@@ -4740,6 +4740,10 @@ function renderAuthScreen() {
               <label>Your name</label>
               <input type="text" id="auth-owner-name" required autocomplete="name" />
             </div>
+            <div class="field">
+              <label>Invite code</label>
+              <input type="text" id="auth-signup-code" autocomplete="off" />
+            </div>
           ` : ''}
           <div class="field">
             <label>Email</label>
@@ -4773,6 +4777,7 @@ function renderAuthScreen() {
             body: {
               shopName: document.getElementById('auth-shop-name').value.trim(),
               ownerName: document.getElementById('auth-owner-name').value.trim(),
+              signupCode: document.getElementById('auth-signup-code').value.trim(),
               email,
               password,
             },

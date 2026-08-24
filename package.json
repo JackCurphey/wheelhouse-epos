@@ -5,7 +5,8 @@
   "type": "module",
   "main": "server/server.js",
   "scripts": {
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "gateway": "node server/gateway.js"
   },
   "engines": {
     "node": ">=22.5.0"

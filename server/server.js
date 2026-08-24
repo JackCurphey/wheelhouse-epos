@@ -60,16 +60,64 @@ function parseCookies(req) {
   return cookies;
 }
 
-function setSessionCookie(res, token) {
+// Secure is conditional on how this request actually arrived rather than
+// always-on, since the app is also used directly over plain http://localhost
+// - a browser silently refuses to store a Secure cookie set over http, which
+// would break local/dev use. Behind the Cloudflare Tunnel, the original
+// public request was https even though it reaches this process over plain
+// http locally, which is exactly what x-forwarded-proto communicates.
+function isHttpsRequest(req) {
+  return req.headers['x-forwarded-proto'] === 'https';
+}
+
+function setSessionCookie(req, res, token) {
+  const secure = isHttpsRequest(req) ? '; Secure' : '';
   res.setHeader(
     'Set-Cookie',
-    `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}`
+    `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}${secure}`
   );
 }
 
 function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
 }
+
+// In-memory per-IP rate limiting for login/signup - proportionate for a
+// single-process app behind one tunnel, and only needed now that the app is
+// reachable from the open internet rather than just localhost. cf-connecting-ip
+// is Cloudflare's authoritative client IP (the tunnel strips anything a
+// client tries to spoof in that header before it reaches this process).
+function clientIp(req) {
+  return (
+    req.headers['cf-connecting-ip'] ||
+    (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+    req.socket.remoteAddress ||
+    'unknown'
+  );
+}
+
+function makeRateLimiter(max, windowMs) {
+  const hits = new Map(); // key -> { count, resetAt }
+  return {
+    check(key) {
+      const now = Date.now();
+      const entry = hits.get(key);
+      if (!entry || entry.resetAt < now) {
+        hits.set(key, { count: 1, resetAt: now + windowMs });
+        return true;
+      }
+      if (entry.count >= max) return false;
+      entry.count++;
+      return true;
+    },
+    reset(key) {
+      hits.delete(key);
+    },
+  };
+}
+
+const loginLimiter = makeRateLimiter(10, 15 * 60 * 1000); // 10 attempts / 15 min / IP
+const signupLimiter = makeRateLimiter(5, 60 * 60 * 1000); // 5 new shops / hour / IP
 
 function currentSession(req) {
   const { [SESSION_COOKIE]: token } = parseCookies(req);
@@ -208,8 +256,17 @@ function route(method, pattern, handler) {
 // ever touches the shop/login registry (auth.js), never a specific shop's
 // data, and each handler resolves its own session via currentSession().
 
+// Closed by default (no SIGNUP_CODE set): the app is reachable from the open
+// internet now, and without this, anyone who finds the URL could create a
+// shop account. Set SIGNUP_CODE in the environment and share it privately
+// with whoever you actually want to be able to sign up.
 route('POST', '/api/auth/signup', async (req, res) => {
+  const ip = clientIp(req);
+  if (!signupLimiter.check(ip)) return sendJson(res, 429, { error: 'Too many accounts created from this network - please try again later.' });
   const body = await readJsonBody(req);
+  if (!process.env.SIGNUP_CODE || body.signupCode !== process.env.SIGNUP_CODE) {
+    return sendJson(res, 403, { error: process.env.SIGNUP_CODE ? 'Invalid invite code' : 'Signups are currently closed' });
+  }
   let created;
   try {
     created = createShop({ shopName: body.shopName, ownerName: body.ownerName, email: body.email, password: body.password });
@@ -218,11 +275,13 @@ route('POST', '/api/auth/signup', async (req, res) => {
     throw err;
   }
   const token = createSession(created.login.id);
-  setSessionCookie(res, token);
+  setSessionCookie(req, res, token);
   sendJson(res, 201, serializeSession(getSessionContext(token)));
 });
 
 route('POST', '/api/auth/login', async (req, res) => {
+  const ip = clientIp(req);
+  if (!loginLimiter.check(ip)) return sendJson(res, 429, { error: 'Too many login attempts - please wait a few minutes and try again.' });
   const body = await readJsonBody(req);
   let login;
   try {
@@ -231,8 +290,9 @@ route('POST', '/api/auth/login', async (req, res) => {
     if (err instanceof AuthError) return sendJson(res, 401, { error: err.message });
     throw err;
   }
+  loginLimiter.reset(ip);
   const token = createSession(login.id);
-  setSessionCookie(res, token);
+  setSessionCookie(req, res, token);
   sendJson(res, 200, serializeSession(getSessionContext(token)));
 });
 

@@ -49,11 +49,28 @@ $env:PORT=4100; npm start         (Windows PowerShell)
 Each shop account starts with an empty inventory - add your own products from
 the Inventory screen.
 
+## Remote access (optional)
+
+The app itself only ever listens on your PC - it isn't reachable from the
+internet unless you deliberately expose it. If you do (e.g. via a
+[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+so you can reach it from your own domain), run `npm run gateway` alongside
+`npm start` and point the tunnel at the gateway's port (8080 by default)
+instead of the app's port (4000) directly. The gateway is a second, much
+simpler process whose only job is to proxy through to the real app when it's
+up and show a friendly "offline" page when it isn't - something the app
+can't do for itself once it's the thing that's crashed or not running.
+
+```
+npm run gateway
+```
+
 ## Notes and what's deliberately left out (for now)
 
-- **One set of login credentials per shop, no per-staff accounts yet.**
-  Everyone at a shop signs in with the same shop account; there's no
-  individual staff permissions or till-cash-up reconciliation yet.
+- **No per-employee permissions yet.** Each shop's owner can add individual
+  employee logins (Office > Edit Shop > Employee Logins), but everyone with a
+  login can currently do everything - there's no till-cash-up reconciliation
+  or restricted roles yet.
 - **No password reset or email verification yet.** There's no email-sending
   set up, so a forgotten password currently has no self-service recovery.
 - **No receipt printer or barcode scanner support yet.** Receipts show on
