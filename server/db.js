@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS customers (
 CREATE TABLE IF NOT EXISTS customer_groups (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
+  discount_percent REAL NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -81,7 +82,9 @@ CREATE TABLE IF NOT EXISTS sales (
   cash_amount REAL NOT NULL DEFAULT 0,
   card_amount REAL NOT NULL DEFAULT 0,
   cash_tendered REAL,
-  note TEXT DEFAULT ''
+  note TEXT DEFAULT '',
+  group_discount_amount REAL NOT NULL DEFAULT 0,
+  group_discount_name TEXT DEFAULT ''
 );
 
 -- Extra tender lines beyond cash/card (e.g. Cyclescheme, Klarna). Cash/card
@@ -366,6 +369,15 @@ function openShopDb(slug) {
     // method, so the full total goes to whichever column matches.
     db.exec("UPDATE sales SET cash_amount = total WHERE payment_method = 'Cash';");
     db.exec("UPDATE sales SET card_amount = total WHERE payment_method = 'Card';");
+  }
+  if (!salesCols.some((c) => c.name === 'group_discount_amount')) {
+    db.exec('ALTER TABLE sales ADD COLUMN group_discount_amount REAL NOT NULL DEFAULT 0;');
+    db.exec("ALTER TABLE sales ADD COLUMN group_discount_name TEXT DEFAULT '';");
+  }
+
+  const groupCols = db.prepare("PRAGMA table_info(customer_groups)").all();
+  if (!groupCols.some((c) => c.name === 'discount_percent')) {
+    db.exec('ALTER TABLE customer_groups ADD COLUMN discount_percent REAL NOT NULL DEFAULT 0;');
   }
 
   const productCols = db.prepare("PRAGMA table_info(products)").all();

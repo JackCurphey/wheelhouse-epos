@@ -630,8 +630,24 @@ function cartItemDiscountTotal() {
   return cart.reduce((sum, l) => sum + ((l.originalPrice ?? l.price) - l.price) * l.qty, 0);
 }
 
+// The automatic discount from whichever of the selected till customer's
+// groups carries the highest discount_percent (mirrors resolveGroupDiscount
+// in server.js, which is what actually gets charged - this is only for live
+// display before the sale is submitted). netSubtotal is the subtotal after
+// any per-line price overrides but before the flat/group discounts.
+function tillCustomerGroupDiscount(netSubtotal) {
+  const customer = customers.find((c) => c.id === tillCustomerId);
+  const groups = customer?.groups || [];
+  const top = groups.reduce((best, g) => (g.discountPercent > (best?.discountPercent || 0) ? g : best), null);
+  if (!top || !top.discountPercent) return { percent: 0, amount: 0, name: '' };
+  const amount = Math.round(netSubtotal * (top.discountPercent / 100) * 100) / 100;
+  return { percent: top.discountPercent, amount, name: top.name };
+}
+
 function cartTotal() {
-  return Math.max(0, cartSubtotal() - (cartItemDiscountTotal() + discount));
+  const netSubtotal = cartSubtotal() - cartItemDiscountTotal();
+  const groupDiscount = tillCustomerGroupDiscount(netSubtotal);
+  return Math.max(0, netSubtotal - discount - groupDiscount.amount);
 }
 
 // Cash and Card each have their own always-visible amount box; whatever the
@@ -760,6 +776,7 @@ function renderCart() {
     dropdownId: 'customer-dropdown',
     getSelectedId: () => tillCustomerId,
     setSelectedId: (id) => { tillCustomerId = id; },
+    onChange: updateTotals,
   });
   document.getElementById('discount-input').addEventListener('input', (e) => {
     discount = Math.max(0, parseFloat(e.target.value) || 0);
@@ -1169,13 +1186,16 @@ function updateTotals() {
   const onTenderPage = !!document.getElementById('cash-tendered');
   const subtotal = cartSubtotal();
   const itemDiscount = cartItemDiscountTotal();
-  const combinedDiscount = itemDiscount + discount;
+  const netSubtotal = subtotal - itemDiscount;
+  const groupDiscount = tillCustomerGroupDiscount(netSubtotal);
+  const combinedDiscount = itemDiscount + discount + groupDiscount.amount;
   const total = Math.max(0, subtotal - combinedDiscount);
   let rows = onTenderPage
     ? ''
     : `
     <tr><td>Subtotal</td><td>${money(subtotal)}</td></tr>
-    <tr><td>Discount${itemDiscount ? ` <span class="muted">(incl. ${money(itemDiscount)} price edits)</span>` : ''}</td><td>−${money(combinedDiscount)}</td></tr>
+    <tr><td>Discount${itemDiscount ? ` <span class="muted">(incl. ${money(itemDiscount)} price edits)</span>` : ''}</td><td>−${money(itemDiscount + discount)}</td></tr>
+    ${groupDiscount.amount ? `<tr><td>${esc(groupDiscount.name)} discount (${groupDiscount.percent}%)</td><td>−${money(groupDiscount.amount)}</td></tr>` : ''}
   `;
   rows += `
     <tr class="grand"><td>Total</td><td>${money(total)}</td></tr>
@@ -2750,9 +2770,9 @@ async function renderEditFrontDesk() {
         <button class="btn btn-primary" id="add-group-btn">+ Add group</button>
       </div>
       <div class="panel-body">
-        <p class="muted" style="margin:0 0 12px;">Tag customers with a group (e.g. a discount scheme or membership) from the customer edit page.</p>
+        <p class="muted" style="margin:0 0 12px;">Tag customers with a group (e.g. a discount scheme or membership) from the customer edit page. A group with a discount is applied automatically to the sale subtotal whenever a customer with that group is selected on Front Desk.</p>
         <table class="data-table">
-          <thead><tr><th>Name</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Discount</th><th></th></tr></thead>
           <tbody id="group-table-body"></tbody>
         </table>
       </div>
@@ -2768,7 +2788,7 @@ function renderGroupTable() {
   const tbody = document.getElementById('group-table-body');
   if (!tbody) return;
   if (!customerGroups.length) {
-    tbody.innerHTML = `<tr><td colspan="2"><div class="empty-state">No groups yet.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state">No groups yet.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = customerGroups
@@ -2776,8 +2796,9 @@ function renderGroupTable() {
       (g) => `
     <tr>
       <td>${esc(g.name)}</td>
+      <td>${g.discountPercent ? `${g.discountPercent}%` : '<span class="muted">—</span>'}</td>
       <td>
-        <button class="icon-btn" data-edit="${g.id}">Rename</button>
+        <button class="icon-btn" data-edit="${g.id}">Edit</button>
         <button class="icon-btn" data-delete="${g.id}">Delete</button>
       </td>
     </tr>
@@ -2813,7 +2834,7 @@ function renderGroupFormModal(holder, group) {
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal">
         <div class="modal-header">
-          <h2>${isEdit ? 'Rename group' : 'Add group'}</h2>
+          <h2>${isEdit ? 'Edit group' : 'Add group'}</h2>
           <button class="modal-close" id="modal-close">✕</button>
         </div>
         <form id="group-form">
@@ -2821,6 +2842,11 @@ function renderGroupFormModal(holder, group) {
             <div class="field">
               <label for="group-name">Name *</label>
               <input id="group-name" type="text" required value="${esc(group?.name || '')}" />
+            </div>
+            <div class="field">
+              <label for="group-discount">Discount %</label>
+              <input id="group-discount" type="number" min="0" max="100" step="0.1" value="${group?.discountPercent || 0}" />
+              <p class="muted" style="margin:4px 0 0;">Applied automatically to the sale subtotal on Front Desk whenever the selected customer has this group. 0 = no automatic discount.</p>
             </div>
           </div>
           <div class="modal-footer">
@@ -2835,11 +2861,12 @@ function renderGroupFormModal(holder, group) {
   document.getElementById('group-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('group-name').value.trim();
+    const discountPercent = Number(document.getElementById('group-discount').value) || 0;
     try {
       if (isEdit) {
-        await api(`/api/customer-groups/${group.id}`, { method: 'PUT', body: { name } });
+        await api(`/api/customer-groups/${group.id}`, { method: 'PUT', body: { name, discountPercent } });
       } else {
-        await api('/api/customer-groups', { method: 'POST', body: { name } });
+        await api('/api/customer-groups', { method: 'POST', body: { name, discountPercent } });
       }
       showToast(isEdit ? 'Group updated' : 'Group added');
       closeModal();
@@ -4643,6 +4670,7 @@ function renderReceiptModal(holder, sale, title) {
             <hr />
             <div class="rline"><span>Subtotal</span><span>${money(sale.subtotal)}</span></div>
             <div class="rline"><span>Discount</span><span>−${money(sale.discount)}</span></div>
+            ${sale.groupDiscountAmount ? `<div class="rline"><span>${esc(sale.groupDiscountName)} discount</span><span>−${money(sale.groupDiscountAmount)}</span></div>` : ''}
             <div class="rline rtotal"><span>Total</span><span>${money(sale.total)}</span></div>
             <div class="rline"><span>Inc. VAT (20%)</span><span>${money(vatFromInclusive(sale.total))}</span></div>
             <div class="rline"><span>Payment</span><span>${esc(sale.paymentMethod)}</span></div>

@@ -405,7 +405,14 @@ route('GET', '/api/categories', async (req, res) => {
 // ---------- Customers ----------
 
 function serializeCustomerGroup(row) {
-  return { id: row.id, name: row.name };
+  return { id: row.id, name: row.name, discountPercent: row.discount_percent };
+}
+
+function resolveDiscountPercent(raw, existing) {
+  if (raw === undefined) return existing !== undefined ? existing : 0;
+  const pct = Number(raw);
+  if (!Number.isFinite(pct) || pct < 0 || pct > 100) return null;
+  return pct;
 }
 
 function groupsForCustomer(customerId) {
@@ -424,14 +431,14 @@ function groupsForCustomer(customerId) {
 function groupsByCustomerId() {
   const rows = db
     .prepare(
-      `SELECT m.customer_id, g.id, g.name FROM customer_group_members m
+      `SELECT m.customer_id, g.* FROM customer_group_members m
        JOIN customer_groups g ON g.id = m.group_id`
     )
     .all();
   const map = new Map();
   for (const r of rows) {
     if (!map.has(r.customer_id)) map.set(r.customer_id, []);
-    map.get(r.customer_id).push({ id: r.id, name: r.name });
+    map.get(r.customer_id).push(serializeCustomerGroup(r));
   }
   return map;
 }
@@ -503,8 +510,10 @@ route('POST', '/api/customer-groups', async (req, res) => {
   const body = await readJsonBody(req);
   const name = (body.name || '').trim();
   if (!name) return badRequest(res, 'Group name is required');
+  const discountPercent = resolveDiscountPercent(body.discountPercent, 0);
+  if (discountPercent === null) return badRequest(res, 'Discount must be a number between 0 and 100');
   try {
-    const info = db.prepare('INSERT INTO customer_groups (name) VALUES (?)').run(name);
+    const info = db.prepare('INSERT INTO customer_groups (name, discount_percent) VALUES (?, ?)').run(name, discountPercent);
     const row = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeCustomerGroup(row));
   } catch (err) {
@@ -520,8 +529,12 @@ route('PUT', '/api/customer-groups/:id', async (req, res, params) => {
   const body = await readJsonBody(req);
   const name = (body.name || '').trim();
   if (!name) return badRequest(res, 'Group name is required');
+  const discountPercent = resolveDiscountPercent(body.discountPercent, existing.discount_percent);
+  if (discountPercent === null) return badRequest(res, 'Discount must be a number between 0 and 100');
   try {
-    db.prepare("UPDATE customer_groups SET name = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?").run(name, id);
+    db.prepare(
+      "UPDATE customer_groups SET name = ?, discount_percent = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
+    ).run(name, discountPercent, id);
     const row = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomerGroup(row));
   } catch (err) {
@@ -717,6 +730,8 @@ function serializeSale(row, items, payments) {
     cashierName: row.cashier_name !== undefined ? row.cashier_name : undefined,
     subtotal: row.subtotal,
     discount: row.discount,
+    groupDiscountAmount: row.group_discount_amount,
+    groupDiscountName: row.group_discount_name,
     total: row.total,
     paymentMethod: row.payment_method,
     cashAmount: row.cash_amount,
@@ -790,6 +805,25 @@ function resolveCashierId(rawId) {
   return { ok: true, cashierId };
 }
 
+// Computed server-side (never trusts a client-sent amount) from whichever of
+// the customer's groups carries the highest discount_percent, so a sale's
+// group discount can't be tampered with via the API. Applies to the same net
+// subtotal (after any per-line price overrides) that the flat discount does.
+function resolveGroupDiscount(customerId, subtotal) {
+  if (!customerId) return { amount: 0, name: '' };
+  const top = db
+    .prepare(
+      `SELECT g.name, g.discount_percent FROM customer_groups g
+       JOIN customer_group_members m ON m.group_id = g.id
+       WHERE m.customer_id = ? AND g.discount_percent > 0
+       ORDER BY g.discount_percent DESC, g.name ASC LIMIT 1`
+    )
+    .get(customerId);
+  if (!top) return { amount: 0, name: '' };
+  const amount = Math.round(subtotal * (top.discount_percent / 100) * 100) / 100;
+  return { amount, name: `${top.name} (${top.discount_percent}%)` };
+}
+
 // Validates items against live stock, inserts the sale + sale_items, and
 // deducts stock. Shared by direct checkout and quote/order -> sale conversion.
 function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
@@ -817,7 +851,8 @@ function createSale({ customerId, cashierId, items, discount, cashAmount, cardAm
   }
 
   const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
-  const total = Math.max(0, subtotal - discount);
+  const groupDiscount = resolveGroupDiscount(customerId, subtotal);
+  const total = Math.max(0, subtotal - discount - groupDiscount.amount);
 
   const cash = Math.max(0, Number(cashAmount) || 0);
   const card = Math.max(0, Number(cardAmount) || 0);
@@ -838,10 +873,10 @@ function createSale({ customerId, cashierId, items, discount, cashAmount, cardAm
   try {
     const saleInfo = db
       .prepare(
-        `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note, group_discount_amount, group_discount_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(customerId, cashierId, subtotal, discount, total, paymentMethod, cash, card, cashTendered, note);
+      .run(customerId, cashierId, subtotal, discount, total, paymentMethod, cash, card, cashTendered, note, groupDiscount.amount, groupDiscount.name);
     const saleId = saleInfo.lastInsertRowid;
 
     for (const p of extraPayments) {
