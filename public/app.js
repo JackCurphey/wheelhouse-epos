@@ -3,6 +3,7 @@
 
 // ---------------- State ----------------
 
+let currentShop = null; // { id, slug, name, email } for the signed-in shop, or null before boot() resolves it
 let route = (location.hash || '#till').replace('#', '');
 let products = [];
 let categories = [];
@@ -85,6 +86,13 @@ async function api(path, { method = 'GET', body } = {}) {
   });
   let data = {};
   try { data = await res.json(); } catch (_) { /* no body */ }
+  if (res.status === 401 && !path.startsWith('/api/auth/')) {
+    // Session expired or was signed out elsewhere mid-use - drop back to the
+    // login screen instead of letting every in-flight view render an opaque
+    // "Request failed (401)" error.
+    currentShop = null;
+    renderAuthScreen();
+  }
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
 }
@@ -248,13 +256,20 @@ function renderShell() {
     <div class="topbar">
       <div class="brand"><span class="logo">🚲</span> Wheelhouse EPOS</div>
       <div class="nav" id="nav"></div>
+      <div class="shop-info">${esc(currentShop ? currentShop.name : '')}</div>
       <div class="clock" id="clock"></div>
+      <button class="btn btn-sm btn-ghost" id="logout-btn">Log out</button>
     </div>
     <main id="main"></main>
   `;
   renderNav();
   updateClock();
   setInterval(updateClock, 30000);
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) { /* ignore */ }
+    currentShop = null;
+    renderAuthScreen();
+  });
 }
 
 function renderNav() {
@@ -4390,7 +4405,83 @@ function wireModalDismiss() {
   if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 }
 
+// ---------------- Auth screen ----------------
+
+let authMode = 'login'; // 'login' | 'signup'
+let authError = '';
+
+function renderAuthScreen() {
+  const app = document.getElementById('app');
+  const isSignup = authMode === 'signup';
+  app.innerHTML = `
+    <div class="auth-screen">
+      <div class="auth-card">
+        <div class="auth-brand"><span class="logo">🚲</span> Wheelhouse EPOS</div>
+        <div class="auth-tabs">
+          <button class="auth-tab ${!isSignup ? 'active' : ''}" data-auth-tab="login">Log in</button>
+          <button class="auth-tab ${isSignup ? 'active' : ''}" data-auth-tab="signup">Create shop account</button>
+        </div>
+        ${authError ? `<div class="error-banner">${esc(authError)}</div>` : ''}
+        <form id="auth-form">
+          ${isSignup ? `
+            <div class="field">
+              <label>Shop name</label>
+              <input type="text" id="auth-shop-name" required autocomplete="organization" />
+            </div>
+          ` : ''}
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="auth-email" required autocomplete="email" />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="auth-password" required minlength="8" autocomplete="${isSignup ? 'new-password' : 'current-password'}" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">${isSignup ? 'Create account' : 'Log in'}</button>
+        </form>
+      </div>
+    </div>
+  `;
+  app.querySelectorAll('[data-auth-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      authMode = btn.dataset.authTab;
+      authError = '';
+      renderAuthScreen();
+    });
+  });
+  document.getElementById('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    authError = '';
+    try {
+      const shop = isSignup
+        ? await api('/api/auth/signup', { method: 'POST', body: { shopName: document.getElementById('auth-shop-name').value.trim(), email, password } })
+        : await api('/api/auth/login', { method: 'POST', body: { email, password } });
+      currentShop = shop;
+      renderShell();
+      renderRoute();
+    } catch (err) {
+      authError = err.message;
+      renderAuthScreen();
+    }
+  });
+}
+
 // ---------------- Init ----------------
 
-renderShell();
-renderRoute();
+async function boot() {
+  try {
+    currentShop = await api('/api/auth/me');
+  } catch (_) {
+    currentShop = null;
+  }
+  if (currentShop) {
+    renderShell();
+    renderRoute();
+  } else {
+    renderAuthScreen();
+  }
+}
+
+boot();

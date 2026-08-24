@@ -110,6 +110,9 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .clock { font-size: 13px; color: #cfe6dd; }
+.shop-info { font-size: 13px; color: #cfe6dd; }
+.topbar .btn-ghost { color: #fff; border-color: rgba(255,255,255,0.35); }
+.topbar .btn-ghost:hover { background: rgba(255,255,255,0.12); }
 
 main {
   flex: 1;
@@ -1195,3 +1198,55 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   padding: 40px 20px;
   color: var(--muted);
 }
+
+/* ---------- Auth screen ---------- */
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+.auth-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  flex: 1;
+  border: none;
+  background: #fff;
+  color: var(--muted);
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-tab.active { background: var(--accent); color: #fff; }
+.auth-tab:not(.active):hover { background: #f2f3f1; }

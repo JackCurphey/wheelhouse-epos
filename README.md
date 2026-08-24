@@ -2,7 +2,8 @@
 
 A local point-of-sale system for a bike shop: till/checkout, inventory management,
 sales history and a dashboard. Runs entirely on your own computer - no internet
-connection, cloud account or npm install required.
+connection or npm install required. Each shop creates its own account and signs
+in to its own private data.
 
 ## Requirements
 
@@ -18,10 +19,12 @@ Open a terminal (Command Prompt / PowerShell / Terminal) in this folder and run:
 npm start
 ```
 
-Then open **http://localhost:4000** in your browser (Chrome, Edge, Firefox all work).
+Then open **http://localhost:4000** in your browser (Chrome, Edge, Firefox all work),
+and either create a shop account (shop name, email, password) or log in to an
+existing one.
 
 To stop it, press `Ctrl+C` in the terminal. Your data (products, sales, stock)
-is saved in `data/epos.db` and will still be there next time you run `npm start`.
+is saved under `data/shops/` and will still be there next time you run `npm start`.
 
 If port 4000 is already used by something else on your PC, run it on a different
 port instead:
@@ -43,14 +46,16 @@ $env:PORT=4100; npm start         (Windows PowerShell)
 - **Dashboard** — today's takings and transaction count, low-stock alerts, and
   today's top sellers.
 
-It comes pre-loaded with 23 sample bike-shop products (bikes, parts, accessories
-and services) so you can try it immediately — edit or delete these from the
-Inventory screen once you're ready to add your own.
+Each shop account starts with an empty inventory - add your own products from
+the Inventory screen.
 
 ## Notes and what's deliberately left out (for now)
 
-- **Single till, single user, no logins.** This is built to run on one till PC.
-  There's no staff accounts, permissions or till-cash-up reconciliation yet.
+- **One set of login credentials per shop, no per-staff accounts yet.**
+  Everyone at a shop signs in with the same shop account; there's no
+  individual staff permissions or till-cash-up reconciliation yet.
+- **No password reset or email verification yet.** There's no email-sending
+  set up, so a forgotten password currently has no self-service recovery.
 - **No receipt printer or barcode scanner support yet.** Receipts show on
   screen (with a "Print" button that uses your browser's normal print dialog —
   works fine with most USB receipt printers set as your default printer). A
@@ -59,8 +64,9 @@ Inventory screen once you're ready to add your own.
 - **No card payment processing.** "Card" is just recorded as the payment method
   for your records — you'd still take the card payment on your existing card
   machine.
-- **Data lives only on this computer**, in `data/epos.db`. Back this file up
+- **Data lives only on this computer**, one file per shop under `data/shops/`,
+  plus `data/accounts.db` holding the login accounts. Back these up
   periodically (copy the whole `data` folder) since there's no cloud sync.
 
-Happy to add any of the above, or things like customer accounts, repair/workshop
-job tracking, or multi-till syncing, next — just ask.
+Happy to add any of the above, or things like per-staff logins, password reset,
+repair/workshop job tracking, or multi-till syncing, next — just ask.

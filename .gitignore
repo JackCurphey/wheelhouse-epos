@@ -3,4 +3,5 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/*.db.bak*
+data/shops/
 _delete_me_test_artifacts/

@@ -5,30 +5,67 @@ import { readFile } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getDb } from './db.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { getShopDb } from './db.js';
+import {
+  AuthError,
+  createShop,
+  verifyLogin,
+  createSession,
+  getShopForSession,
+  destroySession,
+  serializeShop,
+  SESSION_COOKIE,
+  SESSION_MAX_AGE_SECONDS,
+} from './auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
-let db;
-try {
-  db = getDb();
-} catch (err) {
-  console.error('\n  Could not open the database (data/epos.db).\n');
-  console.error('  ' + err.message);
-  console.error(`
-  This is usually caused by the app folder being somewhere SQLite can't
-  reliably lock files, for example:
-    - a network drive or mapped drive
-    - a folder still syncing in OneDrive/Dropbox/Google Drive (wait for
-      sync to finish, or move the folder outside the synced location)
-    - restrictive antivirus/security software
+// Every request that touches shop data runs inside `dbContext.run(shopDb, ...)`
+// (set up once the session cookie has been resolved to a shop, see the
+// request handler at the bottom of this file). `db` below reads whichever
+// shop's database is current for the request handling it, so the ~60 route
+// handlers in this file can keep using the plain `db.prepare(...)` calls
+// they always have instead of threading a db argument through every one of
+// them - each concurrent request still only ever touches its own shop's data.
+const dbContext = new AsyncLocalStorage();
+const db = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const real = dbContext.getStore();
+      if (!real) throw new Error('No shop database in scope for this request');
+      const value = real[prop];
+      return typeof value === 'function' ? value.bind(real) : value;
+    },
+  }
+);
 
-  Try moving this whole folder onto a normal local drive (e.g. C:\\EPOS)
-  and running "npm start" again.
-`);
-  process.exit(1);
+function parseCookies(req) {
+  const header = req.headers.cookie;
+  const cookies = {};
+  if (!header) return cookies;
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    const key = part.slice(0, idx).trim();
+    const value = part.slice(idx + 1).trim();
+    if (key) cookies[key] = decodeURIComponent(value);
+  }
+  return cookies;
+}
+
+function setSessionCookie(res, token) {
+  res.setHeader(
+    'Set-Cookie',
+    `${SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}`
+  );
+}
+
+function clearSessionCookie(res) {
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
 }
 
 const MIME = {
@@ -145,6 +182,53 @@ function route(method, pattern, handler) {
   );
   routes.push({ method, regex, paramNames, handler });
 }
+
+// ---------- Auth ----------
+// Unlike every other route in this file, these three don't run inside
+// dbContext (see the request handler at the bottom) - they only ever touch
+// the shop registry (auth.js), never a specific shop's data.
+
+route('POST', '/api/auth/signup', async (req, res) => {
+  const body = await readJsonBody(req);
+  let shop;
+  try {
+    shop = createShop({ name: body.shopName, email: body.email, password: body.password });
+  } catch (err) {
+    if (err instanceof AuthError) return badRequest(res, err.message);
+    throw err;
+  }
+  const token = createSession(shop.id);
+  setSessionCookie(res, token);
+  sendJson(res, 201, serializeShop(shop));
+});
+
+route('POST', '/api/auth/login', async (req, res) => {
+  const body = await readJsonBody(req);
+  let shop;
+  try {
+    shop = verifyLogin(body.email, body.password);
+  } catch (err) {
+    if (err instanceof AuthError) return sendJson(res, 401, { error: err.message });
+    throw err;
+  }
+  const token = createSession(shop.id);
+  setSessionCookie(res, token);
+  sendJson(res, 200, serializeShop(shop));
+});
+
+route('POST', '/api/auth/logout', async (req, res) => {
+  const { [SESSION_COOKIE]: token } = parseCookies(req);
+  destroySession(token);
+  clearSessionCookie(res);
+  sendJson(res, 200, { ok: true });
+});
+
+route('GET', '/api/auth/me', async (req, res) => {
+  const { [SESSION_COOKIE]: token } = parseCookies(req);
+  const shop = getShopForSession(token);
+  if (!shop) return sendJson(res, 401, { error: 'Not signed in' });
+  sendJson(res, 200, serializeShop(shop));
+});
 
 route('GET', '/api/products', async (req, res, params, query) => {
   const products = listProducts({
@@ -1408,8 +1492,28 @@ const server = createServer(async (req, res) => {
       if (!match) continue;
       const params = {};
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+
+      // Auth routes manage the session cookie themselves and never touch shop
+      // data, so they run outside dbContext. Every other /api/ route needs a
+      // signed-in shop first - that shop's database becomes `db` for the
+      // duration of this one request.
+      if (pathname.startsWith('/api/auth/')) {
+        try {
+          await r.handler(req, res, params, url.searchParams);
+        } catch (err) {
+          console.error(err);
+          sendJson(res, 500, { error: err.message || 'Internal server error' });
+        }
+        return;
+      }
+
+      const { [SESSION_COOKIE]: token } = parseCookies(req);
+      const shop = getShopForSession(token);
+      if (!shop) return sendJson(res, 401, { error: 'Not signed in' });
+
       try {
-        await r.handler(req, res, params, url.searchParams);
+        const shopDb = getShopDb(shop.slug);
+        await dbContext.run(shopDb, () => r.handler(req, res, params, url.searchParams));
       } catch (err) {
         console.error(err);
         sendJson(res, 500, { error: err.message || 'Internal server error' });

@@ -7,9 +7,13 @@ import { fileURLToPath } from 'node:url';
 import { mkdirSync } from 'node:fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, '..', 'data');
-mkdirSync(DATA_DIR, { recursive: true });
-const DB_PATH = path.join(DATA_DIR, 'epos.db');
+export const DATA_DIR = path.join(__dirname, '..', 'data');
+const SHOPS_DIR = path.join(DATA_DIR, 'shops');
+mkdirSync(SHOPS_DIR, { recursive: true });
+
+export function shopDbPath(slug) {
+  return path.join(SHOPS_DIR, `${slug}.db`);
+}
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS products (
@@ -159,41 +163,10 @@ CREATE TABLE IF NOT EXISTS workshop_settings (
 );
 `;
 
-const SEED_PRODUCTS = [
-  // Bikes
-  { sku: 'BIKE-HYB-001', name: 'Ridgeway Hybrid 700c', category: 'Bikes', price: 449.99, cost: 280.00, stock_qty: 6, low_stock_threshold: 2, supplier: 'Ridgeway Cycles' },
-  { sku: 'BIKE-MTB-001', name: 'Summit Trail 27.5" Mountain Bike', category: 'Bikes', price: 599.00, cost: 380.00, stock_qty: 4, low_stock_threshold: 2, supplier: 'Summit Bikes Ltd' },
-  { sku: 'BIKE-RD-001', name: 'Velocé Carbon Road Bike', category: 'Bikes', price: 1299.00, cost: 850.00, stock_qty: 2, low_stock_threshold: 1, supplier: 'Veloce Imports' },
-  { sku: 'BIKE-KID-001', name: "Kids' 20\" Explorer Bike", category: 'Bikes', price: 189.99, cost: 110.00, stock_qty: 5, low_stock_threshold: 2, supplier: 'Ridgeway Cycles' },
-  { sku: 'BIKE-EBK-001', name: 'Volt Electric City Bike', category: 'Bikes', price: 1599.00, cost: 1050.00, stock_qty: 3, low_stock_threshold: 1, supplier: 'Volt E-Bikes' },
-  // Parts
-  { sku: 'PRT-TUBE-26', name: 'Inner Tube 26"', category: 'Parts', price: 6.99, cost: 2.10, stock_qty: 40, low_stock_threshold: 10, supplier: 'CycleParts Wholesale' },
-  { sku: 'PRT-TUBE-700', name: 'Inner Tube 700c', category: 'Parts', price: 7.49, cost: 2.30, stock_qty: 35, low_stock_threshold: 10, supplier: 'CycleParts Wholesale' },
-  { sku: 'PRT-BRKPAD-01', name: 'Disc Brake Pads (pair)', category: 'Parts', price: 14.99, cost: 5.00, stock_qty: 18, low_stock_threshold: 5, supplier: 'CycleParts Wholesale' },
-  { sku: 'PRT-CHAIN-01', name: '9-Speed Chain', category: 'Parts', price: 19.99, cost: 8.50, stock_qty: 12, low_stock_threshold: 4, supplier: 'CycleParts Wholesale' },
-  { sku: 'PRT-TYRE-26', name: 'Tyre 26" x 2.1 All-Terrain', category: 'Parts', price: 22.99, cost: 9.00, stock_qty: 16, low_stock_threshold: 4, supplier: 'CycleParts Wholesale' },
-  { sku: 'PRT-SADDLE-01', name: 'Comfort Gel Saddle', category: 'Parts', price: 27.50, cost: 11.00, stock_qty: 9, low_stock_threshold: 3, supplier: 'ComfortRide Co' },
-  { sku: 'PRT-PEDAL-01', name: 'Alloy Platform Pedals (pair)', category: 'Parts', price: 15.99, cost: 6.00, stock_qty: 14, low_stock_threshold: 4, supplier: 'CycleParts Wholesale' },
-  // Accessories
-  { sku: 'ACC-HELM-01', name: 'Adult Cycling Helmet', category: 'Accessories', price: 34.99, cost: 14.00, stock_qty: 20, low_stock_threshold: 5, supplier: 'SafeHead Ltd' },
-  { sku: 'ACC-HELM-KID', name: "Kids' Cycling Helmet", category: 'Accessories', price: 24.99, cost: 9.50, stock_qty: 15, low_stock_threshold: 5, supplier: 'SafeHead Ltd' },
-  { sku: 'ACC-LOCK-01', name: 'D-Lock with Cable', category: 'Accessories', price: 29.99, cost: 12.00, stock_qty: 11, low_stock_threshold: 4, supplier: 'SecureCycle' },
-  { sku: 'ACC-LIGHT-SET', name: 'Front & Rear LED Light Set', category: 'Accessories', price: 18.99, cost: 6.50, stock_qty: 25, low_stock_threshold: 6, supplier: 'BrightWay' },
-  { sku: 'ACC-PUMP-01', name: 'Mini Track Pump', category: 'Accessories', price: 16.99, cost: 6.00, stock_qty: 13, low_stock_threshold: 4, supplier: 'CycleParts Wholesale' },
-  { sku: 'ACC-BOTTLE-01', name: 'Water Bottle & Cage', category: 'Accessories', price: 9.99, cost: 3.20, stock_qty: 30, low_stock_threshold: 8, supplier: 'HydroRide' },
-  { sku: 'ACC-PANNIER-01', name: 'Rear Pannier Rack Bag', category: 'Accessories', price: 39.99, cost: 16.00, stock_qty: 8, low_stock_threshold: 3, supplier: 'HydroRide' },
-  { sku: 'ACC-GLOVE-01', name: 'Padded Cycling Gloves', category: 'Accessories', price: 12.99, cost: 4.50, stock_qty: 17, low_stock_threshold: 5, supplier: 'ComfortRide Co' },
-  // Services
-  { sku: 'SVC-TUNE-01', name: 'Basic Bike Tune-Up (Service)', category: 'Services', price: 35.00, cost: 0, stock_qty: 999, low_stock_threshold: 0, supplier: '' },
-  { sku: 'SVC-TUNE-02', name: 'Full Service & Safety Check', category: 'Services', price: 65.00, cost: 0, stock_qty: 999, low_stock_threshold: 0, supplier: '' },
-  { sku: 'SVC-PUNC-01', name: 'Puncture Repair (Service)', category: 'Services', price: 12.00, cost: 0, stock_qty: 999, low_stock_threshold: 0, supplier: '' },
-];
+const dbCache = new Map(); // slug -> DatabaseSync, opened lazily and kept open for the process lifetime
 
-let dbInstance = null;
-
-export function initDb() {
-  if (dbInstance) return dbInstance;
-  const db = new DatabaseSync(DB_PATH);
+function openShopDb(slug) {
+  const db = new DatabaseSync(shopDbPath(slug));
   // Use the default rollback-journal mode rather than WAL: WAL relies on
   // shared-memory mapping that some filesystems (network drives, some
   // mounted/synced folders) don't support, and a single-till local app
@@ -439,24 +412,21 @@ export function initDb() {
     WHERE NOT EXISTS (SELECT 1 FROM sale_documents d WHERE d.workshop_job_id = w.id);
   `);
 
-  const countRow = db.prepare('SELECT COUNT(*) AS c FROM products').get();
-  if (countRow.c === 0) {
-    const insert = db.prepare(`
-      INSERT INTO products (sku, name, category, price, cost, stock_qty, low_stock_threshold, supplier)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    for (const p of SEED_PRODUCTS) {
-      insert.run(p.sku, p.name, p.category, p.price, p.cost, p.stock_qty, p.low_stock_threshold, p.supplier);
-    }
-  }
-
   db.exec('INSERT OR IGNORE INTO workshop_settings (id, opening_time, closing_time) VALUES (1, \'09:00\', \'18:00\');');
 
-  dbInstance = db;
   return db;
 }
 
-export function getDb() {
-  if (!dbInstance) return initDb();
-  return dbInstance;
+// Returns the (cached, already-migrated) database for one shop, opening and
+// initialising its file on first use. Each shop's data lives in its own
+// file under data/shops/ so one shop's data is never queryable from another
+// shop's session - see server.js, which resolves the shop from the session
+// cookie before any handler touches `db`.
+export function getShopDb(slug) {
+  let db = dbCache.get(slug);
+  if (!db) {
+    db = openShopDb(slug);
+    dbCache.set(slug, db);
+  }
+  return db;
 }
