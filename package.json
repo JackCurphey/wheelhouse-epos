@@ -1,0 +1,13 @@
+{
+  "name": "bike-shop-epos",
+  "version": "1.0.0",
+  "description": "Local EPOS system for a bike shop - till, inventory, sales history and dashboard. No dependencies to install - uses Node's built-in SQLite and HTTP server.",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
