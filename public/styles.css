@@ -420,6 +420,17 @@ h3 { font-size: 14px; margin: 0 0 8px; color: var(--muted); text-transform: uppe
 }
 
 .subnav-dropdown { position: relative; }
+/* Bridges the gap between the pill and the menu below it (margin-top on
+   .subnav-dropdown-menu) so moving the cursor there in a straight line
+   doesn't briefly leave both boxes and close the menu before it arrives. */
+.subnav-dropdown::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
 .subnav-dropdown-menu {
   display: none;
   flex-direction: column;
