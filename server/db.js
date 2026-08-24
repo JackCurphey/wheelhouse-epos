@@ -43,6 +43,19 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+CREATE TABLE IF NOT EXISTS customer_groups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS customer_group_members (
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  group_id INTEGER NOT NULL REFERENCES customer_groups(id),
+  PRIMARY KEY (customer_id, group_id)
+);
+
 CREATE TABLE IF NOT EXISTS customer_bikes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   customer_id INTEGER NOT NULL REFERENCES customers(id),
@@ -413,6 +426,13 @@ function openShopDb(slug) {
   `);
 
   db.exec('INSERT OR IGNORE INTO workshop_settings (id, opening_time, closing_time) VALUES (1, \'09:00\', \'18:00\');');
+
+  const groupCount = db.prepare('SELECT COUNT(*) AS c FROM customer_groups').get();
+  if (groupCount.c === 0) {
+    const insertGroup = db.prepare('INSERT INTO customer_groups (name) VALUES (?)');
+    insertGroup.run('Blue Light');
+    insertGroup.run('ACC');
+  }
 
   return db;
 }

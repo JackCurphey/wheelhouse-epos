@@ -404,7 +404,64 @@ route('GET', '/api/categories', async (req, res) => {
 
 // ---------- Customers ----------
 
-function serializeCustomer(row) {
+function serializeCustomerGroup(row) {
+  return { id: row.id, name: row.name };
+}
+
+function groupsForCustomer(customerId) {
+  return db
+    .prepare(
+      `SELECT g.* FROM customer_groups g
+       JOIN customer_group_members m ON m.group_id = g.id
+       WHERE m.customer_id = ? ORDER BY g.name`
+    )
+    .all(customerId)
+    .map(serializeCustomerGroup);
+}
+
+// Loads every customer->group membership in one query rather than one query
+// per customer, then hands listCustomers() a lookup it can attach per row.
+function groupsByCustomerId() {
+  const rows = db
+    .prepare(
+      `SELECT m.customer_id, g.id, g.name FROM customer_group_members m
+       JOIN customer_groups g ON g.id = m.group_id`
+    )
+    .all();
+  const map = new Map();
+  for (const r of rows) {
+    if (!map.has(r.customer_id)) map.set(r.customer_id, []);
+    map.get(r.customer_id).push({ id: r.id, name: r.name });
+  }
+  return map;
+}
+
+// Replaces a customer's full group membership list - simplest correct way
+// to apply an edit from the customer form, which always submits the
+// complete set of ticked groups rather than individual add/remove deltas.
+function setCustomerGroups(customerId, groupIds) {
+  db.prepare('DELETE FROM customer_group_members WHERE customer_id = ?').run(customerId);
+  if (!groupIds.length) return;
+  const insert = db.prepare('INSERT OR IGNORE INTO customer_group_members (customer_id, group_id) VALUES (?, ?)');
+  for (const groupId of groupIds) insert.run(customerId, groupId);
+}
+
+// Validates a raw groupIds array against real, existing groups. Returns null
+// (rather than throwing) for an absent field so callers can tell "not
+// supplied - leave unchanged" apart from "supplied as an empty list".
+function resolveGroupIds(rawGroupIds) {
+  if (rawGroupIds === undefined) return null;
+  if (!Array.isArray(rawGroupIds)) return { error: 'groupIds must be an array' };
+  const ids = [...new Set(rawGroupIds.map(Number))];
+  for (const id of ids) {
+    if (!db.prepare('SELECT id FROM customer_groups WHERE id = ?').get(id)) {
+      return { error: `Group ${id} not found` };
+    }
+  }
+  return { ids };
+}
+
+function serializeCustomer(row, groups) {
   return {
     id: row.id,
     name: row.name,
@@ -412,6 +469,7 @@ function serializeCustomer(row) {
     phone: row.phone,
     notes: row.notes,
     active: !!row.active,
+    groups: groups !== undefined ? groups : groupsForCustomer(row.id),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -429,8 +487,57 @@ function listCustomers({ search, activeOnly }) {
     params.push(like, like, like);
   }
   sql += ' ORDER BY name';
-  return db.prepare(sql).all(...params).map(serializeCustomer);
+  const rows = db.prepare(sql).all(...params);
+  const groupMap = groupsByCustomerId();
+  return rows.map((row) => serializeCustomer(row, groupMap.get(row.id) || []));
 }
+
+// ---------- Customer groups ----------
+
+route('GET', '/api/customer-groups', async (req, res) => {
+  const rows = db.prepare('SELECT * FROM customer_groups ORDER BY name').all();
+  sendJson(res, 200, rows.map(serializeCustomerGroup));
+});
+
+route('POST', '/api/customer-groups', async (req, res) => {
+  const body = await readJsonBody(req);
+  const name = (body.name || '').trim();
+  if (!name) return badRequest(res, 'Group name is required');
+  try {
+    const info = db.prepare('INSERT INTO customer_groups (name) VALUES (?)').run(name);
+    const row = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(info.lastInsertRowid);
+    sendJson(res, 201, serializeCustomerGroup(row));
+  } catch (err) {
+    if (String(err.message).includes('UNIQUE')) return badRequest(res, `A group called "${name}" already exists`);
+    throw err;
+  }
+});
+
+route('PUT', '/api/customer-groups/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Group not found');
+  const body = await readJsonBody(req);
+  const name = (body.name || '').trim();
+  if (!name) return badRequest(res, 'Group name is required');
+  try {
+    db.prepare("UPDATE customer_groups SET name = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?").run(name, id);
+    const row = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
+    sendJson(res, 200, serializeCustomerGroup(row));
+  } catch (err) {
+    if (String(err.message).includes('UNIQUE')) return badRequest(res, `A group called "${name}" already exists`);
+    throw err;
+  }
+});
+
+route('DELETE', '/api/customer-groups/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Group not found');
+  db.prepare('DELETE FROM customer_group_members WHERE group_id = ?').run(id);
+  db.prepare('DELETE FROM customer_groups WHERE id = ?').run(id);
+  sendJson(res, 200, { ok: true });
+});
 
 route('GET', '/api/customers', async (req, res, params, query) => {
   const customers = listCustomers({
@@ -463,9 +570,13 @@ route('POST', '/api/customers', async (req, res) => {
   const phone = (body.phone || '').trim();
   const notes = (body.notes || '').trim();
 
+  const groups = resolveGroupIds(body.groupIds);
+  if (groups && groups.error) return badRequest(res, groups.error);
+
   const info = db
     .prepare('INSERT INTO customers (name, email, phone, notes, updated_at) VALUES (?, ?, ?, ?, ?)')
     .run(name, email, phone, notes, nowIso());
+  if (groups) setCustomerGroups(info.lastInsertRowid, groups.ids);
   const row = db.prepare('SELECT * FROM customers WHERE id = ?').get(info.lastInsertRowid);
   sendJson(res, 201, serializeCustomer(row));
 });
@@ -484,9 +595,13 @@ route('PUT', '/api/customers/:id', async (req, res, params) => {
 
   if (!name) return badRequest(res, 'Customer name is required');
 
+  const groups = resolveGroupIds(body.groupIds);
+  if (groups && groups.error) return badRequest(res, groups.error);
+
   db.prepare(
     'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, active = ?, updated_at = ? WHERE id = ?'
   ).run(name, email, phone, notes, active, nowIso(), id);
+  if (groups) setCustomerGroups(id, groups.ids);
   const row = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
   sendJson(res, 200, serializeCustomer(row));
 });

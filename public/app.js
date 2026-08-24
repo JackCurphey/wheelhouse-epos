@@ -37,6 +37,7 @@ let customers = [];
 let customerSearch = '';
 let customerShowInactive = false;
 let customerBikes = []; // bikes belonging to whichever customer is currently in view
+let customerGroups = []; // shop-wide list of groups (e.g. "Blue Light", "ACC") customers can be tagged with
 
 let workshopView = 'week'; // 'week' | 'month'
 let workshopWeekStart = null; // 'YYYY-MM-DD' for the Monday of the displayed week
@@ -173,6 +174,10 @@ async function loadDashboard() {
 
 async function loadCustomers() {
   customers = await api(`/api/customers?all=${customerShowInactive ? '1' : '0'}`);
+}
+
+async function loadCustomerGroups() {
+  customerGroups = await api('/api/customer-groups');
 }
 
 async function loadActiveCustomers() {
@@ -559,12 +564,13 @@ function setupCustomerAutocomplete({
     const newBtn = dropdown.querySelector('button[data-new]');
     if (newBtn) {
       newBtn.addEventListener('mousedown', (e) => e.preventDefault());
-      newBtn.addEventListener('click', () => {
+      newBtn.addEventListener('click', async () => {
         closeDropdown();
         if (onCreateNew) {
           onCreateNew();
           return;
         }
+        await loadCustomerGroups();
         openModal({
           type: 'customer-form',
           customer: null,
@@ -2411,10 +2417,16 @@ function renderSalesTable() {
   );
 }
 
+function renderGroupBadges(groups) {
+  if (!groups || !groups.length) return '<span class="muted">—</span>';
+  return groups.map((g) => `<span class="badge role-cashier">${esc(g.name)}</span>`).join(' ');
+}
+
 // ================= CUSTOMERS =================
 
 async function renderCustomers() {
   await loadCustomers();
+  await loadCustomerGroups();
   const main = document.getElementById('office-content');
   main.innerHTML = `
     <div class="panel">
@@ -2432,7 +2444,7 @@ async function renderCustomers() {
         <div style="overflow-x:auto;">
           <table class="data-table">
             <thead>
-              <tr><th>Name</th><th>Email</th><th>Phone</th><th></th></tr>
+              <tr><th>Name</th><th>Email</th><th>Phone</th><th>Groups</th><th></th></tr>
             </thead>
             <tbody id="cust-table-body"></tbody>
           </table>
@@ -2468,7 +2480,7 @@ function renderCustomerTable() {
     );
   });
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No customers found.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No customers found.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered
@@ -2479,6 +2491,7 @@ function renderCustomerTable() {
         <td><button class="link-btn" data-view="${c.id}">${esc(c.name)}</button>${inactiveTag}</td>
         <td>${esc(c.email || '—')}</td>
         <td>${esc(c.phone || '—')}</td>
+        <td>${renderGroupBadges(c.groups)}</td>
         <td>
           <button class="icon-btn" data-view-sales="${c.id}">Sales</button>
           <button class="icon-btn" data-edit="${c.id}">Edit</button>
@@ -2571,6 +2584,7 @@ async function renderCustomerDetail(id) {
   }
 
   await loadCustomerBikes(id);
+  await loadCustomerGroups();
 
   main.innerHTML = `
     <div id="customer-detail-page">
@@ -2589,6 +2603,7 @@ async function renderCustomerDetail(id) {
             <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">${esc(customer.email || '—')}</span></div>
             <div class="detail-item"><span class="detail-label">Phone</span><span class="detail-value">${esc(customer.phone || '—')}</span></div>
             <div class="detail-item"><span class="detail-label">Notes</span><span class="detail-value">${esc(customer.notes || '—')}</span></div>
+            <div class="detail-item"><span class="detail-label">Groups</span><span class="detail-value">${renderGroupBadges(customer.groups)}</span></div>
           </div>
         </div>
       </div>
@@ -2725,15 +2740,115 @@ function paymentBadgeClass(method) {
 // ================= EDIT FRONT DESK =================
 
 async function renderEditFrontDesk() {
+  await loadCustomerGroups();
   const main = document.getElementById('office-content');
   main.innerHTML = `
     <h1>Edit Front Desk</h1>
     <div class="panel" style="margin-top:14px;">
+      <div class="panel-header">
+        <h2>Customer groups</h2>
+        <button class="btn btn-primary" id="add-group-btn">+ Add group</button>
+      </div>
       <div class="panel-body">
-        <div class="empty-state">Nothing here yet.</div>
+        <p class="muted" style="margin:0 0 12px;">Tag customers with a group (e.g. a discount scheme or membership) from the customer edit page.</p>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th></th></tr></thead>
+          <tbody id="group-table-body"></tbody>
+        </table>
       </div>
     </div>
   `;
+  document.getElementById('add-group-btn').addEventListener('click', () => {
+    openModal({ type: 'group-form', group: null });
+  });
+  renderGroupTable();
+}
+
+function renderGroupTable() {
+  const tbody = document.getElementById('group-table-body');
+  if (!tbody) return;
+  if (!customerGroups.length) {
+    tbody.innerHTML = `<tr><td colspan="2"><div class="empty-state">No groups yet.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = customerGroups
+    .map(
+      (g) => `
+    <tr>
+      <td>${esc(g.name)}</td>
+      <td>
+        <button class="icon-btn" data-edit="${g.id}">Rename</button>
+        <button class="icon-btn" data-delete="${g.id}">Delete</button>
+      </td>
+    </tr>
+  `
+    )
+    .join('');
+
+  tbody.querySelectorAll('button[data-edit]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const g = customerGroups.find((x) => x.id === Number(b.dataset.edit));
+      openModal({ type: 'group-form', group: g });
+    })
+  );
+  tbody.querySelectorAll('button[data-delete]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const g = customerGroups.find((x) => x.id === Number(b.dataset.delete));
+      if (!confirm(`Delete the "${g.name}" group? It will be removed from every customer who has it.`)) return;
+      try {
+        await api(`/api/customer-groups/${g.id}`, { method: 'DELETE' });
+        showToast('Group deleted');
+        await loadCustomerGroups();
+        renderGroupTable();
+      } catch (err) {
+        showToast(err.message);
+      }
+    })
+  );
+}
+
+function renderGroupFormModal(holder, group) {
+  const isEdit = !!group;
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>${isEdit ? 'Rename group' : 'Add group'}</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="group-form">
+          <div class="modal-body">
+            <div class="field">
+              <label for="group-name">Name *</label>
+              <input id="group-name" type="text" required value="${esc(group?.name || '')}" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">${isEdit ? 'Save changes' : 'Add group'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+  document.getElementById('group-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('group-name').value.trim();
+    try {
+      if (isEdit) {
+        await api(`/api/customer-groups/${group.id}`, { method: 'PUT', body: { name } });
+      } else {
+        await api('/api/customer-groups', { method: 'POST', body: { name } });
+      }
+      showToast(isEdit ? 'Group updated' : 'Group added');
+      closeModal();
+      await loadCustomerGroups();
+      renderGroupTable();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
 }
 
 // ================= EMPLOYEE LOGINS =================
@@ -3143,6 +3258,7 @@ function renderModal() {
   if (modal.type === 'bike-service') return renderBikeServiceModal(holder, modal.bike, modal.jobs);
   if (modal.type === 'employee-form') return renderEmployeeFormModal(holder, modal.employee);
   if (modal.type === 'login-form') return renderLoginFormModal(holder);
+  if (modal.type === 'group-form') return renderGroupFormModal(holder, modal.group);
   if (modal.type === 'day-jobs') return renderDayJobsModal(holder, modal.dateStr, modal.jobs);
 }
 
@@ -3328,6 +3444,23 @@ function renderCustomerFormModal(holder, customer) {
               <label for="c-notes">Notes</label>
               <input id="c-notes" type="text" value="${esc(customer?.notes || '')}" placeholder="Optional" />
             </div>
+            <div class="field">
+              <label>Groups</label>
+              ${customerGroups.length
+                ? `<div class="weekday-picker">
+                    ${customerGroups
+                      .map(
+                        (g) => `
+                      <label class="weekday-check">
+                        <input type="checkbox" data-group-id="${g.id}" ${customer?.groups?.some((cg) => cg.id === g.id) ? 'checked' : ''} />
+                        ${esc(g.name)}
+                      </label>
+                    `
+                      )
+                      .join('')}
+                  </div>`
+                : `<p class="muted" style="margin:0;">No groups set up yet - add some under Edit Shop &gt; Front Desk.</p>`}
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn" id="modal-cancel">Cancel</button>
@@ -3345,6 +3478,7 @@ function renderCustomerFormModal(holder, customer) {
       email: document.getElementById('c-email').value.trim(),
       phone: document.getElementById('c-phone').value.trim(),
       notes: document.getElementById('c-notes').value.trim(),
+      groupIds: [...document.querySelectorAll('[data-group-id]:checked')].map((cb) => Number(cb.dataset.groupId)),
     };
     try {
       let saved;
