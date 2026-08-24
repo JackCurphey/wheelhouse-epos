@@ -3,7 +3,8 @@
 
 // ---------------- State ----------------
 
-let currentShop = null; // { id, slug, name, email } for the signed-in shop, or null before boot() resolves it
+let currentUser = null; // { id, name, email, isOwner, shopName, shopSlug } for the signed-in employee, or null before boot() resolves it
+let teamLogins = []; // employee logins for this shop - loaded by renderEmployeeLogins()
 let route = (location.hash || '#till').replace('#', '');
 let products = [];
 let categories = [];
@@ -90,7 +91,7 @@ async function api(path, { method = 'GET', body } = {}) {
     // Session expired or was signed out elsewhere mid-use - drop back to the
     // login screen instead of letting every in-flight view render an opaque
     // "Request failed (401)" error.
-    currentShop = null;
+    currentUser = null;
     renderAuthScreen();
   }
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
@@ -228,9 +229,10 @@ const OFFICE_TABS = [
   {
     id: 'edit-shop',
     label: 'Edit Shop',
-    children: [
+    children: () => [
       { id: 'front-desk', label: 'Front Desk' },
       { id: 'workshop', label: 'Workshop' },
+      ...(currentUser && currentUser.isOwner ? [{ id: 'logins', label: 'Employee Logins' }] : []),
     ],
   },
 ];
@@ -256,7 +258,7 @@ function renderShell() {
     <div class="topbar">
       <div class="brand"><span class="logo">🚲</span> Wheelhouse EPOS</div>
       <div class="nav" id="nav"></div>
-      <div class="shop-info">${esc(currentShop ? currentShop.name : '')}</div>
+      <div class="shop-info">${currentUser ? esc(currentUser.shopName) + ' — ' + esc(currentUser.name) : ''}</div>
       <div class="clock" id="clock"></div>
       <button class="btn btn-sm btn-ghost" id="logout-btn">Log out</button>
     </div>
@@ -267,7 +269,7 @@ function renderShell() {
   setInterval(updateClock, 30000);
   document.getElementById('logout-btn').addEventListener('click', async () => {
     try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) { /* ignore */ }
-    currentShop = null;
+    currentUser = null;
     renderAuthScreen();
   });
 }
@@ -1307,6 +1309,7 @@ async function renderOffice() {
   else if (sub === 'customers' && subId) await renderCustomerDetail(Number(subId));
   else if (sub === 'customers') await renderCustomers();
   else if (sub === 'edit-shop' && subId === 'front-desk') await renderEditFrontDesk();
+  else if (sub === 'edit-shop' && subId === 'logins') await renderEmployeeLogins();
   else if (sub === 'edit-shop') await renderEditWorkshop();
   else await renderDashboard();
 }
@@ -1325,7 +1328,7 @@ function renderOfficeSubnav() {
       <div class="subnav-dropdown">
         <button data-office-nav="${t.id}" class="pill ${sub === t.id ? 'active' : ''}">${t.label}</button>
         <div class="subnav-dropdown-menu">
-          ${t.children
+          ${t.children()
             .map(
               (c) =>
                 `<button data-office-nav="${t.id}" data-office-subnav="${c.id}" class="subnav-dropdown-item ${sub === t.id && (subId || 'workshop') === c.id ? 'active' : ''}">${c.label}</button>`
@@ -2733,6 +2736,148 @@ async function renderEditFrontDesk() {
   `;
 }
 
+// ================= EMPLOYEE LOGINS =================
+// Who can sign in to the app at all - separate from the Front Desk/Workshop
+// "employees" roster above, which just attributes sales and jobs to a name
+// and isn't tied to login yet.
+
+async function loadTeamLogins() {
+  teamLogins = await api('/api/auth/team');
+}
+
+async function renderEmployeeLogins() {
+  await loadTeamLogins();
+  const main = document.getElementById('office-content');
+  main.innerHTML = `
+    <h1>Employee Logins</h1>
+    <div class="panel" style="margin-top:14px;">
+      <div class="panel-header">
+        <h2>Who can sign in</h2>
+        <button class="btn btn-primary" id="add-login-btn">+ Add employee login</button>
+      </div>
+      <div class="panel-body">
+        <p class="muted" style="margin:0 0 12px;">Every login can do everything for now - individual permissions are coming later.</p>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+          <tbody id="login-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.getElementById('add-login-btn').addEventListener('click', () => {
+    openModal({ type: 'login-form' });
+  });
+  renderLoginTable();
+}
+
+function renderLoginTable() {
+  const tbody = document.getElementById('login-table-body');
+  if (!tbody) return;
+  if (!teamLogins.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No logins yet.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = teamLogins
+    .map((l) => {
+      const inactiveTag = !l.active ? ' <span class="badge low">Inactive</span>' : '';
+      const roleBadge = l.isOwner ? '<span class="badge role-mechanic">Owner</span>' : '<span class="muted">Employee</span>';
+      const action = l.isOwner
+        ? ''
+        : l.active
+          ? `<button class="icon-btn" data-deactivate="${l.id}">Deactivate</button>`
+          : `<button class="icon-btn" data-activate="${l.id}">Activate</button>`;
+      return `
+      <tr>
+        <td>${esc(l.name)}${inactiveTag}</td>
+        <td>${esc(l.email)}</td>
+        <td>${roleBadge}</td>
+        <td>${action}</td>
+      </tr>
+    `;
+    })
+    .join('');
+
+  tbody.querySelectorAll('button[data-deactivate]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const l = teamLogins.find((x) => x.id === Number(b.dataset.deactivate));
+      if (!confirm(`Deactivate the login for "${l.name}"? They won't be able to sign in until reactivated.`)) return;
+      try {
+        await api(`/api/auth/team/${l.id}`, { method: 'PUT', body: { active: false } });
+        showToast('Login deactivated');
+        await loadTeamLogins();
+        renderLoginTable();
+      } catch (err) {
+        showToast(err.message);
+      }
+    })
+  );
+  tbody.querySelectorAll('button[data-activate]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const l = teamLogins.find((x) => x.id === Number(b.dataset.activate));
+      try {
+        await api(`/api/auth/team/${l.id}`, { method: 'PUT', body: { active: true } });
+        showToast('Login activated');
+        await loadTeamLogins();
+        renderLoginTable();
+      } catch (err) {
+        showToast(err.message);
+      }
+    })
+  );
+}
+
+function renderLoginFormModal(holder) {
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Add employee login</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="login-form">
+          <div class="modal-body">
+            <div class="field">
+              <label for="login-name">Name *</label>
+              <input id="login-name" type="text" required />
+            </div>
+            <div class="field">
+              <label for="login-email">Email *</label>
+              <input id="login-email" type="email" required autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="login-password">Password *</label>
+              <input id="login-password" type="password" required minlength="8" autocomplete="new-password" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add login</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+      name: document.getElementById('login-name').value.trim(),
+      email: document.getElementById('login-email').value.trim(),
+      password: document.getElementById('login-password').value,
+    };
+    try {
+      await api('/api/auth/team', { method: 'POST', body });
+      showToast('Employee login added');
+      closeModal();
+      await loadTeamLogins();
+      renderLoginTable();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+}
+
 // ================= EDIT WORKSHOP =================
 
 const HOUR_OPTIONS = [...Array(24)].map((_, h) => `${String(h).padStart(2, '0')}:00`);
@@ -2997,6 +3142,7 @@ function renderModal() {
   if (modal.type === 'bike-form') return renderBikeFormModal(holder, modal.bike, modal.customerId);
   if (modal.type === 'bike-service') return renderBikeServiceModal(holder, modal.bike, modal.jobs);
   if (modal.type === 'employee-form') return renderEmployeeFormModal(holder, modal.employee);
+  if (modal.type === 'login-form') return renderLoginFormModal(holder);
   if (modal.type === 'day-jobs') return renderDayJobsModal(holder, modal.dateStr, modal.jobs);
 }
 
@@ -4428,6 +4574,10 @@ function renderAuthScreen() {
               <label>Shop name</label>
               <input type="text" id="auth-shop-name" required autocomplete="organization" />
             </div>
+            <div class="field">
+              <label>Your name</label>
+              <input type="text" id="auth-owner-name" required autocomplete="name" />
+            </div>
           ` : ''}
           <div class="field">
             <label>Email</label>
@@ -4455,10 +4605,18 @@ function renderAuthScreen() {
     const password = document.getElementById('auth-password').value;
     authError = '';
     try {
-      const shop = isSignup
-        ? await api('/api/auth/signup', { method: 'POST', body: { shopName: document.getElementById('auth-shop-name').value.trim(), email, password } })
+      const user = isSignup
+        ? await api('/api/auth/signup', {
+            method: 'POST',
+            body: {
+              shopName: document.getElementById('auth-shop-name').value.trim(),
+              ownerName: document.getElementById('auth-owner-name').value.trim(),
+              email,
+              password,
+            },
+          })
         : await api('/api/auth/login', { method: 'POST', body: { email, password } });
-      currentShop = shop;
+      currentUser = user;
       renderShell();
       renderRoute();
     } catch (err) {
@@ -4472,11 +4630,11 @@ function renderAuthScreen() {
 
 async function boot() {
   try {
-    currentShop = await api('/api/auth/me');
+    currentUser = await api('/api/auth/me');
   } catch (_) {
-    currentShop = null;
+    currentUser = null;
   }
-  if (currentShop) {
+  if (currentUser) {
     renderShell();
     renderRoute();
   } else {

@@ -10,11 +10,14 @@ import { getShopDb } from './db.js';
 import {
   AuthError,
   createShop,
+  createEmployeeLogin,
+  listLogins,
+  setLoginActive,
   verifyLogin,
   createSession,
-  getShopForSession,
+  getSessionContext,
   destroySession,
-  serializeShop,
+  serializeLogin,
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
 } from './auth.js';
@@ -66,6 +69,22 @@ function setSessionCookie(res, token) {
 
 function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+}
+
+function currentSession(req) {
+  const { [SESSION_COOKIE]: token } = parseCookies(req);
+  return getSessionContext(token);
+}
+
+function serializeSession({ login, shop }) {
+  return {
+    id: login.id,
+    name: login.name,
+    email: login.email,
+    isOwner: !!login.is_owner,
+    shopName: shop.name,
+    shopSlug: shop.slug,
+  };
 }
 
 const MIME = {
@@ -184,36 +203,37 @@ function route(method, pattern, handler) {
 }
 
 // ---------- Auth ----------
-// Unlike every other route in this file, these three don't run inside
-// dbContext (see the request handler at the bottom) - they only ever touch
-// the shop registry (auth.js), never a specific shop's data.
+// Unlike every other route in this file, everything under /api/auth/ doesn't
+// run inside dbContext (see the request handler at the bottom) - it only
+// ever touches the shop/login registry (auth.js), never a specific shop's
+// data, and each handler resolves its own session via currentSession().
 
 route('POST', '/api/auth/signup', async (req, res) => {
   const body = await readJsonBody(req);
-  let shop;
+  let created;
   try {
-    shop = createShop({ name: body.shopName, email: body.email, password: body.password });
+    created = createShop({ shopName: body.shopName, ownerName: body.ownerName, email: body.email, password: body.password });
   } catch (err) {
     if (err instanceof AuthError) return badRequest(res, err.message);
     throw err;
   }
-  const token = createSession(shop.id);
+  const token = createSession(created.login.id);
   setSessionCookie(res, token);
-  sendJson(res, 201, serializeShop(shop));
+  sendJson(res, 201, serializeSession(getSessionContext(token)));
 });
 
 route('POST', '/api/auth/login', async (req, res) => {
   const body = await readJsonBody(req);
-  let shop;
+  let login;
   try {
-    shop = verifyLogin(body.email, body.password);
+    login = verifyLogin(body.email, body.password);
   } catch (err) {
     if (err instanceof AuthError) return sendJson(res, 401, { error: err.message });
     throw err;
   }
-  const token = createSession(shop.id);
+  const token = createSession(login.id);
   setSessionCookie(res, token);
-  sendJson(res, 200, serializeShop(shop));
+  sendJson(res, 200, serializeSession(getSessionContext(token)));
 });
 
 route('POST', '/api/auth/logout', async (req, res) => {
@@ -224,10 +244,45 @@ route('POST', '/api/auth/logout', async (req, res) => {
 });
 
 route('GET', '/api/auth/me', async (req, res) => {
-  const { [SESSION_COOKIE]: token } = parseCookies(req);
-  const shop = getShopForSession(token);
-  if (!shop) return sendJson(res, 401, { error: 'Not signed in' });
-  sendJson(res, 200, serializeShop(shop));
+  const ctx = currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  sendJson(res, 200, serializeSession(ctx));
+});
+
+// ---------- Auth: employee logins (owner-only to add/deactivate) ----------
+
+route('GET', '/api/auth/team', async (req, res) => {
+  const ctx = currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  sendJson(res, 200, listLogins(ctx.shop.id));
+});
+
+route('POST', '/api/auth/team', async (req, res) => {
+  const ctx = currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can add employee logins' });
+  const body = await readJsonBody(req);
+  try {
+    const login = createEmployeeLogin({ shopId: ctx.shop.id, name: body.name, email: body.email, password: body.password });
+    sendJson(res, 201, serializeLogin(login));
+  } catch (err) {
+    if (err instanceof AuthError) return badRequest(res, err.message);
+    throw err;
+  }
+});
+
+route('PUT', '/api/auth/team/:id', async (req, res, params) => {
+  const ctx = currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can manage employee logins' });
+  const body = await readJsonBody(req);
+  try {
+    const login = setLoginActive(ctx.shop.id, Number(params.id), !!body.active);
+    sendJson(res, 200, login);
+  } catch (err) {
+    if (err instanceof AuthError) return badRequest(res, err.message);
+    throw err;
+  }
 });
 
 route('GET', '/api/products', async (req, res, params, query) => {
@@ -1507,12 +1562,11 @@ const server = createServer(async (req, res) => {
         return;
       }
 
-      const { [SESSION_COOKIE]: token } = parseCookies(req);
-      const shop = getShopForSession(token);
-      if (!shop) return sendJson(res, 401, { error: 'Not signed in' });
+      const ctx = currentSession(req);
+      if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
 
       try {
-        const shopDb = getShopDb(shop.slug);
+        const shopDb = getShopDb(ctx.shop.slug);
         await dbContext.run(shopDb, () => r.handler(req, res, params, url.searchParams));
       } catch (err) {
         console.error(err);
