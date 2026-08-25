@@ -1,12 +1,12 @@
-// Bike Shop EPOS - local server.
-// Pure Node.js built-ins only (http + node:sqlite) - no npm install required.
+// Bike Shop EPOS - local server, PostgreSQL-backed.
+import './load-env.js';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AsyncLocalStorage } from 'node:async_hooks';
-import { getShopDb } from './db.js';
+import { prepare, dbExec, runWithShop } from './db.js';
+import { runMigrations } from './migrations/run-migrations.js';
 import {
   AuthError,
   createShop,
@@ -26,25 +26,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
-// Every request that touches shop data runs inside `dbContext.run(shopDb, ...)`
-// (set up once the session cookie has been resolved to a shop, see the
-// request handler at the bottom of this file). `db` below reads whichever
-// shop's database is current for the request handling it, so the ~60 route
-// handlers in this file can keep using the plain `db.prepare(...)` calls
-// they always have instead of threading a db argument through every one of
-// them - each concurrent request still only ever touches its own shop's data.
-const dbContext = new AsyncLocalStorage();
-const db = new Proxy(
-  {},
-  {
-    get(_target, prop) {
-      const real = dbContext.getStore();
-      if (!real) throw new Error('No shop database in scope for this request');
-      const value = real[prop];
-      return typeof value === 'function' ? value.bind(real) : value;
-    },
-  }
-);
+// Every request that touches shop data runs inside `runWithShop(shopId, ...)`
+// (see the request handler at the bottom of this file), which checks out a
+// dedicated Postgres client for the request and sets the RLS session
+// variable on it. `db` below is just `prepare`/`exec` from db.js under their
+// old node:sqlite-shaped names, so the ~70 route handlers in this file keep
+// using the plain `db.prepare(...)` calls they always have - each one reads
+// whichever client is current for the request via AsyncLocalStorage
+// internally, and RLS transparently scopes every query to that request's
+// shop, so no call site here needs a shop_id filter added by hand.
+const db = { prepare, exec: dbExec };
 
 function parseCookies(req) {
   const header = req.headers.cookie;
@@ -119,7 +110,7 @@ function makeRateLimiter(max, windowMs) {
 const loginLimiter = makeRateLimiter(10, 15 * 60 * 1000); // 10 attempts / 15 min / IP
 const signupLimiter = makeRateLimiter(5, 60 * 60 * 1000); // 5 new shops / hour / IP
 
-function currentSession(req) {
+async function currentSession(req) {
   const { [SESSION_COOKIE]: token } = parseCookies(req);
   return getSessionContext(token);
 }
@@ -207,7 +198,7 @@ function serializeProduct(row) {
   };
 }
 
-function listProducts({ search, category, activeOnly }) {
+async function listProducts({ search, category, activeOnly }) {
   let sql = 'SELECT * FROM products WHERE 1=1';
   const params = [];
   if (activeOnly) {
@@ -223,7 +214,7 @@ function listProducts({ search, category, activeOnly }) {
     params.push(like, like, like);
   }
   sql += ' ORDER BY category, name';
-  const rows = db.prepare(sql).all(...params);
+  const rows = await db.prepare(sql).all(...params);
   return rows.map(serializeProduct);
 }
 
@@ -252,7 +243,7 @@ function route(method, pattern, handler) {
 
 // ---------- Auth ----------
 // Unlike every other route in this file, everything under /api/auth/ doesn't
-// run inside dbContext (see the request handler at the bottom) - it only
+// run inside runWithShop (see the request handler at the bottom) - it only
 // ever touches the shop/login registry (auth.js), never a specific shop's
 // data, and each handler resolves its own session via currentSession().
 
@@ -269,14 +260,14 @@ route('POST', '/api/auth/signup', async (req, res) => {
   }
   let created;
   try {
-    created = createShop({ shopName: body.shopName, ownerName: body.ownerName, email: body.email, password: body.password });
+    created = await createShop({ shopName: body.shopName, ownerName: body.ownerName, email: body.email, password: body.password });
   } catch (err) {
     if (err instanceof AuthError) return badRequest(res, err.message);
     throw err;
   }
-  const token = createSession(created.login.id);
+  const token = await createSession(created.login.id);
   setSessionCookie(req, res, token);
-  sendJson(res, 201, serializeSession(getSessionContext(token)));
+  sendJson(res, 201, serializeSession(await getSessionContext(token)));
 });
 
 route('POST', '/api/auth/login', async (req, res) => {
@@ -285,26 +276,26 @@ route('POST', '/api/auth/login', async (req, res) => {
   const body = await readJsonBody(req);
   let login;
   try {
-    login = verifyLogin(body.email, body.password);
+    login = await verifyLogin(body.email, body.password);
   } catch (err) {
     if (err instanceof AuthError) return sendJson(res, 401, { error: err.message });
     throw err;
   }
   loginLimiter.reset(ip);
-  const token = createSession(login.id);
+  const token = await createSession(login.id);
   setSessionCookie(req, res, token);
-  sendJson(res, 200, serializeSession(getSessionContext(token)));
+  sendJson(res, 200, serializeSession(await getSessionContext(token)));
 });
 
 route('POST', '/api/auth/logout', async (req, res) => {
   const { [SESSION_COOKIE]: token } = parseCookies(req);
-  destroySession(token);
+  await destroySession(token);
   clearSessionCookie(res);
   sendJson(res, 200, { ok: true });
 });
 
 route('GET', '/api/auth/me', async (req, res) => {
-  const ctx = currentSession(req);
+  const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   sendJson(res, 200, serializeSession(ctx));
 });
@@ -312,18 +303,18 @@ route('GET', '/api/auth/me', async (req, res) => {
 // ---------- Auth: employee logins (owner-only to add/deactivate) ----------
 
 route('GET', '/api/auth/team', async (req, res) => {
-  const ctx = currentSession(req);
+  const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  sendJson(res, 200, listLogins(ctx.shop.id));
+  sendJson(res, 200, await listLogins(ctx.shop.id));
 });
 
 route('POST', '/api/auth/team', async (req, res) => {
-  const ctx = currentSession(req);
+  const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can add employee logins' });
   const body = await readJsonBody(req);
   try {
-    const login = createEmployeeLogin({ shopId: ctx.shop.id, name: body.name, email: body.email, password: body.password });
+    const login = await createEmployeeLogin({ shopId: ctx.shop.id, name: body.name, email: body.email, password: body.password });
     sendJson(res, 201, serializeLogin(login));
   } catch (err) {
     if (err instanceof AuthError) return badRequest(res, err.message);
@@ -332,12 +323,12 @@ route('POST', '/api/auth/team', async (req, res) => {
 });
 
 route('PUT', '/api/auth/team/:id', async (req, res, params) => {
-  const ctx = currentSession(req);
+  const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can manage employee logins' });
   const body = await readJsonBody(req);
   try {
-    const login = setLoginActive(ctx.shop.id, Number(params.id), !!body.active);
+    const login = await setLoginActive(ctx.shop.id, Number(params.id), !!body.active);
     sendJson(res, 200, login);
   } catch (err) {
     if (err instanceof AuthError) return badRequest(res, err.message);
@@ -346,7 +337,7 @@ route('PUT', '/api/auth/team/:id', async (req, res, params) => {
 });
 
 route('GET', '/api/products', async (req, res, params, query) => {
-  const products = listProducts({
+  const products = await listProducts({
     search: query.get('search') || '',
     category: query.get('category') || '',
     activeOnly: query.get('all') !== '1',
@@ -370,22 +361,22 @@ route('POST', '/api/products', async (req, res) => {
   const supplier = (body.supplier || '').trim();
 
   try {
-    const info = db
+    const info = await db
       .prepare(
         `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, low_stock_threshold, supplier, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(sku, barcode, name, category, price, cost, stockQty, lowStockThreshold, supplier, nowIso());
     if (stockQty !== 0) {
-      db.prepare(
+      await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'intake', 'Initial stock')`
       ).run(info.lastInsertRowid, stockQty);
     }
-    const row = db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
+    const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeProduct(row));
   } catch (err) {
-    if (String(err.message).includes('UNIQUE')) {
-      return badRequest(res, err.message.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`);
+    if (err.code === '23505') {
+      return badRequest(res, err.constraint && err.constraint.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`);
     }
     throw err;
   }
@@ -393,7 +384,7 @@ route('POST', '/api/products', async (req, res) => {
 
 route('PUT', '/api/products/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Product not found');
   const body = await readJsonBody(req);
 
@@ -411,15 +402,15 @@ route('PUT', '/api/products/:id', async (req, res, params) => {
   if (!name) return badRequest(res, 'Product name is required');
 
   try {
-    db.prepare(
+    await db.prepare(
       `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, updated_at = ?
        WHERE id = ?`
     ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, nowIso(), id);
-    const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     sendJson(res, 200, serializeProduct(row));
   } catch (err) {
-    if (String(err.message).includes('UNIQUE')) {
-      return badRequest(res, err.message.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`);
+    if (err.code === '23505') {
+      return badRequest(res, err.constraint && err.constraint.includes('barcode') ? `Barcode "${barcode}" is already in use` : `SKU "${sku}" is already in use`);
     }
     throw err;
   }
@@ -427,15 +418,15 @@ route('PUT', '/api/products/:id', async (req, res, params) => {
 
 route('DELETE', '/api/products/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Product not found');
-  db.prepare('UPDATE products SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+  await db.prepare('UPDATE products SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
   sendJson(res, 200, { ok: true });
 });
 
 route('POST', '/api/products/:id/stock', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Product not found');
   const body = await readJsonBody(req);
   const change = Math.trunc(Number(body.change));
@@ -446,19 +437,19 @@ route('POST', '/api/products/:id/stock', async (req, res, params) => {
   const newQty = existing.stock_qty + change;
   if (newQty < 0) return badRequest(res, 'Stock cannot go below zero');
 
-  db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), id);
-  db.prepare('INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, ?, ?)').run(
+  await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), id);
+  await db.prepare('INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, ?, ?)').run(
     id,
     change,
     type,
     note
   );
-  const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   sendJson(res, 200, serializeProduct(row));
 });
 
 route('GET', '/api/categories', async (req, res) => {
-  const rows = db.prepare('SELECT DISTINCT category FROM products ORDER BY category').all();
+  const rows = await db.prepare('SELECT DISTINCT category FROM products ORDER BY category').all();
   sendJson(res, 200, rows.map((r) => r.category));
 });
 
@@ -475,21 +466,21 @@ function resolveDiscountPercent(raw, existing) {
   return pct;
 }
 
-function groupsForCustomer(customerId) {
-  return db
+async function groupsForCustomer(customerId) {
+  const rows = await db
     .prepare(
       `SELECT g.* FROM customer_groups g
        JOIN customer_group_members m ON m.group_id = g.id
        WHERE m.customer_id = ? ORDER BY g.name`
     )
-    .all(customerId)
-    .map(serializeCustomerGroup);
+    .all(customerId);
+  return rows.map(serializeCustomerGroup);
 }
 
 // Loads every customer->group membership in one query rather than one query
 // per customer, then hands listCustomers() a lookup it can attach per row.
-function groupsByCustomerId() {
-  const rows = db
+async function groupsByCustomerId() {
+  const rows = await db
     .prepare(
       `SELECT m.customer_id, g.* FROM customer_group_members m
        JOIN customer_groups g ON g.id = m.group_id`
@@ -506,22 +497,24 @@ function groupsByCustomerId() {
 // Replaces a customer's full group membership list - simplest correct way
 // to apply an edit from the customer form, which always submits the
 // complete set of ticked groups rather than individual add/remove deltas.
-function setCustomerGroups(customerId, groupIds) {
-  db.prepare('DELETE FROM customer_group_members WHERE customer_id = ?').run(customerId);
+async function setCustomerGroups(customerId, groupIds) {
+  await db.prepare('DELETE FROM customer_group_members WHERE customer_id = ?').run(customerId);
   if (!groupIds.length) return;
-  const insert = db.prepare('INSERT OR IGNORE INTO customer_group_members (customer_id, group_id) VALUES (?, ?)');
-  for (const groupId of groupIds) insert.run(customerId, groupId);
+  const insert = db.prepare(
+    'INSERT INTO customer_group_members (customer_id, group_id) VALUES (?, ?) ON CONFLICT (shop_id, customer_id, group_id) DO NOTHING'
+  );
+  for (const groupId of groupIds) await insert.run(customerId, groupId);
 }
 
 // Validates a raw groupIds array against real, existing groups. Returns null
 // (rather than throwing) for an absent field so callers can tell "not
 // supplied - leave unchanged" apart from "supplied as an empty list".
-function resolveGroupIds(rawGroupIds) {
+async function resolveGroupIds(rawGroupIds) {
   if (rawGroupIds === undefined) return null;
   if (!Array.isArray(rawGroupIds)) return { error: 'groupIds must be an array' };
   const ids = [...new Set(rawGroupIds.map(Number))];
   for (const id of ids) {
-    if (!db.prepare('SELECT id FROM customer_groups WHERE id = ?').get(id)) {
+    if (!(await db.prepare('SELECT id FROM customer_groups WHERE id = ?').get(id))) {
       return { error: `Group ${id} not found` };
     }
   }
@@ -536,13 +529,13 @@ function serializeCustomer(row, groups) {
     phone: row.phone,
     notes: row.notes,
     active: !!row.active,
-    groups: groups !== undefined ? groups : groupsForCustomer(row.id),
+    groups: groups || [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-function listCustomers({ search, activeOnly }) {
+async function listCustomers({ search, activeOnly }) {
   let sql = 'SELECT * FROM customers WHERE 1=1';
   const params = [];
   if (activeOnly) {
@@ -554,15 +547,15 @@ function listCustomers({ search, activeOnly }) {
     params.push(like, like, like);
   }
   sql += ' ORDER BY name';
-  const rows = db.prepare(sql).all(...params);
-  const groupMap = groupsByCustomerId();
+  const rows = await db.prepare(sql).all(...params);
+  const groupMap = await groupsByCustomerId();
   return rows.map((row) => serializeCustomer(row, groupMap.get(row.id) || []));
 }
 
 // ---------- Customer groups ----------
 
 route('GET', '/api/customer-groups', async (req, res) => {
-  const rows = db.prepare('SELECT * FROM customer_groups ORDER BY name').all();
+  const rows = await db.prepare('SELECT * FROM customer_groups ORDER BY name').all();
   sendJson(res, 200, rows.map(serializeCustomerGroup));
 });
 
@@ -573,18 +566,18 @@ route('POST', '/api/customer-groups', async (req, res) => {
   const discountPercent = resolveDiscountPercent(body.discountPercent, 0);
   if (discountPercent === null) return badRequest(res, 'Discount must be a number between 0 and 100');
   try {
-    const info = db.prepare('INSERT INTO customer_groups (name, discount_percent) VALUES (?, ?)').run(name, discountPercent);
-    const row = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(info.lastInsertRowid);
+    const info = await db.prepare('INSERT INTO customer_groups (name, discount_percent) VALUES (?, ?)').run(name, discountPercent);
+    const row = await db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(info.lastInsertRowid);
     sendJson(res, 201, serializeCustomerGroup(row));
   } catch (err) {
-    if (String(err.message).includes('UNIQUE')) return badRequest(res, `A group called "${name}" already exists`);
+    if (err.code === '23505') return badRequest(res, `A group called "${name}" already exists`);
     throw err;
   }
 });
 
 route('PUT', '/api/customer-groups/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Group not found');
   const body = await readJsonBody(req);
   const name = (body.name || '').trim();
@@ -592,28 +585,28 @@ route('PUT', '/api/customer-groups/:id', async (req, res, params) => {
   const discountPercent = resolveDiscountPercent(body.discountPercent, existing.discount_percent);
   if (discountPercent === null) return badRequest(res, 'Discount must be a number between 0 and 100');
   try {
-    db.prepare(
-      "UPDATE customer_groups SET name = ?, discount_percent = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
+    await db.prepare(
+      "UPDATE customer_groups SET name = ?, discount_percent = ?, updated_at = now() WHERE id = ?"
     ).run(name, discountPercent, id);
-    const row = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
+    const row = await db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
     sendJson(res, 200, serializeCustomerGroup(row));
   } catch (err) {
-    if (String(err.message).includes('UNIQUE')) return badRequest(res, `A group called "${name}" already exists`);
+    if (err.code === '23505') return badRequest(res, `A group called "${name}" already exists`);
     throw err;
   }
 });
 
 route('DELETE', '/api/customer-groups/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM customer_groups WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Group not found');
-  db.prepare('DELETE FROM customer_group_members WHERE group_id = ?').run(id);
-  db.prepare('DELETE FROM customer_groups WHERE id = ?').run(id);
+  await db.prepare('DELETE FROM customer_group_members WHERE group_id = ?').run(id);
+  await db.prepare('DELETE FROM customer_groups WHERE id = ?').run(id);
   sendJson(res, 200, { ok: true });
 });
 
 route('GET', '/api/customers', async (req, res, params, query) => {
-  const customers = listCustomers({
+  const customers = await listCustomers({
     search: query.get('search') || '',
     activeOnly: query.get('all') !== '1',
   });
@@ -622,16 +615,16 @@ route('GET', '/api/customers', async (req, res, params, query) => {
 
 route('GET', '/api/customers/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const row = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
   if (!row) return notFound(res, 'Customer not found');
-  sendJson(res, 200, serializeCustomer(row));
+  sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
 });
 
 route('GET', '/api/customers/:id/sales', async (req, res, params) => {
   const id = Number(params.id);
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+  const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
   if (!customer) return notFound(res, 'Customer not found');
-  const rows = db.prepare(SALE_SELECT + ' WHERE s.customer_id = ? ORDER BY s.id DESC LIMIT 500').all(id);
+  const rows = await db.prepare(SALE_SELECT + ' WHERE s.customer_id = ? ORDER BY s.id DESC LIMIT 500').all(id);
   sendJson(res, 200, rows.map((r) => serializeSale(r)));
 });
 
@@ -643,20 +636,20 @@ route('POST', '/api/customers', async (req, res) => {
   const phone = (body.phone || '').trim();
   const notes = (body.notes || '').trim();
 
-  const groups = resolveGroupIds(body.groupIds);
+  const groups = await resolveGroupIds(body.groupIds);
   if (groups && groups.error) return badRequest(res, groups.error);
 
-  const info = db
+  const info = await db
     .prepare('INSERT INTO customers (name, email, phone, notes, updated_at) VALUES (?, ?, ?, ?, ?)')
     .run(name, email, phone, notes, nowIso());
-  if (groups) setCustomerGroups(info.lastInsertRowid, groups.ids);
-  const row = db.prepare('SELECT * FROM customers WHERE id = ?').get(info.lastInsertRowid);
-  sendJson(res, 201, serializeCustomer(row));
+  if (groups) await setCustomerGroups(info.lastInsertRowid, groups.ids);
+  const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(info.lastInsertRowid);
+  sendJson(res, 201, serializeCustomer(row, await groupsForCustomer(row.id)));
 });
 
 route('PUT', '/api/customers/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Customer not found');
   const body = await readJsonBody(req);
 
@@ -668,22 +661,22 @@ route('PUT', '/api/customers/:id', async (req, res, params) => {
 
   if (!name) return badRequest(res, 'Customer name is required');
 
-  const groups = resolveGroupIds(body.groupIds);
+  const groups = await resolveGroupIds(body.groupIds);
   if (groups && groups.error) return badRequest(res, groups.error);
 
-  db.prepare(
+  await db.prepare(
     'UPDATE customers SET name = ?, email = ?, phone = ?, notes = ?, active = ?, updated_at = ? WHERE id = ?'
   ).run(name, email, phone, notes, active, nowIso(), id);
-  if (groups) setCustomerGroups(id, groups.ids);
-  const row = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
-  sendJson(res, 200, serializeCustomer(row));
+  if (groups) await setCustomerGroups(id, groups.ids);
+  const row = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+  sendJson(res, 200, serializeCustomer(row, await groupsForCustomer(row.id)));
 });
 
 route('DELETE', '/api/customers/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Customer not found');
-  db.prepare('UPDATE customers SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+  await db.prepare('UPDATE customers SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
   sendJson(res, 200, { ok: true });
 });
 
@@ -706,19 +699,19 @@ function serializeBike(row) {
 
 route('GET', '/api/customers/:id/bikes', async (req, res, params, query) => {
   const customerId = Number(params.id);
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+  const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
   if (!customer) return notFound(res, 'Customer not found');
   let sql = 'SELECT * FROM customer_bikes WHERE customer_id = ?';
   const args = [customerId];
   if (query.get('all') !== '1') sql += ' AND active = 1';
   sql += ' ORDER BY make, model';
-  const rows = db.prepare(sql).all(...args);
+  const rows = await db.prepare(sql).all(...args);
   sendJson(res, 200, rows.map(serializeBike));
 });
 
 route('POST', '/api/customers/:id/bikes', async (req, res, params) => {
   const customerId = Number(params.id);
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
+  const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
   if (!customer) return notFound(res, 'Customer not found');
   const body = await readJsonBody(req);
   const make = (body.make || '').trim();
@@ -728,19 +721,19 @@ route('POST', '/api/customers/:id/bikes', async (req, res, params) => {
   const serialNumber = (body.serialNumber || '').trim();
   const notes = (body.notes || '').trim();
 
-  const info = db
+  const info = await db
     .prepare(
       `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, notes, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(customerId, make, model, colour, serialNumber, notes, nowIso());
-  const row = db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(info.lastInsertRowid);
+  const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(info.lastInsertRowid);
   sendJson(res, 201, serializeBike(row));
 });
 
 route('PUT', '/api/bikes/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Bike not found');
   const body = await readJsonBody(req);
 
@@ -752,27 +745,27 @@ route('PUT', '/api/bikes/:id', async (req, res, params) => {
   const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
   const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
 
-  db.prepare(
+  await db.prepare(
     `UPDATE customer_bikes SET make = ?, model = ?, colour = ?, serial_number = ?, notes = ?, active = ?, updated_at = ?
      WHERE id = ?`
   ).run(make, model, colour, serialNumber, notes, active, nowIso(), id);
-  const row = db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
   sendJson(res, 200, serializeBike(row));
 });
 
 route('DELETE', '/api/bikes/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Bike not found');
-  db.prepare('UPDATE customer_bikes SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+  await db.prepare('UPDATE customer_bikes SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
   sendJson(res, 200, { ok: true });
 });
 
 route('GET', '/api/bikes/:id/jobs', async (req, res, params) => {
   const id = Number(params.id);
-  const bike = db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
+  const bike = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(id);
   if (!bike) return notFound(res, 'Bike not found');
-  const rows = db
+  const rows = await db
     .prepare('SELECT * FROM workshop_jobs WHERE bike_id = ? ORDER BY job_date DESC, start_time DESC')
     .all(id);
   sendJson(res, 200, rows.map(serializeWorkshopJob));
@@ -821,13 +814,12 @@ route('GET', '/api/sales', async (req, res, params, query) => {
   const cashierId = query.get('cashierId');
   let sql = SALE_SELECT + ' WHERE 1=1';
   const args = [];
-  if (dateFilter === 'today') {
-    const today = new Date().toISOString().slice(0, 10);
-    sql += ' AND substr(s.created_at, 1, 10) = ?';
-    args.push(today);
-  } else if (dateFilter) {
-    sql += ' AND substr(s.created_at, 1, 10) = ?';
-    args.push(dateFilter);
+  let dateStr = null;
+  if (dateFilter === 'today') dateStr = new Date().toISOString().slice(0, 10);
+  else if (dateFilter) dateStr = dateFilter;
+  if (dateStr) {
+    sql += " AND s.created_at >= ?::date AND s.created_at < ?::date + interval '1 day'";
+    args.push(dateStr, dateStr);
   }
   if (customerId) {
     sql += ' AND s.customer_id = ?';
@@ -838,7 +830,7 @@ route('GET', '/api/sales', async (req, res, params, query) => {
     args.push(Number(cashierId));
   }
   sql += ' ORDER BY s.id DESC LIMIT 500';
-  const rows = db.prepare(sql).all(...args);
+  const rows = await db.prepare(sql).all(...args);
   sendJson(
     res,
     200,
@@ -848,19 +840,19 @@ route('GET', '/api/sales', async (req, res, params, query) => {
 
 route('GET', '/api/sales/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const sale = db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(id);
+  const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(id);
   if (!sale) return notFound(res, 'Sale not found');
-  const items = db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(id);
-  const payments = db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(id);
+  const items = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(id);
+  const payments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(id);
   sendJson(res, 200, serializeSale(sale, items, payments));
 });
 
 class ValidationError extends Error {}
 
-function resolveCashierId(rawId) {
+async function resolveCashierId(rawId) {
   if (rawId === undefined || rawId === null || rawId === '') return { ok: true, cashierId: null };
   const cashierId = Number(rawId);
-  const cashier = db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_cashier = 1').get(cashierId);
+  const cashier = await db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_cashier = 1').get(cashierId);
   if (!cashier) return { ok: false };
   return { ok: true, cashierId };
 }
@@ -869,9 +861,9 @@ function resolveCashierId(rawId) {
 // the customer's groups carries the highest discount_percent, so a sale's
 // group discount can't be tampered with via the API. Applies to the same net
 // subtotal (after any per-line price overrides) that the flat discount does.
-function resolveGroupDiscount(customerId, subtotal) {
+async function resolveGroupDiscount(customerId, subtotal) {
   if (!customerId) return { amount: 0, name: '' };
-  const top = db
+  const top = await db
     .prepare(
       `SELECT g.name, g.discount_percent FROM customer_groups g
        JOIN customer_group_members m ON m.group_id = g.id
@@ -886,7 +878,7 @@ function resolveGroupDiscount(customerId, subtotal) {
 
 // Validates items against live stock, inserts the sale + sale_items, and
 // deducts stock. Shared by direct checkout and quote/order -> sale conversion.
-function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
+async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
   const loaded = [];
   for (const it of items) {
     const productId = Number(it.productId);
@@ -894,7 +886,7 @@ function createSale({ customerId, cashierId, items, discount, cashAmount, cardAm
     if (!productId || !Number.isFinite(qty) || qty <= 0) {
       throw new ValidationError('Each item needs a valid productId and positive qty');
     }
-    const product = db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
+    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
     if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
     if (product.stock_qty < qty) {
       throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
@@ -911,7 +903,7 @@ function createSale({ customerId, cashierId, items, discount, cashAmount, cardAm
   }
 
   const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
-  const groupDiscount = resolveGroupDiscount(customerId, subtotal);
+  const groupDiscount = await resolveGroupDiscount(customerId, subtotal);
   const total = Math.max(0, subtotal - discount - groupDiscount.amount);
 
   const cash = Math.max(0, Number(cashAmount) || 0);
@@ -929,9 +921,9 @@ function createSale({ customerId, cashierId, items, discount, cashAmount, cardAm
   for (const p of extraPayments) methodsUsed.push(p.tenderType);
   const paymentMethod = methodsUsed.length > 1 ? 'Split' : methodsUsed[0] || 'Cash';
 
-  db.exec('BEGIN');
+  await db.exec('BEGIN');
   try {
-    const saleInfo = db
+    const saleInfo = await db
       .prepare(
         `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note, group_discount_amount, group_discount_name)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -940,7 +932,7 @@ function createSale({ customerId, cashierId, items, discount, cashAmount, cardAm
     const saleId = saleInfo.lastInsertRowid;
 
     for (const p of extraPayments) {
-      db.prepare('INSERT INTO sale_payments (sale_id, tender_type, amount) VALUES (?, ?, ?)').run(
+      await db.prepare('INSERT INTO sale_payments (sale_id, tender_type, amount) VALUES (?, ?, ?)').run(
         saleId,
         p.tenderType,
         p.amount
@@ -949,21 +941,21 @@ function createSale({ customerId, cashierId, items, discount, cashAmount, cardAm
 
     for (const { product, qty, unitPrice } of loaded) {
       const lineTotal = unitPrice * qty;
-      db.prepare(
+      await db.prepare(
         `INSERT INTO sale_items (sale_id, product_id, name, sku, unit_price, qty, line_total)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       ).run(saleId, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
 
       const newQty = product.stock_qty - qty;
-      db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
-      db.prepare(
+      await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
+      await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
       ).run(product.id, -qty, `Sale #${saleId}`);
     }
-    db.exec('COMMIT');
+    await db.exec('COMMIT');
     return saleId;
   } catch (err) {
-    db.exec('ROLLBACK');
+    await db.exec('ROLLBACK');
     throw err;
   }
 }
@@ -984,25 +976,25 @@ route('POST', '/api/sales', async (req, res) => {
   let customerId = null;
   if (body.customerId !== undefined && body.customerId !== null && body.customerId !== '') {
     customerId = Number(body.customerId);
-    const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
+    const customer = await db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
     if (!customer) return badRequest(res, 'Customer not found or inactive');
   }
 
-  const cashierResolved = resolveCashierId(body.cashierId);
+  const cashierResolved = await resolveCashierId(body.cashierId);
   if (!cashierResolved.ok) return badRequest(res, 'Cashier not found or inactive');
   if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
 
   let saleId;
   try {
-    saleId = createSale({ customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note });
+    saleId = await createSale({ customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note });
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
   }
 
-  const sale = db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
-  const savedItems = db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
-  const savedPayments = db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
+  const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
+  const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
+  const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
   sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
 });
 
@@ -1059,15 +1051,15 @@ route('GET', '/api/sale-documents', async (req, res, params, query) => {
     args.push(status);
   }
   sql += ' ORDER BY d.id DESC LIMIT 500';
-  const rows = db.prepare(sql).all(...args);
+  const rows = await db.prepare(sql).all(...args);
   sendJson(res, 200, rows.map((r) => serializeSaleDocument(r)));
 });
 
 route('GET', '/api/sale-documents/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const row = db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
+  const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
   if (!row) return notFound(res, 'Not found');
-  const items = db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+  const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
   sendJson(res, 200, serializeSaleDocument(row, items));
 });
 
@@ -1084,11 +1076,11 @@ route('POST', '/api/sale-documents', async (req, res) => {
   let customerId = null;
   if (body.customerId !== undefined && body.customerId !== null && body.customerId !== '') {
     customerId = Number(body.customerId);
-    const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
+    const customer = await db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
     if (!customer) return badRequest(res, 'Customer not found or inactive');
   }
 
-  const cashierResolved = resolveCashierId(body.cashierId);
+  const cashierResolved = await resolveCashierId(body.cashierId);
   if (!cashierResolved.ok) return badRequest(res, 'Cashier not found or inactive');
 
   // Snapshot product name/sku/price only - no stock check, since a quote or
@@ -1100,7 +1092,7 @@ route('POST', '/api/sale-documents', async (req, res) => {
     if (!productId || !Number.isFinite(qty) || qty <= 0) {
       return badRequest(res, 'Each item needs a valid productId and positive qty');
     }
-    const product = db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
+    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
     if (!product) return badRequest(res, `Product ${productId} not found or inactive`);
     let unitPrice = product.price;
     if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
@@ -1116,9 +1108,9 @@ route('POST', '/api/sale-documents', async (req, res) => {
   const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
   const total = Math.max(0, subtotal - discount);
 
-  db.exec('BEGIN');
+  await db.exec('BEGIN');
   try {
-    const info = db
+    const info = await db
       .prepare(
         `INSERT INTO sale_documents (kind, customer_id, cashier_id, subtotal, discount, total, note, title, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -1127,24 +1119,24 @@ route('POST', '/api/sale-documents', async (req, res) => {
     const docId = info.lastInsertRowid;
     for (const { product, qty, unitPrice } of loaded) {
       const lineTotal = unitPrice * qty;
-      db.prepare(
+      await db.prepare(
         `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       ).run(docId, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
     }
-    db.exec('COMMIT');
-    const row = db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(docId);
-    const savedItems = db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(docId);
+    await db.exec('COMMIT');
+    const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(docId);
+    const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(docId);
     sendJson(res, 201, serializeSaleDocument(row, savedItems));
   } catch (err) {
-    db.exec('ROLLBACK');
+    await db.exec('ROLLBACK');
     throw err;
   }
 });
 
 route('PUT', '/api/sale-documents/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Not found');
   if (existing.status !== 'open') return badRequest(res, `This ${existing.kind} is already ${existing.status}`);
   const body = await readJsonBody(req);
@@ -1160,7 +1152,7 @@ route('PUT', '/api/sale-documents/:id', async (req, res, params) => {
       customerId = null;
     } else {
       customerId = Number(body.customerId);
-      const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
+      const customer = await db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
       if (!customer) return badRequest(res, 'Customer not found or inactive');
     }
   }
@@ -1171,17 +1163,17 @@ route('PUT', '/api/sale-documents/:id', async (req, res, params) => {
       workshopJobId = null;
     } else {
       const jobId = Number(body.workshopJobId);
-      const job = db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
+      const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
       if (!job) return badRequest(res, 'Workshop job not found');
       workshopJobId = jobId;
     }
   }
 
-  db.prepare(
+  await db.prepare(
     'UPDATE sale_documents SET status = ?, title = ?, customer_id = ?, note = ?, workshop_job_id = ?, updated_at = ? WHERE id = ?'
   ).run(status, title, customerId, note, workshopJobId, nowIso(), id);
-  const row = db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
-  const items = db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+  const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
+  const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
   sendJson(res, 200, serializeSaleDocument(row, items));
 });
 
@@ -1191,7 +1183,7 @@ route('PUT', '/api/sale-documents/:id', async (req, res, params) => {
 // POST /api/sale-documents.
 route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Not found');
   if (existing.status !== 'open') return badRequest(res, `This ${existing.kind} is already ${existing.status}`);
   const body = await readJsonBody(req);
@@ -1205,7 +1197,7 @@ route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
     if (!productId || !Number.isFinite(qty) || qty <= 0) {
       return badRequest(res, 'Each item needs a valid productId and positive qty');
     }
-    const product = db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
+    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
     if (!product) return badRequest(res, `Product ${productId} not found or inactive`);
     let unitPrice = product.price;
     if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
@@ -1221,37 +1213,37 @@ route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
   const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
   const total = Math.max(0, subtotal - discount);
 
-  db.exec('BEGIN');
+  await db.exec('BEGIN');
   try {
-    db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
+    await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
     for (const { product, qty, unitPrice } of loaded) {
       const lineTotal = unitPrice * qty;
-      db.prepare(
+      await db.prepare(
         `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       ).run(id, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
     }
-    db.prepare('UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, updated_at = ? WHERE id = ?').run(
+    await db.prepare('UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, updated_at = ? WHERE id = ?').run(
       subtotal,
       discount,
       total,
       nowIso(),
       id
     );
-    db.exec('COMMIT');
+    await db.exec('COMMIT');
   } catch (err) {
-    db.exec('ROLLBACK');
+    await db.exec('ROLLBACK');
     throw err;
   }
 
-  const row = db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
-  const savedItems = db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+  const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(id);
+  const savedItems = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
   sendJson(res, 200, serializeSaleDocument(row, savedItems));
 });
 
 route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
   const id = Number(params.id);
-  const doc = db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
+  const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
   if (!doc) return notFound(res, 'Not found');
   if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
@@ -1264,16 +1256,16 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
       ? Number(body.cashTendered)
       : null;
 
-  const cashierResolved = resolveCashierId(body.cashierId);
+  const cashierResolved = await resolveCashierId(body.cashierId);
   if (!cashierResolved.ok) return badRequest(res, 'Cashier not found or inactive');
   if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
 
-  const items = db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
+  const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
   const saleItems = items.map((it) => ({ productId: it.product_id, qty: it.qty, unitPrice: it.unit_price }));
 
   let saleId;
   try {
-    saleId = createSale({
+    saleId = await createSale({
       customerId: doc.customer_id,
       cashierId: cashierResolved.cashierId,
       items: saleItems,
@@ -1289,16 +1281,16 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
     throw err;
   }
 
-  db.prepare('UPDATE sale_documents SET status = ?, converted_sale_id = ?, updated_at = ? WHERE id = ?').run(
+  await db.prepare('UPDATE sale_documents SET status = ?, converted_sale_id = ?, updated_at = ? WHERE id = ?').run(
     'converted',
     saleId,
     nowIso(),
     id
   );
 
-  const sale = db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
-  const savedItems = db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
-  const savedPayments = db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
+  const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
+  const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
+  const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
   sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
 });
 
@@ -1341,11 +1333,11 @@ const WORKSHOP_JOB_SELECT = `SELECT w.*, c.name AS customer_name, trim(b.make ||
   LEFT JOIN sale_documents d ON d.workshop_job_id = w.id`;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-function resolveJobCustomerId(rawId, existingId) {
+async function resolveJobCustomerId(rawId, existingId) {
   if (rawId === undefined) return { ok: true, customerId: existingId };
   if (rawId === null || rawId === '') return { ok: true, customerId: null };
   const customerId = Number(rawId);
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
+  const customer = await db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
   if (!customer) return { ok: false };
   return { ok: true, customerId };
 }
@@ -1355,10 +1347,10 @@ function resolveJobCustomerId(rawId, existingId) {
 // explicitly provided (e.g. a drag/resize that only moves the time), the
 // existing link is kept unless it no longer matches the resolved customer,
 // in which case it's silently dropped rather than rejecting the request.
-function resolveJobBikeId(rawId, existingId, resolvedCustomerId) {
+async function resolveJobBikeId(rawId, existingId, resolvedCustomerId) {
   if (rawId === undefined) {
     if (!existingId) return { ok: true, bikeId: null };
-    const bike = db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(existingId);
+    const bike = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(existingId);
     if (!bike || !resolvedCustomerId || bike.customer_id !== resolvedCustomerId) {
       return { ok: true, bikeId: null };
     }
@@ -1366,7 +1358,7 @@ function resolveJobBikeId(rawId, existingId, resolvedCustomerId) {
   }
   if (rawId === null || rawId === '') return { ok: true, bikeId: null };
   const bikeId = Number(rawId);
-  const bike = db.prepare('SELECT * FROM customer_bikes WHERE id = ? AND active = 1').get(bikeId);
+  const bike = await db.prepare('SELECT * FROM customer_bikes WHERE id = ? AND active = 1').get(bikeId);
   if (!bike) return { ok: false, error: 'Bike not found or inactive' };
   if (!resolvedCustomerId || bike.customer_id !== resolvedCustomerId) {
     return { ok: false, error: "That bike doesn't belong to the selected customer" };
@@ -1374,11 +1366,11 @@ function resolveJobBikeId(rawId, existingId, resolvedCustomerId) {
   return { ok: true, bikeId };
 }
 
-function resolveJobMechanicId(rawId, existingId) {
+async function resolveJobMechanicId(rawId, existingId) {
   if (rawId === undefined) return { ok: true, mechanicId: existingId };
   if (rawId === null || rawId === '') return { ok: true, mechanicId: null };
   const mechanicId = Number(rawId);
-  const mechanic = db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1').get(mechanicId);
+  const mechanic = await db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1').get(mechanicId);
   if (!mechanic) return { ok: false };
   return { ok: true, mechanicId };
 }
@@ -1415,13 +1407,13 @@ route('GET', '/api/workshop-jobs', async (req, res, params, query) => {
     args.push(end);
   }
   sql += ' ORDER BY w.job_date, w.start_time';
-  const rows = db.prepare(sql).all(...args);
+  const rows = await db.prepare(sql).all(...args);
   sendJson(res, 200, rows.map(serializeWorkshopJob));
 });
 
 route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const row = db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
   if (!row) return notFound(res, 'Job not found');
   sendJson(res, 200, serializeWorkshopJob(row));
 });
@@ -1437,13 +1429,13 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
   const times = resolveJobTimes((body.startTime || '').trim(), (body.endTime || '').trim());
   if (times.error) return badRequest(res, times.error);
 
-  const resolved = resolveJobCustomerId(body.customerId, null);
+  const resolved = await resolveJobCustomerId(body.customerId, null);
   if (!resolved.ok) return badRequest(res, 'Customer not found or inactive');
 
-  const bikeResolved = resolveJobBikeId(body.bikeId, null, resolved.customerId);
+  const bikeResolved = await resolveJobBikeId(body.bikeId, null, resolved.customerId);
   if (!bikeResolved.ok) return badRequest(res, bikeResolved.error);
 
-  const mechResolved = resolveJobMechanicId(body.mechanicId, null);
+  const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
   const status = resolveJobStatus(body.status, null);
@@ -1454,9 +1446,9 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
   // this job to itself (the order's "show in workshop diary" toggle).
   const skipAutoOrder = !!body.skipAutoOrder;
 
-  db.exec('BEGIN');
+  await db.exec('BEGIN');
   try {
-    const info = db
+    const info = await db
       .prepare(
         `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -1476,24 +1468,24 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
     const jobId = info.lastInsertRowid;
 
     if (!skipAutoOrder) {
-      db.prepare(
+      await db.prepare(
         `INSERT INTO sale_documents (kind, customer_id, subtotal, discount, total, note, title, workshop_job_id, updated_at)
          VALUES ('order', ?, 0, 0, 0, ?, ?, ?, ?)`
       ).run(resolved.customerId, notes, title, jobId, nowIso());
     }
 
-    db.exec('COMMIT');
-    const row = db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+    await db.exec('COMMIT');
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
     sendJson(res, 201, serializeWorkshopJob(row));
   } catch (err) {
-    db.exec('ROLLBACK');
+    await db.exec('ROLLBACK');
     throw err;
   }
 });
 
 route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Job not found');
   const body = await readJsonBody(req);
 
@@ -1508,19 +1500,19 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const times = resolveJobTimes(startTimeInput, endTimeInput);
   if (times.error) return badRequest(res, times.error);
 
-  const resolved = resolveJobCustomerId(body.customerId, existing.customer_id);
+  const resolved = await resolveJobCustomerId(body.customerId, existing.customer_id);
   if (!resolved.ok) return badRequest(res, 'Customer not found or inactive');
 
-  const bikeResolved = resolveJobBikeId(body.bikeId, existing.bike_id, resolved.customerId);
+  const bikeResolved = await resolveJobBikeId(body.bikeId, existing.bike_id, resolved.customerId);
   if (!bikeResolved.ok) return badRequest(res, bikeResolved.error);
 
-  const mechResolved = resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
+  const mechResolved = await resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
   const status = resolveJobStatus(body.status, existing.status);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
 
-  db.prepare(
+  await db.prepare(
     `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, status = ?, notes = ?, updated_at = ?
      WHERE id = ?`
   ).run(
@@ -1536,16 +1528,16 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
     nowIso(),
     id
   );
-  const row = db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
   sendJson(res, 200, serializeWorkshopJob(row));
 });
 
 route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Job not found');
-  db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
-  db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
+  await db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
+  await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
   sendJson(res, 200, { ok: true });
 });
 
@@ -1593,7 +1585,7 @@ route('GET', '/api/employees', async (req, res, params, query) => {
   if (role === 'mechanic') sql += ' AND is_mechanic = 1';
   else if (role === 'cashier') sql += ' AND is_cashier = 1';
   sql += ' ORDER BY name';
-  const rows = db.prepare(sql).all(...args);
+  const rows = await db.prepare(sql).all(...args);
   sendJson(res, 200, rows.map(serializeEmployee));
 });
 
@@ -1605,16 +1597,16 @@ route('POST', '/api/employees', async (req, res) => {
   const isCashier = body.isCashier ? 1 : 0;
   const workingDays = resolveWorkingDays(body.workingDays, undefined);
   if (workingDays === null) return badRequest(res, 'workingDays must be an array of day numbers (0-6)');
-  const info = db
+  const info = await db
     .prepare('INSERT INTO employees (name, is_mechanic, is_cashier, working_days, updated_at) VALUES (?, ?, ?, ?, ?)')
     .run(name, isMechanic, isCashier, workingDays, nowIso());
-  const row = db.prepare('SELECT * FROM employees WHERE id = ?').get(info.lastInsertRowid);
+  const row = await db.prepare('SELECT * FROM employees WHERE id = ?').get(info.lastInsertRowid);
   sendJson(res, 201, serializeEmployee(row));
 });
 
 route('PUT', '/api/employees/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Employee not found');
   const body = await readJsonBody(req);
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
@@ -1624,18 +1616,18 @@ route('PUT', '/api/employees/:id', async (req, res, params) => {
   const isCashier = body.isCashier !== undefined ? (body.isCashier ? 1 : 0) : existing.is_cashier;
   const workingDays = resolveWorkingDays(body.workingDays, existing.working_days);
   if (workingDays === null) return badRequest(res, 'workingDays must be an array of day numbers (0-6)');
-  db.prepare(
+  await db.prepare(
     'UPDATE employees SET name = ?, is_mechanic = ?, is_cashier = ?, working_days = ?, active = ?, updated_at = ? WHERE id = ?'
   ).run(name, isMechanic, isCashier, workingDays, active, nowIso(), id);
-  const row = db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
+  const row = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   sendJson(res, 200, serializeEmployee(row));
 });
 
 route('DELETE', '/api/employees/:id', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Employee not found');
-  db.prepare('UPDATE employees SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+  await db.prepare('UPDATE employees SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
   sendJson(res, 200, { ok: true });
 });
 
@@ -1645,12 +1637,12 @@ route('DELETE', '/api/employees/:id', async (req, res, params) => {
 // with how removing a customer/bike/product never destroys sale/job history.
 route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
   const id = Number(params.id);
-  const existing = db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
+  const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Employee not found');
-  db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
-  db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-  db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-  db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+  await db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
+  await db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
+  await db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
+  await db.prepare('DELETE FROM employees WHERE id = ?').run(id);
   sendJson(res, 200, { ok: true });
 });
 
@@ -1667,13 +1659,16 @@ function serializeWorkshopSettings(row) {
 
 const HOUR_RE = /^([01]\d|2[0-3]):00$/;
 
+// One row per shop (RLS scopes it), rather than the old global single-row
+// (id=1) singleton - a shop's id is assigned by Postgres, not fixed at 1, so
+// lookups just take whichever single row RLS makes visible.
 route('GET', '/api/workshop-settings', async (req, res) => {
-  const row = db.prepare('SELECT * FROM workshop_settings WHERE id = 1').get();
+  const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
 route('PUT', '/api/workshop-settings', async (req, res) => {
-  const existing = db.prepare('SELECT * FROM workshop_settings WHERE id = 1').get();
+  const existing = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   const body = await readJsonBody(req);
   const openingTime = body.openingTime !== undefined ? String(body.openingTime).trim() : existing.opening_time;
   const closingTime = body.closingTime !== undefined ? String(body.closingTime).trim() : existing.closing_time;
@@ -1683,10 +1678,10 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   if (closingTime <= openingTime) return badRequest(res, 'Closing time must be after opening time');
   const openingDays = resolveWorkingDays(body.openingDays, existing.opening_days);
   if (openingDays === null) return badRequest(res, 'openingDays must be an array of day numbers (0-6)');
-  db.prepare(
-    'UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, updated_at = ? WHERE id = 1'
-  ).run(openingTime, closingTime, openingDays, nowIso());
-  const row = db.prepare('SELECT * FROM workshop_settings WHERE id = 1').get();
+  await db.prepare(
+    'UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, updated_at = ? WHERE id = ?'
+  ).run(openingTime, closingTime, openingDays, nowIso(), existing.id);
+  const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
@@ -1694,32 +1689,32 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
 
 route('GET', '/api/dashboard', async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
-  const todayAgg = db
+  const todayAgg = await db
     .prepare(
       `SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
-       FROM sales WHERE substr(created_at, 1, 10) = ?`
+       FROM sales WHERE created_at >= ?::date AND created_at < ?::date + interval '1 day'`
     )
-    .get(today);
+    .get(today, today);
 
-  const lowStock = db
+  const lowStock = (await db
     .prepare(
       `SELECT * FROM products WHERE active = 1 AND low_stock_threshold > 0 AND stock_qty <= low_stock_threshold
        ORDER BY stock_qty ASC`
     )
-    .all()
+    .all())
     .map(serializeProduct);
 
-  const topToday = db
+  const topToday = await db
     .prepare(
       `SELECT si.name, SUM(si.qty) AS qty, SUM(si.line_total) AS revenue
        FROM sale_items si
        JOIN sales s ON s.id = si.sale_id
-       WHERE substr(s.created_at, 1, 10) = ?
+       WHERE s.created_at >= ?::date AND s.created_at < ?::date + interval '1 day'
        GROUP BY si.name
        ORDER BY revenue DESC
        LIMIT 5`
     )
-    .all(today);
+    .all(today, today);
 
   sendJson(res, 200, {
     todayCount: todayAgg.count,
@@ -1759,9 +1754,9 @@ const server = createServer(async (req, res) => {
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
 
       // Auth routes manage the session cookie themselves and never touch shop
-      // data, so they run outside dbContext. Every other /api/ route needs a
-      // signed-in shop first - that shop's database becomes `db` for the
-      // duration of this one request.
+      // data, so they run outside runWithShop. Every other /api/ route needs
+      // a signed-in shop first - a client scoped (via RLS) to that shop
+      // becomes `db` for the duration of this one request.
       if (pathname.startsWith('/api/auth/')) {
         try {
           await r.handler(req, res, params, url.searchParams);
@@ -1772,12 +1767,11 @@ const server = createServer(async (req, res) => {
         return;
       }
 
-      const ctx = currentSession(req);
+      const ctx = await currentSession(req);
       if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
 
       try {
-        const shopDb = getShopDb(ctx.shop.slug);
-        await dbContext.run(shopDb, () => r.handler(req, res, params, url.searchParams));
+        await runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams));
       } catch (err) {
         console.error(err);
         sendJson(res, 500, { error: err.message || 'Internal server error' });
@@ -1795,6 +1789,14 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
-});
+runMigrations()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to run database migrations - server not started.');
+    console.error(err);
+    process.exit(1);
+  });

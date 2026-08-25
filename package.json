@@ -1,12 +1,19 @@
 {
   "name": "bike-shop-epos",
   "version": "1.0.0",
-  "description": "Local EPOS system for a bike shop - till, inventory, sales history and dashboard. No dependencies to install - uses Node's built-in SQLite and HTTP server.",
+  "description": "Local EPOS system for a bike shop - till, inventory, sales history and dashboard. Backed by PostgreSQL - one dependency (pg), see README for local setup.",
   "type": "module",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "gateway": "node server/gateway.js"
+    "gateway": "node server/gateway.js",
+    "migrate": "node server/migrations/run-migrations.js",
+    "docker:up": "docker compose up -d --wait",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
   },
   "engines": {
     "node": ">=22.5.0"

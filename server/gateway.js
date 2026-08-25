@@ -10,7 +10,10 @@ import { createServer, request as httpRequest } from 'node:http';
 
 const GATEWAY_PORT = process.env.GATEWAY_PORT ? Number(process.env.GATEWAY_PORT) : 8080;
 const APP_PORT = process.env.APP_PORT ? Number(process.env.APP_PORT) : 4000;
-const APP_HOST = '127.0.0.1';
+// Overridable so this can reach the app by its Docker Compose service name
+// (e.g. "app") when the two run as separate containers on the same
+// network, rather than always assuming they share localhost.
+const APP_HOST = process.env.APP_HOST || '127.0.0.1';
 const PROXY_TIMEOUT_MS = 5000;
 
 const OFFLINE_HTML = `<!doctype html>

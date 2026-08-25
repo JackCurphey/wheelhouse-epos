@@ -1,0 +1,6 @@
+node_modules
+data/
+.env
+.git
+*.log
+_delete_me_test_artifacts/

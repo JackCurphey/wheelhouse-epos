@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      # POSTGRES_USER is the bootstrap Postgres SUPERUSER - kept separate
+      # from the app's own epos_app role (created by docker/init-db.sh) on
+      # purpose, since superusers always bypass Row-Level Security. Nothing
+      # in the app ever connects as this user.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: epos
+      EPOS_APP_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - epos_pgdata:/var/lib/postgresql/data
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    ports:
+      # Host port 5433, not 5432 - the native Postgres Windows service
+      # installed earlier is still running on 5432 as the rollback path and
+      # deliberately left alone. The app itself never uses this mapping
+      # anyway (it reaches this container as "postgres:5432" over the
+      # compose network) - it's only here for host-side psql/tooling access.
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d epos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://epos_app:${POSTGRES_PASSWORD}@postgres:5432/epos
+      PORT: 4000
+      SIGNUP_CODE: ${SIGNUP_CODE:-}
+    ports:
+      - "127.0.0.1:4000:4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  gateway:
+    build: .
+    command: ["node", "server/gateway.js"]
+    depends_on:
+      - app
+    environment:
+      # Reaches the app by its service name on the compose network, not
+      # 127.0.0.1 - see the APP_HOST fix in server/gateway.js.
+      APP_HOST: app
+      APP_PORT: 4000
+      GATEWAY_PORT: 8080
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+volumes:
+  epos_pgdata:
