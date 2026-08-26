@@ -1,31 +1,37 @@
 // Wheelhouse EPOS - customer booking portal. Vanilla JS, no framework, no
 // build step - same philosophy as the staff app (public/app.js), but a
-// wholly separate small bundle: different audience, different auth, and
-// the staff diary's pixel-positioned week/month grid isn't reused here -
-// customers get a simpler day-at-a-time list of bookable slots, which
-// works far better on a phone (the realistic device most customers will
-// use to book).
+// wholly separate small bundle: different audience, different auth.
+//
+// The availability picker deliberately reuses the staff Workshop diary's
+// own week-grid look (.week-grid/.wk-day-header/.wk-day-col/etc, all from
+// the shared /styles.css) so customers see the same thing staff do -
+// closed days greyed exactly like a mechanic's day off, and already-booked
+// time shown with the same hatched pattern, just without any job details
+// (privacy - see server/server.js's /availability route, which only ever
+// returns mechanic/date/time, never a title, customer name, or notes).
 'use strict';
 
 // ---------------- State ----------------
 
 let shopSlug = '';
 let currentCustomer = null; // { id, email, name, shopName, shopSlug } or null when signed out
-let mechanics = [];
+let mechanics = []; // [{ id, name, workingDays }]
 let openingTime = '09:00';
 let closingTime = '18:00';
 let openingDays = [0, 1, 2, 3, 4, 5, 6];
-let selectedMechanicId = null;
-let selectedDate = todayStr();
-let busySlots = []; // busy {mechanicId, jobDate, startTime, endTime} blocks for the selected mechanic+date
+let selectedMechanicIds = []; // 1+ mechanic ids currently shown - matches staff's multi-select split-view diary
+let selectedWeekStart = null; // 'YYYY-MM-DD', Monday of the displayed week
+let busySlots = []; // {mechanicId, jobDate, startTime, endTime} for every selected mechanic across the displayed week
 let bikes = [];
 let bookings = [];
 let view = 'picker'; // 'picker' | 'auth' | 'booking-form' | 'my-bookings'
 let authMode = 'login'; // 'login' | 'signup'
-let pendingSlot = null; // startTime the customer picked, carried across a login/signup detour
+let pendingDate = null; // date the customer clicked on the grid, carried across a login/signup detour
+let pendingSlot = null; // time the customer clicked on the grid, carried across a login/signup detour
+let pendingMechanicId = null; // which mechanic's column was clicked, carried across a login/signup detour
 
-const SLOT_INTERVAL_MIN = 30;
 const DEFAULT_JOB_DURATION_MIN = 60; // matches the shop's own default (server/server.js resolveJobTimes)
+const WORKSHOP_ROW_PX = 48; // matches the staff diary's own row height exactly, for the same visual scale
 
 // ---------------- Helpers ----------------
 
@@ -55,9 +61,33 @@ function addDays(dateStr, n) {
   return dateToStr(d);
 }
 
+function startOfWeek(d) {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay(); // 0 Sun .. 6 Sat
+  const diff = (day === 0 ? -6 : 1) - day; // shift back to Monday
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
+function weekDays(weekStartStr) {
+  const start = new Date(weekStartStr + 'T00:00:00');
+  return [...Array(7)].map((_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+}
+
 function fmtDateLabel(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function fmtWeekRangeLabel(startDate, endDate) {
+  const s = startDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const e = endDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return `${s} – ${e}`;
 }
 
 function timeToMinutes(t) {
@@ -66,23 +96,53 @@ function timeToMinutes(t) {
 }
 
 function minutesToTime(mins) {
-  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+  const clamped = Math.max(0, Math.min(23 * 60 + 59, Math.round(mins)));
+  return `${String(Math.floor(clamped / 60)).padStart(2, '0')}:${String(clamped % 60).padStart(2, '0')}`;
 }
 
-function generateSlots() {
-  const startMin = timeToMinutes(openingTime);
-  const endMin = timeToMinutes(closingTime);
-  const slots = [];
-  for (let m = startMin; m + DEFAULT_JOB_DURATION_MIN <= endMin; m += SLOT_INTERVAL_MIN) {
-    slots.push(minutesToTime(m));
-  }
-  return slots;
+// Recomputed whenever the shop's opening hours load - mirrors
+// applyWorkshopHours() in public/app.js exactly, so the grid is the same
+// vertical scale customers see as staff do.
+let gridHourStart = 9;
+let gridHourEnd = 18;
+let gridHeight = (gridHourEnd - gridHourStart) * WORKSHOP_ROW_PX;
+let gridMinMinutes = gridHourStart * 60;
+let gridMaxMinutes = gridHourEnd * 60;
+
+function applyGridHours() {
+  gridHourStart = parseInt((openingTime || '09:00').split(':')[0], 10);
+  gridHourEnd = parseInt((closingTime || '18:00').split(':')[0], 10);
+  gridHeight = (gridHourEnd - gridHourStart) * WORKSHOP_ROW_PX;
+  gridMinMinutes = gridHourStart * 60;
+  gridMaxMinutes = gridHourEnd * 60;
 }
 
-function isSlotBusy(startTime) {
+function minutesToGridPx(mins) {
+  return ((mins - gridMinMinutes) / 60) * WORKSHOP_ROW_PX;
+}
+
+// Inverse of minutesToGridPx, snapped to 30-minute slots and clamped so the
+// resulting start time always leaves room for the default 1-hour job
+// duration before closing.
+function timeFromGridY(y) {
+  const rawMinutes = gridMinMinutes + (y / WORKSHOP_ROW_PX) * 60;
+  const snapped = Math.round(rawMinutes / 30) * 30;
+  const maxStart = gridMaxMinutes - DEFAULT_JOB_DURATION_MIN;
+  return minutesToTime(Math.max(gridMinMinutes, Math.min(maxStart, snapped)));
+}
+
+function isDayOff(d, mechanicId) {
+  const dow = d.getDay();
+  if (!openingDays.includes(dow)) return true;
+  const mech = mechanics.find((m) => m.id === mechanicId);
+  return !!mech && !mech.workingDays.includes(dow);
+}
+
+function isSlotBusy(dateStr, startTime, mechanicId) {
   const slotStart = timeToMinutes(startTime);
   const slotEnd = slotStart + DEFAULT_JOB_DURATION_MIN;
   return busySlots.some((b) => {
+    if (b.jobDate !== dateStr || b.mechanicId !== mechanicId) return false;
     const bStart = timeToMinutes(b.startTime);
     const bEnd = timeToMinutes(b.endTime);
     return slotStart < bEnd && bStart < slotEnd;
@@ -128,15 +188,30 @@ async function loadMechanicsAndHours() {
   openingTime = data.openingTime;
   closingTime = data.closingTime;
   openingDays = data.openingDays;
-  if (selectedMechanicId === null && mechanics.length) selectedMechanicId = mechanics[0].id;
+  applyGridHours();
+  // Default to every mechanic shown side by side, matching the staff
+  // diary's own default - only on first load (loadMechanicsAndHours() can
+  // be called again later without this clobbering a filter the customer
+  // has since changed, same guard as app.js's loadMechanics()).
+  if (!selectedMechanicIds.length && mechanics.length) selectedMechanicIds = mechanics.map((m) => m.id);
 }
 
 async function loadBusySlots() {
-  if (!selectedMechanicId) {
+  if (!selectedMechanicIds.length) {
     busySlots = [];
     return;
   }
-  busySlots = await api(`/availability?mechanicId=${selectedMechanicId}&start=${selectedDate}&end=${selectedDate}`);
+  const days = weekDays(selectedWeekStart);
+  const start = dateToStr(days[0]);
+  const end = dateToStr(days[6]);
+  // One request per selected mechanic (the endpoint filters to one at a
+  // time) rather than widening it to accept several - this is a handful of
+  // small parallel requests over a 7-day range, not worth the extra API
+  // surface for.
+  const results = await Promise.all(
+    selectedMechanicIds.map((id) => api(`/availability?mechanicId=${id}&start=${start}&end=${end}`))
+  );
+  busySlots = results.flat();
 }
 
 async function loadBikes() {
@@ -156,6 +231,7 @@ async function boot() {
     app.innerHTML = `<div class="portal-shell"><div class="empty-state">No shop specified — check the link you were given.</div></div>`;
     return;
   }
+  selectedWeekStart = dateToStr(startOfWeek(new Date()));
   try {
     currentCustomer = await api('/me');
   } catch (_) {
@@ -174,8 +250,11 @@ async function boot() {
 
 async function render() {
   const app = document.getElementById('app');
+  // The week grid needs more horizontal room than the narrow auth/
+  // booking-form/my-bookings panels do.
+  const wideClass = view === 'picker' ? ' wide' : '';
   app.innerHTML = `
-    <div class="portal-shell">
+    <div class="portal-shell${wideClass}">
       ${renderHeaderHtml()}
       <div id="portal-content"></div>
     </div>
@@ -220,7 +299,64 @@ function wireHeader() {
   });
 }
 
-// ---- Picker: pick a mechanic, a day, then a slot ----
+// ---- Picker: the same week-diary look staff see, read-only, one mechanic
+// at a time - closed days greyed like a day off, already-booked time shown
+// hatched with no details, click any open time to start a booking. ----
+
+// Builds one mechanic's week grid (day headers + hour labels + day columns)
+// - the same markup buildWeekGridHtml() in public/app.js builds for staff,
+// scoped to a single mechanicId so it can be reused for either the solo
+// view or one column of the split multi-mechanic view below.
+function buildMechanicGridHtml(days, mechanicId, todayIso) {
+  const dayHeadersHtml = days
+    .map((d) => {
+      const dateStr = dateToStr(d);
+      return `
+      <div class="wk-day-header ${dateStr === todayIso ? 'today' : ''} ${isDayOff(d, mechanicId) ? 'day-off' : ''}">
+        <span class="wd-name">${esc(d.toLocaleDateString(undefined, { weekday: 'short' }))}</span>
+        <span class="wd-date">${esc(d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' }))}</span>
+      </div>`;
+    })
+    .join('');
+
+  let hourLabelsHtml = '';
+  for (let h = gridHourStart; h < gridHourEnd; h++) {
+    const top = (h - gridHourStart) * WORKSHOP_ROW_PX;
+    hourLabelsHtml += `<div class="wk-hour-label" style="top:${top}px;">${String(h).padStart(2, '0')}:00</div>`;
+  }
+
+  const dayColsHtml = days
+    .map((d) => {
+      const dateStr = dateToStr(d);
+      const dayOff = isDayOff(d, mechanicId);
+      let blocksHtml = '';
+      if (!dayOff) {
+        blocksHtml = busySlots
+          .filter((b) => b.jobDate === dateStr && b.mechanicId === mechanicId)
+          .map((b) => {
+            const startMin = timeToMinutes(b.startTime);
+            const endMin = timeToMinutes(b.endTime);
+            const top = minutesToGridPx(Math.max(startMin, gridMinMinutes));
+            const bottom = minutesToGridPx(Math.min(endMin, gridMaxMinutes));
+            const height = Math.max(18, bottom - top);
+            return `<div class="portal-busy-block" style="top:${top}px; height:${height}px;">Unavailable</div>`;
+          })
+          .join('');
+      }
+      return `
+      <div class="wk-day-col ${dateStr === todayIso ? 'today' : ''} ${dayOff ? 'day-off' : ''}" data-date="${dateStr}" data-mechanic="${mechanicId}" style="height:${gridHeight}px;">
+        ${blocksHtml}
+      </div>`;
+    })
+    .join('');
+
+  return `
+    <div class="wk-corner"></div>
+    ${dayHeadersHtml}
+    <div class="wk-hour-labels" style="height:${gridHeight}px;">${hourLabelsHtml}</div>
+    ${dayColsHtml}
+  `;
+}
 
 async function renderPickerView() {
   const content = document.getElementById('portal-content');
@@ -232,61 +368,90 @@ async function renderPickerView() {
     return;
   }
 
-  const dow = new Date(selectedDate + 'T00:00:00').getDay();
-  const shopClosed = !openingDays.includes(dow);
-  const slots = generateSlots();
+  const days = weekDays(selectedWeekStart);
+  const todayIso = todayStr();
+  const selectedMechs = mechanics.filter((m) => selectedMechanicIds.includes(m.id));
+
+  // Matches staff's own diary exactly: one mechanic selected is a single
+  // plain grid; 2+ selected splits into side-by-side mini-diaries, each
+  // labelled with that mechanic's name, so a customer with no particular
+  // preference can compare everyone's availability at once.
+  const diariesHtml = !mechanics.length
+    ? `<div class="empty-state">This shop hasn't set up any mechanics yet.</div>`
+    : selectedMechs.length <= 1
+      ? `<div class="week-diaries">
+          <div class="week-diary">
+            <div class="week-grid-scroll"><div class="week-grid">${buildMechanicGridHtml(days, selectedMechs[0]?.id, todayIso)}</div></div>
+          </div>
+        </div>`
+      : `<div class="week-diaries split">
+          ${selectedMechs
+            .map(
+              (m) => `
+            <div class="week-diary">
+              <div class="week-diary-title">${esc(m.name)}</div>
+              <div class="week-grid-scroll"><div class="week-grid">${buildMechanicGridHtml(days, m.id, todayIso)}</div></div>
+            </div>
+          `
+            )
+            .join('')}
+        </div>`;
 
   content.innerHTML = `
     <div class="mechanic-select-row">
       ${mechanics
         .map(
           (m) =>
-            `<button class="pill ${m.id === selectedMechanicId ? 'active' : ''}" data-mech="${m.id}">${esc(m.name)}</button>`
+            `<button class="pill ${selectedMechanicIds.includes(m.id) ? 'active' : ''}" data-mech="${m.id}">${esc(m.name)}</button>`
         )
         .join('')}
     </div>
-    <div class="portal-day-nav">
-      <button class="btn btn-sm" id="day-prev">‹</button>
-      <div class="day-label">${esc(fmtDateLabel(selectedDate))}</div>
-      <button class="btn btn-sm" id="day-next">›</button>
+    <div class="portal-week-nav">
+      <button class="btn btn-sm" id="week-prev">‹ Prev</button>
+      <div class="week-label">${esc(fmtWeekRangeLabel(days[0], days[6]))}</div>
+      <button class="btn btn-sm" id="week-next">Next ›</button>
     </div>
-    <div class="panel">
-      <div class="panel-body">
-        ${
-          !mechanics.length
-            ? `<div class="empty-state">This shop hasn't set up any mechanics yet.</div>`
-            : shopClosed
-              ? `<div class="empty-state">Closed on this day - try another.</div>`
-              : `<div class="slot-grid">
-                  ${slots
-                    .map((s) => {
-                      const busy = isSlotBusy(s);
-                      return `<button class="slot-btn ${busy ? 'busy' : ''}" ${busy ? 'disabled' : ''} data-slot="${s}">${s}</button>`;
-                    })
-                    .join('')}
-                </div>`
-        }
-      </div>
-    </div>
+    ${diariesHtml}
   `;
 
   content.querySelectorAll('button[data-mech]').forEach((b) =>
     b.addEventListener('click', () => {
-      selectedMechanicId = Number(b.dataset.mech);
+      const id = Number(b.dataset.mech);
+      const next = selectedMechanicIds.includes(id)
+        ? selectedMechanicIds.filter((x) => x !== id)
+        : [...selectedMechanicIds, id];
+      if (next.length) selectedMechanicIds = next; // always keep at least one selected
       renderPickerView();
     })
   );
-  document.getElementById('day-prev').addEventListener('click', () => {
-    selectedDate = addDays(selectedDate, -1);
+  const prevBtn = document.getElementById('week-prev');
+  if (prevBtn) prevBtn.addEventListener('click', () => {
+    selectedWeekStart = addDays(selectedWeekStart, -7);
     renderPickerView();
   });
-  document.getElementById('day-next').addEventListener('click', () => {
-    selectedDate = addDays(selectedDate, 1);
+  const nextBtn = document.getElementById('week-next');
+  if (nextBtn) nextBtn.addEventListener('click', () => {
+    selectedWeekStart = addDays(selectedWeekStart, 7);
     renderPickerView();
   });
-  content.querySelectorAll('button[data-slot]').forEach((b) =>
-    b.addEventListener('click', () => {
-      pendingSlot = b.dataset.slot;
+
+  // Busy blocks are pointer-events:none (see portal.css), so a click always
+  // lands on the day column itself - re-checking busy-ness here catches
+  // clicks right at a block's edge. data-mechanic on the column (set in
+  // buildMechanicGridHtml) is what tells split-view clicks apart.
+  content.querySelectorAll('.wk-day-col:not(.day-off)').forEach((col) => {
+    col.addEventListener('click', (e) => {
+      const rect = col.getBoundingClientRect();
+      const time = timeFromGridY(e.clientY - rect.top);
+      const dateStr = col.dataset.date;
+      const mechanicId = Number(col.dataset.mechanic);
+      if (isSlotBusy(dateStr, time, mechanicId)) {
+        showToast("That time isn't available");
+        return;
+      }
+      pendingDate = dateStr;
+      pendingSlot = time;
+      pendingMechanicId = mechanicId;
       if (!currentCustomer) {
         authMode = 'login';
         view = 'auth';
@@ -294,8 +459,8 @@ async function renderPickerView() {
         view = 'booking-form';
       }
       render();
-    })
-  );
+    });
+  });
 }
 
 // ---- Auth: login or signup, then continue to the booking form if a slot was picked ----
@@ -345,7 +510,7 @@ function renderAuthView() {
 
 async function renderBookingFormView() {
   const content = document.getElementById('portal-content');
-  if (!pendingSlot) {
+  if (!pendingSlot || !pendingDate || !pendingMechanicId) {
     view = 'picker';
     return renderPickerView();
   }
@@ -356,11 +521,11 @@ async function renderBookingFormView() {
     content.innerHTML = `<div class="empty-state">${esc(err.message)}</div>`;
     return;
   }
-  const mechanic = mechanics.find((m) => m.id === selectedMechanicId);
+  const mechanic = mechanics.find((m) => m.id === pendingMechanicId);
 
   content.innerHTML = `
     <div class="panel">
-      <div class="panel-header"><h2>Book ${esc(fmtDateLabel(selectedDate))} at ${esc(pendingSlot)}${mechanic ? ` with ${esc(mechanic.name)}` : ''}</h2></div>
+      <div class="panel-header"><h2>Book ${esc(fmtDateLabel(pendingDate))} at ${esc(pendingSlot)}${mechanic ? ` with ${esc(mechanic.name)}` : ''}</h2></div>
       <div class="panel-body">
         <form id="booking-form">
           <div class="field">
@@ -400,7 +565,9 @@ async function renderBookingFormView() {
   });
 
   document.getElementById('booking-cancel').addEventListener('click', () => {
+    pendingDate = null;
     pendingSlot = null;
+    pendingMechanicId = null;
     view = 'picker';
     render();
   });
@@ -408,8 +575,8 @@ async function renderBookingFormView() {
   document.getElementById('booking-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {
-      mechanicId: selectedMechanicId,
-      jobDate: selectedDate,
+      mechanicId: pendingMechanicId,
+      jobDate: pendingDate,
       startTime: pendingSlot,
       description: document.getElementById('f-description').value.trim(),
     };
@@ -426,7 +593,9 @@ async function renderBookingFormView() {
     try {
       await api('/bookings', { method: 'POST', body });
       showToast('Booking requested — the shop will confirm it shortly.');
+      pendingDate = null;
       pendingSlot = null;
+      pendingMechanicId = null;
       view = 'my-bookings';
       await loadBookings();
       render();

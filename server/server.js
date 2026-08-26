@@ -1963,10 +1963,12 @@ route('GET', '/api/portal/:shopSlug/me', async (req, res, params) => {
 
 // Public - no login required to see what's open, only to actually book.
 route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
-  const mechanics = await db.prepare('SELECT id, name FROM employees WHERE is_mechanic = 1 AND active = 1 ORDER BY name').all();
+  const mechanics = await db
+    .prepare('SELECT id, name, working_days FROM employees WHERE is_mechanic = 1 AND active = 1 ORDER BY name')
+    .all();
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, {
-    mechanics: mechanics.map((m) => ({ id: m.id, name: m.name })),
+    mechanics: mechanics.map((m) => ({ id: m.id, name: m.name, workingDays: parseWorkingDays(m.working_days) })),
     openingTime: settings.opening_time,
     closingTime: settings.closing_time,
     openingDays: parseWorkingDays(settings.opening_days),

@@ -1,12 +1,23 @@
-/* Portal-specific layout only - buttons, fields, panels, badges all come
-   from the shared /styles.css (linked before this file in index.html) so
-   the booking page looks consistent with the shop's own EPOS. */
+/* Portal-specific layout only - the week-grid look itself (.week-grid,
+   .wk-corner, .wk-day-header, .day-off, .wk-hour-labels, .wk-day-col, etc.)
+   comes straight from the shared /styles.css (linked before this file in
+   index.html), reused as-is so this looks like the same diary staff see -
+   see portal.js's renderPickerView() for the markup that reuses those
+   classes. */
 
 .portal-shell {
   max-width: 640px;
   margin: 0 auto;
   padding: 20px 16px 60px;
   width: 100%;
+}
+
+/* The week grid itself needs more room than the narrow shell the auth/
+   booking-form/my-bookings views use - widened only while the picker is
+   showing. week-grid-scroll (from styles.css) still handles horizontal
+   scroll on narrow viewports, same as it does for staff. */
+.portal-shell.wide {
+  max-width: 980px;
 }
 
 .portal-header {
@@ -20,14 +31,6 @@
 .portal-header h1 { font-size: 19px; margin: 0; }
 .portal-header .muted { font-size: 13px; }
 
-.portal-day-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-.portal-day-nav .day-label { font-weight: 600; flex: 1; text-align: center; }
-
 .mechanic-select-row {
   display: flex;
   gap: 8px;
@@ -35,30 +38,36 @@
   margin-bottom: 16px;
 }
 
-.slot-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+.portal-week-nav {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  margin-bottom: 14px;
 }
+.portal-week-nav .week-label { flex: 1; text-align: center; font-weight: 600; color: var(--muted); font-size: 13.5px; }
 
-.slot-btn {
+/* Busy/unavailable time - deliberately styled like the diary's own day-off
+   hatching (see .wk-day-col.day-off in styles.css), not a colored
+   job-status block - customers must never learn anything about what the
+   job actually is, only that the time isn't free. pointer-events:none so
+   clicks pass through to the day column underneath, which itself re-checks
+   busy-ness before opening the booking form (covers clicks right at a
+   block's edge). */
+.portal-busy-block {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  border-radius: 6px;
   border: 1px solid var(--border);
-  background: #fff;
-  color: var(--ink);
-  padding: 10px 6px;
-  border-radius: 8px;
-  font-size: 13.5px;
-  text-align: center;
-  cursor: pointer;
-}
-.slot-btn:hover { border-color: var(--accent); }
-.slot-btn.busy {
-  background: #f2f3f1;
+  background: repeating-linear-gradient(45deg, #f4f4f2, #f4f4f2 7px, #ebebe9 7px, #ebebe9 14px);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
   color: var(--muted);
-  cursor: not-allowed;
-  text-decoration: line-through;
+  font-weight: 600;
 }
-.slot-btn.busy:hover { border-color: var(--border); }
 
 .booking-list-item {
   display: flex;

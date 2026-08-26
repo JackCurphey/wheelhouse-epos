@@ -48,7 +48,8 @@ let workshopWeekStart = null; // 'YYYY-MM-DD' for the Monday of the displayed we
 let workshopMonthStart = null; // 'YYYY-MM-01' for the displayed month
 let workshopJobs = [];
 let workshopPlacing = false; // true while "Create job" is armed, waiting for a diary click
-let workshopMechanicFilter = 'all'; // 'all' | 'unassigned' | mechanic id
+let workshopMechanicFilter = 'all'; // 'all' | 'unassigned' | mechanic id | array of mechanic ids
+let workshopMechanicFilterInitialized = false; // true once the default below (every mechanic, split view) has been applied - so it only happens once, not every re-render, and a later manual choice (incl. picking "All" back) sticks
 let workshopPendingOnly = false; // when true, on top of workshopMechanicFilter - surfaces customer booking requests awaiting approval
 
 let mechanics = []; // employees with isMechanic=true, active only - used by the Workshop diary
@@ -199,6 +200,14 @@ async function loadWorkshopJobs(start, end) {
 
 async function loadMechanics() {
   mechanics = await api('/api/employees?role=mechanic');
+  // Default to every mechanic shown split side by side (matches the
+  // customer portal's own default) rather than the merged single-column
+  // "All" view - only on first load, so it doesn't override a filter
+  // already chosen this session (including deliberately picking "All" back).
+  if (!workshopMechanicFilterInitialized && mechanics.length) {
+    workshopMechanicFilter = mechanics.map((m) => m.id);
+    workshopMechanicFilterInitialized = true;
+  }
 }
 
 async function loadActiveCashiers() {
