@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { prepare, dbExec, runWithShop } from './db.js';
+import { prepare, dbExec, runWithShop, pool } from './db.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
 import {
@@ -22,9 +22,21 @@ import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
 } from './auth.js';
+import {
+  CustomerAuthError,
+  signupCustomer,
+  verifyCustomerLogin,
+  createCustomerSession,
+  getCustomerSessionContext,
+  destroyCustomerSession,
+  serializeCustomerLogin,
+  CUSTOMER_SESSION_COOKIE,
+  CUSTOMER_SESSION_MAX_AGE_SECONDS,
+} from './customer-auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 // Every request that touches shop data runs inside `runWithShop(shopId, ...)`
@@ -126,6 +138,31 @@ function serializeSession({ login, shop }) {
     shopSlug: shop.slug,
   };
 }
+
+// ---------- Customer portal auth helpers ----------
+// Parallel to the staff ones above but on their own cookie name, so a
+// customer session and a staff session can coexist in the same browser
+// without either one clobbering the other.
+
+function setCustomerSessionCookie(req, res, token) {
+  const secure = isHttpsRequest(req) ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `${CUSTOMER_SESSION_COOKIE}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${CUSTOMER_SESSION_MAX_AGE_SECONDS}${secure}`
+  );
+}
+
+function clearCustomerSessionCookie(res) {
+  res.setHeader('Set-Cookie', `${CUSTOMER_SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+}
+
+async function currentCustomerSession(req) {
+  const { [CUSTOMER_SESSION_COOKIE]: token } = parseCookies(req);
+  return getCustomerSessionContext(token);
+}
+
+const portalLoginLimiter = makeRateLimiter(10, 15 * 60 * 1000);
+const portalSignupLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -1430,7 +1467,11 @@ function serializeWorkshopJob(row) {
   };
 }
 
-const JOB_STATUSES = ['scheduled', 'waiting_parts', 'on_hold', 'complete'];
+// 'pending' is a customer-submitted booking (see /api/portal/*) awaiting a
+// mechanic's manual review before it counts as scheduled - it still occupies
+// its diary slot like any other status, so a second booking can't silently
+// double it up, but staff have to explicitly approve it first.
+const JOB_STATUSES = ['pending', 'scheduled', 'waiting_parts', 'on_hold', 'complete'];
 
 function resolveJobStatus(raw, existing) {
   if (raw === undefined) return existing || 'scheduled';
@@ -1531,6 +1572,42 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
   sendJson(res, 200, serializeWorkshopJob(row));
 });
 
+// Shared by the staff "create job" route below and the customer portal's
+// booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
+// linked order in one transaction. Trusts every field completely; callers
+// are responsible for validating/resolving them first (the portal route
+// deliberately ignores anything the client sends for customerId/status and
+// forces its own values, same principle as createSale() never trusting a
+// client-sent total).
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, status, notes, skipAutoOrder }) {
+  await db.exec('BEGIN');
+  try {
+    const info = await db
+      .prepare(
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, status, notes, nowIso());
+    const jobId = info.lastInsertRowid;
+
+    // Every workshop job is backed by an order so it's findable from the
+    // Orders page, unless the caller already has an order it's about to link
+    // this job to itself (the order's "show in workshop diary" toggle).
+    if (!skipAutoOrder) {
+      await db.prepare(
+        `INSERT INTO sale_documents (kind, customer_id, subtotal, discount, total, note, title, workshop_job_id, updated_at)
+         VALUES ('order', ?, 0, 0, 0, ?, ?, ?, ?)`
+      ).run(customerId, notes, title, jobId, nowIso());
+    }
+
+    await db.exec('COMMIT');
+    return jobId;
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 route('POST', '/api/workshop-jobs', async (req, res) => {
   const body = await readJsonBody(req);
   const title = (body.title || '').trim();
@@ -1554,46 +1631,20 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
   const status = resolveJobStatus(body.status, null);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
 
-  // Every workshop job is backed by an order so it's findable from the
-  // Orders page, unless the caller already has an order it's about to link
-  // this job to itself (the order's "show in workshop diary" toggle).
-  const skipAutoOrder = !!body.skipAutoOrder;
-
-  await db.exec('BEGIN');
-  try {
-    const info = await db
-      .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        title,
-        resolved.customerId,
-        bikeResolved.bikeId,
-        mechResolved.mechanicId,
-        jobDate,
-        times.startTime,
-        times.endTime,
-        status,
-        notes,
-        nowIso()
-      );
-    const jobId = info.lastInsertRowid;
-
-    if (!skipAutoOrder) {
-      await db.prepare(
-        `INSERT INTO sale_documents (kind, customer_id, subtotal, discount, total, note, title, workshop_job_id, updated_at)
-         VALUES ('order', ?, 0, 0, 0, ?, ?, ?, ?)`
-      ).run(resolved.customerId, notes, title, jobId, nowIso());
-    }
-
-    await db.exec('COMMIT');
-    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-    sendJson(res, 201, serializeWorkshopJob(row));
-  } catch (err) {
-    await db.exec('ROLLBACK');
-    throw err;
-  }
+  const jobId = await createWorkshopJob({
+    title,
+    customerId: resolved.customerId,
+    bikeId: bikeResolved.bikeId,
+    mechanicId: mechResolved.mechanicId,
+    jobDate,
+    startTime: times.startTime,
+    endTime: times.endTime,
+    status,
+    notes,
+    skipAutoOrder: !!body.skipAutoOrder,
+  });
+  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+  sendJson(res, 201, serializeWorkshopJob(row));
 });
 
 route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
@@ -1837,16 +1888,227 @@ route('GET', '/api/dashboard', async (req, res) => {
   });
 });
 
+// ---------- Customer portal ----------
+// A second, public-facing surface (see public-portal/) for customers to
+// book their own workshop slots. Its auth is entirely separate from staff
+// auth (see server/customer-auth.js) - signup/login/logout manage their own
+// shop resolution and session, same as /api/auth/* does for staff, and
+// never touch RLS-protected tables directly. Every other /api/portal/*
+// route needs the shop's RLS context (resolved from the :shopSlug in the
+// URL, see the dispatcher below) to read/write customers/employees/
+// workshop_jobs/etc through the normal db.prepare(...) shim.
+
+route('POST', '/api/portal/:shopSlug/signup', async (req, res, params) => {
+  const ip = clientIp(req);
+  if (!portalSignupLimiter.check(ip)) {
+    return sendJson(res, 429, { error: 'Too many accounts created from this network - please try again later.' });
+  }
+  const body = await readJsonBody(req);
+  let created;
+  try {
+    created = await signupCustomer({ shopSlug: params.shopSlug, email: body.email, password: body.password, name: body.name });
+  } catch (err) {
+    if (err instanceof CustomerAuthError) return badRequest(res, err.message);
+    throw err;
+  }
+  const token = await createCustomerSession(created.login.id);
+  setCustomerSessionCookie(req, res, token);
+  sendJson(res, 201, {
+    id: created.login.id,
+    email: created.login.email,
+    name: created.customer.name,
+    shopName: created.shop.name,
+    shopSlug: created.shop.slug,
+  });
+});
+
+route('POST', '/api/portal/:shopSlug/login', async (req, res, params) => {
+  const ip = clientIp(req);
+  if (!portalLoginLimiter.check(ip)) {
+    return sendJson(res, 429, { error: 'Too many login attempts - please wait a few minutes and try again.' });
+  }
+  const body = await readJsonBody(req);
+  let login;
+  try {
+    login = await verifyCustomerLogin(params.shopSlug, body.email, body.password);
+  } catch (err) {
+    if (err instanceof CustomerAuthError) return sendJson(res, 401, { error: err.message });
+    throw err;
+  }
+  portalLoginLimiter.reset(ip);
+  const token = await createCustomerSession(login.id);
+  setCustomerSessionCookie(req, res, token);
+  sendJson(res, 200, serializeCustomerLogin(login));
+});
+
+route('POST', '/api/portal/:shopSlug/logout', async (req, res) => {
+  const { [CUSTOMER_SESSION_COOKIE]: token } = parseCookies(req);
+  await destroyCustomerSession(token);
+  clearCustomerSessionCookie(res);
+  sendJson(res, 200, { ok: true });
+});
+
+route('GET', '/api/portal/:shopSlug/me', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(ctx.login.customer_id);
+  sendJson(res, 200, {
+    id: ctx.login.id,
+    email: ctx.login.email,
+    name: customer ? customer.name : '',
+    shopName: ctx.shop.name,
+    shopSlug: ctx.shop.slug,
+  });
+});
+
+// Public - no login required to see what's open, only to actually book.
+route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
+  const mechanics = await db.prepare('SELECT id, name FROM employees WHERE is_mechanic = 1 AND active = 1 ORDER BY name').all();
+  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+  sendJson(res, 200, {
+    mechanics: mechanics.map((m) => ({ id: m.id, name: m.name })),
+    openingTime: settings.opening_time,
+    closingTime: settings.closing_time,
+    openingDays: parseWorkingDays(settings.opening_days),
+  });
+});
+
+// Public. Returns only mechanic/date/time for whatever's already booked -
+// deliberately never reuses serializeWorkshopJob (title/customer/notes),
+// since that's exactly the private detail this endpoint must not leak.
+// Every job counts as busy regardless of status, including 'pending', so
+// two customers can't unknowingly grab the same slot.
+route('GET', '/api/portal/:shopSlug/availability', async (req, res, params, query) => {
+  const start = query.get('start');
+  const end = query.get('end');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start || '') || !/^\d{4}-\d{2}-\d{2}$/.test(end || '')) {
+    return badRequest(res, 'Valid start and end dates are required');
+  }
+  let sql = `SELECT mechanic_id, job_date, start_time, end_time FROM workshop_jobs
+    WHERE job_date >= ? AND job_date <= ? AND start_time IS NOT NULL AND start_time != ''`;
+  const args = [start, end];
+  const mechanicId = query.get('mechanicId');
+  if (mechanicId) {
+    sql += ' AND mechanic_id = ?';
+    args.push(Number(mechanicId));
+  }
+  sql += ' ORDER BY job_date, start_time';
+  const rows = await db.prepare(sql).all(...args);
+  sendJson(
+    res,
+    200,
+    rows.map((r) => ({ mechanicId: r.mechanic_id, jobDate: r.job_date, startTime: r.start_time, endTime: r.end_time }))
+  );
+});
+
+route('GET', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const rows = await db
+    .prepare('SELECT * FROM customer_bikes WHERE customer_id = ? AND active = 1 ORDER BY make, model')
+    .all(ctx.login.customer_id);
+  sendJson(res, 200, rows.map(serializeBike));
+});
+
+route('POST', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+  const make = (body.make || '').trim();
+  const model = (body.model || '').trim();
+  if (!make && !model) return badRequest(res, 'Make or model is required');
+  const info = await db
+    .prepare(
+      `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(ctx.login.customer_id, make, model, (body.colour || '').trim(), (body.serialNumber || '').trim(), nowIso());
+  const row = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(info.lastInsertRowid);
+  sendJson(res, 201, serializeBike(row));
+});
+
+route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const rows = await db
+    .prepare(WORKSHOP_JOB_SELECT + ' WHERE w.customer_id = ? ORDER BY w.job_date DESC, w.start_time DESC')
+    .all(ctx.login.customer_id);
+  sendJson(res, 200, rows.map((r) => serializeWorkshopJob(r)));
+});
+
+route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+
+  const jobDate = (body.jobDate || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
+  const description = (body.description || '').trim();
+  if (!description) return badRequest(res, 'Please describe what you need done');
+
+  const times = resolveJobTimes((body.startTime || '').trim(), '');
+  if (!times.startTime) return badRequest(res, 'A start time is required');
+  if (times.error) return badRequest(res, times.error);
+
+  const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
+  if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
+
+  // Either an existing bike of theirs, or a new one registered inline -
+  // never a bike belonging to another customer (checked below).
+  let bikeId = null;
+  if (body.newBike) {
+    const make = (body.newBike.make || '').trim();
+    const model = (body.newBike.model || '').trim();
+    if (!make && !model) return badRequest(res, 'Bike make or model is required');
+    const info = await db
+      .prepare(
+        `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        ctx.login.customer_id,
+        make,
+        model,
+        (body.newBike.colour || '').trim(),
+        (body.newBike.serialNumber || '').trim(),
+        nowIso()
+      );
+    bikeId = info.lastInsertRowid;
+  } else if (body.bikeId) {
+    const bike = await db
+      .prepare('SELECT * FROM customer_bikes WHERE id = ? AND customer_id = ? AND active = 1')
+      .get(Number(body.bikeId), ctx.login.customer_id);
+    if (!bike) return badRequest(res, 'Bike not found');
+    bikeId = bike.id;
+  }
+
+  // Never trusts a client-sent customerId or status - always the logged-in
+  // customer's own linked record, always 'pending' until a mechanic reviews
+  // it, same principle as createSale() never trusting a client-sent total.
+  const jobId = await createWorkshopJob({
+    title: `Online booking: ${description}`.slice(0, 200),
+    customerId: ctx.login.customer_id,
+    bikeId,
+    mechanicId: mechResolved.mechanicId,
+    jobDate,
+    startTime: times.startTime,
+    endTime: times.endTime,
+    status: 'pending',
+    notes: description,
+    skipAutoOrder: false,
+  });
+  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+  sendJson(res, 201, serializeWorkshopJob(row));
+});
+
 // ---------- Static file serving ----------
 
-async function serveStatic(req, res, pathname) {
-  let filePath = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);
-  // Prevent path traversal outside the public directory.
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+async function serveStatic(req, res, pathname, baseDir) {
+  let filePath = path.join(baseDir, pathname === '/' ? 'index.html' : pathname);
+  // Prevent path traversal outside the given static directory.
+  if (!filePath.startsWith(baseDir)) {
     return notFound(res);
   }
   if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
-    filePath = path.join(PUBLIC_DIR, 'index.html');
+    filePath = path.join(baseDir, 'index.html');
   }
   const ext = path.extname(filePath);
   const contentType = MIME[ext] || 'application/octet-stream';
@@ -1857,6 +2119,45 @@ async function serveStatic(req, res, pathname) {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  if (pathname.startsWith('/api/portal/')) {
+    for (const r of routes) {
+      if (r.method !== req.method) continue;
+      const match = r.regex.exec(pathname);
+      if (!match) continue;
+      const params = {};
+      r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+
+      // signup/login/logout resolve their own shop (or need none at all, for
+      // logout) and never touch RLS-protected tables directly, same as
+      // /api/auth/* does for staff. Every other portal route needs the
+      // shop's RLS context, resolved here from :shopSlug, to read/write
+      // customers/employees/workshop_jobs/etc through the normal db
+      // shim - customer identity (if the route needs it) is then checked
+      // inside the handler itself via currentCustomerSession().
+      if (/\/(signup|login|logout)$/.test(pathname)) {
+        try {
+          await r.handler(req, res, params, url.searchParams);
+        } catch (err) {
+          console.error(err);
+          sendJson(res, 500, { error: err.message || 'Internal server error' });
+        }
+        return;
+      }
+
+      const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE slug = $1', [params.shopSlug]);
+      if (!shop) return notFound(res, 'Shop not found');
+
+      try {
+        await runWithShop(shop.id, () => r.handler(req, res, params, url.searchParams, shop));
+      } catch (err) {
+        console.error(err);
+        sendJson(res, 500, { error: err.message || 'Internal server error' });
+      }
+      return;
+    }
+    return notFound(res, 'Unknown portal route');
+  }
 
   if (pathname.startsWith('/api/')) {
     for (const r of routes) {
@@ -1894,8 +2195,21 @@ const server = createServer(async (req, res) => {
     return notFound(res, 'Unknown API route');
   }
 
+  // Customer-portal frontend lives under /book - its own small static
+  // bundle (public-portal/), entirely separate from the staff app's.
+  if (pathname === '/book' || pathname.startsWith('/book/')) {
+    const relative = pathname.slice('/book'.length) || '/';
+    try {
+      await serveStatic(req, res, relative, PORTAL_DIR);
+    } catch (err) {
+      console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
+
   try {
-    await serveStatic(req, res, pathname);
+    await serveStatic(req, res, pathname, PUBLIC_DIR);
   } catch (err) {
     console.error(err);
     sendJson(res, 500, { error: 'Internal server error' });

@@ -13,6 +13,9 @@
   --warn-bg: #fff7e0;
   --warn-ink: #8a6100;
   --ok-bg: #e8f5ec;
+  --status-pending-bg: #f1e8fb;
+  --status-pending-border: #6a3ea1;
+  --status-pending-ink: #6a3ea1;
   --status-scheduled-bg: #eaf1fb;
   --status-scheduled-border: #4d7fc4;
   --status-scheduled-ink: #2c5289;
@@ -612,6 +615,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .badge.status-new { background: var(--warn-bg); color: var(--warn-ink); }
 .badge.status-imported { background: var(--ok-bg); color: var(--accent-dark); }
 .badge.status-ignored { background: var(--danger-bg); color: var(--danger); }
+.badge.status-pending { background: var(--status-pending-bg); color: var(--status-pending-ink); }
 
 .table-toolbar {
   display: flex;
@@ -788,6 +792,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   gap: 2px;
 }
 .job-card:hover { border-color: var(--accent); }
+.job-card.status-pending { background: var(--status-pending-bg); border-left-color: var(--status-pending-border); }
 .job-card.status-waiting_parts { background: var(--status-waiting_parts-bg); border-left-color: var(--status-waiting_parts-border); }
 .job-card.status-on_hold { background: var(--status-on_hold-bg); border-left-color: var(--status-on_hold-border); }
 .job-card.status-complete { background: var(--status-complete-bg); border-left-color: var(--status-complete-border); }
@@ -810,6 +815,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   background: var(--status-scheduled-border);
   color: #fff;
 }
+.status-pending .job-status-badge { background: var(--status-pending-border); }
 .status-waiting_parts .job-status-badge { background: var(--status-waiting_parts-border); }
 .status-on_hold .job-status-badge { background: var(--status-on_hold-border); }
 .status-complete .job-status-badge { background: var(--status-complete-border); }
@@ -875,6 +881,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   z-index: 2;
 }
 .wk-job-block.dragging { z-index: 50; box-shadow: 0 6px 16px rgba(0,0,0,0.2); opacity: 0.92; }
+.wk-job-block.status-pending { background: var(--status-pending-bg); border-color: var(--status-pending-border); }
 .wk-job-block.status-waiting_parts { background: var(--status-waiting_parts-bg); border-color: var(--status-waiting_parts-border); }
 .wk-job-block.status-on_hold { background: var(--status-on_hold-bg); border-color: var(--status-on_hold-border); }
 .wk-job-block.status-complete { background: var(--status-complete-bg); border-color: var(--status-complete-border); }
@@ -974,6 +981,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   overflow: hidden;
 }
 .month-job-chip:hover { border-color: var(--accent); }
+.month-job-chip.status-pending { background: var(--status-pending-bg); border-left-color: var(--status-pending-border); }
 .month-job-chip.status-waiting_parts { background: var(--status-waiting_parts-bg); border-left-color: var(--status-waiting_parts-border); }
 .month-job-chip.status-on_hold { background: var(--status-on_hold-bg); border-left-color: var(--status-on_hold-border); }
 .month-job-chip.status-complete { background: var(--status-complete-bg); border-left-color: var(--status-complete-border); }
@@ -1006,6 +1014,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   background: #fff;
 }
 .day-job-row:hover { border-color: var(--accent); }
+.day-job-row.status-pending { border-left-color: var(--status-pending-border); }
 .day-job-row.status-waiting_parts { border-left-color: var(--status-waiting_parts-border); }
 .day-job-row.status-on_hold { border-left-color: var(--status-on_hold-border); }
 .day-job-row.status-complete { border-left-color: var(--status-complete-border); }
@@ -1022,6 +1031,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   background: var(--status-scheduled-border);
   color: #fff;
 }
+.status-pending .djr-status-badge { background: var(--status-pending-border); }
 .status-waiting_parts .djr-status-badge { background: var(--status-waiting_parts-border); }
 .status-on_hold .djr-status-badge { background: var(--status-on_hold-border); }
 .status-complete .djr-status-badge { background: var(--status-complete-border); }

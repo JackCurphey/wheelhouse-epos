@@ -18,13 +18,16 @@ const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export class AuthError extends Error {}
 
-function hashPassword(password) {
+// Exported so server/customer-auth.js (a separate, parallel account system
+// for customers rather than staff) can reuse the same hashing without
+// duplicating it or importing anything shop/login-specific.
+export function hashPassword(password) {
   const salt = randomBytes(16);
   const hash = scryptSync(password, salt, 64);
   return `${salt.toString('hex')}:${hash.toString('hex')}`;
 }
 
-function verifyPassword(password, stored) {
+export function verifyPassword(password, stored) {
   const [saltHex, hashHex] = String(stored).split(':');
   if (!saltHex || !hashHex) return false;
   const salt = Buffer.from(saltHex, 'hex');
@@ -53,7 +56,7 @@ async function uniqueSlug(client, name) {
   return slug;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function validateNewLogin({ name, email, password }) {
   name = (name || '').trim();

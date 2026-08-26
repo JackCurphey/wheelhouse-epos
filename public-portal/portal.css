@@ -1,0 +1,77 @@
+/* Portal-specific layout only - buttons, fields, panels, badges all come
+   from the shared /styles.css (linked before this file in index.html) so
+   the booking page looks consistent with the shop's own EPOS. */
+
+.portal-shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+  width: 100%;
+}
+
+.portal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.portal-header h1 { font-size: 19px; margin: 0; }
+.portal-header .muted { font-size: 13px; }
+
+.portal-day-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.portal-day-nav .day-label { font-weight: 600; flex: 1; text-align: center; }
+
+.mechanic-select-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.slot-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 6px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  text-align: center;
+  cursor: pointer;
+}
+.slot-btn:hover { border-color: var(--accent); }
+.slot-btn.busy {
+  background: #f2f3f1;
+  color: var(--muted);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.slot-btn.busy:hover { border-color: var(--border); }
+
+.booking-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.booking-list-item:last-child { border-bottom: none; }
+
+.portal-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}

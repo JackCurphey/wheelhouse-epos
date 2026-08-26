@@ -49,6 +49,7 @@ let workshopMonthStart = null; // 'YYYY-MM-01' for the displayed month
 let workshopJobs = [];
 let workshopPlacing = false; // true while "Create job" is armed, waiting for a diary click
 let workshopMechanicFilter = 'all'; // 'all' | 'unassigned' | mechanic id
+let workshopPendingOnly = false; // when true, on top of workshopMechanicFilter - surfaces customer booking requests awaiting approval
 
 let mechanics = []; // employees with isMechanic=true, active only - used by the Workshop diary
 let activeCashiers = []; // employees with isCashier=true, active only - used by Front Desk
@@ -1479,9 +1480,15 @@ function renderMechanicPills() {
     { id: 'unassigned', label: 'Unassigned', active: workshopMechanicFilter === 'unassigned' },
     ...mechanics.map((m) => ({ id: String(m.id), label: m.name, active: selectedIds.includes(m.id) })),
   ];
-  wrap.innerHTML = tabs
-    .map((t) => `<button class="pill ${t.active ? 'active' : ''}" data-mech="${esc(t.id)}">${esc(t.label)}</button>`)
-    .join('');
+  const pendingCount = workshopJobs.filter((j) => j.status === 'pending').length;
+  wrap.innerHTML =
+    tabs
+      .map((t) => `<button class="pill ${t.active ? 'active' : ''}" data-mech="${esc(t.id)}">${esc(t.label)}</button>`)
+      .join('') +
+    // Independent of the mechanic filter above (composable, not mutually
+    // exclusive) - surfaces customer booking requests awaiting approval
+    // without staff having to spot them in a full week/month grid.
+    `<button class="pill ${workshopPendingOnly ? 'active' : ''}" id="pending-only-pill">Pending${pendingCount ? ` (${pendingCount})` : ''}</button>`;
   wrap.querySelectorAll('button[data-mech]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const val = btn.dataset.mech;
@@ -1496,6 +1503,11 @@ function renderMechanicPills() {
       renderMechanicPills();
       refreshWorkshopGrid();
     });
+  });
+  document.getElementById('pending-only-pill').addEventListener('click', () => {
+    workshopPendingOnly = !workshopPendingOnly;
+    renderMechanicPills();
+    refreshWorkshopGrid();
   });
 }
 
@@ -1520,10 +1532,11 @@ function refreshWorkshopGrid() {
 }
 
 function visibleWorkshopJobs() {
-  if (workshopMechanicFilter === 'all') return workshopJobs;
-  if (workshopMechanicFilter === 'unassigned') return workshopJobs.filter((j) => !j.mechanicId);
-  if (Array.isArray(workshopMechanicFilter)) return workshopJobs.filter((j) => workshopMechanicFilter.includes(j.mechanicId));
-  return workshopJobs.filter((j) => j.mechanicId === workshopMechanicFilter);
+  const base = workshopJobs.filter((j) => (workshopPendingOnly ? j.status === 'pending' : true));
+  if (workshopMechanicFilter === 'all') return base;
+  if (workshopMechanicFilter === 'unassigned') return base.filter((j) => !j.mechanicId);
+  if (Array.isArray(workshopMechanicFilter)) return base.filter((j) => workshopMechanicFilter.includes(j.mechanicId));
+  return base.filter((j) => j.mechanicId === workshopMechanicFilter);
 }
 
 // When 2+ mechanics are selected at once, the diary splits each day into a
@@ -3183,6 +3196,7 @@ const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const WEEKDAY_LABELS = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
 
 const JOB_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending approval' },
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'waiting_parts', label: 'Waiting for parts' },
   { value: 'on_hold', label: 'On hold' },
