@@ -16,6 +16,7 @@
 let shopSlug = '';
 let currentCustomer = null; // { id, email, name, shopName, shopSlug } or null when signed out
 let mechanics = []; // [{ id, name, workingDays }]
+let jobTypes = []; // [{ value, label, minutes }] - server-defined, so duration estimates live in one place
 let openingTime = '09:00';
 let closingTime = '18:00';
 let openingDays = [0, 1, 2, 3, 4, 5, 6];
@@ -30,7 +31,15 @@ let pendingDate = null; // date the customer clicked on the grid, carried across
 let pendingSlot = null; // time the customer clicked on the grid, carried across a login/signup detour
 let pendingMechanicId = null; // which mechanic's column was clicked, carried across a login/signup detour
 
-const DEFAULT_JOB_DURATION_MIN = 60; // matches the shop's own default (server/server.js resolveJobTimes)
+// Used only for the initial grid click (busy-check and the max clickable
+// start time) - the actual duration a booking gets is whatever job type
+// the customer picks in the form afterward (server/server.js's
+// PORTAL_JOB_TYPES). A slot that looks free under this 60-min proxy but
+// turns out too short once a longer job type is chosen just becomes a
+// second overlapping pending request, same as any other conflict - staff
+// catch it at approval, same tradeoff the rest of this booking flow
+// already makes.
+const DEFAULT_JOB_DURATION_MIN = 60;
 const WORKSHOP_ROW_PX = 48; // matches the staff diary's own row height exactly, for the same visual scale
 
 // ---------------- Helpers ----------------
@@ -185,6 +194,7 @@ async function api(path, { method = 'GET', body } = {}) {
 async function loadMechanicsAndHours() {
   const data = await api('/mechanics');
   mechanics = data.mechanics;
+  jobTypes = data.jobTypes || [];
   openingTime = data.openingTime;
   closingTime = data.closingTime;
   openingDays = data.openingDays;
@@ -546,6 +556,13 @@ async function renderBookingFormView() {
             </div>
           </div>
           <div class="field">
+            <label for="f-job-type">What kind of job is this? *</label>
+            <select id="f-job-type" required>
+              <option value="" disabled ${jobTypes.length ? 'selected' : ''}>Choose the closest match…</option>
+              ${jobTypes.map((t) => `<option value="${esc(t.value)}">${esc(t.label)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
             <label for="f-description">What do you need done? *</label>
             <textarea id="f-description" rows="3" required placeholder="e.g. Squeaky brakes, annual service…"></textarea>
           </div>
@@ -578,6 +595,7 @@ async function renderBookingFormView() {
       mechanicId: pendingMechanicId,
       jobDate: pendingDate,
       startTime: pendingSlot,
+      jobType: document.getElementById('f-job-type').value,
       description: document.getElementById('f-description').value.trim(),
     };
     if (bikeSelect.value === '__new__') {
@@ -624,7 +642,7 @@ async function renderMyBookingsView() {
                   (b) => `
               <div class="booking-list-item">
                 <div>
-                  <div><strong>${esc(b.jobDate)}${b.startTime ? ` at ${esc(b.startTime)}` : ''}</strong></div>
+                  <div><strong>${esc(b.jobDate)}${b.startTime ? ` at ${esc(b.startTime)}${b.endTime ? `–${esc(b.endTime)}` : ''}` : ''}</strong></div>
                   <div class="muted">${esc(b.notes || b.title || '')}${b.mechanicName ? ` · ${esc(b.mechanicName)}` : ''}</div>
                 </div>
                 <span class="badge status-${esc(b.status)}">${esc(b.status)}</span>

@@ -1961,6 +1961,17 @@ route('GET', '/api/portal/:shopSlug/me', async (req, res, params) => {
   });
 });
 
+// A rough first pass at "jobs take different amounts of time" - the
+// customer picks the closest job type rather than typing a duration, and
+// the server (not the client) decides what that maps to in minutes. Not
+// meant to be the final word on estimating job length, just enough that a
+// general service doesn't eat the same single slot as a brake adjustment.
+const PORTAL_JOB_TYPES = {
+  quick: { label: 'Quick fix (puncture, brake or gear adjustment)', minutes: 30 },
+  repair: { label: 'Repair (part replacement, wheel truing, etc.)', minutes: 60 },
+  service: { label: 'General service (full safety check & tune)', minutes: 120 },
+};
+
 // Public - no login required to see what's open, only to actually book.
 route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
   const mechanics = await db
@@ -1972,6 +1983,7 @@ route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
     openingTime: settings.opening_time,
     closingTime: settings.closing_time,
     openingDays: parseWorkingDays(settings.opening_days),
+    jobTypes: Object.entries(PORTAL_JOB_TYPES).map(([value, t]) => ({ value, label: t.label, minutes: t.minutes })),
   });
 });
 
@@ -2047,7 +2059,11 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const description = (body.description || '').trim();
   if (!description) return badRequest(res, 'Please describe what you need done');
 
-  const times = resolveJobTimes((body.startTime || '').trim(), '');
+  const jobType = PORTAL_JOB_TYPES[body.jobType];
+  if (!jobType) return badRequest(res, 'Please choose the kind of job this is');
+
+  const startTime = (body.startTime || '').trim();
+  const times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, jobType.minutes) : '');
   if (!times.startTime) return badRequest(res, 'A start time is required');
   if (times.error) return badRequest(res, times.error);
 
