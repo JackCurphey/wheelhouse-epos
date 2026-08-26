@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepare, dbExec, runWithShop } from './db.js';
 import { runMigrations } from './migrations/run-migrations.js';
+import { runSync } from './suppliers/index.js';
 import {
   AuthError,
   createShop,
@@ -451,6 +452,118 @@ route('POST', '/api/products/:id/stock', async (req, res, params) => {
 route('GET', '/api/categories', async (req, res) => {
   const rows = await db.prepare('SELECT DISTINCT category FROM products ORDER BY category').all();
   sendJson(res, 200, rows.map((r) => r.category));
+});
+
+// ---------- Suppliers & catalogue sync ----------
+// The bike-shop-distributor equivalent of a stock information feed: a
+// supplier's items land in supplier_catalogue_items on sync, and stay in a
+// review queue (status='new') until a person explicitly imports or ignores
+// each one - never auto-created as a real product.
+
+function serializeSupplier(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    adapterType: row.adapter_type,
+    config: row.config,
+    lastSyncedAt: row.last_synced_at,
+    createdAt: row.created_at,
+  };
+}
+
+function serializeCatalogueItem(row) {
+  return {
+    id: row.id,
+    supplierId: row.supplier_id,
+    supplierSku: row.supplier_sku,
+    barcode: row.barcode,
+    name: row.name,
+    price: row.price,
+    stockQty: row.stock_qty,
+    status: row.status,
+    productId: row.product_id,
+    firstSeenAt: row.first_seen_at,
+    lastSeenAt: row.last_seen_at,
+  };
+}
+
+const SUPPLIER_ADAPTER_TYPES = ['mock_csv'];
+
+route('GET', '/api/suppliers', async (req, res) => {
+  const rows = await db.prepare('SELECT * FROM suppliers ORDER BY name').all();
+  sendJson(res, 200, rows.map(serializeSupplier));
+});
+
+route('POST', '/api/suppliers', async (req, res) => {
+  const body = await readJsonBody(req);
+  const name = (body.name || '').trim();
+  if (!name) return badRequest(res, 'Supplier name is required');
+  const adapterType = (body.adapterType || '').trim();
+  if (!SUPPLIER_ADAPTER_TYPES.includes(adapterType)) return badRequest(res, 'Unsupported adapter type');
+  try {
+    const info = await db
+      .prepare('INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES (?, ?, ?, ?)')
+      .run(name, adapterType, JSON.stringify(body.config || {}), nowIso());
+    const row = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(info.lastInsertRowid);
+    sendJson(res, 201, serializeSupplier(row));
+  } catch (err) {
+    if (err.code === '23505') return badRequest(res, `A supplier named "${name}" already exists`);
+    throw err;
+  }
+});
+
+route('POST', '/api/suppliers/:id/sync', async (req, res, params) => {
+  const id = Number(params.id);
+  const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
+  if (!supplier) return notFound(res, 'Supplier not found');
+  const result = await runSync(db, nowIso(), supplier);
+  sendJson(res, 200, result);
+});
+
+route('GET', '/api/catalogue-items', async (req, res, params, query) => {
+  const status = query.get('status') || 'new';
+  const rows = await db
+    .prepare('SELECT * FROM supplier_catalogue_items WHERE status = ? ORDER BY last_seen_at DESC')
+    .all(status);
+  sendJson(res, 200, rows.map(serializeCatalogueItem));
+});
+
+route('POST', '/api/catalogue-items/:id/import', async (req, res, params) => {
+  const id = Number(params.id);
+  const item = await db.prepare('SELECT * FROM supplier_catalogue_items WHERE id = ?').get(id);
+  if (!item) return notFound(res, 'Catalogue item not found');
+  if (item.status !== 'new') return badRequest(res, 'This item has already been imported or ignored');
+  const body = await readJsonBody(req);
+  const category = (body.category || 'Uncategorised').trim();
+  const sellPrice = Number(body.price);
+  if (!Number.isFinite(sellPrice) || sellPrice < 0) return badRequest(res, 'A valid sell price is required');
+
+  const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(item.supplier_id);
+  try {
+    const info = await db
+      .prepare(
+        `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, supplier, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(item.supplier_sku, item.barcode, item.name, category, sellPrice, item.price, item.stock_qty, supplier.name, nowIso());
+    await db
+      .prepare(`UPDATE supplier_catalogue_items SET status = 'imported', product_id = ?, updated_at = ? WHERE id = ?`)
+      .run(info.lastInsertRowid, nowIso(), id);
+    const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
+    sendJson(res, 201, serializeProduct(product));
+  } catch (err) {
+    if (err.code === '23505') return badRequest(res, `SKU or barcode "${item.supplier_sku}" is already in use`);
+    throw err;
+  }
+});
+
+route('POST', '/api/catalogue-items/:id/ignore', async (req, res, params) => {
+  const id = Number(params.id);
+  const item = await db.prepare('SELECT * FROM supplier_catalogue_items WHERE id = ?').get(id);
+  if (!item) return notFound(res, 'Catalogue item not found');
+  if (item.status !== 'new') return badRequest(res, 'This item has already been imported or ignored');
+  await db.prepare(`UPDATE supplier_catalogue_items SET status = 'ignored', updated_at = ? WHERE id = ?`).run(nowIso(), id);
+  sendJson(res, 200, { ok: true });
 });
 
 // ---------- Customers ----------

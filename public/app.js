@@ -25,6 +25,10 @@ let inventorySearch = '';
 let inventoryCategory = '';
 let inventoryShowInactive = false;
 
+let suppliers = [];
+let catalogueItems = [];
+let catalogueStatusFilter = 'new';
+
 let salesDateFilter = 'today';
 let salesCustomerFilter = '';
 let salesCashierFilter = '';
@@ -229,6 +233,7 @@ const TABS = [
 const OFFICE_TABS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'inventory', label: 'Stockroom' },
+  { id: 'suppliers', label: 'Suppliers' },
   { id: 'sales', label: 'Sales History' },
   { id: 'customers', label: 'Customers' },
   {
@@ -1331,6 +1336,7 @@ async function renderOffice() {
   const subId = parts[2];
   if (sub === 'inventory' && subId) await renderProductDetail(Number(subId));
   else if (sub === 'inventory') await renderInventory();
+  else if (sub === 'suppliers') await renderSuppliers();
   else if (sub === 'sales') await renderSalesHistory();
   else if (sub === 'customers' && subId) await renderCustomerDetail(Number(subId));
   else if (sub === 'customers') await renderCustomers();
@@ -2246,6 +2252,154 @@ function renderInventoryTable() {
         showToast('Product activated');
         await loadProductsAll();
         renderInventoryTable();
+      } catch (err) {
+        showToast(err.message);
+      }
+    })
+  );
+}
+
+// ---------------- Suppliers ----------------
+// Distributor catalogue sync (see server/suppliers/): items land in a review
+// queue on sync and only become real products once a person explicitly
+// imports them - never auto-created.
+
+async function loadSuppliers() {
+  suppliers = await api('/api/suppliers');
+}
+
+async function loadCatalogueItems() {
+  catalogueItems = await api(`/api/catalogue-items?status=${catalogueStatusFilter}`);
+}
+
+async function renderSuppliers() {
+  await loadSuppliers();
+  await loadCatalogueItems();
+  const main = document.getElementById('office-content');
+  main.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Suppliers</h2>
+        <button class="btn btn-primary" id="add-supplier-btn">+ Add supplier</button>
+      </div>
+      <div class="panel-body">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Adapter</th><th>Last synced</th><th></th></tr></thead>
+          <tbody id="supplier-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-header">
+        <h2>Review queue</h2>
+        <select id="catalogue-status-filter">
+          <option value="new" ${catalogueStatusFilter === 'new' ? 'selected' : ''}>New</option>
+          <option value="imported" ${catalogueStatusFilter === 'imported' ? 'selected' : ''}>Imported</option>
+          <option value="ignored" ${catalogueStatusFilter === 'ignored' ? 'selected' : ''}>Ignored</option>
+        </select>
+      </div>
+      <div class="panel-body">
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SKU</th><th>Barcode</th><th>Name</th>
+                <th class="num">Supplier price</th><th class="num">Stock</th><th>Status</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="catalogue-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('add-supplier-btn').addEventListener('click', () => openModal({ type: 'supplier-form' }));
+  document.getElementById('catalogue-status-filter').addEventListener('change', async (e) => {
+    catalogueStatusFilter = e.target.value;
+    await loadCatalogueItems();
+    renderCatalogueTable();
+  });
+  renderSupplierTable();
+  renderCatalogueTable();
+}
+
+function renderSupplierTable() {
+  const tbody = document.getElementById('supplier-table-body');
+  if (!tbody) return;
+  if (!suppliers.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No suppliers configured yet.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = suppliers
+    .map(
+      (s) => `
+      <tr>
+        <td>${esc(s.name)}</td>
+        <td>${esc(s.adapterType)}</td>
+        <td>${s.lastSyncedAt ? fmtDateTime(s.lastSyncedAt) : 'Never'}</td>
+        <td><button class="icon-btn" data-sync="${s.id}">Sync now</button></td>
+      </tr>
+    `
+    )
+    .join('');
+  tbody.querySelectorAll('button[data-sync]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      try {
+        const result = await api(`/api/suppliers/${b.dataset.sync}/sync`, { method: 'POST' });
+        showToast(`Synced: ${result.inserted} new, ${result.updated} updated`);
+        await loadSuppliers();
+        await loadCatalogueItems();
+        renderSupplierTable();
+        renderCatalogueTable();
+      } catch (err) {
+        showToast(err.message);
+      }
+    })
+  );
+}
+
+function renderCatalogueTable() {
+  const tbody = document.getElementById('catalogue-table-body');
+  if (!tbody) return;
+  if (!catalogueItems.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Nothing here.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = catalogueItems
+    .map(
+      (it) => `
+      <tr>
+        <td>${esc(it.supplierSku)}</td>
+        <td>${esc(it.barcode || '—')}</td>
+        <td>${esc(it.name)}</td>
+        <td class="num">${money(it.price)}</td>
+        <td class="num">${it.stockQty}</td>
+        <td><span class="badge status-${it.status}">${esc(it.status)}</span></td>
+        <td>
+          ${
+            it.status === 'new'
+              ? `<button class="icon-btn" data-import="${it.id}">Import</button>
+                 <button class="icon-btn" data-ignore="${it.id}">Ignore</button>`
+              : ''
+          }
+        </td>
+      </tr>
+    `
+    )
+    .join('');
+  tbody.querySelectorAll('button[data-import]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const item = catalogueItems.find((x) => x.id === Number(b.dataset.import));
+      openModal({ type: 'catalogue-import', item });
+    })
+  );
+  tbody.querySelectorAll('button[data-ignore]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      try {
+        await api(`/api/catalogue-items/${b.dataset.ignore}/ignore`, { method: 'POST' });
+        showToast('Item ignored');
+        await loadCatalogueItems();
+        renderCatalogueTable();
       } catch (err) {
         showToast(err.message);
       }
@@ -3287,6 +3441,8 @@ function renderModal() {
   if (modal.type === 'login-form') return renderLoginFormModal(holder);
   if (modal.type === 'group-form') return renderGroupFormModal(holder, modal.group);
   if (modal.type === 'day-jobs') return renderDayJobsModal(holder, modal.dateStr, modal.jobs);
+  if (modal.type === 'catalogue-import') return renderCatalogueImportModal(holder, modal.item);
+  if (modal.type === 'supplier-form') return renderSupplierFormModal(holder);
 }
 
 function renderProductFormModal(holder, product) {
@@ -3381,6 +3537,109 @@ function renderProductFormModal(holder, product) {
       showToast(isEdit ? 'Product updated' : 'Product added');
       closeModal();
       await refreshInventoryView(product?.id);
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+}
+
+function renderCatalogueImportModal(holder, item) {
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Import "${esc(item.name)}"</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="catalogue-import-form">
+          <div class="modal-body">
+            <div class="field-row">
+              <div class="field"><label>SKU</label><input type="text" value="${esc(item.supplierSku)}" disabled /></div>
+              <div class="field"><label>Barcode</label><input type="text" value="${esc(item.barcode || '')}" disabled /></div>
+            </div>
+            <div class="field">
+              <label for="f-category">Category *</label>
+              <input id="f-category" type="text" list="category-options" required placeholder="e.g. Bikes, Parts…" />
+              <datalist id="category-options">${categories.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Supplier cost</label><input type="text" value="${money(item.price)}" disabled /></div>
+              <div class="field">
+                <label for="f-price">Sell price (£) *</label>
+                <input id="f-price" type="number" min="0" step="0.01" required />
+              </div>
+            </div>
+            <div class="field"><label>Starting stock</label><input type="text" value="${item.stockQty}" disabled /></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Import as product</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+  document.getElementById('catalogue-import-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+      category: document.getElementById('f-category').value.trim() || 'Uncategorised',
+      price: parseFloat(document.getElementById('f-price').value) || 0,
+    };
+    try {
+      await api(`/api/catalogue-items/${item.id}/import`, { method: 'POST', body });
+      showToast('Product imported');
+      closeModal();
+      await loadCatalogueItems();
+      renderCatalogueTable();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+}
+
+function renderSupplierFormModal(holder) {
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Add supplier</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="supplier-form">
+          <div class="modal-body">
+            <div class="field">
+              <label for="f-name">Name *</label>
+              <input id="f-name" type="text" required placeholder="e.g. Madison" />
+            </div>
+            <div class="field">
+              <label for="f-adapter">Feed type *</label>
+              <select id="f-adapter">
+                <option value="mock_csv">Mock CSV (sample data)</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add supplier</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+  document.getElementById('supplier-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+      name: document.getElementById('f-name').value.trim(),
+      adapterType: document.getElementById('f-adapter').value,
+    };
+    try {
+      await api('/api/suppliers', { method: 'POST', body });
+      showToast('Supplier added');
+      closeModal();
+      await loadSuppliers();
+      renderSupplierTable();
     } catch (err) {
       showToast(err.message);
     }

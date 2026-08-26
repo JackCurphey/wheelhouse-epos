@@ -609,6 +609,9 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .badge.type-quote { background: var(--warn-bg); color: var(--warn-ink); }
 .badge.role-mechanic { background: var(--status-scheduled-bg); color: var(--status-scheduled-ink); }
 .badge.role-cashier { background: #e8eefb; color: #2255a4; }
+.badge.status-new { background: var(--warn-bg); color: var(--warn-ink); }
+.badge.status-imported { background: var(--ok-bg); color: var(--accent-dark); }
+.badge.status-ignored { background: var(--danger-bg); color: var(--danger); }
 
 .table-toolbar {
   display: flex;
