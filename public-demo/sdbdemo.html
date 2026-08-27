@@ -247,6 +247,20 @@
     font-size: 9.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
     pointer-events: none;
   }
+  /* Follows the mouse down a day column, snapped to the same 30-minute grid
+     a click would use, so you can see exactly what you're about to book
+     before you click. pointer-events:none - the column underneath still
+     handles the actual click. */
+  .hover-preview {
+    position: absolute; left: 2px; right: 2px; border-radius: 5px;
+    border: 2px solid var(--brass); background: color-mix(in srgb, var(--brass) 18%, transparent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--brass-deep); font-weight: 700; font-family: "IBM Plex Mono", monospace;
+    pointer-events: none; z-index: 2; overflow: hidden; white-space: nowrap;
+  }
+  .hover-preview.unavailable {
+    border-color: var(--danger); background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger);
+  }
 
   .widget-foot { padding: 16px 24px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
   .widget-foot .hint { font-size: 13px; color: var(--muted); }
@@ -619,7 +633,8 @@
           blocks += '<div class="slot-busy" style="top:' + top + 'px;height:' + Math.max(16, bot - top) + 'px;">Booked</div>';
         });
       }
-      return '<div class="g-col' + (dstr === todayStr ? ' today' : '') + (off ? ' off' : '') + '" data-date="' + dstr + '" data-mech="' + mechId + '" style="height:' + gridHeight + 'px;">' + blocks + '</div>';
+      var preview = off ? '' : '<div class="hover-preview" style="display:none;"></div>';
+      return '<div class="g-col' + (dstr === todayStr ? ' today' : '') + (off ? ' off' : '') + '" data-date="' + dstr + '" data-mech="' + mechId + '" style="height:' + gridHeight + 'px;">' + blocks + preview + '</div>';
     }).join('');
 
     return (
@@ -629,6 +644,16 @@
       cols +
       '</div>'
     );
+  }
+
+  // Same snap-to-30-minutes math the click handler and the hover preview
+  // both need, so the block you see under the cursor is exactly the slot a
+  // click there would book.
+  function snappedStartMin(y) {
+    var mins = HOUR_START * 60 + (y / ROW_PX) * 60;
+    var snapped = Math.round(mins / 30) * 30;
+    var maxStart = HOUR_END * 60 - DURATION_MIN;
+    return Math.max(HOUR_START * 60, Math.min(maxStart, snapped));
   }
 
   function renderDiaries() {
@@ -645,14 +670,28 @@
     document.getElementById('wkRange').textContent = fmtRange(days[0], days[days.length - 1]);
 
     Array.prototype.forEach.call(wrap.querySelectorAll('.g-col:not(.off)'), function (col) {
+      var preview = col.querySelector('.hover-preview');
+      if (preview) {
+        col.addEventListener('mousemove', function (e) {
+          var rect = col.getBoundingClientRect();
+          var startMin = snappedStartMin(e.clientY - rect.top);
+          var top = (startMin - HOUR_START * 60) / 60 * ROW_PX;
+          var bottom = (startMin + DURATION_MIN - HOUR_START * 60) / 60 * ROW_PX;
+          preview.style.top = top + 'px';
+          preview.style.height = Math.max(16, bottom - top) + 'px';
+          preview.style.display = '';
+          var time = minToTime(startMin);
+          var busy = isBusy(col.dataset.date, +col.dataset.mech, time);
+          preview.classList.toggle('unavailable', busy);
+          preview.textContent = busy ? 'Busy' : time;
+        });
+        col.addEventListener('mouseleave', function () {
+          preview.style.display = 'none';
+        });
+      }
       col.addEventListener('click', function (e) {
         var rect = col.getBoundingClientRect();
-        var y = e.clientY - rect.top;
-        var mins = HOUR_START * 60 + (y / ROW_PX) * 60;
-        var snapped = Math.round(mins / 30) * 30;
-        var maxStart = HOUR_END * 60 - DURATION_MIN;
-        snapped = Math.max(HOUR_START * 60, Math.min(maxStart, snapped));
-        var time = minToTime(snapped);
+        var time = minToTime(snappedStartMin(e.clientY - rect.top));
         var mechId = +col.dataset.mech;
         var dateStr = col.dataset.date;
         if (isBusy(dateStr, mechId, time)) { showToast("That time's just been taken — try another."); return; }

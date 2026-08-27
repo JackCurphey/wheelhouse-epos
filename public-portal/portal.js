@@ -380,6 +380,7 @@ function buildMechanicGridHtml(days, mechanicId, todayIso) {
       return `
       <div class="wk-day-col ${dateStr === todayIso ? 'today' : ''} ${dayOff ? 'day-off' : ''}" data-date="${dateStr}" data-mechanic="${mechanicId}" style="height:${gridHeight}px;">
         ${blocksHtml}
+        ${dayOff ? '' : '<div class="hover-preview" style="display:none;"></div>'}
       </div>`;
     })
     .join('');
@@ -474,6 +475,25 @@ async function renderPickerView() {
   // clicks right at a block's edge. data-mechanic on the column (set in
   // buildMechanicGridHtml) is what tells split-view clicks apart.
   content.querySelectorAll('.wk-day-col:not(.day-off)').forEach((col) => {
+    const preview = col.querySelector('.hover-preview');
+    if (preview) {
+      col.addEventListener('mousemove', (e) => {
+        const rect = col.getBoundingClientRect();
+        const time = timeFromGridY(e.clientY - rect.top);
+        const startMin = timeToMinutes(time);
+        const top = minutesToGridPx(startMin);
+        const bottom = minutesToGridPx(startMin + DEFAULT_JOB_DURATION_MIN);
+        preview.style.top = `${top}px`;
+        preview.style.height = `${Math.max(18, bottom - top)}px`;
+        preview.style.display = '';
+        const busy = isSlotBusy(col.dataset.date, time, Number(col.dataset.mechanic));
+        preview.classList.toggle('unavailable', busy);
+        preview.textContent = busy ? 'Busy' : time;
+      });
+      col.addEventListener('mouseleave', () => {
+        preview.style.display = 'none';
+      });
+    }
     col.addEventListener('click', (e) => {
       const rect = col.getBoundingClientRect();
       const time = timeFromGridY(e.clientY - rect.top);
