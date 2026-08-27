@@ -2076,6 +2076,27 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
+  // The grid only ever showed a fixed 60-minute proxy as "free" - the real
+  // length depends on the job type chosen in this same request, so a
+  // "service" (120 min) booked into what looked like an open slot could
+  // actually run past closing or straight into another job. Check both
+  // here, authoritatively, rather than trusting whatever the client showed.
+  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+  if (times.startTime < settings.opening_time || times.endTime > settings.closing_time) {
+    return badRequest(res, `That job doesn't fit in the shop's opening hours (${settings.opening_time}–${settings.closing_time}) - please choose an earlier time or a shorter job type.`);
+  }
+  const overlap = await db
+    .prepare(
+      `SELECT id FROM workshop_jobs
+       WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''
+       AND start_time < ? AND end_time > ?
+       LIMIT 1`
+    )
+    .get(mechResolved.mechanicId, jobDate, times.endTime, times.startTime);
+  if (overlap) {
+    return badRequest(res, "That mechanic is already booked over part of that window - please choose another time or a shorter job type.");
+  }
+
   // Either an existing bike of theirs, or a new one registered inline -
   // never a bike belonging to another customer (checked below).
   let bikeId = null;

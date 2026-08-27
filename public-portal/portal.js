@@ -158,6 +158,30 @@ function isSlotBusy(dateStr, startTime, mechanicId) {
   });
 }
 
+// The grid only ever checks a fixed DEFAULT_JOB_DURATION_MIN when deciding
+// what looks free (see isSlotBusy above) - the job type, picked afterward
+// in the booking form, can run longer than that. This re-checks the actual
+// chosen duration against closing time and every other booked slot, so the
+// customer finds out before submitting rather than from a rejected request.
+// The server re-validates the same thing authoritatively either way.
+function jobTypeFitError(jobTypeValue) {
+  const jobType = jobTypes.find((t) => t.value === jobTypeValue);
+  if (!jobType || !pendingSlot) return null;
+  const start = timeToMinutes(pendingSlot);
+  const end = start + jobType.minutes;
+  if (start < timeToMinutes(openingTime) || end > timeToMinutes(closingTime)) {
+    return `That doesn't fit before closing (${closingTime}) - please pick an earlier time or a shorter job type.`;
+  }
+  const clash = busySlots.some((b) => {
+    if (b.jobDate !== pendingDate || b.mechanicId !== pendingMechanicId) return false;
+    const bStart = timeToMinutes(b.startTime);
+    const bEnd = timeToMinutes(b.endTime);
+    return start < bEnd && bStart < end;
+  });
+  if (clash) return 'That runs into another booking for this mechanic - please pick an earlier time or a shorter job type.';
+  return null;
+}
+
 function showToast(msg) {
   let holder = document.getElementById('portal-toast');
   if (!holder) {
@@ -561,6 +585,7 @@ async function renderBookingFormView() {
               <option value="" disabled ${jobTypes.length ? 'selected' : ''}>Choose the closest match…</option>
               ${jobTypes.map((t) => `<option value="${esc(t.value)}">${esc(t.label)}</option>`).join('')}
             </select>
+            <div class="field-error" id="f-job-type-error" style="display:none;"></div>
           </div>
           <div class="field">
             <label for="f-description">What do you need done? *</label>
@@ -568,7 +593,7 @@ async function renderBookingFormView() {
           </div>
           <div class="field-row">
             <button type="button" class="btn" id="booking-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary btn-block">Request booking</button>
+            <button type="submit" class="btn btn-primary btn-block" id="booking-submit">Request booking</button>
           </div>
         </form>
       </div>
@@ -581,6 +606,16 @@ async function renderBookingFormView() {
     newBikeFields.style.display = bikeSelect.value === '__new__' ? '' : 'none';
   });
 
+  const jobTypeSelect = document.getElementById('f-job-type');
+  const jobTypeError = document.getElementById('f-job-type-error');
+  const submitBtn = document.getElementById('booking-submit');
+  jobTypeSelect.addEventListener('change', () => {
+    const message = jobTypeFitError(jobTypeSelect.value);
+    jobTypeError.textContent = message || '';
+    jobTypeError.style.display = message ? '' : 'none';
+    submitBtn.disabled = !!message;
+  });
+
   document.getElementById('booking-cancel').addEventListener('click', () => {
     pendingDate = null;
     pendingSlot = null;
@@ -591,11 +626,18 @@ async function renderBookingFormView() {
 
   document.getElementById('booking-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const jobTypeValue = document.getElementById('f-job-type').value;
+    const fitError = jobTypeFitError(jobTypeValue);
+    if (fitError) {
+      jobTypeError.textContent = fitError;
+      jobTypeError.style.display = '';
+      return;
+    }
     const body = {
       mechanicId: pendingMechanicId,
       jobDate: pendingDate,
       startTime: pendingSlot,
-      jobType: document.getElementById('f-job-type').value,
+      jobType: jobTypeValue,
       description: document.getElementById('f-description').value.trim(),
     };
     if (bikeSelect.value === '__new__') {

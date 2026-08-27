@@ -556,6 +556,29 @@
     });
   }
 
+  // The grid only ever checks the fixed DURATION_MIN proxy when deciding
+  // what looks free - the job type, picked afterward in the form, can run
+  // longer than that. This re-checks the real chosen duration against
+  // closing time and every other booked slot, so it's caught before
+  // submitting rather than as a rejection from the server (which is the
+  // authoritative check either way).
+  function jobTypeFitError(jobTypeVal) {
+    var jobType = JOB_TYPES.filter(function (t) { return t.value === jobTypeVal; })[0];
+    if (!jobType || !pending) return null;
+    var start = timeToMin(pending.time);
+    var end = start + jobType.minutes;
+    if (start < HOUR_START * 60 || end > HOUR_END * 60) {
+      return "That doesn't fit before closing (" + minToTime(HOUR_END * 60) + ") — please pick an earlier time or a shorter job type.";
+    }
+    var clash = busy.some(function (b) {
+      if (b.dateStr !== pending.dateStr || b.mechanicId !== pending.mechanicId) return false;
+      var bs = timeToMin(b.start), be = timeToMin(b.end);
+      return start < be && bs < end;
+    });
+    if (clash) return 'That runs into another booking for this mechanic — please pick an earlier time or a shorter job type.';
+    return null;
+  }
+
   function renderPills() {
     var wrap = document.getElementById('mechPills');
     wrap.innerHTML = MECHANICS.map(function (m) {
@@ -694,6 +717,14 @@
     document.body.appendChild(back);
     (document.getElementById('bName') || document.getElementById('bBike')).focus();
 
+    document.getElementById('bJobType').addEventListener('change', function () {
+      var msg = jobTypeFitError(this.value);
+      var box = document.getElementById('bError');
+      box.textContent = msg || '';
+      box.style.display = msg ? '' : 'none';
+      document.getElementById('bSubmit').disabled = !!msg;
+    });
+
     back.addEventListener('click', function (e) { if (e.target === back) closeModal(); });
     document.getElementById('modalCancel').addEventListener('click', closeModal);
     document.getElementById('bookForm').addEventListener('submit', function (e) {
@@ -735,6 +766,11 @@
     var jobTypeVal = document.getElementById('bJobType').value;
     var what = document.getElementById('bWhat').value.trim();
     var errBox = document.getElementById('bError');
+    var fitError = jobTypeFitError(jobTypeVal);
+    if (fitError) {
+      if (errBox) { errBox.textContent = fitError; errBox.style.display = ''; }
+      return;
+    }
     if (errBox) errBox.style.display = 'none';
 
     var authStep;
