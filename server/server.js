@@ -1,10 +1,11 @@
 // Bike Shop EPOS - local server, PostgreSQL-backed.
 import './load-env.js';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool } from './db.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -38,6 +39,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
 const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
+// Attachment bytes live here as flat files named by a random per-file token
+// (see workshop_job_attachments.storage_key) - never the customer's original
+// filename, so there's nothing to sanitize or path-traverse with. The token
+// alone never grants access; every read goes through the download route,
+// which checks the owning job through the normal RLS-scoped `db`. Backed by
+// a named Docker volume (docker-compose.yml) so uploads survive a rebuild
+// the same way Postgres's data does.
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 // Every request that touches shop data runs inside `runWithShop(shopId, ...)`
@@ -191,12 +200,12 @@ function badRequest(res, msg = 'Bad request') {
   sendJson(res, 400, { error: msg });
 }
 
-async function readJsonBody(req) {
+async function readJsonBody(req, maxBytes = 2_000_000) {
   return new Promise((resolve, reject) => {
     let data = '';
     req.on('data', (chunk) => {
       data += chunk;
-      if (data.length > 2_000_000) {
+      if (data.length > maxBytes) {
         reject(new Error('Payload too large'));
         req.destroy();
       }
@@ -1706,8 +1715,113 @@ route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Job not found');
+  // The attachments row is ON DELETE CASCADE, but that only removes the DB
+  // record - the file on disk needs its own cleanup or it just sits there
+  // forever with nothing pointing at it.
+  const attachments = await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE workshop_job_id = ?').all(id);
   await db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
   await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
+  await Promise.all(attachments.map((a) => unlink(path.join(UPLOADS_DIR, a.storage_key)).catch(() => {})));
+  sendJson(res, 200, { ok: true });
+});
+
+// ---------- Workshop job attachments ----------
+// Files (e.g. an e-bike's downloaded diagnostic report) attached to a
+// workshop job. Uploaded as base64 inside a normal JSON body rather than
+// multipart/form-data - this project deliberately has exactly one
+// dependency (pg), and a hand-rolled multipart parser is a lot of surface
+// area for something that's rare and small (a PDF report, not a video) for
+// a single shop's workshop.
+
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // plenty for a PDF report; small enough a handful of them won't fill the disk
+// Base64 inflates the raw bytes by ~1.37x, so the request-body cap needs
+// headroom above the decoded-file cap it's ultimately enforcing.
+const MAX_ATTACHMENT_BODY_BYTES = Math.ceil(MAX_ATTACHMENT_BYTES * 1.4);
+
+function serializeAttachment(row) {
+  return {
+    id: row.id,
+    workshopJobId: row.workshop_job_id,
+    originalName: row.original_name,
+    contentType: row.content_type,
+    sizeBytes: row.size_bytes,
+    uploadedAt: row.uploaded_at,
+  };
+}
+
+route('GET', '/api/workshop-jobs/:jobId/attachments', async (req, res, params) => {
+  const jobId = Number(params.jobId);
+  const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
+  if (!job) return notFound(res, 'Job not found');
+  const rows = await db
+    .prepare('SELECT * FROM workshop_job_attachments WHERE workshop_job_id = ? ORDER BY uploaded_at DESC')
+    .all(jobId);
+  sendJson(res, 200, rows.map(serializeAttachment));
+});
+
+route('POST', '/api/workshop-jobs/:jobId/attachments', async (req, res, params) => {
+  const jobId = Number(params.jobId);
+  const job = await db.prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
+  if (!job) return notFound(res, 'Job not found');
+
+  let body;
+  try {
+    body = await readJsonBody(req, MAX_ATTACHMENT_BODY_BYTES);
+  } catch (err) {
+    return badRequest(res, err.message === 'Payload too large' ? 'That file is too large (max 15MB).' : 'Invalid request body');
+  }
+  if (!body.dataBase64) return badRequest(res, 'No file data received');
+  const originalName = String(body.filename || 'attachment').trim().slice(0, 200) || 'attachment';
+  const contentType = String(body.contentType || 'application/octet-stream').trim().slice(0, 100);
+
+  let buffer;
+  try {
+    buffer = Buffer.from(body.dataBase64, 'base64');
+  } catch (err) {
+    return badRequest(res, 'Could not decode file data');
+  }
+  if (!buffer.length) return badRequest(res, 'That file is empty');
+  if (buffer.length > MAX_ATTACHMENT_BYTES) return badRequest(res, 'That file is too large (max 15MB).');
+
+  const storageKey = randomBytes(24).toString('hex');
+  await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);
+  const info = await db
+    .prepare(
+      `INSERT INTO workshop_job_attachments (workshop_job_id, storage_key, original_name, content_type, size_bytes)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+    .run(jobId, storageKey, originalName, contentType, buffer.length);
+  const row = await db.prepare('SELECT * FROM workshop_job_attachments WHERE id = ?').get(info.lastInsertRowid);
+  sendJson(res, 201, serializeAttachment(row));
+});
+
+route('GET', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, params) => {
+  const attachment = await db
+    .prepare('SELECT * FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?')
+    .get(Number(params.id), Number(params.jobId));
+  if (!attachment) return notFound(res, 'Attachment not found');
+  const filePath = path.join(UPLOADS_DIR, attachment.storage_key);
+  if (!existsSync(filePath)) return notFound(res, 'Attachment not found');
+  // RFC 5987 filename* carries the real (possibly non-ASCII) name; the
+  // plain filename= is a plain-ASCII fallback for older clients, with
+  // anything that would break the quoted string stripped out.
+  const asciiFallback = attachment.original_name.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
+  res.writeHead(200, {
+    'Content-Type': attachment.content_type || 'application/octet-stream',
+    'Content-Length': attachment.size_bytes,
+    'Content-Disposition': `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(attachment.original_name)}`,
+    'Cache-Control': 'no-store',
+  });
+  createReadStream(filePath).pipe(res);
+});
+
+route('DELETE', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, params) => {
+  const attachment = await db
+    .prepare('SELECT * FROM workshop_job_attachments WHERE id = ? AND workshop_job_id = ?')
+    .get(Number(params.id), Number(params.jobId));
+  if (!attachment) return notFound(res, 'Attachment not found');
+  await db.prepare('DELETE FROM workshop_job_attachments WHERE id = ?').run(attachment.id);
+  await unlink(path.join(UPLOADS_DIR, attachment.storage_key)).catch(() => {});
   sendJson(res, 200, { ok: true });
 });
 
@@ -2285,6 +2399,7 @@ const server = createServer(async (req, res) => {
 });
 
 runMigrations()
+  .then(() => mkdir(UPLOADS_DIR, { recursive: true }))
   .then(() => {
     server.listen(PORT, () => {
       console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);

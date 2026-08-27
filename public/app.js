@@ -86,6 +86,17 @@ function vatFromInclusive(amount) {
   return (Number(amount) || 0) - (Number(amount) || 0) / 1.2;
 }
 
+// Reads a File as base64, stripping the "data:<mime>;base64," prefix
+// FileReader's own encoding adds - the server only wants the raw payload.
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',').pop());
+    reader.onerror = () => reject(new Error('Could not read that file'));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,
@@ -4273,6 +4284,18 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
                   : `<p class="muted" style="margin:0;">Save the job first, then reopen it here to add items.</p>`
               }
             </div>
+            <div class="field wj-attachments-field" id="wj-attachments-section">
+              <label>Attachments</label>
+              ${
+                isEdit
+                  ? `
+                <div class="attachment-list" id="wj-attachments-list"><div class="empty-cart">Loading…</div></div>
+                <input type="file" id="wj-attachment-file" style="display:none;" />
+                <button type="button" class="btn btn-sm" id="wj-attachment-add">+ Attach file</button>
+              `
+                  : `<p class="muted" style="margin:0;">Save the job first, then reopen it here to attach files.</p>`
+              }
+            </div>
             <div class="field wj-notes-field">
               <label for="wj-notes">Notes</label>
               <textarea id="wj-notes" placeholder="Optional">${esc(initial.notes || '')}</textarea>
@@ -4632,6 +4655,82 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
     renderWjItemsList();
   }
 
+  function fmtFileSize(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  async function loadWjAttachments() {
+    if (!isEdit) return;
+    const list = document.getElementById('wj-attachments-list');
+    try {
+      const rows = await api(`/api/workshop-jobs/${job.id}/attachments`);
+      renderWjAttachments(rows);
+    } catch (err) {
+      if (list) list.innerHTML = `<div class="empty-cart">Could not load attachments.</div>`;
+    }
+  }
+
+  function renderWjAttachments(rows) {
+    const list = document.getElementById('wj-attachments-list');
+    if (!list) return;
+    list.innerHTML = rows.length
+      ? rows
+          .map(
+            (a) => `
+        <div class="attachment-row">
+          <a href="/api/workshop-jobs/${job.id}/attachments/${a.id}" target="_blank" rel="noopener">${esc(a.originalName)}</a>
+          <span class="muted">${fmtFileSize(a.sizeBytes)}</span>
+          <button type="button" class="btn btn-sm btn-danger" data-remove-attachment="${a.id}">Remove</button>
+        </div>
+      `
+          )
+          .join('')
+      : `<div class="empty-cart">No files attached.</div>`;
+    list.querySelectorAll('[data-remove-attachment]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remove this attachment?')) return;
+        try {
+          await api(`/api/workshop-jobs/${job.id}/attachments/${btn.dataset.removeAttachment}`, { method: 'DELETE' });
+          loadWjAttachments();
+        } catch (err) {
+          showToast(err.message);
+        }
+      });
+    });
+  }
+
+  const wjAttachmentAddBtn = document.getElementById('wj-attachment-add');
+  const wjAttachmentFileInput = document.getElementById('wj-attachment-file');
+  if (wjAttachmentAddBtn && wjAttachmentFileInput) {
+    wjAttachmentAddBtn.addEventListener('click', () => wjAttachmentFileInput.click());
+    wjAttachmentFileInput.addEventListener('change', async () => {
+      const file = wjAttachmentFileInput.files[0];
+      wjAttachmentFileInput.value = '';
+      if (!file) return;
+      if (file.size > 15 * 1024 * 1024) {
+        showToast('That file is too large (max 15MB).');
+        return;
+      }
+      wjAttachmentAddBtn.disabled = true;
+      wjAttachmentAddBtn.textContent = 'Uploading…';
+      try {
+        const dataBase64 = await fileToBase64(file);
+        await api(`/api/workshop-jobs/${job.id}/attachments`, {
+          method: 'POST',
+          body: { filename: file.name, contentType: file.type, dataBase64 },
+        });
+        await loadWjAttachments();
+      } catch (err) {
+        showToast(err.message);
+      } finally {
+        wjAttachmentAddBtn.disabled = false;
+        wjAttachmentAddBtn.textContent = '+ Attach file';
+      }
+    });
+  }
+
   const wjItemSearchInput = document.getElementById('wj-item-search');
   if (wjItemSearchInput) {
     wjItemSearchInput.addEventListener('input', (e) => {
@@ -4648,6 +4747,7 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
   }
 
   loadWjItems();
+  loadWjAttachments();
   applyLockState();
 
   const completeToggleBtn = document.getElementById('wj-complete-toggle');

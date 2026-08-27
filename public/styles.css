@@ -1200,6 +1200,22 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   resize: none;
 }
 
+.wj-attachments-field { gap: 6px; }
+.attachment-list { display: flex; flex-direction: column; gap: 6px; }
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+.attachment-row a { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent-dark); }
+.attachment-row .muted { font-size: 12px; white-space: nowrap; }
+.attachment-list .empty-cart { padding: 10px 0; }
+
 .wj-body-grid.wj-locked .field input,
 .wj-body-grid.wj-locked .field select,
 .wj-body-grid.wj-locked .field textarea {

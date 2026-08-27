@@ -36,6 +36,12 @@ services:
       DATABASE_URL: postgres://epos_app:${POSTGRES_PASSWORD}@postgres:5432/epos
       PORT: 4000
       SIGNUP_CODE: ${SIGNUP_CODE:-}
+    volumes:
+      # Workshop job attachments (server.js's UPLOADS_DIR) - a named volume
+      # so they survive an image rebuild, same reasoning as epos_pgdata.
+      # Only the app container touches files directly; gateway just proxies
+      # HTTP to it, so it doesn't need this mount.
+      - epos_uploads:/app/uploads
     ports:
       - "127.0.0.1:4000:4000"
     healthcheck:
@@ -62,3 +68,4 @@ services:
 
 volumes:
   epos_pgdata:
+  epos_uploads:
