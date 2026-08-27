@@ -1561,6 +1561,11 @@ route('GET', '/api/workshop-jobs', async (req, res, params, query) => {
     sql += ' AND w.job_date <= ?';
     args.push(end);
   }
+  const status = query.get('status');
+  if (status) {
+    sql += ' AND w.status = ?';
+    args.push(status);
+  }
   sql += ' ORDER BY w.job_date, w.start_time';
   const rows = await db.prepare(sql).all(...args);
   sendJson(res, 200, rows.map(serializeWorkshopJob));
@@ -2131,7 +2136,13 @@ async function serveStatic(req, res, pathname, baseDir) {
   }
   const ext = path.extname(filePath);
   const contentType = MIME[ext] || 'application/octet-stream';
-  res.writeHead(200, { 'Content-Type': contentType });
+  // Without an explicit header here, Cloudflare's edge falls back to its own
+  // default caching for static-looking extensions (observed: a 4-hour TTL)
+  // - fine for a CDN-fronted site with a build/version pipeline, but this
+  // app deploys straight from source with no cache-busted filenames, so a
+  // cached JS/CSS bundle can silently outlive the code it's stale against.
+  // Small, low-traffic internal tool - correctness beats any caching win.
+  res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
   createReadStream(filePath).pipe(res);
 }
 
@@ -2222,7 +2233,7 @@ const server = createServer(async (req, res) => {
   if (pathname === '/sdbdemo' || pathname === '/sdbdemo/') {
     try {
       const html = await readFile(DEMO_FILE, 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(html);
     } catch (err) {
       console.error(err);
