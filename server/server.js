@@ -1545,6 +1545,54 @@ function addMinutesToTime(timeStr, minutes) {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
+function timeToMinutes(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Merges overlapping/adjacent [start,end) minute intervals before summing
+// them, so two jobs that overlap (or just touch) don't get their shared
+// time counted twice - that would understate how much of the day is
+// actually still free.
+function mergedMinutes(intervals) {
+  if (!intervals.length) return 0;
+  const sorted = intervals.slice().sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let [curStart, curEnd] = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    const [s, e] = sorted[i];
+    if (s <= curEnd) {
+      curEnd = Math.max(curEnd, e);
+    } else {
+      total += curEnd - curStart;
+      [curStart, curEnd] = [s, e];
+    }
+  }
+  total += curEnd - curStart;
+  return total;
+}
+
+// How many minutes of a mechanic's working day (clamped to opening/closing
+// time) are still free, given every job already on the books for that
+// date - the basis for both the portal's "this day is full" display and
+// the authoritative reject-on-booking check below.
+async function mechanicFreeMinutes(mechanicId, jobDate, openingTime, closingTime) {
+  const openMin = timeToMinutes(openingTime);
+  const closeMin = timeToMinutes(closingTime);
+  const rows = await db
+    .prepare(
+      `SELECT start_time, end_time FROM workshop_jobs
+       WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''`
+    )
+    .all(mechanicId, jobDate);
+  const intervals = rows.map((r) => [
+    Math.max(openMin, timeToMinutes(r.start_time)),
+    Math.min(closeMin, timeToMinutes(r.end_time)),
+  ]);
+  const busy = mergedMinutes(intervals);
+  return Math.max(0, closeMin - openMin - busy);
+}
+
 // A job with a start time always gets an end time - defaulting to +1 hour
 // keeps every scheduled job a draggable/resizable block on the diary grid.
 function resolveJobTimes(startTime, endTimeInput) {
@@ -1937,6 +1985,7 @@ function serializeWorkshopSettings(row) {
     openingTime: row.opening_time,
     closingTime: row.closing_time,
     openingDays: parseWorkingDays(row.opening_days),
+    fullDayThresholdMinutes: row.full_day_threshold_minutes,
     updatedAt: row.updated_at,
   };
 }
@@ -1962,9 +2011,16 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   if (closingTime <= openingTime) return badRequest(res, 'Closing time must be after opening time');
   const openingDays = resolveWorkingDays(body.openingDays, existing.opening_days);
   if (openingDays === null) return badRequest(res, 'openingDays must be an array of day numbers (0-6)');
+  let fullDayThresholdMinutes = existing.full_day_threshold_minutes;
+  if (body.fullDayThresholdMinutes !== undefined) {
+    fullDayThresholdMinutes = Number(body.fullDayThresholdMinutes);
+    if (!Number.isInteger(fullDayThresholdMinutes) || fullDayThresholdMinutes < 0 || fullDayThresholdMinutes > 480) {
+      return badRequest(res, 'The full-day threshold must be a whole number of minutes between 0 and 480');
+    }
+  }
   await db.prepare(
-    'UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, updated_at = ? WHERE id = ?'
-  ).run(openingTime, closingTime, openingDays, nowIso(), existing.id);
+    'UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, full_day_threshold_minutes = ?, updated_at = ? WHERE id = ?'
+  ).run(openingTime, closingTime, openingDays, fullDayThresholdMinutes, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
@@ -2128,11 +2184,35 @@ route('GET', '/api/portal/:shopSlug/availability', async (req, res, params, quer
   }
   sql += ' ORDER BY job_date, start_time';
   const rows = await db.prepare(sql).all(...args);
-  sendJson(
-    res,
-    200,
-    rows.map((r) => ({ mechanicId: r.mechanic_id, jobDate: r.job_date, startTime: r.start_time, endTime: r.end_time }))
-  );
+
+  // Alongside the raw busy blocks, work out which mechanic/day combinations
+  // already have less than workshop_settings.full_day_threshold_minutes of
+  // genuinely free time left (small gaps between jobs merged, not summed
+  // twice) - the portal treats those the same as a closed day, even though
+  // technically-free slivers of time remain here and there.
+  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+  const openMin = timeToMinutes(settings.opening_time);
+  const closeMin = timeToMinutes(settings.closing_time);
+  const workingMinutes = closeMin - openMin;
+  const byMechanicDay = new Map();
+  for (const r of rows) {
+    const key = `${r.mechanic_id}|${r.job_date}`;
+    if (!byMechanicDay.has(key)) byMechanicDay.set(key, { mechanicId: r.mechanic_id, jobDate: r.job_date, intervals: [] });
+    byMechanicDay.get(key).intervals.push([
+      Math.max(openMin, timeToMinutes(r.start_time)),
+      Math.min(closeMin, timeToMinutes(r.end_time)),
+    ]);
+  }
+  const fullDays = [];
+  for (const { mechanicId: mId, jobDate, intervals } of byMechanicDay.values()) {
+    const free = workingMinutes - mergedMinutes(intervals);
+    if (free < settings.full_day_threshold_minutes) fullDays.push({ mechanicId: mId, jobDate });
+  }
+
+  sendJson(res, 200, {
+    busy: rows.map((r) => ({ mechanicId: r.mechanic_id, jobDate: r.job_date, startTime: r.start_time, endTime: r.end_time })),
+    fullDays,
+  });
 });
 
 route('GET', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
@@ -2196,6 +2276,16 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   // actually run past closing or straight into another job. Check both
   // here, authoritatively, rather than trusting whatever the client showed.
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+
+  // Even if this specific slot would technically fit, the shop may already
+  // consider the day full once too little free time is left overall (e.g.
+  // several small gaps between jobs adding up under the threshold) -
+  // checked as a coarser gate before the exact-slot checks below.
+  const freeMinutes = await mechanicFreeMinutes(mechResolved.mechanicId, jobDate, settings.opening_time, settings.closing_time);
+  if (freeMinutes < settings.full_day_threshold_minutes) {
+    return badRequest(res, 'That mechanic is fully booked that day - please choose another day.');
+  }
+
   if (times.startTime < settings.opening_time || times.endTime > settings.closing_time) {
     return badRequest(res, `That job doesn't fit in the shop's opening hours (${settings.opening_time}–${settings.closing_time}) - please choose an earlier time or a shorter job type.`);
   }

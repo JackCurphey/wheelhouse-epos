@@ -57,7 +57,7 @@ let activeCashiers = []; // employees with isCashier=true, active only - used by
 let activeCashierId = null;
 let employees = []; // full roster (all roles, active + inactive per toggle) - used by Edit Workshop
 let employeeShowInactive = false;
-let workshopSettings = { openingTime: '09:00', closingTime: '18:00', openingDays: [0, 1, 2, 3, 4, 5, 6] };
+let workshopSettings = { openingTime: '09:00', closingTime: '18:00', openingDays: [0, 1, 2, 3, 4, 5, 6], fullDayThresholdMinutes: 120 };
 
 let docStatusFilter = { quote: '', order: '' }; // '' = all, else 'open' | 'converted' | 'cancelled'
 let docList = { quote: [], order: [] };
@@ -3268,6 +3268,14 @@ const HOUR_OPTIONS = [...Array(24)].map((_, h) => `${String(h).padStart(2, '0')}
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const WEEKDAY_LABELS = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
 
+const FULL_DAY_THRESHOLD_OPTIONS = [0, 30, 60, 90, 120, 150, 180, 240, 300, 360, 420, 480];
+function fmtMinutesLabel(m) {
+  if (m === 0) return 'Never (off)';
+  if (m < 60) return `${m} minutes`;
+  const h = m / 60;
+  return `${h} hour${h === 1 ? '' : 's'}`;
+}
+
 const JOB_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending approval' },
   { value: 'scheduled', label: 'Scheduled' },
@@ -3317,6 +3325,15 @@ async function renderEditWorkshop() {
           </div>
           <p class="muted" style="margin:6px 0 0;">On unchecked days, every mechanic's diary is greyed out and can't have jobs assigned, regardless of their own working days.</p>
         </div>
+        <div class="field" style="margin-top:14px;max-width:220px;">
+          <label for="ws-full-threshold">Treat a day as full once less than this much time is left</label>
+          <select id="ws-full-threshold">
+            ${FULL_DAY_THRESHOLD_OPTIONS.map(
+              (m) => `<option value="${m}" ${workshopSettings.fullDayThresholdMinutes === m ? 'selected' : ''}>${fmtMinutesLabel(m)}</option>`
+            ).join('')}
+          </select>
+          <p class="muted" style="margin:6px 0 0;">Once a mechanic's genuinely free time that day (small gaps between jobs merged, not summed twice) drops below this, the online booking portal shows that whole day as full for them - even if a technically-bookable sliver remains.</p>
+        </div>
         <button class="btn btn-primary" id="ws-save-hours" style="margin-top:14px;">Save</button>
       </div>
     </div>
@@ -3343,8 +3360,9 @@ async function renderEditWorkshop() {
     const openingTime = document.getElementById('ws-opening').value;
     const closingTime = document.getElementById('ws-closing').value;
     const openingDays = [...document.querySelectorAll('[data-ws-day]:checked')].map((cb) => Number(cb.dataset.wsDay));
+    const fullDayThresholdMinutes = Number(document.getElementById('ws-full-threshold').value);
     try {
-      await api('/api/workshop-settings', { method: 'PUT', body: { openingTime, closingTime, openingDays } });
+      await api('/api/workshop-settings', { method: 'PUT', body: { openingTime, closingTime, openingDays, fullDayThresholdMinutes } });
       showToast('Opening hours & days updated');
       await loadWorkshopSettings();
     } catch (err) {

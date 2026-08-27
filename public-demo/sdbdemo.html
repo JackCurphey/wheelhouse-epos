@@ -221,6 +221,11 @@
   .g-head .d-date { display: block; font-size: 10.5px; color: var(--muted); font-family: "IBM Plex Mono", monospace; }
   .g-head.today .d-name { color: var(--brass); }
   .g-head.off { opacity: 0.55; }
+  .g-head.full { opacity: 0.85; }
+  .d-full-badge {
+    display: block; font-family: "IBM Plex Mono", monospace; font-size: 8.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em; color: var(--brass-deep); margin-top: 2px;
+  }
 
   .g-hours { position: relative; background: var(--paper-deep); border-right: 1px solid var(--line); }
   .g-hour-label {
@@ -236,6 +241,14 @@
   .g-col.off {
     background-color: var(--paper-deep);
     background-image: var(--busy), repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent 42px);
+    cursor: not-allowed;
+  }
+  /* Distinct from .off (closed) - the shop's open, this mechanic's day is
+     just already booked past workshop_settings.full_day_threshold_minutes. */
+  .g-col.full {
+    background-color: var(--paper-deep);
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 6px, color-mix(in srgb, var(--brass) 22%, transparent) 6px, color-mix(in srgb, var(--brass) 22%, transparent) 12px),
+      repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent 42px);
     cursor: not-allowed;
   }
   .slot-open { position: absolute; left: 2px; right: 2px; cursor: pointer; border-radius: 5px; }
@@ -483,6 +496,7 @@
   var selectedIds = [];
   var weekStart = startOfWeek(new Date());
   var busy = [];
+  var fullDays = []; // [{mechanicId, jobDate}] - days already under the shop's full-day threshold, treated like a closed day
   var myBookings = [];
   var me = null; // {id, email, name, shopName, shopSlug} once signed in, else null
   var pending = null; // {mechanicId, dateStr, time}
@@ -524,11 +538,16 @@
   function loadAvailability() {
     var days = weekDays(weekStart);
     var start = dateToStr(days[0]), end = dateToStr(days[days.length - 1]);
-    return api('/availability?start=' + start + '&end=' + end).then(function (rows) {
-      busy = rows.map(function (r) {
+    return api('/availability?start=' + start + '&end=' + end).then(function (data) {
+      busy = data.busy.map(function (r) {
         return { mechanicId: r.mechanicId, dateStr: r.jobDate, start: r.startTime, end: r.endTime };
       });
+      fullDays = data.fullDays;
     });
+  }
+
+  function isDayFull(dateStr, mechId) {
+    return fullDays.some(function (f) { return f.mechanicId === mechId && f.jobDate === dateStr; });
   }
 
   // ---------- Date helpers (local, not UTC - avoids the classic
@@ -612,8 +631,11 @@
   function buildGrid(mechId, days, todayStr) {
     var head = '<div class="g-corner"></div>' + days.map(function (d) {
       var dstr = dateToStr(d);
-      return '<div class="g-head' + (dstr === todayStr ? ' today' : '') + (isDayOff(d, mechId) ? ' off' : '') + '">' +
-        '<span class="d-name">' + fmtDay(d) + '</span><span class="d-date mono">' + fmtDate(d) + '</span></div>';
+      var off = isDayOff(d, mechId);
+      var full = !off && isDayFull(dstr, mechId);
+      return '<div class="g-head' + (dstr === todayStr ? ' today' : '') + (off ? ' off' : '') + (full ? ' full' : '') + '">' +
+        '<span class="d-name">' + fmtDay(d) + '</span><span class="d-date mono">' + fmtDate(d) + '</span>' +
+        (full ? '<span class="d-full-badge">Full</span>' : '') + '</div>';
     }).join('');
 
     var hourLabels = '';
@@ -625,16 +647,18 @@
     var cols = days.map(function (d) {
       var dstr = dateToStr(d);
       var off = isDayOff(d, mechId);
+      var full = !off && isDayFull(dstr, mechId);
+      var blocked = off || full;
       var blocks = '';
-      if (!off) {
+      if (!blocked) {
         busy.filter(function (b) { return b.dateStr === dstr && b.mechanicId === mechId; }).forEach(function (b) {
           var top = (timeToMin(b.start) - HOUR_START * 60) / 60 * ROW_PX;
           var bot = (timeToMin(b.end) - HOUR_START * 60) / 60 * ROW_PX;
           blocks += '<div class="slot-busy" style="top:' + top + 'px;height:' + Math.max(16, bot - top) + 'px;">Booked</div>';
         });
       }
-      var preview = off ? '' : '<div class="hover-preview" style="display:none;"></div>';
-      return '<div class="g-col' + (dstr === todayStr ? ' today' : '') + (off ? ' off' : '') + '" data-date="' + dstr + '" data-mech="' + mechId + '" style="height:' + gridHeight + 'px;">' + blocks + preview + '</div>';
+      var preview = blocked ? '' : '<div class="hover-preview" style="display:none;"></div>';
+      return '<div class="g-col' + (dstr === todayStr ? ' today' : '') + (off ? ' off' : '') + (full ? ' full' : '') + '" data-date="' + dstr + '" data-mech="' + mechId + '" style="height:' + gridHeight + 'px;">' + blocks + preview + '</div>';
     }).join('');
 
     return (
@@ -669,7 +693,7 @@
     }).join('');
     document.getElementById('wkRange').textContent = fmtRange(days[0], days[days.length - 1]);
 
-    Array.prototype.forEach.call(wrap.querySelectorAll('.g-col:not(.off)'), function (col) {
+    Array.prototype.forEach.call(wrap.querySelectorAll('.g-col:not(.off):not(.full)'), function (col) {
       var preview = col.querySelector('.hover-preview');
       if (preview) {
         col.addEventListener('mousemove', function (e) {

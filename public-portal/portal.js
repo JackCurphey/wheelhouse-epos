@@ -23,6 +23,7 @@ let openingDays = [0, 1, 2, 3, 4, 5, 6];
 let selectedMechanicIds = []; // 1+ mechanic ids currently shown - matches staff's multi-select split-view diary
 let selectedWeekStart = null; // 'YYYY-MM-DD', Monday of the displayed week
 let busySlots = []; // {mechanicId, jobDate, startTime, endTime} for every selected mechanic across the displayed week
+let fullDays = []; // {mechanicId, jobDate} - days already under workshop_settings.full_day_threshold_minutes of free time, treated like a closed day
 let bikes = [];
 let bookings = [];
 let view = 'picker'; // 'picker' | 'auth' | 'booking-form' | 'my-bookings'
@@ -147,6 +148,11 @@ function isDayOff(d, mechanicId) {
   return !!mech && !mech.workingDays.includes(dow);
 }
 
+function isDayFull(d, mechanicId) {
+  const dateStr = dateToStr(d);
+  return fullDays.some((f) => f.mechanicId === mechanicId && f.jobDate === dateStr);
+}
+
 function isSlotBusy(dateStr, startTime, mechanicId) {
   const slotStart = timeToMinutes(startTime);
   const slotEnd = slotStart + DEFAULT_JOB_DURATION_MIN;
@@ -233,6 +239,7 @@ async function loadMechanicsAndHours() {
 async function loadBusySlots() {
   if (!selectedMechanicIds.length) {
     busySlots = [];
+    fullDays = [];
     return;
   }
   const days = weekDays(selectedWeekStart);
@@ -245,7 +252,8 @@ async function loadBusySlots() {
   const results = await Promise.all(
     selectedMechanicIds.map((id) => api(`/availability?mechanicId=${id}&start=${start}&end=${end}`))
   );
-  busySlots = results.flat();
+  busySlots = results.flatMap((r) => r.busy);
+  fullDays = results.flatMap((r) => r.fullDays);
 }
 
 async function loadBikes() {
@@ -345,10 +353,13 @@ function buildMechanicGridHtml(days, mechanicId, todayIso) {
   const dayHeadersHtml = days
     .map((d) => {
       const dateStr = dateToStr(d);
+      const dayOff = isDayOff(d, mechanicId);
+      const full = !dayOff && isDayFull(d, mechanicId);
       return `
-      <div class="wk-day-header ${dateStr === todayIso ? 'today' : ''} ${isDayOff(d, mechanicId) ? 'day-off' : ''}">
+      <div class="wk-day-header ${dateStr === todayIso ? 'today' : ''} ${dayOff ? 'day-off' : ''} ${full ? 'day-full' : ''}">
         <span class="wd-name">${esc(d.toLocaleDateString(undefined, { weekday: 'short' }))}</span>
         <span class="wd-date">${esc(d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' }))}</span>
+        <span class="wd-full-badge">Full</span>
       </div>`;
     })
     .join('');
@@ -363,8 +374,10 @@ function buildMechanicGridHtml(days, mechanicId, todayIso) {
     .map((d) => {
       const dateStr = dateToStr(d);
       const dayOff = isDayOff(d, mechanicId);
+      const full = !dayOff && isDayFull(d, mechanicId);
+      const blocked = dayOff || full;
       let blocksHtml = '';
-      if (!dayOff) {
+      if (!blocked) {
         blocksHtml = busySlots
           .filter((b) => b.jobDate === dateStr && b.mechanicId === mechanicId)
           .map((b) => {
@@ -378,9 +391,9 @@ function buildMechanicGridHtml(days, mechanicId, todayIso) {
           .join('');
       }
       return `
-      <div class="wk-day-col ${dateStr === todayIso ? 'today' : ''} ${dayOff ? 'day-off' : ''}" data-date="${dateStr}" data-mechanic="${mechanicId}" style="height:${gridHeight}px;">
+      <div class="wk-day-col ${dateStr === todayIso ? 'today' : ''} ${dayOff ? 'day-off' : ''} ${full ? 'day-full' : ''}" data-date="${dateStr}" data-mechanic="${mechanicId}" style="height:${gridHeight}px;">
         ${blocksHtml}
-        ${dayOff ? '' : '<div class="hover-preview" style="display:none;"></div>'}
+        ${blocked ? '' : '<div class="hover-preview" style="display:none;"></div>'}
       </div>`;
     })
     .join('');
@@ -474,7 +487,7 @@ async function renderPickerView() {
   // lands on the day column itself - re-checking busy-ness here catches
   // clicks right at a block's edge. data-mechanic on the column (set in
   // buildMechanicGridHtml) is what tells split-view clicks apart.
-  content.querySelectorAll('.wk-day-col:not(.day-off)').forEach((col) => {
+  content.querySelectorAll('.wk-day-col:not(.day-off):not(.day-full)').forEach((col) => {
     const preview = col.querySelector('.hover-preview');
     if (preview) {
       col.addEventListener('mousemove', (e) => {
