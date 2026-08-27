@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>South Downs Bikes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+  /* ============ Tokens ============ */
+  :root {
+    --paper: #f2eee4;
+    --paper-deep: #e8e0cb;
+    --panel: #ffffff;
+    --ink: #202a22;
+    --muted: #6b6355;
+    --line: #ddd3ba;
+    --brass: #b8793a;
+    --brass-deep: #8f5a26;
+    --brass-ink: #fff6ea;
+    --moss: #4b6350;
+    --moss-deep: #37483c;
+    --moss-bg: #e4ebe3;
+    --busy: repeating-linear-gradient(45deg, #eae4d4, #eae4d4 6px, #ddd3ba 6px, #ddd3ba 12px);
+    --shadow: 0 1px 2px rgba(32,42,34,0.06), 0 10px 28px rgba(32,42,34,0.09);
+    --radius: 14px;
+    --danger: #b3392f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #171e19;
+      --paper-deep: #10150f;
+      --panel: #212b23;
+      --ink: #ede7d9;
+      --muted: #a79e8c;
+      --line: #35402f;
+      --brass: #d08f49;
+      --brass-deep: #e8ab68;
+      --brass-ink: #241505;
+      --moss: #86a68d;
+      --moss-deep: #b6ccb8;
+      --moss-bg: #24312a;
+      --busy: repeating-linear-gradient(45deg, #202a22, #202a22 6px, #2b362d 6px, #2b362d 12px);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+      --danger: #e2776a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #171e19;
+    --paper-deep: #10150f;
+    --panel: #212b23;
+    --ink: #ede7d9;
+    --muted: #a79e8c;
+    --line: #35402f;
+    --brass: #d08f49;
+    --brass-deep: #e8ab68;
+    --brass-ink: #241505;
+    --moss: #86a68d;
+    --moss-deep: #b6ccb8;
+    --moss-bg: #24312a;
+    --busy: repeating-linear-gradient(45deg, #202a22, #202a22 6px, #2b362d 6px, #2b362d 12px);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px rgba(0,0,0,0.35);
+    --danger: #e2776a;
+  }
+
+  /* ============ Base ============ */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Work Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: "Bricolage Grotesque", "Work Sans", sans-serif; text-wrap: balance; margin: 0; }
+  a { color: inherit; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+
+  /* ============ Header ============ */
+  header.site {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .site-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 28px;
+    max-width: 1080px; margin: 0 auto;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+  .brand .mark { width: 30px; height: 30px; flex: none; }
+  .site-nav { display: flex; align-items: center; gap: 22px; font-size: 14.5px; color: var(--muted); }
+  .site-nav a { text-decoration: none; }
+  .site-nav a:hover { color: var(--ink); }
+  .nav-cta {
+    background: var(--brass); color: var(--brass-ink); border: none;
+    padding: 9px 18px; border-radius: 999px; font-weight: 600; font-size: 14px;
+    text-decoration: none; display: inline-block;
+  }
+  .nav-cta:hover { background: var(--brass-deep); }
+
+  /* ============ Hero ============ */
+  .hero {
+    padding: 88px 28px 76px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-inner { max-width: 1080px; margin: 0 auto; position: relative; }
+  .hero .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: "IBM Plex Mono", monospace; font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--moss-deep); background: var(--moss-bg);
+    padding: 6px 12px; border-radius: 999px; margin-bottom: 22px;
+  }
+  .hero .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--moss); }
+  .hero h1 {
+    font-size: clamp(40px, 6.2vw, 74px);
+    font-weight: 700;
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    max-width: 16ch;
+  }
+  .hero h1 em { font-style: normal; color: var(--brass); }
+  .hero .lede {
+    margin: 24px 0 0;
+    font-size: 18.5px;
+    color: var(--muted);
+    max-width: 46ch;
+  }
+  .hero .actions { display: flex; align-items: center; gap: 18px; margin-top: 34px; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--brass); color: var(--brass-ink); border: none;
+    padding: 14px 26px; border-radius: 999px; font-weight: 600; font-size: 15.5px;
+  }
+  .btn-primary:hover { background: var(--brass-deep); }
+  .hero .actions .phone { font-size: 14.5px; color: var(--muted); }
+  .hero .actions .phone strong { color: var(--ink); font-family: "IBM Plex Mono", monospace; font-weight: 500; }
+
+  .hero-strip {
+    margin-top: 56px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .hero-strip .item { background: var(--panel); padding: 20px 22px; }
+  .hero-strip .item .num { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--brass); letter-spacing: 0.06em; }
+  .hero-strip .item h3 { font-size: 16px; font-weight: 600; margin-top: 8px; }
+  .hero-strip .item p { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+
+  /* ============ Booking section ============ */
+  .booking { padding: 72px 28px 90px; }
+  .booking-head { max-width: 640px; margin: 0 auto 40px; text-align: center; }
+  .booking-head .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brass);
+  }
+  .booking-head h2 { font-size: clamp(28px, 4vw, 38px); margin-top: 10px; letter-spacing: -0.01em; }
+  .booking-head p { color: var(--muted); margin-top: 12px; font-size: 15.5px; }
+
+  .widget {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .widget-toolbar {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    padding: 20px 24px; border-bottom: 1px solid var(--line);
+  }
+  .mech-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    padding: 7px 15px; border-radius: 999px; font-size: 13.5px; font-weight: 500;
+  }
+  .pill.active { background: var(--moss); border-color: var(--moss); color: #fff; }
+  .pill:hover:not(.active) { border-color: var(--moss); }
+
+  .week-nav { display: flex; align-items: center; gap: 12px; }
+  .week-nav button {
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    width: 32px; height: 32px; border-radius: 8px; font-size: 15px; display: flex; align-items: center; justify-content: center;
+  }
+  .week-nav button:hover { border-color: var(--brass); color: var(--brass); }
+  .week-nav .range { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--muted); min-width: 128px; text-align: center; }
+
+  .diaries { display: flex; gap: 22px; padding: 22px 24px 26px; overflow-x: auto; }
+  .diary { flex: 1 1 320px; min-width: 300px; }
+  .diary-title { font-weight: 600; font-size: 14.5px; color: var(--moss-deep); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .diary-title .avatar {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--moss-bg); color: var(--moss-deep);
+    font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 52px repeat(6, minmax(58px, 1fr));
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .g-corner { background: var(--paper-deep); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .g-head {
+    background: var(--paper-deep); text-align: center; padding: 8px 2px;
+    border-bottom: 1px solid var(--line); border-right: 1px solid var(--line);
+  }
+  .g-head:last-child { border-right: none; }
+  .g-head .d-name { display: block; font-weight: 700; font-size: 12px; }
+  .g-head .d-date { display: block; font-size: 10.5px; color: var(--muted); font-family: "IBM Plex Mono", monospace; }
+  .g-head.today .d-name { color: var(--brass); }
+  .g-head.off { opacity: 0.55; }
+
+  .g-hours { position: relative; background: var(--paper-deep); border-right: 1px solid var(--line); }
+  .g-hour-label {
+    position: absolute; right: 6px; transform: translateY(-50%);
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--muted);
+  }
+  .g-col {
+    position: relative; border-right: 1px solid var(--line);
+    background-image: repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent 42px);
+  }
+  .g-col:last-child { border-right: none; }
+  .g-col.today { background-color: color-mix(in srgb, var(--moss-bg) 55%, transparent); }
+  .g-col.off {
+    background-color: var(--paper-deep);
+    background-image: var(--busy), repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px, transparent 1px, transparent 42px);
+    cursor: not-allowed;
+  }
+  .slot-open { position: absolute; left: 2px; right: 2px; cursor: pointer; border-radius: 5px; }
+  .slot-open:hover { background: color-mix(in srgb, var(--brass) 16%, transparent); }
+  .slot-busy {
+    position: absolute; left: 2px; right: 2px; border-radius: 5px;
+    background: var(--busy); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
+    pointer-events: none;
+  }
+
+  .widget-foot { padding: 16px 24px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .widget-foot .hint { font-size: 13px; color: var(--muted); }
+  .widget-foot .hint .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--busy); border: 1px solid var(--line); vertical-align: -1px; margin-right: 5px; }
+
+  /* Requests list */
+  .requests { max-width: 720px; margin: 30px auto 0; }
+  .requests h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-family: "Work Sans", sans-serif; font-weight: 600; margin-bottom: 12px; }
+  .req-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px;
+  }
+  .req-item .who { font-weight: 600; font-size: 14.5px; }
+  .req-item .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .badge-pending {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--moss-bg); color: var(--moss-deep); padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+
+  /* ============ Footer ============ */
+  footer.site { border-top: 1px solid var(--line); padding: 44px 28px 34px; }
+  .foot-grid { max-width: 1080px; margin: 0 auto; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .foot-grid .brand { margin-bottom: 8px; }
+  .foot-grid .col p { font-size: 13.5px; color: var(--muted); margin: 3px 0; }
+  .foot-grid .col h4 { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .foot-note { max-width: 1080px; margin: 30px auto 0; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  /* ============ Modal ============ */
+  .modal-back {
+    position: fixed; inset: 0; background: rgba(23,30,25,0.5); display: flex; align-items: center; justify-content: center;
+    padding: 20px; z-index: 100;
+  }
+  .modal {
+    background: var(--panel); border-radius: 16px; width: 100%; max-width: 420px;
+    box-shadow: var(--shadow); border: 1px solid var(--line);
+    max-height: 90vh; display: flex; flex-direction: column;
+  }
+  .modal-body { overflow-y: auto; }
+  .modal-head { padding: 20px 24px 4px; }
+  .modal-head .slot-when { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--brass); text-transform: uppercase; letter-spacing: 0.05em; }
+  .modal-head h3 { font-size: 19px; margin-top: 6px; }
+  .modal-body { padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field textarea, .field select {
+    width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px;
+    font-family: inherit; font-size: 14.5px; background: var(--paper); color: var(--ink);
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: 2px solid var(--brass); outline-offset: -1px; }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .field-error { font-size: 13px; color: var(--danger); }
+  .field-hint { display: block; margin-top: 5px; font-size: 12px; color: var(--muted); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); padding: 11px 18px; border-radius: 999px; font-weight: 600; font-size: 14.5px; flex: 1; }
+  .btn-ghost:hover { border-color: var(--ink); }
+  .modal-actions .btn-primary { flex: 1.4; text-align: center; border-radius: 999px; }
+
+  .toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--paper); padding: 13px 22px; border-radius: 999px;
+    font-size: 14px; font-weight: 500; box-shadow: var(--shadow); z-index: 200;
+    opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 720px) {
+    .hero { padding: 64px 20px 52px; }
+    .hero-strip { grid-template-columns: 1fr; }
+    .booking { padding: 56px 16px 70px; }
+    .widget-toolbar { flex-direction: column; align-items: flex-start; }
+    .site-nav { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-bar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8" cy="23" r="6" stroke="var(--brass)" stroke-width="2.4"/>
+        <circle cx="24" cy="23" r="6" stroke="var(--brass)" stroke-width="2.4"/>
+        <path d="M8 23L14 10H20M20 10L24 23M20 10L16 17H24" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      South Downs Bikes
+    </div>
+    <nav class="site-nav">
+      <a href="#booking">Book a service</a>
+      <a href="#footer-info">Visit us</a>
+    </nav>
+    <a class="nav-cta" href="#booking">Book a service</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow"><span class="dot"></span>Live availability, this week</span>
+    <h1>Book your bike in <em>without</em> the phone tag.</h1>
+    <p class="lede">See exactly when our mechanics are free, pick a slot, tell us what's wrong. We'll confirm it's all sorted before it's locked into the workshop diary.</p>
+    <div class="actions">
+      <a class="btn-primary" href="#booking">See this week's slots</a>
+      <span class="phone">Prefer to talk? <strong>01865 555 0142</strong></span>
+    </div>
+    <div class="hero-strip">
+      <div class="item">
+        <span class="num">01</span>
+        <h3>See real availability</h3>
+        <p>The actual workshop diary — not a guess, not "we'll call you back."</p>
+      </div>
+      <div class="item">
+        <span class="num">02</span>
+        <h3>Booked in two minutes</h3>
+        <p>Pick a slot, add your bike, tell us what needs doing. Done.</p>
+      </div>
+      <div class="item">
+        <span class="num">03</span>
+        <h3>We confirm, not guess</h3>
+        <p>A mechanic checks every booking before it's locked in — no surprises either side.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="booking" id="booking">
+  <div class="booking-head">
+    <span class="eyebrow">The workshop diary</span>
+    <h2>Find a slot, get it sorted</h2>
+    <p>This is our actual booking calendar, live. Pick a slot and it lands as a real request in our workshop diary — a mechanic checks it over and confirms before it's locked in.</p>
+  </div>
+
+  <div class="wrap">
+    <div class="widget">
+      <div class="widget-toolbar">
+        <div class="mech-pills" id="mechPills"></div>
+        <div class="week-nav">
+          <button id="wkPrev" aria-label="Previous week">‹</button>
+          <span class="range mono" id="wkRange"></span>
+          <button id="wkNext" aria-label="Next week">›</button>
+        </div>
+      </div>
+      <div class="diaries" id="diaries"></div>
+      <div class="widget-foot">
+        <span class="hint"><span class="sw"></span>Already booked — pick another time</span>
+        <span class="hint" id="hoursHint">Loading opening hours…</span>
+      </div>
+    </div>
+
+    <div class="requests" id="requests" style="display:none;">
+      <h3 id="reqHead">Your bookings</h3>
+      <div id="reqList"></div>
+    </div>
+  </div>
+</section>
+
+<footer class="site" id="footer-info">
+  <div class="foot-grid">
+    <div class="col">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+          <circle cx="8" cy="23" r="6" stroke="var(--brass)" stroke-width="2.4"/>
+          <circle cx="24" cy="23" r="6" stroke="var(--brass)" stroke-width="2.4"/>
+          <path d="M8 23L14 10H20M20 10L24 23M20 10L16 17H24" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        South Downs Bikes
+      </div>
+      <p>Independent bike shop &amp; workshop.<br>Sales, servicing, and everything in between.</p>
+    </div>
+    <div class="col">
+      <h4>Visit</h4>
+      <p>14 Foundry Row</p>
+      <p>Open Mon–Sat, 09:00–17:30</p>
+      <p>Closed Sundays</p>
+    </div>
+    <div class="col">
+      <h4>Workshop</h4>
+      <p>01865 555 0142</p>
+      <p>workshop@southdownsbikes.example</p>
+    </div>
+  </div>
+  <div class="foot-note">
+    <span>© South Downs Bikes</span>
+    <span>Booking widget built on the Wheelhouse EPOS platform</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Real data, live from the actual South Downs Bikes shop ----------
+  // This page is a marketing preview, but the booking widget below talks
+  // to the same /api/portal/* endpoints as the real customer portal
+  // (public-portal/) - mechanics, availability and bookings here are all
+  // genuine, not mocked.
+  var SHOP_SLUG = 'south-downs-bikes';
+  var API = '/api/portal/' + SHOP_SLUG;
+  var ROW_PX = 42;
+  var HOUR_START = 9, HOUR_END = 17.5; // placeholders, overwritten once /mechanics loads
+  var OPENING_DAYS = [1,2,3,4,5,6]; // closed Sunday
+  var MECHANICS = [];
+  var JOB_TYPES = [];
+  // DURATION_MIN is only the proxy used for the initial grid click (busy
+  // check + max clickable start) - a real booking's actual length comes
+  // from whichever job type is picked in the form, below.
+  var DURATION_MIN = 60;
+  var STATUS_LABELS = {
+    pending: 'Pending approval',
+    scheduled: 'Scheduled',
+    waiting_parts: 'Waiting for parts',
+    on_hold: 'On hold',
+    complete: 'Complete'
+  };
+
+  var selectedIds = [];
+  var weekStart = startOfWeek(new Date());
+  var busy = [];
+  var myBookings = [];
+  var me = null; // {id, email, name, shopName, shopSlug} once signed in, else null
+  var pending = null; // {mechanicId, dateStr, time}
+
+  // ---------- Talking to the real portal API ----------
+  function api(path, opts) {
+    opts = opts || {};
+    var init = { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } };
+    if (opts.method) init.method = opts.method;
+    if (opts.body) init.body = JSON.stringify(opts.body);
+    return fetch(API + path, init).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) throw new Error(data.error || 'Something went wrong - please try again.');
+        return data;
+      });
+    });
+  }
+
+  function loadSettings() {
+    return api('/mechanics').then(function (data) {
+      MECHANICS = data.mechanics || [];
+      JOB_TYPES = data.jobTypes || [];
+      OPENING_DAYS = data.openingDays && data.openingDays.length ? data.openingDays : OPENING_DAYS;
+      HOUR_START = timeToMin(data.openingTime) / 60;
+      HOUR_END = timeToMin(data.closingTime) / 60;
+      selectedIds = MECHANICS.map(function (m) { return m.id; });
+    });
+  }
+
+  function loadMe() {
+    return api('/me').then(function (data) { me = data; }).catch(function () { me = null; });
+  }
+
+  function loadMyBookings() {
+    if (!me) { myBookings = []; renderRequests(); return Promise.resolve(); }
+    return api('/bookings').then(function (rows) { myBookings = rows; renderRequests(); });
+  }
+
+  function loadAvailability() {
+    var days = weekDays(weekStart);
+    var start = dateToStr(days[0]), end = dateToStr(days[days.length - 1]);
+    return api('/availability?start=' + start + '&end=' + end).then(function (rows) {
+      busy = rows.map(function (r) {
+        return { mechanicId: r.mechanicId, dateStr: r.jobDate, start: r.startTime, end: r.endTime };
+      });
+    });
+  }
+
+  // ---------- Date helpers (local, not UTC - avoids the classic
+  // toISOString() day-rollback bug in any UTC+ timezone) ----------
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateToStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function startOfWeek(d) {
+    var date = new Date(d); date.setHours(0,0,0,0);
+    var day = date.getDay();
+    var diff = (day === 0 ? -6 : 1) - day;
+    date.setDate(date.getDate() + diff);
+    return date;
+  }
+  function weekDays(start) {
+    var out = [];
+    for (var i = 0; i < 6; i++) { var d = new Date(start); d.setDate(d.getDate() + i); out.push(d); }
+    return out; // Mon-Sat only, shop closed Sunday
+  }
+  function addDays(d, n) { var nd = new Date(d); nd.setDate(nd.getDate() + n); return nd; }
+  function timeToMin(t) { var p = t.split(':'); return (+p[0]) * 60 + (+p[1]); }
+  function minToTime(m) { m = Math.max(0, Math.round(m)); return pad2(Math.floor(m/60)) + ':' + pad2(m%60); }
+  function fmtDay(d) { return d.toLocaleDateString(undefined, { weekday: 'short' }); }
+  function fmtDate(d) { return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' }); }
+  function fmtRange(a, b) { return a.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' – ' + b.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); }
+
+  // ---------- Rendering ----------
+  function isDayOff(d, mechId) {
+    var dow = d.getDay();
+    if (OPENING_DAYS.indexOf(dow) === -1) return true;
+    var mech = MECHANICS.filter(function (m) { return m.id === mechId; })[0];
+    return !!mech && mech.workingDays.indexOf(dow) === -1;
+  }
+  function isBusy(dateStr, mechId, start) {
+    var s = timeToMin(start), e = s + DURATION_MIN;
+    return busy.some(function (b) {
+      if (b.dateStr !== dateStr || b.mechanicId !== mechId) return false;
+      var bs = timeToMin(b.start), be = timeToMin(b.end);
+      return s < be && bs < e;
+    });
+  }
+
+  function renderPills() {
+    var wrap = document.getElementById('mechPills');
+    wrap.innerHTML = MECHANICS.map(function (m) {
+      return '<button class="pill' + (selectedIds.indexOf(m.id) > -1 ? ' active' : '') + '" data-id="' + m.id + '">' + escapeHtml(m.name) + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(wrap.querySelectorAll('.pill'), function (btn) {
+      btn.addEventListener('click', function () {
+        var id = +btn.dataset.id;
+        var next = selectedIds.indexOf(id) > -1 ? selectedIds.filter(function (x) { return x !== id; }) : selectedIds.concat([id]);
+        if (next.length) selectedIds = next;
+        renderPills();
+        renderDiaries();
+      });
+    });
+  }
+
+  function buildGrid(mechId, days, todayStr) {
+    var head = '<div class="g-corner"></div>' + days.map(function (d) {
+      var dstr = dateToStr(d);
+      return '<div class="g-head' + (dstr === todayStr ? ' today' : '') + (isDayOff(d, mechId) ? ' off' : '') + '">' +
+        '<span class="d-name">' + fmtDay(d) + '</span><span class="d-date mono">' + fmtDate(d) + '</span></div>';
+    }).join('');
+
+    var hourLabels = '';
+    for (var h = HOUR_START; h < HOUR_END; h++) {
+      hourLabels += '<div class="g-hour-label" style="top:' + ((h - HOUR_START) * ROW_PX) + 'px;">' + pad2(h) + ':00</div>';
+    }
+    var gridHeight = (HOUR_END - HOUR_START) * ROW_PX;
+
+    var cols = days.map(function (d) {
+      var dstr = dateToStr(d);
+      var off = isDayOff(d, mechId);
+      var blocks = '';
+      if (!off) {
+        busy.filter(function (b) { return b.dateStr === dstr && b.mechanicId === mechId; }).forEach(function (b) {
+          var top = (timeToMin(b.start) - HOUR_START * 60) / 60 * ROW_PX;
+          var bot = (timeToMin(b.end) - HOUR_START * 60) / 60 * ROW_PX;
+          blocks += '<div class="slot-busy" style="top:' + top + 'px;height:' + Math.max(16, bot - top) + 'px;">Booked</div>';
+        });
+      }
+      return '<div class="g-col' + (dstr === todayStr ? ' today' : '') + (off ? ' off' : '') + '" data-date="' + dstr + '" data-mech="' + mechId + '" style="height:' + gridHeight + 'px;">' + blocks + '</div>';
+    }).join('');
+
+    return (
+      '<div class="grid" style="grid-template-columns:52px repeat(' + days.length + ', minmax(58px,1fr));">' +
+      head +
+      '<div class="g-hours" style="height:' + gridHeight + 'px;">' + hourLabels + '</div>' +
+      cols +
+      '</div>'
+    );
+  }
+
+  function renderDiaries() {
+    var days = weekDays(weekStart);
+    var todayStr = dateToStr(new Date());
+    var mechs = MECHANICS.filter(function (m) { return selectedIds.indexOf(m.id) > -1; });
+    var wrap = document.getElementById('diaries');
+    wrap.innerHTML = mechs.map(function (m) {
+      return '<div class="diary">' +
+        (mechs.length > 1 ? '<div class="diary-title"><span class="avatar">' + escapeHtml(m.name.charAt(0)) + '</span>' + escapeHtml(m.name) + '</div>' : '') +
+        buildGrid(m.id, days, todayStr) +
+        '</div>';
+    }).join('');
+    document.getElementById('wkRange').textContent = fmtRange(days[0], days[days.length - 1]);
+
+    Array.prototype.forEach.call(wrap.querySelectorAll('.g-col:not(.off)'), function (col) {
+      col.addEventListener('click', function (e) {
+        var rect = col.getBoundingClientRect();
+        var y = e.clientY - rect.top;
+        var mins = HOUR_START * 60 + (y / ROW_PX) * 60;
+        var snapped = Math.round(mins / 30) * 30;
+        var maxStart = HOUR_END * 60 - DURATION_MIN;
+        snapped = Math.max(HOUR_START * 60, Math.min(maxStart, snapped));
+        var time = minToTime(snapped);
+        var mechId = +col.dataset.mech;
+        var dateStr = col.dataset.date;
+        if (isBusy(dateStr, mechId, time)) { showToast("That time's just been taken — try another."); return; }
+        openBookingModal(mechId, dateStr, time);
+      });
+    });
+  }
+
+  function fmtHM(hDecimal) { var h = Math.floor(hDecimal); var m = Math.round((hDecimal - h) * 60); return pad2(h) + ':' + pad2(m); }
+  function openingDaysLabel() {
+    var names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    if (!OPENING_DAYS.length) return '';
+    var sorted = OPENING_DAYS.slice().sort();
+    return names[sorted[0]] + '–' + names[sorted[sorted.length - 1]];
+  }
+  function renderAll() {
+    renderPills();
+    document.getElementById('hoursHint').textContent = 'Open ' + openingDaysLabel() + ', ' + fmtHM(HOUR_START) + '–' + fmtHM(HOUR_END);
+    renderDiaries();
+  }
+
+  // ---------- Booking modal ----------
+  function openBookingModal(mechId, dateStr, time) {
+    pending = { mechanicId: mechId, dateStr: dateStr, time: time };
+    var mech = MECHANICS.filter(function (m) { return m.id === mechId; })[0];
+    var d = new Date(dateStr + 'T00:00:00');
+    var when = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + ' at ' + time;
+
+    var accountFields = me
+      ? '<div class="field"><label>Booking as</label><div class="mono" style="padding:9px 0;font-size:14.5px;">' + escapeHtml(me.name || me.email) + ' &middot; ' + escapeHtml(me.email) + '</div></div>'
+      : '<div class="field-row">' +
+          '<div class="field"><label for="bName">Your name</label><input id="bName" required /></div>' +
+          '<div class="field"><label for="bEmail">Email</label><input id="bEmail" type="email" required /></div>' +
+        '</div>' +
+        '<div class="field"><label for="bPassword">Password</label><input id="bPassword" type="password" minlength="8" required />' +
+        '<span class="field-hint">At least 8 characters — this creates your account (or signs you in) so you can track this booking.</span></div>';
+
+    var back = document.createElement('div');
+    back.className = 'modal-back';
+    back.id = 'modalBack';
+    back.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">' +
+        '<div class="modal-head">' +
+          '<div class="slot-when mono">' + when + (mech ? ' · ' + escapeHtml(mech.name) : '') + '</div>' +
+          '<h3 id="modalTitle">Book this slot</h3>' +
+        '</div>' +
+        '<form class="modal-body" id="bookForm">' +
+          accountFields +
+          '<div class="field"><label for="bBike">Bike</label><input id="bBike" placeholder="e.g. Trek Marlin 7" required /></div>' +
+          '<div class="field"><label for="bJobType">What kind of job is this?</label><select id="bJobType" required>' +
+            '<option value="" disabled selected>Choose the closest match…</option>' +
+            JOB_TYPES.map(function (t) { return '<option value="' + t.value + '">' + escapeHtml(t.label) + '</option>'; }).join('') +
+          '</select></div>' +
+          '<div class="field"><label for="bWhat">What needs doing?</label><textarea id="bWhat" rows="3" placeholder="e.g. Squeaky brakes, annual service…" required></textarea></div>' +
+          '<div class="field-error" id="bError" style="display:none;"></div>' +
+          '<div class="modal-actions">' +
+            '<button type="button" class="btn-ghost" id="modalCancel">Cancel</button>' +
+            '<button type="submit" class="btn-primary" id="bSubmit">Request booking</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>';
+    document.body.appendChild(back);
+    (document.getElementById('bName') || document.getElementById('bBike')).focus();
+
+    back.addEventListener('click', function (e) { if (e.target === back) closeModal(); });
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+    document.getElementById('bookForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      submitBooking();
+    });
+  }
+  function closeModal() {
+    var back = document.getElementById('modalBack');
+    if (back) back.remove();
+    pending = null;
+  }
+  function showModalError(msg) {
+    var box = document.getElementById('bError');
+    if (!box) return;
+    box.textContent = msg;
+    box.style.display = '';
+  }
+  // Tries to sign the visitor into an existing account first, and only
+  // falls back to creating one if that fails - covers both "new visitor"
+  // and "already booked before" without a separate login/signup toggle.
+  function ensureSignedIn(name, email, password) {
+    return api('/login', { method: 'POST', body: { email: email, password: password } })
+      .then(function () { return loadMe(); })
+      .catch(function () {
+        return api('/signup', { method: 'POST', body: { email: email, password: password, name: name } })
+          .then(function () { return loadMe(); })
+          .catch(function (err) {
+            if (/already exists/i.test(err.message)) {
+              throw new Error("That email's already registered — check your password and try again.");
+            }
+            throw err;
+          });
+      });
+  }
+  function submitBooking() {
+    var submitBtn = document.getElementById('bSubmit');
+    var bike = document.getElementById('bBike').value.trim();
+    var jobTypeVal = document.getElementById('bJobType').value;
+    var what = document.getElementById('bWhat').value.trim();
+    var errBox = document.getElementById('bError');
+    if (errBox) errBox.style.display = 'none';
+
+    var authStep;
+    if (me) {
+      authStep = Promise.resolve();
+    } else {
+      var name = document.getElementById('bName').value.trim();
+      var email = document.getElementById('bEmail').value.trim();
+      var password = document.getElementById('bPassword').value;
+      authStep = ensureSignedIn(name, email, password);
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Booking…';
+
+    authStep
+      .then(function () {
+        return api('/bookings', {
+          method: 'POST',
+          body: {
+            mechanicId: pending.mechanicId,
+            jobDate: pending.dateStr,
+            startTime: pending.time,
+            jobType: jobTypeVal,
+            newBike: { model: bike },
+            description: what
+          }
+        });
+      })
+      .then(function () {
+        closeModal();
+        showToast('Booking requested — South Downs Bikes will confirm it shortly.');
+        return Promise.all([loadAvailability(), loadMyBookings()]);
+      })
+      .then(function () {
+        renderDiaries();
+      })
+      .catch(function (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Request booking';
+        showModalError(err.message || 'Something went wrong — please try again.');
+      });
+  }
+
+  function renderRequests() {
+    var box = document.getElementById('requests');
+    if (!me) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    var head = document.getElementById('reqHead');
+    head.innerHTML = 'Your bookings <span class="mono" style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">&middot; signed in as ' +
+      escapeHtml(me.email) + ' &middot; <a href="#" id="signOutLink" style="color:var(--brass);">Sign out</a></span>';
+    document.getElementById('signOutLink').addEventListener('click', function (e) { e.preventDefault(); signOut(); });
+
+    if (!myBookings.length) {
+      document.getElementById('reqList').innerHTML = '<p style="color:var(--muted);font-size:14px;">No bookings yet — pick a slot above.</p>';
+      return;
+    }
+    document.getElementById('reqList').innerHTML = myBookings.map(function (r) {
+      var d = new Date(r.jobDate + 'T00:00:00');
+      var when = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' at ' + r.startTime + (r.endTime ? '–' + r.endTime : '');
+      return '<div class="req-item"><div><div class="who">' + escapeHtml(r.bikeLabel || 'Bike') + ' — ' + escapeHtml(r.notes || '') + '</div>' +
+        '<div class="meta">' + when + (r.mechanicName ? ' · with ' + escapeHtml(r.mechanicName) : '') + '</div></div>' +
+        '<span class="badge-pending">' + escapeHtml(STATUS_LABELS[r.status] || r.status) + '</span></div>';
+    }).join('');
+  }
+  function signOut() {
+    api('/logout', { method: 'POST' }).catch(function () {}).then(function () {
+      me = null;
+      myBookings = [];
+      renderRequests();
+      showToast('Signed out.');
+    });
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; });
+  }
+
+  var toastTimer;
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
+  }
+
+  document.getElementById('wkPrev').addEventListener('click', function () { weekStart = addDays(weekStart, -7); loadAvailability().then(renderDiaries); });
+  document.getElementById('wkNext').addEventListener('click', function () { weekStart = addDays(weekStart, 7); loadAvailability().then(renderDiaries); });
+
+  loadSettings()
+    .then(function () { return loadMe(); })
+    .then(function () { return loadMyBookings(); })
+    .then(function () { return loadAvailability(); })
+    .then(function () { renderAll(); })
+    .catch(function (err) {
+      console.error(err);
+      showToast("Couldn't load the live diary — please refresh.");
+    });
+})();
+</script>
+</body>
+</html>

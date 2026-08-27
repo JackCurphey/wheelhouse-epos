@@ -11,6 +11,7 @@ RUN npm ci --omit=dev
 COPY server/ ./server/
 COPY public/ ./public/
 COPY public-portal/ ./public-portal/
+COPY public-demo/ ./public-demo/
 
 EXPOSE 4000
 CMD ["node", "server/server.js"]

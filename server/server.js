@@ -37,6 +37,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
+const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 // Every request that touches shop data runs inside `runWithShop(shopId, ...)`
@@ -2211,6 +2212,23 @@ const server = createServer(async (req, res) => {
       return;
     }
     return notFound(res, 'Unknown API route');
+  }
+
+  // A standalone, self-contained sales-demo page - fixed content, not a
+  // directory to fall back through like /book or / below, so it's served
+  // directly with an explicit content type rather than via serveStatic
+  // (which would guess the MIME type from a file extension the URL
+  // deliberately doesn't have).
+  if (pathname === '/sdbdemo' || pathname === '/sdbdemo/') {
+    try {
+      const html = await readFile(DEMO_FILE, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (err) {
+      console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
   }
 
   // Customer-portal frontend lives under /book - its own small static
