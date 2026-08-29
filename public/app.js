@@ -32,6 +32,11 @@ let suppliers = [];
 let catalogueItems = [];
 let catalogueStatusFilter = 'new';
 
+let purchaseOrders = [];
+let poStatusFilter = '';
+let poFormItems = []; // { productId, name, sku, qty, unitCost } - local line items while building/editing a draft PO
+let poFormSearch = ''; // product picker search text on the PO form
+
 let salesDateFilter = 'today';
 let salesCustomerFilter = '';
 let salesCashierFilter = '';
@@ -276,6 +281,7 @@ const OFFICE_TABS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'inventory', label: 'Stockroom' },
   { id: 'suppliers', label: 'Suppliers' },
+  { id: 'purchase-orders', label: 'Purchase Orders' },
   { id: 'sales', label: 'Sales History' },
   { id: 'customers', label: 'Customers' },
   {
@@ -1379,6 +1385,10 @@ async function renderOffice() {
   if (sub === 'inventory' && subId) await renderProductDetail(Number(subId));
   else if (sub === 'inventory') await renderInventory();
   else if (sub === 'suppliers') await renderSuppliers();
+  else if (sub === 'purchase-orders' && subId === 'new') await renderPurchaseOrderForm();
+  else if (sub === 'purchase-orders' && subId && parts[3] === 'edit') await renderPurchaseOrderForm(Number(subId));
+  else if (sub === 'purchase-orders' && subId) await renderPurchaseOrderDetail(Number(subId));
+  else if (sub === 'purchase-orders') await renderPurchaseOrders();
   else if (sub === 'sales') await renderSalesHistory();
   else if (sub === 'customers' && subId) await renderCustomerDetail(Number(subId));
   else if (sub === 'customers') await renderCustomers();
@@ -2596,11 +2606,20 @@ function renderSupplierTable() {
         <td>${esc(s.name)}</td>
         <td>${esc(s.adapterType)}</td>
         <td>${s.lastSyncedAt ? fmtDateTime(s.lastSyncedAt) : 'Never'}</td>
-        <td><button class="icon-btn" data-sync="${s.id}">Sync now</button></td>
+        <td>
+          <button class="icon-btn" data-edit-supplier="${s.id}">Edit</button>
+          <button class="icon-btn" data-sync="${s.id}">Sync now</button>
+        </td>
       </tr>
     `
     )
     .join('');
+  tbody.querySelectorAll('button[data-edit-supplier]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const supplier = suppliers.find((s) => s.id === Number(b.dataset.editSupplier));
+      openModal({ type: 'supplier-form', supplier });
+    })
+  );
   tbody.querySelectorAll('button[data-sync]').forEach((b) =>
     b.addEventListener('click', async () => {
       try {
@@ -2664,6 +2683,470 @@ function renderCatalogueTable() {
       }
     })
   );
+}
+
+// ================= PURCHASE ORDERS =================
+// Build an order against a supplier, then book in deliveries against it
+// (increasing product stock). Supports partial/split deliveries.
+
+async function loadPurchaseOrders() {
+  const qs = poStatusFilter ? `?status=${encodeURIComponent(poStatusFilter)}` : '';
+  purchaseOrders = await api(`/api/purchase-orders${qs}`);
+}
+
+function poStatusBadgeClass(status) {
+  if (status === 'received') return 'ok';
+  if (status === 'partially_received') return 'card';
+  if (status === 'ordered') return 'split';
+  if (status === 'cancelled') return 'low';
+  return 'other'; // draft
+}
+
+function poStatusLabel(status) {
+  return status.replace(/_/g, ' ');
+}
+
+function poTotalCost(po) {
+  return (po.items || []).reduce((sum, it) => sum + it.qtyOrdered * it.unitCost, 0);
+}
+
+async function renderPurchaseOrders() {
+  await loadSuppliers();
+  await loadPurchaseOrders();
+  const main = document.getElementById('office-content');
+  main.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Purchase orders</h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="po-status-filter">
+            <option value="">All statuses</option>
+            <option value="draft" ${poStatusFilter === 'draft' ? 'selected' : ''}>Draft</option>
+            <option value="ordered" ${poStatusFilter === 'ordered' ? 'selected' : ''}>Ordered</option>
+            <option value="partially_received" ${poStatusFilter === 'partially_received' ? 'selected' : ''}>Partially received</option>
+            <option value="received" ${poStatusFilter === 'received' ? 'selected' : ''}>Received</option>
+            <option value="cancelled" ${poStatusFilter === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+          <button class="btn btn-primary" id="new-po-btn">+ New purchase order</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr><th>#</th><th>Supplier</th><th>Reference</th><th>Status</th><th class="num">Lines</th><th class="num">Total cost</th><th>Created</th></tr>
+            </thead>
+            <tbody id="po-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('new-po-btn').addEventListener('click', () => {
+    location.hash = 'office/purchase-orders/new';
+  });
+  document.getElementById('po-status-filter').addEventListener('change', async (e) => {
+    poStatusFilter = e.target.value;
+    await loadPurchaseOrders();
+    renderPurchaseOrderTable();
+  });
+  renderPurchaseOrderTable();
+}
+
+function renderPurchaseOrderTable() {
+  const tbody = document.getElementById('po-table-body');
+  if (!tbody) return;
+  if (!purchaseOrders.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No purchase orders yet.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = purchaseOrders
+    .map(
+      (po) => `
+      <tr>
+        <td><button class="link-btn" data-view-po="${po.id}">#${po.id}</button></td>
+        <td>${esc(po.supplierName)}</td>
+        <td>${esc(po.reference || '—')}</td>
+        <td><span class="badge ${poStatusBadgeClass(po.status)}">${esc(poStatusLabel(po.status))}</span></td>
+        <td class="num">${po.items.length}</td>
+        <td class="num">${money(poTotalCost(po))}</td>
+        <td>${fmtDateTime(po.createdAt)}</td>
+      </tr>
+    `
+    )
+    .join('');
+  tbody.querySelectorAll('button[data-view-po]').forEach((b) =>
+    b.addEventListener('click', () => {
+      location.hash = `office/purchase-orders/${b.dataset.viewPo}`;
+    })
+  );
+}
+
+// ---- Create / edit (draft only) ----
+
+async function renderPurchaseOrderForm(poId) {
+  await loadSuppliers();
+  await loadProducts();
+  let po = null;
+  if (poId) {
+    po = await api(`/api/purchase-orders/${poId}`);
+    if (po.status !== 'draft') {
+      // Editing is only possible while a PO is still a draft - land on the
+      // detail page instead if it's moved on since the link was clicked.
+      location.hash = `office/purchase-orders/${poId}`;
+      return;
+    }
+  }
+  poFormItems = po ? po.items.map((it) => ({ productId: it.productId, name: it.name, sku: it.sku, qty: it.qtyOrdered, unitCost: it.unitCost })) : [];
+  poFormSearch = '';
+
+  const main = document.getElementById('office-content');
+  main.innerHTML = `
+    <button class="btn btn-sm" id="back-to-po-list">‹ Back to Purchase Orders</button>
+    <div class="panel" style="margin-top:14px;">
+      <div class="panel-header"><h2>${po ? `Edit draft PO #${po.id}` : 'New purchase order'}</h2></div>
+      <div class="panel-body">
+        <div class="field-row">
+          <div class="field">
+            <label for="po-supplier">Supplier *</label>
+            <select id="po-supplier">
+              ${suppliers.map((s) => `<option value="${s.id}" ${po && po.supplierId === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label for="po-reference">Reference</label>
+            <input id="po-reference" type="text" placeholder="Optional - your own PO number" value="${esc((po && po.reference) || '')}" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="po-notes">Notes</label>
+          <textarea id="po-notes" rows="2" placeholder="Optional">${esc((po && po.notes) || '')}</textarea>
+        </div>
+
+        <div class="field" style="margin-top:10px;">
+          <label for="po-product-search">Add a product</label>
+          <div class="search-wrap">
+            <input type="text" id="po-product-search" class="search-input" placeholder="Search products, SKU or scan barcode…" autocomplete="off" />
+            <div class="search-dropdown" id="po-product-dropdown"></div>
+          </div>
+        </div>
+
+        <table class="data-table" style="margin-top:14px;">
+          <thead><tr><th>Product</th><th>SKU</th><th class="num">Qty</th><th class="num">Unit cost</th><th class="num">Line total</th><th></th></tr></thead>
+          <tbody id="po-form-items-body"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer" style="padding:16px;">
+        <button class="btn btn-primary" id="po-save-btn">${po ? 'Save changes' : 'Save draft'}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('back-to-po-list').addEventListener('click', () => {
+    location.hash = po ? `office/purchase-orders/${po.id}` : 'office/purchase-orders';
+  });
+
+  const searchInput = document.getElementById('po-product-search');
+  searchInput.addEventListener('input', (e) => {
+    poFormSearch = e.target.value;
+    renderPoProductDropdown();
+  });
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const matches = getPoProductMatches();
+    if (matches.length > 0) addPoFormItem(matches[0]);
+  });
+
+  document.getElementById('po-save-btn').addEventListener('click', () => savePurchaseOrder(po));
+
+  renderPoProductDropdown();
+  renderPoFormItems();
+}
+
+function getPoProductMatches() {
+  const term = poFormSearch.trim().toLowerCase();
+  if (!term) return [];
+  return products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(term) ||
+      (p.sku || '').toLowerCase().includes(term) ||
+      (p.barcode || '').toLowerCase().includes(term)
+  );
+}
+
+const PO_DROPDOWN_LIMIT = 8;
+
+function renderPoProductDropdown() {
+  const dropdown = document.getElementById('po-product-dropdown');
+  if (!dropdown) return;
+  if (!poFormSearch.trim()) {
+    dropdown.classList.remove('open');
+    dropdown.innerHTML = '';
+    return;
+  }
+  const matches = getPoProductMatches();
+  dropdown.classList.add('open');
+  if (matches.length === 0) {
+    dropdown.innerHTML = '<div class="search-dropdown-empty">No products match.</div>';
+    return;
+  }
+  dropdown.innerHTML = matches
+    .slice(0, PO_DROPDOWN_LIMIT)
+    .map(
+      (p) => `
+      <button class="search-dropdown-item" data-add-po-product="${p.id}">
+        <span class="sdi-main">
+          <span class="sdi-name">${esc(p.name)}</span>
+          <span class="sdi-sku">${esc(p.sku || '')}</span>
+        </span>
+        <span class="sdi-side"><span class="sdi-price">${money(p.cost)} cost</span></span>
+      </button>
+    `
+    )
+    .join('');
+  dropdown.querySelectorAll('button[data-add-po-product]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const product = products.find((p) => p.id === Number(b.dataset.addPoProduct));
+      if (product) addPoFormItem(product);
+    })
+  );
+}
+
+function addPoFormItem(product) {
+  const existing = poFormItems.find((it) => it.productId === product.id);
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    poFormItems.push({ productId: product.id, name: product.name, sku: product.sku, qty: 1, unitCost: product.cost });
+  }
+  poFormSearch = '';
+  const searchInput = document.getElementById('po-product-search');
+  if (searchInput) searchInput.value = '';
+  renderPoProductDropdown();
+  renderPoFormItems();
+}
+
+function renderPoFormItems() {
+  const tbody = document.getElementById('po-form-items-body');
+  if (!tbody) return;
+  if (!poFormItems.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No items added yet.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = poFormItems
+    .map(
+      (it, idx) => `
+      <tr data-po-item-idx="${idx}">
+        <td>${esc(it.name)}</td>
+        <td>${esc(it.sku || '—')}</td>
+        <td class="num"><input type="number" min="1" step="1" class="po-qty-input" data-qty-idx="${idx}" value="${it.qty}" style="width:70px;" /></td>
+        <td class="num">£<input type="number" min="0" step="0.01" class="po-cost-input" data-cost-idx="${idx}" value="${it.unitCost}" style="width:80px;" /></td>
+        <td class="num" data-line-total-idx="${idx}">${money(it.qty * it.unitCost)}</td>
+        <td><button class="remove-btn" data-remove-po-idx="${idx}" title="Remove">✕</button></td>
+      </tr>
+    `
+    )
+    .join('');
+  tbody.querySelectorAll('input[data-qty-idx]').forEach((inp) =>
+    inp.addEventListener('input', (e) => {
+      const idx = Number(e.target.dataset.qtyIdx);
+      poFormItems[idx].qty = Math.max(1, Math.trunc(Number(e.target.value)) || 1);
+      updatePoLineTotal(idx);
+    })
+  );
+  tbody.querySelectorAll('input[data-cost-idx]').forEach((inp) =>
+    inp.addEventListener('input', (e) => {
+      const idx = Number(e.target.dataset.costIdx);
+      poFormItems[idx].unitCost = Math.max(0, Number(e.target.value) || 0);
+      updatePoLineTotal(idx);
+    })
+  );
+  tbody.querySelectorAll('button[data-remove-po-idx]').forEach((b) =>
+    b.addEventListener('click', () => {
+      poFormItems.splice(Number(b.dataset.removePoIdx), 1);
+      renderPoFormItems();
+    })
+  );
+}
+
+function updatePoLineTotal(idx) {
+  const cell = document.querySelector(`[data-line-total-idx="${idx}"]`);
+  if (cell) cell.textContent = money(poFormItems[idx].qty * poFormItems[idx].unitCost);
+}
+
+async function savePurchaseOrder(existingPo) {
+  if (!poFormItems.length) return showToast('Add at least one item first');
+  const body = {
+    supplierId: Number(document.getElementById('po-supplier').value),
+    reference: document.getElementById('po-reference').value.trim(),
+    notes: document.getElementById('po-notes').value.trim(),
+    items: poFormItems.map((it) => ({ productId: it.productId, qty: it.qty, unitCost: it.unitCost })),
+  };
+  try {
+    const saved = existingPo
+      ? await api(`/api/purchase-orders/${existingPo.id}`, { method: 'PUT', body })
+      : await api('/api/purchase-orders', { method: 'POST', body });
+    showToast(existingPo ? 'Purchase order updated' : 'Purchase order created');
+    location.hash = `office/purchase-orders/${saved.id}`;
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+// ---- Detail / receiving ----
+
+async function renderPurchaseOrderDetail(id) {
+  const main = document.getElementById('office-content');
+  let po;
+  try {
+    po = await api(`/api/purchase-orders/${id}`);
+  } catch (err) {
+    main.innerHTML = `
+      <button class="btn btn-sm" id="back-to-po-list">‹ Back to Purchase Orders</button>
+      <div class="empty-state" style="margin-top:14px;">Purchase order not found.</div>
+    `;
+    document.getElementById('back-to-po-list').addEventListener('click', () => { location.hash = 'office/purchase-orders'; });
+    return;
+  }
+
+  const itemsHtml = po.items
+    .map(
+      (it) => `
+      <tr>
+        <td>${esc(it.name)}</td>
+        <td>${esc(it.sku || '—')}</td>
+        <td class="num">${it.qtyOrdered}</td>
+        <td class="num">${it.qtyReceived}</td>
+        <td class="num">${it.outstanding}</td>
+        <td class="num">${money(it.unitCost)}</td>
+        <td class="num">${money(it.qtyOrdered * it.unitCost)}</td>
+      </tr>
+    `
+    )
+    .join('');
+
+  const canEdit = po.status === 'draft';
+  const canReceive = po.status === 'ordered' || po.status === 'partially_received';
+  const canCancel = ['draft', 'ordered'].includes(po.status) && po.items.every((it) => it.qtyReceived === 0);
+
+  main.innerHTML = `
+    <button class="btn btn-sm" id="back-to-po-list">‹ Back to Purchase Orders</button>
+    <div class="panel" style="margin-top:14px;">
+      <div class="panel-header">
+        <h2>PO #${po.id} <span class="badge ${poStatusBadgeClass(po.status)}">${esc(poStatusLabel(po.status))}</span></h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${canEdit ? `<button class="btn" id="po-edit-btn">Edit</button>` : ''}
+          ${canEdit ? `<button class="btn btn-primary" id="po-mark-ordered-btn">Mark as ordered</button>` : ''}
+          ${canReceive ? `<button class="btn btn-primary" id="po-receive-btn">Receive delivery</button>` : ''}
+          ${canCancel ? `<button class="btn btn-danger" id="po-cancel-btn">Cancel</button>` : ''}
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="detail-grid">
+          <div class="detail-item"><span class="detail-label">Supplier</span><span class="detail-value">${esc(po.supplierName)}</span></div>
+          <div class="detail-item"><span class="detail-label">Reference</span><span class="detail-value">${esc(po.reference || '—')}</span></div>
+          <div class="detail-item"><span class="detail-label">Created</span><span class="detail-value">${fmtDateTime(po.createdAt)}</span></div>
+          <div class="detail-item"><span class="detail-label">Ordered</span><span class="detail-value">${po.orderedAt ? fmtDateTime(po.orderedAt) : '—'}</span></div>
+          <div class="detail-item"><span class="detail-label">Total cost</span><span class="detail-value">${money(poTotalCost(po))}</span></div>
+        </div>
+        ${po.notes ? `<p class="muted" style="margin-top:14px;">${esc(po.notes)}</p>` : ''}
+        <div style="overflow-x:auto; margin-top:14px;">
+          <table class="data-table">
+            <thead>
+              <tr><th>Product</th><th>SKU</th><th class="num">Ordered</th><th class="num">Received</th><th class="num">Outstanding</th><th class="num">Unit cost</th><th class="num">Line total</th></tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('back-to-po-list').addEventListener('click', () => { location.hash = 'office/purchase-orders'; });
+  const editBtn = document.getElementById('po-edit-btn');
+  if (editBtn) editBtn.addEventListener('click', () => { location.hash = `office/purchase-orders/${po.id}/edit`; });
+  const markOrderedBtn = document.getElementById('po-mark-ordered-btn');
+  if (markOrderedBtn) {
+    markOrderedBtn.addEventListener('click', async () => {
+      try {
+        await api(`/api/purchase-orders/${po.id}/mark-ordered`, { method: 'POST' });
+        showToast('Marked as ordered');
+        await renderPurchaseOrderDetail(po.id);
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  }
+  const receiveBtn = document.getElementById('po-receive-btn');
+  if (receiveBtn) receiveBtn.addEventListener('click', () => openModal({ type: 'po-receive', po }));
+  const cancelBtn = document.getElementById('po-cancel-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      if (!confirm(`Cancel PO #${po.id}? This can't be undone.`)) return;
+      try {
+        await api(`/api/purchase-orders/${po.id}/cancel`, { method: 'POST' });
+        showToast('Purchase order cancelled');
+        await renderPurchaseOrderDetail(po.id);
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  }
+}
+
+function renderPoReceiveModal(holder, po) {
+  const outstandingItems = po.items.filter((it) => it.outstanding > 0);
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Receive delivery — PO #${po.id}</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="po-receive-form">
+          <div class="modal-body">
+            <p class="muted">Enter how many of each item actually arrived. Defaults to the full outstanding amount - reduce it if this is a partial delivery.</p>
+            <table class="data-table">
+              <thead><tr><th>Product</th><th class="num">Outstanding</th><th class="num">Receiving now</th></tr></thead>
+              <tbody>
+                ${outstandingItems
+                  .map(
+                    (it) => `
+                  <tr>
+                    <td>${esc(it.name)}</td>
+                    <td class="num">${it.outstanding}</td>
+                    <td class="num"><input type="number" min="0" max="${it.outstanding}" step="1" class="po-receive-input" data-receive-item="${it.id}" value="${it.outstanding}" style="width:80px;" /></td>
+                  </tr>
+                `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Book in</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+  document.getElementById('po-receive-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const items = Array.from(document.querySelectorAll('input[data-receive-item]'))
+      .map((inp) => ({ itemId: Number(inp.dataset.receiveItem), qtyReceived: Math.trunc(Number(inp.value)) || 0 }))
+      .filter((it) => it.qtyReceived > 0);
+    if (!items.length) return showToast('Enter at least one quantity to receive');
+    try {
+      await api(`/api/purchase-orders/${po.id}/receive`, { method: 'POST', body: { items } });
+      showToast('Delivery booked in');
+      closeModal();
+      await renderPurchaseOrderDetail(po.id);
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
 }
 
 // Refreshes whichever Stockroom view is currently on screen (list or detail)
@@ -3747,7 +4230,8 @@ function renderModal() {
   if (modal.type === 'group-form') return renderGroupFormModal(holder, modal.group);
   if (modal.type === 'day-jobs') return renderDayJobsModal(holder, modal.dateStr, modal.jobs);
   if (modal.type === 'catalogue-import') return renderCatalogueImportModal(holder, modal.item);
-  if (modal.type === 'supplier-form') return renderSupplierFormModal(holder);
+  if (modal.type === 'supplier-form') return renderSupplierFormModal(holder, modal.supplier);
+  if (modal.type === 'po-receive') return renderPoReceiveModal(holder, modal.po);
   if (modal.type === 'sticker-print') return renderStickerPrintModal(holder, modal.products);
 }
 
@@ -4133,30 +4617,59 @@ function renderCatalogueImportModal(holder, item) {
   });
 }
 
-function renderSupplierFormModal(holder) {
+function renderSupplierFormModal(holder, supplier) {
+  const editing = !!supplier;
   holder.innerHTML = `
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal">
         <div class="modal-header">
-          <h2>Add supplier</h2>
+          <h2>${editing ? `Edit supplier — ${esc(supplier.name)}` : 'Add supplier'}</h2>
           <button class="modal-close" id="modal-close">✕</button>
         </div>
         <form id="supplier-form">
           <div class="modal-body">
             <div class="field">
               <label for="f-name">Name *</label>
-              <input id="f-name" type="text" required placeholder="e.g. Madison" />
+              <input id="f-name" type="text" required placeholder="e.g. Madison" value="${editing ? esc(supplier.name) : ''}" />
             </div>
-            <div class="field">
+            ${
+              editing
+                ? ''
+                : `<div class="field">
               <label for="f-adapter">Feed type *</label>
               <select id="f-adapter">
                 <option value="mock_csv">Mock CSV (sample data)</option>
               </select>
+            </div>`
+            }
+            <div class="field-row">
+              <div class="field">
+                <label for="f-contact">Contact name</label>
+                <input id="f-contact" type="text" placeholder="e.g. Rep name" value="${editing ? esc(supplier.contactName || '') : ''}" />
+              </div>
+              <div class="field">
+                <label for="f-account">Account number</label>
+                <input id="f-account" type="text" placeholder="Your trade account #" value="${editing ? esc(supplier.accountNumber || '') : ''}" />
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="f-email">Email</label>
+                <input id="f-email" type="email" placeholder="orders@supplier.com" value="${editing ? esc(supplier.email || '') : ''}" />
+              </div>
+              <div class="field">
+                <label for="f-phone">Phone</label>
+                <input id="f-phone" type="text" placeholder="Optional" value="${editing ? esc(supplier.phone || '') : ''}" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-address">Address</label>
+              <textarea id="f-address" rows="2" placeholder="Optional">${editing ? esc(supplier.address || '') : ''}</textarea>
             </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn" id="modal-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Add supplier</button>
+            <button type="submit" class="btn btn-primary">${editing ? 'Save changes' : 'Add supplier'}</button>
           </div>
         </form>
       </div>
@@ -4167,11 +4680,21 @@ function renderSupplierFormModal(holder) {
     e.preventDefault();
     const body = {
       name: document.getElementById('f-name').value.trim(),
-      adapterType: document.getElementById('f-adapter').value,
+      contactName: document.getElementById('f-contact').value.trim(),
+      accountNumber: document.getElementById('f-account').value.trim(),
+      email: document.getElementById('f-email').value.trim(),
+      phone: document.getElementById('f-phone').value.trim(),
+      address: document.getElementById('f-address').value.trim(),
     };
+    if (!editing) body.adapterType = document.getElementById('f-adapter').value;
     try {
-      await api('/api/suppliers', { method: 'POST', body });
-      showToast('Supplier added');
+      if (editing) {
+        await api(`/api/suppliers/${supplier.id}`, { method: 'PUT', body });
+        showToast('Supplier updated');
+      } else {
+        await api('/api/suppliers', { method: 'POST', body });
+        showToast('Supplier added');
+      }
       closeModal();
       await loadSuppliers();
       renderSupplierTable();
