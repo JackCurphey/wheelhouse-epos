@@ -2426,6 +2426,41 @@ route('PUT', '/api/label-settings', async (req, res) => {
   sendJson(res, 200, serializeLabelSettings(await db.prepare('SELECT * FROM label_settings LIMIT 1').get()));
 });
 
+// ---------- Shop colour scheme ----------
+// Which preset a shop has chosen (see public/app.js's THEME_PRESETS for what
+// each key actually renders as - only the key is stored server-side). Same
+// singleton-per-shop, lazy-create-on-GET pattern as label_settings above.
+
+const SHOP_THEME_PRESETS = ['forest', 'ocean', 'sunset', 'slate', 'plum'];
+
+function serializeShopTheme(row) {
+  return { preset: row.preset, updatedAt: row.updated_at };
+}
+
+async function getOrCreateShopTheme() {
+  let row = await db.prepare('SELECT * FROM shop_theme LIMIT 1').get();
+  if (!row) {
+    await db.prepare('INSERT INTO shop_theme DEFAULT VALUES').run();
+    row = await db.prepare('SELECT * FROM shop_theme LIMIT 1').get();
+  }
+  return row;
+}
+
+route('GET', '/api/shop-theme', async (req, res) => {
+  sendJson(res, 200, serializeShopTheme(await getOrCreateShopTheme()));
+});
+
+route('PUT', '/api/shop-theme', async (req, res) => {
+  const existing = await getOrCreateShopTheme();
+  const body = await readJsonBody(req);
+  const preset = String(body.preset || '');
+  if (!SHOP_THEME_PRESETS.includes(preset)) {
+    return badRequest(res, `preset must be one of: ${SHOP_THEME_PRESETS.join(', ')}`);
+  }
+  await db.prepare('UPDATE shop_theme SET preset = ?, updated_at = ? WHERE id = ?').run(preset, nowIso(), existing.id);
+  sendJson(res, 200, serializeShopTheme(await db.prepare('SELECT * FROM shop_theme LIMIT 1').get()));
+});
+
 // ---------- Print agents ----------
 // Relays sticker print jobs from a browser tab to a print-agent process
 // (print-agent/agent.js) running on any shop PC - possibly a different one

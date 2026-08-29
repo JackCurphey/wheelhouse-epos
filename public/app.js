@@ -16,6 +16,7 @@ const EXTRA_TENDER_TYPES = ['Cyclescheme', 'Klarna']; // extra tender types offe
 let extraTenders = []; // active extra tenders for the current sale: { name, amount }
 let receiptSale = null; // sale object shown in the post-checkout receipt modal
 let activeOrderId = null; // set while the current cart is fulfilling a specific order
+let shopThemePreset = 'forest'; // this shop's chosen colour scheme key - see THEME_PRESETS
 
 let tillSearch = '';
 let tillCategory = '';
@@ -295,6 +296,7 @@ const OFFICE_TABS = [
     children: () => [
       { id: 'front-desk', label: 'Front Desk' },
       { id: 'workshop', label: 'Workshop' },
+      { id: 'colours', label: 'Colours' },
       ...(currentUser && currentUser.isOwner ? [{ id: 'logins', label: 'Employee Logins' }] : []),
     ],
   },
@@ -1414,6 +1416,7 @@ async function renderOffice() {
   else if (sub === 'customers') await renderCustomers();
   else if (sub === 'edit-shop' && subId === 'front-desk') await renderEditFrontDesk();
   else if (sub === 'edit-shop' && subId === 'logins') await renderEmployeeLogins();
+  else if (sub === 'edit-shop' && subId === 'colours') await renderEditColours();
   else if (sub === 'edit-shop') await renderEditWorkshop();
   else await renderDashboard();
 }
@@ -4308,6 +4311,51 @@ async function renderEditWorkshop() {
   renderEmployeeTable();
 }
 
+async function renderEditColours() {
+  const main = document.getElementById('office-content');
+  main.innerHTML = `
+    <h1>Colours</h1>
+    <div class="panel" style="margin-top:14px;">
+      <div class="panel-header"><h2>Colour scheme</h2></div>
+      <div class="panel-body">
+        <p class="muted" style="margin:0 0 14px;">Sets the top bar colour and every popup's background across the whole app. Click a scheme to switch straight away.</p>
+        <div class="theme-swatch-grid" id="theme-swatch-grid"></div>
+      </div>
+    </div>
+  `;
+  renderThemeSwatchGrid();
+}
+
+function renderThemeSwatchGrid() {
+  const grid = document.getElementById('theme-swatch-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(THEME_PRESETS)
+    .map(
+      ([key, preset]) => `
+      <button type="button" class="theme-swatch ${shopThemePreset === key ? 'active' : ''}" data-preset="${key}">
+        <span class="theme-swatch-preview" style="background:${preset.modalBg};">
+          <span class="theme-swatch-bar" style="background:${preset.topbar};"></span>
+        </span>
+        <span class="theme-swatch-name">${esc(preset.name)}</span>
+      </button>
+    `
+    )
+    .join('');
+  grid.querySelectorAll('button[data-preset]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const preset = btn.dataset.preset;
+      try {
+        await api('/api/shop-theme', { method: 'PUT', body: { preset } });
+        applyShopTheme(preset);
+        showToast(`Switched to ${THEME_PRESETS[preset].name}`);
+        renderThemeSwatchGrid();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  });
+}
+
 function renderEmployeeTable() {
   const tbody = document.getElementById('employee-table-body');
   if (!tbody) return;
@@ -6550,6 +6598,7 @@ function renderAuthScreen() {
           })
         : await api('/api/auth/login', { method: 'POST', body: { email, password } });
       currentUser = user;
+      await loadAndApplyShopTheme();
       renderShell();
       renderRoute();
     } catch (err) {
@@ -6557,6 +6606,35 @@ function renderAuthScreen() {
       renderAuthScreen();
     }
   });
+}
+
+// ---------------- Colour scheme ----------------
+// Shop-configurable via Edit Shop > Colours. Only the preset key is stored
+// server-side (GET/PUT /api/shop-theme) - these are the only two places
+// that actually know what each key looks like.
+
+const THEME_PRESETS = {
+  forest: { name: 'Forest Green', topbar: '#164f42', modalBg: '#DDF7DF' },
+  ocean: { name: 'Ocean Blue', topbar: '#1a3f66', modalBg: '#DCEBFA' },
+  sunset: { name: 'Sunset', topbar: '#7a3410', modalBg: '#FBE8D6' },
+  slate: { name: 'Slate', topbar: '#2c333a', modalBg: '#E6E9EC' },
+  plum: { name: 'Plum', topbar: '#4a2258', modalBg: '#F0E4F7' },
+};
+
+function applyShopTheme(presetKey) {
+  const preset = THEME_PRESETS[presetKey] || THEME_PRESETS.forest;
+  shopThemePreset = THEME_PRESETS[presetKey] ? presetKey : 'forest';
+  document.documentElement.style.setProperty('--accent-dark', preset.topbar);
+  document.documentElement.style.setProperty('--modal-bg', preset.modalBg);
+}
+
+async function loadAndApplyShopTheme() {
+  try {
+    const theme = await api('/api/shop-theme');
+    applyShopTheme(theme.preset);
+  } catch (_) {
+    applyShopTheme('forest');
+  }
 }
 
 // ---------------- Init ----------------
@@ -6568,6 +6646,7 @@ async function boot() {
     currentUser = null;
   }
   if (currentUser) {
+    await loadAndApplyShopTheme();
     renderShell();
     renderRoute();
   } else {

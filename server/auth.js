@@ -113,6 +113,7 @@ export async function createShop({ shopName, ownerName, email, password }) {
     );
     await client.query('INSERT INTO workshop_settings (shop_id) VALUES ($1)', [shop.id]);
     await client.query('INSERT INTO label_settings (shop_id) VALUES ($1)', [shop.id]);
+    await client.query('INSERT INTO shop_theme (shop_id) VALUES ($1)', [shop.id]);
     // Every shop starts with a mock supplier so the catalogue-sync feature
     // is immediately testable - revisit once a real distributor adapter
     // (e.g. Madison) exists, since seeding a mock one for every real shop
