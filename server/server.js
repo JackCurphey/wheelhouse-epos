@@ -1797,6 +1797,13 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
     nowIso(),
     id
   );
+  // An order tied to a workshop job (the "Show in workshop diary" link) is
+  // the customer paying for and collecting that job - being tendered off is
+  // the real-world signal the job itself is done, so it auto-completes here
+  // rather than needing a separate manual step in the diary.
+  if (doc.workshop_job_id) {
+    await db.prepare(`UPDATE workshop_jobs SET status = 'complete', updated_at = ? WHERE id = ?`).run(nowIso(), doc.workshop_job_id);
+  }
 
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
@@ -1822,6 +1829,7 @@ function serializeWorkshopJob(row) {
     status: row.status,
     notes: row.notes,
     orderId: row.order_id,
+    orderStatus: row.order_status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -1839,7 +1847,7 @@ function resolveJobStatus(raw, existing) {
   return raw;
 }
 
-const WORKSHOP_JOB_SELECT = `SELECT w.*, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, d.id AS order_id
+const WORKSHOP_JOB_SELECT = `SELECT w.*, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status
   FROM workshop_jobs w
   LEFT JOIN customers c ON c.id = w.customer_id
   LEFT JOIN customer_bikes b ON b.id = w.bike_id

@@ -28,6 +28,13 @@
   --status-complete-bg: #e8f5ec;
   --status-complete-border: #1f6f5c;
   --status-complete-ink: #164f42;
+  /* A job goes 'complete' the moment work is done, but stays this same
+     status once it's also been paid for and collected - these lighter
+     tones mark that second, fully-resolved state so it visually recedes
+     rather than still asking for staff attention like a fresh "done". */
+  --status-complete-paid-bg: #f5faf6;
+  --status-complete-paid-border: #a9cdbf;
+  --status-complete-paid-ink: #6b9484;
   --radius: 10px;
   --shadow: 0 1px 2px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
 }
@@ -900,6 +907,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .job-card.status-waiting_parts { background: var(--status-waiting_parts-bg); border-left-color: var(--status-waiting_parts-border); }
 .job-card.status-on_hold { background: var(--status-on_hold-bg); border-left-color: var(--status-on_hold-border); }
 .job-card.status-complete { background: var(--status-complete-bg); border-left-color: var(--status-complete-border); }
+.job-card.status-complete.paid { background: var(--status-complete-paid-bg); border-left-color: var(--status-complete-paid-border); }
 
 .job-time { font-size: 10.5px; font-weight: 700; color: var(--accent-dark); }
 .job-title-line { display: block; line-height: 1.3; }
@@ -1006,6 +1014,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .wk-job-block.status-waiting_parts { background: var(--status-waiting_parts-bg); border-color: var(--status-waiting_parts-border); }
 .wk-job-block.status-on_hold { background: var(--status-on_hold-bg); border-color: var(--status-on_hold-border); }
 .wk-job-block.status-complete { background: var(--status-complete-bg); border-color: var(--status-complete-border); }
+.wk-job-block.status-complete.paid { background: var(--status-complete-paid-bg); border-color: var(--status-complete-paid-border); }
 
 .wk-job-block-body {
   flex: 1;
@@ -1106,6 +1115,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .month-job-chip.status-waiting_parts { background: var(--status-waiting_parts-bg); border-left-color: var(--status-waiting_parts-border); }
 .month-job-chip.status-on_hold { background: var(--status-on_hold-bg); border-left-color: var(--status-on_hold-border); }
 .month-job-chip.status-complete { background: var(--status-complete-bg); border-left-color: var(--status-complete-border); }
+.month-job-chip.status-complete.paid { background: var(--status-complete-paid-bg); border-left-color: var(--status-complete-paid-border); }
 .mjc-time { font-weight: 700; color: var(--accent-dark); flex-shrink: 0; }
 .mjc-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mjc-main { font-weight: 700; }
@@ -1139,6 +1149,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .day-job-row.status-waiting_parts { border-left-color: var(--status-waiting_parts-border); }
 .day-job-row.status-on_hold { border-left-color: var(--status-on_hold-border); }
 .day-job-row.status-complete { border-left-color: var(--status-complete-border); }
+.day-job-row.status-complete.paid { border-left-color: var(--status-complete-paid-border); }
 .djr-time { font-size: 12px; font-weight: 700; color: var(--accent-dark); min-width: 66px; }
 .djr-title { font-size: 13.5px; font-weight: 600; flex: 1; }
 .djr-detail { font-size: 12px; color: var(--muted); }

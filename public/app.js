@@ -1770,9 +1770,20 @@ function jobTitleLineHtml(j) {
   return `<span class="job-title-line"><span class="job-title">${esc(j.title)}</span></span>`;
 }
 
+// A job can be 'complete' well before it's actually paid for and picked up
+// (the mechanic finishing the work vs. the customer collecting/paying are
+// separate events) - this extra modifier class lightens complete+paid jobs
+// so a glance at the diary shows "done, still owed" vs. "done and gone".
+// j.orderStatus is the linked order's own status ('open'/'converted'/...),
+// already joined onto the job by the server - 'converted' means it was
+// actually tendered off at the till, not just marked complete.
+function jobPaidClass(j) {
+  return j.status === 'complete' && j.orderStatus === 'converted' ? ' paid' : '';
+}
+
 function renderJobCard(j) {
   return `
-    <button class="job-card status-${j.status || 'scheduled'}" data-job="${j.id}">
+    <button class="job-card status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}">
       ${j.startTime ? `<span class="job-time">${esc(j.startTime)}</span>` : ''}
       ${jobTitleLineHtml(j)}
       ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
@@ -1812,7 +1823,7 @@ function renderTimedDayColumn(dateStr, isToday, mechanicId, dayOff) {
       const bottom = minutesToGridPx(Math.min(endMin, WORKSHOP_GRID_MAX));
       const height = Math.max(18, bottom - top);
       return `
-        <div class="wk-job-block status-${j.status || 'scheduled'}" data-job="${j.id}" style="top:${top}px; height:${height}px;">
+        <div class="wk-job-block status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}" style="top:${top}px; height:${height}px;">
           <div class="wk-resize-handle" data-edge="top"></div>
           <div class="wk-job-block-body">
             <span class="job-time">${esc(j.startTime)}–${esc(j.endTime || minutesToTime(startMin + 60))}</span>
@@ -2222,7 +2233,7 @@ const MONTH_CHIP_LIMIT = 3;
 function renderMonthJobChip(j) {
   const mainText = j.bikeLabel || j.title;
   return `
-    <button class="month-job-chip status-${j.status || 'scheduled'}" data-job="${j.id}">
+    <button class="month-job-chip status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}">
       ${j.startTime ? `<span class="mjc-time">${esc(j.startTime)}</span>` : ''}<span class="mjc-title"><span class="mjc-main">${esc(mainText)}</span>${j.bikeLabel ? ` <span class="mjc-sub">${esc(j.title)}</span>` : ''}</span>
     </button>
   `;
@@ -5345,7 +5356,7 @@ function renderDayJobsModal(holder, dateStr, jobs) {
     ? jobs
         .map(
           (j) => `
-      <button class="day-job-row status-${j.status || 'scheduled'}" data-job="${j.id}">
+      <button class="day-job-row status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}">
         <span class="djr-time">${j.startTime ? esc(j.startTime) : 'Unscheduled'}</span>
         <span class="djr-title">${esc(j.title)}</span>
         <span class="djr-status-badge">${esc(JOB_STATUS_LABELS[j.status] || JOB_STATUS_LABELS.scheduled)}</span>
