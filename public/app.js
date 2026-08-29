@@ -1821,13 +1821,18 @@ function renderTimedDayColumn(dateStr, isToday, mechanicId, dayOff) {
       const endMin = timeToMinutes(j.endTime || minutesToTime(startMin + 60));
       const top = minutesToGridPx(Math.max(startMin, WORKSHOP_GRID_MIN));
       const bottom = minutesToGridPx(Math.min(endMin, WORKSHOP_GRID_MAX));
-      const height = Math.max(18, bottom - top);
+      // Floor raised to guarantee the bike name (the first line in the body,
+      // see below) always has room to render, even for a very short job -
+      // at the old 18px floor it was reliably clipped by the body's own
+      // overflow:hidden before a single line could fit alongside the two
+      // 6px resize handles + body padding.
+      const height = Math.max(34, bottom - top);
       return `
         <div class="wk-job-block status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}" style="top:${top}px; height:${height}px;">
           <div class="wk-resize-handle" data-edge="top"></div>
           <div class="wk-job-block-body">
-            <span class="job-time">${esc(j.startTime)}–${esc(j.endTime || minutesToTime(startMin + 60))}</span>
             ${jobTitleLineHtml(j)}
+            <span class="job-time">${esc(j.startTime)}–${esc(j.endTime || minutesToTime(startMin + 60))}</span>
             ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
             ${j.mechanicName ? `<span class="job-mechanic">${esc(j.mechanicName)}</span>` : ''}
             <span class="job-status-badge">${esc(JOB_STATUS_LABELS[j.status] || JOB_STATUS_LABELS.scheduled)}</span>
@@ -2078,6 +2083,60 @@ function renderWeekGrid(days) {
   wireGridInteractions();
 }
 
+// Hover summary - a short delay avoids flashing a tooltip on every card the
+// mouse merely passes over while scanning the diary.
+const JOB_TOOLTIP_DELAY_MS = 200;
+let jobTooltipTimer = null;
+
+function wireJobTooltipOn(container, selector) {
+  container.querySelectorAll(selector).forEach((el) => {
+    el.addEventListener('mouseenter', () => {
+      clearTimeout(jobTooltipTimer);
+      const job = workshopJobs.find((x) => x.id === Number(el.dataset.job));
+      if (!job) return;
+      jobTooltipTimer = setTimeout(() => showJobTooltip(el, job), JOB_TOOLTIP_DELAY_MS);
+    });
+    el.addEventListener('mouseleave', () => {
+      clearTimeout(jobTooltipTimer);
+      hideJobTooltip();
+    });
+  });
+}
+
+function hideJobTooltip() {
+  const el = document.getElementById('job-tooltip');
+  if (el) el.remove();
+}
+
+function showJobTooltip(anchorEl, job) {
+  // A drag can start during the delay window - don't pop a tooltip over a
+  // block the user is actively moving.
+  if (anchorEl.classList.contains('dragging')) return;
+  hideJobTooltip();
+  const statusLabel = esc(JOB_STATUS_LABELS[job.status] || JOB_STATUS_LABELS.scheduled);
+  const statusColor = `var(--status-${job.status || 'scheduled'}-border)`;
+  const tip = document.createElement('div');
+  tip.id = 'job-tooltip';
+  tip.className = 'job-tooltip';
+  tip.innerHTML = `
+    <div class="job-tooltip-bike">${esc(job.bikeLabel || 'No bike on file')}</div>
+    <div class="job-tooltip-row">${esc(job.title)}</div>
+    <div class="job-tooltip-row">${esc(job.customerName || 'No customer')}</div>
+    <div class="job-tooltip-row">Status: <strong style="color:${statusColor};">${statusLabel}</strong></div>
+    <div class="job-tooltip-row">${job.orderId ? `Order total: ${money(job.orderTotal)}` : 'No order linked'}</div>
+  `;
+  document.body.appendChild(tip);
+
+  const anchorRect = anchorEl.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  let x = anchorRect.left;
+  let y = anchorRect.bottom + 6;
+  if (x + tipRect.width > window.innerWidth) x = window.innerWidth - tipRect.width - 8;
+  if (y + tipRect.height > window.innerHeight) y = anchorRect.top - tipRect.height - 6;
+  tip.style.left = Math.max(8, x) + 'px';
+  tip.style.top = Math.max(8, y) + 'px';
+}
+
 // Right-click quick actions on a job card/block/chip/row - wired onto
 // whichever of the four job-card DOM shapes (see JOB_CARD_SELECTOR callers
 // below) is on screen. Reuses loadOrderIntoCart/the receipt modal rather
@@ -2106,6 +2165,8 @@ function openJobContextMenu(e, job) {
   e.preventDefault();
   e.stopPropagation();
   closeJobContextMenu();
+  clearTimeout(jobTooltipTimer);
+  hideJobTooltip();
 
   const hasOrder = !!job.orderId;
   const menu = document.createElement('div');
@@ -2207,6 +2268,7 @@ function wireGridInteractions() {
     wireJobBlockResize(blockEl, job);
   });
   wireJobContextMenuOn(wrap, '.job-card, .wk-job-block');
+  wireJobTooltipOn(wrap, '.job-card, .wk-job-block');
 
   wrap.querySelectorAll('.wk-day-col').forEach((colEl) => {
     colEl.addEventListener('click', (e) => {
@@ -2317,6 +2379,7 @@ function wireMonthInteractions() {
     });
   });
   wireJobContextMenuOn(wrap, '.month-job-chip');
+  wireJobTooltipOn(wrap, '.month-job-chip');
 
   wrap.querySelectorAll('.month-more-btn').forEach((b) => {
     b.addEventListener('click', (e) => {
@@ -5394,6 +5457,7 @@ function renderDayJobsModal(holder, dateStr, jobs) {
     });
   });
   wireJobContextMenuOn(holder, '.day-job-row');
+  wireJobTooltipOn(holder, '.day-job-row');
 }
 
 function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTime, prefillMechanicId, skipAutoOrder) {

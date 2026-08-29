@@ -1830,6 +1830,7 @@ function serializeWorkshopJob(row) {
     notes: row.notes,
     orderId: row.order_id,
     orderStatus: row.order_status,
+    orderTotal: row.order_total,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -1847,7 +1848,7 @@ function resolveJobStatus(raw, existing) {
   return raw;
 }
 
-const WORKSHOP_JOB_SELECT = `SELECT w.*, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status
+const WORKSHOP_JOB_SELECT = `SELECT w.*, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total
   FROM workshop_jobs w
   LEFT JOIN customers c ON c.id = w.customer_id
   LEFT JOIN customer_bikes b ON b.id = w.bike_id

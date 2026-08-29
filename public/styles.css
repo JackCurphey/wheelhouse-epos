@@ -353,6 +353,22 @@ h3 { font-size: 14px; margin: 0 0 8px; color: var(--muted); text-transform: uppe
 .context-menu-item:hover:not(:disabled) { background: var(--bg); }
 .context-menu-item:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Hover summary on a job card - same positioning approach as .context-menu
+   (fixed, JS-placed, above modals), shown after JOB_TOOLTIP_DELAY_MS. */
+.job-tooltip {
+  position: fixed;
+  z-index: 200;
+  width: 220px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 10px 12px;
+  pointer-events: none;
+}
+.job-tooltip-bike { font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+.job-tooltip-row { font-size: 12px; color: var(--ink); line-height: 1.5; }
+
 .sdi-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sdi-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sdi-sku { font-size: 11.5px; color: var(--muted); }
