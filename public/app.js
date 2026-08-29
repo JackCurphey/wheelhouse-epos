@@ -39,6 +39,7 @@ let salesList = [];
 let viewedSale = null;
 
 let dashboardData = null;
+let printAgents = []; // [{deviceId, deviceName, printers}] currently checked in for this shop (see /api/print-agents)
 
 let customers = [];
 let customerSearch = '';
@@ -199,6 +200,7 @@ async function loadSales() {
 
 async function loadDashboard() {
   dashboardData = await api('/api/dashboard');
+  printAgents = await api('/api/print-agents').then((r) => r.agents);
 }
 
 async function loadCustomers() {
@@ -3670,6 +3672,33 @@ async function renderDashboard() {
               : `<div class="empty-state">No sales yet today.</div>`
           }
         </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-header"><h2>Connected printers</h2></div>
+      <div class="panel-body">
+        ${
+          printAgents.length
+            ? `<div class="printer-agent-list">
+              ${printAgents
+                .map(
+                  (a) => `
+                <div class="printer-agent">
+                  <div class="printer-agent-name">${esc(a.deviceName)}</div>
+                  <div class="printer-agent-printers">
+                    ${
+                      a.printers.length
+                        ? a.printers.map((p) => `<span class="badge ok">${esc(p)}</span>`).join('')
+                        : `<span class="muted">No printers detected</span>`
+                    }
+                  </div>
+                </div>
+              `
+                )
+                .join('')}
+            </div>`
+            : `<div class="empty-state">No print agents currently online. Install and sign in to one on a shop PC to see it here - see the Print Stickers modal in Stockroom.</div>`
+        }
       </div>
     </div>
   `;

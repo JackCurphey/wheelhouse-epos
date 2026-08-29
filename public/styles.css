@@ -653,6 +653,11 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 }
 @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
 
+.printer-agent-list { display: flex; flex-direction: column; gap: 10px; }
+.printer-agent { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.printer-agent-name { font-weight: 600; min-width: 160px; }
+.printer-agent-printers { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* ---------- Workshop calendar ---------- */
 
 .workshop-layout {
