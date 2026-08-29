@@ -4335,6 +4335,7 @@ function renderThemeSwatchGrid() {
       <button type="button" class="theme-swatch ${shopThemePreset === key ? 'active' : ''}" data-preset="${key}">
         <span class="theme-swatch-preview" style="background:${preset.modalBg};">
           <span class="theme-swatch-bar" style="background:${preset.topbar};"></span>
+          <span class="theme-swatch-accent-dot" style="background:${preset.accent};"></span>
         </span>
         <span class="theme-swatch-name">${esc(preset.name)}</span>
       </button>
@@ -6613,18 +6614,22 @@ function renderAuthScreen() {
 // server-side (GET/PUT /api/shop-theme) - these are the only two places
 // that actually know what each key looks like.
 
+// accent is the lighter of each pair (active pills, focus outlines, hover
+// borders, subnav/auth tabs - anywhere var(--accent) is used); topbar is
+// the darker tone used only for the top bar itself (var(--accent-dark)).
 const THEME_PRESETS = {
-  forest: { name: 'Forest Green', topbar: '#164f42', modalBg: '#DDF7DF' },
-  ocean: { name: 'Ocean Blue', topbar: '#1a3f66', modalBg: '#DCEBFA' },
-  sunset: { name: 'Sunset', topbar: '#7a3410', modalBg: '#FBE8D6' },
-  slate: { name: 'Slate', topbar: '#2c333a', modalBg: '#E6E9EC' },
-  plum: { name: 'Plum', topbar: '#4a2258', modalBg: '#F0E4F7' },
+  forest: { name: 'Forest Green', topbar: '#164f42', accent: '#1f6f5c', modalBg: '#DDF7DF' },
+  ocean: { name: 'Ocean Blue', topbar: '#1a3f66', accent: '#2f5f96', modalBg: '#DCEBFA' },
+  sunset: { name: 'Sunset', topbar: '#7a3410', accent: '#a8501e', modalBg: '#FBE8D6' },
+  slate: { name: 'Slate', topbar: '#2c333a', accent: '#4a5560', modalBg: '#E6E9EC' },
+  plum: { name: 'Plum', topbar: '#4a2258', accent: '#7a4a94', modalBg: '#F0E4F7' },
 };
 
 function applyShopTheme(presetKey) {
   const preset = THEME_PRESETS[presetKey] || THEME_PRESETS.forest;
   shopThemePreset = THEME_PRESETS[presetKey] ? presetKey : 'forest';
   document.documentElement.style.setProperty('--accent-dark', preset.topbar);
+  document.documentElement.style.setProperty('--accent', preset.accent);
   document.documentElement.style.setProperty('--modal-bg', preset.modalBg);
 }
 
