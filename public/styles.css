@@ -1156,6 +1156,59 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   flex-direction: column;
 }
 
+/* ---------- Sticker printing ---------- */
+
+.sticker-row-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; }
+.sticker-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.sticker-row-preview { flex: 0 0 auto; min-width: 96px; display: flex; align-items: center; justify-content: center; }
+.sticker-row-info { flex: 1; min-width: 0; }
+.sticker-row-name { font-weight: 600; }
+.sticker-no-code { font-size: 12px; text-align: center; }
+
+/* The actual print output - a single #sticker-print-root, hidden on
+   screen, filled with one .sticker-page per physical label just before
+   window.print() (see printStickers() in app.js). @media print swaps which
+   of #app / #sticker-print-root is visible, so the browser's print preview
+   shows only the label sheet, sized by the @page rule app.js injects
+   dynamically (see setStickerPageSize) - not the app's own chrome. */
+#sticker-print-root { display: none; }
+@media print {
+  #app, #modal-holder { display: none !important; }
+  #sticker-print-root { display: block !important; }
+}
+.sticker-page {
+  page-break-after: always;
+  box-sizing: border-box;
+  padding: 1mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.sticker-page:last-child { page-break-after: auto; }
+.sticker-name {
+  font-weight: 700;
+  font-size: 8pt;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sticker-price { font-weight: 700; font-size: 10pt; margin: 0.5mm 0; }
+.sticker-barcode { line-height: 0; }
+.sticker-code { font-family: ui-monospace, monospace; font-size: 6.5pt; letter-spacing: 0.4px; margin-top: 0.5mm; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .modal-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);

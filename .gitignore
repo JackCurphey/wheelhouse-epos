@@ -1,4 +1,5 @@
 node_modules/
+print-agent/dist/
 .env
 data/*.db
 data/*.db-shm

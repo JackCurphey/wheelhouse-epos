@@ -2025,6 +2025,141 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
+// ---------- Label (sticker printing) settings ----------
+// The physical size of the label roll a shop's dedicated label printer
+// takes. One row per shop, same singleton-per-shop pattern as
+// workshop_settings; createShop() seeds a default row for new shops, but a
+// shop created before this table existed won't have one - GET creates it
+// lazily on first touch rather than needing a migration-time backfill
+// (which would fight RLS, since a migration runs with no shop context set).
+
+function serializeLabelSettings(row) {
+  return { widthMm: Number(row.width_mm), heightMm: Number(row.height_mm), updatedAt: row.updated_at };
+}
+
+async function getOrCreateLabelSettings() {
+  let row = await db.prepare('SELECT * FROM label_settings LIMIT 1').get();
+  if (!row) {
+    await db.prepare('INSERT INTO label_settings DEFAULT VALUES').run();
+    row = await db.prepare('SELECT * FROM label_settings LIMIT 1').get();
+  }
+  return row;
+}
+
+route('GET', '/api/label-settings', async (req, res) => {
+  sendJson(res, 200, serializeLabelSettings(await getOrCreateLabelSettings()));
+});
+
+route('PUT', '/api/label-settings', async (req, res) => {
+  const existing = await getOrCreateLabelSettings();
+  const body = await readJsonBody(req);
+  const widthMm = body.widthMm !== undefined ? Number(body.widthMm) : Number(existing.width_mm);
+  const heightMm = body.heightMm !== undefined ? Number(body.heightMm) : Number(existing.height_mm);
+  if (!Number.isFinite(widthMm) || widthMm < 10 || widthMm > 150 || !Number.isFinite(heightMm) || heightMm < 10 || heightMm > 150) {
+    return badRequest(res, 'Label width and height must both be between 10mm and 150mm');
+  }
+  await db.prepare('UPDATE label_settings SET width_mm = ?, height_mm = ?, updated_at = ? WHERE id = ?').run(
+    widthMm,
+    heightMm,
+    nowIso(),
+    existing.id
+  );
+  sendJson(res, 200, serializeLabelSettings(await db.prepare('SELECT * FROM label_settings LIMIT 1').get()));
+});
+
+// ---------- Print agents ----------
+// Relays sticker print jobs from a browser tab to a print-agent process
+// (print-agent/agent.js) running on any shop PC - possibly a different one
+// than whichever machine the browser is on, so a printer physically wired
+// to a stockroom PC can be reached from the till's browser too. Which
+// devices are currently online and what's queued for each is inherently
+// live/ephemeral state, not history worth a table for - an agent
+// re-registers within one check-in interval of a server restart anyway, so
+// this is plain in-memory state, keyed by shop id. Fine for this app's
+// single-process deployment (see docker-compose.yml - one `app` service,
+// no horizontal scaling to worry about).
+//
+// Every route here re-resolves the session itself via currentSession(req)
+// (the same thing the dispatcher already calls before runWithShop) to get
+// the shop id these maps are keyed by - the same pattern the customer
+// portal's routes already use to get their own shop context inside a
+// handler.
+
+const printAgentsByShop = new Map(); // shopId -> Map<deviceId, {deviceName, printers, lastSeen}>
+const printJobsByDevice = new Map(); // deviceId -> pending job array
+const printJobStatus = new Map(); // jobId -> {status, error} - not surfaced in the UI yet, kept for a future job-history view
+const PRINT_AGENT_STALE_MS = 25000; // ~2-3 missed check-ins before a device drops off the list
+
+function liveAgentsForShop(shopId) {
+  const byDevice = printAgentsByShop.get(shopId);
+  if (!byDevice) return [];
+  const now = Date.now();
+  const live = [];
+  for (const [deviceId, info] of byDevice) {
+    if (now - info.lastSeen > PRINT_AGENT_STALE_MS) {
+      byDevice.delete(deviceId);
+      continue;
+    }
+    live.push({ deviceId, deviceName: info.deviceName, printers: info.printers });
+  }
+  return live;
+}
+
+route('POST', '/api/print-agents/checkin', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+  const deviceId = String(body.deviceId || '').trim();
+  if (!deviceId) return badRequest(res, 'deviceId is required');
+  const deviceName = String(body.deviceName || deviceId).trim().slice(0, 100) || deviceId;
+  const printers = Array.isArray(body.printers) ? body.printers.filter((p) => typeof p === 'string' && p).slice(0, 50) : [];
+
+  if (!printAgentsByShop.has(ctx.shop.id)) printAgentsByShop.set(ctx.shop.id, new Map());
+  printAgentsByShop.get(ctx.shop.id).set(deviceId, { deviceName, printers, lastSeen: Date.now() });
+
+  const jobs = printJobsByDevice.get(deviceId) || [];
+  printJobsByDevice.set(deviceId, []);
+  sendJson(res, 200, { jobs });
+});
+
+// What the sticker-print modal's printer dropdown reads.
+route('GET', '/api/print-agents', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  sendJson(res, 200, { agents: liveAgentsForShop(ctx.shop.id) });
+});
+
+route('POST', '/api/print-agents/:deviceId/jobs', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  // Only ever queue a job for a device this shop can currently see - stops
+  // a stale or guessed deviceId (or one belonging to a different shop, by
+  // construction, since it just wouldn't appear here) from ever receiving
+  // a job.
+  const known = liveAgentsForShop(ctx.shop.id).find((a) => a.deviceId === params.deviceId);
+  if (!known) return badRequest(res, 'That device is not currently online for this shop');
+  const body = await readJsonBody(req);
+  const { printerName, widthMm, heightMm, pages } = body;
+  if (!printerName || !known.printers.includes(printerName)) return badRequest(res, 'Unknown printer for that device');
+  if (!Number.isFinite(widthMm) || !Number.isFinite(heightMm)) return badRequest(res, 'A valid label width and height are required');
+  if (!Array.isArray(pages) || !pages.length) return badRequest(res, 'At least one label page is required');
+
+  const jobId = randomBytes(8).toString('hex');
+  if (!printJobsByDevice.has(params.deviceId)) printJobsByDevice.set(params.deviceId, []);
+  printJobsByDevice.get(params.deviceId).push({ jobId, printerName, widthMm, heightMm, pages });
+  printJobStatus.set(jobId, { status: 'queued' });
+  sendJson(res, 201, { jobId });
+});
+
+route('POST', '/api/print-agents/jobs/:jobId/complete', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+  printJobStatus.set(params.jobId, { status: body.ok ? 'done' : 'error', error: body.error });
+  if (!body.ok) console.error(`Print job ${params.jobId} failed: ${body.error}`);
+  sendJson(res, 200, { ok: true });
+});
+
 // ---------- Dashboard ----------
 
 route('GET', '/api/dashboard', async (req, res) => {

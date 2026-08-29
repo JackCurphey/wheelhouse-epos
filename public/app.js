@@ -24,6 +24,9 @@ let tillCustomerId = null;
 let inventorySearch = '';
 let inventoryCategory = '';
 let inventoryShowInactive = false;
+let inventorySelectedIds = new Set(); // Stockroom bulk-select, for printing several stickers at once
+let labelSettings = { widthMm: 50, heightMm: 25 }; // shop's saved sticker label size - defaults here, real value loaded lazily
+let labelSettingsLoaded = false;
 
 let suppliers = [];
 let catalogueItems = [];
@@ -174,6 +177,15 @@ async function loadProducts() {
 async function loadProductsAll() {
   products = await api(`/api/products?all=${inventoryShowInactive ? '1' : '0'}`);
   categories = await api('/api/categories');
+}
+
+// Only fetched once per session (like workshopMechanicFilterInitialized's
+// guard) - by the time a user opens the sticker print modal from Stockroom,
+// the real saved label size is already in hand rather than the placeholder
+// default above.
+async function loadLabelSettings() {
+  labelSettings = await api('/api/label-settings');
+  labelSettingsLoaded = true;
 }
 
 async function loadSales() {
@@ -1844,7 +1856,8 @@ function wireJobBlockMove(blockEl, job) {
       if (hoveredCol) {
         hoveredCol.classList.add('drop-target');
         const rect = hoveredCol.getBoundingClientRect();
-        const rawMinutes = WORKSHOP_GRID_MIN + ((ev.clientY - rect.top) / WORKSHOP_ROW_PX) * 60;
+        const cardTop = ev.clientY - offsetY;
+        const rawMinutes = WORKSHOP_GRID_MIN + ((cardTop - rect.top) / WORKSHOP_ROW_PX) * 60;
         const snapped = Math.round(rawMinutes / WORKSHOP_SNAP_MIN) * WORKSHOP_SNAP_MIN;
         pendingStartMin = Math.max(WORKSHOP_GRID_MIN, Math.min(WORKSHOP_GRID_MAX - durationMin, snapped));
         pendingDate = hoveredCol.dataset.date;
@@ -2190,10 +2203,115 @@ function wireMonthInteractions() {
   });
 }
 
+// ================= BARCODE (Code128, subset B) =================
+// Used only by the sticker-printing feature below. Subset B covers every
+// printable ASCII character (32-126), so the same encoder handles both a
+// shop-assigned SKU and a real supplier-provided barcode without needing
+// two encoders or validating digit counts/checksums the way EAN-13 would.
+// Standard 107-row Code128 width table - each row is the module widths of
+// six alternating bar/space runs (always starting on a bar), row 106
+// (STOP) has a seventh trailing width. No prior barcode code exists in
+// this codebase to reuse.
+
+const CODE128_PATTERNS = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+  '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+  '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+  '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+  '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+  '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+  '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+  '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+  '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+  '114131', '311141', '411131', '211412', '211214', '211232', '2331112',
+];
+const CODE128_START_B = 104;
+const CODE128_STOP = 106;
+
+// Returns the module-width sequence (numbers, alternating bar/space
+// starting with a bar) Code128 uses to encode `text`, or null if it
+// contains a character outside subset B's range (32-126) - callers fall
+// back to showing the text without a barcode graphic in that case.
+function code128Bars(text) {
+  const symbols = [CODE128_START_B];
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (code < 32 || code > 126) return null;
+    symbols.push(code - 32);
+  }
+  let checksum = symbols[0];
+  for (let i = 1; i < symbols.length; i++) checksum += symbols[i] * i;
+  symbols.push(checksum % 103);
+  symbols.push(CODE128_STOP);
+
+  const widths = [];
+  symbols.forEach((s) => {
+    for (const ch of CODE128_PATTERNS[s]) widths.push(Number(ch));
+  });
+  return widths;
+}
+
+// Converts a Code128 module-width sequence into plain mm bar rectangles
+// ({xMm, wMm}, all at y=0 with height=heightMm) - the module width is
+// derived from the total module count so any label size just works without
+// per-size tuning. Shared by barcodeSvg (on-screen/browser-print) and
+// buildStickerPrintJob (print-agent draw primitives) so the bar-position
+// math exists in exactly one place. Returns null if `text` can't be
+// encoded (see code128Bars).
+function code128Rects(text, widthMm, heightMm) {
+  const widths = code128Bars(text);
+  if (!widths) return null;
+  const totalModules = widths.reduce((a, b) => a + b, 0);
+  const moduleWidth = widthMm / totalModules;
+  let x = 0;
+  const rects = [];
+  widths.forEach((w, i) => {
+    const barWidth = w * moduleWidth;
+    // Even index = a bar (the sequence always starts on a bar and alternates).
+    if (i % 2 === 0) rects.push({ xMm: x, wMm: barWidth });
+    x += barWidth;
+  });
+  return rects;
+}
+
+// Renders a Code128 barcode as inline SVG sized to fill `widthMm`. Returns
+// null if `text` can't be encoded (see code128Bars).
+function barcodeSvg(text, widthMm, heightMm) {
+  const rects = code128Rects(text, widthMm, heightMm);
+  if (!rects) return null;
+  const bars = rects
+    .map((r) => `<rect x="${r.xMm.toFixed(3)}" y="0" width="${r.wMm.toFixed(3)}" height="${heightMm}" fill="#000" />`)
+    .join('');
+  return `<svg viewBox="0 0 ${widthMm} ${heightMm}" width="${widthMm}mm" height="${heightMm}mm" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`;
+}
+
+// Picks what to encode (a real supplier barcode wins over an internal SKU,
+// matching how till search already matches either) and renders it -
+// `svg: null` means either nothing to encode or a character Code128 can't
+// represent, in which case callers show `note` instead of a blank barcode.
+function stickerBarcode(product, widthMm, heightMm) {
+  const code = (product.barcode || product.sku || '').trim();
+  if (!code) return { code: '', svg: null, note: 'No barcode set' };
+  const svg = barcodeSvg(code, widthMm, heightMm);
+  if (!svg) return { code, svg: null, note: "Can't be printed as a barcode" };
+  return { code, svg, note: '' };
+}
+
+// Shared between the on-screen/print-preview layout (buildStickerPageHtml's
+// CSS flex) and the print agent's absolute-position draw primitives
+// (buildStickerPrintJob) - just the numbers that need to match between the
+// two, so the barcode's share of the label doesn't drift out of sync if
+// this ratio ever changes.
+function stickerBarcodeAreaMm(widthMm, heightMm) {
+  return { widthMm: Math.max(5, widthMm - 4), heightMm: Math.max(4, heightMm * 0.4) };
+}
+
 // ================= INVENTORY =================
 
 async function renderInventory() {
   await loadProductsAll();
+  if (!labelSettingsLoaded) await loadLabelSettings();
   const main = document.getElementById('office-content');
   main.innerHTML = `
     <div class="panel">
@@ -2211,11 +2329,13 @@ async function renderInventory() {
           <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;">
             <input type="checkbox" id="inv-show-inactive" ${inventoryShowInactive ? 'checked' : ''} /> Show deactivated
           </label>
+          <button class="btn btn-sm" id="inv-print-stickers-btn" style="display:none;"></button>
         </div>
         <div style="overflow-x:auto;">
           <table class="data-table">
             <thead>
               <tr>
+                <th><input type="checkbox" id="inv-select-all" /></th>
                 <th>SKU</th><th>Barcode</th><th>Name</th><th>Category</th>
                 <th class="num">Price (inc. VAT)</th><th class="num">Cost</th><th class="num">VAT (20%)</th><th class="num">Margin</th><th class="num">Stock</th>
                 <th>Supplier</th><th></th>
@@ -2242,8 +2362,24 @@ async function renderInventory() {
     await loadProductsAll();
     renderInventoryTable();
   });
+  document.getElementById('inv-print-stickers-btn').addEventListener('click', () => {
+    const selected = products.filter((p) => inventorySelectedIds.has(p.id));
+    openModal({ type: 'sticker-print', products: selected });
+  });
 
   renderInventoryTable();
+}
+
+// Shows/hides and labels the bulk "Print stickers" toolbar button - called
+// after any selection change and at the end of every renderInventoryTable()
+// re-render, since a filter/search change can hide selected rows without
+// clearing the selection itself.
+function updateStickerToolbarButton() {
+  const btn = document.getElementById('inv-print-stickers-btn');
+  if (!btn) return;
+  const n = inventorySelectedIds.size;
+  btn.style.display = n ? '' : 'none';
+  btn.textContent = `Print stickers (${n})`;
 }
 
 function renderInventoryTable() {
@@ -2263,8 +2399,16 @@ function renderInventoryTable() {
       return false;
     return true;
   });
+  // Selection survives a search/filter change (so picking items across
+  // several searches works) - only drop an id once the product itself is
+  // actually gone (deactivated out of the loaded set, or deleted), so the
+  // toolbar button's count never silently includes an id nothing points at.
+  for (const id of inventorySelectedIds) {
+    if (!products.some((p) => p.id === id)) inventorySelectedIds.delete(id);
+  }
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">No products found.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">No products found.</div></td></tr>`;
+    updateStickerToolbarButton();
     return;
   }
   tbody.innerHTML = filtered
@@ -2279,6 +2423,7 @@ function renderInventoryTable() {
       const marginLow = margin === null || margin < 20;
       return `
       <tr>
+        <td><input type="checkbox" data-select="${p.id}" ${inventorySelectedIds.has(p.id) ? 'checked' : ''} /></td>
         <td>${esc(p.sku || '—')}</td>
         <td>${esc(p.barcode || '—')}</td>
         <td><button class="link-btn" data-view="${p.id}">${esc(p.name)}</button>${inactiveTag}</td>
@@ -2290,6 +2435,7 @@ function renderInventoryTable() {
         <td class="num">${p.category === 'Services' ? '—' : `<span class="badge ${low ? 'low' : 'ok'}">${p.stockQty}</span>`}</td>
         <td>${esc(p.supplier || '—')}</td>
         <td>
+          <button class="icon-btn" data-sticker="${p.id}">Sticker</button>
           <button class="icon-btn" data-edit="${p.id}">Edit</button>
           ${p.category !== 'Services' ? `<button class="icon-btn" data-stock="${p.id}">Stock</button>` : ''}
           ${p.active ? `<button class="icon-btn" data-deactivate="${p.id}">Deactivate</button>` : `<button class="icon-btn" data-activate="${p.id}">Activate</button>`}
@@ -2299,6 +2445,30 @@ function renderInventoryTable() {
     })
     .join('');
 
+  const selectAllCb = document.getElementById('inv-select-all');
+  if (selectAllCb) {
+    selectAllCb.checked = filtered.length > 0 && filtered.every((p) => inventorySelectedIds.has(p.id));
+    selectAllCb.addEventListener('change', () => {
+      if (selectAllCb.checked) filtered.forEach((p) => inventorySelectedIds.add(p.id));
+      else filtered.forEach((p) => inventorySelectedIds.delete(p.id));
+      renderInventoryTable();
+    });
+  }
+  tbody.querySelectorAll('input[data-select]').forEach((cb) =>
+    cb.addEventListener('change', () => {
+      const id = Number(cb.dataset.select);
+      if (cb.checked) inventorySelectedIds.add(id);
+      else inventorySelectedIds.delete(id);
+      updateStickerToolbarButton();
+      if (selectAllCb) selectAllCb.checked = filtered.every((p) => inventorySelectedIds.has(p.id));
+    })
+  );
+  tbody.querySelectorAll('button[data-sticker]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const p = products.find((x) => x.id === Number(b.dataset.sticker));
+      openModal({ type: 'sticker-print', products: [p] });
+    })
+  );
   tbody.querySelectorAll('button[data-view]').forEach((b) =>
     b.addEventListener('click', () => {
       location.hash = `office/inventory/${b.dataset.view}`;
@@ -2343,6 +2513,7 @@ function renderInventoryTable() {
       }
     })
   );
+  updateStickerToolbarButton();
 }
 
 // ---------------- Suppliers ----------------
@@ -3548,6 +3719,236 @@ function renderModal() {
   if (modal.type === 'day-jobs') return renderDayJobsModal(holder, modal.dateStr, modal.jobs);
   if (modal.type === 'catalogue-import') return renderCatalogueImportModal(holder, modal.item);
   if (modal.type === 'supplier-form') return renderSupplierFormModal(holder);
+  if (modal.type === 'sticker-print') return renderStickerPrintModal(holder, modal.products);
+}
+
+function renderStickerPrintModal(holder, products) {
+  const rowsHtml = products
+    .map((p) => {
+      const { svg, note } = stickerBarcode(p, 40, 14);
+      return `
+      <div class="sticker-row">
+        <div class="sticker-row-preview">${svg || `<div class="sticker-no-code muted">${esc(note)}</div>`}</div>
+        <div class="sticker-row-info">
+          <div class="sticker-row-name">${esc(p.name)}</div>
+          <div class="muted">${money(p.price)}${p.barcode || p.sku ? ` · ${esc(p.barcode || p.sku)}` : ''}</div>
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="sticker-qty-${p.id}">Qty</label>
+          <input type="number" id="sticker-qty-${p.id}" min="1" value="1" style="width:70px;" />
+        </div>
+      </div>
+    `;
+    })
+    .join('');
+
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal wide">
+        <div class="modal-header">
+          <h2>Print stickers</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-row" style="align-items:flex-end;">
+            <div class="field">
+              <label for="sticker-width">Label width (mm)</label>
+              <input type="number" id="sticker-width" min="10" max="150" step="0.5" value="${labelSettings.widthMm}" />
+            </div>
+            <div class="field">
+              <label for="sticker-height">Label height (mm)</label>
+              <input type="number" id="sticker-height" min="10" max="150" step="0.5" value="${labelSettings.heightMm}" />
+            </div>
+          </div>
+          <p class="muted" style="margin:0 0 12px;">Matches your label printer's roll size - saved as the default for next time.</p>
+          <div class="field" id="sticker-printer-field" style="display:none;">
+            <label for="sticker-printer">Send straight to</label>
+            <select id="sticker-printer">
+              <option value="">Use the browser's print dialog instead</option>
+            </select>
+          </div>
+          <p class="muted" id="sticker-agent-note" style="margin:0 0 12px;">Looking for the print agent…</p>
+          <div class="sticker-row-list">${rowsHtml}</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" id="modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="sticker-print-btn">Print</button>
+        </div>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+
+  api('/api/print-agents')
+    .then(({ agents }) => {
+      const note = document.getElementById('sticker-agent-note');
+      const options = agents.flatMap((a) => a.printers.map((printer) => ({ agent: a, printer })));
+      if (!options.length) {
+        note.textContent = agents.length
+          ? "A print agent is signed in, but isn't reporting any printers."
+          : "No print agent is signed in - printing will use the browser's print dialog.";
+        return;
+      }
+      note.remove();
+      const field = document.getElementById('sticker-printer-field');
+      const select = document.getElementById('sticker-printer');
+      options.forEach(({ agent, printer }) => {
+        const opt = document.createElement('option');
+        opt.value = `${agent.deviceId}::${printer}`;
+        opt.textContent = `${agent.deviceName} — ${printer}`;
+        select.appendChild(opt);
+      });
+      field.style.display = '';
+    })
+    .catch(() => {
+      const note = document.getElementById('sticker-agent-note');
+      if (note) note.textContent = "Couldn't check for print agents - printing will use the browser's print dialog.";
+    });
+
+  document.getElementById('sticker-print-btn').addEventListener('click', async () => {
+    const widthMm = Number(document.getElementById('sticker-width').value);
+    const heightMm = Number(document.getElementById('sticker-height').value);
+    if (!(widthMm > 0) || !(heightMm > 0)) {
+      showToast('Enter a valid label width and height');
+      return;
+    }
+    const items = [];
+    products.forEach((p) => {
+      const qty = Math.max(1, Math.round(Number(document.getElementById(`sticker-qty-${p.id}`).value) || 1));
+      for (let i = 0; i < qty; i++) items.push(p);
+    });
+    if (widthMm !== labelSettings.widthMm || heightMm !== labelSettings.heightMm) {
+      try {
+        labelSettings = await api('/api/label-settings', { method: 'PUT', body: { widthMm, heightMm } });
+      } catch (err) {
+        showToast(err.message);
+        return;
+      }
+    }
+    const printerSelect = document.getElementById('sticker-printer');
+    const selected = printerSelect ? printerSelect.value : '';
+    closeModal();
+    if (selected) {
+      // indexOf/slice rather than .split('::') - a printer name could
+      // theoretically contain "::" itself, and this stays correct either way.
+      const sep = selected.indexOf('::');
+      const deviceId = selected.slice(0, sep);
+      const printerName = selected.slice(sep + 2);
+      printStickersViaAgent(items, widthMm, heightMm, deviceId, printerName);
+    } else {
+      printStickers(items, widthMm, heightMm);
+    }
+  });
+}
+
+// One label per physical page/pull, sized via a dynamically-injected @page
+// rule (see setStickerPageSize) - built for a dedicated label printer, not
+// sheet-fed multi-label paper.
+function buildStickerPageHtml(product, widthMm, heightMm) {
+  const barcodeArea = stickerBarcodeAreaMm(widthMm, heightMm);
+  const { svg, note } = stickerBarcode(product, barcodeArea.widthMm, barcodeArea.heightMm);
+  return `
+    <div class="sticker-page" style="width:${widthMm}mm;height:${heightMm}mm;">
+      <div class="sticker-name">${esc(product.name)}</div>
+      <div class="sticker-price">${money(product.price)}</div>
+      ${
+        svg
+          ? `<div class="sticker-barcode">${svg}</div><div class="sticker-code">${esc(product.barcode || product.sku)}</div>`
+          : `<div class="sticker-code">${esc(note)}</div>`
+      }
+    </div>
+  `;
+}
+
+function ensureStickerPrintRoot() {
+  let root = document.getElementById('sticker-print-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'sticker-print-root';
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+// @page's size can't be set via an inline style attribute, so this is the
+// standard way to make it dynamic per print call - one <style> tag, its
+// content replaced each time rather than a new tag appended.
+function setStickerPageSize(widthMm, heightMm) {
+  let style = document.getElementById('sticker-page-size');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'sticker-page-size';
+    document.head.appendChild(style);
+  }
+  style.textContent = `@page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }`;
+}
+
+// `items` is already flattened - one entry per physical label, so a
+// product with qty 3 appears three times.
+function printStickers(items, widthMm, heightMm) {
+  const root = ensureStickerPrintRoot();
+  root.innerHTML = items.map((p) => buildStickerPageHtml(p, widthMm, heightMm)).join('');
+  setStickerPageSize(widthMm, heightMm);
+  window.print();
+}
+
+// ---- Print agents (print-agent/agent.js) - optional. Any shop PC signed
+// into the agent can serve a print job from any browser signed into the
+// same shop, not just its own - both sides only ever talk to this app's
+// own server (GET/POST /api/print-agents*), never to each other directly,
+// so this is a plain same-origin api() call like everything else, no
+// localhost/CORS considerations. See print-agent/README.md. ----
+
+// Builds one label's draw primitives (mm-positioned rectangles + text) for
+// the print agent - it and print-label.ps1 have no barcode or layout logic
+// of their own, so this is the only place deciding where things go for
+// that path. Reuses code128Rects/stickerBarcode/stickerBarcodeAreaMm so the
+// bar geometry can never drift from what barcodeSvg (the on-screen/browser-
+// print path) draws.
+function buildStickerPrintJob(product, widthMm, heightMm) {
+  const barcodeArea = stickerBarcodeAreaMm(widthMm, heightMm);
+  const barcodeX = (widthMm - barcodeArea.widthMm) / 2;
+  const barcodeY = heightMm * 0.42;
+  const { code, svg, note } = stickerBarcode(product, barcodeArea.widthMm, barcodeArea.heightMm);
+  const rects = svg
+    ? code128Rects(code, barcodeArea.widthMm, barcodeArea.heightMm).map((r) => ({
+        xMm: barcodeX + r.xMm,
+        yMm: barcodeY,
+        wMm: r.wMm,
+        hMm: barcodeArea.heightMm,
+      }))
+    : [];
+  return {
+    rects,
+    texts: [
+      { text: product.name, xMm: widthMm / 2, yMm: heightMm * 0.14, sizePt: 8, bold: true, align: 'center' },
+      { text: money(product.price), xMm: widthMm / 2, yMm: heightMm * 0.28, sizePt: 10, bold: true, align: 'center' },
+      { text: code || note, xMm: widthMm / 2, yMm: heightMm * 0.9, sizePt: 6.5, bold: false, align: 'center' },
+    ],
+  };
+}
+
+// `items` is already flattened - one entry per physical label (see
+// printStickers above). Sends everything as one job so the target device
+// runs it as a single multi-page print job, not N separate ones. Queuing
+// is all this can confirm - the actual printing happens whenever that
+// device's next check-in lands (a couple of seconds later at most), so
+// this is honestly "sent," not "done."
+async function printStickersViaAgent(items, widthMm, heightMm, deviceId, printerName) {
+  try {
+    await api(`/api/print-agents/${deviceId}/jobs`, {
+      method: 'POST',
+      body: {
+        printerName,
+        widthMm,
+        heightMm,
+        pages: items.map((p) => buildStickerPrintJob(p, widthMm, heightMm)),
+      },
+    });
+    showToast(`Sent ${items.length} label${items.length === 1 ? '' : 's'} to ${printerName}`);
+  } catch (err) {
+    showToast(`Couldn't send to the print agent: ${err.message}`);
+  }
 }
 
 function renderProductFormModal(holder, product) {
