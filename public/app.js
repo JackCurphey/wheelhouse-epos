@@ -2088,13 +2088,17 @@ function renderWeekGrid(days) {
 const JOB_TOOLTIP_DELAY_MS = 200;
 let jobTooltipTimer = null;
 
+const JOB_TOOLTIP_CURSOR_GAP = 14;
+
 function wireJobTooltipOn(container, selector) {
   container.querySelectorAll(selector).forEach((el) => {
-    el.addEventListener('mouseenter', () => {
+    el.addEventListener('mouseenter', (e) => {
       clearTimeout(jobTooltipTimer);
       const job = workshopJobs.find((x) => x.id === Number(el.dataset.job));
       if (!job) return;
-      jobTooltipTimer = setTimeout(() => showJobTooltip(el, job), JOB_TOOLTIP_DELAY_MS);
+      const cursorX = e.clientX;
+      const cursorY = e.clientY;
+      jobTooltipTimer = setTimeout(() => showJobTooltip(el, job, cursorX, cursorY), JOB_TOOLTIP_DELAY_MS);
     });
     el.addEventListener('mouseleave', () => {
       clearTimeout(jobTooltipTimer);
@@ -2108,7 +2112,7 @@ function hideJobTooltip() {
   if (el) el.remove();
 }
 
-function showJobTooltip(anchorEl, job) {
+function showJobTooltip(anchorEl, job, cursorX, cursorY) {
   // A drag can start during the delay window - don't pop a tooltip over a
   // block the user is actively moving.
   if (anchorEl.classList.contains('dragging')) return;
@@ -2127,12 +2131,16 @@ function showJobTooltip(anchorEl, job) {
   `;
   document.body.appendChild(tip);
 
-  const anchorRect = anchorEl.getBoundingClientRect();
+  // Defaults to the cursor's right, flipping to its left only if there's
+  // not enough room - not anchored to the card itself, since a right-side
+  // placement relative to a wide/short card could still overlap it.
   const tipRect = tip.getBoundingClientRect();
-  let x = anchorRect.left;
-  let y = anchorRect.bottom + 6;
-  if (x + tipRect.width > window.innerWidth) x = window.innerWidth - tipRect.width - 8;
-  if (y + tipRect.height > window.innerHeight) y = anchorRect.top - tipRect.height - 6;
+  let x = cursorX + JOB_TOOLTIP_CURSOR_GAP;
+  if (x + tipRect.width > window.innerWidth - 8) {
+    x = cursorX - JOB_TOOLTIP_CURSOR_GAP - tipRect.width;
+  }
+  let y = cursorY;
+  if (y + tipRect.height > window.innerHeight - 8) y = window.innerHeight - tipRect.height - 8;
   tip.style.left = Math.max(8, x) + 'px';
   tip.style.top = Math.max(8, y) + 'px';
 }
