@@ -314,6 +314,38 @@ h3 { font-size: 14px; margin: 0 0 8px; color: var(--muted); text-transform: uppe
 .search-dropdown-item:hover { background: #fafaf8; }
 .search-dropdown-item:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Right-click quick-actions menu on a workshop job card - positioned at the
+   cursor via JS (left/top set inline), not anchored to a parent element
+   like .search-dropdown is, since a right-click can happen anywhere in the
+   grid. z-index above modals (50) so it still works from the Day Jobs modal. */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+}
+.context-menu-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.context-menu-item:hover:not(:disabled) { background: var(--bg); }
+.context-menu-item:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .sdi-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sdi-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sdi-sku { font-size: 11.5px; color: var(--muted); }

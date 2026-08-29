@@ -2067,6 +2067,103 @@ function renderWeekGrid(days) {
   wireGridInteractions();
 }
 
+// Right-click quick actions on a job card/block/chip/row - wired onto
+// whichever of the four job-card DOM shapes (see JOB_CARD_SELECTOR callers
+// below) is on screen. Reuses loadOrderIntoCart/the receipt modal rather
+// than inventing new job-specific logic, since "the order for this job" is
+// just a normal sale_document (see job.orderId, joined server-side).
+function wireJobContextMenuOn(container, selector) {
+  container.querySelectorAll(selector).forEach((el) => {
+    el.addEventListener('contextmenu', (e) => {
+      const job = workshopJobs.find((x) => x.id === Number(el.dataset.job));
+      if (job) openJobContextMenu(e, job);
+    });
+  });
+}
+
+function closeJobContextMenu() {
+  const el = document.getElementById('job-context-menu');
+  if (el) el.remove();
+  document.removeEventListener('keydown', closeJobContextMenuOnEscape);
+}
+
+function closeJobContextMenuOnEscape(e) {
+  if (e.key === 'Escape') closeJobContextMenu();
+}
+
+function openJobContextMenu(e, job) {
+  e.preventDefault();
+  e.stopPropagation();
+  closeJobContextMenu();
+
+  const hasOrder = !!job.orderId;
+  const menu = document.createElement('div');
+  menu.id = 'job-context-menu';
+  menu.className = 'context-menu';
+  menu.innerHTML = `
+    <button type="button" class="context-menu-item" data-action="view">View / edit job</button>
+    <button type="button" class="context-menu-item" data-action="receipt" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Print receipt for this job</button>
+    <button type="button" class="context-menu-item" data-action="frontdesk" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Open order in Front Desk</button>
+  `;
+  document.body.appendChild(menu);
+
+  const menuRect = menu.getBoundingClientRect();
+  const x = Math.min(e.clientX, window.innerWidth - menuRect.width - 8);
+  const y = Math.min(e.clientY, window.innerHeight - menuRect.height - 8);
+  menu.style.left = Math.max(8, x) + 'px';
+  menu.style.top = Math.max(8, y) + 'px';
+
+  menu.querySelector('[data-action="view"]').addEventListener('click', () => {
+    closeJobContextMenu();
+    openModal({ type: 'workshop-job-form', job });
+  });
+  if (hasOrder) {
+    menu.querySelector('[data-action="receipt"]').addEventListener('click', () => {
+      closeJobContextMenu();
+      printJobOrderReceipt(job);
+    });
+    menu.querySelector('[data-action="frontdesk"]').addEventListener('click', () => {
+      closeJobContextMenu();
+      openJobOrderInFrontDesk(job);
+    });
+  }
+
+  // Deferred so the contextmenu event that opened this menu doesn't
+  // immediately trigger its own outside-click listener.
+  setTimeout(() => {
+    document.addEventListener('click', closeJobContextMenu, { once: true });
+    document.addEventListener('contextmenu', closeJobContextMenu, { once: true });
+  }, 0);
+  document.addEventListener('keydown', closeJobContextMenuOnEscape);
+}
+
+async function printJobOrderReceipt(job) {
+  try {
+    const doc = await api(`/api/sale-documents/${job.orderId}`);
+    if (!doc.convertedSaleId) {
+      showToast("This order hasn't been checked out yet - nothing to print.");
+      return;
+    }
+    const sale = await api(`/api/sales/${doc.convertedSaleId}`);
+    openModal({ type: 'receipt', sale, title: `Sale #${sale.id}` });
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+async function openJobOrderInFrontDesk(job) {
+  try {
+    const doc = await api(`/api/sale-documents/${job.orderId}`);
+    if (doc.status !== 'open') {
+      showToast(`This order is already ${doc.status} - nothing to fulfil.`);
+      return;
+    }
+    loadOrderIntoCart(doc);
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
 function wireGridInteractions() {
   const wrap = document.getElementById('week-diaries');
   if (!wrap) return;
@@ -2098,6 +2195,7 @@ function wireGridInteractions() {
     wireJobBlockMove(blockEl, job);
     wireJobBlockResize(blockEl, job);
   });
+  wireJobContextMenuOn(wrap, '.job-card, .wk-job-block');
 
   wrap.querySelectorAll('.wk-day-col').forEach((colEl) => {
     colEl.addEventListener('click', (e) => {
@@ -2207,6 +2305,7 @@ function wireMonthInteractions() {
       openModal({ type: 'workshop-job-form', job });
     });
   });
+  wireJobContextMenuOn(wrap, '.month-job-chip');
 
   wrap.querySelectorAll('.month-more-btn').forEach((b) => {
     b.addEventListener('click', (e) => {
@@ -5283,6 +5382,7 @@ function renderDayJobsModal(holder, dateStr, jobs) {
       openModal({ type: 'workshop-job-form', job });
     });
   });
+  wireJobContextMenuOn(holder, '.day-job-row');
 }
 
 function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTime, prefillMechanicId, skipAutoOrder) {
