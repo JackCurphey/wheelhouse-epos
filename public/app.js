@@ -2090,15 +2090,23 @@ let jobTooltipTimer = null;
 
 const JOB_TOOLTIP_CURSOR_GAP = 14;
 
+// Tracked continuously (not just captured at mouseenter) so the tooltip
+// appears wherever the cursor actually is once the delay elapses, not where
+// it happened to be when the hover started.
+let lastMouseX = 0;
+let lastMouseY = 0;
+document.addEventListener('mousemove', (e) => {
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+});
+
 function wireJobTooltipOn(container, selector) {
   container.querySelectorAll(selector).forEach((el) => {
-    el.addEventListener('mouseenter', (e) => {
+    el.addEventListener('mouseenter', () => {
       clearTimeout(jobTooltipTimer);
       const job = workshopJobs.find((x) => x.id === Number(el.dataset.job));
       if (!job) return;
-      const cursorX = e.clientX;
-      const cursorY = e.clientY;
-      jobTooltipTimer = setTimeout(() => showJobTooltip(el, job, cursorX, cursorY), JOB_TOOLTIP_DELAY_MS);
+      jobTooltipTimer = setTimeout(() => showJobTooltip(el, job), JOB_TOOLTIP_DELAY_MS);
     });
     el.addEventListener('mouseleave', () => {
       clearTimeout(jobTooltipTimer);
@@ -2112,7 +2120,7 @@ function hideJobTooltip() {
   if (el) el.remove();
 }
 
-function showJobTooltip(anchorEl, job, cursorX, cursorY) {
+function showJobTooltip(anchorEl, job) {
   // A drag can start during the delay window - don't pop a tooltip over a
   // block the user is actively moving.
   if (anchorEl.classList.contains('dragging')) return;
@@ -2135,11 +2143,11 @@ function showJobTooltip(anchorEl, job, cursorX, cursorY) {
   // not enough room - not anchored to the card itself, since a right-side
   // placement relative to a wide/short card could still overlap it.
   const tipRect = tip.getBoundingClientRect();
-  let x = cursorX + JOB_TOOLTIP_CURSOR_GAP;
+  let x = lastMouseX + JOB_TOOLTIP_CURSOR_GAP;
   if (x + tipRect.width > window.innerWidth - 8) {
-    x = cursorX - JOB_TOOLTIP_CURSOR_GAP - tipRect.width;
+    x = lastMouseX - JOB_TOOLTIP_CURSOR_GAP - tipRect.width;
   }
-  let y = cursorY;
+  let y = lastMouseY;
   if (y + tipRect.height > window.innerHeight - 8) y = window.innerHeight - tipRect.height - 8;
   tip.style.left = Math.max(8, x) + 'px';
   tip.style.top = Math.max(8, y) + 'px';
@@ -2177,11 +2185,13 @@ function openJobContextMenu(e, job) {
   hideJobTooltip();
 
   const hasOrder = !!job.orderId;
+  const isPending = job.status === 'pending';
   const menu = document.createElement('div');
   menu.id = 'job-context-menu';
   menu.className = 'context-menu';
   menu.innerHTML = `
     <button type="button" class="context-menu-item" data-action="view">View / edit job</button>
+    ${isPending ? `<button type="button" class="context-menu-item" data-action="approve">Approve</button>` : ''}
     <button type="button" class="context-menu-item" data-action="receipt" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Print receipt for this job</button>
     <button type="button" class="context-menu-item" data-action="frontdesk" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Open order in Front Desk</button>
   `;
@@ -2197,6 +2207,12 @@ function openJobContextMenu(e, job) {
     closeJobContextMenu();
     openModal({ type: 'workshop-job-form', job });
   });
+  if (isPending) {
+    menu.querySelector('[data-action="approve"]').addEventListener('click', () => {
+      closeJobContextMenu();
+      approveJob(job);
+    });
+  }
   if (hasOrder) {
     menu.querySelector('[data-action="receipt"]').addEventListener('click', () => {
       closeJobContextMenu();
@@ -2215,6 +2231,16 @@ function openJobContextMenu(e, job) {
     document.addEventListener('contextmenu', closeJobContextMenu, { once: true });
   }, 0);
   document.addEventListener('keydown', closeJobContextMenuOnEscape);
+}
+
+async function approveJob(job) {
+  try {
+    await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { status: 'scheduled' } });
+    showToast('Job approved');
+    if (document.getElementById('week-diaries')) await renderWorkshop();
+  } catch (err) {
+    showToast(err.message);
+  }
 }
 
 async function printJobOrderReceipt(job) {
