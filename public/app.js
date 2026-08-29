@@ -51,6 +51,7 @@ let customerSearch = '';
 let customerShowInactive = false;
 let customerBikes = []; // bikes belonging to whichever customer is currently in view
 let customerGroups = []; // shop-wide list of groups (e.g. "Blue Light", "ACC") customers can be tagged with
+let customerMessages = []; // texts sent to whichever customer is currently in view
 
 let workshopView = 'week'; // 'week' | 'month'
 let workshopWeekStart = null; // 'YYYY-MM-DD' for the Monday of the displayed week
@@ -222,6 +223,10 @@ async function loadActiveCustomers() {
 
 async function loadCustomerBikes(customerId) {
   customerBikes = customerId ? await api(`/api/customers/${customerId}/bikes`) : [];
+}
+
+async function loadCustomerMessages(customerId) {
+  customerMessages = customerId ? await api(`/api/customers/${customerId}/texts`) : [];
 }
 
 async function loadWorkshopJobs(start, end) {
@@ -782,9 +787,12 @@ function renderCart() {
       <div class="cart-summary-col">
         <div class="field">
           <label for="customer-input">Customer</label>
-          <div class="search-wrap">
-            <input type="text" id="customer-input" class="search-input" placeholder="Walk-in / no account" autocomplete="off" value="${esc(customers.find((c) => c.id === tillCustomerId)?.name || '')}" />
-            <div class="search-dropdown" id="customer-dropdown"></div>
+          <div style="display:flex; gap:8px; align-items:flex-start;">
+            <div class="search-wrap" style="flex:1;">
+              <input type="text" id="customer-input" class="search-input" placeholder="Walk-in / no account" autocomplete="off" value="${esc(customers.find((c) => c.id === tillCustomerId)?.name || '')}" />
+              <div class="search-dropdown" id="customer-dropdown"></div>
+            </div>
+            <button type="button" class="btn btn-sm" id="till-text-btn" ${tillCustomerId ? '' : 'disabled'}>Text</button>
           </div>
         </div>
         <div class="field">
@@ -829,7 +837,14 @@ function renderCart() {
     dropdownId: 'customer-dropdown',
     getSelectedId: () => tillCustomerId,
     setSelectedId: (id) => { tillCustomerId = id; },
-    onChange: updateTotals,
+    onChange: () => {
+      updateTotals();
+      updateTillTextButton();
+    },
+  });
+  document.getElementById('till-text-btn').addEventListener('click', () => {
+    const customer = customers.find((c) => c.id === tillCustomerId);
+    if (customer) openModal({ type: 'customer-sms', customer });
   });
   document.getElementById('discount-input').addEventListener('input', (e) => {
     discount = Math.max(0, parseFloat(e.target.value) || 0);
@@ -1231,6 +1246,11 @@ function changeQty(idx, delta) {
     line.qty = newQty;
   }
   renderCart();
+}
+
+function updateTillTextButton() {
+  const btn = document.getElementById('till-text-btn');
+  if (btn) btn.disabled = !tillCustomerId;
 }
 
 function updateTotals() {
@@ -3501,6 +3521,7 @@ async function renderCustomerDetail(id) {
 
   await loadCustomerBikes(id);
   await loadCustomerGroups();
+  await loadCustomerMessages(id);
 
   main.innerHTML = `
     <div id="customer-detail-page">
@@ -3540,12 +3561,30 @@ async function renderCustomerDetail(id) {
           </div>
         </div>
       </div>
+
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-header">
+          <h2>Messages</h2>
+          <button class="btn btn-primary" id="send-text-btn">+ Send text</button>
+        </div>
+        <div class="panel-body">
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Date</th><th>Status</th><th>Message</th><th>Sent by</th></tr>
+              </thead>
+              <tbody id="message-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
   document.getElementById('back-to-customers').addEventListener('click', () => {
     location.hash = 'office/customers';
   });
+  document.getElementById('send-text-btn').addEventListener('click', () => openModal({ type: 'customer-sms', customer }));
   document.getElementById('cd-sales-btn').addEventListener('click', async () => {
     const sales = await api(`/api/customers/${customer.id}/sales`);
     openModal({ type: 'customer-sales', customer, sales });
@@ -3581,6 +3620,35 @@ async function renderCustomerDetail(id) {
   });
 
   renderBikeTable(customer.id);
+  renderMessageTable();
+}
+
+function smsStatusBadgeClass(status) {
+  return status === 'sent' ? 'ok' : 'low';
+}
+
+function renderMessageTable() {
+  const tbody = document.getElementById('message-table-body');
+  if (!tbody) return;
+  if (!customerMessages.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No texts sent yet.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = customerMessages
+    .map(
+      (m) => `
+      <tr>
+        <td>${fmtDateTime(m.createdAt)}</td>
+        <td>
+          <span class="badge ${smsStatusBadgeClass(m.status)}">${esc(m.status)}</span>
+          ${m.status === 'failed' && m.error ? `<div class="muted" style="font-size:12px;">${esc(m.error)}</div>` : ''}
+        </td>
+        <td>${esc(m.body)}</td>
+        <td>${esc(m.sentByName || '—')}</td>
+      </tr>
+    `
+    )
+    .join('');
 }
 
 function renderBikeTable(customerId) {
@@ -4232,6 +4300,7 @@ function renderModal() {
   if (modal.type === 'catalogue-import') return renderCatalogueImportModal(holder, modal.item);
   if (modal.type === 'supplier-form') return renderSupplierFormModal(holder, modal.supplier);
   if (modal.type === 'po-receive') return renderPoReceiveModal(holder, modal.po);
+  if (modal.type === 'customer-sms') return renderCustomerSmsModal(holder, modal.customer);
   if (modal.type === 'sticker-print') return renderStickerPrintModal(holder, modal.products);
 }
 
@@ -4880,6 +4949,93 @@ function renderCustomerSalesModal(holder, customer, sales) {
     </div>
   `;
   wireModalDismiss();
+}
+
+const SMS_MAX_LEN = 1600;
+
+function renderCustomerSmsModal(holder, customer) {
+  if (!customer.phone) {
+    holder.innerHTML = `
+      <div class="modal-backdrop" id="modal-backdrop">
+        <div class="modal">
+          <div class="modal-header">
+            <h2>Text ${esc(customer.name)}</h2>
+            <button class="modal-close" id="modal-close">✕</button>
+          </div>
+          <div class="modal-body">
+            <p class="muted">This customer has no phone number on file. Add one via Edit before sending a text.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn" id="modal-cancel">Close</button>
+          </div>
+        </div>
+      </div>
+    `;
+    wireModalDismiss();
+    return;
+  }
+
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Text ${esc(customer.name)}</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="sms-form">
+          <div class="modal-body">
+            <p class="muted">To: ${esc(customer.phone)}</p>
+            <div class="field">
+              <label for="sms-body">Message</label>
+              <textarea id="sms-body" rows="4" maxlength="${SMS_MAX_LEN}" required placeholder="Type a message…"></textarea>
+              <div class="muted" id="sms-char-count" style="font-size:12px; margin-top:4px;">0 / ${SMS_MAX_LEN}</div>
+            </div>
+            <div class="field-error" id="sms-error" style="display:none;"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="sms-send-btn">Send</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+
+  const textarea = document.getElementById('sms-body');
+  const counter = document.getElementById('sms-char-count');
+  textarea.addEventListener('input', () => {
+    counter.textContent = `${textarea.value.length} / ${SMS_MAX_LEN}`;
+  });
+
+  document.getElementById('sms-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = textarea.value.trim();
+    if (!body) return;
+    const errorEl = document.getElementById('sms-error');
+    errorEl.style.display = 'none';
+    const sendBtn = document.getElementById('sms-send-btn');
+    sendBtn.disabled = true;
+    try {
+      const message = await api(`/api/customers/${customer.id}/texts`, { method: 'POST', body: { body } });
+      if (message.status === 'sent') {
+        showToast('Text sent');
+        closeModal();
+      } else {
+        errorEl.textContent = message.error || 'Could not send this text';
+        errorEl.style.display = '';
+        sendBtn.disabled = false;
+      }
+      if (document.getElementById('message-table-body')) {
+        await loadCustomerMessages(customer.id);
+        renderMessageTable();
+      }
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = '';
+      sendBtn.disabled = false;
+    }
+  });
 }
 
 function renderBikeFormModal(holder, bike, customerId) {

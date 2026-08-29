@@ -36,6 +36,9 @@ services:
       DATABASE_URL: postgres://epos_app:${POSTGRES_PASSWORD}@postgres:5432/epos
       PORT: 4000
       SIGNUP_CODE: ${SIGNUP_CODE:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
     volumes:
       # Workshop job attachments (server.js's UPLOADS_DIR) - a named volume
       # so they survive an image rebuild, same reasoning as epos_pgdata.
