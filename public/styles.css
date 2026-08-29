@@ -1212,6 +1212,10 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   height: 92vh;
   display: flex;
   flex-direction: column;
+  /* A soft beige instead of the usual white modal background - the
+     fields themselves stay white (.field input/select/textarea), so
+     they read as distinct boxes instead of blending into the modal. */
+  background: #f5efe0;
 }
 .modal.job-modal form {
   flex: 1;
