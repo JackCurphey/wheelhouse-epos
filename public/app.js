@@ -2190,7 +2190,6 @@ function openJobContextMenu(e, job) {
   menu.id = 'job-context-menu';
   menu.className = 'context-menu';
   menu.innerHTML = `
-    <button type="button" class="context-menu-item" data-action="view">View / edit job</button>
     ${isPending ? `<button type="button" class="context-menu-item" data-action="approve">Approve</button>` : ''}
     <button type="button" class="context-menu-item" data-action="receipt" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Print receipt for this job</button>
     <button type="button" class="context-menu-item" data-action="frontdesk" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Open order in Front Desk</button>
@@ -2203,10 +2202,6 @@ function openJobContextMenu(e, job) {
   menu.style.left = Math.max(8, x) + 'px';
   menu.style.top = Math.max(8, y) + 'px';
 
-  menu.querySelector('[data-action="view"]').addEventListener('click', () => {
-    closeJobContextMenu();
-    openModal({ type: 'workshop-job-form', job });
-  });
   if (isPending) {
     menu.querySelector('[data-action="approve"]').addEventListener('click', () => {
       closeJobContextMenu();
