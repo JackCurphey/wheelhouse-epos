@@ -1,4 +1,4 @@
-import { prepare, pool } from './db.js';
+import { prepare, pool, runWithShop } from './db.js';
 
 export const THEME_PRESETS = ['forest', 'ocean', 'sunset', 'slate', 'plum'];
 
@@ -72,14 +72,16 @@ export async function resolveStorefrontShop(req, url) {
   const slug = parseStorefrontSlugCandidate(req, url);
   if (!slug) return null;
 
-  const { rows: [row] } = await pool.query(
-    `SELECT s.id, s.slug, s.name, COALESCE(ss.enabled, false) AS enabled
-     FROM shops s LEFT JOIN storefront_settings ss ON ss.shop_id = s.id
-     WHERE s.slug = $1`,
-    [slug]
-  );
-  if (!row || !row.enabled) return null;
-  return { id: row.id, slug: row.slug, name: row.name };
+  const { rows: [shop] } = await pool.query('SELECT id, slug, name FROM shops WHERE slug = $1', [slug]);
+  if (!shop) return null;
+
+  const enabled = await runWithShop(shop.id, async () => {
+    const settings = await prepare('SELECT enabled FROM storefront_settings LIMIT 1').get();
+    return settings?.enabled || false;
+  });
+  if (!enabled) return null;
+
+  return { id: shop.id, slug: shop.slug, name: shop.name };
 }
 
 export async function getStorefrontInfo(shopRow) {
