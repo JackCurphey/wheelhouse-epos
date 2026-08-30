@@ -3057,6 +3057,19 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
     return sendJson(res, 200, await listStorefrontProducts());
   }
   const storePrefix = `/store/${shop.slug}`;
+  // The storefront's HTML references its CSS/JS with relative hrefs, which
+  // the browser resolves against the current URL's directory. Without a
+  // trailing slash here, "/store/<slug>" has no directory segment of its
+  // own, so the browser drops the slug entirely (e.g. requests
+  // "/store/storefront.css" instead of "/store/<slug>/storefront.css").
+  // Redirecting to the trailing-slash form fixes relative resolution for
+  // every asset without needing per-request URL rewriting.
+  if (pathname === storePrefix) {
+    const queryIndex = req.url.indexOf('?');
+    const search = queryIndex === -1 ? '' : req.url.slice(queryIndex);
+    res.writeHead(302, { Location: `${storePrefix}/${search}` });
+    return res.end();
+  }
   const relative = pathname.startsWith(storePrefix) ? (pathname.slice(storePrefix.length) || '/') : pathname;
   return serveStatic(req, res, relative, STOREFRONT_DIR);
 }
