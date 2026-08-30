@@ -44,6 +44,38 @@ import {
   getStorefrontInfo,
   listStorefrontProducts,
 } from './storefront.js';
+import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
+import {
+  getShopifyConnectionByShopId,
+  decryptSecret,
+  verifyShopifyWebhookHmac,
+  matchOrderLineItemsToProducts,
+  matchRefundLineItemsToProducts,
+  claimShopifyEvent,
+  markShopifyEventError,
+} from './shopify.js';
+
+// A product is only fit to be live on Shopify when it's BOTH marked to show
+// online AND active - `show_online` alone isn't enough, since a deactivated
+// product (DELETE /api/products/:id's soft-delete, or PUT with active:false)
+// has already disappeared from the EPOS storefront's own listing (which
+// filters by active = 1) and shouldn't stay purchasable on Shopify in the
+// meantime. `previousProductRow` and `updatedProductRow` just need
+// `show_online`/`active` fields - callers pass the row as loaded before and
+// after the change (a synthetic "nothing was live yet" stand-in for a
+// brand-new product).
+async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProductRow) {
+  const isLive = (row) => !!row.show_online && !!row.active;
+  try {
+    if (isLive(updatedProductRow)) {
+      await syncProductToShopify(updatedProductRow);
+    } else if (isLive(previousProductRow)) {
+      await unpublishProductFromShopify(updatedProductRow);
+    }
+  } catch (err) {
+    console.error('Shopify product sync failed', err);
+  }
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -211,24 +243,53 @@ function badRequest(res, msg = 'Bad request') {
   sendJson(res, 400, { error: msg });
 }
 
+// Both helpers below accumulate raw Buffers and only convert to a string
+// ONCE, after every chunk has arrived (via Buffer.concat(...).toString()).
+// Converting per-chunk instead (the previous `data += chunk` pattern, which
+// implicitly calls chunk.toString('utf8') on every chunk as it arrives) would
+// corrupt any multi-byte UTF-8 character that happens to land on a TCP chunk
+// boundary - turning it into replacement characters and breaking anything
+// that depends on the exact bytes (notably readRawBody's caller, which HMAC-
+// verifies the raw body against Shopify's signature).
 async function readJsonBody(req, maxBytes = 2_000_000) {
   return new Promise((resolve, reject) => {
-    let data = '';
+    const chunks = [];
+    let bytes = 0;
     req.on('data', (chunk) => {
-      data += chunk;
-      if (data.length > maxBytes) {
+      bytes += chunk.length;
+      if (bytes > maxBytes) {
         reject(new Error('Payload too large'));
         req.destroy();
+        return;
       }
+      chunks.push(chunk);
     });
     req.on('end', () => {
-      if (!data) return resolve({});
+      if (bytes === 0) return resolve({});
       try {
-        resolve(JSON.parse(data));
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
       } catch (err) {
         reject(err);
       }
     });
+    req.on('error', reject);
+  });
+}
+
+function readRawBody(req, maxBytes = 2_000_000) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let bytes = 0;
+    req.on('data', (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maxBytes) {
+        reject(new Error('Payload too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
@@ -438,6 +499,7 @@ route('POST', '/api/products', async (req, res) => {
       ).run(info.lastInsertRowid, stockQty);
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
+    await syncProductWithShopifyIfNeeded({ show_online: false, active: false }, row);
     sendJson(res, 201, serializeProduct(row));
   } catch (err) {
     if (err.code === '23505') {
@@ -475,6 +537,7 @@ route('PUT', '/api/products/:id', async (req, res, params) => {
        WHERE id = ?`
     ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, showOnline, description, photoUrl, nowIso(), id);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    await syncProductWithShopifyIfNeeded(existing, row);
     sendJson(res, 200, serializeProduct(row));
   } catch (err) {
     if (err.code === '23505') {
@@ -489,6 +552,13 @@ route('DELETE', '/api/products/:id', async (req, res, params) => {
   const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Product not found');
   await db.prepare('UPDATE products SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+  const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  // This soft-delete never goes through PUT /api/products/:id, so it needs
+  // its own call - without it, a deactivated product that still has
+  // show_online: true would stay live and purchasable on Shopify
+  // indefinitely even though it has already disappeared from the EPOS
+  // storefront's own listing.
+  await syncProductWithShopifyIfNeeded(existing, row);
   sendJson(res, 200, { ok: true });
 });
 
@@ -512,6 +582,10 @@ route('POST', '/api/products/:id/stock', async (req, res, params) => {
     type,
     note
   );
+  if (existing.shopify_inventory_item_id) {
+    // Never let a Shopify hiccup fail a real stock adjustment - log and move on.
+    await pushInventoryLevel(existing, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+  }
   const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   sendJson(res, 200, serializeProduct(row));
 });
@@ -897,6 +971,11 @@ route('POST', '/api/purchase-orders/:id/receive', async (req, res, params) => {
   }
   if (toApply.length === 0) return badRequest(res, 'No quantities to receive were provided');
 
+  // Same reasoning as createSale's shopifyPushes: defer the HTTP calls until
+  // after COMMIT so they don't hold this receipt's row locks / a pool
+  // connection for the duration of a retried Shopify request.
+  const shopifyPushes = [];
+
   await db.exec('BEGIN');
   try {
     for (const { line, qtyReceived } of toApply) {
@@ -905,14 +984,18 @@ route('POST', '/api/purchase-orders/:id/receive', async (req, res, params) => {
         line.id
       );
       const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(line.product_id);
+      const newQty = product.stock_qty + qtyReceived;
       await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(
-        product.stock_qty + qtyReceived,
+        newQty,
         nowIso(),
         product.id
       );
       await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id) VALUES (?, ?, 'po_receipt', ?, ?)`
       ).run(product.id, qtyReceived, `Booked in from PO #${id}${existing.reference ? ` (${existing.reference})` : ''}`, id);
+      if (product.shopify_inventory_item_id) {
+        shopifyPushes.push({ product, newQty });
+      }
     }
     const freshItems = await loadPurchaseOrderItems(id);
     const allReceived = freshItems.every((it) => it.qty_received >= it.qty_ordered);
@@ -922,6 +1005,11 @@ route('POST', '/api/purchase-orders/:id/receive', async (req, res, params) => {
   } catch (err) {
     await db.exec('ROLLBACK');
     throw err;
+  }
+
+  for (const { product, newQty } of shopifyPushes) {
+    // Never let a Shopify hiccup fail a real PO receipt - log and move on.
+    await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
   }
 
   const row = await db.prepare(PO_SELECT + ' WHERE po.id = ?').get(id);
@@ -1450,6 +1538,15 @@ async function createSale({ customerId, cashierId, items, discount, cashAmount, 
   for (const p of extraPayments) methodsUsed.push(p.tenderType);
   const paymentMethod = methodsUsed.length > 1 ? 'Split' : methodsUsed[0] || 'Cash';
 
+  // Shopify inventory pushes for items with a mapped inventory_item_id are
+  // collected here and only fired AFTER the transaction commits (see below) -
+  // pushInventoryLevel makes an HTTP call with up to 3 retries and backoff,
+  // and firing it while the transaction is still open would hold this sale's
+  // row locks and tie up a pool connection (10 max) for however long that
+  // HTTP round-trip takes. A rollback would also have discarded any
+  // sync_error status write a failed push made, hiding the failure.
+  const shopifyPushes = [];
+
   await db.exec('BEGIN');
   try {
     const saleInfo = await db
@@ -1480,13 +1577,101 @@ async function createSale({ customerId, cashierId, items, discount, cashAmount, 
       await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
       ).run(product.id, -qty, `Sale #${saleId}`);
+      if (product.shopify_inventory_item_id) {
+        shopifyPushes.push({ product, newQty });
+      }
     }
     await db.exec('COMMIT');
+
+    for (const { product, newQty } of shopifyPushes) {
+      // Never let a Shopify hiccup fail a real till sale - log and move on.
+      await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+    }
     return saleId;
   } catch (err) {
     await db.exec('ROLLBACK');
     throw err;
   }
+}
+
+async function processShopifyOrderWebhook(shopId, order) {
+  return runWithShop(shopId, async () => {
+    const claimed = await claimShopifyEvent(order.id, 'order');
+    if (!claimed) return;
+
+    const items = await matchOrderLineItemsToProducts(order);
+    if (items.length === 0) return;
+
+    try {
+      // Shopify's undiscounted line-item sum. order.total_discounts (a
+      // string) is the total discount Shopify already applied to the order -
+      // ignoring it here would record a discounted order at its full,
+      // pre-discount value in EPOS's sales history/dashboards. createSale
+      // computes its own total as subtotal - discount - groupDiscount.amount
+      // (groupDiscount is 0 here since customerId is null for Shopify
+      // orders), so mirror that same math for the payment amount, or
+      // createSale's "payments must sum to the total" validation would fail.
+      const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+      const discount = Number.parseFloat(order.total_discounts) || 0;
+      const payableTotal = Math.max(0, subtotal - discount);
+      await createSale({
+        customerId: null,
+        cashierId: null,
+        items,
+        discount,
+        cashAmount: 0,
+        cardAmount: 0,
+        cashTendered: null,
+        payments: [{ tenderType: 'Shopify', amount: payableTotal }],
+        note: `Shopify order #${order.order_number || order.id}`,
+      });
+    } catch (err) {
+      // claimShopifyEvent above commits immediately, standalone - it isn't
+      // part of a transaction with createSale. If createSale throws
+      // something unexpected (not a ValidationError - a DB blip, a bug),
+      // that error still needs to propagate so the outer webhook handler
+      // returns a 500 and Shopify retries, but the event is already
+      // irreversibly marked claimed - claimShopifyEvent would report the
+      // retry as already-claimed and return without ever calling createSale
+      // again, permanently dropping the order. Marking the claim as an error
+      // here (regardless of which kind of failure this was) at least leaves
+      // an honest, investigable record instead of the misleading default
+      // status='ok' a claimed-but-never-actually-processed row would
+      // otherwise carry.
+      await markShopifyEventError(order.id, 'order', err.message);
+      if (err instanceof ValidationError) {
+        return;
+      }
+      throw err;
+    }
+  });
+}
+
+async function processShopifyRefundWebhook(shopId, refund) {
+  return runWithShop(shopId, async () => {
+    const claimed = await claimShopifyEvent(refund.id, 'refund');
+    if (!claimed) return;
+
+    try {
+      const items = await matchRefundLineItemsToProducts(refund);
+      for (const { product, qty } of items) {
+        const newQty = product.stock_qty + qty;
+        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
+        await db.prepare(
+          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
+        ).run(product.id, qty, `Shopify refund #${refund.id}`);
+        if (product.shopify_inventory_item_id) {
+          await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+        }
+      }
+    } catch (err) {
+      // Same claim-before-work reasoning as processShopifyOrderWebhook above -
+      // an unexpected failure here (e.g. a DB blip) must still leave an
+      // honest status='error' record, not the misleading default 'ok'.
+      await markShopifyEventError(refund.id, 'refund', err.message);
+      throw err;
+    }
+  });
 }
 
 route('POST', '/api/sales', async (req, res) => {
@@ -2610,6 +2795,45 @@ route('PUT', '/api/storefront-settings', async (req, res) => {
   }
 });
 
+// ---------- Shopify connection ----------
+// Per-shop connection to a Shopify store via a custom-app Admin API token
+// (Task 3, shopify.js). These two routes are thin HTTP glue over
+// getShopifyConnection/saveShopifyConnection - same shape as the
+// storefront-settings pair above.
+
+route('GET', '/api/shopify/connection', async (req, res) => {
+  sendJson(res, 200, serializeShopifyConnection(await getShopifyConnection()));
+});
+
+route('POST', '/api/shopify/connection', async (req, res) => {
+  const body = await readJsonBody(req);
+  const shopDomain = String(body.shopDomain || '').trim();
+  const accessToken = String(body.accessToken || '').trim();
+  const storefrontApiToken = String(body.storefrontApiToken || '').trim();
+  if (!shopDomain || !accessToken || !storefrontApiToken) {
+    return badRequest(res, 'shopDomain, accessToken, and storefrontApiToken are all required');
+  }
+
+  let connection;
+  try {
+    connection = await saveShopifyConnection({ shopDomain, accessToken, storefrontApiToken });
+  } catch (err) {
+    return badRequest(res, `Could not connect to Shopify: ${err.message}`);
+  }
+
+  try {
+    await registerShopifyWebhooks(connection, connection.shop_id);
+  } catch (err) {
+    console.error('Failed to register Shopify webhooks', err);
+    return sendJson(res, 200, {
+      ...serializeShopifyConnection(connection),
+      warning: 'Connected, but webhook registration failed - online orders will not sync back to stock until this is retried.',
+    });
+  }
+
+  sendJson(res, 200, serializeShopifyConnection(connection));
+});
+
 // ---------- Print agents ----------
 // Relays sticker print jobs from a browser tab to a print-agent process
 // (print-agent/agent.js) running on any shop PC - possibly a different one
@@ -3103,6 +3327,68 @@ const server = createServer(async (req, res) => {
       await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));
     } catch (err) {
       console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
+
+  if (pathname.startsWith('/webhooks/shopify/')) {
+    const match = pathname.match(/^\/webhooks\/shopify\/(\d+)\/(orders|refunds)$/);
+    if (!match) return notFound(res, 'Unknown webhook route');
+    const shopId = Number(match[1]);
+    const kind = match[2];
+
+    // The whole branch - including the connection lookup and signature
+    // verification, not just order/refund processing at the bottom - is
+    // wrapped in one try/catch, matching every other branch in this
+    // dispatcher (see the storefront and /api/uploaded-images/ branches
+    // above). Without this, an unhandled rejection from e.g. a DB blip on
+    // getShopifyConnectionByShopId, or a GCM auth failure from decryptSecret,
+    // would propagate out of this async dispatcher callback uncaught -
+    // there's no process.on('unhandledRejection') handler anywhere in this
+    // codebase, so on Node's default behavior that crashes the entire
+    // process, taking down every shop, for a route reachable by an
+    // unauthenticated caller with a guessable shopId.
+    try {
+      let rawBody;
+      try {
+        rawBody = await readRawBody(req);
+      } catch (err) {
+        return badRequest(res, 'Invalid request body');
+      }
+
+      // shopify_connections has FORCE ROW LEVEL SECURITY, so it can only be
+      // read correctly from inside a runWithShop context for the exact shop
+      // being queried (the storefront framework plan's final review found
+      // this same bug class in resolveStorefrontShop - a bare pool/prepare
+      // call against an RLS-protected table outside runWithShop either
+      // throws on a connection that's never set app.current_shop_id, or
+      // reads a stale different shop's session value). Unlike that case,
+      // shopId is already known here from the URL, so there's no chicken-
+      // and-egg problem - just enter the context immediately.
+      const connection = await runWithShop(shopId, () => getShopifyConnectionByShopId(shopId));
+      if (!connection) return notFound(res, 'Unknown shop');
+
+      const hmacHeader = req.headers['x-shopify-hmac-sha256'];
+      if (!verifyShopifyWebhookHmac(rawBody, hmacHeader, decryptSecret(connection.webhook_secret))) {
+        return sendJson(res, 401, { error: 'Invalid signature' });
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(rawBody.toString('utf8'));
+      } catch (err) {
+        return badRequest(res, 'Invalid JSON body');
+      }
+
+      if (kind === 'orders') {
+        await processShopifyOrderWebhook(shopId, payload);
+      } else {
+        await processShopifyRefundWebhook(shopId, payload);
+      }
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      console.error('Shopify webhook processing failed', err);
       sendJson(res, 500, { error: 'Internal server error' });
     }
     return;
