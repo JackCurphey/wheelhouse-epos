@@ -48,6 +48,14 @@ export async function updateStorefrontSettings(patch) {
 
 export const STOREFRONT_BASE_DOMAIN = process.env.STOREFRONT_BASE_DOMAIN || 'wheelhouseepos.com';
 
+// Subdomains of STOREFRONT_BASE_DOMAIN that must never be treated as a
+// storefront slug lookup, even if no shop happens to be slugged that way.
+// This is a safety net for common internal/infrastructure subdomains, not a
+// configurable allowlist - see README.md for the deployment implications of
+// putting the staff app (or any other internal service) on a bare subdomain
+// of this same base domain.
+const RESERVED_SUBDOMAINS = new Set(['www', 'app', 'api', 'admin', 'staff']);
+
 // Cheap, DB-free check for "does this request look like it's addressed to a
 // storefront at all" - used by the dispatcher to decide between "not a
 // storefront request, keep routing normally" and "was a storefront request,
@@ -60,7 +68,7 @@ export function parseStorefrontSlugCandidate(req, url) {
 
   if (hostHeader.endsWith(suffix)) {
     const sub = hostHeader.slice(0, -suffix.length);
-    if (sub && sub !== 'www') return sub;
+    if (sub && !RESERVED_SUBDOMAINS.has(sub)) return sub;
   }
   const pathMatch = url.pathname.match(/^\/store\/([^/]+)/);
   if (pathMatch) return pathMatch[1];

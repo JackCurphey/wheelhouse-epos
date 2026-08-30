@@ -3056,6 +3056,22 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
   if (pathname === '/api/storefront/products' && req.method === 'GET') {
     return sendJson(res, 200, await listStorefrontProducts());
   }
+  // On a subdomain-hosted storefront (<slug>.wheelhouseepos.com),
+  // parseStorefrontSlugCandidate matches every path on that host, not just
+  // storefront-specific ones - so requests for uploaded images and the
+  // booking portal have to be forwarded to their real handlers here instead
+  // of falling through to the storefront's own static bundle below (whose
+  // serveStatic fallback would otherwise return the storefront's index.html
+  // for these paths instead of the actual image or portal page). The caller
+  // (the request dispatcher) already wraps this whole call in a try/catch,
+  // so errors from these forwarded calls propagate up to that handler.
+  if (pathname.startsWith('/api/uploaded-images/')) {
+    return serveUploadedImage(req, res, pathname.slice('/api/uploaded-images/'.length));
+  }
+  if (pathname === '/book' || pathname.startsWith('/book/')) {
+    const relative = pathname.slice('/book'.length) || '/';
+    return serveStatic(req, res, relative, PORTAL_DIR);
+  }
   const storePrefix = `/store/${shop.slug}`;
   // The storefront's HTML references its CSS/JS with relative hrefs, which
   // the browser resolves against the current URL's directory. Without a
