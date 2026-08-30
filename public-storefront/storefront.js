@@ -50,17 +50,27 @@ async function addToShopifyCart(domain, token, variantId, quantity = 1) {
   const merchandiseId = `gid://shopify/ProductVariant/${variantId}`;
   const query = shopifyCart.id
     ? `mutation($cartId: ID!, $lines: [CartLineInput!]!) {
-         cartLinesAdd(cartId: $cartId, lines: $lines) { cart { id checkoutUrl lines(first: 100) { edges { node { id } } } } }
+         cartLinesAdd(cartId: $cartId, lines: $lines) { cart { id checkoutUrl lines(first: 100) { edges { node { id } } } } userErrors { field message } }
        }`
     : `mutation($lines: [CartLineInput!]!) {
-         cartCreate(input: { lines: $lines }) { cart { id checkoutUrl lines(first: 100) { edges { node { id } } } } }
+         cartCreate(input: { lines: $lines }) { cart { id checkoutUrl lines(first: 100) { edges { node { id } } } } userErrors { field message } }
        }`;
   const variables = shopifyCart.id
     ? { cartId: shopifyCart.id, lines: [{ merchandiseId, quantity }] }
     : { lines: [{ merchandiseId, quantity }] };
 
   const data = await shopifyStorefrontQuery(domain, token, query, variables);
-  const cart = shopifyCart.id ? data.cartLinesAdd.cart : data.cartCreate.cart;
+  const result = shopifyCart.id ? data.cartLinesAdd : data.cartCreate;
+  // Shopify reports common, expected failures (e.g. "this item isn't
+  // available for purchase") via userErrors with cart: null, not via the
+  // top-level `errors` array shopifyStorefrontQuery already checks (that one
+  // is for malformed queries). Without this check, a userErrors failure
+  // would fall through to `result.cart.id` and throw an unhelpful
+  // "Cannot read properties of null" instead of a real message.
+  if (result.userErrors && result.userErrors.length > 0) {
+    throw new Error(result.userErrors.map((e) => e.message).join(', '));
+  }
+  const cart = result.cart;
   shopifyCart = { id: cart.id, checkoutUrl: cart.checkoutUrl, lineCount: cart.lines.edges.length };
   updateCartBadge();
 }

@@ -21,19 +21,30 @@ async function connectFakeShopify(shopId) {
   }
 }
 
-test('syncProductToShopify creates a new Shopify product and stores the mapping', async () => {
+test('syncProductToShopify creates a new Shopify product, enables inventory tracking, and pushes current stock', async () => {
   const shop = await createTestShop();
   try {
     await runWithShop(shop.id, async () => {
       await connectFakeShopify(shop.id);
       const product = await prepare(
-        "INSERT INTO products (name, price, description, show_online) VALUES ('Trail Bike', 899, 'Great trail bike', true) RETURNING *"
+        "INSERT INTO products (name, price, description, show_online, stock_qty) VALUES ('Trail Bike', 899, 'Great trail bike', true, 12) RETURNING *"
       ).get();
 
+      const calls = [];
       const restore = stubFetch(async (url, opts) => {
-        assert.match(String(url), /\/products\.json$/);
-        assert.equal(opts.method, 'POST');
-        return { ok: true, status: 201, json: async () => ({ product: { id: 555, variants: [{ id: 777, inventory_item_id: 888 }] } }) };
+        calls.push({ url: String(url), body: opts.body ? JSON.parse(opts.body) : null });
+        if (String(url).endsWith('/products.json')) {
+          assert.equal(opts.method, 'POST');
+          assert.equal(JSON.parse(opts.body).product.variants[0].inventory_management, 'shopify');
+          return { ok: true, status: 201, json: async () => ({ product: { id: 555, variants: [{ id: 777, inventory_item_id: 888 }] } }) };
+        }
+        if (String(url).endsWith('/inventory_levels/set.json')) {
+          assert.equal(opts.method, 'POST');
+          assert.equal(JSON.parse(opts.body).inventory_item_id, '888');
+          assert.equal(JSON.parse(opts.body).available, 12);
+          return { ok: true, status: 200, json: async () => ({}) };
+        }
+        throw new Error(`Unexpected fetch to ${url}`);
       });
       try {
         const result = await syncProductToShopify(product);
@@ -41,6 +52,10 @@ test('syncProductToShopify creates a new Shopify product and stores the mapping'
       } finally {
         restore();
       }
+
+      assert.equal(calls.length, 2, 'should create the product then push its current stock');
+      assert.match(calls[0].url, /\/products\.json$/);
+      assert.match(calls[1].url, /\/inventory_levels\/set\.json$/);
 
       const updated = await prepare('SELECT * FROM products WHERE id = ?').get(product.id);
       assert.equal(updated.shopify_product_id, '555');
@@ -69,6 +84,11 @@ test('syncProductToShopify updates an existing Shopify product when already mapp
       const restore = stubFetch(async (url, opts) => {
         assert.match(String(url), /\/products\/555\.json$/);
         assert.equal(opts.method, 'PUT');
+        assert.equal(
+          JSON.parse(opts.body).product.variants[0].inventory_management,
+          undefined,
+          'an update to an already-tracked variant should not need to re-assert inventory_management'
+        );
         return { ok: true, status: 200, json: async () => ({ product: { id: 555, variants: [{ id: 777, inventory_item_id: 888 }] } }) };
       });
       try {
@@ -142,9 +162,14 @@ test('syncProductToShopify recovers a sync_error connection back to connected on
       await prepare('UPDATE shopify_connections SET status = ? WHERE shop_id = ?').run('sync_error', shop.id);
 
       const restore = stubFetch(async (url, opts) => {
-        assert.match(String(url), /\/products\.json$/);
-        assert.equal(opts.method, 'POST');
-        return { ok: true, status: 201, json: async () => ({ product: { id: 555, variants: [{ id: 777, inventory_item_id: 888 }] } }) };
+        if (String(url).endsWith('/products.json')) {
+          assert.equal(opts.method, 'POST');
+          return { ok: true, status: 201, json: async () => ({ product: { id: 555, variants: [{ id: 777, inventory_item_id: 888 }] } }) };
+        }
+        if (String(url).endsWith('/inventory_levels/set.json')) {
+          return { ok: true, status: 200, json: async () => ({}) };
+        }
+        throw new Error(`Unexpected fetch to ${url}`);
       });
       try {
         const result = await syncProductToShopify(product);
@@ -182,6 +207,36 @@ test('unpublishProductFromShopify sets published=false on the mapped Shopify pro
       } finally {
         restore();
       }
+    });
+  } finally {
+    await runWithShop(shop.id, () => prepare('DELETE FROM products').run());
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('unpublishProductFromShopify still attempts the unpublish when the connection is in sync_error', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      await connectFakeShopify(shop.id);
+      await prepare('UPDATE shopify_connections SET status = ? WHERE shop_id = ?').run('sync_error', shop.id);
+      const product = await prepare(
+        `INSERT INTO products (name, price, show_online, shopify_product_id) VALUES ('Trail Bike', 899, false, '555') RETURNING *`
+      ).get();
+
+      let called = false;
+      const restore = stubFetch(async (url, opts) => {
+        called = true;
+        assert.match(String(url), /\/products\/555\.json$/);
+        assert.equal(JSON.parse(opts.body).product.published, false);
+        return { ok: true, status: 200, json: async () => ({ product: { id: 555 } }) };
+      });
+      try {
+        await unpublishProductFromShopify(product);
+      } finally {
+        restore();
+      }
+      assert.equal(called, true, 'a sync_error connection should still attempt the unpublish, matching syncProductToShopify/pushInventoryLevel');
     });
   } finally {
     await runWithShop(shop.id, () => prepare('DELETE FROM products').run());

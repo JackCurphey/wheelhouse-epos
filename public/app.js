@@ -4459,51 +4459,93 @@ async function renderStorefrontSettingsSection(container) {
 
 // ================= SHOPIFY CONNECTION =================
 
+// Shared by both the "never connected" and "reconnect from a sync_error"
+// cases below - same fields, same wiring, just a different heading and an
+// optional domain prefill for the reconnect case.
+function connectFormHtml(prefillDomain = '') {
+  return `
+    <div class="field">
+      <label for="shopify-domain">Shopify store domain</label>
+      <input type="text" id="shopify-domain" placeholder="your-shop.myshopify.com" value="${esc(prefillDomain)}" />
+    </div>
+    <div class="field">
+      <label for="shopify-access-token">Admin API access token</label>
+      <input type="password" id="shopify-access-token" />
+    </div>
+    <div class="field">
+      <label for="shopify-storefront-token">Storefront API token</label>
+      <input type="password" id="shopify-storefront-token" />
+    </div>
+    <button class="btn btn-primary" id="shopify-connect">Connect Shopify</button>
+    <span id="shopify-connect-status" class="muted"></span>
+  `;
+}
+
+function wireConnectForm(container) {
+  const connectBtn = document.getElementById('shopify-connect');
+  if (!connectBtn) return;
+  connectBtn.addEventListener('click', async () => {
+    const status = document.getElementById('shopify-connect-status');
+    status.textContent = 'Connecting…';
+    try {
+      await api('/api/shopify/connection', {
+        method: 'POST',
+        body: {
+          shopDomain: document.getElementById('shopify-domain').value,
+          accessToken: document.getElementById('shopify-access-token').value,
+          storefrontApiToken: document.getElementById('shopify-storefront-token').value,
+        },
+      });
+      showToast('Shopify store connected');
+      await renderShopifyConnectionSection(container);
+    } catch (err) {
+      status.textContent = `Error: ${err.message}`;
+    }
+  });
+}
+
 async function renderShopifyConnectionSection(container) {
   const connection = await api('/api/shopify/connection');
-  container.innerHTML = connection.connected
-    ? `
+
+  // Three states, not two: fully connected, connected-but-last-sync-failed
+  // (sync_error - credentials are still valid, this needs attention rather
+  // than looking identical to "never connected"), and not connected at all.
+  if (connection.status === 'connected') {
+    container.innerHTML = `
       <p class="muted" style="margin:0 0 14px;">Sync products and inventory with a connected Shopify store.</p>
-      <p>Connected to <strong>${esc(connection.shopDomain)}</strong> (status: ${esc(connection.status)})</p>
-    `
-    : `
-      <p class="muted" style="margin:0 0 14px;">Connect a Shopify store to sync products and inventory. You'll need a custom app's Admin API access token and Storefront API token from your Shopify admin.</p>
-      <div class="field">
-        <label for="shopify-domain">Shopify store domain</label>
-        <input type="text" id="shopify-domain" placeholder="your-shop.myshopify.com" />
-      </div>
-      <div class="field">
-        <label for="shopify-access-token">Admin API access token</label>
-        <input type="password" id="shopify-access-token" />
-      </div>
-      <div class="field">
-        <label for="shopify-storefront-token">Storefront API token</label>
-        <input type="password" id="shopify-storefront-token" />
-      </div>
-      <button class="btn btn-primary" id="shopify-connect">Connect Shopify</button>
-      <span id="shopify-connect-status" class="muted"></span>
+      <p><span class="badge ok">Connected</span> to <strong>${esc(connection.shopDomain)}</strong></p>
     `;
-  const connectBtn = document.getElementById('shopify-connect');
-  if (connectBtn) {
-    connectBtn.addEventListener('click', async () => {
-      const status = document.getElementById('shopify-connect-status');
-      status.textContent = 'Connecting…';
-      try {
-        await api('/api/shopify/connection', {
-          method: 'POST',
-          body: {
-            shopDomain: document.getElementById('shopify-domain').value,
-            accessToken: document.getElementById('shopify-access-token').value,
-            storefrontApiToken: document.getElementById('shopify-storefront-token').value,
-          },
-        });
-        showToast('Shopify store connected');
-        await renderShopifyConnectionSection(container);
-      } catch (err) {
-        status.textContent = `Error: ${err.message}`;
+    return;
+  }
+
+  if (connection.status === 'sync_error') {
+    container.innerHTML = `
+      <p class="muted" style="margin:0 0 14px;">Sync products and inventory with a connected Shopify store.</p>
+      <p><span class="badge low">Sync error</span> — check your connection to <strong>${esc(connection.shopDomain)}</strong>. The credentials are still valid; the next successful sync will clear this automatically, or you can reconnect now.</p>
+      <button class="btn btn-sm" id="shopify-reconnect-toggle">Reconnect</button>
+      <div id="shopify-reconnect-form" style="display:none; margin-top:14px;"></div>
+    `;
+    const toggle = document.getElementById('shopify-reconnect-toggle');
+    const formHost = document.getElementById('shopify-reconnect-form');
+    toggle.addEventListener('click', () => {
+      if (formHost.style.display === 'none') {
+        formHost.style.display = '';
+        formHost.innerHTML = connectFormHtml(connection.shopDomain);
+        wireConnectForm(container);
+      } else {
+        formHost.style.display = 'none';
+        formHost.innerHTML = '';
       }
     });
+    return;
   }
+
+  // not_connected
+  container.innerHTML = `
+    <p class="muted" style="margin:0 0 14px;">Connect a Shopify store to sync products and inventory. You'll need a custom app's Admin API access token and Storefront API token from your Shopify admin.</p>
+    ${connectFormHtml()}
+  `;
+  wireConnectForm(container);
 }
 
 function renderEmployeeTable() {

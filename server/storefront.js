@@ -96,7 +96,14 @@ export async function resolveStorefrontShop(req, url) {
 export async function getStorefrontInfo(shopRow) {
   const settings = await getOrCreateStorefrontSettings();
   const shopifyConnection = await getShopifyConnection();
-  const shopifyConnected = shopifyConnection && shopifyConnection.status === 'connected';
+  // A 'sync_error' connection is still fundamentally connected - the
+  // underlying Shopify products/variants still exist and are still
+  // purchasable, a temporary sync hiccup doesn't retroactively un-publish
+  // anything. Only hide Buy buttons when there's genuinely no connection at
+  // all, not on every transient sync failure (which would otherwise hide
+  // every product's Buy button storefront-wide until some unrelated future
+  // operation happens to self-heal the status back to 'connected').
+  const shopifyConnected = shopifyConnection && shopifyConnection.status !== 'not_connected';
   return {
     shopName: shopRow.name,
     tagline: settings.tagline || '',

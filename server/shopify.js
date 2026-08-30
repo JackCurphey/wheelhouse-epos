@@ -1,6 +1,15 @@
 import { createCipheriv, createDecipheriv, createHmac, timingSafeEqual, randomBytes, scryptSync } from 'node:crypto';
 import { prepare } from './db.js';
 
+// SHOPIFY_TOKEN_ENCRYPTION_KEY derives the key used to encrypt stored
+// Shopify tokens (see README.md). The 'dev-only-insecure-key' fallback below
+// is fine for local development, but a production deploy that silently fell
+// back to it would encrypt real shop credentials under a key sitting in
+// public source code - so a production deploy without this var set fails
+// loudly at startup instead.
+if (process.env.NODE_ENV === 'production' && !process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY) {
+  throw new Error('SHOPIFY_TOKEN_ENCRYPTION_KEY must be set in production - refusing to start with an insecure default encryption key.');
+}
 const ENCRYPTION_KEY = scryptSync(process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY || 'dev-only-insecure-key', 'shopify-token-salt', 32);
 
 export function encryptSecret(plaintext) {
@@ -134,13 +143,19 @@ export async function syncProductToShopify(product) {
   const connection = await getShopifyConnection();
   if (!connection || connection.status === 'not_connected') return null;
 
+  const isNewProduct = !product.shopify_product_id;
+
   try {
     const result = await withRetry(async () => {
       const payload = {
         product: {
           title: product.name,
           body_html: product.description || '',
-          variants: [{ price: String(product.price) }],
+          // inventory_management: 'shopify' only makes sense on create - it's
+          // what tells Shopify to actually track and enforce inventory for
+          // this variant, rather than treating it as always-available. An
+          // update to an already-tracked variant doesn't need to re-assert it.
+          variants: [isNewProduct ? { price: String(product.price), inventory_management: 'shopify' } : { price: String(product.price) }],
         },
       };
 
@@ -154,16 +169,35 @@ export async function syncProductToShopify(product) {
 
       const shopifyProduct = response.product;
       const variant = shopifyProduct.variants[0];
+      const updatedProductRow = {
+        ...product,
+        shopify_product_id: String(shopifyProduct.id),
+        shopify_variant_id: String(variant.id),
+        shopify_inventory_item_id: String(variant.inventory_item_id),
+      };
       await prepare(
         'UPDATE products SET shopify_product_id = ?, shopify_variant_id = ?, shopify_inventory_item_id = ? WHERE id = ?'
-      ).run(String(shopifyProduct.id), String(variant.id), String(variant.inventory_item_id), product.id);
+      ).run(updatedProductRow.shopify_product_id, updatedProductRow.shopify_variant_id, updatedProductRow.shopify_inventory_item_id, product.id);
 
-      return { shopifyProductId: String(shopifyProduct.id), shopifyVariantId: String(variant.id) };
+      return { shopifyProductId: updatedProductRow.shopify_product_id, shopifyVariantId: updatedProductRow.shopify_variant_id, updatedProductRow };
     }, 3, 50);
+
+    if (isNewProduct) {
+      // A freshly-created product otherwise sits with whatever inventory
+      // Shopify defaults a newly-tracked variant to (typically 0) until some
+      // later, unrelated stock change happens to call pushInventoryLevel -
+      // push the real current stock now so the Shopify side starts accurate.
+      // Deliberately done OUTSIDE the withRetry above (which only guards the
+      // create/update request itself) - pushInventoryLevel has its own
+      // retry, and retrying the outer block on a push failure would re-issue
+      // the POST /products.json and create a duplicate product on Shopify.
+      await pushInventoryLevel(result.updatedProductRow, product.stock_qty);
+    }
+
     if (connection.status === 'sync_error') {
       await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('connected', connection.id);
     }
-    return result;
+    return { shopifyProductId: result.shopifyProductId, shopifyVariantId: result.shopifyVariantId };
   } catch (err) {
     await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('sync_error', connection.id);
     throw err;
@@ -195,7 +229,12 @@ export async function pushInventoryLevel(product, quantity) {
 
 export async function unpublishProductFromShopify(product) {
   const connection = await getShopifyConnection();
-  if (!connection || connection.status !== 'connected' || !product.shopify_product_id) return;
+  // Matches syncProductToShopify/pushInventoryLevel's gate: 'sync_error' still
+  // attempts the operation (it means "was connected, one sync failed" - not
+  // "give up permanently"). Only a connection that was never established at
+  // all is skipped. (No retry/sync_error-marking on failure here yet - that's
+  // a separate, deliberately-deferred issue.)
+  if (!connection || connection.status === 'not_connected' || !product.shopify_product_id) return;
   await shopifyAdminRequest(connection, 'PUT', `/products/${product.shopify_product_id}.json`, {
     product: { id: product.shopify_product_id, published: false },
   });
