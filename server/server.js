@@ -245,6 +245,9 @@ function serializeProduct(row) {
     active: !!row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    showOnline: !!row.show_online,
+    description: row.description || '',
+    photoUrl: row.photo_url || null,
   };
 }
 
@@ -409,14 +412,17 @@ route('POST', '/api/products', async (req, res) => {
     ? Math.trunc(Number(body.lowStockThreshold))
     : 3;
   const supplier = (body.supplier || '').trim();
+  const showOnline = Boolean(body.showOnline);
+  const description = (body.description || '').trim();
+  const photoUrl = body.photoUrl || null;
 
   try {
     const info = await db
       .prepare(
-        `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, low_stock_threshold, supplier, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, low_stock_threshold, supplier, show_online, description, photo_url, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(sku, barcode, name, category, price, cost, stockQty, lowStockThreshold, supplier, nowIso());
+      .run(sku, barcode, name, category, price, cost, stockQty, lowStockThreshold, supplier, showOnline, description, photoUrl, nowIso());
     if (stockQty !== 0) {
       await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'intake', 'Initial stock')`
@@ -448,14 +454,17 @@ route('PUT', '/api/products/:id', async (req, res, params) => {
     body.lowStockThreshold !== undefined ? Math.trunc(Number(body.lowStockThreshold)) || 0 : existing.low_stock_threshold;
   const supplier = body.supplier !== undefined ? String(body.supplier).trim() : existing.supplier;
   const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+  const showOnline = body.showOnline !== undefined ? Boolean(body.showOnline) : existing.show_online;
+  const description = body.description !== undefined ? String(body.description).trim() : existing.description;
+  const photoUrl = body.photoUrl !== undefined ? (body.photoUrl || null) : existing.photo_url;
 
   if (!name) return badRequest(res, 'Product name is required');
 
   try {
     await db.prepare(
-      `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, updated_at = ?
+      `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, show_online = ?, description = ?, photo_url = ?, updated_at = ?
        WHERE id = ?`
-    ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, nowIso(), id);
+    ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, showOnline, description, photoUrl, nowIso(), id);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     sendJson(res, 200, serializeProduct(row));
   } catch (err) {
