@@ -2242,6 +2242,105 @@ route('DELETE', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, pa
   sendJson(res, 200, { ok: true });
 });
 
+// ---------- Image uploads (product photos, shop logo, shop hero image) ----------
+// Same base64-in-a-JSON-body convention as workshop job attachments above,
+// and the same opaque-storage_key-on-disk approach - but the uploader can be
+// any of three different call sites (a product photo, the storefront logo,
+// or its hero image), so the actual read/validate/store logic lives in one
+// shared helper and each route just says what changed after the upload.
+
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+// Shared by product photo, logo, and hero image uploads - only the size
+// cap and what happens with the resulting URL differ between them.
+async function readUploadedImage(req, maxBytes) {
+  const maxBodyBytes = Math.ceil(maxBytes * 1.4);
+  let body;
+  try {
+    body = await readJsonBody(req, maxBodyBytes);
+  } catch (err) {
+    throw new ValidationError(err.message === 'Payload too large' ? `That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).` : 'Invalid request body');
+  }
+  if (!body.dataBase64) throw new ValidationError('No image data received');
+
+  const contentType = String(body.contentType || '').trim().toLowerCase();
+  if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
+    throw new ValidationError('Image must be JPEG, PNG, or WebP');
+  }
+
+  let buffer;
+  try {
+    buffer = Buffer.from(body.dataBase64, 'base64');
+  } catch (err) {
+    throw new ValidationError('Could not decode image data');
+  }
+  if (!buffer.length) throw new ValidationError('That image is empty');
+  if (buffer.length > maxBytes) throw new ValidationError(`That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).`);
+
+  const storageKey = randomBytes(24).toString('hex');
+  await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);
+  // uploaded_image_types has no `id` column (storage_key is its primary
+  // key), so this INSERT carries its own RETURNING clause - otherwise
+  // db.js's prepare() would auto-append `RETURNING id` (see needsReturningId
+  // there) and the query would fail with "column \"id\" does not exist".
+  await db.prepare('INSERT INTO uploaded_image_types (storage_key, content_type) VALUES (?, ?) RETURNING storage_key').run(storageKey, contentType);
+  return `/api/uploaded-images/${storageKey}`;
+}
+
+const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_SHOP_IMAGE_BYTES = 5 * 1024 * 1024;
+
+route('POST', '/api/products/:id/photo', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Product not found');
+
+  let photoUrl;
+  try {
+    photoUrl = await readUploadedImage(req, MAX_PRODUCT_PHOTO_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+
+  await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
+  const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  sendJson(res, 200, serializeProduct(row));
+});
+
+route('POST', '/api/storefront-settings/logo', async (req, res) => {
+  let logoUrl;
+  try {
+    logoUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ logoUrl })));
+});
+
+route('POST', '/api/storefront-settings/hero', async (req, res) => {
+  let heroImageUrl;
+  try {
+    heroImageUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ heroImageUrl })));
+});
+
+route('GET', '/api/uploaded-images/:key', async (req, res, params) => {
+  const filePath = path.join(UPLOADS_DIR, params.key);
+  if (!filePath.startsWith(UPLOADS_DIR) || !existsSync(filePath)) {
+    return notFound(res, 'Image not found');
+  }
+  const typeRow = await pool.query('SELECT content_type FROM uploaded_image_types WHERE storage_key = $1', [params.key]);
+  const contentType = typeRow.rows[0]?.content_type || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' });
+  createReadStream(filePath).pipe(res);
+});
+
 // ---------- Employees ----------
 // A single roster shared by the Workshop (mechanics) and Front Desk
 // (cashiers): every mechanic is an employee, but not every employee is a
