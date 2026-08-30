@@ -107,3 +107,69 @@ export async function registerShopifyWebhooks(connection, shopId) {
     webhook: { topic: 'refunds/create', address: `${baseUrl}/webhooks/shopify/${shopId}/refunds`, format: 'json' },
   });
 }
+
+// Small in-process retry for transient Shopify API failures (rate limits,
+// momentary 5xxs). Not a persistent job queue - there's no background
+// worker infrastructure in this app yet, and one shop's occasional sync
+// hiccup doesn't warrant building one. If every attempt fails, the caller
+// marks the connection sync_error so it's visible in shop settings rather
+// than failing silently; the next successful product edit or sale clears
+// it back to connected on its own.
+async function withRetry(fn, attempts = 3, baseDelayMs = 500) {
+  let lastError;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (i < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** i));
+      }
+    }
+  }
+  throw lastError;
+}
+
+export async function syncProductToShopify(product) {
+  const connection = await getShopifyConnection();
+  if (!connection || connection.status !== 'connected') return null;
+
+  try {
+    return await withRetry(async () => {
+      const payload = {
+        product: {
+          title: product.name,
+          body_html: product.description || '',
+          variants: [{ price: String(product.price) }],
+        },
+      };
+
+      let response;
+      if (product.shopify_product_id) {
+        payload.product.id = product.shopify_product_id;
+        response = await shopifyAdminRequest(connection, 'PUT', `/products/${product.shopify_product_id}.json`, payload);
+      } else {
+        response = await shopifyAdminRequest(connection, 'POST', '/products.json', payload);
+      }
+
+      const shopifyProduct = response.product;
+      const variant = shopifyProduct.variants[0];
+      await prepare(
+        'UPDATE products SET shopify_product_id = ?, shopify_variant_id = ?, shopify_inventory_item_id = ? WHERE id = ?'
+      ).run(String(shopifyProduct.id), String(variant.id), String(variant.inventory_item_id), product.id);
+
+      return { shopifyProductId: String(shopifyProduct.id), shopifyVariantId: String(variant.id) };
+    }, 3, 50);
+  } catch (err) {
+    await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('sync_error', connection.id);
+    throw err;
+  }
+}
+
+export async function unpublishProductFromShopify(product) {
+  const connection = await getShopifyConnection();
+  if (!connection || connection.status !== 'connected' || !product.shopify_product_id) return;
+  await shopifyAdminRequest(connection, 'PUT', `/products/${product.shopify_product_id}.json`, {
+    product: { id: product.shopify_product_id, published: false },
+  });
+}
