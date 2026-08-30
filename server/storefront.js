@@ -1,4 +1,5 @@
 import { prepare, pool, runWithShop } from './db.js';
+import { getShopifyConnection } from './shopify.js';
 
 export const THEME_PRESETS = ['forest', 'ocean', 'sunset', 'slate', 'plum'];
 
@@ -94,6 +95,8 @@ export async function resolveStorefrontShop(req, url) {
 
 export async function getStorefrontInfo(shopRow) {
   const settings = await getOrCreateStorefrontSettings();
+  const shopifyConnection = await getShopifyConnection();
+  const shopifyConnected = shopifyConnection && shopifyConnection.status === 'connected';
   return {
     shopName: shopRow.name,
     tagline: settings.tagline || '',
@@ -101,6 +104,8 @@ export async function getStorefrontInfo(shopRow) {
     logoUrl: settings.logo_url || null,
     heroImageUrl: settings.hero_image_url || null,
     themePreset: settings.theme_preset,
+    shopifyDomain: shopifyConnected ? shopifyConnection.shop_domain : null,
+    shopifyStorefrontToken: shopifyConnected ? shopifyConnection.storefront_api_token : null,
   };
 }
 
@@ -111,12 +116,13 @@ export function serializeStorefrontProduct(row) {
     price: Number(row.price),
     description: row.description || '',
     photoUrl: row.photo_url || null,
+    shopifyVariantId: row.shopify_variant_id || null,
   };
 }
 
 export async function listStorefrontProducts() {
   const rows = await prepare(
-    'SELECT id, name, price, description, photo_url FROM products WHERE show_online = ? AND active = 1 ORDER BY category, name'
+    'SELECT id, name, price, description, photo_url, shopify_variant_id FROM products WHERE show_online = ? AND active = 1 ORDER BY category, name'
   ).all(true);
   return rows.map(serializeStorefrontProduct);
 }
