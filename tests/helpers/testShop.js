@@ -12,5 +12,12 @@ export async function createTestShop(overrides = {}) {
 }
 
 export async function deleteTestShop(shopId) {
-  await pool.query('DELETE FROM shops WHERE id = $1', [shopId]);
+  const client = await pool.connect();
+  try {
+    await client.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shopId)]);
+    await client.query('DELETE FROM storefront_settings WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM shops WHERE id = $1', [shopId]);
+  } finally {
+    client.release();
+  }
 }
