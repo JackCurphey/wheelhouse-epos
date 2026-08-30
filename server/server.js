@@ -44,7 +44,19 @@ import {
   getStorefrontInfo,
   listStorefrontProducts,
 } from './storefront.js';
-import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks } from './shopify.js';
+import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify } from './shopify.js';
+
+async function syncProductWithShopifyIfNeeded(previousShowOnline, updatedProductRow) {
+  try {
+    if (updatedProductRow.show_online) {
+      await syncProductToShopify(updatedProductRow);
+    } else if (previousShowOnline && !updatedProductRow.show_online) {
+      await unpublishProductFromShopify(updatedProductRow);
+    }
+  } catch (err) {
+    console.error('Shopify product sync failed', err);
+  }
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -439,6 +451,7 @@ route('POST', '/api/products', async (req, res) => {
       ).run(info.lastInsertRowid, stockQty);
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
+    await syncProductWithShopifyIfNeeded(false, row);
     sendJson(res, 201, serializeProduct(row));
   } catch (err) {
     if (err.code === '23505') {
@@ -476,6 +489,7 @@ route('PUT', '/api/products/:id', async (req, res, params) => {
        WHERE id = ?`
     ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, showOnline, description, photoUrl, nowIso(), id);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    await syncProductWithShopifyIfNeeded(existing.show_online, row);
     sendJson(res, 200, serializeProduct(row));
   } catch (err) {
     if (err.code === '23505') {
