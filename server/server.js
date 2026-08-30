@@ -35,6 +35,7 @@ import {
   CUSTOMER_SESSION_COOKIE,
   CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from './customer-auth.js';
+import { getOrCreateStorefrontSettings, updateStorefrontSettings, serializeStorefrontSettings } from './storefront.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -2459,6 +2460,28 @@ route('PUT', '/api/shop-theme', async (req, res) => {
   }
   await db.prepare('UPDATE shop_theme SET preset = ?, updated_at = ? WHERE id = ?').run(preset, nowIso(), existing.id);
   sendJson(res, 200, serializeShopTheme(await db.prepare('SELECT * FROM shop_theme LIMIT 1').get()));
+});
+
+// ---------- Storefront settings ----------
+// Public-storefront on/off switch plus its branding fields (tagline,
+// description, logo/hero images, theme preset) - same singleton-per-shop,
+// lazy-create-on-GET pattern as shop_theme above. Persistence and validation
+// live in storefront.js (Task 3); these two routes are thin HTTP glue over
+// it, same shape as the shop-theme pair above.
+
+route('GET', '/api/storefront-settings', async (req, res) => {
+  sendJson(res, 200, serializeStorefrontSettings(await getOrCreateStorefrontSettings()));
+});
+
+route('PUT', '/api/storefront-settings', async (req, res) => {
+  const body = await readJsonBody(req);
+  try {
+    const updated = await updateStorefrontSettings(body);
+    sendJson(res, 200, serializeStorefrontSettings(updated));
+  } catch (err) {
+    if (err.message.startsWith('Invalid theme preset')) return badRequest(res, err.message);
+    throw err;
+  }
 });
 
 // ---------- Print agents ----------
