@@ -4,18 +4,21 @@
 
 Give each bike shop using Wheelhouse EPOS a public-facing website — reachable at
 `<shop-slug>.wheelhouseepos.com` — showing their branding, a curated product
-catalog, and a link into the existing workshop-booking portal. This is the
-first of two planned sub-projects; a later, separate project will connect
-storefront products to Shopify for actual checkout, and another later project
-will add shop-owned custom domains. Neither is designed here — this spec
-deliberately stops at the framework that makes both easy to add afterward.
+catalog customers can actually buy from (via each shop's own Shopify store),
+and a link into the existing workshop-booking portal. Shop-owned custom
+domains and deeper theming remain a later, separate project — this spec
+deliberately stops at the framework that makes those easy to add afterward.
 
 ## Non-goals (for this phase)
 
-- No checkout, cart, or payment processing (that's the future Shopify project).
 - No shop-owned custom domains (subdomain only, for now).
 - No custom CSS/layout editing or fonts — theming is limited to the 5 existing
   color presets plus logo/hero image/text fields.
+- No public OAuth "Install app" flow for Shopify — shops connect via a
+  manually-generated custom-app access token (see below).
+- No fully embedded payment UI — the final "pay now" step redirects to
+  Shopify's own hosted checkout (see Checkout section). This is a platform
+  constraint on non-Plus Shopify plans, not a scope cut.
 
 ## Data model
 
@@ -45,6 +48,29 @@ RLS policy: same pattern as other shop-scoped tables — scoped to
 `boolean`, default `false`. Per-product opt-in for public visibility, editable
 from the existing inventory UI. Nothing appears on a storefront until an owner
 explicitly flips this for a product.
+
+### `products` — Shopify mapping columns (new)
+
+`shopify_product_id`, `shopify_variant_id`, `shopify_inventory_item_id`
+(all nullable text/bigint as appropriate). Populated once EPOS successfully
+syncs a `show_online` product to the shop's connected Shopify store; null
+means "not yet synced" (storefront shows "Coming soon", no Buy button).
+
+### `shopify_connections` (new table, 1:1 with `shops`)
+
+| column | type | notes |
+|---|---|---|
+| `shop_id` | fk → `shops.id` | primary key |
+| `shop_domain` | text | e.g. `theirshop.myshopify.com` |
+| `access_token` | text, encrypted at rest | Admin API token from a custom app the owner creates in their own Shopify admin |
+| `storefront_api_token` | text | public Storefront API token, used client-side for cart/checkout |
+| `webhook_secret` | text, encrypted at rest | used to verify inbound webhook HMAC signatures |
+| `status` | text | `connected` / `sync_error` / `not_connected` |
+| `connected_at` | timestamp | nullable |
+
+RLS-scoped like other shop tables. A shop with no row here, or `status !=
+connected`, simply shows no Buy buttons on its storefront — everything else
+(catalog display, booking link) works independently of Shopify.
 
 ## Routing & tenant resolution
 
@@ -77,10 +103,72 @@ middleware above:
 - `GET /api/storefront/info` → shop name, tagline, description, logo/hero
   URLs, theme preset.
 - `GET /api/storefront/products` → products where `show_online = true`
-  (name, price, photo, description). No cost, supplier, stock-level, or other
-  internal fields.
+  (name, price, photo, description, `shopify_variant_id` if synced). No cost,
+  supplier, stock-level, or other internal fields.
 
-No write endpoints. No customer PII is read or written by this API.
+No write endpoints on this file. No customer PII is read or written here —
+cart/checkout state lives entirely in Shopify (see Checkout section), and
+order-completion data arrives via the separate webhook endpoint below.
+
+## Shopify integration
+
+### Connecting a shop
+
+Each shop connects independently: the owner creates a **custom app** in
+their own Shopify admin, generates an Admin API access token and a
+Storefront API token, and pastes both (plus their `.myshopify.com` domain)
+into EPOS storefront settings. EPOS stores them in `shopify_connections` and
+registers the `orders/paid` and `refunds/create` webhooks against that store
+via the Admin API, pointing at this app's webhook endpoint.
+
+This avoids building and maintaining a public Shopify OAuth "Install app"
+flow (which requires Partner app review for distribution) — appropriate
+since this connects shops to your own platform, not a store other merchants
+install from the Shopify App Store. Worth revisiting if manual token setup
+proves too fiddly for non-technical shop owners.
+
+### Product sync (EPOS → Shopify, push)
+
+Whenever a product is flagged `show_online = true` (or edited/priced while
+flagged, for a shop with `status = connected`), EPOS pushes a create/update
+to Shopify's Admin API (product + variant + price) and stores the returned
+`shopify_product_id`/`shopify_variant_id`/`shopify_inventory_item_id` back on
+the product row. Un-flagging `show_online` unpublishes (not deletes) the
+Shopify product, preserving any existing order history references to it.
+
+### Stock sync (two-way)
+
+- **EPOS → Shopify**: any EPOS stock change on a synced product (till sale,
+  restock, manual adjustment) pushes the new available quantity to Shopify's
+  `InventoryLevel` API for that `shopify_inventory_item_id`.
+- **Shopify → EPOS**: the `orders/paid` webhook (`POST
+  /webhooks/shopify/:shop_id/orders`) deducts EPOS stock per line item and
+  records the sale in sales history tagged `channel = shopify`, so it appears
+  in existing dashboards/reports alongside till sales.
+- **Refunds/cancellations**: the `refunds/create` webhook restocks the
+  corresponding quantity automatically.
+- All webhook handlers verify the request's HMAC signature against
+  `webhook_secret` and are idempotent by Shopify order/refund ID (Shopify
+  retries delivery on failure or timeout).
+
+### Checkout
+
+Product browsing and cart are built natively into the storefront frontend
+using Shopify's **Storefront API** (GraphQL) — add-to-cart, quantities, and
+a cart view all styled with the shop's own theme, no Shopify branding
+visible during browsing. Only the final "Pay now" action redirects to the
+cart's `checkoutUrl`, Shopify's own hosted checkout page, to collect payment.
+
+This is a deliberate constraint, not a shortcut: fully embedded card-entry
+UI (never leaving the page) requires Shopify Plus's checkout extensibility,
+unavailable on standard plans. Redirecting only for the payment step is the
+standard, lowest-risk pattern for headless Shopify integrations — Shopify
+still handles all PCI compliance, and it's a small expected hop rather than
+a jarring context switch.
+
+Product cards only show a "Buy" affordance once `shopify_variant_id` is
+populated; a `show_online` product without a confirmed sync shows
+"Coming soon" instead.
 
 ## Storefront frontend (`public-storefront/`, new)
 
@@ -93,9 +181,9 @@ step. Fetches from the two endpoints above and renders:
   using the same CSS-custom-property mechanism already implemented in
   `applyShopTheme()` (`public/app.js`) — not a new theming implementation,
   just applied to a new page.
-- Product grid: photo, name, price, description. No buy button — a plain
-  "Available in store" label (or equivalent) until the Shopify project adds
-  one.
+- Product grid: photo, name, price, description, and — for products with a
+  confirmed Shopify sync — a "Buy" affordance backed by the Storefront-API
+  cart described above; unsynced `show_online` products show "Coming soon".
 - Footer: shop hours/location (if available on the `shops` record) and a
   link into the existing `/book/:slug` workshop-booking portal.
 
@@ -109,6 +197,9 @@ Extend the existing shop admin/settings screen (no new admin app) with:
   `shop_theme`).
 - Logo and hero image upload.
 - Per-product "show online" toggle, added to the existing inventory edit UI.
+- Shopify connection fields (store domain, Admin API token, Storefront API
+  token) and a connection status indicator (connected / sync error / not
+  connected).
 
 ## Error handling
 
@@ -121,6 +212,11 @@ Extend the existing shop admin/settings screen (no new admin app) with:
   with any existing upload handling in the app (check for a precedent during
   implementation; if none exists, keep this minimal — reasonable size cap and
   image-mimetype check only).
+- Shopify sync failures (rate limits, API errors) retry with backoff and set
+  `shopify_connections.status = sync_error`, surfaced visibly in shop
+  settings rather than failing silently.
+- Webhook requests with an invalid HMAC signature are rejected (401) and
+  logged; webhook handlers are idempotent by Shopify order/refund ID.
 
 ## Testing
 
@@ -130,13 +226,15 @@ Extend the existing shop admin/settings screen (no new admin app) with:
   endpoints), `show_online` filtering excludes non-flagged products.
 - Manual pass in-browser against a real seeded shop once built, checking
   theme application and booking-portal link.
+- Shopify: unit tests for HMAC webhook verification; mocked-Shopify-API tests
+  for product/inventory push; idempotency test for duplicate webhook
+  delivery (order and refund); a manual end-to-end pass against a real
+  Shopify dev store — buy a test item with Shopify's bogus payment gateway,
+  confirm EPOS stock drops and the sale appears in history tagged
+  `channel = shopify`; refund it, confirm stock is restored.
 
 ## Future seams (explicitly deferred, not designed here)
 
-- **Shopify checkout**: product cards gain a "Buy" affordance; products gain
-  an optional `shopify_variant_id` mapping; checkout redirects to
-  Shopify-hosted checkout or uses their Storefront API. This design's product
-  grid component is not expected to need rearchitecting for this.
 - **Custom domains**: `storefront_settings` gains a `custom_domain` column,
   a verification step (DNS TXT or CNAME check), and per-domain TLS
   (e.g. Let's Encrypt DNS-01 automation, or a service that handles this,
