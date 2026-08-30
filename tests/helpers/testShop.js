@@ -18,6 +18,7 @@ export async function deleteTestShop(shopId) {
     await client.query('DELETE FROM storefront_settings WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM shopify_connections WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM shopify_processed_events WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM products WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM shops WHERE id = $1', [shopId]);
   } finally {
     client.release();

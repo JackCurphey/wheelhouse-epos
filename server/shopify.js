@@ -200,3 +200,39 @@ export async function unpublishProductFromShopify(product) {
     product: { id: product.shopify_product_id, published: false },
   });
 }
+
+export async function matchOrderLineItemsToProducts(order) {
+  const items = [];
+  for (const lineItem of order.line_items) {
+    const product = await prepare('SELECT id FROM products WHERE shopify_variant_id = ?').get(String(lineItem.variant_id));
+    if (product) {
+      items.push({ productId: product.id, qty: lineItem.quantity, unitPrice: Number(lineItem.price) });
+    }
+  }
+  return items;
+}
+
+export async function matchRefundLineItemsToProducts(refund) {
+  const items = [];
+  for (const refundLineItem of refund.refund_line_items || []) {
+    const variantId = refundLineItem.line_item?.variant_id;
+    if (!variantId) continue;
+    const product = await prepare('SELECT * FROM products WHERE shopify_variant_id = ?').get(String(variantId));
+    if (product) items.push({ product, qty: refundLineItem.quantity });
+  }
+  return items;
+}
+
+export async function claimShopifyEvent(shopifyEventId, kind) {
+  const result = await prepare(
+    `INSERT INTO shopify_processed_events (shopify_order_id, kind) VALUES (?, ?)
+     ON CONFLICT (shop_id, shopify_order_id, kind) DO NOTHING`
+  ).run(String(shopifyEventId), kind);
+  return result.changes > 0;
+}
+
+export async function markShopifyEventError(shopifyEventId, kind, errorMessage) {
+  await prepare(
+    'UPDATE shopify_processed_events SET status = ?, error_message = ? WHERE shopify_order_id = ? AND kind = ?'
+  ).run('error', errorMessage, String(shopifyEventId), kind);
+}
