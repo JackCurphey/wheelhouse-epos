@@ -12,6 +12,7 @@ COPY server/ ./server/
 COPY public/ ./public/
 COPY public-portal/ ./public-portal/
 COPY public-demo/ ./public-demo/
+COPY public-storefront/ ./public-storefront/
 
 EXPOSE 4000
 CMD ["node", "server/server.js"]
