@@ -1,4 +1,4 @@
-import { prepare } from './db.js';
+import { prepare, pool } from './db.js';
 
 export const THEME_PRESETS = ['forest', 'ocean', 'sunset', 'slate', 'plum'];
 
@@ -44,4 +44,69 @@ export async function updateStorefrontSettings(patch) {
   ).run(enabled, tagline, description, logoUrl, heroImageUrl, themePreset, new Date().toISOString(), existing.id);
 
   return prepare('SELECT * FROM storefront_settings LIMIT 1').get();
+}
+
+export const STOREFRONT_BASE_DOMAIN = process.env.STOREFRONT_BASE_DOMAIN || 'wheelhouseepos.com';
+
+// Cheap, DB-free check for "does this request look like it's addressed to a
+// storefront at all" - used by the dispatcher to decide between "not a
+// storefront request, keep routing normally" and "was a storefront request,
+// but didn't resolve to one - show a generic not-found page" (never fall
+// through to the staff app for the latter, and never distinguish "unknown
+// slug" from "disabled storefront" in the response).
+export function parseStorefrontSlugCandidate(req, url) {
+  const hostHeader = String(req.headers.host || '').split(':')[0].toLowerCase();
+  const suffix = `.${STOREFRONT_BASE_DOMAIN}`;
+
+  if (hostHeader.endsWith(suffix)) {
+    const sub = hostHeader.slice(0, -suffix.length);
+    if (sub && sub !== 'www') return sub;
+  }
+  const pathMatch = url.pathname.match(/^\/store\/([^/]+)/);
+  if (pathMatch) return pathMatch[1];
+
+  return url.searchParams.get('storefrontSlug') || null;
+}
+
+export async function resolveStorefrontShop(req, url) {
+  const slug = parseStorefrontSlugCandidate(req, url);
+  if (!slug) return null;
+
+  const { rows: [row] } = await pool.query(
+    `SELECT s.id, s.slug, s.name, COALESCE(ss.enabled, false) AS enabled
+     FROM shops s LEFT JOIN storefront_settings ss ON ss.shop_id = s.id
+     WHERE s.slug = $1`,
+    [slug]
+  );
+  if (!row || !row.enabled) return null;
+  return { id: row.id, slug: row.slug, name: row.name };
+}
+
+export async function getStorefrontInfo(shopRow) {
+  const settings = await getOrCreateStorefrontSettings();
+  return {
+    shopName: shopRow.name,
+    tagline: settings.tagline || '',
+    description: settings.description || '',
+    logoUrl: settings.logo_url || null,
+    heroImageUrl: settings.hero_image_url || null,
+    themePreset: settings.theme_preset,
+  };
+}
+
+export function serializeStorefrontProduct(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    price: Number(row.price),
+    description: row.description || '',
+    photoUrl: row.photo_url || null,
+  };
+}
+
+export async function listStorefrontProducts() {
+  const rows = await prepare(
+    'SELECT id, name, price, description, photo_url FROM products WHERE show_online = ? AND active = 1 ORDER BY category, name'
+  ).all(true);
+  return rows.map(serializeStorefrontProduct);
 }
