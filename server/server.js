@@ -44,7 +44,7 @@ import {
   getStorefrontInfo,
   listStorefrontProducts,
 } from './storefront.js';
-import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify } from './shopify.js';
+import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 
 async function syncProductWithShopifyIfNeeded(previousShowOnline, updatedProductRow) {
   try {
@@ -527,6 +527,10 @@ route('POST', '/api/products/:id/stock', async (req, res, params) => {
     type,
     note
   );
+  if (existing.shopify_inventory_item_id) {
+    // Never let a Shopify hiccup fail a real stock adjustment - log and move on.
+    await pushInventoryLevel(existing, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+  }
   const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   sendJson(res, 200, serializeProduct(row));
 });
@@ -920,14 +924,19 @@ route('POST', '/api/purchase-orders/:id/receive', async (req, res, params) => {
         line.id
       );
       const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(line.product_id);
+      const newQty = product.stock_qty + qtyReceived;
       await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(
-        product.stock_qty + qtyReceived,
+        newQty,
         nowIso(),
         product.id
       );
       await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note, purchase_order_id) VALUES (?, ?, 'po_receipt', ?, ?)`
       ).run(product.id, qtyReceived, `Booked in from PO #${id}${existing.reference ? ` (${existing.reference})` : ''}`, id);
+      if (product.shopify_inventory_item_id) {
+        // Never let a Shopify hiccup fail a real PO receipt - log and move on.
+        await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      }
     }
     const freshItems = await loadPurchaseOrderItems(id);
     const allReceived = freshItems.every((it) => it.qty_received >= it.qty_ordered);
@@ -1495,6 +1504,10 @@ async function createSale({ customerId, cashierId, items, discount, cashAmount, 
       await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
       ).run(product.id, -qty, `Sale #${saleId}`);
+      if (product.shopify_inventory_item_id) {
+        // Never let a Shopify hiccup fail a real till sale - log and move on.
+        await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      }
     }
     await db.exec('COMMIT');
     return saleId;
