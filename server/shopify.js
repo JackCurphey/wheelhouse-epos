@@ -132,10 +132,10 @@ async function withRetry(fn, attempts = 3, baseDelayMs = 500) {
 
 export async function syncProductToShopify(product) {
   const connection = await getShopifyConnection();
-  if (!connection || connection.status !== 'connected') return null;
+  if (!connection || connection.status === 'not_connected') return null;
 
   try {
-    return await withRetry(async () => {
+    const result = await withRetry(async () => {
       const payload = {
         product: {
           title: product.name,
@@ -160,6 +160,10 @@ export async function syncProductToShopify(product) {
 
       return { shopifyProductId: String(shopifyProduct.id), shopifyVariantId: String(variant.id) };
     }, 3, 50);
+    if (connection.status === 'sync_error') {
+      await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('connected', connection.id);
+    }
+    return result;
   } catch (err) {
     await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('sync_error', connection.id);
     throw err;

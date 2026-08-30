@@ -128,6 +128,40 @@ test('syncProductToShopify retries on failure, then marks the connection sync_er
   }
 });
 
+test('syncProductToShopify recovers a sync_error connection back to connected on the next successful sync', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      await connectFakeShopify(shop.id);
+      const product = await prepare(
+        "INSERT INTO products (name, price, show_online) VALUES ('Trail Bike', 899, true) RETURNING *"
+      ).get();
+
+      // Simulate a prior transient failure having already marked the
+      // connection sync_error, the way the retry-then-fail test above does.
+      await prepare('UPDATE shopify_connections SET status = ? WHERE shop_id = ?').run('sync_error', shop.id);
+
+      const restore = stubFetch(async (url, opts) => {
+        assert.match(String(url), /\/products\.json$/);
+        assert.equal(opts.method, 'POST');
+        return { ok: true, status: 201, json: async () => ({ product: { id: 555, variants: [{ id: 777, inventory_item_id: 888 }] } }) };
+      });
+      try {
+        const result = await syncProductToShopify(product);
+        assert.deepEqual(result, { shopifyProductId: '555', shopifyVariantId: '777' });
+      } finally {
+        restore();
+      }
+
+      const connection = await prepare('SELECT status FROM shopify_connections WHERE shop_id = ?').get(shop.id);
+      assert.equal(connection.status, 'connected');
+    });
+  } finally {
+    await runWithShop(shop.id, () => prepare('DELETE FROM products').run());
+    await deleteTestShop(shop.id);
+  }
+});
+
 test('unpublishProductFromShopify sets published=false on the mapped Shopify product', async () => {
   const shop = await createTestShop();
   try {
