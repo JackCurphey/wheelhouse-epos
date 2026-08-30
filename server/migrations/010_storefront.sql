@@ -4,7 +4,7 @@
 -- pattern as shop_theme (009_shop_theme.sql).
 CREATE TABLE storefront_settings (
   id SERIAL PRIMARY KEY,
-  shop_id INTEGER NOT NULL UNIQUE DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id) ON DELETE CASCADE,
+  shop_id INTEGER NOT NULL UNIQUE DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id),
   enabled BOOLEAN NOT NULL DEFAULT false,
   tagline TEXT,
   description TEXT,
