@@ -170,6 +170,29 @@ export async function syncProductToShopify(product) {
   }
 }
 
+export async function pushInventoryLevel(product, quantity) {
+  if (!product.shopify_inventory_item_id) return;
+  const connection = await getShopifyConnection();
+  // 'sync_error' still attempts the push (it means "was connected, one
+  // sync failed" - not "give up permanently"). Only a connection that was
+  // never established at all is skipped.
+  if (!connection || connection.status === 'not_connected') return;
+
+  try {
+    await withRetry(() => shopifyAdminRequest(connection, 'POST', '/inventory_levels/set.json', {
+      location_id: connection.location_id,
+      inventory_item_id: product.shopify_inventory_item_id,
+      available: quantity,
+    }), 3, 50);
+    if (connection.status === 'sync_error') {
+      await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('connected', connection.id);
+    }
+  } catch (err) {
+    await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('sync_error', connection.id);
+    throw err;
+  }
+}
+
 export async function unpublishProductFromShopify(product) {
   const connection = await getShopifyConnection();
   if (!connection || connection.status !== 'connected' || !product.shopify_product_id) return;
