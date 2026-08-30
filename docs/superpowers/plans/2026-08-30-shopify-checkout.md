@@ -1262,7 +1262,16 @@ In the `createServer(async (req, res) => { ... })` callback, add this branch rig
       return badRequest(res, 'Invalid request body');
     }
 
-    const connection = await getShopifyConnectionByShopId(shopId);
+    // shopify_connections has FORCE ROW LEVEL SECURITY, so it can only be
+    // read correctly from inside a runWithShop context for the exact shop
+    // being queried (the storefront framework plan's final review found
+    // this same bug class in resolveStorefrontShop - a bare pool/prepare
+    // call against an RLS-protected table outside runWithShop either
+    // throws on a connection that's never set app.current_shop_id, or
+    // reads a stale different shop's session value). Unlike that case,
+    // shopId is already known here from the URL, so there's no chicken-
+    // and-egg problem - just enter the context immediately.
+    const connection = await runWithShop(shopId, () => getShopifyConnectionByShopId(shopId));
     if (!connection) return notFound(res, 'Unknown shop');
 
     const hmacHeader = req.headers['x-shopify-hmac-sha256'];
