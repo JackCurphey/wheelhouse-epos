@@ -35,11 +35,20 @@ import {
   CUSTOMER_SESSION_COOKIE,
   CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from './customer-auth.js';
-import { getOrCreateStorefrontSettings, updateStorefrontSettings, serializeStorefrontSettings } from './storefront.js';
+import {
+  getOrCreateStorefrontSettings,
+  updateStorefrontSettings,
+  serializeStorefrontSettings,
+  parseStorefrontSlugCandidate,
+  resolveStorefrontShop,
+  getStorefrontInfo,
+  listStorefrontProducts,
+} from './storefront.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
+const STOREFRONT_DIR = path.join(__dirname, '..', 'public-storefront');
 const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
 // Attachment bytes live here as flat files named by a random per-file token
 // (see workshop_job_attachments.storage_key) - never the customer's original
@@ -3040,9 +3049,35 @@ async function serveStatic(req, res, pathname, baseDir) {
   createReadStream(filePath).pipe(res);
 }
 
+async function handleStorefrontRequest(req, res, pathname, shop) {
+  if (pathname === '/api/storefront/info' && req.method === 'GET') {
+    return sendJson(res, 200, await getStorefrontInfo(shop));
+  }
+  if (pathname === '/api/storefront/products' && req.method === 'GET') {
+    return sendJson(res, 200, await listStorefrontProducts());
+  }
+  const storePrefix = `/store/${shop.slug}`;
+  const relative = pathname.startsWith(storePrefix) ? (pathname.slice(storePrefix.length) || '/') : pathname;
+  return serveStatic(req, res, relative, STOREFRONT_DIR);
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  if (parseStorefrontSlugCandidate(req, url)) {
+    const storefrontShop = await resolveStorefrontShop(req, url);
+    if (!storefrontShop) {
+      return notFound(res, 'Storefront not found');
+    }
+    try {
+      await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));
+    } catch (err) {
+      console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
 
   // Deliberately handled here, before the generic /api/ branch below would
   // otherwise swallow it and demand a staff session - these images need to
