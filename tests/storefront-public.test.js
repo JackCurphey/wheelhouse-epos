@@ -11,6 +11,13 @@ import {
   updateStorefrontSettings,
   getOrCreateStorefrontSettings,
 } from '../server/storefront.js';
+import { saveShopifyConnection } from '../server/shopify.js';
+
+function stubFetch(handler) {
+  const original = globalThis.fetch;
+  globalThis.fetch = handler;
+  return () => { globalThis.fetch = original; };
+}
 
 function fakeRequest(host, pathname, query = {}) {
   const url = new URL(`http://${host}${pathname}`);
@@ -124,6 +131,36 @@ test('getStorefrontInfo reflects shop name and settings', async () => {
       const info = await getStorefrontInfo(shop);
       assert.equal(info.shopName, 'Acme Cycles');
       assert.equal(info.tagline, 'Ride happy');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('getStorefrontInfo keeps Buy buttons enabled (shopifyDomain set) when the connection is sync_error, but hides them when not_connected', async () => {
+  const shop = await createTestShop({ name: 'Acme Cycles' });
+  try {
+    await runWithShop(shop.id, async () => {
+      // Not connected at all - Buy buttons should be hidden.
+      const infoNotConnected = await getStorefrontInfo(shop);
+      assert.equal(infoNotConnected.shopifyDomain, null);
+
+      const restore = stubFetch(async () => ({ ok: true, status: 200, json: async () => ({ locations: [{ id: 1 }] }) }));
+      try {
+        await saveShopifyConnection({ shopDomain: 'acme.myshopify.com', accessToken: 'tok', storefrontApiToken: 'store-tok' });
+      } finally {
+        restore();
+      }
+
+      const infoConnected = await getStorefrontInfo(shop);
+      assert.equal(infoConnected.shopifyDomain, 'acme.myshopify.com');
+
+      // A transient sync failure sets status to sync_error - the underlying
+      // Shopify products are still live and purchasable, so Buy buttons
+      // should stay up rather than disappearing storefront-wide.
+      await prepare('UPDATE shopify_connections SET status = ? WHERE shop_id = ?').run('sync_error', shop.id);
+      const infoSyncError = await getStorefrontInfo(shop);
+      assert.equal(infoSyncError.shopifyDomain, 'acme.myshopify.com');
     });
   } finally {
     await deleteTestShop(shop.id);

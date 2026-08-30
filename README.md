@@ -87,6 +87,32 @@ same base domain unless that subdomain is added to the reserved list** in
 storefront lookup and served a storefront "not found" page instead of the
 real app.
 
+### Shopify integration: `SHOPIFY_TOKEN_ENCRYPTION_KEY` and `APP_PUBLIC_URL`
+
+A shop can connect a Shopify store (Office > Shopify) to sync products and
+inventory and accept online orders. Two environment variables are required
+for this to work correctly in production:
+
+- **`SHOPIFY_TOKEN_ENCRYPTION_KEY`** - a secret used to derive the key that
+  encrypts Shopify access tokens and webhook secrets before they're stored in
+  the database. Without it set, the app falls back to a hardcoded
+  development-only key - fine for local testing, but insecure for a real
+  deploy since that fallback key is sitting in this repository's source code.
+  In production (`NODE_ENV=production`), the app refuses to start at all if
+  this isn't set, rather than silently encrypting real shop credentials under
+  a key anyone can read.
+- **`APP_PUBLIC_URL`** - the app's own public base URL (e.g.
+  `https://app.example.com`), used to build the webhook callback URLs
+  registered with Shopify (`${APP_PUBLIC_URL}/webhooks/shopify/...`). Shopify
+  needs to be able to reach this URL from the internet, so it isn't optional
+  for the Shopify integration - connecting a store without it set will fail
+  when registering webhooks.
+
+```
+set SHOPIFY_TOKEN_ENCRYPTION_KEY=some-long-random-secret&& set APP_PUBLIC_URL=https://app.example.com&& npm start        (Windows Command Prompt)
+$env:SHOPIFY_TOKEN_ENCRYPTION_KEY="some-long-random-secret"; $env:APP_PUBLIC_URL="https://app.example.com"; npm start   (Windows PowerShell)
+```
+
 ## Notes and what's deliberately left out (for now)
 
 - **No per-employee permissions yet.** Each shop's owner can add individual
