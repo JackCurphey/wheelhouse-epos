@@ -2330,16 +2330,25 @@ route('POST', '/api/storefront-settings/hero', async (req, res) => {
   sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ heroImageUrl })));
 });
 
-route('GET', '/api/uploaded-images/:key', async (req, res, params) => {
-  const filePath = path.join(UPLOADS_DIR, params.key);
+// Deliberately NOT registered via route() into the shared routes table -
+// every route reached that way requires a signed-in staff session (see the
+// dispatcher below), but these images (product photos, shop logo, hero
+// image) need to be viewable by anonymous public-storefront visitors whose
+// <img> tags carry no session cookie at all. It's served from its own
+// unauthenticated branch in the dispatcher instead. Safe to leave
+// unauthenticated: the storage key is a randomBytes(24) hex token (192 bits
+// of entropy) - unguessable, so knowing it is the only "access control" an
+// image URL like this needs, the same way most image/CDN URLs work.
+async function serveUploadedImage(req, res, key) {
+  const filePath = path.join(UPLOADS_DIR, key);
   if (!filePath.startsWith(UPLOADS_DIR) || !existsSync(filePath)) {
     return notFound(res, 'Image not found');
   }
-  const typeRow = await pool.query('SELECT content_type FROM uploaded_image_types WHERE storage_key = $1', [params.key]);
+  const typeRow = await pool.query('SELECT content_type FROM uploaded_image_types WHERE storage_key = $1', [key]);
   const contentType = typeRow.rows[0]?.content_type || 'application/octet-stream';
   res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' });
   createReadStream(filePath).pipe(res);
-});
+}
 
 // ---------- Employees ----------
 // A single roster shared by the Workshop (mechanics) and Front Desk
@@ -3034,6 +3043,20 @@ async function serveStatic(req, res, pathname, baseDir) {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  // Deliberately handled here, before the generic /api/ branch below would
+  // otherwise swallow it and demand a staff session - these images need to
+  // be fetchable by anonymous public-storefront visitors (see
+  // serveUploadedImage's comment for why that's safe).
+  if (pathname.startsWith('/api/uploaded-images/')) {
+    try {
+      await serveUploadedImage(req, res, pathname.slice('/api/uploaded-images/'.length));
+    } catch (err) {
+      console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
 
   if (pathname.startsWith('/api/portal/')) {
     for (const r of routes) {
