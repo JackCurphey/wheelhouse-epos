@@ -65,6 +65,28 @@ can't do for itself once it's the thing that's crashed or not running.
 npm run gateway
 ```
 
+### Public storefronts and `STOREFRONT_BASE_DOMAIN`
+
+Each shop can turn on a public storefront, reachable either at `/store/<slug>`
+on the app's own host, or on its own subdomain, `<slug>.wheelhouseepos.com`.
+The base domain used for the subdomain form defaults to `wheelhouseepos.com`
+and can be overridden with the `STOREFRONT_BASE_DOMAIN` environment variable:
+
+```
+set STOREFRONT_BASE_DOMAIN=example.com && npm start        (Windows Command Prompt)
+$env:STOREFRONT_BASE_DOMAIN="example.com"; npm start        (Windows PowerShell)
+```
+
+Any request whose `Host` header is a subdomain of this base domain is treated
+as a storefront slug lookup (e.g. `acme.wheelhouseepos.com` looks up the shop
+slugged `acme`), except for a small set of reserved subdomains (`www`, `app`,
+`api`, `admin`, `staff`). Because of this, **the staff app itself (or any
+other internal service) must never be deployed on a bare subdomain of this
+same base domain unless that subdomain is added to the reserved list** in
+`server/storefront.js` - otherwise requests to it would be misread as a
+storefront lookup and served a storefront "not found" page instead of the
+real app.
+
 ## Notes and what's deliberately left out (for now)
 
 - **No per-employee permissions yet.** Each shop's owner can add individual

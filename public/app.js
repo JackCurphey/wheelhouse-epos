@@ -127,6 +127,23 @@ async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
+// Shared by every image-upload control (storefront logo/hero, product photo):
+// reads the chosen file, posts it as base64 to the given endpoint, and
+// reflects progress/result in statusEl. Reuses fileToBase64 above rather than
+// a second file-reading helper.
+async function uploadImage(endpoint, fileInput, statusEl) {
+  const file = fileInput.files[0];
+  if (!file) return;
+  statusEl.textContent = 'Uploading…';
+  try {
+    const dataBase64 = await fileToBase64(file);
+    await api(endpoint, { method: 'POST', body: { dataBase64, contentType: file.type } });
+    statusEl.textContent = 'Uploaded';
+  } catch (err) {
+    statusEl.textContent = `Error: ${err.message}`;
+  }
+}
+
 let toastTimer = null;
 function showToast(msg) {
   let el = document.getElementById('toast');
@@ -297,6 +314,7 @@ const OFFICE_TABS = [
       { id: 'front-desk', label: 'Front Desk' },
       { id: 'workshop', label: 'Workshop' },
       { id: 'colours', label: 'Colours' },
+      { id: 'storefront', label: 'Storefront' },
       ...(currentUser && currentUser.isOwner ? [{ id: 'logins', label: 'Employee Logins' }] : []),
     ],
   },
@@ -1417,6 +1435,7 @@ async function renderOffice() {
   else if (sub === 'edit-shop' && subId === 'front-desk') await renderEditFrontDesk();
   else if (sub === 'edit-shop' && subId === 'logins') await renderEmployeeLogins();
   else if (sub === 'edit-shop' && subId === 'colours') await renderEditColours();
+  else if (sub === 'edit-shop' && subId === 'storefront') await renderEditStorefront();
   else if (sub === 'edit-shop') await renderEditWorkshop();
   else await renderDashboard();
 }
@@ -4357,6 +4376,82 @@ function renderThemeSwatchGrid() {
   });
 }
 
+// ================= STOREFRONT SETTINGS =================
+
+async function renderEditStorefront() {
+  const main = document.getElementById('office-content');
+  main.innerHTML = `
+    <h1>Storefront</h1>
+    <div class="panel" style="margin-top:14px;">
+      <div class="panel-body" id="storefront-settings-section"></div>
+    </div>
+  `;
+  await renderStorefrontSettingsSection(document.getElementById('storefront-settings-section'));
+}
+
+async function renderStorefrontSettingsSection(container) {
+  const settings = await api('/api/storefront-settings');
+  const presetOptions = Object.keys(THEME_PRESETS)
+    .map((key) => `<option value="${esc(key)}" ${settings.themePreset === key ? 'selected' : ''}>${esc(THEME_PRESETS[key].name)}</option>`)
+    .join('');
+  container.innerHTML = `
+    <p class="muted" style="margin:0 0 14px;">Controls the public storefront customers see when they visit your shop's store link.</p>
+    <div class="field">
+      <label><input type="checkbox" id="storefront-enabled" ${settings.enabled ? 'checked' : ''}> Enable public storefront</label>
+    </div>
+    <div class="field">
+      <label for="storefront-tagline">Tagline</label>
+      <input type="text" id="storefront-tagline" value="${esc(settings.tagline)}" maxlength="200" />
+    </div>
+    <div class="field">
+      <label for="storefront-description">Description</label>
+      <textarea id="storefront-description" maxlength="2000">${esc(settings.description)}</textarea>
+    </div>
+    <div class="field">
+      <label for="storefront-theme-preset">Theme</label>
+      <select id="storefront-theme-preset">${presetOptions}</select>
+    </div>
+    <div class="field">
+      <label for="storefront-logo-file">Logo</label>
+      <input type="file" id="storefront-logo-file" accept="image/jpeg,image/png,image/webp" />
+      <button type="button" class="btn btn-sm" id="storefront-logo-upload">Upload logo</button>
+      <span id="storefront-logo-status" class="muted">${settings.logoUrl ? 'Current logo set' : 'No logo yet'}</span>
+    </div>
+    <div class="field">
+      <label for="storefront-hero-file">Hero image</label>
+      <input type="file" id="storefront-hero-file" accept="image/jpeg,image/png,image/webp" />
+      <button type="button" class="btn btn-sm" id="storefront-hero-upload">Upload hero image</button>
+      <span id="storefront-hero-status" class="muted">${settings.heroImageUrl ? 'Current hero image set' : 'No hero image yet'}</span>
+    </div>
+    <button class="btn btn-primary" id="storefront-save">Save storefront settings</button>
+    <span id="storefront-save-status" class="muted"></span>
+  `;
+  document.getElementById('storefront-save').addEventListener('click', async () => {
+    const status = document.getElementById('storefront-save-status');
+    try {
+      await api('/api/storefront-settings', {
+        method: 'PUT',
+        body: {
+          enabled: document.getElementById('storefront-enabled').checked,
+          tagline: document.getElementById('storefront-tagline').value,
+          description: document.getElementById('storefront-description').value,
+          themePreset: document.getElementById('storefront-theme-preset').value,
+        },
+      });
+      status.textContent = 'Saved';
+      showToast('Storefront settings saved');
+    } catch (err) {
+      status.textContent = `Error: ${err.message}`;
+    }
+  });
+  document.getElementById('storefront-logo-upload').addEventListener('click', () =>
+    uploadImage('/api/storefront-settings/logo', document.getElementById('storefront-logo-file'), document.getElementById('storefront-logo-status'))
+  );
+  document.getElementById('storefront-hero-upload').addEventListener('click', () =>
+    uploadImage('/api/storefront-settings/hero', document.getElementById('storefront-hero-file'), document.getElementById('storefront-hero-status'))
+  );
+}
+
 function renderEmployeeTable() {
   const tbody = document.getElementById('employee-table-body');
   if (!tbody) return;
@@ -4842,6 +4937,24 @@ function renderProductFormModal(holder, product) {
               <label for="f-supplier">Supplier</label>
               <input id="f-supplier" type="text" value="${esc(product?.supplier || '')}" />
             </div>
+            ${
+              isEdit
+                ? `
+            <div class="field">
+              <label><input type="checkbox" id="product-show-online" ${product.showOnline ? 'checked' : ''}> Show on storefront</label>
+            </div>
+            <div class="field">
+              <label for="product-description">Online description</label>
+              <textarea id="product-description" maxlength="2000">${esc(product.description)}</textarea>
+            </div>
+            <div class="field">
+              <label for="product-photo-file">Photo</label>
+              <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/webp" />
+              <button type="button" class="btn btn-sm" id="product-photo-upload">Upload photo</button>
+              <span id="product-photo-status" class="muted">${product.photoUrl ? 'Current photo set' : 'No photo yet'}</span>
+            </div>`
+                : ''
+            }
           </div>
           <div class="modal-footer">
             <button type="button" class="btn" id="modal-cancel">Cancel</button>
@@ -4852,6 +4965,11 @@ function renderProductFormModal(holder, product) {
     </div>
   `;
   wireModalDismiss();
+  if (isEdit) {
+    document.getElementById('product-photo-upload').addEventListener('click', () =>
+      uploadImage(`/api/products/${product.id}/photo`, document.getElementById('product-photo-file'), document.getElementById('product-photo-status'))
+    );
+  }
   document.getElementById('product-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {
@@ -4866,6 +4984,9 @@ function renderProductFormModal(holder, product) {
     };
     if (!isEdit) {
       body.stockQty = parseInt(document.getElementById('f-stock').value, 10) || 0;
+    } else {
+      body.showOnline = document.getElementById('product-show-online').checked;
+      body.description = document.getElementById('product-description').value;
     }
     try {
       if (isEdit) {

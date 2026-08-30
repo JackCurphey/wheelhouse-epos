@@ -35,10 +35,20 @@ import {
   CUSTOMER_SESSION_COOKIE,
   CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from './customer-auth.js';
+import {
+  getOrCreateStorefrontSettings,
+  updateStorefrontSettings,
+  serializeStorefrontSettings,
+  parseStorefrontSlugCandidate,
+  resolveStorefrontShop,
+  getStorefrontInfo,
+  listStorefrontProducts,
+} from './storefront.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
+const STOREFRONT_DIR = path.join(__dirname, '..', 'public-storefront');
 const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
 // Attachment bytes live here as flat files named by a random per-file token
 // (see workshop_job_attachments.storage_key) - never the customer's original
@@ -244,6 +254,9 @@ function serializeProduct(row) {
     active: !!row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    showOnline: !!row.show_online,
+    description: row.description || '',
+    photoUrl: row.photo_url || null,
   };
 }
 
@@ -408,14 +421,17 @@ route('POST', '/api/products', async (req, res) => {
     ? Math.trunc(Number(body.lowStockThreshold))
     : 3;
   const supplier = (body.supplier || '').trim();
+  const showOnline = Boolean(body.showOnline);
+  const description = (body.description || '').trim();
+  const photoUrl = body.photoUrl || null;
 
   try {
     const info = await db
       .prepare(
-        `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, low_stock_threshold, supplier, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, low_stock_threshold, supplier, show_online, description, photo_url, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(sku, barcode, name, category, price, cost, stockQty, lowStockThreshold, supplier, nowIso());
+      .run(sku, barcode, name, category, price, cost, stockQty, lowStockThreshold, supplier, showOnline, description, photoUrl, nowIso());
     if (stockQty !== 0) {
       await db.prepare(
         `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'intake', 'Initial stock')`
@@ -447,14 +463,17 @@ route('PUT', '/api/products/:id', async (req, res, params) => {
     body.lowStockThreshold !== undefined ? Math.trunc(Number(body.lowStockThreshold)) || 0 : existing.low_stock_threshold;
   const supplier = body.supplier !== undefined ? String(body.supplier).trim() : existing.supplier;
   const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
+  const showOnline = body.showOnline !== undefined ? Boolean(body.showOnline) : existing.show_online;
+  const description = body.description !== undefined ? String(body.description).trim() : existing.description;
+  const photoUrl = body.photoUrl !== undefined ? (body.photoUrl || null) : existing.photo_url;
 
   if (!name) return badRequest(res, 'Product name is required');
 
   try {
     await db.prepare(
-      `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, updated_at = ?
+      `UPDATE products SET sku = ?, barcode = ?, name = ?, category = ?, price = ?, cost = ?, low_stock_threshold = ?, supplier = ?, active = ?, show_online = ?, description = ?, photo_url = ?, updated_at = ?
        WHERE id = ?`
-    ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, nowIso(), id);
+    ).run(sku, barcode, name, category, price, cost, lowStockThreshold, supplier, active, showOnline, description, photoUrl, nowIso(), id);
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     sendJson(res, 200, serializeProduct(row));
   } catch (err) {
@@ -2232,6 +2251,114 @@ route('DELETE', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, pa
   sendJson(res, 200, { ok: true });
 });
 
+// ---------- Image uploads (product photos, shop logo, shop hero image) ----------
+// Same base64-in-a-JSON-body convention as workshop job attachments above,
+// and the same opaque-storage_key-on-disk approach - but the uploader can be
+// any of three different call sites (a product photo, the storefront logo,
+// or its hero image), so the actual read/validate/store logic lives in one
+// shared helper and each route just says what changed after the upload.
+
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+// Shared by product photo, logo, and hero image uploads - only the size
+// cap and what happens with the resulting URL differ between them.
+async function readUploadedImage(req, maxBytes) {
+  const maxBodyBytes = Math.ceil(maxBytes * 1.4);
+  let body;
+  try {
+    body = await readJsonBody(req, maxBodyBytes);
+  } catch (err) {
+    throw new ValidationError(err.message === 'Payload too large' ? `That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).` : 'Invalid request body');
+  }
+  if (!body.dataBase64) throw new ValidationError('No image data received');
+
+  const contentType = String(body.contentType || '').trim().toLowerCase();
+  if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
+    throw new ValidationError('Image must be JPEG, PNG, or WebP');
+  }
+
+  let buffer;
+  try {
+    buffer = Buffer.from(body.dataBase64, 'base64');
+  } catch (err) {
+    throw new ValidationError('Could not decode image data');
+  }
+  if (!buffer.length) throw new ValidationError('That image is empty');
+  if (buffer.length > maxBytes) throw new ValidationError(`That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).`);
+
+  const storageKey = randomBytes(24).toString('hex');
+  await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);
+  // uploaded_image_types has no `id` column (storage_key is its primary
+  // key), so this INSERT carries its own RETURNING clause - otherwise
+  // db.js's prepare() would auto-append `RETURNING id` (see needsReturningId
+  // there) and the query would fail with "column \"id\" does not exist".
+  await db.prepare('INSERT INTO uploaded_image_types (storage_key, content_type) VALUES (?, ?) RETURNING storage_key').run(storageKey, contentType);
+  return `/api/uploaded-images/${storageKey}`;
+}
+
+const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_SHOP_IMAGE_BYTES = 5 * 1024 * 1024;
+
+route('POST', '/api/products/:id/photo', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Product not found');
+
+  let photoUrl;
+  try {
+    photoUrl = await readUploadedImage(req, MAX_PRODUCT_PHOTO_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+
+  await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
+  const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  sendJson(res, 200, serializeProduct(row));
+});
+
+route('POST', '/api/storefront-settings/logo', async (req, res) => {
+  let logoUrl;
+  try {
+    logoUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ logoUrl })));
+});
+
+route('POST', '/api/storefront-settings/hero', async (req, res) => {
+  let heroImageUrl;
+  try {
+    heroImageUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ heroImageUrl })));
+});
+
+// Deliberately NOT registered via route() into the shared routes table -
+// every route reached that way requires a signed-in staff session (see the
+// dispatcher below), but these images (product photos, shop logo, hero
+// image) need to be viewable by anonymous public-storefront visitors whose
+// <img> tags carry no session cookie at all. It's served from its own
+// unauthenticated branch in the dispatcher instead. Safe to leave
+// unauthenticated: the storage key is a randomBytes(24) hex token (192 bits
+// of entropy) - unguessable, so knowing it is the only "access control" an
+// image URL like this needs, the same way most image/CDN URLs work.
+async function serveUploadedImage(req, res, key) {
+  const filePath = path.join(UPLOADS_DIR, key);
+  if (!filePath.startsWith(UPLOADS_DIR) || !existsSync(filePath)) {
+    return notFound(res, 'Image not found');
+  }
+  const typeRow = await pool.query('SELECT content_type FROM uploaded_image_types WHERE storage_key = $1', [key]);
+  const contentType = typeRow.rows[0]?.content_type || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' });
+  createReadStream(filePath).pipe(res);
+}
+
 // ---------- Employees ----------
 // A single roster shared by the Workshop (mechanics) and Front Desk
 // (cashiers): every mechanic is an employee, but not every employee is a
@@ -2459,6 +2586,28 @@ route('PUT', '/api/shop-theme', async (req, res) => {
   }
   await db.prepare('UPDATE shop_theme SET preset = ?, updated_at = ? WHERE id = ?').run(preset, nowIso(), existing.id);
   sendJson(res, 200, serializeShopTheme(await db.prepare('SELECT * FROM shop_theme LIMIT 1').get()));
+});
+
+// ---------- Storefront settings ----------
+// Public-storefront on/off switch plus its branding fields (tagline,
+// description, logo/hero images, theme preset) - same singleton-per-shop,
+// lazy-create-on-GET pattern as shop_theme above. Persistence and validation
+// live in storefront.js (Task 3); these two routes are thin HTTP glue over
+// it, same shape as the shop-theme pair above.
+
+route('GET', '/api/storefront-settings', async (req, res) => {
+  sendJson(res, 200, serializeStorefrontSettings(await getOrCreateStorefrontSettings()));
+});
+
+route('PUT', '/api/storefront-settings', async (req, res) => {
+  const body = await readJsonBody(req);
+  try {
+    const updated = await updateStorefrontSettings(body);
+    sendJson(res, 200, serializeStorefrontSettings(updated));
+  } catch (err) {
+    if (err.message.startsWith('Invalid theme preset')) return badRequest(res, err.message);
+    throw err;
+  }
 });
 
 // ---------- Print agents ----------
@@ -2900,9 +3049,78 @@ async function serveStatic(req, res, pathname, baseDir) {
   createReadStream(filePath).pipe(res);
 }
 
+async function handleStorefrontRequest(req, res, pathname, shop) {
+  if (pathname === '/api/storefront/info' && req.method === 'GET') {
+    return sendJson(res, 200, await getStorefrontInfo(shop));
+  }
+  if (pathname === '/api/storefront/products' && req.method === 'GET') {
+    return sendJson(res, 200, await listStorefrontProducts());
+  }
+  // On a subdomain-hosted storefront (<slug>.wheelhouseepos.com),
+  // parseStorefrontSlugCandidate matches every path on that host, not just
+  // storefront-specific ones - so requests for uploaded images and the
+  // booking portal have to be forwarded to their real handlers here instead
+  // of falling through to the storefront's own static bundle below (whose
+  // serveStatic fallback would otherwise return the storefront's index.html
+  // for these paths instead of the actual image or portal page). The caller
+  // (the request dispatcher) already wraps this whole call in a try/catch,
+  // so errors from these forwarded calls propagate up to that handler.
+  if (pathname.startsWith('/api/uploaded-images/')) {
+    return serveUploadedImage(req, res, pathname.slice('/api/uploaded-images/'.length));
+  }
+  if (pathname === '/book' || pathname.startsWith('/book/')) {
+    const relative = pathname.slice('/book'.length) || '/';
+    return serveStatic(req, res, relative, PORTAL_DIR);
+  }
+  const storePrefix = `/store/${shop.slug}`;
+  // The storefront's HTML references its CSS/JS with relative hrefs, which
+  // the browser resolves against the current URL's directory. Without a
+  // trailing slash here, "/store/<slug>" has no directory segment of its
+  // own, so the browser drops the slug entirely (e.g. requests
+  // "/store/storefront.css" instead of "/store/<slug>/storefront.css").
+  // Redirecting to the trailing-slash form fixes relative resolution for
+  // every asset without needing per-request URL rewriting.
+  if (pathname === storePrefix) {
+    const queryIndex = req.url.indexOf('?');
+    const search = queryIndex === -1 ? '' : req.url.slice(queryIndex);
+    res.writeHead(302, { Location: `${storePrefix}/${search}` });
+    return res.end();
+  }
+  const relative = pathname.startsWith(storePrefix) ? (pathname.slice(storePrefix.length) || '/') : pathname;
+  return serveStatic(req, res, relative, STOREFRONT_DIR);
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  if (parseStorefrontSlugCandidate(req, url)) {
+    const storefrontShop = await resolveStorefrontShop(req, url);
+    if (!storefrontShop) {
+      return notFound(res, 'Storefront not found');
+    }
+    try {
+      await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));
+    } catch (err) {
+      console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
+
+  // Deliberately handled here, before the generic /api/ branch below would
+  // otherwise swallow it and demand a staff session - these images need to
+  // be fetchable by anonymous public-storefront visitors (see
+  // serveUploadedImage's comment for why that's safe).
+  if (pathname.startsWith('/api/uploaded-images/')) {
+    try {
+      await serveUploadedImage(req, res, pathname.slice('/api/uploaded-images/'.length));
+    } catch (err) {
+      console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
 
   if (pathname.startsWith('/api/portal/')) {
     for (const r of routes) {
