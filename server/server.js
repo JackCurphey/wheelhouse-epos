@@ -44,6 +44,7 @@ import {
   getStorefrontInfo,
   listStorefrontProducts,
 } from './storefront.js';
+import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks } from './shopify.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -2608,6 +2609,45 @@ route('PUT', '/api/storefront-settings', async (req, res) => {
     if (err.message.startsWith('Invalid theme preset')) return badRequest(res, err.message);
     throw err;
   }
+});
+
+// ---------- Shopify connection ----------
+// Per-shop connection to a Shopify store via a custom-app Admin API token
+// (Task 3, shopify.js). These two routes are thin HTTP glue over
+// getShopifyConnection/saveShopifyConnection - same shape as the
+// storefront-settings pair above.
+
+route('GET', '/api/shopify/connection', async (req, res) => {
+  sendJson(res, 200, serializeShopifyConnection(await getShopifyConnection()));
+});
+
+route('POST', '/api/shopify/connection', async (req, res) => {
+  const body = await readJsonBody(req);
+  const shopDomain = String(body.shopDomain || '').trim();
+  const accessToken = String(body.accessToken || '').trim();
+  const storefrontApiToken = String(body.storefrontApiToken || '').trim();
+  if (!shopDomain || !accessToken || !storefrontApiToken) {
+    return badRequest(res, 'shopDomain, accessToken, and storefrontApiToken are all required');
+  }
+
+  let connection;
+  try {
+    connection = await saveShopifyConnection({ shopDomain, accessToken, storefrontApiToken });
+  } catch (err) {
+    return badRequest(res, `Could not connect to Shopify: ${err.message}`);
+  }
+
+  try {
+    await registerShopifyWebhooks(connection, connection.shop_id);
+  } catch (err) {
+    console.error('Failed to register Shopify webhooks', err);
+    return sendJson(res, 200, {
+      ...serializeShopifyConnection(connection),
+      warning: 'Connected, but webhook registration failed - online orders will not sync back to stock until this is retried.',
+    });
+  }
+
+  sendJson(res, 200, serializeShopifyConnection(connection));
 });
 
 // ---------- Print agents ----------
