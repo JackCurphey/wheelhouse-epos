@@ -882,6 +882,33 @@ test('pushInventoryLevel retries on failure, then marks the connection sync_erro
   }
 });
 
+test('pushInventoryLevel recovers the connection to connected after a prior sync_error', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const restoreConnect = stubFetch(async () => ({ ok: true, status: 200, json: async () => ({ locations: [{ id: 42 }] }) }));
+      try {
+        await saveShopifyConnection({ shopDomain: 'fake.myshopify.com', accessToken: 'tok', storefrontApiToken: 'store-tok' });
+      } finally {
+        restoreConnect();
+      }
+      await pool.query("UPDATE shopify_connections SET status = 'sync_error' WHERE shop_id = $1", [shop.id]);
+
+      const restore = stubFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+      try {
+        await pushInventoryLevel({ shopify_inventory_item_id: '888' }, 3);
+      } finally {
+        restore();
+      }
+
+      const { rows: [connection] } = await pool.query('SELECT status FROM shopify_connections WHERE shop_id = $1', [shop.id]);
+      assert.equal(connection.status, 'connected');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test('pushInventoryLevel is a no-op for a product with no Shopify mapping', async () => {
   const shop = await createTestShop();
   try {
@@ -916,7 +943,10 @@ Expected: FAIL — `pushInventoryLevel` doesn't exist.
 export async function pushInventoryLevel(product, quantity) {
   if (!product.shopify_inventory_item_id) return;
   const connection = await getShopifyConnection();
-  if (!connection || connection.status !== 'connected') return;
+  // 'sync_error' still attempts the push (it means "was connected, one
+  // sync failed" - not "give up permanently"). Only a connection that was
+  // never established at all is skipped.
+  if (!connection || connection.status === 'not_connected') return;
 
   try {
     await withRetry(() => shopifyAdminRequest(connection, 'POST', '/inventory_levels/set.json', {
@@ -924,6 +954,9 @@ export async function pushInventoryLevel(product, quantity) {
       inventory_item_id: product.shopify_inventory_item_id,
       available: quantity,
     }), 3, 50);
+    if (connection.status === 'sync_error') {
+      await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('connected', connection.id);
+    }
   } catch (err) {
     await prepare('UPDATE shopify_connections SET status = ? WHERE id = ?').run('sync_error', connection.id);
     throw err;
