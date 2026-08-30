@@ -3261,6 +3261,16 @@ async function serveStatic(req, res, pathname, baseDir) {
   if (!existsSync(filePath) || statSync(filePath).isDirectory()) {
     filePath = path.join(baseDir, 'index.html');
   }
+  // The fallback above assumes baseDir itself has an index.html - if the
+  // whole directory is missing (a deploy/packaging gap, e.g. a static
+  // bundle never copied into the image) that assumption fails too. Without
+  // this check, createReadStream() below fails asynchronously and - since
+  // nothing else on this stream listens for 'error' - Node's default
+  // behavior for an unhandled 'error' event is to crash the entire
+  // process, taking down every shop, not just this one request.
+  if (!existsSync(filePath)) {
+    return notFound(res);
+  }
   const ext = path.extname(filePath);
   const contentType = MIME[ext] || 'application/octet-stream';
   // Without an explicit header here, Cloudflare's edge falls back to its own
@@ -3270,7 +3280,15 @@ async function serveStatic(req, res, pathname, baseDir) {
   // cached JS/CSS bundle can silently outlive the code it's stale against.
   // Small, low-traffic internal tool - correctness beats any caching win.
   res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
-  createReadStream(filePath).pipe(res);
+  const stream = createReadStream(filePath);
+  // Defense in depth beyond the existsSync check above (e.g. a permissions
+  // error, or the file disappearing between the check and the read) -
+  // same reasoning: an unhandled stream 'error' event crashes the process.
+  stream.on('error', (err) => {
+    console.error('serveStatic stream error', err);
+    res.destroy();
+  });
+  stream.pipe(res);
 }
 
 async function handleStorefrontRequest(req, res, pathname, shop) {
