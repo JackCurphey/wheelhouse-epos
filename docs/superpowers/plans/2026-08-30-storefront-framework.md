@@ -654,7 +654,6 @@ git commit -m "feat: add tenant resolution and public catalog data layer"
 
 **Files:**
 - Modify: `server/server.js` (`serializeProduct`, `POST /api/products`, `PUT /api/products/:id`)
-- Create: `tests/product-storefront-fields.test.js`
 
 **Interfaces:**
 - Produces: `serializeProduct(row)` gains `showOnline`, `description`, `photoUrl` fields; `POST /api/products` and `PUT /api/products/:id` accept `showOnline` (boolean), `description` (string), `photoUrl` (string or null) in the request body, defaulting to `false` / `''` / `null` respectively when omitted on create, and left unchanged on update when omitted.
@@ -734,87 +733,126 @@ git commit -m "feat: add show-online, description, and photo fields to products"
 
 ---
 
-## Task 7: Product photo upload
+## Task 7: Image upload (product photos, shop logo, shop hero image)
 
 **Files:**
-- Modify: `server/server.js` (add a new route near the existing workshop-job-attachment upload route)
+- Modify: `server/server.js` (add new routes near the existing workshop-job-attachment upload route)
+- Create: `server/migrations/011_uploaded_image_types.sql`
 
 **Interfaces:**
-- Produces: `POST /api/products/:id/photo` (authenticated) — body `{ dataBase64, contentType }`, sets `products.photo_url` to a retrieval URL and returns the updated serialized product; `GET /api/product-photos/:key` — streams the stored image back.
+- Produces: `POST /api/products/:id/photo` (authenticated) — body `{ dataBase64, contentType }`, sets `products.photo_url` to a retrieval URL and returns the updated serialized product; `POST /api/storefront-settings/logo` and `POST /api/storefront-settings/hero` (authenticated) — same body shape, set `storefront_settings.logo_url`/`hero_image_url` respectively and return the updated serialized settings (via `updateStorefrontSettings` from Task 3); `GET /api/uploaded-images/:key` — streams any of the above back with the right content type.
 
-No automated test — mirrors the existing (untested) attachment-upload route's own precedent exactly, and image-handling logic is a thin, low-risk wrapper around `writeFile`/`createReadStream`. Verified manually.
+All three upload routes are thin wrappers around one shared helper, since they only differ in image size limit and where the resulting URL gets stored. No automated test — mirrors the existing (untested) attachment-upload route's own precedent exactly, and the image-handling logic itself is a thin, low-risk wrapper around `writeFile`/`createReadStream`. Verified manually.
 
-- [ ] **Step 1: Add the upload and retrieval routes**
+- [ ] **Step 1: Add the shared upload helper and the three routes**
 
 Add near the existing workshop-job-attachment routes (which already define `UPLOADS_DIR`, `randomBytes` import, and `MAX_ATTACHMENT_BYTES`-style constants to mirror):
 
 ```js
-const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
-const MAX_PRODUCT_PHOTO_BODY_BYTES = Math.ceil(MAX_PRODUCT_PHOTO_BYTES * 1.4);
-const ALLOWED_PRODUCT_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-route('POST', '/api/products/:id/photo', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Product not found');
-
+// Shared by product photo, logo, and hero image uploads - only the size
+// cap and what happens with the resulting URL differ between them.
+async function readUploadedImage(req, maxBytes) {
+  const maxBodyBytes = Math.ceil(maxBytes * 1.4);
   let body;
   try {
-    body = await readJsonBody(req, MAX_PRODUCT_PHOTO_BODY_BYTES);
+    body = await readJsonBody(req, maxBodyBytes);
   } catch (err) {
-    return badRequest(res, err.message === 'Payload too large' ? 'That image is too large (max 5MB).' : 'Invalid request body');
+    throw new ValidationError(err.message === 'Payload too large' ? `That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).` : 'Invalid request body');
   }
-  if (!body.dataBase64) return badRequest(res, 'No image data received');
+  if (!body.dataBase64) throw new ValidationError('No image data received');
 
   const contentType = String(body.contentType || '').trim().toLowerCase();
-  if (!ALLOWED_PRODUCT_PHOTO_TYPES.has(contentType)) {
-    return badRequest(res, 'Image must be JPEG, PNG, or WebP');
+  if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
+    throw new ValidationError('Image must be JPEG, PNG, or WebP');
   }
 
   let buffer;
   try {
     buffer = Buffer.from(body.dataBase64, 'base64');
   } catch (err) {
-    return badRequest(res, 'Could not decode image data');
+    throw new ValidationError('Could not decode image data');
   }
-  if (!buffer.length) return badRequest(res, 'That image is empty');
-  if (buffer.length > MAX_PRODUCT_PHOTO_BYTES) return badRequest(res, 'That image is too large (max 5MB).');
+  if (!buffer.length) throw new ValidationError('That image is empty');
+  if (buffer.length > maxBytes) throw new ValidationError(`That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).`);
 
   const storageKey = randomBytes(24).toString('hex');
   await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);
-  await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?')
-    .run(`/api/product-photos/${storageKey}`, nowIso(), id);
-  await db.prepare('INSERT INTO product_photo_types (storage_key, content_type) VALUES (?, ?)')
-    .run(storageKey, contentType);
+  await db.prepare('INSERT INTO uploaded_image_types (storage_key, content_type) VALUES (?, ?)').run(storageKey, contentType);
+  return `/api/uploaded-images/${storageKey}`;
+}
 
+const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_SHOP_IMAGE_BYTES = 5 * 1024 * 1024;
+
+route('POST', '/api/products/:id/photo', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Product not found');
+
+  let photoUrl;
+  try {
+    photoUrl = await readUploadedImage(req, MAX_PRODUCT_PHOTO_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+
+  await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
   const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
   sendJson(res, 200, serializeProduct(row));
 });
 
-route('GET', '/api/product-photos/:key', async (req, res, params) => {
+route('POST', '/api/storefront-settings/logo', async (req, res) => {
+  let logoUrl;
+  try {
+    logoUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ logoUrl })));
+});
+
+route('POST', '/api/storefront-settings/hero', async (req, res) => {
+  let heroImageUrl;
+  try {
+    heroImageUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ heroImageUrl })));
+});
+
+route('GET', '/api/uploaded-images/:key', async (req, res, params) => {
   const filePath = path.join(UPLOADS_DIR, params.key);
   if (!filePath.startsWith(UPLOADS_DIR) || !existsSync(filePath)) {
     return notFound(res, 'Image not found');
   }
-  const typeRow = await pool.query('SELECT content_type FROM product_photo_types WHERE storage_key = $1', [params.key]);
+  const typeRow = await pool.query('SELECT content_type FROM uploaded_image_types WHERE storage_key = $1', [params.key]);
   const contentType = typeRow.rows[0]?.content_type || 'application/octet-stream';
   res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' });
   createReadStream(filePath).pipe(res);
 });
 ```
 
+`ValidationError` is the existing error class already used elsewhere in `server.js` for exactly this "throw with a user-facing message" pattern (check its existing definition/import — do not redeclare it if it already exists in this file).
+
 This introduces one tiny new table to remember each stored image's content-type (uploads are stored as opaque hex-named files with no extension, same as attachments, so the type has to be recorded somewhere) — add it to a new migration:
 
 - [ ] **Step 2: Add the supporting migration**
 
 ```sql
--- server/migrations/011_product_photo_types.sql
+-- server/migrations/011_uploaded_image_types.sql
 
--- Uploaded product photos are stored under UPLOADS_DIR by an opaque random
--- key with no file extension (same convention as workshop job attachments),
--- so the retrieval route needs somewhere to remember each one's content
--- type to serve it back with the right header.
-CREATE TABLE product_photo_types (
+-- Uploaded images (product photos, shop logo, shop hero image) are stored
+-- under UPLOADS_DIR by an opaque random key with no file extension (same
+-- convention as workshop job attachments), so the retrieval route needs
+-- somewhere to remember each one's content type to serve it back with the
+-- right header.
+CREATE TABLE uploaded_image_types (
   storage_key TEXT PRIMARY KEY,
   content_type TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -838,16 +876,19 @@ base64 -w0 some-bike.jpg > /tmp/photo.b64
 curl -b cookies.txt -X POST -H "Content-Type: application/json" \
   -d "{\"dataBase64\":\"$(cat /tmp/photo.b64)\",\"contentType\":\"image/jpeg\"}" \
   http://localhost:4000/api/products/1/photo
-curl -o /tmp/downloaded.jpg http://localhost:4000/api/product-photos/<returned-key>
+curl -b cookies.txt -X POST -H "Content-Type: application/json" \
+  -d "{\"dataBase64\":\"$(cat /tmp/photo.b64)\",\"contentType\":\"image/jpeg\"}" \
+  http://localhost:4000/api/storefront-settings/logo
+curl -o /tmp/downloaded.jpg http://localhost:4000/api/uploaded-images/<returned-key>
 ```
 
-Expected: upload returns the updated product with `photoUrl` set; the retrieval `curl` downloads back a valid JPEG.
+Expected: both uploads return their respective updated resource with the new URL set; the retrieval `curl` downloads back a valid JPEG.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add server/server.js server/migrations/011_product_photo_types.sql
-git commit -m "feat: add product photo upload and retrieval"
+git add server/server.js server/migrations/011_uploaded_image_types.sql
+git commit -m "feat: add product photo and shop logo/hero image upload"
 ```
 
 ---
@@ -1104,22 +1145,60 @@ git commit -m "feat: add storefront frontend and request routing"
 - Modify: `public/app.js`
 
 **Interfaces:**
-- Consumes: `GET`/`PUT /api/storefront-settings` (Task 4), `showOnline`/`description`/`photoUrl` fields on `PUT /api/products/:id` (Task 6), `POST /api/products/:id/photo` (Task 7), the existing `api()` helper, `esc()` helper, and `THEME_PRESETS`/preset-picker markup pattern already used for shop theming.
+- Consumes: `GET`/`PUT /api/storefront-settings` (Task 4), `POST /api/storefront-settings/logo`, `POST /api/storefront-settings/hero`, `POST /api/products/:id/photo` (all Task 7), `showOnline`/`description`/`photoUrl` fields on `PUT /api/products/:id` (Task 6), the existing `api()` helper, `esc()` helper, and the `THEME_PRESETS` constant already used for shop theming (reuse its keys as the preset picker's options — do not hardcode a second list of preset names).
 
 No automated test — this is UI work in a codebase with no existing frontend test coverage, consistent with the rest of `public/app.js`. Verified manually in the browser.
 
-- [ ] **Step 1: Add a "Storefront" settings section**
+- [ ] **Step 1: Add a shared file-to-base64 helper**
+
+Add near the existing `api()` helper — every upload UI in this task needs it:
+
+```js
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImage(endpoint, fileInput, statusEl) {
+  const file = fileInput.files[0];
+  if (!file) return;
+  statusEl.textContent = 'Uploading…';
+  try {
+    const dataBase64 = await readFileAsBase64(file);
+    await api(endpoint, { method: 'POST', body: { dataBase64, contentType: file.type } });
+    statusEl.textContent = 'Uploaded';
+  } catch (err) {
+    statusEl.textContent = `Error: ${err.message}`;
+  }
+}
+```
+
+- [ ] **Step 2: Add a "Storefront" settings section**
 
 Search `public/app.js` for the existing shop-theme preset-picker rendering code (around the `THEME_PRESETS` usage described in the design research, roughly line 4332) — the settings/admin screen that renders it. Add a new self-contained section alongside it:
 
 ```js
 async function renderStorefrontSettingsSection(container) {
   const settings = await api('/api/storefront-settings');
+  const presetOptions = Object.keys(THEME_PRESETS)
+    .map((key) => `<option value="${esc(key)}" ${settings.themePreset === key ? 'selected' : ''}>${esc(THEME_PRESETS[key].name)}</option>`)
+    .join('');
   container.innerHTML = `
     <h3>Storefront</h3>
     <label><input type="checkbox" id="storefront-enabled" ${settings.enabled ? 'checked' : ''}> Enable public storefront</label>
     <label>Tagline <input type="text" id="storefront-tagline" value="${esc(settings.tagline)}" maxlength="200"></label>
     <label>Description <textarea id="storefront-description" maxlength="2000">${esc(settings.description)}</textarea></label>
+    <label>Theme <select id="storefront-theme-preset">${presetOptions}</select></label>
+    <label>Logo <input type="file" id="storefront-logo-file" accept="image/jpeg,image/png,image/webp"></label>
+    <button id="storefront-logo-upload">Upload logo</button>
+    <span id="storefront-logo-status">${settings.logoUrl ? 'Current logo set' : 'No logo yet'}</span>
+    <label>Hero image <input type="file" id="storefront-hero-file" accept="image/jpeg,image/png,image/webp"></label>
+    <button id="storefront-hero-upload">Upload hero image</button>
+    <span id="storefront-hero-status">${settings.heroImageUrl ? 'Current hero image set' : 'No hero image yet'}</span>
     <button id="storefront-save">Save storefront settings</button>
     <span id="storefront-save-status"></span>
   `;
@@ -1132,6 +1211,7 @@ async function renderStorefrontSettingsSection(container) {
           enabled: document.getElementById('storefront-enabled').checked,
           tagline: document.getElementById('storefront-tagline').value,
           description: document.getElementById('storefront-description').value,
+          themePreset: document.getElementById('storefront-theme-preset').value,
         },
       });
       status.textContent = 'Saved';
@@ -1139,18 +1219,35 @@ async function renderStorefrontSettingsSection(container) {
       status.textContent = `Error: ${err.message}`;
     }
   });
+  document.getElementById('storefront-logo-upload').addEventListener('click', () =>
+    uploadImage('/api/storefront-settings/logo', document.getElementById('storefront-logo-file'), document.getElementById('storefront-logo-status'))
+  );
+  document.getElementById('storefront-hero-upload').addEventListener('click', () =>
+    uploadImage('/api/storefront-settings/hero', document.getElementById('storefront-hero-file'), document.getElementById('storefront-hero-status'))
+  );
 }
 ```
 
 Call `renderStorefrontSettingsSection(someContainerElement)` from wherever the existing settings screen assembles its sections (find the function that renders the theme preset picker and call this alongside it, passing a new container element placed in that screen's template).
 
-- [ ] **Step 2: Add per-product fields to the inventory edit form**
+- [ ] **Step 3: Add per-product fields to the inventory edit form**
 
 Find the inventory product edit form's template/render function (renders fields like SKU, category, price, cost, supplier) and add:
 
 ```js
     <label><input type="checkbox" id="product-show-online" ${product.showOnline ? 'checked' : ''}> Show on storefront</label>
     <label>Online description <textarea id="product-description" maxlength="2000">${esc(product.description)}</textarea></label>
+    <label>Photo <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/webp"></label>
+    <button type="button" id="product-photo-upload">Upload photo</button>
+    <span id="product-photo-status">${product.photoUrl ? 'Current photo set' : 'No photo yet'}</span>
+```
+
+Wire the upload button (this needs the product's `id`, already in scope wherever this form is rendered for an existing product):
+
+```js
+    document.getElementById('product-photo-upload').addEventListener('click', () =>
+      uploadImage(`/api/products/${product.id}/photo`, document.getElementById('product-photo-file'), document.getElementById('product-photo-status'))
+    );
 ```
 
 And in the form's save handler (wherever it builds the body for `PUT /api/products/:id`), add:
@@ -1160,21 +1257,21 @@ And in the form's save handler (wherever it builds the body for `PUT /api/produc
     description: document.getElementById('product-description').value,
 ```
 
-- [ ] **Step 3: Verify manually**
+- [ ] **Step 4: Verify manually**
 
 ```bash
 npm start
 ```
 
-Log in as a shop, open the settings screen, toggle "Enable public storefront" on, save, then open an existing product, check "Show on storefront", save, and reload `/store/<slug>` to confirm the change is reflected.
+Log in as a shop, open the settings screen, toggle "Enable public storefront" on, pick a non-default theme, upload a logo and hero image, save, then open an existing product, check "Show on storefront", upload a product photo, save, and reload `/store/<slug>` to confirm every change is reflected (theme colors, logo, hero image, product photo).
 
-Expected: toggling and saving both work with no console errors; the storefront reflects the change after reload.
+Expected: all of the above work with no console errors; the storefront reflects every change after reload.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add public/app.js
-git commit -m "feat: add storefront settings and product visibility UI"
+git commit -m "feat: add storefront settings, theming, image uploads, and product visibility UI"
 ```
 
 ---
