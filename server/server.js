@@ -45,6 +45,15 @@ import {
   listStorefrontProducts,
 } from './storefront.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
+import {
+  getShopifyConnectionByShopId,
+  decryptSecret,
+  verifyShopifyWebhookHmac,
+  matchOrderLineItemsToProducts,
+  matchRefundLineItemsToProducts,
+  claimShopifyEvent,
+  markShopifyEventError,
+} from './shopify.js';
 
 async function syncProductWithShopifyIfNeeded(previousShowOnline, updatedProductRow) {
   try {
@@ -242,6 +251,24 @@ async function readJsonBody(req, maxBytes = 2_000_000) {
         reject(err);
       }
     });
+    req.on('error', reject);
+  });
+}
+
+function readRawBody(req, maxBytes = 2_000_000) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    let bytes = 0;
+    req.on('data', (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maxBytes) {
+        reject(new Error('Payload too large'));
+        req.destroy();
+        return;
+      }
+      data += chunk;
+    });
+    req.on('end', () => resolve(data));
     req.on('error', reject);
   });
 }
@@ -1515,6 +1542,55 @@ async function createSale({ customerId, cashierId, items, discount, cashAmount, 
     await db.exec('ROLLBACK');
     throw err;
   }
+}
+
+async function processShopifyOrderWebhook(shopId, order) {
+  return runWithShop(shopId, async () => {
+    const claimed = await claimShopifyEvent(order.id, 'order');
+    if (!claimed) return;
+
+    const items = await matchOrderLineItemsToProducts(order);
+    if (items.length === 0) return;
+
+    try {
+      await createSale({
+        customerId: null,
+        cashierId: null,
+        items,
+        discount: 0,
+        cashAmount: 0,
+        cardAmount: 0,
+        cashTendered: null,
+        payments: [{ tenderType: 'Shopify', amount: items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0) }],
+        note: `Shopify order #${order.order_number || order.id}`,
+      });
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        await markShopifyEventError(order.id, 'order', err.message);
+        return;
+      }
+      throw err;
+    }
+  });
+}
+
+async function processShopifyRefundWebhook(shopId, refund) {
+  return runWithShop(shopId, async () => {
+    const claimed = await claimShopifyEvent(refund.id, 'refund');
+    if (!claimed) return;
+
+    const items = await matchRefundLineItemsToProducts(refund);
+    for (const { product, qty } of items) {
+      const newQty = product.stock_qty + qty;
+      await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
+      await db.prepare(
+        `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'return', ?)`
+      ).run(product.id, qty, `Shopify refund #${refund.id}`);
+      if (product.shopify_inventory_item_id) {
+        await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      }
+    }
+  });
 }
 
 route('POST', '/api/sales', async (req, res) => {
@@ -3170,6 +3246,57 @@ const server = createServer(async (req, res) => {
       await runWithShop(storefrontShop.id, () => handleStorefrontRequest(req, res, pathname, storefrontShop));
     } catch (err) {
       console.error(err);
+      sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
+
+  if (pathname.startsWith('/webhooks/shopify/')) {
+    const match = pathname.match(/^\/webhooks\/shopify\/(\d+)\/(orders|refunds)$/);
+    if (!match) return notFound(res, 'Unknown webhook route');
+    const shopId = Number(match[1]);
+    const kind = match[2];
+
+    let rawBody;
+    try {
+      rawBody = await readRawBody(req);
+    } catch (err) {
+      return badRequest(res, 'Invalid request body');
+    }
+
+    // shopify_connections has FORCE ROW LEVEL SECURITY, so it can only be
+    // read correctly from inside a runWithShop context for the exact shop
+    // being queried (the storefront framework plan's final review found
+    // this same bug class in resolveStorefrontShop - a bare pool/prepare
+    // call against an RLS-protected table outside runWithShop either
+    // throws on a connection that's never set app.current_shop_id, or
+    // reads a stale different shop's session value). Unlike that case,
+    // shopId is already known here from the URL, so there's no chicken-
+    // and-egg problem - just enter the context immediately.
+    const connection = await runWithShop(shopId, () => getShopifyConnectionByShopId(shopId));
+    if (!connection) return notFound(res, 'Unknown shop');
+
+    const hmacHeader = req.headers['x-shopify-hmac-sha256'];
+    if (!verifyShopifyWebhookHmac(rawBody, hmacHeader, decryptSecret(connection.webhook_secret))) {
+      return sendJson(res, 401, { error: 'Invalid signature' });
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (err) {
+      return badRequest(res, 'Invalid JSON body');
+    }
+
+    try {
+      if (kind === 'orders') {
+        await processShopifyOrderWebhook(shopId, payload);
+      } else {
+        await processShopifyRefundWebhook(shopId, payload);
+      }
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      console.error('Shopify webhook processing failed', err);
       sendJson(res, 500, { error: 'Internal server error' });
     }
     return;
