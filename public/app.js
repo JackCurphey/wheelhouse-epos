@@ -4385,8 +4385,13 @@ async function renderEditStorefront() {
     <div class="panel" style="margin-top:14px;">
       <div class="panel-body" id="storefront-settings-section"></div>
     </div>
+    <div class="panel" style="margin-top:14px;">
+      <div class="panel-header"><h2>Shopify</h2></div>
+      <div class="panel-body" id="shopify-connection-section"></div>
+    </div>
   `;
   await renderStorefrontSettingsSection(document.getElementById('storefront-settings-section'));
+  await renderShopifyConnectionSection(document.getElementById('shopify-connection-section'));
 }
 
 async function renderStorefrontSettingsSection(container) {
@@ -4450,6 +4455,55 @@ async function renderStorefrontSettingsSection(container) {
   document.getElementById('storefront-hero-upload').addEventListener('click', () =>
     uploadImage('/api/storefront-settings/hero', document.getElementById('storefront-hero-file'), document.getElementById('storefront-hero-status'))
   );
+}
+
+// ================= SHOPIFY CONNECTION =================
+
+async function renderShopifyConnectionSection(container) {
+  const connection = await api('/api/shopify/connection');
+  container.innerHTML = connection.connected
+    ? `
+      <p class="muted" style="margin:0 0 14px;">Sync products and inventory with a connected Shopify store.</p>
+      <p>Connected to <strong>${esc(connection.shopDomain)}</strong> (status: ${esc(connection.status)})</p>
+    `
+    : `
+      <p class="muted" style="margin:0 0 14px;">Connect a Shopify store to sync products and inventory. You'll need a custom app's Admin API access token and Storefront API token from your Shopify admin.</p>
+      <div class="field">
+        <label for="shopify-domain">Shopify store domain</label>
+        <input type="text" id="shopify-domain" placeholder="your-shop.myshopify.com" />
+      </div>
+      <div class="field">
+        <label for="shopify-access-token">Admin API access token</label>
+        <input type="password" id="shopify-access-token" />
+      </div>
+      <div class="field">
+        <label for="shopify-storefront-token">Storefront API token</label>
+        <input type="password" id="shopify-storefront-token" />
+      </div>
+      <button class="btn btn-primary" id="shopify-connect">Connect Shopify</button>
+      <span id="shopify-connect-status" class="muted"></span>
+    `;
+  const connectBtn = document.getElementById('shopify-connect');
+  if (connectBtn) {
+    connectBtn.addEventListener('click', async () => {
+      const status = document.getElementById('shopify-connect-status');
+      status.textContent = 'Connecting…';
+      try {
+        await api('/api/shopify/connection', {
+          method: 'POST',
+          body: {
+            shopDomain: document.getElementById('shopify-domain').value,
+            accessToken: document.getElementById('shopify-access-token').value,
+            storefrontApiToken: document.getElementById('shopify-storefront-token').value,
+          },
+        });
+        showToast('Shopify store connected');
+        await renderShopifyConnectionSection(container);
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+      }
+    });
+  }
 }
 
 function renderEmployeeTable() {
