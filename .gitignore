@@ -7,3 +7,7 @@ data/*.db-wal
 data/*.db.bak*
 data/shops/
 _delete_me_test_artifacts/
+
+# Agent working memory - volatile per-project state, not part of the repo.
+# Committed specs and plans live in docs/, not here.
+.agents/
