@@ -87,3 +87,139 @@ test('loadDocumentLine rejects a valid product with qty 0', async () => {
     await deleteTestShop(shop.id);
   }
 });
+
+test('loadDocumentLine accepts a labour line with a typed price', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const line = await loadDocumentLine(
+        { lineType: 'labour', name: 'Rear hub service', unitPrice: 45, minutes: 45 },
+        { checkStock: true }
+      );
+      assert.equal(line.lineType, 'labour');
+      assert.equal(line.product, null);
+      assert.equal(line.name, 'Rear hub service');
+      assert.equal(Number(line.unitPrice), 45);
+      assert.equal(line.qty, 1);
+      assert.equal(Number(line.lineTotal), 45);
+      assert.equal(line.minutes, 45);
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a labour line snapshots its service, and repricing the service later does not change it', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const svc = await prepare(
+        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Standard service', 55.00, 60)`
+      ).run();
+      const line = await loadDocumentLine(
+        { lineType: 'labour', serviceId: svc.lastInsertRowid },
+        { checkStock: true }
+      );
+      assert.equal(line.name, 'Standard service');
+      assert.equal(Number(line.unitPrice), 55);
+      assert.equal(line.minutes, 60);
+
+      await prepare('UPDATE workshop_services SET price = 65.00 WHERE id = ?').run(svc.lastInsertRowid);
+      // The already-loaded line keeps the price it was created with.
+      assert.equal(Number(line.unitPrice), 55);
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a labour line needs a description and rejects a negative price', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      await assert.rejects(
+        () => loadDocumentLine({ lineType: 'labour', unitPrice: 10 }, { checkStock: true }),
+        /needs a description/
+      );
+      await assert.rejects(
+        () => loadDocumentLine({ lineType: 'labour', name: 'X', unitPrice: -1 }, { checkStock: true }),
+        /price of zero or more/
+      );
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a shop cannot see another shop\'s labour lines', async () => {
+  const shopA = await createTestShop();
+  const shopB = await createTestShop();
+  try {
+    await runWithShop(shopA.id, async () => {
+      const doc = await prepare(
+        `INSERT INTO sale_documents (kind, subtotal, discount, total) VALUES ('order', 45, 0, 45)`
+      ).run();
+      await prepare(
+        `INSERT INTO sale_document_items (document_id, name, unit_price, qty, line_total, line_type, minutes)
+         VALUES (?, 'A only labour', 45.00, 1, 45.00, 'labour', 45)`
+      ).run(doc.lastInsertRowid);
+    });
+    await runWithShop(shopB.id, async () => {
+      const rows = await prepare("SELECT * FROM sale_document_items WHERE line_type = 'labour'").all();
+      assert.equal(rows.length, 0, 'shop B must not see shop A labour lines');
+    });
+  } finally {
+    await deleteTestShop(shopA.id);
+    await deleteTestShop(shopB.id);
+  }
+});
+
+// The two tests above only prove loadDocumentLine snapshots the price into
+// the object it returns - they never touch storage. A regression where the
+// INSERT/SELECT path re-joined workshop_services on service_id and served
+// its *current* price instead of the stored unit_price would sail past both
+// of them. This test goes through the actual persisted row: insert a labour
+// line (via loadDocumentLine, same as the routes do), reprice the service,
+// then re-read the row from sale_document_items directly and confirm its
+// stored unit_price - the value serializeSaleDocument will hand to the
+// client - is untouched by the reprice.
+test('a persisted labour line keeps its stored price after the service is repriced', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const svc = await prepare(
+        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Standard service', 55.00, 60)`
+      ).run();
+      const line = await loadDocumentLine({ lineType: 'labour', serviceId: svc.lastInsertRowid }, { checkStock: true });
+
+      const doc = await prepare(
+        `INSERT INTO sale_documents (kind, subtotal, discount, total) VALUES ('order', ?, 0, ?)`
+      ).run(line.lineTotal, line.lineTotal);
+      await prepare(
+        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        doc.lastInsertRowid,
+        null,
+        line.name,
+        line.sku,
+        line.unitPrice,
+        line.qty,
+        line.lineTotal,
+        line.lineType,
+        line.serviceId,
+        line.minutes
+      );
+
+      await prepare('UPDATE workshop_services SET price = 65.00 WHERE id = ?').run(svc.lastInsertRowid);
+
+      const stored = await prepare(
+        'SELECT * FROM sale_document_items WHERE document_id = ?'
+      ).all(doc.lastInsertRowid);
+      assert.equal(stored.length, 1);
+      assert.equal(Number(stored[0].unit_price), 55, 'stored line price must not follow a later reprice');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});

@@ -1452,6 +1452,51 @@ async function resolveGroupDiscount(customerId, subtotal) {
 // checkStock is true only at tender - a quote or an open order may reference
 // something that is currently out of stock.
 export async function loadDocumentLine(it, { checkStock }) {
+  // A labour line is a typed price with an optional recorded duration. It
+  // carries no product, so nothing downstream may treat it as stock.
+  if (it.lineType === 'labour') {
+    let name = String(it.name || '').trim();
+    let unitPrice = it.unitPrice;
+    let minutes = it.minutes;
+    let serviceId = null;
+
+    // Picking a saved service snapshots its name, price and duration onto the
+    // line. Repricing the service later must never rewrite a past job, which
+    // is why these are copied rather than read through service_id.
+    if (it.serviceId !== undefined && it.serviceId !== null && it.serviceId !== '') {
+      serviceId = Number(it.serviceId);
+      const service = await db.prepare('SELECT * FROM workshop_services WHERE id = ? AND active = 1').get(serviceId);
+      if (!service) throw new ValidationError(`Service ${serviceId} not found or inactive`);
+      if (!name) name = service.name;
+      if (unitPrice === undefined || unitPrice === null || unitPrice === '') unitPrice = service.price;
+      if (minutes === undefined || minutes === null || minutes === '') minutes = service.minutes;
+    }
+
+    if (!name) throw new ValidationError('A labour line needs a description');
+    const price = Number(unitPrice);
+    if (!Number.isFinite(price) || price < 0) {
+      throw new ValidationError('A labour line needs a price of zero or more');
+    }
+    let mins = null;
+    if (minutes !== undefined && minutes !== null && minutes !== '') {
+      mins = Math.trunc(Number(minutes));
+      if (!Number.isFinite(mins) || mins <= 0) {
+        throw new ValidationError('Duration must be a positive number of minutes');
+      }
+    }
+    return {
+      lineType: 'labour',
+      product: null,
+      serviceId,
+      name,
+      sku: null,
+      qty: 1,
+      unitPrice: price,
+      minutes: mins,
+      lineTotal: price,
+    };
+  }
+
   const productId = Number(it.productId);
   const qty = Math.trunc(Number(it.qty));
   if (!productId || !Number.isFinite(qty) || qty <= 0) {
@@ -1718,6 +1763,9 @@ function serializeSaleDocument(row, items) {
           unitPrice: it.unit_price,
           qty: it.qty,
           lineTotal: it.line_total,
+          lineType: it.line_type,
+          serviceId: it.service_id,
+          minutes: it.minutes,
         }))
       : undefined,
   };
@@ -1795,9 +1843,20 @@ route('POST', '/api/sale-documents', async (req, res) => {
     const docId = info.lastInsertRowid;
     for (const line of loaded) {
       await db.prepare(
-        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(docId, line.product.id, line.name, line.sku, line.unitPrice, line.qty, line.lineTotal);
+        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        docId,
+        line.product ? line.product.id : null,
+        line.name,
+        line.sku,
+        line.unitPrice,
+        line.qty,
+        line.lineTotal,
+        line.lineType,
+        line.serviceId,
+        line.minutes
+      );
     }
     await db.exec('COMMIT');
     const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(docId);
@@ -1883,9 +1942,20 @@ route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
     await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
     for (const line of loaded) {
       await db.prepare(
-        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(id, line.product.id, line.name, line.sku, line.unitPrice, line.qty, line.lineTotal);
+        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        id,
+        line.product ? line.product.id : null,
+        line.name,
+        line.sku,
+        line.unitPrice,
+        line.qty,
+        line.lineTotal,
+        line.lineType,
+        line.serviceId,
+        line.minutes
+      );
     }
     await db.prepare('UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, updated_at = ? WHERE id = ?').run(
       subtotal,
