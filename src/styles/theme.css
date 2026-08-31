@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Wheelhouse design tokens for the React/Tailwind bundle.
+
+   Every value below is lifted from public/styles.css `:root` so the React
+   surfaces render identically to the vanilla-JS app. This file does NOT
+   replace public/styles.css - the two coexist while screens are ported one at
+   a time.
+
+   ===========================================================================
+   THE RULE THAT MATTERS MOST: --accent, --accent-dark and --modal-bg are
+   RUNTIME variables. public/app.js applyShopTheme() (~line 6900) calls
+   document.documentElement.style.setProperty() for those three, per shop,
+   from THEME_PRESETS (forest / ocean / sunset / slate / plum). Tailwind
+   compiles at build time and can never know a shop's colours, so these three
+   are declared as ordinary CSS custom properties in the `:root` block below,
+   and every Tailwind token that depends on them is mapped through
+   `@theme inline` so the generated utility emits `var(--accent)` at the point
+   of use rather than baking a literal. Move any of these three into a plain
+   `@theme` block as a hex literal and per-shop theming silently dies for
+   every shop.
+   ------------------------------------------------------------------------ */
+
+/* shadcn/Tailwind 4 class-based dark mode. */
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ---- Runtime-overridden (see the note above). Defaults = 'forest'. ---- */
+  --accent: #1f6f5c;
+  --accent-dark: #164f42;
+  --modal-bg: #DDF7DF;
+
+  /* ---- Wheelhouse surfaces / text (from public/styles.css) ---- */
+  --wh-bg: #f4f5f3;
+  --wh-panel: #ffffff;
+  --wh-ink: #1c231f;
+  --wh-muted: #6b7570;
+  --wh-border: #e0e2dd;
+
+  /* ---- Brand ----
+     DECISION D-001: --brand is #b8460f here, NOT the #d9581e still in
+     public/styles.css. #d9581e contrasts 3.91:1 against white and fails
+     WCAG AA; #b8460f measures 5.36:1. public/styles.css already uses
+     #b8460f as --brand-dark, so brand and brand-dark now hold the same
+     value - no darker tone is invented here. */
+  --wh-brand: #b8460f;
+  --wh-brand-dark: #b8460f;
+
+  /* ---- Feedback ---- */
+  /* Hover surfaces. Exact values lifted from public/styles.css so the React
+     build and the vanilla app hover identically - see .btn:hover (179),
+     .btn-danger:hover (189) and table.data-table tr:hover td (676). */
+  --wh-hover: #f2f3f1;
+  --wh-hover-subtle: #fafaf8;
+  --wh-danger-hover: #a5301f;
+  --wh-danger: #c0392b;
+  --wh-danger-bg: #fdecea;
+  --wh-warn-bg: #fff7e0;
+  --wh-warn-ink: #8a6100;
+  --wh-ok-bg: #e8f5ec;
+
+  /* ---- Job status chips (bg / border / ink triples) ---- */
+  --wh-status-pending-bg: #f1e8fb;
+  --wh-status-pending-border: #6a3ea1;
+  --wh-status-pending-ink: #6a3ea1;
+  --wh-status-scheduled-bg: #eaf1fb;
+  --wh-status-scheduled-border: #4d7fc4;
+  --wh-status-scheduled-ink: #2c5289;
+  --wh-status-waiting-parts-bg: #fff0e3;
+  --wh-status-waiting-parts-border: #d9581e;
+  --wh-status-waiting-parts-ink: #a8420f;
+  --wh-status-on-hold-bg: #fff7e0;
+  --wh-status-on-hold-border: #c99a1e;
+  --wh-status-on-hold-ink: #8a6100;
+  --wh-status-complete-bg: #e8f5ec;
+  --wh-status-complete-border: #1f6f5c;
+  --wh-status-complete-ink: #164f42;
+  /* Paid-and-collected: the same 'complete' status, visually receding. */
+  --wh-status-complete-paid-bg: #f5faf6;
+  --wh-status-complete-paid-border: #a9cdbf;
+  --wh-status-complete-paid-ink: #6b9484;
+
+  /* ---- shadcn contract, mapped onto the Wheelhouse palette ----
+     Light mode is deliberately identical to today's app. Names shadcn
+     expects but Wheelhouse has no direct equivalent for are marked NEW. */
+  --background: var(--wh-bg);
+  --foreground: var(--wh-ink);
+  --card: var(--wh-panel);
+  --card-foreground: var(--wh-ink);
+  --popover: var(--wh-panel);
+  --popover-foreground: var(--wh-ink);
+  --primary: var(--accent);              /* runtime, per shop */
+  --primary-foreground: var(--wh-panel);
+  --secondary: var(--wh-bg);             /* NEW: no Wheelhouse 'secondary' */
+  --secondary-foreground: var(--wh-ink);
+  --muted: var(--wh-bg);                 /* NEW: surface for muted text */
+  --muted-foreground: var(--wh-muted);
+  --accent-foreground: var(--wh-panel);  /* text on the accent fill */
+  --destructive: var(--wh-danger);
+  --destructive-foreground: var(--wh-panel);
+  --border: var(--wh-border);
+  --input: var(--wh-border);
+  --ring: var(--accent);                 /* runtime: focus rings follow shop */
+  --sidebar: var(--accent-dark);         /* runtime: matches the top bar */
+  --sidebar-foreground: var(--wh-panel);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--wh-panel);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--wh-panel);
+  --sidebar-border: var(--wh-border);
+  --sidebar-ring: var(--accent);
+
+  /* Geometry, straight from public/styles.css. */
+  --radius: 10px;
+  --wh-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark mode. The staff app has no dark palette today, so these are NEW.
+   They reuse existing Wheelhouse values with their roles swapped (ink becomes
+   the surface, bg becomes the text) rather than introducing a second hue
+   family; only --wh-muted and --wh-border needed genuinely new values.
+   The three runtime variables are intentionally NOT redefined here - the
+   shop's chosen scheme applies in both modes. */
+.dark {
+  --wh-bg: #131715;
+  --wh-panel: #1c231f;
+  --wh-ink: #f4f5f3;
+  --wh-muted: #9aa5a0;
+  --wh-border: #2c3531;
+}
+
+/* `inline` is what keeps runtime theming alive: the utility class emits
+   var(--primary) / var(--accent) etc. at the use site, so a later
+   style.setProperty() on <html> - or the .dark block above - still wins. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-modal-bg: var(--modal-bg);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Wheelhouse-named aliases, so ported markup can keep its vocabulary. */
+  --color-wh-bg: var(--wh-bg);
+  --color-wh-panel: var(--wh-panel);
+  --color-wh-ink: var(--wh-ink);
+  --color-wh-muted: var(--wh-muted);
+  --color-wh-border: var(--wh-border);
+  --color-wh-brand: var(--wh-brand);
+  --color-wh-brand-dark: var(--wh-brand-dark);
+  --color-wh-danger: var(--wh-danger);
+  --color-wh-danger-bg: var(--wh-danger-bg);
+  --color-wh-warn-bg: var(--wh-warn-bg);
+  --color-wh-warn-ink: var(--wh-warn-ink);
+  --color-wh-ok-bg: var(--wh-ok-bg);
+
+  --color-status-pending-bg: var(--wh-status-pending-bg);
+  --color-status-pending-border: var(--wh-status-pending-border);
+  --color-status-pending-ink: var(--wh-status-pending-ink);
+  --color-status-scheduled-bg: var(--wh-status-scheduled-bg);
+  --color-status-scheduled-border: var(--wh-status-scheduled-border);
+  --color-status-scheduled-ink: var(--wh-status-scheduled-ink);
+  --color-status-waiting-parts-bg: var(--wh-status-waiting-parts-bg);
+  --color-status-waiting-parts-border: var(--wh-status-waiting-parts-border);
+  --color-status-waiting-parts-ink: var(--wh-status-waiting-parts-ink);
+  --color-status-on-hold-bg: var(--wh-status-on-hold-bg);
+  --color-status-on-hold-border: var(--wh-status-on-hold-border);
+  --color-status-on-hold-ink: var(--wh-status-on-hold-ink);
+  --color-status-complete-bg: var(--wh-status-complete-bg);
+  --color-status-complete-border: var(--wh-status-complete-border);
+  --color-status-complete-ink: var(--wh-status-complete-ink);
+  --color-status-complete-paid-bg: var(--wh-status-complete-paid-bg);
+  --color-status-complete-paid-border: var(--wh-status-complete-paid-border);
+  --color-status-complete-paid-ink: var(--wh-status-complete-paid-ink);
+
+  /* shadcn's radius scale, all derived from the single 10px --radius. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-wheelhouse: var(--wh-shadow);
+
+  /* Matches the html/body stack in public/styles.css. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}

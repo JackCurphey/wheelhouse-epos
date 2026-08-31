@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "input",
+  "title": "Input",
+  "author": "Wheelhouse EPOS",
+  "description": "Single-line text field matching .field input in the existing app: white ground so it stays legible on the shop-coloured modal background, accent focus ring, and number spinners suppressed the way the vanilla app suppresses them.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "primitives/input.tsx",
+      "content": "import * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\n/**\n * Wheelhouse text input.\n *\n * Matches `.field input` in public/styles.css: 7px radius, 1px --border,\n * white ground so a field still reads as a distinct box when it sits on the\n * shop-coloured modal background (--modal-bg).\n *\n * The focus ring uses --accent, which is tenant-varying and rewritten at\n * runtime by public/app.js, so it stays a CSS custom property rather than a\n * compiled Tailwind colour class.\n */\nexport function Input({ className, type = 'text', ...props }: React.ComponentProps<'input'>) {\n  return (\n    <input\n      type={type}\n      className={cn(\n        'w-full rounded-[7px] border border-[var(--border)] bg-white px-2.5 py-[9px]',\n        'text-sm text-[var(--ink)] placeholder:text-[var(--muted)]',\n        'focus:outline-2 focus:outline-offset-[-1px] focus:outline-[var(--accent)]',\n        'disabled:cursor-not-allowed disabled:opacity-50',\n        'aria-invalid:border-[var(--danger)]',\n        // Number fields are edited by typing, not by nudging spinners - the\n        // vanilla app hides them globally and React inputs must match.\n        '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n",
+      "type": "registry:ui"
+    }
+  ],
+  "type": "registry:ui"
+}
