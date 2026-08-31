@@ -473,7 +473,7 @@ curl -b cookies.txt -X POST -H "Content-Type: application/json" \
   http://localhost:4000/api/shopify/connection
 ```
 
-Expected: `{"connected":true,"shopDomain":"your-dev-store.myshopify.com","status":"connected","connectedAt":"..."}`. In the Shopify admin, check Settings → Notifications → Webhooks to confirm the two webhooks were registered (requires `APP_PUBLIC_URL` to be a real, internet-reachable URL for this specific check — e.g. via the Cloudflare Tunnel setup mentioned in `README.md` — a `localhost` URL will save the connection but the webhook registration call to Shopify will fail harmlessly with the warning above).
+Expected: `{"connected":true,"shopDomain":"your-dev-store.myshopify.com","status":"connected","connectedAt":"..."}`. In the Shopify admin, check Settings → Notifications → Webhooks to confirm the two webhooks were registered (requires `APP_PUBLIC_URL` to be a real, internet-reachable URL for this specific check — which a purely local install does not provide - see issue #5 — a `localhost` URL will save the connection but the webhook registration call to Shopify will fail harmlessly with the warning above).
 
 - [ ] **Step 4: Commit**
 
@@ -1635,7 +1635,7 @@ Expected: all tests pass (both plans' suites).
 
 - [ ] **Step 2: Full manual walkthrough**
 
-Prerequisites: a free Shopify Partners development store, with a custom app created in it (Admin API scopes: `read_products`, `write_products`, `read_inventory`, `write_inventory`, `read_orders`; Storefront API scope: unauthenticated read/write checkout) and its two tokens generated. `APP_PUBLIC_URL` set to a real, internet-reachable URL (e.g. via the existing Cloudflare Tunnel setup) so Shopify's webhooks can reach this app.
+Prerequisites: a free Shopify Partners development store, with a custom app created in it (Admin API scopes: `read_products`, `write_products`, `read_inventory`, `write_inventory`, `read_orders`; Storefront API scope: unauthenticated read/write checkout) and its two tokens generated. `APP_PUBLIC_URL` set to a real, internet-reachable URL so Shopify's webhooks can reach this app. Note that the tunnel this originally relied on has since been removed and no public route has replaced it, so this prerequisite cannot currently be met locally.
 
 1. Connect the shop to the Shopify dev store via the new settings UI (Task 10). Confirm the two webhooks appear under the dev store's webhook settings.
 2. Mark a product `show_online`, confirm it appears in the Shopify admin's product list with the same name/price/description.
