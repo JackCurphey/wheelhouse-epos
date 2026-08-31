@@ -1,0 +1,52 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "wheelhouse-patterns",
+  "homepage": "https://github.com/JackCurphey/wheelhouse-epos",
+  "items": [
+    {
+      "name": "money-input",
+      "type": "registry:ui",
+      "title": "Money Input",
+      "author": "Wheelhouse EPOS",
+      "description": "Currency field whose value is an integer number of pence and never a float. Parsing works on the digit strings and formatting divides only an exact multiple of 100, so no amount can drift a penny through rounding. Exports parsePence and formatPence for callers that need the same arithmetic outside a form.",
+      "dependencies": [],
+      "registryDependencies": ["@wheelhouse/input"],
+      "files": [
+        {
+          "path": "money-input.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "data-table",
+      "type": "registry:ui",
+      "title": "Data Table",
+      "author": "Wheelhouse EPOS",
+      "description": "Shop-scoped table with the loading, failed and genuinely-empty states written into the component rather than left to each caller. Shop scoping is enforced by PostgreSQL row-level security on the server; this makes that scope legible in the empty and error copy.",
+      "dependencies": [],
+      "registryDependencies": ["@wheelhouse/table", "@wheelhouse/button"],
+      "files": [
+        {
+          "path": "data-table.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "confirm-dialog",
+      "type": "registry:ui",
+      "title": "Confirm Dialog",
+      "author": "Wheelhouse EPOS",
+      "description": "Replacement for the native window.confirm() the app currently calls before destructive actions. Includes a promise-based useConfirmDialog hook so call sites read the way confirm() did, and destructive confirmations ignore backdrop clicks so a stray tap on a busy counter cannot answer for staff.",
+      "dependencies": [],
+      "registryDependencies": ["@wheelhouse/dialog", "@wheelhouse/button"],
+      "files": [
+        {
+          "path": "confirm-dialog.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    }
+  ]
+}

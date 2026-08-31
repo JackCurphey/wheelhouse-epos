@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "table",
+  "title": "Table",
+  "author": "Wheelhouse EPOS",
+  "description": "Table markup matching table.data-table: uppercase muted headers over a 2px rule, 13.5px body, numeric columns right-aligned. Wraps itself in a horizontal scroll container because EPOS tables are wide and must not push a counter screen sideways.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "primitives/table.tsx",
+      "content": "import * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\n/**\n * Wheelhouse table primitive - the markup layer only. Data fetching, empty\n * and error states live in the data-table pattern that composes this.\n *\n * Visual parity with `table.data-table` in public/styles.css: 13.5px body,\n * uppercase muted headers over a 2px rule, 1px rules between rows.\n *\n * The scroll container is part of the primitive on purpose: EPOS tables are\n * wide (job sheets, stock takes) and must scroll inside their panel rather\n * than push the page sideways on a shop counter screen.\n */\nexport function Table({ className, ...props }: React.ComponentProps<'table'>) {\n  return (\n    <div className=\"w-full overflow-x-auto\">\n      <table\n        className={cn('w-full border-collapse text-[13.5px] text-[var(--ink)]', className)}\n        {...props}\n      />\n    </div>\n  );\n}\n\nexport function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {\n  return <thead className={cn('', className)} {...props} />;\n}\n\nexport function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {\n  return <tbody className={cn('', className)} {...props} />;\n}\n\nexport function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {\n  return <tfoot className={cn('font-semibold', className)} {...props} />;\n}\n\nexport function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {\n  return <tr className={cn('hover:bg-wh-hover-subtle', className)} {...props} />;\n}\n\ntype CellProps = {\n  /** Right-align and tabular-align the digits - `.num` in public/styles.css. */\n  numeric?: boolean;\n};\n\nexport function TableHead({ className, numeric, ...props }: React.ComponentProps<'th'> & CellProps) {\n  return (\n    <th\n      scope=\"col\"\n      className={cn(\n        'whitespace-nowrap border-b-2 border-[var(--border)] px-2.5 py-[9px]',\n        'text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--muted)]',\n        numeric && 'text-right',\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\nexport function TableCell({ className, numeric, ...props }: React.ComponentProps<'td'> & CellProps) {\n  return (\n    <td\n      className={cn(\n        'border-b border-[var(--border)] px-2.5 py-[9px] align-middle',\n        numeric && 'text-right tabular-nums',\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\nexport function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) {\n  return <caption className={cn('sr-only', className)} {...props} />;\n}\n",
+      "type": "registry:ui"
+    }
+  ],
+  "type": "registry:ui"
+}

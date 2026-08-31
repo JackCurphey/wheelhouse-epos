@@ -3359,11 +3359,28 @@ async function serveStatic(req, res, pathname, baseDir) {
   const contentType = MIME[ext] || 'application/octet-stream';
   // Without an explicit header here, Cloudflare's edge falls back to its own
   // default caching for static-looking extensions (observed: a 4-hour TTL)
-  // - fine for a CDN-fronted site with a build/version pipeline, but this
-  // app deploys straight from source with no cache-busted filenames, so a
-  // cached JS/CSS bundle can silently outlive the code it's stale against.
-  // Small, low-traffic internal tool - correctness beats any caching win.
-  res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
+  // - fine for a CDN-fronted site with a build/version pipeline, but most of
+  // what this app serves deploys straight from source with no cache-busted
+  // filenames, so a cached JS/CSS bundle can silently outlive the code it's
+  // stale against. Those files stay 'no-store': correctness beats any
+  // caching win on a small, low-traffic internal tool.
+  //
+  // The one exception is a "dist" directory inside the static root, which
+  // holds Vite's build output. Every filename there carries a hash of the
+  // file's own contents, so a change produces a new URL and a cached copy
+  // can never be stale - the exact reason 'no-store' exists doesn't apply.
+  // Note this is decided on the RESOLVED filePath, not the request path:
+  // the index.html fallback above can turn a /dist/... request into
+  // index.html, which is not hashed and must not be cached.
+  const distRoot = path.join(baseDir, 'dist') + path.sep;
+  // Only /dist/assets/ - Vite content-hashes filenames in there and nowhere
+  // else. Anything else under dist (a manifest, or a stray unhashed copy) must
+  // not be pinned in browsers for a year.
+  const isHashedBuildOutput = filePath.startsWith(path.join(distRoot, 'assets'));
+  const cacheControl = isHashedBuildOutput
+    ? 'public, max-age=31536000, immutable'
+    : 'no-store';
+  res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': cacheControl });
   const stream = createReadStream(filePath);
   // Defense in depth beyond the existsSync check above (e.g. a permissions
   // error, or the file disappearing between the check and the read) -
