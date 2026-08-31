@@ -85,10 +85,12 @@ flow into the work order with no re-entry. Tekmetric publish a figure that shops
 sending eight or more images with an inspection saw sales rise 17% **[V, their
 own number, not independently audited]**.
 
-That is the differentiator to build. It is proven in a more mature market, it is
-absent from cycling, and it makes the shop money rather than saving it time —
-which is the only argument that lands with a buyer who wants to work on bikes
-and make money.
+**Superseded 31 August 2026.** This was the proposed differentiator. After review
+with Jack the differentiator is the **experience**, with the **job-done email**
+as its named artefact — see business plan §5d and P5 of the master implementation
+plan. The inspection pattern above is not discarded: it is the same machinery
+aimed at the middle of the job rather than the end, and it follows as P5b. Read
+this section as the research behind that machinery, not as current sequencing.
 
 **Pricing anchors [V]:** Bikebook £49.99/mo ex VAT · Velodrop $59/$95/$129 ·
 Bikedesk €99/€149 · bikeryOS €699/store/mo · Citrus-Lime £105/£339/£515 with the

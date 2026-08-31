@@ -29,10 +29,11 @@ A hosted point-of-sale and workshop system for independent bike shops. The buyer
 wants to work on bikes and make money, does not care about technology, and is
 price-sensitive. We lead with the **workshop module, given away free**, running
 alongside whatever till the shop already has; the paid product is the full system
-at one flat price in the £49–79/month band. The differentiator is a structured
-inspection workflow — checklist, photos, itemised estimate, per-line customer
-approval — proven in automotive repair software and absent from every cycling
-tool we could find **[V]**.
+at one flat price in the £49–79/month band. The differentiator is the **experience**: obviously
+simpler than anything else a shop can buy, and a **job-done email** that tells
+the customer in plain English what was done, itemises the price, invoices it, and
+lets them pay in one tap. Structured inspection follows as the same machinery
+pointed at the middle of the job rather than the end.
 
 ## 2. The five things that are true and must stay true
 
@@ -193,16 +194,33 @@ two probes (nested transaction, cross-tenant FK) re-run and behaving correctly.
 
 **G2:** three shops running the free workshop on real jobs for thirty days.
 
-### P5 — The differentiator (W2)
+### P5 — The experience, and the job-done email
+
+Revised 31 August 2026: the differentiator is the experience, not the structured
+inspection. The inspection is the same machinery aimed at the middle of the job
+and follows in P5b. Business plan §5d has the reasoning and the three simplicity
+tests.
+
+**Blocked on the payments decision (§10.4) before CX-4 can start.**
 
 | ID | Task | Owner | Done when |
 |---|---|---|---|
-| INS-0 | **Labour lines** — a time and a rate, not a fake product row. Prerequisite; touches the till | Mark + Jack | A job can carry labour without inventing a product |
+| CX-0 | **Labour lines** — a time and a rate, not a fake product row. Still the prerequisite; touches the till | Mark + Jack | A job carries labour without inventing a product |
+| CX-1 | **Plain-English job summary.** What was done, written for a customer, generated from the job rather than composed by hand | Jack | Three real completed jobs produce summaries a non-cyclist understands |
+| CX-2 | Photos from the job attached to the summary. EXIF GPS stripped server-side on ingest | Jack (Mark on ingest) | A photo taken outdoors carries no location data after upload |
+| CX-3 | **Itemised pricing and an invoice** on the summary — parts and labour separated | Jack | Invoice totals reconcile against the job's order |
+| CX-4 | **Pay in one tap.** Shop keeps its own choice of processor; no coercion, no undisclosed cut | Mark | A customer pays from the email; funds reach the shop, not us |
+| CX-5 | **The job-done email itself** — assembled from CX-1 to CX-4 and sent on completion | Jack | Customer test 3 in business plan §5d passes on real customers |
+| CX-6 | **Mechanic-flow test.** Start, record, complete a job with the bike in front of you. Count taps, measure time | Jack | Test 2 in §5d passes, with the numbers written down |
+| CX-7 | Append-only attributed entries; dispute flag with right of reply; no customer edit of a professional's entry | Mark (model), Jack (surface) | Attempted edit of another party's entry is rejected |
+
+### P5b — Structured inspection (was the differentiator, now the extension)
+
+| ID | Task | Owner | Done when |
+|---|---|---|---|
 | INS-1 | Reusable checklist templates per shop. Content authored by Jack | Jack | A shop can create and run its own checklist |
-| INS-2 | Photos per inspection item, captured on a phone. EXIF GPS stripped server-side on ingest | Jack (Mark on ingest) | A photo taken outdoors carries no location data after upload |
-| INS-3 | Itemised estimate from flagged items, each line individually approvable or declinable | Jack | Customer approves two of four lines; only those two land |
-| INS-4 | Approved lines flow into the job's linked order with no re-entry | Jack | No double keying, asserted by test |
-| INS-5 | Append-only attributed entries; dispute flag with right of reply; no rider or customer edit of a professional's entry | Mark (model), Jack (surface) | Attempted edit of another party's entry is rejected |
+| INS-2 | Itemised estimate from flagged items, each line individually approvable or declinable | Jack | Customer approves two of four lines; only those two land |
+| INS-3 | Approved lines flow into the job's linked order with no re-entry | Jack | No double keying, asserted by test |
 
 ### P6 — Paid product, to Gate G3
 
@@ -277,10 +295,13 @@ business days, no marketing SMS to a US number without a compliant consent flow.
    date in this plan.
 2. **UK or EU data residency.** Blocks PL-1 and PL-2.
 3. **Domain name.** Blocks the website, the product URL and the sending domain.
-4. **99spokes terms** — price, whether we may cache, whether we may redisplay.
+4. **Payments architecture** — the shop's own processor versus a Connect-style
+   platform. The largest unscoped item in the plan. **Blocks CX-4 and therefore
+   P5.** See business plan §5d.
+5. **99spokes terms** — price, whether we may cache, whether we may redisplay.
    Blocks BIKE-2 only; BIKE-3 proceeds regardless.
-5. **Is the inspection workflow free or paid?** It is the strongest thing here
-   and giving it away may be wrong.
+6. **Is the job-done email free or paid?** It is now the strongest thing in the
+   product and giving it away may be wrong.
 6. **Forum public or private at launch.**
 7. **Final price**, set at G3.
 
@@ -289,3 +310,4 @@ business days, no marketing SMS to a US number without a compliant consent flow.
 | Date | Change |
 |---|---|
 | 2026-08-31 | Created. Supersedes the sequencing in the system-build and workshop specs following the corrective architecture review. Adds P0 as a blocking phase on the strength of the verified cross-tenant foreign-key defect. |
+| 2026-08-31 | **Differentiator changed** after review with Jack: the experience, not the structured inspection. P5 rebuilt around the job-done email — plain-English summary, photos, itemised pricing, invoice, pay in one tap. Inspection demoted to P5b as an extension of the same machinery. Adds the payments architecture as a blocking open decision. |

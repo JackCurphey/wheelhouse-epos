@@ -208,12 +208,22 @@ that spec belong here because they change the business case, not just the code:
 1. **Automated status messaging is the one table-stakes feature we lack**, and
    every competitor has it. We have no email capability of any kind — not even
    password reset. That is the first new dependency the project takes on.
-2. **The differentiator is the structured inspection workflow** — a checklist at
-   intake, photos per item, an itemised estimate, and per-line customer approval.
-   Proven in automotive (Shopmonkey, Tekmetric, Mitchell 1 all converged on it),
-   absent from every cycling tool, where the best available is a single ad hoc
-   photo-and-price message. It makes the shop money rather than saving it time,
-   which is the only argument that lands with this buyer.
+2. **The differentiator is the experience — revised 31 Aug 2026 after review
+   with Jack.** Not the structured inspection workflow, which was the earlier
+   answer. The product wins by being obviously simpler than anything else a bike
+   shop can buy: simple for a customer to book, simple for a mechanic to run a
+   job, simple for the shop to keep a customer informed.
+
+   **"Good UX" is unfalsifiable, so it is defined by artefacts and tests, not
+   adjectives.** The named artefact is the **job-done email**: when the work is
+   finished the customer receives a plain-English account of what was done, the
+   itemised pricing, an invoice, and a way to pay in one tap. See §5d.
+
+   The structured inspection is not discarded — it is the same machinery pointed
+   at the middle of the job instead of the end, and it becomes an extension once
+   the completion email is working. Sequencing it second is also lower risk: the
+   completion email changes nothing about how a mechanic works, and the
+   mid-job approval flow does.
 3. **Two competitor corrections.** Saledock / Celerant ONE — the ACT's endorsed
    UK partner — has no native workshop module and integrates Bikebook instead.
    And i-BikeShop's "Workshop" is a static marketing page, not a tool; it should
@@ -414,6 +424,64 @@ arrangement work at all.
 If Mark has more hours per week than Jack, takeover happens regardless of every
 rule above. "Here to help" should mean a small, fixed, deliberately capped
 commitment, and **the ratio matters more than the absolute numbers**.
+
+## 5d. The experience, made concrete
+
+**Decided 31 August 2026.** "User experience is the differentiator" only survives
+contact with a roadmap if it is written as artefacts and measurable tests.
+
+### The named artefact: the job-done email
+
+When a job is completed the customer gets, without anyone at the shop composing
+anything:
+
+- **What was done**, in plain English — not part numbers and not workshop
+  shorthand. "Replaced the chain and rear brake pads, adjusted the gears."
+- **Photos**, where the mechanic took them.
+- **Itemised pricing**, parts and labour separated.
+- **An invoice.**
+- **A way to pay, in one tap.**
+
+Why this one. It is the moment a shop currently handles by phone, badly or not at
+all. It answers the customer's real question — what did you do to my bike and why
+does it cost that — before they have to ask. It gets the shop paid sooner. And it
+is the first thing a rider ever receives from us, so it is the whole product's
+first impression.
+
+### The three simplicity tests
+
+Written so they can fail. Run on real people, watched, not self-reported.
+
+1. **Shop owner, cold.** Completes a cash sale, adds a product, and books a job
+   with no training and no manual. (Already §7.)
+2. **Mechanic, mid-shift.** Starts a job, records what was done, and completes it
+   with the bike in front of them and dirty hands. Count the taps and time it.
+3. **Customer, cold.** Receives the job-done email and understands what was done
+   and what they owe **without calling the shop**, and can pay from it.
+
+A feature that cannot survive these does not ship, however many competitors have
+it.
+
+### What this changes about payments
+
+"Easy for them to pay" means we are moving money on behalf of a shop, which is a
+larger step than anything else in this plan. Two constraints, one decision.
+
+**Constraint one: never force our processor.** The single strongest validated
+complaint in this market is payment coercion — a Lightspeed shop quoted going
+from \$138 to \$602 a month, a co-owner calling it "blackmail" **[V]**. Whatever
+we build, the shop keeps its choice of processor and we take no cut that is not
+disclosed.
+
+**Constraint two: do not model revenue on it.** Established in the research and
+unchanged.
+
+**The decision (open):** either the shop brings its own payment account and we
+generate links against it — cheaper, faster, no money touches us, but clumsier
+onboarding — or we use a Connect-style platform so funds settle to the shop with
+us as the platform, which is a better experience and brings know-your-customer
+onboarding, and regulatory weight, per shop. This is now the largest single
+unscoped item in the plan and it needs deciding before P5 starts.
 
 ## 6. Deletions — things this buyer removes from the roadmap
 
