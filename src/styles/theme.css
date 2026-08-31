@@ -35,7 +35,7 @@
   --wh-bg: #f4f5f3;
   --wh-panel: #ffffff;
   --wh-ink: #1c231f;
-  --wh-muted: #6b7570;
+  --wh-muted: #5f6a64;   /* D-001: was #6b7570, 4.36 on --bg (fails AA). Now 5.14/5.63. */
   --wh-border: #e0e2dd;
 
   /* ---- Brand ----
@@ -45,7 +45,7 @@
      #b8460f as --brand-dark, so brand and brand-dark now hold the same
      value - no darker tone is invented here. */
   --wh-brand: #b8460f;
-  --wh-brand-dark: #b8460f;
+  --wh-brand-dark: #93380b; /* D-001: 7.47 with white. Was #b8460f, which is now --wh-brand. */
 
   /* ---- Feedback ---- */
   /* Hover surfaces. Exact values lifted from public/styles.css so the React
@@ -79,6 +79,8 @@
   /* Paid-and-collected: the same 'complete' status, visually receding. */
   --wh-status-complete-paid-bg: #f5faf6;
   --wh-status-complete-paid-border: #a9cdbf;
+  /* NOT corrected: D-001 computes #4d7364 (5.03) but styles.css:31-34 documents
+     that this state is meant to recede. Needs sign-off - do not change silently. */
   --wh-status-complete-paid-ink: #6b9484;
 
   /* ---- shadcn contract, mapped onto the Wheelhouse palette ----
