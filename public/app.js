@@ -4,7 +4,6 @@
 // ---------------- State ----------------
 
 let currentUser = null; // { id, name, email, isOwner, shopName, shopSlug } for the signed-in employee, or null before boot() resolves it
-let teamLogins = []; // employee logins for this shop - loaded by renderEmployeeLogins()
 let route = (location.hash || '#till').replace('#', '');
 let products = [];
 let categories = [];
@@ -66,8 +65,8 @@ let pendingFeedJobs = []; // every pending (customer-submitted, unapproved) job 
 let mechanics = []; // employees with isMechanic=true, active only - used by the Workshop diary
 let activeCashiers = []; // employees with isCashier=true, active only - used by Front Desk
 let activeCashierId = null;
-let employees = []; // full roster (all roles, active + inactive per toggle) - used by Edit Workshop
-let employeeShowInactive = false;
+let team = []; // merged roster + login list - used by Office > Edit Shop > Office
+let teamShowInactive = false;
 let workshopSettings = { openingTime: '09:00', closingTime: '18:00', openingDays: [0, 1, 2, 3, 4, 5, 6], fullDayThresholdMinutes: 120 };
 
 let docStatusFilter = { quote: '', order: '' }; // '' = all, else 'open' | 'converted' | 'cancelled'
@@ -277,8 +276,8 @@ async function loadActiveCashiers() {
   }
 }
 
-async function loadEmployees() {
-  employees = await api(`/api/employees?all=${employeeShowInactive ? '1' : '0'}`);
+async function loadTeam() {
+  team = await api('/api/team');
 }
 
 async function loadWorkshopSettings() {
@@ -312,10 +311,8 @@ const OFFICE_TABS = [
     label: 'Edit Shop',
     children: () => [
       { id: 'front-desk', label: 'Front Desk' },
+      { id: 'office', label: 'Office' },
       { id: 'workshop', label: 'Workshop' },
-      { id: 'colours', label: 'Colours' },
-      { id: 'storefront', label: 'Storefront' },
-      ...(currentUser && currentUser.isOwner ? [{ id: 'logins', label: 'Employee Logins' }] : []),
     ],
   },
 ];
@@ -1433,9 +1430,7 @@ async function renderOffice() {
   else if (sub === 'customers' && subId) await renderCustomerDetail(Number(subId));
   else if (sub === 'customers') await renderCustomers();
   else if (sub === 'edit-shop' && subId === 'front-desk') await renderEditFrontDesk();
-  else if (sub === 'edit-shop' && subId === 'logins') await renderEmployeeLogins();
-  else if (sub === 'edit-shop' && subId === 'colours') await renderEditColours();
-  else if (sub === 'edit-shop' && subId === 'storefront') await renderEditStorefront();
+  else if (sub === 'edit-shop' && subId === 'office') await renderShopOffice();
   else if (sub === 'edit-shop') await renderEditWorkshop();
   else await renderDashboard();
 }
@@ -4066,148 +4061,6 @@ function renderGroupFormModal(holder, group) {
   });
 }
 
-// ================= EMPLOYEE LOGINS =================
-// Who can sign in to the app at all - separate from the Front Desk/Workshop
-// "employees" roster above, which just attributes sales and jobs to a name
-// and isn't tied to login yet.
-
-async function loadTeamLogins() {
-  teamLogins = await api('/api/auth/team');
-}
-
-async function renderEmployeeLogins() {
-  await loadTeamLogins();
-  const main = document.getElementById('office-content');
-  main.innerHTML = `
-    <h1>Employee Logins</h1>
-    <div class="panel" style="margin-top:14px;">
-      <div class="panel-header">
-        <h2>Who can sign in</h2>
-        <button class="btn btn-primary" id="add-login-btn">+ Add employee login</button>
-      </div>
-      <div class="panel-body">
-        <p class="muted" style="margin:0 0 12px;">Every login can do everything for now - individual permissions are coming later.</p>
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
-          <tbody id="login-table-body"></tbody>
-        </table>
-      </div>
-    </div>
-  `;
-  document.getElementById('add-login-btn').addEventListener('click', () => {
-    openModal({ type: 'login-form' });
-  });
-  renderLoginTable();
-}
-
-function renderLoginTable() {
-  const tbody = document.getElementById('login-table-body');
-  if (!tbody) return;
-  if (!teamLogins.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No logins yet.</div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = teamLogins
-    .map((l) => {
-      const inactiveTag = !l.active ? ' <span class="badge low">Inactive</span>' : '';
-      const roleBadge = l.isOwner ? '<span class="badge role-mechanic">Owner</span>' : '<span class="muted">Employee</span>';
-      const action = l.isOwner
-        ? ''
-        : l.active
-          ? `<button class="icon-btn" data-deactivate="${l.id}">Deactivate</button>`
-          : `<button class="icon-btn" data-activate="${l.id}">Activate</button>`;
-      return `
-      <tr>
-        <td>${esc(l.name)}${inactiveTag}</td>
-        <td>${esc(l.email)}</td>
-        <td>${roleBadge}</td>
-        <td>${action}</td>
-      </tr>
-    `;
-    })
-    .join('');
-
-  tbody.querySelectorAll('button[data-deactivate]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const l = teamLogins.find((x) => x.id === Number(b.dataset.deactivate));
-      if (!confirm(`Deactivate the login for "${l.name}"? They won't be able to sign in until reactivated.`)) return;
-      try {
-        await api(`/api/auth/team/${l.id}`, { method: 'PUT', body: { active: false } });
-        showToast('Login deactivated');
-        await loadTeamLogins();
-        renderLoginTable();
-      } catch (err) {
-        showToast(err.message);
-      }
-    })
-  );
-  tbody.querySelectorAll('button[data-activate]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const l = teamLogins.find((x) => x.id === Number(b.dataset.activate));
-      try {
-        await api(`/api/auth/team/${l.id}`, { method: 'PUT', body: { active: true } });
-        showToast('Login activated');
-        await loadTeamLogins();
-        renderLoginTable();
-      } catch (err) {
-        showToast(err.message);
-      }
-    })
-  );
-}
-
-function renderLoginFormModal(holder) {
-  holder.innerHTML = `
-    <div class="modal-backdrop" id="modal-backdrop">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>Add employee login</h2>
-          <button class="modal-close" id="modal-close">✕</button>
-        </div>
-        <form id="login-form">
-          <div class="modal-body">
-            <div class="field">
-              <label for="login-name">Name *</label>
-              <input id="login-name" type="text" required />
-            </div>
-            <div class="field">
-              <label for="login-email">Email *</label>
-              <input id="login-email" type="email" required autocomplete="off" />
-            </div>
-            <div class="field">
-              <label for="login-password">Password *</label>
-              <input id="login-password" type="password" required minlength="8" autocomplete="new-password" />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn" id="modal-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">Add login</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  `;
-  wireModalDismiss();
-
-  document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = {
-      name: document.getElementById('login-name').value.trim(),
-      email: document.getElementById('login-email').value.trim(),
-      password: document.getElementById('login-password').value,
-    };
-    try {
-      await api('/api/auth/team', { method: 'POST', body });
-      showToast('Employee login added');
-      closeModal();
-      await loadTeamLogins();
-      renderLoginTable();
-    } catch (err) {
-      showToast(err.message);
-    }
-  });
-}
-
 // ================= EDIT WORKSHOP =================
 
 const HOUR_OPTIONS = [...Array(24)].map((_, h) => `${String(h).padStart(2, '0')}:00`);
@@ -4236,7 +4089,6 @@ const JOB_STATUS_SELECT_OPTIONS = JOB_STATUS_OPTIONS.filter((s) => s.value !== '
 
 async function renderEditWorkshop() {
   await loadWorkshopSettings();
-  await loadEmployees();
 
   const main = document.getElementById('office-content');
   main.innerHTML = `
@@ -4285,23 +4137,6 @@ async function renderEditWorkshop() {
         <button class="btn btn-primary" id="ws-save-hours" style="margin-top:14px;">Save</button>
       </div>
     </div>
-
-    <div class="panel" style="margin-top:16px;">
-      <div class="panel-header">
-        <h2>Employees</h2>
-        <button class="btn btn-primary" id="add-employee-btn">+ Add employee</button>
-      </div>
-      <div class="panel-body">
-        <p class="muted" style="margin:0 0 12px;">Every mechanic and cashier is an employee - tick the roles that apply to each person. A mechanic gets their own diary; a cashier can be selected on Front Desk.</p>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;margin-bottom:12px;">
-          <input type="checkbox" id="employee-show-inactive" ${employeeShowInactive ? 'checked' : ''} /> Show removed
-        </label>
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Roles</th><th></th></tr></thead>
-          <tbody id="employee-table-body"></tbody>
-        </table>
-      </div>
-    </div>
   `;
 
   document.getElementById('ws-save-hours').addEventListener('click', async () => {
@@ -4317,32 +4152,6 @@ async function renderEditWorkshop() {
       showToast(err.message);
     }
   });
-
-  document.getElementById('add-employee-btn').addEventListener('click', () => {
-    openModal({ type: 'employee-form', employee: null });
-  });
-  document.getElementById('employee-show-inactive').addEventListener('change', async (e) => {
-    employeeShowInactive = e.target.checked;
-    await loadEmployees();
-    renderEmployeeTable();
-  });
-
-  renderEmployeeTable();
-}
-
-async function renderEditColours() {
-  const main = document.getElementById('office-content');
-  main.innerHTML = `
-    <h1>Colours</h1>
-    <div class="panel" style="margin-top:14px;">
-      <div class="panel-header"><h2>Colour scheme</h2></div>
-      <div class="panel-body">
-        <p class="muted" style="margin:0 0 14px;">Sets the top bar colour and every popup's background across the whole app. Click a scheme to switch straight away.</p>
-        <div class="theme-swatch-grid" id="theme-swatch-grid"></div>
-      </div>
-    </div>
-  `;
-  renderThemeSwatchGrid();
 }
 
 function renderThemeSwatchGrid() {
@@ -4376,22 +4185,60 @@ function renderThemeSwatchGrid() {
   });
 }
 
-// ================= STOREFRONT SETTINGS =================
+// ================= SHOP OFFICE (colours, storefront, employee logins) =================
 
-async function renderEditStorefront() {
+async function renderShopOffice() {
+  const isOwner = currentUser && currentUser.isOwner;
   const main = document.getElementById('office-content');
   main.innerHTML = `
-    <h1>Storefront</h1>
+    <h1>Office</h1>
     <div class="panel" style="margin-top:14px;">
+      <div class="panel-header"><h2>Colour scheme</h2></div>
+      <div class="panel-body">
+        <p class="muted" style="margin:0 0 14px;">Sets the top bar colour and every popup's background across the whole app. Click a scheme to switch straight away.</p>
+        <div class="theme-swatch-grid" id="theme-swatch-grid"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-header"><h2>Storefront</h2></div>
       <div class="panel-body" id="storefront-settings-section"></div>
     </div>
-    <div class="panel" style="margin-top:14px;">
+    <div class="panel" style="margin-top:16px;">
       <div class="panel-header"><h2>Shopify</h2></div>
       <div class="panel-body" id="shopify-connection-section"></div>
     </div>
+    <div class="panel" style="margin-top:16px;">
+      <div class="panel-header">
+        <h2>Team</h2>
+        ${isOwner ? '<button class="btn btn-primary" id="add-team-btn">+ Add person</button>' : ''}
+      </div>
+      <div class="panel-body">
+        <p class="muted" style="margin:0 0 12px;">Everyone who works here - their roles (a mechanic gets a diary, a cashier can be selected on Front Desk) and whether they can sign in. Every login can do everything for now - individual permissions are coming later.</p>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;margin-bottom:12px;">
+          <input type="checkbox" id="team-show-inactive" ${teamShowInactive ? 'checked' : ''} /> Show removed
+        </label>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Roles</th><th>Access</th><th></th></tr></thead>
+          <tbody id="team-table-body"></tbody>
+        </table>
+      </div>
+    </div>
   `;
+  renderThemeSwatchGrid();
   await renderStorefrontSettingsSection(document.getElementById('storefront-settings-section'));
   await renderShopifyConnectionSection(document.getElementById('shopify-connection-section'));
+
+  await loadTeam();
+  if (isOwner) {
+    document.getElementById('add-team-btn').addEventListener('click', () => {
+      openModal({ type: 'team-add-form' });
+    });
+  }
+  document.getElementById('team-show-inactive').addEventListener('change', (e) => {
+    teamShowInactive = e.target.checked;
+    renderTeamTable();
+  });
+  renderTeamTable();
 }
 
 async function renderStorefrontSettingsSection(container) {
@@ -4555,61 +4402,99 @@ async function renderShopifyConnectionSection(container) {
   wireConnectForm(container);
 }
 
-function renderEmployeeTable() {
-  const tbody = document.getElementById('employee-table-body');
+// A team member's identity is one or both of employeeId/loginId - either
+// can be null (a roster-only person with no login, or a login-only person
+// like the owner). rowKey/findByKey below let the table look a member back
+// up from a button click without assuming either id exists.
+function teamRowKey(m) {
+  return `${m.employeeId ?? ''}:${m.loginId ?? ''}`;
+}
+
+function renderTeamTable() {
+  const tbody = document.getElementById('team-table-body');
   if (!tbody) return;
-  if (!employees.length) {
-    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state">No employees added yet.</div></td></tr>`;
+  const visible = team.filter((m) => teamShowInactive || m.active);
+  if (!visible.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No team members yet.</div></td></tr>`;
     return;
   }
-  tbody.innerHTML = employees
-    .map((e) => {
-      const inactiveTag = !e.active ? ' <span class="badge low">Inactive</span>' : '';
-      const roles = [e.isMechanic ? '<span class="badge role-mechanic">Mechanic</span>' : '', e.isCashier ? '<span class="badge role-cashier">Cashier</span>' : '']
+  const isOwner = currentUser && currentUser.isOwner;
+  tbody.innerHTML = visible
+    .map((m) => {
+      const inactiveTag = !m.active ? ' <span class="badge low">Inactive</span>' : '';
+      const roles = [m.isMechanic ? '<span class="badge role-mechanic">Mechanic</span>' : '', m.isCashier ? '<span class="badge role-cashier">Cashier</span>' : '']
         .filter(Boolean)
         .join(' ');
+      const access = m.isOwner
+        ? `${esc(m.email)} <span class="badge role-mechanic">Owner</span>`
+        : m.loginId
+          ? esc(m.email)
+          : '<span class="muted">No login</span>';
+
+      const actions = [];
+      if (isOwner) {
+        const key = teamRowKey(m);
+        if (m.employeeId) actions.push(`<button class="icon-btn" data-edit="${key}">Edit</button>`);
+        if (m.employeeId && !m.loginId) actions.push(`<button class="icon-btn" data-attach-login="${key}">Add login</button>`);
+        if (!m.employeeId && m.loginId) actions.push(`<button class="icon-btn" data-attach-roles="${key}">Edit roles</button>`);
+        if (!m.isOwner) {
+          actions.push(
+            m.active
+              ? `<button class="icon-btn" data-deactivate="${key}">Deactivate</button>`
+              : `<button class="icon-btn" data-reactivate="${key}">Activate</button>`
+          );
+        }
+        if (m.employeeId) actions.push(`<button class="icon-btn" data-delete="${key}">Delete</button>`);
+      }
+
       return `
       <tr>
-        <td>${esc(e.name)}${inactiveTag}</td>
+        <td>${esc(m.name)}${inactiveTag}</td>
         <td>${roles || '<span class="muted">—</span>'}</td>
-        <td>
-          <button class="icon-btn" data-edit="${e.id}">Edit</button>
-          ${e.active ? `<button class="icon-btn" data-deactivate="${e.id}">Deactivate</button>` : `<button class="icon-btn" data-activate="${e.id}">Activate</button>`}
-          <button class="icon-btn" data-delete="${e.id}">Delete</button>
-        </td>
+        <td>${access}</td>
+        <td>${actions.join(' ')}</td>
       </tr>
     `;
     })
     .join('');
 
+  if (!isOwner) return;
+  const findByKey = (key) => team.find((x) => teamRowKey(x) === key);
+
   tbody.querySelectorAll('button[data-edit]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const e = employees.find((x) => x.id === Number(b.dataset.edit));
-      openModal({ type: 'employee-form', employee: e });
-    })
+    b.addEventListener('click', () => openModal({ type: 'team-edit-form', member: findByKey(b.dataset.edit) }))
+  );
+  tbody.querySelectorAll('button[data-attach-login]').forEach((b) =>
+    b.addEventListener('click', () => openModal({ type: 'team-attach-login-form', member: findByKey(b.dataset.attachLogin) }))
+  );
+  tbody.querySelectorAll('button[data-attach-roles]').forEach((b) =>
+    b.addEventListener('click', () => openModal({ type: 'team-attach-roles-form', member: findByKey(b.dataset.attachRoles) }))
   );
   tbody.querySelectorAll('button[data-deactivate]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const e = employees.find((x) => x.id === Number(b.dataset.deactivate));
-      if (!confirm(`Deactivate "${e.name}"? Their diary and job history are kept, and they'll no longer appear as an option for new jobs or sales.`)) return;
+      const m = findByKey(b.dataset.deactivate);
+      const loginNote = m.loginId ? ' They will also no longer be able to sign in.' : '';
+      if (!confirm(`Deactivate "${m.name}"? Their diary and job history are kept, and they'll no longer appear as an option for new jobs or sales.${loginNote}`)) return;
       try {
-        await api(`/api/employees/${e.id}`, { method: 'DELETE' });
-        showToast('Employee deactivated');
-        await loadEmployees();
-        renderEmployeeTable();
+        if (m.employeeId) await api(`/api/team/${m.employeeId}/deactivate`, { method: 'POST' });
+        else await api(`/api/team/logins/${m.loginId}/deactivate`, { method: 'POST' });
+        showToast('Team member deactivated');
+        await loadTeam();
+        renderTeamTable();
       } catch (err) {
         showToast(err.message);
       }
     })
   );
-  tbody.querySelectorAll('button[data-activate]').forEach((b) =>
+  tbody.querySelectorAll('button[data-reactivate]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const e = employees.find((x) => x.id === Number(b.dataset.activate));
+      const m = findByKey(b.dataset.reactivate);
       try {
-        await api(`/api/employees/${e.id}`, { method: 'PUT', body: { active: true } });
-        showToast('Employee activated');
-        await loadEmployees();
-        renderEmployeeTable();
+        if (m.employeeId) await api(`/api/team/${m.employeeId}/reactivate`, { method: 'POST' });
+        else await api(`/api/team/logins/${m.loginId}/reactivate`, { method: 'POST' });
+        showToast('Team member reactivated');
+        await loadTeam();
+        renderTeamTable();
       } catch (err) {
         showToast(err.message);
       }
@@ -4617,13 +4502,14 @@ function renderEmployeeTable() {
   );
   tbody.querySelectorAll('button[data-delete]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const e = employees.find((x) => x.id === Number(b.dataset.delete));
-      if (!confirm(`Permanently delete "${e.name}"? This cannot be undone. Any workshop jobs or sales tied to them will become unassigned.`)) return;
+      const m = findByKey(b.dataset.delete);
+      const loginNote = m.loginId ? " Their login access is kept and they'll show up as a login-only entry." : '';
+      if (!confirm(`Permanently delete "${m.name}"'s roster entry? This cannot be undone. Any workshop jobs or sales tied to them will become unassigned.${loginNote}`)) return;
       try {
-        await api(`/api/employees/${e.id}/permanent`, { method: 'DELETE' });
-        showToast('Employee permanently deleted');
-        await loadEmployees();
-        renderEmployeeTable();
+        await api(`/api/employees/${m.employeeId}/permanent`, { method: 'DELETE' });
+        showToast('Roster entry permanently deleted');
+        await loadTeam();
+        renderTeamTable();
       } catch (err) {
         showToast(err.message);
       }
@@ -4742,8 +4628,10 @@ function renderModal() {
   if (modal.type === 'document-view') return renderDocumentModal(holder, modal.doc);
   if (modal.type === 'bike-form') return renderBikeFormModal(holder, modal.bike, modal.customerId);
   if (modal.type === 'bike-service') return renderBikeServiceModal(holder, modal.bike, modal.jobs);
-  if (modal.type === 'employee-form') return renderEmployeeFormModal(holder, modal.employee);
-  if (modal.type === 'login-form') return renderLoginFormModal(holder);
+  if (modal.type === 'team-add-form') return renderTeamAddFormModal(holder);
+  if (modal.type === 'team-edit-form') return renderTeamEditFormModal(holder, modal.member);
+  if (modal.type === 'team-attach-login-form') return renderTeamAttachLoginFormModal(holder, modal.member);
+  if (modal.type === 'team-attach-roles-form') return renderTeamAttachRolesFormModal(holder, modal.member);
   if (modal.type === 'group-form') return renderGroupFormModal(holder, modal.group);
   if (modal.type === 'day-jobs') return renderDayJobsModal(holder, modal.dateStr, modal.jobs);
   if (modal.type === 'catalogue-import') return renderCatalogueImportModal(holder, modal.item);
@@ -5627,54 +5515,183 @@ function renderBikeServiceModal(holder, bike, jobs) {
   wireModalDismiss();
 }
 
-function renderEmployeeFormModal(holder, employee) {
-  const isEdit = !!employee;
-  const isMechanic = employee ? employee.isMechanic : false;
-  const workingDays = employee ? employee.workingDays : [0, 1, 2, 3, 4, 5, 6];
+// Shared by the four Team modals below: a Mechanic/Cashier checkbox pair
+// plus a working-days picker that only matters (and only shows) once
+// Mechanic is ticked, since only mechanics have a diary.
+function rolesAndWorkingDaysFieldsHtml({ isMechanic, isCashier, workingDays }) {
+  return `
+    <div class="field">
+      <label>Roles</label>
+      <div class="weekday-picker">
+        <label class="weekday-check">
+          <input type="checkbox" id="team-is-mechanic" ${isMechanic ? 'checked' : ''} />
+          Mechanic
+        </label>
+        <label class="weekday-check">
+          <input type="checkbox" id="team-is-cashier" ${isCashier ? 'checked' : ''} />
+          Cashier
+        </label>
+      </div>
+    </div>
+    <div class="field" id="team-working-days-field" style="${isMechanic ? '' : 'display:none'}">
+      <label>Working days</label>
+      <div class="weekday-picker">
+        ${WEEKDAY_ORDER.map(
+          (d) => `
+          <label class="weekday-check">
+            <input type="checkbox" data-day="${d}" ${workingDays.includes(d) ? 'checked' : ''} />
+            ${WEEKDAY_LABELS[d]}
+          </label>
+        `
+        ).join('')}
+      </div>
+      <p class="muted" style="margin:6px 0 0;">Unchecked days are greyed out on their diary and can't have jobs assigned.</p>
+    </div>
+  `;
+}
+
+function wireRolesAndWorkingDaysFields() {
+  document.getElementById('team-is-mechanic').addEventListener('change', (e) => {
+    document.getElementById('team-working-days-field').style.display = e.target.checked ? '' : 'none';
+  });
+}
+
+function readRolesAndWorkingDaysFields() {
+  return {
+    isMechanic: document.getElementById('team-is-mechanic').checked,
+    isCashier: document.getElementById('team-is-cashier').checked,
+    workingDays: [...document.querySelectorAll('#team-working-days-field input:checked')].map((cb) => Number(cb.dataset.day)),
+  };
+}
+
+// Mandatory by design - see the Office > Edit Shop brainstorm - a new team
+// member always gets both roster roles and login access, created together.
+function renderTeamAddFormModal(holder) {
   holder.innerHTML = `
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal">
         <div class="modal-header">
-          <h2>${isEdit ? 'Edit employee' : 'Add employee'}</h2>
+          <h2>Add person</h2>
           <button class="modal-close" id="modal-close">✕</button>
         </div>
-        <form id="employee-form">
+        <form id="team-add-form">
           <div class="modal-body">
             <div class="field">
-              <label for="emp-name">Name *</label>
-              <input id="emp-name" type="text" required value="${esc(employee?.name || '')}" />
+              <label for="team-name">Name *</label>
+              <input id="team-name" type="text" required />
+            </div>
+            ${rolesAndWorkingDaysFieldsHtml({ isMechanic: false, isCashier: false, workingDays: [0, 1, 2, 3, 4, 5, 6] })}
+            <div class="field">
+              <label for="team-email">Email *</label>
+              <input id="team-email" type="email" required autocomplete="off" />
             </div>
             <div class="field">
-              <label>Roles</label>
-              <div class="weekday-picker">
-                <label class="weekday-check">
-                  <input type="checkbox" id="emp-is-mechanic" ${isMechanic ? 'checked' : ''} />
-                  Mechanic
-                </label>
-                <label class="weekday-check">
-                  <input type="checkbox" id="emp-is-cashier" ${employee?.isCashier ? 'checked' : ''} />
-                  Cashier
-                </label>
-              </div>
-            </div>
-            <div class="field" id="emp-working-days-field" style="${isMechanic ? '' : 'display:none'}">
-              <label>Working days</label>
-              <div class="weekday-picker">
-                ${WEEKDAY_ORDER.map(
-                  (d) => `
-                  <label class="weekday-check">
-                    <input type="checkbox" data-day="${d}" ${workingDays.includes(d) ? 'checked' : ''} />
-                    ${WEEKDAY_LABELS[d]}
-                  </label>
-                `
-                ).join('')}
-              </div>
-              <p class="muted" style="margin:6px 0 0;">Unchecked days are greyed out on their diary and can't have jobs assigned.</p>
+              <label for="team-password">Password *</label>
+              <input id="team-password" type="password" required minlength="8" autocomplete="new-password" />
             </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn" id="modal-cancel">Cancel</button>
-            <button type="submit" class="btn btn-primary">${isEdit ? 'Save changes' : 'Add employee'}</button>
+            <button type="submit" class="btn btn-primary">Add person</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+  wireRolesAndWorkingDaysFields();
+
+  document.getElementById('team-add-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+      name: document.getElementById('team-name').value.trim(),
+      ...readRolesAndWorkingDaysFields(),
+      email: document.getElementById('team-email').value.trim(),
+      password: document.getElementById('team-password').value,
+    };
+    try {
+      await api('/api/team', { method: 'POST', body });
+      showToast('Team member added');
+      closeModal();
+      await loadTeam();
+      renderTeamTable();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+}
+
+// Name/roles/working days only - never touches login access (see
+// team-attach-login-form below for that).
+function renderTeamEditFormModal(holder, member) {
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Edit ${esc(member.name)}</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="team-edit-form">
+          <div class="modal-body">
+            <div class="field">
+              <label for="team-name">Name *</label>
+              <input id="team-name" type="text" required value="${esc(member.name)}" />
+            </div>
+            ${rolesAndWorkingDaysFieldsHtml(member)}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+  wireRolesAndWorkingDaysFields();
+
+  document.getElementById('team-edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = {
+      name: document.getElementById('team-name').value.trim(),
+      ...readRolesAndWorkingDaysFields(),
+    };
+    try {
+      await api(`/api/employees/${member.employeeId}`, { method: 'PUT', body });
+      showToast('Team member updated');
+      closeModal();
+      await loadTeam();
+      renderTeamTable();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+}
+
+// Completes a roster-only person (added without login access, or added
+// before this link existed) by giving them login access now.
+function renderTeamAttachLoginFormModal(holder, member) {
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Add login for ${esc(member.name)}</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="team-attach-login-form">
+          <div class="modal-body">
+            <div class="field">
+              <label for="team-email">Email *</label>
+              <input id="team-email" type="email" required autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="team-password">Password *</label>
+              <input id="team-password" type="password" required minlength="8" autocomplete="new-password" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add login</button>
           </div>
         </form>
       </div>
@@ -5682,28 +5699,58 @@ function renderEmployeeFormModal(holder, employee) {
   `;
   wireModalDismiss();
 
-  document.getElementById('emp-is-mechanic').addEventListener('change', (e) => {
-    document.getElementById('emp-working-days-field').style.display = e.target.checked ? '' : 'none';
-  });
-
-  document.getElementById('employee-form').addEventListener('submit', async (e) => {
+  document.getElementById('team-attach-login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {
-      name: document.getElementById('emp-name').value.trim(),
-      isMechanic: document.getElementById('emp-is-mechanic').checked,
-      isCashier: document.getElementById('emp-is-cashier').checked,
-      workingDays: [...document.querySelectorAll('#emp-working-days-field input:checked')].map((cb) => Number(cb.dataset.day)),
+      email: document.getElementById('team-email').value.trim(),
+      password: document.getElementById('team-password').value,
     };
     try {
-      if (isEdit) {
-        await api(`/api/employees/${employee.id}`, { method: 'PUT', body });
-      } else {
-        await api('/api/employees', { method: 'POST', body });
-      }
-      showToast(isEdit ? 'Employee updated' : 'Employee added');
+      await api(`/api/team/${member.employeeId}/attach-login`, { method: 'POST', body });
+      showToast('Login access added');
       closeModal();
-      await loadEmployees();
-      renderEmployeeTable();
+      await loadTeam();
+      renderTeamTable();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+}
+
+// Completes a login-only person (typically the owner, whose login is
+// created at signup with no roster entry) by giving them roster roles now.
+function renderTeamAttachRolesFormModal(holder, member) {
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Set roles for ${esc(member.name)}</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <form id="team-attach-roles-form">
+          <div class="modal-body">
+            ${rolesAndWorkingDaysFieldsHtml({ isMechanic: false, isCashier: false, workingDays: [0, 1, 2, 3, 4, 5, 6] })}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" id="modal-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save roles</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  wireModalDismiss();
+  wireRolesAndWorkingDaysFields();
+
+  document.getElementById('team-attach-roles-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = readRolesAndWorkingDaysFields();
+    try {
+      await api(`/api/team/logins/${member.loginId}/attach-roles`, { method: 'POST', body });
+      showToast('Roles saved');
+      closeModal();
+      await loadTeam();
+      renderTeamTable();
     } catch (err) {
       showToast(err.message);
     }
@@ -6834,7 +6881,7 @@ function renderAuthScreen() {
 }
 
 // ---------------- Colour scheme ----------------
-// Shop-configurable via Edit Shop > Colours. Only the preset key is stored
+// Shop-configurable via Edit Shop > Office. Only the preset key is stored
 // server-side (GET/PUT /api/shop-theme) - these are the only two places
 // that actually know what each key looks like.
 

@@ -13,17 +13,24 @@ import { sendSms } from './sms.js';
 import {
   AuthError,
   createShop,
-  createEmployeeLogin,
-  listLogins,
-  setLoginActive,
   verifyLogin,
   createSession,
   getSessionContext,
   destroySession,
-  serializeLogin,
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
 } from './auth.js';
+import {
+  TeamError,
+  listTeam,
+  createTeamMember,
+  deactivateTeamMember,
+  reactivateTeamMember,
+  attachLogin,
+  attachRoles,
+  deactivateLoginOnly,
+  reactivateLoginOnly,
+} from './team.js';
 import {
   CustomerAuthError,
   signupCustomer,
@@ -426,42 +433,6 @@ route('GET', '/api/auth/me', async (req, res) => {
   const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   sendJson(res, 200, serializeSession(ctx));
-});
-
-// ---------- Auth: employee logins (owner-only to add/deactivate) ----------
-
-route('GET', '/api/auth/team', async (req, res) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  sendJson(res, 200, await listLogins(ctx.shop.id));
-});
-
-route('POST', '/api/auth/team', async (req, res) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can add employee logins' });
-  const body = await readJsonBody(req);
-  try {
-    const login = await createEmployeeLogin({ shopId: ctx.shop.id, name: body.name, email: body.email, password: body.password });
-    sendJson(res, 201, serializeLogin(login));
-  } catch (err) {
-    if (err instanceof AuthError) return badRequest(res, err.message);
-    throw err;
-  }
-});
-
-route('PUT', '/api/auth/team/:id', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can manage employee logins' });
-  const body = await readJsonBody(req);
-  try {
-    const login = await setLoginActive(ctx.shop.id, Number(params.id), !!body.active);
-    sendJson(res, 200, login);
-  } catch (err) {
-    if (err instanceof AuthError) return badRequest(res, err.message);
-    throw err;
-  }
 });
 
 route('GET', '/api/products', async (req, res, params, query) => {
@@ -2597,21 +2568,9 @@ route('GET', '/api/employees', async (req, res, params, query) => {
   sendJson(res, 200, rows.map(serializeEmployee));
 });
 
-route('POST', '/api/employees', async (req, res) => {
-  const body = await readJsonBody(req);
-  const name = (body.name || '').trim();
-  if (!name) return badRequest(res, 'Employee name is required');
-  const isMechanic = body.isMechanic ? 1 : 0;
-  const isCashier = body.isCashier ? 1 : 0;
-  const workingDays = resolveWorkingDays(body.workingDays, undefined);
-  if (workingDays === null) return badRequest(res, 'workingDays must be an array of day numbers (0-6)');
-  const info = await db
-    .prepare('INSERT INTO employees (name, is_mechanic, is_cashier, working_days, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .run(name, isMechanic, isCashier, workingDays, nowIso());
-  const row = await db.prepare('SELECT * FROM employees WHERE id = ?').get(info.lastInsertRowid);
-  sendJson(res, 201, serializeEmployee(row));
-});
-
+// Name/roles/working-days only - never touches login access. See the
+// /api/team routes below for creating a person, and for deactivate/
+// reactivate, which also has to cascade to their login when they have one.
 route('PUT', '/api/employees/:id', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
@@ -2619,23 +2578,119 @@ route('PUT', '/api/employees/:id', async (req, res, params) => {
   const body = await readJsonBody(req);
   const name = body.name !== undefined ? String(body.name).trim() : existing.name;
   if (!name) return badRequest(res, 'Employee name is required');
-  const active = body.active !== undefined ? (body.active ? 1 : 0) : existing.active;
   const isMechanic = body.isMechanic !== undefined ? (body.isMechanic ? 1 : 0) : existing.is_mechanic;
   const isCashier = body.isCashier !== undefined ? (body.isCashier ? 1 : 0) : existing.is_cashier;
   const workingDays = resolveWorkingDays(body.workingDays, existing.working_days);
   if (workingDays === null) return badRequest(res, 'workingDays must be an array of day numbers (0-6)');
   await db.prepare(
-    'UPDATE employees SET name = ?, is_mechanic = ?, is_cashier = ?, working_days = ?, active = ?, updated_at = ? WHERE id = ?'
-  ).run(name, isMechanic, isCashier, workingDays, active, nowIso(), id);
+    'UPDATE employees SET name = ?, is_mechanic = ?, is_cashier = ?, working_days = ?, updated_at = ? WHERE id = ?'
+  ).run(name, isMechanic, isCashier, workingDays, nowIso(), id);
   const row = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   sendJson(res, 200, serializeEmployee(row));
 });
 
-route('DELETE', '/api/employees/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Employee not found');
-  await db.prepare('UPDATE employees SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+// ---------- Team (Office > Edit Shop > Office): merges the employee roster
+// above with login access - see server/team.js for why creation is
+// mandatory-both and deactivate/reactivate cascade to the linked login.
+// Every route here needs to know if the caller is the owner, so each
+// re-resolves the session itself via currentSession(req), same as the other
+// routes that need more than just "signed in" (see the comment above the
+// storefront routes).
+
+route('GET', '/api/team', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  sendJson(res, 200, await listTeam(ctx.shop.id));
+});
+
+route('POST', '/api/team', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can add team members' });
+  const body = await readJsonBody(req);
+  try {
+    const member = await createTeamMember({
+      shopId: ctx.shop.id,
+      name: body.name,
+      isMechanic: body.isMechanic,
+      isCashier: body.isCashier,
+      workingDays: body.workingDays,
+      email: body.email,
+      password: body.password,
+    });
+    sendJson(res, 201, member);
+  } catch (err) {
+    if (err instanceof TeamError) return badRequest(res, err.message);
+    throw err;
+  }
+});
+
+route('POST', '/api/team/:id/deactivate', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can deactivate a team member' });
+  await deactivateTeamMember(Number(params.id));
+  sendJson(res, 200, { ok: true });
+});
+
+route('POST', '/api/team/:id/reactivate', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can reactivate a team member' });
+  await reactivateTeamMember(Number(params.id));
+  sendJson(res, 200, { ok: true });
+});
+
+// Gives an existing roster-only employee login access.
+route('POST', '/api/team/:id/attach-login', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can grant login access' });
+  const body = await readJsonBody(req);
+  try {
+    await attachLogin({ shopId: ctx.shop.id, employeeId: Number(params.id), email: body.email, password: body.password });
+    sendJson(res, 200, { ok: true });
+  } catch (err) {
+    if (err instanceof TeamError) return badRequest(res, err.message);
+    throw err;
+  }
+});
+
+// Gives an existing login-only person (typically the owner) roster roles.
+route('POST', '/api/team/logins/:loginId/attach-roles', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can set roles' });
+  const body = await readJsonBody(req);
+  try {
+    await attachRoles({ loginId: Number(params.loginId), isMechanic: body.isMechanic, isCashier: body.isCashier, workingDays: body.workingDays });
+    sendJson(res, 200, { ok: true });
+  } catch (err) {
+    if (err instanceof TeamError) return badRequest(res, err.message);
+    throw err;
+  }
+});
+
+// Deactivate/reactivate for a login-only person (no roster link) - e.g. any
+// staff login created before this feature, which never had an employee row.
+route('POST', '/api/team/logins/:loginId/deactivate', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can deactivate a team member' });
+  try {
+    await deactivateLoginOnly(Number(params.loginId));
+    sendJson(res, 200, { ok: true });
+  } catch (err) {
+    if (err instanceof TeamError) return badRequest(res, err.message);
+    throw err;
+  }
+});
+
+route('POST', '/api/team/logins/:loginId/reactivate', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can reactivate a team member' });
+  await reactivateLoginOnly(Number(params.loginId));
   sendJson(res, 200, { ok: true });
 });
 

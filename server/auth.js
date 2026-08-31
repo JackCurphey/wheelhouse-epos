@@ -58,7 +58,7 @@ async function uniqueSlug(client, name) {
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function validateNewLogin({ name, email, password }) {
+export async function validateNewLogin({ name, email, password }) {
   name = (name || '').trim();
   email = (email || '').trim().toLowerCase();
   if (!name) throw new AuthError('Name is required');
@@ -75,10 +75,6 @@ async function insertLogin(client, { shopId, name, email, password, isOwner }) {
     [shopId, name, email, hashPassword(password), !!isOwner]
   );
   return rows[0];
-}
-
-export function serializeLogin(login) {
-  return { id: login.id, name: login.name, email: login.email, isOwner: !!login.is_owner, active: !!login.active };
 }
 
 // Creates a shop and its first login (the owner) together, plus the default
@@ -132,30 +128,6 @@ export async function createShop({ shopName, ownerName, email, password }) {
   }
 }
 
-// Adds another login to an existing shop (owner-only, enforced in server.js).
-export async function createEmployeeLogin({ shopId, name, email, password }) {
-  const clean = await validateNewLogin({ name, email, password });
-  return insertLogin(pool, { shopId, name: clean.name, email: clean.email, password, isOwner: false });
-}
-
-export async function listLogins(shopId) {
-  const { rows } = await pool.query(
-    'SELECT * FROM logins WHERE shop_id = $1 ORDER BY is_owner DESC, name',
-    [shopId]
-  );
-  return rows.map(serializeLogin);
-}
-
-export async function setLoginActive(shopId, loginId, active) {
-  const { rows: [login] } = await pool.query('SELECT * FROM logins WHERE id = $1 AND shop_id = $2', [loginId, shopId]);
-  if (!login) throw new AuthError('Login not found');
-  if (login.is_owner) throw new AuthError("The owner login can't be deactivated");
-  const { rows: [updated] } = await pool.query(
-    "UPDATE logins SET active = $1, updated_at = now() WHERE id = $2 RETURNING *",
-    [!!active, loginId]
-  );
-  return serializeLogin(updated);
-}
 
 export async function verifyLogin(email, password) {
   email = (email || '').trim().toLowerCase();
