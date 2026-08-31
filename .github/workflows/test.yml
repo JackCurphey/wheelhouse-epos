@@ -1,0 +1,64 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          # Mirrors docker-compose.yml: this bootstrap user is a Postgres
+          # SUPERUSER and superusers bypass RLS, so the app (and therefore
+          # the test suite) must never connect as it. The epos_app role
+          # created below is what DATABASE_URL points at.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-superuser-pw
+          POSTGRES_DB: epos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d epos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://epos_app:ci-epos-app-pw@127.0.0.1:5432/epos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Runs the real bootstrap script rather than a copy of its SQL, so CI
+      # fails if it ever loses its executable bit again (it was committed
+      # 100644 once, which made the compose bootstrap fail silently while
+      # the container still reported healthy).
+      - name: Create the epos_app role
+        run: ./docker/init-db.sh
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: epos
+          EPOS_APP_PASSWORD: ci-epos-app-pw
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGPASSWORD: ci-superuser-pw
+
+      - name: Fail if the app role is a superuser
+        run: |
+          test "$(psql "$DATABASE_URL" -tAc 'SELECT rolsuper FROM pg_roles WHERE rolname = current_user')" = "f"
+
+      - run: npm ci
+
+      - run: npm run migrate
+
+      - run: npm test

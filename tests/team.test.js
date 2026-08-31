@@ -8,6 +8,7 @@ import {
   listTeam,
   createTeamMember,
   deactivateTeamMember,
+  reactivateTeamMember,
   attachLogin,
   attachRoles,
   deactivateLoginOnly,
@@ -112,7 +113,7 @@ test('deactivateTeamMember deactivates the linked login too', async () => {
         password: 'password123',
       });
 
-      await deactivateTeamMember(member.employeeId);
+      await deactivateTeamMember({ shopId: shop.id, employeeId: member.employeeId });
 
       const team = await listTeam(shop.id);
       assert.equal(team[0].active, false);
@@ -133,7 +134,7 @@ test('deactivateTeamMember works for an employee with no login', async () => {
         'INSERT INTO employees (name, is_mechanic, is_cashier, updated_at) VALUES (?, ?, ?, ?)'
       ).run('Roster Only', 1, 0, new Date().toISOString());
 
-      await deactivateTeamMember(info.lastInsertRowid);
+      await deactivateTeamMember({ shopId: shop.id, employeeId: info.lastInsertRowid });
 
       const team = await listTeam(shop.id);
       assert.equal(team.length, 1);
@@ -222,7 +223,7 @@ test('attachRoles gives an existing login (e.g. the owner) roster roles', async 
         [shop.id, 'Owner Person', `owner2-${shop.id}@example.com`, 'irrelevant-hash']
       );
 
-      await attachRoles({ loginId: login.id, isMechanic: true, isCashier: true });
+      await attachRoles({ shopId: shop.id, loginId: login.id, isMechanic: true, isCashier: true });
 
       const team = await listTeam(shop.id);
       assert.equal(team.length, 1);
@@ -244,7 +245,7 @@ test('attachRoles requires at least one role', async () => {
         [shop.id, 'Owner Person', `owner3-${shop.id}@example.com`, 'irrelevant-hash']
       );
 
-      await assert.rejects(() => attachRoles({ loginId: login.id, isMechanic: false, isCashier: false }), TeamError);
+      await assert.rejects(() => attachRoles({ shopId: shop.id, loginId: login.id, isMechanic: false, isCashier: false }), TeamError);
     });
   } finally {
     await deleteTestShop(shop.id);
@@ -260,12 +261,12 @@ test('deactivateLoginOnly deactivates a legacy standalone login (no employee lin
         [shop.id, 'Legacy Staff', `legacystaff-${shop.id}@example.com`, 'irrelevant-hash']
       );
 
-      await deactivateLoginOnly(login.id);
+      await deactivateLoginOnly({ shopId: shop.id, loginId: login.id });
 
       const team = await listTeam(shop.id);
       assert.equal(team[0].active, false);
 
-      await reactivateLoginOnly(login.id);
+      await reactivateLoginOnly({ shopId: shop.id, loginId: login.id });
       const teamAgain = await listTeam(shop.id);
       assert.equal(teamAgain[0].active, true);
     });
@@ -283,7 +284,7 @@ test('deactivateLoginOnly refuses to deactivate the owner', async () => {
         [shop.id, 'Owner Person', `ownerprotect-${shop.id}@example.com`, 'irrelevant-hash']
       );
 
-      await assert.rejects(() => deactivateLoginOnly(login.id), TeamError);
+      await assert.rejects(() => deactivateLoginOnly({ shopId: shop.id, loginId: login.id }), TeamError);
     });
   } finally {
     await deleteTestShop(shop.id);
@@ -302,7 +303,7 @@ test('deactivateLoginOnly refuses a login that is actually linked to an employee
         password: 'password123',
       });
 
-      await assert.rejects(() => deactivateLoginOnly(member.loginId), TeamError);
+      await assert.rejects(() => deactivateLoginOnly({ shopId: shop.id, loginId: member.loginId }), TeamError);
     });
   } finally {
     await deleteTestShop(shop.id);
@@ -335,6 +336,139 @@ test('deleting an employee row leaves their login intact (employee_id goes to nu
     });
   } finally {
     await deleteTestShop(shop.id);
+  }
+});
+
+// ---------- Cross-shop isolation for the login-side writes ----------
+// `logins` is deliberately not RLS-protected (auth has to find a login
+// before a shop is in scope), so every query against it must carry an
+// explicit shop_id. These tests are the guard: each one drives a function
+// as shop A while passing shop B's id, and asserts shop B is untouched.
+
+async function makeStandaloneLogin(shop, label) {
+  const { rows: [login] } = await pool.query(
+    'INSERT INTO logins (shop_id, name, email, password_hash, is_owner, active) VALUES ($1, $2, $3, $4, false, $5) RETURNING *',
+    [shop.id, label, `${label}-${shop.id}@example.com`, 'irrelevant-hash', true]
+  );
+  return login;
+}
+
+async function loginById(id) {
+  const { rows: [row] } = await pool.query('SELECT * FROM logins WHERE id = $1', [id]);
+  return row;
+}
+
+test('deactivateLoginOnly refuses a login belonging to another shop', async () => {
+  const shopA = await createTestShop();
+  const shopB = await createTestShop();
+  try {
+    const victim = await makeStandaloneLogin(shopB, 'victim');
+
+    await runWithShop(shopA.id, async () => {
+      await assert.rejects(() => deactivateLoginOnly({ shopId: shopA.id, loginId: victim.id }), TeamError);
+    });
+
+    assert.equal((await loginById(victim.id)).active, true, "another shop's login was deactivated");
+  } finally {
+    await deleteTestShop(shopA.id);
+    await deleteTestShop(shopB.id);
+  }
+});
+
+test('reactivateLoginOnly leaves a login belonging to another shop deactivated', async () => {
+  const shopA = await createTestShop();
+  const shopB = await createTestShop();
+  try {
+    const victim = await makeStandaloneLogin(shopB, 'lockedout');
+    await pool.query('UPDATE logins SET active = false WHERE id = $1', [victim.id]);
+
+    await runWithShop(shopA.id, async () => {
+      await reactivateLoginOnly({ shopId: shopA.id, loginId: victim.id });
+    });
+
+    assert.equal((await loginById(victim.id)).active, false, "another shop's login was re-enabled");
+  } finally {
+    await deleteTestShop(shopA.id);
+    await deleteTestShop(shopB.id);
+  }
+});
+
+test('attachRoles refuses a login belonging to another shop', async () => {
+  const shopA = await createTestShop();
+  const shopB = await createTestShop();
+  try {
+    const victim = await makeStandaloneLogin(shopB, 'roleless');
+
+    await runWithShop(shopA.id, async () => {
+      await assert.rejects(
+        () => attachRoles({ shopId: shopA.id, loginId: victim.id, isMechanic: true, isCashier: false }),
+        TeamError
+      );
+    });
+
+    assert.equal((await loginById(victim.id)).employee_id, null, "another shop's login was given roster roles");
+  } finally {
+    await deleteTestShop(shopA.id);
+    await deleteTestShop(shopB.id);
+  }
+});
+
+test('deactivateTeamMember does not touch a login in another shop', async () => {
+  const shopA = await createTestShop();
+  const shopB = await createTestShop();
+  try {
+    let victimLoginId;
+    await runWithShop(shopB.id, async () => {
+      const member = await createTeamMember({
+        shopId: shopB.id,
+        name: 'Shop B Mechanic',
+        isMechanic: true,
+        isCashier: false,
+        email: `shopb-mech-${shopB.id}@example.com`,
+        password: 'password123',
+      });
+      victimLoginId = member.loginId;
+    });
+    const victimEmployeeId = (await loginById(victimLoginId)).employee_id;
+
+    await runWithShop(shopA.id, async () => {
+      await deactivateTeamMember({ shopId: shopA.id, employeeId: victimEmployeeId });
+    });
+
+    assert.equal((await loginById(victimLoginId)).active, true, "another shop's login was deactivated");
+  } finally {
+    await deleteTestShop(shopA.id);
+    await deleteTestShop(shopB.id);
+  }
+});
+
+test('reactivateTeamMember does not touch a login in another shop', async () => {
+  const shopA = await createTestShop();
+  const shopB = await createTestShop();
+  try {
+    let victimLoginId;
+    await runWithShop(shopB.id, async () => {
+      const member = await createTeamMember({
+        shopId: shopB.id,
+        name: 'Shop B Cashier',
+        isMechanic: false,
+        isCashier: true,
+        email: `shopb-cash-${shopB.id}@example.com`,
+        password: 'password123',
+      });
+      victimLoginId = member.loginId;
+      await deactivateTeamMember({ shopId: shopB.id, employeeId: member.employeeId });
+    });
+    const victimEmployeeId = (await loginById(victimLoginId)).employee_id;
+
+    await runWithShop(shopA.id, async () => {
+      await reactivateTeamMember({ shopId: shopA.id, employeeId: victimEmployeeId });
+    });
+
+    assert.equal((await loginById(victimLoginId)).active, false, "another shop's login was re-enabled");
+  } finally {
+    await deleteTestShop(shopA.id);
+    await deleteTestShop(shopB.id);
   }
 });
 
