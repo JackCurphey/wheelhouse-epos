@@ -1,0 +1,10 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "wheelhouse",
+  "homepage": "https://github.com/JackCurphey/wheelhouse-epos",
+  "include": [
+    "./primitives/registry.json",
+    "./patterns/registry.json"
+  ],
+  "items": []
+}

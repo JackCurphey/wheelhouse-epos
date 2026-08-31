@@ -1,0 +1,82 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "wheelhouse-primitives",
+  "homepage": "https://github.com/JackCurphey/wheelhouse-epos",
+  "items": [
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "author": "Wheelhouse EPOS",
+      "description": "The Wheelhouse button, matching the .btn family in the existing app. The accent variant reads the tenant-varying --accent / --accent-dark custom properties rather than a compiled colour class, so a shop's chosen scheme still applies at runtime.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "button.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "title": "Input",
+      "author": "Wheelhouse EPOS",
+      "description": "Single-line text field matching .field input in the existing app: white ground so it stays legible on the shop-coloured modal background, accent focus ring, and number spinners suppressed the way the vanilla app suppresses them.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "input.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "label",
+      "type": "registry:ui",
+      "title": "Label",
+      "author": "Wheelhouse EPOS",
+      "description": "Field label plus the Field stack and FieldError message that always travel with it, matching .field, .field label and .field-error. Plain elements paired by htmlFor, so it works inside the native dialog element the Wheelhouse dialog uses.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "label.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "author": "Wheelhouse EPOS",
+      "description": "Modal built on the native dialog element, so focus trapping, background inerting and Escape come from the browser. Visual parity with .modal, including the shop-configurable --modal-bg panel colour.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "dialog.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "title": "Table",
+      "author": "Wheelhouse EPOS",
+      "description": "Table markup matching table.data-table: uppercase muted headers over a 2px rule, 13.5px body, numeric columns right-aligned. Wraps itself in a horizontal scroll container because EPOS tables are wide and must not push a counter screen sideways.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "table.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    }
+  ]
+}
