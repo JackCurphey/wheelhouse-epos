@@ -4405,6 +4405,10 @@ async function renderStorefrontSettingsSection(container) {
       <label><input type="checkbox" id="storefront-enabled" ${settings.enabled ? 'checked' : ''}> Enable public storefront</label>
     </div>
     <div class="field">
+      <button type="button" class="btn btn-sm" id="storefront-preview">Preview storefront</button>
+      <span class="muted">${settings.enabled ? 'Opens your live storefront in a new tab.' : "Opens a preview only you can see — customers can't view it until you enable it above."}</span>
+    </div>
+    <div class="field">
       <label for="storefront-tagline">Tagline</label>
       <input type="text" id="storefront-tagline" value="${esc(settings.tagline)}" maxlength="200" />
     </div>
@@ -4431,6 +4435,9 @@ async function renderStorefrontSettingsSection(container) {
     <button class="btn btn-primary" id="storefront-save">Save storefront settings</button>
     <span id="storefront-save-status" class="muted"></span>
   `;
+  document.getElementById('storefront-preview').addEventListener('click', () => {
+    window.open(`/store/${encodeURIComponent(currentUser.shopSlug)}/`, '_blank');
+  });
   document.getElementById('storefront-save').addEventListener('click', async () => {
     const status = document.getElementById('storefront-save-status');
     try {
