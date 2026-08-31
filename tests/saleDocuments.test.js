@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
-import { loadDocumentLine } from '../server/server.js';
+import { loadDocumentLine, createSale } from '../server/server.js';
 
 // The helper has to survive a shop that owns an order with lines. Until it
 // deletes sale_document_items, deleting sale_documents trips a foreign key.
@@ -218,6 +218,47 @@ test('a persisted labour line keeps its stored price after the service is repric
       ).all(doc.lastInsertRowid);
       assert.equal(stored.length, 1);
       assert.equal(Number(stored[0].unit_price), 55, 'stored line price must not follow a later reprice');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// stock_movements.product_id is NOT NULL, so a labour line reaching the
+// stock-deduction loop in createSale is a constraint violation, not a soft
+// bug - this proves it never gets there. Note: createSale derives the
+// payment method from which of cashAmount/cardAmount/payments are non-zero;
+// it takes no paymentMethod parameter.
+test('tendering an order with a labour line moves no stock and writes no movement', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const product = await prepare(
+        `INSERT INTO products (sku, name, price, cost, stock_qty, active)
+         VALUES ('SKU-1', 'Chain', 24.99, 10.00, 5, 1)`
+      ).run();
+      const saleId = await createSale({
+        items: [
+          { productId: product.lastInsertRowid, qty: 1 },
+          { lineType: 'labour', name: 'Fit chain', unitPrice: 15, minutes: 20 },
+        ],
+        discount: 0,
+        cashAmount: 39.99,
+        cashTendered: 40,
+      });
+
+      const after = await prepare('SELECT stock_qty FROM products WHERE id = ?').get(product.lastInsertRowid);
+      assert.equal(after.stock_qty, 4, 'the part moves stock');
+
+      const movements = await prepare('SELECT * FROM stock_movements').all();
+      assert.equal(movements.length, 1, 'only the part writes a movement, never the labour');
+      assert.equal(movements[0].product_id, product.lastInsertRowid);
+
+      const lines = await prepare('SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id').all(saleId);
+      assert.equal(lines.length, 2);
+      assert.equal(lines[1].line_type, 'labour');
+      assert.equal(lines[1].product_id, null);
+      assert.equal(lines[1].minutes, 20);
     });
   } finally {
     await deleteTestShop(shop.id);

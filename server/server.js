@@ -1530,7 +1530,7 @@ export async function loadDocumentLine(it, { checkStock }) {
 
 // Validates items against live stock, inserts the sale + sale_items, and
 // deducts stock. Shared by direct checkout and quote/order -> sale conversion.
-async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
   const loaded = [];
   for (const it of items) {
     loaded.push(await loadDocumentLine(it, { checkStock: true }));
@@ -1582,20 +1582,35 @@ async function createSale({ customerId, cashierId, items, discount, cashAmount, 
       );
     }
 
-    for (const { product, qty, unitPrice } of loaded) {
-      const lineTotal = unitPrice * qty;
+    for (const line of loaded) {
       await db.prepare(
-        `INSERT INTO sale_items (sale_id, product_id, name, sku, unit_price, qty, line_total)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(saleId, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
+        `INSERT INTO sale_items (sale_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        saleId,
+        line.product ? line.product.id : null,
+        line.name,
+        line.sku,
+        line.unitPrice,
+        line.qty,
+        line.lineTotal,
+        line.lineType,
+        line.serviceId,
+        line.minutes
+      );
 
-      const newQty = product.stock_qty - qty;
-      await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
-      await db.prepare(
-        `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
-      ).run(product.id, -qty, `Sale #${saleId}`);
-      if (product.shopify_inventory_item_id) {
-        shopifyPushes.push({ product, newQty });
+      // Labour is not stock. stock_movements.product_id is NOT NULL, so a
+      // labour line reaching this block is a constraint violation, not a
+      // cosmetic bug.
+      if (line.lineType === 'product') {
+        const newQty = line.product.stock_qty - line.qty;
+        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), line.product.id);
+        await db.prepare(
+          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
+        ).run(line.product.id, -line.qty, `Sale #${saleId}`);
+        if (line.product.shopify_inventory_item_id) {
+          shopifyPushes.push({ product: line.product, newQty });
+        }
       }
     }
     await db.exec('COMMIT');
@@ -1995,7 +2010,21 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
   if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
 
   const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
-  const saleItems = items.map((it) => ({ productId: it.product_id, qty: it.qty, unitPrice: it.unit_price }));
+  // A stored labour line has product_id NULL. Dropping line_type here (as a
+  // bare {productId, qty, unitPrice} mapping used to) sends it into
+  // loadDocumentLine looking like an incomplete product line, which rejects
+  // it - a job with labour on its order could never be converted into a
+  // sale. Carry the fields loadDocumentLine actually branches on, for both
+  // line types, so a labour line survives the round trip.
+  const saleItems = items.map((it) => ({
+    lineType: it.line_type,
+    productId: it.product_id,
+    qty: it.qty,
+    unitPrice: it.unit_price,
+    name: it.name,
+    serviceId: it.service_id,
+    minutes: it.minutes,
+  }));
 
   let saleId;
   try {
