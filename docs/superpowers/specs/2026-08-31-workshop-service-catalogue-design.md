@@ -89,6 +89,10 @@ Verified against the code on 31 August 2026, not taken from the plan.
   `stock_movements.product_id` is **`NOT NULL`** (`:292`), so a labour line
   reaching that loop is a constraint violation, not a soft bug. This is the
   load-bearing guard.
+- **`createSale` is not exported** (`server.js:1451`). Testing it directly
+  requires adding `export`, which the plan does.
+- **There is no till refund.** TILL-09 is None in the catalogue and there is no
+  route for one, so there is no second stock path to guard.
 - **The job ↔ order link is `sale_documents.workshop_job_id`**, a nullable FK
   on the order side. Every job auto-creates a £0 placeholder order
   (`server.js:2176-2180`).
@@ -315,7 +319,6 @@ Coverage:
   `stock_movements` row.** The load-bearing test.
 - **The job → till → tender round-trip preserves description, price,
   `serviceId` and minutes.** The round-trip defect test.
-- A refund of a sale containing a labour line does not restock anything.
 - The CHECK constraints hold: a labour line cannot carry a `product_id`, a
   product line cannot have a null one.
 - Shop B can neither read nor modify shop A's services or labour lines (RLS),
