@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseRootTokens, contrast, findDeclarations, findHexLiterals,
+  parseRootTokens, contrast, findDeclarations, findHexLiterals, readFile,
 } from './css.js';
 
 test('parseRootTokens reads custom properties from the :root block', () => {
@@ -44,4 +44,15 @@ test('findHexLiterals finds hex colours and skips non-colour hashes', () => {
   const hits = findHexLiterals(src);
   assert.deepEqual(hits.map(h => h.hex), ['#ff0000', '#abc']);
   assert.equal(hits[0].line, 1);
+});
+
+test('findHexLiterals ignores hex-shaped ids, href fragments and url() refs', () => {
+  const src = 'div#eee { }\na[href="#deadbe"] {}\n.class#fff { }';
+  const hits = findHexLiterals(src);
+  assert.deepEqual(hits, []);
+});
+
+test('readFile reads a known repo file by repo-root-relative path', () => {
+  const pkg = readFile('package.json');
+  assert.match(pkg, /"type"\s*:\s*"module"/);
 });

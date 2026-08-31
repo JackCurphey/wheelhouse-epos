@@ -26,6 +26,11 @@ export function parseRootTokens(css) {
   const close = clean.indexOf('}', open);
   const body = clean.slice(open + 1, close);
   const tokens = new Map();
+  // NOTE: the per-line pattern below requires a trailing `;`. A final
+  // declaration inside :root with no trailing semicolon (valid CSS, e.g.
+  // `--x: 1px }`) is silently dropped. Not currently triggered by any
+  // stylesheet in this repo; documented here rather than fixed, since
+  // fixing it changes matching behaviour for every downstream task.
   for (const line of body.split('\n')) {
     const m = line.match(/^\s*(--[\w-]+)\s*:\s*([^;]+);/);
     if (m) tokens.set(m[1], m[2].trim());
@@ -47,6 +52,11 @@ export function relativeLuminance(hex) {
   return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
 }
 
+// NOTE: the 2dp rounding below is standard WCAG-reporting behaviour, but it
+// means ratios in [4.495, 4.5) round UP to a displayed 4.50 even though the
+// true ratio is under the 4.5 AA threshold. Downstream tasks asserting
+// `contrast(...) >= 4.5` should treat this function as carrying ~0.005 of
+// slack by design, not as a bug to be tightened here.
 export function contrast(hexA, hexB) {
   const a = relativeLuminance(hexA);
   const b = relativeLuminance(hexB);
@@ -68,11 +78,20 @@ export function findDeclarations(css, prop) {
   return out;
 }
 
+// Context immediately before a `#` that means it is NOT a colour literal:
+// - an identifier character, `]` or `)` directly touching the `#` (e.g.
+//   `div#eee`, `.class#fff`, `arr[0]#abc`, `fn()#abc`)
+// - an `id=` or `href=` attribute opening into a quote (e.g. `href="#deadbe"`)
+// - a `url(` opening into a quote or directly (e.g. `url(#fragment)`)
+const NON_COLOUR_HASH_CONTEXT = /(?:[\w\]\)]|(?:\bid|\bhref)\s*=\s*["']?|url\(\s*["']?)$/i;
+
 export function findHexLiterals(source) {
   const lines = source.split('\n');
   const out = [];
   lines.forEach((line, i) => {
     for (const m of line.matchAll(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g)) {
+      const before = line.slice(0, m.index);
+      if (NON_COLOUR_HASH_CONTEXT.test(before)) continue;
       out.push({ hex: m[0], line: i + 1 });
     }
   });
