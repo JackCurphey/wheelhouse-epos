@@ -25,6 +25,10 @@ export async function deleteTestShop(shopId) {
     await client.query('DELETE FROM sale_document_items WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM sale_documents WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM sale_items WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM workshop_services WHERE shop_id = $1', [shopId]);
+    // sale_payments.sale_id has no ON DELETE CASCADE, so it must be cleared
+    // before sales or the delete below fails with a foreign-key violation.
+    await client.query('DELETE FROM sale_payments WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM sales WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM stock_movements WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM workshop_job_attachments WHERE shop_id = $1', [shopId]);
