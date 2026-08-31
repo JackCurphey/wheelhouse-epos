@@ -76,10 +76,21 @@ independently worth having.
 Why this and not something else:
 
 - **It is the strongest thing we have.** Drag-to-place week and month diary with
-  per-mechanic columns, server-enforced hours and overlap, configurable capacity,
-  job attachments, a moderated pending-approval booking queue, guest booking by
-  phone, real SMS. None of the three workshop competitors describes a diary of
-  that depth, and none has the moderated queue.
+  per-mechanic columns, configurable capacity, job attachments, a moderated
+  pending-approval booking queue, guest booking by phone, real SMS. None of the
+  three workshop competitors describes a diary of that depth, and none has the
+  moderated queue.
+
+  **Corrected 31 Aug 2026 (same day):** an earlier version of this line, and the
+  business research it came from, said "server-enforced hours and overlap." That
+  is true only on the customer booking path. For staff-created and staff-moved
+  jobs, overlap prevention, opening-hours clamping, working-day blocking and the
+  complete-job lock live in `public/app.js` and nowhere else — any authenticated
+  request can double-book a mechanic or book a closed Sunday. The rules exist
+  server-side at `server/server.js:3238-3261` and were never lifted into the
+  staff routes. Fixing that is Phase W0 of
+  `docs/superpowers/specs/2026-08-31-workshop-first-build.md`. Do not quote the
+  diary's server-side enforcement as a strength until that lands.
 - **It does not collide with the incumbent.** Workshop booking in most shops is a
   paper diary or a wall calendar, not a POS module. Nothing has to be
   disconnected, migrated or cancelled to start using it. The shop takes zero risk.
@@ -181,6 +192,35 @@ candidate for the G3 unlock, ahead of everything currently in Track D.
 Validation is free and starts now: it is added to the Track A conversations in
 §8. Technical design may be specced ahead of the gate — a spec costs a session
 and sharpens the questions — but no build starts before G3.
+
+## 5a. Decided: the workshop module is built first
+
+**Decided 31 August 2026.** The workshop is the first thing we build, ahead of
+the paid till floor in §8 Track B2 and ahead of the §5 bike record. This is
+consistent with the wedge in §4 rather than a change to it — it makes Track B1
+the active track and B2 the one built alongside it.
+
+The build order, the feature-by-feature comparison against the field, the bike
+spec autofill design, and the legal constraints as data-model rules all live in
+`docs/superpowers/specs/2026-08-31-workshop-first-build.md`. Three things from
+that spec belong here because they change the business case, not just the code:
+
+1. **Automated status messaging is the one table-stakes feature we lack**, and
+   every competitor has it. We have no email capability of any kind — not even
+   password reset. That is the first new dependency the project takes on.
+2. **The differentiator is the structured inspection workflow** — a checklist at
+   intake, photos per item, an itemised estimate, and per-line customer approval.
+   Proven in automotive (Shopmonkey, Tekmetric, Mitchell 1 all converged on it),
+   absent from every cycling tool, where the best available is a single ad hoc
+   photo-and-price message. It makes the shop money rather than saving it time,
+   which is the only argument that lands with this buyer.
+3. **Two competitor corrections.** Saledock / Celerant ONE — the ACT's endorsed
+   UK partner — has no native workshop module and integrates Bikebook instead.
+   And i-BikeShop's "Workshop" is a static marketing page, not a tool; it should
+   not appear in any competitive comparison. A new vendor also surfaced,
+   **bikeryOS** (€699/store/month), claiming both spec autofill and a full
+   bike-as-asset record — but it was not live in production at the time of
+   research and has no independent trace. Study it; do not treat it as validated.
 
 ## 6. Deletions — things this buyer removes from the roadmap
 
@@ -308,7 +348,8 @@ Written now, while it is still cheap to be honest.
 ## 13. Open
 
 1. **Weekly time budget** — needed for gate dates.
-2. **Final price** — set at G3.
+2. **Final price** — set at G3. Note the workshop anchor: Bikebook charges
+   £49.99/mo ex VAT for roughly what we intend to give away.
 3. **Whether the free workshop stays free publicly after G4**, or becomes
    free-with-limits. Design partners are grandfathered regardless.
 4. **Rider-owned or shop-owned-with-rider-access** for the §5 bike record. These
