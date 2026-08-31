@@ -3334,11 +3334,12 @@ async function serveStatic(req, res, pathname, baseDir) {
   }
   const ext = path.extname(filePath);
   const contentType = MIME[ext] || 'application/octet-stream';
-  // Without an explicit header here, Cloudflare's edge falls back to its own
-  // default caching for static-looking extensions (observed: a 4-hour TTL)
-  // - fine for a CDN-fronted site with a build/version pipeline, but this
-  // app deploys straight from source with no cache-busted filenames, so a
-  // cached JS/CSS bundle can silently outlive the code it's stale against.
+  // Without an explicit header here, any CDN or caching proxy in front of
+  // this app falls back to its own default caching for static-looking
+  // extensions (a 4-hour TTL was observed in practice) - fine for a
+  // CDN-fronted site with a build/version pipeline, but this app deploys
+  // straight from source with no cache-busted filenames, so a cached
+  // JS/CSS bundle can silently outlive the code it's stale against.
   // Small, low-traffic internal tool - correctness beats any caching win.
   res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
   const stream = createReadStream(filePath);

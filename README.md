@@ -68,17 +68,18 @@ alongside `npm start` for the same arrangement.
 The app's own port is deliberately not published. Reaching the app directly
 would bypass the gateway, and the gateway is what makes the client's IP
 trustworthy: it overwrites `x-forwarded-for` from the real socket and drops
-anything the caller sent in it or in the Cloudflare-style headers. The app
+anything the caller sent in it or in the other client-settable forwarding
+headers. The app
 believes those headers only when `TRUST_PROXY=1`, which Compose sets for the
 app service precisely because the gateway is the only way in. The per-IP
 rate limiter on login and signup depends on this - a client that could
 choose its own forwarded address could choose a fresh rate-limit key on
 every request.
 
-**This setup is local only.** Nothing here exposes the app to the internet,
-and the previous Cloudflare Tunnel arrangement has been removed. Two
-features need genuine public reachability and therefore do not work in a
-purely local install:
+**This setup is local only.** Nothing here exposes the app to the internet.
+The tunnel this used to rely on has been removed and nothing has replaced
+it. Two features need genuine public reachability and therefore do not work
+in a purely local install:
 
 - **Shopify webhooks.** `APP_PUBLIC_URL` must be an internet-reachable URL
   for Shopify to deliver order and refund webhooks. Product and inventory

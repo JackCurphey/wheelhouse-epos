@@ -1,8 +1,8 @@
 // tests/proxy-trust.test.js
 //
-// The app used to sit behind a Cloudflare Tunnel, which stripped any
-// forwarding headers a client tried to spoof before they reached this
-// process. Nothing does that any more, so anything a client can set is
+// The app used to sit behind a tunnel that stripped any forwarding
+// headers a client tried to spoof before they reached this process.
+// Nothing does that any more, so anything a client can set is
 // attacker-controlled and must not be believed unless a proxy we trust put
 // it there. The per-IP rate limiter on login/signup is what depends on
 // getting this right: a spoofable key means no brute-force protection at

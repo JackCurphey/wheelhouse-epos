@@ -76,10 +76,12 @@ function sendOffline(res) {
 // defeat the limit entirely. Anything a client sends in one of these is
 // dropped on the floor first.
 //
-// The Cloudflare-shaped names are in here because the app used to sit
-// behind a Cloudflare Tunnel, which set cf-connecting-ip authoritatively.
-// It no longer does, so the header now carries no authority at all and is
-// removed rather than forwarded.
+// The cf-* names are in the list because a tunnel in front of this app
+// once set cf-connecting-ip authoritatively and the app trusted it.
+// Nothing sets it now, so it carries no authority and is dropped rather
+// than forwarded. Do not remove these names to tidy up: the strip list IS
+// the defence. Anything left out of it reaches the app as a header a
+// caller chose, and clientIp() is what keys the login rate limiter.
 const CLIENT_CONTROLLED_FORWARDING_HEADERS = [
   'cf-connecting-ip',
   'cf-ipcountry',

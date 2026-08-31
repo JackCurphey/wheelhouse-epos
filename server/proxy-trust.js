@@ -1,11 +1,10 @@
 // Who a request came from, and whether it arrived over https.
 //
-// This used to assume a Cloudflare Tunnel sat in front of the app. That
-// mattered for more than tidiness: the tunnel overwrote cf-connecting-ip
-// with the real client address and stripped whatever a client tried to put
-// there, so trusting that header was safe. Nothing does that now, so every
-// forwarding header is attacker-controlled unless a proxy we actually
-// trust set it. The per-IP rate limiter on login/signup is what depends on
+// This used to assume a tunnel sat in front of the app. That mattered for
+// more than tidiness: the tunnel overwrote the client-IP header with the
+// real client address and stripped whatever a caller tried to put there,
+// so trusting it was safe. Nothing does that now, so every forwarding
+// header is attacker-controlled unless a proxy we actually trust set it. The per-IP rate limiter on login/signup is what depends on
 // this - a key the caller can choose is no rate limit at all, because
 // every request can claim to be a new IP.
 //
