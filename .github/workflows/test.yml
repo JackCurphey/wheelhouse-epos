@@ -2,7 +2,12 @@ name: Tests
 
 on:
   push:
-    branches: [master]
+    # Both names on purpose, while the default branch is being renamed from
+    # master to main. Renaming needs repo admin, so it may land at any time
+    # or not for a while; listing both means the push trigger keeps firing
+    # either side of it and nothing has to be timed. Drop master once the
+    # rename is done.
+    branches: [main, master]
   pull_request:
 
 jobs:
