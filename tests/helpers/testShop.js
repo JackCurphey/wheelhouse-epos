@@ -36,11 +36,24 @@ export async function deleteTestShop(shopId) {
     await client.query('DELETE FROM workshop_settings WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM customer_bikes WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM customers WHERE shop_id = $1', [shopId]);
+    // customer_groups has customers.group_id pointing at it, so it must wait
+    // until customers are gone (above).
+    await client.query('DELETE FROM customer_groups WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM employees WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM storefront_settings WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM shopify_connections WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM shopify_processed_events WHERE shop_id = $1', [shopId]);
+    // Purchase-order lines reference both purchase_orders and products, so
+    // they go before either. createShop() seeds one mock supplier for every
+    // shop (see server/auth.js), so suppliers must be cleared too, after its
+    // own children.
+    await client.query('DELETE FROM purchase_order_items WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM purchase_orders WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM supplier_catalogue_items WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM suppliers WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM products WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM label_settings WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM shop_theme WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM shops WHERE id = $1', [shopId]);
   } finally {
     client.release();
