@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "bencium-impact-designer@bencium-marketplace": true,
+    "design-audit@bencium-marketplace": true,
+    "bencium-controlled-ux-designer@bencium-marketplace": true
+  }
+}
