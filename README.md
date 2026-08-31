@@ -1,38 +1,63 @@
 # Wheelhouse EPOS
 
-A local point-of-sale system for a bike shop: till/checkout, inventory management,
-sales history and a dashboard. Runs entirely on your own computer - no internet
-connection or npm install required. Each shop creates its own account and signs
-in to its own private data.
+A point-of-sale system for a bike shop: till/checkout, inventory management,
+sales history and a dashboard. Runs entirely on your own computer. Each shop
+creates its own account and signs in to its own private data, and the database
+enforces that separation itself rather than trusting the application to
+remember it.
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) version 22.5 or later (you have this already -
-  check with `node -v` in a terminal). It uses Node's built-in SQLite database,
-  so there is nothing else to install.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) - the app,
+  its database and its gateway all run as containers.
+- [Node.js](https://nodejs.org/) 22.5 or later, only if you want to run the
+  test suite or the app outside Docker.
+
+Data is stored in **PostgreSQL** with row-level security. Earlier versions of
+this app used Node's built-in SQLite with one file per shop under
+`data/shops/`; neither is true any more.
 
 ## Running it
 
-Open a terminal (Command Prompt / PowerShell / Terminal) in this folder and run:
+Create a `.env` file in this folder with a password for each database role:
 
 ```
-npm start
+POSTGRES_SUPERUSER_PASSWORD=pick-something
+POSTGRES_PASSWORD=pick-something-else
+DATABASE_URL=postgres://epos_app:pick-something-else@127.0.0.1:5433/epos
 ```
 
-Then open **http://localhost:4000** in your browser (Chrome, Edge, Firefox all work),
-and either create a shop account (shop name, email, password) or log in to an
-existing one.
-
-To stop it, press `Ctrl+C` in the terminal. Your data (products, sales, stock)
-is saved under `data/shops/` and will still be there next time you run `npm start`.
-
-If port 4000 is already used by something else on your PC, run it on a different
-port instead:
+Then start everything and apply the schema:
 
 ```
-set PORT=4100 && npm start        (Windows Command Prompt)
-$env:PORT=4100; npm start         (Windows PowerShell)
+docker compose up -d --wait
+npm install && npm run migrate
 ```
+
+Open **http://localhost:8080** in your browser (Chrome, Edge, Firefox all
+work), and either create a shop account (shop name, email, password) or log in
+to an existing one.
+
+**8080 is the gateway, not the app.** The app's own port is deliberately not
+published to your machine - see "The gateway" below for why that is a security
+property and not an inconvenience. Postgres is on 5433, so it does not collide
+with any Postgres you already have on 5432.
+
+To stop it, `docker compose down`. Your data (products, sales, stock) lives in
+a Docker volume and will still be there next time you start it. `docker compose
+down -v` deletes that volume and everything in it.
+
+### Running the tests
+
+```
+docker compose up -d --wait
+npm install
+npm run migrate
+npm test
+```
+
+The suite needs a real Postgres - it does not mock the database, because the
+row-level security policies are the thing most worth testing.
 
 ## What's included
 
@@ -156,7 +181,8 @@ $env:SHOPIFY_TOKEN_ENCRYPTION_KEY="some-long-random-secret"; $env:APP_PUBLIC_URL
 - **No card payment processing.** "Card" is just recorded as the payment method
   for your records — you'd still take the card payment on your existing card
   machine.
-- **Data lives only on this computer**, one file per shop under `data/shops/`,
+- **Data lives only on this computer**, in a Docker volume, separated per shop by
+  database row-level security rather than by file,
   plus `data/accounts.db` holding the login accounts. Back these up
   periodically (copy the whole `data` folder) since there's no cloud sync.
 
