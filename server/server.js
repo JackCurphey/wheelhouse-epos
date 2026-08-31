@@ -1446,30 +1446,49 @@ async function resolveGroupDiscount(customerId, subtotal) {
   return { amount, name: `${top.name} (${top.discount_percent}%)` };
 }
 
+// The one place a request line becomes a stored line. Extracted from the three
+// near-identical blocks in createSale, POST /api/sale-documents and PUT
+// /api/sale-documents/:id/items, so the rules cannot drift between them.
+// checkStock is true only at tender - a quote or an open order may reference
+// something that is currently out of stock.
+export async function loadDocumentLine(it, { checkStock }) {
+  const productId = Number(it.productId);
+  const qty = Math.trunc(Number(it.qty));
+  if (!productId || !Number.isFinite(qty) || qty <= 0) {
+    throw new ValidationError('Each item needs a valid productId and positive qty');
+  }
+  const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
+  if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
+  if (checkStock && product.stock_qty < qty) {
+    throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
+  }
+  let unitPrice = product.price;
+  if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
+    const overridden = Number(it.unitPrice);
+    if (!Number.isFinite(overridden) || overridden < 0) {
+      throw new ValidationError(`Invalid price for "${product.name}"`);
+    }
+    unitPrice = overridden;
+  }
+  return {
+    lineType: 'product',
+    product,
+    serviceId: null,
+    name: product.name,
+    sku: product.sku,
+    qty,
+    unitPrice,
+    minutes: null,
+    lineTotal: unitPrice * qty,
+  };
+}
+
 // Validates items against live stock, inserts the sale + sale_items, and
 // deducts stock. Shared by direct checkout and quote/order -> sale conversion.
 async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
   const loaded = [];
   for (const it of items) {
-    const productId = Number(it.productId);
-    const qty = Math.trunc(Number(it.qty));
-    if (!productId || !Number.isFinite(qty) || qty <= 0) {
-      throw new ValidationError('Each item needs a valid productId and positive qty');
-    }
-    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
-    if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
-    if (product.stock_qty < qty) {
-      throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
-    }
-    let unitPrice = product.price;
-    if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
-      const overridden = Number(it.unitPrice);
-      if (!Number.isFinite(overridden) || overridden < 0) {
-        throw new ValidationError(`Invalid price for "${product.name}"`);
-      }
-      unitPrice = overridden;
-    }
-    loaded.push({ product, qty, unitPrice });
+    loaded.push(await loadDocumentLine(it, { checkStock: true }));
   }
 
   const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
@@ -1754,25 +1773,15 @@ route('POST', '/api/sale-documents', async (req, res) => {
   // order can reference items that are currently out of stock.
   const loaded = [];
   for (const it of items) {
-    const productId = Number(it.productId);
-    const qty = Math.trunc(Number(it.qty));
-    if (!productId || !Number.isFinite(qty) || qty <= 0) {
-      return badRequest(res, 'Each item needs a valid productId and positive qty');
+    try {
+      loaded.push(await loadDocumentLine(it, { checkStock: false }));
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      throw err;
     }
-    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
-    if (!product) return badRequest(res, `Product ${productId} not found or inactive`);
-    let unitPrice = product.price;
-    if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
-      const overridden = Number(it.unitPrice);
-      if (!Number.isFinite(overridden) || overridden < 0) {
-        return badRequest(res, `Invalid price for "${product.name}"`);
-      }
-      unitPrice = overridden;
-    }
-    loaded.push({ product, qty, unitPrice });
   }
 
-  const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
+  const subtotal = loaded.reduce((sum, line) => sum + line.lineTotal, 0);
   const total = Math.max(0, subtotal - discount);
 
   await db.exec('BEGIN');
@@ -1784,12 +1793,11 @@ route('POST', '/api/sale-documents', async (req, res) => {
       )
       .run(kind, customerId, cashierResolved.cashierId, subtotal, discount, total, note, title, nowIso());
     const docId = info.lastInsertRowid;
-    for (const { product, qty, unitPrice } of loaded) {
-      const lineTotal = unitPrice * qty;
+    for (const line of loaded) {
       await db.prepare(
         `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(docId, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
+      ).run(docId, line.product.id, line.name, line.sku, line.unitPrice, line.qty, line.lineTotal);
     }
     await db.exec('COMMIT');
     const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(docId);
@@ -1859,36 +1867,25 @@ route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
 
   const loaded = [];
   for (const it of items) {
-    const productId = Number(it.productId);
-    const qty = Math.trunc(Number(it.qty));
-    if (!productId || !Number.isFinite(qty) || qty <= 0) {
-      return badRequest(res, 'Each item needs a valid productId and positive qty');
+    try {
+      loaded.push(await loadDocumentLine(it, { checkStock: false }));
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      throw err;
     }
-    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
-    if (!product) return badRequest(res, `Product ${productId} not found or inactive`);
-    let unitPrice = product.price;
-    if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
-      const overridden = Number(it.unitPrice);
-      if (!Number.isFinite(overridden) || overridden < 0) {
-        return badRequest(res, `Invalid price for "${product.name}"`);
-      }
-      unitPrice = overridden;
-    }
-    loaded.push({ product, qty, unitPrice });
   }
 
-  const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
+  const subtotal = loaded.reduce((sum, line) => sum + line.lineTotal, 0);
   const total = Math.max(0, subtotal - discount);
 
   await db.exec('BEGIN');
   try {
     await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
-    for (const { product, qty, unitPrice } of loaded) {
-      const lineTotal = unitPrice * qty;
+    for (const line of loaded) {
       await db.prepare(
         `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(id, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
+      ).run(id, line.product.id, line.name, line.sku, line.unitPrice, line.qty, line.lineTotal);
     }
     await db.prepare('UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, updated_at = ? WHERE id = ?').run(
       subtotal,
