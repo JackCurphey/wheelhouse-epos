@@ -64,6 +64,20 @@
   --badge-other-bg: #f1e8fb;
   --badge-other-ink: #6a3ea1;
 
+  /* ---------- On-fill text and surface variants (Task 4) ---------- */
+  --on-brand: #ffffff;         /* white text on a brand/accent/danger fill */
+  --on-accent: #dfeee9;        /* idle nav label on the topbar */
+  --on-accent-muted: #cfe6dd;  /* .clock, .shop-info on the topbar */
+  --hover-bg: #f2f3f1;         /* .btn:hover, .btn-ghost:hover, .auth-tab:hover */
+  --hover-subtle: #fafaf8;     /* .search-dropdown-item:hover, data-table tr:hover */
+  --surface-today: #fbfdfc;    /* .wk-cell.today, .wk-day-col.today, .month-cell.today */
+  --surface-muted: #fafaf9;    /* .month-cell.other-month */
+  --surface-disabled: #eeeeec; /* .price-input:disabled */
+  --surface-sunken: #ececea;   /* .wk-day-header.day-off */
+  --hatch-a: #f4f4f2;          /* day-off diagonal stripe, lighter band */
+  --hatch-b: #ebebe9;          /* day-off diagonal stripe, darker band */
+  --hatch-full: #f2e3b8;       /* day-full diagonal stripe (amber) */
+
   /* Overridden at runtime by applyShopTheme() (public/app.js) per the shop's
      chosen colour scheme - this default matches the 'forest' preset so there's
      no flash of a different colour before that JS runs. */

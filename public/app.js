@@ -2532,7 +2532,7 @@ function barcodeSvg(text, widthMm, heightMm) {
   const rects = code128Rects(text, widthMm, heightMm);
   if (!rects) return null;
   const bars = rects
-    .map((r) => `<rect x="${r.xMm.toFixed(3)}" y="0" width="${r.wMm.toFixed(3)}" height="${heightMm}" fill="#000" />`)
+    .map((r) => `<rect x="${r.xMm.toFixed(3)}" y="0" width="${r.wMm.toFixed(3)}" height="${heightMm}" fill="currentColor" />`)
     .join('');
   return `<svg viewBox="0 0 ${widthMm} ${heightMm}" width="${widthMm}mm" height="${heightMm}mm" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`;
 }
