@@ -4,7 +4,12 @@ Design spec — 2026-08-31
 
 Status: **approved design, not yet implemented.** This document is written to be
 picked up cold by someone who has not been part of the conversation that
-produced it. The implementation plan lives alongside it.
+produced it.
+
+**Implementation plan:** [`docs/superpowers/plans/2026-08-31-workos-auth-migration.md`](../plans/2026-08-31-workos-auth-migration.md)
+— 17 tasks in dependency order, each with test code, verification commands and
+a deliberate step that breaks the code to prove the test bites. Read this spec
+first: the plan argues from it and does not restate the reasoning.
 
 ---
 
