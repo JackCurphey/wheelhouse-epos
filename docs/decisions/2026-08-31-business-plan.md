@@ -316,6 +316,105 @@ question gets answered by someone other than us. Independents comparing notes on
 labour pricing, hiring mechanics and dealing with distributors is a real
 retention asset — and it is not a five-shop activity.
 
+## 5c. Who owns what
+
+**Decided 31 August 2026. This is Jack's project. Mark is helping.**
+
+Jack is a bike expert, new to development. Mark is an experienced developer.
+Everything below is designed against one failure mode.
+
+### The failure mode
+
+Takeover happens through velocity, not intent. The experienced developer ships
+faster, so more of the codebase is his, so more decisions default to him because
+he is the one who knows that code, and within three months the founder is a
+contributor to his own project. Nobody decides this; it is close to automatic.
+
+### The rules that prevent it
+
+1. **Mark builds what Jack would never choose to spend his time on** — platform,
+   hosting, backups and restore, deploys, monitoring, security, RLS and tenancy,
+   the irreversible plumbing.
+2. **Mark does not build product features Jack could build more slowly.** If the
+   answer to "would Jack build this eventually?" is yes, Jack builds it. This
+   will feel inefficient every week. It is the rule that keeps the product his.
+3. **Mark's default is a question, not a patch.** A commit that silently corrects
+   someone's work transfers ownership of that code and teaches nothing.
+4. **Jack merges everything, including Mark's work.** Which sets the quality bar:
+   if Mark cannot explain a change to Jack, it is too clever for this codebase.
+   Jack asking "why is this here?" is a complete code review.
+5. **Jack is the public face** — the website, the forum, the design-partner
+   relationships, the name on the changelog. A bike person building shops a tool
+   is a better story than a software vendor anyway.
+
+### Decision rights
+
+Jack decides what gets built, in what order, at what price, for whom, what it is
+called, and what the words on screen say. Mark decides how a schema is shaped,
+whether something is secure, and what is irreversible.
+
+Where they disagree on product, **Jack wins**. Where they disagree on "this will
+lose customer data", **Mark wins**. There are only two categories and almost
+nothing is genuinely in the second.
+
+### The bright line, and when it expires
+
+Jack does not touch `server/`, migrations, RLS policies, auth, billing or deploys
+**through Stages 1 and 2** — not because he will always be junior, but because
+those are the irreversible ones, and this repo has already had two cross-tenant
+leaks. He pairs on them throughout, and **owns them from Stage 3**. An
+open-ended line would make Mark the permanent owner of the core, which is the
+outcome this section exists to prevent.
+
+### Jack's real contribution is not frontend code
+
+The plan's binding constraint was that nobody has spoken to a bike shop, and
+Track A was bottlenecked on one person's calendar. Jack removes that, and he is
+better at it than Mark: a bike expert in an independent bike shop is a different
+conversation from a software vendor in one.
+
+So Jack owns the workshop **domain specification** — job statuses, checklist
+templates, service menus, what a mechanic needs on screen — as well as the code.
+That work needs zero React and starts immediately, in parallel with Mark's
+foundation work, feeding straight into W2.
+
+### Stage 1 without either of them blocked
+
+Stage 1 is almost entirely Mark's: architecture stage one, managed Postgres with
+a rehearsed restore, the deploy pipeline, email, workshop W0. Jack is not idle
+during it — that is when he runs Track A, writes the domain spec and the website
+copy, and ramps on the codebase with small frontend tasks against Mark's stubbed
+API contracts. **Mark defining and stubbing the contract before Jack needs it** is
+the single discipline that keeps them unblocked from each other.
+
+### Design for Mark leaving
+
+The acid test. Runbooks for everything Mark owns, no undocumented systems, and
+periodically **Jack performs the ops task with Mark watching** rather than the
+reverse. Do the rehearsed database restore that way — Jack's hands, Mark's eyes.
+It is the highest-stakes thing in the system and the one most likely to become a
+permanent Mark dependency.
+
+### Two risks, named
+
+**Jack's expertise is real and it is n=1.** There is a failure mode where he
+builds what his shop needed rather than what shops need, and it is hard to spot
+because he will be confident and usually right. His opinions are hypotheses; the
+in-shop usability test on other people's shops is what confirms them.
+
+**This will be slower.** Features land later than if Mark built them. That is a
+real cost against gates that have no dates yet, and it should be a conscious
+trade made once rather than a surprise in November. AI agents narrow the gap
+considerably — Jack plus an agent on the product surfaces closes much of the
+velocity difference that causes takeover — and that is probably what makes this
+arrangement work at all.
+
+### The gates now need two time budgets
+
+If Mark has more hours per week than Jack, takeover happens regardless of every
+rule above. "Here to help" should mean a small, fixed, deliberately capped
+commitment, and **the ratio matters more than the absolute numbers**.
+
 ## 6. Deletions — things this buyer removes from the roadmap
 
 Recorded so they do not quietly creep back:
@@ -441,7 +540,8 @@ Written now, while it is still cheap to be honest.
 
 ## 13. Open
 
-1. **Weekly time budget** — needed for gate dates.
+1. **Weekly time budgets — two of them now**, Jack's and Mark's, and the ratio
+   between them (see §5c). Still the only thing blocking real dates.
 2. **Final price** — set at G3. Note the workshop anchor: Bikebook charges
    £49.99/mo ex VAT for roughly what we intend to give away.
 3. **Whether the free workshop stays free publicly after G4**, or becomes
