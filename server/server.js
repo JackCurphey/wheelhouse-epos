@@ -2733,6 +2733,85 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
+// ---------- Workshop services (the fixed-price labour catalogue) ----------
+
+export function serializeWorkshopService(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    price: row.price,
+    minutes: row.minutes,
+    // active is INTEGER 0/1 on this table, matching products.active.
+    active: row.active === 1,
+  };
+}
+
+// Shared by POST and PUT. Throws ValidationError so both callers translate it
+// the same way.
+function readServiceBody(body) {
+  const name = String(body.name || '').trim();
+  if (!name) throw new ValidationError('A service needs a name');
+  const price = Number(body.price);
+  if (!Number.isFinite(price) || price < 0) throw new ValidationError('A service needs a price of zero or more');
+  let minutes = null;
+  if (body.minutes !== undefined && body.minutes !== null && body.minutes !== '') {
+    minutes = Math.trunc(Number(body.minutes));
+    if (!Number.isFinite(minutes) || minutes <= 0) throw new ValidationError('Duration must be a positive number of minutes');
+  }
+  return { name, price, minutes };
+}
+
+route('GET', '/api/workshop-services', async (req, res) => {
+  const rows = await db.prepare('SELECT * FROM workshop_services ORDER BY active DESC, name').all();
+  sendJson(res, 200, rows.map(serializeWorkshopService));
+});
+
+route('POST', '/api/workshop-services', async (req, res) => {
+  const body = await readJsonBody(req);
+  let fields;
+  try {
+    fields = readServiceBody(body);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  const info = await db.prepare(
+    'INSERT INTO workshop_services (name, price, minutes) VALUES (?, ?, ?)'
+  ).run(fields.name, fields.price, fields.minutes);
+  const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
+  sendJson(res, 201, serializeWorkshopService(row));
+});
+
+route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Not found');
+  const body = await readJsonBody(req);
+  let fields;
+  try {
+    fields = readServiceBody(body);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
+  await db.prepare(
+    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, updated_at = ? WHERE id = ?'
+  ).run(fields.name, fields.price, fields.minutes, active, nowIso(), id);
+  const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
+  sendJson(res, 200, serializeWorkshopService(row));
+});
+
+// Deactivate rather than delete: a job line keeps its service_id, and that
+// link must not dangle.
+route('DELETE', '/api/workshop-services/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Not found');
+  await db.prepare('UPDATE workshop_services SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+  sendJson(res, 200, { ok: true });
+});
+
 // ---------- Label (sticker printing) settings ----------
 // The physical size of the label roll a shop's dedicated label printer
 // takes. One row per shop, same singleton-per-shop pattern as
