@@ -91,6 +91,58 @@ test('resolveStorefrontShop falls back to a ?storefrontSlug= query param', async
   }
 });
 
+test('resolveStorefrontShop lets a shop\'s own owner preview it while disabled', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, () => getOrCreateStorefrontSettings()); // enabled defaults to false
+    const { req, url } = fakeRequest('localhost:4000', `/store/${shop.slug}`);
+    const resolved = await resolveStorefrontShop(req, url, shop.id);
+    assert.deepEqual(resolved, { id: shop.id, slug: shop.slug, name: shop.name });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('resolveStorefrontShop does not let a different shop\'s owner preview a disabled storefront', async () => {
+  const shop = await createTestShop();
+  const otherShop = await createTestShop();
+  try {
+    await runWithShop(shop.id, () => getOrCreateStorefrontSettings());
+    const { req, url } = fakeRequest('localhost:4000', `/store/${shop.slug}`);
+    assert.equal(await resolveStorefrontShop(req, url, otherShop.id), null);
+  } finally {
+    await deleteTestShop(shop.id);
+    await deleteTestShop(otherShop.id);
+  }
+});
+
+test('resolveStorefrontShop still returns null for a disabled storefront with no session at all', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, () => getOrCreateStorefrontSettings());
+    const { req, url } = fakeRequest('localhost:4000', `/store/${shop.slug}`);
+    assert.equal(await resolveStorefrontShop(req, url, undefined), null);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('getStorefrontInfo reports whether the storefront is actually enabled', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const infoDisabled = await getStorefrontInfo(shop);
+      assert.equal(infoDisabled.enabled, false);
+
+      await updateStorefrontSettings({ enabled: true });
+      const infoEnabled = await getStorefrontInfo(shop);
+      assert.equal(infoEnabled.enabled, true);
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test('listStorefrontProducts only returns show_online products for the current shop', async () => {
   const shopA = await createTestShop();
   const shopB = await createTestShop();

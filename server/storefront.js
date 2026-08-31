@@ -77,7 +77,12 @@ export function parseStorefrontSlugCandidate(req, url) {
   return url.searchParams.get('storefrontSlug') || null;
 }
 
-export async function resolveStorefrontShop(req, url) {
+// sessionShopId, when provided, is the shop id of the currently
+// authenticated staff session (if any) - it lets a shop's own owner preview
+// their storefront before enabling it for real customers, without changing
+// what an anonymous visitor can ever see or distinguish (disabled vs.
+// nonexistent still collapse to the same null for everyone else).
+export async function resolveStorefrontShop(req, url, sessionShopId) {
   const slug = parseStorefrontSlugCandidate(req, url);
   if (!slug) return null;
 
@@ -88,7 +93,7 @@ export async function resolveStorefrontShop(req, url) {
     const settings = await prepare('SELECT enabled FROM storefront_settings LIMIT 1').get();
     return settings?.enabled || false;
   });
-  if (!enabled) return null;
+  if (!enabled && shop.id !== sessionShopId) return null;
 
   return { id: shop.id, slug: shop.slug, name: shop.name };
 }
@@ -106,6 +111,7 @@ export async function getStorefrontInfo(shopRow) {
   const shopifyConnected = shopifyConnection && shopifyConnection.status !== 'not_connected';
   return {
     shopName: shopRow.name,
+    enabled: !!settings.enabled,
     tagline: settings.tagline || '',
     description: settings.description || '',
     logoUrl: settings.logo_url || null,
