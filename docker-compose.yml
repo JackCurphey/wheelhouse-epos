@@ -35,6 +35,13 @@ services:
     environment:
       DATABASE_URL: postgres://epos_app:${POSTGRES_PASSWORD}@postgres:5432/epos
       PORT: 4000
+      # Safe here, and only here: the app is reached through the gateway,
+      # which overwrites x-forwarded-for from the real socket and drops
+      # whatever the caller sent (see server/gateway.js). Without this the
+      # app sees only the gateway's address and every client shares one
+      # rate-limit bucket. Do not set it where the app is reachable
+      # directly - it would let a caller pick its own rate-limit key.
+      TRUST_PROXY: '1'
       SIGNUP_CODE: ${SIGNUP_CODE:-}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
@@ -45,8 +52,12 @@ services:
       # Only the app container touches files directly; gateway just proxies
       # HTTP to it, so it doesn't need this mount.
       - epos_uploads:/app/uploads
-    ports:
-      - "127.0.0.1:4000:4000"
+    # Deliberately no published port. The app is reachable only from inside
+    # the compose network, via the gateway on 8080 - which is what makes
+    # TRUST_PROXY above safe. Publishing 4000 to the host would reopen the
+    # bypass: anything that can reach the app directly can set its own
+    # x-forwarded-for and pick its own rate-limit key. The gateway proxies
+    # everything through transparently, so 8080 is a full substitute.
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 5s
