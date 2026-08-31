@@ -3617,15 +3617,26 @@ const server = createServer(async (req, res) => {
   }
 });
 
-runMigrations()
-  .then(() => mkdir(UPLOADS_DIR, { recursive: true }))
-  .then(() => {
-    server.listen(PORT, () => {
-      console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
+// This module exports functions (serializeX, etc.) that test files import
+// directly. Without this guard, every test file that imports server.js would
+// also run this migrate-and-listen chain and boot a real HTTP server -
+// one listener per test file, all fighting over the same port and holding
+// the event loop open forever. Only start the server when this file is the
+// entry point actually being run (node server/server.js / npm start), not
+// when it's merely imported for its exports.
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  runMigrations()
+    .then(() => mkdir(UPLOADS_DIR, { recursive: true }))
+    .then(() => {
+      server.listen(PORT, () => {
+        console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
+      });
+    })
+    .catch((err) => {
+      console.error('Failed to run database migrations - server not started.');
+      console.error(err);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error('Failed to run database migrations - server not started.');
-    console.error(err);
-    process.exit(1);
-  });
+}
