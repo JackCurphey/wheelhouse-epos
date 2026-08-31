@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool } from './db.js';
+import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
 import { sendSms } from './sms.js';
@@ -125,16 +126,6 @@ function parseCookies(req) {
   return cookies;
 }
 
-// Secure is conditional on how this request actually arrived rather than
-// always-on, since the app is also used directly over plain http://localhost
-// - a browser silently refuses to store a Secure cookie set over http, which
-// would break local/dev use. Behind the Cloudflare Tunnel, the original
-// public request was https even though it reaches this process over plain
-// http locally, which is exactly what x-forwarded-proto communicates.
-function isHttpsRequest(req) {
-  return req.headers['x-forwarded-proto'] === 'https';
-}
-
 function setSessionCookie(req, res, token) {
   const secure = isHttpsRequest(req) ? '; Secure' : '';
   res.setHeader(
@@ -145,20 +136,6 @@ function setSessionCookie(req, res, token) {
 
 function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
-}
-
-// In-memory per-IP rate limiting for login/signup - proportionate for a
-// single-process app behind one tunnel, and only needed now that the app is
-// reachable from the open internet rather than just localhost. cf-connecting-ip
-// is Cloudflare's authoritative client IP (the tunnel strips anything a
-// client tries to spoof in that header before it reaches this process).
-function clientIp(req) {
-  return (
-    req.headers['cf-connecting-ip'] ||
-    (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-    req.socket.remoteAddress ||
-    'unknown'
-  );
 }
 
 function makeRateLimiter(max, windowMs) {
