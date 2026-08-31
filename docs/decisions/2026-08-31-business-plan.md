@@ -222,6 +222,100 @@ that spec belong here because they change the business case, not just the code:
    bike-as-asset record — but it was not live in production at the time of
    research and has no independent trace. Study it; do not treat it as validated.
 
+## 5b. The design-partner programme
+
+**Decided 31 August 2026.** How we involve early shops in building the workshop
+module. Marketing automation and cold outreach are **on hold** and deliberately
+excluded from this section; see §13 Open.
+
+### The principle
+
+At three to eight shops there is no community to host — there is a rhythm. The
+mistake is buying a platform first: an empty forum is the most visible possible
+signal that a product has no users, which is exactly what we cannot afford to
+show a shop deciding whether to bet on an unproven vendor.
+
+**They never log into anything to participate.** Every durable artifact — notes,
+decisions, changelog, roadmap — is maintained by us in `docs/`. Their side is a
+phone they already carry in the workshop.
+
+### Channel
+
+**A WhatsApp group, with plain email as the durable record.** Verified against
+the alternatives **[V]**: Slack's free plan hides message history after 90 days,
+so it cannot be the record; Circle is $89/mo annual; Discourse's hosted pricing
+could not be reconciled across sources; Discord needs an account this demographic
+does not have and reads as gaming-coded; GitHub Discussions is a developer tool.
+WhatsApp is the only option requiring zero onboarding, because it is already open
+on their phone all day for supplier and customer contact.
+
+Two conditions. A group exposes every participant's phone number to every other
+participant — agree that explicitly before adding anyone. And WhatsApp is a poor
+system of record, so it is the conversation layer only.
+
+**Design the input for a voice note.** A shop owner with dirty hands sends a
+thirty-second voice note or a photo of a screen. They will not file a bug report
+or find a feedback tab. Accept voice notes and photos as the primary input and do
+the transcription and triage ourselves. This single decision probably determines
+whether we get real feedback or polite silence.
+
+### Rhythm
+
+1. **First session in their shop, in person.** This doubles as the §7 usability
+   gate — watch them complete a sale, add a product, book a job, unaided.
+2. **A standing fifteen-minute call, monthly.** Not an hour. At a time that suits
+   a bike shop rather than an office; ask them rather than guessing.
+3. **A "what changed" message with screenshots.** Not release notes.
+
+### Speccing with people who do not read specs
+
+Never a document. A picture or a clickable thing, shown at the counter or on a
+call, followed by watching their face. Fifteen-minute "does this make sense"
+sessions against a screenshot beat any written spec review, and cost the shop
+almost nothing — which matters, because they are donating time.
+
+**What they say is weak evidence; whether they use it on a real job next week is
+strong evidence.** G2 is already written as thirty days of real usage rather than
+signatures — instrument that from the first install. A shop that is enthusiastic
+on calls and has not booked a job in three weeks is telling you the truth, and
+the calls are not.
+
+### What they get
+
+- Free forever, grandfathered, in writing.
+- Named as a founding shop, if they want to be.
+- Their request shipped with their name on it in the changelog.
+- Migration in done for them, free.
+- Their data out whenever they ask, in a documented format.
+- **What happens if we stop building it, said up front and unprompted** — data
+  out, help moving, no lock-in. A shop betting on an unproven vendor is carrying
+  a risk we can name and defuse in a sentence, and naming it buys more trust than
+  any feature.
+
+### What we ask
+
+Use it on real jobs. One fifteen-minute call a month. Honest feedback, including
+"this is worse than what I already have."
+
+Write both lists on one page. An agreement, not a contract.
+
+### Recruitment
+
+Within driving distance, so we can turn up in person — which satisfies the
+in-shop usability requirement and solves the trust problem in a way no email can.
+Local first; widen only when the format is proven. **Not by cold email.**
+
+### When to graduate off WhatsApp
+
+Two different thresholds, both real. WhatsApp stops holding a group sensibly at
+around a dozen active participants **[R]** — at that point the conversation needs
+structure, and email digests plus scheduled calls carry it. A genuine community
+platform earns its place later and for a different reason: when shops want to
+talk to **each other** rather than to us, which needs enough shops that a posted
+question gets answered by someone other than us. Independents comparing notes on
+labour pricing, hiring mechanics and dealing with distributors is a real
+retention asset — and it is not a five-shop activity.
+
 ## 6. Deletions — things this buyer removes from the roadmap
 
 Recorded so they do not quietly creep back:
@@ -352,6 +446,18 @@ Written now, while it is still cheap to be honest.
    £49.99/mo ex VAT for roughly what we intend to give away.
 3. **Whether the free workshop stays free publicly after G4**, or becomes
    free-with-limits. Design partners are grandfathered regardless.
-4. **Rider-owned or shop-owned-with-rider-access** for the §5 bike record. These
+4. **Marketing automation and cold outreach — on hold, deliberately.** Two
+   findings are banked for when it resumes. Every mainstream email platform
+   checked bars cold outreach in its acceptable use policy — Mailchimp, Brevo,
+   MailerLite, Resend, Customer.io, Klaviyo and HubSpot's free tier — so paying
+   more does not buy the ability to do it; Resend's wording is explicit **[V]**.
+   And Google Places forbids storing anything but the place ID, so it can never
+   be the prospect database **[V]**. The clean list sources are Companies House
+   (free, Open Government Licence, no marketing restriction, but no shop-front
+   email) and OpenStreetMap (ODbL, commercial use with attribution). The ACT's
+   consumer directory lists 3,500+ retailers with the richest fields of any free
+   source, and its terms bar commercial use without a licence — so the move there
+   is to ask ACT, not to scrape **[V]**.
+5. **Rider-owned or shop-owned-with-rider-access** for the §5 bike record. These
    produce materially different products, different data-protection positions and
    different network effects. Decide before the technical spec hardens.
