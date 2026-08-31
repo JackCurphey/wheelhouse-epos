@@ -52,7 +52,7 @@ per-till surcharge. "One price, everything in" is itself the pitch, and the
 incumbent structurally cannot match it — their tiers and SIM licences exist for
 a reason.
 
-Final number is set at G3, after the support-cost model in §8 and after ten shop
+Final number is set at G3, after the support-cost model in §9 and after ten shop
 conversations. OPEN until then.
 
 **Consequence, stated plainly:** 1,675 UK independents × ~£800/yr is a £1.3M
@@ -108,7 +108,7 @@ outflanks all three. The wedge is free workshop; the business is the paid till.
 
 **Risk, acknowledged:** we are giving away our best asset, and free tiers are
 hard to un-free. Accepted, because the paid value of the workshop is
-unrealisable for months regardless — we cannot sell a till until §7 Track B2 is
+unrealisable for months regardless — we cannot sell a till until §8 Track B2 is
 done — so spending it on distribution costs us little we could otherwise bank.
 Design partners are grandfathered free forever, in writing.
 
@@ -119,7 +119,70 @@ mode there is no till); automated status-triggered SMS; job photos from a phone;
 service reminders. The last three are also the clearest gaps against Bikebook and
 Velodrop, so the wedge and the competitive floor are the same work.
 
-## 5. Deletions — things this buyer removes from the roadmap
+## 5. The rider-owned bike record — recorded direction, not yet built
+
+The rider, not the shop, owns a record of their bikes: make, model, year, frame
+number, component spec, purchase date, receipts, photos, and the service history
+accumulated across every shop that has ever touched the bike. The rider can share
+it with any shop — including a shop that is not our customer and has never heard
+of us.
+
+Why this is strategically interesting, in order of strength:
+
+1. **It makes the platform sticky on a second side.** Today the only thing
+   holding anyone is the shop's own data. A rider with three years of service
+   history in one place has a reason to steer their next shop — and their next
+   bike purchase — to somewhere that reads it.
+2. **It is an acquisition channel that runs backwards up the funnel.** A rider
+   hands a spec to a shop that has never heard of us. That shop meets the product
+   as a useful thing a customer gave them, not as a sales call. In a market where
+   cold outreach to independents is hard and the buyer distrusts vendors, an
+   introduction made by their own customer is the cheapest one available.
+3. **It extends the surface we already have.** The customer booking portal exists,
+   leaks nothing between shops, and already supports guest booking by phone. This
+   is the next step on the same surface, not a new product line.
+4. **It inverts the GDPR finding, correctly this time.** The research established
+   that Article 20 portability does *not* apply to a shop — a shop is a controller,
+   not a data subject, and pitching otherwise is legally wrong. It *does* apply to
+   a rider. "Your bike's record is yours and you can take it anywhere" is accurate
+   when said to the rider, which means the anti-lock-in story finally gets told to
+   the person who actually holds the right.
+5. **No evidence anyone owns this category.** Marked **[U]** — we have not looked.
+   Do not treat it as white space until someone has searched properly.
+
+**Plausible but unvalidated extensions [U]:** frame number as proof of ownership
+against theft, second-hand handover of a bike's history at resale, insurance
+evidence. UK bike theft is a real problem; whether any of this is a *buying*
+reason has not been researched. Do not build toward these on intuition.
+
+### What has to be true, and what could sink it
+
+- **Cold start.** The record is worth roughly nothing with one shop and no riders,
+  and its value rises with coverage. It must ride on the free workshop's installed
+  base, not lead it. Sequencing it before the wedge would be building a network
+  with no nodes.
+- **It is a consumer product.** Different discipline, different support surface,
+  different expectations, and the rider is not the one paying. It competes for the
+  same scarce calendar time as Track A, which is the resource that actually
+  constrains this business.
+- **The data-controller question is a design constraint, not a footnote.** If the
+  rider owns the record and shops read and write to it, decide before any code:
+  who is controller and who is processor for which fields, the lawful basis for a
+  shop reading a record it did not create, and what happens when a shop and a
+  rider disagree about what is in it. Get this wrong and it is not fixable later.
+- **It must not breach the §7 simple gate.** For the shop, this has to be
+  invisible until a rider hands them something.
+
+### Decision
+
+Recorded as a direction. **Not unfrozen, and not scheduled.** It is the leading
+candidate for the G3 unlock, ahead of everything currently in Track D.
+
+Validation is free and starts now: it is added to the Track A conversations in
+§8. Technical design may be specced ahead of the gate — a spec costs a session
+and sharpens the questions — but no build starts before G3.
+
+## 6. Deletions — things this buyer removes from the roadmap
 
 Recorded so they do not quietly creep back:
 
@@ -136,7 +199,7 @@ Recorded so they do not quietly creep back:
   free, as the closing lever. Nobody in the market solves getting data out; that
   finding becomes a service, not a slogan.
 
-## 6. Simple is a gate, not an adjective
+## 7. Simple is a gate, not an adjective
 
 > A shop owner who has never seen the system completes a cash sale, adds a
 > product, and books a workshop job — unaided, no training, no manual.
@@ -147,7 +210,7 @@ many competitors have it. This is also the honest filter on the floor list: a
 permissions model and VAT-as-stored-data survive it; a reporting suite mostly
 does not.
 
-## 7. Four tracks
+## 8. Four tracks
 
 **Track A — Commercial. Mark only. Starts now, never pauses.**
 Long lead times, so it runs ahead of the product rather than after it.
@@ -163,7 +226,12 @@ Long lead times, so it runs ahead of the product rather than after it.
    the migration pitch and nobody has read one.
 5. One thirty-minute call with TrueCommerce. One call, not a strategy — the
    research already downgraded it.
-6. Run the §6 usability test on every design partner, in their shop.
+6. Run the §7 usability test on every design partner, in their shop.
+7. Validate the §5 rider-owned bike record inside the same ten conversations, at
+   no extra cost: would you look at a service history a customer brought in from
+   another shop? Would you trust it? Would you add to it? And through the design
+   partners, ask riders: do you know your bike's spec, and where is it written
+   down today?
 
 **Track B1 — The free wedge. Agents. Scope in §4.**
 The only engineering that matters before G2.
@@ -191,14 +259,14 @@ Storefront and Duda, DNS, distributor feeds, Shopify App Store listing, offline
 mode, multi-site, product variants. All defensible, all unbounded. Frozen behind
 G3. Track A may reorder this list; nothing else may unfreeze it.
 
-## 8. Support economics — model before publishing a price
+## 9. Support economics — model before publishing a price
 
 Price-sensitive plus non-technical equals phone support. At £59/mo, one support
 call a month per shop is most of the margin. This is not a reason to avoid the
 segment — it is the reason done-for-you onboarding and prescribed hardware are
 economics rather than generosity. Build the model before G3.
 
-## 9. Gates
+## 10. Gates
 
 | Gate | Condition | Unlocks |
 |---|---|---|
@@ -215,7 +283,7 @@ signed up and never booked a job is not a data point.
 decided. Track A is roughly 20–25 hours of Mark's own time to complete; the rest
 is agent-executable. Fill the dates in when the budget is set.
 
-## 10. Kill criteria
+## 11. Kill criteria
 
 Written now, while it is still cheap to be honest.
 
@@ -226,7 +294,7 @@ Written now, while it is still cheap to be honest.
 - Twelve months from G2 with fewer than ten paying shops → the segment does not
   support the effort. Stop, or change territory.
 
-## 11. Hygiene blocking the above
+## 12. Hygiene blocking the above
 
 - **Merge PR #7.** The research this plan rests on sits on an unmerged branch.
   Same for PR #6.
@@ -237,9 +305,12 @@ Written now, while it is still cheap to be honest.
 - `master` → `main` still needs the repo owner. Blocking nothing, but it
   retargets open PRs cleanly if done before the branch count grows.
 
-## 12. Open
+## 13. Open
 
 1. **Weekly time budget** — needed for gate dates.
 2. **Final price** — set at G3.
 3. **Whether the free workshop stays free publicly after G4**, or becomes
    free-with-limits. Design partners are grandfathered regardless.
+4. **Rider-owned or shop-owned-with-rider-access** for the §5 bike record. These
+   produce materially different products, different data-protection positions and
+   different network effects. Decide before the technical spec hardens.
