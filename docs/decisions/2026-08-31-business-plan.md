@@ -458,6 +458,48 @@ Written now, while it is still cheap to be honest.
    consumer directory lists 3,500+ retailers with the richest fields of any free
    source, and its terms bar commercial use without a licence — so the move there
    is to ask ACT, not to scrape **[V]**.
+
+   **The legal position, researched 31 Aug 2026 — it reshapes the list, so read
+   it before building one.** Under PECR, limited companies, LLPs and *Scottish*
+   partnerships are "corporate subscribers" and need **no consent** for cold
+   email or SMS — sender identity and a valid opt-out are still mandatory
+   **[V]**. But sole traders and ordinary English, Welsh and Northern Irish
+   partnerships are **individual subscribers** with the same protection as
+   consumers **[V]**, and a large share of true independents are exactly that.
+   For them the soft opt-in is structurally unavailable: the ICO states there is
+   no such thing as a third-party marketing list that complies with it, because
+   the details must have been collected by us during a sale or negotiation
+   **[V]**.
+
+   The decisive sentence is the ICO's own default: *if you are unsure which type
+   a contact is, treat it as an individual subscriber* **[V]**. A scraped list
+   cannot tell us a shop's legal form — so **Companies House stops being a list
+   source and becomes the classification spine**. Cold email is workable for the
+   incorporated half and effectively closed for the rest, who have to be reached
+   by turning up, by referral, or through the trade body.
+
+   Three more that shape the process **[V]**: SMS is "electronic mail" under
+   PECR, so there is no looser track for texts, and marketing versus
+   transactional turns on *purpose* — a design-partner pitch dressed as a service
+   update is still marketing. A generic `info@` address is not personal data, so
+   UK GDPR does not apply to it; a named `dave@` address is, which triggers a
+   documented lawful basis, an Article 14 notice within one month of obtaining
+   the data, and an absolute right to object. And the Article 14
+   disproportionate-effort exemption is a weak fallback when we are about to
+   email the person anyway.
+
+   Enforcement calibration: **no ICO enforcement action against B2B
+   corporate-subscriber email could be found** **[NF]** — the published cases are
+   consumer reg 22 matters (HelloFresh, Jan 2024: 80.9m messages, £140k reduced
+   to £112k **[V]**). PECR's enforcement regime is in transition following the
+   Data (Use and Access) Act 2025, so recheck before any campaign. The real risk
+   is not cold-emailing a limited company; it is misclassifying a sole trader, or
+   mishandling a named individual's data.
+
+   **Not researched: cold voice calls.** Telephone is the obvious way to reach
+   the sole traders that email cannot, and it sits under different PECR
+   regulations with TPS/CTPS screening. Resolve before relying on the phone as
+   the workaround.
 5. **Rider-owned or shop-owned-with-rider-access** for the §5 bike record. These
    produce materially different products, different data-protection positions and
    different network effects. Decide before the technical spec hardens.
