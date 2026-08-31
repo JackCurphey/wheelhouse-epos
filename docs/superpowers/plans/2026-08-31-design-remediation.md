@@ -19,7 +19,7 @@
 - **Contrast floor is WCAG 2.1 AA:** 4.5:1 for text under 18.66px or under 14px bold; 3:1 for larger. Assert against the smaller figure unless the type size is proven larger.
 - **Touch target floor is 24×24px** (WCAG 2.5.8 AA), targeting 44×44px where layout allows. Do not shrink any control below 24px.
 - **Preserve the four things that already work** (findings §5): every list keeps its empty state, the six-state status token set keeps its semantics, interactive elements stay real `<button>`s, and errors keep funnelling through one `showToast` path.
-- **`applyShopTheme()` overrides `--brand`, `--accent` and `--modal-bg` at runtime.** Any contrast guarantee must hold for every preset in `THEME_PRESETS`, not just the default. Task 4 makes that testable.
+- **`applyShopTheme()` overrides `--accent-dark`, `--accent` and `--modal-bg` at runtime** (`public/app.js:6899-6905`) — it does **not** touch `--brand`. Any contrast guarantee for those three must hold for every preset in `THEME_PRESETS`, not just the default; Task 4 makes that testable. `--brand`'s fix is safe from runtime override. (Corrected 2026-08-31: this line previously named `--brand` instead of `--accent-dark`. Verified against the source — `preset.topbar` sets `--accent-dark`, `preset.accent` sets `--accent`.)
 - Tests run against the same Postgres as local dev via `DATABASE_URL`; the new design tests are pure text/CSS parsing and need no database.
 
 ## Approved decisions
