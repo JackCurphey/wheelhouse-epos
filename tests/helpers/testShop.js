@@ -19,8 +19,17 @@ export async function deleteTestShop(shopId) {
     await client.query('DELETE FROM logins WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM customer_sessions WHERE customer_login_id IN (SELECT id FROM customer_logins WHERE shop_id = $1)', [shopId]);
     await client.query('DELETE FROM customer_logins WHERE shop_id = $1', [shopId]);
+    // Children before parents. sale_documents must go before sales because
+    // converted_sale_id points at it, and before workshop_jobs because
+    // workshop_job_id does.
+    await client.query('DELETE FROM sale_document_items WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM sale_documents WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM sale_items WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM sales WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM stock_movements WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM workshop_job_attachments WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM workshop_jobs WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM workshop_settings WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM customer_bikes WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM customers WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM employees WHERE shop_id = $1', [shopId]);
