@@ -1,13 +1,22 @@
 # Feature catalogue
 
 **Date:** 31 August 2026
-**Purpose:** every feature of the whole tool in one list, so each can be
-assigned a priority of 0, 1, 2 or 3. This is the input to the roadmap, not
-the roadmap itself — `docs/superpowers/plans/2026-08-31-master-implementation-plan.md`
+**Purpose:** every feature of the whole tool in one list, as the implementation
+spec — the agreed set of what gets built. This is the input to the roadmap, not
+the roadmap itself; `docs/superpowers/plans/2026-08-31-master-implementation-plan.md`
 holds sequencing and ownership.
 
-**Priorities are deliberately blank.** They are Jack's call. Fill them in the
-spreadsheet (`Feature catalogue` tab) or here.
+**Three steps, in this order. Do not merge them.**
+
+| Step | Question | Tracked in |
+|---|---|---|
+| **1. Agree the features** | Is this the right set? Anything wrong, missing or misdescribed? Each one is In, Out, Change or Missing | Issue #16 |
+| 2. Organise into releases | What ships together, and in what order? | Opens when step 1 lands |
+| 3. Assign and schedule | Who builds what, by when? | Opens after step 2 |
+
+You cannot sensibly prioritise a list you have not agreed, which is why step 1
+carries no priorities and no dates. Priority and release columns are deliberately
+blank here and in the spreadsheet.
 
 **Today** is verified against the code where it says Have, Partial or None.
 `Unknown` means it needs checking before anyone plans around it.
