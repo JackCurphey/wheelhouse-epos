@@ -28,6 +28,7 @@ import {
   CustomerAuthError,
   signupCustomer,
   verifyCustomerLogin,
+  resolveGuestCustomer,
   createCustomerSession,
   getCustomerSessionContext,
   destroyCustomerSession,
@@ -216,6 +217,10 @@ async function currentCustomerSession(req) {
 
 const portalLoginLimiter = makeRateLimiter(10, 15 * 60 * 1000);
 const portalSignupLimiter = makeRateLimiter(5, 60 * 60 * 1000);
+// Guest bookings skip signup entirely, so nothing else gates how often this
+// network can create jobs/customers - mirrors portalSignupLimiter's limits
+// since it's standing in for that same missing gate.
+const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -3153,8 +3158,31 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
-  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const signedIn = ctx && ctx.shop.slug === params.shopSlug;
   const body = await readJsonBody(req);
+
+  // No account required to book: an out-of-towner booking a single job
+  // shouldn't be forced through signup. Falls back to a guest customer
+  // (matched/created by phone, see resolveGuestCustomer) instead of the
+  // signed-in customer's own record - rate-limited per IP since guests skip
+  // portalSignupLimiter, the only other gate on how fast jobs/customers get
+  // created here.
+  let customerId;
+  if (signedIn) {
+    customerId = ctx.login.customer_id;
+  } else {
+    const ip = clientIp(req);
+    if (!portalGuestBookingLimiter.check(ip)) {
+      return sendJson(res, 429, { error: 'Too many booking requests from this network - please try again later.' });
+    }
+    try {
+      const guest = await resolveGuestCustomer({ name: body.guestName, phone: body.guestPhone });
+      customerId = guest.id;
+    } catch (err) {
+      if (err instanceof CustomerAuthError) return badRequest(res, err.message);
+      throw err;
+    }
+  }
 
   const jobDate = (body.jobDate || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
@@ -3215,7 +3243,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
       )
       .run(
-        ctx.login.customer_id,
+        customerId,
         make,
         model,
         (body.newBike.colour || '').trim(),
@@ -3226,17 +3254,18 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   } else if (body.bikeId) {
     const bike = await db
       .prepare('SELECT * FROM customer_bikes WHERE id = ? AND customer_id = ? AND active = 1')
-      .get(Number(body.bikeId), ctx.login.customer_id);
+      .get(Number(body.bikeId), customerId);
     if (!bike) return badRequest(res, 'Bike not found');
     bikeId = bike.id;
   }
 
-  // Never trusts a client-sent customerId or status - always the logged-in
-  // customer's own linked record, always 'pending' until a mechanic reviews
-  // it, same principle as createSale() never trusting a client-sent total.
+  // Never trusts a client-sent customerId or status - always the resolved
+  // customer (signed-in, or the matched/created guest above), always
+  // 'pending' until a mechanic reviews it, same principle as createSale()
+  // never trusting a client-sent total.
   const jobId = await createWorkshopJob({
     title: `Online booking: ${description}`.slice(0, 200),
-    customerId: ctx.login.customer_id,
+    customerId,
     bikeId,
     mechanicId: mechResolved.mechanicId,
     jobDate,

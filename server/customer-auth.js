@@ -14,7 +14,7 @@
 // touch afterward (customers, customer_bikes, workshop_jobs) is RLS-scoped
 // exactly like it already is for staff.
 import { randomBytes } from 'node:crypto';
-import { pool } from './db.js';
+import { pool, prepare } from './db.js';
 import { hashPassword, verifyPassword, EMAIL_RE } from './auth.js';
 
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -75,6 +75,28 @@ export async function signupCustomer({ shopSlug, email, password, name }) {
   } finally {
     client.release();
   }
+}
+
+// Resolves a guest booking (no account, no login) to a customers row,
+// matched by phone within the current shop - reusing signupCustomer's "match
+// an existing customer if we can, otherwise create one" idea, but simpler:
+// no customer_logins row is ever created, and this always runs from inside a
+// route that's already resolved shop context (via runWithShop), so it can
+// use the plain RLS-scoped `prepare` shim instead of opening its own
+// transaction and set_config like signupCustomer must.
+export async function resolveGuestCustomer({ name, phone }) {
+  name = (name || '').trim();
+  phone = (phone || '').trim();
+  if (!name) throw new CustomerAuthError('Name is required');
+  if (!phone) throw new CustomerAuthError('Phone number is required');
+
+  const existing = await prepare('SELECT * FROM customers WHERE phone = ? AND active = 1').get(phone);
+  if (existing) return existing;
+
+  const info = await prepare(
+    'INSERT INTO customers (name, phone, updated_at) VALUES (?, ?, ?)'
+  ).run(name, phone, new Date().toISOString());
+  return await prepare('SELECT * FROM customers WHERE id = ?').get(info.lastInsertRowid);
 }
 
 export async function verifyCustomerLogin(shopSlug, email, password) {

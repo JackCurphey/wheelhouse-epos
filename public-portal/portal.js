@@ -27,10 +27,16 @@ let fullDays = []; // {mechanicId, jobDate} - days already under workshop_settin
 let bikes = [];
 let bookings = [];
 let view = 'picker'; // 'picker' | 'auth' | 'booking-form' | 'my-bookings'
-let authMode = 'login'; // 'login' | 'signup'
+let authMode = 'login'; // 'login' | 'signup' | 'guest'
 let pendingDate = null; // date the customer clicked on the grid, carried across a login/signup detour
 let pendingSlot = null; // time the customer clicked on the grid, carried across a login/signup detour
 let pendingMechanicId = null; // which mechanic's column was clicked, carried across a login/signup detour
+// Set once someone chooses "Continue without an account" - carried for the
+// rest of this visit (like currentCustomer is) so later slot clicks go
+// straight to the booking form instead of asking again. Never sent to /me
+// or persisted anywhere; just enough to fill guestName/guestPhone on submit.
+let pendingGuestName = null;
+let pendingGuestPhone = null;
 
 // Used only for the initial grid click (busy-check and the max clickable
 // start time) - the actual duration a booking gets is whatever job type
@@ -314,6 +320,7 @@ function renderHeaderHtml() {
       <div>
         <h1>🚲 Book a workshop slot</h1>
         ${currentCustomer ? `<div class="muted">Signed in as ${esc(currentCustomer.name || currentCustomer.email)}</div>` : ''}
+        ${!currentCustomer && pendingGuestName ? `<div class="muted">Booking as ${esc(pendingGuestName)} (no account)</div>` : ''}
       </div>
       <div>
         ${
@@ -519,7 +526,7 @@ async function renderPickerView() {
       pendingDate = dateStr;
       pendingSlot = time;
       pendingMechanicId = mechanicId;
-      if (!currentCustomer) {
+      if (!currentCustomer && !pendingGuestName) {
         authMode = 'login';
         view = 'auth';
       } else {
@@ -538,22 +545,39 @@ function renderAuthView() {
     <div class="portal-tabs">
       <button class="pill ${authMode === 'login' ? 'active' : ''}" id="tab-login">Log in</button>
       <button class="pill ${authMode === 'signup' ? 'active' : ''}" id="tab-signup">Create account</button>
+      <button class="pill ${authMode === 'guest' ? 'active' : ''}" id="tab-guest">Continue without an account</button>
     </div>
     <div class="panel">
       <div class="panel-body">
         <form id="auth-form">
-          ${authMode === 'signup' ? `<div class="field"><label for="f-name">Your name *</label><input id="f-name" type="text" required /></div>` : ''}
-          <div class="field"><label for="f-email">Email *</label><input id="f-email" type="email" required /></div>
-          <div class="field"><label for="f-password">Password *</label><input id="f-password" type="password" required minlength="8" /></div>
-          <button type="submit" class="btn btn-primary btn-block">${authMode === 'signup' ? 'Create account' : 'Log in'}</button>
+          ${authMode === 'guest'
+            ? `<div class="field"><label for="f-guest-name">Your name *</label><input id="f-guest-name" type="text" required /></div>
+               <div class="field"><label for="f-guest-phone">Phone number *</label><input id="f-guest-phone" type="tel" required /></div>
+               <div class="muted" style="margin-bottom:10px;">We'll use this to contact you about your booking. Without an account you won't be able to see your booking history later.</div>`
+            : `${authMode === 'signup' ? `<div class="field"><label for="f-name">Your name *</label><input id="f-name" type="text" required /></div>` : ''}
+               <div class="field"><label for="f-email">Email *</label><input id="f-email" type="email" required /></div>
+               <div class="field"><label for="f-password">Password *</label><input id="f-password" type="password" required minlength="8" /></div>`
+          }
+          <button type="submit" class="btn btn-primary btn-block">${authMode === 'signup' ? 'Create account' : authMode === 'guest' ? 'Continue' : 'Log in'}</button>
         </form>
       </div>
     </div>
   `;
   document.getElementById('tab-login').addEventListener('click', () => { authMode = 'login'; renderAuthView(); });
   document.getElementById('tab-signup').addEventListener('click', () => { authMode = 'signup'; renderAuthView(); });
+  document.getElementById('tab-guest').addEventListener('click', () => { authMode = 'guest'; renderAuthView(); });
   document.getElementById('auth-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (authMode === 'guest') {
+      const name = document.getElementById('f-guest-name').value.trim();
+      const phone = document.getElementById('f-guest-phone').value.trim();
+      if (!name || !phone) return showToast('Please enter your name and phone number');
+      pendingGuestName = name;
+      pendingGuestPhone = phone;
+      view = pendingSlot ? 'booking-form' : 'picker';
+      render();
+      return;
+    }
     const email = document.getElementById('f-email').value.trim();
     const password = document.getElementById('f-password').value;
     try {
@@ -564,6 +588,8 @@ function renderAuthView() {
         await api('/login', { method: 'POST', body: { email, password } });
         currentCustomer = await api('/me');
       }
+      pendingGuestName = null;
+      pendingGuestPhone = null;
       showToast(`Welcome${currentCustomer.name ? ', ' + currentCustomer.name : ''}!`);
       view = pendingSlot ? 'booking-form' : 'picker';
       render();
@@ -673,6 +699,10 @@ async function renderBookingFormView() {
       jobType: jobTypeValue,
       description: document.getElementById('f-description').value.trim(),
     };
+    if (!currentCustomer) {
+      body.guestName = pendingGuestName;
+      body.guestPhone = pendingGuestPhone;
+    }
     if (bikeSelect.value === '__new__') {
       body.newBike = {
         make: document.getElementById('f-bike-make').value.trim(),
@@ -685,12 +715,17 @@ async function renderBookingFormView() {
     }
     try {
       await api('/bookings', { method: 'POST', body });
-      showToast('Booking requested — the shop will confirm it shortly.');
       pendingDate = null;
       pendingSlot = null;
       pendingMechanicId = null;
-      view = 'my-bookings';
-      await loadBookings();
+      if (currentCustomer) {
+        showToast('Booking requested — the shop will confirm it shortly.');
+        view = 'my-bookings';
+        await loadBookings();
+      } else {
+        showToast("Thanks — we've got your request and will call you to confirm.");
+        view = 'picker';
+      }
       render();
     } catch (err) {
       showToast(err.message);
