@@ -1,0 +1,77 @@
+/* public/tokens.css
+ *
+ * The single source of truth for design tokens across all Wheelhouse
+ * front-ends: the staff EPOS (/), the booking portal (/book) and the public
+ * storefront (shop subdomains). Every one of them links this file first.
+ *
+ * Colour values here are contrast-checked by tests/design-contrast.test.js
+ * against WCAG 2.1 AA (4.5:1 for body text). Do not change a colour without
+ * running `npm test` - the gate will catch a regression, but only if you run it.
+ */
+:root {
+  /* ---------- Surfaces and text ---------- */
+  --bg: #f4f5f3;
+  --panel: #ffffff;
+  --ink: #1c231f;
+  /* Darkened from #6b7570, which measured 4.36 on --bg (WCAG AA fail).
+     #5f6a64 measures 5.14 on --bg and 5.63 on --panel. */
+  --muted: #5f6a64;
+  --border: #e0e2dd;
+
+  /* ---------- Brand and action ---------- */
+  /* Darkened from #d9581e, which measured 3.91 with white text (AA fail).
+     #b8460f measures 5.36. The old --brand-dark value was #b8460f, so the
+     hover step moves down to #93380b (7.47). */
+  --brand: #b8460f;
+  --brand-dark: #93380b;
+  --accent: #1f6f5c;
+  --accent-dark: #164f42;
+  --danger: #c0392b;
+  --danger-hover: #a5301f;
+  --danger-bg: #fdecea;
+  --warn-bg: #fff7e0;
+  --warn-ink: #8a6100;
+  --ok-bg: #e8f5ec;
+
+  /* ---------- Job status (six states) ---------- */
+  --status-pending-bg: #f1e8fb;
+  --status-pending-border: #6a3ea1;
+  --status-pending-ink: #6a3ea1;
+  --status-scheduled-bg: #eaf1fb;
+  --status-scheduled-border: #4d7fc4;
+  --status-scheduled-ink: #2c5289;
+  --status-waiting_parts-bg: #fff0e3;
+  --status-waiting_parts-border: #d9581e;
+  --status-waiting_parts-ink: #a8420f;
+  --status-on_hold-bg: #fff7e0;
+  --status-on_hold-border: #c99a1e;
+  --status-on_hold-ink: #8a6100;
+  --status-complete-bg: #e8f5ec;
+  --status-complete-border: #1f6f5c;
+  --status-complete-ink: #164f42;
+  /* A job goes 'complete' the moment work is done, but stays this same status
+     once it's also been paid for and collected. That fully-resolved state still
+     needs to recede - but the recede signal now lives in the BACKGROUND (the
+     palest of the six) rather than in pale ink, because the old ink (#6b9484)
+     measured 3.21 and was unreadable at the 9.5px this badge renders at. */
+  --status-complete-paid-bg: #f5faf6;
+  --status-complete-paid-border: #a9cdbf;
+  --status-complete-paid-ink: #4d7364;
+
+  /* ---------- Badges (previously untokenised hex) ---------- */
+  --badge-card-bg: #e8eefb;
+  --badge-card-ink: #2255a4;
+  --badge-other-bg: #f1e8fb;
+  --badge-other-ink: #6a3ea1;
+
+  /* Overridden at runtime by applyShopTheme() (public/app.js) per the shop's
+     chosen colour scheme - this default matches the 'forest' preset so there's
+     no flash of a different colour before that JS runs. */
+  --modal-bg: #DDF7DF;
+
+  /* ---------- Shape ---------- */
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+}
