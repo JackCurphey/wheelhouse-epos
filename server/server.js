@@ -2629,7 +2629,7 @@ route('POST', '/api/team/:id/deactivate', async (req, res, params) => {
   const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can deactivate a team member' });
-  await deactivateTeamMember(Number(params.id));
+  await deactivateTeamMember({ shopId: ctx.shop.id, employeeId: Number(params.id) });
   sendJson(res, 200, { ok: true });
 });
 
@@ -2637,7 +2637,7 @@ route('POST', '/api/team/:id/reactivate', async (req, res, params) => {
   const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can reactivate a team member' });
-  await reactivateTeamMember(Number(params.id));
+  await reactivateTeamMember({ shopId: ctx.shop.id, employeeId: Number(params.id) });
   sendJson(res, 200, { ok: true });
 });
 
@@ -2663,7 +2663,7 @@ route('POST', '/api/team/logins/:loginId/attach-roles', async (req, res, params)
   if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can set roles' });
   const body = await readJsonBody(req);
   try {
-    await attachRoles({ loginId: Number(params.loginId), isMechanic: body.isMechanic, isCashier: body.isCashier, workingDays: body.workingDays });
+    await attachRoles({ shopId: ctx.shop.id, loginId: Number(params.loginId), isMechanic: body.isMechanic, isCashier: body.isCashier, workingDays: body.workingDays });
     sendJson(res, 200, { ok: true });
   } catch (err) {
     if (err instanceof TeamError) return badRequest(res, err.message);
@@ -2678,7 +2678,7 @@ route('POST', '/api/team/logins/:loginId/deactivate', async (req, res, params) =
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can deactivate a team member' });
   try {
-    await deactivateLoginOnly(Number(params.loginId));
+    await deactivateLoginOnly({ shopId: ctx.shop.id, loginId: Number(params.loginId) });
     sendJson(res, 200, { ok: true });
   } catch (err) {
     if (err instanceof TeamError) return badRequest(res, err.message);
@@ -2690,7 +2690,7 @@ route('POST', '/api/team/logins/:loginId/reactivate', async (req, res, params) =
   const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can reactivate a team member' });
-  await reactivateLoginOnly(Number(params.loginId));
+  await reactivateLoginOnly({ shopId: ctx.shop.id, loginId: Number(params.loginId) });
   sendJson(res, 200, { ok: true });
 });
 

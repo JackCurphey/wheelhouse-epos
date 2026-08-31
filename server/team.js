@@ -41,7 +41,7 @@ export async function listTeam(shopId) {
         e.working_days, e.active AS employee_active,
         l.id AS login_id, l.name AS login_name, l.email, l.is_owner, l.active AS login_active
       FROM employees e
-      LEFT JOIN logins l ON l.employee_id = e.id
+      LEFT JOIN logins l ON l.employee_id = e.id AND l.shop_id = ?
       UNION ALL
       SELECT
         NULL::integer, NULL, NULL::integer, NULL::integer,
@@ -51,7 +51,7 @@ export async function listTeam(shopId) {
       WHERE l.employee_id IS NULL AND l.shop_id = ?
     ) t
     ORDER BY is_owner DESC NULLS LAST, COALESCE(employee_name, login_name)`
-  ).all(shopId);
+  ).all(shopId, shopId);
   return rows.map(serializeTeamRow);
 }
 
@@ -115,7 +115,7 @@ export async function createTeamMember({ shopId, name, isMechanic, isCashier, wo
 export async function attachLogin({ shopId, employeeId, email, password }) {
   const existing = await prepare('SELECT * FROM employees WHERE id = ?').get(employeeId);
   if (!existing) throw new TeamError('Employee not found');
-  const alreadyLinked = await prepare('SELECT id FROM logins WHERE employee_id = ?').get(employeeId);
+  const alreadyLinked = await prepare('SELECT id FROM logins WHERE employee_id = ? AND shop_id = ?').get(employeeId, shopId);
   if (alreadyLinked) throw new TeamError('This person already has login access');
 
   let clean;
@@ -134,8 +134,8 @@ export async function attachLogin({ shopId, employeeId, email, password }) {
 
 // Completes a login-only person (typically the owner, whose login is created
 // at signup with no roster entry) by giving them roster roles now.
-export async function attachRoles({ loginId, isMechanic, isCashier, workingDays }) {
-  const login = await prepare('SELECT * FROM logins WHERE id = ?').get(loginId);
+export async function attachRoles({ shopId, loginId, isMechanic, isCashier, workingDays }) {
+  const login = await prepare('SELECT * FROM logins WHERE id = ? AND shop_id = ?').get(loginId, shopId);
   if (!login) throw new TeamError('Login not found');
   if (login.employee_id) throw new TeamError('This person already has roster roles');
   const mechanic = isMechanic ? 1 : 0;
@@ -148,7 +148,7 @@ export async function attachRoles({ loginId, isMechanic, isCashier, workingDays 
     const empInfo = await prepare(
       'INSERT INTO employees (name, is_mechanic, is_cashier, working_days, updated_at) VALUES (?, ?, ?, ?, ?)'
     ).run(login.name, mechanic, cashier, days, new Date().toISOString());
-    await prepare('UPDATE logins SET employee_id = ? WHERE id = ?').run(empInfo.lastInsertRowid, loginId);
+    await prepare('UPDATE logins SET employee_id = ? WHERE id = ? AND shop_id = ?').run(empInfo.lastInsertRowid, loginId, shopId);
     await dbExec('COMMIT');
     return empInfo.lastInsertRowid;
   } catch (err) {
@@ -162,24 +162,24 @@ export async function attachRoles({ loginId, isMechanic, isCashier, workingDays 
 // only owner) and refuses a login that does have an employee link (that
 // case must go through deactivateTeamMember instead, so the roster side
 // gets deactivated too).
-export async function deactivateLoginOnly(loginId) {
-  const login = await prepare('SELECT * FROM logins WHERE id = ?').get(loginId);
+export async function deactivateLoginOnly({ shopId, loginId }) {
+  const login = await prepare('SELECT * FROM logins WHERE id = ? AND shop_id = ?').get(loginId, shopId);
   if (!login) throw new TeamError('Login not found');
   if (login.is_owner) throw new TeamError("The owner login can't be deactivated");
   if (login.employee_id) throw new TeamError('This person has roster roles - deactivate them from there instead');
-  await prepare('UPDATE logins SET active = false, updated_at = now() WHERE id = ?').run(loginId);
+  await prepare('UPDATE logins SET active = false, updated_at = now() WHERE id = ? AND shop_id = ?').run(loginId, shopId);
 }
 
-export async function reactivateLoginOnly(loginId) {
-  await prepare('UPDATE logins SET active = true, updated_at = now() WHERE id = ?').run(loginId);
+export async function reactivateLoginOnly({ shopId, loginId }) {
+  await prepare('UPDATE logins SET active = true, updated_at = now() WHERE id = ? AND shop_id = ?').run(loginId, shopId);
 }
 
-export async function deactivateTeamMember(employeeId) {
+export async function deactivateTeamMember({ shopId, employeeId }) {
   await dbExec('BEGIN');
   try {
     const now = new Date().toISOString();
     await prepare('UPDATE employees SET active = 0, updated_at = ? WHERE id = ?').run(now, employeeId);
-    await prepare('UPDATE logins SET active = false, updated_at = now() WHERE employee_id = ?').run(employeeId);
+    await prepare('UPDATE logins SET active = false, updated_at = now() WHERE employee_id = ? AND shop_id = ?').run(employeeId, shopId);
     await dbExec('COMMIT');
   } catch (err) {
     await dbExec('ROLLBACK');
@@ -187,12 +187,12 @@ export async function deactivateTeamMember(employeeId) {
   }
 }
 
-export async function reactivateTeamMember(employeeId) {
+export async function reactivateTeamMember({ shopId, employeeId }) {
   await dbExec('BEGIN');
   try {
     const now = new Date().toISOString();
     await prepare('UPDATE employees SET active = 1, updated_at = ? WHERE id = ?').run(now, employeeId);
-    await prepare('UPDATE logins SET active = true, updated_at = now() WHERE employee_id = ?').run(employeeId);
+    await prepare('UPDATE logins SET active = true, updated_at = now() WHERE employee_id = ? AND shop_id = ?').run(employeeId, shopId);
     await dbExec('COMMIT');
   } catch (err) {
     await dbExec('ROLLBACK');
