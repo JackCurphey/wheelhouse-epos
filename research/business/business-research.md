@@ -2,6 +2,7 @@
 
 **Compiled:** 31 August 2026
 **Status:** Research reference. Paused mid-thread — see §12 for open questions and the next actions.
+**Last updated:** 1 September 2026 — added **§3.6 Hubtiger**, which supersedes part of §10.3.
 **Companion files on Desktop:** `Wheelhouse-EPOS-Strategy.md` (strategic recommendations, v2), `Wheelhouse-EPOS-Strategy.pptx` (14 slides), `Wheelhouse-EPOS-Code-Review.pptx` (10 slides).
 
 **Confidence tags used throughout:**
@@ -157,10 +158,11 @@ A shop owner stays on a system she dislikes rather than risk *"losing informatio
 | **Velodrop** | Wayback to **Jan 2018** — genuinely long-running. "Founded by experienced bicycle mechanics" | **$59 / $95 / $129 per month** (tiers differ only by bundled SMS credits) |
 | **Masterlinq** | Active since Oct 2023. Markets explicitly against "manual phone bookings and inventory confusion that traditional systems create" | **From $750/month** +$100/location — a full storefront platform, not a workshop add-on |
 | **Bikebook Workshop** | Active since Apr 2024. UK, owned by **MyGroup Services Ltd (12895911)**. In NBDA's "Friends of" list | **£49.99/month ex VAT** |
+| **Hubtiger** | Founded **2018**, South Africa. The largest of the group by a distance — claims 2000+ businesses in 25+ countries, partnered with both the **ACT** and the **NBDA**. **Full profile in §3.6** | **$52 / $99 / $125 per month** (service module; gated on technician count) |
 
 **Velobench** — the product tied to the unreadable forum thread — exists but rests entirely on its own marketing site: no Wayback history at all, no press, no LinkedIn, and the shop that supposedly built it never mentions it **[U]**.
 
-**Defensible claim:** *"At least three independently-run companies have built businesses bolting workshop tooling onto incumbent POS systems — the oldest operating since 2018."*
+**Defensible claim (revised 1 Sep 2026):** *"At least four independently-run companies have built businesses bolting workshop tooling onto incumbent POS systems. The oldest, Hubtiger, has been at it since 2018 and claims over 2,000 shops in 25+ countries."* The pattern is stronger than the original phrasing implied — and one of these is no longer a niche bolt-on.
 
 ### 3.4 Also validated
 
@@ -169,6 +171,107 @@ Support quality **[V]** — Lightspeed *"Don't expect help getting set up… use
 ### 3.5 Evidence gap
 
 **Reddit was unreachable in every research pass** — r/bikeshops, r/BikeMechanics, r/NICUBikeShop. Fetches blocked, no indexed threads surfaced. This is a real hole, not proof those communities are quiet. Worth a manual pass before committing spend.
+
+### 3.6 Hubtiger — the category leader §3.3 missed **[V]**
+
+*Added 1 September 2026. §3.3 named Velodrop, Masterlinq and Bikebook as the workshop bolt-ons. It missed the largest one. Hubtiger is not a fourth example of the pattern — it is the incumbent version of it, and the closest thing in this market to the product we are building.*
+
+#### What it is
+
+Cloud workshop-management software that sits **on top of** someone else's POS. Two modules, sold separately or together **[V]**:
+
+- **Repair / service** — online booking widget, repair calendar, digital job cards with assigned technician and status, quotes and invoices built from the job card, technician time logging against estimates, service checklists, service history per customer *and per item*, automated customer updates by **email, SMS or WhatsApp**, "smart reviews", reporting on revenue / job volume / technician performance / service type.
+- **Rental** — online reservations, digital waivers, deposits and upfront payment, real-time fleet availability. Added 2023.
+
+It is **not a till.** It has no POS of its own — the POS integration *is* the product. That is the whole difference between Hubtiger and us.
+
+#### Pricing — from hubtiger.com/pricing, fetched 1 Sep 2026 **[V]**
+
+| Service & Repair | Price/mo USD | Technicians | Text credits |
+|---|---|---|---|
+| Lite | **$52** | 1 | 100 |
+| Professional | **$99** | 2–4 | 250 |
+| Premium | **$125** | 5+ | 350 |
+
+| Rental | Price/mo USD | Rental items |
+|---|---|---|
+| Lite | $42 | 1–20 |
+| Standard | $65 | 21–50 |
+| Professional | $95 | 51–100 |
+| Premium | $155 | 101–200 |
+| Enterprise | $315 | 200+ |
+
+Unlimited users and unlimited services on every service tier — **tiers gate on technician count, not seats**. WhatsApp is a paid add-on on all service tiers; rental text credits are billed separately. No free tier; free trial with no card required **[R]** (Capterra).
+
+**This sets the ceiling on a workshop-only wedge.** A UK shop can buy a better-than-ours workshop module for roughly **£40–£95/month** while keeping its existing till. Any workshop-only pitch from us competes with that number, not with Citrus-Lime's £105–£515.
+
+#### Scale — the two claims disagree, and the gap is the story
+
+| Source | Claim | Date |
+|---|---|---|
+| The Latz Report | "around 300 stores in 15 countries" incl. US, UK, Spain, South Africa, Germany, Ireland, Netherlands | ~2021 **[R]** |
+| hubtiger.com homepage | "2000+ repair and rental businesses", "25+ countries", "8 years" | Sep 2026 **[V]** — vendor self-report, unaudited |
+
+If both are honest, that is **~6–7× store growth in five years**. Named reference: **99 Bikes** — "10,000+ services a month", "saves 8 minutes per job" **[V]** (vendor-stated). 99 Bikes is a ~75-store Australian chain, so the platform demonstrably runs at chain scale, not just single-shop.
+
+#### Company **[R]**
+
+Founded **2018**, Johannesburg, South Africa. CEO/co-founder **Stuart Blyth**, with developers Jonathan Jardim and Michael Kumm; origin story is Blyth's own experience as a bike-shop *customer*. Started cycling-only, since opened to **motorcycles, scooters, jewellery, appliances, sewing machines** and other repair verticals — the same adjacent-vertical move §1.4 identified for us, already executed. Funding is **[U]**: sources conflict between "Grindstone incubator/accelerator" and "no funding raised". No Companies House equivalent read — South African CIPC not checked. **[NF]**
+
+#### Integrations — the moat is breadth, not depth **[V]**
+
+Named POS/accounting/payment partners: **Lightspeed, Shopify, Square, Epos Now, Cin7, Teamwork Commerce, Retail Express, Xero, Sage, Global Payments**. Plus **Project 529** bike-registry integration for theft recovery.
+
+Lightspeed specifically, from hubtiger.com/integrations/lightspeed:
+
+- Works with **both X-Series and R-Series**, with different feature sets.
+- **Two-way:** customers, inventory decrement on job create/complete, work-order line-item changes, pricing/availability pulled into Hubtiger quotes.
+- **One-way (Lightspeed → Hubtiger):** rental pricing SKUs (hourly/daily/weekly).
+- **R-Series only:** work orders and special orders. X-Series gets neither.
+- **Stated limitations:** work orders must originate in Hubtiger, not Lightspeed; rental fleet lives only in Hubtiger; Lightspeed loyalty does not integrate; **separate logins and separate billing** for each platform.
+
+Those last two lines are the exploitable seam — see below.
+
+#### Channel — they already have both trade bodies
+
+- **ACT (Association of Cycle Traders)** partnered with Hubtiger to bring it to UK cycling retail **[R]**.
+- **NBDA** runs an exclusive partnership with member discounts, publishes Hubtiger content, and Hubtiger sponsored the **2026 NBDA Retailer Excellence Awards** **[R]**.
+
+§0 of the strategy doc records the ACT endorsing Saledock/Celerant. **The ACT endorses both — a POS and a workshop bolt-on.** That is not a contradiction, it is the shape of the market: the trade body treats workshop software as a separate category from the till. Worth confirming directly with the ACT before assuming either endorsement is exclusive.
+
+#### Reviews **[R]** — Capterra, GetApp, SoftwareAdvice
+
+Positive overall. Praised: customer communication about repairs, the job calendar, **photos attached to jobs**, easy-to-read quotes. Criticised: the **rental** module "not very intuitive"; thin documentation and how-to material for a feature-rich product; one report that the **Lightspeed sync is "slow… sometimes"**. Review volume is low — treat sentiment as indicative, not statistically meaningful.
+
+#### What this does to our position
+
+**Corrects §10.3 directly.** That section said we are "behind" on automated status SMS, job photos and service reminders, and that "nobody clearly has" quotes/estimates and parts-attached-to-job. **Hubtiger has all five**, plus WhatsApp, technician time-tracking against estimates, service checklists, per-item service history, and review solicitation. The "category-wide gap worth building ahead of the market" was not a gap.
+
+Where we still differ:
+
+| | Hubtiger | Wheelhouse |
+|---|---|---|
+| Own till | **No** — requires a host POS | **Yes** |
+| Per-mechanic drag-and-drop diary | Not described | Yes |
+| Moderated pending-approval booking queue | Direct self-service | Yes |
+| Logins / billing | Two systems, two bills | One |
+| Verticals | Bike + 5 more, 25+ countries | Bike, UK |
+| Rental | Yes | No |
+
+**Three readings, in order of how much I'd bet on them:**
+
+1. **Hubtiger validates the workshop thesis and kills the workshop-only wedge.** A 2018 company at claimed 2000+ shops proves shops will pay for this. It also means we cannot sell workshop-only into the UK at a premium — Hubtiger is there, cheaper, endorsed by the ACT, and better-featured. Our wedge has to be the thing Hubtiger structurally cannot do: **be the till too**. "One system, one login, one bill" is the honest pitch against them, and their own integrations page concedes the pain.
+2. **Their limitations are our specification.** Work orders can't originate in the POS; loyalty doesn't cross; sync is occasionally slow; two bills. Every one of those is an artefact of being a bolt-on. None of them exist for us.
+3. **They are a plausible acquirer or partner, not only a rival.** A South African company with no confirmed institutional funding, expanding verticals, that needs a POS it does not own — against Citrus-Lime, freshly recapitalised, which owns a POS and wants workshop depth. Worth knowing which way that goes.
+
+#### Open questions
+
+- Is the ACT endorsement exclusive, paid, or a listing? Ask the ACT directly.
+- Real UK install base — the "2000+" is global, unaudited and vendor-stated. **[U]**
+- GBP pricing: is UK billed in USD at these numbers, or localised? Pricing page read in USD only.
+- Funding and ownership: resolve Grindstone vs. no-funding via CIPC. **[U]**
+- Does the Lightspeed X-Series work-order gap push X-Series shops toward a rival — and is that a segment we can name?
+
 
 ---
 
@@ -509,6 +612,8 @@ Workshop diary (drag to place/move/resize, per-mechanic columns, job attachments
 
 ### 10.3 Where we stand against the workshop competitors
 
+> **Superseded in part — read §3.6 first.** This comparison was written against Velodrop, Masterlinq and Bikebook only. **Hubtiger has every feature listed below as a gap, plus the two called a category-wide opening.** The "ahead"/"behind" lines below still hold against the other three; they do not hold against Hubtiger.
+
 **Ahead:** drag-and-drop week *and* month diary with per-mechanic columns (none of the three describe one); the moderated **pending-approval booking queue** (all three do direct self-service); auto-created linked order making jobs billable at the till; explicit capacity/overlap logic.
 
 **Behind:** **automated status-triggered SMS/email** (Bikebook and Velodrop both have it; we have manual only — the clearest and cheapest gap to close); **job photos from a phone** (Bikebook sells this); **service reminders** (Velodrop has them — a revenue lever, not just parity).
@@ -535,6 +640,7 @@ Things that were wrong during this research and were fixed. Kept because the pat
 | Cloudflare Registrar has no API or reseller path | **Wrong.** It has a beta Registrar API that genuinely registers domains |
 | Bikebook Workshop costs $89/mo | **£49.99/mo ex VAT.** Its "400+ UK businesses" claim isn't on the current site |
 | Saledock is an independent UK vendor | Acquired by **Celerant (US)** Mar 2025, rebranded Celerant ONE Aug 2026 |
+| The workshop bolt-on field is three small companies; quotes and parts-to-job are a category-wide gap | **Missed the market leader.** **Hubtiger** (2018, South Africa) claims 2000+ shops in 25+ countries, is partnered with both the ACT and the NBDA, and already ships every feature §10.3 listed as our gap *and* both it called an opening. Added as §3.6 on 1 Sep 2026 |
 
 ---
 
@@ -575,6 +681,8 @@ Things that were wrong during this research and were fixed. Kept because the pat
 **Financials:** Companies House filed accounts read directly — Citrus-Lime Ltd (03792454), Citrus-Lime Topco (16839694), H Young Operations (00706712), H Young Holdings (00194944), Saledock (12597079), Seanic Retail (04058001), SiWIS (05378609), Zyro (03060232), BGF Nominees (10007355), MyGroup Services (12895911).
 
 **Pricing:** citruslime.com/pricing/uk/; Saledock comparison blog (Apr 2026); Wayback CDX history; duda.co/pricing; velodrop.com/pricing; masterlinq.io/pricing; bikebook.co.uk/workshop.
+
+**Hubtiger (added 1 Sep 2026):** hubtiger.com — home, /pricing, /about-us, /integrations/lightspeed, /repair-software (all fetched 1 Sep 2026); Lightspeed marketplace listing; Bicycle Retailer (Aug 2020); The Latz Report company feature; Cycling Industry News and cycleassociation.uk on the ACT partnership; NBDA member-partnership and 2026 Retailer Excellence Award pages; Capterra / GetApp / SoftwareAdvice reviews; Crunchbase / PitchBook / Tracxn / CB Insights for company data (conflicting, hence **[U]**).
 
 **Market pain:** Bicycle Retailer "State of Retail" 2022/2023/2025; Bicycle Retailer on Lightspeed's programme (May 2023); Capterra; Trustpilot; BBB.
 
