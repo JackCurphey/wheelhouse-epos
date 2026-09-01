@@ -9,6 +9,7 @@ import { runWithShop, prepare } from '../../server/db.js';
 export async function seedWorkshopJob({
   shopId,
   customerId,
+  mechanicId = null,
   title = 'Test job',
   jobDate = '2026-09-07',
   startTime = '10:00',
@@ -19,9 +20,9 @@ export async function seedWorkshopJob({
 }) {
   return runWithShop(shopId, async () => {
     const { lastInsertRowid: jobId } = await prepare(
-      `INSERT INTO workshop_jobs (title, customer_id, job_date, start_time, end_time, status, notes, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, now())`
-    ).run(title, customerId, jobDate, startTime, endTime, status, notes);
+      `INSERT INTO workshop_jobs (title, customer_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())`
+    ).run(title, customerId, mechanicId, jobDate, startTime, endTime, status, notes);
 
     const { lastInsertRowid: orderId } = await prepare(
       `INSERT INTO sale_documents (kind, customer_id, subtotal, discount, total, note, title, workshop_job_id, updated_at)
