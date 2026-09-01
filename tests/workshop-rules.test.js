@@ -10,7 +10,7 @@ import '../server/load-env.js';
 import { pool } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { staffSignup, staffRequest, seedMechanic, setOpeningDays, TEST_SIGNUP_CODE } from './helpers/staff.js';
+import { staffSignup, staffRequest, seedMechanic, setOpeningDays } from './helpers/staff.js';
 
 const MONDAY = '2026-09-07';
 const SUNDAY = '2026-09-06';
@@ -18,7 +18,7 @@ const SUNDAY = '2026-09-06';
 let server;
 
 before(async () => {
-  server = await startLiveServer({ env: { SIGNUP_CODE: TEST_SIGNUP_CODE } });
+  server = await startLiveServer();
 });
 
 after(async () => {
@@ -111,6 +111,33 @@ test('reopening a complete job is still allowed', async () => {
       body: { status: 'scheduled' },
     });
     assert.equal(reopened.status, 200, `reopening was rejected: ${JSON.stringify(reopened.body)}`);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('the server rejects a job on a mechanic\'s day off', async () => {
+  const { cookie, shop } = await newShop();
+  try {
+    // Works Tuesday to Friday - Monday is their day off, but the shop is open.
+    const mechanicId = await seedMechanic(shop.id, { name: 'Part Timer', workingDays: [2, 3, 4, 5] });
+    const res = await postJob(cookie, {
+      title: 'Booked on a day off', jobDate: MONDAY, startTime: '10:00', endTime: '11:00', mechanicId,
+    });
+    assert.equal(res.status, 400, "a job on the mechanic's day off was accepted");
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a mechanic working that day is still bookable', async () => {
+  const { cookie, shop } = await newShop();
+  try {
+    const mechanicId = await seedMechanic(shop.id, { name: 'Monday Mechanic', workingDays: [1, 2, 3, 4, 5] });
+    const res = await postJob(cookie, {
+      title: 'Normal Monday job', jobDate: MONDAY, startTime: '10:00', endTime: '11:00', mechanicId,
+    });
+    assert.equal(res.status, 201, `a legal booking was rejected: ${JSON.stringify(res.body)}`);
   } finally {
     await deleteTestShop(shop.id);
   }

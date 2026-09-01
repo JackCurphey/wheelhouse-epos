@@ -2231,6 +2231,17 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
     return 'The shop is closed that day - please choose another date.';
   }
 
+  // A mechanic's own days off are separate from the shop's closing days - a
+  // part-timer can be off on a Monday the shop is open. Checked before the
+  // times, because a day off rules out the whole day regardless of hours.
+  if (mechanicId) {
+    const mechanic = await db.prepare('SELECT working_days FROM employees WHERE id = ?').get(mechanicId);
+    const workingDays = mechanic ? parseWorkingDays(mechanic.working_days) : null;
+    if (Array.isArray(workingDays) && !workingDays.includes(dayOfWeek)) {
+      return 'That mechanic does not work that day - please choose another day or another mechanic.';
+    }
+  }
+
   // A job with no times is a loose "sometime that day" entry - it occupies no
   // slot, so there is nothing to check it against.
   if (!startTime || !endTime) return null;

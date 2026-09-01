@@ -1,44 +1,32 @@
 // Staff-side helpers: a real shop with a real owner session, for tests that
 // have to call the staff API over raw HTTP.
 //
-// Goes through POST /api/auth/signup rather than inserting rows, because
-// createShop() also seeds workshop_settings and the customer groups a shop
-// needs before the diary works at all. The signup route is invite-gated, so
-// the server under test must be started with SIGNUP_CODE set - see
-// TEST_SIGNUP_CODE below.
+// Calls createShop() and createSession() directly rather than POSTing to
+// /api/auth/signup. Two reasons: the signup route is invite-gated and
+// rate-limited to five new shops an hour per IP, which a test file trips
+// long before it runs out of cases, and weakening a real abuse control to
+// suit tests is the wrong trade. The session token still comes from
+// createSession(), the same function the route calls, so the cookie a test
+// carries is a genuine one - only the shop's creation skips the HTTP hop.
+//
+// createShop() is what matters here anyway: it seeds workshop_settings and
+// the customer groups a shop needs before the diary works at all.
 import { randomUUID } from 'node:crypto';
-import { SESSION_COOKIE } from '../../server/auth.js';
-import { pool, runWithShop, prepare } from '../../server/db.js';
-import { jsonRequest, readCookie } from './http.js';
-
-export const TEST_SIGNUP_CODE = 'test-signup-code';
+import { createShop, createSession, SESSION_COOKIE } from '../../server/auth.js';
+import { runWithShop, prepare } from '../../server/db.js';
+import { jsonRequest } from './http.js';
 
 // Creates a shop with an owner and returns their session cookie.
 export async function staffSignup(baseUrl, overrides = {}) {
   const suffix = randomUUID().slice(0, 8);
-  const payload = {
+  const created = await createShop({
     shopName: overrides.shopName || `Test Shop ${suffix}`,
     ownerName: overrides.ownerName || 'Test Owner',
     email: overrides.email || `owner-${suffix}@example.com`,
     password: overrides.password || 'password123',
-    signupCode: TEST_SIGNUP_CODE,
-  };
-
-  const res = await fetch(`${baseUrl}/api/auth/signup`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload),
   });
-  const body = await res.json();
-  if (res.status !== 201) throw new Error(`staff signup failed (${res.status}): ${JSON.stringify(body)}`);
-
-  const cookie = readCookie(res, SESSION_COOKIE);
-  if (!cookie) throw new Error('staff signup issued no session cookie');
-
-  // The session response carries the shop's slug but not its id, and tests
-  // need the id to seed rows under the right RLS context.
-  const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE slug = $1', [body.shopSlug]);
-  return { cookie, shop, email: payload.email };
+  const token = await createSession(created.login.id);
+  return { cookie: `${SESSION_COOKIE}=${token}`, shop: created.shop, email: created.login.email };
 }
 
 export function staffRequest(baseUrl, cookie, path, options) {
