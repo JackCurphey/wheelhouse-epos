@@ -28,7 +28,8 @@ decision, *"Full EPOS vs workshop-first go-to-market"* — is **which half of
 that free workshop leads**: the internal diary, or the customer-facing booking
 and messaging layer.
 
-This decision answers that.
+This decision answers that — and §5 records Jack narrowing it further, from
+the whole workshop module down to the booking system alone.
 
 ## 2. The premise checks out
 
@@ -111,29 +112,62 @@ coincidence — but note the free workshop is the wedge and £49–79 is the *pa
 full system*, so we are giving away something Bikebook charges £49.99 for.
 That is deliberate and it is the whole argument for the wedge.
 
-## 5. The sub-decision this forces
+## 5. The wedge is the booking system, not the workshop module
 
-Booking-led means choosing how we relate to the incumbent till:
+Narrowed by Jack, 1 September 2026: *"change the wedge to be the bolt on
+booking system rather than the whole workshop... it would be hard to convince
+people to rip and replace their existing workshop."*
 
-**Option 1 — integrated bolt-on.** Read and write the shop's existing POS so
-jobs bill at their till. Preserves our strongest existing feature (a job
-auto-creates a linked order, billable at the till — §10.3). But it makes the
-wedge dependent on the incumbent's goodwill. Citrus-Lime's API key is *"gated
-behind a support call"* **[V]**, and as of 20 November 2025 they are
-BGF-backed with money earmarked for technology development and international
-expansion **[V]** — every incentive to close that door on a competitor. This
-is the dependency Masterlinq and Bikebook live inside. Survivable, not a moat.
+Accepted. §2 supports it — every competitor but i-BikeShop already ships a
+workshop module, so the free workshop as originally scoped still asked a shop
+to displace something it owns.
 
-**Option 2 — standalone island.** Bookings, diary and job status live entirely
-in our system; the shop still rings up in Citrus-Lime. No integration risk. But
-the billable-at-the-till advantage is dead on arrival for wedge shops, and our
-full EPOS sits unused until they convert.
+**What this does not change.** A booking system needs a diary underneath it to
+know which slots are free: mechanics, opening hours, capacity, overlap. That
+machinery ships either way. What narrows is what the *shop* is asked to adopt,
+not what gets built — most of it already exists and is tested.
 
-**Proposed: Option 2, with till write-back as the upsell.** "Your jobs bill
-automatically" becomes the reason to take the whole system, which turns the
-wedge into a funnel rather than a second business. This is also what the plan
-already implies — `PF-2` workshop-only mode exists precisely so a job can
-complete without a till of ours.
+### The open sub-decision: who re-types the booking?
+
+This is the question that decides whether a booking-only bolt-on survives
+contact with a real shop. If bookings arrive in our system and jobs are
+managed in Citrus-Lime, someone keys every booking twice. Shops tolerate that
+for about a week. Three ways out:
+
+**Option A — write back into the incumbent POS.** A booking appears as a job
+in their Citrus-Lime or Lightspeed diary automatically. No double keying, and
+it is what Bikebook and Velodrop do. The cost is a dependency on the
+incumbent's API: Citrus-Lime's key is *"gated behind a support call"* **[V]**,
+and since 20 November 2025 they are BGF-backed with money earmarked for
+technology development **[V]** — every incentive to close that door on a
+competitor. Survivable, not a moat, and the whole wedge stops working the day
+they revoke access.
+
+**Option B — accept the double keying, make it cheap.** The booking arrives
+with everything the shop needs; they copy it into their own system once. Zero
+dependency, honest, and strictly worse than what two competitors already
+offer. Viable only if the copy genuinely takes seconds.
+
+**Option C — coexistence. Online bookings become jobs *here*; everything else
+stays where it is.** The shop keeps Citrus-Lime for till, stock and the jobs
+they take by phone. Jobs that arrive through our booking link are worked in
+our system, through to the job-done email. No rip-and-replace, no double
+keying, no API dependency. Over time the online share grows and their old
+module withers on its own, without anyone having to decide to abandon it.
+
+**Recommended: Option C.** It is the only one of the three that is neither
+dependent on a competitor's goodwill nor visibly worse than what a shop can
+already buy.
+
+It does mean a shop briefly runs two diaries, which §3's reasoning warned
+against — that warning was about asking a shop to *replace* its diary
+wholesale, and this is not that. The split has an obvious rule the shop can
+state in one sentence: online bookings live here, phone bookings live there.
+That is a different proposition from "abandon what you have", and it is the
+reason the objection does not carry over.
+
+`PF-2` (workshop-only mode — a job completes without a linked till sale)
+is exactly the machinery Option C needs, and it is already in the plan.
 
 ## 6. What changes if this is signed off
 
@@ -146,7 +180,9 @@ Nothing in P0. The changes are in ordering and wording:
 | `CX-2` job photos from a phone | Rises in priority; Bikebook sells this **[V]** |
 | Service reminders | **Not currently a task anywhere.** Velodrop has them **[V]** and they are a revenue lever for the shop, not just parity. Needs adding |
 | `WEB-1` public website | Copy leads with booking and customer messaging, not the diary |
-| Master plan §1 | Reword "we lead with the workshop module" → lead with the customer-facing booking and messaging layer, diary included |
+| `PF-2` workshop-only mode | Promoted into the wedge itself. Under Option C it is not a convenience, it is the thing that lets a shop run our jobs without our till |
+| Master plan §1 | Reword "we lead with the **workshop module**, given away free" → we lead with the **booking system**, given away free, running alongside whatever till and whatever workshop module the shop already has. The diary ships underneath it and is not the pitch |
+| Scope of the free tier | Narrows. Not "the workshop", but: the booking link, the slots behind it, the jobs those bookings become, and the messages that keep the customer informed |
 
 ## 6b. Follow-up — reconnecting guest bookings to accounts
 
