@@ -27,13 +27,28 @@ Confidence tags: **[V]** verified · **[R]** reported · **[U]** unverified ·
 
 A hosted point-of-sale and workshop system for independent bike shops. The buyer
 wants to work on bikes and make money, does not care about technology, and is
-price-sensitive. We lead with the **workshop module, given away free**, running
-alongside whatever till the shop already has; the paid product is the full system
-at one flat price in the £49–79/month band. The differentiator is the **experience**: obviously
-simpler than anything else a shop can buy, and a **job-done email** that tells
-the customer in plain English what was done, itemises the price, invoices it, and
-lets them pay in one tap. Structured inspection follows as the same machinery
-pointed at the middle of the job rather than the end.
+price-sensitive. We lead with the **online booking system, given away free**,
+running alongside whatever till *and whatever workshop module* the shop already
+has; the paid product is the full system at one flat price in the £49–79/month
+band. The differentiator is the **experience**: obviously simpler than anything
+else a shop can buy, and a **job-done email** that tells the customer in plain
+English what was done, itemises the price, invoices it, and lets them pay in one
+tap. Structured inspection follows as the same machinery pointed at the middle of
+the job rather than the end.
+
+**Narrowed 1 September 2026** from "the workshop module, given away free". Every
+competitor but i-BikeShop already ships a workshop module, so giving ours away
+still asked a shop to displace something it owns. Booking is additive: it goes
+live on a Monday without touching the till. The diary ships underneath it, because
+a booking system needs one to know which slots are free — but it is not the pitch.
+First market is **Citrus-Lime shops**, and the shape is **coexistence**: jobs booked
+through our link are worked in our system, everything else stays where it is.
+Pushing bookings into Citrus-Lime's own diary was investigated and is not
+available — their published API can create an order shell but not a scheduled
+booking, and their API agreement bars an application that "competes with or merely
+replicates" them. Reasoning and sources:
+`docs/decisions/2026-09-01-wedge-booking-vs-workshop.md` (on the branch of PR #22,
+so this reference resolves once that merges).
 
 ## 2. The five things that are true and must stay true
 
@@ -126,10 +141,10 @@ isolation defects.
 
 | ID | Task | Owner | Done when |
 |---|---|---|---|
-| DS-0 | Revise `docs/superpowers/plans/2026-08-31-architecture-stage-1.md` and `.claude/workflows/wheelhouse-architecture-stage-1.js` per `docs/reviews/2026-08-31-claude-architecture-stage-1-revision-prompt.md`. Plan and workflow only — no production code | Mark | Both files meet the eleven acceptance criteria in the revision prompt |
+| DS-0 | Revise `docs/superpowers/plans/2026-08-31-architecture-stage-1.md` and `.claude/workflows/wheelhouse-architecture-stage-1.js` per `docs/reviews/2026-08-31-claude-architecture-stage-1-revision-prompt.md`. Plan and workflow only — no production code | Mark | **Blocked, 1 Sep: the revision prompt does not exist on any branch** (`git log --all -- 'docs/reviews/*'` is empty), so the eleven criteria cannot be checked. Mark either writes it or restates this done-condition. Everything in P0 waits behind this |
 | DS-1 | Make tenant state transaction-local. Every runtime `set_config` site, found by search, not assumption — includes `server/db.js` and `server/auth.js` | Mark | `grep -rn "set_config" server/` shows no `false` third argument; tests prove context does not leak between requests on a reused client |
 | DS-2 | Safe client cleanup before local pool release: roll back abandoned transactions, reset `app.current_shop_id`, destroy the client if cleanup fails | Mark | A test that deliberately leaves a transaction open proves the next checkout is clean |
-| DS-3 | Record transaction pooling as unsupported, in the plan and in deployment docs | Mark | Written, and the connection string in use is the direct/unpooled one |
+| DS-3 | Record transaction pooling as unsupported, in the plan and in deployment docs | Mark | Written, and the connection string in use is the direct/unpooled one. **Partial, 1 Sep: the connection string is already direct** (`docker-compose.yml`); only the written record is missing |
 | DS-4 | **Composite tenant foreign keys.** Unique `(shop_id, id)` on every tenant-owned parent; convert every tenant relationship to a composite FK. Designed for existing data: audit query, then add/backfill/validate | Mark | The review's cross-tenant probe fails at the database. An adversarial test attempts a cross-tenant reference for **every** converted relationship and all are rejected |
 | DS-5 | **Resolver privilege boundary.** `SECURITY DEFINER` functions with fixed `search_path` for session resolution, tenant-qualified login verification, shop-slug resolution, session create/destroy, controlled account and shop creation. Revoke underlying table access from the request role. Covers staff and customer auth | Mark | The app role cannot `SELECT` directly from `logins`, `sessions`, `customer_logins`, `customer_sessions`; adversarial tests per function |
 | DS-6 | `uploaded_image_types` policy: ownership, deletion, abuse response. It is a 192-bit bearer capability with a one-year immutable cache — not a demonstrated leak, but not revocable either | Mark + Jack (policy) | Written decision, plus a deletion path that works |
@@ -164,19 +179,30 @@ two probes (nested transaction, cross-tenant FK) re-run and behaving correctly.
 
 | ID | Task | Owner | Done when |
 |---|---|---|---|
-| PF-1 | Self-serve signup and shop provisioning — one URL, one login, no install | Jack (paired on the auth touchpoints) | A new shop signs up and reaches an empty till without human intervention |
-| PF-2 | **Workshop-only mode** — a job completes without a linked till sale, because a wedge shop has no till of ours | Jack | A job created in workshop-only mode completes; no orphan `sale_documents` row |
-| PF-3 | Print agent installer, signed, one-page setup | Mark | A non-developer installs it from the instructions alone |
+| PF-1 | Self-serve signup and shop provisioning — one URL, one login, no install | Jack (paired on the auth touchpoints) | A new shop signs up and reaches an empty till without human intervention. **Partial, 1 Sep: built end to end.** The only thing left is the `SIGNUP_CODE` invite gate, which returns "Signups are currently closed" — opening it is a decision, not a build |
+| PF-2 | **Workshop-only mode** — a job completes without a linked till sale, because a wedge shop has no till of ours | Jack | A job created in workshop-only mode completes; no orphan `sale_documents` row. **Partial, 1 Sep: the mechanism works** — `skipAutoOrder` creates a job with no order, asserted by test in PR #21. Missing is the *mode*: a shop-level setting and the UI for it. **Promoted — this is what the coexistence wedge runs on** |
+| PF-3 | Print agent installer, signed, one-page setup | Mark | A non-developer installs it from the instructions alone. **Partial, 1 Sep: packaging and the one-page instructions exist; it is explicitly unsigned.** Jack has queried whether to drop the print agent for browser printing — note that would discard nearly-finished work |
 
 ### P3 — Workshop table stakes (W1) and the front door
+
+**Reordered 1 September 2026 by the wedge decision.** WS-2 and WS-5 are the wedge
+itself and come first after P0; WS-6 to WS-8 are new. WS-6 exists because service
+reminders are a revenue lever a competitor already sells and the plan had no task
+for them. WS-7 and WS-8 replace the phone-number match DS-7 removed: the shop
+recovers the deduplication through a staff decision, and the customer gets a nudge
+that never confirms whether an account exists — a form that answered that question
+would leak the shop's customer list to anyone typing numbers into it.
 
 | ID | Task | Owner | Done when |
 |---|---|---|---|
 | WS-1 | Job status history — who changed what, when. Required for notifications and for the attribution the legal position depends on | Jack (paired) | Every transition recorded with actor and timestamp |
-| WS-2 | Automated status-triggered messaging, SMS and email, per-shop templates. `customer_messages` already carries `direction` and `provider_sid` for this | Jack | Booking confirmation, ready-for-collection and waiting-for-parts messages send and are logged |
+| WS-2 | Automated status-triggered messaging, SMS and email, per-shop templates | Jack | Booking confirmation, ready-for-collection and waiting-for-parts messages send and are logged. **Partial, 1 Sep: the plumbing is live** — Twilio sender in `server/sms.js`, `customer_messages` carrying direction/status/`provider_sid`/error, and a working manual send route. Missing: the status trigger, per-shop templates, email. **Promoted to first product task after P0 — this is the wedge's core feature, not a table stake** |
 | WS-3 | Internal versus customer-visible notes | Jack | Internal notes never appear in a portal response — asserted by test |
 | WS-4 | Customer-level service history, not only per-bike | Jack | A job with no bike attached appears in the customer's history |
-| WS-5 | Booking cancel and reschedule by the customer; reject with a reason by the shop | Jack | New statuses exist; both paths tested |
+| WS-5 | Booking cancel and reschedule by the customer; reject with a reason by the shop | Jack | New statuses exist; both paths tested. **Promoted 1 Sep — same surface and same pitch as WS-2** |
+| WS-6 | **Service reminders.** "Your last service was in March" — sent on a schedule from the bike's job history, not triggered by a status change | Jack | A bike whose last job is older than the shop's chosen interval produces one reminder, once |
+| WS-7 | Sign-in nudge on the guest booking form — shown to **everyone**, never varied by what the visitor typed | Jack | The form always offers it; no response differs based on whether an account exists |
+| WS-8 | Staff-side merge queue for duplicate customer records created by guest bookings | Jack | A shop can see a suggested match and merge it, or not |
 | WEB-1 | Public website: what it is, the free workshop, pricing, who we are, help, changelog, status, contact. Plain English, acronyms spelled out | Jack | Live, and a non-technical reader can say what it does |
 | WEB-2 | Legal set: shop privacy notice, rider privacy notice, DPA offered to shops, cookie policy, terms | Jack + solicitor | Published |
 | FOR-1 | Community forum, private to design partners. **Email-in and email-reply is a hard requirement**; single sign-on from the product account. Discourse's free tier may cover it — 500k pageviews, 20k emails, 2 staff seats **[V]**; Pro is $100/mo **[V]** | Jack | A design partner replies to a thread by email without visiting the site |
@@ -230,7 +256,7 @@ tests.
 | TILL-2 | Cash-up / Z-report | Jack | End-of-day figures reconcile against a seeded day |
 | TILL-3 | CSV export of everything | Jack | A shop exports its whole dataset unaided |
 | TILL-4 | VAT as stored data; date-range reporting | Jack (paired) | A VAT return period can be produced |
-| TILL-5 | Permissions model | Mark | A non-owner cannot reach owner functions — tested by raw HTTP |
+| TILL-5 | Permissions model | Mark | A non-owner cannot reach owner functions — tested by raw HTTP. **Partial, 1 Sep: `is_owner` gates the eight team routes only.** Everything else is open to any logged-in staff, as `public/app.js` says out loud: "Every login can do everything for now" |
 | BIL-1 | Billing. Not before G3; the first three shops are invoiced by hand | Mark | First recurring payment collected |
 | BIKE-1 | Richer bike record: year, size, wheel size, groupset, e-bike system, purchase date, photo; index `serial_number` | Jack | Fields present and searchable |
 | BIKE-2 | Spec autofill, subject to 99spokes terms (§10) | Jack | A model lookup populates components, or the task is closed as blocked |
@@ -302,12 +328,18 @@ business days, no marketing SMS to a US number without a compliant consent flow.
    Blocks BIKE-2 only; BIKE-3 proceeds regardless.
 6. **Is the job-done email free or paid?** It is now the strongest thing in the
    product and giving it away may be wrong.
-6. **Forum public or private at launch.**
-7. **Final price**, set at G3.
+7. **Forum public or private at launch.**
+8. **Final price**, set at G3.
+9. **What Gate G2 becomes** if DP-1 to DP-4 are dropped. Jack has queried all four
+   as unnecessary; G2 is defined as three design partners running the workshop for
+   thirty days, and DP-5 exists only to measure that. Dropping the four leaves the
+   gate with no definition, so it needs replacing rather than deleting.
 
 ## 11. Change log
 
 | Date | Change |
 |---|---|
 | 2026-08-31 | Created. Supersedes the sequencing in the system-build and workshop specs following the corrective architecture review. Adds P0 as a blocking phase on the strength of the verified cross-tenant foreign-key defect. |
+| 2026-09-01 | **Wedge narrowed** to the online booking system alone, from the whole workshop module — every competitor but i-BikeShop already ships one, so the free workshop still asked a shop to displace what it owns. First market is Citrus-Lime shops; the shape is coexistence, because their API cannot write a scheduled booking and their API agreement bars a competing application. §1 rewritten. WS-2, WS-5 and PF-2 promoted. WS-6 (service reminders) added — the wedge needs it and no task existed. WS-7 and WS-8 added to replace the guest phone-number match removed by DS-7. See `docs/decisions/2026-09-01-wedge-booking-vs-workshop.md`. |
+| 2026-09-01 | **Six tasks marked partial** after an audit of all 63 against `master`: DS-3, PF-1, PF-2, PF-3, WS-2, TILL-5. Nothing else in the plan is started; the audit found no fully completed task except PL-15, done the same day the plan was written. **DS-0 marked blocked** — the revision prompt its done-condition is measured against does not exist on any branch. Added open decision 9 (what G2 becomes without DP-1 to DP-4) and fixed the duplicate numbering in §10. |
 | 2026-08-31 | **Differentiator changed** after review with Jack: the experience, not the structured inspection. P5 rebuilt around the job-done email — plain-English summary, photos, itemised pricing, invoice, pay in one tap. Inspection demoted to P5b as an extension of the same machinery. Adds the payments architecture as a blocking open decision. |
