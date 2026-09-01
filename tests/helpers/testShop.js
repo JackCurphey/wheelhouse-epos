@@ -20,7 +20,9 @@ export async function deleteTestShop(shopId) {
     await client.query('DELETE FROM customer_sessions WHERE customer_login_id IN (SELECT id FROM customer_logins WHERE shop_id = $1)', [shopId]);
     await client.query('DELETE FROM customer_logins WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM sale_documents WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM workshop_job_attachments WHERE workshop_job_id IN (SELECT id FROM workshop_jobs WHERE shop_id = $1)', [shopId]);
     await client.query('DELETE FROM workshop_jobs WHERE shop_id = $1', [shopId]);
+    await client.query('DELETE FROM workshop_settings WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM customer_bikes WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM customers WHERE shop_id = $1', [shopId]);
     await client.query('DELETE FROM employees WHERE shop_id = $1', [shopId]);

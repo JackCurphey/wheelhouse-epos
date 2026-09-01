@@ -1993,6 +1993,28 @@ function serializeWorkshopJob(row) {
   };
 }
 
+// What a customer is allowed to see about their own job. Deliberately a
+// separate function from serializeWorkshopJob() above rather than a filtered
+// version of it: the staff serializer is where new fields get added, and a
+// shared one silently exposes each new field to customers the day it lands.
+// Notably absent - the linked order (id, status, total) and `notes`, which
+// staff edit freely in the diary and treat as internal. The customer's own
+// description survives in `title` ("Online booking: ..."), which is what the
+// portal's my-bookings list falls back to.
+function serializePortalBooking(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    bikeLabel: row.bike_label !== undefined ? row.bike_label : undefined,
+    mechanicName: row.mechanic_name !== undefined ? row.mechanic_name : undefined,
+    jobDate: row.job_date,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
 // 'pending' is a customer-submitted booking (see /api/portal/*) awaiting a
 // mechanic's manual review before it counts as scheduled - it still occupies
 // its diary slot like any other status, so a second booking can't silently
@@ -3185,7 +3207,7 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const rows = await db
     .prepare(WORKSHOP_JOB_SELECT + ' WHERE w.customer_id = ? ORDER BY w.job_date DESC, w.start_time DESC')
     .all(ctx.login.customer_id);
-  sendJson(res, 200, rows.map((r) => serializeWorkshopJob(r)));
+  sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
 });
 
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
@@ -3308,7 +3330,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     skipAutoOrder: false,
   });
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-  sendJson(res, 201, serializeWorkshopJob(row));
+  sendJson(res, 201, serializePortalBooking(row));
 });
 
 // ---------- Static file serving ----------
