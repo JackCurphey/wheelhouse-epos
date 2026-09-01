@@ -19,3 +19,9 @@ public/dist/
 # drift gate diffs a fresh `shadcn build` against the committed output to
 # catch hand-edited components; with nothing committed there is nothing to
 # diff and the gate passes vacuously.
+
+# Workshop job attachments and uploaded images. A named Docker volume in
+# production (docker-compose.yml); a real directory here when the server runs
+# on the host, including during tests. Customer files must never be
+# committable.
+uploads/

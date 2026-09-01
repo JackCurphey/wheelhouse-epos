@@ -4,7 +4,13 @@
 // Deliberately mirrors createWorkshopJob() in server/server.js - a job plus
 // its linked order in one transaction - because the linked order is exactly
 // what the portal must not leak back to a customer.
+import path from 'node:path';
+import { unlink } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { runWithShop, prepare } from '../../server/db.js';
+
+// Mirrors server.js's UPLOADS_DIR.
+export const UPLOADS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'uploads');
 
 export async function seedWorkshopJob({
   shopId,
@@ -54,4 +60,16 @@ export async function seedBookableShop(shopId, { mechanicName = 'Test Mechanic',
     await prepare('INSERT INTO workshop_settings (opening_time) VALUES (?)').run('09:00');
     return { mechanicId };
   });
+}
+
+// Attachment uploads land on disk as well as in the database, and
+// deleteTestShop() only clears rows. Without this, every test run leaves
+// files behind in the repo's uploads/ directory.
+export async function purgeAttachmentFiles(shopId) {
+  const keys = await runWithShop(shopId, () =>
+    prepare('SELECT storage_key FROM workshop_job_attachments').all()
+  );
+  await Promise.all(
+    keys.map((k) => unlink(path.join(UPLOADS_DIR, k.storage_key)).catch(() => {}))
+  );
 }
