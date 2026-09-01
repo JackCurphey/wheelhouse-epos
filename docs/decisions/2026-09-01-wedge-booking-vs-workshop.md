@@ -148,6 +148,39 @@ Nothing in P0. The changes are in ordering and wording:
 | `WEB-1` public website | Copy leads with booking and customer messaging, not the diary |
 | Master plan §1 | Reword "we lead with the workshop module" → lead with the customer-facing booking and messaging layer, diary included |
 
+## 6b. Follow-up — reconnecting guest bookings to accounts
+
+Agreed by Jack, 1 September 2026. Raised while fixing DS-7, which removed
+the phone-number match that used to link a guest booking to an existing
+customer. That match was a real convenience and losing it costs something:
+a regular who books as a guest three times becomes three customer records.
+
+**Rejected first idea.** The obvious replacement — telling the guest form
+"there is already an account with that number, please sign in" — leaks the
+shop's customer list. Anyone could type numbers into a public page and learn
+which ones belong to real customers. It is the same reason a login page says
+"invalid email or password" rather than "no such email": the specific message
+helps the honest user and helps a stranger fishing just as much.
+
+**Two changes that get the same result without the leak:**
+
+| | What it is | Why it is safe |
+|---|---|---|
+| **The unconditional nudge** | The guest booking form always shows "Got an account? Sign in to keep all your bookings together" — shown to everyone, regardless of what they typed | The message never varies, so it carries no information about who exists |
+| **The staff merge queue** | The shop sees "this guest booking's phone matches Sam Regular — same person?" and merges, or does not | A person who knows their customers decides, instead of a stranger's typing |
+
+Together these recover the deduplication DS-7 gave up. The nudge catches
+people who already have an account; the merge queue cleans up everyone else.
+
+Neither is scheduled yet. The nudge is small and belongs with `WEB-1`; the
+merge queue is a new task with no ID, closest in spirit to `WS-4`
+(customer-level service history), which has the same "one customer, many
+records" shape.
+
+**The rule to keep:** never let a public form confirm whether an account
+exists. Any future version of this that varies its message based on what the
+visitor typed reintroduces exactly what was rejected here.
+
 ## 7. What would falsify this
 
 - If shops turn out to book overwhelmingly by phone and walk-in *by
