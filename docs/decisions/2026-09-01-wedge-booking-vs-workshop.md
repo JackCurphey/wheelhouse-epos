@@ -179,10 +179,12 @@ and the reflex answer was to build first on whichever platform had the
 friendlier API, then use a working prototype to persuade the harder vendor.
 That reflex misreads who needs persuading.
 
-If the API key is issued to the retailer for their own data — which the
-"gated behind a support call" evidence points to **[U]**, and which is being
-checked — then Citrus-Lime's permission is not required at all. A shop asks
-its own vendor for its own key. The persuasion target is a shop owner.
+~~If the API key is issued to the retailer for their own data, Citrus-Lime's
+permission is not required at all — a shop asks its own vendor for its own
+key.~~ **This was wrong, and §5c corrects it.** Citrus-Lime issues keys per
+Application to a registered "Developer", reviewed against their API Agreement.
+There is no self-serve retailer key. The reasoning below about *who* to
+persuade survives; the claim that nobody's permission is needed does not.
 
 And if vendor permission *were* required, a polished integration with their
 largest rival is the worst thing to arrive with: it demonstrates a competitor
@@ -205,6 +207,98 @@ moment a job is pushed outward, so nothing is wasted by starting now.
 
 **Not decided:** Lightspeed. Deferred, not ruled out — a second adapter later
 is a different question from where the first shop comes from.
+
+## 5c. The API answer — both vendors, 1 September 2026
+
+Desk research against primary sources. **No live API call was made against
+either vendor**, so every finding below is a documentation-level read. That is
+the strongest check available without a key, and it is not the same as proof.
+
+### Citrus-Lime — write-back is effectively closed
+
+Read directly from the live OpenAPI spec at
+`cloudposapi.citruslime.com/swagger/v1/swagger.json` and the API Usage
+Agreement v1.4 (25 Apr 2024). Both public, no login.
+
+**Technically incomplete.** A workshop job is not a first-class resource. It is
+a Customer Order with `ChannelType = "Workshop"` (a confirmed enum value), and
+`POST /api/CustomerOrder` does create one. But the fields that make it a
+*scheduled diary entry* appear only in the read model, with no writable
+counterpart anywhere: `MechanicId`, `WorkshopStartDate`, `WorkshopEndDate`,
+`ServicedItem`, `WorkshopStatus`, `CheckedIn`, `QualityCheck`. `StorageSlot` is
+GET-only. **[V]**
+
+So you can create an order shell and not a booking. This reconciles the two
+conflicting claims in `business-research.md` — the "full CRUD" claim was true
+of CustomerOrder as a record, the "no documented workshop write" claim was true
+of the fields that constitute a booking. Both were half right.
+
+**Contractually barred, which matters more.** The Agreement states plainly:
+*"You may not create an Application that competes with or merely replicates
+Citrus-Lime, or any Citrus-Lime Covered Services."* It also requires written,
+discretionary, **revocable** permission — via their Cloud POS Marketplace —
+before one Application may serve more than one Citrus-Lime retailer. They may
+audit, and may terminate "with or without cause, and without notice." **[V]**
+
+A booking bolt-on for their retailers is squarely what that clause describes,
+and they hold sole discretion over the reading. **Whether the clause is
+enforceable as written is a question for a solicitor, not for this document** —
+but a wedge whose mechanism can be revoked without notice by the incumbent it
+displaces is not a foundation.
+
+**Also:** no self-serve key (Support ticket plus an API Request Form, reviewed),
+no isolated sandbox (a "demo" group inside production), and 1 request per
+second. **[V]**
+
+### Lightspeed X-Series — open
+
+Applies to **X-Series** (the former Vend/Retail product). S-Series/OnSite was
+not established either way — **[NF]**, not a no.
+
+- `POST /api/2.0/services` — a documented Service Orders create endpoint.
+  Gated on the retailer having the Service Orders module enabled. **[V]**
+- An Admin self-issues a Personal Token inside their own account, no vendor
+  involvement. Plus plan only, and being replaced by "private apps" — accounts
+  created after 27 Jan 2026 reportedly get private apps only **[R]**.
+- A registered OAuth app connects to **up to 30 stores while still
+  "Not Approved"** — a full pilot without asking permission. **[V]**
+- Nothing in the API licence bars a competing product. The non-exclusivity
+  clause protects *Lightspeed's* right to compete; the data clauses constrain
+  what an integrator does with data, not who they are. **[V]**
+- Public docs, trial store as a sandbox, leaky-bucket limits bucketed
+  separately from in-store till traffic. **[V]**
+- Velodrop's own marketing says its integration creates Lightspeed workorders
+  **[R]** — consistent, not independently confirmed.
+
+### What this settles
+
+**§5's Option A is dead for Citrus-Lime and alive for Lightspeed.** The market
+decision in §5b stands unchanged, exactly as that section anticipated: the
+target is Citrus-Lime shops and the build is **Option C, coexistence**, which
+needs no key, no agreement and no permission from anyone.
+
+Write-back becomes a **Lightspeed-only upgrade**, available whenever it is
+worth building, and it costs nothing to defer because Option C is identical
+until the moment a job is pushed outward.
+
+### Corrections this forces to existing research
+
+- `business-research.md` tags Masterlinq as shipping "an actual App Store
+  listing bridging Lightspeed and Ascend" **[V]**. That listing could not be
+  found — general "syncs with Lightspeed" claims only. Downgrade to **[NF]**;
+  absence is not proof, but the **[V]** is not earned.
+- `strategy.md` §8 calls vendor terms *"the load-bearing artifact and nobody
+  has read one yet."* One has now been read. Citrus-Lime's API Agreement is
+  not the end-of-contract data clause that section was chasing, but it is the
+  first vendor term actually read end to end.
+
+### The check that would overturn this
+
+A real Citrus-Lime key — even a demo-group one — and an actual
+`POST /api/CustomerOrder` with `ChannelType: "Workshop"`, followed by a `PUT`
+carrying a mechanic and dates. If undocumented fields accept them, the
+technical half of this section is wrong. The contractual half would still
+stand.
 
 ## 6. What changes if this is signed off
 
