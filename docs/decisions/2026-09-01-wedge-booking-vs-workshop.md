@@ -169,6 +169,43 @@ reason the objection does not carry over.
 `PF-2` (workshop-only mode — a job completes without a linked till sale)
 is exactly the machinery Option C needs, and it is already in the plan.
 
+## 5b. First platform — Citrus-Lime shops
+
+Decided by Jack, 1 September 2026. The wedge targets shops running
+**Citrus-Lime**, not Lightspeed, as the first market.
+
+**Why, and it is not the API.** §5's options turn on who re-types a booking,
+and the reflex answer was to build first on whichever platform had the
+friendlier API, then use a working prototype to persuade the harder vendor.
+That reflex misreads who needs persuading.
+
+If the API key is issued to the retailer for their own data — which the
+"gated behind a support call" evidence points to **[U]**, and which is being
+checked — then Citrus-Lime's permission is not required at all. A shop asks
+its own vendor for its own key. The persuasion target is a shop owner.
+
+And if vendor permission *were* required, a polished integration with their
+largest rival is the worst thing to arrive with: it demonstrates a competitor
+with traction, which is a reason to close the door. Leverage cuts both ways.
+
+So the prototype's job is to win **design partners**, and design partners
+asking their own vendor for their own keys is the route into Citrus-Lime.
+Citrus-Lime is also simply where the UK independents are (§2), so building for
+the platform we intend to displace beats building for the one we do not.
+
+**"Easiest" is measured in permission cost, not code.** A platform where a
+shop can self-issue a token in five minutes beats one with a nicer API and a
+support ticket that asks why.
+
+**This decision is not contingent on the API answer.** If Citrus-Lime's API
+cannot create a workshop job, the target market is unchanged and the build is
+Option C, which needs no key from anyone. If it can, Option C ships first and
+write-back follows as an upgrade. The two builds are identical until the
+moment a job is pushed outward, so nothing is wasted by starting now.
+
+**Not decided:** Lightspeed. Deferred, not ruled out — a second adapter later
+is a different question from where the first shop comes from.
+
 ## 6. What changes if this is signed off
 
 Nothing in P0. The changes are in ordering and wording:
