@@ -17,6 +17,12 @@
  * --brand #b8460f was approved by Jack on 2 September 2026 as the working
  * value. It is expected to change again later; any replacement still has to
  * clear 4.5:1 with white text or the contrast gate fails.
+ *
+ * Also approved by Jack, 2 September 2026: the --status-complete-paid
+ * treatment (a finished job recedes via the palest background rather than
+ * pale ink, because the old ink measured 3.21 at the 9.5px this badge
+ * renders at), the 4px spacing scale, and the global focus ring. The type
+ * scale was approved separately on 31 August 2026.
  */
 :root {
   /* ---------- Surfaces and text ---------- */
