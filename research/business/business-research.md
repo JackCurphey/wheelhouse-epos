@@ -2,7 +2,7 @@
 
 **Compiled:** 31 August 2026
 **Status:** Research reference. Paused mid-thread — see §12 for open questions and the next actions.
-**Last updated:** 1 September 2026 — added **§3.6 Hubtiger**, which supersedes part of §10.3.
+**Last updated:** 1 September 2026 — added **§3.6 Hubtiger**, which supersedes part of §10.3, and **§3.7 Book My Bike In**, which is Citrus-Lime's own free booking product and reframes the booking wedge.
 **Companion files on Desktop:** `Wheelhouse-EPOS-Strategy.md` (strategic recommendations, v2), `Wheelhouse-EPOS-Strategy.pptx` (14 slides), `Wheelhouse-EPOS-Code-Review.pptx` (10 slides).
 
 **Confidence tags used throughout:**
@@ -272,6 +272,118 @@ Where we still differ:
 - Funding and ownership: resolve Grindstone vs. no-funding via CIPC. **[U]**
 - Does the Lightspeed X-Series work-order gap push X-Series shops toward a rival — and is that a segment we can name?
 
+
+### 3.7 Book My Bike In — Citrus-Lime's own booking product **[V]**
+
+*Added 1 September 2026. Researched after Jack identified it as the closest thing to the booking product we intend to build. It is not a third-party competitor — it is Citrus-Lime's own, and it is free to their workshop customers. That makes a free-booking wedge aimed at Citrus-Lime shops a fight against an incumbent feature those shops already have at no extra cost.*
+
+#### What it is
+
+Free online workshop booking, plus a consumer-facing directory at `bookmybikein.com` where a rider finds a shop by location. Live in the UK, Ireland, USA, Australia, Germany, Switzerland and New Zealand **[V]**.
+
+**Not free-standing free.** It requires a **Workshop Module licence per store** **[V]**, inside a POS at £105–£515/mo (§2.2). "Completely free to Citrus-Lime workshop users" means free as an add-on to a paid module.
+
+#### How it works — funnel walked directly, 1 Sep 2026 **[V]**
+
+Five steps: country → location → workshop → service → **drop-off date plus Morning/Afternoon** → contact details.
+
+**It does not schedule.** Their own booking page tells the rider that the workshop will confirm the service and collection dates when the bike is dropped off. On the shop side, the booking auto-creates a Workshop Job in Cloud POS which lands as an **Unscheduled Job**; staff then drag it onto the calendar manually **[V, their support documentation]**.
+
+Capacity is **bookings-per-day plus a lead time, set per store** **[V]**. Cross-confirmed from their API, where `StoreModel` exposes `WorkshopBookingsPerDay`, `WorkshopLeadTime` and `WorkshopBookingsActive`.
+
+There is no mechanic assignment, no time slot, and no bike make or model captured anywhere in the flow.
+
+#### Network size — the marketing claim does not survive contact
+
+Marketing claims "thousands of retailers" and "over 40,000 bikes booked" **[V as a vendor statement, U as fact]**. Their own workshop-finder, from a Manchester origin, 1 Sep 2026 **[V]**:
+
+| Radius | Workshops returned |
+|---|---|
+| 1 mile | 1 |
+| 10 miles | 4 |
+| 25 miles | 10 |
+| 100 miles | 46 |
+| 250 miles | 135 |
+| **500 miles** | **143** |
+
+500 miles from Manchester covers effectively all of the UK and Ireland. **The network is roughly 143 workshops**, and central Manchester returns one.
+
+Caveat: a single origin point read from their own UI. Treat ~143 as an order of magnitude, not an audited national count **[V for the observation, U for the total]**.
+
+#### Product quality — observed against one live shop's listing
+
+- 17 services in a flat list: no categories, no filtering, no ordering control
+- Shop-authored names a rider cannot parse — "Manx Missile", "The Flying Scotchman", "The Schleck"
+- Unvalidated shop data reaches the customer: `RealMcHoyDiskDi2GearServi`, "Servicece", "Insurance Assesment"
+- Price formatting broken: `£52.5` rendered instead of £52.50
+- "Labor Charges" — US spelling on the UK site
+- The rider must already know "Di2" and rim versus disc, with no help path
+
+The typos belong to that shop. That they reach a rider unvalidated and unformatted is Citrus-Lime's. Rendering was checked at 375px, 768px and 1440px — **no responsive fault found**, so do not claim one.
+
+#### Their own users' unmet requests — `citruslime.canny.io`, Book My Bike In board, sorted Top, 1 Sep 2026 **[V]**
+
+| Request | Votes | Status |
+|---|---|---|
+| Blocking Dates — cannot block a one-off closure or training day | 41 | open |
+| Option to remove the morning/afternoon choice | 22 | open |
+| Riders read "drop-off date" as the completion date and arrive angry | 21 | open |
+| Capture bike make and model at booking | 16 | open |
+| Link booked services to items in Cloud POS | 14 | open |
+| Reorder how workshop services display | 14 | open |
+| **The workshop diary does not feed back to the booking site** | 13 | open |
+| Limit specific services per day/week (cargo bikes) | 12 | Planned |
+| Booking fee / deposit to reduce no-shows | 12 | Under Review |
+| Concept UI redesign — *posted by Citrus-Lime themselves* | 10 | open |
+
+**The most important line in this section** is the seventh: a customer reporting that when the workshop diary is full for a given day, the booking site still accepts bookings for that day **[R — customer-reported on the vendor's own board, not independently reproduced]**.
+
+If it holds, **the integrated incumbent double-books.** Full POS integration has not bought them true availability, because capacity is a per-day counter rather than actual diary load. Any argument that a standalone booking system of ours is structurally weaker on availability than Citrus-Lime's has to reckon with this first.
+
+#### Workshop Module roadmap — what Citrus-Lime has not built **[V]**
+
+From the same board's roadmap view:
+
+| Item | Status |
+|---|---|
+| Mechanic Available Hours (supplement to Workshop Opening Hours) | Planned |
+| Workshop Capacity View | Planned |
+| Send Quote from Workshop | Planned |
+| Email/SMS invoice from Workshop Module | Planned |
+| Jobs that don't get finished get lost | Planned |
+| View Workshop Job Schedule in POS | Planned |
+| A record of images, estimates etc saved to customer's account | **In Progress** |
+| View all Serviced Items | **In Progress** |
+
+Two consequences. First, **Citrus-Lime cannot currently model per-mechanic availability** — that is a Planned item, and the highest-voted request on the Workshop board. Second, **job photos, saved estimates and per-item service history do not exist in Cloud POS today**, but both are *In Progress*. §10.3's "bike entity with a real schema" and per-item history are real gaps that are actively closing. Time-box anything that depends on them.
+
+#### What this does to our position
+
+| Capability | Book My Bike In | Us today |
+|---|---|---|
+| Free to the shop | Yes, with a paid Workshop Module licence | Yes |
+| Consumer directory driving demand | Yes, ~143 workshops | No |
+| Books a real appointment | No — drop-off date + AM/PM only | Yes — per-mechanic slot |
+| Availability reflects the real diary | **Reportedly not** | Yes — server-side capacity gate on the portal path |
+| Per-mechanic availability | No (Planned) | Yes |
+| Block a one-off date | No (41 votes) | Yes — working-day blocking |
+| Bike make/model captured at booking | No (16 votes) | Yes — `customer_bikes` |
+| Per-service capacity limits | No (Planned) | Yes — configurable capacity |
+| Tells the rider when the bike will be ready | No — confirmed in person at drop-off | The job-done email (P5, not yet built) |
+| Deposits at booking | No (Under Review) | No — deliberately deferred |
+
+**Three readings, in order of how much I would bet on them:**
+
+1. **A free-booking wedge aimed at Citrus-Lime shops is the weakest available target.** Those shops already have free booking wired into their POS. This is the same trap the 1 September narrowing was trying to escape — asking a shop to displace something it already owns — and it lands harder here, because the incumbent's version costs them nothing.
+2. **The board is a product specification we did not have to pay for.** Eight of the top ten unmet requests are things our diary and portal already do. It is dated, vote-counted evidence of unmet demand from the incumbent's own customers.
+3. **BMBI is a directory as well as a booking tool.** That is the part we have no answer to, and at ~143 workshops it is thin — but building a two-sided consumer directory is a different business from selling EPOS. Flagged, not recommended.
+
+#### Open questions
+
+- **Audited UK network size.** ~143 is one observation from one origin. Worth a second origin and a third before it is quoted anywhere.
+- **Does the diary-feedback failure reproduce?** Currently one customer's report. It is load-bearing for the availability argument, so it should be confirmed with a shop that runs it.
+- **Is BMBI reachable without a Workshop Module licence?** Assume not, but confirm before sizing the segment.
+- **What does Citrus-Lime's own "Concept UI" post imply about timing?** They have publicly signalled a redesign and per-dealer custom styling. Anything we build against today's UI has a shelf life.
 
 ---
 
@@ -641,6 +753,7 @@ Things that were wrong during this research and were fixed. Kept because the pat
 | Bikebook Workshop costs $89/mo | **£49.99/mo ex VAT.** Its "400+ UK businesses" claim isn't on the current site |
 | Saledock is an independent UK vendor | Acquired by **Celerant (US)** Mar 2025, rebranded Celerant ONE Aug 2026 |
 | The workshop bolt-on field is three small companies; quotes and parts-to-job are a category-wide gap | **Missed the market leader.** **Hubtiger** (2018, South Africa) claims 2000+ shops in 25+ countries, is partnered with both the ACT and the NBDA, and already ships every feature §10.3 listed as our gap *and* both it called an opening. Added as §3.6 on 1 Sep 2026 |
+| The competitor picture covered third-party workshop tools only | **Missed the incumbent's own booking product.** **Book My Bike In** is Citrus-Lime's, free to their workshop customers, live in seven countries, with a consumer directory. Any free-booking wedge aimed at Citrus-Lime shops competes with a feature they already have at no extra cost. Added as §3.7 on 1 Sep 2026 |
 
 ---
 
@@ -667,6 +780,10 @@ Things that were wrong during this research and were fixed. Kept because the pat
 - **Whether Jobber, Housecall Pro, Toast et al. buy or build** their website builders
 - **Trial accounts with Velodrop and Bikebook** (both free, no card) to verify quotes/estimates and POS write-back depth
 - **Citrus-Lime customer enumeration** — needs BuiltWith or PublicWWW (paid)
+- **Book My Bike In UK network size** — ~143 workshops is one observation from one origin (§3.7). Needs a second and third origin before being quoted
+- **Does BMBI's diary-feedback failure reproduce?** Customer-reported on the vendor's own board. Load-bearing for the availability argument — confirm with a shop that runs it
+- **Real UK install base for Hubtiger** — the 2000+ figure is global, vendor-stated and unaudited **[U]** (§3.6)
+- **Is the ACT's Hubtiger endorsement exclusive, paid, or a listing?** Ask the ACT directly (§3.6)
 
 ### Decisions waiting
 - **Buy vs build the storefront** — resolves on Duda's three unknowns
@@ -683,6 +800,8 @@ Things that were wrong during this research and were fixed. Kept because the pat
 **Pricing:** citruslime.com/pricing/uk/; Saledock comparison blog (Apr 2026); Wayback CDX history; duda.co/pricing; velodrop.com/pricing; masterlinq.io/pricing; bikebook.co.uk/workshop.
 
 **Hubtiger (added 1 Sep 2026):** hubtiger.com — home, /pricing, /about-us, /integrations/lightspeed, /repair-software (all fetched 1 Sep 2026); Lightspeed marketplace listing; Bicycle Retailer (Aug 2020); The Latz Report company feature; Cycling Industry News and cycleassociation.uk on the ACT partnership; NBDA member-partnership and 2026 Retailer Excellence Award pages; Capterra / GetApp / SoftwareAdvice reviews; Crunchbase / PitchBook / Tracxn / CB Insights for company data (conflicting, hence **[U]**).
+
+**Book My Bike In (added 1 Sep 2026):** citruslime.com/book-my-bike-in; howto.citruslime.com — "How does it work?" and "How do I get set up?"; bookmybikein.com (booking funnel walked to step 4, no booking submitted, 1 Sep 2026); citruslime.canny.io — Book My Bike In and Workshop Module boards plus the roadmap view; cloudposapi.citruslime.com OpenAPI spec (`StoreModel`, `CustomerOrderModel`, `MechanicModel`) and ApiAgreement.
 
 **Market pain:** Bicycle Retailer "State of Retail" 2022/2023/2025; Bicycle Retailer on Lightspeed's programme (May 2023); Capterra; Trustpilot; BBB.
 
