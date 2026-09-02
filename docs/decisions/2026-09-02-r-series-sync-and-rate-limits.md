@@ -140,7 +140,17 @@ Raised by Jack, 2 September 2026: the shop should understand that slow job
 updates are Lightspeed's constraint, not ours — no webhooks means we poll —
 and that moving fully to Wheelhouse removes the lag entirely.
 
-**Accepted, with the framing changed, and the reasoning is worth keeping.**
+Clarified by Jack the same day: **the point is not to blame Lightspeed. It is
+that the delay must be unambiguously attributed to Lightspeed's limitation and
+never mistaken for slowness in our software.**
+
+**Accepted. That attribution is the requirement; the framing below is how it
+survives contact with a real shop.**
+
+**The success criterion, stated plainly.** A shop owner who notices the lag
+should be able to say what causes it without asking anyone. If they cannot —
+or worse, if they assume our software is slow — the feature has failed, however
+accurate the underlying timestamp is. Everything below serves that one test.
 
 The attribution is true, and a shop deserves to know why its till and its diary
 are a minute apart. But how it is said decides whether it works:
@@ -169,10 +179,16 @@ relative time near anything sourced from Lightspeed, with an expandable
 explanation. No task ID yet. It belongs with the read-out sync work, not before
 it, because it has nothing to display until that exists.
 
-**The failure mode to design against:** the shop concluding "this integration is
-unreliable" rather than "Lightspeed is the limit." That is decided entirely by
-tone and by whether the number shown is small. A 40-second figure makes the
-point. A 6-minute figure makes the opposite one.
+**The failure mode to design against** is the whole reason this requirement
+exists: a shop concluding "this integration is unreliable" rather than
+"Lightspeed is the limit." Silence produces exactly that — an unexplained
+delay is attributed to whatever the person is looking at, which is us.
+
+Two things decide it. Tone, per the four points above. And the size of the
+number: a 40-second figure reads as a system working within someone else's
+constraint. A 6-minute figure reads as our software being slow, no matter what
+the label next to it says. **If we cannot keep the figure small, we should not
+show it — we should fix the interval first.**
 
 ## 6. What this changes
 
