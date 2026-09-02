@@ -11,3 +11,11 @@ _delete_me_test_artifacts/
 # Agent working memory - volatile per-project state, not part of the repo.
 # Committed specs and plans live in docs/, not here.
 .agents/
+
+# Vite bundle - rebuilt from src/ on every deploy, never committed.
+public/dist/
+
+# public/r/ (the built shadcn registry) is deliberately NOT ignored. The CI
+# drift gate diffs a fresh `shadcn build` against the committed output to
+# catch hand-edited components; with nothing committed there is nothing to
+# diff and the gate passes vacuously.

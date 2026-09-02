@@ -237,8 +237,8 @@ Extend the existing shop admin/settings screen (no new admin app) with:
 
 - **Custom domains**: `storefront_settings` gains a `custom_domain` column,
   a verification step (DNS TXT or CNAME check), and per-domain TLS
-  (e.g. Let's Encrypt DNS-01 automation, or a service that handles this,
-  such as Cloudflare for SaaS). The tenant-resolution middleware gains a
+  (e.g. Let's Encrypt DNS-01 automation, or a managed multi-tenant TLS
+  service). The tenant-resolution middleware gains a
   second lookup path (by `custom_domain`, alongside `slug`) — no
   rearchitecture of routing needed.
 - **Deeper theming**: custom colors beyond the 5 presets, fonts, layout

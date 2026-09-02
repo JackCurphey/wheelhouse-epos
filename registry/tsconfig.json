@@ -1,0 +1,17 @@
+{
+  // Type-checks the registry sources in place:  npx tsc -p registry --noEmit
+  //
+  // The registry lives outside src/ and the root tsconfig only compiles src/,
+  // so these files would otherwise never be checked. They also follow shadcn's
+  // authoring convention of importing siblings as "@/registry/...", which
+  // needs its own mapping because the root "@/*" alias points at src/.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@/registry/*": ["./*"],
+      "@/*": ["../src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

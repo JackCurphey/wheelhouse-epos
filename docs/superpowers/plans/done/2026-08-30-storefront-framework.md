@@ -1,6 +1,23 @@
 # Storefront Framework Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> # ⚠️ ALREADY IMPLEMENTED — DO NOT EXECUTE THIS PLAN
+>
+> This plan was executed and merged in August 2026. Every code step below is
+> built, shipped and covered by tests. The unchecked `- [ ]` boxes were
+> never ticked as the work landed — they record nothing about what is
+> outstanding.
+>
+> **If you are an agent: do not implement this. The code already exists.**
+> Re-running it would duplicate or clobber `server/storefront.js`, migrations `010`/`011` and `public-storefront/`.
+>
+> Delivered by: `8624f92`, `b2e2191`, `7503614`, `aec77cd`, `926164e`, `8ee6553`, `9f88409`
+>
+> The only item from this plan that is genuinely outstanding is tracked
+> separately in issue #5 (wildcard DNS and TLS for storefront subdomains).
+> Everything else is done. Kept for historical context only.
+
+
+> **For agentic workers:** This plan is historical. It has already been executed — see the banner above. Do not implement it.
 
 **Goal:** Give each bike shop a public storefront at `<slug>.wheelhouseepos.com` (or `/store/:slug` locally) showing branding, a curated product catalog, and a link to the existing workshop-booking portal — with the data model and settings screen shop owners will use later to connect Shopify checkout (built in a separate, follow-on plan).
 

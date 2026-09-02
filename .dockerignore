@@ -1,6 +1,24 @@
+# Never ship or rebuild from host artefacts.
 node_modules
+public/dist/
+public/r/
+print-agent/dist/
+
+# Local state and secrets.
 data/
+uploads/
 .env
+.env.*
 .git
+.github
+.agents/
 *.log
 _delete_me_test_artifacts/
+
+# Not needed by either stage.
+docs/
+tests/
+README.md
+Dockerfile
+.dockerignore
+docker-compose.yml

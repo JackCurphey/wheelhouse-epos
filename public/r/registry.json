@@ -1,0 +1,139 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "wheelhouse",
+  "homepage": "https://github.com/JackCurphey/wheelhouse-epos",
+  "items": [
+    {
+      "name": "button",
+      "title": "Button",
+      "author": "Wheelhouse EPOS",
+      "description": "The Wheelhouse button, matching the .btn family in the existing app. The accent variant reads the tenant-varying --accent / --accent-dark custom properties rather than a compiled colour class, so a shop's chosen scheme still applies at runtime.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/button.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "input",
+      "title": "Input",
+      "author": "Wheelhouse EPOS",
+      "description": "Single-line text field matching .field input in the existing app: white ground so it stays legible on the shop-coloured modal background, accent focus ring, and number spinners suppressed the way the vanilla app suppresses them.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/input.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "label",
+      "title": "Label",
+      "author": "Wheelhouse EPOS",
+      "description": "Field label plus the Field stack and FieldError message that always travel with it, matching .field, .field label and .field-error. Plain elements paired by htmlFor, so it works inside the native dialog element the Wheelhouse dialog uses.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/label.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "dialog",
+      "title": "Dialog",
+      "author": "Wheelhouse EPOS",
+      "description": "Modal built on the native dialog element, so focus trapping, background inerting and Escape come from the browser. Visual parity with .modal, including the shop-configurable --modal-bg panel colour.",
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/dialog.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "table",
+      "title": "Table",
+      "author": "Wheelhouse EPOS",
+      "description": "Table markup matching table.data-table: uppercase muted headers over a 2px rule, 13.5px body, numeric columns right-aligned. Wraps itself in a horizontal scroll container because EPOS tables are wide and must not push a counter screen sideways.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/table.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "money-input",
+      "title": "Money Input",
+      "author": "Wheelhouse EPOS",
+      "description": "Currency field whose value is an integer number of pence and never a float. Parsing works on the digit strings and formatting divides only an exact multiple of 100, so no amount can drift a penny through rounding. Exports parsePence and formatPence for callers that need the same arithmetic outside a form.",
+      "dependencies": [],
+      "registryDependencies": [
+        "@wheelhouse/input"
+      ],
+      "files": [
+        {
+          "path": "patterns/money-input.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "data-table",
+      "title": "Data Table",
+      "author": "Wheelhouse EPOS",
+      "description": "Shop-scoped table with the loading, failed and genuinely-empty states written into the component rather than left to each caller. Shop scoping is enforced by PostgreSQL row-level security on the server; this makes that scope legible in the empty and error copy.",
+      "dependencies": [],
+      "registryDependencies": [
+        "@wheelhouse/table",
+        "@wheelhouse/button"
+      ],
+      "files": [
+        {
+          "path": "patterns/data-table.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "confirm-dialog",
+      "title": "Confirm Dialog",
+      "author": "Wheelhouse EPOS",
+      "description": "Replacement for the native window.confirm() the app currently calls before destructive actions. Includes a promise-based useConfirmDialog hook so call sites read the way confirm() did, and destructive confirmations ignore backdrop clicks so a stray tap on a busy counter cannot answer for staff.",
+      "dependencies": [],
+      "registryDependencies": [
+        "@wheelhouse/dialog",
+        "@wheelhouse/button"
+      ],
+      "files": [
+        {
+          "path": "patterns/confirm-dialog.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    }
+  ]
+}

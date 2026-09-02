@@ -1,5 +1,13 @@
 # Design Remediation Implementation Plan
 
+> **PARTLY SUPERSEDED — 2026-08-31.** See `.agents/DECISIONS.md` D-005.
+> Wheelhouse is adopting shadcn/ui + Tailwind. Eleven of the nineteen tasks below
+> are retired because Radix and Tailwind provide them directly: **1, 3, 4, 5, 7,
+> 8, 9, 10, 12, 13, 19**. Eight remain in scope: **2, 6, 11, 14, 15, 16, 17, 18**.
+> Task 2's contrast gate is retargeted at the Tailwind `@theme` tokens rather
+> than `styles.css`. D-001's `--brand` correction to `#b8460f` still stands and
+> carries into `@theme`. Do not execute a retired task.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give Wheelhouse's four front-ends one shared, accessible, contrast-safe design layer, and close the 19 Phase 1 and Phase 2 findings from the 2026-08-31 design audit.

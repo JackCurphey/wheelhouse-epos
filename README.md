@@ -1,38 +1,63 @@
 # Wheelhouse EPOS
 
-A local point-of-sale system for a bike shop: till/checkout, inventory management,
-sales history and a dashboard. Runs entirely on your own computer - no internet
-connection or npm install required. Each shop creates its own account and signs
-in to its own private data.
+A point-of-sale system for a bike shop: till/checkout, inventory management,
+sales history and a dashboard. Runs entirely on your own computer. Each shop
+creates its own account and signs in to its own private data, and the database
+enforces that separation itself rather than trusting the application to
+remember it.
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) version 22.5 or later (you have this already -
-  check with `node -v` in a terminal). It uses Node's built-in SQLite database,
-  so there is nothing else to install.
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) - the app,
+  its database and its gateway all run as containers.
+- [Node.js](https://nodejs.org/) 22.5 or later, only if you want to run the
+  test suite or the app outside Docker.
+
+Data is stored in **PostgreSQL** with row-level security. Earlier versions of
+this app used Node's built-in SQLite with one file per shop under
+`data/shops/`; neither is true any more.
 
 ## Running it
 
-Open a terminal (Command Prompt / PowerShell / Terminal) in this folder and run:
+Create a `.env` file in this folder with a password for each database role:
 
 ```
-npm start
+POSTGRES_SUPERUSER_PASSWORD=pick-something
+POSTGRES_PASSWORD=pick-something-else
+DATABASE_URL=postgres://epos_app:pick-something-else@127.0.0.1:5433/epos
 ```
 
-Then open **http://localhost:4000** in your browser (Chrome, Edge, Firefox all work),
-and either create a shop account (shop name, email, password) or log in to an
-existing one.
-
-To stop it, press `Ctrl+C` in the terminal. Your data (products, sales, stock)
-is saved under `data/shops/` and will still be there next time you run `npm start`.
-
-If port 4000 is already used by something else on your PC, run it on a different
-port instead:
+Then start everything and apply the schema:
 
 ```
-set PORT=4100 && npm start        (Windows Command Prompt)
-$env:PORT=4100; npm start         (Windows PowerShell)
+docker compose up -d --wait
+npm install && npm run migrate
 ```
+
+Open **http://localhost:8080** in your browser (Chrome, Edge, Firefox all
+work), and either create a shop account (shop name, email, password) or log in
+to an existing one.
+
+**8080 is the gateway, not the app.** The app's own port is deliberately not
+published to your machine - see "The gateway" below for why that is a security
+property and not an inconvenience. Postgres is on 5433, so it does not collide
+with any Postgres you already have on 5432.
+
+To stop it, `docker compose down`. Your data (products, sales, stock) lives in
+a Docker volume and will still be there next time you start it. `docker compose
+down -v` deletes that volume and everything in it.
+
+### Running the tests
+
+```
+docker compose up -d --wait
+npm install
+npm run migrate
+npm test
+```
+
+The suite needs a real Postgres - it does not mock the database, because the
+row-level security policies are the thing most worth testing.
 
 ## What's included
 
@@ -49,21 +74,48 @@ $env:PORT=4100; npm start         (Windows PowerShell)
 Each shop account starts with an empty inventory - add your own products from
 the Inventory screen.
 
-## Remote access (optional)
+## The gateway, and reaching the app from elsewhere
 
-The app itself only ever listens on your PC - it isn't reachable from the
-internet unless you deliberately expose it. If you do (e.g. via a
-[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-so you can reach it from your own domain), run `npm run gateway` alongside
-`npm start` and point the tunnel at the gateway's port (8080 by default)
-instead of the app's port (4000) directly. The gateway is a second, much
-simpler process whose only job is to proxy through to the real app when it's
-up and show a friendly "offline" page when it isn't - something the app
-can't do for itself once it's the thing that's crashed or not running.
+Everything runs locally in Docker. `docker compose up -d --wait` starts
+Postgres, the app, and a gateway, and the gateway is the only one with a
+port published to the host:
 
 ```
-npm run gateway
+http://localhost:8080
 ```
+
+The gateway is a second, much simpler process whose only job is to proxy
+through to the real app when it's up and show a friendly "offline" page
+when it isn't - something the app can't do for itself once it's the thing
+that's crashed or not running. Outside Docker, run `npm run gateway`
+alongside `npm start` for the same arrangement.
+
+The app's own port is deliberately not published. Reaching the app directly
+would bypass the gateway, and the gateway is what makes the client's IP
+trustworthy: it overwrites `x-forwarded-for` from the real socket and drops
+anything the caller sent in it or in the other client-settable forwarding
+headers. The app
+believes those headers only when `TRUST_PROXY=1`, which Compose sets for the
+app service precisely because the gateway is the only way in. The per-IP
+rate limiter on login and signup depends on this - a client that could
+choose its own forwarded address could choose a fresh rate-limit key on
+every request.
+
+**This setup is local only.** Nothing here exposes the app to the internet.
+The tunnel this used to rely on has been removed and nothing has replaced
+it. Two features need genuine public reachability and therefore do not work
+in a purely local install:
+
+- **Shopify webhooks.** `APP_PUBLIC_URL` must be an internet-reachable URL
+  for Shopify to deliver order and refund webhooks. Product and inventory
+  pushes still work; incoming webhooks do not.
+- **Public storefronts on a subdomain.** `/store/<slug>` works locally;
+  `<slug>.wheelhouseepos.com` needs public DNS and TLS.
+
+How the app gets exposed publicly again is an open decision, not an
+oversight. Whatever terminates TLS would sit in front of the gateway and
+would need to set `x-forwarded-proto` itself, with the gateway taught to
+trust it the same way the app trusts the gateway today.
 
 ### Public storefronts and `STOREFRONT_BASE_DOMAIN`
 
@@ -129,7 +181,8 @@ $env:SHOPIFY_TOKEN_ENCRYPTION_KEY="some-long-random-secret"; $env:APP_PUBLIC_URL
 - **No card payment processing.** "Card" is just recorded as the payment method
   for your records — you'd still take the card payment on your existing card
   machine.
-- **Data lives only on this computer**, one file per shop under `data/shops/`,
+- **Data lives only on this computer**, in a Docker volume, separated per shop by
+  database row-level security rather than by file,
   plus `data/accounts.db` holding the login accounts. Back these up
   periodically (copy the whole `data` folder) since there's no cloud sync.
 
