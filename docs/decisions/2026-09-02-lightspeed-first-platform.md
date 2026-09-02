@@ -256,10 +256,13 @@ is the part that has to change, not the platform choice.
    Both free, no card.
 3. **Which series a UK Lightspeed shop is actually on** — worth asking the first
    design partner directly rather than inferring from US distributor lists.
-4. **R-Series API operational limits** — rate limits, and whether work-order
-   changes can be received as webhooks or must be polled. Not yet researched.
-   Decides whether the diary can stay in sync or has to poll, which affects both
-   architecture and how a busy shop's day feels.
+4. **R-Series API operational limits** — ~~rate limits, and whether work-order
+   changes can be received as webhooks or must be polled~~ **Answered
+   2 September 2026: `2026-09-02-r-series-sync-and-rate-limits.md`.** There are
+   no webhooks, so the diary polls; the API supports a "what changed since X"
+   query and the limits are comfortable for live sync. One question remains open
+   there and can only be settled against a live account: whether a parent
+   `Workorder` timestamp moves when a child line changes.
 5. **Reddit sweep** — r/bikeshops and r/BikeMechanics, still unreachable in every
    research pass **[NF]**, still the hole under the demand evidence.
 
