@@ -1446,30 +1446,94 @@ async function resolveGroupDiscount(customerId, subtotal) {
   return { amount, name: `${top.name} (${top.discount_percent}%)` };
 }
 
+// The one place a request line becomes a stored line. Extracted from the three
+// near-identical blocks in createSale, POST /api/sale-documents and PUT
+// /api/sale-documents/:id/items, so the rules cannot drift between them.
+// checkStock is true only at tender - a quote or an open order may reference
+// something that is currently out of stock.
+export async function loadDocumentLine(it, { checkStock }) {
+  // A labour line is a typed price with an optional recorded duration. It
+  // carries no product, so nothing downstream may treat it as stock.
+  if (it.lineType === 'labour') {
+    let name = String(it.name || '').trim();
+    let unitPrice = it.unitPrice;
+    let minutes = it.minutes;
+    let serviceId = null;
+
+    // Picking a saved service snapshots its name, price and duration onto the
+    // line. Repricing the service later must never rewrite a past job, which
+    // is why these are copied rather than read through service_id.
+    if (it.serviceId !== undefined && it.serviceId !== null && it.serviceId !== '') {
+      serviceId = Number(it.serviceId);
+      const service = await db.prepare('SELECT * FROM workshop_services WHERE id = ? AND active = 1').get(serviceId);
+      if (!service) throw new ValidationError(`Service ${serviceId} not found or inactive`);
+      if (!name) name = service.name;
+      if (unitPrice === undefined || unitPrice === null || unitPrice === '') unitPrice = service.price;
+      if (minutes === undefined || minutes === null || minutes === '') minutes = service.minutes;
+    }
+
+    if (!name) throw new ValidationError('A labour line needs a description');
+    const price = Number(unitPrice);
+    if (!Number.isFinite(price) || price < 0) {
+      throw new ValidationError('A labour line needs a price of zero or more');
+    }
+    let mins = null;
+    if (minutes !== undefined && minutes !== null && minutes !== '') {
+      mins = Math.trunc(Number(minutes));
+      if (!Number.isFinite(mins) || mins <= 0) {
+        throw new ValidationError('Duration must be a positive number of minutes');
+      }
+    }
+    return {
+      lineType: 'labour',
+      product: null,
+      serviceId,
+      name,
+      sku: null,
+      qty: 1,
+      unitPrice: price,
+      minutes: mins,
+      lineTotal: price,
+    };
+  }
+
+  const productId = Number(it.productId);
+  const qty = Math.trunc(Number(it.qty));
+  if (!productId || !Number.isFinite(qty) || qty <= 0) {
+    throw new ValidationError('Each item needs a valid productId and positive qty');
+  }
+  const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
+  if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
+  if (checkStock && product.stock_qty < qty) {
+    throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
+  }
+  let unitPrice = product.price;
+  if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
+    const overridden = Number(it.unitPrice);
+    if (!Number.isFinite(overridden) || overridden < 0) {
+      throw new ValidationError(`Invalid price for "${product.name}"`);
+    }
+    unitPrice = overridden;
+  }
+  return {
+    lineType: 'product',
+    product,
+    serviceId: null,
+    name: product.name,
+    sku: product.sku,
+    qty,
+    unitPrice,
+    minutes: null,
+    lineTotal: unitPrice * qty,
+  };
+}
+
 // Validates items against live stock, inserts the sale + sale_items, and
 // deducts stock. Shared by direct checkout and quote/order -> sale conversion.
-async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
   const loaded = [];
   for (const it of items) {
-    const productId = Number(it.productId);
-    const qty = Math.trunc(Number(it.qty));
-    if (!productId || !Number.isFinite(qty) || qty <= 0) {
-      throw new ValidationError('Each item needs a valid productId and positive qty');
-    }
-    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
-    if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
-    if (product.stock_qty < qty) {
-      throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
-    }
-    let unitPrice = product.price;
-    if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
-      const overridden = Number(it.unitPrice);
-      if (!Number.isFinite(overridden) || overridden < 0) {
-        throw new ValidationError(`Invalid price for "${product.name}"`);
-      }
-      unitPrice = overridden;
-    }
-    loaded.push({ product, qty, unitPrice });
+    loaded.push(await loadDocumentLine(it, { checkStock: true }));
   }
 
   const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
@@ -1518,20 +1582,35 @@ async function createSale({ customerId, cashierId, items, discount, cashAmount, 
       );
     }
 
-    for (const { product, qty, unitPrice } of loaded) {
-      const lineTotal = unitPrice * qty;
+    for (const line of loaded) {
       await db.prepare(
-        `INSERT INTO sale_items (sale_id, product_id, name, sku, unit_price, qty, line_total)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(saleId, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
+        `INSERT INTO sale_items (sale_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        saleId,
+        line.product ? line.product.id : null,
+        line.name,
+        line.sku,
+        line.unitPrice,
+        line.qty,
+        line.lineTotal,
+        line.lineType,
+        line.serviceId,
+        line.minutes
+      );
 
-      const newQty = product.stock_qty - qty;
-      await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), product.id);
-      await db.prepare(
-        `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
-      ).run(product.id, -qty, `Sale #${saleId}`);
-      if (product.shopify_inventory_item_id) {
-        shopifyPushes.push({ product, newQty });
+      // Labour is not stock. stock_movements.product_id is NOT NULL, so a
+      // labour line reaching this block is a constraint violation, not a
+      // cosmetic bug.
+      if (line.lineType === 'product') {
+        const newQty = line.product.stock_qty - line.qty;
+        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), line.product.id);
+        await db.prepare(
+          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
+        ).run(line.product.id, -line.qty, `Sale #${saleId}`);
+        if (line.product.shopify_inventory_item_id) {
+          shopifyPushes.push({ product: line.product, newQty });
+        }
       }
     }
     await db.exec('COMMIT');
@@ -1699,6 +1778,9 @@ function serializeSaleDocument(row, items) {
           unitPrice: it.unit_price,
           qty: it.qty,
           lineTotal: it.line_total,
+          lineType: it.line_type,
+          serviceId: it.service_id,
+          minutes: it.minutes,
         }))
       : undefined,
   };
@@ -1754,25 +1836,15 @@ route('POST', '/api/sale-documents', async (req, res) => {
   // order can reference items that are currently out of stock.
   const loaded = [];
   for (const it of items) {
-    const productId = Number(it.productId);
-    const qty = Math.trunc(Number(it.qty));
-    if (!productId || !Number.isFinite(qty) || qty <= 0) {
-      return badRequest(res, 'Each item needs a valid productId and positive qty');
+    try {
+      loaded.push(await loadDocumentLine(it, { checkStock: false }));
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      throw err;
     }
-    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
-    if (!product) return badRequest(res, `Product ${productId} not found or inactive`);
-    let unitPrice = product.price;
-    if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
-      const overridden = Number(it.unitPrice);
-      if (!Number.isFinite(overridden) || overridden < 0) {
-        return badRequest(res, `Invalid price for "${product.name}"`);
-      }
-      unitPrice = overridden;
-    }
-    loaded.push({ product, qty, unitPrice });
   }
 
-  const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
+  const subtotal = loaded.reduce((sum, line) => sum + line.lineTotal, 0);
   const total = Math.max(0, subtotal - discount);
 
   await db.exec('BEGIN');
@@ -1784,12 +1856,22 @@ route('POST', '/api/sale-documents', async (req, res) => {
       )
       .run(kind, customerId, cashierResolved.cashierId, subtotal, discount, total, note, title, nowIso());
     const docId = info.lastInsertRowid;
-    for (const { product, qty, unitPrice } of loaded) {
-      const lineTotal = unitPrice * qty;
+    for (const line of loaded) {
       await db.prepare(
-        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(docId, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
+        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        docId,
+        line.product ? line.product.id : null,
+        line.name,
+        line.sku,
+        line.unitPrice,
+        line.qty,
+        line.lineTotal,
+        line.lineType,
+        line.serviceId,
+        line.minutes
+      );
     }
     await db.exec('COMMIT');
     const row = await db.prepare(DOC_SELECT + ' WHERE d.id = ?').get(docId);
@@ -1859,36 +1941,36 @@ route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
 
   const loaded = [];
   for (const it of items) {
-    const productId = Number(it.productId);
-    const qty = Math.trunc(Number(it.qty));
-    if (!productId || !Number.isFinite(qty) || qty <= 0) {
-      return badRequest(res, 'Each item needs a valid productId and positive qty');
+    try {
+      loaded.push(await loadDocumentLine(it, { checkStock: false }));
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      throw err;
     }
-    const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
-    if (!product) return badRequest(res, `Product ${productId} not found or inactive`);
-    let unitPrice = product.price;
-    if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
-      const overridden = Number(it.unitPrice);
-      if (!Number.isFinite(overridden) || overridden < 0) {
-        return badRequest(res, `Invalid price for "${product.name}"`);
-      }
-      unitPrice = overridden;
-    }
-    loaded.push({ product, qty, unitPrice });
   }
 
-  const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
+  const subtotal = loaded.reduce((sum, line) => sum + line.lineTotal, 0);
   const total = Math.max(0, subtotal - discount);
 
   await db.exec('BEGIN');
   try {
     await db.prepare('DELETE FROM sale_document_items WHERE document_id = ?').run(id);
-    for (const { product, qty, unitPrice } of loaded) {
-      const lineTotal = unitPrice * qty;
+    for (const line of loaded) {
       await db.prepare(
-        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(id, product.id, product.name, product.sku, unitPrice, qty, lineTotal);
+        `INSERT INTO sale_document_items (document_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        id,
+        line.product ? line.product.id : null,
+        line.name,
+        line.sku,
+        line.unitPrice,
+        line.qty,
+        line.lineTotal,
+        line.lineType,
+        line.serviceId,
+        line.minutes
+      );
     }
     await db.prepare('UPDATE sale_documents SET subtotal = ?, discount = ?, total = ?, updated_at = ? WHERE id = ?').run(
       subtotal,
@@ -1928,7 +2010,21 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
   if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
 
   const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
-  const saleItems = items.map((it) => ({ productId: it.product_id, qty: it.qty, unitPrice: it.unit_price }));
+  // A stored labour line has product_id NULL. Dropping line_type here (as a
+  // bare {productId, qty, unitPrice} mapping used to) sends it into
+  // loadDocumentLine looking like an incomplete product line, which rejects
+  // it - a job with labour on its order could never be converted into a
+  // sale. Carry the fields loadDocumentLine actually branches on, for both
+  // line types, so a labour line survives the round trip.
+  const saleItems = items.map((it) => ({
+    lineType: it.line_type,
+    productId: it.product_id,
+    qty: it.qty,
+    unitPrice: it.unit_price,
+    name: it.name,
+    serviceId: it.service_id,
+    minutes: it.minutes,
+  }));
 
   let saleId;
   try {
@@ -2846,6 +2942,85 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
+// ---------- Workshop services (the fixed-price labour catalogue) ----------
+
+export function serializeWorkshopService(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    price: row.price,
+    minutes: row.minutes,
+    // active is INTEGER 0/1 on this table, matching products.active.
+    active: row.active === 1,
+  };
+}
+
+// Shared by POST and PUT. Throws ValidationError so both callers translate it
+// the same way.
+function readServiceBody(body) {
+  const name = String(body.name || '').trim();
+  if (!name) throw new ValidationError('A service needs a name');
+  const price = Number(body.price);
+  if (!Number.isFinite(price) || price < 0) throw new ValidationError('A service needs a price of zero or more');
+  let minutes = null;
+  if (body.minutes !== undefined && body.minutes !== null && body.minutes !== '') {
+    minutes = Math.trunc(Number(body.minutes));
+    if (!Number.isFinite(minutes) || minutes <= 0) throw new ValidationError('Duration must be a positive number of minutes');
+  }
+  return { name, price, minutes };
+}
+
+route('GET', '/api/workshop-services', async (req, res) => {
+  const rows = await db.prepare('SELECT * FROM workshop_services ORDER BY active DESC, name').all();
+  sendJson(res, 200, rows.map(serializeWorkshopService));
+});
+
+route('POST', '/api/workshop-services', async (req, res) => {
+  const body = await readJsonBody(req);
+  let fields;
+  try {
+    fields = readServiceBody(body);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  const info = await db.prepare(
+    'INSERT INTO workshop_services (name, price, minutes) VALUES (?, ?, ?)'
+  ).run(fields.name, fields.price, fields.minutes);
+  const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
+  sendJson(res, 201, serializeWorkshopService(row));
+});
+
+route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Not found');
+  const body = await readJsonBody(req);
+  let fields;
+  try {
+    fields = readServiceBody(body);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
+  await db.prepare(
+    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, updated_at = ? WHERE id = ?'
+  ).run(fields.name, fields.price, fields.minutes, active, nowIso(), id);
+  const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
+  sendJson(res, 200, serializeWorkshopService(row));
+});
+
+// Deactivate rather than delete: a job line keeps its service_id, and that
+// link must not dangle.
+route('DELETE', '/api/workshop-services/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Not found');
+  await db.prepare('UPDATE workshop_services SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
+  sendJson(res, 200, { ok: true });
+});
+
 // ---------- Label (sticker printing) settings ----------
 // The physical size of the label roll a shop's dedicated label printer
 // takes. One row per shop, same singleton-per-shop pattern as
@@ -3727,15 +3902,26 @@ const server = createServer(async (req, res) => {
   }
 });
 
-runMigrations()
-  .then(() => mkdir(UPLOADS_DIR, { recursive: true }))
-  .then(() => {
-    server.listen(PORT, () => {
-      console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
+// This module exports functions (serializeX, etc.) that test files import
+// directly. Without this guard, every test file that imports server.js would
+// also run this migrate-and-listen chain and boot a real HTTP server -
+// one listener per test file, all fighting over the same port and holding
+// the event loop open forever. Only start the server when this file is the
+// entry point actually being run (node server/server.js / npm start), not
+// when it's merely imported for its exports.
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  runMigrations()
+    .then(() => mkdir(UPLOADS_DIR, { recursive: true }))
+    .then(() => {
+      server.listen(PORT, () => {
+        console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
+      });
+    })
+    .catch((err) => {
+      console.error('Failed to run database migrations - server not started.');
+      console.error(err);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.error('Failed to run database migrations - server not started.');
-    console.error(err);
-    process.exit(1);
-  });
+}
