@@ -44,11 +44,12 @@ export async function customerIdForLogin(shopId, loginId) {
 // The minimum a shop needs before the portal will accept a booking: a
 // mechanic to assign it to, and a workshop_settings row for opening hours
 // and the full-day threshold. Both tables default every other column.
-export async function seedBookableShop(shopId, { mechanicName = 'Test Mechanic' } = {}) {
+export async function seedBookableShop(shopId, { mechanicName = 'Test Mechanic', workingDays = null } = {}) {
   return runWithShop(shopId, async () => {
-    const { lastInsertRowid: mechanicId } = await prepare(
-      'INSERT INTO employees (name, is_mechanic) VALUES (?, 1)'
-    ).run(mechanicName);
+    const { lastInsertRowid: mechanicId } = workingDays
+      ? await prepare('INSERT INTO employees (name, is_mechanic, working_days) VALUES (?, 1, ?)')
+          .run(mechanicName, JSON.stringify(workingDays))
+      : await prepare('INSERT INTO employees (name, is_mechanic) VALUES (?, 1)').run(mechanicName);
     await prepare('INSERT INTO workshop_settings (opening_time) VALUES (?)').run('09:00');
     return { mechanicId };
   });

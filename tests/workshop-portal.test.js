@@ -13,6 +13,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { seedWorkshopJob, customerIdForLogin, seedBookableShop } from './helpers/workshopFixtures.js';
+import { setOpeningDays } from './helpers/staff.js';
 
 let server;
 
@@ -101,6 +102,65 @@ test('creating a booking does not return the shop internal order either', async 
     assert.ok(!('orderId' in body), 'booking response leaked orderId');
     assert.ok(!('orderTotal' in body), 'booking response leaked orderTotal');
     assert.ok(!('notes' in body), 'booking response leaked notes');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a customer cannot book on a day the shop is closed', async () => {
+  const shop = await createTestShop();
+  try {
+    const { cookie } = await portalSignup(server.baseUrl, shop.slug);
+    const { mechanicId } = await seedBookableShop(shop.id);
+    await setOpeningDays(shop.id, [1, 2, 3, 4, 5]); // Monday to Friday
+
+    const { status } = await portalRequest(
+      server.baseUrl,
+      cookie,
+      `/api/portal/${shop.slug}/bookings`,
+      {
+        method: 'POST',
+        body: {
+          jobDate: '2026-09-06', // a Sunday
+          startTime: '10:00',
+          jobType: 'quick',
+          description: 'Sunday puncture',
+          mechanicId,
+          newBike: { make: 'Test', model: 'Bike' },
+        },
+      }
+    );
+
+    assert.equal(status, 400, 'the portal accepted a booking on a closed day');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a customer cannot book a mechanic on their day off', async () => {
+  const shop = await createTestShop();
+  try {
+    const { cookie } = await portalSignup(server.baseUrl, shop.slug);
+    const { mechanicId } = await seedBookableShop(shop.id, { workingDays: [2, 3, 4, 5] });
+
+    const { status } = await portalRequest(
+      server.baseUrl,
+      cookie,
+      `/api/portal/${shop.slug}/bookings`,
+      {
+        method: 'POST',
+        body: {
+          jobDate: '2026-09-07', // a Monday - shop open, this mechanic off
+          startTime: '10:00',
+          jobType: 'quick',
+          description: 'Monday puncture',
+          mechanicId,
+          newBike: { make: 'Test', model: 'Bike' },
+        },
+      }
+    );
+
+    assert.equal(status, 400, "the portal accepted a booking on the mechanic's day off");
   } finally {
     await deleteTestShop(shop.id);
   }
