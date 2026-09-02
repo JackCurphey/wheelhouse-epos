@@ -4,11 +4,18 @@
 // Deliberately mirrors createWorkshopJob() in server/server.js - a job plus
 // its linked order in one transaction - because the linked order is exactly
 // what the portal must not leak back to a customer.
+import path from 'node:path';
+import { unlink } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { runWithShop, prepare } from '../../server/db.js';
+
+// Mirrors server.js's UPLOADS_DIR.
+export const UPLOADS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'uploads');
 
 export async function seedWorkshopJob({
   shopId,
   customerId,
+  mechanicId = null,
   title = 'Test job',
   jobDate = '2026-09-07',
   startTime = '10:00',
@@ -19,9 +26,9 @@ export async function seedWorkshopJob({
 }) {
   return runWithShop(shopId, async () => {
     const { lastInsertRowid: jobId } = await prepare(
-      `INSERT INTO workshop_jobs (title, customer_id, job_date, start_time, end_time, status, notes, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, now())`
-    ).run(title, customerId, jobDate, startTime, endTime, status, notes);
+      `INSERT INTO workshop_jobs (title, customer_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())`
+    ).run(title, customerId, mechanicId, jobDate, startTime, endTime, status, notes);
 
     const { lastInsertRowid: orderId } = await prepare(
       `INSERT INTO sale_documents (kind, customer_id, subtotal, discount, total, note, title, workshop_job_id, updated_at)
@@ -53,4 +60,16 @@ export async function seedBookableShop(shopId, { mechanicName = 'Test Mechanic',
     await prepare('INSERT INTO workshop_settings (opening_time) VALUES (?)').run('09:00');
     return { mechanicId };
   });
+}
+
+// Attachment uploads land on disk as well as in the database, and
+// deleteTestShop() only clears rows. Without this, every test run leaves
+// files behind in the repo's uploads/ directory.
+export async function purgeAttachmentFiles(shopId) {
+  const keys = await runWithShop(shopId, () =>
+    prepare('SELECT storage_key FROM workshop_job_attachments').all()
+  );
+  await Promise.all(
+    keys.map((k) => unlink(path.join(UPLOADS_DIR, k.storage_key)).catch(() => {}))
+  );
 }
