@@ -1,4 +1,4 @@
-# The wedge — online booking, not the workshop module
+# The wedge — online booking, not the workshop module *(§4 superseded)*
 
 **Date:** 1 September 2026
 **Status:** Proposed 1 September 2026 and acted on since, but **never formally
@@ -6,8 +6,11 @@ signed off** — no sign-off record exists for this document.
 (`2026-09-01-ownership-signoff.md` covers the master implementation plan's owner
 column only.) **Partly superseded 2 September 2026:** §5b's choice of
 Citrus-Lime shops as the first market is replaced by
-`2026-09-02-lightspeed-first-platform.md`. Landed on `main` as the record of the
-reasoning; treat §5b as historical and everything else as live.
+`2026-09-02-lightspeed-first-platform.md`, and §4's booking-led framing — lead
+with booking, *"the diary ships underneath it and is not the pitch"* — is
+replaced by §1.4 of the same document: the free product is the booking system
+and the diary together, as one thing. Landed on `main` as the record of the
+reasoning; treat §4 and §5b as historical and everything else as live.
 **Question raised by:** Jack — *"would it make more sense for the wedge to be
 the online booking system rather than the workshop module, given Citrus-Lime
 and Lightspeed already have (bad) workshop modules built in?"*

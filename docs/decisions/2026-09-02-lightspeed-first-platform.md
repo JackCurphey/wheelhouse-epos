@@ -13,17 +13,36 @@ reported · **[U]** unverified · **[NF]** searched, not found (not proof of abs
 
 ---
 
-## 1. The decision, in three parts
+## 1. The decision, in four parts
 
 1. **Lightspeed is the first platform**, not Citrus-Lime.
 2. **UK shops first**, with North America as a deliberate later phase — not a
    maybe, and not a pivot when the UK disappoints.
 3. **R-Series is the integration target**, not X-Series.
+4. **The free product is the booking system and the diary together**, as one
+   thing, not one leading and the other underneath it.
 
-The wedge itself is unchanged from 1 September: a free product that runs
-alongside whatever till the shop already has, with the paid full system at
-£49–79/month behind it. What changes is which platform it sits next to, and
-what the integration is *for*.
+Point 4 supersedes §4 of `2026-09-01-wedge-booking-vs-workshop.md`, which said
+to lead with booking and that *"the diary ships underneath it and is not the
+pitch."* Decided by Jack, 2 September 2026: *"both together, because both
+together would definitely be an improvement on anything any of the competitors
+make."*
+
+**Why the earlier split no longer applies.** §4's argument for booking-led was
+that a diary-led pitch asks a shop to replace something it already owns, and
+§2 of that document showed every serious competitor ships a workshop module.
+That is true of Citrus-Lime, and §3 below shows it is *not* true of Lightspeed:
+what Lightspeed ships is a job record with a date on it, not a diary. So the
+objection that forced the split is absent on this platform, and splitting the
+product in two costs us the only thing that distinguishes it.
+
+What is unchanged from 1 September: the free product runs alongside whatever
+till the shop already has, with the paid full system at £49–79/month behind it.
+
+**The claim this rests on is not yet evidenced.** "Both together beat anything
+the competitors make" is the whole proposition, and nobody has looked at a
+competitor's product. See §6. It is written here as the position taken, not as
+a finding.
 
 ## 2. Why the earlier reasoning has to be corrected first
 
@@ -154,10 +173,16 @@ not. Neither is a reason not to do it. Both are reasons to do it openly.
 ## 5. UK first, then North America
 
 **UK first, because that is where the domain knowledge is.** Decided by Jack:
-*"that's what I have the knowledge on."* Design-partner recruitment, trade
-credibility and the ability to stand in a shop and watch a mechanic work all
-depend on being in the same country. That is worth more at this stage than
-market size.
+*"that's what I have the knowledge on."* Knowing the trade — what a shop's week
+looks like, what a mechanic actually needs at the bench, which objections are
+real — is worth more at this stage than market size, and it does not travel.
+
+Note this reason stands on its own and deliberately does not lean on the
+design-partner programme. `2026-09-01-ownership-signoff.md` records `DP-1`
+through `DP-4` — shop conversations, recruiting partners, in-shop usability
+tests, the WhatsApp group — as *"dont think this is necessary."* Any argument
+for UK-first built on recruiting design partners is arguing from a programme
+that has been struck out.
 
 **North America is planned, not hypothetical.** `strategy.md` §3 already reaches
 the same conclusion from the numbers: the UK alone is a single-digit-millions
@@ -207,11 +232,17 @@ different endgame, and §4 is the whole of the differentiation. "Free" and "bett
 are worth little on their own here; "free, better, and it becomes your till" is
 the position.
 
-**The claim that is not yet evidenced:** that our diary is materially better than
-theirs. §8 of the 1 September decision already flagged this and nobody has done
-it — **trial accounts with Velodrop and Bikebook, both free, no card**. It is the
-only one of our three claims a shop can check in ten minutes, so it is the one
-that has to be true. It cannot be settled from documentation.
+**The claim that is not yet evidenced, and it is now the whole proposition.**
+§1.4 commits to booking and diary together *because together they beat anything
+the competitors make*. Nobody has looked at a competitor's product. §8 of the
+1 September decision flagged this on 31 August and it is still not done —
+**trial accounts with Velodrop and Bikebook, both free, no card**.
+
+This is the only one of our three claims a shop can check in ten minutes, so it
+is the one that has to be true, and it cannot be settled from documentation.
+Until those trials are run, treat "better than theirs" as an assumption the
+plan rests on rather than a fact it stands on. If it turns out to be wrong, §1.4
+is the part that has to change, not the platform choice.
 
 ## 7. Open items
 
@@ -219,7 +250,10 @@ that has to be true. It cannot be settled from documentation.
    this decision rests on it. Nearest routes: ask Lightspeed's UK sales, count
    Lightspeed-powered shops in a UK directory sweep, or ask the bolt-on vendors
    how many UK customers they have.
-2. **Velodrop and Bikebook trials.** Unstarted since 31 August. Settles §6.
+2. **Velodrop and Bikebook trials.** Unstarted since 31 August, and now the
+   highest-value open item on this list — §1.4 makes "better than theirs" the
+   product's whole reason to exist, and this is the only thing that tests it.
+   Both free, no card.
 3. **Which series a UK Lightspeed shop is actually on** — worth asking the first
    design partner directly rather than inferring from US distributor lists.
 4. **R-Series API operational limits** — rate limits, and whether work-order
