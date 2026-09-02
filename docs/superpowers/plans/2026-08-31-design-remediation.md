@@ -27,7 +27,7 @@
 - **Contrast floor is WCAG 2.1 AA:** 4.5:1 for text under 18.66px or under 14px bold; 3:1 for larger. Assert against the smaller figure unless the type size is proven larger.
 - **Touch target floor is 24×24px** (WCAG 2.5.8 AA), targeting 44×44px where layout allows. Do not shrink any control below 24px.
 - **Preserve the four things that already work** (findings §5): every list keeps its empty state, the six-state status token set keeps its semantics, interactive elements stay real `<button>`s, and errors keep funnelling through one `showToast` path.
-- **`applyShopTheme()` overrides `--brand`, `--accent` and `--modal-bg` at runtime.** Any contrast guarantee must hold for every preset in `THEME_PRESETS`, not just the default. Task 4 makes that testable.
+- **`applyShopTheme()` overrides `--accent-dark`, `--accent` and `--modal-bg` at runtime** (`public/app.js:6899-6905`) — it does **not** touch `--brand`. Any contrast guarantee for those three must hold for every preset in `THEME_PRESETS`, not just the default; Task 4 makes that testable. `--brand`'s fix is safe from runtime override. (Corrected 2026-08-31: this line previously named `--brand` instead of `--accent-dark`. Verified against the source — `preset.topbar` sets `--accent-dark`, `preset.accent` sets `--accent`.)
 - Tests run against the same Postgres as local dev via `DATABASE_URL`; the new design tests are pure text/CSS parsing and need no database.
 
 ## Approved decisions
@@ -690,7 +690,7 @@ test('a spacing scale exists with 8 steps on a 4px grid', () => {
 
 test('a type scale exists with paired line-heights', () => {
   const scale = {
-    '--text-xs': '11px', '--text-sm': '13px', '--text-base': '15px',
+    '--text-2xs': '9.5px', '--text-xs': '11px', '--text-sm': '13px', '--text-base': '15px',
     '--text-lg': '17px', '--text-xl': '20px', '--text-2xl': '24px', '--text-3xl': '30px',
   };
   for (const [name, value] of Object.entries(scale)) {
@@ -698,6 +698,16 @@ test('a type scale exists with paired line-heights', () => {
   }
   assert.ok(tokens.get('--leading-tight'));
   assert.ok(tokens.get('--leading-body'));
+});
+
+test('dense components pin a tight line-height so the grids do not grow', () => {
+  // body gets --leading-body (1.55) for running text. The calendar chips, job
+  // blocks and badges live in fixed-height boxes - a 30-minute week-grid slot
+  // is 24px tall - so they must opt out or they overflow.
+  for (const sel of ['.wk-job-block', '.job-card', '.badge']) {
+    const rules = findDeclarations(styles, 'line-height').filter((d) => d.selector.includes(sel));
+    assert.ok(rules.length > 0, `${sel} must pin a line-height, not inherit --leading-body`);
+  }
 });
 
 test('a focus ring token exists', () => {
@@ -748,10 +758,13 @@ Expected: FAIL on all six — no scale tokens, no focus ring, no `:focus-visible
   --space-8: 48px;
 
   /* ---------- Type scale ----------
-     Seven steps replacing the 19 hand-tuned values the audit found. The
-     8.5-11px tier collapses into --text-xs: nothing in this product needs to
-     be smaller than 11px, and the status badges that were at 8.5px were the
-     hardest-to-read text in the app. */
+     Eight steps replacing the 19 hand-tuned values the audit found.
+     --text-2xs exists because the week-grid job blocks stack five lines of
+     text into a 24px half-hour slot; collapsing their 8.5-10px type into
+     11px overflows that box. So the dense tier moves at most +1px and the
+     badge stays small - its legibility is tracked separately as finding P4.
+     Approved by the user 2026-08-31 over a single 11px floor. */
+  --text-2xs: 9.5px;
   --text-xs: 11px;
   --text-sm: 13px;
   --text-base: 15px;
@@ -787,7 +800,8 @@ Map each of the 19 existing values to its nearest scale step:
 
 | Was | Becomes |
 |---|---|
-| 8.5, 9, 9.5, 10, 10.5, 11, 11.5 | `var(--text-xs)` |
+| 8.5, 9, 9.5, 10 | `var(--text-2xs)` |
+| 10.5, 11, 11.5 | `var(--text-xs)` |
 | 12, 12.5, 13, 13.5 | `var(--text-sm)` |
 | 14, 15 | `var(--text-base)` |
 | 16, 17 | `var(--text-lg)` |
@@ -801,6 +815,15 @@ Then set a body default so the missing `line-height` is fixed once:
 html, body {
   font-size: var(--text-base);
   line-height: var(--leading-body);
+}
+
+/* Dense components opt out. A 30-minute week-grid slot is 24px tall
+   (WORKSHOP_ROW_PX = 48 per hour, app.js:1743) and stacks time, subtitle,
+   customer, mechanic and a status badge. At --leading-body they overflow. */
+.wk-job-block, .wk-job-block *,
+.job-card, .job-card *,
+.badge, .month-job-chip, .day-job-row {
+  line-height: var(--leading-tight);
 }
 ```
 

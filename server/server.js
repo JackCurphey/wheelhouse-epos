@@ -1993,6 +1993,28 @@ function serializeWorkshopJob(row) {
   };
 }
 
+// What a customer is allowed to see about their own job. Deliberately a
+// separate function from serializeWorkshopJob() above rather than a filtered
+// version of it: the staff serializer is where new fields get added, and a
+// shared one silently exposes each new field to customers the day it lands.
+// Notably absent - the linked order (id, status, total) and `notes`, which
+// staff edit freely in the diary and treat as internal. The customer's own
+// description survives in `title` ("Online booking: ..."), which is what the
+// portal's my-bookings list falls back to.
+function serializePortalBooking(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    bikeLabel: row.bike_label !== undefined ? row.bike_label : undefined,
+    mechanicName: row.mechanic_name !== undefined ? row.mechanic_name : undefined,
+    jobDate: row.job_date,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
 // 'pending' is a customer-submitted booking (see /api/portal/*) awaiting a
 // mechanic's manual review before it counts as scheduled - it still occupies
 // its diary slot like any other status, so a second booking can't silently
@@ -2187,6 +2209,62 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
   }
 }
 
+// The diary's scheduling rules, enforced server-side.
+//
+// These lived only in public/app.js, which made them suggestions: the browser
+// greys out a closed Sunday, but a raw POST scheduled one anyway. Both the
+// staff routes and the portal booking route go through here now, so there is
+// one implementation of "is this slot legal" rather than three that drift.
+//
+// Returns an error string, or null when the slot is fine. `ignoreJobId` is
+// the job being edited - a job must not collide with itself.
+async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJobId = null }) {
+  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
+  if (!settings) return null;
+
+  // getUTCDay() rather than getDay(): job_date is a bare calendar date with
+  // no timezone, and parsing it locally would shift the weekday for anyone
+  // west of UTC.
+  const dayOfWeek = new Date(`${jobDate}T00:00:00Z`).getUTCDay();
+  const openingDays = parseWorkingDays(settings.opening_days);
+  if (Array.isArray(openingDays) && !openingDays.includes(dayOfWeek)) {
+    return 'The shop is closed that day - please choose another date.';
+  }
+
+  // A mechanic's own days off are separate from the shop's closing days - a
+  // part-timer can be off on a Monday the shop is open. Checked before the
+  // times, because a day off rules out the whole day regardless of hours.
+  if (mechanicId) {
+    const mechanic = await db.prepare('SELECT working_days FROM employees WHERE id = ?').get(mechanicId);
+    const workingDays = mechanic ? parseWorkingDays(mechanic.working_days) : null;
+    if (Array.isArray(workingDays) && !workingDays.includes(dayOfWeek)) {
+      return 'That mechanic does not work that day - please choose another day or another mechanic.';
+    }
+  }
+
+  // A job with no times is a loose "sometime that day" entry - it occupies no
+  // slot, so there is nothing to check it against.
+  if (!startTime || !endTime) return null;
+
+  if (startTime < settings.opening_time || endTime > settings.closing_time) {
+    return `That job doesn't fit in the shop's opening hours (${settings.opening_time}\u2013${settings.closing_time}) - please choose an earlier time or a shorter job type.`;
+  }
+
+  if (!mechanicId) return null;
+  const overlap = await db
+    .prepare(
+      `SELECT id FROM workshop_jobs
+       WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''
+       AND start_time < ? AND end_time > ? AND (?::int IS NULL OR id != ?::int)
+       LIMIT 1`
+    )
+    .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
+  if (overlap) {
+    return 'That mechanic is already booked over part of that window - please choose another time.';
+  }
+  return null;
+}
+
 route('POST', '/api/workshop-jobs', async (req, res) => {
   const body = await readJsonBody(req);
   const title = (body.title || '').trim();
@@ -2209,6 +2287,14 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
 
   const status = resolveJobStatus(body.status, null);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+
+  const slotError = await checkJobSlot({
+    jobDate,
+    startTime: times.startTime,
+    endTime: times.endTime,
+    mechanicId: mechResolved.mechanicId,
+  });
+  if (slotError) return badRequest(res, slotError);
 
   const jobId = await createWorkshopJob({
     title,
@@ -2254,6 +2340,33 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
 
   const status = resolveJobStatus(body.status, existing.status);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+
+  // A complete job is a record of work already done, so its details are
+  // frozen - the browser disables every field on the form. Changing status
+  // is the one edit that stays open, because that is how a job is reopened.
+  if (existing.status === 'complete') {
+    const changesBeyondStatus =
+      title !== existing.title ||
+      jobDate !== existing.job_date ||
+      notes !== existing.notes ||
+      times.startTime !== existing.start_time ||
+      times.endTime !== existing.end_time ||
+      resolved.customerId !== existing.customer_id ||
+      bikeResolved.bikeId !== existing.bike_id ||
+      mechResolved.mechanicId !== existing.mechanic_id;
+    if (changesBeyondStatus) {
+      return badRequest(res, 'This job is complete - reopen it before making changes.');
+    }
+  }
+
+  const slotError = await checkJobSlot({
+    jobDate,
+    startTime: times.startTime,
+    endTime: times.endTime,
+    mechanicId: mechResolved.mechanicId,
+    ignoreJobId: id,
+  });
+  if (slotError) return badRequest(res, slotError);
 
   await db.prepare(
     `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, status = ?, notes = ?, updated_at = ?
@@ -3185,7 +3298,7 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const rows = await db
     .prepare(WORKSHOP_JOB_SELECT + ' WHERE w.customer_id = ? ORDER BY w.job_date DESC, w.start_time DESC')
     .all(ctx.login.customer_id);
-  sendJson(res, 200, rows.map((r) => serializeWorkshopJob(r)));
+  sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
 });
 
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
@@ -3248,20 +3361,17 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     return badRequest(res, 'That mechanic is fully booked that day - please choose another day.');
   }
 
-  if (times.startTime < settings.opening_time || times.endTime > settings.closing_time) {
-    return badRequest(res, `That job doesn't fit in the shop's opening hours (${settings.opening_time}–${settings.closing_time}) - please choose an earlier time or a shorter job type.`);
-  }
-  const overlap = await db
-    .prepare(
-      `SELECT id FROM workshop_jobs
-       WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''
-       AND start_time < ? AND end_time > ?
-       LIMIT 1`
-    )
-    .get(mechResolved.mechanicId, jobDate, times.endTime, times.startTime);
-  if (overlap) {
-    return badRequest(res, "That mechanic is already booked over part of that window - please choose another time or a shorter job type.");
-  }
+  // Closed days, opening hours and mechanic overlap - the same rules the
+  // staff routes enforce, from the same place. Previously this route checked
+  // hours and overlap with its own copy and never checked opening days at
+  // all, so a customer could book a slot the diary showed as closed.
+  const slotError = await checkJobSlot({
+    jobDate,
+    startTime: times.startTime,
+    endTime: times.endTime,
+    mechanicId: mechResolved.mechanicId,
+  });
+  if (slotError) return badRequest(res, slotError);
 
   // Either an existing bike of theirs, or a new one registered inline -
   // never a bike belonging to another customer (checked below).
@@ -3308,7 +3418,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     skipAutoOrder: false,
   });
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-  sendJson(res, 201, serializeWorkshopJob(row));
+  sendJson(res, 201, serializePortalBooking(row));
 });
 
 // ---------- Static file serving ----------

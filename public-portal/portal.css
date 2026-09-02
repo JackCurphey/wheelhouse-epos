@@ -59,7 +59,7 @@
   right: 3px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: repeating-linear-gradient(45deg, #f4f4f2, #f4f4f2 7px, #ebebe9 7px, #ebebe9 14px);
+  background: repeating-linear-gradient(45deg, var(--hatch-a), var(--hatch-a) 7px, var(--hatch-b) 7px, var(--hatch-b) 14px);
   pointer-events: none;
   display: flex;
   align-items: center;
