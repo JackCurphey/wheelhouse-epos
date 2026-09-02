@@ -3,6 +3,12 @@
 **Date:** 31 August 2026 · supersedes v1 of the same date
 **Confidence tags:** **[V]** verified against a primary source · **[R]** third-party reported · **[U]** unverified · **[NF]** searched, not found (not proof of absence)
 
+> **Platform decision, 2 September 2026.** This report does not pick a first
+> platform. `docs/decisions/2026-09-02-lightspeed-first-platform.md` does:
+> Lightspeed R-Series, UK shops first, integrating by reading data *out* of the
+> incumbent rather than writing bookings into it. It supersedes §5b of
+> `2026-09-01-wedge-booking-vs-workshop.md`. Read it before acting on §10 here.
+
 ---
 
 ## 0. Corrections to v1 — read this first
