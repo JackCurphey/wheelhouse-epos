@@ -2,7 +2,12 @@ name: Tests
 
 on:
   push:
-    branches: [master]
+    # Both names on purpose, while the default branch is being renamed from
+    # master to main. Renaming needs repo admin, so it may land at any time
+    # or not for a while; listing both means the push trigger keeps firing
+    # either side of it and nothing has to be timed. Drop master once the
+    # rename is done.
+    branches: [main, master]
   pull_request:
 
 jobs:
@@ -59,6 +64,51 @@ jobs:
 
       - run: npm ci
 
+      # ---------- Front-end build and static analysis ----------
+      # Cheap and independent of Postgres, so they run before the database
+      # steps: a type error should not wait on migrations to be reported.
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm run build
+
+      # ---------- Design system ----------
+
+      - name: Validate the registry
+        run: npm run registry:validate
+
+      # shadcn components are ordinary editable files, so the registry only
+      # stays truthful if something checks. See the header comment in the
+      # script for why this rebuilds rather than using `shadcn add --diff`.
+      - name: Fail if the registry is out of date
+        run: node scripts/ci/check-registry-drift.mjs
+
+      # ---------- Database ----------
+
       - run: npm run migrate
 
+      # Tenant isolation is enforced by Postgres RLS rather than by
+      # application code, so a migration that adds a shop-scoped table and
+      # forgets its policy is invisible to every functional test. Checked
+      # against the live catalogue, after migrations, for that reason.
+      - name: Assert RLS covers every shop-scoped table
+        run: node scripts/ci/assert-rls-coverage.mjs
+
       - run: npm test
+
+      # A second migrate must be a no-op. run-migrations.js skips anything
+      # already recorded in schema_migrations, so re-applying means a
+      # migration ran without being recorded, or a committed migration file
+      # was renamed after it shipped - both of which diverge deployed
+      # databases from fresh ones.
+      - name: Migrations are idempotent
+        run: |
+          set -o pipefail
+          out=$(npm run migrate 2>&1)
+          printf '%s\n' "$out"
+          if printf '%s\n' "$out" | grep -q 'Applied migration:'; then
+            echo "::error::A second 'npm run migrate' re-applied migrations; they are not idempotent."
+            exit 1
+          fi

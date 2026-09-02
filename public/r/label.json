@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "label",
+  "title": "Label",
+  "author": "Wheelhouse EPOS",
+  "description": "Field label plus the Field stack and FieldError message that always travel with it, matching .field, .field label and .field-error. Plain elements paired by htmlFor, so it works inside the native dialog element the Wheelhouse dialog uses.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "primitives/label.tsx",
+      "content": "import * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\n/**\n * Wheelhouse field label - the small muted caption above an input, matching\n * `.field label` in public/styles.css (12px, 600, --muted).\n *\n * Deliberately a plain <label>: pairing is by htmlFor/id, which keeps the\n * component dependency-free and works inside the native <dialog> the\n * Wheelhouse dialog primitive uses.\n */\nexport function Label({ className, ...props }: React.ComponentProps<'label'>) {\n  return (\n    <label\n      className={cn(\n        'text-xs font-semibold text-[var(--muted)]',\n        'peer-disabled:cursor-not-allowed peer-disabled:opacity-50',\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\n/**\n * The label + control stack the vanilla app calls `.field`. Bundled with the\n * label because every Wheelhouse form uses the two together.\n */\nexport function Field({ className, ...props }: React.ComponentProps<'div'>) {\n  return <div className={cn('mb-3 flex flex-col gap-1', className)} {...props} />;\n}\n\n/** Validation message under a field - `.field-error` in public/styles.css. */\nexport function FieldError({ className, ...props }: React.ComponentProps<'p'>) {\n  return <p className={cn('mt-1 text-[12.5px] text-[var(--danger)]', className)} {...props} />;\n}\n",
+      "type": "registry:ui"
+    }
+  ],
+  "type": "registry:ui"
+}

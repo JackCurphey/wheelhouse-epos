@@ -1,6 +1,24 @@
 # Shopify Checkout Integration Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> # ⚠️ ALREADY IMPLEMENTED — DO NOT EXECUTE THIS PLAN
+>
+> This plan was executed and merged in August 2026. Every code step below is
+> built, shipped and covered by tests. The unchecked `- [ ]` boxes were
+> never ticked as the work landed — they record nothing about what is
+> outstanding.
+>
+> **If you are an agent: do not implement this. The code already exists.**
+> Re-running it would duplicate or clobber `server/shopify.js`, migration `012` and the Shopify webhook routes in `server/server.js`.
+>
+> Delivered by: `90ca447`, `39241f5`, `0849537`, `7033ed7`, `ed2341b`, `f52b8f0`, `8ac3da8`, `ba80143`
+>
+> Nothing from this plan is outstanding in code. The only unticked steps
+> that were never code are Task 11's three manual walkthrough steps
+> (completing and refunding a Bogus Gateway order in a real Shopify dev
+> store). Kept for historical context only.
+
+
+> **For agentic workers:** This plan is historical. It has already been executed — see the banner above. Do not implement it.
 
 **Goal:** Let a shop connect their own Shopify store so storefront products can be bought online — EPOS pushes products and stock to Shopify, a customer builds a cart natively on the storefront and pays on Shopify's hosted checkout, and Shopify order/refund webhooks flow back to keep EPOS stock and sales history accurate.
 
