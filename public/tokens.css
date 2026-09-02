@@ -1,12 +1,22 @@
 /* public/tokens.css
  *
- * The single source of truth for design tokens across all Wheelhouse
- * front-ends: the staff EPOS (/), the booking portal (/book) and the public
- * storefront (shop subdomains). Every one of them links this file first.
+ * The single source of truth for design tokens for the staff EPOS (/) and the
+ * booking portal (/book). Both link this file first.
+ *
+ * The public storefront (shop subdomains) is deliberately NOT included, and
+ * the no-raw-hex gates in tests/design-tokens.test.js deliberately do not
+ * cover storefront.css. Decided 2 September 2026: storefront styling becomes
+ * per-shop and editable by the shop, so it cannot share one fixed palette.
+ * If that changes, add the link in public-storefront/index.html and extend
+ * the gates to match - not one without the other.
  *
  * Colour values here are contrast-checked by tests/design-contrast.test.js
  * against WCAG 2.1 AA (4.5:1 for body text). Do not change a colour without
  * running `npm test` - the gate will catch a regression, but only if you run it.
+ *
+ * --brand #b8460f was approved by Jack on 2 September 2026 as the working
+ * value. It is expected to change again later; any replacement still has to
+ * clear 4.5:1 with white text or the contrast gate fails.
  */
 :root {
   /* ---------- Surfaces and text ---------- */
