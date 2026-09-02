@@ -90,9 +90,12 @@ export async function resolveGuestCustomer({ name, phone }) {
   if (!name) throw new CustomerAuthError('Name is required');
   if (!phone) throw new CustomerAuthError('Phone number is required');
 
-  const existing = await prepare('SELECT * FROM customers WHERE phone = ? AND active = 1').get(phone);
-  if (existing) return existing;
-
+  // A phone number typed into a public booking form is not proof that the
+  // person typing it owns that number. Matching on it alone attached a
+  // stranger's booking - and, through the portal, that customer's job
+  // history - to whoever's number they entered. Every guest booking now
+  // gets its own customers row; merging duplicates is a staff decision made
+  // in the Office UI, where the shop can actually verify who is who.
   const info = await prepare(
     'INSERT INTO customers (name, phone, updated_at) VALUES (?, ?, ?)'
   ).run(name, phone, new Date().toISOString());

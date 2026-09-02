@@ -19,16 +19,21 @@ test('resolveGuestCustomer creates a new customer when no phone match exists', a
   }
 });
 
-test('resolveGuestCustomer reuses an existing customer with the same phone in this shop', async () => {
+// Superseded by DS-7. This used to assert the opposite - that a repeat guest
+// reuses their existing customers row - which was real deduplication, but it
+// was reached by trusting an unverified phone number typed into a public
+// form. Duplicate rows a shop can merge are the accepted cost of not letting
+// a stranger attach themselves to someone else's record.
+test('resolveGuestCustomer never reuses an existing customer on phone alone', async () => {
   const shop = await createTestShop();
   try {
     await runWithShop(shop.id, async () => {
       const first = await resolveGuestCustomer({ name: 'Sam Regular', phone: '07700900002' });
       const second = await resolveGuestCustomer({ name: 'Sam Regular', phone: '07700900002' });
-      assert.equal(second.id, first.id);
+      assert.notEqual(second.id, first.id);
 
       const rows = await prepare('SELECT id FROM customers WHERE phone = ?').all('07700900002');
-      assert.equal(rows.length, 1, 'only one customer row should exist for this phone number');
+      assert.equal(rows.length, 2, 'each guest booking gets its own customer row');
     });
   } finally {
     await deleteTestShop(shop.id);

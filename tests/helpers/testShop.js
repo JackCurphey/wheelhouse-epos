@@ -11,50 +11,63 @@ export async function createTestShop(overrides = {}) {
   return shop;
 }
 
+// Rows that belong to a shop without carrying shop_id themselves - they hang
+// off a row that does. Deleted first, by their parent's shop.
+const INDIRECT_CLEANUP = [
+  'DELETE FROM sessions WHERE login_id IN (SELECT id FROM logins WHERE shop_id = $1)',
+  'DELETE FROM customer_sessions WHERE customer_login_id IN (SELECT id FROM customer_logins WHERE shop_id = $1)',
+  'DELETE FROM workshop_job_attachments WHERE workshop_job_id IN (SELECT id FROM workshop_jobs WHERE shop_id = $1)',
+];
+
+// Every table carrying a shop_id, discovered rather than listed. An explicit
+// list went stale twice while writing the workshop tests - createShop() seeds
+// customer_groups and suppliers, and each one only announced itself as a
+// foreign-key error during teardown. Discovery means a new tenant-owned table
+// is cleaned up the day it is added.
+async function shopOwnedTables(client) {
+  const { rows } = await client.query(`
+    SELECT table_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND column_name = 'shop_id' AND table_name <> 'shops'
+  `);
+  return rows.map((r) => r.table_name);
+}
+
 export async function deleteTestShop(shopId) {
   const client = await pool.connect();
   try {
     await client.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shopId)]);
-    await client.query('DELETE FROM sessions WHERE login_id IN (SELECT id FROM logins WHERE shop_id = $1)', [shopId]);
-    await client.query('DELETE FROM logins WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM customer_sessions WHERE customer_login_id IN (SELECT id FROM customer_logins WHERE shop_id = $1)', [shopId]);
-    await client.query('DELETE FROM customer_logins WHERE shop_id = $1', [shopId]);
-    // Children before parents. sale_documents must go before sales because
-    // converted_sale_id points at it, and before workshop_jobs because
-    // workshop_job_id does.
-    await client.query('DELETE FROM sale_document_items WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM sale_documents WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM sale_items WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM workshop_services WHERE shop_id = $1', [shopId]);
-    // sale_payments.sale_id has no ON DELETE CASCADE, so it must be cleared
-    // before sales or the delete below fails with a foreign-key violation.
-    await client.query('DELETE FROM sale_payments WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM sales WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM stock_movements WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM workshop_job_attachments WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM workshop_jobs WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM workshop_settings WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM customer_bikes WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM customers WHERE shop_id = $1', [shopId]);
-    // customer_groups has customers.group_id pointing at it, so it must wait
-    // until customers are gone (above).
-    await client.query('DELETE FROM customer_groups WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM employees WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM storefront_settings WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM shopify_connections WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM shopify_processed_events WHERE shop_id = $1', [shopId]);
-    // Purchase-order lines reference both purchase_orders and products, so
-    // they go before either. createShop() seeds one mock supplier for every
-    // shop (see server/auth.js), so suppliers must be cleared too, after its
-    // own children.
-    await client.query('DELETE FROM purchase_order_items WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM purchase_orders WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM supplier_catalogue_items WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM suppliers WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM products WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM label_settings WHERE shop_id = $1', [shopId]);
-    await client.query('DELETE FROM shop_theme WHERE shop_id = $1', [shopId]);
+    // Savepoints below are only legal inside a transaction block.
+    await client.query('BEGIN');
+    for (const sql of INDIRECT_CLEANUP) await client.query(sql, [shopId]);
+
+    // Tables reference each other (workshop_jobs ← sale_documents, customers
+    // ← customer_bikes), so a single pass in an arbitrary order hits foreign
+    // keys. Retry the ones that fail until a full pass clears nothing more -
+    // then any remainder is a real problem worth surfacing.
+    let pending = await shopOwnedTables(client);
+    while (pending.length) {
+      const failed = [];
+      for (const table of pending) {
+        try {
+          await client.query('SAVEPOINT tbl');
+          await client.query(`DELETE FROM ${table} WHERE shop_id = $1`, [shopId]);
+          await client.query('RELEASE SAVEPOINT tbl');
+        } catch {
+          await client.query('ROLLBACK TO SAVEPOINT tbl');
+          failed.push(table);
+        }
+      }
+      if (failed.length === pending.length) {
+        throw new Error(`deleteTestShop could not clear: ${failed.join(', ')}`);
+      }
+      pending = failed;
+    }
+
     await client.query('DELETE FROM shops WHERE id = $1', [shopId]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
   } finally {
     client.release();
   }
