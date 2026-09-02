@@ -133,6 +133,39 @@ test('a labour line snapshots its service, and repricing the service later does 
   }
 });
 
+// Design decision 1: a labour line is a typed price, not a computed one - the
+// shop types what the work costs. Picking a saved service fills the blanks; it
+// must not overwrite what was typed. Without this test, changing the guard to
+// always take the service's values leaves all 125 other tests passing, and a
+// mechanic who prices a bigger-than-usual job at £70 silently books it at the
+// catalogue's £55.
+//
+// The neighbouring snapshot test does not cover this: it checks the price
+// holds after the service is repriced later, not that a price typed at the
+// same time as choosing the service survives at all.
+test('a typed price and duration beat the service they are chosen alongside', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const svc = await prepare(
+        `INSERT INTO workshop_services (name, price, minutes) VALUES ('Standard service', 55.00, 60)`
+      ).run();
+      const line = await loadDocumentLine(
+        { lineType: 'labour', serviceId: svc.lastInsertRowid, unitPrice: 70, minutes: 90 },
+        { checkStock: true }
+      );
+      assert.equal(Number(line.unitPrice), 70, 'the typed price must win over the service price');
+      assert.equal(line.minutes, 90, 'the typed duration must win over the service duration');
+      // The link to the service is still kept, for reporting.
+      assert.equal(line.serviceId, svc.lastInsertRowid);
+      // The name is still filled in from the service, because none was typed.
+      assert.equal(line.name, 'Standard service');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test('a labour line needs a description and rejects a negative price', async () => {
   const shop = await createTestShop();
   try {
