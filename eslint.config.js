@@ -61,6 +61,11 @@ export default tseslint.config(
   {
     ignores: [
       'node_modules/**',
+      // Claude Code workflow definitions, not application source. They are
+      // fragments executed by the harness, so a top-level `return` is legal
+      // there and a parse error to ESLint. Same reasoning as server/ and
+      // tests/ below: this config lints src/ and registry/ only.
+      '.claude/**',
       'public/**',
       'public-demo/**',
       'public-portal/**',
