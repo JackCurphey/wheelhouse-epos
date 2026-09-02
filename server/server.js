@@ -3337,11 +3337,27 @@ async function serveStatic(req, res, pathname, baseDir) {
   // Without an explicit header here, any CDN or caching proxy in front of
   // this app falls back to its own default caching for static-looking
   // extensions (a 4-hour TTL was observed in practice) - fine for a
-  // CDN-fronted site with a build/version pipeline, but this app deploys
-  // straight from source with no cache-busted filenames, so a cached
-  // JS/CSS bundle can silently outlive the code it's stale against.
-  // Small, low-traffic internal tool - correctness beats any caching win.
-  res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
+  // CDN-fronted site with a build/version pipeline, but most of what this app
+  // serves deploys straight from source with no cache-busted filenames, so a
+  // cached JS/CSS bundle can silently outlive the code it's stale against.
+  // Those files stay 'no-store': correctness beats any caching win.
+  //
+  // The one exception is /dist/assets/, which holds Vite's build output.
+  // Every filename there carries a hash of the file's own contents, so a
+  // change produces a new URL and a cached copy can never be stale - the
+  // exact reason 'no-store' exists doesn't apply. Scoped to assets/
+  // specifically: anything else under dist (the manifest, or a stray unhashed
+  // file) must not be pinned in browsers for a year.
+  //
+  // Decided on the RESOLVED filePath, not the request path: the index.html
+  // fallback above can turn a /dist/... request into index.html, which is not
+  // hashed and must not be cached.
+  const distRoot = path.join(baseDir, 'dist') + path.sep;
+  const isHashedBuildOutput = filePath.startsWith(path.join(distRoot, 'assets'));
+  const cacheControl = isHashedBuildOutput
+    ? 'public, max-age=31536000, immutable'
+    : 'no-store';
+  res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': cacheControl });
   const stream = createReadStream(filePath);
   // Defense in depth beyond the existsSync check above (e.g. a permissions
   // error, or the file disappearing between the check and the read) -
