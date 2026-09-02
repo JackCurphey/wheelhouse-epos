@@ -1,0 +1,138 @@
+/* public/tokens.css
+ *
+ * The single source of truth for design tokens for the staff EPOS (/) and the
+ * booking portal (/book). Both link this file first.
+ *
+ * The public storefront (shop subdomains) is deliberately NOT included, and
+ * the no-raw-hex gates in tests/design-tokens.test.js deliberately do not
+ * cover storefront.css. Decided 2 September 2026: storefront styling becomes
+ * per-shop and editable by the shop, so it cannot share one fixed palette.
+ * If that changes, add the link in public-storefront/index.html and extend
+ * the gates to match - not one without the other.
+ *
+ * Colour values here are contrast-checked by tests/design-contrast.test.js
+ * against WCAG 2.1 AA (4.5:1 for body text). Do not change a colour without
+ * running `npm test` - the gate will catch a regression, but only if you run it.
+ *
+ * --brand #b8460f was approved by Jack on 2 September 2026 as the working
+ * value. It is expected to change again later; any replacement still has to
+ * clear 4.5:1 with white text or the contrast gate fails.
+ *
+ * Also approved by Jack, 2 September 2026: the --status-complete-paid
+ * treatment (a finished job recedes via the palest background rather than
+ * pale ink, because the old ink measured 3.21 at the 9.5px this badge
+ * renders at), the 4px spacing scale, and the global focus ring. The type
+ * scale was approved separately on 31 August 2026.
+ */
+:root {
+  /* ---------- Surfaces and text ---------- */
+  --bg: #f4f5f3;
+  --panel: #ffffff;
+  --ink: #1c231f;
+  /* Darkened from #6b7570, which measured 4.36 on --bg (WCAG AA fail).
+     #5f6a64 measures 5.14 on --bg and 5.63 on --panel. */
+  --muted: #5f6a64;
+  --border: #e0e2dd;
+
+  /* ---------- Brand and action ---------- */
+  /* Darkened from #d9581e, which measured 3.91 with white text (AA fail).
+     #b8460f measures 5.36. The old --brand-dark value was #b8460f, so the
+     hover step moves down to #93380b (7.47). */
+  --brand: #b8460f;
+  --brand-dark: #93380b;
+  --accent: #1f6f5c;
+  --accent-dark: #164f42;
+  --danger: #c0392b;
+  --danger-hover: #a5301f;
+  --danger-bg: #fdecea;
+  --warn-bg: #fff7e0;
+  --warn-ink: #8a6100;
+  --ok-bg: #e8f5ec;
+
+  /* ---------- Job status (six states) ---------- */
+  --status-pending-bg: #f1e8fb;
+  --status-pending-border: #6a3ea1;
+  --status-pending-ink: #6a3ea1;
+  --status-scheduled-bg: #eaf1fb;
+  --status-scheduled-border: #4d7fc4;
+  --status-scheduled-ink: #2c5289;
+  --status-waiting_parts-bg: #fff0e3;
+  --status-waiting_parts-border: #d9581e;
+  --status-waiting_parts-ink: #a8420f;
+  --status-on_hold-bg: #fff7e0;
+  --status-on_hold-border: #c99a1e;
+  --status-on_hold-ink: #8a6100;
+  --status-complete-bg: #e8f5ec;
+  --status-complete-border: #1f6f5c;
+  --status-complete-ink: #164f42;
+  /* A job goes 'complete' the moment work is done, but stays this same status
+     once it's also been paid for and collected. That fully-resolved state still
+     needs to recede - but the recede signal now lives in the BACKGROUND (the
+     palest of the six) rather than in pale ink, because the old ink (#6b9484)
+     measured 3.21 and was unreadable at the 9.5px this badge renders at. */
+  --status-complete-paid-bg: #f5faf6;
+  --status-complete-paid-border: #a9cdbf;
+  --status-complete-paid-ink: #4d7364;
+
+  /* ---------- Badges (previously untokenised hex) ---------- */
+  --badge-card-bg: #e8eefb;
+  --badge-card-ink: #2255a4;
+  --badge-other-bg: #f1e8fb;
+  --badge-other-ink: #6a3ea1;
+
+  /* ---------- On-fill text and surface variants (Task 4) ---------- */
+  --on-brand: #ffffff;         /* white text on a brand/accent/danger fill */
+  --on-accent: #dfeee9;        /* idle nav label on the topbar */
+  --on-accent-muted: #cfe6dd;  /* .clock, .shop-info on the topbar */
+  --hover-bg: #f2f3f1;         /* .btn:hover, .btn-ghost:hover, .auth-tab:hover */
+  --hover-subtle: #fafaf8;     /* .search-dropdown-item:hover, data-table tr:hover */
+  --surface-today: #fbfdfc;    /* .wk-cell.today, .wk-day-col.today, .month-cell.today */
+  --surface-muted: #fafaf9;    /* .month-cell.other-month */
+  --surface-disabled: #eeeeec; /* .price-input:disabled */
+  --surface-sunken: #ececea;   /* .wk-day-header.day-off */
+  --hatch-a: #f4f4f2;          /* day-off diagonal stripe, lighter band */
+  --hatch-b: #ebebe9;          /* day-off diagonal stripe, darker band */
+  --hatch-full: #f2e3b8;       /* day-full diagonal stripe (amber) */
+
+  /* Overridden at runtime by applyShopTheme() (public/app.js) per the shop's
+     chosen colour scheme - this default matches the 'forest' preset so there's
+     no flash of a different colour before that JS runs. */
+  --modal-bg: #DDF7DF;
+
+  /* ---------- Shape ---------- */
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+
+  /* ---------- Spacing (4px grid) ---------- */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+
+  /* ---------- Type scale ----------
+     Eight steps replacing the 19 hand-tuned values the audit found.
+     --text-2xs exists because the week-grid job blocks stack five lines of
+     text into a 24px half-hour slot; collapsing their 8.5-10px type into
+     11px overflows that box. So the dense tier moves at most +1px and the
+     badge stays small - its legibility is tracked separately as finding P4.
+     Approved by the user 2026-08-31 over a single 11px floor. */
+  --text-2xs: 9.5px;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --leading-tight: 1.25;
+  --leading-body: 1.55;
+
+  /* ---------- Focus ---------- */
+  --focus-ring: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent);
+}
