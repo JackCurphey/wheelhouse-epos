@@ -27,28 +27,57 @@ Confidence tags: **[V]** verified · **[R]** reported · **[U]** unverified ·
 
 A hosted point-of-sale and workshop system for independent bike shops. The buyer
 wants to work on bikes and make money, does not care about technology, and is
-price-sensitive. We lead with the **online booking system, given away free**,
-running alongside whatever till *and whatever workshop module* the shop already
-has; the paid product is the full system at one flat price in the £49–79/month
-band. The differentiator is the **experience**: obviously simpler than anything
-else a shop can buy, and a **job-done email** that tells the customer in plain
+price-sensitive. We lead with the **online booking system and the workshop diary
+together, as one free product**, running alongside whatever till the shop
+already has; the paid product is the full system at one flat price in the
+£49–79/month band. The differentiator is the **experience**: obviously simpler
+than anything else a shop can buy, and a **job-done email** that tells the
+customer in plain
 English what was done, itemises the price, invoices it, and lets them pay in one
 tap. Structured inspection follows as the same machinery pointed at the middle of
 the job rather than the end.
 
-**Narrowed 1 September 2026** from "the workshop module, given away free". Every
-competitor but i-BikeShop already ships a workshop module, so giving ours away
-still asked a shop to displace something it owns. Booking is additive: it goes
-live on a Monday without touching the till. The diary ships underneath it, because
-a booking system needs one to know which slots are free — but it is not the pitch.
-First market is **Citrus-Lime shops**, and the shape is **coexistence**: jobs booked
-through our link are worked in our system, everything else stays where it is.
-Pushing bookings into Citrus-Lime's own diary was investigated and is not
-available — their published API can create an order shell but not a scheduled
-booking, and their API agreement bars an application that "competes with or merely
-replicates" them. Reasoning and sources:
-`docs/decisions/2026-09-01-wedge-booking-vs-workshop.md` (on the branch of PR #22,
-so this reference resolves once that merges).
+**Superseded 2 September 2026. Build for Lightspeed, not Citrus-Lime.**
+Decided by Jack in `docs/decisions/2026-09-02-lightspeed-first-platform.md`, in
+four parts:
+
+1. **Lightspeed is the first platform**, not Citrus-Lime.
+2. **UK shops first.** North America is a deliberate later phase, not a pivot
+   when the UK disappoints.
+3. **R-Series is the integration target**, not X-Series.
+4. **The free product is the booking system and the diary together**, as one
+   thing — not booking leading with the diary underneath it.
+
+Point 4 reverses the 1 September narrowing. That narrowing existed because every
+serious competitor ships a workshop module, so a diary-led pitch asked a shop to
+displace something it owns. **That is true of Citrus-Lime and not true of
+Lightspeed**, which ships a job record with a date on it rather than a diary. The
+objection that forced the split is absent on this platform, and splitting the
+product costs the only thing that distinguishes it. Jack's reasoning, recorded:
+*"both together, because both together would definitely be an improvement on
+anything any of the competitors make."*
+
+Unchanged from 1 September: the free product runs alongside whatever till the
+shop already has, and the shape is **coexistence** — jobs booked through our link
+are worked in our system, everything else stays where it is.
+
+**Do not repeat the Citrus-Lime API argument.** The 1 September text said their
+API agreement blocks us from building a diary for their shops. §2 of the
+Lightspeed decision records that premise as **wrong**: the agreement bars a
+competing *application built on their API*, which says nothing about a standalone
+product sold to shops that happen to run Citrus-Lime, because a contract we never
+sign cannot bind us.
+
+**The claim this rests on is not yet evidenced.** "Both together beat anything
+the competitors make" is the whole proposition and nobody has looked at a
+competitor's product. Lightspeed's workshop gap is occupied — Velodrop, Workshop
+by Bikebook, velobench, Trail Hits Hub, HubTiger, Masterlinq. Until the Velodrop
+and Bikebook trials are run, treat "better than theirs" as an assumption this
+plan rests on, not a fact it stands on. If it is wrong, point 4 changes — not the
+platform choice. See §6 and §7 of the decision.
+
+Prior reasoning, still valid for its detail:
+`docs/decisions/2026-09-01-wedge-booking-vs-workshop.md`.
 
 ## 2. The five things that are true and must stay true
 
@@ -186,7 +215,15 @@ two probes (nested transaction, cross-tenant FK) re-run and behaving correctly.
 ### P3 — Workshop table stakes (W1) and the front door
 
 **Reordered 1 September 2026 by the wedge decision.** WS-2 and WS-5 are the wedge
-itself and come first after P0; WS-6 to WS-8 are new. WS-6 exists because service
+itself and come first after P0; WS-6 to WS-8 are new.
+
+> **Ordering not yet revised for the 2 September Lightspeed decision.** That
+> decision states it affects "§1 and the P3/P5 ordering", but does not say what
+> the new order is. §1 is now corrected; **this ordering is not**, and the
+> promotion rationale below still assumes booking-led-with-diary-underneath,
+> which point 4 reversed. Resequencing P3/P5 is a decision for Jack, not an edit.
+> Until it is made, treat the order below as the 1 September order and the
+> rationale for it as superseded. Recorded 3 September 2026. WS-6 exists because service
 reminders are a revenue lever a competitor already sells and the plan had no task
 for them. WS-7 and WS-8 replace the phone-number match DS-7 removed: the shop
 recovers the deduplication through a staff decision, and the customer gets a nudge
@@ -340,6 +377,7 @@ business days, no marketing SMS to a US number without a compliant consent flow.
 | Date | Change |
 |---|---|
 | 2026-08-31 | Created. Supersedes the sequencing in the system-build and workshop specs following the corrective architecture review. Adds P0 as a blocking phase on the strength of the verified cross-tenant foreign-key defect. |
-| 2026-09-01 | **Wedge narrowed** to the online booking system alone, from the whole workshop module — every competitor but i-BikeShop already ships one, so the free workshop still asked a shop to displace what it owns. First market is Citrus-Lime shops; the shape is coexistence, because their API cannot write a scheduled booking and their API agreement bars a competing application. §1 rewritten. WS-2, WS-5 and PF-2 promoted. WS-6 (service reminders) added — the wedge needs it and no task existed. WS-7 and WS-8 added to replace the guest phone-number match removed by DS-7. See `docs/decisions/2026-09-01-wedge-booking-vs-workshop.md`. |
+| 2026-09-01 | **[SUPERSEDED 2026-09-02 — see the 2026-09-03 entry. Build for Lightspeed; the Citrus-Lime API premise below is wrong.]** **Wedge narrowed** to the online booking system alone, from the whole workshop module — every competitor but i-BikeShop already ships one, so the free workshop still asked a shop to displace what it owns. First market is Citrus-Lime shops; the shape is coexistence, because their API cannot write a scheduled booking and their API agreement bars a competing application. §1 rewritten. WS-2, WS-5 and PF-2 promoted. WS-6 (service reminders) added — the wedge needs it and no task existed. WS-7 and WS-8 added to replace the guest phone-number match removed by DS-7. See `docs/decisions/2026-09-01-wedge-booking-vs-workshop.md`. |
 | 2026-09-01 | **Six tasks marked partial** after an audit of all 63 against `master`: DS-3, PF-1, PF-2, PF-3, WS-2, TILL-5. Nothing else in the plan is started; the audit found no fully completed task except PL-15, done the same day the plan was written. **DS-0 marked blocked** — the revision prompt its done-condition is measured against does not exist on any branch. Added open decision 9 (what G2 becomes without DP-1 to DP-4) and fixed the duplicate numbering in §10. |
+| 2026-09-03 | **Built for Lightspeed, not Citrus-Lime.** §1 rewritten to record the 2 September decision (`docs/decisions/2026-09-02-lightspeed-first-platform.md`): Lightspeed first, UK shops first, R-Series the integration target, and **the free product is booking and the diary together**, reversing the 1 September narrowing. The reversal holds because Lightspeed ships a job record with a date, not a diary, so the displacement objection that forced the split is absent there. §1 now also flags the Citrus-Lime API premise as wrong and not to be repeated, and records that "better than theirs" is an untested assumption pending the Velodrop and Bikebook trials. **P3/P5 ordering is NOT resequenced** — the decision says it is affected but not how; a note in P3 marks the rationale as superseded and the reorder as an open decision for Jack. Requested by Jack, 3 September 2026. |
 | 2026-08-31 | **Differentiator changed** after review with Jack: the experience, not the structured inspection. P5 rebuilt around the job-done email — plain-English summary, photos, itemised pricing, invoice, pay in one tap. Inspection demoted to P5b as an extension of the same machinery. Adds the payments architecture as a blocking open decision. |
