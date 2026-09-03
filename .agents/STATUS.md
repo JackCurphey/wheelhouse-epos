@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-03
-**Branch:** `chore/track-agents-status`
+**Branch:** `main`
 **Blocked on:** nothing. Every open item below is Jack's to decide.
 
 > **This file is tracked and authoritative.** It and `ARCHIVE.md` are the only
