@@ -8,9 +8,16 @@ data/*.db.bak*
 data/shops/
 _delete_me_test_artifacts/
 
-# Agent working memory - volatile per-project state, not part of the repo.
-# Committed specs and plans live in docs/, not here.
-.agents/
+# Agent working memory. The directory is volatile scratch and stays ignored,
+# with ONE exception: STATUS.md is tracked, because the global process requires
+# a fresh session to read it before starting work and an untracked file cannot
+# serve that purpose for anyone but the machine it happens to sit on.
+# A negation cannot re-include a file under an excluded DIRECTORY, which is why
+# this ignores the contents (.agents/*) rather than the directory itself.
+# Committed specs and plans still live in docs/, not here.
+.agents/*
+!.agents/STATUS.md
+!.agents/ARCHIVE.md
 
 # Vite bundle - rebuilt from src/ on every deploy, never committed.
 public/dist/
