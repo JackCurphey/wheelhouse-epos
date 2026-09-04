@@ -2115,7 +2115,7 @@ function serializePortalBooking(row) {
 // mechanic's manual review before it counts as scheduled - it still occupies
 // its diary slot like any other status, so a second booking can't silently
 // double it up, but staff have to explicitly approve it first.
-const JOB_STATUSES = ['pending', 'scheduled', 'waiting_parts', 'on_hold', 'complete'];
+export const JOB_STATUSES = ['pending', 'scheduled', 'waiting_parts', 'on_hold', 'complete'];
 
 function resolveJobStatus(raw, existing) {
   if (raw === undefined) return existing || 'scheduled';

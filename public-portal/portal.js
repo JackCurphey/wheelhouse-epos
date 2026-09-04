@@ -642,7 +642,16 @@ async function renderBookingFormView() {
             <label for="f-job-type">What kind of job is this? *</label>
             <select id="f-job-type" required>
               <option value="" disabled ${jobTypes.length ? 'selected' : ''}>Choose the closest match…</option>
-              ${jobTypes.map((t) => `<option value="${esc(t.value)}">${esc(t.label)}</option>`).join('')}
+              ${jobTypes
+                .map((t) => {
+                  // The duration was always known here (PORTAL_JOB_TYPES sends
+                  // it, and jobTypeFitError already checks against it) - it
+                  // just used to reach the customer only as an error after
+                  // they had picked something too long.
+                  const d = PortalCopy.formatDuration(t.minutes);
+                  return `<option value="${esc(t.value)}">${esc(t.label)}${d ? ` — about ${esc(d)}` : ''}</option>`;
+                })
+                .join('')}
             </select>
             <div class="field-error" id="f-job-type-error" style="display:none;"></div>
           </div>
@@ -749,15 +758,22 @@ async function renderMyBookingsView() {
             ? `<div class="empty-state">No bookings yet.</div>`
             : bookings
                 .map(
-                  (b) => `
+                  (b) => {
+                    // b.status is the raw workshop_jobs enum - 'waiting_parts'
+                    // and 'on_hold' both read as database internals. The CSS
+                    // class still uses the raw value; only the words change.
+                    const s = PortalCopy.statusFor(b.status);
+                    return `
               <div class="booking-list-item">
                 <div>
                   <div><strong>${esc(b.jobDate)}${b.startTime ? ` at ${esc(b.startTime)}${b.endTime ? `–${esc(b.endTime)}` : ''}` : ''}</strong></div>
                   <div class="muted">${esc(b.notes || b.title || '')}${b.mechanicName ? ` · ${esc(b.mechanicName)}` : ''}</div>
+                  ${s.explanation ? `<div class="muted">${esc(s.explanation)}</div>` : ''}
                 </div>
-                <span class="badge status-${esc(b.status)}">${esc(b.status)}</span>
+                <span class="badge status-${esc(b.status)}">${esc(s.label)}</span>
               </div>
-            `
+            `;
+                  }
                 )
                 .join('')
         }
