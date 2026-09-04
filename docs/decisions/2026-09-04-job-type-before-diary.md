@@ -64,21 +64,33 @@ Two consequences follow, and they point opposite ways:
 - **Over-promising.** A 120-minute service appears bookable at 16:30 against an
   18:00 close. The customer finds out it is not, later.
 
-### 2.2 `fullDays` has the same blindness one layer down
+### 2.2 Full days are a separate mechanism, and are unexplained
 
-The availability route computes free minutes per mechanic-day and marks the day
-full when the total falls below `full_day_threshold_minutes`
-(`server/server.js:3415-3437`) **[V]**. It merges overlapping jobs so time is
-not double-counted, but it compares a **total**, not a contiguous block.
+**Corrected 4 September.** An earlier version of this section described
+`fullDays` as having "the same blindness one layer down", on the grounds that it
+compares a **total** of free minutes rather than a contiguous block
+(`server/server.js:3415-3437`) **[V]**. That reading was wrong, and is retained
+here only so the correction is legible.
 
-So a day with 90 free minutes split across three separate 30-minute gaps is not
-marked full, yet cannot take a 60-minute repair. And a day with 100 contiguous
-free minutes is marked full under a 120-minute threshold, though a quick fix
-would drop into it without trouble. The portal renders full days as
-unbookable, exactly like a closed day **[V]** `portal.js`.
+`full_day_threshold_minutes` is a deliberate capacity reserve. Jack: shops need
+to account for *"mechanics' lunches, admin time, and all the little bits that
+aren't directly working on a bike"* — a mechanic does not start on a bike at
+09:00 and stop at 18:00. For a reserve, a **total is the correct measure**:
+lunch needs time in the day, not time in a particular place. The default is 120
+minutes (`005_full_day_threshold.sql`) **[V]**.
 
-Knowing the duration up front is the only change that addresses §2.1 and §2.2
-coherently. Every alternative is a patch on a grid that is guessing.
+What survives from the original criticism is only this: the portal renders a
+full day exactly like a closed day, with no explanation **[V]** `portal.js`. A
+customer cannot tell "this shop is shut" from "this shop is out of capacity",
+and neither can they tell that a shorter job might still have fitted. That is a
+content problem, not an arithmetic one.
+
+The reserve itself has a real defect, but a different one from the one first
+claimed — see §5.2.
+
+Knowing the duration up front is what addresses §2.1. §2.2 is a separate
+concern with its own decision, now recorded in
+`2026-09-04-booking-mode-and-downtime.md`.
 
 ### 2.3 The current flow fails in the most expensive place
 
@@ -162,16 +174,23 @@ the first thing a spec would need to settle.
    disappears and no one has to infer why. The residual need is only that the
    currently chosen job type stays visible on screen, so a customer always
    knows which job the marks refer to.
-2. **`fullDays` has to change or move, on both routes.** A day marked full may
-   still fit a 30-minute job. Either the threshold check moves client-side
-   against the chosen duration, or `/availability` starts accepting a duration
-   parameter. Note this is not only a display problem: the booking POST applies
-   the same duration-blind gate independently — `mechanicFreeMinutes()` against
-   `full_day_threshold_minutes`, rejecting with *"That mechanic is fully booked
-   that day"* (`server/server.js:3534`) **[V]** — so a short job filtered *in*
-   by a smarter client would still be refused by the server. Both sides move or
-   neither does. **This is the part of the change that is not small**, and it is
-   the main open question for a spec. Not yet decided either way.
+2. **The capacity reserve does not actually reserve.** **Corrected 4
+   September** — this item previously claimed `fullDays` had to change because
+   it was duration-blind. It is deliberately duration-blind (§2.2). The real
+   defect is that the gate tests free time *before* the booking and never asks
+   whether the booking would consume the reserve: `freeMinutes <
+   full_day_threshold_minutes` (`server/server.js:3535`) **[V]**.
+
+   Proven against a running server, not inferred: a 540-minute day with a
+   120-minute threshold and 420 minutes already booked has exactly 120 free.
+   `120 < 120` is false, so a 120-minute service is accepted — `201 Created` —
+   and the day ends with **zero** free minutes. One booking consumes the entire
+   lunch and admin allowance, every time.
+
+   The fix and the better models for downtime are in
+   `2026-09-04-booking-mode-and-downtime.md`. It matters to *this* decision
+   because in drop-off mode that reserve arithmetic stops being a coarse gate
+   and becomes the entire booking rule.
 3. **It assumes a short list.** Three job types is a comfortable pre-question.
    If the merged service catalogue (JOB-12/13, PR #24) ever feeds this list,
    a pre-question across twenty services is a materially worse experience and
