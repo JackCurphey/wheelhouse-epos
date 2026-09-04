@@ -191,10 +191,20 @@ the first thing a spec would need to settle.
    `2026-09-04-booking-mode-and-downtime.md`. It matters to *this* decision
    because in drop-off mode that reserve arithmetic stops being a coarse gate
    and becomes the entire booking rule.
-3. **It assumes a short list.** Three job types is a comfortable pre-question.
-   If the merged service catalogue (JOB-12/13, PR #24) ever feeds this list,
-   a pre-question across twenty services is a materially worse experience and
-   this design would need revisiting.
+3. **It assumes a short list, and that assumption is going away.** Three job
+   types is a comfortable pre-question. **Confirmed by Jack on 4 September** that
+   `PORTAL_JOB_TYPES` is placeholder scaffolding: *"every job item will have a
+   time associated with it when we create it... The time we just have in the
+   cells currently is just an estimate before we add that feature."* The real
+   durations come from `workshop_services.minutes` (JOB-12/13, PR #24), a list
+   that may run to twenty or more entries, and the line model already allows
+   several services on one job.
+
+   So this is no longer a hypothetical. A pre-question over a shop's full
+   service catalogue is materially worse than one over three job types, and a
+   single-select dropdown cannot express a puncture *plus* a gear service. This
+   design needs revisiting before it is built. Tracked as §6.3 of
+   `2026-09-04-booking-mode-and-downtime.md`.
 4. **Server-side validation stays regardless.** `checkJobSlot()` (`server/server.js:3543`)
    re-checks fit against closing time and every other booked slot, and must
    continue to **[V]**. The client is never authoritative. This change stops

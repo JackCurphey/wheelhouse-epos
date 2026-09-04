@@ -121,18 +121,62 @@ shops report changeover time mattering separately from lunch; unmeasured **[U]**
 
 ## 5. What exists already, and what is missing
 
-### 5.1 The gap that decides the size of this work
+### 5.1 Where a job's duration comes from
 
-**`workshop_jobs` stores no duration.** The table has `start_time` and
-`end_time` and nothing else (`001_init_schema.sql:167-181`) **[V]**, and both
-`mechanicFreeMinutes()` and the `/availability` query filter to rows where
-`start_time` is non-empty **[V]**. An untimed job therefore contributes **zero**
-busy minutes, so in drop-off mode every day computes as entirely free, forever.
+**Revised 4 September, after Jack's clarification.** An earlier version of this
+section concluded that a duration column on `workshop_jobs` was needed and was
+"a migration, the first thing a plan should schedule". That is probably wrong.
+The correction matters enough to keep visible.
 
-Capacity in drop-off mode is impossible until a job's estimated minutes live on
-the row. **This is a migration**, and it is the first thing a plan should
-schedule. The estimate itself already exists at booking time — `PORTAL_JOB_TYPES`
-sends 30/60/120 **[V]** — it is simply discarded once the job is written.
+The problem is real: `workshop_jobs` has `start_time` and `end_time` and nothing
+else (`001_init_schema.sql:167-181`) **[V]**, and both `mechanicFreeMinutes()`
+and the `/availability` query filter to rows where `start_time` is non-empty
+**[V]**. An untimed job contributes **zero** busy minutes, so in drop-off mode
+every day computes as entirely free, forever.
+
+What was missed is that the durations already have a home. Jack: *"every job
+item will have a time associated with it when we create it — a gear service
+will be 45 minutes, a puncture 10 minutes, a general service 2 hours. The time
+we just have in the cells currently is just an estimate before we add that
+feature."* That feature is largely built:
+
+- `workshop_services` carries `minutes` per service
+  (`014_workshop_services.sql:9`) **[V]**.
+- Labour lines carry `service_id` and `minutes` on `sale_document_items`
+  (`014_workshop_services.sql:24-26`) **[V]**, and every workshop job already
+  gets an order those lines can hang from.
+- The portal uses **none** of it. `POST /bookings` creates the job with an
+  auto-order and no labour lines (`server/server.js:3583`) **[V]**; the chosen
+  job type only sets `end_time` via `addMinutesToTime`. `PORTAL_JOB_TYPES`
+  (30/60/120) is placeholder scaffolding, and Jack has confirmed it as such.
+
+### 5.1.1 The split this implies
+
+**Duration is a property of the job's services. Start time is a property of the
+schedule.** Today the two are conflated: duration is only expressed as
+`end_time − start_time`, which is exactly why it evaporates when the times go
+away. Under the split, `end_time` becomes *derived* in timed mode, and in
+drop-off mode there is no schedule at all and the services carry the duration
+alone. One rule, both modes.
+
+It also means a job's duration is a **sum**, not a single value — a puncture
+plus a gear service is 55 minutes — because the line model already permits
+several services on one job.
+
+### 5.1.2 Open fork: derive or denormalise
+
+Not decided, and it should be decided before anything is built.
+
+1. **Derive** — sum `sale_document_items.minutes` for the order linked to the
+   job. No migration, one source of truth, no drift. Cost: every availability
+   query becomes a join and aggregate across two more tables, and availability
+   is the hottest read path in the portal.
+2. **Denormalise** — keep a summed `estimated_minutes` on `workshop_jobs`,
+   written whenever the lines change. Capacity queries stay flat and fast. Cost:
+   a migration, and a second copy of a fact that can drift from the lines.
+
+The earlier version of this document assumed option 2 without noticing option 1
+existed.
 
 ### 5.2 Encouraging: the staff list view largely exists
 
@@ -152,12 +196,16 @@ What is missing is the mode switch, the duration, and the capacity arithmetic.
 ### 5.3 Missing
 
 1. A per-shop booking mode setting, and a staff UI to set it.
-2. A duration column on `workshop_jobs` (§5.1).
-3. Capacity from summed durations rather than from start/end times, in both
+2. A resolution to §5.1.2 — derive durations from labour lines, or denormalise
+   them onto the job.
+3. The portal offering the shop's own `workshop_services` in place of the
+   hardcoded `PORTAL_JOB_TYPES`, and writing a labour line when a booking is
+   made, so a job carries its real duration. See §6.3 for the cost of this.
+4. Capacity from summed durations rather than from start/end times, in both
    `mechanicFreeMinutes()` and `/availability`.
-4. A day-picker in the customer portal for drop-off mode.
-5. Drop-off window and lead-time settings (§2, item 3).
-6. The staff diary choosing list or grid by mode.
+5. A day-picker in the customer portal for drop-off mode.
+6. Drop-off window and lead-time settings (§2, item 3).
+7. The staff diary choosing list or grid by mode.
 
 ## 6. Open questions
 
@@ -169,7 +217,14 @@ What is missing is the mode switch, the duration, and the capacity arithmetic.
    currently requires one (`resolveJobMechanicId` **[V]**). A shop that fits work
    in around the day may prefer to assign later, which would change what the
    customer picks and what capacity is measured against.
-3. **Whether "no room left that day" needs to say more.** §2.2 of the other
+3. **What the customer picks, once the catalogue replaces `PORTAL_JOB_TYPES`.**
+   Three job types is a comfortable question. A shop's real service list may run
+   to twenty or more, and the line model allows picking several. A single-select
+   dropdown is the wrong shape for that, and this is the one part of Jack's
+   direction that makes the customer's experience harder rather than easier.
+   It needs its own answer — grouping, a short "what's wrong?" front end over
+   the catalogue, or something else. **Not designed.**
+4. **Whether "no room left that day" needs to say more.** §2.2 of the other
    document notes a full day is currently indistinguishable from a closed one.
    In drop-off mode this is the *only* signal a customer gets, so it carries far
    more weight.
