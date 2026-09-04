@@ -1,7 +1,9 @@
 # Ask the job type before showing the diary
 
 **Date:** 4 September 2026
-**Status:** **PROPOSED — not decided.** Raised by Jack on 4 September 2026 while
+**Status:** **PROPOSED — not decided.** Shape refined by Jack on 4 September
+(see §4.2), which is now the preferred direction; the ordering question inside
+it is still open. Raised by Jack on 4 September 2026 while
 scoping customer-facing content work on the booking portal. Recorded here
 because the content work was scoped and started first (Jack's call), and this
 question would otherwise be lost in a chat log.
@@ -99,21 +101,67 @@ visitor, that the shop has slots this week. Someone arriving cold from a shop's
 storefront would instead land on a form. That is a conversion cost, and it is
 not obviously smaller than the problems in §2.
 
-## 4. Recommended shape (Claude's recommendation, not a decision)
+## 4. Shape
+
+### 4.1 Claude's original recommendation
 
 Keep the diary as the landing view. Put the job-type selector above it as a
 persistent, always-visible filter that re-renders availability on change.
 Nobody is blocked from seeing availability; everybody sees availability filtered
 to what they are actually booking.
 
+### 4.2 Jack's refinement, 4 September — preferred
+
+Jack's version keeps the flow order exactly as it is today, and changes only
+what the diary *shows* once a job type is known:
+
+> *"it might be worth doing it so that it's the same as it is now, but once the
+> customer is prompted to select the job they want, that will filter it and not
+> show a customer a job that they don't have enough time to book in"*
+
+and, on how the filtering should appear:
+
+> *"if there was a slot that was open in the diary, but there's not enough time
+> to book in for the job that they want, it will show in the diary and just say
+> 'not enough time for this job' or something (just so that they're not confused
+> why they saw an open slot that's not now available)"*
+
+**A slot that cannot fit the chosen job stays visible and says why.** It is not
+removed from the grid, and it is not left looking bookable.
+
+This is better than §4.1 on the point that matters most. §5.1 named silent
+hiding as the main risk of filtering at all — a customer reading a sparse week
+as a fully booked shop. A slot labelled *"not enough time for this job"* is not
+hiding anything: it tells the customer the shop is open then, that their
+particular job will not fit, and implicitly that a shorter job would. That is
+strictly more information than either today's flow or §4.1 gives them.
+
+It also avoids the cost §3 raised. Nothing moves in front of the diary, so a
+visitor arriving cold still lands on visible availability.
+
+**Open question on ordering.** §4.2 does not by itself say *when* the job type
+is first asked, and there are two readings:
+
+1. The job type is asked up front (defaulted, changeable), the diary renders
+   marked-up from the start, and changing the job type re-marks it.
+2. The order stays literally as today — click a slot, then choose the job —
+   and a job that does not fit returns the customer to a diary that is now
+   marked up, instead of to an error on the form.
+
+Both satisfy "show the slot, say why". They differ in whether a first-time
+visitor sees a plain grid or a marked-up one. **Not yet resolved** — this is
+the first thing a spec would need to settle.
+
 ## 5. Costs and open questions
 
 1. **Wrong guesses become silent.** Today, choosing "service" when you meant
-   "quick fix" produces a visible error. Under filtering it quietly hides slots,
-   and a customer may read a sparse week as a fully booked shop. **This is the
-   main risk of the change.** It argues for the filter stating its effect
-   conspicuously at all times — *"Showing times that fit a 2-hour general
-   service — change"* — never a quiet dropdown.
+   "quick fix" produces a visible error. Under §4.1's filtering it would
+   quietly hide slots, and a customer might read a sparse week as a fully
+   booked shop. This was the main risk of the change — and **§4.2 removes it**:
+   an unfittable slot stays on the grid carrying its own reason, so nothing
+   disappears and no one has to infer why. The residual need is only that the
+   currently chosen job type stays visible on screen, so a customer always
+   knows which job the marks refer to.
 2. **`fullDays` has to change or move, on both routes.** A day marked full may
    still fit a 30-minute job. Either the threshold check moves client-side
    against the chosen duration, or `/availability` starts accepting a duration
