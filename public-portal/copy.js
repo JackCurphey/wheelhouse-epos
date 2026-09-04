@@ -52,6 +52,29 @@ globalThis.PortalCopy = {
     return { label: words ? words[0].toUpperCase() + words.slice(1) : 'Unknown', explanation: '' };
   },
 
+  // What the week grid can show, in the order the legend lists it. Without
+  // this a customer sees grey days, hatched blocks and "Full" badges with
+  // nothing saying what any of them mean.
+  DIARY_LEGEND: [
+    { key: 'free', label: 'Free — click to book' },
+    { key: 'busy', label: 'Already booked' },
+    { key: 'closed', label: 'Shop closed, or the mechanic is off' },
+    { key: 'full', label: 'No room left that day' },
+  ],
+
+  // Shown after a booking request is accepted. A signed-in customer at least
+  // lands on My Bookings; a guest used to be returned to the picker with a
+  // three-second toast and no record at all that anything had happened.
+  //
+  // Deliberately factual about what happens next. The shop very likely does
+  // ring people back, but the software does not send anything, so this copy
+  // does not promise a call, a text, or a time.
+  BOOKING_CONFIRMED: {
+    heading: 'Request sent',
+    account: 'The shop has your request and will confirm it. You can check back here for its status at any time.',
+    guest: 'The shop has your request, along with the name and phone number you gave. There is no account to sign in to, so please keep these details for your own reference.',
+  },
+
   // PORTAL_JOB_TYPES already sends minutes (30/60/120) and portal.js already
   // uses them to check a job fits before closing - this is what puts that
   // number in front of the customer choosing, instead of only in the error

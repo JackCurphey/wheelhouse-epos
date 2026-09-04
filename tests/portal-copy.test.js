@@ -80,3 +80,61 @@ test('statusFor returns the real copy for a known status', () => {
   const copy = loadPortalCopy();
   assert.equal(copy.statusFor('scheduled').label, copy.JOB_STATUS.scheduled.label);
 });
+
+// ---- Status badges must be visible, not just worded ----
+
+test('every job status has a badge style, not just badge words', () => {
+  // styles.css had .badge.status-pending only, so 'Waiting to be confirmed'
+  // rendered as a lilac pill and the other four as bare text. The tokens for
+  // all five already exist (the staff diary's .job-card.status-* uses them)
+  // and design-contrast.test.js already gates them for AA.
+  const css = readFileSync(path.join(root, 'public/styles.css'), 'utf8');
+  const missing = JOB_STATUSES.filter((s) => !css.includes(`.badge.status-${s}`));
+  assert.deepEqual(missing, [], 'job statuses with no badge styling');
+});
+
+test('badge styles use status tokens rather than raw colours', () => {
+  const css = readFileSync(path.join(root, 'public/styles.css'), 'utf8');
+  for (const status of JOB_STATUSES) {
+    const rule = css.slice(css.indexOf(`.badge.status-${status}`));
+    const line = rule.slice(0, rule.indexOf('}'));
+    assert.match(line, new RegExp(`--status-${status}-bg`), `${status} badge does not use its own bg token`);
+    assert.match(line, new RegExp(`--status-${status}-ink`), `${status} badge does not use its own ink token`);
+  }
+});
+
+// ---- Dates ----
+
+test('My Bookings formats dates instead of printing raw ISO', () => {
+  // The portal already has fmtDateLabel() and uses it everywhere else;
+  // renderMyBookingsView printed b.jobDate straight, so a customer read
+  // "2026-09-11" instead of "Fri, 11 Sep".
+  const js = readFileSync(path.join(root, 'public-portal/portal.js'), 'utf8');
+  assert.ok(!js.includes('esc(b.jobDate)'), 'My Bookings still renders the raw ISO date');
+});
+
+// ---- The two views that had no words at all ----
+
+test('the diary legend explains every state the grid can show', () => {
+  const copy = loadPortalCopy();
+  // Arrays come back from the vm context in another realm, so compare
+  // values rather than structures - deepEqual would fail on the prototype.
+  const keys = Array.from(copy.DIARY_LEGEND, (entry) => entry.key).sort().join(',');
+  assert.equal(keys, 'busy,closed,free,full');
+  for (const entry of copy.DIARY_LEGEND) {
+    assert.ok(entry.label && entry.label.length > 3, `legend entry ${entry.key} has no usable label`);
+  }
+});
+
+test('a guest gets a confirmation they can read, not just a toast', () => {
+  // A signed-in customer at least lands on My Bookings. A guest was sent
+  // back to the picker with no record that anything had happened.
+  const copy = loadPortalCopy();
+  assert.ok(copy.BOOKING_CONFIRMED.heading, 'no confirmation heading');
+  assert.ok(copy.BOOKING_CONFIRMED.guest.length > 20, 'guest confirmation says too little');
+  assert.ok(copy.BOOKING_CONFIRMED.account.length > 20, 'account confirmation says too little');
+  // Neither may promise contact the software does not itself make.
+  for (const line of [copy.BOOKING_CONFIRMED.guest, copy.BOOKING_CONFIRMED.account]) {
+    assert.ok(!/we('| wi)ll (call|ring|text|email)/i.test(line), `confirmation promises contact the system does not make: ${line}`);
+  }
+});

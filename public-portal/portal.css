@@ -112,3 +112,49 @@
   gap: 8px;
   margin-bottom: 16px;
 }
+
+/* Legend for the week grid. The swatches deliberately reuse the exact
+   backgrounds the grid itself paints (see .wk-day-col.day-off,
+   .wk-day-col.day-full and .portal-busy-block above) rather than
+   approximating them - a legend that does not match what it explains is
+   worse than none. Note that "already booked" and "closed" share the same
+   grey hatch in the grid today; only their shape on screen tells them
+   apart, which the labels have to carry. */
+.portal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  flex: none;
+}
+.legend-swatch.swatch-free { background: var(--panel); }
+.legend-swatch.swatch-busy {
+  background: repeating-linear-gradient(45deg, var(--hatch-a), var(--hatch-a) 4px, var(--hatch-b) 4px, var(--hatch-b) 8px);
+}
+.legend-swatch.swatch-closed {
+  background-color: var(--hatch-a);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--hatch-b) 4px, var(--hatch-b) 8px);
+}
+.legend-swatch.swatch-full {
+  background-color: var(--warn-bg);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--hatch-full) 4px, var(--hatch-full) 8px);
+}
+
+/* Confirmation panel - the booking stated back after it is accepted. */
+.confirmation-detail {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-sunken);
+}
