@@ -183,3 +183,40 @@ test('POST /api/workshop-services rejects a negative price with 400 and a human-
   const body = await res.json();
   assert.match(body.error, /price/i);
 });
+
+test('a new service is not bookable online until the shop says so', async () => {
+  const res = await authedFetch('/api/workshop-services', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Bottom bracket service', price: 45, minutes: 60 }),
+  });
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.equal(body.bookableOnline, false, 'the whole catalogue must not be exposed by default');
+});
+
+test('a shop can mark a service bookable online', async () => {
+  const created = await (await authedFetch('/api/workshop-services', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Puncture repair', price: 12, minutes: 15, bookableOnline: true }),
+  })).json();
+  assert.equal(created.bookableOnline, true);
+
+  const updated = await (await authedFetch(`/api/workshop-services/${created.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name: 'Puncture repair', price: 12, minutes: 15, bookableOnline: false }),
+  })).json();
+  assert.equal(updated.bookableOnline, false, 'a shop must be able to withdraw a service from online booking');
+});
+
+test('leaving bookableOnline out of a PUT does not silently withdraw the service', async () => {
+  const created = await (await authedFetch('/api/workshop-services', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Gear service', price: 30, minutes: 45, bookableOnline: true }),
+  })).json();
+
+  const updated = await (await authedFetch(`/api/workshop-services/${created.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ name: 'Gear service', price: 32, minutes: 45 }),
+  })).json();
+  assert.equal(updated.bookableOnline, true, 'a price edit must not remove a service from online booking');
+});

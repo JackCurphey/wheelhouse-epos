@@ -2903,6 +2903,14 @@ function serializeWorkshopSettings(row) {
     closingTime: row.closing_time,
     openingDays: parseWorkingDays(row.opening_days),
     fullDayThresholdMinutes: row.full_day_threshold_minutes,
+    bookingMode: row.booking_mode,
+    dropoffWindowStart: row.dropoff_window_start,
+    dropoffWindowEnd: row.dropoff_window_end,
+    timedLeadMinutes: row.timed_lead_minutes,
+    unspecifiedJobMinutes: row.unspecified_job_minutes,
+    // INTEGER 0/1 in the column, boolean over the wire - the client renders
+    // it directly, same shape serializeWorkshopService uses for `active`.
+    showPricesOnline: row.show_prices_online === 1,
     updatedAt: row.updated_at,
   };
 }
@@ -2935,9 +2943,50 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
       return badRequest(res, 'The full-day threshold must be a whole number of minutes between 0 and 480');
     }
   }
+
+  const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : existing.booking_mode;
+  if (bookingMode !== 'timed' && bookingMode !== 'dropoff') {
+    return badRequest(res, "Booking mode must be either 'timed' or 'dropoff'");
+  }
+
+  const dropoffWindowStart = body.dropoffWindowStart !== undefined
+    ? String(body.dropoffWindowStart).trim() : existing.dropoff_window_start;
+  const dropoffWindowEnd = body.dropoffWindowEnd !== undefined
+    ? String(body.dropoffWindowEnd).trim() : existing.dropoff_window_end;
+  if (!TIME_RE.test(dropoffWindowStart) || !TIME_RE.test(dropoffWindowEnd)) {
+    return badRequest(res, 'Drop-off window times must look like 09:00');
+  }
+  if (dropoffWindowEnd <= dropoffWindowStart) {
+    return badRequest(res, 'The drop-off window must end after it starts');
+  }
+
+  let timedLeadMinutes = existing.timed_lead_minutes;
+  if (body.timedLeadMinutes !== undefined) {
+    timedLeadMinutes = Number(body.timedLeadMinutes);
+    if (!Number.isInteger(timedLeadMinutes) || timedLeadMinutes < 0 || timedLeadMinutes > 240) {
+      return badRequest(res, 'The arrival lead time must be a whole number of minutes between 0 and 240');
+    }
+  }
+
+  let unspecifiedJobMinutes = existing.unspecified_job_minutes;
+  if (body.unspecifiedJobMinutes !== undefined) {
+    unspecifiedJobMinutes = Number(body.unspecifiedJobMinutes);
+    if (!Number.isInteger(unspecifiedJobMinutes) || unspecifiedJobMinutes <= 0 || unspecifiedJobMinutes > 480) {
+      return badRequest(res, 'The not-sure duration must be a whole number of minutes between 1 and 480');
+    }
+  }
+
+  const showPricesOnline = body.showPricesOnline === undefined
+    ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
+
   await db.prepare(
-    'UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, full_day_threshold_minutes = ?, updated_at = ? WHERE id = ?'
-  ).run(openingTime, closingTime, openingDays, fullDayThresholdMinutes, nowIso(), existing.id);
+    `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?,
+       full_day_threshold_minutes = ?, booking_mode = ?, dropoff_window_start = ?,
+       dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
+       show_prices_online = ?, updated_at = ? WHERE id = ?`
+  ).run(openingTime, closingTime, openingDays, fullDayThresholdMinutes, bookingMode,
+        dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
+        showPricesOnline, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
@@ -2952,6 +3001,11 @@ export function serializeWorkshopService(row) {
     minutes: row.minutes,
     // active is INTEGER 0/1 on this table, matching products.active.
     active: row.active === 1,
+    // Whether a customer may book this service themselves. The catalogue is
+    // written in mechanic language and organised by work performed; only the
+    // subset a shop ticks belongs in front of a customer. See
+    // docs/decisions/2026-09-04-booking-mode-and-downtime.md §7.
+    bookableOnline: row.bookable_online === 1,
   };
 }
 
@@ -2984,9 +3038,10 @@ route('POST', '/api/workshop-services', async (req, res) => {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
   }
+  const bookableOnline = body.bookableOnline ? 1 : 0;
   const info = await db.prepare(
-    'INSERT INTO workshop_services (name, price, minutes) VALUES (?, ?, ?)'
-  ).run(fields.name, fields.price, fields.minutes);
+    'INSERT INTO workshop_services (name, price, minutes, bookable_online) VALUES (?, ?, ?, ?)'
+  ).run(fields.name, fields.price, fields.minutes, bookableOnline);
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
   sendJson(res, 201, serializeWorkshopService(row));
 });
@@ -3004,9 +3059,11 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
     throw err;
   }
   const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
+  const bookableOnline = body.bookableOnline === undefined
+    ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
   await db.prepare(
-    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, updated_at = ? WHERE id = ?'
-  ).run(fields.name, fields.price, fields.minutes, active, nowIso(), id);
+    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, updated_at = ? WHERE id = ?'
+  ).run(fields.name, fields.price, fields.minutes, active, bookableOnline, nowIso(), id);
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
   sendJson(res, 200, serializeWorkshopService(row));
 });
@@ -3527,13 +3584,17 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   // here, authoritatively, rather than trusting whatever the client showed.
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
 
-  // Even if this specific slot would technically fit, the shop may already
-  // consider the day full once too little free time is left overall (e.g.
-  // several small gaps between jobs adding up under the threshold) -
-  // checked as a coarser gate before the exact-slot checks below.
+  // The shop holds back full_day_threshold_minutes of each mechanic's day for
+  // lunch, admin, and the parts of a shift that are not spent on a bike. The
+  // check subtracts the job being booked: testing only the free time already
+  // left let one booking consume the entire reserve (540-minute day, 120-minute
+  // threshold, 420 booked, `120 < 120` false, a 120-minute service accepted,
+  // zero minutes left). Staff routes deliberately do NOT apply this - a shop
+  // may choose to work through its own lunch; a customer may not choose it for
+  // them.
   const freeMinutes = await mechanicFreeMinutes(mechResolved.mechanicId, jobDate, settings.opening_time, settings.closing_time);
-  if (freeMinutes < settings.full_day_threshold_minutes) {
-    return badRequest(res, 'That mechanic is fully booked that day - please choose another day.');
+  if (freeMinutes - jobType.minutes < settings.full_day_threshold_minutes) {
+    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
   }
 
   // Closed days, opening hours and mechanic overlap - the same rules the
