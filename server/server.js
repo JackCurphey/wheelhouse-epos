@@ -3527,13 +3527,17 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   // here, authoritatively, rather than trusting whatever the client showed.
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
 
-  // Even if this specific slot would technically fit, the shop may already
-  // consider the day full once too little free time is left overall (e.g.
-  // several small gaps between jobs adding up under the threshold) -
-  // checked as a coarser gate before the exact-slot checks below.
+  // The shop holds back full_day_threshold_minutes of each mechanic's day for
+  // lunch, admin, and the parts of a shift that are not spent on a bike. The
+  // check subtracts the job being booked: testing only the free time already
+  // left let one booking consume the entire reserve (540-minute day, 120-minute
+  // threshold, 420 booked, `120 < 120` false, a 120-minute service accepted,
+  // zero minutes left). Staff routes deliberately do NOT apply this - a shop
+  // may choose to work through its own lunch; a customer may not choose it for
+  // them.
   const freeMinutes = await mechanicFreeMinutes(mechResolved.mechanicId, jobDate, settings.opening_time, settings.closing_time);
-  if (freeMinutes < settings.full_day_threshold_minutes) {
-    return badRequest(res, 'That mechanic is fully booked that day - please choose another day.');
+  if (freeMinutes - jobType.minutes < settings.full_day_threshold_minutes) {
+    return badRequest(res, 'That mechanic has no room left that day - please choose another day.');
   }
 
   // Closed days, opening hours and mechanic overlap - the same rules the
