@@ -2903,6 +2903,14 @@ function serializeWorkshopSettings(row) {
     closingTime: row.closing_time,
     openingDays: parseWorkingDays(row.opening_days),
     fullDayThresholdMinutes: row.full_day_threshold_minutes,
+    bookingMode: row.booking_mode,
+    dropoffWindowStart: row.dropoff_window_start,
+    dropoffWindowEnd: row.dropoff_window_end,
+    timedLeadMinutes: row.timed_lead_minutes,
+    unspecifiedJobMinutes: row.unspecified_job_minutes,
+    // INTEGER 0/1 in the column, boolean over the wire - the client renders
+    // it directly, same shape serializeWorkshopService uses for `active`.
+    showPricesOnline: row.show_prices_online === 1,
     updatedAt: row.updated_at,
   };
 }
@@ -2935,9 +2943,50 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
       return badRequest(res, 'The full-day threshold must be a whole number of minutes between 0 and 480');
     }
   }
+
+  const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : existing.booking_mode;
+  if (bookingMode !== 'timed' && bookingMode !== 'dropoff') {
+    return badRequest(res, "Booking mode must be either 'timed' or 'dropoff'");
+  }
+
+  const dropoffWindowStart = body.dropoffWindowStart !== undefined
+    ? String(body.dropoffWindowStart).trim() : existing.dropoff_window_start;
+  const dropoffWindowEnd = body.dropoffWindowEnd !== undefined
+    ? String(body.dropoffWindowEnd).trim() : existing.dropoff_window_end;
+  if (!TIME_RE.test(dropoffWindowStart) || !TIME_RE.test(dropoffWindowEnd)) {
+    return badRequest(res, 'Drop-off window times must look like 09:00');
+  }
+  if (dropoffWindowEnd <= dropoffWindowStart) {
+    return badRequest(res, 'The drop-off window must end after it starts');
+  }
+
+  let timedLeadMinutes = existing.timed_lead_minutes;
+  if (body.timedLeadMinutes !== undefined) {
+    timedLeadMinutes = Number(body.timedLeadMinutes);
+    if (!Number.isInteger(timedLeadMinutes) || timedLeadMinutes < 0 || timedLeadMinutes > 240) {
+      return badRequest(res, 'The arrival lead time must be a whole number of minutes between 0 and 240');
+    }
+  }
+
+  let unspecifiedJobMinutes = existing.unspecified_job_minutes;
+  if (body.unspecifiedJobMinutes !== undefined) {
+    unspecifiedJobMinutes = Number(body.unspecifiedJobMinutes);
+    if (!Number.isInteger(unspecifiedJobMinutes) || unspecifiedJobMinutes <= 0 || unspecifiedJobMinutes > 480) {
+      return badRequest(res, 'The not-sure duration must be a whole number of minutes between 1 and 480');
+    }
+  }
+
+  const showPricesOnline = body.showPricesOnline === undefined
+    ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
+
   await db.prepare(
-    'UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, full_day_threshold_minutes = ?, updated_at = ? WHERE id = ?'
-  ).run(openingTime, closingTime, openingDays, fullDayThresholdMinutes, nowIso(), existing.id);
+    `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?,
+       full_day_threshold_minutes = ?, booking_mode = ?, dropoff_window_start = ?,
+       dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
+       show_prices_online = ?, updated_at = ? WHERE id = ?`
+  ).run(openingTime, closingTime, openingDays, fullDayThresholdMinutes, bookingMode,
+        dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
+        showPricesOnline, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
