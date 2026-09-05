@@ -2,8 +2,8 @@
 
 **Date:** 4 September 2026
 **Status:** **Booking mode — DECIDED by Jack, 4 September 2026** (§2).
-**What the customer picks — DECIDED by Jack, 5 September 2026** (§7), with two
-sub-decisions still open (§7.6).
+**What the customer picks — DECIDED by Jack, 5 September 2026** (§7), including
+both sub-decisions (§7.6).
 **Downtime model — PROPOSED**, direction agreed by Jack, shape not specced (§4).
 **Raised by:** Jack, while reviewing the customer-facing content work on the
 booking portal.
@@ -281,22 +281,37 @@ lines at approval, where the pricing has to be checked anyway.
 No taxonomy, no symptom-to-service mapping table, nothing for a shop to maintain
 beyond a checkbox.
 
-### 7.6 Still open, and both needed before this is built
+### 7.6 Both sub-decisions, resolved 5 September
 
-1. **What duration does "not sure" book?** It must have one — capacity is
-   computed from durations (§5.1), and in drop-off mode capacity *is* the
-   booking rule (§3). Recommended: a shop setting for an inspection slot,
-   defaulting to something short, with the mechanic extending at approval.
-   Taking the shop's shortest bookable service instead would be automatic but
-   arbitrary. **Not decided.**
-2. **Whether customers see prices.** `workshop_services` carries `price`
-   **[V]**, so rendering catalogue entries to customers exposes it unless
-   deliberately suppressed. Some shops price online happily; others treat it as
-   an invitation to be undercut. This is a per-shop business decision, not a UI
-   default, and it should be settled before the picker is built rather than
-   discovered when a shop finds their labour rates public. **Not decided.**
+**1. "Not sure" books one hour.** Jack: *"the not-sure duration should be the
+default: an hour, but then, of course, the mechanics will change that."* The
+booking takes an hour of capacity, and the mechanic sets the real duration when
+they review it.
 
-### 7.7 Deliberately not built: symptom-first
+Implementation reading: a column on `workshop_settings` defaulting to 60, matching
+the shape `full_day_threshold_minutes` already uses **[V]**, so a shop that finds
+an hour wrong for them can move it without a code change. If Jack meant a flat
+hardcoded hour with no setting, that is a smaller change and this note is the
+place to correct it.
+
+**2. Price visibility is a per-shop setting.** Jack: *"there should be a setting
+that the mechanics can, or the business owner can, choose whether they want
+prices online or not."* Default not specified; recommend off, since showing a
+shop's labour rates publicly by default is the harder mistake to undo.
+
+### 7.7 Consequence worth recording: staff are not capacity-gated
+
+The mechanic extending a "not sure" job can push the day past its reserve, and
+**that is intended.** The capacity gate exists only on the portal booking route
+(`server/server.js:3534-3535`) and in the availability the portal displays
+(`:3436`) **[V]**. Staff job routes do not apply it at all.
+
+So the reserve governs what *customers* may book themselves, not what a shop may
+choose to take on. That is the right split — a shop deciding to work through
+lunch is a shop's business — but it is easy to mistake for a missing check, so
+it is written down here as deliberate.
+
+### 7.8 Deliberately not built: symptom-first
 
 The better long-term experience is a plain-English symptom list ("gears aren't
 shifting properly") mapped behind the scenes to catalogue services that supply
@@ -306,7 +321,23 @@ during onboarding, and a half-filled mapping is worse than none — it produces
 confidently wrong durations. Worth revisiting once there are design partners who
 will tune it.
 
-## 8. Status of the work
+## 8. One migration, not five
+
+Four separate decisions in this document all need per-shop configuration, and
+`workshop_settings` is already one row per shop under RLS **[V]**:
+
+| Setting | From |
+|---|---|
+| Booking mode (timed / drop-off) | §2.1 |
+| Drop-off window, and timed-mode lead time | §2, item 3 |
+| "Not sure" duration, default 60 | §7.6.1 |
+| Show prices online | §7.6.2 |
+
+Plus one column on `workshop_services` for the online-visibility flag (§7.5), and
+whatever §5.1.2 resolves to. A plan should carry these as a single migration
+rather than accumulating one per feature.
+
+## 9. Status of the work
 
 Nothing here is implemented. The customer-facing content work merged alongside
 it (durations, status words, badges, dates, legend, confirmation panel) is
