@@ -2,6 +2,8 @@
 
 **Date:** 4 September 2026
 **Status:** **Booking mode — DECIDED by Jack, 4 September 2026** (§2).
+**What the customer picks — DECIDED by Jack, 5 September 2026** (§7), with two
+sub-decisions still open (§7.6).
 **Downtime model — PROPOSED**, direction agreed by Jack, shape not specced (§4).
 **Raised by:** Jack, while reviewing the customer-facing content work on the
 booking portal.
@@ -217,19 +219,94 @@ What is missing is the mode switch, the duration, and the capacity arithmetic.
    currently requires one (`resolveJobMechanicId` **[V]**). A shop that fits work
    in around the day may prefer to assign later, which would change what the
    customer picks and what capacity is measured against.
-3. **What the customer picks, once the catalogue replaces `PORTAL_JOB_TYPES`.**
-   Three job types is a comfortable question. A shop's real service list may run
-   to twenty or more, and the line model allows picking several. A single-select
-   dropdown is the wrong shape for that, and this is the one part of Jack's
-   direction that makes the customer's experience harder rather than easier.
-   It needs its own answer — grouping, a short "what's wrong?" front end over
-   the catalogue, or something else. **Not designed.**
+3. ~~**What the customer picks, once the catalogue replaces
+   `PORTAL_JOB_TYPES`.**~~ **Answered 5 September — see §7.**
 4. **Whether "no room left that day" needs to say more.** §2.2 of the other
    document notes a full day is currently indistinguishable from a closed one.
    In drop-off mode this is the *only* signal a customer gets, so it carries far
    more weight.
 
-## 7. Status of the work
+## 7. What the customer picks
+
+**DECIDED by Jack, 5 September 2026.** This answers the question raised as §6.3.
+
+### 7.1 The decision
+
+1. **A per-item visibility flag on the service catalogue.** Jack: *"a flag on a
+   workshop job item. It just decides whether it is visible on the customer
+   booking or not, so that each shop can decide what jobs they would like to
+   show on the online booking system."* The shop ticks which services a customer
+   may book online; the rest stay internal.
+2. **An escape hatch at the bottom of the list** — *"Not sure"* or *"Something
+   not listed?"* — for the customer who cannot place their problem in the
+   shop's terms.
+
+### 7.2 Why the full catalogue does not go in front of a customer
+
+The catalogue is written in mechanic language and organised by *work performed*
+— "rear mech index", "bottom bracket service", "wheel true". Customers arrive
+with symptoms ("gears slipping", "creaking when I pedal") or with nothing beyond
+"it needs looking at". Showing them the internal list asks them to complete the
+diagnosis before a mechanic has seen the bike.
+
+The visibility flag keeps the two lists deliberately different things rather
+than letting one leak into the other.
+
+### 7.3 Why the stakes are lower than they look
+
+The customer's choice does not have to be correct. Every portal booking is
+written with status `pending` (`server/server.js:3591`) **[V]**, and staff can
+change a job's start and end times when they review it
+(`server/server.js:2423-2425`) **[V]**. The customer's pick is an estimate with
+a human check already in the path — not a commitment. This is what makes a short
+list plus an escape hatch sufficient, where otherwise it would need to be a
+diagnosis tool.
+
+### 7.4 Customers pick one thing, not several
+
+The line model permits several services on one job (§5.1.1), but a customer
+should not be assembling a basket of labour — that is the same mistake as the
+long list, in a different shape. One selection, plus the free-text *"What do you
+need done?"* box the portal already has **[V]**. The mechanic adds any further
+lines at approval, where the pricing has to be checked anyway.
+
+### 7.5 Cost
+
+- One column on `workshop_services` (it currently carries only `active`
+  **[V]**), and a migration.
+- A staff toggle wherever services are managed.
+- The portal reading bookable services in place of the hardcoded
+  `PORTAL_JOB_TYPES`.
+
+No taxonomy, no symptom-to-service mapping table, nothing for a shop to maintain
+beyond a checkbox.
+
+### 7.6 Still open, and both needed before this is built
+
+1. **What duration does "not sure" book?** It must have one — capacity is
+   computed from durations (§5.1), and in drop-off mode capacity *is* the
+   booking rule (§3). Recommended: a shop setting for an inspection slot,
+   defaulting to something short, with the mechanic extending at approval.
+   Taking the shop's shortest bookable service instead would be automatic but
+   arbitrary. **Not decided.**
+2. **Whether customers see prices.** `workshop_services` carries `price`
+   **[V]**, so rendering catalogue entries to customers exposes it unless
+   deliberately suppressed. Some shops price online happily; others treat it as
+   an invitation to be undercut. This is a per-shop business decision, not a UI
+   default, and it should be settled before the picker is built rather than
+   discovered when a shop finds their labour rates public. **Not decided.**
+
+### 7.7 Deliberately not built: symptom-first
+
+The better long-term experience is a plain-English symptom list ("gears aren't
+shifting properly") mapped behind the scenes to catalogue services that supply
+the duration. Held back on purpose: it requires every shop to maintain a
+symptom-to-service mapping, which is configuration work a shop will not do
+during onboarding, and a half-filled mapping is worse than none — it produces
+confidently wrong durations. Worth revisiting once there are design partners who
+will tune it.
+
+## 8. Status of the work
 
 Nothing here is implemented. The customer-facing content work merged alongside
 it (durations, status words, badges, dates, legend, confirmation panel) is

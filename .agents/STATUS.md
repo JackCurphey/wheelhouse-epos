@@ -95,7 +95,7 @@ by hand rather than left to git. Recover the original with:
 | `2026-09-02-r-series-sync-and-rate-limits.md` | Research complete, awaiting sign-off |
 | `2026-09-01-wedge-booking-vs-workshop.md` | Proposed, acted on, **never ratified** |
 | `2026-09-04-job-type-before-diary.md` | **Proposed 4 Sep, not decided** |
-| `2026-09-04-booking-mode-and-downtime.md` | Booking mode **DECIDED 4 Sep**; downtime model proposed |
+| `2026-09-04-booking-mode-and-downtime.md` | Booking mode + customer picker **DECIDED**; downtime model proposed |
 | `2026-08-31-feature-catalogue.md` | Reference |
 
 ## Plan register
