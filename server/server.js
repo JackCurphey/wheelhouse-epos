@@ -3594,7 +3594,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   // them.
   const freeMinutes = await mechanicFreeMinutes(mechResolved.mechanicId, jobDate, settings.opening_time, settings.closing_time);
   if (freeMinutes - jobType.minutes < settings.full_day_threshold_minutes) {
-    return badRequest(res, 'That mechanic has no room left that day - please choose another day.');
+    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
   }
 
   // Closed days, opening hours and mechanic overlap - the same rules the

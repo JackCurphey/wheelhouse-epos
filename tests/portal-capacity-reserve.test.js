@@ -50,35 +50,47 @@ function book(baseUrl, cookie, slug, { mechanicId, startTime, jobType }) {
 test('a booking that would consume the whole reserve is refused', async () => {
   // 420 booked, so exactly 120 free - the reserve and nothing more.
   const { shop, mechanicId, cookie } = await shopWithBookedMinutes('16:00');
-  const res = await book(server.baseUrl, cookie, shop.slug, {
-    mechanicId, startTime: '16:00', jobType: 'service', // 120 minutes
-  });
-  assert.equal(res.status, 400, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
+  try {
+    const res = await book(server.baseUrl, cookie, shop.slug, {
+      mechanicId, startTime: '16:00', jobType: 'service', // 120 minutes
+    });
+    assert.equal(res.status, 400, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
 
-  const left = await runWithShop(shop.id, () =>
-    prepare('SELECT COUNT(*)::int AS n FROM workshop_jobs WHERE mechanic_id = ? AND job_date = ?')
-      .get(mechanicId, WEDNESDAY));
-  assert.equal(left.n, 1, 'the refused booking must not have been written');
-  await deleteTestShop(shop.id);
+    const left = await runWithShop(shop.id, () =>
+      prepare('SELECT COUNT(*)::int AS n FROM workshop_jobs WHERE mechanic_id = ? AND job_date = ?')
+        .get(mechanicId, WEDNESDAY));
+    assert.equal(left.n, 1, 'the refused booking must not have been written');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
 });
 
 test('a booking that leaves the reserve intact is still accepted', async () => {
   // 360 booked, so 180 free. A 30-minute job leaves 150, above the 120 reserve.
+  // This is a control, not evidence of the fix: it passes whether the reserve
+  // gate is present or reverted, because it never touches the reserve. It only
+  // proves the gate does not over-reject a booking that leaves it intact.
   const { shop, mechanicId, cookie } = await shopWithBookedMinutes('15:00');
-  const res = await book(server.baseUrl, cookie, shop.slug, {
-    mechanicId, startTime: '15:00', jobType: 'quick', // 30 minutes
-  });
-  assert.equal(res.status, 201, `expected acceptance, got ${res.status}: ${JSON.stringify(res.body)}`);
-  await deleteTestShop(shop.id);
+  try {
+    const res = await book(server.baseUrl, cookie, shop.slug, {
+      mechanicId, startTime: '15:00', jobType: 'quick', // 30 minutes
+    });
+    assert.equal(res.status, 201, `expected acceptance, got ${res.status}: ${JSON.stringify(res.body)}`);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
 });
 
 test('the same day refuses a long job while accepting a short one', async () => {
   // 180 free: a 120-minute service would leave 60, below the reserve.
   const { shop, mechanicId, cookie } = await shopWithBookedMinutes('15:00');
-  const res = await book(server.baseUrl, cookie, shop.slug, {
-    mechanicId, startTime: '15:00', jobType: 'service',
-  });
-  assert.equal(res.status, 400, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
-  assert.match(res.body.error, /room|full/i, 'the refusal should say the day has no room left');
-  await deleteTestShop(shop.id);
+  try {
+    const res = await book(server.baseUrl, cookie, shop.slug, {
+      mechanicId, startTime: '15:00', jobType: 'service',
+    });
+    assert.equal(res.status, 400, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
+    assert.match(res.body.error, /enough free time/i, 'the refusal should say there is not enough free time');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
 });
