@@ -3001,6 +3001,11 @@ export function serializeWorkshopService(row) {
     minutes: row.minutes,
     // active is INTEGER 0/1 on this table, matching products.active.
     active: row.active === 1,
+    // Whether a customer may book this service themselves. The catalogue is
+    // written in mechanic language and organised by work performed; only the
+    // subset a shop ticks belongs in front of a customer. See
+    // docs/decisions/2026-09-04-booking-mode-and-downtime.md §7.
+    bookableOnline: row.bookable_online === 1,
   };
 }
 
@@ -3033,9 +3038,10 @@ route('POST', '/api/workshop-services', async (req, res) => {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
   }
+  const bookableOnline = body.bookableOnline ? 1 : 0;
   const info = await db.prepare(
-    'INSERT INTO workshop_services (name, price, minutes) VALUES (?, ?, ?)'
-  ).run(fields.name, fields.price, fields.minutes);
+    'INSERT INTO workshop_services (name, price, minutes, bookable_online) VALUES (?, ?, ?, ?)'
+  ).run(fields.name, fields.price, fields.minutes, bookableOnline);
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
   sendJson(res, 201, serializeWorkshopService(row));
 });
@@ -3053,9 +3059,11 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
     throw err;
   }
   const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
+  const bookableOnline = body.bookableOnline === undefined
+    ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
   await db.prepare(
-    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, updated_at = ? WHERE id = ?'
-  ).run(fields.name, fields.price, fields.minutes, active, nowIso(), id);
+    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, updated_at = ? WHERE id = ?'
+  ).run(fields.name, fields.price, fields.minutes, active, bookableOnline, nowIso(), id);
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
   sendJson(res, 200, serializeWorkshopService(row));
 });
