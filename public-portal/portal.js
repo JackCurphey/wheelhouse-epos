@@ -37,6 +37,10 @@ let pendingMechanicId = null; // which mechanic's column was clicked, carried ac
 // or persisted anywhere; just enough to fill guestName/guestPhone on submit.
 let pendingGuestName = null;
 let pendingGuestPhone = null;
+// What was just booked, captured before the pending* vars are cleared, so the
+// confirmation view can state it back. A guest has no booking history to fall
+// back on, so for them this is the only record they ever see.
+let lastBooking = null;
 
 // Used only for the initial grid click (busy-check and the max clickable
 // start time) - the actual duration a booking gets is whatever job type
@@ -310,6 +314,7 @@ async function render() {
   wireHeader();
   if (view === 'auth') return renderAuthView();
   if (view === 'booking-form') return renderBookingFormView();
+  if (view === 'confirmed') return renderConfirmedView();
   if (view === 'my-bookings') return renderMyBookingsView();
   return renderPickerView();
 }
@@ -465,6 +470,11 @@ async function renderPickerView() {
       <button class="btn btn-sm" id="week-prev">‹ Prev</button>
       <div class="week-label">${esc(fmtWeekRangeLabel(days[0], days[6]))}</div>
       <button class="btn btn-sm" id="week-next">Next ›</button>
+    </div>
+    <div class="portal-legend">
+      ${PortalCopy.DIARY_LEGEND.map(
+        (entry) => `<span class="legend-item"><span class="legend-swatch swatch-${esc(entry.key)}"></span>${esc(entry.label)}</span>`
+      ).join('')}
     </div>
     ${diariesHtml}
   `;
@@ -642,7 +652,16 @@ async function renderBookingFormView() {
             <label for="f-job-type">What kind of job is this? *</label>
             <select id="f-job-type" required>
               <option value="" disabled ${jobTypes.length ? 'selected' : ''}>Choose the closest match…</option>
-              ${jobTypes.map((t) => `<option value="${esc(t.value)}">${esc(t.label)}</option>`).join('')}
+              ${jobTypes
+                .map((t) => {
+                  // The duration was always known here (PORTAL_JOB_TYPES sends
+                  // it, and jobTypeFitError already checks against it) - it
+                  // just used to reach the customer only as an error after
+                  // they had picked something too long.
+                  const d = PortalCopy.formatDuration(t.minutes);
+                  return `<option value="${esc(t.value)}">${esc(t.label)}${d ? ` — about ${esc(d)}` : ''}</option>`;
+                })
+                .join('')}
             </select>
             <div class="field-error" id="f-job-type-error" style="display:none;"></div>
           </div>
@@ -715,21 +734,67 @@ async function renderBookingFormView() {
     }
     try {
       await api('/bookings', { method: 'POST', body });
+      const jobType = jobTypes.find((t) => t.value === jobTypeValue);
+      const mechanic = mechanics.find((m) => m.id === pendingMechanicId);
+      lastBooking = {
+        jobDate: pendingDate,
+        startTime: pendingSlot,
+        mechanicName: mechanic ? mechanic.name : '',
+        jobTypeLabel: jobType ? jobType.label : '',
+        minutes: jobType ? jobType.minutes : 0,
+        asGuest: !currentCustomer,
+      };
       pendingDate = null;
       pendingSlot = null;
       pendingMechanicId = null;
-      if (currentCustomer) {
-        showToast('Booking requested — the shop will confirm it shortly.');
-        view = 'my-bookings';
-        await loadBookings();
-      } else {
-        showToast("Thanks — we've got your request and will call you to confirm.");
-        view = 'picker';
-      }
+      // Both routes land on the confirmation now. It used to be a toast that
+      // vanished in three seconds - which for a guest, who has no booking
+      // history to return to, was the only acknowledgement they ever got.
+      if (currentCustomer) await loadBookings();
+      view = 'confirmed';
       render();
     } catch (err) {
       showToast(err.message);
     }
+  });
+}
+
+// ---- Confirmation: what was just booked, stated back ----
+
+function renderConfirmedView() {
+  const content = document.getElementById('portal-content');
+  if (!lastBooking) {
+    view = 'picker';
+    return renderPickerView();
+  }
+  const b = lastBooking;
+  const duration = PortalCopy.formatDuration(b.minutes);
+  content.innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><h2>${esc(PortalCopy.BOOKING_CONFIRMED.heading)}</h2></div>
+      <div class="panel-body">
+        <div class="confirmation-detail">
+          <div><strong>${esc(fmtDateLabel(b.jobDate))} at ${esc(b.startTime)}</strong></div>
+          ${b.mechanicName ? `<div class="muted">With ${esc(b.mechanicName)}</div>` : ''}
+          ${b.jobTypeLabel ? `<div class="muted">${esc(b.jobTypeLabel)}${duration ? ` · about ${esc(duration)}` : ''}</div>` : ''}
+        </div>
+        <p>${esc(b.asGuest ? PortalCopy.BOOKING_CONFIRMED.guest : PortalCopy.BOOKING_CONFIRMED.account)}</p>
+        <div class="field-row">
+          <button class="btn" id="confirm-book-another">Book another slot</button>
+          ${currentCustomer ? '<button class="btn btn-primary btn-block" id="confirm-my-bookings">See my bookings</button>' : ''}
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('confirm-book-another').addEventListener('click', () => {
+    view = 'picker';
+    render();
+  });
+  const mine = document.getElementById('confirm-my-bookings');
+  if (mine) mine.addEventListener('click', async () => {
+    await loadBookings();
+    view = 'my-bookings';
+    render();
   });
 }
 
@@ -749,15 +814,22 @@ async function renderMyBookingsView() {
             ? `<div class="empty-state">No bookings yet.</div>`
             : bookings
                 .map(
-                  (b) => `
+                  (b) => {
+                    // b.status is the raw workshop_jobs enum - 'waiting_parts'
+                    // and 'on_hold' both read as database internals. The CSS
+                    // class still uses the raw value; only the words change.
+                    const s = PortalCopy.statusFor(b.status);
+                    return `
               <div class="booking-list-item">
                 <div>
-                  <div><strong>${esc(b.jobDate)}${b.startTime ? ` at ${esc(b.startTime)}${b.endTime ? `–${esc(b.endTime)}` : ''}` : ''}</strong></div>
+                  <div><strong>${esc(fmtDateLabel(b.jobDate))}${b.startTime ? ` at ${esc(b.startTime)}${b.endTime ? `–${esc(b.endTime)}` : ''}` : ''}</strong></div>
                   <div class="muted">${esc(b.notes || b.title || '')}${b.mechanicName ? ` · ${esc(b.mechanicName)}` : ''}</div>
+                  ${s.explanation ? `<div class="muted">${esc(s.explanation)}</div>` : ''}
                 </div>
-                <span class="badge status-${esc(b.status)}">${esc(b.status)}</span>
+                <span class="badge status-${esc(b.status)}">${esc(s.label)}</span>
               </div>
-            `
+            `;
+                  }
                 )
                 .join('')
         }

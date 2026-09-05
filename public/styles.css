@@ -689,6 +689,14 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .badge.status-imported { background: var(--ok-bg); color: var(--accent-dark); }
 .badge.status-ignored { background: var(--danger-bg); color: var(--danger); }
 .badge.status-pending { background: var(--status-pending-bg); color: var(--status-pending-ink); }
+/* The customer portal's My Bookings renders one of these for every job
+   status. Only .status-pending existed, so four of the five showed as bare
+   text. Tokens are the staff diary's own (.job-card.status-* uses the same
+   pairs) and design-contrast.test.js already gates each ink/bg pair for AA. */
+.badge.status-scheduled { background: var(--status-scheduled-bg); color: var(--status-scheduled-ink); }
+.badge.status-waiting_parts { background: var(--status-waiting_parts-bg); color: var(--status-waiting_parts-ink); }
+.badge.status-on_hold { background: var(--status-on_hold-bg); color: var(--status-on_hold-ink); }
+.badge.status-complete { background: var(--status-complete-bg); color: var(--status-complete-ink); }
 
 .table-toolbar {
   display: flex;
