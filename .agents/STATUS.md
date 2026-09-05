@@ -104,6 +104,7 @@ by hand rather than left to git. Recover the original with:
 |---|---|
 | `2026-08-31-master-implementation-plan.md` | LOCKED — the arc |
 | `2026-08-31-architecture-stage-1.md` | Set up, not started |
+| `2026-09-05-booking-mode-foundations.md` | Written 5 Sep, not started |
 | `2026-08-31-workos-auth-migration.md` | Approved design (2,880 lines), not implemented |
 | `2026-08-31-workshop-service-catalogue.md` | Design agreed; server rules and tests merged |
 | `2026-08-31-design-remediation.md` | Findings recorded in `docs/design/` |
