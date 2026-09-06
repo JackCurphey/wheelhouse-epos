@@ -1,6 +1,6 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-03
+**Updated:** 2026-09-06
 **Branch:** `main`
 **Blocked on:** nothing. Every open item below is Jack's to decide.
 
@@ -48,9 +48,10 @@ by hand rather than left to git. Recover the original with:
 3. **Architecture stage one** — set up, not started. Entry point, from a new
    branch with docker up: `Workflow({ name: 'wheelhouse-architecture-stage-1' })`.
    Commands are in `docs/superpowers/plans/2026-08-31-architecture-stage-1.md`.
-4. **Formally decide the wedge.** `docs/decisions/2026-09-01-wedge-booking-vs-workshop.md`
-   has been acted on since 1 September but its own status line says it was never
-   formally decided.
+4. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
+   leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
+   through `DP-4` (design-partner recruitment and cadence — "dont think this is
+   necessary") open. They need Mark before those owners are settled.
 
 ## Done
 
@@ -93,7 +94,8 @@ by hand rather than left to git. Recover the original with:
 | `2026-08-31-frontend-platform.md` | Decided (approver: Mark) |
 | `2026-09-02-lightspeed-first-platform.md` | DECIDED by Jack, 2 Sep 2026 |
 | `2026-09-02-r-series-sync-and-rate-limits.md` | Research complete, awaiting sign-off |
-| `2026-09-01-wedge-booking-vs-workshop.md` | Proposed, acted on, **never ratified** |
+| `2026-09-01-wedge-booking-vs-workshop.md` | **DECIDED** 1 Sep, ratified 6 Sep; §4 and §5b superseded by the Lightspeed decision |
+| `2026-09-01-ownership-signoff.md` | Signed off by Jack 1 Sep — 58 agreed, 5 queried (`PF-3`, `DP-1`–`DP-4`), 0 reassigned. The five queries still need Mark |
 | `2026-09-04-job-type-before-diary.md` | **Proposed 4 Sep, not decided** |
 | `2026-09-04-booking-mode-and-downtime.md` | Booking mode + customer picker **DECIDED** (5 Sep); downtime model proposed |
 | `2026-08-31-feature-catalogue.md` | Reference |
@@ -104,7 +106,7 @@ by hand rather than left to git. Recover the original with:
 |---|---|
 | `2026-08-31-master-implementation-plan.md` | LOCKED — the arc |
 | `2026-08-31-architecture-stage-1.md` | Set up, not started |
-| `2026-09-05-booking-mode-foundations.md` | Written 5 Sep, not started |
+| `2026-09-05-booking-mode-foundations.md` | Executed — merged 5 Sep (PR #35) |
 | `2026-08-31-workos-auth-migration.md` | Approved design (2,880 lines), not implemented |
 | `2026-08-31-workshop-service-catalogue.md` | Design agreed; server rules and tests merged |
 | `2026-08-31-design-remediation.md` | Findings recorded in `docs/design/` |

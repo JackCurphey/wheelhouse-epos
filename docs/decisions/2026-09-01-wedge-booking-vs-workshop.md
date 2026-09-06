@@ -1,10 +1,15 @@
 # The wedge — online booking, not the workshop module *(§4 superseded)*
 
 **Date:** 1 September 2026
-**Status:** Proposed 1 September 2026 and acted on since, but **never formally
-signed off** — no sign-off record exists for this document.
-(`2026-09-01-ownership-signoff.md` covers the master implementation plan's owner
-column only.) **Partly superseded 2 September 2026:** §5b's choice of
+**Status:** **DECIDED.** Proposed 1 September 2026, acted on since, and ratified
+by Jack on 6 September 2026 — confirming the decision recorded in §5 and §5b
+rather than making a new one. The consequences in §6 were already applied to
+`2026-08-31-master-implementation-plan.md` on 1 September; §1 was rewritten, WS-6
+was added, and WS-2, WS-5 and PF-2 were promoted. Ratification closes the
+document's own missing status line, nothing more.
+(`2026-09-01-ownership-signoff.md` is a separate record and covers the master
+implementation plan's owner column only.)
+**Partly superseded 2 September 2026:** §5b's choice of
 Citrus-Lime shops as the first market is replaced by
 `2026-09-02-lightspeed-first-platform.md`, and §4's booking-led framing — lead
 with booking, *"the diary ships underneath it and is not the pitch"* — is
