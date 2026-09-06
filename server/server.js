@@ -6,7 +6,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
-import { prepare, dbExec, runWithShop, pool } from './db.js';
+import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -3974,6 +3974,12 @@ const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileUR
 
 if (isMainModule) {
   runMigrations()
+    // Session-scoped tenancy (the DB_TENANT_SCOPE default) is only safe on a
+    // direct connection or a session-mode pooler. Put a transaction-mode
+    // pooler in front of this and one shop's request can be served on a
+    // connection still carrying another shop's tenant - so check once, here,
+    // rather than discover it in production. See server/db.js.
+    .then(() => assertPoolerModeSafe())
     .then(() => mkdir(UPLOADS_DIR, { recursive: true }))
     .then(() => {
       server.listen(PORT, () => {
@@ -3981,7 +3987,7 @@ if (isMainModule) {
       });
     })
     .catch((err) => {
-      console.error('Failed to run database migrations - server not started.');
+      console.error('Database startup checks failed - server not started.');
       console.error(err);
       process.exit(1);
     });

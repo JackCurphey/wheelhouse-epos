@@ -101,7 +101,12 @@ export async function createShop({ shopName, ownerName, email, password }) {
     // was passed explicitly or picked up from the column DEFAULT, so this
     // client needs the session variable set even though it isn't going
     // through the normal per-request runWithShop path.
-    await client.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shop.id)]);
+    // is_local = true: scoped to the BEGIN above, so it is gone the moment
+    // this transaction ends and cannot ride back into the pool on this
+    // client for whoever gets it next. Session scope here was the same leak
+    // runWithShop had (see server/db.js), on a different code path. Matches
+    // server/customer-auth.js exactly.
+    await client.query("SELECT set_config('app.current_shop_id', $1, true)", [String(shop.id)]);
     const login = await insertLogin(client, { shopId: shop.id, name, email: cleanEmail, password, isOwner: true });
     await client.query(
       'INSERT INTO customer_groups (shop_id, name) VALUES ($1, $2), ($1, $3)',

@@ -6,6 +6,20 @@
 // the pool for that request's whole lifetime. A forgotten WHERE clause can
 // never leak another shop's rows - the database refuses to return or accept
 // them.
+//
+// DEPLOYMENT CONSTRAINT - read before putting a connection pooler in front
+// of this app.
+//   DB_TENANT_SCOPE=session (the default, and what ships today) makes
+//   `app.current_shop_id` a SESSION-scoped Postgres setting. That is only
+//   safe when one checked-out client means one dedicated backend for the
+//   whole request, i.e. a direct connection or a SESSION-mode pooler.
+//   A TRANSACTION-mode pooler (PgBouncer's transaction mode and most managed
+//   equivalents) may hand the same backend to two overlapping requests, and
+//   one shop's tenant setting then becomes another's. Transaction pooling
+//   requires DB_TENANT_SCOPE=transaction, which is NOT yet ready to be the
+//   default - see the note on runWithShop below. assertPoolerModeSafe()
+//   detects the unsafe combination at boot rather than leaving it to be
+//   discovered in production.
 import pg from 'pg';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
@@ -35,18 +49,44 @@ export const pool = new Pool({
   ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: true } : false,
 });
 
-// Holds the single `pg` client checked out for whichever request is
-// currently being handled (see runWithShop). `prepare()`/`exec()` below read
-// this on every call so the ~150 `db.prepare(...)`/`db.exec(...)` call sites
-// throughout server.js don't need a db argument threaded through them -
-// mirrors the shape of the previous per-shop-file design exactly, just
-// backed by a checked-out pooled client instead of a DatabaseSync instance.
+// ---------- Tenancy scope mode ----------
+
+export const TENANT_SCOPE_MODES = ['session', 'transaction'];
+const TENANT_SETTING = 'app.current_shop_id';
+
+// Read per call rather than captured at import time, so a deployment can be
+// reconfigured without reasoning about module load order, and so the tests
+// can exercise both modes in one process. A typo is a hard error rather than
+// a silent fallback to `session`: "trasnaction" quietly behaving as session
+// is exactly the kind of misconfiguration this whole file exists to prevent.
+export function tenantScopeMode() {
+  const raw = (process.env.DB_TENANT_SCOPE ?? 'session').trim().toLowerCase();
+  if (!TENANT_SCOPE_MODES.includes(raw)) {
+    throw new Error(
+      `DB_TENANT_SCOPE must be one of ${TENANT_SCOPE_MODES.join(', ')} - got ${JSON.stringify(raw)}`
+    );
+  }
+  return raw;
+}
+
+// Holds the state of whichever request is currently being handled (see
+// runWithShop): the single `pg` client checked out for it, which shop it is
+// for, and how deep into nested transaction blocks it is. `prepare()`/
+// `dbExec()` below read this on every call so the ~150 `db.prepare(...)`/
+// `db.exec(...)` call sites throughout server.js don't need a db argument
+// threaded through them - mirrors the shape of the previous per-shop-file
+// design exactly, just backed by a checked-out pooled client instead of a
+// DatabaseSync instance.
 export const dbContext = new AsyncLocalStorage();
 
+function currentState() {
+  const state = dbContext.getStore();
+  if (!state) throw new Error('No database client in scope for this request');
+  return state;
+}
+
 function currentClient() {
-  const client = dbContext.getStore();
-  if (!client) throw new Error('No database client in scope for this request');
-  return client;
+  return currentState().client;
 }
 
 // Translates SQLite-style `?` positional placeholders to Postgres `$1, $2,
@@ -89,28 +129,300 @@ export function prepare(sql) {
   };
 }
 
+// ---------- Transaction nesting ----------
+
+// dbExec is used for nothing but BEGIN / COMMIT / ROLLBACK anywhere in
+// server/ (11 blocks, 33 statements, across server/server.js and
+// server/team.js), which makes it the single place where transaction
+// nesting can be handled once instead of at 33 call sites.
+//
+// Postgres has no nested BEGIN: a second BEGIN on a connection that is
+// already in a transaction is a no-op with a warning. So before this shim, a
+// handler's BEGIN/COMMIT/ROLLBACK block that happened to run inside another
+// open transaction would silently borrow the outer boundary - its ROLLBACK
+// discarding the outer block's work, its COMMIT making the outer block's
+// work durable early. Nothing in the app nests today, but DB_TENANT_SCOPE=
+// transaction opens an outer transaction around every request, and any new
+// handler calling into an existing one would do the same. Mapping depth >= 1
+// onto savepoints keeps every one of those 11 blocks a real boundary in both
+// modes, with no call site changes.
+//
+// A rule for future handlers: do not open a savepoint per iteration of an
+// unbounded loop. Each one costs a subtransaction, and Postgres degrades
+// badly past ~64 of them per transaction. The 11 sites here are all
+// straight-line, so this is a caution, not a current problem.
+const TX_STATEMENT = /^\s*(BEGIN|COMMIT|ROLLBACK)\s*;?\s*$/i;
+const INVALID_SAVEPOINT = '3B001';
+
 // For raw statements that don't fit the get/all/run shape - BEGIN / COMMIT /
 // ROLLBACK, mainly. Runs on the same request-scoped client as prepare()
 // above, so it participates in the same transaction.
 export async function dbExec(sql) {
-  await currentClient().query(sql);
+  const match = TX_STATEMENT.exec(sql);
+  if (!match) {
+    await currentClient().query(sql);
+    return;
+  }
+  const state = currentState();
+  const verb = match[1].toUpperCase();
+  if (verb === 'BEGIN') return beginScope(state);
+  return endScope(state, verb);
 }
+
+async function beginScope(state) {
+  if (state.txDepth === 0) {
+    await state.client.query('BEGIN');
+    state.txDepth = 1;
+    return;
+  }
+  // Names are never reused within a request, so a stale reference from an
+  // unbalanced caller can never resolve to a live savepoint by accident.
+  const name = `sp_${++state.savepointSeq}`;
+  await state.client.query(`SAVEPOINT ${name}`);
+  state.savepointStack.push(name);
+  state.txDepth += 1;
+}
+
+// COMMIT/ROLLBACK with nothing left to close MUST NOT THROW. These calls sit
+// in catch blocks that immediately re-throw the original error - createSale's
+// post-COMMIT Shopify loop (server/server.js:1618-1624) is the live example -
+// so raising a database error about savepoints here would replace the real
+// failure with a misleading one. Log and no-op instead.
+async function endScope(state, verb) {
+  if (state.txDepth === 0) {
+    console.warn(`db: ${verb} issued with no transaction open - ignored`);
+    return;
+  }
+  if (state.txDepth === 1) {
+    await state.client.query(verb);
+    state.txDepth = 0;
+    return;
+  }
+
+  const name = state.savepointStack.pop();
+  state.txDepth -= 1;
+  if (!name) {
+    console.warn(`db: ${verb} issued for a savepoint that was already released - ignored`);
+    return;
+  }
+  try {
+    if (verb === 'COMMIT') {
+      await state.client.query(`RELEASE SAVEPOINT ${name}`);
+    } else {
+      await state.client.query(`ROLLBACK TO SAVEPOINT ${name}`);
+      await state.client.query(`RELEASE SAVEPOINT ${name}`);
+    }
+  } catch (err) {
+    if (err && err.code === INVALID_SAVEPOINT) {
+      console.warn(`db: ${verb} target savepoint ${name} no longer exists - ignored`);
+      return;
+    }
+    throw err;
+  }
+}
+
+// ---------- Request scope ----------
 
 // Checks out one dedicated client from the pool for the duration of a
 // request (never a shared/pool-wide query - Postgres transactions require a
 // single connection throughout BEGIN...COMMIT/ROLLBACK), sets the RLS
-// session variable on it once, and always releases it back to the pool when
-// the request finishes, even on error. Concurrent requests - whether for the
+// variable on it once, and always releases it back to the pool when the
+// request finishes, even on error. Concurrent requests - whether for the
 // same shop or different shops - each get their own client, so they never
 // share (or race on) `app.current_shop_id`.
+//
+// Two modes, chosen by DB_TENANT_SCOPE:
+//
+//   session (DEFAULT, and what ships) - `set_config(..., false)`, exactly
+//     today's behaviour. The setting lives on the connection, so the release
+//     path below has to clear it by hand; forgetting to was the bug this
+//     change fixes.
+//
+//   transaction (OFF by default) - BEGIN, then `set_config(..., true)`, so
+//     the tenant is scoped to the request's transaction and cannot outlive
+//     it under any pooler. NOT safe to switch on yet: Shopify pushes with
+//     retry (server/server.js:1618, :963), Twilio sends (:1330), the
+//     storefront static/upload streaming branch (:3769, :3735) and
+//     readJsonBody all run inside this scope today, and every route writes
+//     its HTTP response with sendJson BEFORE the outer COMMIT would land.
+//     Enabling it would hold row locks across third-party HTTP with backoff
+//     and across slow-client I/O, and would make a commit failure
+//     unreportable to a client already told it succeeded. Moving that work
+//     out of this scope is the prerequisite, and is deliberately not part of
+//     this change.
 export async function runWithShop(shopId, fn) {
-  const client = await pool.connect();
-  try {
-    // SET doesn't accept bind parameters (it's a syntax error, not just
-    // unsupported) - set_config() is the parameterized equivalent.
-    await client.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shopId)]);
-    return await dbContext.run(client, fn);
-  } finally {
-    client.release();
+  const outer = dbContext.getStore();
+  if (outer) {
+    // Re-entering for the same shop is harmless and is what a helper calling
+    // into another helper looks like - reuse the scope. Re-entering for a
+    // DIFFERENT shop would silently run under the outer shop's tenant
+    // setting and its transaction, which is the exact class of bug RLS is
+    // here to make impossible. Refuse loudly.
+    if (String(outer.shopId) !== String(shopId)) {
+      throw new Error(
+        `runWithShop re-entered for shop ${shopId} inside an active scope for shop ${outer.shopId}`
+      );
+    }
+    return await fn();
   }
+
+  const mode = tenantScopeMode();
+  const client = await pool.connect();
+  const state = {
+    client,
+    shopId: String(shopId),
+    mode,
+    txDepth: 0,
+    savepointSeq: 0,
+    savepointStack: [],
+  };
+  try {
+    if (mode === 'transaction') {
+      await client.query('BEGIN');
+      state.txDepth = 1;
+    }
+    // SET doesn't accept bind parameters (it's a syntax error, not just
+    // unsupported) - set_config() is the parameterized equivalent. The third
+    // argument is is_local: true scopes the setting to the surrounding
+    // transaction, false to the whole connection.
+    await client.query(`SELECT set_config('${TENANT_SETTING}', $1, ${mode === 'transaction'})`, [state.shopId]);
+
+    const result = await dbContext.run(state, fn);
+
+    if (state.txDepth > 0) {
+      if (mode === 'transaction') {
+        // Committing the request's own outer transaction is the whole point
+        // of this mode. A COMMIT also releases any savepoints an unbalanced
+        // handler left open.
+        await client.query('COMMIT');
+      } else {
+        // Session mode: runWithShop opened no transaction, so anything still
+        // open is a handler that forgot to close its own block. Roll it back.
+        // Committing work the handler never committed would be inventing a
+        // decision it did not make, and it is how a half-finished sale would
+        // become durable.
+        console.warn('db: request finished with a transaction still open - rolling it back');
+        await client.query('ROLLBACK');
+      }
+      state.txDepth = 0;
+    }
+    return result;
+  } catch (err) {
+    if (state.txDepth > 0) {
+      // Never let the rollback's own failure replace the error that caused
+      // it - the release path below will destroy the client if it is wedged.
+      await client.query('ROLLBACK').catch(() => {});
+      state.txDepth = 0;
+    }
+    throw err;
+  } finally {
+    await releaseClient(state);
+  }
+}
+
+// A pooled client goes back into circulation for whichever shop asks next,
+// so it has to leave here carrying nothing from this request: no open
+// transaction, and no tenant setting. Both were leaking before this change -
+// the next holder of the connection inherited the previous request's shop,
+// and could read its uncommitted rows.
+async function releaseClient(state) {
+  const { client } = state;
+  try {
+    if (state.txDepth > 0) {
+      await client.query('ROLLBACK');
+      state.txDepth = 0;
+    }
+    // Blank rather than RESET/DISCARD ALL: DISCARD ALL would also throw away
+    // prepared statements and every other per-connection nicety to solve a
+    // problem one targeted set_config solves. Blank is safe because the RLS
+    // policies cast this setting to int with no missing_ok fallback, so a
+    // connection that reaches an RLS table without a tenant raises rather
+    // than returning silently-empty results.
+    await client.query(`SELECT set_config('${TENANT_SETTING}', '', false)`);
+    client.release();
+  } catch (err) {
+    // Handing a client of unknown state back to the pool is worse than
+    // losing it. Passing an error to release() makes node-postgres destroy
+    // the connection instead of reusing it.
+    console.error('db: could not reset a pooled client on release - destroying it', err);
+    client.release(err);
+  }
+}
+
+// ---------- Pooler safety guard ----------
+
+// One-line policy switch. 'fail' refuses to boot on an unsafe combination;
+// 'warn' logs and continues. Hard-fail is the default because the failure it
+// prevents is cross-tenant data exposure, which is worse than downtime; flip
+// this single constant to 'warn' to trade that the other way.
+const POOLER_GUARD_ON_UNSAFE = 'fail';
+
+const POOLER_PROBE_SETTING = 'app.pooler_probe';
+
+// Detects a connection-multiplexing pooler by observation, not by guessing
+// from a hostname. Two clients are checked out CONCURRENTLY, a nonce is set
+// as a session variable on one, and the other is asked to read it back. On a
+// direct connection (or a session-mode pooler) the second client is a
+// different backend and can never see it. If it does, or the two report the
+// same pg_backend_pid, they are the same backend and a request's session
+// state is not its own. There is no way for a healthy setup to produce a
+// positive, so this cannot cry wolf.
+export async function probePoolerMode(targetPool = pool, rounds = 3) {
+  for (let round = 0; round < rounds; round += 1) {
+    const nonce = `${process.pid}-${round}-${Math.random().toString(36).slice(2)}`;
+    const [a, b] = await Promise.all([targetPool.connect(), targetPool.connect()]);
+    try {
+      await a.query(`SELECT set_config('${POOLER_PROBE_SETTING}', $1, false)`, [nonce]);
+      const { rows: [seen] } = await b.query(
+        `SELECT current_setting('${POOLER_PROBE_SETTING}', true) AS value, pg_backend_pid() AS pid`
+      );
+      const { rows: [own] } = await a.query('SELECT pg_backend_pid() AS pid');
+      await a.query(`SELECT set_config('${POOLER_PROBE_SETTING}', '', false)`);
+
+      if (seen.value === nonce) {
+        return {
+          safe: false,
+          reason:
+            'Two concurrently checked-out clients share one Postgres backend: a session variable set on one was readable from the other. A transaction-mode connection pooler is in front of this app.',
+        };
+      }
+      if (seen.pid === own.pid) {
+        return {
+          safe: false,
+          reason: `Two concurrently checked-out clients reported the same backend pid (${own.pid}). A transaction-mode connection pooler is in front of this app.`,
+        };
+      }
+    } finally {
+      a.release();
+      b.release();
+    }
+  }
+  return {
+    safe: true,
+    reason: `Concurrently checked-out clients reached distinct Postgres backends across ${rounds} rounds.`,
+  };
+}
+
+// Boot-time gate. Session-scoped tenancy plus a transaction-mode pooler is
+// the one combination that silently breaks tenant isolation, so it is
+// checked once at startup rather than trusted.
+export async function assertPoolerModeSafe(targetPool = pool) {
+  const mode = tenantScopeMode();
+  if (mode === 'transaction') {
+    // The tenant travels with the transaction, so a backend shared between
+    // transactions carries nothing across.
+    return { safe: true, reason: 'DB_TENANT_SCOPE=transaction: tenancy is scoped to each transaction.' };
+  }
+
+  const result = await probePoolerMode(targetPool);
+  if (result.safe) return result;
+
+  const message =
+    `Unsafe database topology: ${result.reason} ` +
+    'With DB_TENANT_SCOPE=session the tenant is a session-scoped Postgres setting, so one shop\'s ' +
+    'requests can be served on a connection still carrying another shop\'s tenant. Use a direct ' +
+    'connection or a session-mode pooler.';
+  if (POOLER_GUARD_ON_UNSAFE === 'fail') throw new Error(message);
+  console.warn(message);
+  return result;
 }
