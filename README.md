@@ -1,21 +1,27 @@
 # Wheelhouse EPOS
 
 A point-of-sale system for a bike shop: till/checkout, inventory management,
-sales history and a dashboard. Runs entirely on your own computer. Each shop
-creates its own account and signs in to its own private data, and the database
-enforces that separation itself rather than trusting the application to
-remember it.
+sales history and a dashboard. Each shop creates its own account and signs in
+to its own private data. That separation is enforced by the database itself,
+not by application code: every shop-scoped table has a `shop_id` column and a
+PostgreSQL Row-Level Security policy filtering on it, so a bug in the app
+cannot leak one shop's rows to another - the database refuses the query
+regardless of what the application asked for.
 
 ## Requirements
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) - the app,
   its database and its gateway all run as containers.
 - [Node.js](https://nodejs.org/) 22.5 or later, only if you want to run the
-  test suite or the app outside Docker.
+  test suite, the frontend build, or the app outside Docker.
 
-Data is stored in **PostgreSQL** with row-level security. Earlier versions of
-this app used Node's built-in SQLite with one file per shop under
-`data/shops/`; neither is true any more.
+Data is stored in **PostgreSQL**. The app never connects as the database
+superuser - it connects as an ordinary role, `epos_app`, created by
+`docker/init-db.sh` the first time the Postgres container starts. This is
+load-bearing, not a style choice: Postgres superusers bypass Row-Level
+Security even on tables with `FORCE ROW LEVEL SECURITY` set, so if the app
+connected as the superuser every isolation policy in the schema would be
+silently ignored and one shop could read or write another's data.
 
 ## Running it
 
@@ -33,6 +39,16 @@ Then start everything and apply the schema:
 docker compose up -d --wait
 npm install && npm run migrate
 ```
+
+Docker Compose starts three containers - Postgres, the app, and the gateway
+(see "The gateway" below) - and publishes only Postgres (host port `5433`,
+deliberately not the default `5432`, so it doesn't collide with a Postgres you
+may already have running) and the gateway (`8080`) to your machine. `npm run
+migrate` applies every schema file under `server/migrations/` that hasn't run
+yet; it's also run automatically whenever the app starts, and is safe to run
+from more than one process at once - it takes a Postgres advisory lock for the
+duration, so a second process waits instead of racing the first through the
+same migration.
 
 Open **http://localhost:8080** in your browser (Chrome, Edge, Firefox all
 work), and either create a shop account (shop name, email, password) or log in
@@ -73,6 +89,30 @@ row-level security policies are the thing most worth testing.
 
 Each shop account starts with an empty inventory - add your own products from
 the Inventory screen.
+
+## The frontend build
+
+There is a second, separate frontend stack in this repo: Vite, React,
+TypeScript and Tailwind, with a [shadcn](https://ui.shadcn.com/) component
+registry under `registry/`. **It is scaffolding, not something you'll see if
+you just run the app.** `public/index.html` - what the app actually serves -
+loads the original plain-JavaScript `public/app.js`, not anything from this
+stack; nothing built by `npm run build` is wired into a page yet.
+
+Relevant commands, if you're working on it:
+
+```
+npm run dev              # Vite dev server
+npm run build             # builds to public/dist (gitignored, not committed)
+npm run lint
+npm run typecheck
+npm run registry:validate # checks registry/registry.json against its schema
+```
+
+CI additionally checks the built registry hasn't drifted from its source
+(`scripts/ci/check-registry-drift.mjs`) and that every shop-scoped table
+still has both RLS flags set (`scripts/ci/assert-rls-coverage.mjs`) - see
+`.github/workflows/test.yml`.
 
 ## The gateway, and reaching the app from elsewhere
 
@@ -165,6 +205,11 @@ set SHOPIFY_TOKEN_ENCRYPTION_KEY=some-long-random-secret&& set APP_PUBLIC_URL=ht
 $env:SHOPIFY_TOKEN_ENCRYPTION_KEY="some-long-random-secret"; $env:APP_PUBLIC_URL="https://app.example.com"; npm start   (Windows PowerShell)
 ```
 
+Every outbound call to Shopify's Admin API, and every outbound call to
+Twilio (used for SMS notifications), carries an explicit timeout via
+`AbortSignal.timeout()` rather than waiting indefinitely on a slow or hung
+upstream.
+
 ## Notes and what's deliberately left out (for now)
 
 - **No per-employee permissions yet.** Each shop's owner can add individual
@@ -181,10 +226,12 @@ $env:SHOPIFY_TOKEN_ENCRYPTION_KEY="some-long-random-secret"; $env:APP_PUBLIC_URL
 - **No card payment processing.** "Card" is just recorded as the payment method
   for your records — you'd still take the card payment on your existing card
   machine.
-- **Data lives only on this computer**, in a Docker volume, separated per shop by
-  database row-level security rather than by file,
-  plus `data/accounts.db` holding the login accounts. Back these up
-  periodically (copy the whole `data` folder) since there's no cloud sync.
+- **No backups.** All data lives in a single Postgres instance, in the
+  `epos_pgdata` Docker volume. There is no automated backup, no
+  point-in-time recovery, and no rehearsed restore procedure - if that volume
+  is lost or corrupted, the data is gone. Setting this up is real
+  infrastructure work for a human, deliberately left out of the current stage
+  of work on this codebase rather than something the app does for you.
 
 Happy to add any of the above, or things like per-staff logins, password reset,
 repair/workshop job tracking, or multi-till syncing, next — just ask.
