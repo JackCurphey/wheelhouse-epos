@@ -14,6 +14,12 @@ export function normalizePhoneToE164(raw) {
   return trimmed;
 }
 
+// This is a single, non-retried call from the customer-facing till flow -
+// no withRetry wraps it, so this constant IS the total worst-case bound (no
+// retry multiplier to account for). 5s matches the default used for the
+// single, non-retried Shopify Admin API calls in server/shopify.js.
+const SMS_REQUEST_TIMEOUT_MS = 5000;
+
 export async function sendSms(toPhone, body) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -35,6 +41,12 @@ export async function sendSms(toPhone, body) {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: params,
+      // A timeout throws the same DOMException shape as any other network
+      // failure (a rejected fetch), so it's caught by the same catch block
+      // below and returned as the same {ok:false, error} shape sendSms
+      // already uses for any other failed call - no new unhandled
+      // rejection path.
+      signal: AbortSignal.timeout(SMS_REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
     return { ok: false, error: `Could not reach Twilio: ${err.message}` };

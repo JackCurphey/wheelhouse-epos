@@ -40,7 +40,26 @@ export function verifyShopifyWebhookHmac(rawBody, hmacHeader, webhookSecret) {
 
 const SHOPIFY_API_VERSION = '2024-10';
 
-export async function shopifyAdminRequest(connection, method, path, body) {
+// Default timeout for Shopify Admin API calls. This covers the locations
+// probe (saveShopifyConnection), product create/update and inventory push
+// (syncProductToShopify / pushInventoryLevel), and unpublish - all of which
+// are synchronous request/response calls where the caller is waiting on the
+// result. syncProductToShopify and pushInventoryLevel additionally run
+// inside withRetry() while a request holds one of only ten pooled Postgres
+// connections (see server/db.js runWithShop), so this value has to stay
+// short enough that a stalled Shopify endpoint can't pin that connection
+// indefinitely - 5s is generous for a healthy Shopify API response and
+// still bounds the worst case (see the comment on withRetry below).
+const SHOPIFY_API_TIMEOUT_MS = 5000;
+
+// Webhook registration (registerShopifyWebhooks) runs once, during initial
+// shop connect, outside any withRetry/connection-holding loop - so it can
+// afford to wait longer for Shopify to accept the registration rather than
+// fail an otherwise-successful connect flow over a slow-but-working
+// response.
+const SHOPIFY_WEBHOOK_TIMEOUT_MS = 10000;
+
+export async function shopifyAdminRequest(connection, method, path, body, timeoutMs = SHOPIFY_API_TIMEOUT_MS) {
   const accessToken = decryptSecret(connection.access_token);
   const res = await fetch(`https://${connection.shop_domain}/admin/api/${SHOPIFY_API_VERSION}${path}`, {
     method,
@@ -49,6 +68,12 @@ export async function shopifyAdminRequest(connection, method, path, body) {
       'Content-Type': 'application/json',
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    // A timed-out request throws the same way any other fetch failure does
+    // (a rejected promise) - it flows through the exact same catch blocks
+    // that already retry it (withRetry) and mark the connection sync_error
+    // (syncProductToShopify/pushInventoryLevel), so no new unhandled
+    // rejection path is introduced.
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -111,10 +136,10 @@ export async function registerShopifyWebhooks(connection, shopId) {
   if (!baseUrl) throw new Error('APP_PUBLIC_URL is not configured');
   await shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
     webhook: { topic: 'orders/paid', address: `${baseUrl}/webhooks/shopify/${shopId}/orders`, format: 'json' },
-  });
+  }, SHOPIFY_WEBHOOK_TIMEOUT_MS);
   await shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
     webhook: { topic: 'refunds/create', address: `${baseUrl}/webhooks/shopify/${shopId}/refunds`, format: 'json' },
-  });
+  }, SHOPIFY_WEBHOOK_TIMEOUT_MS);
 }
 
 // Small in-process retry for transient Shopify API failures (rate limits,
@@ -124,6 +149,18 @@ export async function registerShopifyWebhooks(connection, shopId) {
 // marks the connection sync_error so it's visible in shop settings rather
 // than failing silently; the next successful product edit or sale clears
 // it back to connected on its own.
+// Worst-case bounded time: both call sites below use withRetry(fn, 3, 50).
+// Each of the 3 attempts can itself take up to SHOPIFY_API_TIMEOUT_MS before
+// the AbortSignal fires and the attempt fails, and the backoff between
+// attempts is baseDelayMs * 2**i for i = 0, 1 (no backoff after the final
+// attempt). So the total worst case is:
+//   3 * SHOPIFY_API_TIMEOUT_MS + 50*2**0 + 50*2**1
+//   = 3 * 5000ms + 50ms + 100ms
+//   = 15150ms (~15.15s)
+// That is the longest pushInventoryLevel (called from inside runWithShop,
+// see server/db.js) can pin one of the ten pooled Postgres connections
+// while every attempt times out - bounded, not indefinite, but still worth
+// knowing when reasoning about pool exhaustion under a Shopify slowdown.
 async function withRetry(fn, attempts = 3, baseDelayMs = 500) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
