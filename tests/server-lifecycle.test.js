@@ -20,7 +20,7 @@ import { createServer as createNetServer } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import '../server/load-env.js';
-import { checkDatabaseHealth } from '../server/server.js';
+import { checkDatabaseHealth, gracefulShutdown } from '../server/server.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -233,6 +233,77 @@ test('GET /healthz returns 200 with the database actually reachable', async () =
   }
 });
 
+// GET /healthz with the database actually unreachable, driven over real HTTP
+// against the real route (not checkDatabaseHealth() called directly - see
+// the note below on why that alone is not coverage of the route). Cutting
+// off the real shared docker-compose Postgres would break every other test
+// file's pool at the same time, so this spawns the app pointed at a TCP
+// proxy in front of the real database instead: boot (migrations, the pooler
+// probe) succeeds through the proxy exactly as normal, then the proxy stops
+// accepting new connections. The app's own pool still has its already-open
+// connections at that point, so this does NOT yet retest anything - it waits
+// past pg's default 10s idleTimeoutMillis, which pg itself uses to cleanly
+// end those idle connections (no socket error, just a normal client.end()).
+// The next SELECT 1 then has no idle client to reuse and must open a fresh
+// one, which the now-closed proxy refuses - a real, connection-level
+// "database unreachable" indistinguishable from the real thing, delivered to
+// this one spawned process's own isolated pool without touching the shared
+// test database at all.
+//
+// (Destroying the proxy's already-open sockets instead of just closing its
+// listener was tried first and rejected: pg's Pool has no
+// pool.on('error', ...) handler in server/db.js, so an idle client's
+// connection dying mid-flight surfaces as an uncaughtException that this
+// file's own crash guard (installCrashGuard) treats as fatal and exits the
+// whole process before /healthz is ever reached - a real gap worth a human
+// look at server/db.js, not something this route-level test can or should
+// paper over.)
+test('GET /healthz returns 503 with the database actually unreachable', async () => {
+  const REAL_DB_HOST = '127.0.0.1';
+  const REAL_DB_PORT = 5433;
+  const openSockets = new Set();
+  const proxy = createNetServer((client) => {
+    const upstream = net.connect(REAL_DB_PORT, REAL_DB_HOST);
+    openSockets.add(client);
+    client.pipe(upstream);
+    upstream.pipe(client);
+    client.on('error', () => {});
+    upstream.on('error', () => {});
+  });
+  await new Promise((resolve) => proxy.listen(0, '127.0.0.1', resolve));
+  const proxyPort = proxy.address().port;
+
+  const realDbUrl = new URL(process.env.DATABASE_URL);
+  const proxiedDbUrl = new URL(process.env.DATABASE_URL);
+  proxiedDbUrl.hostname = '127.0.0.1';
+  proxiedDbUrl.port = String(proxyPort);
+  void realDbUrl;
+
+  const server = await spawnServer({ DATABASE_URL: proxiedDbUrl.toString() });
+  try {
+    const before = await fetch(`${server.baseUrl}/healthz`);
+    assert.equal(before.status, 200, 'sanity check: boot through the proxy must succeed exactly like a direct connection');
+
+    // Stop accepting NEW connections only - existing piped connections are
+    // left alone so pg ends them cleanly on its own idle timeout rather than
+    // erroring out (see the comment above).
+    proxy.close();
+
+    await new Promise((r) => setTimeout(r, 10_500));
+    assert.equal(server.child.exitCode, null, `server must not have crashed while waiting out the idle timeout; stderr:\n${server.getStderr()}`);
+
+    const res = await fetch(`${server.baseUrl}/healthz`);
+    assert.equal(res.status, 503, `expected 503 once every pooled connection has to be re-established through the dead proxy; stderr:\n${server.getStderr()}`);
+    const body = await res.json();
+    assert.equal(body.status, 'error');
+    assert.equal(body.error, 'Database unreachable');
+  } finally {
+    if (server.child.exitCode === null) server.child.kill('SIGKILL');
+    for (const s of openSockets) s.destroy();
+    proxy.close();
+  }
+});
+
 // checkDatabaseHealth is the function /healthz calls to decide its status
 // code. Exercising the failure branch through a full HTTP round trip would
 // mean cutting off the real shared docker-compose Postgres out from under
@@ -303,4 +374,129 @@ test('installCrashGuard exits non-zero on an unhandled promise rejection', async
   assert.notEqual(code, 0, `expected a non-zero exit code; stdout:\n${stdout}\nstderr:\n${stderr}`);
   assert.match(stderr, /deliberate crash-guard fixture rejection/);
   assert.doesNotMatch(stdout, /fixture did not crash/);
+});
+
+// ---------- gracefulShutdown driven directly (fake httpServer/dbPool) ----------
+//
+// The SIGTERM/SIGINT tests above spawn the real process and prove the
+// observable outer behaviour (drains a real in-flight HTTP request, exits
+// 0). These tests instead call gracefulShutdown() directly with injected
+// fakes - exactly the seam it already exposes for this
+// (httpServer/dbPool/graceMs/exit/pendingPushes) - to pin two properties
+// that a real spawned process can't easily force on demand: a deferred
+// Shopify push still in flight when shutdown begins, and a request (or a
+// push) that never finishes at all.
+//
+// Each scenario spawns its own tiny fixture process rather than calling
+// gracefulShutdown() in-process (like the crash-guard fixtures below do, for
+// the same reason): gracefulShutdown() guards itself with a module-level
+// `shuttingDown` flag that is never reset, so a second in-process call in
+// this same test file would silently no-op and the test would hang forever
+// awaiting an exit() that never comes. A fresh process per scenario gives
+// each one a fresh module and makes that a non-issue.
+function runGracefulShutdownFixture(source) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, ['--input-type=module', '-e', source], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => (stdout += d.toString('utf8')));
+    child.stderr.on('data', (d) => (stderr += d.toString('utf8')));
+    child.on('exit', () => resolve({ stdout, stderr }));
+  });
+}
+
+function gracefulShutdownImportLine() {
+  const importPath = path.join(ROOT, 'server', 'server.js').replace(/\\/g, '\\\\');
+  return `import { gracefulShutdown } from ${JSON.stringify(importPath)};\n`;
+}
+
+test('a deferred Shopify push in flight when shutdown begins is drained before the pool ends', async () => {
+  const source =
+    gracefulShutdownImportLine() +
+    `let pushResolve;\n` +
+    `const pushPromise = new Promise((res) => { pushResolve = res; });\n` +
+    // Mirrors the real firePendingShopifyPushes/pendingShopifyPushes pattern
+    // (server/server.js): the tracked promise removes itself from the set
+    // once it settles. Without this, waitForPendingShopifyPushes' own
+    // \`while (pendingPushes.size > 0)\` loop would spin on an already-settled
+    // promise forever - a bug in this test fixture, not in gracefulShutdown,
+    // caught by running it standalone before wiring it into node:test.
+    `const pendingPushes = new Set();\n` +
+    `const trackedPush = pushPromise.then(() => console.log('MARK push-settled'));\n` +
+    `pendingPushes.add(trackedPush);\n` +
+    `trackedPush.finally(() => pendingPushes.delete(trackedPush));\n` +
+    `const fakeHttpServer = { close: (cb) => setImmediate(cb), closeIdleConnections: () => {} };\n` +
+    `const fakeDbPool = { end: () => { console.log('MARK pool-end'); return Promise.resolve(); } };\n` +
+    `gracefulShutdown('SIGTERM', {\n` +
+    `  httpServer: fakeHttpServer, dbPool: fakeDbPool, graceMs: 5000, pendingPushes,\n` +
+    `  exit: (code) => { console.log('MARK exit:' + code); process.exit(code); },\n` +
+    `});\n` +
+    `setTimeout(() => pushResolve(), 100);\n`;
+
+  const { stdout, stderr } = await runGracefulShutdownFixture(source);
+  const marks = [...stdout.matchAll(/MARK (\S+)/g)].map((m) => m[1]);
+  assert.deepEqual(
+    marks,
+    ['push-settled', 'pool-end', 'exit:0'],
+    `the push must settle strictly before the pool ends, which must happen strictly before exit; stdout:\n${stdout}\nstderr:\n${stderr}`
+  );
+});
+
+// Reviewer's suggested shape for the force-exit timer (otherwise completely
+// unexercised: delete it and "bounded" silently becomes "hangs forever on a
+// stuck request", and nothing in this suite would notice).
+test('gracefulShutdown force-exits once the grace period elapses, even if httpServer.close never calls back', async () => {
+  const source =
+    gracefulShutdownImportLine() +
+    // The force-exit timer is deliberately .unref()'d in production (see
+    // server/server.js) so it can never itself be the reason the process
+    // stays alive - a real listening httpServer is what keeps the event
+    // loop open until then. This fake httpServer never calls back and holds
+    // no handle of its own, so without something else ref'd here Node would
+    // find nothing left to do and exit on its own before the unref'd timer
+    // ever got a chance to fire - proving nothing about gracefulShutdown
+    // itself. This interval stands in for that real listening socket.
+    `setInterval(() => {}, 1000);\n` +
+    `const fakeHttpServer = { close: () => {}, closeIdleConnections: () => {} };\n` +
+    `const fakeDbPool = { end: () => Promise.resolve() };\n` +
+    `const start = Date.now();\n` +
+    `gracefulShutdown('SIGTERM', {\n` +
+    `  httpServer: fakeHttpServer, dbPool: fakeDbPool, graceMs: 100,\n` +
+    `  exit: (code) => { console.log('MARK exit:' + code + ':' + (Date.now() - start)); process.exit(code); },\n` +
+    `});\n`;
+
+  const { stdout, stderr } = await runGracefulShutdownFixture(source);
+  const match = stdout.match(/MARK exit:(-?\d+):(\d+)/);
+  assert.ok(match, `expected an exit mark; stdout:\n${stdout}\nstderr:\n${stderr}`);
+  const [, code, elapsedStr] = match;
+  assert.equal(code, '1', 'a hung close() must still force-exit with a non-zero code');
+  assert.ok(Number(elapsedStr) < 2000, `force-exit must fire close to the grace period (100ms), took ${elapsedStr}ms`);
+});
+
+// The same bound applies to a wedged Shopify push specifically - tracking it
+// must never turn into a NEW way for shutdown to hang, on top of the plain
+// close()-never-calls-back case above.
+test('a Shopify push that never settles cannot hold shutdown open past the grace period', async () => {
+  const source =
+    gracefulShutdownImportLine() +
+    // Same keep-alive rationale as the previous test - a pending await on a
+    // promise that never settles schedules no timer/IO of its own and would
+    // otherwise let Node's event loop drain and exit before the unref'd
+    // force-exit timer got a chance to fire.
+    `setInterval(() => {}, 1000);\n` +
+    `const pendingPushes = new Set([new Promise(() => {})]);\n` + // never settles
+    `const fakeHttpServer = { close: (cb) => setImmediate(cb), closeIdleConnections: () => {} };\n` +
+    `const fakeDbPool = { end: () => Promise.resolve() };\n` +
+    `const start = Date.now();\n` +
+    `gracefulShutdown('SIGTERM', {\n` +
+    `  httpServer: fakeHttpServer, dbPool: fakeDbPool, graceMs: 150, pendingPushes,\n` +
+    `  exit: (code) => { console.log('MARK exit:' + code + ':' + (Date.now() - start)); process.exit(code); },\n` +
+    `});\n`;
+
+  const { stdout, stderr } = await runGracefulShutdownFixture(source);
+  const match = stdout.match(/MARK exit:(-?\d+):(\d+)/);
+  assert.ok(match, `expected an exit mark; stdout:\n${stdout}\nstderr:\n${stderr}`);
+  const [, code, elapsedStr] = match;
+  assert.equal(code, '1', 'a wedged push must still force-exit with a non-zero code');
+  assert.ok(Number(elapsedStr) < 2000, `a wedged push must not delay exit past the grace period (150ms), took ${elapsedStr}ms`);
 });

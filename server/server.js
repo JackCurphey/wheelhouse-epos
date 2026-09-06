@@ -104,14 +104,28 @@ async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProduct
 // overlap for this request, so the property the brief asks for holds: the
 // connection a real till sale's own reads/writes needed is free again
 // before any Shopify HTTP round-trip (with its retries/backoff) begins.
+//
+// This is fire-and-forget from the caller's point of view - the HTTP
+// response has already been sent - but graceful shutdown still needs to know
+// it happened. `pendingShopifyPushes` tracks every push started this way so
+// gracefulShutdown() can wait for them before calling dbPool.end(): pg
+// rejects connect() once end() has been called, so a push that opens its
+// runWithShop(shopId, ...) scope after the pool has already ended gets a
+// connection refused mid-push. The .catch() below already means that
+// wouldn't fail a till sale, but it would fail the push itself silently -
+// tracking it here means shutdown drains it first instead.
+const pendingShopifyPushes = new Set();
+
 function firePendingShopifyPushes(shopId, pushes) {
   if (!pushes.length) return;
-  runWithShop(shopId, async () => {
+  const pending = runWithShop(shopId, async () => {
     for (const { product, newQty } of pushes) {
       // Never let a Shopify hiccup fail a real till sale - log and move on.
       await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
     }
   }).catch((err) => console.error('Shopify inventory push scope failed', err));
+  pendingShopifyPushes.add(pending);
+  pending.finally(() => pendingShopifyPushes.delete(pending));
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -4082,10 +4096,24 @@ const SHUTDOWN_GRACE_MS = 10_000;
 
 let shuttingDown = false;
 
+// Waits for every currently-tracked deferred Shopify push to settle
+// (success or failure - either way it's done with the pool). Re-checks the
+// set after each round rather than snapshotting once, in case a push that
+// was itself still in the middle of starting adds a sibling before this
+// resolves. Deliberately has no timeout of its own: the caller's own
+// forceExit timer already bounds the ENTIRE shutdown (this wait included),
+// so a wedged push cannot hold the process open past that - it just means
+// the process exits via the force-exit path instead of the clean one.
+async function waitForPendingShopifyPushes(pendingPushes) {
+  while (pendingPushes.size > 0) {
+    await Promise.allSettled([...pendingPushes]);
+  }
+}
+
 // Exported so tests can drive it directly against a fake server/pool without
 // spawning a real process for every assertion; production only ever calls it
 // through the SIGTERM/SIGINT listeners below.
-export function gracefulShutdown(signal, { httpServer = server, dbPool = pool, graceMs = SHUTDOWN_GRACE_MS, exit = process.exit } = {}) {
+export function gracefulShutdown(signal, { httpServer = server, dbPool = pool, graceMs = SHUTDOWN_GRACE_MS, exit = process.exit, pendingPushes = pendingShopifyPushes } = {}) {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`${signal} received - closing the HTTP server, waiting up to ${graceMs}ms for in-flight requests to finish`);
@@ -4100,8 +4128,14 @@ export function gracefulShutdown(signal, { httpServer = server, dbPool = pool, g
 
   httpServer.close((err) => {
     if (err) console.error('Error while closing the HTTP server', err);
-    dbPool
-      .end()
+    // A sale that completed just as the signal landed can still have a
+    // deferred Shopify push in flight, opened on its OWN pooled client after
+    // the sale's own client was already released (see
+    // firePendingShopifyPushes above) - draining HTTP connections says
+    // nothing about that. Wait for it before ending the pool, or pg refuses
+    // its connect() with the pool already ended and the push dies silently.
+    waitForPendingShopifyPushes(pendingPushes)
+      .then(() => dbPool.end())
       .catch((poolErr) => console.error('Error while closing the database pool', poolErr))
       .finally(() => {
         clearTimeout(forceExit);
@@ -4130,6 +4164,15 @@ export function gracefulShutdown(signal, { httpServer = server, dbPool = pool, g
 // process whose state is unknown (a client that may never have been
 // released, an in-flight transaction of uncertain status) is worse than one
 // that exits and lets the orchestrator start a clean one.
+//
+// Deliberately NOT coordinated with gracefulShutdown's `shuttingDown` flag:
+// an uncaught error that lands while a drain is already in progress (a bug
+// in some OTHER, unrelated in-flight request, say) exits immediately here
+// rather than letting the rest of the grace period run out first, which
+// truncates it for every other still-draining request. That is an accepted
+// cost under the same reasoning as above, not an oversight - a process that
+// has just proven its own state is unknown by throwing uncaught is not one
+// this codebase trusts to finish draining correctly either.
 export function installCrashGuard({ exit = process.exit } = {}) {
   process.on('unhandledRejection', (reason, promise) => {
     console.error('Fatal: unhandled promise rejection - exiting so the process supervisor can restart clean', {
