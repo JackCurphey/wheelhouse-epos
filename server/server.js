@@ -86,6 +86,34 @@ async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProduct
   }
 }
 
+// Fires createSale's deferred Shopify inventory pushes (see
+// deferShopifyPushesTo on createSale). Called only once the request's own
+// pooled client has already gone back to the pool - `product` here is a row
+// createSale read earlier in the same request, before COMMIT, so nothing
+// about firing this late depends on that original client.
+//
+// pushInventoryLevel (server/shopify.js) is not a pure HTTP call, though:
+// getShopifyConnection() and the post-push status update both go through
+// prepare(), which reads the current request-scoped client out of
+// AsyncLocalStorage (server/db.js) and throws "No database client in scope"
+// with none active. Firing this with no scope at all would crash every
+// deferred push. runWithShop(shopId, ...) here checks out a NEW client from
+// the pool - not the one that was just released - and holds it only for
+// this push (or this shop's small batch of them), which starts strictly
+// after the original request has already sent its response. The two never
+// overlap for this request, so the property the brief asks for holds: the
+// connection a real till sale's own reads/writes needed is free again
+// before any Shopify HTTP round-trip (with its retries/backoff) begins.
+function firePendingShopifyPushes(shopId, pushes) {
+  if (!pushes.length) return;
+  runWithShop(shopId, async () => {
+    for (const { product, newQty } of pushes) {
+      // Never let a Shopify hiccup fail a real till sale - log and move on.
+      await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+    }
+  }).catch((err) => console.error('Shopify inventory push scope failed', err));
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
@@ -1530,7 +1558,16 @@ export async function loadDocumentLine(it, { checkStock }) {
 
 // Validates items against live stock, inserts the sale + sale_items, and
 // deducts stock. Shared by direct checkout and quote/order -> sale conversion.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
+//
+// `deferShopifyPushesTo`, if given an array, makes this function record the
+// {product, newQty} pairs onto it instead of firing pushInventoryLevel
+// itself - the caller is then responsible for firing them once it is safe to
+// (see the comment above the shopifyPushes collection below, and the HTTP
+// route handlers that pass this in). Left undefined, the old inline
+// behaviour runs unchanged, which is what every direct createSale() caller
+// that doesn't care about pool-connection lifetime (tests, the Shopify
+// webhook handlers) keeps getting for free.
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }, { deferShopifyPushesTo } = {}) {
   const loaded = [];
   for (const it of items) {
     loaded.push(await loadDocumentLine(it, { checkStock: true }));
@@ -1615,9 +1652,18 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
     }
     await db.exec('COMMIT');
 
-    for (const { product, newQty } of shopifyPushes) {
-      // Never let a Shopify hiccup fail a real till sale - log and move on.
-      await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+    if (deferShopifyPushesTo) {
+      // The caller (an HTTP route handler releasing its pooled client before
+      // firing these - see the dispatcher's afterRelease handling below)
+      // owns firing these now. `product` is the row this function already
+      // read earlier in the request, captured in the closure - nothing here
+      // depends on the database client remaining checked out.
+      deferShopifyPushesTo.push(...shopifyPushes);
+    } else {
+      for (const { product, newQty } of shopifyPushes) {
+        // Never let a Shopify hiccup fail a real till sale - log and move on.
+        await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      }
     }
     return saleId;
   } catch (err) {
@@ -1706,7 +1752,7 @@ async function processShopifyRefundWebhook(shopId, refund) {
   });
 }
 
-route('POST', '/api/sales', async (req, res) => {
+route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease, shopId) => {
   const body = await readJsonBody(req);
   const items = Array.isArray(body.items) ? body.items : [];
   if (items.length === 0) return badRequest(res, 'Sale must include at least one item');
@@ -1731,8 +1777,12 @@ route('POST', '/api/sales', async (req, res) => {
   if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
 
   let saleId;
+  const shopifyPushes = [];
   try {
-    saleId = await createSale({ customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note });
+    saleId = await createSale(
+      { customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note },
+      { deferShopifyPushesTo: shopifyPushes }
+    );
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -1742,6 +1792,9 @@ route('POST', '/api/sales', async (req, res) => {
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
   sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
+  if (afterRelease && shopifyPushes.length) {
+    afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
+  }
 });
 
 // ---------- Quotes & orders (sale documents) ----------
@@ -1990,7 +2043,7 @@ route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
   sendJson(res, 200, serializeSaleDocument(row, savedItems));
 });
 
-route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
+route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
   const id = Number(params.id);
   const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
   if (!doc) return notFound(res, 'Not found');
@@ -2027,18 +2080,22 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
   }));
 
   let saleId;
+  const shopifyPushes = [];
   try {
-    saleId = await createSale({
-      customerId: doc.customer_id,
-      cashierId: cashierResolved.cashierId,
-      items: saleItems,
-      discount: doc.discount,
-      cashAmount,
-      cardAmount,
-      cashTendered,
-      payments,
-      note: `Converted from ${doc.kind} #${doc.id}`,
-    });
+    saleId = await createSale(
+      {
+        customerId: doc.customer_id,
+        cashierId: cashierResolved.cashierId,
+        items: saleItems,
+        discount: doc.discount,
+        cashAmount,
+        cardAmount,
+        cashTendered,
+        payments,
+        note: `Converted from ${doc.kind} #${doc.id}`,
+      },
+      { deferShopifyPushesTo: shopifyPushes }
+    );
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -2062,6 +2119,9 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
   sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
+  if (afterRelease && shopifyPushes.length) {
+    afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
+  }
 });
 
 // ---------- Workshop jobs ----------
@@ -3756,9 +3816,39 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
   return serveStatic(req, res, relative, STOREFRONT_DIR);
 }
 
+// Steady-state health, not boot health: the boot chain already runs
+// runMigrations() then assertPoolerModeSafe() before the server ever starts
+// listening, so a container that reports "up" has already proven the
+// database was reachable once. That says nothing about a minute later - a
+// dropped connection, a full pool, or Postgres going away after boot leaves
+// the process listening and accepting connections while every real request
+// fails. Takes a fresh query on every call (never cached) so /healthz always
+// reflects the database's condition right now, not at startup.
+export async function checkDatabaseHealth(targetPool = pool) {
+  try {
+    await targetPool.query('SELECT 1');
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  // Deliberately ahead of every other branch: an orchestrator's health probe
+  // must never be mistaken for a shop/storefront route (and must never wait
+  // on shop resolution), and must never be satisfied by the generic static
+  // fallback at the bottom of this dispatcher - that's exactly the docker-
+  // compose bug this replaces (GETting `/`, which serves index.html off disk
+  // and passes with Postgres completely down).
+  if (pathname === '/healthz') {
+    const health = await checkDatabaseHealth();
+    if (health.ok) return sendJson(res, 200, { status: 'ok' });
+    console.error('Health check failed: database unreachable', health.error);
+    return sendJson(res, 503, { status: 'error', error: 'Database unreachable' });
+  }
 
   if (parseStorefrontSlugCandidate(req, url)) {
     const storefrontShop = await resolveStorefrontShop(req, url);
@@ -3914,11 +4004,29 @@ const server = createServer(async (req, res) => {
       const ctx = await currentSession(req);
       if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
 
+      // A handler that needs work done AFTER its pooled client goes back to
+      // the pool (currently: firing Shopify inventory pushes queued by
+      // createSale's deferShopifyPushesTo - see the comment there) pushes a
+      // callback onto this array instead of running that work itself while
+      // still inside runWithShop. It is only read below once the
+      // `runWithShop` call has fully resolved, which cannot happen until its
+      // `finally` has already released the client back to the pool - so
+      // anything queued here is guaranteed to run without holding one of the
+      // ten pooled connections across it.
+      const afterRelease = [];
       try {
-        await runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams));
+        await runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams, afterRelease, ctx.shop.id));
       } catch (err) {
         console.error(err);
         sendJson(res, 500, { error: err.message || 'Internal server error' });
+        return;
+      }
+      for (const work of afterRelease) {
+        try {
+          work();
+        } catch (err) {
+          console.error('Post-release work failed', err);
+        }
       }
       return;
     }
@@ -3963,6 +4071,79 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// ---------- Graceful shutdown ----------
+
+// How long a rolling deploy's SIGTERM waits for requests already in flight
+// (a till mid-transaction, a slow Shopify push-with-retry) to finish on their
+// own before the process gives up and exits anyway. Bounded deliberately: an
+// orchestrator's own "give up and SIGKILL" timeout is typically 10-30s, and
+// exiting cleanly one second before that beats being SIGKILLed mid-write.
+const SHUTDOWN_GRACE_MS = 10_000;
+
+let shuttingDown = false;
+
+// Exported so tests can drive it directly against a fake server/pool without
+// spawning a real process for every assertion; production only ever calls it
+// through the SIGTERM/SIGINT listeners below.
+export function gracefulShutdown(signal, { httpServer = server, dbPool = pool, graceMs = SHUTDOWN_GRACE_MS, exit = process.exit } = {}) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received - closing the HTTP server, waiting up to ${graceMs}ms for in-flight requests to finish`);
+
+  const forceExit = setTimeout(() => {
+    console.error(`Shutdown grace period (${graceMs}ms) elapsed with requests still in flight - forcing exit`);
+    exit(1);
+  }, graceMs);
+  // The force-exit timer must never be the reason the process stays alive -
+  // only in-flight work should do that.
+  forceExit.unref();
+
+  httpServer.close((err) => {
+    if (err) console.error('Error while closing the HTTP server', err);
+    dbPool
+      .end()
+      .catch((poolErr) => console.error('Error while closing the database pool', poolErr))
+      .finally(() => {
+        clearTimeout(forceExit);
+        exit(err ? 1 : 0);
+      });
+  });
+
+  // A keep-alive socket sitting idle (no request in flight on it) would
+  // otherwise hold server.close()'s callback open indefinitely, since Node
+  // only fires it once every connection - including idle ones - has closed.
+  // Idle connections have nothing to drain, so cut them immediately; a
+  // connection with a request actually in flight is untouched by this call
+  // and is left to finish within the grace period above.
+  httpServer.closeIdleConnections?.();
+}
+
+// ---------- Crash guard ----------
+
+// Several comments elsewhere in this file (the Shopify webhook branch, the
+// storefront branch, etc.) individually wrap their own async work in
+// try/catch specifically because, until now, nothing caught a rejection that
+// slipped past all of them - Node's default behaviour for an unhandled
+// rejection or an uncaught synchronous throw is to crash the whole process
+// immediately, taking every shop down with it, with no log line explaining
+// why. This does not try to keep serving after either kind of error: a
+// process whose state is unknown (a client that may never have been
+// released, an in-flight transaction of uncertain status) is worse than one
+// that exits and lets the orchestrator start a clean one.
+export function installCrashGuard({ exit = process.exit } = {}) {
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Fatal: unhandled promise rejection - exiting so the process supervisor can restart clean', {
+      reason,
+      promise,
+    });
+    exit(1);
+  });
+  process.on('uncaughtException', (err, origin) => {
+    console.error(`Fatal: uncaught exception (${origin}) - exiting so the process supervisor can restart clean`, err);
+    exit(1);
+  });
+}
+
 // This module exports functions (serializeX, etc.) that test files import
 // directly. Without this guard, every test file that imports server.js would
 // also run this migrate-and-listen chain and boot a real HTTP server -
@@ -3973,6 +4154,12 @@ const server = createServer(async (req, res) => {
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
+  installCrashGuard();
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  // Same treatment as SIGTERM so Ctrl+C locally behaves consistently with a
+  // real rolling deploy rather than Node's raw default (immediate exit).
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
   runMigrations()
     // Session-scoped tenancy (the DB_TENANT_SCOPE default) is only safe on a
     // direct connection or a session-mode pooler. Put a transaction-mode
