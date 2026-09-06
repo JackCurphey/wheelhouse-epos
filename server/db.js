@@ -49,6 +49,36 @@ export const pool = new Pool({
   ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: true } : false,
 });
 
+// pg-pool emits 'error' on the POOL (not the individual client) whenever an
+// IDLE client's underlying connection dies - a Postgres restart, a failover,
+// a load balancer resetting a TCP connection, a cloud provider recycling a
+// connection. None of that is exceptional; it is an ordinary fact of running
+// against a network database, and it happens to a connection nobody is
+// currently using. node-postgres's own docs call this out explicitly and
+// recommend exactly this: log it and do nothing else. The pool has already
+// removed the dead client by the time this fires and creates a replacement
+// on the next checkout; every OTHER client currently in use by another
+// request is unaffected.
+//
+// This is PRE-EXISTING and this branch did not cause or worsen it. Before
+// the crash guard installed elsewhere on this branch (server/server.js:
+// installCrashGuard), Node's own default behaviour for an uncaught exception
+// was already to print a stack and exit(1) - a listener-less 'error' event is
+// an EventEmitter throwing synchronously, which for a failure surfaced from
+// an async socket event becomes an uncaught exception with nothing else in
+// the picture. The crash guard turned that from an unexplained crash into a
+// logged, deliberate exit(1); it did not change the outcome. Without this
+// handler, that exit(1) takes down the ENTIRE shared multi-tenant process -
+// every shop, not just whichever request happened to be near that
+// connection - over a routine event that a bare `pg.Pool` is designed to
+// recover from on its own. Do not add reconnection logic here: pg already
+// replaces the client itself. Do not swallow this silently either - an
+// operator needs to see it to tell "Postgres restarted" from "Postgres is
+// down", and it is signal, not noise.
+pool.on('error', (err) => {
+  console.error('db: idle client connection error - pool continues with its other clients', err);
+});
+
 // ---------- Tenancy scope mode ----------
 
 export const TENANT_SCOPE_MODES = ['session', 'transaction'];

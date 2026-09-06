@@ -258,12 +258,42 @@ test('GET /healthz returns 200 with the database actually reachable', async () =
 // whole process before /healthz is ever reached - a real gap worth a human
 // look at server/db.js, not something this route-level test can or should
 // paper over.)
+// Polls /healthz until it returns the given status or the deadline passes,
+// returning the last response so the caller can assert on it. This replaces
+// a fixed sleep banking on pg's 10s idle timer firing in the spawned child's
+// event loop within a fixed margin - setTimeout only guarantees "no earlier
+// than", so under CPU contention (concurrent test files, a loaded CI runner,
+// a slower machine) that margin is ordinary scheduling jitter, not a real
+// deadline, and the test fails for losing a race rather than for a defect.
+//
+// The interval between checks MUST be well above pg's idle timeout (10s),
+// not a short poll like 200ms. Every /healthz call that gets a 200 has
+// exercised the pool's one surviving idle client, and pg starts that
+// client's idle timer over again the moment it is released back to the
+// pool - polling more frequently than the timeout is what would make it,
+// so a fast/tight poll here would never observe the 503 at all (proven
+// empirically: it still read 200 after 30+ seconds of 200ms polling).
+// Spacing checks past the timeout gives each one an honest, undisturbed
+// window for the client to actually go idle and get closed, and a failed
+// check simply retries with a fresh full window rather than the test
+// failing outright - which is what makes this robust to jitter that would
+// have broken the old fixed 10,500ms wait.
+async function pollUntilStatus(url, expectedStatus, { timeoutMs, intervalMs }) {
+  const deadline = Date.now() + timeoutMs;
+  let last;
+  while (true) {
+    last = await fetch(url);
+    if (last.status === expectedStatus || Date.now() >= deadline) return last;
+    await last.arrayBuffer().catch(() => {});
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
 test('GET /healthz returns 503 with the database actually unreachable', async () => {
-  const REAL_DB_HOST = '127.0.0.1';
-  const REAL_DB_PORT = 5433;
+  const realDbUrl = new URL(process.env.DATABASE_URL);
   const openSockets = new Set();
   const proxy = createNetServer((client) => {
-    const upstream = net.connect(REAL_DB_PORT, REAL_DB_HOST);
+    const upstream = net.connect(Number(realDbUrl.port), realDbUrl.hostname);
     openSockets.add(client);
     client.pipe(upstream);
     upstream.pipe(client);
@@ -273,11 +303,9 @@ test('GET /healthz returns 503 with the database actually unreachable', async ()
   await new Promise((resolve) => proxy.listen(0, '127.0.0.1', resolve));
   const proxyPort = proxy.address().port;
 
-  const realDbUrl = new URL(process.env.DATABASE_URL);
   const proxiedDbUrl = new URL(process.env.DATABASE_URL);
   proxiedDbUrl.hostname = '127.0.0.1';
   proxiedDbUrl.port = String(proxyPort);
-  void realDbUrl;
 
   const server = await spawnServer({ DATABASE_URL: proxiedDbUrl.toString() });
   try {
@@ -289,10 +317,12 @@ test('GET /healthz returns 503 with the database actually unreachable', async ()
     // erroring out (see the comment above).
     proxy.close();
 
-    await new Promise((r) => setTimeout(r, 10_500));
+    // pg's default idleTimeoutMillis is 10s; poll at an interval past that
+    // (11s) with a generous overall budget (45s, four attempts) rather than
+    // trusting a single fixed sleep to land after it in every environment
+    // this runs in.
+    const res = await pollUntilStatus(`${server.baseUrl}/healthz`, 503, { timeoutMs: 45_000, intervalMs: 11_000 });
     assert.equal(server.child.exitCode, null, `server must not have crashed while waiting out the idle timeout; stderr:\n${server.getStderr()}`);
-
-    const res = await fetch(`${server.baseUrl}/healthz`);
     assert.equal(res.status, 503, `expected 503 once every pooled connection has to be re-established through the dead proxy; stderr:\n${server.getStderr()}`);
     const body = await res.json();
     assert.equal(body.status, 'error');
