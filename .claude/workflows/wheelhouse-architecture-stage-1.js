@@ -17,7 +17,7 @@ export const meta = {
 // ---------------------------------------------------------------------------
 
 const SHARED = `
-You are working in the Wheelhouse EPOS repo at /Users/curphey/Documents/Github/wheelhouse-epos.
+You are working in the Wheelhouse EPOS repo at /Users/jackcurphey/wheelhouse-epos.
 
 WHAT THIS SYSTEM IS
 A multi-tenant bike-shop EPOS heading for a hosted SaaS at hundreds of shops.
