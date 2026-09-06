@@ -34,8 +34,22 @@ test('runMigrations blocks while another process holds the migration advisory lo
 
     await holder.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
 
-    // Now that the lock is free, the blocked call should complete.
+    // Minor 4: a bare "eventually completes" assertion would also pass for
+    // a genuinely slow first run that has nothing to do with lock
+    // contention (this test database's migrations are already applied by
+    // every other test file that ran before it, which is the only reason
+    // the 300ms pending-check above holds at all - it says nothing about
+    // how fast a legitimately unblocked run actually is). Bound how long
+    // "now that the lock is free" is allowed to take, so a regression that
+    // makes the unblocked path itself slow (not just lock-contended) still
+    // fails this test.
+    const start = Date.now();
     await assert.doesNotReject(migrationRun);
+    const elapsed = Date.now() - start;
+    assert.ok(
+      elapsed < 2000,
+      `expected the unblocked run to complete promptly once the lock was released, took ${elapsed}ms`
+    );
   } finally {
     holder.release();
   }

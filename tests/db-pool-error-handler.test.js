@@ -1,20 +1,22 @@
 // tests/db-pool-error-handler.test.js
 //
-// server/db.js's pool has no pool.on('error', ...) listener. pg-pool emits
-// 'error' on the pool whenever an IDLE client's underlying connection dies -
-// a Postgres restart, a failover, a load balancer resetting a TCP connection,
-// a cloud provider recycling a connection. An 'error' event with no listener
-// is not just logged by Node - EventEmitter throws it synchronously, and
-// because the failure here originates from an async socket event (not from
-// inside any of this test file's own try/catch), that throw surfaces at the
-// top of the event loop as an uncaught exception. Node's own default
-// behaviour for an uncaught exception is to print the stack and exit(1); this
-// branch neither installs nor needs installCrashGuard() to observe that - the
-// crash is pre-existing and happens with or without the guard from
+// server/db.js's pool now has a pool.on('error', ...) listener (commit
+// a677855, this branch) - this test predates that fix and originally
+// documented what happened without one. pg-pool emits 'error' on the pool
+// whenever an IDLE client's underlying connection dies - a Postgres restart,
+// a failover, a load balancer resetting a TCP connection, a cloud provider
+// recycling a connection. An 'error' event with no listener is not just
+// logged by Node - EventEmitter throws it synchronously, and because the
+// failure here originates from an async socket event (not from inside any
+// of this test file's own try/catch), that throw surfaces at the top of the
+// event loop as an uncaught exception. Node's own default behaviour for an
+// uncaught exception is to print the stack and exit(1); this branch neither
+// installs nor needs installCrashGuard() to observe that - the crash this
+// test guards against would happen with or without the guard from
 // server/server.js. This is a real, ordinary operational event (not a bug
-// anywhere else) that currently takes down the whole shared multi-tenant
-// process over one connection that had nothing left to do at the moment it
-// died.
+// anywhere else) that, without the handler, took down the whole shared
+// multi-tenant process over one connection that had nothing left to do at
+// the moment it died.
 //
 // This is deliberately NOT "assert a listener is registered" - a test like
 // that passes even if the registered listener itself does nothing (or does

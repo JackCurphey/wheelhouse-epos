@@ -20,7 +20,9 @@ import { createServer as createNetServer } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import '../server/load-env.js';
+import pg from 'pg';
 import { checkDatabaseHealth, gracefulShutdown } from '../server/server.js';
+import { pool as realPool } from '../server/db.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -220,6 +222,39 @@ test('SIGINT is handled the same way as SIGTERM', async () => {
   }
 });
 
+// Critical 2: signal handlers are installed before server.listen, so a
+// SIGTERM that lands during the boot chain (migrations, the pooler probe -
+// still running, server not listening yet) must not be treated as "the HTTP
+// server failed to close" nor cause the still-running boot chain to log a
+// false "Database startup checks failed". This is exactly the multi-replica
+// rolling-deploy scenario the advisory lock exists to make safe: a replica
+// scaled down while still waiting on another replica's migration lock.
+// Spawns the raw child directly (not spawnServer, which waits for the
+// server to actually start listening before returning - the whole point
+// here is to signal BEFORE that happens).
+test('SIGTERM landing before the server starts listening exits 0 without a false database failure', async () => {
+  const port = await freePort();
+  const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], {
+    cwd: ROOT,
+    env: { ...process.env, PORT: String(port) },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stderr = '';
+  child.stderr.on('data', (d) => { stderr += d.toString('utf8'); });
+  try {
+    // 120ms is well before migrations + the pooler probe normally finish
+    // (spawnServer's own waitForServer allows up to 30s for that), so the
+    // process is still mid-boot chain, pre-listen, when the signal lands.
+    await new Promise((r) => setTimeout(r, 120));
+    child.kill('SIGTERM');
+    const code = await waitForExit(child, 15000);
+    assert.equal(code, 0, `expected a clean exit 0 for a pre-listen SIGTERM, got ${code}; stderr:\n${stderr}`);
+    assert.doesNotMatch(stderr, /Database startup checks failed/, `a pre-listen SIGTERM must not be misreported as a database failure; stderr:\n${stderr}`);
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+  }
+});
+
 test('GET /healthz returns 200 with the database actually reachable', async () => {
   const server = await spawnServer();
   try {
@@ -251,13 +286,19 @@ test('GET /healthz returns 200 with the database actually reachable', async () =
 // test database at all.
 //
 // (Destroying the proxy's already-open sockets instead of just closing its
-// listener was tried first and rejected: pg's Pool has no
-// pool.on('error', ...) handler in server/db.js, so an idle client's
-// connection dying mid-flight surfaces as an uncaughtException that this
-// file's own crash guard (installCrashGuard) treats as fatal and exits the
-// whole process before /healthz is ever reached - a real gap worth a human
-// look at server/db.js, not something this route-level test can or should
-// paper over.)
+// listener was tried first and rejected, on the reasoning that pg's Pool
+// had no pool.on('error', ...) handler in server/db.js at the time, so an
+// idle client's connection dying mid-flight would surface as an
+// uncaughtException that this file's own crash guard (installCrashGuard)
+// treats as fatal, exiting the whole process before /healthz is ever
+// reached. That handler now exists (commit a677855, this branch) - this
+// design note is stale and kept only as a record of why the slower
+// idle-timeout approach below was chosen; it was never re-verified whether
+// the cheaper socket-destroy approach is viable now that the gap it was
+// rejected over is closed. Left as a known follow-up rather than switched
+// blind: this test's own timing (an 11-45s window) is deliberately
+// generous, and a socket-destroy rewrite needs its own red/mutation proof
+// against a route that hardcodes a 200 response before it can replace this.)
 // Polls /healthz until it returns the given status or the deadline passes,
 // returning the last response so the caller can assert on it. This replaces
 // a fixed sleep banking on pg's 10s idle timer firing in the spawned child's
@@ -352,6 +393,60 @@ test('checkDatabaseHealth reports ok against a pool whose query succeeds', async
   const workingPool = { query: () => Promise.resolve({ rows: [{ '?column?': 1 }] }) };
   const result = await checkDatabaseHealth(workingPool);
   assert.equal(result.ok, true);
+});
+
+// Important 2: server/db.js's real pool had no connectionTimeoutMillis, so
+// pool.query() (what checkDatabaseHealth uses) QUEUES INDEFINITELY once all
+// pooled clients are checked out - the one steady-state failure this
+// branch's own deferred Shopify pushes are most likely to cause (a stalled
+// push under withRetry holds a connection for up to ~15.15s each - see
+// server/shopify.js). Without a bound, /healthz can't report that: instead
+// of a fast 503, the probe hangs, the orchestrator's own health-check
+// timeout fires, the pod gets restarted, and any in-flight push dies with
+// it - repeat.
+//
+// This builds a SEPARATE, small pool (max: 1) rather than exhausting the
+// real shared `pool` from server/db.js - that pool is used by every other
+// concurrently-running test file, and holding all ten of its connections
+// open here would wedge the whole suite, not just this test. It copies the
+// real pool's actual configured connectionTimeoutMillis (asserting first
+// that one is actually set, which is the config-level half of this fix) so
+// the behavioural half - a query against an exhausted pool failing fast
+// rather than hanging - is proven against the real configured value, not an
+// arbitrary one chosen for the test.
+test('a pool query fails fast (not hangs) once every connection is checked out, because connectionTimeoutMillis is set', async () => {
+  assert.ok(
+    typeof realPool.options.connectionTimeoutMillis === 'number' && realPool.options.connectionTimeoutMillis > 0,
+    'server/db.js pool must set a positive connectionTimeoutMillis so pool.query() cannot queue indefinitely under exhaustion'
+  );
+
+  const smallPool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 1,
+    connectionTimeoutMillis: realPool.options.connectionTimeoutMillis,
+  });
+  try {
+    // Check out the pool's only connection and hold it - simulating every
+    // connection being busy, the steady-state exhaustion scenario above.
+    const holder = await smallPool.connect();
+    try {
+      const start = Date.now();
+      const watchdog = new Promise((resolve) => setTimeout(() => resolve('WATCHDOG'), 20000));
+      const outcome = checkDatabaseHealth(smallPool).then((r) => ({ settled: 'RESULT', r }));
+      const raced = await Promise.race([outcome, watchdog.then((v) => ({ settled: v }))]);
+      const elapsed = Date.now() - start;
+      assert.notEqual(raced.settled, 'WATCHDOG', `checkDatabaseHealth hung past the watchdog (${elapsed}ms) instead of failing fast under pool exhaustion`);
+      assert.equal(raced.r.ok, false, 'an exhausted pool must report not-ok, not hang');
+      assert.ok(
+        elapsed < realPool.options.connectionTimeoutMillis + 5000,
+        `expected checkDatabaseHealth to fail close to connectionTimeoutMillis (${realPool.options.connectionTimeoutMillis}ms), took ${elapsed}ms`
+      );
+    } finally {
+      holder.release();
+    }
+  } finally {
+    await smallPool.end();
+  }
 });
 
 // Part 2 - crash guard. installCrashGuard() needs no database, so this spawns

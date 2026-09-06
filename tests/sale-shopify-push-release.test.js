@@ -23,7 +23,7 @@ import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
 import { saveShopifyConnection, pushInventoryLevel } from '../server/shopify.js';
-import { createSale } from '../server/server.js';
+import { createSale, pendingShopifyPushes, firePendingShopifyPushes } from '../server/server.js';
 
 function stubFetch(handler) {
   const original = globalThis.fetch;
@@ -165,6 +165,109 @@ test('pushInventoryLevel cannot run with no database scope open at all', async (
     () => pushInventoryLevel({ shopify_inventory_item_id: '888' }, 5),
     /No database client in scope/
   );
+});
+
+// Important 4: the real route handlers (POST /api/sales,
+// POST /api/sale-documents/:id/convert) only call firePendingShopifyPushes
+// from an `afterRelease` callback that runs after res.end() and after
+// runWithShop/releaseClient's own round-trips - a real gap the size of a
+// signal handler's single tick. If gracefulShutdown's pendingShopifyPushes
+// set only gained an entry when firePendingShopifyPushes itself ran (at FIRE
+// time), a SIGTERM landing in that gap would see the set empty, let
+// closeIdleConnections() cut the idle client's socket, and pool.end() would
+// beat the push's own connect() - the same seam commit 26034ae already
+// closed one layer earlier. This proves the set gains its entry the moment
+// createSale commits (QUEUE time), strictly before any afterRelease callback
+// has had a chance to run at all.
+test('pendingShopifyPushes gains a tracking entry the moment createSale commits, before firePendingShopifyPushes ever runs', async () => {
+  const events = [];
+  const { shop, productId, cashierId } = await setUpShopWithConnectedProduct(events);
+  try {
+    const shopifyPushes = [];
+    const sizeBefore = pendingShopifyPushes.size;
+    let saleId;
+    await runWithShop(shop.id, async () => {
+      saleId = await createSale(
+        { cashierId, items: [{ productId, qty: 3 }], discount: 0, cashAmount: 30 },
+        { deferShopifyPushesTo: shopifyPushes }
+      );
+    });
+    // Deliberately checked BEFORE anything resembling the real
+    // firePendingShopifyPushes/afterRelease callback is ever invoked - a
+    // fix that only registers the entry at fire time would leave the set
+    // exactly as it was before createSale ran, and this assertion would
+    // fail.
+    assert.ok(saleId, 'the sale must still be created');
+    assert.equal(
+      pendingShopifyPushes.size,
+      sizeBefore + 1,
+      'createSale must register a pendingShopifyPushes tracking entry as soon as it commits, not wait for the caller to fire the push'
+    );
+
+    // Settling it the real way (the deferred push actually running) must
+    // clear the entry back out - proving this isn't a permanent leak.
+    const restore = stubFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    try {
+      await runWithShop(shop.id, async () => {
+        for (const { product, newQty } of shopifyPushes) {
+          await pushInventoryLevel(product, newQty);
+        }
+      });
+    } finally {
+      restore();
+    }
+    if (shopifyPushes._pendingPushSettle) shopifyPushes._pendingPushSettle();
+    await new Promise((r) => setImmediate(r));
+    assert.equal(pendingShopifyPushes.size, sizeBefore, 'the tracking entry must clear once the push actually settles');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Important 1: firePendingShopifyPushes used to wrap its whole `for` loop
+// in ONE runWithShop scope, pinning a single pooled connection for the
+// entire batch (each item up to ~15.15s under withRetry - see
+// server/shopify.js's withRetry comment). This proves the fix ("a scope per
+// push") the direct way: spying on pool.connect() itself. One shared scope
+// for a 2-item batch calls pool.connect() exactly once; a fresh scope per
+// item calls it twice - a deterministic signal of the actual code path
+// taken, not a timing race against how fast Node happens to reuse a freed
+// connection.
+test('firePendingShopifyPushes opens a fresh pooled connection per push, not one held for the whole batch', async () => {
+  const events = [];
+  const { shop } = await setUpShopWithConnectedProduct(events);
+  try {
+    const restoreFetch = stubFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    const originalConnect = pool.connect.bind(pool);
+    let connectCalls = 0;
+    pool.connect = (...args) => {
+      connectCalls += 1;
+      return originalConnect(...args);
+    };
+    const pushes = [
+      { product: { shopify_inventory_item_id: '888' }, newQty: 1 },
+      { product: { shopify_inventory_item_id: '999' }, newQty: 2 },
+    ];
+    try {
+      const sizeBefore = pendingShopifyPushes.size;
+      firePendingShopifyPushes(shop.id, pushes);
+      const deadline = Date.now() + 5000;
+      while (pendingShopifyPushes.size > sizeBefore) {
+        if (Date.now() > deadline) throw new Error('firePendingShopifyPushes never settled');
+        await new Promise((r) => setTimeout(r, 20));
+      }
+    } finally {
+      pool.connect = originalConnect;
+      restoreFetch();
+    }
+    assert.equal(
+      connectCalls,
+      pushes.length,
+      `expected one pool.connect() per queued push (${pushes.length}), got ${connectCalls} - a single scope wrapping the whole batch would only call it once`
+    );
+  } finally {
+    await deleteTestShop(shop.id);
+  }
 });
 
 test.after(async () => {

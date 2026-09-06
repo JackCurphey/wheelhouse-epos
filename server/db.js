@@ -47,6 +47,20 @@ export const pool = new Pool({
   // Postgres providers generally require SSL, so set PGSSL=require in
   // DATABASE_URL's environment when eventually pointing at one.
   ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: true } : false,
+  // Without this, pool.connect() (and pool.query(), which checkDatabaseHealth
+  // and every runWithShop scope use) QUEUES INDEFINITELY once all `max`
+  // clients are checked out, instead of failing. That is exactly the
+  // steady-state failure this app's own deferred Shopify pushes can cause:
+  // pushInventoryLevel's withRetry can hold a connection for up to ~15.15s
+  // per attempt chain (see server/shopify.js), and a few concurrent slow
+  // pushes can exhaust all 10. Without a bound, /healthz can't report that -
+  // instead of a fast 503 it hangs, the orchestrator's own probe timeout
+  // fires, the pod gets restarted, and any in-flight push dies with it.
+  // 5s matches SHOPIFY_API_TIMEOUT_MS (server/shopify.js) - long enough that
+  // a healthy request briefly queued behind a normal burst isn't punished,
+  // short enough that a genuinely exhausted pool surfaces as a bounded
+  // request failure well within any reasonable orchestrator probe timeout.
+  connectionTimeoutMillis: 5000,
 });
 
 // pg-pool emits 'error' on the POOL (not the individual client) whenever an

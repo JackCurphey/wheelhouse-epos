@@ -145,6 +145,75 @@ test('registerShopifyWebhooks completes in ~1 call worth of time, not ~2, when b
   }
 });
 
+// Simulates the window Critical 1 lives in: the response headers arrive
+// (2xx, res.ok true) but the body never finishes streaming. Real
+// fetch/undici rejects res.json() with the same AbortSignal.timeout()
+// DOMException in this case, since the signal covers the whole request
+// including body read - this stub reproduces exactly that, rather than
+// neverRespondingFetch's "no response at all" case which never reaches
+// res.json() in the first place.
+function headersArriveBodyStallsFetch() {
+  return (url, opts) => Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => new Promise((resolve, reject) => {
+      opts?.signal?.addEventListener('abort', () => {
+        reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+      });
+    }),
+  });
+}
+
+// Critical 1: shopifyAdminRequest's bare `.catch(() => ({}))` around
+// res.json() turns a stalled-body timeout on a 2xx response into a
+// successful-looking `{}` return, because res.ok is still true by that
+// point. pushInventoryLevel is the worst call site for this - it discards
+// the withRetry/shopifyAdminRequest return value entirely
+// (`await withRetry(...)` with no assignment), so a push that never
+// actually reached Shopify records as success, and a connection previously
+// in sync_error gets silently flipped back to 'connected'. This must
+// instead surface as a rejection so withRetry retries it and, if every
+// attempt stalls the same way, the connection is marked sync_error - not
+// silently cleared to 'connected'.
+test('pushInventoryLevel does not report success (or clear sync_error) when the response body stalls after 2xx headers', async () => {
+  const shop = await createTestShop();
+  try {
+    await runWithShop(shop.id, async () => {
+      const restoreConnect = stubFetch(async () => ({ ok: true, status: 200, json: async () => ({ locations: [{ id: 42 }] }) }));
+      try {
+        await saveShopifyConnection({ shopDomain: 'fake.myshopify.com', accessToken: 'tok', storefrontApiToken: 'store-tok' });
+      } finally {
+        restoreConnect();
+      }
+      // Start the connection in sync_error, the way it would be after a
+      // prior failed push - the wrong behaviour under test is this
+      // flipping back to 'connected' on the strength of a `{}` fake
+      // success.
+      await prepare('UPDATE shopify_connections SET status = ? WHERE shop_id = ?').run('sync_error', shop.id);
+
+      const restore = stubFetch(headersArriveBodyStallsFetch());
+      try {
+        const start = Date.now();
+        const watchdog = new Promise((resolve) => setTimeout(() => resolve('WATCHDOG'), 25000));
+        const outcome = pushInventoryLevel({ shopify_inventory_item_id: '888' }, 5)
+          .then(() => 'RESOLVED')
+          .catch((err) => `REJECTED:${err.name || err.message}`);
+        const result = await Promise.race([outcome, watchdog]);
+        const elapsed = Date.now() - start;
+        assert.notEqual(result, 'WATCHDOG', `pushInventoryLevel hung past the watchdog (${elapsed}ms)`);
+        assert.match(result, /^REJECTED/, `pushInventoryLevel must reject a stalled body instead of returning success, got ${result}`);
+      } finally {
+        restore();
+      }
+
+      const connection = await prepare('SELECT status FROM shopify_connections WHERE shop_id = ?').get(shop.id);
+      assert.equal(connection.status, 'sync_error', 'a stalled-body push must not be recorded as a success that clears sync_error');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test.after(async () => {
   await pool.end();
 });

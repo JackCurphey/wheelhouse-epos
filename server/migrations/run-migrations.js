@@ -24,10 +24,40 @@ const MIGRATIONS_DIR = path.dirname(fileURLToPath(import.meta.url));
 // each other.
 export const MIGRATION_LOCK_KEY = 8_237_401_552_019;
 
+// Important 5: without a bound, a replica blocked on this lock waits
+// FOREVER - pre-listen, with no /healthz of its own to report anything -
+// whether the lock is held by another replica genuinely still migrating
+// (the normal multi-replica boot case this lock exists to serialise) or by
+// a wedged one that will never release it. Kubernetes reads a replica stuck
+// here as "still starting" and just keeps waiting (or restarts it into the
+// exact same block, if some other liveness probe eventually gives up) -
+// either way, "another replica is migrating" and "the migration is stuck"
+// are indistinguishable from outside the process. 30s is generous for a
+// real migration file to finish running (the slowest files here are schema
+// DDL, not data backfills) while still being short enough that an operator
+// watching a rolling deploy sees the failure well within any reasonable
+// patience for "is this deploy stuck".
+//
+// pg_advisory_lock() DOES respect lock_timeout (unlike some other advisory
+// lock functions) - it is a heavyweight lock acquisition as far as the lock
+// manager is concerned, and SET lock_timeout applies to it exactly as it
+// would to a normal row/table lock wait.
+export const MIGRATION_LOCK_TIMEOUT_MS = 30_000;
+
 export async function runMigrations() {
   const client = await pool.connect();
   try {
-    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    await client.query(`SET lock_timeout = '${MIGRATION_LOCK_TIMEOUT_MS}ms'`);
+    try {
+      await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    } catch (err) {
+      console.error(
+        `Timed out after ${MIGRATION_LOCK_TIMEOUT_MS}ms waiting for the migration advisory lock (key ${MIGRATION_LOCK_KEY}) - ` +
+        'another replica may still be migrating, or one is wedged holding it. Original error:',
+        err
+      );
+      throw err;
+    }
     try {
       await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
         filename TEXT PRIMARY KEY,
@@ -57,7 +87,22 @@ export async function runMigrations() {
       // so they'd otherwise stay held for as long as this client sits in the
       // pool waiting to be reused by an unrelated request - unlock
       // explicitly before handing the client back.
-      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
+      //
+      // Guarded with .catch(), not awaited bare: an unguarded rejection here
+      // (plausible on a broken connection right after a migration failure -
+      // the same connection just had a query fail and got rolled back) would
+      // otherwise REPLACE whatever real error is already propagating out of
+      // the try block above (the "Migration <file> failed: <reason>"
+      // message), leaving the operator a connection error and no idea which
+      // file broke. server/db.js's releaseClient guards the equivalent
+      // hazard for the same reason (see its comment); this just crosses that
+      // convention into this file. Swallowing costs nothing beyond the log
+      // line below - the advisory lock is session-scoped and is released by
+      // Postgres itself when the backend terminates, whether or not this
+      // unlock call ever succeeds.
+      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch((err) => {
+        console.error('Failed to release migration advisory lock (harmless - released automatically when the connection closes)', err);
+      });
     }
   } finally {
     client.release();

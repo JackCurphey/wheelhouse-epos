@@ -103,7 +103,7 @@ Relevant commands, if you're working on it:
 
 ```
 npm run dev              # Vite dev server
-npm run build             # builds to public/dist (gitignored, but three stale artifacts from fa32b60 still tracked)
+npm run build             # builds to public/dist (gitignored, but three stale artifacts committed in fa32b60 are still tracked - a local build will show those three files as modified; that's expected, not a sign anything is broken)
 npm run lint
 npm run typecheck
 npm run registry:validate # checks registry/registry.json against its schema

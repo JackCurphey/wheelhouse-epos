@@ -90,7 +90,26 @@ export async function shopifyAdminRequest(connection, method, path, body, timeou
     // rejection path is introduced.
     signal: AbortSignal.timeout(timeoutMs),
   });
-  const data = await res.json().catch(() => ({}));
+  // res.json() can still reject even after a successful (2xx) response
+  // arrived, if the timeout fires while the body is still streaming - the
+  // same AbortSignal covers the whole request, not just the initial
+  // headers. A bare `.catch(() => ({}))` here used to turn that into a
+  // fake `{}` success (res.ok was already true), and the worst call site
+  // (pushInventoryLevel) discards the return value entirely - so a push
+  // that never reached Shopify recorded as success, and could clear a
+  // sync_error connection back to 'connected'. Rethrow instead, naming a
+  // timeout as a timeout, so withRetry retries it and, on exhaustion, the
+  // caller's catch marks the connection sync_error - same shape as
+  // server/sms.js's sendSms fix for the identical defect.
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    const timedOut = err.name === 'TimeoutError' || err.name === 'AbortError';
+    throw new Error(timedOut
+      ? 'Shopify API timeout: response body did not finish streaming in time'
+      : `Could not read Shopify response: ${err.message}`);
+  }
   if (!res.ok) {
     throw new Error(`Shopify API error (${res.status}): ${JSON.stringify(data)}`);
   }
