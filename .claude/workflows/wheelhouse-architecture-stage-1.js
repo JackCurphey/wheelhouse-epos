@@ -25,7 +25,7 @@ Plain Node http server, no framework. PostgreSQL. \`pg\` is the ONLY runtime
 dependency and must stay that way. Tenant isolation is enforced by Postgres
 Row-Level Security, not application code: every shop-scoped table has a
 shop_id defaulted from current_setting('app.current_shop_id') and a policy
-filtering on it. 25 tables have RLS both ENABLED and FORCED (FORCE matters -
+filtering on it. 26 tables have RLS both ENABLED and FORCED (FORCE matters -
 epos_app owns every table and owners bypass unforced RLS).
 
 HOW A REQUEST WORKS TODAY
