@@ -210,6 +210,43 @@ Twilio (used for SMS notifications), carries an explicit timeout via
 `AbortSignal.timeout()` rather than waiting indefinitely on a slow or hung
 upstream.
 
+### Database connection topology: `DB_TENANT_SCOPE` and the boot-time pooler guard
+
+Tenant isolation between shops is enforced by Postgres Row-Level Security,
+keyed off a Postgres session setting (`app.current_shop_id`) that is set once
+per request on the connection handling it. That is only safe if one request
+means one dedicated backend for its whole lifetime - true of a direct
+connection or a session-mode pooler, but NOT true of a transaction-mode
+pooler (e.g. PgBouncer in transaction mode), which can hand two overlapping
+requests the same backend and let one shop's tenant setting leak into
+another's request.
+
+- **`DB_TENANT_SCOPE`** - `session` (the default, and what ships today) or
+  `transaction` (not yet supported end-to-end; see `server/db.js`). Leaving
+  it unset, or setting it to an empty string (which is what a bare
+  `- DB_TENANT_SCOPE` line in a Docker Compose file produces when the
+  variable is unset in the host environment), both mean "not configured" and
+  fall back to `session`. A misspelled value (e.g. `sesion`) is a hard error
+  at startup rather than a silent fallback.
+- **Boot-time pooler guard.** Before accepting traffic, the app checks out
+  several clients from its own connection pool concurrently and asks whether
+  any two of them land on the same Postgres backend. If they do, and
+  `DB_TENANT_SCOPE` is still `session`, the server refuses to start with an
+  "Unsafe database topology" error rather than risk serving one shop's data
+  to another shop's staff. This is a **recorded decision** (repo owner,
+  6 September 2026): a server that won't start is a louder, cheaper failure
+  than one that runs and quietly mixes tenants. If you hit this error, either
+  point the app at a direct connection / session-mode pooler, or set
+  `DB_TENANT_SCOPE=transaction` once that mode's prerequisites are met.
+  - **What the guard can and cannot prove.** A result reporting the topology
+    as *unsafe* is conclusive - there's no innocent explanation for two
+    concurrently-held connections sharing a backend. A result reporting it as
+    *safe* is not proof of the opposite: it means the guard's sample, taken
+    once at boot when a pooler is typically at its most idle, did not observe
+    sharing - not that sharing cannot happen once real traffic arrives.
+    Treat "safe" as "no evidence of a transaction-mode pooler," not as
+    "verified direct connection."
+
 ## Notes and what's deliberately left out (for now)
 
 - **No per-employee permissions yet.** Each shop's owner can add individual

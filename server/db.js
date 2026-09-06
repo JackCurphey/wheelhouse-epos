@@ -59,8 +59,17 @@ const TENANT_SETTING = 'app.current_shop_id';
 // can exercise both modes in one process. A typo is a hard error rather than
 // a silent fallback to `session`: "trasnaction" quietly behaving as session
 // is exactly the kind of misconfiguration this whole file exists to prevent.
+//
+// BLANK IS NOT A TYPO. `DB_TENANT_SCOPE=` in a .env file, or a bare
+// `- DB_TENANT_SCOPE` in a compose file (which passes the variable through as
+// an empty string when it is unset in the host environment), both arrive here
+// as "". Treating that as an unrecognised value refused to boot an otherwise
+// healthy deployment over a variable the operator never meant to set. Blank
+// after trimming means "not configured", so it takes the default. A value
+// that is present but wrong still fails loudly.
 export function tenantScopeMode() {
-  const raw = (process.env.DB_TENANT_SCOPE ?? 'session').trim().toLowerCase();
+  const configured = (process.env.DB_TENANT_SCOPE ?? '').trim().toLowerCase();
+  const raw = configured === '' ? 'session' : configured;
   if (!TENANT_SCOPE_MODES.includes(raw)) {
     throw new Error(
       `DB_TENANT_SCOPE must be one of ${TENANT_SCOPE_MODES.join(', ')} - got ${JSON.stringify(raw)}`
@@ -151,22 +160,52 @@ export function prepare(sql) {
 // unbounded loop. Each one costs a subtransaction, and Postgres degrades
 // badly past ~64 of them per transaction. The 11 sites here are all
 // straight-line, so this is a caution, not a current problem.
-const TX_STATEMENT = /^\s*(BEGIN|COMMIT|ROLLBACK)\s*;?\s*$/i;
+// Anything that opens, closes or manipulates a transaction has to go through
+// the shim, because anything that reaches the connection directly moves the
+// real transaction depth without moving `state.txDepth` with it. Matching only
+// the bare verbs was the trap: `BEGIN TRANSACTION`, `START TRANSACTION`, `END`
+// and `COMMIT WORK` are all ordinary, correct SQL that a future handler may
+// well write, and every one of them used to fall straight through to a raw
+// query and re-open the nested-BEGIN collapse this shim exists to close. All
+// 11 sites today use the bare form, so there is no live bug - the point is
+// that the shim is trap-proof for the next handler someone writes.
+//
+// TX_CONTROL is the wide net: everything it catches is handled or refused,
+// never run raw. TX_BEGIN / TX_END are the forms the shim can faithfully map
+// onto savepoints. The rest are refused rather than guessed at:
+//   - SAVEPOINT / RELEASE / ROLLBACK TO: hand-rolled savepoints would collide
+//     with the shim's own `sp_<n>` bookkeeping.
+//   - AND CHAIN: closes one transaction and immediately opens another, which
+//     no savepoint can imitate.
+//   - BEGIN with isolation or read-only characteristics: a savepoint cannot
+//     carry them, so honouring the statement at depth >= 1 is impossible and
+//     silently ignoring it would be worse.
+//   - PREPARE TRANSACTION / COMMIT PREPARED: two-phase commit, not in use.
+const TX_CONTROL = /^\s*(?:BEGIN|START|COMMIT|END|ROLLBACK|ABORT|SAVEPOINT|RELEASE|PREPARE\s+TRANSACTION)\b/i;
+const TX_BEGIN = /^\s*(?:BEGIN|START)(?:\s+(?:WORK|TRANSACTION))?\s*;?\s*$/i;
+const TX_END = /^\s*(COMMIT|END|ROLLBACK|ABORT)(?:\s+(?:WORK|TRANSACTION))?\s*;?\s*$/i;
 const INVALID_SAVEPOINT = '3B001';
 
 // For raw statements that don't fit the get/all/run shape - BEGIN / COMMIT /
 // ROLLBACK, mainly. Runs on the same request-scoped client as prepare()
 // above, so it participates in the same transaction.
 export async function dbExec(sql) {
-  const match = TX_STATEMENT.exec(sql);
-  if (!match) {
+  if (!TX_CONTROL.test(sql)) {
     await currentClient().query(sql);
     return;
   }
   const state = currentState();
-  const verb = match[1].toUpperCase();
-  if (verb === 'BEGIN') return beginScope(state);
-  return endScope(state, verb);
+  if (TX_BEGIN.test(sql)) return beginScope(state);
+  const end = TX_END.exec(sql);
+  if (end) {
+    // END and ABORT are Postgres's aliases for COMMIT and ROLLBACK.
+    const word = end[1].toUpperCase();
+    return endScope(state, word === 'END' ? 'COMMIT' : word === 'ABORT' ? 'ROLLBACK' : word);
+  }
+  throw new Error(
+    `db: unsupported transaction-control statement passed to dbExec: ${JSON.stringify(sql.trim())}. ` +
+      'Use a plain BEGIN / COMMIT / ROLLBACK so the savepoint shim can keep the nesting depth honest.'
+  );
 }
 
 async function beginScope(state) {
@@ -325,8 +364,18 @@ export async function runWithShop(shopId, fn) {
 // transaction, and no tenant setting. Both were leaking before this change -
 // the next holder of the connection inherited the previous request's shop,
 // and could read its uncommitted rows.
+//
+// This function MUST NOT REJECT, ever. It is called from runWithShop's
+// `finally`, so a rejection here does not merely fail cleanup - it replaces
+// the handler's original error with a cleanup error, and the real reason the
+// request failed is gone. `client.release()` is a live source of that:
+// node-postgres throws from release() on a client the pool has already
+// removed after a connection-level error, which is exactly the situation in
+// which a handler is most likely to be reporting something the operator needs
+// to read. Every failure path below is therefore logged and swallowed.
 async function releaseClient(state) {
   const { client } = state;
+  let cleanupError = null;
   try {
     if (state.txDepth > 0) {
       await client.query('ROLLBACK');
@@ -339,67 +388,143 @@ async function releaseClient(state) {
     // connection that reaches an RLS table without a tenant raises rather
     // than returning silently-empty results.
     await client.query(`SELECT set_config('${TENANT_SETTING}', '', false)`);
-    client.release();
   } catch (err) {
     // Handing a client of unknown state back to the pool is worse than
     // losing it. Passing an error to release() makes node-postgres destroy
     // the connection instead of reusing it.
     console.error('db: could not reset a pooled client on release - destroying it', err);
-    client.release(err);
+    cleanupError = err;
+  }
+
+  try {
+    // release(err) destroys the connection; release() returns it to the pool.
+    if (cleanupError) client.release(cleanupError);
+    else client.release();
+  } catch (err) {
+    // The client is already out of our hands either way, and there is nothing
+    // left to fall back to. Log it and let the caller's own error stand.
+    console.error('db: releasing a pooled client threw - ignoring so the original error survives', err);
   }
 }
 
 // ---------- Pooler safety guard ----------
 
 // One-line policy switch. 'fail' refuses to boot on an unsafe combination;
-// 'warn' logs and continues. Hard-fail is the default because the failure it
-// prevents is cross-tenant data exposure, which is worse than downtime; flip
-// this single constant to 'warn' to trade that the other way.
+// 'warn' logs and continues.
+//
+// 'fail' is a RECORDED DECISION, not a default that happened to be picked:
+// the repo owner ruled on 6 September 2026 that the guard hard-fails rather
+// than warns, on the grounds that customer data security is paramount. The
+// failure being prevented is one shop's staff being served another shop's
+// data on a recycled connection, and a server that refuses to start is a
+// louder and cheaper failure than one that runs and quietly mixes tenants.
+// It is an availability trade, and it has been made. Changing this constant
+// to 'warn' reverses that decision and needs the owner's sign-off, not just
+// a one-word edit.
 const POOLER_GUARD_ON_UNSAFE = 'fail';
 
 const POOLER_PROBE_SETTING = 'app.pooler_probe';
 
-// Detects a connection-multiplexing pooler by observation, not by guessing
-// from a hostname. Two clients are checked out CONCURRENTLY, a nonce is set
-// as a session variable on one, and the other is asked to read it back. On a
-// direct connection (or a session-mode pooler) the second client is a
-// different backend and can never see it. If it does, or the two report the
-// same pg_backend_pid, they are the same backend and a request's session
-// state is not its own. There is no way for a healthy setup to produce a
-// positive, so this cannot cry wolf.
-export async function probePoolerMode(targetPool = pool, rounds = 3) {
-  for (let round = 0; round < rounds; round += 1) {
-    const nonce = `${process.pid}-${round}-${Math.random().toString(36).slice(2)}`;
-    const [a, b] = await Promise.all([targetPool.connect(), targetPool.connect()]);
-    try {
-      await a.query(`SELECT set_config('${POOLER_PROBE_SETTING}', $1, false)`, [nonce]);
-      const { rows: [seen] } = await b.query(
-        `SELECT current_setting('${POOLER_PROBE_SETTING}', true) AS value, pg_backend_pid() AS pid`
-      );
-      const { rows: [own] } = await a.query('SELECT pg_backend_pid() AS pid');
-      await a.query(`SELECT set_config('${POOLER_PROBE_SETTING}', '', false)`);
+// How many clients are checked out concurrently per round. More clients means
+// more distinct pairs that have to land on distinct backends, which is the
+// only thing that improves this probe's sensitivity (see the asymmetry note
+// below). Kept comfortably under the pool's max of 10 so the probe cannot
+// starve anything else that needs a connection while it runs.
+const POOLER_PROBE_CLIENTS = 4;
 
-      if (seen.value === nonce) {
-        return {
-          safe: false,
-          reason:
-            'Two concurrently checked-out clients share one Postgres backend: a session variable set on one was readable from the other. A transaction-mode connection pooler is in front of this app.',
-        };
+// Detects a connection-multiplexing pooler by observation, not by guessing
+// from a hostname. Several clients are checked out CONCURRENTLY, each is
+// given its own nonce as a session variable, and each is then asked to read
+// the setting back. On a direct connection (or a session-mode pooler) every
+// client is its own backend and reads its own nonce. If any client reads a
+// nonce that is not its own, or if any two report the same pg_backend_pid,
+// they are sharing a backend and a request's session state is not its own.
+//
+// WHAT THIS PROBE CAN AND CANNOT ESTABLISH - read before trusting a result.
+// The evidence is ASYMMETRIC. An `unsafe` result is proof: a session variable
+// crossing between two clients, or two clients reporting one backend pid, has
+// no innocent explanation, so this cannot cry wolf. A `safe` result is NOT
+// proof of the converse. It means only that this probe did not observe
+// sharing on this sample, which is a different claim. PgBouncer in
+// transaction mode with pool_size > 1 has more than one server connection to
+// hand out, so concurrently checked-out probe clients can each land on a
+// different backend and the probe returns safe on a topology that is not -
+// and the probe runs at boot, when a pooler is at its most idle and therefore
+// at its most likely to have spare backends. Raising the client count raises
+// the number of simultaneous backends the pooler must supply before the
+// sample looks clean, so it narrows the gap; it does not close it. Nothing
+// short of knowing the deployment topology can. Treat `safe` as "no evidence
+// of a transaction-mode pooler", never as "verified direct connection".
+export async function probePoolerMode(targetPool = pool, rounds = 3, clientsPerRound = POOLER_PROBE_CLIENTS) {
+  for (let round = 0; round < rounds; round += 1) {
+    const clients = await Promise.all(
+      Array.from({ length: clientsPerRound }, () => targetPool.connect())
+    );
+    try {
+      const nonces = clients.map(
+        (_, i) => `${process.pid}-${round}-${i}-${Math.random().toString(36).slice(2)}`
+      );
+      for (const [i, client] of clients.entries()) {
+        await client.query(`SELECT set_config('${POOLER_PROBE_SETTING}', $1, false)`, [nonces[i]]);
       }
-      if (seen.pid === own.pid) {
-        return {
-          safe: false,
-          reason: `Two concurrently checked-out clients reported the same backend pid (${own.pid}). A transaction-mode connection pooler is in front of this app.`,
-        };
+
+      const seen = [];
+      for (const client of clients) {
+        const { rows: [row] } = await client.query(
+          `SELECT current_setting('${POOLER_PROBE_SETTING}', true) AS value, pg_backend_pid() AS pid`
+        );
+        seen.push(row);
+      }
+
+      // Shared backends mean the last set_config wins for all of them, so at
+      // least one client reads a nonce that is not the one it wrote.
+      for (const [i, row] of seen.entries()) {
+        if (row.value !== nonces[i]) {
+          return {
+            safe: false,
+            reason:
+              'Concurrently checked-out clients share one Postgres backend: a session variable set on one was ' +
+              'readable from another. A transaction-mode connection pooler is in front of this app.',
+          };
+        }
+      }
+
+      const pids = new Map();
+      for (const row of seen) {
+        if (pids.has(row.pid)) {
+          return {
+            safe: false,
+            reason: `Two concurrently checked-out clients reported the same backend pid (${row.pid}). A transaction-mode connection pooler is in front of this app.`,
+          };
+        }
+        pids.set(row.pid, true);
       }
     } finally {
-      a.release();
-      b.release();
+      // Blanking has to happen even when a probe query above threw. It used
+      // to be the last statement of the try, which meant a mid-probe failure
+      // returned clients to the pool still carrying app.pooler_probe - the
+      // exact residue class this whole file exists to remove. Each blank is
+      // independently guarded so one wedged client cannot stop the others
+      // being cleaned, and so a cleanup failure never masks the probe error.
+      for (const client of clients) {
+        await client.query(`SELECT set_config('${POOLER_PROBE_SETTING}', '', false)`).catch((err) => {
+          console.error('db: could not clear the pooler probe setting on a client', err);
+        });
+        try {
+          client.release();
+        } catch (err) {
+          console.error('db: releasing a pooler probe client threw - ignored', err);
+        }
+      }
     }
   }
   return {
     safe: true,
-    reason: `Concurrently checked-out clients reached distinct Postgres backends across ${rounds} rounds.`,
+    // Deliberately worded as an observation, not a clearance - see the
+    // asymmetry note above.
+    reason:
+      `No evidence of a shared backend: ${clientsPerRound} concurrently checked-out clients reached ` +
+      `distinct Postgres backends in each of ${rounds} rounds. This does not prove the topology is safe.`,
   };
 }
 

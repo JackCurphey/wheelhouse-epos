@@ -215,6 +215,18 @@ test('COMMIT or ROLLBACK with nothing open, or against an already-released savep
   }
 });
 
+// Pinned to session mode explicitly. Without the pin this asserts session-mode
+// behaviour under whatever the ambient environment happens to hold, so a
+// deployment or a CI runner exporting DB_TENANT_SCOPE=transaction would change
+// what the test means without changing the test.
+//
+// WHAT THIS TEST PROVES, precisely: that every write the sale path makes sits
+// inside ONE rollback boundary. It does NOT distinguish a working ROLLBACK
+// from a broken one - the transaction is already ABORTED by the CHECK
+// violation when the site's ROLLBACK runs, and Postgres treats COMMIT on an
+// aborted transaction as a rollback, so replacing the ROLLBACK with a COMMIT
+// is invisible from here (mutation M5 in the build report). Single-boundary
+// coverage is the point, and it is enough.
 test('a sale that fails partway leaves no sale, no sale_items and no stock_movements behind', async () => {
   const shop = await createTestShop();
   try {
@@ -224,53 +236,69 @@ test('a sale that fails partway leaves no sale, no sale_items and no stock_movem
     // sale_item have all already been written inside the transaction.
     // NOT VALID keeps it from scanning the existing table; it still applies
     // to new rows, which is all this needs.
+    //
+    // DROP IF EXISTS first: the ADD sits outside the try whose finally drops
+    // it, so a run killed between ADD and DROP used to leave the constraint
+    // behind and every subsequent run then failed at ADD with 42710, before
+    // ever reaching the finally - a permanent, self-inflicted red.
+    //
+    // The reviewer's DDL-free alternative (driving the second line's
+    // `UPDATE products SET stock_qty = ?` into an int4 underflow) does not
+    // work and was checked rather than assumed: createSale loads its lines
+    // with checkStock: true, which requires product.stock_qty >= qty, and
+    // stock_qty is int4, so stock_qty - qty is never negative. The attempt
+    // fails with ValidationError "Not enough stock" BEFORE the BEGIN, leaving
+    // zero rows and therefore no partway state at all.
+    await pool.query('ALTER TABLE stock_movements DROP CONSTRAINT IF EXISTS tmp_sale_rollback_probe');
     await pool.query(
       'ALTER TABLE stock_movements ADD CONSTRAINT tmp_sale_rollback_probe CHECK (change_qty <> -424242) NOT VALID'
     );
     try {
-      let cashierId;
-      let goodProductId;
-      let boomProductId;
-      await runWithShop(shop.id, async () => {
-        cashierId = (
-          await prepare("INSERT INTO employees (name, is_cashier) VALUES (?, 1)").run('Till Person')
-        ).lastInsertRowid;
-        goodProductId = (
-          await prepare('INSERT INTO products (name, sku, price, stock_qty) VALUES (?, ?, ?, ?)')
-            .run('Inner Tube', `TUBE-${shop.id}`, 5, 10)
-        ).lastInsertRowid;
-        boomProductId = (
-          await prepare('INSERT INTO products (name, sku, price, stock_qty) VALUES (?, ?, ?, ?)')
-            .run('Bulk Widget', `BULK-${shop.id}`, 0, 500000)
-        ).lastInsertRowid;
-      });
+      await withTenantScope('session', async () => {
+        let cashierId;
+        let goodProductId;
+        let boomProductId;
+        await runWithShop(shop.id, async () => {
+          cashierId = (
+            await prepare("INSERT INTO employees (name, is_cashier) VALUES (?, 1)").run('Till Person')
+          ).lastInsertRowid;
+          goodProductId = (
+            await prepare('INSERT INTO products (name, sku, price, stock_qty) VALUES (?, ?, ?, ?)')
+              .run('Inner Tube', `TUBE-${shop.id}`, 5, 10)
+          ).lastInsertRowid;
+          boomProductId = (
+            await prepare('INSERT INTO products (name, sku, price, stock_qty) VALUES (?, ?, ?, ?)')
+              .run('Bulk Widget', `BULK-${shop.id}`, 0, 500000)
+          ).lastInsertRowid;
+        });
 
-      await runWithShop(shop.id, async () => {
-        await assert.rejects(
-          () =>
-            createSale({
-              cashierId,
-              items: [
-                { productId: goodProductId, qty: 1 },
-                { productId: boomProductId, qty: 424242 },
-              ],
-              discount: 0,
-              cashAmount: 5,
-              cardAmount: 0,
-            }),
-          (err) => err.code === '23514' || /tmp_sale_rollback_probe/.test(err.message)
-        );
+        await runWithShop(shop.id, async () => {
+          await assert.rejects(
+            () =>
+              createSale({
+                cashierId,
+                items: [
+                  { productId: goodProductId, qty: 1 },
+                  { productId: boomProductId, qty: 424242 },
+                ],
+                discount: 0,
+                cashAmount: 5,
+                cardAmount: 0,
+              }),
+            (err) => err.code === '23514' || /tmp_sale_rollback_probe/.test(err.message)
+          );
 
-        assert.equal((await prepare('SELECT id FROM sales').all()).length, 0, 'no sale should survive');
-        assert.equal((await prepare('SELECT id FROM sale_items').all()).length, 0, 'no sale_items should survive');
-        assert.equal(
-          (await prepare('SELECT id FROM stock_movements').all()).length,
-          0,
-          'no stock_movements should survive'
-        );
-        // The stock deduction the first line already made must be undone too.
-        const good = await prepare('SELECT stock_qty FROM products WHERE id = ?').get(goodProductId);
-        assert.equal(good.stock_qty, 10);
+          assert.equal((await prepare('SELECT id FROM sales').all()).length, 0, 'no sale should survive');
+          assert.equal((await prepare('SELECT id FROM sale_items').all()).length, 0, 'no sale_items should survive');
+          assert.equal(
+            (await prepare('SELECT id FROM stock_movements').all()).length,
+            0,
+            'no stock_movements should survive'
+          );
+          // The stock deduction the first line already made must be undone too.
+          const good = await prepare('SELECT stock_qty FROM products WHERE id = ?').get(goodProductId);
+          assert.equal(good.stock_qty, 10);
+        });
       });
     } finally {
       await pool.query('ALTER TABLE stock_movements DROP CONSTRAINT tmp_sale_rollback_probe');
