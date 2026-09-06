@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
-import { encryptSecret, shopifyAdminRequest, saveShopifyConnection, pushInventoryLevel } from '../server/shopify.js';
+import { encryptSecret, shopifyAdminRequest, saveShopifyConnection, pushInventoryLevel, registerShopifyWebhooks } from '../server/shopify.js';
 
 function stubFetch(handler) {
   const original = globalThis.fetch;
@@ -94,6 +94,54 @@ test('pushInventoryLevel fails within a bounded time and marks the connection sy
     });
   } finally {
     await deleteTestShop(shop.id);
+  }
+});
+
+// A response that resolves successfully but only after `delayMs` - models a
+// slow-but-working Shopify, not a hang. Still honours the caller's
+// AbortSignal so a genuinely too-slow response still times out.
+function slowRespondingFetch(delayMs) {
+  return (url, opts) => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      resolve({ ok: true, status: 200, json: async () => ({ webhook: { id: 1 } }) });
+    }, delayMs);
+    opts?.signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+    });
+  });
+}
+
+// Finding 2: registerShopifyWebhooks makes two SHOPIFY_WEBHOOK_TIMEOUT_MS
+// (10s) calls, and the whole function runs inside runWithShop for the
+// POST /api/shopify/connection route (server/server.js:3207), holding a
+// pooled Postgres connection for the whole request. If each call is
+// merely slow (not hung) and takes close to the full 10s to succeed,
+// running them one after another would add up to ~20s of held connection
+// time; run concurrently, the same two slow-but-working calls must
+// finish in ~1 call's worth of time (~6s here), not ~2 (~12s) - proving
+// the calls race the same deadline instead of stacking.
+test('registerShopifyWebhooks completes in ~1 call worth of time, not ~2, when both calls are merely slow (not hung)', async () => {
+  const originalBaseUrl = process.env.APP_PUBLIC_URL;
+  process.env.APP_PUBLIC_URL = 'https://example.test';
+  const connection = { shop_domain: 'fake.myshopify.com', access_token: encryptSecret('faketoken') };
+  const restore = stubFetch(slowRespondingFetch(6000));
+  try {
+    const start = Date.now();
+    // Strictly between one slow call (~6s) and two stacked slow calls
+    // (~12s), so this only passes if the two webhook calls genuinely run
+    // concurrently instead of sequentially.
+    const watchdog = new Promise((resolve) => setTimeout(() => resolve('WATCHDOG'), 9000));
+    const outcome = registerShopifyWebhooks(connection, 'test-shop-id')
+      .then(() => 'RESOLVED')
+      .catch((err) => `REJECTED:${err.message}`);
+    const result = await Promise.race([outcome, watchdog]);
+    const elapsed = Date.now() - start;
+    assert.notEqual(result, 'WATCHDOG', `registerShopifyWebhooks took longer than one call's worth of time (${elapsed}ms) - the two webhook calls are running sequentially, not concurrently`);
+    assert.equal(result, 'RESOLVED', `expected both calls to succeed, got ${result}`);
+  } finally {
+    restore();
+    process.env.APP_PUBLIC_URL = originalBaseUrl;
   }
 });
 

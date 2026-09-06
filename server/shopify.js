@@ -52,11 +52,26 @@ const SHOPIFY_API_VERSION = '2024-10';
 // still bounds the worst case (see the comment on withRetry below).
 const SHOPIFY_API_TIMEOUT_MS = 5000;
 
-// Webhook registration (registerShopifyWebhooks) runs once, during initial
-// shop connect, outside any withRetry/connection-holding loop - so it can
-// afford to wait longer for Shopify to accept the registration rather than
-// fail an otherwise-successful connect flow over a slow-but-working
-// response.
+// Webhook registration (registerShopifyWebhooks) is NOT outside the
+// connection-holding request path - it is called from the POST
+// /api/shopify/connection route (server/server.js), and that route isn't
+// under /api/auth/, so the dispatcher wraps it in runWithShop and it holds
+// one of the ten pooled Postgres connections (server/db.js) for the whole
+// request, same as any other route. It isn't wrapped in withRetry though
+// (a single failed attempt just reports a "webhook registration failed"
+// warning rather than retrying), so there's no retry multiplier to worry
+// about, and it's a rare, one-shot, human-initiated action (a shop
+// connecting for the first time), not a hot loop like inventory sync.
+// registerShopifyWebhooks makes two of these calls (orders/paid,
+// refunds/create); they're run concurrently below rather than
+// sequentially so the worst case for this constant is one timeout, not
+// two stacked. That keeps the whole route's worst case at
+// SHOPIFY_API_TIMEOUT_MS (saveShopifyConnection's locations probe) +
+// SHOPIFY_WEBHOOK_TIMEOUT_MS (both webhook calls in parallel) = 5s + 10s =
+// 15s of pooled-connection hold time, in the same order of magnitude as
+// the ~15.15s withRetry worst case already accepted for
+// pushInventoryLevel/syncProductToShopify below, rather than the 25s a
+// sequential 5s + 10s + 10s chain would produce.
 const SHOPIFY_WEBHOOK_TIMEOUT_MS = 10000;
 
 export async function shopifyAdminRequest(connection, method, path, body, timeoutMs = SHOPIFY_API_TIMEOUT_MS) {
@@ -134,12 +149,19 @@ export async function saveShopifyConnection({ shopDomain, accessToken, storefron
 export async function registerShopifyWebhooks(connection, shopId) {
   const baseUrl = process.env.APP_PUBLIC_URL;
   if (!baseUrl) throw new Error('APP_PUBLIC_URL is not configured');
-  await shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
-    webhook: { topic: 'orders/paid', address: `${baseUrl}/webhooks/shopify/${shopId}/orders`, format: 'json' },
-  }, SHOPIFY_WEBHOOK_TIMEOUT_MS);
-  await shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
-    webhook: { topic: 'refunds/create', address: `${baseUrl}/webhooks/shopify/${shopId}/refunds`, format: 'json' },
-  }, SHOPIFY_WEBHOOK_TIMEOUT_MS);
+  // Run both webhook registrations concurrently, not sequentially - this
+  // call holds a pooled Postgres connection for the whole request (see the
+  // comment on SHOPIFY_WEBHOOK_TIMEOUT_MS above), so two sequential 10s
+  // timeouts would double the worst-case hold time to 20s for no benefit;
+  // the two topics don't depend on each other.
+  await Promise.all([
+    shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
+      webhook: { topic: 'orders/paid', address: `${baseUrl}/webhooks/shopify/${shopId}/orders`, format: 'json' },
+    }, SHOPIFY_WEBHOOK_TIMEOUT_MS),
+    shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
+      webhook: { topic: 'refunds/create', address: `${baseUrl}/webhooks/shopify/${shopId}/refunds`, format: 'json' },
+    }, SHOPIFY_WEBHOOK_TIMEOUT_MS),
+  ]);
 }
 
 // Small in-process retry for transient Shopify API failures (rate limits,

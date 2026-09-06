@@ -52,7 +52,25 @@ export async function sendSms(toPhone, body) {
     return { ok: false, error: `Could not reach Twilio: ${err.message}` };
   }
 
-  const data = await res.json().catch(() => null);
+  // res.json() can still reject even after a successful (2xx) response
+  // arrived, if the timeout fires while the body is still streaming - the
+  // same AbortSignal covers the whole request, not just the initial
+  // headers. That must produce the same {ok:false, error} shape as any
+  // other failure here, not an uncaught TypeError from reading `.sid` off
+  // a null `data` (the bug: a bare `.catch(() => null)` left the success
+  // path reading `data.sid` unguarded).
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    const timedOut = err.name === 'TimeoutError' || err.name === 'AbortError';
+    return {
+      ok: false,
+      error: timedOut
+        ? 'Twilio request timeout: response body did not finish streaming in time'
+        : `Could not read Twilio response: ${err.message}`,
+    };
+  }
   if (!res.ok) {
     return { ok: false, error: (data && data.message) || `Twilio returned ${res.status}` };
   }
