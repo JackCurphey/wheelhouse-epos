@@ -166,15 +166,46 @@ function registerPendingShopifyPushSlot() {
   if (requestSlots) {
     requestSlots.add(settle);
     slot.finally(() => requestSlots.delete(settle));
+  } else {
+    // No request-scoped store means this call is NOT covered by
+    // runRequestWithPushSlotCleanup - see the comment on
+    // pendingPushSlotRequestStorage below for exactly which dispatcher
+    // branches that is true of today. That is precisely the condition
+    // under which a later throw in this same call's tail cannot settle
+    // the slot above, and it would sit in pendingShopifyPushes forever,
+    // degrading every later gracefulShutdown() to its 10s force-exit
+    // path. This does not throw: the failure it guards against is a
+    // degraded shutdown, not lost data or a lost sale, and this file's
+    // own uncaughtException/unhandledRejection handlers (below) exit the
+    // whole process on an unhandled error - turning an
+    // unwrapped-but-otherwise-working route into a hard outage is worse
+    // than the problem it would be catching. Logging makes the gap
+    // visible the moment it is first exercised, so it gets wired up
+    // before it ever reaches production shutdown behaviour.
+    console.error(
+      'registerPendingShopifyPushSlot: slot registered with no active request-scoped store (pendingPushSlotRequestStorage.getStore() ' +
+        'returned undefined) - if this call\'s tail throws before the push fires, the slot will be orphaned in pendingShopifyPushes ' +
+        'forever and every later gracefulShutdown() will hit its 10s force-exit path. Wrap this code path in runRequestWithPushSlotCleanup.'
+    );
   }
   return settle;
 }
 
-// See registerPendingShopifyPushSlot's comment above for why this exists.
-// Every /api/ route handler already runs inside this (wired in the
-// dispatcher, below) - no route-specific code has to opt in, so no future
-// route (or an early return added to an existing one) can reintroduce the
-// orphaned-slot regression by simply forgetting to wire it up.
+// registerPendingShopifyPushSlot's slot is only cleaned up on a request
+// tail's failure if that call happened inside runRequestWithPushSlotCleanup.
+// Today that is true of exactly ONE branch: the generic non-auth `/api/*`
+// loop below (the one that wraps its route call in
+// runRequestWithPushSlotCleanup). It is NOT true of the /api/auth/* branch
+// inside that same loop, the /api/portal/* branch, the storefront branch, or
+// the Shopify webhook branch - a deferred push registered from any of those
+// would not be settled by a request-tail throw and would orphan the slot.
+// No branch does that today (processShopifyOrderWebhook, the only webhook
+// caller of createSale, never passes deferShopifyPushesTo, so it always
+// takes the immediate-push path and never reaches here without a store) -
+// but nothing stops a future change to one of those four branches from
+// doing so. The guard in registerPendingShopifyPushSlot's `else` branch
+// above is what will tell you if that ever happens; it is not structural
+// coverage, only a loud signal that coverage is missing.
 const pendingPushSlotRequestStorage = new AsyncLocalStorage();
 
 export async function runRequestWithPushSlotCleanup(fn) {
