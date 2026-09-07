@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-07
-**Branch:** `main`
+**Branch:** `fix/compose-healthcheck-healthz`
 **Blocked on:** nothing. Every open item below is Jack's to decide.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -17,6 +17,12 @@ Architecture stage one merged 7 Sep (PR #37): the pooler trap, migration race,
 outbound timeouts, process lifecycle and README are closed. The sixth ceiling —
 managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
 Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
+
+In flight on this branch: the `app` healthcheck probes `/healthz`, guarded by
+`tests/compose-healthcheck.test.js`, which runs the command out of
+`docker-compose.yml` against a stub that 503s there. Not proven in a rebuilt
+container. Left alone: `gateway` has a bare `depends_on: app`, so the check
+gates `up --wait`, not gateway start.
 
 **Do not assume stage one did more than it did.** It makes the app safe to run
 as more than one process. It does nothing about recovering data if the volume
@@ -55,16 +61,11 @@ original file are in `.agents/ARCHIVE.md`.
    sync loop is written**. Needs an account, so it is Jack's. Read the real
    bucket size from `X-LS-Api-Bucket-Level` on the same call; 90 and 60 are both
    published and neither has been seen live.
-3. **Repoint the `app` healthcheck** in `docker-compose.yml:62` at `/healthz`.
-   Stage one added the endpoint and deliberately did not edit compose. Until
-   this is done the container still probes `/`, which serves index.html off
-   disk and reports healthy with Postgres completely down. One line, and it is
-   now unblocked.
-4. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
+3. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
    `main` cannot reach; deleting those removes a label, not history. Analysis and
    recommendation: `.agents/ARCHIVE.md`, "Branch audit". Not tidiness — the
    ownership sign-off hid for a week in a list where 25 of 26 lines were dead.
-5. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
+4. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
    leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
    through `DP-4` (design-partner recruitment and cadence — "dont think this is
    necessary") open. They need Mark before those owners are settled.
@@ -113,9 +114,10 @@ npm run build
 npm run docker:up
 ```
 
-**Last verified:** 275 tests, 275 pass, 0 fail on `main`, 7 Sep, with RLS
+**Last verified:** 278 pass, 0 fail on `fix/compose-healthcheck-healthz` (275 on
+`main`), 7 Sep, lint and typecheck clean. The earlier `main` run added RLS
 coverage, typecheck, lint, build, registry validate and drift check. CI green on
-PR #37. The docker `app` image is from 31 Aug and runs stale code — verify
+PR #37. The docker `app` image is from 31 Aug and runs stale code - verify
 against the working tree, never that container.
 
 ## Open items needing Mark
@@ -133,9 +135,6 @@ just not what this file is for any more.
    "hundreds of shops" scale rather than an inherited default.
 2. **Gate spacing / dates.** `2026-08-31-business-plan.md:583` — OPEN pending
    Mark's weekly time budget.
-
-The compose healthcheck repoint is immediate next action 3 above, not repeated
-here — one owner, one entry.
 
 Mark's fifth item — `git reset --hard 8514727` on `design/workos-auth-migration`
 — is **deliberately dropped as obsolete**, not lost. PR #29 put the plan on
