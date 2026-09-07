@@ -1,6 +1,7 @@
 // Bike Shop EPOS - local server, PostgreSQL-backed.
 import './load-env.js';
 import { createServer } from 'node:http';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -135,12 +136,55 @@ export const pendingShopifyPushes = new Set();
 // is even sent - closes that gap: the set is non-empty from the moment the
 // sale commits, and stays that way (via `slot.settle`) until the push
 // actually runs, however late that turns out to be.
+// Regression fix (fix round 2): the ONLY code that ever calls the resolver
+// this returns is firePendingShopifyPushes, which is ONLY ever reached from
+// a route's own `afterRelease.push(...)` call at the very end of the
+// handler - after several more db.prepare calls and sendJson(). If anything
+// in that tail throws (a transient DB error, a bug in serializeSale,
+// anything), the dispatcher's catch sends the 500 and returns without ever
+// reaching afterRelease - so the slot registered right above at COMMIT time
+// would otherwise sit in pendingShopifyPushes forever, and every later
+// gracefulShutdown() call would hit the 10s force-exit path (exit 1)
+// instead of draining cleanly. `pendingPushSlotRequestStorage` (an
+// AsyncLocalStorage set up per-request by runRequestWithPushSlotCleanup,
+// which the dispatcher wraps every route handler in) makes this structural
+// rather than remembered: whichever request is currently running when a
+// slot is registered gets a reference to this exact resolver added to its
+// own request-scoped set, and runRequestWithPushSlotCleanup's catch settles
+// every slot still in that set the moment the request fails - whatever
+// throws, wherever, on any current or future route. A slot that DOES fire
+// normally removes itself from the request-scoped set too (the
+// `slot.finally` above), so a request that succeeds never touches this at
+// all - it's purely a backstop for the failure path.
 function registerPendingShopifyPushSlot() {
   let settle;
   const slot = new Promise((resolve) => { settle = resolve; });
   pendingShopifyPushes.add(slot);
   slot.finally(() => pendingShopifyPushes.delete(slot));
+
+  const requestSlots = pendingPushSlotRequestStorage.getStore();
+  if (requestSlots) {
+    requestSlots.add(settle);
+    slot.finally(() => requestSlots.delete(settle));
+  }
   return settle;
+}
+
+// See registerPendingShopifyPushSlot's comment above for why this exists.
+// Every /api/ route handler already runs inside this (wired in the
+// dispatcher, below) - no route-specific code has to opt in, so no future
+// route (or an early return added to an existing one) can reintroduce the
+// orphaned-slot regression by simply forgetting to wire it up.
+const pendingPushSlotRequestStorage = new AsyncLocalStorage();
+
+export async function runRequestWithPushSlotCleanup(fn) {
+  const requestSlots = new Set();
+  try {
+    return await pendingPushSlotRequestStorage.run(requestSlots, fn);
+  } catch (err) {
+    for (const settle of requestSlots) settle();
+    throw err;
+  }
 }
 
 // Exported (read-only use in tests) so a test can drive it directly with a
@@ -4092,7 +4136,13 @@ const server = createServer(async (req, res) => {
       // ten pooled connections across it.
       const afterRelease = [];
       try {
-        await runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams, afterRelease, ctx.shop.id));
+        // runRequestWithPushSlotCleanup (see registerPendingShopifyPushSlot's
+        // comment) settles any pendingShopifyPushes slot this request
+        // registered at commit time if the request itself fails anywhere in
+        // its own tail, before ever reaching the afterRelease loop below.
+        await runRequestWithPushSlotCleanup(() =>
+          runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams, afterRelease, ctx.shop.id))
+        );
       } catch (err) {
         console.error(err);
         sendJson(res, 500, { error: err.message || 'Internal server error' });
