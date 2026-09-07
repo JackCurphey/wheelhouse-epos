@@ -14,22 +14,17 @@
 
 ## Where this stands
 
-Architecture stage one is merged (PR #37, 7 Sep). Five of its six ceilings are
-closed: the pooler trap, the migration race, outbound timeouts, process
-lifecycle, and the README. The sixth — managed Postgres with point-in-time
-recovery and a rehearsed restore — is untouched infrastructure and is Jack's.
-
-The platform decision is made and the research behind it is close to complete.
+Architecture stage one merged 7 Sep (PR #37): the pooler trap, migration race,
+outbound timeouts, process lifecycle and README are closed. The sixth ceiling —
+managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
 Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
 
-**What stage one did NOT do, and must not be assumed to have done.** It makes
-the app safe to run as more than one process. It does nothing about getting
-data back if the database volume is lost. And the request-wide transaction mode
-it adds is OFF: `DB_TENANT_SCOPE` defaults to `session`, which is the behaviour
-that shipped before. Three handlers must be restructured before that flag can
-be turned on — the checklist is in
-`docs/decisions/2026-09-06-tenant-scoping-and-pooler-safety.md`, not here,
-because it must outlive this file.
+**Do not assume stage one did more than it did.** It makes the app safe to run
+as more than one process. It does nothing about recovering data if the volume
+is lost. And its request-wide transaction mode is OFF — `DB_TENANT_SCOPE`
+defaults to `session`, the behaviour that already shipped. Three handlers must
+be restructured first; that checklist lives in
+`docs/decisions/2026-09-06-tenant-scoping-and-pooler-safety.md`.
 
 ## Provenance
 
@@ -51,9 +46,14 @@ account, and Mark's original file verbatim, are in `.agents/ARCHIVE.md`.
    the highest-value open item, unstarted since 31 August. It is the only thing
    that tests the "better than theirs" claim the product rests on. Both free,
    no card. Account creation is Jack's — an agent cannot sign up.
-2. **Sign off the R-Series research.** PR #30 is open and CI-green. §4
-   (architecture consequence) and §5 (product requirement) need Jack's sign-off
-   before they change any plan.
+2. **Test the timestamp question against a live Lightspeed account.** Signing
+   off the R-Series research did not settle it, because documentation cannot: if
+   a `Workorder`'s `timeStamp` does not move when a child `WorkorderLine`
+   changes, polling parents silently misses line edits and the diary shows a job
+   as unchanged while its contents changed. A design fork — test it **before the
+   sync loop is written**. Needs an account, so it is Jack's. Read the real
+   bucket size from `X-LS-Api-Bucket-Level` on the same call; 90 and 60 are both
+   published and neither has been seen live.
 3. **Repoint the `app` healthcheck** in `docker-compose.yml:62` at `/healthz`.
    Stage one added the endpoint and deliberately did not edit compose. Until
    this is done the container still probes `/`, which serves index.html off
@@ -79,7 +79,7 @@ under "Merged work, 30 August - 2 September 2026". Nothing was dropped.
 | `2026-08-31-business-plan.md` | Decided, except lines marked OPEN |
 | `2026-08-31-frontend-platform.md` | Decided (approver: Mark) |
 | `2026-09-02-lightspeed-first-platform.md` | DECIDED by Jack, 2 Sep 2026 |
-| `2026-09-02-r-series-sync-and-rate-limits.md` | Research complete, awaiting sign-off |
+| `2026-09-02-r-series-sync-and-rate-limits.md` | **SIGNED OFF by Jack, 7 Sep** (PR #30). §4 and §5 binding on the master plan; two open questions survive the sign-off — next action 2 |
 | `2026-09-01-wedge-booking-vs-workshop.md` | **DECIDED** 1 Sep, ratified 6 Sep; §4 and §5b superseded by the Lightspeed decision |
 | `2026-09-01-ownership-signoff.md` | Signed off by Jack 1 Sep — 58 agreed, 5 queried (`PF-3`, `DP-1`–`DP-4`), 0 reassigned. The five queries still need Mark |
 | `2026-09-06-tenant-scoping-and-pooler-safety.md` | **DECIDED by Jack, 6 Sep** — the pooler guard hard-fails; the pool error handler was fixed on the stage-one branch. Also carries the flag-flip checklist and what the new tests do and do not prove |
