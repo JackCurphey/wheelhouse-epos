@@ -1,6 +1,6 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-03
+**Updated:** 2026-09-06
 **Branch:** `main`
 **Blocked on:** nothing. Every open item below is Jack's to decide.
 
@@ -20,12 +20,8 @@ approved and unbuilt.
 
 ## Provenance
 
-This file replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug, blob
-`0eca91d3`). That version is still on nine unmerged branches, where it is
-identical everywhere. A merge of any of them will **silently** keep this file
-and drop Mark's with no conflict — so its live content was carried forward here
-by hand rather than left to git. Recover the original with:
-`git show fa32b60:.agents/STATUS.md`
+This file replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug). The full
+account, and Mark's original file verbatim, are in `.agents/ARCHIVE.md`.
 
 ## Read order for a fresh session
 
@@ -48,42 +44,18 @@ by hand rather than left to git. Recover the original with:
 3. **Architecture stage one** — set up, not started. Entry point, from a new
    branch with docker up: `Workflow({ name: 'wheelhouse-architecture-stage-1' })`.
    Commands are in `docs/superpowers/plans/2026-08-31-architecture-stage-1.md`.
-4. **Formally decide the wedge.** `docs/decisions/2026-09-01-wedge-booking-vs-workshop.md`
-   has been acted on since 1 September but its own status line says it was never
-   formally decided.
+4. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
+   leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
+   through `DP-4` (design-partner recruitment and cadence — "dont think this is
+   necessary") open. They need Mark before those owners are settled.
 
 ## Done
 
-24 PRs merged, #1-#29. Nothing here is removed when it ages — it moves to
+29 PRs merged, #1-#35 (verified 6 Sep: `gh pr list --state merged -L 100`). Nothing here is removed when it ages — it moves to
 `.agents/ARCHIVE.md`. Full list any time: `gh pr list --state merged -L 100`.
 
-**Carried forward verbatim from Mark's file (`fa32b60`):**
-
-- **`fix/cross-tenant-login-scope` merged** (PR #4). Master had no CI at all
-  before that; it also carried the fix scoping every `logins` write to the
-  caller's shop.
-- **Frontend phase one** — PR #9, CI green on run `33396591409` (89/89 tests,
-  41s). Vite 8 + React 19 + TS + Tailwind 4.3.3 + a shadcn registry with four
-  enforcement gates, each mutation-tested. Nothing user-visible changed.
-
-**Since (30 Aug - 2 Sep):**
-
-- **Storefronts and checkout** — per-shop public storefronts (#1), Shopify
-  checkout (#2), owner preview button (#3). Plans archived (#6).
-- **Platform and infra** — Cloudflare Tunnel assumption dropped (#8), CI push
-  trigger on main (#10), architecture stage-one workflow set up (#11), README
-  made accurate (#12), ESLint stopped parsing workflow files (#26).
-- **Workshop / diary** — booking portal data leak closed (DS-7, #19), server
-  enforces diary rules (DS-8, #20), first workshop tests (DS-9, #21), service
-  catalogue and labour lines (JOB-12/13, #24).
-- **Design** — audit findings, shared tokens, WCAG contrast gate (#14).
-- **Research and direction** — business/market research (#7), business plan and
-  workshop-first direction (#13), wedge decision (#22) and plan reconciliation
-  (#23), Book My Bike In teardown + Hubtiger research (#25), Lightspeed R-Series
-  as first platform (#27).
-- **WorkOS auth** — design spec and 2,880-line plan on `main` (#29, replaces
-  #15). Approved, not implemented.
-- **Process** — `.agents/STATUS.md` untracked (#28), then rebuilt and tracked.
+Detail for everything merged to 2 September has moved to `.agents/ARCHIVE.md`
+under "Merged work, 30 August - 2 September 2026". Nothing was dropped.
 
 ## Decisions in force
 
@@ -93,7 +65,8 @@ by hand rather than left to git. Recover the original with:
 | `2026-08-31-frontend-platform.md` | Decided (approver: Mark) |
 | `2026-09-02-lightspeed-first-platform.md` | DECIDED by Jack, 2 Sep 2026 |
 | `2026-09-02-r-series-sync-and-rate-limits.md` | Research complete, awaiting sign-off |
-| `2026-09-01-wedge-booking-vs-workshop.md` | Proposed, acted on, **never ratified** |
+| `2026-09-01-wedge-booking-vs-workshop.md` | **DECIDED** 1 Sep, ratified 6 Sep; §4 and §5b superseded by the Lightspeed decision |
+| `2026-09-01-ownership-signoff.md` | Signed off by Jack 1 Sep — 58 agreed, 5 queried (`PF-3`, `DP-1`–`DP-4`), 0 reassigned. The five queries still need Mark |
 | `2026-09-04-job-type-before-diary.md` | **Proposed 4 Sep, not decided** |
 | `2026-09-04-booking-mode-and-downtime.md` | Booking mode + customer picker **DECIDED** (5 Sep); downtime model proposed |
 | `2026-08-31-feature-catalogue.md` | Reference |
@@ -104,7 +77,7 @@ by hand rather than left to git. Recover the original with:
 |---|---|
 | `2026-08-31-master-implementation-plan.md` | LOCKED — the arc |
 | `2026-08-31-architecture-stage-1.md` | Set up, not started |
-| `2026-09-05-booking-mode-foundations.md` | Written 5 Sep, not started |
+| `2026-09-05-booking-mode-foundations.md` | Executed — merged 5 Sep (PR #35) |
 | `2026-08-31-workos-auth-migration.md` | Approved design (2,880 lines), not implemented |
 | `2026-08-31-workshop-service-catalogue.md` | Design agreed; server rules and tests merged |
 | `2026-08-31-design-remediation.md` | Findings recorded in `docs/design/` |
