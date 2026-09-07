@@ -40,7 +40,41 @@ export function verifyShopifyWebhookHmac(rawBody, hmacHeader, webhookSecret) {
 
 const SHOPIFY_API_VERSION = '2024-10';
 
-export async function shopifyAdminRequest(connection, method, path, body) {
+// Default timeout for Shopify Admin API calls. This covers the locations
+// probe (saveShopifyConnection), product create/update and inventory push
+// (syncProductToShopify / pushInventoryLevel), and unpublish - all of which
+// are synchronous request/response calls where the caller is waiting on the
+// result. syncProductToShopify and pushInventoryLevel additionally run
+// inside withRetry() while a request holds one of only ten pooled Postgres
+// connections (see server/db.js runWithShop), so this value has to stay
+// short enough that a stalled Shopify endpoint can't pin that connection
+// indefinitely - 5s is generous for a healthy Shopify API response and
+// still bounds the worst case (see the comment on withRetry below).
+const SHOPIFY_API_TIMEOUT_MS = 5000;
+
+// Webhook registration (registerShopifyWebhooks) is NOT outside the
+// connection-holding request path - it is called from the POST
+// /api/shopify/connection route (server/server.js), and that route isn't
+// under /api/auth/, so the dispatcher wraps it in runWithShop and it holds
+// one of the ten pooled Postgres connections (server/db.js) for the whole
+// request, same as any other route. It isn't wrapped in withRetry though
+// (a single failed attempt just reports a "webhook registration failed"
+// warning rather than retrying), so there's no retry multiplier to worry
+// about, and it's a rare, one-shot, human-initiated action (a shop
+// connecting for the first time), not a hot loop like inventory sync.
+// registerShopifyWebhooks makes two of these calls (orders/paid,
+// refunds/create); they're run concurrently below rather than
+// sequentially so the worst case for this constant is one timeout, not
+// two stacked. That keeps the whole route's worst case at
+// SHOPIFY_API_TIMEOUT_MS (saveShopifyConnection's locations probe) +
+// SHOPIFY_WEBHOOK_TIMEOUT_MS (both webhook calls in parallel) = 5s + 10s =
+// 15s of pooled-connection hold time, in the same order of magnitude as
+// the ~15.15s withRetry worst case already accepted for
+// pushInventoryLevel/syncProductToShopify below, rather than the 25s a
+// sequential 5s + 10s + 10s chain would produce.
+const SHOPIFY_WEBHOOK_TIMEOUT_MS = 10000;
+
+export async function shopifyAdminRequest(connection, method, path, body, timeoutMs = SHOPIFY_API_TIMEOUT_MS) {
   const accessToken = decryptSecret(connection.access_token);
   const res = await fetch(`https://${connection.shop_domain}/admin/api/${SHOPIFY_API_VERSION}${path}`, {
     method,
@@ -49,8 +83,33 @@ export async function shopifyAdminRequest(connection, method, path, body) {
       'Content-Type': 'application/json',
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    // A timed-out request throws the same way any other fetch failure does
+    // (a rejected promise) - it flows through the exact same catch blocks
+    // that already retry it (withRetry) and mark the connection sync_error
+    // (syncProductToShopify/pushInventoryLevel), so no new unhandled
+    // rejection path is introduced.
+    signal: AbortSignal.timeout(timeoutMs),
   });
-  const data = await res.json().catch(() => ({}));
+  // res.json() can still reject even after a successful (2xx) response
+  // arrived, if the timeout fires while the body is still streaming - the
+  // same AbortSignal covers the whole request, not just the initial
+  // headers. A bare `.catch(() => ({}))` here used to turn that into a
+  // fake `{}` success (res.ok was already true), and the worst call site
+  // (pushInventoryLevel) discards the return value entirely - so a push
+  // that never reached Shopify recorded as success, and could clear a
+  // sync_error connection back to 'connected'. Rethrow instead, naming a
+  // timeout as a timeout, so withRetry retries it and, on exhaustion, the
+  // caller's catch marks the connection sync_error - same shape as
+  // server/sms.js's sendSms fix for the identical defect.
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    const timedOut = err.name === 'TimeoutError' || err.name === 'AbortError';
+    throw new Error(timedOut
+      ? 'Shopify API timeout: response body did not finish streaming in time'
+      : `Could not read Shopify response: ${err.message}`);
+  }
   if (!res.ok) {
     throw new Error(`Shopify API error (${res.status}): ${JSON.stringify(data)}`);
   }
@@ -109,12 +168,19 @@ export async function saveShopifyConnection({ shopDomain, accessToken, storefron
 export async function registerShopifyWebhooks(connection, shopId) {
   const baseUrl = process.env.APP_PUBLIC_URL;
   if (!baseUrl) throw new Error('APP_PUBLIC_URL is not configured');
-  await shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
-    webhook: { topic: 'orders/paid', address: `${baseUrl}/webhooks/shopify/${shopId}/orders`, format: 'json' },
-  });
-  await shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
-    webhook: { topic: 'refunds/create', address: `${baseUrl}/webhooks/shopify/${shopId}/refunds`, format: 'json' },
-  });
+  // Run both webhook registrations concurrently, not sequentially - this
+  // call holds a pooled Postgres connection for the whole request (see the
+  // comment on SHOPIFY_WEBHOOK_TIMEOUT_MS above), so two sequential 10s
+  // timeouts would double the worst-case hold time to 20s for no benefit;
+  // the two topics don't depend on each other.
+  await Promise.all([
+    shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
+      webhook: { topic: 'orders/paid', address: `${baseUrl}/webhooks/shopify/${shopId}/orders`, format: 'json' },
+    }, SHOPIFY_WEBHOOK_TIMEOUT_MS),
+    shopifyAdminRequest(connection, 'POST', '/webhooks.json', {
+      webhook: { topic: 'refunds/create', address: `${baseUrl}/webhooks/shopify/${shopId}/refunds`, format: 'json' },
+    }, SHOPIFY_WEBHOOK_TIMEOUT_MS),
+  ]);
 }
 
 // Small in-process retry for transient Shopify API failures (rate limits,
@@ -124,6 +190,18 @@ export async function registerShopifyWebhooks(connection, shopId) {
 // marks the connection sync_error so it's visible in shop settings rather
 // than failing silently; the next successful product edit or sale clears
 // it back to connected on its own.
+// Worst-case bounded time: both call sites below use withRetry(fn, 3, 50).
+// Each of the 3 attempts can itself take up to SHOPIFY_API_TIMEOUT_MS before
+// the AbortSignal fires and the attempt fails, and the backoff between
+// attempts is baseDelayMs * 2**i for i = 0, 1 (no backoff after the final
+// attempt). So the total worst case is:
+//   3 * SHOPIFY_API_TIMEOUT_MS + 50*2**0 + 50*2**1
+//   = 3 * 5000ms + 50ms + 100ms
+//   = 15150ms (~15.15s)
+// That is the longest pushInventoryLevel (called from inside runWithShop,
+// see server/db.js) can pin one of the ten pooled Postgres connections
+// while every attempt times out - bounded, not indefinite, but still worth
+// knowing when reasoning about pool exhaustion under a Shopify slowdown.
 async function withRetry(fn, attempts = 3, baseDelayMs = 500) {
   let lastError;
   for (let i = 0; i < attempts; i++) {

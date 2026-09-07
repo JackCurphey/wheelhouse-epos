@@ -1,12 +1,13 @@
 // Bike Shop EPOS - local server, PostgreSQL-backed.
 import './load-env.js';
 import { createServer } from 'node:http';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
-import { prepare, dbExec, runWithShop, pool } from './db.js';
+import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -83,6 +84,177 @@ async function syncProductWithShopifyIfNeeded(previousProductRow, updatedProduct
     }
   } catch (err) {
     console.error('Shopify product sync failed', err);
+  }
+}
+
+// Fires createSale's deferred Shopify inventory pushes (see
+// deferShopifyPushesTo on createSale). Called only once the request's own
+// pooled client has already gone back to the pool - `product` here is a row
+// createSale read earlier in the same request, before COMMIT, so nothing
+// about firing this late depends on that original client.
+//
+// pushInventoryLevel (server/shopify.js) is not a pure HTTP call, though:
+// getShopifyConnection() and the post-push status update both go through
+// prepare(), which reads the current request-scoped client out of
+// AsyncLocalStorage (server/db.js) and throws "No database client in scope"
+// with none active. Firing this with no scope at all would crash every
+// deferred push. runWithShop(shopId, ...) here checks out a NEW client from
+// the pool - not the one that was just released - and, as of the fix below,
+// holds it only for ONE push at a time (see firePendingShopifyPushes' own
+// comment for why a single scope wrapping every queued push was unbounded,
+// not "small"), each starting strictly after the original request has
+// already sent its response. The two never overlap for this request, so the
+// property the brief asks for holds: the
+// connection a real till sale's own reads/writes needed is free again
+// before any Shopify HTTP round-trip (with its retries/backoff) begins.
+//
+// This is fire-and-forget from the caller's point of view - the HTTP
+// response has already been sent - but graceful shutdown still needs to know
+// it happened. `pendingShopifyPushes` tracks every push started this way so
+// gracefulShutdown() can wait for them before calling dbPool.end(): pg
+// rejects connect() once end() has been called, so a push that opens its
+// runWithShop(shopId, ...) scope after the pool has already ended gets a
+// connection refused mid-push. The .catch() below already means that
+// wouldn't fail a till sale, but it would fail the push itself silently -
+// tracking it here means shutdown drains it first instead.
+// Exported (read-only use in tests) so tests/sale-shopify-push-release.test.js
+// can assert this set is non-empty at QUEUE time (right after createSale
+// commits), not just at fire time - see registerPendingShopifyPushSlot below
+// for why that distinction matters.
+export const pendingShopifyPushes = new Set();
+
+// Important 4: without this, the tracking entry above was only added inside
+// firePendingShopifyPushes - i.e. at FIRE time, from the afterRelease
+// callback, which runs after res.end() and after runWithShop/releaseClient's
+// own round-trips (commit 26034ae closed the same seam one layer earlier: a
+// signal landing in that ~1ms gap between the sale committing and
+// afterRelease actually firing found pendingShopifyPushes still empty, so
+// gracefulShutdown's drain saw nothing to wait for, closeIdleConnections()
+// could cut the idle client's socket, and pool.end() could beat the push's
+// own connect(). Registering a promise the moment createSale knows it has
+// pushes to fire - immediately after COMMIT, well before the HTTP response
+// is even sent - closes that gap: the set is non-empty from the moment the
+// sale commits, and stays that way (via `slot.settle`) until the push
+// actually runs, however late that turns out to be.
+// Regression fix (fix round 2): the ONLY code that ever calls the resolver
+// this returns is firePendingShopifyPushes, which is ONLY ever reached from
+// a route's own `afterRelease.push(...)` call at the very end of the
+// handler - after several more db.prepare calls and sendJson(). If anything
+// in that tail throws (a transient DB error, a bug in serializeSale,
+// anything), the dispatcher's catch sends the 500 and returns without ever
+// reaching afterRelease - so the slot registered right above at COMMIT time
+// would otherwise sit in pendingShopifyPushes forever, and every later
+// gracefulShutdown() call would hit the 10s force-exit path (exit 1)
+// instead of draining cleanly. `pendingPushSlotRequestStorage` (an
+// AsyncLocalStorage set up per-request by runRequestWithPushSlotCleanup,
+// which the dispatcher wraps every route handler in) makes this structural
+// rather than remembered: whichever request is currently running when a
+// slot is registered gets a reference to this exact resolver added to its
+// own request-scoped set, and runRequestWithPushSlotCleanup's catch settles
+// every slot still in that set the moment the request fails - whatever
+// throws, wherever, on any current or future route. A slot that DOES fire
+// normally removes itself from the request-scoped set too (the
+// `slot.finally` above), so a request that succeeds never touches this at
+// all - it's purely a backstop for the failure path.
+function registerPendingShopifyPushSlot() {
+  let settle;
+  const slot = new Promise((resolve) => { settle = resolve; });
+  pendingShopifyPushes.add(slot);
+  slot.finally(() => pendingShopifyPushes.delete(slot));
+
+  const requestSlots = pendingPushSlotRequestStorage.getStore();
+  if (requestSlots) {
+    requestSlots.add(settle);
+    slot.finally(() => requestSlots.delete(settle));
+  } else {
+    // No request-scoped store means this call is NOT covered by
+    // runRequestWithPushSlotCleanup - see the comment on
+    // pendingPushSlotRequestStorage below for exactly which dispatcher
+    // branches that is true of today. That is precisely the condition
+    // under which a later throw in this same call's tail cannot settle
+    // the slot above, and it would sit in pendingShopifyPushes forever,
+    // degrading every later gracefulShutdown() to its 10s force-exit
+    // path. This does not throw: the failure it guards against is a
+    // degraded shutdown, not lost data or a lost sale, and this file's
+    // own uncaughtException/unhandledRejection handlers (below) exit the
+    // whole process on an unhandled error - turning an
+    // unwrapped-but-otherwise-working route into a hard outage is worse
+    // than the problem it would be catching. Logging makes the gap
+    // visible the moment it is first exercised, so it gets wired up
+    // before it ever reaches production shutdown behaviour.
+    console.error(
+      'registerPendingShopifyPushSlot: slot registered with no active request-scoped store (pendingPushSlotRequestStorage.getStore() ' +
+        'returned undefined) - if this call\'s tail throws before the push fires, the slot will be orphaned in pendingShopifyPushes ' +
+        'forever and every later gracefulShutdown() will hit its 10s force-exit path. Wrap this code path in runRequestWithPushSlotCleanup.'
+    );
+  }
+  return settle;
+}
+
+// registerPendingShopifyPushSlot's slot is only cleaned up on a request
+// tail's failure if that call happened inside runRequestWithPushSlotCleanup.
+// Today that is true of exactly ONE branch: the generic non-auth `/api/*`
+// loop below (the one that wraps its route call in
+// runRequestWithPushSlotCleanup). It is NOT true of the /api/auth/* branch
+// inside that same loop, the /api/portal/* branch, the storefront branch, or
+// the Shopify webhook branch - a deferred push registered from any of those
+// would not be settled by a request-tail throw and would orphan the slot.
+// No branch does that today (processShopifyOrderWebhook, the only webhook
+// caller of createSale, never passes deferShopifyPushesTo, so it always
+// takes the immediate-push path and never reaches here without a store) -
+// but nothing stops a future change to one of those four branches from
+// doing so. The guard in registerPendingShopifyPushSlot's `else` branch
+// above is what will tell you if that ever happens; it is not structural
+// coverage, only a loud signal that coverage is missing.
+const pendingPushSlotRequestStorage = new AsyncLocalStorage();
+
+export async function runRequestWithPushSlotCleanup(fn) {
+  const requestSlots = new Set();
+  try {
+    return await pendingPushSlotRequestStorage.run(requestSlots, fn);
+  } catch (err) {
+    for (const settle of requestSlots) settle();
+    throw err;
+  }
+}
+
+// Exported (read-only use in tests) so a test can drive it directly with a
+// slow stubbed Shopify call and observe the pool's active-client count
+// dipping back to baseline BETWEEN items - proving each push opens and
+// releases its own connection instead of one scope holding a client for the
+// whole batch (Important 1).
+export function firePendingShopifyPushes(shopId, pushes) {
+  if (!pushes.length) return;
+  const settleQueuedSlot = pushes._pendingPushSettle;
+  const pending = (async () => {
+    // ONE runWithShop scope per push, not one scope wrapping the whole
+    // `for` loop - a single wrapping scope held one of only ten pooled
+    // Postgres connections for the ENTIRE batch (each item up to ~15.15s
+    // under withRetry - see server/shopify.js), which for a sale with many
+    // line items could pin a connection for minutes during a Shopify
+    // outage; a few concurrent sales like that exhausts the pool and stalls
+    // every till in every shop. There is no bound on how many items a
+    // single sale can queue here, so "this shop's small batch" was never a
+    // safe assumption - opening a fresh scope per item bounds the
+    // connection-hold to one push's worth of time, however many items are
+    // queued.
+    for (const { product, newQty } of pushes) {
+      await runWithShop(shopId, () => pushInventoryLevel(product, newQty))
+        // Never let a Shopify hiccup fail a real till sale - log and move on.
+        .catch((err) => console.error('Shopify inventory push failed', err));
+    }
+  })().catch((err) => console.error('Shopify inventory push scope failed', err));
+  if (settleQueuedSlot) {
+    // The tracking entry already exists (added at queue time, in
+    // createSale) - settle it once this actual work finishes instead of
+    // adding a second, redundant entry.
+    pending.finally(settleQueuedSlot);
+  } else {
+    // Defensive fallback only - every real caller goes through createSale's
+    // deferShopifyPushesTo path above, which always registers a slot when
+    // pushes.length > 0.
+    pendingShopifyPushes.add(pending);
+    pending.finally(() => pendingShopifyPushes.delete(pending));
   }
 }
 
@@ -1530,7 +1702,16 @@ export async function loadDocumentLine(it, { checkStock }) {
 
 // Validates items against live stock, inserts the sale + sale_items, and
 // deducts stock. Shared by direct checkout and quote/order -> sale conversion.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }) {
+//
+// `deferShopifyPushesTo`, if given an array, makes this function record the
+// {product, newQty} pairs onto it instead of firing pushInventoryLevel
+// itself - the caller is then responsible for firing them once it is safe to
+// (see the comment above the shopifyPushes collection below, and the HTTP
+// route handlers that pass this in). Left undefined, the old inline
+// behaviour runs unchanged, which is what every direct createSale() caller
+// that doesn't care about pool-connection lifetime (tests, the Shopify
+// webhook handlers) keeps getting for free.
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }, { deferShopifyPushesTo } = {}) {
   const loaded = [];
   for (const it of items) {
     loaded.push(await loadDocumentLine(it, { checkStock: true }));
@@ -1615,9 +1796,26 @@ export async function createSale({ customerId, cashierId, items, discount, cashA
     }
     await db.exec('COMMIT');
 
-    for (const { product, newQty } of shopifyPushes) {
-      // Never let a Shopify hiccup fail a real till sale - log and move on.
-      await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+    if (deferShopifyPushesTo) {
+      // The caller (an HTTP route handler releasing its pooled client before
+      // firing these - see the dispatcher's afterRelease handling below)
+      // owns firing these now. `product` is the row this function already
+      // read earlier in the request, captured in the closure - nothing here
+      // depends on the database client remaining checked out.
+      deferShopifyPushesTo.push(...shopifyPushes);
+      if (shopifyPushes.length && !deferShopifyPushesTo._pendingPushSettle) {
+        // Registered at QUEUE time, right after COMMIT - see
+        // registerPendingShopifyPushSlot's comment. The whole point is for
+        // gracefulShutdown's drain to see this sale's push as pending from
+        // this line onward, well before the HTTP response is sent or
+        // firePendingShopifyPushes ever runs.
+        deferShopifyPushesTo._pendingPushSettle = registerPendingShopifyPushSlot();
+      }
+    } else {
+      for (const { product, newQty } of shopifyPushes) {
+        // Never let a Shopify hiccup fail a real till sale - log and move on.
+        await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      }
     }
     return saleId;
   } catch (err) {
@@ -1706,7 +1904,7 @@ async function processShopifyRefundWebhook(shopId, refund) {
   });
 }
 
-route('POST', '/api/sales', async (req, res) => {
+route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease, shopId) => {
   const body = await readJsonBody(req);
   const items = Array.isArray(body.items) ? body.items : [];
   if (items.length === 0) return badRequest(res, 'Sale must include at least one item');
@@ -1731,8 +1929,12 @@ route('POST', '/api/sales', async (req, res) => {
   if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
 
   let saleId;
+  const shopifyPushes = [];
   try {
-    saleId = await createSale({ customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note });
+    saleId = await createSale(
+      { customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note },
+      { deferShopifyPushesTo: shopifyPushes }
+    );
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -1742,6 +1944,9 @@ route('POST', '/api/sales', async (req, res) => {
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
   sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
+  if (afterRelease && shopifyPushes.length) {
+    afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
+  }
 });
 
 // ---------- Quotes & orders (sale documents) ----------
@@ -1990,7 +2195,7 @@ route('PUT', '/api/sale-documents/:id/items', async (req, res, params) => {
   sendJson(res, 200, serializeSaleDocument(row, savedItems));
 });
 
-route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
+route('POST', '/api/sale-documents/:id/convert', async (req, res, params, searchParams, afterRelease, shopId) => {
   const id = Number(params.id);
   const doc = await db.prepare('SELECT * FROM sale_documents WHERE id = ?').get(id);
   if (!doc) return notFound(res, 'Not found');
@@ -2027,18 +2232,22 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
   }));
 
   let saleId;
+  const shopifyPushes = [];
   try {
-    saleId = await createSale({
-      customerId: doc.customer_id,
-      cashierId: cashierResolved.cashierId,
-      items: saleItems,
-      discount: doc.discount,
-      cashAmount,
-      cardAmount,
-      cashTendered,
-      payments,
-      note: `Converted from ${doc.kind} #${doc.id}`,
-    });
+    saleId = await createSale(
+      {
+        customerId: doc.customer_id,
+        cashierId: cashierResolved.cashierId,
+        items: saleItems,
+        discount: doc.discount,
+        cashAmount,
+        cardAmount,
+        cashTendered,
+        payments,
+        note: `Converted from ${doc.kind} #${doc.id}`,
+      },
+      { deferShopifyPushesTo: shopifyPushes }
+    );
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -2062,6 +2271,9 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params) => {
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
   sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
+  if (afterRelease && shopifyPushes.length) {
+    afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
+  }
 });
 
 // ---------- Workshop jobs ----------
@@ -3756,9 +3968,39 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
   return serveStatic(req, res, relative, STOREFRONT_DIR);
 }
 
+// Steady-state health, not boot health: the boot chain already runs
+// runMigrations() then assertPoolerModeSafe() before the server ever starts
+// listening, so a container that reports "up" has already proven the
+// database was reachable once. That says nothing about a minute later - a
+// dropped connection, a full pool, or Postgres going away after boot leaves
+// the process listening and accepting connections while every real request
+// fails. Takes a fresh query on every call (never cached) so /healthz always
+// reflects the database's condition right now, not at startup.
+export async function checkDatabaseHealth(targetPool = pool) {
+  try {
+    await targetPool.query('SELECT 1');
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  // Deliberately ahead of every other branch: an orchestrator's health probe
+  // must never be mistaken for a shop/storefront route (and must never wait
+  // on shop resolution), and must never be satisfied by the generic static
+  // fallback at the bottom of this dispatcher - that's exactly the docker-
+  // compose bug this replaces (GETting `/`, which serves index.html off disk
+  // and passes with Postgres completely down).
+  if (pathname === '/healthz') {
+    const health = await checkDatabaseHealth();
+    if (health.ok) return sendJson(res, 200, { status: 'ok' });
+    console.error('Health check failed: database unreachable', health.error);
+    return sendJson(res, 503, { status: 'error', error: 'Database unreachable' });
+  }
 
   if (parseStorefrontSlugCandidate(req, url)) {
     const storefrontShop = await resolveStorefrontShop(req, url);
@@ -3914,11 +4156,35 @@ const server = createServer(async (req, res) => {
       const ctx = await currentSession(req);
       if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
 
+      // A handler that needs work done AFTER its pooled client goes back to
+      // the pool (currently: firing Shopify inventory pushes queued by
+      // createSale's deferShopifyPushesTo - see the comment there) pushes a
+      // callback onto this array instead of running that work itself while
+      // still inside runWithShop. It is only read below once the
+      // `runWithShop` call has fully resolved, which cannot happen until its
+      // `finally` has already released the client back to the pool - so
+      // anything queued here is guaranteed to run without holding one of the
+      // ten pooled connections across it.
+      const afterRelease = [];
       try {
-        await runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams));
+        // runRequestWithPushSlotCleanup (see registerPendingShopifyPushSlot's
+        // comment) settles any pendingShopifyPushes slot this request
+        // registered at commit time if the request itself fails anywhere in
+        // its own tail, before ever reaching the afterRelease loop below.
+        await runRequestWithPushSlotCleanup(() =>
+          runWithShop(ctx.shop.id, () => r.handler(req, res, params, url.searchParams, afterRelease, ctx.shop.id))
+        );
       } catch (err) {
         console.error(err);
         sendJson(res, 500, { error: err.message || 'Internal server error' });
+        return;
+      }
+      for (const work of afterRelease) {
+        try {
+          work();
+        } catch (err) {
+          console.error('Post-release work failed', err);
+        }
       }
       return;
     }
@@ -3963,6 +4229,153 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// ---------- Graceful shutdown ----------
+
+// How long a rolling deploy's SIGTERM waits for requests already in flight
+// (a till mid-transaction, a slow Shopify push-with-retry) to finish on their
+// own before the process gives up and exits anyway. Bounded deliberately: an
+// orchestrator's own "give up and SIGKILL" timeout is typically 10-30s, and
+// exiting cleanly one second before that beats being SIGKILLed mid-write.
+const SHUTDOWN_GRACE_MS = 10_000;
+
+let shuttingDown = false;
+
+// Critical 2: signal handlers are installed before server.listen (see the
+// isMainModule block below), so a SIGTERM/SIGINT can land while the boot
+// chain (runMigrations, assertPoolerModeSafe) is still running and the HTTP
+// server has never listened. Without this flag, gracefulShutdown would call
+// httpServer.close() on a server that was never started (a synchronous
+// ERR_SERVER_NOT_RUNNING from Node, logged as "Error while closing the HTTP
+// server") AND set shuttingDown before the still-running boot chain's own
+// pool.end()-adjacent work runs - so a pooler probe mid-flight on the same
+// pool then fails with "Cannot use a pool after calling end on the pool",
+// and the boot chain's catch block logs a false "Database startup checks
+// failed", even though nothing about the database ever failed. This matters
+// most for a rolling deploy scaling a replica down while it's still waiting
+// on another replica's migration advisory lock - exactly the multi-replica
+// cold start that lock exists to make safe.
+let serverListening = false;
+
+// Waits for every currently-tracked deferred Shopify push to settle
+// (success or failure - either way it's done with the pool). Re-checks the
+// set after each round rather than snapshotting once, in case a push that
+// was itself still in the middle of starting adds a sibling before this
+// resolves. Deliberately has no timeout of its own: the caller's own
+// forceExit timer already bounds the ENTIRE shutdown (this wait included),
+// so a wedged push cannot hold the process open past that - it just means
+// the process exits via the force-exit path instead of the clean one.
+async function waitForPendingShopifyPushes(pendingPushes) {
+  while (pendingPushes.size > 0) {
+    await Promise.allSettled([...pendingPushes]);
+  }
+}
+
+// Exported so tests can drive it directly against a fake server/pool without
+// spawning a real process for every assertion; production only ever calls it
+// through the SIGTERM/SIGINT listeners below.
+export function gracefulShutdown(signal, {
+  httpServer = server,
+  dbPool = pool,
+  graceMs = SHUTDOWN_GRACE_MS,
+  exit = process.exit,
+  pendingPushes = pendingShopifyPushes,
+  // Only the real production httpServer (the default) is gated on the
+  // module-level serverListening flag - tests inject their own fake
+  // httpServer objects to drive the drain/force-exit paths directly and
+  // don't model a pre-listen state at all, so a fake httpServer is always
+  // treated as already listening.
+  isListening = () => (httpServer === server ? serverListening : true),
+} = {}) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  // A signal landing before server.listen()'s callback has fired means
+  // there is no HTTP server to close and no pool activity belonging to
+  // this shutdown path - the boot chain (runMigrations,
+  // assertPoolerModeSafe) is still using the pool itself. Exit clean and
+  // immediately, touching neither the HTTP server nor the pool: setting
+  // `shuttingDown` above is what keeps the still-running boot chain's own
+  // failure path quiet (see the isMainModule .catch below), and returning
+  // here rather than falling through avoids the false
+  // ERR_SERVER_NOT_RUNNING / "Cannot use a pool after calling end" pair a
+  // real run of this scenario produced.
+  if (!isListening()) {
+    console.log(`${signal} received before the server started listening - exiting cleanly`);
+    exit(0);
+    return;
+  }
+
+  console.log(`${signal} received - closing the HTTP server, waiting up to ${graceMs}ms for in-flight requests to finish`);
+
+  const forceExit = setTimeout(() => {
+    console.error(`Shutdown grace period (${graceMs}ms) elapsed with requests still in flight - forcing exit`);
+    exit(1);
+  }, graceMs);
+  // The force-exit timer must never be the reason the process stays alive -
+  // only in-flight work should do that.
+  forceExit.unref();
+
+  httpServer.close((err) => {
+    if (err) console.error('Error while closing the HTTP server', err);
+    // A sale that completed just as the signal landed can still have a
+    // deferred Shopify push in flight, opened on its OWN pooled client after
+    // the sale's own client was already released (see
+    // firePendingShopifyPushes above) - draining HTTP connections says
+    // nothing about that. Wait for it before ending the pool, or pg refuses
+    // its connect() with the pool already ended and the push dies silently.
+    waitForPendingShopifyPushes(pendingPushes)
+      .then(() => dbPool.end())
+      .catch((poolErr) => console.error('Error while closing the database pool', poolErr))
+      .finally(() => {
+        clearTimeout(forceExit);
+        exit(err ? 1 : 0);
+      });
+  });
+
+  // A keep-alive socket sitting idle (no request in flight on it) would
+  // otherwise hold server.close()'s callback open indefinitely, since Node
+  // only fires it once every connection - including idle ones - has closed.
+  // Idle connections have nothing to drain, so cut them immediately; a
+  // connection with a request actually in flight is untouched by this call
+  // and is left to finish within the grace period above.
+  httpServer.closeIdleConnections?.();
+}
+
+// ---------- Crash guard ----------
+
+// Several comments elsewhere in this file (the Shopify webhook branch, the
+// storefront branch, etc.) individually wrap their own async work in
+// try/catch specifically because, until now, nothing caught a rejection that
+// slipped past all of them - Node's default behaviour for an unhandled
+// rejection or an uncaught synchronous throw is to crash the whole process
+// immediately, taking every shop down with it, with no log line explaining
+// why. This does not try to keep serving after either kind of error: a
+// process whose state is unknown (a client that may never have been
+// released, an in-flight transaction of uncertain status) is worse than one
+// that exits and lets the orchestrator start a clean one.
+//
+// Deliberately NOT coordinated with gracefulShutdown's `shuttingDown` flag:
+// an uncaught error that lands while a drain is already in progress (a bug
+// in some OTHER, unrelated in-flight request, say) exits immediately here
+// rather than letting the rest of the grace period run out first, which
+// truncates it for every other still-draining request. That is an accepted
+// cost under the same reasoning as above, not an oversight - a process that
+// has just proven its own state is unknown by throwing uncaught is not one
+// this codebase trusts to finish draining correctly either.
+export function installCrashGuard({ exit = process.exit } = {}) {
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Fatal: unhandled promise rejection - exiting so the process supervisor can restart clean', {
+      reason,
+      promise,
+    });
+    exit(1);
+  });
+  process.on('uncaughtException', (err, origin) => {
+    console.error(`Fatal: uncaught exception (${origin}) - exiting so the process supervisor can restart clean`, err);
+    exit(1);
+  });
+}
+
 // This module exports functions (serializeX, etc.) that test files import
 // directly. Without this guard, every test file that imports server.js would
 // also run this migrate-and-listen chain and boot a real HTTP server -
@@ -3973,15 +4386,36 @@ const server = createServer(async (req, res) => {
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
+  installCrashGuard();
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  // Same treatment as SIGTERM so Ctrl+C locally behaves consistently with a
+  // real rolling deploy rather than Node's raw default (immediate exit).
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
   runMigrations()
+    // Session-scoped tenancy (the DB_TENANT_SCOPE default) is only safe on a
+    // direct connection or a session-mode pooler. Put a transaction-mode
+    // pooler in front of this and one shop's request can be served on a
+    // connection still carrying another shop's tenant - so check once, here,
+    // rather than discover it in production. See server/db.js.
+    .then(() => assertPoolerModeSafe())
     .then(() => mkdir(UPLOADS_DIR, { recursive: true }))
     .then(() => {
       server.listen(PORT, () => {
+        serverListening = true;
         console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
       });
     })
     .catch((err) => {
-      console.error('Failed to run database migrations - server not started.');
+      // A signal that landed pre-listen already called gracefulShutdown's
+      // own clean exit(0) path above (see the `!isListening()` branch) and
+      // set `shuttingDown` before this boot chain's own pool use (e.g.
+      // probePoolerMode) could fail as a side effect of that shutdown. Stay
+      // quiet here in that case - the real cause is an intentional
+      // shutdown, not a database failure, and process.exit(0) has already
+      // been called or is about to win the race.
+      if (shuttingDown) return;
+      console.error('Database startup checks failed - server not started.');
       console.error(err);
       process.exit(1);
     });

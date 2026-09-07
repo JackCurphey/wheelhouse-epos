@@ -35,9 +35,12 @@ async function shopOwnedTables(client) {
 export async function deleteTestShop(shopId) {
   const client = await pool.connect();
   try {
-    await client.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shopId)]);
     // Savepoints below are only legal inside a transaction block.
     await client.query('BEGIN');
+    // is_local = true, so the tenant setting dies with this transaction
+    // rather than riding back into the pool on this client - the same
+    // hardening runWithShop and auth.js's createShop now have.
+    await client.query("SELECT set_config('app.current_shop_id', $1, true)", [String(shopId)]);
     for (const sql of INDIRECT_CLEANUP) await client.query(sql, [shopId]);
 
     // Tables reference each other (workshop_jobs ← sale_documents, customers
