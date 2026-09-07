@@ -1,8 +1,27 @@
 # Lightspeed R-Series — how we stay in sync, and what it costs
 
 **Date:** 2 September 2026
-**Status:** Research complete. The architecture consequence (§4) and the product
-requirement (§5) need Jack's sign-off before they change any plan.
+**Status:** **SIGNED OFF by Jack, 7 September 2026.** §4 (the architecture
+consequence) and §5 (the product requirement) are binding on
+`docs/superpowers/plans/2026-08-31-master-implementation-plan.md` from that date.
+
+Signing off does NOT settle the two things this document deliberately left open,
+and neither is resolved by agreeing with the rest of it:
+
+1. **The bucket size is unconfirmed** — 90 on Lightspeed's own page, 60 in
+   secondary sources, and no live response header has ever been seen. Read the
+   real value from `X-LS-Api-Bucket-Level` on the first call and trust that over
+   both numbers, including the ones in §4's table.
+2. **It is unknown whether a `Workorder`'s `timeStamp` moves when a child
+   `WorkorderLine` changes.** If it does not, polling parents silently misses
+   line-level edits and the diary shows a job as unchanged while its contents
+   changed underneath. This is a design fork, it cannot be answered from
+   documentation, and it is the **first thing to test against a live account —
+   before the sync loop is written, not after.**
+
+§5's hard rule travels with the sign-off: the lag message is only permitted
+while the polling interval is genuinely tight. Relax the interval and the
+message changes with it, or it becomes a claim we know to be untrue.
 **Closes:** open item 4 of `2026-09-02-lightspeed-first-platform.md` §7.
 **Method:** desk research against Lightspeed's own developer documentation.
 **No live API call was made**, so every finding is a documentation-level read.
