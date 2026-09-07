@@ -58,8 +58,13 @@ services:
     # bypass: anything that can reach the app directly can set its own
     # x-forwarded-for and pick its own rate-limit key. The gateway proxies
     # everything through transparently, so 8080 is a full substitute.
+    # Probes /healthz, not `/`. `/` is served off disk from index.html and
+    # reports healthy with Postgres completely down; /healthz runs a fresh
+    # SELECT 1 on every call and answers 503 when the database is gone.
+    # Guarded by tests/compose-healthcheck.test.js, which runs this exact
+    # command against a stub that 200s on static routes and 503s on /healthz.
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/healthz', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 5s
       timeout: 5s
       retries: 10
