@@ -120,3 +120,37 @@ Moved out of `STATUS.md` on 6 September 2026 when the file passed its
 - **WorkOS auth** — design spec and 2,880-line plan on `main` (#29, replaces
   #15). Approved, not implemented.
 - **Process** — `.agents/STATUS.md` untracked (#28), then rebuilt and tracked.
+
+---
+
+## Housekeeping notes
+
+Moved out of `STATUS.md` on 7 September 2026 when the file passed its
+8,000-byte cap after the stage-one merge. Verbatim as it stood there.
+
+- `origin/design/workos-auth-migration` (0dad2a4, 31 Aug) is the superseded
+  pre-rebuild branch. Its content is safe: the 2,880-line plan and 760-line
+  spec are both on `main`, byte-identical, merged via PR #29. Deleting the
+  stale remote branch is a judgement call nobody has made.
+
+---
+
+## Open design items carried from Mark's 31 August STATUS.md
+
+Moved out of `STATUS.md` on 7 September 2026 when the file passed its
+8,000-byte cap. STILL OPEN — moved for space, not resolved. Verbatim.
+
+Items 1-4 are carried forward verbatim in substance from Mark's own STATUS.md
+(`fa32b60`, 31 Aug) and re-verified against the tree on 2026-09-03.
+
+1. **`--status-complete-paid-ink` needs sign-off.** Held back on purpose.
+   Still unapplied and now inconsistent: `public/tokens.css:75` has the fixed
+   `#4d7364`, `src/styles/theme.css:84` still has `#6b9484` at 3.21 contrast,
+   which fails AA. `docs/decisions/2026-08-31-frontend-platform.md:68` records
+   it as NOT applied.
+2. **Dark-mode palette** in `src/styles/theme.css` was invented during the
+   scaffold with no design approval. Nothing renders it yet. Design direction
+   is Mark's to approve.
+3. **Registry primitives use native `<dialog>`** rather than Radix, because
+   `@radix-ui/*` was not installed. Should be an explicit decision, not a
+   default that hardened.
