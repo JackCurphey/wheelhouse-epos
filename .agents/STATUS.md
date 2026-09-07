@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-07
-**Branch:** `fix/compose-healthcheck-healthz`
+**Branch:** `main`
 **Blocked on:** nothing. Every open item below is Jack's to decide.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -17,12 +17,6 @@ Architecture stage one merged 7 Sep (PR #37): the pooler trap, migration race,
 outbound timeouts, process lifecycle and README are closed. The sixth ceiling —
 managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
 Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
-
-In flight on this branch: the `app` healthcheck probes `/healthz`, guarded by
-`tests/compose-healthcheck.test.js`, which runs the command out of
-`docker-compose.yml` against a stub that 503s there. Not proven in a rebuilt
-container. Left alone: `gateway` has a bare `depends_on: app`, so the check
-gates `up --wait`, not gateway start.
 
 **Do not assume stage one did more than it did.** It makes the app safe to run
 as more than one process. It does nothing about recovering data if the volume
@@ -65,16 +59,22 @@ original file are in `.agents/ARCHIVE.md`.
    `main` cannot reach; deleting those removes a label, not history. Analysis and
    recommendation: `.agents/ARCHIVE.md`, "Branch audit". Not tidiness — the
    ownership sign-off hid for a week in a list where 25 of 26 lines were dead.
-4. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
+4. **Decide whether `gateway` should wait for a healthy `app`.** It has a bare
+   `depends_on: app`, so the new `/healthz` check gates `docker compose up
+   --wait` and health reporting but not gateway startup. Topology change, so
+   it was deliberately left out of PR #42.
+5. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
    leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
    through `DP-4` (design-partner recruitment and cadence — "dont think this is
    necessary") open. They need Mark before those owners are settled.
 
 ## Done
 
-36 PRs merged, #1-#40 (verified 7 Sep). Nothing here is deleted when it ages —
-it moves to `.agents/ARCHIVE.md`, which holds the detail to 2 September.
-Full list: `gh pr list --state merged -L 100`.
+36 PRs merged, spanning #1-#42 (counted 7 Sep; #36 open, #15 closed unmerged,
+5/16/17/18 are issue numbers). The earlier "36 merged, #1-#40" overcounted by
+two. Nothing here is deleted when it ages — it moves to `.agents/ARCHIVE.md`,
+which holds the detail to 2 September. Full list:
+`gh pr list --state merged -L 100`.
 
 ## Decisions in force
 
@@ -114,11 +114,10 @@ npm run build
 npm run docker:up
 ```
 
-**Last verified:** 278 pass, 0 fail on `fix/compose-healthcheck-healthz` (275 on
-`main`), 7 Sep, lint and typecheck clean. The earlier `main` run added RLS
-coverage, typecheck, lint, build, registry validate and drift check. CI green on
-PR #37. The docker `app` image is from 31 Aug and runs stale code - verify
-against the working tree, never that container.
+**Last verified:** 278 pass, 0 fail on `main`, 7 Sep, lint and typecheck clean;
+CI green on PR #42. An earlier `main` run added RLS coverage, build, registry
+validate and drift check. The docker `app` image is from 31 Aug and runs stale
+code — verify against the working tree, never that container.
 
 ## Open items needing Mark
 
