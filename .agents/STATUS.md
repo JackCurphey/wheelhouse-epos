@@ -4,13 +4,12 @@
 **Branch:** `main`
 **Blocked on:** nothing. Every open item below is Jack's to decide.
 
-> **This file is tracked and authoritative.** It and `ARCHIVE.md` are the only
-> exceptions to the gitignore on `.agents/`; everything else here is scratch. Hold
-> it to the same standard as anything in `docs/`: if it is wrong, that is a bug.
+> **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
+> exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
 >
-> **Never put a destructive command in this file.** A stale `git reset --hard`
-> here was one edit away from destroying the 2,880-line WorkOS plan (see
-> `9da1d75`). State facts and point at documents; let the reader run the verbs.
+> **Never put a destructive command here.** A stale `git reset --hard` was one
+> edit away from destroying the 2,880-line WorkOS plan (`9da1d75`). State facts
+> and point at documents; let the reader run the verbs.
 
 ## Where this stands
 
@@ -28,8 +27,8 @@ be restructured first; that checklist lives in
 
 ## Provenance
 
-This file replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug). The full
-account, and Mark's original file verbatim, are in `.agents/ARCHIVE.md`.
+Replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug); the full account and his
+original file are in `.agents/ARCHIVE.md`.
 
 ## Read order for a fresh session
 
@@ -37,7 +36,9 @@ account, and Mark's original file verbatim, are in `.agents/ARCHIVE.md`.
 2. `docs/decisions/2026-08-31-business-plan.md` — ownership, the Jack/Mark split
 3. `docs/decisions/2026-09-02-lightspeed-first-platform.md` — the platform bet,
    and the open items that would falsify it (§7, §8)
-4. `docs/superpowers/plans/2026-08-31-master-implementation-plan.md` — LOCKED;
+4. `docs/decisions/2026-09-06-tenant-scoping-and-pooler-safety.md` — what stage
+   one did, and what must change before `DB_TENANT_SCOPE=transaction`
+5. `docs/superpowers/plans/2026-08-31-master-implementation-plan.md` — LOCKED;
    changes to it are decisions, not edits
 
 ## Immediate next actions
@@ -59,18 +60,20 @@ account, and Mark's original file verbatim, are in `.agents/ARCHIVE.md`.
    this is done the container still probes `/`, which serves index.html off
    disk and reports healthy with Postgres completely down. One line, and it is
    now unblocked.
-4. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
+4. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
+   `main` cannot reach; deleting those removes a label, not history. Analysis and
+   recommendation: `.agents/ARCHIVE.md`, "Branch audit". Not tidiness — the
+   ownership sign-off hid for a week in a list where 25 of 26 lines were dead.
+5. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
    leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
    through `DP-4` (design-partner recruitment and cadence — "dont think this is
    necessary") open. They need Mark before those owners are settled.
 
 ## Done
 
-31 PRs merged, #1-#38 (verified 7 Sep: `gh pr list --state merged -L 100`). Nothing here is removed when it ages — it moves to
-`.agents/ARCHIVE.md`. Full list any time: `gh pr list --state merged -L 100`.
-
-Detail for everything merged to 2 September has moved to `.agents/ARCHIVE.md`
-under "Merged work, 30 August - 2 September 2026". Nothing was dropped.
+36 PRs merged, #1-#40 (verified 7 Sep). Nothing here is deleted when it ages —
+it moves to `.agents/ARCHIVE.md`, which holds the detail to 2 September.
+Full list: `gh pr list --state merged -L 100`.
 
 ## Decisions in force
 
@@ -110,11 +113,10 @@ npm run build
 npm run docker:up
 ```
 
-**Last verified:** 275 tests, 275 pass, 0 fail — run locally on `main` after the
-stage-one merge, 2026-09-07, alongside RLS coverage, typecheck, lint, build,
-registry validate and drift check. CI green on PR #37 (run `34085367882`).
-Note the docker `app` container image is from 31 August and runs stale code;
-verify against the working tree, not that container.
+**Last verified:** 275 tests, 275 pass, 0 fail on `main`, 7 Sep, with RLS
+coverage, typecheck, lint, build, registry validate and drift check. CI green on
+PR #37. The docker `app` image is from 31 Aug and runs stale code — verify
+against the working tree, never that container.
 
 ## Open items needing Mark
 
@@ -141,8 +143,7 @@ Mark's fifth item — `git reset --hard 8514727` on `design/workos-auth-migratio
 
 ## Keeping this file honest
 
-Update it at every phase boundary and before ending a session. Hot-file cap is
-8,000 bytes (`~/.claude/process/major-project.md`). When it grows past that,
-trim by **moving**: anything no longer current to `.agents/ARCHIVE.md` (tracked
-for exactly this reason — an ignored archive would make "move, never delete"
-a synonym for delete), anything that is a decision to `docs/decisions/`.
+Update at every phase boundary and before ending a session. Cap is 8,000 bytes
+(`~/.claude/process/major-project.md`). Past that, trim by **moving** — stale
+content to `.agents/ARCHIVE.md` (tracked precisely so "move, never delete" is
+not a synonym for delete), decisions to `docs/decisions/`. Never by deleting.

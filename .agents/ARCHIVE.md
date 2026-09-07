@@ -154,3 +154,42 @@ Items 1-4 are carried forward verbatim in substance from Mark's own STATUS.md
 3. **Registry primitives use native `<dialog>`** rather than Radix, because
    `@radix-ui/*` was not installed. Should be an explicit decision, not a
    default that hardened.
+
+---
+
+## Branch audit — 7 September 2026
+
+Run at session close, after the stage-one merge. 26 remote branches.
+
+**22 have zero commits `main` cannot reach.** Verified with
+`git rev-list --count origin/main..<branch>` returning 0 for each. That check
+also rules out the squash-merge case: a squash-merged branch keeps its own
+commit objects and would have returned non-zero. For these 22, deleting the
+remote branch removes a ref, not history — every commit remains reachable from
+`main`, and the GitHub PR page survives deletion and still shows the diff.
+
+**Two are safe in content but not in commits:**
+
+- `docs/ownership-signoff` — 1 commit (`90f1f23`). Its content was brought to
+  `main` by cherry-pick on 6 Sep, so `main` holds an equivalent commit under a
+  different SHA. Deleting the branch orphans the original object.
+- `design/workos-auth-migration` — 5 commits. Every file on it also exists on
+  `main`, and the two documents that matter — the 2,880-line WorkOS plan and the
+  760-line spec (`2026-08-31-workos-auth-migration-design.md`) — are
+  byte-identical to `main`'s copies, confirmed by diff. What looked like unique
+  content is older versions of files `main` has since rewritten. The five commit
+  objects are not in `main`'s history.
+
+**One is genuinely unmerged:** `chore/purge-test-shops-script`, PR #36, open.
+More relevant now than when it was raised — the cross-tenant verifier left
+throwaway shops around ids 18389-18391 in the dev database on 7 Sep.
+
+**Recommendation:** delete the 22, leave the other two, keep #36's branch.
+
+**Why this is worth doing at all.** Mark's ownership sign-off sat on
+`docs/ownership-signoff` for a week, 103 commits behind `main`, with no PR ever
+opened — and it read as "never signed off" in every document that referenced it.
+Nothing was broken. It was invisible because it was one line in a list where
+almost every other line was dead. Deleting the dead ones is what makes the next
+live branch visible.
+
