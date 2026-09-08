@@ -213,3 +213,20 @@ was added by stage one, but pg-pool removes the error listener at checkout,
 so it covers idle clients only. Pre-existing, and the crash guard treats it
 as a deliberate restart policy — but it wants an explicit decision at
 "hundreds of shops" scale rather than an inherited default.
+
+## Hubtiger trial — records created 8 September 2026
+
+Left in the Hubtiger trial account by the 8 Sep testing. Listed so a later
+session knows why they are there.
+
+- Job **#96** (demo-seeded) — a `Repair` line, SKU 100002, £75.00, added to test
+  the POS parts pull. Also dragged from Tue 09:00 to Wed 08:00 to test
+  rescheduling.
+- Customer **ZZTest PosPush** (`zztest@example.com`) and job **#100** — created
+  from scratch to rule out demo data as the cause of the quote-push failure.
+  This customer also synced through to the Lightspeed X-Series trial as
+  `ZZTest-53CH`, which is what proved writes to the POS work.
+- Setting changed: Technician 2 linked to POS user Jack Curphey, on the POS
+  integration page.
+
+In the Velodrop trial: appointment **241105 ("ZZTest Trial")**.

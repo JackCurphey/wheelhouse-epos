@@ -357,7 +357,24 @@ running product, not read from marketing.
 This settles §10.3's "drag-and-drop week *and* month diary with per-mechanic columns
 (none of the three describe one)". Hubtiger has four views, per-technician lanes,
 real time slots, hours-based availability and calendar feed export per technician.
-Drag-to-reschedule was **not** tested — it would move a seeded demo job **[NF]**.
+
+**Drag-to-reschedule works** **[V]**. Job #000096 was dragged from Tuesday
+09:00–10:30 to Wednesday 08:00–09:30 and the availability strip recalculated for both
+days immediately.
+
+**Adding a POS part to a job takes three actions** **[V]** — open job, type in the
+search, click the result. The line lands with SKU and price from Lightspeed, and the
+job total renders as time and money together ("1Hr 30Mins | £75.00"). Two buttons
+then appear: **Send quote to customer** and **Send quote to POS**. That is the
+friction benchmark any "we are easier to use" claim has to beat.
+
+**Job creation** is a five-section wizard — Customer Details, Item Details, Services
+and Products, Booking Details, Extras — with a **"Send communication to customer"**
+toggle **on by default**. Booking Details carries service type, technician, scheduled
+date and time, an optional **required-by date**, booked-in-by, and a **Third Party**
+with a "Responsible for payment?" flag. Extras carries "the item is at the store" and
+a **Bay/tag no.** Their subcontracting and bay models are real, not just merge
+fields.
 
 **The job record** **[V]** carries: a running **timer** with start/stop, a status
 dropdown, **three tiers of notes** (Internal — "only shop employees will be able to
@@ -398,8 +415,55 @@ than "parts pull":
 - The section is headed **"UPDATE VEND CONFIG"** — X-Series confirmed a third time.
 
 So "parts and labor pricing pulled from your POS system" is **verified**, not
-marketing. Pushing a quote back into Lightspeed was **not** tested — it writes to the
-POS account **[NF]**.
+marketing.
+
+**Quote push to the POS is broken.** Tested 8 September, twice, on two different jobs.
+
+Their integrations page claims the connection is bidirectional: *"generate quotes
+using the inventory directly from your POS/Accounting platform, you can also push
+quotes to the POS/Accounting platform."* The first half works. The second does not.
+
+What happens **[V]**:
+
+- The button fires `GET hubtigerservices.azurewebsites.net/api/Invoice/SendToPOS/<id>`
+  and receives **HTTP 200**, so the client believes it succeeded.
+- The server returns **"Object reference not set to an instance of an object"** — an
+  unhandled .NET `NullReferenceException`, surfaced verbatim to the shop.
+- Nothing arrives in Lightspeed. Checked **Quotes** (filter widened from the default
+  *Open* to *All quotes*, which includes Archived and Completed), **Sales history**,
+  and the **Services** module. All empty.
+
+Three explanations were tested and ruled out:
+
+1. **Missing technician-to-POS-employee mapping.** All three rows were unset, which
+   was the best configuration candidate for the null. Linked Technician 2 to the POS
+   user and retried: identical request, identical failure **[V]**.
+2. **A stale or wrong invoice id.** The first attempt called `SendToPOS/4620996` while
+   the job was addressed elsewhere as `4686786`, which looked like the cause. A second
+   job produced `SendToPOS/4621154` — a different id. **The id is job-specific, so
+   this hypothesis was wrong** **[V]**.
+3. **Seeded demo data.** Job #96 was demo-provisioned. A job was therefore created
+   from scratch (#100 — new customer, new item, POS product line, service type,
+   Technician 2) and pushed. **Identical failure** **[V]**.
+
+**And writes to Lightspeed demonstrably work.** The customer created for that test
+appeared in Lightspeed's customer list as `ZZTest PosPush`, code `ZZTest-53CH`, with
+the email address **[V]**. So this is not a credentials, permissions or trial-tier
+restriction on writing. Customer sync succeeds; quote push fails.
+
+What has **not** been ruled out **[NF]**: that the push requires a particular job
+status (both test jobs were early-stage — "Waiting - Parts" and "Waiting For Work" —
+and a completed job might behave differently), and whether their **R-Series** path
+works, since this was only tested on X-Series.
+
+**Also observed:** the job card throws `TypeError: Cannot read properties of null
+(reading 'length')` on load, unrelated to the push **[V]**.
+
+**Why this matters.** Regardless of root cause, three things are true and independent
+of it: the operation fails, the HTTP status reports success, and the error text is raw
+.NET internals rather than anything a mechanic can act on. On the evidence, the
+bidirectional half of their integration claim does not survive contact — and
+bidirectional is the harder half.
 
 **Receipt Template Designer** — full detail in
 `research/business/hubtiger-receipt-designer.md`. Summary: a drag-and-drop WYSIWYG
@@ -556,8 +620,8 @@ asterisk is the fastest way to be bitten twice.
 |---|---|
 | Hubtiger trial | **Started 8 Sep**, 7 days. Calendar, job record, settings and SMS pricing verified (§3.5, §3.6) |
 | **Hubtiger ↔ Lightspeed X-Series integration test** | Both trials live and both Jack's. Hubtiger's POS screen offers **Lightspeed-X** directly. Tests the parts-pull and quote-push claims end to end. Needs Jack's go-ahead to connect. Window is 7 days |
-| Drag-to-reschedule in the Hubtiger calendar | Not tested — would move a seeded demo job. Needs Jack's go-ahead |
-| Quote approval round trip — what the customer receives | Needs a POS connected for priced line items |
+| Does quote push work from a *completed* job, or on R-Series? | The two remaining explanations for the push failure. Both untested |
+| Quote approval round trip — what the customer receives | Not sent; it would message a real address and spend a trial SMS credit |
 | Is £0.028–£0.032/SMS above or below UK wholesale? | Unchecked. Blocks any "bring-your-own saves money" claim |
 | Velodrop pending-approval booking queue | Needs shop hours set in the Velodrop trial |
 | Velodrop → Lightspeed write-back depth | Blocked behind the X-Series developer portal (§2.2). Lower value since the Hubtiger pivot |
