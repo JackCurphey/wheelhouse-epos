@@ -225,6 +225,9 @@ session knows why they are there.
 - Customer **ZZTest PosPush** (`zztest@example.com`) and job **#100** — created
   from scratch to rule out demo data as the cause of the quote-push failure.
   Job #100 was later moved to "Job Completed" / Bike Ready as part of that
+  testing. Job **#101** was then created through the public booking widget as
+  customer-facing test (mobile 07700 900456, an Ofcom-reserved fictitious
+  number that cannot reach anyone).
   testing. This customer also synced through to the Lightspeed X-Series trial as
   `ZZTest-53CH`, which is what proved writes to the POS work.
 - Setting changed: Technician 2 linked to POS user Jack Curphey, on the POS

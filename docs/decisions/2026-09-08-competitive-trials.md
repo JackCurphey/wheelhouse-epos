@@ -285,7 +285,8 @@ From the repair-software page **[V]**:
 |---|---|
 | **Ahead:** diary with per-mechanic columns | Repair calendar with assigned technicians |
 | **Ahead:** auto-created linked order, billable at the till | "The job is sent to your POS for payment" |
-| **Ahead:** explicit capacity/overlap logic | Customers pick from *available* date and time slots |
+| **Ahead:** explicit capacity/overlap logic | Customers pick a date; the system assigns technician and slot |
+| **Ahead:** moderated pending-approval booking queue | **Holds — the only one that does.** Public bookings confirm instantly and land in the diary as "Booked In" (§3.5b) |
 | **Nobody has:** quotes/estimates | Quotes on the work order, one-click customer approval |
 | **Nobody has:** parts-attached-to-job | Parts and labour pricing pulled from the POS |
 | **Behind:** automated status messaging | Email, SMS **and** WhatsApp |
@@ -484,6 +485,78 @@ Notably, the feature is **undocumented publicly** — the phrase "Receipt Design
 returns nothing on hubtiger.com, help.hubtiger.com, or third-party review sites
 **[NF]**. It is only visible inside the product.
 
+### 3.5b The public booking widget — the one "ahead" claim that survives
+
+Walked end to end on 8 September, as a customer would, at
+`bookings.hubtiger.com/bikes/Deeznuts/...` — a clean vanity URL carrying the shop
+name. Everything here is **[V]**.
+
+**Shop-side configuration** is extensive: booking lead-time buffer in days, language,
+service-type pre-select, service-group filter, rich-text "additional information" and
+"payment information" blocks, toggles for show prices / "where did you hear about us"
+/ allow coupons / **show pre-approved amount**, **Google Tag Manager** and **Facebook
+Pixel** fields, and full theming — four colours plus 22 font choices. **Stripe** is
+loaded on the widget, consistent with the Online Payments and Service Deposits
+settings.
+
+**The customer flow is five steps:** service (with a free-text "any details which
+will help us understand any issues on your bike") → **service date** → your details →
+bike details → summary → confirmed.
+
+**There is no time selection.** The customer picks a *date*. Weekends grey out from
+shop hours. Hubtiger's marketing says customers "choose an available date & time" —
+on this configuration they choose a date only, and the shop's system decides the time.
+
+**The booking is confirmed immediately.** The customer sees "Booking confirmed" with
+a reference (HT:101). Shop-side it appeared as job **#000101**, auto-assigned to
+**Technician 1** at **08:00–09:30** on the requested date, status **Booked In** —
+straight into the diary.
+
+**This confirms §10.3's surviving "ahead" line.** The research claims a moderated
+**pending-approval booking queue** as ours, noting "all three do direct self-service".
+Verified for Hubtiger: no approval step, no queue, no shop confirmation. A public
+booking takes a technician's slot without anyone in the workshop agreeing to it.
+
+That is the only §10.3 "ahead" claim that has survived testing against Hubtiger, and
+it is worth more than it first looks: it is a workflow difference, not a feature
+checkbox, and the shop feels it every time an unwanted booking lands.
+
+### 3.5c A privacy behaviour on the public booking page
+
+Recorded because the project has an explicit decision on exactly this, and because it
+is a competitor weakness of a kind we have already reasoned about.
+
+On the **public, unauthenticated** details step, entering a mobile number caused the
+form to populate with an existing customer's details **[V]**:
+
+- Email shown as `****st@*****e.com`, first name `Z*****`, last name `P******` —
+  masked, but disclosing existence, first initial and field lengths
+- The **next step then listed that customer's bike, `TestBrand - TestModel`, in
+  full and unmasked**
+
+Controls run: an unknown address (`nobody-zz9x7@example.com`) produced nothing — no
+masking, no lookup. The known email **alone** also produced nothing. Entering the
+mobile number reliably triggered it, twice.
+
+**Three honest limits on this finding.** The matched record was created without a
+mobile number, so the matching key is **not established [U]** — the association may
+have come from an earlier pass in the same session. The masked values **persisted
+after changing the number**, so the form retained the earlier match rather than
+re-querying, which means a clean enumeration test has **not** been run **[NF]**. And
+a full enumeration oracle would need testing from a fresh session against numbers
+never entered before.
+
+**Why it is recorded anyway.** `2026-09-01-wedge-booking-vs-workshop.md` §6b states
+the rule this project adopted after rejecting the same idea in our own portal:
+
+> "never let a public form confirm whether an account exists. Any future version of
+> this that varies its message based on what the visitor typed reintroduces exactly
+> what was rejected here."
+
+Whatever the matching key turns out to be, a public page that returns a customer's
+bike make and model in response to typed input is doing the thing that rule exists to
+prevent. Worth a clean re-test before it is ever used in a comparison **[NF]**.
+
 ### 3.6 How Hubtiger charges for SMS — both ways at once
 
 Directly relevant to §6.3. Hubtiger runs **both** models simultaneously **[V]**:
@@ -525,7 +598,14 @@ bring-your-own as the power-user path. Two consequences worth weighing:
 **Against Velodrop, "better than theirs" holds comfortably.** They have no diary at
 all — a per-day counter, a month grid, and a queue.
 
-**Against Hubtiger it does not — and this is no longer marketing.** §3.5 verified the
+**One thing does survive.** The moderated pending-approval booking queue (§3.5b).
+Hubtiger confirms public bookings instantly and drops them into a technician's slot
+with nobody in the workshop agreeing. That is a workflow difference rather than a
+feature checkbox, and it is the single §10.3 "ahead" line still standing after a day
+of testing.
+
+**On everything else, against Hubtiger it does not — and this is no longer
+marketing.** §3.5 verified the
 diary in the running product: four views, per-technician lanes, real time slots,
 hours-based availability, iCal export per technician. The job record has a timer,
 three note tiers, a SKU product search and a send-quote action. The claims that
@@ -623,7 +703,8 @@ asterisk is the fastest way to be bitten twice.
 
 | Item | Blocked on |
 |---|---|
-| Hubtiger trial | **Started 8 Sep**, 7 days. Calendar, job record, settings and SMS pricing verified (§3.5, §3.6) |
+| Hubtiger trial | **Started 8 Sep**, 7 days. Calendar, job record, settings, SMS pricing, POS integration and public booking widget all verified (§3.4–§3.6) |
+| Clean re-test of the booking-page disclosure | §3.5c. Fresh session, numbers never entered before, to establish the matching key and whether it enumerates. Do this before the finding is used in any comparison |
 | **Hubtiger ↔ Lightspeed X-Series integration test** | Both trials live and both Jack's. Hubtiger's POS screen offers **Lightspeed-X** directly. Tests the parts-pull and quote-push claims end to end. Needs Jack's go-ahead to connect. Window is 7 days |
 | Does quote push work on R-Series? | The only surviving explanation for the failure short of a server-side defect. Needs an R-Series account, so it is downstream of the first-adapter decision |
 | Quote approval round trip — what the customer receives | Not sent; it would message a real address and spend a trial SMS credit |
