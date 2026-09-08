@@ -193,3 +193,23 @@ Nothing was broken. It was invisible because it was one line in a list where
 almost every other line was dead. Deleting the dead ones is what makes the next
 live branch visible.
 
+
+## PR accounting, moved from STATUS 8 September 2026
+
+Moved to keep STATUS under its 8,000-byte cap. Accurate as at 7 September 2026.
+
+36 PRs merged, spanning #1-#42 (counted 7 Sep; #36 open, #15 closed unmerged,
+5/16/17/18 are issue numbers). The earlier "36 merged, #1-#40" overcounted by
+two. The detail to 2 September is elsewhere in this file. Full list:
+`gh pr list --state merged -L 100`.
+
+## Open item for Mark, moved from STATUS 8 September 2026
+
+Moved verbatim to keep STATUS under its 8,000-byte cap. Still open.
+
+**A connection dying while actively serving a request still crashes the
+process**, taking every shop's in-flight requests with it. `pool.on('error')`
+was added by stage one, but pg-pool removes the error listener at checkout,
+so it covers idle clients only. Pre-existing, and the crash guard treats it
+as a deliberate restart policy — but it wants an explicit decision at
+"hundreds of shops" scale rather than an inherited default.

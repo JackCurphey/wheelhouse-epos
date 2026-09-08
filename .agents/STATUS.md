@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-07
-**Branch:** `main`
+**Updated:** 2026-09-08
+**Branch:** `docs/competitive-trials-2026-09-08`
 **Blocked on:** nothing. Every open item below is Jack's to decide.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -13,22 +13,21 @@
 
 ## Where this stands
 
-Architecture stage one merged 7 Sep (PR #37): the pooler trap, migration race,
-outbound timeouts, process lifecycle and README are closed. The sixth ceiling —
-managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
-Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
+Architecture stage one merged 7 Sep (PR #37): pooler trap, migration race,
+outbound timeouts, process lifecycle and README closed. The sixth ceiling —
+managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's. Two
+designs approved and unbuilt: WorkOS auth, design remediation. Competitive
+research moved substantially on 8 Sep — read `2026-09-08-competitive-trials.md`
+before believing any "better than theirs" claim.
 
 **Do not assume stage one did more than it did.** It makes the app safe to run
-as more than one process. It does nothing about recovering data if the volume
-is lost. And its request-wide transaction mode is OFF — `DB_TENANT_SCOPE`
-defaults to `session`, the behaviour that already shipped. Three handlers must
-be restructured first; that checklist lives in
-`docs/decisions/2026-09-06-tenant-scoping-and-pooler-safety.md`.
+as more than one process. It does nothing about recovering data if the volume is
+lost. Its request-wide transaction mode is OFF — `DB_TENANT_SCOPE` defaults to
+`session`, what already shipped. Three handlers need restructuring first; that
+checklist is in `docs/decisions/2026-09-06-tenant-scoping-and-pooler-safety.md`.
 
-## Provenance
-
-Replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug); the full account and his
-original file are in `.agents/ARCHIVE.md`.
+Replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug); his original and the
+full account are in `.agents/ARCHIVE.md`.
 
 ## Read order for a fresh session
 
@@ -38,43 +37,42 @@ original file are in `.agents/ARCHIVE.md`.
    and the open items that would falsify it (§7, §8)
 4. `docs/decisions/2026-09-06-tenant-scoping-and-pooler-safety.md` — what stage
    one did, and what must change before `DB_TENANT_SCOPE=transaction`
-5. `docs/superpowers/plans/2026-08-31-master-implementation-plan.md` — LOCKED;
+5. `docs/decisions/2026-09-08-competitive-trials.md` — who the competitors
+   actually are, and what that does to "better than theirs"
+6. `docs/superpowers/plans/2026-08-31-master-implementation-plan.md` — LOCKED;
    changes to it are decisions, not edits
 
 ## Immediate next actions
 
-1. **Velodrop and Bikebook trials.** Named in the Lightspeed decision (§7.2) as
-   the highest-value open item, unstarted since 31 August. It is the only thing
-   that tests the "better than theirs" claim the product rests on. Both free,
-   no card. Account creation is Jack's — an agent cannot sign up.
-2. **Test the timestamp question against a live Lightspeed account.** Signing
-   off the R-Series research did not settle it, because documentation cannot: if
-   a `Workorder`'s `timeStamp` does not move when a child `WorkorderLine`
-   changes, polling parents silently misses line edits and the diary shows a job
-   as unchanged while its contents changed. A design fork — test it **before the
-   sync loop is written**. Needs an account, so it is Jack's. Read the real
-   bucket size from `X-LS-Api-Bucket-Level` on the same call; 90 and 60 are both
-   published and neither has been seen live.
+1. **Hubtiger trial, and the Hubtiger ↔ Lightspeed integration test.** Velodrop
+   trialled 8 Sep; Hubtiger replaced Bikebook as priority the same day. Hubtiger
+   gives 7 days, no card; the Lightspeed trial has ~15. That overlap is the only
+   window to test their "parts pulled from your POS" claim end to end.
+2. **The timestamp question is still blocked, and the reason changed.** If a
+   `Workorder`'s `timeStamp` does not move when a child `WorkorderLine` changes,
+   polling parents misses line edits and the diary shows a job as unchanged
+   while its contents changed. Test **before the sync loop is written**. The
+   8 Sep trial account is **X-Series**, so it cannot answer an R-Series
+   question — see action 5. Read `X-LS-Api-Bucket-Level` on the same call; 90
+   and 60 are both published, neither seen live.
 3. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
-   `main` cannot reach; deleting those removes a label, not history. Analysis and
-   recommendation: `.agents/ARCHIVE.md`, "Branch audit". Not tidiness — the
-   ownership sign-off hid for a week in a list where 25 of 26 lines were dead.
-4. **Decide whether `gateway` should wait for a healthy `app`.** It has a bare
-   `depends_on: app`, so the new `/healthz` check gates `docker compose up
-   --wait` and health reporting but not gateway startup. Topology change, so
-   it was deliberately left out of PR #42.
-5. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
+   `main` cannot reach; deleting those removes a label, not history. Analysis,
+   recommendation and why it matters: `.agents/ARCHIVE.md`, "Branch audit".
+4. **Decide whether `gateway` should wait for a healthy `app`.** Its bare
+   `depends_on: app` means `/healthz` gates `docker compose up --wait` and
+   health reporting, not gateway startup. Topology change, so left out of PR #42.
+5. **Decide the first adapter, and whether to chase R-Series.** The plan targets
+   R-Series; the account a new shop can actually get is X-Series. Asking
+   Lightspeed UK sales settles both that and §7.1 in one conversation.
+6. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
    leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
    through `DP-4` (design-partner recruitment and cadence — "dont think this is
    necessary") open. They need Mark before those owners are settled.
 
 ## Done
 
-36 PRs merged, spanning #1-#42 (counted 7 Sep; #36 open, #15 closed unmerged,
-5/16/17/18 are issue numbers). The earlier "36 merged, #1-#40" overcounted by
-two. Nothing here is deleted when it ages — it moves to `.agents/ARCHIVE.md`,
-which holds the detail to 2 September. Full list:
-`gh pr list --state merged -L 100`.
+36 PRs merged, #1-#42 as at 7 Sep. Ageing content moves to `.agents/ARCHIVE.md`,
+never deleted. Full list: `gh pr list --state merged -L 100`.
 
 ## Decisions in force
 
@@ -89,6 +87,7 @@ which holds the detail to 2 September. Full list:
 | `2026-09-06-tenant-scoping-and-pooler-safety.md` | **DECIDED by Jack, 6 Sep** — the pooler guard hard-fails; the pool error handler was fixed on the stage-one branch. Also carries the flag-flip checklist and what the new tests do and do not prove |
 | `2026-09-04-job-type-before-diary.md` | **Proposed 4 Sep, not decided** |
 | `2026-09-04-booking-mode-and-downtime.md` | Booking mode + customer picker **DECIDED** (5 Sep); downtime model proposed |
+| `2026-09-08-competitive-trials.md` | **Two decisions by Jack, 8 Sep** — Hubtiger replaces Bikebook as trial priority; free software, customer-supplied integration accounts. Three OPEN in §6.4. Corrects four §10.3 lines |
 | `2026-08-31-feature-catalogue.md` | Reference |
 
 ## Plan register
@@ -114,24 +113,21 @@ npm run build
 npm run docker:up
 ```
 
-**Last verified:** 278 pass, 0 fail on `main`, 7 Sep, lint and typecheck clean;
+**Last verified:** 278 pass, 0 fail on `main`, 7 Sep; lint and typecheck clean;
 CI green on PR #42. An earlier `main` run added RLS coverage, build, registry
 validate and drift check. The docker `app` image is from 31 Aug and runs stale
-code — verify against the working tree, never that container.
+code — verify against the working tree, never that container. **Nothing in this
+session ran the test suite; no code changed.**
 
 ## Open items needing Mark
 
-Three design items carried from Mark's 31 August file — the paid-ink contrast
-token, the unapproved dark-mode palette, and the registry's native `<dialog>`
-primitives — have moved to `.agents/ARCHIVE.md`. They are still open; they are
-just not what this file is for any more.
+Three design items from Mark's 31 August file — paid-ink contrast token,
+unapproved dark-mode palette, registry `<dialog>` primitives — are in
+`.agents/ARCHIVE.md`. Still open; just not what this file is for.
 
-1. **A connection dying while actively serving a request still crashes the
-   process**, taking every shop's in-flight requests with it. `pool.on('error')`
-   was added by stage one, but pg-pool removes the error listener at checkout,
-   so it covers idle clients only. Pre-existing, and the crash guard treats it
-   as a deliberate restart policy — but it wants an explicit decision at
-   "hundreds of shops" scale rather than an inherited default.
+1. **A connection dying mid-request still crashes the process**, taking every
+   shop's in-flight requests with it. Full text in `.agents/ARCHIVE.md`, "Open
+   item for Mark". Wants an explicit decision at "hundreds of shops" scale.
 2. **Gate spacing / dates.** `2026-08-31-business-plan.md:583` — OPEN pending
    Mark's weekly time budget.
 
@@ -143,5 +139,4 @@ Mark's fifth item — `git reset --hard 8514727` on `design/workos-auth-migratio
 
 Update at every phase boundary and before ending a session. Cap is 8,000 bytes
 (`~/.claude/process/major-project.md`). Past that, trim by **moving** — stale
-content to `.agents/ARCHIVE.md` (tracked precisely so "move, never delete" is
-not a synonym for delete), decisions to `docs/decisions/`. Never by deleting.
+content to `.agents/ARCHIVE.md`, decisions to `docs/decisions/`. Never delete.
