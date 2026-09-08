@@ -224,7 +224,8 @@ session knows why they are there.
   rescheduling.
 - Customer **ZZTest PosPush** (`zztest@example.com`) and job **#100** — created
   from scratch to rule out demo data as the cause of the quote-push failure.
-  This customer also synced through to the Lightspeed X-Series trial as
+  Job #100 was later moved to "Job Completed" / Bike Ready as part of that
+  testing. This customer also synced through to the Lightspeed X-Series trial as
   `ZZTest-53CH`, which is what proved writes to the POS work.
 - Setting changed: Technician 2 linked to POS user Jack Curphey, on the POS
   integration page.

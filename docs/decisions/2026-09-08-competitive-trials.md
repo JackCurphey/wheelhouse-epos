@@ -433,7 +433,7 @@ What happens **[V]**:
   *Open* to *All quotes*, which includes Archived and Completed), **Sales history**,
   and the **Services** module. All empty.
 
-Three explanations were tested and ruled out:
+Four explanations were tested and ruled out:
 
 1. **Missing technician-to-POS-employee mapping.** All three rows were unset, which
    was the best configuration candidate for the null. Linked Technician 2 to the POS
@@ -445,16 +445,21 @@ Three explanations were tested and ruled out:
 3. **Seeded demo data.** Job #96 was demo-provisioned. A job was therefore created
    from scratch (#100 — new customer, new item, POS product line, service type,
    Technician 2) and pushed. **Identical failure** **[V]**.
+4. **Job status too early.** Both jobs were mid-workflow ("Waiting - Parts",
+   "Waiting For Work"), so the push may have required a finished job. Job #100 was
+   moved to **Job Completed** — the record became "Bike Ready | #100" with
+   *Reopen Job Card* and *Mark as Collected* actions — and pushed again. **Identical
+   failure** **[V]**. Quotes, sales history and services all still empty.
 
 **And writes to Lightspeed demonstrably work.** The customer created for that test
 appeared in Lightspeed's customer list as `ZZTest PosPush`, code `ZZTest-53CH`, with
 the email address **[V]**. So this is not a credentials, permissions or trial-tier
 restriction on writing. Customer sync succeeds; quote push fails.
 
-What has **not** been ruled out **[NF]**: that the push requires a particular job
-status (both test jobs were early-stage — "Waiting - Parts" and "Waiting For Work" —
-and a completed job might behave differently), and whether their **R-Series** path
-works, since this was only tested on X-Series.
+What has **not** been ruled out **[NF]**: whether their **R-Series** path works. This
+was only tested on X-Series. That is the single remaining explanation short of a
+server-side defect, and it cannot be tested without an R-Series account — which ties
+back to §6.4's first-adapter question.
 
 **Also observed:** the job card throws `TypeError: Cannot read properties of null
 (reading 'length')` on load, unrelated to the push **[V]**.
@@ -620,7 +625,7 @@ asterisk is the fastest way to be bitten twice.
 |---|---|
 | Hubtiger trial | **Started 8 Sep**, 7 days. Calendar, job record, settings and SMS pricing verified (§3.5, §3.6) |
 | **Hubtiger ↔ Lightspeed X-Series integration test** | Both trials live and both Jack's. Hubtiger's POS screen offers **Lightspeed-X** directly. Tests the parts-pull and quote-push claims end to end. Needs Jack's go-ahead to connect. Window is 7 days |
-| Does quote push work from a *completed* job, or on R-Series? | The two remaining explanations for the push failure. Both untested |
+| Does quote push work on R-Series? | The only surviving explanation for the failure short of a server-side defect. Needs an R-Series account, so it is downstream of the first-adapter decision |
 | Quote approval round trip — what the customer receives | Not sent; it would message a real address and spend a trial SMS credit |
 | Is £0.028–£0.032/SMS above or below UK wholesale? | Unchecked. Blocks any "bring-your-own saves money" claim |
 | Velodrop pending-approval booking queue | Needs shop hours set in the Velodrop trial |
