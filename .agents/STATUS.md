@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-09
-**Branch:** `feat/workshop-prototype` — pushed, open as PR #45.
+**Branch:** `main` — level with `origin/main` at `ee9d201`.
 **Blocked on:** nothing. Every open item below is Jack's or Mark's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -18,10 +18,10 @@ outbound timeouts, process lifecycle and README are closed. The sixth ceiling �
 managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
 Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
 
-The **workshop prototype** landed 9 Sep (`3b77920`): a standalone in-memory
-React demo under `prototype/` with a real-browser suite. A learning artefact,
-not product code; persistence, auth and tenancy are out of scope by its spec, so
-it is not a step toward WorkOS. Scope
+The **workshop prototype** merged 9 Sep (PR #45): a standalone in-memory React
+demo under `prototype/` with a real-browser suite. A learning artefact, not
+product code — persistence, auth and tenancy are out of scope by its spec, so it
+is not a step toward WorkOS. Scope
 `docs/reviews/2026-09-08-workshop-prototype-decisions.md`; evidence
 `prototype/OVERNIGHT.md`.
 
@@ -69,10 +69,9 @@ All under `docs/decisions/`, except the plan under `docs/superpowers/plans/`.
 
 ## Immediate next actions
 
-0. **Review PR #45**, the prototype branch — pushed 9 Sep, no longer on one
-   disk. Re-verified on this tree: 278/278, runner 7/7, lint and typecheck
-   exit 0, three containers healthy. Its own 18/18 and 20/20 browser runs are
-   from earlier that day (`prototype/OVERNIGHT.md`), not re-run. Merge is Jack's.
+0. **Decide whether CI should gate the prototype and the runner.** Neither
+   `prototype` nor `python` appears in `.github/workflows/test.yml`, so both
+   merged on a local run only and will rot silently. CI runs node 22, local 26.
 1. **Velodrop and Bikebook trials.** Named in the Lightspeed decision (§7.2) as
    the highest-value open item, unstarted since 31 August. It is the only thing
    that tests the "better than theirs" claim the product rests on. Both free,
@@ -102,9 +101,10 @@ All under `docs/decisions/`, except the plan under `docs/superpowers/plans/`.
 
 ## Done
 
-36 PRs merged, spanning #1-#42 (counted 7 Sep). Plus the workshop prototype,
-`3b77920`, not yet a PR. Nothing here is deleted when it ages — it moves to
-`.agents/ARCHIVE.md`. Full list: `gh pr list --state merged -L 100`.
+37 PRs merged, spanning #1-#45. #45 merged 9 Sep as `ee9d201`, carrying the
+workshop prototype and the overnight runner. Nothing here is deleted when it
+ages — it moves to `.agents/ARCHIVE.md`. Full list:
+`gh pr list --state merged -L 100`.
 
 ## Decisions in force
 
@@ -148,9 +148,10 @@ working tree, never that container.
 
 ## Open items needing Mark
 
-Six carried items — pg-pool's checkout error listener, gate spacing/dates, the
-paid-ink token, the dark-mode palette, the registry's native `<dialog>`, and the
-five ownership queries. All still open; full text in `.agents/ARCHIVE.md`.
+Seven carried items — pg-pool's checkout error listener, gate spacing/dates,
+the paid-ink token, the dark-mode palette, the registry's native `<dialog>`, the
+five ownership queries, and now the CI gap in next action 0. All still open;
+full text in `.agents/ARCHIVE.md`.
 
 ## Keeping this file honest
 
