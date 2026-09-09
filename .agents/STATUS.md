@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-09
-**Branch:** `feat/workshop-prototype` — one commit above `origin/main`, UNPUSHED.
+**Branch:** `feat/workshop-prototype` — pushed, open as PR #45.
 **Blocked on:** nothing. Every open item below is Jack's or Mark's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -69,10 +69,10 @@ All under `docs/decisions/`, except the plan under `docs/superpowers/plans/`.
 
 ## Immediate next actions
 
-0. **Decide the prototype branch's fate.** `feat/workshop-prototype`, one
-   commit, UNPUSHED, on this machine's disk only. Push and PR, or keep local.
-   Verified on this base 9 Sep: 18/18 domain+JSDOM, 20/20 real-browser, repo
-   278/278. Containers are down after a reboot — `npm run docker:up` first.
+0. **Review PR #45**, the prototype branch — pushed 9 Sep, no longer on one
+   disk. Re-verified on this tree: 278/278, runner 7/7, lint and typecheck
+   exit 0, three containers healthy. Its own 18/18 and 20/20 browser runs are
+   from earlier that day (`prototype/OVERNIGHT.md`), not re-run. Merge is Jack's.
 1. **Velodrop and Bikebook trials.** Named in the Lightspeed decision (§7.2) as
    the highest-value open item, unstarted since 31 August. It is the only thing
    that tests the "better than theirs" claim the product rests on. Both free,
