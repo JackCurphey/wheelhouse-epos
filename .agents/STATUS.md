@@ -89,11 +89,11 @@ All under `docs/decisions/`, except the plan under `docs/superpowers/plans/`.
    `depends_on: app`, so the new `/healthz` check gates `docker compose up
    --wait` and health reporting but not gateway startup. Topology change, so
    it was deliberately left out of PR #42.
-5. **Re-verify two items against `main`** — unknown, not open: composite
-   tenant-consistent FKs, and the privilege boundary on the non-RLS resolver
-   tables. Confirmed absent on `main`: any idempotency key (no
-   `Idempotency-Key`/`outbox`/`webhook_events`), so `withRetry` in
-   `server/shopify.js` can still double-create on a timed-out success.
+5. **Two tenant-isolation gaps, confirmed ABSENT on `main` 9 Sep** — they were
+   "unknown"; they are open. No composite tenant-consistent FKs; no privilege
+   boundary on the resolver tables (`epos_app` owns them). Evidence and the
+   failure each permits: `.agents/ARCHIVE.md`, "Tenant isolation". Also absent:
+   any idempotency key, so `withRetry` can still double-create on a timeout.
 6. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
    leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
    through `DP-4` (design-partner recruitment and cadence — "dont think this is
