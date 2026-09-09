@@ -32,3 +32,6 @@ public/dist/
 # on the host, including during tests. Customer files must never be
 # committable.
 uploads/
+
+# Browser-test screenshots and run evidence from the workshop prototype.
+.prototype-overnight/

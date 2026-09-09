@@ -6,6 +6,11 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
+    "prototype": "npm --prefix prototype run dev",
+    "prototype:build": "npm --prefix prototype run build",
+    "prototype:test": "npm --prefix prototype test",
+    "prototype:test:browser": "npm --prefix prototype run test:browser",
+    "prototype:browser:install": "npm --prefix prototype run test:browser:install",
     "gateway": "node server/gateway.js",
     "migrate": "node server/migrations/run-migrations.js",
     "test": "node --test \"tests/**/*.test.js\"",

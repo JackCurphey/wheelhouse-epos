@@ -193,3 +193,83 @@ Nothing was broken. It was invisible because it was one line in a list where
 almost every other line was dead. Deleting the dead ones is what makes the next
 live branch visible.
 
+## Moved out of STATUS.md, 9 September 2026
+
+STATUS.md hit its 8,000-byte cap when the workshop prototype and the restored
+operational traps were added. Trimmed by moving, per its own rule. Verbatim:
+
+### Immediate next action 2, full text (moved 9 Sep)
+
+```
+2. **Test the timestamp question against a live Lightspeed account.** Signing
+   off the R-Series research did not settle it, because documentation cannot: if
+   a `Workorder`'s `timeStamp` does not move when a child `WorkorderLine`
+   changes, polling parents silently misses line edits and the diary shows a job
+   as unchanged while its contents changed. A design fork — test it **before the
+   sync loop is written**. Needs an account, so it is Jack's. Read the real
+   bucket size from `X-LS-Api-Bucket-Level` on the same call; 90 and 60 are both
+   published and neither has been seen live.
+```
+
+### Immediate next action 3, full text (moved 9 Sep)
+
+```
+3. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
+   `main` cannot reach; deleting those removes a label, not history. Analysis and
+   recommendation: `.agents/ARCHIVE.md`, "Branch audit". Not tidiness — the
+   ownership sign-off hid for a week in a list where 25 of 26 lines were dead.
+```
+
+### Decisions in force — full status cells (moved 9 Sep)
+
+```
+| Decision | Status |
+|---|---|
+| `2026-08-31-business-plan.md` | Decided, except lines marked OPEN |
+| `2026-08-31-frontend-platform.md` | Decided (approver: Mark) |
+| `2026-09-02-lightspeed-first-platform.md` | DECIDED by Jack, 2 Sep 2026 |
+| `2026-09-02-r-series-sync-and-rate-limits.md` | **SIGNED OFF by Jack, 7 Sep** (PR #30). §4 and §5 binding on the master plan; two open questions survive the sign-off — next action 2 |
+| `2026-09-01-wedge-booking-vs-workshop.md` | **DECIDED** 1 Sep, ratified 6 Sep; §4 and §5b superseded by the Lightspeed decision |
+| `2026-09-01-ownership-signoff.md` | Signed off by Jack 1 Sep — 58 agreed, 5 queried (`PF-3`, `DP-1`–`DP-4`), 0 reassigned. The five queries still need Mark |
+| `2026-09-06-tenant-scoping-and-pooler-safety.md` | **DECIDED by Jack, 6 Sep** — the pooler guard hard-fails; the pool error handler was fixed on the stage-one branch. Also carries the flag-flip checklist and what the new tests do and do not prove |
+| `2026-09-04-job-type-before-diary.md` | **Proposed 4 Sep, not decided** |
+| `2026-09-04-booking-mode-and-downtime.md` | Booking mode + customer picker **DECIDED** (5 Sep); downtime model proposed |
+| `2026-08-31-feature-catalogue.md` | Reference |
+```
+
+### Open items needing Mark — full text (moved from STATUS.md, 9 Sep)
+
+(as written 7 Sep)
+
+Three design items carried from Mark's 31 August file — the paid-ink contrast
+token, the unapproved dark-mode palette, and the registry's native `<dialog>`
+primitives — have moved to `.agents/ARCHIVE.md`. They are still open; they are
+just not what this file is for any more.
+
+1. **A connection dying while actively serving a request still crashes the
+   process**, taking every shop's in-flight requests with it. `pool.on('error')`
+   was added by stage one, but pg-pool removes the error listener at checkout,
+   so it covers idle clients only. Pre-existing, and the crash guard treats it
+   as a deliberate restart policy — but it wants an explicit decision at
+   "hundreds of shops" scale rather than an inherited default.
+2. **Gate spacing / dates.** `2026-08-31-business-plan.md:583` — OPEN pending
+   Mark's weekly time budget.
+
+Mark's fifth item — `git reset --hard 8514727` on `design/workos-auth-migration`
+— is **deliberately dropped as obsolete**, not lost. PR #29 put the plan on
+`main`; see the housekeeping notes in `.agents/ARCHIVE.md`.
+
+### Plan register — full table (moved from STATUS.md, 9 Sep)
+
+(as written 7 Sep)
+
+| Plan | Status |
+|---|---|
+| `2026-08-31-master-implementation-plan.md` | LOCKED — the arc |
+| `2026-08-31-architecture-stage-1.md` | Executed — merged 7 Sep (PR #37), five of six ceilings closed |
+| `2026-09-05-booking-mode-foundations.md` | Executed — merged 5 Sep (PR #35) |
+| `2026-08-31-workos-auth-migration.md` | Approved design (2,880 lines), not implemented |
+| `2026-08-31-workshop-service-catalogue.md` | Design agreed; server rules and tests merged |
+| `2026-08-31-design-remediation.md` | Findings recorded in `docs/design/` |
+| `plans/done/2026-08-30-storefront-framework.md` | Executed |
+| `plans/done/2026-08-30-shopify-checkout.md` | Executed |
