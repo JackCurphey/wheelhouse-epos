@@ -1,8 +1,16 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-10
-**Branch:** `docs/competitive-trials-2026-09-08` — open as PR #44.
+**Updated:** 2026-09-10, late evening (session close)
+**Branch:** `docs/status-close-2026-09-10`, off `main` at `84ff40a`. PRs #44, #46 and #49 are all merged.
 **Blocked on:** nothing. Every open item below is Jack's or Mark's.
+
+> **Working-tree trap, 10 Sep 23:35.** The root checkout on `main` carries
+> uncommitted work from a *different* session: two new decisions
+> (`2026-09-10-release-1-scope-reduction.md`, `2026-09-10-release-1-lightspeed-readiness.md`),
+> a review (`2026-09-10-ranked-release-adversarial-review.md`), `docs/design/release-1-journey/`,
+> `docs/presentations/`, and small edits to the master plan and workshop spec.
+> The closing session did not write them and did not touch them. Whoever owns
+> that work must commit it on a branch; do not stash, reset or clean.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
@@ -20,6 +28,22 @@ Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
 Competitive research moved on 8 Sep — read `2026-09-08-competitive-trials.md`
 before believing any "better than theirs" claim. Hubtiger is the competitor
 that matters, not Velodrop.
+
+**Hubtiger was walked from the inside on 10 Sep** (PR #49):
+`docs/decisions/2026-09-10-hubtiger-live-analysis.md` is the observed
+inventory, two Codex reviews of it sit in `docs/reviews/`, and
+`docs/decisions/2026-09-10-hubtiger-feature-comparison.md` maps 317 Hubtiger
+features to where we stand, one citation per row. **Jack ranked all 317 the
+same day** on issue #47: 172 Release 1, 102 Later, 43 Not for us; the order
+inside Release 1 he attributed to Claude, not himself. A later session has
+already drafted a scope reduction from that ranking — see the working-tree
+trap above; it is not yet committed, so treat the ranking as the last
+authoritative word until it is.
+
+**There is no Lightspeed technical spec.** Two decisions exist (platform,
+2 Sep; sync and rate limits, 2 Sep, signed off 7 Sep) and no adapter code,
+no OAuth app, no plan task. F05 of the 8 Sep review — which system owns each
+stock and money event — is unanswered and is the spine the spec hangs on.
 
 The **workshop prototype** merged 9 Sep (PR #45): a standalone in-memory React
 demo under `prototype/` with a real-browser suite. A learning artefact, not
@@ -74,9 +98,20 @@ All under `docs/decisions/`, bar the plan under `docs/superpowers/plans/`.
 0. **Decide whether CI should gate the prototype and the runner.** Neither
    `prototype` nor `python` is in `.github/workflows/test.yml`, so both merged
    on a local run only and will rot silently. CI runs node 22, local 26.
-1. **Finish the Hubtiger trial before it lapses.** Started 8 Sep, 7 days. Open
-   inside it: the quote-approval round trip (needs Jack's inbox) and a clean
-   re-test of the booking-page disclosure (§3.5c).
+1. **Commit the other session's Release 1 work** (working-tree trap above) on
+   a branch, then reconcile it with Jack's #47 ranking and the Hubtiger
+   comparison. Until it lands, #47 stays open and its write-back step (fill
+   the priority column, open a PR) has not run.
+1b. **Answer F05, then write the Lightspeed adapter spec.** Needs Jack's
+   choice — read-only with manual handoff, narrow write-back, or Wheelhouse as
+   scheduling authority — and an R-Series developer account; every trial so far
+   was X-Series. Hubtiger's own R-Series sync (Nov 2025) is write-back and
+   requires special orders to originate in the workshop tool; their X-Series
+   quote push fails. Both are evidence for the choice.
+1c. **Hubtiger trial lapses about 15 Sep.** Still untested inside it: the
+   quote-approval round trip and the booking-page disclosure re-test (§3.5c).
+   Login is Jack's; the 10 Sep walk used a Chrome DevTools MCP relay that is
+   now stopped, profile at `~/.cache/chrome-devtools-mcp/wheelhouse-profile`.
 2. **The timestamp question is still blocked, and the reason changed.** If a
    `Workorder`'s `timeStamp` does not move when a child `WorkorderLine` changes,
    polling parents misses line edits. Test before the sync loop is written. The
