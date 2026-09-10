@@ -18,12 +18,12 @@ outbound timeouts, process lifecycle and README are closed. The sixth ceiling �
 managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
 Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
 Competitive research moved on 8 Sep — read `2026-09-08-competitive-trials.md`
-before believing any "better than theirs" claim. Hubtiger, not Velodrop, is the
-competitor that matters.
+before believing any "better than theirs" claim. Hubtiger is the competitor
+that matters, not Velodrop.
 
-The **workshop prototype** landed 9 Sep (PR #45): a standalone in-memory React
+The **workshop prototype** merged 9 Sep (PR #45): a standalone in-memory React
 demo under `prototype/` with a real-browser suite. A learning artefact, not
-product code; persistence, auth and tenancy are out of scope by its spec, so it
+product code — persistence, auth and tenancy are out of scope by its spec, so it
 is not a step toward WorkOS. Scope
 `docs/reviews/2026-09-08-workshop-prototype-decisions.md`; evidence
 `prototype/OVERNIGHT.md`.
@@ -31,7 +31,7 @@ is not a step toward WorkOS. Scope
 **Check the checkout before judging state.** On 9 Sep work sat 156 commits
 behind on a branch forked 31 Aug, and stage one was reported open when it had
 merged 7 Sep. Run `git rev-list --left-right --count origin/main...HEAD` first.
-`origin/HEAD` points at `main`; `origin/master` is gone.
+
 
 **Do not assume stage one did more than it did.** It makes the app safe to run
 as more than one process. It does nothing about recovering data if the volume is
@@ -46,6 +46,7 @@ In Mark's 31 Aug file, dropped by the 7 Sep rewrite, restored 9 Sep.
 - **The app is on `localhost:8080`, not 4000.** Compose stops publishing the app
   port deliberately: `TRUST_PROXY=1` is only safe while the gateway is the sole
   entrance. 4000 refuses host connections.
+
 - **Never delete the `cf-*` header names in `server/gateway.js`.** That is the
   strip list, not Cloudflare residue; removing it reintroduces a login
   brute-force bypass (14/14 spoofed IPs passed before PR #8, 11 blocked after).
@@ -70,38 +71,38 @@ All under `docs/decisions/`, bar the plan under `docs/superpowers/plans/`.
 
 ## Immediate next actions
 
-1. **Finish the Hubtiger trial before it lapses.** Started 8 Sep, 7 days.
-   Still open inside it: the quote-approval round trip (needs Jack's inbox) and
-   a clean re-test of the booking-page disclosure (§3.5c).
+0. **Decide whether CI should gate the prototype and the runner.** Neither
+   `prototype` nor `python` is in `.github/workflows/test.yml`, so both merged
+   on a local run only and will rot silently. CI runs node 22, local 26.
+1. **Finish the Hubtiger trial before it lapses.** Started 8 Sep, 7 days. Open
+   inside it: the quote-approval round trip (needs Jack's inbox) and a clean
+   re-test of the booking-page disclosure (§3.5c).
 2. **The timestamp question is still blocked, and the reason changed.** If a
    `Workorder`'s `timeStamp` does not move when a child `WorkorderLine` changes,
    polling parents misses line edits. Test before the sync loop is written. The
    8 Sep trial account is **X-Series**, so it cannot answer an R-Series
-   question; see action 5. Detail: `2026-09-02-r-series-sync-and-rate-limits.md`.
+   question; see action 6. Detail: `2026-09-02-r-series-sync-and-rate-limits.md`.
 3. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
-   `main` cannot reach. Analysis and recommendation: `.agents/ARCHIVE.md`,
-   "Branch audit".
-4. **Decide whether `gateway` should wait for a healthy `app`.** It has a bare
-   `depends_on: app`, so the new `/healthz` check gates `docker compose up
-   --wait` and health reporting but not gateway startup. Topology change, so
-   it was deliberately left out of PR #42.
-5. **Decide the first adapter, and whether to chase R-Series.** The plan targets
-   R-Series; a new shop gets X-Series. Asking Lightspeed UK sales settles that
-   and §7.1 together.
-6. **Re-verify two items against `main`** — unknown, not open: composite
-   tenant-consistent FKs, and the privilege boundary on the non-RLS resolver
-   tables. Confirmed absent on `main`: any idempotency key (no
-   `Idempotency-Key`/`outbox`/`webhook_events`), so `withRetry` in
-   `server/shopify.js` can still double-create on a timed-out success.
+   `main` cannot reach. Analysis: `.agents/ARCHIVE.md`, "Branch audit".
+4. **Decide whether `gateway` should wait for a healthy `app`.** Its bare
+   `depends_on: app` means `/healthz` gates `docker compose up --wait` and
+   health reporting, not gateway startup. Topology change, so left out of #42.
+5. **Two tenant-isolation gaps, confirmed ABSENT on `main` 9 Sep** — they were
+   "unknown"; they are open. No composite tenant-consistent FKs; no privilege
+   boundary on the resolver tables. Evidence: `.agents/ARCHIVE.md`, "Tenant
+   isolation". Also absent: any idempotency key, so `withRetry` can still
+   double-create on a timeout.
+6. **Decide the first adapter.** The plan targets R-Series; a new shop gets
+   X-Series. Lightspeed UK sales settles that and §7.1 together.
 7. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
-   leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
-   through `DP-4` (design-partner recruitment and cadence — "dont think this is
-   necessary") open. They need Mark before those owners are settled.
+   leaves `PF-3` (print agent — could it be browser-based?) and `DP-1`–`DP-4`
+   (design-partner recruitment) open. They need Mark.
 
 ## Done
 
-37 PRs merged, #1-#45 (prototype merged as PR #45, 9 Sep). Ageing content moves
-to `.agents/ARCHIVE.md`, never deleted. `gh pr list --state merged -L 100`.
+37 PRs merged, #1-#45. #45 merged 9 Sep, carrying the workshop prototype and
+the overnight runner. Ageing content moves to `.agents/ARCHIVE.md`, never
+deleted. Full list: `gh pr list --state merged -L 100`.
 
 ## Decisions in force
 
@@ -119,7 +120,7 @@ to `.agents/ARCHIVE.md`, never deleted. `gh pr list --state merged -L 100`.
 | `2026-09-08-competitive-trials.md` | **Two decisions by Jack, 8 Sep** — Hubtiger replaces Bikebook; free software, bring-your-own integrations. Three OPEN in §6.4 |
 | `2026-08-31-feature-catalogue.md` | Reference — 214 rows, the feature list |
 
-Reasoning behind each cell, written 7 Sep: `.agents/ARCHIVE.md`.
+Cell reasoning, written 7 Sep: `.agents/ARCHIVE.md`.
 
 ## Plan register
 
@@ -139,16 +140,17 @@ npm run build
 npm run docker:up
 ```
 
-**Last verified:** 278 pass, 0 fail, 10 Sep on the PR #44 merge of `main`.
-**Lint and typecheck were NOT re-run on that merge** — last clean 9 Sep. The
-docker `app` image is from 31 Aug and runs stale code — verify against the
-working tree, never that container.
+**Last verified:** 278 pass, 0 fail, 10 Sep on the PR #44 merge. **Lint and
+typecheck were NOT re-run on it** — last clean 9 Sep. The docker `app` image is
+from 31 Aug and runs stale code — verify the working tree, never that
+container.
 
 ## Open items needing Mark
 
-Six carried items — pg-pool's checkout error listener, gate spacing/dates, the
-paid-ink token, the dark-mode palette, the registry's native `<dialog>`, and the
-five ownership queries. All still open; full text in `.agents/ARCHIVE.md`.
+Seven carried items — pg-pool's checkout error listener, gate spacing/dates,
+the paid-ink token, the dark-mode palette, the registry's native `<dialog>`, the
+five ownership queries, and now the CI gap in next action 0. All still open;
+full text in `.agents/ARCHIVE.md`.
 
 ## Keeping this file honest
 

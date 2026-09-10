@@ -305,3 +305,77 @@ Mark's fifth item — `git reset --hard 8514727` on `design/workos-auth-migratio
 | `2026-08-31-design-remediation.md` | Findings recorded in `docs/design/` |
 | `plans/done/2026-08-30-storefront-framework.md` | Executed |
 | `plans/done/2026-08-30-shopify-checkout.md` | Executed |
+
+## Tenant isolation — two gaps confirmed on `main`, 9 September 2026
+
+Both were carried in STATUS as "unknown, not open". Both are ABSENT, verified
+against the code and, for the second, against the running database. Neither is
+fixed; this is a record of what is true, not of work done.
+
+### 1. Composite tenant-consistent foreign keys — ABSENT
+
+Every foreign key in the schema is single-column, referencing only the parent's
+`id`. 61 `REFERENCES` clauses across the 15 files in `server/migrations/`; not
+one `FOREIGN KEY (...)` or `REFERENCES x (...)` clause contains a comma, and
+there is no `UNIQUE (shop_id, id)` anywhere to make a composite FK possible. The
+only composite key of any kind is the junction primary key at
+`001_init_schema.sql:159`. No schema SQL exists outside `server/migrations/`.
+
+Examples of the single-column pattern: `customer_bikes.customer_id`
+(`001:135`), `workshop_jobs.customer_id`/`bike_id`/`mechanic_id`
+(`001:171-173`), `sales.customer_id`/`cashier_id` (`001:193-194`),
+`sale_items.sale_id`/`product_id` (`001:232-233`).
+
+**What it permits.** FK referential checks bypass RLS, so shop A can insert a
+`customer_bikes` or `workshop_jobs` row pointing at shop B's `customer_id` —
+creating a tenant-A-visible record attached to another tenant's entity, and
+confirming which of B's row IDs exist (an existence oracle). This was already
+demonstrated in-repo: `docs/reviews/2026-08-31-architecture-stage-1-review.md`,
+lines 70-84.
+
+### 2. Privilege boundary on the non-RLS resolver tables — ABSENT
+
+The resolver tables are `shops`, `logins`, `sessions`
+(`001_init_schema.sql:22-50`) and `customer_logins`, `customer_sessions`
+(`003_customer_portal.sql:5-30`). `logins` and `customer_logins` are the two
+declared RLS exemptions in `scripts/ci/assert-rls-coverage.mjs:26`; `shops` and
+`sessions` have no `shop_id`, so that check never considers them.
+
+There is exactly one grant statement in the entire repository —
+`docker/init-db.sh:18`, `GRANT ALL ON SCHEMA public TO epos_app`. No `REVOKE`,
+no second role, no per-table grants. And migrations run through the app's own
+pool (`server/migrations/run-migrations.js` imports `pool` from `../db.js`), so
+`epos_app` **creates and therefore owns** every table — owner-level DML applies
+regardless of grants.
+
+Confirmed against the running container, 9 Sep:
+
+```
+     tablename     | tableowner | sel | ins | upd | del
+ customer_logins   | epos_app   | t   | t   | t   | t
+ customer_sessions | epos_app   | t   | t   | t   | t
+ logins            | epos_app   | t   | t   | t   | t
+ sessions          | epos_app   | t   | t   | t   | t
+ shops             | epos_app   | t   | t   | t   | t
+```
+
+**What it permits.** The only thing separating tenants on these tables is
+application code — `server/auth.js` queries `shops`/`logins` by email or id with
+no shop predicate (`:53,:67,:74,:139,:165`). Any SQL-capable path can rewrite
+the shop-to-login mapping or repoint a session's `login_id` and obtain
+RLS-legitimate access to another tenant. RLS cannot defend this, because the
+mapping is what RLS trusts.
+
+**The adjacent control is real, and is a different thing.** `init-db.sh`'s
+comment promises only that `epos_app` is not a superuser, which protects against
+RLS bypass. Verified: `rolsuper=f`, `rolbypassrls=f` for `epos_app`, both `t`
+for `postgres`. That guarantee holds and is orthogonal to resolver-table
+writability.
+
+### How this was verified
+
+A subagent surveyed and reported both as absent; the load-bearing absence claims
+were then re-checked directly in the main session (the grep patterns above) and,
+for the privilege claim, proven by catalog query against the live database
+rather than inferred from source. Recorded because a delegated "X does not
+exist" is not evidence on its own.
