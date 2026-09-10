@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-09
-**Branch:** `main` — level with `origin/main` at `ee9d201`.
+**Updated:** 2026-09-10
+**Branch:** `docs/competitive-trials-2026-09-08` — open as PR #44.
 **Blocked on:** nothing. Every open item below is Jack's or Mark's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -17,6 +17,9 @@ Architecture stage one merged 7 Sep (PR #37): the pooler trap, migration race,
 outbound timeouts, process lifecycle and README are closed. The sixth ceiling —
 managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
 Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
+Competitive research moved on 8 Sep — read `2026-09-08-competitive-trials.md`
+before believing any "better than theirs" claim. Hubtiger is the competitor
+that matters, not Velodrop.
 
 The **workshop prototype** merged 9 Sep (PR #45): a standalone in-memory React
 demo under `prototype/` with a real-browser suite. A learning artefact, not
@@ -26,10 +29,9 @@ is not a step toward WorkOS. Scope
 `prototype/OVERNIGHT.md`.
 
 **Check the checkout before judging state.** On 9 Sep work sat 156 commits
-behind on `chore/architecture-stage-1-setup` (forked `fa32b60`, 31 Aug) and
-stage one was reported open when it had merged 7 Sep. Run
-`git rev-list --left-right --count origin/main...HEAD` first. `origin/HEAD` now
-points at `main`; `origin/master` is gone.
+behind on a branch forked 31 Aug, and stage one was reported open when it had
+merged 7 Sep. Run `git rev-list --left-right --count origin/main...HEAD` first.
+
 
 **Do not assume stage one did more than it did.** It makes the app safe to run
 as more than one process. It does nothing about recovering data if the volume is
@@ -44,16 +46,15 @@ In Mark's 31 Aug file, dropped by the 7 Sep rewrite, restored 9 Sep.
 - **The app is on `localhost:8080`, not 4000.** Compose stops publishing the app
   port deliberately: `TRUST_PROXY=1` is only safe while the gateway is the sole
   entrance. 4000 refuses host connections.
+
 - **Never delete the `cf-*` header names in `server/gateway.js`.** That is the
   strip list, not Cloudflare residue; removing it reintroduces a login
-  brute-force bypass (14/14 spoofed-IP attempts passed before PR #8, 11 blocked
-  after).
+  brute-force bypass (14/14 spoofed IPs passed before PR #8, 11 blocked after).
 
 ## Provenance
 
-Replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug); the full account, his
-original file, and the PR arithmetic behind the count below are in
-`.agents/ARCHIVE.md`.
+Replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug); his original, the full
+account, and the PR arithmetic are in `.agents/ARCHIVE.md`.
 
 ## Read order for a fresh session
 
@@ -63,48 +64,45 @@ original file, and the PR arithmetic behind the count below are in
    falsifiers (§7, §8)
 4. `2026-09-06-tenant-scoping-and-pooler-safety.md` — what stage one did, and
    what must change before `DB_TENANT_SCOPE=transaction`
-5. `2026-08-31-master-implementation-plan.md` — LOCKED; changes are decisions
+5. `2026-09-08-competitive-trials.md` — who the competitors actually are
+6. `2026-08-31-master-implementation-plan.md` — LOCKED; changes are decisions
 
-All under `docs/decisions/`, except the plan under `docs/superpowers/plans/`.
+All under `docs/decisions/`, bar the plan under `docs/superpowers/plans/`.
 
 ## Immediate next actions
 
 0. **Decide whether CI should gate the prototype and the runner.** Neither
-   `prototype` nor `python` appears in `.github/workflows/test.yml`, so both
-   merged on a local run only and will rot silently. CI runs node 22, local 26.
-1. **Velodrop and Bikebook trials.** Named in the Lightspeed decision (§7.2) as
-   the highest-value open item, unstarted since 31 August. It is the only thing
-   that tests the "better than theirs" claim the product rests on. Both free,
-   no card. Account creation is Jack's — an agent cannot sign up.
-2. **Test the timestamp question against a live Lightspeed account.** If a
+   `prototype` nor `python` is in `.github/workflows/test.yml`, so both merged
+   on a local run only and will rot silently. CI runs node 22, local 26.
+1. **Finish the Hubtiger trial before it lapses.** Started 8 Sep, 7 days. Open
+   inside it: the quote-approval round trip (needs Jack's inbox) and a clean
+   re-test of the booking-page disclosure (§3.5c).
+2. **The timestamp question is still blocked, and the reason changed.** If a
    `Workorder`'s `timeStamp` does not move when a child `WorkorderLine` changes,
-   polling parents silently misses line edits. A design fork — test it before
-   the sync loop is written. Needs an account, so it is Jack's. Detail and the
-   bucket-size question: `2026-09-02-r-series-sync-and-rate-limits.md`, and
-   `.agents/ARCHIVE.md`.
+   polling parents misses line edits. Test before the sync loop is written. The
+   8 Sep trial account is **X-Series**, so it cannot answer an R-Series
+   question; see action 6. Detail: `2026-09-02-r-series-sync-and-rate-limits.md`.
 3. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
-   `main` cannot reach. Analysis and recommendation: `.agents/ARCHIVE.md`,
-   "Branch audit".
-4. **Decide whether `gateway` should wait for a healthy `app`.** It has a bare
-   `depends_on: app`, so the new `/healthz` check gates `docker compose up
-   --wait` and health reporting but not gateway startup. Topology change, so
-   it was deliberately left out of PR #42.
+   `main` cannot reach. Analysis: `.agents/ARCHIVE.md`, "Branch audit".
+4. **Decide whether `gateway` should wait for a healthy `app`.** Its bare
+   `depends_on: app` means `/healthz` gates `docker compose up --wait` and
+   health reporting, not gateway startup. Topology change, so left out of #42.
 5. **Two tenant-isolation gaps, confirmed ABSENT on `main` 9 Sep** — they were
    "unknown"; they are open. No composite tenant-consistent FKs; no privilege
-   boundary on the resolver tables (`epos_app` owns them). Evidence and the
-   failure each permits: `.agents/ARCHIVE.md`, "Tenant isolation". Also absent:
-   any idempotency key, so `withRetry` can still double-create on a timeout.
-6. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
-   leaves `PF-3` (print agent — could it just be browser-based?) and `DP-1`
-   through `DP-4` (design-partner recruitment and cadence — "dont think this is
-   necessary") open. They need Mark before those owners are settled.
+   boundary on the resolver tables. Evidence: `.agents/ARCHIVE.md`, "Tenant
+   isolation". Also absent: any idempotency key, so `withRetry` can still
+   double-create on a timeout.
+6. **Decide the first adapter.** The plan targets R-Series; a new shop gets
+   X-Series. Lightspeed UK sales settles that and §7.1 together.
+7. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
+   leaves `PF-3` (print agent — could it be browser-based?) and `DP-1`–`DP-4`
+   (design-partner recruitment) open. They need Mark.
 
 ## Done
 
-37 PRs merged, spanning #1-#45. #45 merged 9 Sep as `ee9d201`, carrying the
-workshop prototype and the overnight runner. Nothing here is deleted when it
-ages — it moves to `.agents/ARCHIVE.md`. Full list:
-`gh pr list --state merged -L 100`.
+37 PRs merged, #1-#45. #45 merged 9 Sep, carrying the workshop prototype and
+the overnight runner. Ageing content moves to `.agents/ARCHIVE.md`, never
+deleted. Full list: `gh pr list --state merged -L 100`.
 
 ## Decisions in force
 
@@ -119,9 +117,10 @@ ages — it moves to `.agents/ARCHIVE.md`. Full list:
 | `2026-09-06-tenant-scoping-and-pooler-safety.md` | Decided by Jack 6 Sep; carries the flag-flip checklist |
 | `2026-09-04-job-type-before-diary.md` | **Proposed, not decided** |
 | `2026-09-04-booking-mode-and-downtime.md` | Booking mode decided 5 Sep; downtime model proposed |
+| `2026-09-08-competitive-trials.md` | **Two decisions by Jack, 8 Sep** — Hubtiger replaces Bikebook; free software, bring-your-own integrations. Three OPEN in §6.4 |
 | `2026-08-31-feature-catalogue.md` | Reference — 214 rows, the feature list |
 
-Reasoning behind each cell, as written 7 Sep: `.agents/ARCHIVE.md`.
+Cell reasoning, written 7 Sep: `.agents/ARCHIVE.md`.
 
 ## Plan register
 
@@ -141,10 +140,10 @@ npm run build
 npm run docker:up
 ```
 
-**Last verified:** 278 pass, 0 fail, 9 Sep on `feat/workshop-prototype` (one
-commit above `main`); lint/typecheck clean and CI green on PR #42, 7 Sep. The
-docker `app` image is from 31 Aug and runs stale code — verify against the
-working tree, never that container.
+**Last verified:** 278 pass, 0 fail, 10 Sep on the PR #44 merge. **Lint and
+typecheck were NOT re-run on it** — last clean 9 Sep. The docker `app` image is
+from 31 Aug and runs stale code — verify the working tree, never that
+container.
 
 ## Open items needing Mark
 

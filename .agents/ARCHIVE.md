@@ -193,6 +193,38 @@ Nothing was broken. It was invisible because it was one line in a list where
 almost every other line was dead. Deleting the dead ones is what makes the next
 live branch visible.
 
+
+## PR accounting, moved from STATUS 8 September 2026
+
+Moved to keep STATUS under its 8,000-byte cap. Accurate as at 7 September 2026.
+
+36 PRs merged, spanning #1-#42 (counted 7 Sep; #36 open, #15 closed unmerged,
+5/16/17/18 are issue numbers). The earlier "36 merged, #1-#40" overcounted by
+two. The detail to 2 September is elsewhere in this file. Full list:
+`gh pr list --state merged -L 100`.
+
+## Hubtiger trial — records created 8 September 2026
+
+Left in the Hubtiger trial account by the 8 Sep testing. Listed so a later
+session knows why they are there.
+
+- Job **#96** (demo-seeded) — a `Repair` line, SKU 100002, £75.00, added to test
+  the POS parts pull. Also dragged from Tue 09:00 to Wed 08:00 to test
+  rescheduling.
+- Customer **ZZTest PosPush** (`zztest@example.com`) and job **#100** — created
+  from scratch to rule out demo data as the cause of the quote-push failure.
+  Job #100 was later moved to Bike Ready as part of that testing. That customer
+  also synced through to the Lightspeed X-Series trial as `ZZTest-53CH`, which
+  is what proved writes to the POS work.
+- Job **#101** — created through the public booking widget to test the
+  customer-facing flow. Mobile 07700 900456, an Ofcom-reserved fictitious
+  number that cannot reach anyone.
+- Job **#99** — two POS lines (Repair £75.00, Replacement Parts £50.00) and a
+  quote sent to `jack@curphey.com`, testing the quote-approval round trip.
+- Setting changed: Technician 2 linked to POS user Jack Curphey, on the POS
+  integration page.
+
+In the Velodrop trial: appointment **241105 ("ZZTest Trial")**.
 ## Moved out of STATUS.md, 9 September 2026
 
 STATUS.md hit its 8,000-byte cap when the workshop prototype and the restored
