@@ -1,0 +1,28 @@
+{
+  "journeyBoard": {
+    "pages": 1,
+    "format": "single large vector page",
+    "screens": 84,
+    "pageSizePoints": [
+      2448.0,
+      4827.6
+    ]
+  },
+  "screenReview": {
+    "pages": 85,
+    "coverPages": 1,
+    "screenPages": 84,
+    "bookmarks": 91,
+    "screenHeadingsAndNotesVerified": 84
+  },
+  "sampleVisualInspection": [
+    "cover",
+    "service",
+    "date",
+    "quote-editor",
+    "diary",
+    "print",
+    "settings",
+    "message-error"
+  ]
+}

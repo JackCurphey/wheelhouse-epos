@@ -1,0 +1,125 @@
+{
+  "slides": [
+    {
+      "title": "Release 1: a focused workshop release",
+      "takeaway": "Book the work. Agree the quote. Keep the customer informed. Print and scan the bike tag.",
+      "bullets": [
+        "Keep booking, diary, job cards, workshop workflow and line-by-line quote approval.",
+        "Keep real email, SMS and WhatsApp on shop-owned provider accounts.",
+        "Build one proven Lightspeed connector and physical bike-tag printing.",
+        "Money, import, reports, groups and disaster-recovery development move to Later."
+      ],
+      "notes": "This replaces the earlier store-review deck after Jack’s feedback. The first scope card is retained; the phrase “card on file” is interpreted as “card one”, not storage of payment cards. Scope reductions are instructed; technical details and provider access remain to be proven. No application code has been implemented in this planning pass."
+    },
+    {
+      "title": "What stays in Release 1",
+      "takeaway": "One complete workshop journey, supported by the shop’s existing till.",
+      "bullets": [
+        "Customer booking, workshop diary, job card, capacity and collection status.",
+        "Itemised quotes: customers approve or decline individual lines.",
+        "Email, SMS and WhatsApp updates and the agreed reply routes.",
+        "One Lightspeed connection, printed job cards and scannable bike tags."
+      ],
+      "notes": "Normal customer and bike records remain. So do checklists/service questions and existing selected operational views. Quote amounts, taxes and discounts are calculated accurately but there is no invoice issuance or payment collection. Messaging setup still requires real provider evidence."
+    },
+    {
+      "title": "What moves to Later",
+      "takeaway": "The expensive financial, migration and group work is removed from this build.",
+      "bullets": [
+        "Invoices, online payments, deposits, refunds and new till-settlement work.",
+        "Customer import and historical migration.",
+        "Report suites, group capacity and the supporting chain model.",
+        "The second Lightspeed adapter and the disaster-recovery programme."
+      ],
+      "notes": "The third-party billing and new Bike Sale/till expansion are deferred with the money work; existing code is not deleted. Operational job counts, overdue indicators and single-shop calendar capacity are not reporting suites and remain. Customer duplicate review remains independent of bulk import. Recovery/PITR/restore drills are not hidden release prerequisites."
+    },
+    {
+      "title": "The store workflow",
+      "takeaway": "Wheelhouse manages the repair; Lightspeed remains the place where money is handled.",
+      "bullets": [
+        "Book in the bike, create the job and print its tag.",
+        "Inspect, propose work and get approval for the selected quote lines.",
+        "Schedule, send updates and hand approved work to the linked Lightspeed job.",
+        "The shop invoices and takes payment in Lightspeed; staff record collection in Wheelhouse."
+      ],
+      "notes": "A work order is not an invoice. Wheelhouse must not infer payment from a “ready” or “collected” state. An external reference and handoff status show which POS job corresponds to the repair. Current-job customer lookup/create is limited to that job and is not a bulk import. The exact work-order and stock effects must be demonstrated before the integration is accepted."
+    },
+    {
+      "title": "One Lightspeed: prove access first",
+      "takeaway": "R-Series is the planning recommendation. The actual shop and API proof decide.",
+      "bullets": [
+        "Confirm the first shop’s series and a usable test account with app authorisation.",
+        "Prove product, stock, employee and current-job customer access.",
+        "Create, update and cancel a test work order; verify part and labour effects.",
+        "Prove refresh, revocation, child-line updates and safe handling of uncertain results."
+      ],
+      "notes": "No Lightspeed credentials were configured in the inspected checkout, and no authenticated call was made. Public documentation supports the R-Series API and workbench scope, but scopes cannot exceed employee rights. We have not certified our access. R-Series and X-Series are different APIs. Only one adapter is built; the alternative is Later. Source: docs/decisions/2026-09-10-release-1-lightspeed-readiness.md; https://developers.lightspeedhq.com/retail/authentication/scopes/; https://developers.lightspeedhq.com/retail/authentication/clients/."
+    },
+    {
+      "title": "The integration boundary",
+      "takeaway": "No customer migration or payment engine hidden inside the connector.",
+      "bullets": [
+        "Lightspeed supplies product identity and stock; Wheelhouse owns scheduling and approval.",
+        "Link only customers needed for current jobs. Do not backfill customer history.",
+        "One stock authority: measure what work-order part changes already do.",
+        "Invoices, payment and refunds stay in Lightspeed. Failed or uncertain handoffs stay visible."
+      ],
+      "notes": "Never double-decrement stock through both a work-order part and a separate adjustment. Labour is not inventory. Cancellation before a sale may release a commitment; it is not a refund. After a till sale, handle a conflict in the till instead of automatically restocking. Document field ownership, stable source IDs and a tested child-update strategy. No report or register/refund API scopes are added for excluded features."
+    },
+    {
+      "title": "Print the tag. Scan the right job.",
+      "takeaway": "A useful physical tag is an early deliverable, not a finishing touch.",
+      "bullets": [
+        "Print a readable job number, bike identification and a QR for the staff job page.",
+        "Use a phone or 2D reader for QR; add a barcode if the shop uses a 1D scanner.",
+        "Confirm printer, label dimensions and driver PC; test the actual tag on a bike.",
+        "Scan respects staff login and shop access. Offline printing and deliberate reprints are visible."
+      ],
+      "notes": "The existing print agent uses Windows printer drivers via PowerShell; Mac host support is not proven. Choose the actual hardware in P00b. QR must preserve square modules and the encoder’s quiet zone; prove readability at real label size and print settings. A QR is not a customer bearer token. Scanning must not approve or collect a job. Auto-print on book-in/custody, not every pending online request. Print states queued/claimed/acknowledged/failed/unknown must be scoped to the shop/device. Physical print/scan testing remains outstanding."
+    },
+    {
+      "title": "The new build sequence",
+      "takeaway": "Deliver a useful workshop slice before completing the connector and message channels.",
+      "bullets": [
+        "A — prove API and printer setup; check tenant and staff access.",
+        "B — persistent job, quote basics, printed tag and scan-to-job.",
+        "C — capacity, diary, customer booking, line approvals and messaging.",
+        "D/E — connect the proven Lightspeed workflow, then run the store acceptance scenarios."
+      ],
+      "notes": "This is dependency order, not a delivery-date commitment. P00 probes can run alongside foundational work. P08 printing needs the stable job reference and hardware, not invoice or payment code. Core quote/progress links can work before provider setup, but real channel delivery is still required for release. The plan has P00 coordination/proof plus P01–P10 delivery/verification packages, each split into reviewable slices."
+    },
+    {
+      "title": "First implementation issues",
+      "takeaway": "Start with evidence and one job the mechanic can print, scan and work on.",
+      "bullets": [
+        "Prove Lightspeed account/API access and the supported printer/scanner combination.",
+        "Close tenant and session-revocation gaps; preserve shop isolation.",
+        "Persist the job, planned effort and stable job reference without creating a sale.",
+        "Build tag/scan, quote-line approval and atomic capacity in dependency order."
+      ],
+      "notes": "See P00a, P01a/b, P02a, P08a, P03a/b and P04a/b in the plan. Assign builder/reviewer and migration ownership at issue splitting. Some are parallel; model-dependent tasks cannot all start together. Quote approval needs to preserve exactly what was approved even though invoicing is deferred. An old quote link must not approve changed prices."
+    },
+    {
+      "title": "What proves Release 1 is ready",
+      "takeaway": "Show the whole store workflow, including the real connector and physical tags.",
+      "bullets": [
+        "Guest booking → quote approval → workshop work → ready → collection.",
+        "Concurrent booking and revised quotes preserve capacity and the approved amount.",
+        "Real channel delivery/replies, linked Lightspeed job and a successful tag scan.",
+        "No invoices, payments, import, report, group or recovery setup required to use the release."
+      ],
+      "notes": "Ten acceptance scenarios are listed in the implementation plan. Every retained row needs evidence appropriate to it; provider/device rows need actual provider/device proof, not mocks alone. Check retry/unknown outcomes and tenant boundaries. Disaster restore testing is excluded. The original 172 row references were not independent feature counts: the revised ledger retains 154, defers 18 and adds the QR slice of row 296, for 155 active references under the provisional R-Series choice."
+    },
+    {
+      "title": "Store review: remaining inputs",
+      "takeaway": "The scope is narrower. The next choices are concrete account and shop-workflow details.",
+      "bullets": [
+        "Which Lightspeed series does the first shop use, and is the test app/account available?",
+        "Which printer, tag stock, driver PC and scanner will the shop actually use?",
+        "Which email/SMS/WhatsApp providers and inbound reply paths are required?",
+        "Confirm quote revision, book-in/collection and tag-content examples; then assign the issue slices."
+      ],
+      "notes": "The first-shop series/account question was asked during replanning and had not been answered at document creation. Do not claim access is verified until P00-LS passes. No request to reconsider the agreed deferrals is hidden here. The current plan, scope decision, readiness brief and revised ledger are the operative sources; previous decks remain historical."
+    }
+  ]
+}

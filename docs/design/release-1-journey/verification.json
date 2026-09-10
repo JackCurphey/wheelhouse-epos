@@ -1,0 +1,17 @@
+{
+  "screenCount": 84,
+  "checks": [
+    "HTML and JavaScript execute without errors",
+    "Unique screen IDs",
+    "All next, branch and button destinations resolve",
+    "Every screen has a heading",
+    "Line-approval arithmetic and dependency validation",
+    "Approval confirmation reflects selection",
+    "Modal open and close",
+    "Chapter filtering and search",
+    "Per-screen feedback save, badge, summary and Markdown export",
+    "Every form control has a label"
+  ],
+  "browserRendering": "Blocked: local Chromium and Chrome abort under the managed sandbox. No browser layout or screenshot validation claimed.",
+  "errors": []
+}
