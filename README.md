@@ -8,6 +8,20 @@ PostgreSQL Row-Level Security policy filtering on it, so a bug in the app
 cannot leak one shop's rows to another - the database refuses the query
 regardless of what the application asked for.
 
+## Interactive workshop prototype
+
+`prototype/` holds a standalone interactive demo of the workshop workflow, used
+to test whether shops share Jack's problems before any of it is built for real.
+It runs without this server, the database, a till, or any messaging or payment
+provider: `npm ci --prefix prototype`, then `npm run prototype`, and open
+<http://127.0.0.1:4173/>. State lasts one session by design.
+
+It is a learning artefact, not part of the product. See
+[prototype/README.md](prototype/README.md) for the walkthrough and
+[prototype/OVERNIGHT.md](prototype/OVERNIGHT.md) for its acceptance evidence.
+The scope it implements is
+[docs/reviews/2026-09-08-workshop-prototype-decisions.md](docs/reviews/2026-09-08-workshop-prototype-decisions.md).
+
 ## Requirements
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) - the app,
