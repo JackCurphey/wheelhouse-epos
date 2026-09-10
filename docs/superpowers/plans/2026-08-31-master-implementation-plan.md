@@ -1,5 +1,7 @@
 # Wheelhouse EPOS — master implementation plan
 
+> **Release 1 amendment — 10 September 2026:** Jack’s review narrows this release to workshop operations, quote approvals, messaging, one proven Lightspeed adapter and scannable bike tags. [Scope decision](../../decisions/2026-09-10-release-1-scope-reduction.md) and [current implementation plan](2026-09-10-release-1-workshop-plan.md) supersede incompatible scope, sequencing and release gates below, including invoices/payments/refunds, customer import, reports, groups and recovery. Unaffected architectural constraints remain.
+
 **Date:** 31 August 2026
 **Status:** LOCKED. Changes to this file are decisions, not edits — record what
 changed and why at the bottom.
@@ -381,3 +383,8 @@ business days, no marketing SMS to a US number without a compliant consent flow.
 | 2026-09-01 | **Six tasks marked partial** after an audit of all 63 against `master`: DS-3, PF-1, PF-2, PF-3, WS-2, TILL-5. Nothing else in the plan is started; the audit found no fully completed task except PL-15, done the same day the plan was written. **DS-0 marked blocked** — the revision prompt its done-condition is measured against does not exist on any branch. Added open decision 9 (what G2 becomes without DP-1 to DP-4) and fixed the duplicate numbering in §10. |
 | 2026-09-03 | **Built for Lightspeed, not Citrus-Lime.** §1 rewritten to record the 2 September decision (`docs/decisions/2026-09-02-lightspeed-first-platform.md`): Lightspeed first, UK shops first, R-Series the integration target, and **the free product is booking and the diary together**, reversing the 1 September narrowing. The reversal holds because Lightspeed ships a job record with a date, not a diary, so the displacement objection that forced the split is absent there. §1 now also flags the Citrus-Lime API premise as wrong and not to be repeated, and records that "better than theirs" is an untested assumption pending the Velodrop and Bikebook trials. **P3/P5 ordering is NOT resequenced** — the decision says it is affected but not how; a note in P3 marks the rationale as superseded and the reorder as an open decision for Jack. Requested by Jack, 3 September 2026. |
 | 2026-08-31 | **Differentiator changed** after review with Jack: the experience, not the structured inspection. P5 rebuilt around the job-done email — plain-English summary, photos, itemised pricing, invoice, pay in one tap. Inspection demoted to P5b as an extension of the same machinery. Adds the payments architecture as a blocking open decision. |
+
+
+## Amendment — 10 September 2026, review with Jack
+
+User-directed Release 1 scope reduction recorded in `docs/decisions/2026-09-10-release-1-scope-reduction.md`. The linked workshop plan now governs Release 1 implementation and acceptance. This is a scope decision, not a claim those removed features are built. The original #47 buckets remain archived; the revised ledger records the changes.

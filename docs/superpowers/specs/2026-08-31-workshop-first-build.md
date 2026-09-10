@@ -1,5 +1,7 @@
 # Workshop-first build — spec
 
+> **Release 1 scope update — 10 September 2026:** use the [scope reduction](../../decisions/2026-09-10-release-1-scope-reduction.md) and [current implementation plan](../plans/2026-09-10-release-1-workshop-plan.md). Invoicing, online payments/refunds, customer import, reports, group capacity and recovery are Later; one Lightspeed adapter and QR bike-tag printing remain. Historical implementation-status claims below must be checked against current code.
+
 **Date:** 31 August 2026
 **Decision:** the workshop module is what we build first. See
 `docs/decisions/2026-08-31-business-plan.md` §4 (the free wedge) and §5 (the

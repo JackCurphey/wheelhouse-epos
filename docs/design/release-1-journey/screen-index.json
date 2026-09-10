@@ -1,0 +1,1113 @@
+[
+  {
+    "id": "service",
+    "group": "book",
+    "title": "Choose a service",
+    "role": "Customer · phone",
+    "note": "Embedded shop-branded booking, also usable as a standalone page. Known service and diagnosis entry both lead into the same job journey.",
+    "next": "problem",
+    "pack": "P03 · P05",
+    "branches": [
+      [
+        "Unknown problem",
+        "diagnosis"
+      ]
+    ],
+    "mobile": true,
+    "number": "01"
+  },
+  {
+    "id": "problem",
+    "group": "book",
+    "title": "Describe the bike & problem",
+    "role": "Customer · phone",
+    "note": "Service questions appear here, not in a separate survey. Media is optional. Upload selection stays local in this review artefact.",
+    "next": "date",
+    "pack": "P03 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "02"
+  },
+  {
+    "id": "date",
+    "group": "book",
+    "title": "Choose drop-off or appointment",
+    "role": "Customer · phone",
+    "note": "Proposed date in this fixed scenario is 17 September. The production calendar must recompute availability atomically. Drop-off never implies a promised start.",
+    "next": "details",
+    "pack": "P04 · P05",
+    "branches": [
+      [
+        "Timed booking",
+        "appointment"
+      ],
+      [
+        "No availability",
+        "full"
+      ]
+    ],
+    "mobile": true,
+    "number": "03"
+  },
+  {
+    "id": "details",
+    "group": "book",
+    "title": "Contact & update preferences",
+    "role": "Customer · phone",
+    "note": "No customer account. Matching a phone number never exposes existing records. Marketing permission is separate from job updates. The review artefact uses fictional details.",
+    "next": "pending",
+    "pack": "P05 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "04"
+  },
+  {
+    "id": "pending",
+    "group": "book",
+    "title": "Request received",
+    "role": "Customer · phone",
+    "note": "Review-mode request is not confirmed. Automatic acceptance is a separate configured path, shown by the confirmed screen after successful capacity reservation.",
+    "next": "requests",
+    "pack": "P04 · P05",
+    "branches": [
+      [
+        "Automatic acceptance outcome",
+        "confirmed"
+      ]
+    ],
+    "mobile": true,
+    "number": "05"
+  },
+  {
+    "id": "requests",
+    "group": "intake",
+    "title": "Review incoming requests",
+    "role": "Service desk · desktop",
+    "note": "Staff can distinguish requests from confirmed capacity and review the customer’s own words. Operational counts stay in scope; this is not a report.",
+    "next": "review",
+    "pack": "P02 · P04 · P05",
+    "branches": [],
+    "mobile": false,
+    "number": "06"
+  },
+  {
+    "id": "review",
+    "group": "intake",
+    "title": "Confirm the request",
+    "role": "Service desk · desktop",
+    "note": "Accept reserves capacity once. Reject includes a human explanation. A failed acceptance must leave the request unchanged.",
+    "next": "confirmed",
+    "pack": "P04 · P05",
+    "branches": [
+      [
+        "Cannot accept",
+        "reject"
+      ]
+    ],
+    "mobile": false,
+    "number": "07"
+  },
+  {
+    "id": "confirmed",
+    "group": "intake",
+    "title": "Booking confirmed",
+    "role": "Customer · phone",
+    "note": "This is the result for reviewed acceptance or a successful automatically accepted booking. It must never appear before reservation succeeds.",
+    "next": "desk",
+    "pack": "P04 · P05 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "08"
+  },
+  {
+    "id": "desk",
+    "group": "intake",
+    "title": "The workshop at a glance",
+    "role": "Service desk · desktop",
+    "note": "Queues and custody are independent of work state. Counters are operational, not a reporting dashboard. A walk-in uses the same job model.",
+    "next": "intake",
+    "pack": "P02 · P04",
+    "branches": [
+      [
+        "Walk-in",
+        "new-job"
+      ],
+      [
+        "Diary",
+        "diary"
+      ]
+    ],
+    "mobile": false,
+    "number": "09"
+  },
+  {
+    "id": "intake",
+    "group": "intake",
+    "title": "Book the bike into the shop",
+    "role": "Service desk · desktop",
+    "note": "Explicit custody event. Default auto-print can be set by the shop. Recording arrival must succeed even if the printer is offline, with a visible print task.",
+    "next": "print",
+    "pack": "P02 · P08",
+    "branches": [],
+    "mobile": false,
+    "number": "10"
+  },
+  {
+    "id": "print",
+    "group": "intake",
+    "title": "Print & attach the bike tag",
+    "role": "Service desk · desktop",
+    "note": "Valid specimen QR encodes https://wheelhouse.example/staff/jobs/WH-1042 (reserved example domain). Final label size, driver, customer-detail policy and 1D barcode need physical shop validation. “Acknowledged” is a designed state, not evidence of a real print.",
+    "next": "scan",
+    "pack": "P08",
+    "branches": [
+      [
+        "Paper job card",
+        "job-card"
+      ],
+      [
+        "Offline / unknown print",
+        "print-error"
+      ]
+    ],
+    "mobile": false,
+    "number": "11"
+  },
+  {
+    "id": "scan",
+    "group": "intake",
+    "title": "Scan → authenticated job",
+    "role": "Mechanic · phone",
+    "note": "Staff-only QR route. A signed-out scan returns to this job after login. A different shop gets no customer or job disclosure. The local artefact does not access a camera.",
+    "next": "mechanic",
+    "pack": "P01 · P02 · P08",
+    "branches": [
+      [
+        "Signed out",
+        "login"
+      ],
+      [
+        "Wrong shop",
+        "denied"
+      ]
+    ],
+    "mobile": true,
+    "number": "12"
+  },
+  {
+    "id": "mechanic",
+    "group": "quote",
+    "title": "Open the mechanic’s job",
+    "role": "Mechanic · phone",
+    "note": "Phone is a working tool for inspection, not a shrunk desktop table. Opening a job does not claim it or start work.",
+    "next": "inspection",
+    "pack": "P02 · P03",
+    "branches": [],
+    "mobile": true,
+    "number": "17"
+  },
+  {
+    "id": "inspection",
+    "group": "quote",
+    "title": "Inspect & explain the findings",
+    "role": "Mechanic · phone",
+    "note": "Completed template answers are preserved if the shop later changes the checklist. Media is explicitly attached to the job and shared with the customer when sent.",
+    "next": "quote-editor",
+    "pack": "P02 · P03 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "18"
+  },
+  {
+    "id": "quote-editor",
+    "group": "quote",
+    "title": "Build the itemised quote",
+    "role": "Service desk · desktop",
+    "note": "£65 + £28 + £18 + £12 = £123 proposed. Parts and fitting are explained as one repair dependency; declining necessary fitting must not authorise an unsafe partial repair.",
+    "next": "quote-send",
+    "pack": "P03",
+    "branches": [
+      [
+        "Search catalogue",
+        "catalogue-search"
+      ]
+    ],
+    "mobile": false,
+    "number": "19"
+  },
+  {
+    "id": "quote-send",
+    "group": "quote",
+    "title": "Send the approval request",
+    "role": "Service desk · desktop",
+    "note": "Send honours selected channels at send time; no blind retries after uncertain delivery. This artefact routes to the customer preview and sends nothing.",
+    "next": "approval",
+    "pack": "P03 · P05 · P06",
+    "branches": [],
+    "mobile": false,
+    "number": "20"
+  },
+  {
+    "id": "approval",
+    "group": "quote",
+    "title": "Approve each line",
+    "role": "Customer · phone",
+    "note": "Interactive selections update the total. Both brake lines remain individually visible and their dependency is explicit. Consent is bound to quote revision 2. Unchecked new lines are declined.",
+    "next": "approval-done",
+    "pack": "P03 · P05",
+    "branches": [
+      [
+        "Stale quote",
+        "stale"
+      ],
+      [
+        "Spending ceiling",
+        "ceiling"
+      ]
+    ],
+    "mobile": true,
+    "number": "21"
+  },
+  {
+    "id": "approval-done",
+    "group": "quote",
+    "title": "Know what was agreed",
+    "role": "Customer · phone",
+    "note": "Confirmation reflects selections from the interactive quote screen. The standard walkthrough uses £111 with the £12 cable declined.",
+    "next": "approved",
+    "pack": "P03 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "22"
+  },
+  {
+    "id": "approved",
+    "group": "quote",
+    "title": "Shop sees the exact agreement",
+    "role": "Service desk · desktop",
+    "note": "Fixed canonical £111 scenario. Any additional effort must reserve capacity, independently of monetary consent. Approval does not mean the work is already scheduled.",
+    "next": "diary",
+    "pack": "P02 · P03 · P04",
+    "branches": [],
+    "mobile": false,
+    "number": "23"
+  },
+  {
+    "id": "diary",
+    "group": "work",
+    "title": "Allocate work in the diary",
+    "role": "Service desk · desktop",
+    "note": "Proposed allocation shown for review. Move saves atomically and retains the old allocation on conflict. Shared-to-mechanic transfer must not double-count. Day, week and month views share one capacity model.",
+    "next": "queue",
+    "pack": "P04",
+    "branches": [
+      [
+        "Capacity conflict",
+        "capacity-conflict"
+      ],
+      [
+        "Week",
+        "week"
+      ],
+      [
+        "Month",
+        "month"
+      ]
+    ],
+    "mobile": false,
+    "number": "25"
+  },
+  {
+    "id": "queue",
+    "group": "work",
+    "title": "Take work from the shared queue",
+    "role": "Mechanic · phone",
+    "note": "Alternative to desk allocation: shared-queue claim is atomic. If another mechanic takes it first, show the owner and leave capacity unchanged.",
+    "next": "working",
+    "pack": "P02 · P04",
+    "branches": [
+      [
+        "Someone took it first",
+        "claim-conflict"
+      ]
+    ],
+    "mobile": true,
+    "number": "26"
+  },
+  {
+    "id": "working",
+    "group": "work",
+    "title": "Do the approved work",
+    "role": "Mechanic · phone",
+    "note": "Only approved work is actionable. Work finished, ready for collection and physically collected are separate events. Notes are staff-only unless explicitly shared.",
+    "next": "finish",
+    "pack": "P02 · P03",
+    "branches": [
+      [
+        "Parts delay",
+        "waiting"
+      ]
+    ],
+    "mobile": true,
+    "number": "27"
+  },
+  {
+    "id": "waiting",
+    "group": "work",
+    "title": "Handle a parts delay",
+    "role": "Service desk · desktop",
+    "note": "Exception scenario: revised date and remaining effort are independent. This branch does not silently overwrite the canonical on-time walkthrough.",
+    "next": "customer-message",
+    "pack": "P02 · P04 · P06",
+    "branches": [],
+    "mobile": false,
+    "number": "28"
+  },
+  {
+    "id": "inbox",
+    "group": "work",
+    "title": "One job conversation",
+    "role": "Service desk · desktop",
+    "note": "Illustrative sent/received states. Production inbound matching, consent and provider capability must be proven; sending in this artefact is navigation only.",
+    "next": "customer-message",
+    "pack": "P06",
+    "branches": [
+      [
+        "Delivery problem",
+        "message-error"
+      ]
+    ],
+    "mobile": false,
+    "number": "29"
+  },
+  {
+    "id": "customer-message",
+    "group": "work",
+    "title": "Customer follows up",
+    "role": "Customer · phone",
+    "note": "Secure customer thread. The ready-state fixture illustrates a conversation; delay messages use the same composition. Do not show staff-only notes or unrelated customer history.",
+    "next": "progress",
+    "pack": "P05 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "30"
+  },
+  {
+    "id": "pos",
+    "group": "work",
+    "title": "Handoff agreed work to Lightspeed",
+    "role": "Service desk · desktop",
+    "note": "R-Series is provisional. These are target UI states, not proof of API access. Customer association is for this job only. Actual work-order, stock and employee permissions gate implementation.",
+    "next": "pos-done",
+    "pack": "P00 · P07",
+    "branches": [
+      [
+        "Uncertain write",
+        "pos-unknown"
+      ]
+    ],
+    "mobile": false,
+    "number": "31"
+  },
+  {
+    "id": "pos-done",
+    "group": "work",
+    "title": "See the linked work order",
+    "role": "Service desk · desktop",
+    "note": "External link/deep-link availability is an API proof item; reference lookup remains a safe designed fallback. No Wheelhouse payment, refund or invoice controls.",
+    "next": "ready",
+    "pack": "P07",
+    "branches": [],
+    "mobile": false,
+    "number": "32"
+  },
+  {
+    "id": "finish",
+    "group": "work",
+    "title": "Finish, check, then mark ready",
+    "role": "Mechanic · phone",
+    "note": "A distinct final check separates work finished from ready for collection. Message delivery failure cannot undo work completion or falsely mark delivery successful.",
+    "next": "finished",
+    "pack": "P02 · P03 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "33"
+  },
+  {
+    "id": "ready",
+    "group": "work",
+    "title": "Customer is invited to collect",
+    "role": "Customer · phone",
+    "note": "Readiness is not collection or settlement. Show a concise handover and opening hours; no online payment CTA.",
+    "next": "collection",
+    "pack": "P02 · P05 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "34"
+  },
+  {
+    "id": "collection",
+    "group": "work",
+    "title": "Record physical collection",
+    "role": "Service desk · desktop",
+    "note": "Custody leaves “In shop” only after explicit confirmation. Staff use the existing till process independently. No payment gate or settlement status is invented.",
+    "next": "closed",
+    "pack": "P02 · P07",
+    "branches": [],
+    "mobile": false,
+    "number": "35"
+  },
+  {
+    "id": "closed",
+    "group": "work",
+    "title": "Collected, with a durable history",
+    "role": "Service desk · desktop",
+    "note": "Locked collected record. Reopening needs permission and a reason; it must not erase the original collection or imply the bike is physically back.",
+    "next": "desk",
+    "pack": "P02",
+    "branches": [
+      [
+        "Reopen",
+        "reopen"
+      ]
+    ],
+    "mobile": false,
+    "number": "36"
+  },
+  {
+    "id": "diagnosis",
+    "group": "edges",
+    "title": "“I don’t know what’s wrong”",
+    "role": "Customer · phone",
+    "note": "Alternative fixture: Oliver’s unknown problem. The production journey retains these entered details; atlas navigation returns to the canonical Maya fixture after this branch. No diagnostic price is invented.",
+    "next": "diagnosis-review",
+    "pack": "P03 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "42"
+  },
+  {
+    "id": "diagnosis-review",
+    "group": "edges",
+    "title": "Triage an unknown problem",
+    "role": "Service desk · desktop",
+    "note": "£25/30 min are illustrative shop choices, not an approved fee policy. Customer must see and agree the assessment before it becomes chargeable. Approval uses the same component as the service quote.",
+    "next": "approval",
+    "pack": "P03 · P04 · P05",
+    "branches": [],
+    "mobile": false,
+    "number": "43"
+  },
+  {
+    "id": "appointment",
+    "group": "edges",
+    "title": "Book an exact appointment",
+    "role": "Customer · phone",
+    "note": "Fixed timed-appointment specimen; chosen mode must be carried through request and confirmation in production. This branch routes back to canonical drop-off contact details in the atlas.",
+    "next": "details",
+    "pack": "P04 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "44"
+  },
+  {
+    "id": "full",
+    "group": "edges",
+    "title": "Explain unavailable dates",
+    "role": "Customer · phone",
+    "note": "Server is authoritative at submit. No false success, no silent overbooking, and no customer waiting-list feature added.",
+    "next": "date",
+    "pack": "P04 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "45"
+  },
+  {
+    "id": "reschedule",
+    "group": "edges",
+    "title": "Change or cancel a booking",
+    "role": "Customer · phone",
+    "note": "Requesting a change does not discard the original booking. Capacity is exchanged atomically on acceptance. In-shop cancellation needs staff handling.",
+    "next": "change-pending",
+    "pack": "P04 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "46"
+  },
+  {
+    "id": "change-pending",
+    "group": "edges",
+    "title": "Date change is pending",
+    "role": "Customer · phone",
+    "note": "The old hold remains while a new-date request awaits a decision. Acceptance and rejection reuse the request review decision pattern.",
+    "next": "review",
+    "pack": "P04 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "47"
+  },
+  {
+    "id": "cancel",
+    "group": "edges",
+    "title": "Confirm a cancellation",
+    "role": "Customer · phone",
+    "note": "Explicit confirmation before releasing the reservation. This screen applies before bike arrival; no refund flow is introduced.",
+    "next": "cancelled",
+    "pack": "P04 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "48"
+  },
+  {
+    "id": "cancelled",
+    "group": "edges",
+    "title": "Cancellation acknowledged",
+    "role": "Customer · phone",
+    "note": "Cancellation is distinct from rejected and expired requests. Keep the cancellation event in staff history.",
+    "next": "service",
+    "pack": "P02 · P04 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "49"
+  },
+  {
+    "id": "reject",
+    "group": "edges",
+    "title": "Decline with an explanation",
+    "role": "Service desk · desktop",
+    "note": "Staff-written explanation is required in the proposed UX. Confirm the shop’s rejection wording during review.",
+    "next": "rejected",
+    "pack": "P04 · P05 · P06",
+    "branches": [],
+    "mobile": false,
+    "number": "50"
+  },
+  {
+    "id": "rejected",
+    "group": "edges",
+    "title": "Customer sees a declined request",
+    "role": "Customer · phone",
+    "note": "Clear customer outcome. No booked status or live hold remains after rejection.",
+    "next": "date",
+    "pack": "P05 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "51"
+  },
+  {
+    "id": "expired",
+    "group": "edges",
+    "title": "Expired request / private link",
+    "role": "Customer · phone",
+    "note": "Reservation expiry and secure-link expiry are different backend events. The lower section is the shared safe-access explanation; production uses the appropriate specific heading, without disclosing another customer’s data.",
+    "next": "date",
+    "pack": "P01 · P04 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "52"
+  },
+  {
+    "id": "stale",
+    "group": "edges",
+    "title": "A quote changed before approval",
+    "role": "Customer · phone",
+    "note": "Stale submission never silently approves new prices. Only changed lines need new approval; unchanged decisions stay intact.",
+    "next": "approval",
+    "pack": "P03 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "53"
+  },
+  {
+    "id": "ceiling",
+    "group": "edges",
+    "title": "Agree a spending ceiling",
+    "role": "Customer · phone",
+    "note": "Alternative approval policy to validate with Jack. This is a fixed £120 specimen, not live permission storage. A changed limit requires matching consent wording; exceeding the limit or scope requires a new decision.",
+    "next": "progress",
+    "pack": "P03 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "54"
+  },
+  {
+    "id": "progress",
+    "group": "work",
+    "title": "Return to the private progress link",
+    "role": "Customer · phone",
+    "note": "Canonical in-progress snapshot. Production progress derives from the current job state; the atlas intentionally shows named state specimens rather than a full simulation.",
+    "next": "ready",
+    "pack": "P02 · P05 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "37"
+  },
+  {
+    "id": "capacity-conflict",
+    "group": "edges",
+    "title": "A diary move cannot be saved",
+    "role": "Service desk · desktop",
+    "note": "Same conflict pattern covers stale job edits, with current actor/version shown and edits preserved for comparison rather than silent overwrite.",
+    "next": "diary",
+    "pack": "P02 · P04",
+    "branches": [],
+    "mobile": false,
+    "number": "55"
+  },
+  {
+    "id": "claim-conflict",
+    "group": "edges",
+    "title": "Another mechanic claimed it",
+    "role": "Mechanic · phone",
+    "note": "Atomic claim. A concurrency conflict is an ordinary usable state, not an unexplained error toast.",
+    "next": "queue",
+    "pack": "P02 · P04",
+    "branches": [],
+    "mobile": true,
+    "number": "56"
+  },
+  {
+    "id": "pos-unknown",
+    "group": "edges",
+    "title": "Uncertain Lightspeed handoff",
+    "role": "Service desk · desktop",
+    "note": "Unknown is different from failed. Reconciliation must verify job/customer/amount; it cannot blindly attach an arbitrary ID. Retry only after duplicate absence is established.",
+    "next": "pos-done",
+    "pack": "P07",
+    "branches": [],
+    "mobile": false,
+    "number": "57"
+  },
+  {
+    "id": "print-error",
+    "group": "edges",
+    "title": "Printer offline / output unknown",
+    "role": "Service desk · desktop",
+    "note": "Durable scoped print tasks survive restart. Unknown acknowledgement never claims physical success. Native Mac printer-host support is not assumed.",
+    "next": "reprint",
+    "pack": "P08",
+    "branches": [],
+    "mobile": false,
+    "number": "58"
+  },
+  {
+    "id": "reprint",
+    "group": "edges",
+    "title": "Deliberately reprint a tag",
+    "role": "Service desk · desktop",
+    "note": "Reprint is an intentional new task with actor/reason, not automatic replay of an unknown task.",
+    "next": "print",
+    "pack": "P08",
+    "branches": [],
+    "mobile": false,
+    "number": "59"
+  },
+  {
+    "id": "message-error",
+    "group": "edges",
+    "title": "A message needs attention",
+    "role": "Service desk · desktop",
+    "note": "Three distinct delivery states: queued, confirmed failed, unknown. Provider responses must drive labels; mock delivery is not integration proof.",
+    "next": "inbox",
+    "pack": "P06",
+    "branches": [],
+    "mobile": false,
+    "number": "60"
+  },
+  {
+    "id": "login",
+    "group": "edges",
+    "title": "Sign in after scanning",
+    "role": "Mechanic · phone",
+    "note": "Visual sign-in reference only; final auth method follows the existing authentication implementation. No credentials leave this file. Revoked accounts cannot regain old-session access after reactivation.",
+    "next": "mechanic",
+    "pack": "P01 · P08",
+    "branches": [],
+    "mobile": true,
+    "number": "61"
+  },
+  {
+    "id": "denied",
+    "group": "edges",
+    "title": "Wrong shop or revoked access",
+    "role": "Mechanic · phone",
+    "note": "No bike, customer, price or job-existence details from another tenant. Server enforces the boundary; hiding a button is insufficient.",
+    "next": "login",
+    "pack": "P01",
+    "branches": [],
+    "mobile": true,
+    "number": "62"
+  },
+  {
+    "id": "reopen",
+    "group": "edges",
+    "title": "Reopen without rewriting history",
+    "role": "Service desk · desktop",
+    "note": "Proposed manager-permission boundary to validate. A checked return must create a separate custody event; the unchecked default keeps custody out of shop.",
+    "next": "job",
+    "pack": "P01 · P02",
+    "branches": [],
+    "mobile": false,
+    "number": "63"
+  },
+  {
+    "id": "catalogue-search",
+    "group": "quote",
+    "title": "Find parts, SKUs & labour",
+    "role": "Service desk · desktop",
+    "note": "Grouped product variants with distinct SKU/barcode identity. Catalogue price is copied into the proposal; approval snapshots remain immutable.",
+    "next": "quote-editor",
+    "pack": "P02 · P03 · P07",
+    "branches": [],
+    "mobile": false,
+    "number": "24"
+  },
+  {
+    "id": "new-job",
+    "group": "intake",
+    "title": "Create a walk-in job",
+    "role": "Service desk · desktop",
+    "note": "Staff-only customer search. Walk-in with bike present shares the explicit custody/checklist event and capacity checks.",
+    "next": "intake",
+    "pack": "P02 · P04",
+    "branches": [],
+    "mobile": false,
+    "number": "13"
+  },
+  {
+    "id": "job",
+    "group": "intake",
+    "title": "The complete job workspace",
+    "role": "Service desk · desktop",
+    "note": "Job is independent of a sale. Product, customer, bike and service writer controls belong here; separate work status and custody are visible.",
+    "next": "inspection",
+    "pack": "P02",
+    "branches": [],
+    "mobile": false,
+    "number": "14"
+  },
+  {
+    "id": "history",
+    "group": "intake",
+    "title": "Audit changes to the job",
+    "role": "Service desk · desktop",
+    "note": "Actor, time and prior decisions remain attributable. This is job activity, not a reporting suite.",
+    "next": "job",
+    "pack": "P02",
+    "branches": [],
+    "mobile": false,
+    "number": "15"
+  },
+  {
+    "id": "job-card",
+    "group": "intake",
+    "title": "Full paper job card",
+    "role": "Service desk · desktop",
+    "note": "Tag and A4 card share a stable QR but different layouts. Physical printer and stock need verification. No invoice/receipt template.",
+    "next": "print",
+    "pack": "P08",
+    "branches": [],
+    "mobile": false,
+    "number": "16"
+  },
+  {
+    "id": "week",
+    "group": "work",
+    "title": "Week view of workshop capacity",
+    "role": "Service desk · desktop",
+    "note": "Week overview counts shared work once. Leave reduces available minutes. This is live operational capacity, not group/report analytics.",
+    "next": "diary",
+    "pack": "P04",
+    "branches": [],
+    "mobile": false,
+    "number": "38"
+  },
+  {
+    "id": "month",
+    "group": "work",
+    "title": "Month view and closed days",
+    "role": "Service desk · desktop",
+    "note": "September 2026 starts Tuesday; Sundays are closed. Illustrative utilisation is for this shop only. Clicking a day in this fixed atlas opens the Thursday diary specimen.",
+    "next": "diary",
+    "pack": "P04",
+    "branches": [],
+    "mobile": false,
+    "number": "39"
+  },
+  {
+    "id": "settings",
+    "group": "setup",
+    "title": "Shop identity & booking appearance",
+    "role": "Manager · desktop",
+    "note": "Uses existing shop theming direction. Appearance controls affect the embed and customer portal; staff brand stays consistent. No group or subscription controls.",
+    "next": "services",
+    "pack": "P05 · P09",
+    "branches": [],
+    "mobile": false,
+    "number": "66"
+  },
+  {
+    "id": "services",
+    "group": "setup",
+    "title": "Service catalogue & questions",
+    "role": "Manager · desktop",
+    "note": "Extend existing service model rather than add a parallel catalogue. Durations feed capacity; prices feed quotes; bookability feeds the customer embed.",
+    "next": "service-edit",
+    "pack": "P03",
+    "branches": [],
+    "mobile": false,
+    "number": "67"
+  },
+  {
+    "id": "service-edit",
+    "group": "setup",
+    "title": "Configure a service",
+    "role": "Manager · desktop",
+    "note": "Shown order is part of the template. New template version affects future jobs only. Example brake question should be conditional to the customer concern in production.",
+    "next": "hours",
+    "pack": "P03",
+    "branches": [],
+    "mobile": false,
+    "number": "68"
+  },
+  {
+    "id": "hours",
+    "group": "setup",
+    "title": "Hours, leave & available effort",
+    "role": "Manager · desktop",
+    "note": "Shop opening hours and mechanic effort are distinct. Leave, closures and breaks reduce available capacity; the public calendar must not expose staff leave details.",
+    "next": "booking-settings",
+    "pack": "P04",
+    "branches": [],
+    "mobile": false,
+    "number": "69"
+  },
+  {
+    "id": "booking-settings",
+    "group": "setup",
+    "title": "Set booking & diary behaviour",
+    "role": "Manager · desktop",
+    "note": "Four-hour expiry and 60-minute staff reserve are proposed review defaults, not previously agreed policy. Per-service overrides remain explicit. Embed can preselect/filter a service; no separate website builder.",
+    "next": "message-settings",
+    "pack": "P04 · P05 · P09",
+    "branches": [],
+    "mobile": false,
+    "number": "70"
+  },
+  {
+    "id": "message-settings",
+    "group": "setup",
+    "title": "Connect email, SMS & WhatsApp",
+    "role": "Manager · desktop",
+    "note": "No provider is claimed connected. Shop-owned credentials and actual send/inbound capability are P00 proof tasks for all three channels.",
+    "next": "channel-edit",
+    "pack": "P00 · P06",
+    "branches": [],
+    "mobile": false,
+    "number": "71"
+  },
+  {
+    "id": "channel-edit",
+    "group": "setup",
+    "title": "Configure a messaging channel",
+    "role": "Manager · desktop",
+    "note": "Provider-specific form and inbound identifiers depend on chosen provider; exact fields shown are a design assumption. Secrets are not collected or sent by this artefact.",
+    "next": "channel-proof",
+    "pack": "P00 · P06",
+    "branches": [],
+    "mobile": false,
+    "number": "72"
+  },
+  {
+    "id": "channel-proof",
+    "group": "setup",
+    "title": "Verify delivery before enabling",
+    "role": "Manager · desktop",
+    "note": "Setup remains unavailable for live sending until proof. This screen does not manufacture a successful test or enable fake provider credentials.",
+    "next": "message-settings",
+    "pack": "P00 · P06",
+    "branches": [],
+    "mobile": false,
+    "number": "73"
+  },
+  {
+    "id": "template",
+    "group": "setup",
+    "title": "Edit a customer message template",
+    "role": "Manager · desktop",
+    "note": "Template controls belong to messaging, not duplicate generic settings. Provider limits and WhatsApp approved templates must constrain the final editor.",
+    "next": "connect",
+    "pack": "P06 · P09",
+    "branches": [],
+    "mobile": false,
+    "number": "74"
+  },
+  {
+    "id": "connect",
+    "group": "setup",
+    "title": "Connect the one chosen Lightspeed",
+    "role": "Manager · desktop",
+    "note": "One adapter only. R-Series is provisional pending first-shop selection. This artefact does not perform OAuth or assert full API access. The real Connect button will start provider authorisation once P00a passes.",
+    "next": "connect-proof",
+    "pack": "P00 · P07",
+    "branches": [],
+    "mobile": false,
+    "number": "75"
+  },
+  {
+    "id": "connect-proof",
+    "group": "setup",
+    "title": "Verify connector capabilities",
+    "role": "Manager · desktop",
+    "note": "Readiness brief LS-01–09 remains the actual evidence gate. This is an honest unconnected setup state alongside designed connected job states.",
+    "next": "printer-settings",
+    "pack": "P00 · P07",
+    "branches": [],
+    "mobile": false,
+    "number": "76"
+  },
+  {
+    "id": "printer-settings",
+    "group": "setup",
+    "title": "Register printers & scan a fixture",
+    "role": "Manager · desktop",
+    "note": "Windows agent is existing implementation direction. Final label dimensions are deliberately not fabricated; scanner and paper proof remains pending.",
+    "next": "staff-settings",
+    "pack": "P00 · P08",
+    "branches": [],
+    "mobile": false,
+    "number": "77"
+  },
+  {
+    "id": "staff-settings",
+    "group": "setup",
+    "title": "Manage staff access",
+    "role": "Manager · desktop",
+    "note": "Role labels are proposed presentation of existing permission boundaries, not new group-level roles. Deactivation must permanently revoke old sessions.",
+    "next": "staff-edit",
+    "pack": "P01",
+    "branches": [],
+    "mobile": false,
+    "number": "78"
+  },
+  {
+    "id": "staff-edit",
+    "group": "setup",
+    "title": "Change or deactivate access",
+    "role": "Manager · desktop",
+    "note": "Deactivation gets a confirmation screen. Actor history remains even when staff access is removed.",
+    "next": "staff-deactivate",
+    "pack": "P01",
+    "branches": [],
+    "mobile": false,
+    "number": "79"
+  },
+  {
+    "id": "staff-deactivate",
+    "group": "setup",
+    "title": "Confirm staff deactivation",
+    "role": "Manager · desktop",
+    "note": "Mutation is simulated only. Production invalidates tokens at the server and scopes the staff member to the current shop.",
+    "next": "staff-settings",
+    "pack": "P01",
+    "branches": [],
+    "mobile": false,
+    "number": "80"
+  },
+  {
+    "id": "customers",
+    "group": "setup",
+    "title": "Customer & bike records",
+    "role": "Service desk · desktop",
+    "note": "Normal record maintenance remains in scope. No bulk customer import, backfill or public phone-history lookup.",
+    "next": "customer-record",
+    "pack": "P02",
+    "branches": [],
+    "mobile": false,
+    "number": "81"
+  },
+  {
+    "id": "customer-record",
+    "group": "setup",
+    "title": "Edit a customer and bike",
+    "role": "Service desk · desktop",
+    "note": "Staff can add/edit bikes without mandatory serial numbers. Access and history are shop scoped. Editing contacts does not retroactively change approval snapshots.",
+    "next": "job",
+    "pack": "P02",
+    "branches": [],
+    "mobile": false,
+    "number": "82"
+  },
+  {
+    "id": "duplicates",
+    "group": "setup",
+    "title": "Review a possible duplicate",
+    "role": "Manager · desktop",
+    "note": "Explicit staff review with surviving values. Production must block cross-shop merge and retain attribution; there is no automatic name/phone merge.",
+    "next": "customers",
+    "pack": "P02",
+    "branches": [],
+    "mobile": false,
+    "number": "83"
+  },
+  {
+    "id": "preferences",
+    "group": "edges",
+    "title": "Change customer update channels",
+    "role": "Customer · phone",
+    "note": "Preferences must be checked at send time; changing them cancels incompatible queued reminders. The secure link remains usable regardless of channel selection.",
+    "next": "progress",
+    "pack": "P05 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "64"
+  },
+  {
+    "id": "setup-saved",
+    "group": "setup",
+    "title": "A clear save confirmation",
+    "role": "Manager · desktop",
+    "note": "Shared acknowledgement specimen. Production stays on the edited page with a specific inline confirmation (e.g. “Service saved”) and current values, rather than sending every edit here.",
+    "next": "settings",
+    "pack": "P01 · P09",
+    "branches": [],
+    "mobile": false,
+    "number": "84"
+  },
+  {
+    "id": "finished",
+    "group": "work",
+    "title": "Work finished; prepare the handover",
+    "role": "Service desk · desktop",
+    "note": "Work-finished is an explicit state before readiness. The walkthrough visits the POS handoff next; the shop may link it earlier. Collection and payment remain separate.",
+    "next": "pos",
+    "pack": "P02 · P07",
+    "branches": [],
+    "mobile": false,
+    "number": "40"
+  },
+  {
+    "id": "mechanic-message",
+    "group": "work",
+    "title": "Mechanic’s job conversation",
+    "role": "Mechanic · phone",
+    "note": "A staff phone opens the staff conversation, never the customer’s private link. Staff-only notes are separate from outgoing messages.",
+    "next": "mechanic",
+    "pack": "P02 · P06",
+    "branches": [],
+    "mobile": true,
+    "number": "41"
+  },
+  {
+    "id": "service-status",
+    "group": "edges",
+    "title": "Booking service temporarily unavailable",
+    "role": "Customer · phone",
+    "note": "Retained P10 service/error visibility. Never infer booking failure after an ambiguous submission: that separate case needs request-status lookup before retrying. No disaster-recovery feature or guarantee.",
+    "next": "service",
+    "pack": "P05 · P10",
+    "branches": [],
+    "mobile": true,
+    "number": "65"
+  }
+]

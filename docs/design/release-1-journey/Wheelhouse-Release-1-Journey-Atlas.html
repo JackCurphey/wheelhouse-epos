@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wheelhouse — Release 1 journey atlas</title><style>:root {
+  --ink: #1c231f;
+  --green: #164f42;
+  --orange: #b8460f;
+  --paper: #f6f5ef;
+  --line: #d9dcd2;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+}
+button {
+  border: 1px solid #c9d1c5;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 9px 13px;
+  min-height: 38px;
+  font-weight: 600;
+  font-size: 12px;
+}
+button:hover {
+  background: #e6ecdf;
+}
+button.active,
+button.primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #f6f5eff5;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  padding: 13px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.wordmark {
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.8px;
+}
+.wordmark span {
+  color: var(--orange);
+  margin-right: 5px;
+}
+.topbar small {
+  font-size: 11px;
+  color: #5f6a64;
+  margin-left: 16px;
+}
+.toolrow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.hero {
+  padding: 44px 40px 32px;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 50px;
+  border-bottom: 1px solid var(--line);
+}
+.kicker {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--orange);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-size: clamp(38px, 4.2vw, 66px);
+  font-weight: 650;
+  letter-spacing: -2.5px;
+  line-height: 1.04;
+  max-width: 780px;
+  margin: 0;
+}
+.hero p {
+  font-size: 16px;
+  line-height: 1.65;
+  color: #536056;
+  max-width: 690px;
+  margin: 20px 0 0;
+}
+.summary {
+  border-left: 1px solid #c6cfc0;
+  padding: 8px 0 8px 30px;
+  align-self: end;
+}
+.summary strong {
+  font-size: 38px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+.summary .counts {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 16px;
+}
+.summary small {
+  display: block;
+  color: #5f6a64;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.summary p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+.route {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+  margin: 0;
+  padding: 22px 40px;
+  border-bottom: 1px solid var(--line);
+}
+.route button {
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  border-right: 1px solid var(--line);
+  padding: 7px 18px;
+}
+.route button:first-child {
+  padding-left: 0;
+}
+.route button:last-child {
+  border: 0;
+}
+.route span {
+  display: block;
+  color: var(--orange);
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+.route strong {
+  display: block;
+  font-size: 13px;
+}
+.route small {
+  display: block;
+  font-weight: 400;
+  font-size: 10px;
+  color: #5f6a64;
+  margin-top: 6px;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 40px;
+  gap: 16px;
+  background: #eeefe7;
+  border-bottom: 1px solid var(--line);
+}
+.controls input {
+  background: #fff;
+  border: 1px solid #c9d1c5;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  width: 260px;
+}
+.controls small {
+  font-size: 11px;
+  color: #5f6a64;
+}
+.board-window {
+  overflow: auto;
+  height: calc(100vh - 143px);
+  min-height: 520px;
+  position: relative;
+  background-image: radial-gradient(#cbd1c4 0.7px, transparent 0.7px);
+  background-size: 20px 20px;
+  padding: 28px 40px 70px;
+}
+.board-sizer {
+  position: relative;
+}
+.board {
+  transform-origin: 0 0;
+  width: 3360px;
+  padding: 8px 0 24px;
+}
+.lane {
+  margin-bottom: 44px;
+}
+.lanehead {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 20px;
+  width: 3300px;
+}
+.lanehead .index {
+  font-size: 48px;
+  color: #b8460f;
+  font-weight: 400;
+  letter-spacing: -2px;
+  width: 65px;
+}
+.lanehead h2 {
+  font-size: 27px;
+  font-weight: 650;
+  letter-spacing: -0.6px;
+  margin: 0;
+}
+.lanehead p {
+  font-size: 13px;
+  color: #5f6a64;
+  margin: 5px 0;
+}
+.lanehead .pack {
+  font-size: 12px;
+  color: #5f6a64;
+  margin-left: auto;
+  padding-right: 30px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(8, 390px);
+  gap: 30px 28px;
+}
+.card {
+  width: 390px;
+  position: relative;
+  text-align: left;
+  border: 1px solid #c9d1c4;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 3px 8px #2338290a;
+  cursor: pointer;
+}
+.card:hover {
+  border-color: var(--green);
+  box-shadow: 0 5px 18px #23382920;
+}
+.card:after {
+  content: "→";
+  position: absolute;
+  right: -26px;
+  top: 155px;
+  color: var(--green);
+  font-size: 22px;
+}
+.screenstage {
+  height: 274px;
+  position: relative;
+  background: #e4e9df;
+  overflow: hidden;
+  pointer-events: none;
+}
+.screenstage.desktop iframe {
+  width: 1100px;
+  height: 760px;
+  transform: scale(0.35455);
+  transform-origin: 0 0;
+  border: 0;
+  background: #fff;
+}
+.screenstage.mobile iframe {
+  width: 390px;
+  height: 844px;
+  transform: scale(0.32);
+  transform-origin: 0 0;
+  position: absolute;
+  left: 132px;
+  top: 2px;
+  border: 0;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 0 0 8px #20362a;
+}
+.caption {
+  padding: 17px 18px 15px;
+  min-height: 130px;
+}
+.caption .meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #5f6a64;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.caption h3 {
+  font-size: 17px;
+  line-height: 1.25;
+  letter-spacing: -0.25px;
+  margin: 0 0 10px;
+  font-weight: 650;
+}
+.caption .next {
+  font-size: 10px;
+  color: var(--green);
+}
+.caption .id {
+  font-family: ui-monospace, monospace;
+  color: #b8460f;
+}
+.review-notes {
+  padding: 35px 40px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.review-notes h2 {
+  font-size: 19px;
+  letter-spacing: -0.4px;
+}
+.review-notes a {
+  color: #164f42;
+}
+.review-notes p {
+  color: #536056;
+}
+.legend {
+  display: flex;
+  gap: 18px;
+  font-size: 11px;
+  color: #5f6a64;
+}
+.legend b {
+  color: #164f42;
+}
+.modal {
+  border: 0;
+  padding: 0;
+  width: calc(100vw - 32px);
+  max-width: 1600px;
+  height: calc(100vh - 32px);
+  max-height: none;
+  border-radius: 12px;
+  background: #e4e9df;
+  overflow: hidden;
+  box-shadow: 0 25px 90px #0e211640;
+}
+.modal::backdrop {
+  background: #10271dde;
+  backdrop-filter: blur(6px);
+}
+.viewerhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #f6f5ef;
+  height: 64px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #cbd4c7;
+}
+.viewerhead .label {
+  font-size: 13px;
+  font-weight: 650;
+}
+.viewerhead small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: #5f6a64;
+  margin-top: 3px;
+}
+.viewerbody {
+  display: grid;
+  grid-template-columns: 1fr 285px;
+  height: calc(100% - 64px);
+}
+.screenview {
+  padding: 20px;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.frameholder {
+  position: relative;
+  flex-shrink: 0;
+}
+.screenview iframe {
+  border: 0;
+  background: white;
+  box-shadow: 0 5px 30px #183d2115;
+  transform-origin: 0 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.notes {
+  padding: 24px 20px;
+  background: #f6f5ef;
+  border-left: 1px solid #cbd4c7;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.notes h2 {
+  font-size: 21px;
+  line-height: 1.25;
+  letter-spacing: -0.6px;
+  margin: 12px 0;
+}
+.notes h3 {
+  font-size: 11px;
+  color: #5f6a64;
+  margin-top: 25px;
+}
+.notes p {
+  color: #45564a;
+}
+.notes .routes {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+.notes .routes button {
+  text-align: left;
+  font-size: 11px;
+}
+.notes .badge {
+  font-size: 10px;
+  border: 1px solid #c8d2c2;
+  border-radius: 4px;
+  padding: 5px 7px;
+  display: inline-block;
+  color: #164f42;
+}
+.notes .divider {
+  border: 0;
+  border-top: 1px solid #d5dccf;
+  margin: 22px 0;
+}
+.zoomfield {
+  font-size: 12px;
+  min-width: 45px;
+  text-align: center;
+}
+.printonly {
+  display: none;
+}
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #164f42;
+  color: white;
+  border-radius: 7px;
+  padding: 12px 22px;
+  z-index: 100;
+  font-size: 13px;
+}
+.feedback-mark {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 2;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #164f42;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.review-form {
+  display: grid;
+  gap: 9px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #d5dccf;
+}
+.review-form label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5f6a64;
+}
+.review-form select,
+.review-form textarea {
+  width: 100%;
+  border: 1px solid #bfcabf;
+  border-radius: 6px;
+  background: #fff;
+  color: #1c231f;
+  padding: 9px;
+  font: inherit;
+}
+.review-form textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.45;
+}
+.review-form .review-actions {
+  display: flex;
+  gap: 7px;
+}
+.feedback-panel {
+  position: fixed;
+  z-index: 60;
+  inset: 20px 20px 20px auto;
+  width: min(540px, calc(100vw - 40px));
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  background: #f6f5ef;
+  border: 1px solid #bfcabf;
+  border-radius: 10px;
+  box-shadow: 0 20px 70px #0e21164d;
+}
+.feedback-panel[hidden] {
+  display: none;
+}
+.feedback-panel > header,
+.feedback-panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid #d5dccf;
+}
+.feedback-panel > header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.feedback-panel > header p {
+  margin: 4px 0 0;
+  color: #5f6a64;
+  font-size: 12px;
+}
+.feedback-panel > footer {
+  border-top: 1px solid #d5dccf;
+  border-bottom: 0;
+}
+.feedback-summary {
+  padding: 13px 22px;
+  background: #e8efe9;
+  color: #164f42;
+  font-size: 12px;
+  font-weight: 650;
+}
+.feedback-list {
+  overflow: auto;
+  padding: 8px 22px 22px;
+}
+.feedback-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #d5dccf;
+}
+.feedback-item:last-child {
+  border: 0;
+}
+.feedback-item h3 {
+  margin: 0 0 5px;
+  font-size: 14px;
+}
+.feedback-item p {
+  margin: 6px 0;
+  color: #45564a;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.feedback-item button {
+  margin-top: 7px;
+}
+.feedback-status {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: #fff;
+  border: 1px solid #cbd4c7;
+  color: #164f42;
+  font-size: 10px;
+  font-weight: 700;
+}
+.emptyresult {
+  padding: 50px;
+  font-size: 20px;
+  color: #536056;
+}
+.skip {
+  position: absolute;
+  left: -9999px;
+}
+.skip:focus {
+  left: 15px;
+  top: 15px;
+  z-index: 100;
+  background: white;
+  padding: 15px;
+}
+@media (max-width: 900px) {
+  .feedback-panel {
+    inset: 8px;
+    width: calc(100vw - 16px);
+  }
+  #feedback-count {
+    display: none;
+  }
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 28px 22px;
+    gap: 22px;
+  }
+  .summary {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 20px 0 0;
+  }
+  .summary .counts {
+    float: left;
+    margin-right: 25px;
+  }
+  .route {
+    padding: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .topbar {
+    padding: 12px 16px;
+  }
+  .topbar small {
+    display: none;
+  }
+  .controls {
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+  .board-window {
+    padding: 20px;
+    height: 70vh;
+  }
+  .review-notes {
+    padding: 25px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .viewerbody {
+    grid-template-columns: 1fr;
+  }
+  .notes {
+    display: none;
+  }
+  .viewerhead {
+    padding: 9px;
+  }
+  .viewerhead .label {
+    max-width: 190px;
+  }
+  .hero h1 {
+    font-size: 42px;
+  }
+  .toolrow {
+    gap: 4px;
+  }
+  .controls input {
+    width: 190px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+@media print {
+  .topbar,
+  .controls,
+  .route,
+  .review-notes,
+  .modal {
+    display: none;
+  }
+  .hero {
+    padding: 20px;
+  }
+  .board-window {
+    height: auto;
+    overflow: visible;
+    padding: 0;
+    background: none;
+  }
+  .board {
+    transform: none !important;
+  }
+  .board-sizer {
+    width: auto !important;
+    height: auto !important;
+  }
+  .card {
+    break-inside: avoid;
+  }
+  .printonly {
+    display: block;
+  }
+}
+</style></head><body>
+<a class="skip" href="#board-window">Skip to journey board</a>
+<header class="topbar"><div class="wordmark"><span>◉</span>wheelhouse <small>RELEASE 1 / JOURNEY ATLAS / 10 SEPTEMBER 2026</small></div><div class="toolrow"><button id="feedback-count" onclick="openFeedback()">Review feedback · 0</button><button onclick="all();fit()">See the whole journey</button><button class="primary" onclick="jump('service')">Start walkthrough →</button></div></header>
+<section class="hero"><div><div class="kicker">FROM FIRST BOOKING TO THE RIDE HOME</div><h1>Every handoff.<br>Every screen. One workshop.</h1><p>A visual specification for the release agreed with Jack. Follow Maya’s Trek through the customer and shop experience, then explore the decisions, exceptions and setup behind it.</p></div><div class="summary"><div class="counts"><div><strong id="screen-count">—</strong><small>HIGH-FIDELITY SCREENS</small></div><div><strong>6</strong><small>CONNECTED CHAPTERS</small></div></div><p>Open any screen to inspect it at full size. Follow its buttons or use Next. The orange screen reference gives us a precise place to discuss changes.</p></div></section>
+<nav class="route" aria-label="Journey chapters"><button data-group="book" onclick="lane('book')"><span>01 → CUSTOMER</span><strong>Book a visit</strong><small>Service → problem → date → request</small></button><button data-group="intake" onclick="lane('intake')"><span>02 → SERVICE DESK</span><strong>Confirm & receive</strong><small>Review → custody → tag → scan</small></button><button data-group="quote" onclick="lane('quote')"><span>03 → TOGETHER</span><strong>Agree the work</strong><small>Inspect → quote → line approval</small></button><button data-group="work" onclick="lane('work')"><span>04 → WORKSHOP</span><strong>Repair & hand back</strong><small>Allocate → work → ready → collect</small></button><button data-group="edges" onclick="lane('edges')"><span>05 → ALTERNATE PATHS</span><strong>Handle changes</strong><small>Capacity, delays, access & failures</small></button><button data-group="setup" onclick="lane('setup')"><span>06 → MANAGER</span><strong>Set up the shop</strong><small>Services, team, channels & devices</small></button></nav>
+<div class="controls"><div class="toolrow"><button onclick="all()">All screens</button><label><input id="search" aria-label="Search screens or implementation packages" placeholder="Find a screen or package…"></label></div><div class="legend"><span><b>Click</b> to inspect</span><span><b>Scroll</b> across the board</span><span><b>Next</b> follows the journey</span></div><div class="toolrow"><button onclick="setZoom(zoom-.1)" aria-label="Zoom out">−</button><span class="zoomfield" id="zoom-value">55%</span><button onclick="setZoom(zoom+.1)" aria-label="Zoom in">＋</button><button onclick="fit()">Fit width</button><button onclick="setZoom(1)">100%</button></div></div>
+<main class="board-window" id="board-window" tabindex="0" aria-label="Scrollable journey canvas"><div class="board-sizer" id="sizer"><div class="board" id="board"></div></div></main>
+<footer class="review-notes"><div><h2>The Release 1 boundary</h2><p>Booking, workshop jobs, itemised quotes and approvals, email/SMS/WhatsApp, one Lightspeed connection, printed job cards and scannable bike tags. Invoicing, online payments, refunds, customer import, reports, group capacity and recovery development remain outside this release.</p><p>Source: <a href="../../decisions/2026-09-10-release-1-scope-reduction.md">Jack’s scope decision</a> · <a href="../../superpowers/plans/2026-09-10-release-1-workshop-plan.md">Implementation plan P00–P10</a></p></div><div><h2>Decisions still requiring store evidence</h2><p>Confirm the first shop’s Lightspeed series and actual API permissions. Test the physical printer, label and scanner. Agree the defaults for reservations, staff reserve, spending permissions and visible customer details on a tag.</p><p>This is the proposed build target for review, not an approved final design or a live product. Screen notes distinguish confirmed scope from assumptions. Fictional data; no messages or financial transactions are sent.</p></div></footer>
+<dialog class="modal" id="viewer" aria-labelledby="viewer-label"><header class="viewerhead"><div class="label" id="viewer-label"></div><div class="toolrow"><button id="previous" aria-label="Previous screen">←</button><button id="next">Next →</button><button id="close">Close ✕</button></div></header><div class="viewerbody"><div class="screenview"><div class="frameholder"><iframe id="full-screen" title="Full-size screen"></iframe></div></div><aside class="notes" id="notes"></aside></div></dialog>
+<section class="feedback-panel" id="feedback-panel" hidden aria-labelledby="feedback-title"><header><div><div class="kicker">STORE REVIEW</div><h2 id="feedback-title">Feedback by screen</h2><p>Comments stay in this browser until exported.</p></div><button onclick="closeFeedback()">Close ✕</button></header><div class="feedback-summary" id="feedback-summary"></div><div class="feedback-list" id="feedback-list"></div><footer><button onclick="copyFeedback()">Copy for GitHub</button><button class="primary" onclick="downloadFeedback()">Download Markdown</button></footer></section>
+<script>const screenCSS="\n*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;color:#1c231f;font-size:14px;line-height:1.45}body{background:#f4f5f3}button,input,select,textarea{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #b8460f;outline-offset:3px}button{border:1px solid #ccd4cf;background:white;color:#1c231f;border-radius:7px;padding:10px 14px;min-height:42px;font-weight:600}button:hover{background:#e8efe9}button.primary{background:#164f42;border-color:#164f42;color:white}button.orange{background:#b8460f;border-color:#b8460f;color:white}button.danger{color:#a5301f;border-color:#e8c6bf}button.link{border:0;background:none;padding:6px;color:#164f42}h1,h2,h3,p{margin:0}h1{font-size:28px;line-height:1.2;font-weight:650;letter-spacing:-.65px}h2{font-size:18px;line-height:1.3;font-weight:650}h3{font-size:14px;font-weight:650}p{margin-top:8px}small,.muted{color:#5f6a64;font-size:12px}.eyebrow{font-size:11px;font-weight:700;color:#5f6a64;margin-bottom:8px}.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}.stack{display:grid;gap:16px}.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.split{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(240px,1fr);gap:20px}.panel{background:white;border:1px solid #dfe4de;border-radius:10px;padding:20px}.panel.tight{padding:16px}.panel p{color:#5f6a64}.divider{border:0;border-top:1px solid #e1e6e1;margin:18px 0}.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:650;padding:4px 8px;border-radius:5px;background:#e8efe9;color:#164f42;white-space:nowrap}.badge.amber{color:#805500;background:#fff3d7}.badge.blue{color:#2c5289;background:#eaf1fb}.badge.purple{color:#6a3ea1;background:#f1e8fb}.badge.red{color:#a5301f;background:#fdecea}.badge.grey{background:#edf0ed;color:#5f6a64}.notice{padding:13px 15px;border:1px solid #e8d7ab;background:#fff8e7;border-radius:8px;color:#775100;font-size:13px}.notice.good{background:#eaf4ed;border-color:#c7dccd;color:#164f42}.notice.bad{background:#fff0ed;border-color:#e8c6bf;color:#a5301f}label.field{display:grid;gap:6px;font-size:12px;font-weight:600}input:not([type=checkbox],[type=radio]),select,textarea{width:100%;border:1px solid #bac6bd;padding:11px 12px;border-radius:6px;background:white;color:#1c231f;min-height:44px}textarea{resize:vertical;min-height:80px}label.check{display:flex;gap:9px;align-items:flex-start;font-size:13px;padding:9px 0}input[type=checkbox],input[type=radio]{accent-color:#164f42;width:18px;height:18px;flex-shrink:0;margin:0}.actions{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin-top:20px}.brand{font-weight:750;font-size:20px;letter-spacing:-.8px}.brand b{color:#b8460f;margin-right:5px;font-size:24px}.appbar{height:64px;background:#fff;border-bottom:1px solid #dfe4de;display:flex;align-items:center;justify-content:space-between;padding:0 24px}.appbar .search{background:#f4f5f3;border:1px solid #e0e5df;border-radius:6px;padding:9px 16px;color:#5f6a64;width:310px;font-size:12px}.avatar{background:#e8efe9;border-radius:50%;height:30px;width:30px;display:grid;place-items:center;color:#164f42;font-size:11px;font-weight:700}.shell{display:grid;grid-template-columns:176px 1fr;height:calc(100% - 64px)}.sidebar{border-right:1px solid #dfe4de;background:white;padding:22px 12px;display:flex;flex-direction:column;gap:6px}.sidebar button{border:0;text-align:left;background:none;color:#5f6a64;font-size:13px}.sidebar button.active{background:#e8efe9;color:#164f42}.sidebar .bottom{margin-top:auto;border-top:1px solid #e0e5df;padding-top:12px}.content{padding:26px 28px;overflow:auto}.heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.tabs{display:flex;border-bottom:1px solid #dfe4de;gap:22px;margin:16px 0 20px}.tabs button{border:0;background:none;border-radius:0;padding:9px 0;color:#5f6a64;font-size:12px}.tabs button.sel{color:#164f42;border-bottom:3px solid #164f42}.metric{font-size:30px;letter-spacing:-1px;font-weight:650;margin:6px 0}.table{width:100%;border-collapse:collapse;font-size:12px}.table th{text-align:left;font-weight:600;color:#5f6a64;padding:10px 12px;background:#f5f7f4;border-bottom:1px solid #dfe4de}.table td{padding:15px 12px;border-bottom:1px solid #e8ece7;vertical-align:middle}.table td:first-child{font-weight:600}.table tr:last-child td{border-bottom:0}.table button{font-size:12px;min-height:32px;padding:5px 9px}.number{text-align:right;font-variant-numeric:tabular-nums}.mini{font-size:11px;color:#5f6a64;font-weight:400;margin-top:3px}.bike{height:120px;display:grid;place-items:center;background:#f0f3ee;border-radius:7px}.bike svg{width:210px;height:110px}.timeline{border-left:2px solid #dce5dd;margin:16px 0 0 6px;padding-left:20px}.timeline>div{position:relative;margin-bottom:20px;font-size:13px}.timeline>div:before{content:'';width:8px;height:8px;background:#164f42;border-radius:50%;position:absolute;left:-25px;top:6px}.jobhead{margin-bottom:16px}.jobhead h1{font-size:25px}.statline{display:flex;gap:24px;font-size:12px;color:#5f6a64;margin-top:12px}.statline strong{display:block;color:#1c231f;font-size:13px;margin-top:4px}.phone{background:#fff;max-width:100%;min-height:100%;padding-bottom:24px}.phone .shopbar{padding:18px 22px;border-bottom:1px solid #e0e5df;display:flex;justify-content:space-between;align-items:center;font-weight:700;color:#164f42}.phone main{padding:24px}.phone h1{font-size:28px;margin-bottom:12px}.phone h2{font-size:17px}.phone p{font-size:14px;color:#5f6a64;line-height:1.55}.phone .panel{padding:16px}.phone .actions{display:grid;margin-top:24px;gap:10px}.phone .actions button{width:100%;min-height:48px}.step{font-size:11px;color:#5f6a64;margin-bottom:20px}.progress{display:flex;gap:4px;margin-top:9px}.progress i{height:3px;flex:1;background:#e3e9e1}.progress i.done{background:#164f42}.choice{display:flex;align-items:center;gap:12px;background:white;border:1px solid #d6ded5;border-radius:8px;padding:17px 14px;width:100%;text-align:left;font-weight:400}.choice.selected{border:2px solid #164f42;background:#f3f7f1;padding:16px 13px}.choice strong{display:block;font-weight:650}.choice small{display:block;margin-top:4px}.choice .price{margin-left:auto;font-weight:650;white-space:nowrap}.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:14px 0}.calendar>*{text-align:center;font-size:12px;padding:8px 0}.calendar button{padding:8px 0;min-height:38px;border:0;background:#f2f5f0}.calendar .chosen{background:#164f42;color:white}.calendar button:disabled{color:#9ba29c;background:#fff;cursor:default}.bubble{background:#edf2e9;border-radius:10px 10px 10px 0;padding:15px;font-size:13px;max-width:86%;margin:12px 0}.bubble.mine{background:#164f42;color:#fff;margin-left:auto;border-radius:10px 10px 0 10px}.schedule{display:grid;grid-template-columns:62px repeat(3,1fr);position:relative}.schedule .col{border-left:1px solid #e0e5df;background:repeating-linear-gradient(to bottom,white 0,white 57px,#e8ece7 58px,#e8ece7 59px);min-height:370px}.schedule .colhead{height:48px;background:#f3f6f1;padding:9px 12px;border-bottom:1px solid #dfe4de}.schedule .event{border-left:3px solid #4d7fc4;background:#eaf1fb;border-radius:5px;padding:10px;margin:8px;font-size:12px}.schedule .event.green{background:#e8f5ec;border-color:#164f42}.schedule .event.amber{background:#fff3d7;border-color:#b78523}.hours div{height:59px;color:#5f6a64;font-size:11px;padding-top:8px}.tag{background:white;border:2px solid #1c231f;width:275px;padding:20px;text-align:center;margin:auto;color:#111}.tag h1{font-size:34px}.qr{width:130px;height:130px;margin:12px auto;display:block}.printsheet{background:#e8ece7;padding:24px;border-radius:8px}.switch{display:inline-block;width:34px;height:20px;border-radius:20px;background:#164f42;position:relative}.switch:after{content:'';position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:white}.media{background:#e5eae2;border-radius:8px;min-height:120px;display:flex;align-items:center;justify-content:center;gap:16px;color:#164f42;padding:20px}.play{height:40px;width:40px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:18px}.bigicon{font-size:34px;background:#e8efe9;color:#164f42;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;margin-bottom:22px}.rail{display:flex;gap:7px;flex-wrap:wrap}.lineitem{padding:15px 0;border-bottom:1px solid #e0e5df}.lineitem:last-child{border:0}.customer-footer{text-align:center;font-size:10px;color:#5f6a64;margin:20px}.subnav{display:grid;gap:5px}.subnav button{text-align:left;border:0;background:none;font-size:12px}.subnav button.sel{background:#e8efe9;color:#164f42}.settings{display:grid;grid-template-columns:154px 1fr;gap:20px}.upload{border:1px dashed #9eafa1;padding:18px;text-align:center;border-radius:7px;font-size:12px;color:#5f6a64}.receiptlike{font-family:ui-monospace,monospace;font-size:12px}.center{max-width:540px;margin:55px auto}.mobileStaff{background:#f4f5f3}.mobileStaff .shopbar{background:#164f42;color:white}.mobileStaff main{padding:20px}.mobileStaff .panel{background:white}.empty{padding:30px;text-align:center;color:#5f6a64}button:disabled{cursor:default;opacity:.55}\n/* Let dense forms and tables shrink within their containing grid tracks. */\n.content,.stack,.panel,.field{min-width:0}.settings{grid-template-columns:154px minmax(0,1fr)}input,select,textarea{min-width:0;max-width:100%}\n";
+
+const screens=[];
+const groups=[
+ ['book','01','Customer books','A clear request, with no account or payment step.','Customer · phone','P03 · P04 · P05'],
+ ['intake','02','Shop confirms & receives','Review the request, reserve the work and put a tag on the bike.','Service desk · desktop','P02 · P04 · P08'],
+ ['quote','03','Inspect & agree the work','Show the findings. Approve individual lines. Preserve the agreement.','Mechanic + customer','P02 · P03 · P05 · P06'],
+ ['work','04','Carry out & hand over','One job from shared queue to collection, connected to the till.','Workshop + customer','P02 · P04 · P06 · P07'],
+ ['edges','05','When plans change','Visible, recoverable decisions in everyday shop work.','Customer + shop','P01–P08'],
+ ['setup','06','Get the shop ready','The settings that make the daily journey possible.','Shop manager · desktop','P00 · P01 · P03 · P04 · P06–P09']
+];
+const B=(text,to,style='primary')=>`<button class="${style}" onclick="parent.jump('${to}')">${text}</button>`;
+const badge=(text,style='')=>`<span class="badge ${style}">${text}</span>`;
+const F=(label,value,type='text')=>`<label class="field">${label}<input type="${type}" value="${value}"></label>`;
+const note=(text,type='')=>`<div class="notice ${type}">${text}</div>`;
+const bike=`<div class="bike"><svg viewBox="0 0 240 120" fill="none" stroke="#324b41" stroke-width="3" aria-label="Illustration of a green road bike" role="img"><circle cx="50" cy="80" r="32"/><circle cx="190" cy="80" r="32"/><path d="M50 80 86 30 119 80 50 80M86 30h83l-50 50M169 30l21 50M169 30l-6-15h19M78 23h23M119 80l12 8"/><circle cx="119" cy="80" r="7"/><path d="M132 90h11"/></svg></div>`;
+const table=(heads,rows)=>`<table class="table"><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+const steps=(n)=>`<div class="step">Step ${n} of 4<div class="progress">${[1,2,3,4].map(x=>`<i class="${x<=n?'done':''}"></i>`).join('')}</div></div>`;
+const phone=(body,staff=false)=>`<div class="phone ${staff?'mobileStaff':''}"><header class="shopbar"><span>${staff?'◉ Wheelhouse':'North Street Cycles'}</span><span>${staff?'AM':'✳'}</span></header><main>${body}</main><div class="customer-footer">${staff?'North Street Cycles · Alex Morgan':'Workshop care, powered by Wheelhouse'}</div></div>`;
+const nav=[['▦','Workshop','desk'],['▤','Diary','diary'],['↗','Requests','requests'],['☷','Messages','inbox'],['◎','Customers','customers'],['⚙','Settings','settings']];
+const staff=(title,sub,body,active='Workshop',action='')=>`<header class="appbar"><span class="brand"><b>◉</b>wheelhouse</span><button class="search" onclick="parent.jump('scan')">⌕ &nbsp; Search jobs, customers or scan a tag</button><div class="row"><small>North Street Cycles</small><span class="avatar">JL</span></div></header><div class="shell"><nav class="sidebar">${nav.map(([i,t,s])=>B(i+'　'+t,s,active===t?'active':'')).join('')}<div class="bottom"><small>THURSDAY 17 SEPTEMBER</small><p class="muted">Shop open · until 18:00</p></div></nav><main class="content"><div class="heading"><div><h1>${title}</h1><p class="muted">${sub}</p></div>${action}</div>${body}</main></div>`;
+const jobhead=(status='In workshop')=>`<div class="jobhead"><div class="row between"><div><div class="eyebrow">WH-1042 / MAYA PATEL</div><h1>Trek Domane AL 3</h1></div>${badge(status)}</div><div class="statline"><span>Booking<strong>Thu 17 Sep · drop-off</strong></span><span>Target ready<strong>Fri 18 Sep · 16:00</strong></span><span>Allocated effort<strong>90 min · shared queue</strong></span></div></div>`;
+const tabs=(selected='Overview')=>`<div class="tabs">${[['Overview','job'],['Quote','quote-editor'],['Checklist','inspection'],['Messages','inbox'],['History','history']].map(([s,t])=>B(s,t,s===selected?'sel':'')).join('')}</div>`;
+const job=(body,status='In workshop',selected='Overview')=>staff('Job workspace','Workshop / WH-1042',jobhead(status)+tabs(selected)+body);
+const quoteRows=(status=false)=>table(['Work','Qty','Amount',status?'Decision':''],[
+ ['Standard service<div class="mini">Labour · 60 min</div>','1','£65.00',status?badge('Approved'):badge('Agreed')],
+ ['Shimano brake pads<div class="mini">Part · B05S-RX</div>','1','£28.00',status?badge('Approved'):badge('New','purple')],
+ ['Fit & adjust brakes<div class="mini">Labour · 30 min</div>','1','£18.00',status?badge('Approved'):badge('New','purple')],
+ ['Replace gear cable<div class="mini">Optional · cable still serviceable</div>','1','£12.00',status?badge('Declined','grey'):badge('Optional','grey')]
+]);
+function add(id,group,title,role,body,noteText,next,pack,branches=[]){screens.push({id,group,title,role,body,note:noteText,next,pack,branches,mobile:role.includes('phone')});}
+add('service','book','Choose a service','Customer · phone',phone(steps(1)+`<h1>A better ride starts here.</h1><p>Book your bike into North Street Cycles. Tell us what it needs; we’ll take care of the rest.</p><div class="stack" style="margin-top:24px"><button class="choice selected" onclick="parent.jump('problem')"><span>◉</span><span><strong>Standard service</strong><small>Safety check, gears, brakes & tune-up</small></span><span class="price">£65</span></button><button class="choice" onclick="parent.jump('diagnosis')"><span>⌕</span><span><strong>I’m not sure what’s wrong</strong><small>Describe the problem. We’ll advise.</small></span></button><button class="choice" onclick="parent.jump('problem')"><span>↻</span><span><strong>Brake service</strong><small>From £35 · parts quoted separately</small></span></button></div><p style="font-size:12px;margin-top:20px">Service prices include VAT. Additional work is always agreed with you.</p><div class="actions">${B('Continue →','problem')}</div>`),'Embedded shop-branded booking, also usable as a standalone page. Known service and diagnosis entry both lead into the same job journey.','problem','P03 · P05',[['Unknown problem','diagnosis']]);
+add('problem','book','Describe the bike & problem','Customer · phone',phone(steps(2)+`<h1>Tell us about your bike.</h1><div class="stack">${F('Bike make & model','Trek Domane AL 3')}${F('Colour / identifying detail','Green · black mudguards')}<label class="field">Anything we should look at?<textarea>My rear brake squeals and feels weak. The gears could use a tune-up too.</textarea></label><label class="field">When does the brake noise happen?<select><option>When braking, wet or dry</option><option>Only in wet weather</option><option>I’m not sure</option></select></label><div class="upload">＋ Add photos or a short video<br><small>Optional · you can also show us at drop-off</small><input aria-label="Add bike photos or video" type="file" accept="image/*,video/*" style="margin-top:10px"></div></div><div class="actions">${B('Choose a day →','date')}</div>`),'Service questions appear here, not in a separate survey. Media is optional. Upload selection stays local in this review artefact.','date','P03 · P05');
+add('date','book','Choose drop-off or appointment','Customer · phone',phone(steps(3)+`<h1>When can you drop in?</h1><div class="two" style="gap:8px">${B('Drop-off day','date')}${B('Exact appointment','appointment','')}</div><p>Drop your bike off during opening hours. Your mechanic’s start time is arranged separately.</p><div class="row between" style="margin-top:20px"><h2>September 2026</h2><small>‹　›</small></div><div class="calendar">${['M','T','W','T','F','S','S'].map(d=>`<small>${d}</small>`).join('')}${Array.from({length:21},(_,i)=>{let n=i+7;return `<button ${n<14||[19,20,26,27].includes(n)?'disabled':''} class="${n===17?'chosen':''}" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('chosen'));this.classList.add('chosen')">${n}</button>`}).join('')}</div><div class="panel"><strong>Thursday 17 September</strong><p>Drop off 09:00–18:00</p><small>We’ll confirm availability after reviewing your request.</small></div><div class="actions">${B('Continue with Thursday →','details')}${B('No suitable day?','full','link')}</div>`),'Proposed date in this fixed scenario is 17 September. The production calendar must recompute availability atomically. Drop-off never implies a promised start.','details','P04 · P05',[['Timed booking','appointment'],['No availability','full']]);
+add('details','book','Contact & update preferences','Customer · phone',phone(steps(4)+`<h1>How can we reach you?</h1><div class="stack">${F('Full name','Maya Patel')}${F('Email','maya@example.test','email')}${F('Mobile number','07700 900 142','tel')}</div><h2 style="margin-top:22px">Workshop updates</h2><p>Choose where you’d like booking and job updates.</p><div class="rail" style="margin:12px 0"><label class="check"><input type="checkbox" checked>Email</label><label class="check"><input type="checkbox" checked>SMS</label><label class="check"><input type="checkbox">WhatsApp</label></div><label class="check"><input type="checkbox" checked>I agree to the booking terms and privacy notice shown by the shop.</label><div class="panel" style="margin-top:12px"><div class="row between"><strong>Standard service</strong><strong>£65.00</strong></div><p>Thu 17 September · drop-off<br>Extra work needs your approval.</p></div><div class="actions">${B('Request booking →','pending')}</div>`),'No customer account. Matching a phone number never exposes existing records. Marketing permission is separate from job updates. The review artefact uses fictional details.','pending','P05 · P06');
+add('pending','book','Request received','Customer · phone',phone(`<div class="bigicon">✓</div>${badge('Awaiting shop confirmation','purple')}<h1 style="margin-top:18px">Your request is with us.</h1><p>We’ll review it and send you a confirmation. Please wait for that before bringing your bike in.</p><div class="panel" style="margin-top:24px"><h2>Standard service</h2><p>Trek Domane AL 3<br>Requested: Thu 17 September</p><hr class="divider"><div class="row between"><small>Reference</small><strong>WH-1042</strong></div></div><p style="margin-top:24px">Keep your private progress link. You can check the request or send us a message here.</p><div class="actions">${B('View request','progress')}${B('Change or cancel request','reschedule','')}</div>`),'Review-mode request is not confirmed. Automatic acceptance is a separate configured path, shown by the confirmed screen after successful capacity reservation.','requests','P04 · P05',[['Automatic acceptance outcome','confirmed']]);
+add('requests','intake','Review incoming requests','Service desk · desktop',staff('Booking requests','3 requests need a decision. Confirm the work before the customer travels.',`<div class="rail" style="margin-bottom:20px">${badge('Needs review · 3','purple')}${badge('Confirmed today · 6','grey')}</div><div class="panel" style="padding:0">${table(['Customer / bike','Requested work','Requested day','Effort',''],[['Maya Patel<div class="mini">Trek Domane AL 3 · green</div>','Standard service<br><small>Rear brake squeal</small>','Thu 17 Sep','60 min',B('Review','review','')],['Oliver Chen<div class="mini">Brompton C Line · black</div>','Not sure / diagnosis','Fri 18 Sep','To assess',B('Review diagnosis','diagnosis-review','')],['Sam Reed<div class="mini">Specialized Sirrus · grey</div>','Brake service','Fri 18 Sep','45 min',badge('Needs review','purple')]])}</div><div class="notice" style="margin-top:20px">Requests awaiting a decision are shown separately from confirmed work. Reservation expiry is visible on each request.</div>`,'Requests'),'Staff can distinguish requests from confirmed capacity and review the customer’s own words. Operational counts stay in scope; this is not a report.','review','P02 · P04 · P05');
+add('review','intake','Confirm the request','Service desk · desktop',staff('Review booking request','WH-1042 · received today at 08:42',`<div class="split"><div class="stack"><div class="panel"><div class="row between"><h2>Maya Patel</h2>${badge('Needs review','purple')}</div><p>Trek Domane AL 3 · green · black mudguards</p><hr class="divider"><h3>What the customer told us</h3><p>“My rear brake squeals and feels weak. The gears could use a tune-up too.”</p><hr class="divider"><h3>Standard service · £65.00</h3><p>60 minutes planned. Parts and additional work require agreement.</p></div><div class="panel"><h2>Customer communication</h2><p>Confirmation by email and SMS. The private progress link shows the same booking.</p></div></div><div class="panel stack"><h2>Reserve the work</h2>${F('Drop-off day','2026-09-17','date')}<label class="field">Allocation<select><option>Shared workshop queue</option><option>Alex Morgan</option><option>Jo Taylor</option></select></label>${note('2 hours available after this booking.','good')}<small>Request reservation expires today at 12:00. Confirming keeps the allocation.</small>${B('Confirm booking','confirmed')}${B('Offer another date','reschedule','')}${B('Decline with a message','reject','danger')}</div></div>`,'Requests'),'Accept reserves capacity once. Reject includes a human explanation. A failed acceptance must leave the request unchanged.','confirmed','P04 · P05',[['Cannot accept','reject']]);
+add('confirmed','intake','Booking confirmed','Customer · phone',phone(`<div class="bigicon">✓</div>${badge('Booking confirmed')}<h1 style="margin-top:18px">We’ll see you Thursday.</h1><p>Bring your Trek Domane to North Street Cycles on 17 September.</p><div class="panel stack" style="margin-top:24px"><div><small>DROP-OFF WINDOW</small><h2>09:00–18:00</h2></div><div><small>WHERE TO FIND US</small><h2>24 North Street</h2><p>Please bring the lock key and let us know about any accessories.</p></div><small>A drop-off day isn’t a fixed mechanic start time. We’ll update you after inspection.</small></div><div class="actions">${B('View my booking','progress')}${B('Change or cancel','reschedule','')}</div>`),'This is the result for reviewed acceptance or a successful automatically accepted booking. It must never appear before reservation succeeds.','desk','P04 · P05 · P06');
+add('desk','intake','The workshop at a glance','Service desk · desktop',staff('Today’s workshop','Thursday 17 September · one shop, one view of the work',`<div class="three"><div class="panel"><small>EXPECTED TODAY</small><div class="metric">8 <span class="muted">bikes</span></div><small>3 still to arrive</small></div><div class="panel"><small>IN THE WORKSHOP</small><div class="metric">12</div><small>4 ready to collect</small></div><div class="panel"><small>PLANNED EFFORT</small><div class="metric">6h <span class="muted">/ 8h</span></div><small>Shared and assigned, counted once</small></div></div><div class="tabs">${B('Arrivals · 3','desk','sel')}${B('Shared queue · 4','queue','')}${B('Needs attention · 2','pos-unknown','')}${B('Ready · 4','ready','')}</div><div class="panel" style="padding:0">${table(['Job / customer','Bike','Work','Custody',''],[['WH-1042 · Maya Patel','Trek Domane AL 3','Standard service',badge('Expected','blue'),B('Book in','intake','')],['WH-1045 · Jamie Brooks','Giant Escape 2','Gear adjustment',badge('Expected','blue'),badge('10:30 appointment','grey')],['WH-1047 · Aisha Khan','Cannondale Quick','Safety check',badge('Expected','blue'),badge('Drop-off','grey')]])}</div>`,'Workshop',B('＋ New job','new-job')),'Queues and custody are independent of work state. Counters are operational, not a reporting dashboard. A walk-in uses the same job model.','intake','P02 · P04',[['Walk-in','new-job'],['Diary','diary']]);
+add('intake','intake','Book the bike into the shop','Service desk · desktop',job(`<div class="split"><div class="panel stack"><h2>Confirm what arrived</h2>${bike}<div class="two">${F('Bike identification','Green · black mudguards')}${F('Accessories received','Rear light, lock key')}</div><label class="field">Condition / handover note<textarea>Scuff on left bar end. Customer reports rear brake noise.</textarea></label></div><div class="panel stack"><h2>Book-in checklist</h2><label class="check"><input type="checkbox" checked>Bike is physically in the shop</label><label class="check"><input type="checkbox" checked>Identity and accessories checked</label><label class="check"><input type="checkbox" checked>Print bike tag on Front desk Zebra</label>${note('A tag prints when you confirm book-in. Pending requests do not print tags.','good')}${B('Confirm book-in & print tag','print')}</div></div>`,'Expected'),'Explicit custody event. Default auto-print can be set by the shop. Recording arrival must succeed even if the printer is offline, with a visible print task.','print','P02 · P08');
+add('print','intake','Print & attach the bike tag','Service desk · desktop',job(`<div class="split"><div class="printsheet"><div class="tag"><div class="receiptlike">NORTH STREET CYCLES</div><h1>WH-1042</h1><hr class="divider"><strong>TREK DOMANE AL 3</strong><p>Green · black mudguards</p><div class="qr"><svg width="100%" height="100%" version="1.1" viewBox="0 0 41 41" xmlns="http://www.w3.org/2000/svg"><path d="M4,4H5V5H4zM5,4H6V5H5zM6,4H7V5H6zM7,4H8V5H7zM8,4H9V5H8zM9,4H10V5H9zM10,4H11V5H10zM12,4H13V5H12zM13,4H14V5H13zM14,4H15V5H14zM15,4H16V5H15zM16,4H17V5H16zM17,4H18V5H17zM18,4H19V5H18zM19,4H20V5H19zM20,4H21V5H20zM22,4H23V5H22zM27,4H28V5H27zM30,4H31V5H30zM31,4H32V5H31zM32,4H33V5H32zM33,4H34V5H33zM34,4H35V5H34zM35,4H36V5H35zM36,4H37V5H36zM4,5H5V6H4zM10,5H11V6H10zM16,5H17V6H16zM17,5H18V6H17zM18,5H19V6H18zM22,5H23V6H22zM23,5H24V6H23zM24,5H25V6H24zM25,5H26V6H25zM28,5H29V6H28zM30,5H31V6H30zM36,5H37V6H36zM4,6H5V7H4zM6,6H7V7H6zM7,6H8V7H7zM8,6H9V7H8zM10,6H11V7H10zM13,6H14V7H13zM14,6H15V7H14zM15,6H16V7H15zM16,6H17V7H16zM18,6H19V7H18zM19,6H20V7H19zM21,6H22V7H21zM22,6H23V7H22zM25,6H26V7H25zM26,6H27V7H26zM27,6H28V7H27zM28,6H29V7H28zM30,6H31V7H30zM32,6H33V7H32zM33,6H34V7H33zM34,6H35V7H34zM36,6H37V7H36zM4,7H5V8H4zM6,7H7V8H6zM7,7H8V8H7zM8,7H9V8H8zM10,7H11V8H10zM12,7H13V8H12zM15,7H16V8H15zM19,7H20V8H19zM20,7H21V8H20zM21,7H22V8H21zM23,7H24V8H23zM25,7H26V8H25zM26,7H27V8H26zM28,7H29V8H28zM30,7H31V8H30zM32,7H33V8H32zM33,7H34V8H33zM34,7H35V8H34zM36,7H37V8H36zM4,8H5V9H4zM6,8H7V9H6zM7,8H8V9H7zM8,8H9V9H8zM10,8H11V9H10zM12,8H13V9H12zM14,8H15V9H14zM17,8H18V9H17zM20,8H21V9H20zM23,8H24V9H23zM25,8H26V9H25zM27,8H28V9H27zM28,8H29V9H28zM30,8H31V9H30zM32,8H33V9H32zM33,8H34V9H33zM34,8H35V9H34zM36,8H37V9H36zM4,9H5V10H4zM10,9H11V10H10zM12,9H13V10H12zM14,9H15V10H14zM15,9H16V10H15zM16,9H17V10H16zM17,9H18V10H17zM18,9H19V10H18zM19,9H20V10H19zM22,9H23V10H22zM24,9H25V10H24zM28,9H29V10H28zM30,9H31V10H30zM36,9H37V10H36zM4,10H5V11H4zM5,10H6V11H5zM6,10H7V11H6zM7,10H8V11H7zM8,10H9V11H8zM9,10H10V11H9zM10,10H11V11H10zM12,10H13V11H12zM14,10H15V11H14zM16,10H17V11H16zM18,10H19V11H18zM20,10H21V11H20zM22,10H23V11H22zM24,10H25V11H24zM26,10H27V11H26zM28,10H29V11H28zM30,10H31V11H30zM31,10H32V11H31zM32,10H33V11H32zM33,10H34V11H33zM34,10H35V11H34zM35,10H36V11H35zM36,10H37V11H36zM12,11H13V12H12zM18,11H19V12H18zM21,11H22V12H21zM22,11H23V12H22zM23,11H24V12H23zM24,11H25V12H24zM25,11H26V12H25zM26,11H27V12H26zM27,11H28V12H27zM28,11H29V12H28zM4,12H5V13H4zM8,12H9V13H8zM10,12H11V13H10zM11,12H12V13H11zM12,12H13V13H12zM13,12H14V13H13zM19,12H20V13H19zM20,12H21V13H20zM21,12H22V13H21zM25,12H26V13H25zM26,12H27V13H26zM28,12H29V13H28zM29,12H30V13H29zM30,12H31V13H30zM31,12H32V13H31zM32,12H33V13H32zM33,12H34V13H33zM36,12H37V13H36zM6,13H7V14H6zM7,13H8V14H7zM11,13H12V14H11zM13,13H14V14H13zM14,13H15V14H14zM18,13H19V14H18zM19,13H20V14H19zM20,13H21V14H20zM21,13H22V14H21zM22,13H23V14H22zM25,13H26V14H25zM27,13H28V14H27zM29,13H30V14H29zM33,13H34V14H33zM34,13H35V14H34zM35,13H36V14H35zM5,14H6V15H5zM6,14H7V15H6zM7,14H8V15H7zM9,14H10V15H9zM10,14H11V15H10zM11,14H12V15H11zM12,14H13V15H12zM13,14H14V15H13zM14,14H15V15H14zM16,14H17V15H16zM17,14H18V15H17zM18,14H19V15H18zM19,14H20V15H19zM22,14H23V15H22zM24,14H25V15H24zM27,14H28V15H27zM28,14H29V15H28zM29,14H30V15H29zM33,14H34V15H33zM35,14H36V15H35zM5,15H6V16H5zM8,15H9V16H8zM9,15H10V16H9zM12,15H13V16H12zM14,15H15V16H14zM17,15H18V16H17zM20,15H21V16H20zM24,15H25V16H24zM26,15H27V16H26zM27,15H28V16H27zM28,15H29V16H28zM29,15H30V16H29zM30,15H31V16H30zM35,15H36V16H35zM36,15H37V16H36zM4,16H5V17H4zM5,16H6V17H5zM6,16H7V17H6zM7,16H8V17H7zM9,16H10V17H9zM10,16H11V17H10zM14,16H15V17H14zM15,16H16V17H15zM17,16H18V17H17zM20,16H21V17H20zM23,16H24V17H23zM26,16H27V17H26zM30,16H31V17H30zM31,16H32V17H31zM33,16H34V17H33zM4,17H5V18H4zM6,17H7V18H6zM7,17H8V18H7zM9,17H10V18H9zM11,17H12V18H11zM14,17H15V18H14zM16,17H17V18H16zM18,17H19V18H18zM21,17H22V18H21zM22,17H23V18H22zM23,17H24V18H23zM24,17H25V18H24zM25,17H26V18H25zM27,17H28V18H27zM28,17H29V18H28zM29,17H30V18H29zM30,17H31V18H30zM31,17H32V18H31zM5,18H6V19H5zM10,18H11V19H10zM12,18H13V19H12zM13,18H14V19H13zM15,18H16V19H15zM16,18H17V19H16zM17,18H18V19H17zM19,18H20V19H19zM21,18H22V19H21zM22,18H23V19H22zM24,18H25V19H24zM27,18H28V19H27zM29,18H30V19H29zM30,18H31V19H30zM33,18H34V19H33zM34,18H35V19H34zM35,18H36V19H35zM5,19H6V20H5zM6,19H7V20H6zM7,19H8V20H7zM8,19H9V20H8zM9,19H10V20H9zM12,19H13V20H12zM13,19H14V20H13zM16,19H17V20H16zM18,19H19V20H18zM19,19H20V20H19zM20,19H21V20H20zM21,19H22V20H21zM22,19H23V20H22zM25,19H26V20H25zM27,19H28V20H27zM29,19H30V20H29zM30,19H31V20H30zM5,20H6V21H5zM6,20H7V21H6zM10,20H11V21H10zM11,20H12V21H11zM13,20H14V21H13zM14,20H15V21H14zM15,20H16V21H15zM17,20H18V21H17zM20,20H21V21H20zM21,20H22V21H21zM23,20H24V21H23zM24,20H25V21H24zM25,20H26V21H25zM26,20H27V21H26zM28,20H29V21H28zM30,20H31V21H30zM32,20H33V21H32zM35,20H36V21H35zM4,21H5V22H4zM6,21H7V22H6zM7,21H8V22H7zM8,21H9V22H8zM11,21H12V22H11zM12,21H13V22H12zM13,21H14V22H13zM14,21H15V22H14zM15,21H16V22H15zM18,21H19V22H18zM19,21H20V22H19zM20,21H21V22H20zM26,21H27V22H26zM27,21H28V22H27zM33,21H34V22H33zM34,21H35V22H34zM35,21H36V22H35zM8,22H9V23H8zM9,22H10V23H9zM10,22H11V23H10zM12,22H13V23H12zM15,22H16V23H15zM17,22H18V23H17zM18,22H19V23H18zM19,22H20V23H19zM21,22H22V23H21zM25,22H26V23H25zM26,22H27V23H26zM27,22H28V23H27zM28,22H29V23H28zM30,22H31V23H30zM31,22H32V23H31zM33,22H34V23H33zM5,23H6V24H5zM7,23H8V24H7zM8,23H9V24H8zM11,23H12V24H11zM14,23H15V24H14zM18,23H19V24H18zM21,23H22V24H21zM22,23H23V24H22zM23,23H24V24H23zM24,23H25V24H24zM25,23H26V24H25zM27,23H28V24H27zM28,23H29V24H28zM31,23H32V24H31zM36,23H37V24H36zM6,24H7V25H6zM9,24H10V25H9zM10,24H11V25H10zM14,24H15V25H14zM17,24H18V25H17zM18,24H19V25H18zM19,24H20V25H19zM22,24H23V25H22zM24,24H25V25H24zM29,24H30V25H29zM30,24H31V25H30zM32,24H33V25H32zM33,24H34V25H33zM36,24H37V25H36zM4,25H5V26H4zM8,25H9V26H8zM9,25H10V26H9zM11,25H12V26H11zM12,25H13V26H12zM13,25H14V26H13zM14,25H15V26H14zM16,25H17V26H16zM17,25H18V26H17zM20,25H21V26H20zM23,25H24V26H23zM26,25H27V26H26zM27,25H28V26H27zM28,25H29V26H28zM29,25H30V26H29zM33,25H34V26H33zM35,25H36V26H35zM6,26H7V27H6zM10,26H11V27H10zM13,26H14V27H13zM14,26H15V27H14zM15,26H16V27H15zM17,26H18V27H17zM18,26H19V27H18zM20,26H21V27H20zM21,26H22V27H21zM23,26H24V27H23zM25,26H26V27H25zM27,26H28V27H27zM28,26H29V27H28zM29,26H30V27H29zM34,26H35V27H34zM35,26H36V27H35zM7,27H8V28H7zM9,27H10V28H9zM12,27H13V28H12zM13,27H14V28H13zM15,27H16V28H15zM16,27H17V28H16zM17,27H18V28H17zM21,27H22V28H21zM23,27H24V28H23zM24,27H25V28H24zM25,27H26V28H25zM27,27H28V28H27zM29,27H30V28H29zM30,27H31V28H30zM31,27H32V28H31zM32,27H33V28H32zM35,27H36V28H35zM4,28H5V29H4zM5,28H6V29H5zM7,28H8V29H7zM8,28H9V29H8zM10,28H11V29H10zM13,28H14V29H13zM14,28H15V29H14zM15,28H16V29H15zM16,28H17V29H16zM18,28H19V29H18zM19,28H20V29H19zM21,28H22V29H21zM24,28H25V29H24zM25,28H26V29H25zM26,28H27V29H26zM28,28H29V29H28zM29,28H30V29H29zM30,28H31V29H30zM31,28H32V29H31zM32,28H33V29H32zM12,29H13V30H12zM13,29H14V30H13zM14,29H15V30H14zM16,29H17V30H16zM18,29H19V30H18zM19,29H20V30H19zM21,29H22V30H21zM22,29H23V30H22zM24,29H25V30H24zM25,29H26V30H25zM26,29H27V30H26zM28,29H29V30H28zM32,29H33V30H32zM34,29H35V30H34zM35,29H36V30H35zM4,30H5V31H4zM5,30H6V31H5zM6,30H7V31H6zM7,30H8V31H7zM8,30H9V31H8zM9,30H10V31H9zM10,30H11V31H10zM12,30H13V31H12zM13,30H14V31H13zM14,30H15V31H14zM17,30H18V31H17zM18,30H19V31H18zM19,30H20V31H19zM22,30H23V31H22zM24,30H25V31H24zM28,30H29V31H28zM30,30H31V31H30zM32,30H33V31H32zM33,30H34V31H33zM35,30H36V31H35zM4,31H5V32H4zM10,31H11V32H10zM15,31H16V32H15zM19,31H20V32H19zM24,31H25V32H24zM26,31H27V32H26zM28,31H29V32H28zM32,31H33V32H32zM36,31H37V32H36zM4,32H5V33H4zM6,32H7V33H6zM7,32H8V33H7zM8,32H9V33H8zM10,32H11V33H10zM12,32H13V33H12zM13,32H14V33H13zM14,32H15V33H14zM15,32H16V33H15zM17,32H18V33H17zM18,32H19V33H18zM20,32H21V33H20zM23,32H24V33H23zM26,32H27V33H26zM28,32H29V33H28zM29,32H30V33H29zM30,32H31V33H30zM31,32H32V33H31zM32,32H33V33H32zM33,32H34V33H33zM36,32H37V33H36zM4,33H5V34H4zM6,33H7V34H6zM7,33H8V34H7zM8,33H9V34H8zM10,33H11V34H10zM16,33H17V34H16zM18,33H19V34H18zM21,33H22V34H21zM22,33H23V34H22zM23,33H24V34H23zM24,33H25V34H24zM28,33H29V34H28zM30,33H31V34H30zM31,33H32V34H31zM32,33H33V34H32zM34,33H35V34H34zM35,33H36V34H35zM4,34H5V35H4zM6,34H7V35H6zM7,34H8V35H7zM8,34H9V35H8zM10,34H11V35H10zM14,34H15V35H14zM15,34H16V35H15zM18,34H19V35H18zM19,34H20V35H19zM21,34H22V35H21zM22,34H23V35H22zM24,34H25V35H24zM26,34H27V35H26zM27,34H28V35H27zM28,34H29V35H28zM30,34H31V35H30zM31,34H32V35H31zM32,34H33V35H32zM33,34H34V35H33zM34,34H35V35H34zM4,35H5V36H4zM10,35H11V36H10zM14,35H15V36H14zM15,35H16V36H15zM16,35H17V36H16zM18,35H19V36H18zM19,35H20V36H19zM20,35H21V36H20zM21,35H22V36H21zM25,35H26V36H25zM28,35H29V36H28zM29,35H30V36H29zM30,35H31V36H30zM4,36H5V37H4zM5,36H6V37H5zM6,36H7V37H6zM7,36H8V37H7zM8,36H9V37H8zM9,36H10V37H9zM10,36H11V37H10zM12,36H13V37H12zM13,36H14V37H13zM14,36H15V37H14zM15,36H16V37H15zM21,36H22V37H21zM23,36H24V37H23zM24,36H25V37H24zM25,36H26V37H25zM26,36H27V37H26zM28,36H29V37H28zM30,36H31V37H30zM33,36H34V37H33zM36,36H37V37H36z" id="qr-path" fill="#000000" fill-opacity="1" fill-rule="nonzero" stroke="none"/></svg></div><strong>Scan to open staff job</strong><hr class="divider"><div class="receiptlike">IN: 17 SEP 2026<br>JOB CARD · KEEP WITH BIKE</div></div></div><div class="stack"><div class="panel"><div class="row between"><h2>Bike tag sent</h2>${badge('Acknowledged')}</div><p>Front desk Zebra · 1 copy<br>09:12 · printed by Jack Lewis</p><hr class="divider"><small>Attach the tag where it can be scanned without removing it from the bike.</small><div class="actions">${B('Scan / look up the job','scan')}</div></div><div class="panel"><h2>Need another copy?</h2><p>Check the printer output before reprinting.</p><div class="actions">${B('Review print status','print-error','')}${B('Full job card','job-card','')}</div></div></div></div>`),'Valid specimen QR encodes https://wheelhouse.example/staff/jobs/WH-1042 (reserved example domain). Final label size, driver, customer-detail policy and 1D barcode need physical shop validation. “Acknowledged” is a designed state, not evidence of a real print.','scan','P08',[['Paper job card','job-card'],['Offline / unknown print','print-error']]);
+add('scan','intake','Scan → authenticated job','Mechanic · phone',phone(`<div class="eyebrow">FIND A BIKE</div><h1>Scan it. Find the job.</h1><p>Use your phone camera on the tag’s QR code, or scan the job number into search.</p><div class="panel stack" style="margin-top:24px">${F('Job number / scanner input','WH-1042')}${B('Open job','mechanic')}</div><div class="panel" style="margin-top:20px"><div class="row between"><strong>WH-1042</strong>${badge('In workshop')}</div><h2 style="margin-top:12px">Trek Domane AL 3</h2><p>Green · black mudguards</p></div><p style="font-size:12px;margin-top:20px">You’re signed in to North Street Cycles. Scanning opens the job; it doesn’t change its status.</p><div class="actions">${B('See signed-out scan','login','')}</div>`,true),'Staff-only QR route. A signed-out scan returns to this job after login. A different shop gets no customer or job disclosure. The local artefact does not access a camera.','mechanic','P01 · P02 · P08',[['Signed out','login'],['Wrong shop','denied']]);
+add('mechanic','quote','Open the mechanic’s job','Mechanic · phone',phone(`<div class="row between"><small>WH-1042</small>${badge('In workshop')}</div><h1 style="margin-top:16px">Trek Domane AL 3</h1><p>Maya Patel · green · black mudguards</p>${bike}<div class="panel" style="margin-top:16px"><h2>Customer’s concern</h2><p>Rear brake squeals and feels weak. Gears need a tune-up.</p><hr class="divider"><div class="row between"><small>Agreed service</small><strong>£65.00</strong></div><p>60 min planned · shared queue</p></div><div class="actions">${B('Start inspection','inspection')}${B('View job conversation','mechanic-message','')}</div>`,true),'Phone is a working tool for inspection, not a shrunk desktop table. Opening a job does not claim it or start work.','inspection','P02 · P03');
+add('inspection','quote','Inspect & explain the findings','Mechanic · phone',phone(`<div class="eyebrow">WH-1042 / INSPECTION</div><h1>What needs attention?</h1><div class="panel"><label class="check"><input type="checkbox" checked>Frame & fork checked</label><label class="check"><input type="checkbox" checked>Wheels & tyres checked</label><label class="check"><input type="checkbox" checked>Gears checked</label><div class="row between"><strong>Rear brake pads</strong>${badge('Needs work','amber')}</div></div><label class="field" style="margin-top:18px">Finding for the customer<textarea>The rear pads are worn. We recommend replacing the pads and adjusting the brake. The gear cable can wait.</textarea></label><div class="upload" style="margin-top:16px">Add inspection photos or video<input type="file" aria-label="Inspection media" accept="image/*,video/*" style="margin-top:8px"></div><div class="actions">${B('Save findings & build quote','quote-editor')}</div>`,true),'Completed template answers are preserved if the shop later changes the checklist. Media is explicitly attached to the job and shared with the customer when sent.','quote-editor','P02 · P03 · P05');
+add('quote-editor','quote','Build the itemised quote','Service desk · desktop',job(`<div class="split" style="grid-template-columns:1.9fr 1fr"><div class="panel" style="padding:0">${quoteRows()}<div style="padding:16px">${B('＋ Add service, SKU or scanned part','catalogue-search','')}</div></div><div class="stack"><div class="panel"><h2>Quote revision 2</h2><p>£65 service already agreed.<br>Additional work needs a decision.</p><hr class="divider"><div class="row between"><small>All proposed work</small><strong>£123.00</strong></div><p class="mini">Includes £20.50 VAT. Final amount depends on selected lines.</p><hr class="divider"><label class="field">Message to Maya<textarea>We found worn rear pads. The gear cable is optional; it can wait.</textarea></label><div class="actions">${B('Preview & send for approval','quote-send')}</div></div><div class="notice">Parts prices are snapshots. A catalogue update won’t change agreed work.</div></div></div>`,'Awaiting approval','Quote'),'£65 + £28 + £18 + £12 = £123 proposed. Parts and fitting are explained as one repair dependency; declining necessary fitting must not authorise an unsafe partial repair.','quote-send','P03',[['Search catalogue','catalogue-search']]);
+add('quote-send','quote','Send the approval request','Service desk · desktop',job(`<div class="split"><div class="panel stack"><h2>Ask Maya to approve the extra work</h2><div class="rail">${badge('Email selected')}${badge('SMS selected')}${badge('WhatsApp off','grey')}</div><label class="field">Message<textarea>Hi Maya, we’ve inspected your Trek. The rear pads need replacing. Please review each item using your private link. The cable replacement is optional.</textarea></label><div class="panel" style="background:#f5f7f4"><strong>Included with this request</strong><p>Inspection finding · quote revision 2 · individual line decisions</p></div><div class="actions">${B('Send approval request','approval')}</div></div><div class="panel"><h2>Private approval link</h2><p>The customer can review on any device. The link only approves the quote they are shown.</p><hr class="divider"><p>No messaging provider connected?</p><small>Copying the secure link remains available so work can be agreed independently of delivery setup.</small><div class="actions">${B('Preview customer link','approval','')}</div></div></div>`,'Awaiting approval','Messages'),'Send honours selected channels at send time; no blind retries after uncertain delivery. This artefact routes to the customer preview and sends nothing.','approval','P03 · P05 · P06');
+add('approval','quote','Approve each line','Customer · phone',phone(`<div class="eyebrow">WH-1042 / QUOTE 2</div><h1>A little extra care.</h1><p>The rear pads are worn. Please choose the work you’d like us to do.</p><div class="panel" style="margin-top:16px"><h3>Alex’s inspection</h3><p>The pads and fitting belong together. The gear cable can safely wait.</p></div><div class="lineitem"><div class="row between"><strong>Standard service</strong><strong>£65</strong></div><small>Already approved</small></div><label class="check lineitem"><input class="qpart" type="checkbox" checked onchange="quoteTotal()"><span><strong>Brake pads · £28</strong><br><small>New rear brake pads</small></span></label><label class="check lineitem"><input class="qfit" type="checkbox" checked onchange="quoteTotal()"><span><strong>Fit & adjust brakes · £18</strong><br><small>Required with new pads</small></span></label><label class="check lineitem"><input class="qcable" type="checkbox" onchange="quoteTotal()"><span><strong>Gear cable · £12</strong><br><small>Optional · unchecked work will be declined</small></span></label><div class="panel" style="margin-top:16px"><div class="row between"><strong>Your approved total</strong><h2 class="qtotal">£111.00</h2></div><small>Including VAT · no payment taken here</small></div><div class="qerror notice bad" style="display:none;margin-top:12px">Pads and fitting must be selected together. Ask the shop if you’d like another option.</div><div class="actions"><button class="primary qsubmit" onclick="parent.approve(document.querySelector('.qcable').checked,document.querySelector('.qpart').checked)">Confirm my choices</button>${B('Ask a question first','customer-message','link')}</div>`),'Interactive selections update the total. Both brake lines remain individually visible and their dependency is explicit. Consent is bound to quote revision 2. Unchecked new lines are declined.','approval-done','P03 · P05',[['Stale quote','stale'],['Spending ceiling','ceiling']]);
+add('approval-done','quote','Know what was agreed','Customer · phone',phone(`<div class="bigicon">✓</div><h1>Your choices are saved.</h1><p>We’ll carry out the work you approved and leave the rest.</p><div class="panel" style="margin-top:24px"><div class="lineitem row between"><span>Standard service</span>${badge('Approved')}</div><div class="lineitem row between"><span>Brake pads & fitting</span><span class="brakeDecision">${badge('Approved')}</span></div><div class="lineitem row between"><span>Gear cable</span><span class="cableDecision">${badge('Declined','grey')}</span></div><hr class="divider"><div class="row between"><strong>Agreed total</strong><h2 class="agreedTotal">£111.00</h2></div></div><p style="margin-top:20px">Quote 2 · recorded today at 11:18.<br>We’ll ask again if the agreed work changes.</p><div class="actions">${B('View job progress','progress')}</div>`),'Confirmation reflects selections from the interactive quote screen. The standard walkthrough uses £111 with the £12 cable declined.','approved','P03 · P05');
+add('approved','quote','Shop sees the exact agreement','Service desk · desktop',job(`<div class="notice good" style="margin-bottom:20px">Maya responded at 11:18. Quote 2: £111.00 approved; optional gear cable declined.</div><div class="split"><div class="panel" style="padding:0">${quoteRows(true)}</div><div class="panel stack"><h2>Ready to allocate</h2><p>Approved effort: 90 minutes.<br>Recheck capacity for the extra 30 minutes before committing the work.</p>${B('Allocate approved work','diary')}${B('Review POS handoff','pos','')}<small>Changing an approved line creates a new proposal. Original decisions stay in the history.</small></div></div>`,'Approved','Quote'),'Fixed canonical £111 scenario. Any additional effort must reserve capacity, independently of monetary consent. Approval does not mean the work is already scheduled.','diary','P02 · P03 · P04');
+add('diary','work','Allocate work in the diary','Service desk · desktop',staff('Workshop diary','Thursday 17 September · 30-minute grid',`<div class="row between" style="margin-bottom:16px"><div class="rail">${B('Day','diary')}${B('Week','week','')}${B('Month','month','')}</div><div class="rail">${badge('8h available','grey')}${badge('6h allocated')}${badge('1h shared','blue')}</div></div><div class="panel" style="padding:0;overflow:hidden"><div class="schedule"><div><div style="height:48px"></div><div class="hours">${['09:00','10:00','11:00','12:00','13:00'].map(t=>`<div>${t}</div>`).join('')}</div></div><div class="col"><div class="colhead"><strong>Alex Morgan</strong><br><small>4h available</small></div><div class="event">WH-1038 · Safety check<br><small>09:00–10:00 · 60 min</small></div><div class="event green" style="margin-top:72px"><strong>WH-1042 · Maya Patel</strong><br>Trek Domane · 90 min<br><small>11:30–13:00 · approved £111</small></div></div><div class="col"><div class="colhead"><strong>Jo Taylor</strong><br><small>4h available</small></div><div class="event">WH-1040 · Gear service<br><small>09:00–10:30 · 90 min</small></div><div class="event amber" style="margin-top:85px">Lunch / unavailable<br><small>12:00–12:30</small></div></div><div class="col"><div class="colhead"><strong>Shared queue</strong><br><small>Unassigned effort</small></div><div class="event">WH-1046 · Standard service<br><small>60 min · drop-off</small></div></div></div></div><div class="row between" style="margin-top:18px"><small>Drop-off allocations consume effort without promising a start time.</small>${B('Save allocation','queue')}</div>`,'Diary'),'Proposed allocation shown for review. Move saves atomically and retains the old allocation on conflict. Shared-to-mechanic transfer must not double-count. Day, week and month views share one capacity model.','queue','P04',[['Capacity conflict','capacity-conflict'],['Week','week'],['Month','month']]);
+add('queue','work','Take work from the shared queue','Mechanic · phone',phone(`<h1>Ready to work.</h1><p>Thursday 17 September</p><div class="rail" style="margin:18px 0">${badge('Shared · 4')}${badge('My work · 2','grey')}</div><div class="panel stack"><div class="row between"><strong>WH-1042</strong>${badge('Approved')}</div><h2>Trek Domane AL 3</h2><p>Standard service + rear brakes<br>90 min · target Fri 18 Sep, 16:00</p><hr class="divider"><div class="row between"><small>Agreed work</small><strong>£111.00</strong></div>${B('Take this job & start work','working')}</div><div class="panel" style="margin-top:16px"><div class="row between"><strong>WH-1046</strong>${badge('Scheduled','blue')}</div><h2 style="margin-top:10px">Specialized Allez</h2><p>Standard service · 60 min</p></div>`,true),'Alternative to desk allocation: shared-queue claim is atomic. If another mechanic takes it first, show the owner and leave capacity unchanged.','working','P02 · P04',[['Someone took it first','claim-conflict']]);
+add('working','work','Do the approved work','Mechanic · phone',phone(`<div class="row between"><small>WH-1042 · MY WORK</small>${badge('In progress')}</div><h1 style="margin-top:16px">Service & rear brakes</h1><p>Trek Domane AL 3 · Maya Patel</p><div class="panel" style="margin-top:20px"><h2>Approved work</h2><label class="check"><input type="checkbox" checked>Standard service</label><label class="check"><input type="checkbox" checked>Rear brake pads fitted</label><label class="check"><input type="checkbox" checked>Brakes adjusted & tested</label><hr class="divider"><small>Gear cable declined. Leave unchanged.</small></div><label class="field" style="margin-top:18px">Workshop note<textarea>Rear pads replaced. Brake tested. Gears adjusted; existing cable retained.</textarea></label><div class="actions">${B('Work finished → final checks','finish')}${B('Waiting for parts','waiting','')}${B('Need approval for a change','stale','link')}</div>`,true),'Only approved work is actionable. Work finished, ready for collection and physically collected are separate events. Notes are staff-only unless explicitly shared.','finish','P02 · P03',[['Parts delay','waiting']]);
+add('waiting','work','Handle a parts delay','Service desk · desktop',job(`<div class="split"><div class="panel stack"><h2>Waiting for parts</h2>${F('Part / reason','Replacement rear brake pads delayed')}${F('Revised target ready','2026-09-19T16:00','datetime-local')}<label class="field">Customer update<textarea>The brake pads are arriving later than expected. We’re aiming for Saturday at 16:00 and will confirm as soon as your bike is ready.</textarea></label>${note('Target dates are estimates. This update does not mark the bike ready.')}<div class="actions">${B('Save delay & send update','customer-message')}</div></div><div class="panel"><h2>Work still required</h2><p>30 minutes for pads and adjustment.</p><hr class="divider"><p>Keep unfinished effort visible when replanning. Custody stays “In shop”.</p><div class="actions">${B('Replan remaining effort','diary','')}</div></div></div>`,'Waiting for parts'),'Exception scenario: revised date and remaining effort are independent. This branch does not silently overwrite the canonical on-time walkthrough.','customer-message','P02 · P04 · P06');
+add('inbox','work','One job conversation','Service desk · desktop',staff('Messages','Conversations attached to the job, across email, SMS and WhatsApp.',`<div class="split" style="grid-template-columns:230px 1fr"><div class="panel tight"><h3>Needs a reply · 2</h3><hr class="divider"><strong>Maya Patel</strong><p class="muted">WH-1042 · Trek Domane</p><p>Thanks. Can I collect after work?</p><hr class="divider"><strong>Oliver Chen</strong><p class="muted">WH-1048 · Brompton</p><p>It clicks under load.</p></div><div class="panel"><div class="row between"><h2>Maya Patel / WH-1042</h2>${badge('SMS')}</div><div class="bubble mine">Hi Maya, your bike is ready to collect. We’re open until 18:00.<div class="mini" style="color:#d7e5d6">SMS · delivered 15:42</div></div><div class="bubble">Thanks. Can I collect after work?<div class="mini">SMS · received 15:46</div></div><hr class="divider"><label class="field">Reply via<select><option>SMS · customer selected</option><option>Email · customer selected</option><option disabled>WhatsApp · not selected</option></select></label><label class="field" style="margin-top:14px">Message<textarea>Of course. We’re here until 18:00. See you later!</textarea></label><div class="row between" style="margin-top:16px"><small>Replies remain attached to this job.</small>${B('Send reply','customer-message')}</div></div></div>`,'Messages'),'Illustrative sent/received states. Production inbound matching, consent and provider capability must be proven; sending in this artefact is navigation only.','customer-message','P06',[['Delivery problem','message-error']]);
+add('customer-message','work','Customer follows up','Customer · phone',phone(`<div class="eyebrow">WH-1042 / CONVERSATION</div><h1>Talk to the workshop.</h1><p>North Street Cycles</p><div class="bubble">Your Trek is ready. We’re open until 18:00.<div class="mini">North Street Cycles · 15:42</div></div><div class="bubble mine">Thanks. Can I collect after work?<div class="mini" style="color:#d7e5d6">You · 15:46</div></div><div class="bubble">Of course. We’re here until 18:00. See you later!<div class="mini">North Street Cycles · 15:48</div></div><label class="field" style="margin-top:24px">Message<textarea placeholder="Write to the workshop…"></textarea></label><div class="actions">${B('Send message','progress')}${B('Back to progress','progress','')}</div>`),'Secure customer thread. The ready-state fixture illustrates a conversation; delay messages use the same composition. Do not show staff-only notes or unrelated customer history.','progress','P05 · P06');
+add('pos','work','Handoff agreed work to Lightspeed','Service desk · desktop',job(`<div class="notice good" style="margin-bottom:20px">Ready to hand over quote 2. Only approved work is included.</div><div class="split"><div class="panel"><h2>Approved work → work order</h2><hr class="divider">${table(['Line','Type','Amount'],[['Standard service','Labour','£65.00'],['Shimano brake pads × 1','Stock item','£28.00'],['Fit & adjust brakes','Labour','£18.00']])}<div class="row between" style="margin-top:20px"><strong>Approved total, including VAT</strong><h2>£111.00</h2></div></div><div class="panel stack"><div class="row between"><h2>Lightspeed</h2>${badge('Ready')}</div><small>R-Series · North Street Cycles</small><div><h3>Customer association</h3><p>Maya Patel · current-job match confirmed by staff</p></div><div><h3>Stock checked</h3><p>Brake pads: 6 at this shop<br>Last refreshed today, 11:20</p></div>${B('Create linked work order','pos-done')}<small>The shop completes invoicing and payment in Lightspeed.</small></div></div>`,'Work in progress','Quote'),'R-Series is provisional. These are target UI states, not proof of API access. Customer association is for this job only. Actual work-order, stock and employee permissions gate implementation.','pos-done','P00 · P07',[['Uncertain write','pos-unknown']]);
+add('pos-done','work','See the linked work order','Service desk · desktop',job(`<div class="panel"><div class="row between"><div><h2>Linked to Lightspeed</h2><p>Work order #5821 · approved quote 2 · £111.00</p></div>${badge('Up to date')}</div><hr class="divider"><div class="three"><div><small>CUSTOMER</small><p><strong>Maya Patel</strong></p></div><div><small>PHYSICAL PART</small><p><strong>1 × brake pad set</strong></p></div><div><small>LAST SYNC</small><p><strong>Today · 11:22</strong></p></div></div><hr class="divider"><p>Use work order #5821 in Lightspeed to invoice and take payment at the till.</p><div class="actions">${B('Mark ready & notify Maya','ready')}</div></div><div class="notice" style="margin-top:20px">Finishing work or recording collection in Wheelhouse does not assert that payment was taken.</div>`),'External link/deep-link availability is an API proof item; reference lookup remains a safe designed fallback. No Wheelhouse payment, refund or invoice controls.','ready','P07');
+add('finish','work','Finish, check, then mark ready','Mechanic · phone',phone(`<div class="eyebrow">WH-1042 / FINAL CHECK</div><h1>Ready for another ride?</h1><div class="panel" style="margin-top:20px"><label class="check"><input type="checkbox" checked>Approved work completed</label><label class="check"><input type="checkbox" checked>Brakes & gears tested</label><label class="check"><input type="checkbox" checked>Accessories accounted for</label><label class="check"><input type="checkbox" checked>Bike safe to hand back</label></div><label class="field" style="margin-top:20px">Collection note for Maya<textarea>Rear pads replaced and brakes adjusted. Gears tuned. The existing gear cable is still serviceable.</textarea></label><p style="font-size:12px;margin-top:16px">The bike remains in the shop until collection is recorded.</p><div class="actions">${B('Save final checks & finish work','finished')}</div>`,true),'A distinct final check separates work finished from ready for collection. Message delivery failure cannot undo work completion or falsely mark delivery successful.','finished','P02 · P03 · P06');
+add('ready','work','Customer is invited to collect','Customer · phone',phone(`<div class="bigicon">✓</div>${badge('Ready for collection')}<h1 style="margin-top:18px">Your bike’s ready, Maya.</h1><p>Brakes sorted, gears tuned. Your Trek is ready to ride again.</p><div class="panel" style="margin-top:24px"><h2>Collect from North Street Cycles</h2><p>Today · open until 18:00<br>24 North Street</p><hr class="divider"><div class="row between"><small>Agreed work</small><strong>£111.00</strong></div><p>We’ll handle the bill at the shop.</p></div><div class="panel" style="margin-top:16px"><h3>Alex’s handover note</h3><p>Rear pads replaced. Brakes and gears tested. The existing gear cable is still serviceable.</p></div><div class="actions">${B('Message the shop','customer-message','')}</div>`),'Readiness is not collection or settlement. Show a concise handover and opening hours; no online payment CTA.','collection','P02 · P05 · P06');
+add('collection','work','Record physical collection','Service desk · desktop',job(`<div class="split"><div class="panel stack"><h2>Hand the bike back</h2><p>Maya Patel · Trek Domane AL 3</p><label class="check"><input type="checkbox" checked>Bike handed to the customer or authorised collector</label><label class="check"><input type="checkbox" checked>Lock key and rear light returned</label>${F('Collected by','Maya Patel')}<label class="field">Handover note<textarea>Explained the brake work and optional gear cable. Customer happy with the test ride.</textarea></label><div class="actions">${B('Record collection','closed')}</div></div><div class="panel"><h2>Till handoff</h2><p>Lightspeed work order #5821<br>Agreed quote: £111.00</p><hr class="divider"><p>Use Lightspeed for invoicing, taking payment or any refund.</p><small>Collection records who took the bike and when. It does not record payment.</small></div></div>`,'Ready for collection'),'Custody leaves “In shop” only after explicit confirmation. Staff use the existing till process independently. No payment gate or settlement status is invented.','closed','P02 · P07');
+add('closed','work','Collected, with a durable history','Service desk · desktop',job(`<div class="notice good" style="margin-bottom:20px">Collected by Maya Patel today at 17:24. Recorded by Jack Lewis.</div><div class="split"><div class="panel"><h2>Job history</h2><div class="timeline"><div><strong>Bike collected</strong><p class="mini">17:24 · Jack Lewis · accessories returned</p></div><div><strong>Ready for collection</strong><p class="mini">15:42 · Alex Morgan · customer notified</p></div><div><strong>Work order #5821 linked</strong><p class="mini">11:22 · approved quote 2</p></div><div><strong>Quote approved: £111.00</strong><p class="mini">11:18 · Maya Patel · gear cable declined</p></div><div><strong>Bike received & tag printed</strong><p class="mini">09:12 · Jack Lewis</p></div></div></div><div class="panel"><h2>Job locked</h2><p>The completed record and approval history remain available.</p><hr class="divider"><p>Need to correct or continue the job?</p><div class="actions">${B('Reopen with a reason','reopen','')}</div></div></div>`,'Collected','History'),'Locked collected record. Reopening needs permission and a reason; it must not erase the original collection or imply the bike is physically back.','desk','P02',[['Reopen','reopen']]);
+
+add('diagnosis','edges','“I don’t know what’s wrong”','Customer · phone',phone(steps(2)+`<h1>You don’t need to diagnose it.</h1><p>Tell us what you’ve noticed. The workshop will review your request before confirming the work and price.</p><div class="stack" style="margin-top:20px">${F('Bike make & model','Brompton C Line')}<label class="field">What’s happening?<textarea>There’s a clicking sound when I pedal hard. I’m not sure where it comes from.</textarea></label><label class="field">When did it start?<input value="About a week ago"></label><div class="upload">Optional photo or video<input type="file" aria-label="Problem media" accept="image/*,video/*"></div></div><div class="actions">${B('Choose a requested day','date')}</div>`),'Alternative fixture: Oliver’s unknown problem. The production journey retains these entered details; atlas navigation returns to the canonical Maya fixture after this branch. No diagnostic price is invented.','diagnosis-review','P03 · P05');
+add('diagnosis-review','edges','Triage an unknown problem','Service desk · desktop',staff('Review a diagnosis request','WH-1048 · Oliver Chen · Brompton C Line',`<div class="split"><div class="panel"><h2>“It clicks when I pedal hard.”</h2><p>Started about a week ago. No known impact or damage.</p><hr class="divider"><h3>Ask before promising the repair</h3><p>Clarify the concern, propose the initial assessment and agree any charge before starting chargeable work.</p><div class="actions">${B('Ask the customer a question','inbox','')}</div></div><div class="panel stack"><h2>Initial workshop assessment</h2>${F('Planned assessment effort','30 minutes')}${F('Proposed assessment charge','£25.00')}<label class="field">Message<textarea>We suggest a 30-minute assessment. We’ll quote any repair separately after finding the cause.</textarea></label>${B('Propose assessment for approval','approval')}</div></div>`,'Requests'),'£25/30 min are illustrative shop choices, not an approved fee policy. Customer must see and agree the assessment before it becomes chargeable. Approval uses the same component as the service quote.','approval','P03 · P04 · P05');
+add('appointment','edges','Book an exact appointment','Customer · phone',phone(steps(3)+`<h1>Choose an appointment.</h1><p>A fixed arrival time for your standard service.</p><div class="two" style="margin:20px 0">${B('Drop-off day','date','')}${B('Exact appointment','appointment')}</div><h2>Thursday 17 September</h2><div class="two" style="margin:20px 0"><button class="primary">09:30</button><button onclick="this.classList.toggle('primary')">11:00</button><button onclick="this.classList.toggle('primary')">14:00</button><button disabled>15:00 · full</button></div><div class="panel"><h2>Arrive at 09:30</h2><p>We’ll confirm your appointment after reviewing the request.</p><small>Availability includes other appointments and committed drop-off work.</small></div><div class="actions">${B('Continue with 09:30','details')}</div>`),'Fixed timed-appointment specimen; chosen mode must be carried through request and confirmation in production. This branch routes back to canonical drop-off contact details in the atlas.','details','P04 · P05');
+add('full','edges','Explain unavailable dates','Customer · phone',phone(`<div class="bigicon">↗</div><h1>Thursday is now full.</h1><p>Another booking took the remaining workshop space. Your request hasn’t been confirmed.</p><div class="panel" style="margin-top:24px"><h2>Try Friday 18 September</h2><p>Drop-off 09:00–18:00</p><small>Availability will be checked again when you submit.</small></div><div class="actions">${B('Choose another day','date')}${B('Ask the shop for help','customer-message','')}</div><hr class="divider"><small>Closed days are labelled “Closed”. A full day means the shop is open but has no remaining capacity.</small>`),'Server is authoritative at submit. No false success, no silent overbooking, and no customer waiting-list feature added.','date','P04 · P05');
+add('reschedule','edges','Change or cancel a booking','Customer · phone',phone(`<div class="eyebrow">WH-1042 / MANAGE BOOKING</div><h1>Plans changed?</h1><div class="panel"><h2>Your current booking</h2><p>Thu 17 September · drop-off<br>Standard service · Trek Domane</p></div><div class="stack" style="margin-top:22px">${F('Preferred new day','2026-09-18','date')}<label class="field">Note to the shop<textarea>Could I bring it in on Friday instead?</textarea></label>${note('Your existing booking stays in place until the new date is accepted.')}</div><div class="actions">${B('Request date change','change-pending')}${B('Cancel this booking','cancel','danger')}</div>`),'Requesting a change does not discard the original booking. Capacity is exchanged atomically on acceptance. In-shop cancellation needs staff handling.','change-pending','P04 · P05');
+add('change-pending','edges','Date change is pending','Customer · phone',phone(`<div class="bigicon">↻</div><h1>We’ve asked the shop.</h1><p>Your requested new day is Friday 18 September.</p><div class="panel" style="margin-top:24px"><h2>Current booking kept</h2><p>Thursday 17 September</p><small>Wait for confirmation before changing your drop-off plans.</small></div><div class="actions">${B('Back to booking','progress')}</div>`),'The old hold remains while a new-date request awaits a decision. Acceptance and rejection reuse the request review decision pattern.','review','P04 · P05');
+add('cancel','edges','Confirm a cancellation','Customer · phone',phone(`<h1>Cancel your booking?</h1><p>This will cancel the standard service requested for Thursday 17 September.</p><label class="field" style="margin-top:24px">Reason (optional)<textarea>I can’t get to the shop this week.</textarea></label><div class="notice" style="margin-top:20px">Your reserved workshop space will be released. You’ll need a new booking if you change your mind.</div><div class="actions">${B('Yes, cancel booking','cancelled','danger')}${B('Keep my booking','progress','')}</div>`),'Explicit confirmation before releasing the reservation. This screen applies before bike arrival; no refund flow is introduced.','cancelled','P04 · P05');
+add('cancelled','edges','Cancellation acknowledged','Customer · phone',phone(`<div class="bigicon">✓</div><h1>Your booking is cancelled.</h1><p>WH-1042 · Thursday 17 September</p><div class="panel" style="margin-top:24px"><h2>No visit is expected</h2><p>The shop has been notified and the reserved workshop space has been released.</p></div><div class="actions">${B('Make a new booking','service')}</div>`),'Cancellation is distinct from rejected and expired requests. Keep the cancellation event in staff history.','service','P02 · P04 · P05');
+add('reject','edges','Decline with an explanation','Service desk · desktop',staff('Decline booking request','WH-1042 · Maya Patel',`<div class="center panel stack"><h2>Explain what the customer can do next</h2><label class="field">Message to Maya<textarea>Sorry, we can’t fit this service in on Thursday. Please try Friday, or call us and we’ll help find another day.</textarea></label>${note('Declining releases the request’s reservation. The customer is told not to travel for this request.')}<div class="actions">${B('Keep request','review','')}${B('Decline & notify customer','rejected','danger')}</div></div>`,'Requests'),'Staff-written explanation is required in the proposed UX. Confirm the shop’s rejection wording during review.','rejected','P04 · P05 · P06');
+add('rejected','edges','Customer sees a declined request','Customer · phone',phone(`${badge('Request declined','red')}<h1 style="margin-top:20px">We can’t confirm Thursday.</h1><p>“Sorry, we can’t fit this service in on Thursday. Please try Friday, or call us and we’ll help find another day.”</p><div class="panel" style="margin-top:24px"><h2>You don’t have a confirmed booking</h2><p>Please choose another day before travelling.</p></div><div class="actions">${B('Choose another day','date')}${B('Message the shop','customer-message','')}</div>`),'Clear customer outcome. No booked status or live hold remains after rejection.','date','P05 · P06');
+add('expired','edges','Expired request / private link','Customer · phone',phone(`<div class="bigicon">↻</div><h1>This request has expired.</h1><p>The shop didn’t confirm the requested slot before its reservation expired. You don’t have a booking for that day.</p><div class="actions">${B('Find a new day','date')}${B('Contact the shop','customer-message','')}</div><hr class="divider"><h2>Can’t open a private link?</h2><p>Ask the shop to send a fresh link to your registered contact details.</p><small>We don’t show customer history based on a phone number alone.</small>`),'Reservation expiry and secure-link expiry are different backend events. The lower section is the shared safe-access explanation; production uses the appropriate specific heading, without disclosing another customer’s data.','date','P01 · P04 · P05');
+add('stale','edges','A quote changed before approval','Customer · phone',phone(`<div class="bigicon">↻</div><h1>There’s a newer quote.</h1><p>The workshop updated the proposed work after this link was sent. Your old choices haven’t been applied to the new items.</p><div class="panel" style="margin-top:24px"><h2>Your agreed service is kept</h2><p>Standard service · £65.00</p><small>Please review the current descriptions and prices before approving any changes.</small></div><div class="actions">${B('Review current quote','approval')}${B('Ask the workshop','customer-message','')}</div>`),'Stale submission never silently approves new prices. Only changed lines need new approval; unchanged decisions stay intact.','approval','P03 · P05');
+add('ceiling','edges','Agree a spending ceiling','Customer · phone',phone(`<h1>Set a limit for agreed work.</h1><p>You can give the shop permission to complete the service and brake repair up to a total amount.</p><div class="panel" style="margin-top:22px"><h2>What this covers</h2><p>Standard service and the rear brake repair described in your request.</p><small>Unrelated work still needs separate approval.</small></div><label class="field" style="margin-top:20px">Maximum total, including VAT<input type="number" min="65" value="120"></label><label class="check" style="margin-top:14px"><input type="checkbox" checked>I authorise this described work up to £120 in total.</label><small>This is permission for work. No card is stored and no payment is taken.</small><div class="actions">${B('Save permission','progress')}${B('Decide each line instead','approval','')}</div>`),'Alternative approval policy to validate with Jack. This is a fixed £120 specimen, not live permission storage. A changed limit requires matching consent wording; exceeding the limit or scope requires a new decision.','progress','P03 · P05');
+add('progress','work','Return to the private progress link','Customer · phone',phone(`<div class="eyebrow">YOUR BIKE / WH-1042</div><h1>We’re taking care of it.</h1><p>Trek Domane AL 3 · North Street Cycles</p><div class="panel" style="margin-top:20px"><div class="row between"><h2>In progress</h2>${badge('In shop')}</div><p>Target ready: Fri 18 September, 16:00</p><small>We’ll let you know when it’s ready to collect.</small></div><div class="timeline"><div><strong>Work in progress</strong><p class="mini">Alex is servicing your bike</p></div><div><strong>Extra work agreed</strong><p class="mini">£111 approved · gear cable declined</p></div><div><strong>Bike received</strong><p class="mini">Thu 17 September · 09:12</p></div><div><strong>Booking confirmed</strong><p class="mini">Standard service · drop-off</p></div></div><div class="actions">${B('View agreed work','approval-done','')}${B('Message the workshop','customer-message','')}${B('Update contact preferences','preferences','link')}</div>`),'Canonical in-progress snapshot. Production progress derives from the current job state; the atlas intentionally shows named state specimens rather than a full simulation.','ready','P02 · P05 · P06');
+add('capacity-conflict','edges','A diary move cannot be saved','Service desk · desktop',staff('Allocation changed while you were editing','WH-1042 · your original booking is safe',`<div class="center panel stack"><div class="bigicon">↻</div><h2>That space is no longer available</h2><p>Jo booked another job into the remaining capacity. We haven’t moved WH-1042 or discarded its original allocation.</p>${note('Current allocation: Thu 17 September · shared queue · 90 minutes.')}<div class="actions">${B('Reload available capacity','diary')}${B('Keep original allocation','job','')}</div></div>`,'Diary'),'Same conflict pattern covers stale job edits, with current actor/version shown and edits preserved for comparison rather than silent overwrite.','diary','P02 · P04');
+add('claim-conflict','edges','Another mechanic claimed it','Mechanic · phone',phone(`<div class="bigicon">↗</div><h1>Jo just took this job.</h1><p>WH-1042 is now assigned to Jo Taylor. We haven’t started a second work session for you.</p><div class="actions">${B('Choose another job','queue')}${B('View current job','mechanic','')}</div>`,true),'Atomic claim. A concurrency conflict is an ordinary usable state, not an unexplained error toast.','queue','P02 · P04');
+add('pos-unknown','edges','Uncertain Lightspeed handoff','Service desk · desktop',job(`<div class="notice" style="margin-bottom:20px">We haven’t confirmed whether Lightspeed created the work order. Don’t submit it again yet.</div><div class="split"><div class="panel stack"><h2>Check before retrying</h2><p>Attempt today at 11:22 · quote 2 · £111.00</p><p>Look for WH-1042 in Lightspeed. If it exists, link that work order instead of creating a duplicate.</p>${F('Existing Lightspeed work-order reference','5821')}<div class="actions">${B('Check & link existing order','pos-done')}</div></div><div class="panel"><h2>Local work is safe</h2><p>Job notes and the customer’s approval are saved in Wheelhouse.</p><hr class="divider"><p>Stock last checked at 11:20. Treat availability as unconfirmed until sync resumes.</p><div class="actions">${B('Continue local job','job','')}</div></div></div>`),'Unknown is different from failed. Reconciliation must verify job/customer/amount; it cannot blindly attach an arbitrary ID. Retry only after duplicate absence is established.','pos-done','P07');
+add('print-error','edges','Printer offline / output unknown','Service desk · desktop',staff('Print queue','Front desk Zebra · North Street Cycles',`<div class="notice" style="margin-bottom:20px">Printer agent is offline. Book-in is saved; check the physical output before requesting another copy.</div><div class="panel" style="padding:0">${table(['Job','Document','Sent','State',''],[['WH-1042','Bike tag','09:12',badge('Output unknown','amber'),B('Review before reprint','reprint','')],['WH-1046','Bike tag','09:14',badge('Queued','blue'),badge('Will send when online','grey')]])}</div><div class="two" style="margin-top:20px"><div class="panel"><h2>Check the printer host</h2><p>Make sure the registered Windows print agent is running, the driver is ready and the label stock is loaded.</p></div><div class="panel"><h2>Keep the job identifiable</h2><p>Use readable job number WH-1042 on the bike until a scannable tag is available.</p></div></div>`,'Workshop'),'Durable scoped print tasks survive restart. Unknown acknowledgement never claims physical success. Native Mac printer-host support is not assumed.','reprint','P08');
+add('reprint','edges','Deliberately reprint a tag','Service desk · desktop',staff('Reprint bike tag','WH-1042 · Front desk Zebra',`<div class="center panel stack"><h2>Has a usable tag already printed?</h2><p>A missing acknowledgement can still mean that a label came out. Check before printing another copy.</p><label class="check"><input type="checkbox" checked>I checked the output and need a replacement tag</label>${F('Reason','Original label did not emerge / unusable')}<div class="actions">${B('Cancel','print-error','')}${B('Print one replacement','print')}</div></div>`),'Reprint is an intentional new task with actor/reason, not automatic replay of an unknown task.','print','P08');
+add('message-error','edges','A message needs attention','Service desk · desktop',staff('Message delivery','WH-1042 · approval request',`<div class="panel"><h2>SMS delivery not confirmed</h2><p>The provider timed out after accepting our request. The customer may still receive it.</p><hr class="divider">${table(['Channel','Recipient','State'],[['Email','maya@example.test',badge('Delivered')],['SMS','07700 900 142',badge('Unknown','amber')],['WhatsApp','Not selected',badge('Not sent','grey')]])}<hr class="divider"><div class="row between"><small>The approval link remains valid. Check provider status before resending.</small>${B('Review conversation','inbox')}</div></div><div class="notice" style="margin-top:20px">For confirmed failures, show the reason (such as revoked credentials or low balance) and allow a deliberate retry after it is fixed.</div>`,'Messages'),'Three distinct delivery states: queued, confirmed failed, unknown. Provider responses must drive labels; mock delivery is not integration proof.','inbox','P06');
+add('login','edges','Sign in after scanning','Mechanic · phone',phone(`<div class="eyebrow">STAFF ACCESS</div><h1>Sign in to the workshop.</h1><p>We’ll return you to the scanned job after you sign in.</p><div class="stack" style="margin-top:28px">${F('Work email','alex@example.test','email')}${F('Password','','password')}${B('Sign in & return to job','mechanic')}</div><p style="font-size:12px;margin-top:24px">This is staff access. Customers use their private progress link.</p>`,true),'Visual sign-in reference only; final auth method follows the existing authentication implementation. No credentials leave this file. Revoked accounts cannot regain old-session access after reactivation.','mechanic','P01 · P08');
+add('denied','edges','Wrong shop or revoked access','Mechanic · phone',phone(`<div class="bigicon">⊘</div><h1>This job isn’t available to you.</h1><p>Check that you’re signed in to the correct workshop. Ask your manager if your staff access has changed.</p><div class="actions">${B('Back to workshop','queue')}${B('Sign in again','login','')}</div>`,true),'No bike, customer, price or job-existence details from another tenant. Server enforces the boundary; hiding a button is insufficient.','login','P01');
+add('reopen','edges','Reopen without rewriting history','Service desk · desktop',staff('Reopen collected job','WH-1042 · manager action',`<div class="center panel stack"><h2>Why does this job need reopening?</h2><label class="field">Reason<textarea>Customer reported a brake noise after collection. Arrange an inspection.</textarea></label>${note('Original collection stays in history. Reopening does not record the bike as physically returned.')}<label class="check"><input type="checkbox">Bike has physically returned to the shop</label><div class="actions">${B('Cancel','closed','')}${B('Reopen job','job')}</div></div>`),'Proposed manager-permission boundary to validate. A checked return must create a separate custody event; the unchecked default keeps custody out of shop.','job','P01 · P02');
+add('catalogue-search','quote','Find parts, SKUs & labour','Service desk · desktop',staff('Add to WH-1042','Quote / item search',`<div class="panel stack">${F('Search name, SKU or scan a product barcode','Shimano brake pads')}<div class="rail">${badge('Products')}${badge('Services','grey')}${badge('Stock refreshed 11:20','grey')}</div>${table(['Product / variant','SKU','At this shop','Price',''],[['Shimano resin brake pads<div class="mini">B05S-RX · spring included</div>','B05S-RX','6','£28.00',B('Add 1','quote-editor','')],['Shimano resin brake pads<div class="mini">L05A-RF · finned</div>','L05A-RF','2','£34.00',badge('Different fit','grey')]])}<small>Confirm compatibility before adding. Stock is supplied by the chosen Lightspeed connection.</small></div>`),'Grouped product variants with distinct SKU/barcode identity. Catalogue price is copied into the proposal; approval snapshots remain immutable.','quote-editor','P02 · P03 · P07');
+add('new-job','intake','Create a walk-in job','Service desk · desktop',staff('New workshop job','Use the same workflow for a customer at the counter.',`<div class="split"><div class="panel stack"><h2>Customer & bike</h2>${F('Find customer by name, phone or email','Maya Patel')}<div class="panel"><strong>Maya Patel</strong><p>07700 900 142 · maya@example.test</p><small>Trek Domane AL 3 · green</small></div>${F('Work requested','Standard service; inspect rear brake')}<label class="check"><input type="checkbox" checked>Bike is here now</label></div><div class="panel stack"><h2>Plan the work</h2>${F('Planned effort','60 minutes')}${F('Drop-off day','2026-09-17','date')}<label class="field">Queue / technician<select><option>Shared workshop queue</option><option>Alex Morgan</option></select></label>${B('Create job & book in','intake')}<small>New customers and bikes can be added at the counter. No sale or invoice is created by this action.</small></div></div>`),'Staff-only customer search. Walk-in with bike present shares the explicit custody/checklist event and capacity checks.','intake','P02 · P04');
+add('job','intake','The complete job workspace','Service desk · desktop',job(`<div class="split"><div class="stack"><div class="panel"><h2>Customer & bike</h2><p>Maya Patel · 07700 900 142<br>Trek Domane AL 3 · green · black mudguards</p><hr class="divider"><h3>Customer’s concern</h3><p>Rear brake squeals and feels weak. Gears need a tune-up.</p><hr class="divider"><div class="rail">${badge('Bike in shop')}${badge('Lock key received','grey')}${badge('Rear light received','grey')}</div></div><div class="panel"><h2>Next action</h2><p>Inspect the brake and agree any additional work before starting it.</p><div class="actions">${B('Open inspection','inspection')}</div></div></div><div class="stack"><div class="panel"><h2>Planned work</h2><p>Standard service · 60 minutes<br>£65.00 agreed</p><div class="actions">${B('Edit quote','quote-editor','')}</div></div><div class="panel"><h2>Bike tag</h2><p>WH-1042 · attached at intake</p><div class="actions">${B('Print / scan','print','')}</div></div></div></div>`),'Job is independent of a sale. Product, customer, bike and service writer controls belong here; separate work status and custody are visible.','inspection','P02');
+add('history','intake','Audit changes to the job','Service desk · desktop',job(`<div class="panel"><h2>Activity & decisions</h2><div class="timeline"><div><strong>Inspection recorded</strong><p class="mini">Alex Morgan · 10:42 · rear pads worn, cable optional</p></div><div><strong>Bike received</strong><p class="mini">Jack Lewis · 09:12 · lock key + rear light</p></div><div><strong>Booking confirmed</strong><p class="mini">Jack Lewis · 09:01 · shared queue, 60 minutes</p></div><div><strong>Booking requested</strong><p class="mini">Maya Patel · 08:42 · standard service, requested Thursday</p></div></div></div>`,'In workshop','History'),'Actor, time and prior decisions remain attributable. This is job activity, not a reporting suite.','job','P02');
+add('job-card','intake','Full paper job card','Service desk · desktop',staff('Job card print preview','WH-1042 · A4 portrait · printer setup determines final output',`<div class="split"><div class="panel"><div class="row between"><h2>NORTH STREET CYCLES</h2><strong>WH-1042</strong></div><hr class="divider"><h2>Trek Domane AL 3</h2><p>Green · black mudguards<br>Received 17 September · lock key, rear light</p><hr class="divider"><h3>Requested work</h3><p>Standard service. Rear brake squeals and feels weak; check gears.</p><hr class="divider"><h3>Workshop checklist</h3><p>□ Frame / fork　 □ Wheels / tyres<br>□ Brakes　 □ Gears　 □ Final safety check</p><div class="row" style="margin-top:20px"><div style="width:100px;height:100px"><svg width="100%" height="100%" version="1.1" viewBox="0 0 41 41" xmlns="http://www.w3.org/2000/svg"><path d="M4,4H5V5H4zM5,4H6V5H5zM6,4H7V5H6zM7,4H8V5H7zM8,4H9V5H8zM9,4H10V5H9zM10,4H11V5H10zM12,4H13V5H12zM13,4H14V5H13zM14,4H15V5H14zM15,4H16V5H15zM16,4H17V5H16zM17,4H18V5H17zM18,4H19V5H18zM19,4H20V5H19zM20,4H21V5H20zM22,4H23V5H22zM27,4H28V5H27zM30,4H31V5H30zM31,4H32V5H31zM32,4H33V5H32zM33,4H34V5H33zM34,4H35V5H34zM35,4H36V5H35zM36,4H37V5H36zM4,5H5V6H4zM10,5H11V6H10zM16,5H17V6H16zM17,5H18V6H17zM18,5H19V6H18zM22,5H23V6H22zM23,5H24V6H23zM24,5H25V6H24zM25,5H26V6H25zM28,5H29V6H28zM30,5H31V6H30zM36,5H37V6H36zM4,6H5V7H4zM6,6H7V7H6zM7,6H8V7H7zM8,6H9V7H8zM10,6H11V7H10zM13,6H14V7H13zM14,6H15V7H14zM15,6H16V7H15zM16,6H17V7H16zM18,6H19V7H18zM19,6H20V7H19zM21,6H22V7H21zM22,6H23V7H22zM25,6H26V7H25zM26,6H27V7H26zM27,6H28V7H27zM28,6H29V7H28zM30,6H31V7H30zM32,6H33V7H32zM33,6H34V7H33zM34,6H35V7H34zM36,6H37V7H36zM4,7H5V8H4zM6,7H7V8H6zM7,7H8V8H7zM8,7H9V8H8zM10,7H11V8H10zM12,7H13V8H12zM15,7H16V8H15zM19,7H20V8H19zM20,7H21V8H20zM21,7H22V8H21zM23,7H24V8H23zM25,7H26V8H25zM26,7H27V8H26zM28,7H29V8H28zM30,7H31V8H30zM32,7H33V8H32zM33,7H34V8H33zM34,7H35V8H34zM36,7H37V8H36zM4,8H5V9H4zM6,8H7V9H6zM7,8H8V9H7zM8,8H9V9H8zM10,8H11V9H10zM12,8H13V9H12zM14,8H15V9H14zM17,8H18V9H17zM20,8H21V9H20zM23,8H24V9H23zM25,8H26V9H25zM27,8H28V9H27zM28,8H29V9H28zM30,8H31V9H30zM32,8H33V9H32zM33,8H34V9H33zM34,8H35V9H34zM36,8H37V9H36zM4,9H5V10H4zM10,9H11V10H10zM12,9H13V10H12zM14,9H15V10H14zM15,9H16V10H15zM16,9H17V10H16zM17,9H18V10H17zM18,9H19V10H18zM19,9H20V10H19zM22,9H23V10H22zM24,9H25V10H24zM28,9H29V10H28zM30,9H31V10H30zM36,9H37V10H36zM4,10H5V11H4zM5,10H6V11H5zM6,10H7V11H6zM7,10H8V11H7zM8,10H9V11H8zM9,10H10V11H9zM10,10H11V11H10zM12,10H13V11H12zM14,10H15V11H14zM16,10H17V11H16zM18,10H19V11H18zM20,10H21V11H20zM22,10H23V11H22zM24,10H25V11H24zM26,10H27V11H26zM28,10H29V11H28zM30,10H31V11H30zM31,10H32V11H31zM32,10H33V11H32zM33,10H34V11H33zM34,10H35V11H34zM35,10H36V11H35zM36,10H37V11H36zM12,11H13V12H12zM18,11H19V12H18zM21,11H22V12H21zM22,11H23V12H22zM23,11H24V12H23zM24,11H25V12H24zM25,11H26V12H25zM26,11H27V12H26zM27,11H28V12H27zM28,11H29V12H28zM4,12H5V13H4zM8,12H9V13H8zM10,12H11V13H10zM11,12H12V13H11zM12,12H13V13H12zM13,12H14V13H13zM19,12H20V13H19zM20,12H21V13H20zM21,12H22V13H21zM25,12H26V13H25zM26,12H27V13H26zM28,12H29V13H28zM29,12H30V13H29zM30,12H31V13H30zM31,12H32V13H31zM32,12H33V13H32zM33,12H34V13H33zM36,12H37V13H36zM6,13H7V14H6zM7,13H8V14H7zM11,13H12V14H11zM13,13H14V14H13zM14,13H15V14H14zM18,13H19V14H18zM19,13H20V14H19zM20,13H21V14H20zM21,13H22V14H21zM22,13H23V14H22zM25,13H26V14H25zM27,13H28V14H27zM29,13H30V14H29zM33,13H34V14H33zM34,13H35V14H34zM35,13H36V14H35zM5,14H6V15H5zM6,14H7V15H6zM7,14H8V15H7zM9,14H10V15H9zM10,14H11V15H10zM11,14H12V15H11zM12,14H13V15H12zM13,14H14V15H13zM14,14H15V15H14zM16,14H17V15H16zM17,14H18V15H17zM18,14H19V15H18zM19,14H20V15H19zM22,14H23V15H22zM24,14H25V15H24zM27,14H28V15H27zM28,14H29V15H28zM29,14H30V15H29zM33,14H34V15H33zM35,14H36V15H35zM5,15H6V16H5zM8,15H9V16H8zM9,15H10V16H9zM12,15H13V16H12zM14,15H15V16H14zM17,15H18V16H17zM20,15H21V16H20zM24,15H25V16H24zM26,15H27V16H26zM27,15H28V16H27zM28,15H29V16H28zM29,15H30V16H29zM30,15H31V16H30zM35,15H36V16H35zM36,15H37V16H36zM4,16H5V17H4zM5,16H6V17H5zM6,16H7V17H6zM7,16H8V17H7zM9,16H10V17H9zM10,16H11V17H10zM14,16H15V17H14zM15,16H16V17H15zM17,16H18V17H17zM20,16H21V17H20zM23,16H24V17H23zM26,16H27V17H26zM30,16H31V17H30zM31,16H32V17H31zM33,16H34V17H33zM4,17H5V18H4zM6,17H7V18H6zM7,17H8V18H7zM9,17H10V18H9zM11,17H12V18H11zM14,17H15V18H14zM16,17H17V18H16zM18,17H19V18H18zM21,17H22V18H21zM22,17H23V18H22zM23,17H24V18H23zM24,17H25V18H24zM25,17H26V18H25zM27,17H28V18H27zM28,17H29V18H28zM29,17H30V18H29zM30,17H31V18H30zM31,17H32V18H31zM5,18H6V19H5zM10,18H11V19H10zM12,18H13V19H12zM13,18H14V19H13zM15,18H16V19H15zM16,18H17V19H16zM17,18H18V19H17zM19,18H20V19H19zM21,18H22V19H21zM22,18H23V19H22zM24,18H25V19H24zM27,18H28V19H27zM29,18H30V19H29zM30,18H31V19H30zM33,18H34V19H33zM34,18H35V19H34zM35,18H36V19H35zM5,19H6V20H5zM6,19H7V20H6zM7,19H8V20H7zM8,19H9V20H8zM9,19H10V20H9zM12,19H13V20H12zM13,19H14V20H13zM16,19H17V20H16zM18,19H19V20H18zM19,19H20V20H19zM20,19H21V20H20zM21,19H22V20H21zM22,19H23V20H22zM25,19H26V20H25zM27,19H28V20H27zM29,19H30V20H29zM30,19H31V20H30zM5,20H6V21H5zM6,20H7V21H6zM10,20H11V21H10zM11,20H12V21H11zM13,20H14V21H13zM14,20H15V21H14zM15,20H16V21H15zM17,20H18V21H17zM20,20H21V21H20zM21,20H22V21H21zM23,20H24V21H23zM24,20H25V21H24zM25,20H26V21H25zM26,20H27V21H26zM28,20H29V21H28zM30,20H31V21H30zM32,20H33V21H32zM35,20H36V21H35zM4,21H5V22H4zM6,21H7V22H6zM7,21H8V22H7zM8,21H9V22H8zM11,21H12V22H11zM12,21H13V22H12zM13,21H14V22H13zM14,21H15V22H14zM15,21H16V22H15zM18,21H19V22H18zM19,21H20V22H19zM20,21H21V22H20zM26,21H27V22H26zM27,21H28V22H27zM33,21H34V22H33zM34,21H35V22H34zM35,21H36V22H35zM8,22H9V23H8zM9,22H10V23H9zM10,22H11V23H10zM12,22H13V23H12zM15,22H16V23H15zM17,22H18V23H17zM18,22H19V23H18zM19,22H20V23H19zM21,22H22V23H21zM25,22H26V23H25zM26,22H27V23H26zM27,22H28V23H27zM28,22H29V23H28zM30,22H31V23H30zM31,22H32V23H31zM33,22H34V23H33zM5,23H6V24H5zM7,23H8V24H7zM8,23H9V24H8zM11,23H12V24H11zM14,23H15V24H14zM18,23H19V24H18zM21,23H22V24H21zM22,23H23V24H22zM23,23H24V24H23zM24,23H25V24H24zM25,23H26V24H25zM27,23H28V24H27zM28,23H29V24H28zM31,23H32V24H31zM36,23H37V24H36zM6,24H7V25H6zM9,24H10V25H9zM10,24H11V25H10zM14,24H15V25H14zM17,24H18V25H17zM18,24H19V25H18zM19,24H20V25H19zM22,24H23V25H22zM24,24H25V25H24zM29,24H30V25H29zM30,24H31V25H30zM32,24H33V25H32zM33,24H34V25H33zM36,24H37V25H36zM4,25H5V26H4zM8,25H9V26H8zM9,25H10V26H9zM11,25H12V26H11zM12,25H13V26H12zM13,25H14V26H13zM14,25H15V26H14zM16,25H17V26H16zM17,25H18V26H17zM20,25H21V26H20zM23,25H24V26H23zM26,25H27V26H26zM27,25H28V26H27zM28,25H29V26H28zM29,25H30V26H29zM33,25H34V26H33zM35,25H36V26H35zM6,26H7V27H6zM10,26H11V27H10zM13,26H14V27H13zM14,26H15V27H14zM15,26H16V27H15zM17,26H18V27H17zM18,26H19V27H18zM20,26H21V27H20zM21,26H22V27H21zM23,26H24V27H23zM25,26H26V27H25zM27,26H28V27H27zM28,26H29V27H28zM29,26H30V27H29zM34,26H35V27H34zM35,26H36V27H35zM7,27H8V28H7zM9,27H10V28H9zM12,27H13V28H12zM13,27H14V28H13zM15,27H16V28H15zM16,27H17V28H16zM17,27H18V28H17zM21,27H22V28H21zM23,27H24V28H23zM24,27H25V28H24zM25,27H26V28H25zM27,27H28V28H27zM29,27H30V28H29zM30,27H31V28H30zM31,27H32V28H31zM32,27H33V28H32zM35,27H36V28H35zM4,28H5V29H4zM5,28H6V29H5zM7,28H8V29H7zM8,28H9V29H8zM10,28H11V29H10zM13,28H14V29H13zM14,28H15V29H14zM15,28H16V29H15zM16,28H17V29H16zM18,28H19V29H18zM19,28H20V29H19zM21,28H22V29H21zM24,28H25V29H24zM25,28H26V29H25zM26,28H27V29H26zM28,28H29V29H28zM29,28H30V29H29zM30,28H31V29H30zM31,28H32V29H31zM32,28H33V29H32zM12,29H13V30H12zM13,29H14V30H13zM14,29H15V30H14zM16,29H17V30H16zM18,29H19V30H18zM19,29H20V30H19zM21,29H22V30H21zM22,29H23V30H22zM24,29H25V30H24zM25,29H26V30H25zM26,29H27V30H26zM28,29H29V30H28zM32,29H33V30H32zM34,29H35V30H34zM35,29H36V30H35zM4,30H5V31H4zM5,30H6V31H5zM6,30H7V31H6zM7,30H8V31H7zM8,30H9V31H8zM9,30H10V31H9zM10,30H11V31H10zM12,30H13V31H12zM13,30H14V31H13zM14,30H15V31H14zM17,30H18V31H17zM18,30H19V31H18zM19,30H20V31H19zM22,30H23V31H22zM24,30H25V31H24zM28,30H29V31H28zM30,30H31V31H30zM32,30H33V31H32zM33,30H34V31H33zM35,30H36V31H35zM4,31H5V32H4zM10,31H11V32H10zM15,31H16V32H15zM19,31H20V32H19zM24,31H25V32H24zM26,31H27V32H26zM28,31H29V32H28zM32,31H33V32H32zM36,31H37V32H36zM4,32H5V33H4zM6,32H7V33H6zM7,32H8V33H7zM8,32H9V33H8zM10,32H11V33H10zM12,32H13V33H12zM13,32H14V33H13zM14,32H15V33H14zM15,32H16V33H15zM17,32H18V33H17zM18,32H19V33H18zM20,32H21V33H20zM23,32H24V33H23zM26,32H27V33H26zM28,32H29V33H28zM29,32H30V33H29zM30,32H31V33H30zM31,32H32V33H31zM32,32H33V33H32zM33,32H34V33H33zM36,32H37V33H36zM4,33H5V34H4zM6,33H7V34H6zM7,33H8V34H7zM8,33H9V34H8zM10,33H11V34H10zM16,33H17V34H16zM18,33H19V34H18zM21,33H22V34H21zM22,33H23V34H22zM23,33H24V34H23zM24,33H25V34H24zM28,33H29V34H28zM30,33H31V34H30zM31,33H32V34H31zM32,33H33V34H32zM34,33H35V34H34zM35,33H36V34H35zM4,34H5V35H4zM6,34H7V35H6zM7,34H8V35H7zM8,34H9V35H8zM10,34H11V35H10zM14,34H15V35H14zM15,34H16V35H15zM18,34H19V35H18zM19,34H20V35H19zM21,34H22V35H21zM22,34H23V35H22zM24,34H25V35H24zM26,34H27V35H26zM27,34H28V35H27zM28,34H29V35H28zM30,34H31V35H30zM31,34H32V35H31zM32,34H33V35H32zM33,34H34V35H33zM34,34H35V35H34zM4,35H5V36H4zM10,35H11V36H10zM14,35H15V36H14zM15,35H16V36H15zM16,35H17V36H16zM18,35H19V36H18zM19,35H20V36H19zM20,35H21V36H20zM21,35H22V36H21zM25,35H26V36H25zM28,35H29V36H28zM29,35H30V36H29zM30,35H31V36H30zM4,36H5V37H4zM5,36H6V37H5zM6,36H7V37H6zM7,36H8V37H7zM8,36H9V37H8zM9,36H10V37H9zM10,36H11V37H10zM12,36H13V37H12zM13,36H14V37H13zM14,36H15V37H14zM15,36H16V37H15zM21,36H22V37H21zM23,36H24V37H23zM24,36H25V37H24zM25,36H26V37H25zM26,36H27V37H26zM28,36H29V37H28zM30,36H31V37H30zM33,36H34V37H33zM36,36H37V37H36z" id="qr-path" fill="#000000" fill-opacity="1" fill-rule="nonzero" stroke="none"/></svg></div><small>Scan for the current authorised staff job.<br>Printed notes may be out of date.</small></div></div><div class="panel stack"><h2>Print job card</h2><label class="field">Printer<select><option>Workshop A4 printer</option></select></label>${F('Copies','1','number')}${B('Send job card to printer','print')}<small>Customer name/contact on paper is a shop-review decision. This proposed default minimises visible personal details.</small></div></div>`),'Tag and A4 card share a stable QR but different layouts. Physical printer and stock need verification. No invoice/receipt template.','print','P08');
+add('week','work','Week view of workshop capacity','Service desk · desktop',staff('Workshop diary','Week of 14 September 2026',`<div class="rail" style="margin-bottom:20px">${B('Day','diary','')}${B('Week','week')}${B('Month','month','')}</div><div class="panel" style="padding:0">${table(['Resource','Mon 14','Tue 15','Wed 16','Thu 17','Fri 18'],[['Alex Morgan','3h / 4h','4h / 4h','2h / 4h','3h / 4h','2h / 4h'],['Jo Taylor','4h / 4h','3h / 4h',badge('Leave','amber'),'2h / 4h','4h / 4h'],['Shared queue','1h','1h','1h','1h','1h'],['Shop total','8h / 8h','8h / 8h','3h / 4h','6h / 8h','7h / 8h']])}</div><div class="panel" style="margin-top:20px"><h2>Thursday 17 September</h2><p>8 bikes expected · 6 hours planned · 2 hours remaining</p><div class="actions">${B('Open Thursday’s diary','diary')}</div></div>`,'Diary'),'Week overview counts shared work once. Leave reduces available minutes. This is live operational capacity, not group/report analytics.','diary','P04');
+add('month','work','Month view and closed days','Service desk · desktop',staff('Workshop diary','September 2026',`<div class="rail" style="margin-bottom:20px">${B('Day','diary','')}${B('Week','week','')}${B('Month','month')}</div><div class="panel"><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(t=>`<small>${t}</small>`).join('')}<span></span>${Array.from({length:30},(_,i)=>`<button style="text-align:left;height:64px;font-size:12px;${(i+1)%7===6?'background:#eef0ed;color:#707b72':''}" onclick="parent.jump('diary')">${i+1}<br><small>${(i+1)%7===6?'Closed':i===16?'6h / 8h':i%3===0?'Full':'Space available'}</small></button>`).join('')}</div></div>`,'Diary'),'September 2026 starts Tuesday; Sundays are closed. Illustrative utilisation is for this shop only. Clicking a day in this fixed atlas opens the Thursday diary specimen.','diary','P04');
+const settingNav=(sel)=>`<nav class="subnav">${[['Shop profile','settings'],['Services','services'],['Hours & team','hours'],['Booking','booking-settings'],['Messages','message-settings'],['Lightspeed','connect'],['Printing','printer-settings'],['Staff access','staff-settings']].map(([t,id])=>B(t,id,t===sel?'sel':'')).join('')}</nav>`;
+const setting=(title,body)=>staff('Shop settings','North Street Cycles',`<div class="settings">${settingNav(title)}<div class="stack">${body}</div></div>`,'Settings');
+add('settings','setup','Shop identity & booking appearance','Manager · desktop',setting('Shop profile',`<div class="panel stack"><h2>Shop profile</h2><div class="two">${F('Shop name','North Street Cycles')}${F('Shop type','Bike workshop')}</div>${F('Address shown to customers','24 North Street')}<div class="two">${F('Contact email','workshop@example.test')}${F('Phone','020 7946 0142')}</div><label class="field">Booking introduction<textarea>Book your bike in for a service or tell us what’s wrong. We’ll help you get riding again.</textarea></label><div class="two"><label class="field">Customer theme<select><option>Forest</option><option>Ocean</option><option>Sunset</option></select></label><label class="field">Booking font<select><option>System sans serif</option><option>Humanist sans serif</option></select></label></div><div class="actions">${B('Preview customer booking','service','')}${B('Save shop profile','setup-saved')}</div></div>`),'Uses existing shop theming direction. Appearance controls affect the embed and customer portal; staff brand stays consistent. No group or subscription controls.','services','P05 · P09');
+add('services','setup','Service catalogue & questions','Manager · desktop',setting('Services',`<div class="panel"><div class="row between"><h2>Workshop services</h2>${B('Edit standard service','service-edit','')}</div><hr class="divider">${table(['Service','Price','Effort','Online'],[['Standard service','£65.00','60 min',badge('Bookable')],['Brake service','From £35','45 min',badge('Bookable')],['Diagnosis','Quote first','30 min',badge('Review required','purple')]])}</div><div class="panel"><h2>Templates stay with the service</h2><p>Booking questions ask about the problem. The inspection checklist guides mechanics. Existing job answers are preserved when templates change.</p></div>`),'Extend existing service model rather than add a parallel catalogue. Durations feed capacity; prices feed quotes; bookability feeds the customer embed.','service-edit','P03');
+add('service-edit','setup','Configure a service','Manager · desktop',setting('Services',`<div class="panel stack"><h2>Standard service</h2><div class="two">${F('Price, including VAT','65.00','number')}${F('Planned minutes','60','number')}</div>${F('Linked labour SKU','LAB-SERVICE-STD')}<label class="check"><input type="checkbox" checked>Available for online booking</label><label class="field">Booking approval<select><option>Use shop default: review first</option><option>Automatically accept when capacity allows</option></select></label><hr class="divider"><h3>Customer questions</h3>${F('Question 1','Anything we should look at?')}${F('Question 2','When does the brake noise happen?')}<h3>Inspection checklist</h3><p>Frame & fork → wheels & tyres → brakes → gears → safety check</p><div class="actions">${B('Save service','setup-saved')}</div></div>`),'Shown order is part of the template. New template version affects future jobs only. Example brake question should be conditional to the customer concern in production.','hours','P03');
+add('hours','setup','Hours, leave & available effort','Manager · desktop',setting('Hours & team',`<div class="panel"><h2>Opening hours & workshop availability</h2><hr class="divider">${table(['Day','Shop open','Bookable effort'],[['Mon–Fri','09:00–18:00','8h / day'],['Saturday','09:00–17:00','4h / day'],['Sunday','Closed','0h']])}</div><div class="panel"><h2>Team availability</h2><hr class="divider">${table(['Mechanic','Thu 17 Sep','Break / leave'],[['Alex Morgan','4h bookable','12:30–13:00 break'],['Jo Taylor','4h bookable','12:00–12:30 break']])}<div class="two" style="margin-top:16px">${F('Closure date','2026-09-28','date')}${F('Reason','Staff training')}</div><div class="actions">${B('Save availability','setup-saved')}</div></div>`),'Shop opening hours and mechanic effort are distinct. Leave, closures and breaks reduce available capacity; the public calendar must not expose staff leave details.','booking-settings','P04');
+add('booking-settings','setup','Set booking & diary behaviour','Manager · desktop',setting('Booking',`<div class="panel stack"><h2>Booking behaviour</h2><div class="two"><label class="field">Acceptance default<select><option>Shop reviews before confirming</option><option>Automatic when capacity permits</option></select></label><label class="field">Booking modes<select><option>Drop-off days and appointments</option><option>Drop-off days only</option></select></label></div><div class="two">${F('Pending reservation lifetime (hours)','4','number')}${F('Reserve for staff bookings (minutes/day)','60','number')}</div><label class="field">Customer drop-off explanation<textarea>Drop off during opening hours. We’ll arrange the mechanic’s start time separately.</textarea></label><h3>Diary display</h3><div class="two"><label class="field">Time grid<select><option>30 minutes</option><option>15 minutes</option><option>60 minutes</option></select></label><label class="field">Resource order<select><option>Alex, Jo, Shared queue</option><option>Shared queue, Alex, Jo</option></select></label></div><div class="actions">${B('Preview embedded booking','service','')}${B('Save booking settings','setup-saved')}</div></div>`),'Four-hour expiry and 60-minute staff reserve are proposed review defaults, not previously agreed policy. Per-service overrides remain explicit. Embed can preselect/filter a service; no separate website builder.','message-settings','P04 · P05 · P09');
+add('message-settings','setup','Connect email, SMS & WhatsApp','Manager · desktop',setting('Messages',`<div class="panel"><h2>Channels</h2><hr class="divider">${table(['Channel','Connection',''],[['Email',badge('Setup required','amber'),B('Configure','channel-edit','')],['SMS',badge('Setup required','amber'),B('Configure','channel-edit','')],['WhatsApp',badge('Setup required','amber'),B('Configure','channel-edit','')]])}</div><div class="panel stack"><h2>Job update defaults</h2><label class="check"><input type="checkbox" checked>Booking confirmed or declined</label><label class="check"><input type="checkbox" checked>Quote ready for approval</label><label class="check"><input type="checkbox" checked>Delay / revised target</label><label class="check"><input type="checkbox" checked>Ready for collection</label><small>Customer preferences are checked again when a message is sent.</small><div class="actions">${B('Edit message template','template','')}</div></div>`),'No provider is claimed connected. Shop-owned credentials and actual send/inbound capability are P00 proof tasks for all three channels.','channel-edit','P00 · P06');
+add('channel-edit','setup','Configure a messaging channel','Manager · desktop',setting('Messages',`<div class="panel stack"><h2>SMS connection</h2><p>Use the shop’s messaging account.</p>${F('Sender name / number','NorthStreet')}${F('Provider account identifier','')}${F('API credential','','password')}<small>Credentials are hidden after saving and accessible only to the authorised service.</small>${note('Send a test to a shop-controlled number and verify inbound replies before enabling this channel.')}${F('Shop test number','','tel')}<div class="actions">${B('Preview test checklist','channel-proof','')}</div></div>`),'Provider-specific form and inbound identifiers depend on chosen provider; exact fields shown are a design assumption. Secrets are not collected or sent by this artefact.','channel-proof','P00 · P06');
+add('channel-proof','setup','Verify delivery before enabling','Manager · desktop',setting('Messages',`<div class="panel stack"><h2>Channel readiness</h2>${table(['Check','Evidence'],[['Outbound to shop test number',badge('Not tested','amber')],['Delivery-status callback',badge('Not tested','amber')],['Inbound reply reaches correct job',badge('Not tested','amber')],['Revoked credentials / failures visible',badge('Not tested','amber')]])}<small>WhatsApp also needs its provider onboarding and any required template approvals. Email reply routing must be tested separately.</small><div class="actions">${B('Back to channels','message-settings')}</div></div>`),'Setup remains unavailable for live sending until proof. This screen does not manufacture a successful test or enable fake provider credentials.','message-settings','P00 · P06');
+add('template','setup','Edit a customer message template','Manager · desktop',setting('Messages',`<div class="panel stack"><h2>Ready for collection</h2><label class="field">Template<textarea>Hi {first_name}, your {bike} is ready to collect from {shop_name}. We’re open until {closing_time}. View your job: {progress_link}</textarea></label><div class="panel" style="background:#f4f7f1"><small>PREVIEW</small><p>Hi Maya, your Trek Domane is ready to collect from North Street Cycles. We’re open until 18:00. View your job: [private link]</p></div><label class="check"><input type="checkbox" checked>Send when staff marks a job ready</label><small>Job changes cancel stale reminders. Available placeholders are validated before saving.</small><div class="actions">${B('Save template','setup-saved')}</div></div>`),'Template controls belong to messaging, not duplicate generic settings. Provider limits and WhatsApp approved templates must constrain the final editor.','connect','P06 · P09');
+add('connect','setup','Connect the one chosen Lightspeed','Manager · desktop',setting('Lightspeed',`<div class="panel stack"><div class="row between"><h2>Lightspeed R-Series</h2>${badge('Not connected','grey')}</div><p>Connect the shop to read products and stock, associate the current customer and hand over approved work orders.</p><div class="notice">Your Lightspeed account must permit the required API access. The setup will confirm the shop and permissions before enabling sync.</div><h3>Access this connection needs</h3><p>Catalogue and shop stock · customer lookup/link for current jobs · work-order create/update · employee mapping</p><small>No historical customer import or financial writes are part of this connection.</small><div class="actions">${B('Review connection checks','connect-proof')}</div></div>`),'One adapter only. R-Series is provisional pending first-shop selection. This artefact does not perform OAuth or assert full API access. The real Connect button will start provider authorisation once P00a passes.','connect-proof','P00 · P07');
+add('connect-proof','setup','Verify connector capabilities','Manager · desktop',setting('Lightspeed',`<div class="panel"><h2>Connection checks</h2><p>Confirm this is the right shop before enabling handoff.</p><hr class="divider">${table(['Capability','Status'],[['Shop & employee permissions',badge('Not tested','amber')],['Catalogue / variant / local stock read',badge('Not tested','amber')],['Current-job customer association',badge('Not tested','amber')],['Work-order and child-line writes',badge('Not tested','amber')],['Stock add / remove / cancel behaviour',badge('Not tested','amber')],['Refresh, revocation & uncertain result',badge('Not tested','amber')]])}<div class="actions">${B('See target handoff experience','pos','')}${B('Back to connection','connect')}</div></div>`),'Readiness brief LS-01–09 remains the actual evidence gate. This is an honest unconnected setup state alongside designed connected job states.','printer-settings','P00 · P07');
+add('printer-settings','setup','Register printers & scan a fixture','Manager · desktop',setting('Printing',`<div class="panel stack"><h2>Bike tags & job cards</h2><div class="two">${F('Tag printer name','Front desk Zebra')}${F('Printer host','Workshop Windows PC')}</div><label class="field">Tag layout<select><option>Job number + bike + staff QR</option><option>Job number + bike + QR + Code 128</option></select></label><label class="check"><input type="checkbox" checked>Print one tag when a bike is booked in</label><label class="check"><input type="checkbox">Include customer name on tag</label>${note('Verify the actual printer, driver, label stock and scanner before use. A 1D reader needs the additional Code 128 job number.')}<div class="actions">${B('Preview tag fixture','print','')}${B('Review print queue','print-error','')}</div></div><div class="panel"><h3>Physical acceptance</h3><p>Print at normal driver settings. Attach to a bike. Scan with the shop’s device, sign in if required, and confirm the correct job opens.</p></div>`),'Windows agent is existing implementation direction. Final label dimensions are deliberately not fabricated; scanner and paper proof remains pending.','staff-settings','P00 · P08');
+add('staff-settings','setup','Manage staff access','Manager · desktop',setting('Staff access',`<div class="panel"><div class="row between"><h2>Workshop team</h2>${B('Edit Alex’s access','staff-edit','')}</div><hr class="divider">${table(['Staff','Role','Status'],[['Jack Lewis','Manager',badge('Active')],['Alex Morgan','Mechanic',badge('Active')],['Jo Taylor','Mechanic',badge('Active')]])}</div><div class="panel"><h2>Access belongs to this shop</h2><p>Managers configure the shop and staff. Mechanics work on permitted jobs. Deactivating an account ends its existing access.</p><small>Final role matrix must align with P01 and the existing authentication plan.</small></div>`),'Role labels are proposed presentation of existing permission boundaries, not new group-level roles. Deactivation must permanently revoke old sessions.','staff-edit','P01');
+add('staff-edit','setup','Change or deactivate access','Manager · desktop',setting('Staff access',`<div class="panel stack"><h2>Alex Morgan</h2>${F('Work email','alex@example.test','email')}<label class="field">Role<select><option>Mechanic</option><option>Manager</option></select></label>${note('Deactivating staff ends their current access. Reactivating later requires a fresh sign-in.')}<div class="actions">${B('Deactivate access','staff-deactivate','danger')}${B('Save role','setup-saved')}</div></div>`),'Deactivation gets a confirmation screen. Actor history remains even when staff access is removed.','staff-deactivate','P01');
+add('staff-deactivate','setup','Confirm staff deactivation','Manager · desktop',setting('Staff access',`<div class="panel stack"><h2>Deactivate Alex Morgan?</h2><p>Alex will lose workshop access, including from existing signed-in devices. Their work history stays on jobs.</p><div class="actions">${B('Keep active','staff-settings','')}${B('Deactivate Alex','setup-saved','danger')}</div></div>`),'Mutation is simulated only. Production invalidates tokens at the server and scopes the staff member to the current shop.','staff-settings','P01');
+add('customers','setup','Customer & bike records','Service desk · desktop',staff('Customers','Find or maintain a customer record for workshop work.',`<div class="panel stack">${F('Search customers','Maya Patel')}${table(['Customer','Contact','Bikes',''],[['Maya Patel','07700 900 142','Trek Domane AL 3',B('Open record','customer-record','')],['Maya P.','07700 900 142','No bike linked',B('Review possible duplicate','duplicates','')]])}</div><div class="notice" style="margin-top:20px">Matching contact details suggest a duplicate; they never trigger an automatic merge.</div>`,'Customers'),'Normal record maintenance remains in scope. No bulk customer import, backfill or public phone-history lookup.','customer-record','P02');
+add('customer-record','setup','Edit a customer and bike','Service desk · desktop',staff('Maya Patel','Customer / record',`<div class="split"><div class="panel stack"><h2>Contact details</h2>${F('Full name','Maya Patel')}${F('Email','maya@example.test','email')}${F('Mobile','07700 900 142','tel')}<div class="rail">${badge('Email updates')}${badge('SMS updates')}</div><div class="actions">${B('Save customer','setup-saved')}</div></div><div class="panel stack"><h2>Bike</h2>${F('Make / model','Trek Domane AL 3')}${F('Colour / detail','Green · black mudguards')}${F('Serial number','Not recorded')}<h3>Workshop history</h3><p>WH-1042 · Standard service</p>${B('Open job','job','')}</div></div>`,'Customers'),'Staff can add/edit bikes without mandatory serial numbers. Access and history are shop scoped. Editing contacts does not retroactively change approval snapshots.','job','P02');
+add('duplicates','setup','Review a possible duplicate','Manager · desktop',staff('Review customer duplicate','Compare before combining records.',`<div class="two"><div class="panel"><h2>Keep: Maya Patel</h2><p>maya@example.test<br>07700 900 142</p><hr class="divider"><p>Trek Domane AL 3<br>1 workshop job · WH-1042</p></div><div class="panel"><h2>Merge: Maya P.</h2><p>No email recorded<br>07700 900 142</p><hr class="divider"><p>No bike linked<br>No workshop jobs</p></div></div><div class="panel stack" style="margin-top:20px"><label class="check"><input type="checkbox" checked>I have confirmed these records are the same customer</label><small>Keep Maya Patel’s name and contact details. Move linked records without changing job approval history.</small><div class="actions">${B('Keep separate','customers','')}${B('Confirm merge','setup-saved')}</div></div>`,'Customers'),'Explicit staff review with surviving values. Production must block cross-shop merge and retain attribution; there is no automatic name/phone merge.','customers','P02');
+add('preferences','edges','Change customer update channels','Customer · phone',phone(`<h1>Your update preferences.</h1><p>Choose how North Street Cycles contacts you about this job.</p><div class="panel" style="margin-top:24px"><label class="check"><input type="checkbox" checked>Email · maya@example.test</label><label class="check"><input type="checkbox" checked>SMS · ending 0142</label><label class="check"><input type="checkbox">WhatsApp · ending 0142</label></div><p>These choices are for workshop messages. They don’t sign you up for marketing.</p><div class="actions">${B('Save preferences','progress')}</div>`),'Preferences must be checked at send time; changing them cancels incompatible queued reminders. The secure link remains usable regardless of channel selection.','progress','P05 · P06');
+add('setup-saved','setup','A clear save confirmation','Manager · desktop',setting('Shop profile',`<div class="panel stack"><div class="bigicon">✓</div><h2>Changes saved</h2><p>Your update has been saved for North Street Cycles.</p><div class="actions">${B('Back to settings','settings')}${B('Open workshop','desk','')}</div></div>`),'Shared acknowledgement specimen. Production stays on the edited page with a specific inline confirmation (e.g. “Service saved”) and current values, rather than sending every edit here.','settings','P01 · P09');
+add('finished','work','Work finished; prepare the handover','Service desk · desktop',job(`<div class="notice good" style="margin-bottom:20px">Alex finished the work and final checks at 15:30. The bike is still in the shop.</div><div class="split"><div class="panel stack"><h2>Final checks complete</h2><p>Service, pads and fitting completed. Brakes tested, gears tuned, accessories accounted for.</p><h3>Customer handover note</h3><p>Rear pads replaced and brakes adjusted. Gears tuned. The existing gear cable is still serviceable.</p><div class="actions">${B('Mark ready & notify customer','ready')}</div></div><div class="panel stack"><h2>Lightspeed handoff</h2><p>Agreed work: £111.00</p><small>If not already linked, hand the approved work to the till. A connector outage doesn’t discard the workshop record.</small>${B('Review work-order handoff','pos','')}</div></div>`,'Work finished'),'Work-finished is an explicit state before readiness. The walkthrough visits the POS handoff next; the shop may link it earlier. Collection and payment remain separate.','pos','P02 · P07');
+add('mechanic-message','work','Mechanic’s job conversation','Mechanic · phone',phone(`<div class="eyebrow">WH-1042 / MESSAGES</div><h1>Maya Patel</h1><div class="bubble">Could you check the rear brake too?<div class="mini">Maya · SMS · 09:15</div></div><div class="bubble mine">Yes, I’ll inspect it during the service and send you the findings.<div class="mini" style="color:#d7e5d6">Alex · SMS · delivered 09:18</div></div><label class="field" style="margin-top:24px">Reply to customer<textarea placeholder="Write your update…"></textarea></label><label class="field" style="margin-top:14px">Channel<select><option>SMS · selected by customer</option><option>Email · selected by customer</option></select></label><div class="actions">${B('Send reply','mechanic')}${B('Back to job','mechanic','')}</div>`,true),'A staff phone opens the staff conversation, never the customer’s private link. Staff-only notes are separate from outgoing messages.','mechanic','P02 · P06');
+add('service-status','edges','Booking service temporarily unavailable','Customer · phone',phone(`<div class="bigicon">↻</div><h1>We can’t load bookings right now.</h1><p>Your details haven’t been submitted. Please try again in a moment or contact North Street Cycles.</p><div class="panel" style="margin-top:24px"><h2>Call the workshop</h2><p>020 7946 0142<br>Open today until 18:00</p></div><div class="actions">${B('Try booking again','service')}</div><p style="font-size:12px">If you already have a confirmation, your booking is unchanged.</p>`),'Retained P10 service/error visibility. Never infer booking failure after an ambiguous submission: that separate case needs request-status lookup before retrying. No disaster-recovery feature or guarantee.','service','P05 · P10');
+
+const orderedScreens=groups.flatMap(([group])=>screens.filter(s=>s.group===group));
+orderedScreens.forEach((s,i)=>{s.number=String(i+1).padStart(2,'0');});
+const byId=Object.fromEntries(orderedScreens.map(s=>[s.id,s]));
+const reviewIssueUrl='https://github.com/JackCurphey/wheelhouse-epos/issues/50';
+const reviewStatusLabels={change:'Change requested',question:'Question',approved:'Approved as shown',note:'General note'};
+const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+function loadReviews(){try{return JSON.parse(localStorage.getItem('wheelhouse-r1-screen-feedback')||'{}');}catch{return {};}}
+let reviews=loadReviews();
+function persistReviews(){try{localStorage.setItem('wheelhouse-r1-screen-feedback',JSON.stringify(reviews));}catch{}updateFeedbackCount();}
+let quoteChoice={cable:false,brakes:true};
+function doc(s){let body=s.body;if(s.id==='approval-done'){body=body.replace('class="agreedTotal">£111.00',`class="agreedTotal">£${(65+(quoteChoice.brakes?46:0)+(quoteChoice.cable?12:0)).toFixed(2)}`).replace('<span class="cableDecision">'+badge('Declined','grey'),'<span class="cableDecision">'+badge(quoteChoice.cable?'Approved':'Declined',quoteChoice.cable?'':'grey')).replace('<span class="brakeDecision">'+badge('Approved'),'<span class="brakeDecision">'+badge(quoteChoice.brakes?'Approved':'Declined',quoteChoice.brakes?'':'grey'));}return `<!doctype html><html lang="en-GB"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${s.title}</title><style>${screenCSS}</style><body>${body}<script>function quoteTotal(){const p=document.querySelector('.qpart').checked,f=document.querySelector('.qfit').checked,c=document.querySelector('.qcable').checked;document.querySelector('.qtotal').textContent='£'+(65+(p?28:0)+(f?18:0)+(c?12:0)).toFixed(2);document.querySelector('.qerror').style.display=p!==f?'block':'none';document.querySelector('.qsubmit').disabled=p!==f;}<\/script></body></html>`;}
+const board=document.querySelector('#board'), sizer=document.querySelector('#sizer'), viewport=document.querySelector('#board-window');
+let zoom=.55,filter='all',query='',current=null,opener=null;
+function render(){board.innerHTML='';for(const g of groups){const list=screens.filter(s=>s.group===g[0]&&(filter==='all'||filter===s.group)&&(!query||`${s.title} ${s.role} ${s.pack} ${s.note} ${s.id}`.toLowerCase().includes(query)));if(!list.length)continue;const section=document.createElement('section');section.className='lane';section.id='lane-'+g[0];section.innerHTML=`<div class="lanehead"><span class="index">${g[1]}</span><div><h2>${g[2]}</h2><p>${g[3]}</p></div><span class="pack">${g[4]}<br>${g[5]}</span></div><div class="cards"></div>`;for(const s of list){let c=document.createElement('article');c.className='card';c.tabIndex=0;c.setAttribute('role','button');c.setAttribute('aria-label',`${s.number}: ${s.title}, ${s.role}. Open full-size screen`);c.dataset.screen=s.id;c.innerHTML=`${reviews[s.id]?'<span class="feedback-mark">Feedback saved</span>':''}<div class="screenstage ${s.mobile?'mobile':'desktop'}" inert><iframe tabindex="-1" title="Preview: ${s.title}" loading="lazy"></iframe></div><div class="caption"><div class="meta"><span class="id">${s.number} / ${s.id}</span><span>${s.role}</span></div><h3>${s.title}</h3><div class="next">Next → ${byId[s.next]?.title||'Workshop'} &nbsp; ↗</div></div>`;c.querySelector('iframe').srcdoc=doc(s);c.onclick=()=>jump(s.id);c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();jump(s.id);}};section.querySelector('.cards').append(c);}board.append(section);}if(!board.children.length)board.innerHTML='<p class="emptyresult">No screens match. Try “quote”, “print” or “P04”.</p>';requestAnimationFrame(resizeBoard);}
+function resizeBoard(){board.style.transform=`scale(${zoom})`;sizer.style.width=`${3360*zoom}px`;sizer.style.height=`${board.offsetHeight*zoom}px`;document.querySelector('#zoom-value').textContent=Math.round(zoom*100)+'%';}
+function setZoom(z){zoom=Math.min(1.2,Math.max(.2,z));resizeBoard();}
+function all(){filter='all';query='';document.querySelector('#search').value='';render();document.querySelectorAll('.route button').forEach(b=>b.classList.remove('active'));viewport.scrollTo(0,0);}
+function lane(id){filter=id;render();document.querySelectorAll('.route button').forEach(b=>b.classList.toggle('active',b.dataset.group===id));viewport.scrollTo(0,0);viewport.scrollIntoView({block:'start',behavior:'smooth'});}
+function fit(){setZoom(Math.max(.2,(viewport.clientWidth-80)/3360));viewport.scrollTo(0,0);}
+const dialog=document.querySelector('#viewer'), frame=document.querySelector('#full-screen');
+function jump(id){const s=byId[id];if(!s)return;current=s;const saved=reviews[s.id]||{status:'note',note:''};if(!dialog.open){opener=document.activeElement;dialog.showModal();}document.querySelector('#viewer-label').innerHTML=`${s.number} / ${s.title}<small>${s.role} · proposed Release 1 screen</small>`;document.querySelector('#notes').innerHTML=`<span class="badge">${s.pack}</span><h2>${s.title}</h2><p>${s.note}</p><hr class="divider"><h3>FOLLOW THE JOURNEY</h3><div class="routes">${B('Next → '+(byId[s.next]?.title||'Workshop'),s.next)}${s.branches.map(([l,id])=>B(l+' ↗',id,'')).join('')}</div><h3>SCREEN REFERENCE</h3><p>${s.number} / ${s.id}<br>${s.mobile?'390 × 844 · phone':'1,100 × 760 · desktop'}</p><h3>REVIEW CONTEXT</h3><p>Detailed visual specification with fixed fictional scenarios. Actions navigate between designed states; there is no backend, live delivery, camera access or provider connection.</p><button onclick="copyScreenLink()">Copy screen link</button><form class="review-form" onsubmit="saveCurrentReview(event)"><h3>JACK’S FEEDBACK</h3><label for="review-status">Decision</label><select id="review-status"><option value="change" ${saved.status==='change'?'selected':''}>Change requested</option><option value="question" ${saved.status==='question'?'selected':''}>Question</option><option value="approved" ${saved.status==='approved'?'selected':''}>Approved as shown</option><option value="note" ${saved.status==='note'?'selected':''}>General note</option></select><label for="review-note">Comment for this screen</label><textarea id="review-note" placeholder="What should change, and why?">${escapeHTML(saved.note)}</textarea><div class="review-actions"><button class="primary" type="submit">Save feedback</button>${reviews[s.id]?'<button type="button" onclick="clearCurrentReview()">Clear</button>':''}</div></form>`;frame.title=s.title;frame.srcdoc=doc(s);history.replaceState(null,'','#'+s.id);resizeViewer();document.querySelector('#close').focus();}
+function resizeViewer(){if(!current)return;const host=document.querySelector('.screenview'),w=current.mobile?390:1100,h=current.mobile?844:760;let scale=Math.min(1,(host.clientWidth-40)/w);const holder=document.querySelector('.frameholder');holder.style.width=w*scale+'px';holder.style.height=h*scale+'px';frame.style.width=w+'px';frame.style.height=h+'px';frame.style.transform=`scale(${scale})`;}
+function closeViewer(){dialog.close();history.replaceState(null,'',location.pathname+location.search);opener?.focus();}
+function approve(cable,brakes){quoteChoice={cable,brakes};jump('approval-done');}
+function next(){if(current)jump(current.next);}
+function previous(){if(!current)return;const i=orderedScreens.indexOf(current);jump(orderedScreens[Math.max(0,i-1)].id);}
+async function copyScreenLink(){try{await navigator.clipboard.writeText(location.href);toast('Screen link copied');}catch{toast('Screen reference: '+current.id+' · use the browser address bar');}}
+function updateFeedbackCount(){const count=Object.keys(reviews).length;const button=document.querySelector('#feedback-count');if(button)button.textContent=`Review feedback · ${count}`;}
+function saveCurrentReview(event){event.preventDefault();const status=document.querySelector('#review-status').value,note=document.querySelector('#review-note').value.trim();if(status!=='approved'&&!note){toast('Add a comment, or mark the screen approved');return;}reviews[current.id]={status,note,updated:new Date().toISOString()};persistReviews();render();jump(current.id);toast(`Feedback saved for ${current.number} / ${current.id}`);}
+function clearCurrentReview(){if(!current)return;delete reviews[current.id];persistReviews();render();jump(current.id);toast('Screen feedback cleared');}
+function editFeedback(id){closeFeedback();jump(id);}
+function openFeedback(){renderFeedback();document.querySelector('#feedback-panel').hidden=false;document.querySelector('#feedback-panel button').focus();}
+function closeFeedback(){document.querySelector('#feedback-panel').hidden=true;document.querySelector('#feedback-count')?.focus();}
+function renderFeedback(){const entries=orderedScreens.filter(s=>reviews[s.id]);document.querySelector('#feedback-summary').textContent=entries.length?`${entries.length} of ${orderedScreens.length} screens have feedback. Export when the review is complete.`:'No feedback saved yet. Open a screen and use Jack’s feedback panel.';document.querySelector('#feedback-list').innerHTML=entries.length?entries.map(s=>`<article class="feedback-item"><span class="feedback-status">${escapeHTML(reviewStatusLabels[reviews[s.id].status])}</span><h3>${s.number} / ${escapeHTML(s.title)}</h3><p>${escapeHTML(reviews[s.id].note||'Approved without an additional note.')}</p><button onclick="editFeedback('${s.id}')">Open screen</button></article>`).join(''):'<p class="emptyresult">Feedback will appear here as Jack reviews each screen.</p>';}
+function feedbackMarkdown(){const entries=orderedScreens.filter(s=>reviews[s.id]);const header=['# Wheelhouse Release 1 — screen review','',`Reviewed screens: ${entries.length} of ${orderedScreens.length}`,reviewIssueUrl?`Review issue: ${reviewIssueUrl}`:'',''].filter((line,index)=>line||index!==3);const body=entries.flatMap(s=>[`## ${s.number} / ${s.title} (\`${s.id}\`)`,'',`**Decision:** ${reviewStatusLabels[reviews[s.id].status]}`,'',reviews[s.id].note||'_Approved without an additional note._','',`Implementation package: ${s.pack}`,'']);return [...header,...body].join('\n');}
+async function copyFeedback(){const text=feedbackMarkdown();if(!Object.keys(reviews).length){toast('Add feedback to at least one screen first');return;}try{await navigator.clipboard.writeText(text);toast('Feedback copied — paste it into the GitHub issue');}catch{downloadFeedback();}}
+function downloadFeedback(){if(!Object.keys(reviews).length){toast('Add feedback to at least one screen first');return;}const blob=new Blob([feedbackMarkdown()],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='wheelhouse-release-1-screen-feedback.md';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Markdown feedback downloaded');}
+function toast(text){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=text;document.body.append(t);setTimeout(()=>t.remove(),3500);}
+document.querySelector('#search').addEventListener('input',e=>{query=e.target.value.toLowerCase();filter='all';render();});
+document.querySelector('#close').onclick=closeViewer;document.querySelector('#next').onclick=next;document.querySelector('#previous').onclick=previous;
+dialog.addEventListener('cancel',e=>{e.preventDefault();closeViewer();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.querySelector('#feedback-panel').hidden){closeFeedback();return;}if(!dialog.open||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;if(e.key==='ArrowRight')next();if(e.key==='ArrowLeft')previous();});
+window.addEventListener('resize',()=>{resizeBoard();resizeViewer();});
+document.querySelector('#screen-count').textContent=screens.length;updateFeedbackCount();render();if(byId[location.hash.slice(1)])jump(location.hash.slice(1));
+
+</script></body></html>
