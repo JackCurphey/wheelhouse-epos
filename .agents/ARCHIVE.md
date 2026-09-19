@@ -379,3 +379,75 @@ were then re-checked directly in the main session (the grep patterns above) and,
 for the privilege claim, proven by catalog query against the live database
 rather than inferred from source. Recorded because a delegated "X does not
 exist" is not evidence on its own.
+
+## Moved out of STATUS.md, 19 September 2026
+
+### Working-tree trap of 10 Sep — resolved
+
+The 10 Sep close recorded uncommitted Release 1 work sitting on `main` in the
+root checkout: two decisions, an adversarial review,
+`docs/design/release-1-journey/`, `docs/presentations/`, and edits to the master
+plan and workshop spec. It landed in PR #51 (`21c811c`, 10 Sep 23:58). The
+working tree is clean; the warning is retired, not lost.
+
+### Branch cleanup — 19 September 2026
+
+Executed the recommendation from the 7 Sep audit above, twelve days later and
+against a larger list. **29 remote and 19 local branches deleted**, each checked
+individually with `git rev-list --count origin/main..<branch>` returning 0 — so
+this removed refs, not history, and every commit stays reachable from `main`.
+The GitHub PR pages survive the deletion and still show their diffs.
+
+Remote branches deleted: `chore/architecture-stage-1-setup`,
+`chore/ci-trigger-main`, `chore/untrack-agents-status`,
+`design/audit-remediation-plan`, `design/workos-auth-migration-rebuilt`,
+`design/workshop-service-catalogue`, `docs/archive-executed-plans`,
+`docs/bmbi-and-hubtiger-research`, `docs/business-plan`,
+`docs/business-research`, `docs/competitive-trials-2026-09-08`,
+`docs/job-type-before-diary`, `docs/lightspeed-first-platform`,
+`docs/plan-wedge-reconciliation`, `docs/readme-accuracy`,
+`docs/status-after-healthcheck-merge`, `docs/status-after-pr-45`,
+`docs/status-close-2026-09-10`, `docs/wedge-booking-vs-workshop`,
+`feat/booking-mode-foundations`, `feat/shadcn-foundation`,
+`feat/workshop-prototype`, `feat/workshop-server-rules`,
+`fix/compose-healthcheck-healthz`, `fix/cross-tenant-login-scope`,
+`fix/eslint-ignore-claude`, `fix/portal-data-exposure`,
+`refactor/drop-cloudflare-assumptions`, `test/workshop-ds9-coverage`. The local
+set was the same list minus the ones that never existed locally.
+
+`docs/status-close-2026-09-10` was the one with a commit of its own (`081a616`,
+PR #52). It was deleted anyway, after diffing it against `main`: `STATUS.md` was
+byte-identical and every other path on it was a deletion of something `main`
+has. The orphaned object carries no unique content.
+
+**Kept, and why** — `docs/jack-ranking-2026-09-10` (PR #48, closed) holds the
+only copy of the filled **Jack's priority** column and the four duplicate-row
+removals; `main`'s comparison file still has that column empty.
+`docs/ownership-signoff` and `design/workos-auth-migration` are the two the
+7 Sep audit called "safe in content but not in commits", for the reasons given
+there.
+
+### Issue #47 and PR #52, closed 19 September 2026
+
+#47 asked Jack to rank 317 Hubtiger features. He did, on 10 Sep: 172 Release 1,
+102 Later, 43 Not for us, with the order inside Release 1 attributed to Claude
+rather than himself. The write-back into
+`docs/decisions/2026-09-10-hubtiger-feature-comparison.md` rode PR #48, which was
+closed, so that column on `main` is still empty and the issue comment is the
+record. The ranking is no longer the live scope: the 10 Sep scope reduction says
+in terms that it supersedes the Release 1 selections in it, and the revised plan
+carries 154 of the 172 forward with reasons for the 18 moved to Later.
+
+PR #52 proposed a STATUS update whose content had already reached `main` through
+PR #51 — the two copies of `.agents/STATUS.md` were byte-identical — so it was
+closed as redundant rather than merged.
+
+### Superseded next actions, as they stood on 10 Sep
+
+Actions 1 (commit the other session's Release 1 work), 1b (answer F05, then
+write the Lightspeed adapter spec), 1c (the Hubtiger trial), 2 (the `Workorder`
+timestamp question), 3 (branch cleanup) and 6 (decide the first adapter) are all
+either done or absorbed. F05 and the adapter choice now live in the Lightspeed
+readiness brief; the timestamp question is its step LS-07; the trial lapsed
+about 15 Sep with the quote-approval round trip and the booking-page disclosure
+re-test still untested.
