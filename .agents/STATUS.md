@@ -1,195 +1,159 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-10, late evening (session close)
-**Branch:** `docs/status-close-2026-09-10`, off `main` at `84ff40a`. PRs #44, #46 and #49 are all merged.
-**Blocked on:** nothing. Every open item below is Jack's or Mark's.
-
-> **Working-tree trap, 10 Sep 23:35.** The root checkout on `main` carries
-> uncommitted work from a *different* session: two new decisions
-> (`2026-09-10-release-1-scope-reduction.md`, `2026-09-10-release-1-lightspeed-readiness.md`),
-> a review (`2026-09-10-ranked-release-adversarial-review.md`), `docs/design/release-1-journey/`,
-> `docs/presentations/`, and small edits to the master plan and workshop spec.
-> The closing session did not write them and did not touch them. Whoever owns
-> that work must commit it on a branch; do not stash, reset or clean.
+**Updated:** 2026-09-19
+**Branch:** `docs/status-2026-09-19`, off `main` at `4947bcf`.
+**Blocked on:** Mark, for the 84-screen review on issue #50. Every other open
+item below is Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
->
-> **Never put a destructive command here.** A stale `git reset --hard` was one
+> **Never put a destructive command here** — a stale `git reset --hard` was one
 > edit away from destroying the 2,880-line WorkOS plan (`9da1d75`). State facts
 > and point at documents; let the reader run the verbs.
 
 ## Where this stands
 
-Architecture stage one merged 7 Sep (PR #37): the pooler trap, migration race,
-outbound timeouts, process lifecycle and README are closed. The sixth ceiling —
-managed Postgres, PITR, a rehearsed restore — is untouched, and is Jack's.
-Two designs remain approved and unbuilt: WorkOS auth, and design remediation.
-Competitive research moved on 8 Sep — read `2026-09-08-competitive-trials.md`
-before believing any "better than theirs" claim. Hubtiger is the competitor
-that matters, not Velodrop.
+**Release 1 has a narrowed scope and a plan.** PR #51, 10 Sep.
+`docs/decisions/2026-09-10-release-1-scope-reduction.md` is the live scope —
+booking, diary, job cards, statuses, capacity, line-level quote approval,
+messaging, printing and tags, one Lightspeed adapter. Invoicing, payments,
+refunds, customer import, reports, group capacity and recovery are Later. It
+**supersedes the #47 Hubtiger ranking**, now closed. The plan —
+`docs/superpowers/plans/2026-09-10-release-1-workshop-plan.md` — is packages
+P00–P09 over 154 of the original 172 rows, not yet split into issues.
 
-**Hubtiger was walked from the inside on 10 Sep** (PR #49):
-`docs/decisions/2026-09-10-hubtiger-live-analysis.md` is the observed
-inventory, two Codex reviews of it sit in `docs/reviews/`, and
-`docs/decisions/2026-09-10-hubtiger-feature-comparison.md` maps 317 Hubtiger
-features to where we stand, one citation per row. **Jack ranked all 317 the
-same day** on issue #47: 172 Release 1, 102 Later, 43 Not for us; the order
-inside Release 1 he attributed to Claude, not himself. A later session has
-already drafted a scope reduction from that ranking — see the working-tree
-trap above; it is not yet committed, so treat the ranking as the last
-authoritative word until it is.
+**The 84-screen journey atlas is reviewed and waiting on Mark.** Issue #50,
+`docs/design/release-1-journey/`. Jack marked all 84 on 17 Sep: 71 approved as
+shown, 13 with notes; nothing since. It is the visual build target for store
+review, not design sign-off.
 
-**There is no Lightspeed technical spec.** Two decisions exist (platform,
-2 Sep; sync and rate limits, 2 Sep, signed off 7 Sep) and no adapter code,
-no OAuth app, no plan task. F05 of the 8 Sep review — which system owns each
-stock and money event — is unanswered and is the spine the spec hangs on.
+**There is still no Lightspeed technical spec, and no account.**
+`2026-09-10-release-1-lightspeed-readiness.md` recommends R-Series *conditional
+on the first shop*, carries the integration contract, and leaves proof steps
+LS-01 to LS-09 all "Pending". None start without the shop's series and an
+authorised test account, which is Jack's to supply.
 
-The **workshop prototype** merged 9 Sep (PR #45): a standalone in-memory React
-demo under `prototype/` with a real-browser suite. A learning artefact, not
-product code — persistence, auth and tenancy are out of scope by its spec, so it
-is not a step toward WorkOS. Scope
-`docs/reviews/2026-09-08-workshop-prototype-decisions.md`; evidence
-`prototype/OVERNIGHT.md`.
+Architecture stage one merged 7 Sep (PR #37): pooler trap, migration race,
+outbound timeouts, process lifecycle and README closed. Recovery — managed
+Postgres, PITR, a rehearsed restore — is untouched and now outside Release 1.
+WorkOS auth and design remediation stay approved and unbuilt. The **workshop
+prototype** (PR #45) is an in-memory demo under `prototype/`: a learning
+artefact, not product code, and not a step toward WorkOS.
 
 **Check the checkout before judging state.** On 9 Sep work sat 156 commits
 behind on a branch forked 31 Aug, and stage one was reported open when it had
 merged 7 Sep. Run `git rev-list --left-right --count origin/main...HEAD` first.
 
-
-**Do not assume stage one did more than it did.** It makes the app safe to run
-as more than one process. It does nothing about recovering data if the volume is
-lost. Its request-wide transaction mode is OFF — `DB_TENANT_SCOPE` defaults to
-`session`; three handlers must be restructured first (checklist in the
-tenant-scoping decision).
+**Stage one did less than its name suggests.** It makes the app safe to run as
+more than one process; it does nothing about recovering data if the volume is
+lost, and its request-wide transaction mode is OFF — `DB_TENANT_SCOPE` defaults
+to `session` until three handlers are restructured.
 
 ## Operational traps
-
-In Mark's 31 Aug file, dropped by the 7 Sep rewrite, restored 9 Sep.
 
 - **The app is on `localhost:8080`, not 4000.** Compose stops publishing the app
   port deliberately: `TRUST_PROXY=1` is only safe while the gateway is the sole
   entrance. 4000 refuses host connections.
-
 - **Never delete the `cf-*` header names in `server/gateway.js`.** That is the
   strip list, not Cloudflare residue; removing it reintroduces a login
   brute-force bypass (14/14 spoofed IPs passed before PR #8, 11 blocked after).
 
-## Provenance
-
-Replaces Mark's `.agents/STATUS.md` (`fa32b60`, 31 Aug); his original, the full
-account, and the PR arithmetic are in `.agents/ARCHIVE.md`.
-
 ## Read order for a fresh session
 
 1. This file
-2. `2026-08-31-business-plan.md` — ownership, the Jack/Mark split
-3. `2026-09-02-lightspeed-first-platform.md` — the platform bet and its
-   falsifiers (§7, §8)
-4. `2026-09-06-tenant-scoping-and-pooler-safety.md` — what stage one did, and
-   what must change before `DB_TENANT_SCOPE=transaction`
-5. `2026-09-08-competitive-trials.md` — who the competitors actually are
-6. `2026-08-31-master-implementation-plan.md` — LOCKED; changes are decisions
+2. `2026-09-10-release-1-scope-reduction.md` — what Release 1 is now
+3. `2026-09-10-release-1-lightspeed-readiness.md` — integration contract, proof
+4. `2026-09-10-release-1-workshop-plan.md` — the package breakdown
+5. `2026-08-31-business-plan.md` — ownership, the Jack/Mark split
+6. `2026-09-06-tenant-scoping-and-pooler-safety.md` — the
+   `DB_TENANT_SCOPE=transaction` checklist
 
-All under `docs/decisions/`, bar the plan under `docs/superpowers/plans/`.
+Under `docs/decisions/`, bar the plan under `docs/superpowers/plans/`.
 
 ## Immediate next actions
 
-0. **Decide whether CI should gate the prototype and the runner.** Neither
-   `prototype` nor `python` is in `.github/workflows/test.yml`, so both merged
-   on a local run only and will rot silently. CI runs node 22, local 26.
-1. **Commit the other session's Release 1 work** (working-tree trap above) on
-   a branch, then reconcile it with Jack's #47 ranking and the Hubtiger
-   comparison. Until it lands, #47 stays open and its write-back step (fill
-   the priority column, open a PR) has not run.
-1b. **Answer F05, then write the Lightspeed adapter spec.** Needs Jack's
-   choice — read-only with manual handoff, narrow write-back, or Wheelhouse as
-   scheduling authority — and an R-Series developer account; every trial so far
-   was X-Series. Hubtiger's own R-Series sync (Nov 2025) is write-back and
-   requires special orders to originate in the workshop tool; their X-Series
-   quote push fails. Both are evidence for the choice.
-1c. **Hubtiger trial lapses about 15 Sep.** Still untested inside it: the
-   quote-approval round trip and the booking-page disclosure re-test (§3.5c).
-   Login is Jack's; the 10 Sep walk used a Chrome DevTools MCP relay that is
-   now stopped, profile at `~/.cache/chrome-devtools-mcp/wheelhouse-profile`.
-2. **The timestamp question is still blocked, and the reason changed.** If a
-   `Workorder`'s `timeStamp` does not move when a child `WorkorderLine` changes,
-   polling parents misses line edits. Test before the sync loop is written. The
-   8 Sep trial account is **X-Series**, so it cannot answer an R-Series
-   question; see action 6. Detail: `2026-09-02-r-series-sync-and-rate-limits.md`.
-3. **Decide on branch cleanup.** 22 of 26 remote branches have zero commits
-   `main` cannot reach. Analysis: `.agents/ARCHIVE.md`, "Branch audit".
-4. **Decide whether `gateway` should wait for a healthy `app`.** Its bare
-   `depends_on: app` means `/healthz` gates `docker compose up --wait` and
-   health reporting, not gateway startup. Topology change, so left out of #42.
-5. **Two tenant-isolation gaps, confirmed ABSENT on `main` 9 Sep** — they were
-   "unknown"; they are open. No composite tenant-consistent FKs; no privilege
-   boundary on the resolver tables. Evidence: `.agents/ARCHIVE.md`, "Tenant
-   isolation". Also absent: any idempotency key, so `withRetry` can still
-   double-create on a timeout.
-6. **Decide the first adapter.** The plan targets R-Series; a new shop gets
-   X-Series. Lightspeed UK sales settles that and §7.1 together.
-7. **Answer the five ownership queries.** `2026-09-01-ownership-signoff.md`
-   leaves `PF-3` (print agent — could it be browser-based?) and `DP-1`–`DP-4`
-   (design-partner recruitment) open. They need Mark.
+1. **Jack: the first shop's Lightspeed series, and an authorised test account.**
+   Nothing in P00-LS moves without it, and no honest claim of API access can be
+   made. Other packages proceed meanwhile; P07 stays conditional.
+2. **Jack: the hardware answers** — printer model, tag dimensions, the Windows
+   driver host, 1D or 2D scanner. P08a is early and blocked on these.
+3. **Jack: the message providers**, and what inbound replies should do.
+4. **Mark: the 84-screen review**, issue #50, outstanding since 17 Sep. The 13
+   screens carrying notes are the ones that change the build.
+5. **Split the plan into issues** — row IDs, allowed state changes, expected
+   failure, test command and proof artefact per package.
+
+**Carried, unchanged, and still open:** whether CI should gate `prototype` and
+the Python runner (neither is in `.github/workflows/test.yml`, so both merged on
+a local run only and will rot); three tenant-isolation gaps confirmed ABSENT on
+`main` 9 Sep — no composite tenant-consistent FKs, no privilege boundary on the
+resolver tables, no idempotency key, so `withRetry` can still double-create on a
+timeout; whether `gateway` should wait for a healthy `app`; and the five
+ownership queries `PF-3`, `DP-1`–`DP-4`, which need Mark. Evidence and full text
+for each: `.agents/ARCHIVE.md`.
+
+**The Hubtiger trial lapsed about 15 Sep**, with the quote-approval round trip
+and the booking-page disclosure re-test (§3.5c) never run. Re-entry needs a
+fresh login: Jack's.
 
 ## Done
 
-37 PRs merged, #1-#45. #45 merged 9 Sep, carrying the workshop prototype and
-the overnight runner. Ageing content moves to `.agents/ARCHIVE.md`, never
-deleted. Full list: `gh pr list --state merged -L 100`.
+43 PRs merged, #1–#51; #51 carried the scope reduction, the plan and the atlas.
+#48 and #52 were closed unmerged, both accounted for in `.agents/ARCHIVE.md`,
+where ageing content moves rather than being deleted.
+
+## Branches
+
+Cleaned 19 Sep: 29 remote and 19 local deleted, each verified at zero commits
+`main` cannot reach. Three kept, reasons in `.agents/ARCHIVE.md`. One matters
+here: `docs/jack-ranking-2026-09-10` holds the only copy of the filled **Jack's
+priority** column, which is empty on `main`.
 
 ## Decisions in force
 
 | Decision | Status |
 |---|---|
-| `2026-08-31-business-plan.md` | Decided, except lines marked OPEN |
-| `2026-08-31-frontend-platform.md` | Decided (Mark) |
-| `2026-09-02-lightspeed-first-platform.md` | Decided by Jack 2 Sep |
-| `2026-09-02-r-series-sync-and-rate-limits.md` | Signed off 7 Sep (PR #30); two questions survive — next action 2 |
-| `2026-09-01-wedge-booking-vs-workshop.md` | Decided 1 Sep, ratified 6 Sep; §4/§5b superseded by Lightspeed |
-| `2026-09-01-ownership-signoff.md` | Signed off 1 Sep; five queries still need Mark |
+| `2026-09-10-release-1-scope-reduction.md` | **Instructed by Mark after review with Jack, 10 Sep — the live scope** |
+| `2026-09-10-release-1-lightspeed-readiness.md` | R-Series recommended, conditional; access unproven |
+| `2026-09-10-hubtiger-feature-comparison.md` | Reference, 317 rows; superseded as scope, #47 closed 19 Sep |
 | `2026-09-06-tenant-scoping-and-pooler-safety.md` | Decided by Jack 6 Sep; carries the flag-flip checklist |
 | `2026-09-04-job-type-before-diary.md` | **Proposed, not decided** |
 | `2026-09-04-booking-mode-and-downtime.md` | Booking mode decided 5 Sep; downtime model proposed |
-| `2026-09-08-competitive-trials.md` | **Two decisions by Jack, 8 Sep** — Hubtiger replaces Bikebook; free software, bring-your-own integrations. Three OPEN in §6.4 |
-| `2026-08-31-feature-catalogue.md` | Reference — 214 rows, the feature list |
+| `2026-09-08-competitive-trials.md` | Two decisions by Jack, 8 Sep; three OPEN in §6.4 |
 
-Cell reasoning, written 7 Sep: `.agents/ARCHIVE.md`.
+Six older decisions stay in force unchanged — business plan, frontend platform,
+Lightspeed platform, R-Series sync (its timestamp question is now LS-07), the
+wedge, ownership sign-off — plus the 214-row feature catalogue. Cells and
+reasoning: `.agents/ARCHIVE.md`.
 
 ## Plan register
 
-LOCKED: `2026-08-31-master-implementation-plan.md` — the arc. Executed: stage
-one (PR #37, 7 Sep), booking-mode foundations (PR #35, 5 Sep), the workshop
-service catalogue, the storefront and Shopify-checkout plans. Approved and
-unbuilt: `2026-08-31-workos-auth-migration.md` (2,880 lines) and design
-remediation. Per-plan detail: `.agents/ARCHIVE.md`.
+LOCKED: `2026-08-31-master-implementation-plan.md` — the arc, superseded where
+its Release 1 sequencing conflicts with the 10 Sep reduction. Current: the
+Release 1 workshop plan. Approved and unbuilt: the 2,880-line WorkOS migration,
+design remediation. Executed plans and per-plan detail: `.agents/ARCHIVE.md`.
 
 ## Canonical commands
 
 ```sh
-npm test        # node --test "tests/**/*.test.js"
-npm run typecheck
-npm run lint
-npm run build
+npm test  # node --test "tests/**/*.test.js"
+npm run typecheck && npm run lint && npm run build
 npm run docker:up
 ```
 
 **Last verified:** 278 pass, 0 fail, 10 Sep on the PR #44 merge. **Lint and
-typecheck were NOT re-run on it** — last clean 9 Sep. The docker `app` image is
-from 31 Aug and runs stale code — verify the working tree, never that
-container.
+typecheck were NOT re-run on it** — last clean 9 Sep. Nothing ran on 19 Sep:
+docs and branches only. The docker `app` image is from 31 Aug and runs
+stale code — verify the working tree, never that container.
 
 ## Open items needing Mark
 
-Seven carried items — pg-pool's checkout error listener, gate spacing/dates,
-the paid-ink token, the dark-mode palette, the registry's native `<dialog>`, the
-five ownership queries, and now the CI gap in next action 0. All still open;
-full text in `.agents/ARCHIVE.md`.
+Eight. The 84-screen review is the urgent one; the other seven are in
+`.agents/ARCHIVE.md`.
 
 ## Keeping this file honest
 
 Update at every phase boundary and before ending a session. Cap is 8,000 bytes
 (`~/.claude/process/major-project.md`). Past that, trim by **moving** — stale
-content to `.agents/ARCHIVE.md` (tracked precisely so "move, never delete" is
-not a synonym for delete), decisions to `docs/decisions/`. Never by deleting.
+content to `.agents/ARCHIVE.md`, decisions to `docs/decisions/`. Never by
+deleting.
