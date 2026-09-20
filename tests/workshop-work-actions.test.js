@@ -127,10 +127,13 @@ test('tendering the linked order finishes the work through the machine', async (
   }
 });
 
-test('tendering an order for work that never started is refused, not forced', async () => {
-  // A job still not_started has no 'finish' event. The convert must report that
-  // rather than writing 'complete' behind the machine's back - which is exactly
-  // what the old single status column allowed.
+test('tendering an order for work that never started still takes the payment', async () => {
+  // Jack's decision, 20 Sep: a job-tracking rule must never refuse a customer's
+  // money. The shop tendering the order is the work having happened, whether or
+  // not anyone pressed start. So the payment always goes through, and the job
+  // is walked to complete along the machine's own declared transitions
+  // (not_started -> start -> in_progress -> finish -> complete) rather than
+  // having 'complete' written straight to the column.
   const { cookie, shop, mechanicId, cashierId } = await newShop();
   try {
     const created = await staffRequest(server.baseUrl, cookie, '/api/workshop-jobs', {
@@ -143,8 +146,15 @@ test('tendering an order for work that never started is refused, not forced', as
       method: 'POST',
       body: { cashierId, cashAmount: 0, cashTendered: 0 },
     });
-    assert.equal(converted.status, 409, JSON.stringify(converted.body));
-    assert.match(converted.body.error, /cannot finish a job that is not_started/);
+    assert.equal(converted.status, 201, JSON.stringify(converted.body));
+    assert.equal(converted.body.jobWarning, undefined, 'a job that can be walked to complete is not a warning');
+
+    const job = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`);
+    assert.equal(job.body.workState, 'complete');
+    // Exactly two steps (start, finish) from version 1, so version 3. `> 1`
+    // would also be satisfied by writing 'complete' straight to the column,
+    // which is the thing this is meant to rule out.
+    assert.equal(job.body.version, 3, 'the job must be walked through start and finish, not written directly');
   } finally {
     await deleteTestShop(shop.id);
   }

@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool, runWithShop, prepare } from '../server/db.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
-import { applyEvent } from '../server/workshop/transitions.js';
+import { applyEvent, eventsToReach, driveTo } from '../server/workshop/transitions.js';
 import { work, custody } from '../server/workshop/state-machines.js';
 
 after(async () => {
@@ -104,5 +104,48 @@ test('another shop cannot move this job', async () => {
   } finally {
     await deleteTestShop(shop.id);
     await deleteTestShop(other.id);
+  }
+});
+
+test('eventsToReach finds the shortest declared route, and only declared ones', () => {
+  assert.deepEqual(eventsToReach(work, 'not_started', 'complete'), ['start', 'finish']);
+  assert.deepEqual(eventsToReach(work, 'on_hold', 'complete'), ['resume', 'finish']);
+  assert.deepEqual(eventsToReach(work, 'waiting_parts', 'complete'), ['parts_arrived', 'finish']);
+  assert.deepEqual(eventsToReach(work, 'complete', 'complete'), [], 'already there is an empty path');
+  // custody has no route from collected to expected - a bike that has left
+  // cannot become one that never arrived, and the machine says so.
+  assert.equal(eventsToReach(custody, 'collected', 'expected'), null);
+});
+
+test('driveTo walks the path and records every step', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await seedJob(shop.id);
+    await runWithShop(shop.id, async () => {
+      const result = await driveTo({ jobId: job.id, machine: work, target: 'complete', expectedVersion: 1 });
+      assert.equal(result.ok, true, JSON.stringify(result));
+      assert.equal(result.job.work_state, 'complete');
+      // Two events, so two version bumps. One would mean the intermediate state
+      // was skipped and 'complete' effectively written straight in.
+      assert.equal(result.job.version, 3);
+    });
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('driveTo reports an unreachable target rather than forcing it', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await seedJob(shop.id, { custody_state: 'collected' });
+    await runWithShop(shop.id, async () => {
+      const result = await driveTo({ jobId: job.id, machine: custody, target: 'expected', expectedVersion: 1 });
+      assert.equal(result.ok, false);
+      assert.equal(result.code, 'unreachable');
+      const row = await prepare('SELECT custody_state FROM workshop_jobs WHERE id = ?').get(job.id);
+      assert.equal(row.custody_state, 'collected', 'an unreachable target must change nothing');
+    });
+  } finally {
+    await deleteTestShop(shop.id);
   }
 });

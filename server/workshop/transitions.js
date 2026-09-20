@@ -61,3 +61,60 @@ export async function applyEvent({ jobId, machine, event, expectedVersion }) {
   const updated = await prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(jobId);
   return { ok: true, job: updated };
 }
+
+// The shortest sequence of declared events that gets a machine from one state
+// to another, or null if there is no such route.
+//
+// Breadth-first over the machine's own transitions, so every step is a move the
+// product already allows. This is deliberately not a way to reach a state the
+// machine forbids - if no path exists it says so, and the caller decides what to
+// do about that.
+export function eventsToReach(machine, from, to) {
+  if (from === to) return [];
+  const seen = new Set([from]);
+  const queue = [[from, []]];
+  while (queue.length) {
+    const [state, path] = queue.shift();
+    for (const event of machine.events(state)) {
+      const next = machine.next(state, event);
+      if (seen.has(next)) continue;
+      const took = [...path, event];
+      if (next === to) return took;
+      seen.add(next);
+      queue.push([next, took]);
+    }
+  }
+  return null;
+}
+
+// Walks a job to a target state along that path, one guarded applyEvent per
+// step. Returns the same shape as applyEvent.
+//
+// Used where an outside fact tells us where a job has ended up - tendering its
+// order means the work happened - and the job's recorded state has not caught
+// up. Walking the declared path records how it got there instead of writing the
+// destination straight to the column, which is what the old single status
+// column allowed.
+export async function driveTo({ jobId, machine, target, expectedVersion }) {
+  const column = MACHINE_COLUMNS[machine.name];
+  const job = await prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(jobId);
+  if (!job) return { ok: false, code: 'not_found', message: 'Job not found' };
+
+  const path = eventsToReach(machine, job[column], target);
+  if (path === null) {
+    return {
+      ok: false,
+      code: 'unreachable',
+      message: `a job that is ${job[column]} cannot reach ${target}`,
+    };
+  }
+
+  let version = expectedVersion;
+  let last = { ok: true, job };
+  for (const event of path) {
+    last = await applyEvent({ jobId, machine, event, expectedVersion: version });
+    if (!last.ok) return last;
+    version = last.job.version;
+  }
+  return last;
+}
