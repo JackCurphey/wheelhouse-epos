@@ -752,3 +752,33 @@ exist beside it rather than instead of it. It also leaves `custody_state` alone,
 so editing a job cannot reset a bike that is in the shop back to `expected`.
 
 Both die with `public/app.js` in Phase 4.
+
+
+## Phase 3 — detail at the merge, 20 September 2026 (PR #57)
+
+Fifteen action endpoints, one per thing a person does, each guarded by its Phase
+1 machine and by an optimistic `version` check. An illegal move and a lost race
+are both 409 and say different things, because a screen can only offer "reload
+and look again" for the second.
+
+**The tender rule, decided twice.** Tendering the order for a job requires
+`finish` to be a legal move on the work machine, and `finish` is legal only from
+`in_progress`. So a tender is refused for a job that never started AND for one
+on hold or waiting for parts; the refusal names the way out (`resume`,
+`parts_arrived`). Checked before the sale is created, so a refused tender leaves
+no sale behind. Jack chose refusal in the plan, reversed it on 20 Sep to "never
+refuse a payment", then reversed back the same day. If the breadth proves wrong
+at a real till, narrowing it to `not_started` only is a one-line change in the
+convert handler's pre-flight.
+
+**Three tests were found to prove nothing** and were fixed: one asserted only a
+200 and passed against a PUT that wrote nothing; one ran two HTTP requests in a
+`Promise.all` and passed against a deliberately broken check-then-act allocator,
+because the requests never actually overlapped; one crossed shops, so RLS hid the
+row and the customer-ownership join it claimed to test never ran.
+
+**A CI failure that was real, not flaky.** `tests/server-lifecycle.test.js`
+slept 120ms before sending SIGTERM. Measured: module evaluation finishes ~67ms
+and the server listens by ~145ms, so that sat in a ~78ms window. Adding four
+modules to `server.js`'s import graph lost the race. `server.js` now prints
+`SIGNALS_READY` when its handlers are installed and the test waits for it.

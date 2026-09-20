@@ -1,9 +1,9 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-20
-**Branch:** `feat/phase-3-api`, which carries the Phase 2 STATUS close too.
-**Phases 0-2 are merged to `main`** — PRs #54, #55, #56. **Phase 3 is built and
-verified, not merged.** Next: merge it, then Phase 4, the screens.
+**Branch:** `docs/phase-3-merged`, unpushed. **Phases 0-3 are all merged to
+`main`** — PRs #54, #55, #56 and #57 (Phase 3, merged 20 Sep, CI green).
+Next: Phase 4, the screens. No plan for it yet.
 **Blocked on:** nothing. Mark's #50 review is against the
 superseded 84-screen version; he was told on 20 Sep. Other open items are
 Jack's.
@@ -59,8 +59,8 @@ Older entries moved to `ARCHIVE.md`.
 
 ## Immediate next actions
 
-0. **Merge `feat/phase-3-api`, then Phase 4 — the screens.** Phase 3 is built
-   and verified but unmerged; it carries the Phase 2 STATUS close with it.
+0. **Phase 4 — the screens.** No plan yet. React app, journey order, against
+   the Phase 3 API. Edges last: 24 of the 82 are alternative outcomes.
 1. **Jack: the first shop's Lightspeed series and an authorised test account.**
    Nothing in P00-LS moves without it; P07 stays conditional.
 2. **Jack: the hardware answers** — printer, tag dimensions, Windows driver
@@ -99,21 +99,20 @@ in the Phase 0 and Phase 2 plans' constraint sections.
 Migrations 016-020 house them. Phases 0-2 merged to `main` 20 Sep (PRs #54-#56);
 detail in `ARCHIVE.md`.
 
-**Phase 3 is built on `feat/phase-3-api`, not merged** (PR #57). `status` is now
+**Phase 3 is merged** (PR #57, 20 Sep). `status` is now
 a **generated column** derived from `booking_state` and `work_state` (migration
 021), so the old diary and portal keep reading it and **nothing can write it**.
 Fifteen action endpoints are guarded by the machines and an optimistic `version`
-check: an illegal move and a lost race are both 409 and say different things.
-Job references (`WH-1000`) are per shop. Capacity holds are taken in the job's
-own transaction, so a race loser rolls back. Quotes supersede rather than
-mutate, per-line, with `canApprove` guarding stale links.
+check. Job references (`WH-1000`) are per shop; capacity holds are taken in the
+job's transaction; quotes supersede rather than mutate, per-line. Detail and the
+tender rule are in `ARCHIVE.md`.
 
-**One deliberate hole:** the old `status` is still accepted on `POST`/`PUT
-/api/workshop-jobs`, unguarded, for the old diary's buttons. Detail in
-`ARCHIVE.md`. It dies with `public/app.js` in Phase 4.
+**One deliberate hole:** the old `status` is still accepted, unguarded, on
+`POST`/`PUT /api/workshop-jobs` for the old diary's buttons (`ARCHIVE.md`). It
+dies with `public/app.js` in Phase 4.
 
-**Print tasks and message intent are not built** - they need P00b and P00c,
-which have not landed. Seven atlas screens have no backing endpoint as a result.
+**Print tasks and message intent are not built** - they need P00b and P00c.
+Seven atlas screens have no backing endpoint as a result.
 
 ## Phase plan for building the atlas
 
@@ -144,9 +143,10 @@ python3 docs/design/release-1-journey/package.py && node docs/design/release-1-j
 All of these run in CI too, so a green PR means they passed.
 
 
-**Last verified 20 Sep on `feat/phase-3-api`, all green:** 393 pass / 0 fail,
+**Last verified 20 Sep on PR #57, all green:** 394 pass / 0 fail,
 typecheck/lint/build clean, RLS OK across 30 protected tables, screen trace OK,
-atlas 82 screens no errors. The docker
+atlas 82 screens no errors. **`main` itself has not been run since the merge** —
+the hook closed the session first. Run the canonical commands before trusting it. The docker
 `app` image is from 31 Aug — verify the working tree, not that container.
 
 ## Open items needing Mark
