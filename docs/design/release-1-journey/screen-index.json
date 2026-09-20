@@ -17,6 +17,18 @@
     "number": "01"
   },
   {
+    "id": "service-list",
+    "group": "book",
+    "title": "Choose an individual service",
+    "role": "Customer · phone",
+    "note": "Categories and the services inside them are shop-defined in settings. A shop with few services still sees its own headings; nothing here is a Wheelhouse-supplied catalogue. Prices shown are starting prices, with parts quoted separately.",
+    "next": "problem",
+    "pack": "P03 · P05",
+    "branches": [],
+    "mobile": true,
+    "number": "02"
+  },
+  {
     "id": "problem",
     "group": "book",
     "title": "Describe the bike & problem",
@@ -26,7 +38,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "02"
+    "number": "03"
   },
   {
     "id": "date",
@@ -47,7 +59,7 @@
       ]
     ],
     "mobile": true,
-    "number": "03"
+    "number": "04"
   },
   {
     "id": "details",
@@ -59,7 +71,7 @@
     "pack": "P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "04"
+    "number": "05"
   },
   {
     "id": "pending",
@@ -76,7 +88,7 @@
       ]
     ],
     "mobile": true,
-    "number": "05"
+    "number": "06"
   },
   {
     "id": "requests",
@@ -88,7 +100,7 @@
     "pack": "P02 · P04 · P05",
     "branches": [],
     "mobile": false,
-    "number": "06"
+    "number": "07"
   },
   {
     "id": "review",
@@ -105,7 +117,7 @@
       ]
     ],
     "mobile": false,
-    "number": "07"
+    "number": "08"
   },
   {
     "id": "confirmed",
@@ -117,7 +129,7 @@
     "pack": "P04 · P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "08"
+    "number": "09"
   },
   {
     "id": "desk",
@@ -138,7 +150,7 @@
       ]
     ],
     "mobile": false,
-    "number": "09"
+    "number": "10"
   },
   {
     "id": "intake",
@@ -150,7 +162,7 @@
     "pack": "P02 · P08",
     "branches": [],
     "mobile": false,
-    "number": "10"
+    "number": "11"
   },
   {
     "id": "print",
@@ -171,7 +183,7 @@
       ]
     ],
     "mobile": false,
-    "number": "11"
+    "number": "12"
   },
   {
     "id": "scan",
@@ -192,7 +204,7 @@
       ]
     ],
     "mobile": true,
-    "number": "12"
+    "number": "13"
   },
   {
     "id": "mechanic",
@@ -204,7 +216,7 @@
     "pack": "P02 · P03",
     "branches": [],
     "mobile": true,
-    "number": "17"
+    "number": "18"
   },
   {
     "id": "inspection",
@@ -216,7 +228,7 @@
     "pack": "P02 · P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "18"
+    "number": "19"
   },
   {
     "id": "quote-editor",
@@ -233,7 +245,7 @@
       ]
     ],
     "mobile": false,
-    "number": "19"
+    "number": "20"
   },
   {
     "id": "quote-send",
@@ -245,7 +257,7 @@
     "pack": "P03 · P05 · P06",
     "branches": [],
     "mobile": false,
-    "number": "20"
+    "number": "21"
   },
   {
     "id": "approval",
@@ -266,7 +278,7 @@
       ]
     ],
     "mobile": true,
-    "number": "21"
+    "number": "22"
   },
   {
     "id": "approval-done",
@@ -278,7 +290,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "22"
+    "number": "23"
   },
   {
     "id": "approved",
@@ -290,7 +302,7 @@
     "pack": "P02 · P03 · P04",
     "branches": [],
     "mobile": false,
-    "number": "23"
+    "number": "24"
   },
   {
     "id": "diary",
@@ -315,7 +327,7 @@
       ]
     ],
     "mobile": false,
-    "number": "25"
+    "number": "26"
   },
   {
     "id": "queue",
@@ -332,7 +344,7 @@
       ]
     ],
     "mobile": true,
-    "number": "26"
+    "number": "27"
   },
   {
     "id": "working",
@@ -349,7 +361,7 @@
       ]
     ],
     "mobile": true,
-    "number": "27"
+    "number": "28"
   },
   {
     "id": "waiting",
@@ -361,7 +373,7 @@
     "pack": "P02 · P04 · P06",
     "branches": [],
     "mobile": false,
-    "number": "28"
+    "number": "29"
   },
   {
     "id": "inbox",
@@ -378,7 +390,7 @@
       ]
     ],
     "mobile": false,
-    "number": "29"
+    "number": "30"
   },
   {
     "id": "customer-message",
@@ -390,7 +402,7 @@
     "pack": "P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "30"
+    "number": "31"
   },
   {
     "id": "pos",
@@ -407,7 +419,7 @@
       ]
     ],
     "mobile": false,
-    "number": "31"
+    "number": "32"
   },
   {
     "id": "pos-done",
@@ -419,7 +431,7 @@
     "pack": "P07",
     "branches": [],
     "mobile": false,
-    "number": "32"
+    "number": "33"
   },
   {
     "id": "finish",
@@ -431,7 +443,7 @@
     "pack": "P02 · P03 · P06",
     "branches": [],
     "mobile": true,
-    "number": "33"
+    "number": "34"
   },
   {
     "id": "ready",
@@ -443,7 +455,7 @@
     "pack": "P02 · P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "34"
+    "number": "35"
   },
   {
     "id": "collection",
@@ -455,7 +467,7 @@
     "pack": "P02 · P07",
     "branches": [],
     "mobile": false,
-    "number": "35"
+    "number": "36"
   },
   {
     "id": "closed",
@@ -472,7 +484,7 @@
       ]
     ],
     "mobile": false,
-    "number": "36"
+    "number": "37"
   },
   {
     "id": "diagnosis",
@@ -484,7 +496,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "42"
+    "number": "43"
   },
   {
     "id": "diagnosis-review",
@@ -496,7 +508,7 @@
     "pack": "P03 · P04 · P05",
     "branches": [],
     "mobile": false,
-    "number": "43"
+    "number": "44"
   },
   {
     "id": "appointment",
@@ -508,7 +520,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "44"
+    "number": "45"
   },
   {
     "id": "full",
@@ -520,7 +532,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "45"
+    "number": "46"
   },
   {
     "id": "reschedule",
@@ -532,7 +544,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "46"
+    "number": "47"
   },
   {
     "id": "change-pending",
@@ -544,7 +556,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "47"
+    "number": "48"
   },
   {
     "id": "cancel",
@@ -556,7 +568,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "48"
+    "number": "49"
   },
   {
     "id": "cancelled",
@@ -568,7 +580,7 @@
     "pack": "P02 · P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "49"
+    "number": "50"
   },
   {
     "id": "reject",
@@ -580,7 +592,7 @@
     "pack": "P04 · P05 · P06",
     "branches": [],
     "mobile": false,
-    "number": "50"
+    "number": "51"
   },
   {
     "id": "rejected",
@@ -592,7 +604,7 @@
     "pack": "P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "51"
+    "number": "52"
   },
   {
     "id": "expired",
@@ -604,7 +616,7 @@
     "pack": "P01 · P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "52"
+    "number": "53"
   },
   {
     "id": "stale",
@@ -616,7 +628,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "53"
+    "number": "54"
   },
   {
     "id": "ceiling",
@@ -628,7 +640,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "54"
+    "number": "55"
   },
   {
     "id": "progress",
@@ -640,7 +652,7 @@
     "pack": "P02 · P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "37"
+    "number": "38"
   },
   {
     "id": "capacity-conflict",
@@ -652,7 +664,7 @@
     "pack": "P02 · P04",
     "branches": [],
     "mobile": false,
-    "number": "55"
+    "number": "56"
   },
   {
     "id": "claim-conflict",
@@ -664,7 +676,7 @@
     "pack": "P02 · P04",
     "branches": [],
     "mobile": true,
-    "number": "56"
+    "number": "57"
   },
   {
     "id": "pos-unknown",
@@ -676,7 +688,7 @@
     "pack": "P07",
     "branches": [],
     "mobile": false,
-    "number": "57"
+    "number": "58"
   },
   {
     "id": "print-error",
@@ -688,7 +700,7 @@
     "pack": "P08",
     "branches": [],
     "mobile": false,
-    "number": "58"
+    "number": "59"
   },
   {
     "id": "reprint",
@@ -700,7 +712,7 @@
     "pack": "P08",
     "branches": [],
     "mobile": false,
-    "number": "59"
+    "number": "60"
   },
   {
     "id": "message-error",
@@ -712,7 +724,7 @@
     "pack": "P06",
     "branches": [],
     "mobile": false,
-    "number": "60"
+    "number": "61"
   },
   {
     "id": "login",
@@ -724,7 +736,7 @@
     "pack": "P01 · P08",
     "branches": [],
     "mobile": true,
-    "number": "61"
+    "number": "62"
   },
   {
     "id": "denied",
@@ -736,7 +748,7 @@
     "pack": "P01",
     "branches": [],
     "mobile": true,
-    "number": "62"
+    "number": "63"
   },
   {
     "id": "reopen",
@@ -748,7 +760,7 @@
     "pack": "P01 · P02",
     "branches": [],
     "mobile": false,
-    "number": "63"
+    "number": "64"
   },
   {
     "id": "catalogue-search",
@@ -760,7 +772,7 @@
     "pack": "P02 · P03 · P07",
     "branches": [],
     "mobile": false,
-    "number": "24"
+    "number": "25"
   },
   {
     "id": "new-job",
@@ -772,7 +784,7 @@
     "pack": "P02 · P04",
     "branches": [],
     "mobile": false,
-    "number": "13"
+    "number": "14"
   },
   {
     "id": "job",
@@ -784,7 +796,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "14"
+    "number": "15"
   },
   {
     "id": "history",
@@ -796,7 +808,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "15"
+    "number": "16"
   },
   {
     "id": "job-card",
@@ -808,7 +820,7 @@
     "pack": "P08",
     "branches": [],
     "mobile": false,
-    "number": "16"
+    "number": "17"
   },
   {
     "id": "week",
@@ -820,7 +832,7 @@
     "pack": "P04",
     "branches": [],
     "mobile": false,
-    "number": "38"
+    "number": "39"
   },
   {
     "id": "month",
@@ -832,7 +844,7 @@
     "pack": "P04",
     "branches": [],
     "mobile": false,
-    "number": "39"
+    "number": "40"
   },
   {
     "id": "settings",
@@ -844,7 +856,7 @@
     "pack": "P05 · P09",
     "branches": [],
     "mobile": false,
-    "number": "66"
+    "number": "67"
   },
   {
     "id": "services",
@@ -856,19 +868,19 @@
     "pack": "P03",
     "branches": [],
     "mobile": false,
-    "number": "67"
+    "number": "68"
   },
   {
     "id": "service-edit",
     "group": "setup",
     "title": "Configure a service",
     "role": "Manager · desktop",
-    "note": "Shown order is part of the template. New template version affects future jobs only. Example brake question should be conditional to the customer concern in production.",
+    "note": "The checklist and the number of customer questions are both editable per service: some shops ask one question, some ask many. Shown order is part of the template. New template version affects future jobs only. Example brake question should be conditional to the customer concern in production.",
     "next": "hours",
     "pack": "P03",
     "branches": [],
     "mobile": false,
-    "number": "68"
+    "number": "69"
   },
   {
     "id": "hours",
@@ -880,7 +892,7 @@
     "pack": "P04",
     "branches": [],
     "mobile": false,
-    "number": "69"
+    "number": "70"
   },
   {
     "id": "booking-settings",
@@ -892,7 +904,7 @@
     "pack": "P04 · P05 · P09",
     "branches": [],
     "mobile": false,
-    "number": "70"
+    "number": "71"
   },
   {
     "id": "message-settings",
@@ -904,7 +916,7 @@
     "pack": "P00 · P06",
     "branches": [],
     "mobile": false,
-    "number": "71"
+    "number": "72"
   },
   {
     "id": "channel-edit",
@@ -916,7 +928,7 @@
     "pack": "P00 · P06",
     "branches": [],
     "mobile": false,
-    "number": "72"
+    "number": "73"
   },
   {
     "id": "channel-proof",
@@ -928,7 +940,7 @@
     "pack": "P00 · P06",
     "branches": [],
     "mobile": false,
-    "number": "73"
+    "number": "74"
   },
   {
     "id": "template",
@@ -940,7 +952,7 @@
     "pack": "P06 · P09",
     "branches": [],
     "mobile": false,
-    "number": "74"
+    "number": "75"
   },
   {
     "id": "connect",
@@ -952,7 +964,7 @@
     "pack": "P00 · P07",
     "branches": [],
     "mobile": false,
-    "number": "75"
+    "number": "76"
   },
   {
     "id": "connect-proof",
@@ -964,7 +976,7 @@
     "pack": "P00 · P07",
     "branches": [],
     "mobile": false,
-    "number": "76"
+    "number": "77"
   },
   {
     "id": "printer-settings",
@@ -976,7 +988,7 @@
     "pack": "P00 · P08",
     "branches": [],
     "mobile": false,
-    "number": "77"
+    "number": "78"
   },
   {
     "id": "staff-settings",
@@ -988,7 +1000,7 @@
     "pack": "P01",
     "branches": [],
     "mobile": false,
-    "number": "78"
+    "number": "79"
   },
   {
     "id": "staff-edit",
@@ -1000,7 +1012,7 @@
     "pack": "P01",
     "branches": [],
     "mobile": false,
-    "number": "79"
+    "number": "80"
   },
   {
     "id": "staff-deactivate",
@@ -1012,7 +1024,7 @@
     "pack": "P01",
     "branches": [],
     "mobile": false,
-    "number": "80"
+    "number": "81"
   },
   {
     "id": "customers",
@@ -1024,7 +1036,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "81"
+    "number": "82"
   },
   {
     "id": "customer-record",
@@ -1036,7 +1048,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "82"
+    "number": "83"
   },
   {
     "id": "duplicates",
@@ -1048,7 +1060,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "83"
+    "number": "84"
   },
   {
     "id": "preferences",
@@ -1060,7 +1072,7 @@
     "pack": "P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "64"
+    "number": "65"
   },
   {
     "id": "setup-saved",
@@ -1072,7 +1084,7 @@
     "pack": "P01 · P09",
     "branches": [],
     "mobile": false,
-    "number": "84"
+    "number": "85"
   },
   {
     "id": "finished",
@@ -1084,7 +1096,7 @@
     "pack": "P02 · P07",
     "branches": [],
     "mobile": false,
-    "number": "40"
+    "number": "41"
   },
   {
     "id": "mechanic-message",
@@ -1096,7 +1108,7 @@
     "pack": "P02 · P06",
     "branches": [],
     "mobile": true,
-    "number": "41"
+    "number": "42"
   },
   {
     "id": "service-status",
@@ -1108,6 +1120,6 @@
     "pack": "P05 · P10",
     "branches": [],
     "mobile": true,
-    "number": "65"
+    "number": "66"
   }
 ]
