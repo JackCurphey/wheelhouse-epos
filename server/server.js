@@ -11,6 +11,13 @@ import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.j
 import { readLegacyStatus, bookingRequest, custody, work } from './workshop/state-machines.js';
 import { applyEvent } from './workshop/transitions.js';
 import { allocateReference } from './workshop/references.js';
+import {
+  createRevision as createQuoteRevision,
+  send as sendQuoteForApproval,
+  recordLineDecision,
+  approve as approveQuote,
+  serializeQuote,
+} from './workshop/quotes.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -2841,6 +2848,62 @@ function jobActionRoute(action, machine, event) {
 }
 
 const ENDS_A_BOOKING = new Set(['cancel', 'decline', 'expire']);
+
+// ---------- Quotes ----------
+//
+// One mapper so a single place decides that a refused move is 409 and a hidden
+// row is 404.
+function sendQuoteResult(res, result, status = 200) {
+  if (result.ok) return sendJson(res, status, serializeQuote(result.quote));
+  if (result.code === 'not_found') return notFound(res, result.message);
+  return sendJson(res, 409, { error: result.message });
+}
+
+// screens: quote-editor
+route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
+  const body = await readJsonBody(req);
+  if (!Array.isArray(body.lines)) return badRequest(res, 'lines must be an array');
+  sendQuoteResult(res, await createQuoteRevision({ jobId: Number(params.id), lines: body.lines }), 201);
+});
+
+// screens: quote-send
+route('POST', '/api/quotes/:id/send', async (req, res, params) => {
+  sendQuoteResult(res, await sendQuoteForApproval({ quoteId: Number(params.id) }));
+});
+
+// screens: approval
+// Under /api/portal/ because the customer makes this decision on their phone,
+// authenticated as a customer - not as staff. Resolved exactly the way every
+// other portal route does it.
+route('POST', '/api/portal/:shopSlug/quotes/:id/lines/:lineId/decision', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+  sendQuoteResult(res, await recordLineDecision({
+    quoteId: Number(params.id),
+    lineId: Number(params.lineId),
+    decision: body.decision,
+    customerId: ctx.login.customer_id,
+  }));
+});
+
+// screens: approval-done, approved, stale
+route('POST', '/api/portal/:shopSlug/quotes/:id/approve', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+  // The revision the customer's link was issued for. Required, never defaulted
+  // to the current one - defaulting it would approve whatever the price happens
+  // to be now, which is the exact failure screen 51 exists to show.
+  if (!Number.isInteger(body.revision)) {
+    return badRequest(res, 'revision is required - it comes from the approval link');
+  }
+  sendQuoteResult(res, await approveQuote({
+    quoteId: Number(params.id),
+    linkRevision: body.revision,
+    customerId: ctx.login.customer_id,
+  }));
+});
 
 // screens: requests, review
 jobActionRoute('accept', bookingRequest, 'accept');
