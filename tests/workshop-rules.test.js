@@ -111,6 +111,13 @@ test('reopening a complete job is still allowed', async () => {
       body: { status: 'scheduled' },
     });
     assert.equal(reopened.status, 200, `reopening was rejected: ${JSON.stringify(reopened.body)}`);
+    // Asserting the 200 alone let this pass even when the PUT wrote nothing at
+    // all, which it briefly did while status was being moved onto the state
+    // columns in Phase 3. The point of reopening is that the job actually
+    // reopens.
+    assert.equal(reopened.body.status, 'scheduled', 'the job must actually reopen, not just return 200');
+    const refetched = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`);
+    assert.equal(refetched.body.status, 'scheduled', 'and it must still be reopened when read back');
   } finally {
     await deleteTestShop(shop.id);
   }

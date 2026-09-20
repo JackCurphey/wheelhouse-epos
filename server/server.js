@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
+import { readLegacyStatus } from './workshop/state-machines.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -2264,7 +2265,11 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // the real-world signal the job itself is done, so it auto-completes here
   // rather than needing a separate manual step in the diary.
   if (doc.workshop_job_id) {
-    await db.prepare(`UPDATE workshop_jobs SET status = 'complete', updated_at = ? WHERE id = ?`).run(nowIso(), doc.workshop_job_id);
+    // TODO(Task 5): this writes the work state directly, behind the machine's
+    // back - exactly what the state machines exist to stop. Task 5 routes it
+    // through applyEvent so a job that never started is refused rather than
+    // forced to 'complete'.
+    await db.prepare(`UPDATE workshop_jobs SET work_state = 'complete', updated_at = ? WHERE id = ?`).run(nowIso(), doc.workshop_job_id);
   }
 
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
@@ -2488,15 +2493,19 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
 // deliberately ignores anything the client sends for customerId/status and
 // forces its own values, same principle as createSale() never trusting a
 // client-sent total).
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, status, notes, skipAutoOrder }) {
+// Takes the three states, not a status: workshop_jobs.status is a generated
+// column since migration 021 and Postgres refuses a direct write. Callers that
+// still speak the old five-value vocabulary (the staff diary's POST, below)
+// translate at the boundary with readLegacyStatus().
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder }) {
   await db.exec('BEGIN');
   try {
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, notes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, status, notes, nowIso());
+      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, nowIso());
     const jobId = info.lastInsertRowid;
 
     // Every workshop job is backed by an order so it's findable from the
@@ -2595,6 +2604,10 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
 
   const status = resolveJobStatus(body.status, null);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+  // The staff diary still sends a legacy status and will until Phase 4 replaces
+  // it. Translating here rather than changing the request contract is what
+  // keeps public/app.js working untouched through this phase.
+  const created = readLegacyStatus(status);
 
   const slotError = await checkJobSlot({
     jobDate,
@@ -2612,7 +2625,9 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
     jobDate,
     startTime: times.startTime,
     endTime: times.endTime,
-    status,
+    bookingState: created.booking,
+    workState: created.work,
+    custodyState: created.custody ?? 'expected',
     notes,
     skipAutoOrder: !!body.skipAutoOrder,
   });
@@ -2646,8 +2661,27 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
-  const status = resolveJobStatus(body.status, existing.status);
-  if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+
+  // The staff diary still changes a job's state by PUTting a legacy status
+  // (public/app.js approveJob() and the complete/reopen toggle), and will until
+  // Phase 4 replaces it. This translates that into the state columns.
+  //
+  // Deliberately NOT routed through applyEvent: the old app sends no version,
+  // so it cannot take part in the optimistic-concurrency contract, and some of
+  // its moves are not single machine events. This is the unguarded legacy path,
+  // and it is the reason the action endpoints exist beside it rather than
+  // instead of it. It dies with public/app.js.
+  //
+  // custody_state is left alone. The old status never expressed custody (Phase
+  // 1: readLegacyStatus('complete') returns custody: null), so deriving one
+  // here would reset a bike that is in the shop back to 'expected'.
+  let legacyStates = null;
+  if (body.status !== undefined) {
+    const requested = resolveJobStatus(body.status, null);
+    if (requested === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+    const { booking, work: workState } = readLegacyStatus(requested);
+    legacyStates = { booking, workState };
+  }
 
   // A complete job is a record of work already done, so its details are
   // frozen - the browser disables every field on the form. Changing status
@@ -2677,7 +2711,8 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   if (slotError) return badRequest(res, slotError);
 
   await db.prepare(
-    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, status = ?, notes = ?, updated_at = ?
+    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, updated_at = ?,
+       booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)
      WHERE id = ?`
   ).run(
     title,
@@ -2687,9 +2722,10 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
     jobDate,
     times.startTime,
     times.endTime,
-    status,
     notes,
     nowIso(),
+    legacyStates?.booking ?? null,
+    legacyStates?.workState ?? null,
     id
   );
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
@@ -3861,7 +3897,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     jobDate,
     startTime: times.startTime,
     endTime: times.endTime,
-    status: 'pending',
+    bookingState: 'pending',
+    workState: 'not_started',
+    custodyState: 'expected',
     notes: description,
     skipAutoOrder: false,
   });
