@@ -1,7 +1,8 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-20
-**Branch:** `feat/phase-2-schema`, stacked on Phase 1 (#55) on Phase 0 (#54).
+**Branch:** `docs/status-phase-2-close`. **Phases 0, 1 and 2 are merged to
+`main`** — PRs #54, #55, #56, all 20 Sep. Next: Phase 3, the API layer.
 **Blocked on:** nothing, for the atlas. Mark's #50 review is against the
 superseded 84-screen version; he was told on 20 Sep. Other open items are
 Jack's.
@@ -9,33 +10,25 @@ Jack's.
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
 > **Never put a destructive command here** — one stale `git reset --hard` nearly
-> destroyed the WorkOS plan (`9da1d75`, detail in `ARCHIVE.md`). State facts and
-> point at documents; let the reader run the verbs.
+> destroyed the WorkOS plan. State facts; let the reader run the verbs.
 
 ## Where this stands
 
-**Release 1 has a narrowed scope and a plan.** PR #51, 10 Sep.
+**Release 1 has a narrowed scope and a plan.** PR #51.
 `docs/decisions/2026-09-10-release-1-scope-reduction.md` is the live scope;
-invoicing, payments, refunds, customer import, reports, group capacity and
-recovery are Later. It supersedes the #47 Hubtiger ranking, now closed. The
-workshop plan is packages P00–P09, not yet split into issues.
+invoicing, payments, refunds, import, reports, group capacity and recovery are
+Later. The workshop plan is packages P00–P09, not yet split into issues.
 
 **The journey atlas is revised: 84 screens → 82**, all 13 notes applied and
-asserted by `check-notes.mjs`. PR #54; Mark told on #50. Carried: the tag
-barcode is a declared **non-scanning specimen** until Jack's scanner, and the
-PDFs and board PNG are **stale**. Detail in `ARCHIVE.md`.
+asserted by `check-notes.mjs` (#54). Carried: the tag barcode is a declared
+**non-scanning specimen**, and the PDFs and board PNG are **stale**.
 
-**There is still no Lightspeed technical spec, and no account.**
-`2026-09-10-release-1-lightspeed-readiness.md` recommends R-Series *conditional
-on the first shop* and leaves proof steps LS-01 to LS-09 all "Pending". None
-start without the shop's series and an authorised test account: Jack's to
-supply.
-
-Architecture stage one merged 7 Sep (PR #37); detail in `ARCHIVE.md`. Recovery
-is outside Release 1. WorkOS auth and design remediation stay approved and
-unbuilt. The **workshop prototype** (PR #45) is an in-memory demo, not product
-code, and has **no week view** — the diary Jack built is in `public/app.js`, the
-customer slot grid in `public-portal/portal.js`.
+**There is still no Lightspeed technical spec, and no account.** LS-01 to
+LS-09 are all "Pending" and need the first shop's series plus an authorised test
+account: Jack's to supply. Architecture stage one merged 7 Sep (PR #37);
+recovery is outside Release 1; WorkOS auth and design remediation stay approved
+and unbuilt. The `prototype/` demo has **no week view** — the diary Jack built
+is in `public/app.js`, the customer slot grid in `public-portal/portal.js`.
 
 **Check the checkout before judging state.** On 9 Sep work sat 156 commits
 behind. Run `git rev-list --left-right --count origin/main...HEAD` first.
@@ -45,15 +38,14 @@ defaults to `session` until three handlers are restructured.
 
 ## Operational traps
 
-- **The app is on `localhost:8080`, not 4000.** Postgres is on **5433**, not
-  5432. Compose publishes neither service port directly.
-- **Never delete the `cf-*` header names in `server/gateway.js`.** That is the
-  strip list; removing it reintroduces a login brute-force bypass.
-- **Never hand-edit the atlas HTML** — `package.py` regenerates it.
-- **`npm run build` dirties tracked files** under `public/dist`. Revert it.
+- **The app is on `localhost:8080`, not 4000; Postgres on 5433, not 5432.**
+- **Never delete the `cf-*` header names in `server/gateway.js`** — the strip
+  list; removing it reintroduces a login brute-force bypass.
+- **Never hand-edit the atlas HTML**; `package.py` regenerates it.
+- **`npm run build` dirties `public/dist`.** Revert it.
 - **`npm run docker:down` keeps the volume**, so it does not give you a clean
   database. Use a scratch database to test migrations from empty.
-- **`npm test` hangs silently** if the compose Postgres is not up.
+- **`npm test` hangs silently** without the compose Postgres up.
 
 ## Read order for a fresh session
 
@@ -66,23 +58,24 @@ Older entries moved to `ARCHIVE.md`.
 
 ## Immediate next actions
 
-1. **Jack: the first shop's Lightspeed series, and an authorised test account.**
-   Nothing in P00-LS moves without it; P07 stays conditional meanwhile.
-2. **Jack: the hardware answers** — printer model, tag dimensions, the Windows
-   driver host, 1D or 2D scanner. Scanner arrives Mon 21 Sep; the atlas barcode
-   stays a declared specimen until it is proven.
+0. **Phase 3 — the API layer.** No plan yet. First phase that changes
+   behaviour: `server.js` moves off `workshop_jobs.status` onto the new
+   columns, each endpoint traced to a named screen in `screen-index.json`.
+1. **Jack: the first shop's Lightspeed series and an authorised test account.**
+   Nothing in P00-LS moves without it; P07 stays conditional.
+2. **Jack: the hardware answers** — printer, tag dimensions, Windows driver
+   host, scanner. Scanner arrives Mon 21 Sep; the atlas barcode stays a
+   declared non-scanning specimen until it is proven.
 3. **Jack: the message providers**, and what inbound replies do.
-4. **Mark: the screen review**, issue #50, outstanding since 17 Sep — now
-   against a superseded version. He needs telling that the atlas changed.
-5. **Split the plan into issues** — row IDs, allowed state changes, expected
-   failure, test command and proof artefact per package.
+4. **Mark: the screen review**, #50, outstanding since 17 Sep and now against
+   the revised 82-screen atlas — he was told on 20 Sep.
+5. **Split the Release 1 plan into issues** — row IDs, allowed state changes,
+   expected failure, test command and proof artefact per package.
 
-**Carried, unchanged, and still open:** six items, including three
-tenant-isolation gaps confirmed ABSENT on `main` 9 Sep. Full text and evidence:
-`ARCHIVE.md`.
-
-**The Hubtiger trial lapsed about 15 Sep**; two tests never ran. Re-entry
-needs Jack's login.
+**Carried open:** six items including three tenant-isolation gaps confirmed
+ABSENT on `main` 9 Sep, and whether CI should gate the atlas checks,
+`prototype/` and the Python runner. Detail in `ARCHIVE.md`. **The Hubtiger
+trial lapsed about 15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
 
@@ -98,7 +91,7 @@ undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
 `2026-09-04-booking-mode-and-downtime.md`. The eight decisions taken 20 Sep are
 in the Phase 0 and Phase 2 plans' constraint sections.
 
-## Phases 1 and 2 — the state model, built
+## Phases 0-2 — merged to main 20 Sep
 
 `server/workshop/state-machines.js` replaces the ambiguous single
 `workshop_jobs.status` with seven machines — 35 states, 48 transitions,
@@ -116,19 +109,23 @@ about the old column never recording collection.
 Proven, not assumed: tests run as `epos_app` (`rolsuper = false`); removing
 `FORCE ROW LEVEL SECURITY` let shop B read shop A's quotes; breaking the
 capacity index predicate let two concurrent bookings both win; all 20
-migrations apply cleanly into an empty database. Full detail in PRs #55 and the
-Phase 2 PR.
+migrations apply cleanly into an empty database. Detail in PRs #55 and #56.
+
+**CI does not run the atlas checks.** `package.py`, `check-static.mjs` and
+`check-notes.mjs` appear nowhere in `.github/workflows/test.yml`, so #54's green
+CI said nothing about the atlas being valid — those ran locally only, and the
+atlas can rot without CI noticing. Same open question as `prototype/` and the
+Python runner.
 
 ## Phase plan for building the atlas
 
 Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`,
-which records who decided what. Agreed with Jack 20 Sep: a **new staff app** for
-these screens only, cut over at the end, on the **existing server and schema**,
-sequenced **by layer** because nothing is deployed. The old app keeps till,
-inventory, suppliers and storefront. Phases: 0 atlas, 1 state machines and 2
-schema (all built) → 3 API (each endpoint traced to a named screen) → 4 screens
-→ 5 integration. P00 proofs run alongside, all Jack's. Plans written: phase-0,
-phase-1 and phase-2, all dated 2026-09-20 under `docs/superpowers/plans/`.
+which records who decided what. A **new staff app** for these screens only, cut
+over at the end, on the **existing server and schema**, sequenced **by layer**
+because nothing is deployed. The old app keeps till, inventory, suppliers and
+storefront. Phases 0-2 built; 3 API → 4 screens → 5 integration remain. P00
+proofs run alongside, all Jack's. Plans for phases 0, 1 and 2 are under
+`docs/superpowers/plans/`, all dated 2026-09-20. **Phase 3 has no plan yet.**
 
 ## Plan register
 
@@ -156,7 +153,6 @@ Eight. The screen review is the urgent one, and it now needs re-pointing at the 
 
 ## Keeping this file honest
 
-Update at every phase boundary and before ending a session. Cap is 8,000 bytes
-(`~/.claude/process/major-project.md`). Past that, trim by **moving** — stale
-content to `.agents/ARCHIVE.md`, decisions to `docs/decisions/`. Never by
-deleting.
+Update at every phase boundary and before ending a session. Cap is 8,000 bytes.
+Past that, trim by **moving** — to `ARCHIVE.md` or `docs/decisions/`. Never by
+deleting. Check the byte count before committing, not after.
