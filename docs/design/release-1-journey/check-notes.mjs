@@ -1,6 +1,7 @@
 // Asserts Jack's 17 September review notes have been applied to the atlas.
 // Source of the notes: docs/reviews/2026-09-17-release-1-screen-review-jack.md
 // Run after: python3 package.py && node check-static.mjs
+import { JSDOM, VirtualConsole } from '../../../prototype/node_modules/jsdom/lib/api.js';
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
@@ -14,6 +15,21 @@ const byId = id => {
   assert.ok(screen, `No screen with id "${id}"`);
   return screen;
 };
+
+// Some markup is computed at render time (a class built from a template
+// expression, for example), so it never appears literally in the source.
+// renderedOf gives the screen's actual HTML, the way check-static.mjs does.
+const vc = new VirtualConsole();
+const atlas = new JSDOM(await readFile(path('Wheelhouse-Release-1-Journey-Atlas.html'), 'utf8'), {
+  runScripts: 'dangerously', url: 'https://atlas.example/', virtualConsole: vc,
+  beforeParse(w) {
+    w.HTMLDialogElement.prototype.showModal = function () { this.open = true };
+    w.HTMLDialogElement.prototype.close = function () { this.open = false };
+    w.HTMLElement.prototype.scrollTo = function () {};
+    w.HTMLElement.prototype.scrollIntoView = function () {};
+  },
+});
+const renderedOf = id => atlas.window.doc(atlas.window.eval('screens').find(s => s.id === id));
 
 // The add(...) call for one screen: from add('<id>' up to the next add(' at line start.
 const sourceOf = id => {
@@ -70,4 +86,27 @@ const sourceOf = id => {
     'the date screen does not explain that the shop controls this choice');
 }
 
+// Note 38 — the week view matches the one already built in public/app.js:
+// a per-mechanic split grid with week navigation and a default-view preference.
+{
+  const body = sourceOf('week');
+  assert.match(body, /Prev|\u2039/, 'week view has no previous-week control');
+  assert.match(body, /This week/i, 'week view has no this-week control');
+  assert.match(body, /Next|\u203a/, 'week view has no next-week control');
+  assert.match(body, /mechanic/i, 'week view is not split by mechanic');
+  assert.match(body, /default/i, 'week view offers no way to set a default diary view');
+}
+
+// Note 39 — month cells say "full" or "space available" AND are colour-coded.
+{
+  const body = sourceOf('month');
+  assert.match(body, /Full/, 'month view never says "Full"');
+  assert.match(body, /Space available/i, 'month view never says "Space available"');
+  const rendered = renderedOf('month');
+  for (const cls of ['monthcell full', 'monthcell some', 'monthcell free']) {
+    assert.ok(rendered.includes(cls), `month view is missing the "${cls}" state`);
+  }
+}
+
+atlas.window.close();
 console.log('check-notes: all applied-note assertions passed');

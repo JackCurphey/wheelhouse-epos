@@ -827,7 +827,7 @@
     "group": "work",
     "title": "Week view of workshop capacity",
     "role": "Service desk · desktop",
-    "note": "Week overview counts shared work once. Leave reduces available minutes. This is live operational capacity, not group/report analytics.",
+    "note": "Follows the week diary already built in public/app.js: week navigation, per-mechanic columns and click-to-place. Week overview counts shared work once. Leave reduces available minutes. This is live operational capacity, not group/report analytics.",
     "next": "diary",
     "pack": "P04",
     "branches": [],
