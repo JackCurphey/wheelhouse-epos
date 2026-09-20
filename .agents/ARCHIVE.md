@@ -562,3 +562,29 @@ its Release 1 sequencing conflicts with the 10 Sep reduction. Current: the
 Release 1 workshop plan. Approved and unbuilt: the 2,880-line WorkOS migration,
 design remediation. Executed plans and per-plan detail: `.agents/ARCHIVE.md`.
 
+## Atlas revision detail, moved from STATUS.md 20 Sep 2026
+
+**The journey atlas has been revised against Jack's review: 84 screens → 82.**
+His export is committed at `docs/reviews/2026-09-17-release-1-screen-review-jack.md`
+(71 approved, 13 noted) rather than living only in a browser. Phase 0 applied all
+13 notes on 20 Sep: mechanic phone flow (10 screens) → one tablet `job-page`;
+Code 128 tag instead of QR; a third appointment-only booking mode; diary and slot
+picker following `public/app.js` and `public-portal/portal.js`; services grouped
+by category; deposits left out. `check-notes.mjs` asserts each applied note.
+**The PDFs and board PNG are stale** — rendered from the 84-screen version, and
+WeasyPrint/PyMuPDF/Pillow are not installed here. **The barcode is a declared
+non-scanning specimen**; Jack has a scanner from Mon 21 Sep, and a generated,
+verified Code 128 replaces it in P00b.
+
+## Read order, 20 Sep version moved from STATUS.md
+
+## Read order for a fresh session
+
+1. This file
+2. The Phase 0 plan and the build design, named under **Phase plan** below
+3. `docs/decisions/2026-09-10-release-1-scope-reduction.md` — what Release 1 is
+4. `2026-09-10-release-1-lightspeed-readiness.md` — integration contract, proof
+5. `2026-09-10-release-1-workshop-plan.md` — the package breakdown
+
+Older entries (business plan, tenant-scoping checklist) moved to `ARCHIVE.md`.
+
