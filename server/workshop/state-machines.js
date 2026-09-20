@@ -75,3 +75,38 @@ export const bookingRequest = defineMachine({
   },
   terminal: ['declined', 'expired', 'cancelled'],
 });
+
+// What the mechanic is doing. Independent of custody: a finished bike is still
+// in the shop until someone collects it.
+export const work = defineMachine({
+  name: 'work',
+  initial: 'not_started',
+  states: ['not_started', 'in_progress', 'waiting_parts', 'on_hold', 'complete'],
+  transitions: {
+    not_started: { start: 'in_progress', hold: 'on_hold' },
+    in_progress: { await_parts: 'waiting_parts', hold: 'on_hold', finish: 'complete' },
+    waiting_parts: { parts_arrived: 'in_progress', hold: 'on_hold' },
+    on_hold: { resume: 'in_progress' },
+    // Final checks fail, or the customer rides away and comes straight back.
+    complete: { reopen: 'in_progress' },
+  },
+});
+
+// How a row written under the old five-value workshop_jobs.status should be
+// READ. This is not a migration: Phase 2 decides what to write and what to
+// backfill. custody is null for 'complete' because the old column never
+// recorded whether the bike left - the information does not exist, and
+// inventing it here would be fabricating history.
+const LEGACY = {
+  pending: { booking: 'pending', work: 'not_started', custody: 'expected' },
+  scheduled: { booking: 'scheduled', work: 'not_started', custody: 'expected' },
+  waiting_parts: { booking: 'scheduled', work: 'waiting_parts', custody: 'in_shop' },
+  on_hold: { booking: 'scheduled', work: 'on_hold', custody: 'in_shop' },
+  complete: { booking: 'scheduled', work: 'complete', custody: null },
+};
+
+export function readLegacyStatus(status) {
+  const mapped = LEGACY[status];
+  if (!mapped) throw new Error(`unknown legacy status: ${status}`);
+  return { ...mapped };
+}

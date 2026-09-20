@@ -11,7 +11,9 @@
 // event, not a clock, so these tests never wait.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defineMachine, custody, bookingRequest } from '../server/workshop/state-machines.js';
+import {
+  defineMachine, custody, bookingRequest, work, readLegacyStatus,
+} from '../server/workshop/state-machines.js';
 
 test('defineMachine rejects a transition to a state it does not declare', () => {
   assert.throws(
@@ -89,4 +91,50 @@ test('asking to move a confirmed booking keeps the original until the shop agree
 
 test('a scheduled booking can still be cancelled by either side', () => {
   assert.equal(bookingRequest.next('scheduled', 'cancel'), 'cancelled');
+});
+
+test('work moves through the states a mechanic actually works in', () => {
+  assert.equal(work.next('not_started', 'start'), 'in_progress');
+  assert.equal(work.next('in_progress', 'await_parts'), 'waiting_parts');
+  assert.equal(work.next('waiting_parts', 'parts_arrived'), 'in_progress');
+  assert.equal(work.next('in_progress', 'finish'), 'complete');
+});
+
+test('a job can be put on hold from anywhere it is live, and resumed', () => {
+  assert.equal(work.next('in_progress', 'hold'), 'on_hold');
+  assert.equal(work.next('waiting_parts', 'hold'), 'on_hold');
+  assert.equal(work.next('on_hold', 'resume'), 'in_progress');
+});
+
+test('finished work can be reopened, because final checks fail', () => {
+  assert.equal(work.next('complete', 'reopen'), 'in_progress');
+});
+
+test('work completion says nothing about collection', () => {
+  // The whole reason this phase exists: "complete" used to mean both.
+  assert.equal(work.states.includes('collected'), false);
+  assert.deepEqual(work.events('complete'), ['reopen']);
+});
+
+test('the old single status is read as three independent facts', () => {
+  assert.deepEqual(readLegacyStatus('pending'),
+    { booking: 'pending', work: 'not_started', custody: 'expected' });
+  assert.deepEqual(readLegacyStatus('scheduled'),
+    { booking: 'scheduled', work: 'not_started', custody: 'expected' });
+  assert.deepEqual(readLegacyStatus('waiting_parts'),
+    { booking: 'scheduled', work: 'waiting_parts', custody: 'in_shop' });
+  assert.deepEqual(readLegacyStatus('on_hold'),
+    { booking: 'scheduled', work: 'on_hold', custody: 'in_shop' });
+});
+
+test('the old "complete" cannot say whether the bike went home', () => {
+  // This is the ambiguity being broken, and it cannot be resolved by reading
+  // the old column - the information was never recorded. Phase 2 must decide
+  // what to backfill; it must not guess silently here.
+  assert.deepEqual(readLegacyStatus('complete'),
+    { booking: 'scheduled', work: 'complete', custody: null });
+});
+
+test('an unrecognised legacy status is refused rather than guessed', () => {
+  assert.throws(() => readLegacyStatus('nonsense'), /unknown legacy status: nonsense/);
 });
