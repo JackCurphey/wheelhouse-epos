@@ -1945,7 +1945,8 @@ route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease,
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
-  sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
+  const payload = serializeSale(sale, savedItems, savedPayments);
+  sendJson(res, 201, jobWarning ? { ...payload, jobWarning } : payload);
   if (afterRelease && shopifyPushes.length) {
     afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
   }
@@ -2203,6 +2204,21 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   if (!doc) return notFound(res, 'Not found');
   if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
+  // Tendering the order for a job is the shop saying the work is done, so it
+  // has to be a legal 'finish' on the work machine. Checked HERE, before the
+  // sale is created: refusing further down would leave a real sale on the books
+  // and the job untouched, which is a worse answer than either outcome.
+  let jobToFinish = null;
+  if (doc.workshop_job_id) {
+    jobToFinish = await db.prepare('SELECT id, work_state, version FROM workshop_jobs WHERE id = ?')
+      .get(doc.workshop_job_id);
+    if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
+      return sendJson(res, 409, {
+        error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
+      });
+    }
+  }
+
   const body = await readJsonBody(req);
   const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
   const cardAmount = Math.max(0, Number(body.cardAmount) || 0);
@@ -2265,18 +2281,26 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // the customer paying for and collecting that job - being tendered off is
   // the real-world signal the job itself is done, so it auto-completes here
   // rather than needing a separate manual step in the diary.
-  if (doc.workshop_job_id) {
-    // TODO(Task 5): this writes the work state directly, behind the machine's
-    // back - exactly what the state machines exist to stop. Task 5 routes it
-    // through applyEvent so a job that never started is refused rather than
-    // forced to 'complete'.
-    await db.prepare(`UPDATE workshop_jobs SET work_state = 'complete', updated_at = ? WHERE id = ?`).run(nowIso(), doc.workshop_job_id);
+  let jobWarning = null;
+  if (jobToFinish) {
+    const finished = await applyEvent({
+      jobId: jobToFinish.id,
+      machine: work,
+      event: 'finish',
+      expectedVersion: jobToFinish.version,
+    });
+    // The sale is already real by this point, so a failure here cannot undo it.
+    // Someone moved the job between the pre-flight check above and now. Say so
+    // in the response rather than swallowing it - a silently uncompleted job is
+    // exactly the ambiguity the state machines exist to remove.
+    if (!finished.ok) jobWarning = finished.message;
   }
 
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
-  sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
+  const payload = serializeSale(sale, savedItems, savedPayments);
+  sendJson(res, 201, jobWarning ? { ...payload, jobWarning } : payload);
   if (afterRelease && shopifyPushes.length) {
     afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
   }
@@ -2696,7 +2720,11 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   // A complete job is a record of work already done, so its details are
   // frozen - the browser disables every field on the form. Changing status
   // is the one edit that stays open, because that is how a job is reopened.
-  if (existing.status === 'complete') {
+  // Was `existing.status === 'complete'`. The derived column now also reads
+  // 'complete' for a cancelled, declined or expired booking, and freezing those
+  // against edits is a behaviour change nobody asked for. This guard was always
+  // about finished work.
+  if (existing.work_state === 'complete') {
     const changesBeyondStatus =
       title !== existing.title ||
       jobDate !== existing.job_date ||
