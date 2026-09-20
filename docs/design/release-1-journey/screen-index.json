@@ -1031,7 +1031,7 @@
     "group": "setup",
     "title": "Edit a customer and bike",
     "role": "Service desk · desktop",
-    "note": "Staff can add/edit bikes without mandatory serial numbers. Access and history are shop scoped. Editing contacts does not retroactively change approval snapshots.",
+    "note": "A customer may own several bikes, so the record opens on a chooser and edits one at a time; the second bike is fixture detail, not shop data. Staff can add/edit bikes without mandatory serial numbers. Access and history are shop scoped. Editing contacts does not retroactively change approval snapshots.",
     "next": "job",
     "pack": "P02",
     "branches": [],
