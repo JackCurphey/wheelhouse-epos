@@ -9,6 +9,7 @@ const url = new URL('./', import.meta.url), path = n => new URL(n, url);
 const index = JSON.parse(await readFile(path('screen-index.json'), 'utf8'));
 const source = (await readFile(path('screens.js'), 'utf8'))
   + (await readFile(path('branches.js'), 'utf8'));
+const rawBarcode = await readFile(path('tag-bars.svg'), 'utf8').catch(() => '');
 
 const byId = id => {
   const screen = index.find(s => s.id === id);
@@ -120,6 +121,31 @@ const sourceOf = id => {
     'a selectable slot was disabled');
   assert.match(rendered, /checked again|confirmed when you submit/i,
     'appointment screen does not warn that availability is re-checked on submit');
+}
+
+// Note 11 — Code 128 barcode instead of a QR, and the shop picks the headline.
+{
+  const body = sourceOf('print');
+  assert.match(body, /__BARS__/, 'the tag does not carry the barcode token');
+  assert.doesNotMatch(body, /__QR__/, 'the tag still carries the QR specimen');
+  assert.match(body, /Code 128/, 'the tag screen does not name the barcode symbology');
+  assert.match(body, /WH-1042/, 'the tag no longer shows the readable job number fallback');
+
+  // Honesty gate: until the scanner proof (P00b), the specimen must say it does
+  // not scan, in the screen note and in the image's own accessible name.
+  const svg = rawBarcode;
+  assert.match(svg, /not .{0,20}scan|non-scanning/i,
+    'the barcode SVG does not declare itself a non-scanning specimen');
+  assert.match(body, /not .{0,20}scan|non-scanning/i,
+    'the print screen note does not declare the barcode a non-scanning specimen');
+}
+
+// The shop chooses what the tag headline shows.
+{
+  const body = sourceOf('printer-settings');
+  for (const option of ['Job number', 'Customer name', 'Bike']) {
+    assert.ok(body.includes(option), `tag headline choice is missing "${option}"`);
+  }
 }
 
 atlas.window.close();

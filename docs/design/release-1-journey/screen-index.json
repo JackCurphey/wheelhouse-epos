@@ -169,7 +169,7 @@
     "group": "intake",
     "title": "Print & attach the bike tag",
     "role": "Service desk · desktop",
-    "note": "Valid specimen QR encodes https://wheelhouse.example/staff/jobs/WH-1042 (reserved example domain). Final label size, driver, customer-detail policy and 1D barcode need physical shop validation. “Acknowledged” is a designed state, not evidence of a real print.",
+    "note": "The tag carries a Code 128 job number for the shop’s own scanner. The bar pattern shown here is a non-scanning specimen: it is a placeholder, not a real encoding, and a generated scanner-verified barcode follows the printer and scanner proof (P00b). The readable job number stays as the fallback, and the layout keeps room for a QR if a shop later wants phone-camera scanning. Final label size, driver and customer-detail policy need physical shop validation. “Acknowledged” is a designed state, not evidence of a real print.",
     "next": "scan",
     "pack": "P08",
     "branches": [
