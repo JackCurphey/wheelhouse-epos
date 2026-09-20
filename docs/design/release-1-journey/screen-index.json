@@ -899,7 +899,7 @@
     "group": "setup",
     "title": "Set booking & diary behaviour",
     "role": "Manager · desktop",
-    "note": "Four-hour expiry and 60-minute staff reserve are proposed review defaults, not previously agreed policy. Per-service overrides remain explicit. Embed can preselect/filter a service; no separate website builder.",
+    "note": "Booking mode is the shop’s choice, not the customer’s: a shop offering one mode shows only that mode on its booking page. Four-hour expiry and 60-minute staff reserve are proposed review defaults, not previously agreed policy. Per-service overrides remain explicit. Embed can preselect/filter a service; no separate website builder.",
     "next": "message-settings",
     "pack": "P04 · P05 · P09",
     "branches": [],

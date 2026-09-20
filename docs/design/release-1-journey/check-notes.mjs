@@ -53,4 +53,21 @@ const sourceOf = id => {
   assert.match(body, /Remove|Delete|✕/, 'service-edit cannot remove a customer question');
 }
 
+// Notes 03 and 70 — booking mode is a shop setting with three options, and
+// appointment-only shops still absorb walk-ins through an untimed shared queue.
+{
+  const body = sourceOf('booking-settings');
+  for (const mode of ['Drop-off days only', 'Exact appointments only', 'Both \u2014 customer chooses']) {
+    assert.ok(body.includes(mode), `booking-settings is missing the "${mode}" mode`);
+  }
+  assert.match(body, /shared queue/i,
+    'booking-settings does not say what happens to a walk-in under appointment-only');
+}
+
+// Note 03 — the customer sees whichever mode the shop chose, not both by default.
+{
+  assert.match(sourceOf('date'), /your shop|the shop|set by/i,
+    'the date screen does not explain that the shop controls this choice');
+}
+
 console.log('check-notes: all applied-note assertions passed');
