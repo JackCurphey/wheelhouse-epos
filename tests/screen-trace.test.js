@@ -49,3 +49,20 @@ test('the real server.js passes', () => {
   const result = checkSource(source, screenIds);
   assert.equal(result.ok, true, result.problems.join('\n'));
 });
+
+test('a GET quote route with no screens comment is reported', () => {
+  const result = checkSource(
+    "route('GET', '/api/quotes/:id', async (req, res, params) => {\n});",
+    screenIds
+  );
+  assert.equal(result.ok, false);
+  assert.match(result.problems.join('\n'), /names no screen/);
+});
+
+test('a GET quote route naming a real screen passes', () => {
+  const result = checkSource(
+    "// screens: quote-editor\nroute('GET', '/api/quotes/:id', async (req, res, params) => {\n});",
+    screenIds
+  );
+  assert.equal(result.ok, true, result.problems.join('\n'));
+});

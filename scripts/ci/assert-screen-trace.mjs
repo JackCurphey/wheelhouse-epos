@@ -21,9 +21,14 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 // Route paths this rule applies to. Anything matching one of these must carry a
 // `// screens: ...` comment immediately above it.
+//
+// The quotes pattern's trailing `(\/[a-z-]+)?` is optional so that a read route
+// with no action segment - GET /api/quotes/:id itself, not just an action
+// hanging off it - is still checked. This list grows as later phases add route
+// shapes; a shape absent from it is not checked at all.
 const COVERED = [
   /^\/api\/workshop-jobs\/:id\/[a-z-]+$/,
-  /^\/api\/quotes\/:id\/[a-z-]+$/,
+  /^\/api\/quotes\/:id(\/[a-z-]+)?$/,
   /^\/api\/portal\/:shopSlug\/quotes\//,
 ];
 
