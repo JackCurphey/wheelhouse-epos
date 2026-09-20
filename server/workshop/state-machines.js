@@ -152,3 +152,30 @@ export function canApprove({ quoteState, linkRevision, currentRevision }) {
   }
   return { allowed: true, reason: null };
 }
+
+// A claim on workshop capacity. Only 'held' and 'confirmed' consume space; an
+// expired or released hold must stop counting immediately, or the diary
+// promises room it does not have.
+export const capacityHold = defineMachine({
+  name: 'capacityHold',
+  initial: 'held',
+  states: ['held', 'confirmed', 'expired', 'released'],
+  transitions: {
+    held: { confirm: 'confirmed', expire: 'expired', release: 'released' },
+    confirmed: { release: 'released' },
+  },
+  terminal: ['expired', 'released'],
+});
+
+export const CONSUMES_CAPACITY = new Set(['held', 'confirmed']);
+
+// The oracle for "two customers requested the last slot". First live hold in
+// the given order wins; everything else loses. Order is the caller's - in
+// production it comes from the database's own serialisation, not from here.
+export function settleRace(holds) {
+  const winner = holds.find(h => h.state === 'held') ?? null;
+  return {
+    winner: winner ? winner.id : null,
+    losers: holds.filter(h => h !== winner).map(h => h.id),
+  };
+}

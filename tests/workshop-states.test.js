@@ -13,6 +13,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   defineMachine, custody, bookingRequest, work, readLegacyStatus, quote, canApprove,
+  capacityHold, settleRace,
 } from '../server/workshop/state-machines.js';
 
 test('defineMachine rejects a transition to a state it does not declare', () => {
@@ -180,4 +181,45 @@ test('a current link against a superseded quote is still refused', () => {
 test('approving twice is refused rather than silently repeated', () => {
   const result = canApprove({ quoteState: 'approved', linkRevision: 1, currentRevision: 1 });
   assert.equal(result.allowed, false);
+});
+
+test('a hold is taken, then confirmed or let go', () => {
+  assert.equal(capacityHold.next('held', 'confirm'), 'confirmed');
+  assert.equal(capacityHold.next('held', 'expire'), 'expired');
+  assert.equal(capacityHold.next('held', 'release'), 'released');
+});
+
+test('an expired or released hold stops consuming capacity and cannot return', () => {
+  // A hold that still counted after expiry would make the diary lie about
+  // available space.
+  assert.throws(() => capacityHold.next('expired', 'confirm'),
+    /capacityHold: cannot confirm from expired/);
+  assert.throws(() => capacityHold.next('released', 'confirm'),
+    /capacityHold: cannot confirm from released/);
+});
+
+test('a confirmed hold can be released when the booking is cancelled', () => {
+  assert.equal(capacityHold.next('confirmed', 'release'), 'released');
+});
+
+test('two requests for the last slot produce exactly one winner', () => {
+  const result = settleRace([
+    { id: 'a', state: 'held' },
+    { id: 'b', state: 'held' },
+  ]);
+  assert.equal(result.winner, 'a');
+  assert.deepEqual(result.losers, ['b']);
+});
+
+test('an expired hold does not win, even if it asked first', () => {
+  const result = settleRace([
+    { id: 'a', state: 'expired' },
+    { id: 'b', state: 'held' },
+  ]);
+  assert.equal(result.winner, 'b');
+});
+
+test('no live holds means no winner, not an arbitrary one', () => {
+  assert.deepEqual(settleRace([{ id: 'a', state: 'expired' }]),
+    { winner: null, losers: ['a'] });
 });
