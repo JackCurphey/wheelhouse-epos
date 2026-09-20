@@ -36,7 +36,7 @@ backed by the existing Postgres schema and server.
   Vite). `src/staff/main.tsx` is a deliberately inert entry point that mounts
   only when a `#wh-root` element exists. The live staff UI is the 6,933-line
   vanilla `public/app.js`.
-- Composition of the 84 screens, from `screen-index.json`: by journey group,
+- Composition of the 84 screens **as reviewed**, from `screen-index.json`. Phase 0 has since revised this to 82 — see the plan's outcome section: by journey group,
   book 5, intake 11, quote 8, work 17, edges 24, setup 19. By role, service desk
   desktop 33, customer phone 24, manager desktop 17, mechanic phone 10.
 

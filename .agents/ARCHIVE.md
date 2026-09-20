@@ -451,3 +451,114 @@ either done or absorbed. F05 and the adapter choice now live in the Lightspeed
 readiness brief; the timestamp question is its step LS-07; the trial lapsed
 about 15 Sep with the quote-approval round trip and the booking-page disclosure
 re-test still untested.
+
+---
+
+# Moved from STATUS.md, 20 September 2026
+
+Moved to keep STATUS within its 8,000-byte cap after the Phase 0 entry was
+added. Both were historical record rather than live state.
+
+## Done (as at 19 Sep 2026)
+
+43 PRs merged, #1–#51; #51 carried the scope reduction, the plan and the atlas.
+#48 and #52 were closed unmerged, both accounted for in `.agents/ARCHIVE.md`,
+where ageing content moves rather than being deleted.
+
+## Branches (cleaned 19 Sep 2026)
+
+Cleaned 19 Sep: 29 remote and 19 local deleted, each verified at zero commits
+`main` cannot reach. Three kept, reasons in `.agents/ARCHIVE.md`. One matters
+here: `docs/jack-ranking-2026-09-10` holds the only copy of the filled **Jack's
+priority** column, which is empty on `main`.
+
+## Decisions in force (table moved from STATUS.md, 20 Sep 2026)
+
+
+| Decision | Status |
+|---|---|
+| `2026-09-10-release-1-scope-reduction.md` | **Instructed by Mark after review with Jack, 10 Sep — the live scope** |
+| `2026-09-10-release-1-lightspeed-readiness.md` | R-Series recommended, conditional; access unproven |
+| `2026-09-10-hubtiger-feature-comparison.md` | Reference, 317 rows; superseded as scope, #47 closed 19 Sep |
+| `2026-09-06-tenant-scoping-and-pooler-safety.md` | Decided by Jack 6 Sep; carries the flag-flip checklist |
+| `2026-09-04-job-type-before-diary.md` | **Proposed, not decided** |
+| `2026-09-04-booking-mode-and-downtime.md` | Booking mode decided 5 Sep; downtime model proposed |
+| `2026-09-08-competitive-trials.md` | Two decisions by Jack, 8 Sep; three OPEN in §6.4 |
+
+Six older decisions stay in force unchanged — business plan, frontend platform,
+Lightspeed platform, R-Series sync (its timestamp question is now LS-07), the
+wedge, ownership sign-off — plus the 214-row feature catalogue. Cells and
+reasoning: `.agents/ARCHIVE.md`.
+
+
+The live decisions themselves are the files under `docs/decisions/`; this
+table was a summary of them, and summaries of documents that exist do not
+belong in a capped file.
+
+## Architecture stage one, moved from STATUS.md 20 Sep 2026
+
+Architecture stage one merged 7 Sep (PR #37): pooler trap, migration race,
+outbound timeouts, process lifecycle and README closed. Recovery — managed
+Postgres, PITR, a rehearsed restore — is untouched and now outside Release 1.
+WorkOS auth and design remediation stay approved and unbuilt. The **workshop
+prototype** (PR #45) is an in-memory demo under `prototype/`: a learning
+artefact, not product code, and not a step toward WorkOS.
+
+## Read order, fuller version moved from STATUS.md 20 Sep 2026
+
+## Read order for a fresh session
+
+1. This file
+2. `2026-09-10-release-1-scope-reduction.md` — what Release 1 is now
+3. `2026-09-10-release-1-lightspeed-readiness.md` — integration contract, proof
+4. `2026-09-10-release-1-workshop-plan.md` — the package breakdown
+5. `2026-08-31-business-plan.md` — ownership, the Jack/Mark split
+6. `2026-09-06-tenant-scoping-and-pooler-safety.md` — the
+   `DB_TENANT_SCOPE=transaction` checklist
+
+Under `docs/decisions/`, bar the plan under `docs/superpowers/plans/`.
+
+## Canonical commands, earlier version moved from STATUS.md 20 Sep 2026
+
+## Canonical commands
+
+```sh
+npm test  # node --test "tests/**/*.test.js"
+npm run typecheck && npm run lint && npm run build
+npm run docker:up
+```
+
+**Last verified:** 278 pass, 0 fail, 10 Sep on the PR #44 merge. **Lint and
+typecheck were NOT re-run on it** — last clean 9 Sep. Nothing ran on 19 Sep:
+docs and branches only. The docker `app` image is from 31 Aug and runs
+stale code — verify the working tree, never that container.
+
+## Carried open items, moved from STATUS.md 20 Sep 2026
+
+**Carried, unchanged, and still open:** CI gating for `prototype` and the Python
+runner; three tenant-isolation gaps confirmed ABSENT on `main` 9 Sep (no
+composite tenant-consistent FKs, no privilege boundary on the resolver tables,
+no idempotency key — `withRetry` can still double-create on a timeout); whether
+`gateway` should wait for a healthy `app`; the five ownership queries needing
+Mark. Full text and evidence: `.agents/ARCHIVE.md`.
+
+## Operational traps, earlier version moved from STATUS.md 20 Sep 2026
+
+## Operational traps
+
+- **The app is on `localhost:8080`, not 4000.** Compose stops publishing the app
+  port deliberately: `TRUST_PROXY=1` is only safe while the gateway is the sole
+  entrance. 4000 refuses host connections.
+- **Never delete the `cf-*` header names in `server/gateway.js`.** That is the
+  strip list, not Cloudflare residue; removing it reintroduces a login
+  brute-force bypass (14/14 spoofed IPs passed before PR #8, 11 blocked after).
+
+## Plan register, earlier version moved from STATUS.md 20 Sep 2026
+
+## Plan register
+
+LOCKED: `2026-08-31-master-implementation-plan.md` — the arc, superseded where
+its Release 1 sequencing conflicts with the 10 Sep reduction. Current: the
+Release 1 workshop plan. Approved and unbuilt: the 2,880-line WorkOS migration,
+design remediation. Executed plans and per-plan detail: `.agents/ARCHIVE.md`.
+
