@@ -708,3 +708,22 @@ asserted by `check-notes.mjs`. PR #54; Mark told on #50. Carried: the tag
 barcode is a declared **non-scanning specimen** until Jack's scanner, and the
 PDFs and board PNG are **stale**. Detail in `ARCHIVE.md`.
 
+
+## Phases 0-2 detail — moved from STATUS.md, 20 September 2026
+
+Moved to make room for Phase 3 while keeping STATUS under its 8,000-byte cap.
+
+**Proven, not assumed** (Phases 1-2): tests run as `epos_app`
+(`rolsuper = false`); removing `FORCE ROW LEVEL SECURITY` let shop B read shop
+A's quotes; breaking the capacity index predicate let two concurrent bookings
+both win; all 20 migrations apply cleanly into an empty database. Detail in PRs
+#55 and #56.
+
+**CI did not run the atlas checks** (recorded at the Phase 2 close).
+`package.py`, `check-static.mjs` and `check-notes.mjs` appeared nowhere in
+`.github/workflows/test.yml`, so #54's green CI said nothing about the atlas
+being valid - those ran locally only. Phase 3 closed the narrow half of this by
+adding `scripts/ci/assert-screen-trace.mjs` to CI, which gates the
+endpoint-to-screen trace. Whether the three atlas scripts themselves should run
+in CI is still open and is Jack's decision, alongside `prototype/` and the
+Python runner.

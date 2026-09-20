@@ -85,6 +85,15 @@ jobs:
       - name: Fail if the registry is out of date
         run: node scripts/ci/check-registry-drift.mjs
 
+      # ---------- Atlas traceability ----------
+
+      # The Release 1 design's one rule for the API layer: every workshop
+      # endpoint names the atlas screen it serves, and an endpoint no screen
+      # consumes is not built. Static, so it runs with the other cheap checks,
+      # before Postgres is involved.
+      - name: Assert every workshop route names a screen
+        run: node scripts/ci/assert-screen-trace.mjs
+
       # ---------- Database ----------
 
       - run: npm run migrate

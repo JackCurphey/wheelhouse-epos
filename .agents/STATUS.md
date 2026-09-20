@@ -1,9 +1,10 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-20
-**Branch:** `docs/status-phase-2-close`. **Phases 0, 1 and 2 are merged to
-`main`** — PRs #54, #55, #56, all 20 Sep. Next: Phase 3, the API layer.
-**Blocked on:** nothing, for the atlas. Mark's #50 review is against the
+**Branch:** `feat/phase-3-api`, which carries the Phase 2 STATUS close too.
+**Phases 0-2 are merged to `main`** — PRs #54, #55, #56. **Phase 3 is built and
+verified, not merged.** Next: merge it, then Phase 4, the screens.
+**Blocked on:** nothing. Mark's #50 review is against the
 superseded 84-screen version; he was told on 20 Sep. Other open items are
 Jack's.
 
@@ -58,9 +59,8 @@ Older entries moved to `ARCHIVE.md`.
 
 ## Immediate next actions
 
-0. **Phase 3 — the API layer.** No plan yet. First phase that changes
-   behaviour: `server.js` moves off `workshop_jobs.status` onto the new
-   columns, each endpoint traced to a named screen in `screen-index.json`.
+0. **Merge `feat/phase-3-api`, then Phase 4 — the screens.** Phase 3 is built
+   and verified but unmerged; it carries the Phase 2 STATUS close with it.
 1. **Jack: the first shop's Lightspeed series and an authorised test account.**
    Nothing in P00-LS moves without it; P07 stays conditional.
 2. **Jack: the hardware answers** — printer, tag dimensions, Windows driver
@@ -91,31 +91,30 @@ undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
 `2026-09-04-booking-mode-and-downtime.md`. The eight decisions taken 20 Sep are
 in the Phase 0 and Phase 2 plans' constraint sections.
 
-## Phases 0-2 — merged to main 20 Sep
+## Phases 0-3
 
 `server/workshop/state-machines.js` replaces the ambiguous single
-`workshop_jobs.status` with seven machines — 35 states, 48 transitions,
-`docs/design/workshop-states.md` generated from them. Migrations 016–020 give
-them somewhere to live: job states, `reference`, `planned_minutes`, `version`,
-`shops.next_job_number`, four new `workshop_*` tables and
-`customer_messages.intent_state`. CHECK constraints are generated from the
-machines; a drift test fails if a machine changes without a migration.
+`workshop_jobs.status` with seven machines - 35 states, 48 transitions.
+Migrations 016-020 give them somewhere to live. Phases 0-2 merged to `main`
+20 Sep (PRs #54, #55, #56); detail in `ARCHIVE.md`.
 
-**Additive. `workshop_jobs.status` is still the live column** and nothing reads
-the new ones; Phase 3 switches them over. **No backfill exists, deliberately** —
-there was no data, only test residue, which answers Phase 1's open question
-about the old column never recording collection.
+**Phase 3 is built on `feat/phase-3-api`, not merged.** `status` is now a
+**generated column** Postgres derives from `booking_state` and `work_state`
+(migration 021), so `public/app.js` and the portal keep reading it and **nothing
+can write it** - a direct write is refused. Fifteen action endpoints are
+guarded by the machines and an optimistic `version` check: an illegal move and a
+lost race are both 409 and say different things. Job references (`WH-1000`) are
+per shop. Capacity holds are taken in the job's own transaction, so a race loser
+rolls back rather than keeping a booking for a slot it does not hold. Quotes
+supersede rather than mutate, per-line, with `canApprove` guarding stale links.
 
-Proven, not assumed: tests run as `epos_app` (`rolsuper = false`); removing
-`FORCE ROW LEVEL SECURITY` let shop B read shop A's quotes; breaking the
-capacity index predicate let two concurrent bookings both win; all 20
-migrations apply cleanly into an empty database. Detail in PRs #55 and #56.
+**One deliberate hole:** `POST`/`PUT /api/workshop-jobs` still accept a legacy
+`status` and translate it, because the old diary's approve and complete buttons
+send one. That PUT path is **not** version- or machine-guarded. It dies with
+`public/app.js` in Phase 4.
 
-**CI does not run the atlas checks.** `package.py`, `check-static.mjs` and
-`check-notes.mjs` appear nowhere in `.github/workflows/test.yml`, so #54's green
-CI said nothing about the atlas being valid — those ran locally only, and the
-atlas can rot without CI noticing. Same open question as `prototype/` and the
-Python runner.
+**Print tasks and message intent are not built** - they need P00b and P00c,
+which have not landed. Seven atlas screens have no backing endpoint as a result.
 
 ## Phase plan for building the atlas
 
@@ -124,8 +123,8 @@ which records who decided what. A **new staff app** for these screens only, cut
 over at the end, on the **existing server and schema**, sequenced **by layer**
 because nothing is deployed. The old app keeps till, inventory, suppliers and
 storefront. Phases 0-2 built; 3 API → 4 screens → 5 integration remain. P00
-proofs run alongside, all Jack's. Plans for phases 0, 1 and 2 are under
-`docs/superpowers/plans/`, all dated 2026-09-20. **Phase 3 has no plan yet.**
+proofs run alongside, all Jack's. Plans for phases 0-3 are under
+`docs/superpowers/plans/`, all dated 2026-09-20.
 
 ## Plan register
 
@@ -139,11 +138,13 @@ migration, design remediation. Per-plan detail: `.agents/ARCHIVE.md`.
 npm run docker:up   # the suite hangs silently without it
 npm test && npm run typecheck && npm run lint && npm run build
 node scripts/ci/assert-rls-coverage.mjs
+node scripts/ci/assert-screen-trace.mjs
 python3 docs/design/release-1-journey/package.py && node docs/design/release-1-journey/check-static.mjs && node docs/design/release-1-journey/check-notes.mjs
 ```
 
-**Last verified 20 Sep, all green:** 347 pass / 0 fail, typecheck/lint/build
-clean, RLS OK across 30 protected tables, atlas 82 screens no errors. The docker
+**Last verified 20 Sep on `feat/phase-3-api`, all green:** 393 pass / 0 fail,
+typecheck/lint/build clean, RLS OK across 30 protected tables, screen trace OK,
+atlas 82 screens no errors. The docker
 `app` image is from 31 Aug — verify the working tree, not that container.
 
 ## Open items needing Mark
