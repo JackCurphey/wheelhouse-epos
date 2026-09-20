@@ -1,7 +1,7 @@
 // Asserts Jack's 17 September review notes have been applied to the atlas.
 // Source of the notes: docs/reviews/2026-09-17-release-1-screen-review-jack.md
 // Run after: python3 package.py && node check-static.mjs
-import { JSDOM, VirtualConsole } from '../../../prototype/node_modules/jsdom/lib/api.js';
+import { JSDOM, VirtualConsole } from 'jsdom';
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 

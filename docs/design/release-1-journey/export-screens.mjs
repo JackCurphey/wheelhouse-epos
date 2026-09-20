@@ -1,4 +1,4 @@
-import {JSDOM,VirtualConsole} from '../../../prototype/node_modules/jsdom/lib/api.js';
+import {JSDOM,VirtualConsole} from 'jsdom';
 import {readFile,writeFile} from 'node:fs/promises';
 const base=new URL('./',import.meta.url);
 const dom=new JSDOM(await readFile(new URL('Wheelhouse-Release-1-Journey-Atlas.html',base),'utf8'),{runScripts:'dangerously',pretendToBeVisual:true,url:'https://atlas.example/',virtualConsole:new VirtualConsole()});
