@@ -179,3 +179,35 @@ export function settleRace(holds) {
     losers: holds.filter(h => h !== winner).map(h => h.id),
   };
 }
+
+// A tag waiting to come out of a printer. 'unknown' exists because an agent can
+// print and then die before acknowledging: the honest state is "we do not
+// know", and a person resolves it. Never retried automatically from unknown.
+export const printTask = defineMachine({
+  name: 'printTask',
+  initial: 'queued',
+  states: ['queued', 'claimed', 'acknowledged', 'failed', 'unknown'],
+  transitions: {
+    queued: { claim: 'claimed', cancel: 'failed' },
+    claimed: { acknowledge: 'acknowledged', fail: 'failed', lose_contact: 'unknown' },
+    unknown: { confirm_printed: 'acknowledged', confirm_missing: 'failed' },
+  },
+  terminal: ['acknowledged'],
+});
+
+// An intention to tell the customer something. Same shape as printTask and for
+// the same reason: a provider timeout is not a failure, and treating it as one
+// sends the message twice.
+export const messageIntent = defineMachine({
+  name: 'messageIntent',
+  initial: 'intended',
+  states: ['intended', 'sending', 'delivered', 'failed', 'unknown'],
+  transitions: {
+    intended: { send: 'sending', cancel: 'failed' },
+    sending: { delivered: 'delivered', reject: 'failed', timeout: 'unknown' },
+    // Known-failed may be retried deliberately; unknown may not.
+    failed: { retry: 'sending' },
+    unknown: { confirm_delivered: 'delivered', confirm_not_sent: 'failed' },
+  },
+  terminal: ['delivered'],
+});

@@ -13,7 +13,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   defineMachine, custody, bookingRequest, work, readLegacyStatus, quote, canApprove,
-  capacityHold, settleRace,
+  capacityHold, settleRace, printTask, messageIntent,
 } from '../server/workshop/state-machines.js';
 
 test('defineMachine rejects a transition to a state it does not declare', () => {
@@ -222,4 +222,45 @@ test('an expired hold does not win, even if it asked first', () => {
 test('no live holds means no winner, not an arbitrary one', () => {
   assert.deepEqual(settleRace([{ id: 'a', state: 'expired' }]),
     { winner: null, losers: ['a'] });
+});
+
+test('a print task is queued, claimed by an agent, then acknowledged', () => {
+  assert.equal(printTask.next('queued', 'claim'), 'claimed');
+  assert.equal(printTask.next('claimed', 'acknowledge'), 'acknowledged');
+});
+
+test('a lost acknowledgement leaves the task unknown, not assumed printed', () => {
+  // The agent may have printed the tag and died before saying so. Asserting
+  // "printed" would tell a shop a label exists that nobody can find.
+  assert.equal(printTask.next('claimed', 'lose_contact'), 'unknown');
+});
+
+test('an unknown print task is reconciled by a human, either way', () => {
+  assert.equal(printTask.next('unknown', 'confirm_printed'), 'acknowledged');
+  assert.equal(printTask.next('unknown', 'confirm_missing'), 'failed');
+});
+
+test('an unknown print task cannot be silently retried', () => {
+  // Retrying blind is how a shop ends up with two tags on one bike.
+  assert.equal(printTask.can('unknown', 'claim'), false);
+});
+
+test('a message is sent, then confirmed delivered or failed', () => {
+  assert.equal(messageIntent.next('intended', 'send'), 'sending');
+  assert.equal(messageIntent.next('sending', 'delivered'), 'delivered');
+  assert.equal(messageIntent.next('sending', 'reject'), 'failed');
+});
+
+test('a provider timeout leaves the message unknown, never re-sent blind', () => {
+  // The SMS may have gone. Re-sending on a timeout is how a customer gets the
+  // same message three times.
+  assert.equal(messageIntent.next('sending', 'timeout'), 'unknown');
+  assert.equal(messageIntent.can('unknown', 'send'), false);
+  assert.equal(messageIntent.next('unknown', 'confirm_delivered'), 'delivered');
+  assert.equal(messageIntent.next('unknown', 'confirm_not_sent'), 'failed');
+});
+
+test('a failed message can be deliberately re-sent', () => {
+  // Known-failed is different from unknown. A shop may try again.
+  assert.equal(messageIntent.next('failed', 'retry'), 'sending');
 });
