@@ -189,9 +189,9 @@
     "id": "scan",
     "group": "intake",
     "title": "Scan → authenticated job",
-    "role": "Mechanic · phone",
+    "role": "Mechanic · tablet",
     "note": "Staff-only QR route. A signed-out scan returns to this job after login. A different shop gets no customer or job disclosure. The local artefact does not access a camera.",
-    "next": "mechanic",
+    "next": "job-page",
     "pack": "P01 · P02 · P08",
     "branches": [
       [
@@ -203,32 +203,29 @@
         "denied"
       ]
     ],
-    "mobile": true,
+    "mobile": false,
     "number": "13"
   },
   {
-    "id": "mechanic",
+    "id": "job-page",
     "group": "quote",
-    "title": "Open the mechanic’s job",
-    "role": "Mechanic · phone",
-    "note": "Phone is a working tool for inspection, not a shrunk desktop table. Opening a job does not claim it or start work.",
-    "next": "inspection",
-    "pack": "P02 · P03",
-    "branches": [],
-    "mobile": true,
+    "title": "The mechanic’s job page",
+    "role": "Mechanic · tablet",
+    "note": "One page per job on a tablet or desktop: the agreement on the left, the work on the right, nothing hidden behind a tab. In portrait it becomes a single scrolling column. Replaces the former mechanic phone flow (open job, inspect, do the work, final check). The checklist comes from the service template. Marking ready is independent of custody and of payment: it does not mean collected, and it does not mean paid.",
+    "next": "finished",
+    "pack": "P02 · P03 · P06",
+    "branches": [
+      [
+        "Parts delay",
+        "waiting"
+      ],
+      [
+        "Job conversation",
+        "mechanic-message"
+      ]
+    ],
+    "mobile": false,
     "number": "18"
-  },
-  {
-    "id": "inspection",
-    "group": "quote",
-    "title": "Inspect & explain the findings",
-    "role": "Mechanic · phone",
-    "note": "Completed template answers are preserved if the shop later changes the checklist. Media is explicitly attached to the job and shared with the customer when sent.",
-    "next": "quote-editor",
-    "pack": "P02 · P03 · P05",
-    "branches": [],
-    "mobile": true,
-    "number": "19"
   },
   {
     "id": "quote-editor",
@@ -245,7 +242,7 @@
       ]
     ],
     "mobile": false,
-    "number": "20"
+    "number": "19"
   },
   {
     "id": "quote-send",
@@ -257,7 +254,7 @@
     "pack": "P03 · P05 · P06",
     "branches": [],
     "mobile": false,
-    "number": "21"
+    "number": "20"
   },
   {
     "id": "approval",
@@ -278,7 +275,7 @@
       ]
     ],
     "mobile": true,
-    "number": "22"
+    "number": "21"
   },
   {
     "id": "approval-done",
@@ -290,7 +287,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "23"
+    "number": "22"
   },
   {
     "id": "approved",
@@ -302,7 +299,7 @@
     "pack": "P02 · P03 · P04",
     "branches": [],
     "mobile": false,
-    "number": "24"
+    "number": "23"
   },
   {
     "id": "diary",
@@ -327,15 +324,15 @@
       ]
     ],
     "mobile": false,
-    "number": "26"
+    "number": "25"
   },
   {
     "id": "queue",
     "group": "work",
     "title": "Take work from the shared queue",
-    "role": "Mechanic · phone",
+    "role": "Mechanic · tablet",
     "note": "Alternative to desk allocation: shared-queue claim is atomic. If another mechanic takes it first, show the owner and leave capacity unchanged.",
-    "next": "working",
+    "next": "job-page",
     "pack": "P02 · P04",
     "branches": [
       [
@@ -343,25 +340,8 @@
         "claim-conflict"
       ]
     ],
-    "mobile": true,
-    "number": "27"
-  },
-  {
-    "id": "working",
-    "group": "work",
-    "title": "Do the approved work",
-    "role": "Mechanic · phone",
-    "note": "Only approved work is actionable. Work finished, ready for collection and physically collected are separate events. Notes are staff-only unless explicitly shared.",
-    "next": "finish",
-    "pack": "P02 · P03",
-    "branches": [
-      [
-        "Parts delay",
-        "waiting"
-      ]
-    ],
-    "mobile": true,
-    "number": "28"
+    "mobile": false,
+    "number": "26"
   },
   {
     "id": "waiting",
@@ -373,7 +353,7 @@
     "pack": "P02 · P04 · P06",
     "branches": [],
     "mobile": false,
-    "number": "29"
+    "number": "27"
   },
   {
     "id": "inbox",
@@ -390,7 +370,7 @@
       ]
     ],
     "mobile": false,
-    "number": "30"
+    "number": "28"
   },
   {
     "id": "customer-message",
@@ -402,7 +382,7 @@
     "pack": "P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "31"
+    "number": "29"
   },
   {
     "id": "pos",
@@ -419,7 +399,7 @@
       ]
     ],
     "mobile": false,
-    "number": "32"
+    "number": "30"
   },
   {
     "id": "pos-done",
@@ -431,19 +411,7 @@
     "pack": "P07",
     "branches": [],
     "mobile": false,
-    "number": "33"
-  },
-  {
-    "id": "finish",
-    "group": "work",
-    "title": "Finish, check, then mark ready",
-    "role": "Mechanic · phone",
-    "note": "A distinct final check separates work finished from ready for collection. Message delivery failure cannot undo work completion or falsely mark delivery successful.",
-    "next": "finished",
-    "pack": "P02 · P03 · P06",
-    "branches": [],
-    "mobile": true,
-    "number": "34"
+    "number": "31"
   },
   {
     "id": "ready",
@@ -455,7 +423,7 @@
     "pack": "P02 · P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "35"
+    "number": "32"
   },
   {
     "id": "collection",
@@ -467,7 +435,7 @@
     "pack": "P02 · P07",
     "branches": [],
     "mobile": false,
-    "number": "36"
+    "number": "33"
   },
   {
     "id": "closed",
@@ -484,7 +452,7 @@
       ]
     ],
     "mobile": false,
-    "number": "37"
+    "number": "34"
   },
   {
     "id": "diagnosis",
@@ -496,7 +464,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "43"
+    "number": "40"
   },
   {
     "id": "diagnosis-review",
@@ -508,7 +476,7 @@
     "pack": "P03 · P04 · P05",
     "branches": [],
     "mobile": false,
-    "number": "44"
+    "number": "41"
   },
   {
     "id": "appointment",
@@ -520,7 +488,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "45"
+    "number": "42"
   },
   {
     "id": "full",
@@ -532,7 +500,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "46"
+    "number": "43"
   },
   {
     "id": "reschedule",
@@ -544,7 +512,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "47"
+    "number": "44"
   },
   {
     "id": "change-pending",
@@ -556,7 +524,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "48"
+    "number": "45"
   },
   {
     "id": "cancel",
@@ -568,7 +536,7 @@
     "pack": "P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "49"
+    "number": "46"
   },
   {
     "id": "cancelled",
@@ -580,7 +548,7 @@
     "pack": "P02 · P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "50"
+    "number": "47"
   },
   {
     "id": "reject",
@@ -592,7 +560,7 @@
     "pack": "P04 · P05 · P06",
     "branches": [],
     "mobile": false,
-    "number": "51"
+    "number": "48"
   },
   {
     "id": "rejected",
@@ -604,7 +572,7 @@
     "pack": "P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "52"
+    "number": "49"
   },
   {
     "id": "expired",
@@ -616,7 +584,7 @@
     "pack": "P01 · P04 · P05",
     "branches": [],
     "mobile": true,
-    "number": "53"
+    "number": "50"
   },
   {
     "id": "stale",
@@ -628,7 +596,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "54"
+    "number": "51"
   },
   {
     "id": "ceiling",
@@ -640,7 +608,7 @@
     "pack": "P03 · P05",
     "branches": [],
     "mobile": true,
-    "number": "55"
+    "number": "52"
   },
   {
     "id": "progress",
@@ -652,7 +620,7 @@
     "pack": "P02 · P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "38"
+    "number": "35"
   },
   {
     "id": "capacity-conflict",
@@ -664,19 +632,19 @@
     "pack": "P02 · P04",
     "branches": [],
     "mobile": false,
-    "number": "56"
+    "number": "53"
   },
   {
     "id": "claim-conflict",
     "group": "edges",
     "title": "Another mechanic claimed it",
-    "role": "Mechanic · phone",
+    "role": "Mechanic · tablet",
     "note": "Atomic claim. A concurrency conflict is an ordinary usable state, not an unexplained error toast.",
     "next": "queue",
     "pack": "P02 · P04",
     "branches": [],
-    "mobile": true,
-    "number": "57"
+    "mobile": false,
+    "number": "54"
   },
   {
     "id": "pos-unknown",
@@ -688,7 +656,7 @@
     "pack": "P07",
     "branches": [],
     "mobile": false,
-    "number": "58"
+    "number": "55"
   },
   {
     "id": "print-error",
@@ -700,7 +668,7 @@
     "pack": "P08",
     "branches": [],
     "mobile": false,
-    "number": "59"
+    "number": "56"
   },
   {
     "id": "reprint",
@@ -712,7 +680,7 @@
     "pack": "P08",
     "branches": [],
     "mobile": false,
-    "number": "60"
+    "number": "57"
   },
   {
     "id": "message-error",
@@ -724,31 +692,31 @@
     "pack": "P06",
     "branches": [],
     "mobile": false,
-    "number": "61"
+    "number": "58"
   },
   {
     "id": "login",
     "group": "edges",
     "title": "Sign in after scanning",
-    "role": "Mechanic · phone",
+    "role": "Mechanic · tablet",
     "note": "Visual sign-in reference only; final auth method follows the existing authentication implementation. No credentials leave this file. Revoked accounts cannot regain old-session access after reactivation.",
-    "next": "mechanic",
+    "next": "job-page",
     "pack": "P01 · P08",
     "branches": [],
-    "mobile": true,
-    "number": "62"
+    "mobile": false,
+    "number": "59"
   },
   {
     "id": "denied",
     "group": "edges",
     "title": "Wrong shop or revoked access",
-    "role": "Mechanic · phone",
+    "role": "Mechanic · tablet",
     "note": "No bike, customer, price or job-existence details from another tenant. Server enforces the boundary; hiding a button is insufficient.",
     "next": "login",
     "pack": "P01",
     "branches": [],
-    "mobile": true,
-    "number": "63"
+    "mobile": false,
+    "number": "60"
   },
   {
     "id": "reopen",
@@ -760,7 +728,7 @@
     "pack": "P01 · P02",
     "branches": [],
     "mobile": false,
-    "number": "64"
+    "number": "61"
   },
   {
     "id": "catalogue-search",
@@ -772,7 +740,7 @@
     "pack": "P02 · P03 · P07",
     "branches": [],
     "mobile": false,
-    "number": "25"
+    "number": "24"
   },
   {
     "id": "new-job",
@@ -792,7 +760,7 @@
     "title": "The complete job workspace",
     "role": "Service desk · desktop",
     "note": "Job is independent of a sale. Product, customer, bike and service writer controls belong here; separate work status and custody are visible.",
-    "next": "inspection",
+    "next": "job-page",
     "pack": "P02",
     "branches": [],
     "mobile": false,
@@ -832,7 +800,7 @@
     "pack": "P04",
     "branches": [],
     "mobile": false,
-    "number": "39"
+    "number": "36"
   },
   {
     "id": "month",
@@ -844,7 +812,7 @@
     "pack": "P04",
     "branches": [],
     "mobile": false,
-    "number": "40"
+    "number": "37"
   },
   {
     "id": "settings",
@@ -856,7 +824,7 @@
     "pack": "P05 · P09",
     "branches": [],
     "mobile": false,
-    "number": "67"
+    "number": "64"
   },
   {
     "id": "services",
@@ -868,7 +836,7 @@
     "pack": "P03",
     "branches": [],
     "mobile": false,
-    "number": "68"
+    "number": "65"
   },
   {
     "id": "service-edit",
@@ -880,7 +848,7 @@
     "pack": "P03",
     "branches": [],
     "mobile": false,
-    "number": "69"
+    "number": "66"
   },
   {
     "id": "hours",
@@ -892,7 +860,7 @@
     "pack": "P04",
     "branches": [],
     "mobile": false,
-    "number": "70"
+    "number": "67"
   },
   {
     "id": "booking-settings",
@@ -904,7 +872,7 @@
     "pack": "P04 · P05 · P09",
     "branches": [],
     "mobile": false,
-    "number": "71"
+    "number": "68"
   },
   {
     "id": "message-settings",
@@ -916,7 +884,7 @@
     "pack": "P00 · P06",
     "branches": [],
     "mobile": false,
-    "number": "72"
+    "number": "69"
   },
   {
     "id": "channel-edit",
@@ -928,7 +896,7 @@
     "pack": "P00 · P06",
     "branches": [],
     "mobile": false,
-    "number": "73"
+    "number": "70"
   },
   {
     "id": "channel-proof",
@@ -940,7 +908,7 @@
     "pack": "P00 · P06",
     "branches": [],
     "mobile": false,
-    "number": "74"
+    "number": "71"
   },
   {
     "id": "template",
@@ -952,7 +920,7 @@
     "pack": "P06 · P09",
     "branches": [],
     "mobile": false,
-    "number": "75"
+    "number": "72"
   },
   {
     "id": "connect",
@@ -964,7 +932,7 @@
     "pack": "P00 · P07",
     "branches": [],
     "mobile": false,
-    "number": "76"
+    "number": "73"
   },
   {
     "id": "connect-proof",
@@ -976,7 +944,7 @@
     "pack": "P00 · P07",
     "branches": [],
     "mobile": false,
-    "number": "77"
+    "number": "74"
   },
   {
     "id": "printer-settings",
@@ -988,7 +956,7 @@
     "pack": "P00 · P08",
     "branches": [],
     "mobile": false,
-    "number": "78"
+    "number": "75"
   },
   {
     "id": "staff-settings",
@@ -1000,7 +968,7 @@
     "pack": "P01",
     "branches": [],
     "mobile": false,
-    "number": "79"
+    "number": "76"
   },
   {
     "id": "staff-edit",
@@ -1012,7 +980,7 @@
     "pack": "P01",
     "branches": [],
     "mobile": false,
-    "number": "80"
+    "number": "77"
   },
   {
     "id": "staff-deactivate",
@@ -1024,7 +992,7 @@
     "pack": "P01",
     "branches": [],
     "mobile": false,
-    "number": "81"
+    "number": "78"
   },
   {
     "id": "customers",
@@ -1036,7 +1004,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "82"
+    "number": "79"
   },
   {
     "id": "customer-record",
@@ -1048,7 +1016,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "83"
+    "number": "80"
   },
   {
     "id": "duplicates",
@@ -1060,7 +1028,7 @@
     "pack": "P02",
     "branches": [],
     "mobile": false,
-    "number": "84"
+    "number": "81"
   },
   {
     "id": "preferences",
@@ -1072,7 +1040,7 @@
     "pack": "P05 · P06",
     "branches": [],
     "mobile": true,
-    "number": "65"
+    "number": "62"
   },
   {
     "id": "setup-saved",
@@ -1084,7 +1052,7 @@
     "pack": "P01 · P09",
     "branches": [],
     "mobile": false,
-    "number": "85"
+    "number": "82"
   },
   {
     "id": "finished",
@@ -1096,19 +1064,19 @@
     "pack": "P02 · P07",
     "branches": [],
     "mobile": false,
-    "number": "41"
+    "number": "38"
   },
   {
     "id": "mechanic-message",
     "group": "work",
     "title": "Mechanic’s job conversation",
-    "role": "Mechanic · phone",
+    "role": "Mechanic · tablet",
     "note": "A staff phone opens the staff conversation, never the customer’s private link. Staff-only notes are separate from outgoing messages.",
-    "next": "mechanic",
+    "next": "job-page",
     "pack": "P02 · P06",
     "branches": [],
-    "mobile": true,
-    "number": "42"
+    "mobile": false,
+    "number": "39"
   },
   {
     "id": "service-status",
@@ -1120,6 +1088,6 @@
     "pack": "P05 · P10",
     "branches": [],
     "mobile": true,
-    "number": "66"
+    "number": "63"
   }
 ]

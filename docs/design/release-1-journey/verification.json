@@ -1,5 +1,5 @@
 {
-  "screenCount": 85,
+  "screenCount": 82,
   "checks": [
     "HTML and JavaScript execute without errors",
     "Unique screen IDs",

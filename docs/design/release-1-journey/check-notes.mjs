@@ -148,5 +148,37 @@ const sourceOf = id => {
   }
 }
 
+// Notes 17, 27 and 33 — no phone-first mechanic flow; one job page on a tablet.
+{
+  const phones = index.filter(s => s.role === 'Mechanic \u00b7 phone');
+  assert.deepEqual(phones.map(s => s.id), [],
+    `still phone-first mechanic screens: ${phones.map(s => s.id).join(', ')}`);
+
+  const page = byId('job-page');
+  assert.match(page.role, /tablet/i, 'the job page is not a tablet screen');
+
+  const body = sourceOf('job-page');
+  for (const [label, pattern] of [
+    ['the agreed work', /Agreed|Approved/],
+    ['the inspection checklist', /checklist/i],
+    ['parts scanning', /scan/i],
+    ['finish and mark ready', /mark ready/i],
+  ]) {
+    assert.match(body, pattern, `the job page does not include ${label}`);
+  }
+  assert.doesNotMatch(body, /class="tabs"/,
+    'the job page uses tabs; the decision was one page with nothing hidden');
+
+  // The four collapsed screens must be gone, not merely renamed.
+  for (const id of ['mechanic', 'inspection', 'working', 'finish']) {
+    assert.equal(index.find(s => s.id === id), undefined,
+      `"${id}" still exists; it should have collapsed into job-page`);
+  }
+
+  // Note 27 — the checklist comes from a shop-authored service template.
+  assert.match(body, /template/i,
+    'the job page does not show that the checklist comes from a service template');
+}
+
 atlas.window.close();
 console.log('check-notes: all applied-note assertions passed');
