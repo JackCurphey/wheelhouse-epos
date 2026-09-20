@@ -8,7 +8,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
-import { readLegacyStatus } from './workshop/state-machines.js';
+import { readLegacyStatus, bookingRequest, custody, work } from './workshop/state-machines.js';
+import { applyEvent } from './workshop/transitions.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -2297,6 +2298,15 @@ function serializeWorkshopJob(row) {
     startTime: row.start_time,
     endTime: row.end_time,
     status: row.status,
+    // The states the screens actually drive from. `status` above is the derived
+    // legacy field, kept only for public/app.js and the customer portal until
+    // Phase 4 replaces them.
+    bookingState: row.booking_state,
+    custodyState: row.custody_state,
+    workState: row.work_state,
+    // Every action endpoint requires the version the caller last saw, so it has
+    // to come back on every read.
+    version: row.version,
     notes: row.notes,
     orderId: row.order_id,
     orderStatus: row.order_status,
@@ -2731,6 +2741,48 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
   sendJson(res, 200, serializeWorkshopJob(row));
 });
+
+// ---------- Workshop job actions ----------
+//
+// One endpoint per thing a person does, not a status field on the PUT above.
+// The URL names what happened, so the access log, the screen trace and any
+// future per-action permission all read the path instead of the body.
+//
+// Every one of these carries a `screens:` comment naming the atlas screens it
+// serves. scripts/ci/assert-screen-trace.mjs fails the build if a workshop
+// route has no such comment or names an id that is not in screen-index.json -
+// the design's "an endpoint no screen consumes is not built" rule, made into a
+// check that runs rather than a promise in a document.
+function jobActionRoute(action, machine, event) {
+  route('POST', `/api/workshop-jobs/:id/${action}`, async (req, res, params) => {
+    const id = Number(params.id);
+    const body = await readJsonBody(req);
+    // The caller must say which version it saw. Defaulting it would turn every
+    // racing write into a silent last-one-wins, which is the bug the version
+    // column exists to prevent.
+    if (!Number.isInteger(body.version)) {
+      return badRequest(res, 'version is required - send the version you last read');
+    }
+    const result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+    if (!result.ok) {
+      if (result.code === 'not_found') return notFound(res, 'Job not found');
+      return sendJson(res, 409, { error: result.message });
+    }
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+}
+
+// screens: requests, review
+jobActionRoute('accept', bookingRequest, 'accept');
+// screens: reject, rejected
+jobActionRoute('decline', bookingRequest, 'decline');
+// screens: reschedule, change-pending
+jobActionRoute('request-reschedule', bookingRequest, 'request_reschedule');
+// screens: cancel, cancelled
+jobActionRoute('cancel', bookingRequest, 'cancel');
+// screens: expired
+jobActionRoute('expire', bookingRequest, 'expire');
 
 route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
