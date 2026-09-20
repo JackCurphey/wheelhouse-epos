@@ -226,3 +226,57 @@ test("one shop cannot read another shop's quotes", async () => {
     await deleteTestShop(b.id);
   }
 });
+
+test('two concurrent requests for the same slot produce exactly one winner', async () => {
+  // The acceptance scenario the workshop plan names first. settleRace in
+  // state-machines.js is the model's answer; this proves the database gives the
+  // same answer under real concurrency, which is where application-level
+  // check-then-insert loses.
+  const shop = await createTestShop();
+  try {
+    const hold = () => runWithShop(shop.id, () =>
+      prepare(`INSERT INTO workshop_capacity_holds (job_date, start_time, mechanic_id, minutes)
+               VALUES ('2026-09-17', '09:30', NULL, 60)`).run());
+    const results = await Promise.allSettled([hold(), hold()]);
+    const won = results.filter(r => r.status === 'fulfilled');
+    const lost = results.filter(r => r.status === 'rejected');
+    assert.equal(won.length, 1, 'exactly one hold should be taken');
+    assert.equal(lost.length, 1);
+    assert.match(String(lost[0].reason), /duplicate key value|unique constraint/);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a released hold frees the slot for someone else', async () => {
+  // Expired and released holds must stop consuming capacity immediately, or
+  // the diary promises room the shop has not got.
+  const shop = await createTestShop();
+  try {
+    const first = await runWithShop(shop.id, () =>
+      prepare(`INSERT INTO workshop_capacity_holds (job_date, start_time, mechanic_id, minutes)
+               VALUES ('2026-09-18', '10:00', NULL, 60) RETURNING *`).get());
+    await runWithShop(shop.id, () =>
+      prepare('UPDATE workshop_capacity_holds SET state = ? WHERE id = ?').run('released', first.id));
+    const second = await runWithShop(shop.id, () =>
+      prepare(`INSERT INTO workshop_capacity_holds (job_date, start_time, mechanic_id, minutes)
+               VALUES ('2026-09-18', '10:00', NULL, 60) RETURNING *`).get());
+    assert.equal(second.state, 'held');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('the database refuses a hold state no machine declares', async () => {
+  const shop = await createTestShop();
+  try {
+    await assert.rejects(
+      runWithShop(shop.id, () =>
+        prepare(`INSERT INTO workshop_capacity_holds (job_date, start_time, minutes, state)
+                 VALUES ('2026-09-19', '11:00', 60, 'pencilled_in')`).run()),
+      /violates check constraint/,
+    );
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
