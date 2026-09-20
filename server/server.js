@@ -2532,6 +2532,9 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
 // column since migration 021 and Postgres refuses a direct write. Callers that
 // still speak the old five-value vocabulary (the staff diary's POST, below)
 // translate at the boundary with readLegacyStatus().
+// Throws a pg unique-violation (code 23505) when another request already holds
+// the slot. Callers map that to 409 - the request was well-formed and lost a
+// race, which is not the same thing as being wrong.
 async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder }) {
   await db.exec('BEGIN');
   try {
@@ -2545,6 +2548,29 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes, nowIso());
+    const jobIdForHold = info.lastInsertRowid;
+
+    // Take the capacity hold in the same transaction as the job. checkJobSlot
+    // above is a SELECT, so two requests can both pass it and both insert; the
+    // partial unique index from migration 018 is what makes exactly one of them
+    // win. Inside the transaction so the loser's job rolls back with its hold
+    // rather than surviving as a booking for a slot it does not hold.
+    //
+    // Only timed jobs take a hold. A job with no start time reserves no slot,
+    // and every such job would otherwise collide with every other one on the
+    // same date (the index COALESCEs a null mechanic to 0).
+    if (startTime) {
+      await db.prepare(
+        `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
+         VALUES (?, ?, ?, ?, ?, 'held')`
+      ).run(
+        jobIdForHold,
+        jobDate,
+        startTime,
+        mechanicId,
+        Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime))
+      );
+    }
     const jobId = info.lastInsertRowid;
 
     // Every workshop job is backed by an order so it's findable from the
@@ -2801,10 +2827,20 @@ function jobActionRoute(action, machine, event) {
       if (result.code === 'not_found') return notFound(res, 'Job not found');
       return sendJson(res, 409, { error: result.message });
     }
+    // A hold that outlives its booking is capacity the diary is still promising
+    // away. Released in the same request, not on a timer.
+    if (ENDS_A_BOOKING.has(event)) {
+      await db.prepare(
+        `UPDATE workshop_capacity_holds SET state = 'released'
+         WHERE workshop_job_id = ? AND state IN ('held', 'confirmed')`
+      ).run(id);
+    }
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
     sendJson(res, 200, serializeWorkshopJob(row));
   });
 }
+
+const ENDS_A_BOOKING = new Set(['cancel', 'decline', 'expire']);
 
 // screens: requests, review
 jobActionRoute('accept', bookingRequest, 'accept');
@@ -2853,6 +2889,11 @@ route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   // forever with nothing pointing at it.
   const attachments = await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE workshop_job_id = ?').all(id);
   await db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
+  // The capacity hold references this job, so it has to go first or the delete
+  // fails on the foreign key. Deleted rather than released: a released hold is
+  // a record of a slot the shop gave back, and there is no longer a booking for
+  // it to be a record of.
+  await db.prepare('DELETE FROM workshop_capacity_holds WHERE workshop_job_id = ?').run(id);
   await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
   await Promise.all(attachments.map((a) => unlink(path.join(UPLOADS_DIR, a.storage_key)).catch(() => {})));
   sendJson(res, 200, { ok: true });
@@ -4001,7 +4042,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   // customer (signed-in, or the matched/created guest above), always
   // 'pending' until a mechanic reviews it, same principle as createSale()
   // never trusting a client-sent total.
-  const jobId = await createWorkshopJob({
+  let jobId;
+  try {
+    jobId = await createWorkshopJob({
     title: `Online booking: ${description}`.slice(0, 200),
     customerId,
     bikeId,
@@ -4014,7 +4057,15 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     custodyState: 'expected',
     notes: description,
     skipAutoOrder: false,
-  });
+    });
+  } catch (err) {
+    // 23505 is the capacity index: someone else took this slot between the
+    // availability check and now.
+    if (err.code === '23505') {
+      return sendJson(res, 409, { error: 'That time is no longer available - please choose another.' });
+    }
+    throw err;
+  }
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
   sendJson(res, 201, serializePortalBooking(row));
 });

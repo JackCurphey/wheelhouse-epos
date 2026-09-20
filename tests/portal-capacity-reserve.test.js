@@ -32,7 +32,7 @@ async function shopWithBookedMinutes(endTime) {
   const customerId = await customerIdForLogin(shop.id, signup.loginId);
   await seedWorkshopJob({
     shopId: shop.id, customerId, mechanicId, title: 'Existing work',
-    jobDate: WEDNESDAY, startTime: '09:00', endTime, status: 'scheduled',
+    jobDate: WEDNESDAY, startTime: '09:00', endTime, legacyStatus: 'scheduled',
   });
   return { shop, mechanicId, cookie: signup.cookie };
 }
