@@ -1945,8 +1945,7 @@ route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease,
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
-  const payload = serializeSale(sale, savedItems, savedPayments);
-  sendJson(res, 201, jobWarning ? { ...payload, jobWarning } : payload);
+  sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
   if (afterRelease && shopifyPushes.length) {
     afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
   }
