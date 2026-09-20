@@ -114,8 +114,10 @@ const sourceOf = id => {
   const rendered = renderedOf('appointment');
   assert.match(rendered, /class="slot taken"/,
     'appointment screen does not mark any slot as taken');
-  assert.match(rendered, /disabled/,
-    'taken slots are not actually unselectable');
+  assert.match(rendered, /<button class="slot taken"[^>]*\bdisabled\b/,
+    'taken slots are rendered but not actually unselectable');
+  assert.doesNotMatch(rendered, /<button class="slot chosen"[^>]*\bdisabled\b/,
+    'a selectable slot was disabled');
   assert.match(rendered, /checked again|confirmed when you submit/i,
     'appointment screen does not warn that availability is re-checked on submit');
 }
