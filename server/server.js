@@ -10,6 +10,7 @@ import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { readLegacyStatus, bookingRequest, custody, work } from './workshop/state-machines.js';
 import { applyEvent } from './workshop/transitions.js';
+import { allocateReference } from './workshop/references.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -2324,6 +2325,7 @@ function serializeWorkshopJob(row) {
     // The states the screens actually drive from. `status` above is the derived
     // legacy field, kept only for public/app.js and the customer portal until
     // Phase 4 replaces them.
+    reference: row.reference,
     bookingState: row.booking_state,
     custodyState: row.custody_state,
     workState: row.work_state,
@@ -2533,12 +2535,16 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
 async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder }) {
   await db.exec('BEGIN');
   try {
+    // Inside the transaction: a reference allocated for a job whose insert then
+    // fails is a number spent for nothing, which is tolerable, but a reference
+    // allocated outside and reused is not.
+    const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, nowIso());
+      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes, nowIso());
     const jobId = info.lastInsertRowid;
 
     // Every workshop job is backed by an order so it's findable from the
