@@ -108,5 +108,17 @@ const sourceOf = id => {
   }
 }
 
+// Note 44 — the appointment picker shows the diary with taken slots blocked out,
+// as public-portal/portal.js already does.
+{
+  const rendered = renderedOf('appointment');
+  assert.match(rendered, /class="slot taken"/,
+    'appointment screen does not mark any slot as taken');
+  assert.match(rendered, /disabled/,
+    'taken slots are not actually unselectable');
+  assert.match(rendered, /checked again|confirmed when you submit/i,
+    'appointment screen does not warn that availability is re-checked on submit');
+}
+
 atlas.window.close();
 console.log('check-notes: all applied-note assertions passed');

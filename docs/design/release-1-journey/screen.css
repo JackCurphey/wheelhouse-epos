@@ -10,3 +10,9 @@
 .monthcell.some{background:#fdf6e3;border-color:#e2cf9a}
 .monthcell.free{background:#eef7f1;border-color:#b7d8c4}
 .monthcell.closed{background:#eef0ed;border-color:#d5d9d4;color:#707b72}
+
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+.slot{padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px}
+.slot.chosen{border-color:#2f5d4b;box-shadow:inset 0 0 0 1px #2f5d4b}
+.slot.taken{background:#f2f2f0;color:#8b8b85;border-style:dashed}
+.slot.taken small{display:block;font-size:11px}

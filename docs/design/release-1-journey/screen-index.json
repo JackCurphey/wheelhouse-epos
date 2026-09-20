@@ -515,7 +515,7 @@
     "group": "edges",
     "title": "Book an exact appointment",
     "role": "Customer · phone",
-    "note": "Fixed timed-appointment specimen; chosen mode must be carried through request and confirmation in production. This branch routes back to canonical drop-off contact details in the atlas.",
+    "note": "Follows the slot grid already built in public-portal/portal.js: taken times are shown and unselectable, and the sixty-minute proxy is re-checked against the real job duration on submit. Fixed timed-appointment specimen; chosen mode must be carried through request and confirmation in production. This branch routes back to canonical drop-off contact details in the atlas.",
     "next": "details",
     "pack": "P04 · P05",
     "branches": [],
