@@ -110,3 +110,119 @@ test('job numbers are allocated per shop, so volume does not leak between them',
     await deleteTestShop(b.id);
   }
 });
+
+// A quote for a job, using the column defaults for shop_id and revision.
+async function insertQuote(shopId, jobId, overrides = {}) {
+  const cols = { workshop_job_id: jobId, ...overrides };
+  const names = Object.keys(cols);
+  const placeholders = names.map(() => '?').join(', ');
+  return runWithShop(shopId, () =>
+    prepare(`INSERT INTO workshop_quotes (${names.join(', ')}) VALUES (${placeholders}) RETURNING *`)
+      .get(...Object.values(cols)));
+}
+
+test('a quote belongs to a job and starts as a draft revision 1', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    const quote = await insertQuote(shop.id, job.id);
+    assert.equal(quote.revision, 1);
+    assert.equal(quote.state, 'draft');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('one job cannot have two quotes at the same revision', async () => {
+  // Revision is what a customer's approval link is bound to. Two rows claiming
+  // revision 2 would make "is this link current?" unanswerable.
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    await insertQuote(shop.id, job.id, { revision: 2 });
+    await assert.rejects(
+      insertQuote(shop.id, job.id, { revision: 2 }),
+      /duplicate key value|unique constraint/,
+    );
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('the database refuses a quote state no machine declares', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    await assert.rejects(
+      insertQuote(shop.id, job.id, { state: 'half_approved' }),
+      /violates check constraint/,
+    );
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a line records its own decision, so some can be approved and others not', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    const quote = await insertQuote(shop.id, job.id);
+    const line = (description, amount, decision) => runWithShop(shop.id, () =>
+      prepare(`INSERT INTO workshop_quote_lines
+                 (workshop_quote_id, kind, description, quantity, unit_amount, decision)
+               VALUES (?, 'labour', ?, 1, ?, ?) RETURNING *`)
+        .get(quote.id, description, amount, decision));
+
+    const approved = await line('Standard service', '65.00', 'approved');
+    const declined = await line('Replace gear cable', '12.00', 'declined');
+    assert.equal(approved.decision, 'approved');
+    assert.equal(declined.decision, 'declined');
+    // NUMERIC comes back as a JS number, not a string: server/db.js:31-38 sets
+    // a type parser deliberately, so every read site gets a number.
+    assert.equal(approved.unit_amount, 65);
+    assert.equal(declined.unit_amount, 12);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a line decision outside the three allowed values is refused', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    const quote = await insertQuote(shop.id, job.id);
+    await assert.rejects(
+      runWithShop(shop.id, () =>
+        prepare(`INSERT INTO workshop_quote_lines
+                   (workshop_quote_id, kind, description, quantity, unit_amount, decision)
+                 VALUES (?, 'labour', 'x', 1, '1.00', 'maybe')`).run(quote.id)),
+      /violates check constraint/,
+    );
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test("one shop cannot read another shop's quotes", async () => {
+  // Tenant isolation here is enforced by Postgres, not application code, so it
+  // has to be tested through a real shop context rather than by trusting a
+  // WHERE clause. runWithShop sets app.current_shop_id, which is what the RLS
+  // policy filters on.
+  const a = await createTestShop();
+  const b = await createTestShop();
+  try {
+    const job = await insertJob(a.id);
+    await insertQuote(a.id, job.id);
+
+    const seenByOwner = await runWithShop(a.id, () =>
+      prepare('SELECT COUNT(*)::int AS n FROM workshop_quotes').get());
+    assert.equal(seenByOwner.n, 1, 'the owning shop should see its own quote');
+
+    const seenByOther = await runWithShop(b.id, () =>
+      prepare('SELECT COUNT(*)::int AS n FROM workshop_quotes').get());
+    assert.equal(seenByOther.n, 0, 'another shop must see nothing');
+  } finally {
+    await deleteTestShop(a.id);
+    await deleteTestShop(b.id);
+  }
+});
