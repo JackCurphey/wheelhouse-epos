@@ -115,7 +115,7 @@ test('a GET route with no screens comment is reported', () => {
     "route('GET', '/api/quotes/:id', async (req, res, params) => {",
     '});',
   ].join('\n');
-  const problems = findProblems(source, new Set(['quote-editor']));
+  const problems = checkSource(source, new Set(['quote-editor']));
   assert.equal(problems.length, 1);
   assert.match(problems[0], /names no screen/);
 });
@@ -126,11 +126,11 @@ test('a GET route naming a real screen passes', () => {
     "route('GET', '/api/quotes/:id', async (req, res, params) => {",
     '});',
   ].join('\n');
-  assert.deepEqual(findProblems(source, new Set(['quote-editor'])), []);
+  assert.deepEqual(checkSource(source, new Set(['quote-editor'])), []);
 });
 ```
 
-If `findProblems` is not the exported name in the current file, use whatever
+If `checkSource` is not the exported name in the current file, use whatever
 the existing tests in `tests/screen-trace.test.js` already call — do not
 rename the export.
 
