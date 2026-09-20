@@ -110,3 +110,45 @@ export function readLegacyStatus(status) {
   if (!mapped) throw new Error(`unknown legacy status: ${status}`);
   return { ...mapped };
 }
+
+// What the customer has agreed to. Revisions supersede rather than mutate, so
+// the amounts a customer saw when they agreed remain recoverable.
+export const quote = defineMachine({
+  name: 'quote',
+  initial: 'draft',
+  states: ['draft', 'sent', 'partly_approved', 'approved', 'declined', 'superseded', 'expired'],
+  transitions: {
+    draft: { send: 'sent' },
+    sent: {
+      approve_all: 'approved',
+      approve_some: 'partly_approved',
+      decline_all: 'declined',
+      revise: 'superseded',
+      expire: 'expired',
+    },
+    // Already-decided lines stay decided; changing the rest means a new
+    // proposal for the changed work.
+    partly_approved: { revise: 'superseded' },
+    approved: { revise: 'superseded' },
+  },
+  terminal: ['declined', 'superseded', 'expired'],
+});
+
+const APPROVABLE = new Set(['sent']);
+
+// The guard Phase 3's approval endpoint calls. Two independent reasons to
+// refuse: the link is for an older revision, or the quote is no longer live.
+// Both are checked, because matching revision numbers do not make a superseded
+// quote approvable.
+export function canApprove({ quoteState, linkRevision, currentRevision }) {
+  if (linkRevision !== currentRevision) {
+    return {
+      allowed: false,
+      reason: `this link is for revision ${linkRevision}; the current quote is revision ${currentRevision}`,
+    };
+  }
+  if (!APPROVABLE.has(quoteState)) {
+    return { allowed: false, reason: `a quote that is ${quoteState} cannot be approved` };
+  }
+  return { allowed: true, reason: null };
+}

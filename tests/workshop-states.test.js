@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  defineMachine, custody, bookingRequest, work, readLegacyStatus,
+  defineMachine, custody, bookingRequest, work, readLegacyStatus, quote, canApprove,
 } from '../server/workshop/state-machines.js';
 
 test('defineMachine rejects a transition to a state it does not declare', () => {
@@ -137,4 +137,47 @@ test('the old "complete" cannot say whether the bike went home', () => {
 
 test('an unrecognised legacy status is refused rather than guessed', () => {
   assert.throws(() => readLegacyStatus('nonsense'), /unknown legacy status: nonsense/);
+});
+
+test('a quote is sent, and the customer decides line by line', () => {
+  assert.equal(quote.next('draft', 'send'), 'sent');
+  assert.equal(quote.next('sent', 'approve_all'), 'approved');
+  assert.equal(quote.next('sent', 'approve_some'), 'partly_approved');
+  assert.equal(quote.next('sent', 'decline_all'), 'declined');
+});
+
+test('revising a sent quote supersedes it rather than editing it', () => {
+  // The amounts the customer saw must survive. A new revision is a new
+  // proposal; the old one becomes history.
+  assert.equal(quote.next('sent', 'revise'), 'superseded');
+  assert.equal(quote.next('partly_approved', 'revise'), 'superseded');
+});
+
+test('a superseded quote can never be approved', () => {
+  assert.throws(() => quote.next('superseded', 'approve_all'),
+    /quote: cannot approve_all from superseded/);
+});
+
+test('a stale approval link is refused, naming why', () => {
+  const result = canApprove({ quoteState: 'sent', linkRevision: 1, currentRevision: 2 });
+  assert.equal(result.allowed, false);
+  assert.match(result.reason, /revision 1.*revision 2/);
+});
+
+test('an approval link for the current revision is allowed', () => {
+  assert.deepEqual(canApprove({ quoteState: 'sent', linkRevision: 2, currentRevision: 2 }),
+    { allowed: true, reason: null });
+});
+
+test('a current link against a superseded quote is still refused', () => {
+  // Both checks must hold. Matching revision numbers are not enough if the
+  // quote itself is no longer the live one.
+  const result = canApprove({ quoteState: 'superseded', linkRevision: 2, currentRevision: 2 });
+  assert.equal(result.allowed, false);
+  assert.match(result.reason, /superseded/);
+});
+
+test('approving twice is refused rather than silently repeated', () => {
+  const result = canApprove({ quoteState: 'approved', linkRevision: 1, currentRevision: 1 });
+  assert.equal(result.allowed, false);
 });
