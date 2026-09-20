@@ -1,15 +1,16 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-19
-**Branch:** `docs/status-2026-09-19`, off `main` at `4947bcf`.
-**Blocked on:** Mark, for the 84-screen review on issue #50. Every other open
-item below is Jack's.
+**Updated:** 2026-09-20
+**Branch:** `docs/release-1-screen-build-design`, off `main` at `3ecbc66`.
+**Blocked on:** nothing, for the atlas. Mark's #50 review is against the
+superseded 84-screen version; he was told on 20 Sep. Other open items are
+Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
-> **Never put a destructive command here** — a stale `git reset --hard` was one
-> edit away from destroying the 2,880-line WorkOS plan (`9da1d75`). State facts
-> and point at documents; let the reader run the verbs.
+> **Never put a destructive command here** — one stale `git reset --hard` nearly
+> destroyed the WorkOS plan (`9da1d75`, detail in `ARCHIVE.md`). State facts and
+> point at documents; let the reader run the verbs.
 
 ## Where this stands
 
@@ -18,137 +19,133 @@ item below is Jack's.
 booking, diary, job cards, statuses, capacity, line-level quote approval,
 messaging, printing and tags, one Lightspeed adapter. Invoicing, payments,
 refunds, customer import, reports, group capacity and recovery are Later. It
-**supersedes the #47 Hubtiger ranking**, now closed. The plan —
-`docs/superpowers/plans/2026-09-10-release-1-workshop-plan.md` — is packages
-P00–P09 over 154 of the original 172 rows, not yet split into issues.
+**supersedes the #47 Hubtiger ranking**, now closed. The workshop plan is
+packages P00–P09 over 154 of the original 172 rows, not yet split into issues.
 
-**The 84-screen journey atlas is reviewed and waiting on Mark.** Issue #50,
-`docs/design/release-1-journey/`. Jack marked all 84 on 17 Sep: 71 approved as
-shown, 13 with notes; nothing since. It is the visual build target for store
-review, not design sign-off.
+**The journey atlas has been revised against Jack's review: 84 screens → 82.**
+His export is committed at `docs/reviews/2026-09-17-release-1-screen-review-jack.md`
+(71 approved, 13 noted) rather than living only in a browser. Phase 0 applied all
+13 notes on 20 Sep: mechanic phone flow (10 screens) → one tablet `job-page`;
+Code 128 tag instead of QR; a third appointment-only booking mode; diary and slot
+picker following `public/app.js` and `public-portal/portal.js`; services grouped
+by category; deposits left out. `check-notes.mjs` asserts each applied note.
+**The PDFs and board PNG are stale** — rendered from the 84-screen version, and
+WeasyPrint/PyMuPDF/Pillow are not installed here. **The barcode is a declared
+non-scanning specimen**; Jack has a scanner from Mon 21 Sep, and a generated,
+verified Code 128 replaces it in P00b.
 
 **There is still no Lightspeed technical spec, and no account.**
 `2026-09-10-release-1-lightspeed-readiness.md` recommends R-Series *conditional
-on the first shop*, carries the integration contract, and leaves proof steps
-LS-01 to LS-09 all "Pending". None start without the shop's series and an
-authorised test account, which is Jack's to supply.
+on the first shop* and leaves proof steps LS-01 to LS-09 all "Pending". None
+start without the shop's series and an authorised test account: Jack's to
+supply.
 
-Architecture stage one merged 7 Sep (PR #37): pooler trap, migration race,
-outbound timeouts, process lifecycle and README closed. Recovery — managed
-Postgres, PITR, a rehearsed restore — is untouched and now outside Release 1.
-WorkOS auth and design remediation stay approved and unbuilt. The **workshop
-prototype** (PR #45) is an in-memory demo under `prototype/`: a learning
-artefact, not product code, and not a step toward WorkOS.
+Architecture stage one merged 7 Sep (PR #37); detail in `ARCHIVE.md`. Recovery
+is outside Release 1. WorkOS auth and design remediation stay approved and
+unbuilt. The **workshop prototype** (PR #45) is an in-memory demo, not product
+code, and has **no week view** — the diary Jack built is in `public/app.js`, the
+customer slot grid in `public-portal/portal.js`.
 
 **Check the checkout before judging state.** On 9 Sep work sat 156 commits
-behind on a branch forked 31 Aug, and stage one was reported open when it had
-merged 7 Sep. Run `git rev-list --left-right --count origin/main...HEAD` first.
+behind. Run `git rev-list --left-right --count origin/main...HEAD` first.
 
-**Stage one did less than its name suggests.** It makes the app safe to run as
-more than one process; it does nothing about recovering data if the volume is
-lost, and its request-wide transaction mode is OFF — `DB_TENANT_SCOPE` defaults
-to `session` until three handlers are restructured.
+**Stage one's request-wide transaction mode is OFF** — `DB_TENANT_SCOPE`
+defaults to `session` until three handlers are restructured.
 
 ## Operational traps
 
 - **The app is on `localhost:8080`, not 4000.** Compose stops publishing the app
   port deliberately: `TRUST_PROXY=1` is only safe while the gateway is the sole
-  entrance. 4000 refuses host connections.
+  entrance.
 - **Never delete the `cf-*` header names in `server/gateway.js`.** That is the
   strip list, not Cloudflare residue; removing it reintroduces a login
   brute-force bypass (14/14 spoofed IPs passed before PR #8, 11 blocked after).
+- **Never hand-edit the atlas HTML.** It is generated by `package.py` from
+  `screens.js` / `branches.js`; a hand edit is overwritten on the next run.
+- **`npm run build` dirties tracked files** under `public/dist` with no app
+  source change. Revert that churn; do not commit it.
 
 ## Read order for a fresh session
 
 1. This file
-2. `2026-09-10-release-1-scope-reduction.md` — what Release 1 is now
-3. `2026-09-10-release-1-lightspeed-readiness.md` — integration contract, proof
-4. `2026-09-10-release-1-workshop-plan.md` — the package breakdown
-5. `2026-08-31-business-plan.md` — ownership, the Jack/Mark split
-6. `2026-09-06-tenant-scoping-and-pooler-safety.md` — the
-   `DB_TENANT_SCOPE=transaction` checklist
+2. The Phase 0 plan and the build design, named under **Phase plan** below
+3. `docs/decisions/2026-09-10-release-1-scope-reduction.md` — what Release 1 is
+4. `2026-09-10-release-1-lightspeed-readiness.md` — integration contract, proof
+5. `2026-09-10-release-1-workshop-plan.md` — the package breakdown
 
-Under `docs/decisions/`, bar the plan under `docs/superpowers/plans/`.
+Older entries (business plan, tenant-scoping checklist) moved to `ARCHIVE.md`.
 
 ## Immediate next actions
 
 1. **Jack: the first shop's Lightspeed series, and an authorised test account.**
-   Nothing in P00-LS moves without it, and no honest claim of API access can be
-   made. Other packages proceed meanwhile; P07 stays conditional.
+   Nothing in P00-LS moves without it; P07 stays conditional meanwhile.
 2. **Jack: the hardware answers** — printer model, tag dimensions, the Windows
-   driver host, 1D or 2D scanner. P08a is early and blocked on these.
-3. **Jack: the message providers**, and what inbound replies should do.
-4. **Mark: the 84-screen review**, issue #50, outstanding since 17 Sep. The 13
-   screens carrying notes are the ones that change the build.
+   driver host, 1D or 2D scanner. Scanner arrives Mon 21 Sep; the atlas barcode
+   stays a declared specimen until it is proven.
+3. **Jack: the message providers**, and what inbound replies do.
+4. **Mark: the screen review**, issue #50, outstanding since 17 Sep — now
+   against a superseded version. He needs telling that the atlas changed.
 5. **Split the plan into issues** — row IDs, allowed state changes, expected
    failure, test command and proof artefact per package.
 
-**Carried, unchanged, and still open:** whether CI should gate `prototype` and
-the Python runner (neither is in `.github/workflows/test.yml`, so both merged on
-a local run only and will rot); three tenant-isolation gaps confirmed ABSENT on
-`main` 9 Sep — no composite tenant-consistent FKs, no privilege boundary on the
-resolver tables, no idempotency key, so `withRetry` can still double-create on a
-timeout; whether `gateway` should wait for a healthy `app`; and the five
-ownership queries `PF-3`, `DP-1`–`DP-4`, which need Mark. Evidence and full text
-for each: `.agents/ARCHIVE.md`.
+**Carried, unchanged, and still open:** six items — CI gating for `prototype`
+and the Python runner, three tenant-isolation gaps confirmed ABSENT on `main`
+9 Sep, gateway/app health ordering, and five ownership queries needing Mark.
+Full text, evidence and row references: `.agents/ARCHIVE.md`.
 
-**The Hubtiger trial lapsed about 15 Sep**, with the quote-approval round trip
-and the booking-page disclosure re-test (§3.5c) never run. Re-entry needs a
-fresh login: Jack's.
+**The Hubtiger trial lapsed about 15 Sep**; two tests never ran. Re-entry
+needs Jack's login.
 
-## Done
+## Done and branches
 
-43 PRs merged, #1–#51; #51 carried the scope reduction, the plan and the atlas.
-#48 and #52 were closed unmerged, both accounted for in `.agents/ARCHIVE.md`,
-where ageing content moves rather than being deleted.
-
-## Branches
-
-Cleaned 19 Sep: 29 remote and 19 local deleted, each verified at zero commits
-`main` cannot reach. Three kept, reasons in `.agents/ARCHIVE.md`. One matters
-here: `docs/jack-ranking-2026-09-10` holds the only copy of the filled **Jack's
-priority** column, which is empty on `main`.
+43 PRs merged (#1–#51), plus PR #54. Record and the 19 Sep cleanup:
+`ARCHIVE.md`. One branch still matters — `docs/jack-ranking-2026-09-10` holds
+the only copy of the filled **Jack's priority** column, empty on `main`.
 
 ## Decisions in force
 
-| Decision | Status |
-|---|---|
-| `2026-09-10-release-1-scope-reduction.md` | **Instructed by Mark after review with Jack, 10 Sep — the live scope** |
-| `2026-09-10-release-1-lightspeed-readiness.md` | R-Series recommended, conditional; access unproven |
-| `2026-09-10-hubtiger-feature-comparison.md` | Reference, 317 rows; superseded as scope, #47 closed 19 Sep |
-| `2026-09-06-tenant-scoping-and-pooler-safety.md` | Decided by Jack 6 Sep; carries the flag-flip checklist |
-| `2026-09-04-job-type-before-diary.md` | **Proposed, not decided** |
-| `2026-09-04-booking-mode-and-downtime.md` | Booking mode decided 5 Sep; downtime model proposed |
-| `2026-09-08-competitive-trials.md` | Two decisions by Jack, 8 Sep; three OPEN in §6.4 |
+Every decision is a file under `docs/decisions/`; the status summary table
+moved to `.agents/ARCHIVE.md` on 20 Sep. The live scope is
+`2026-09-10-release-1-scope-reduction.md`. Two remain undecided:
+`2026-09-04-job-type-before-diary.md` (proposed) and the downtime model in
+`2026-09-04-booking-mode-and-downtime.md`. Five decisions were added 20 Sep
+and live in the Phase 0 plan's constraints: barcode-now-QR-later, the
+appointment-only walk-in rule, deposits out of Release 1, the two-column
+tablet job page, and services grouped by category.
 
-Six older decisions stay in force unchanged — business plan, frontend platform,
-Lightspeed platform, R-Series sync (its timestamp question is now LS-07), the
-wedge, ownership sign-off — plus the 214-row feature catalogue. Cells and
-reasoning: `.agents/ARCHIVE.md`.
+## Phase plan for building the atlas
+
+Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`,
+which records who decided what. Agreed with Jack 20 Sep: a **new staff app** for
+these screens only, cut over at the end, on the **existing server and schema**,
+sequenced **by layer** because nothing is deployed. The old app keeps till,
+inventory, suppliers and storefront. Phases: 0 atlas revision (done) → 1 state
+machine → 2 schema → 3 API (every endpoint traced to a named screen) → 4 screens
+→ 5 integration. P00 proofs run alongside and are Jack's. Only Phase 0 has a
+written plan: `docs/superpowers/plans/2026-09-20-phase-0-atlas-revision.md`.
 
 ## Plan register
 
-LOCKED: `2026-08-31-master-implementation-plan.md` — the arc, superseded where
-its Release 1 sequencing conflicts with the 10 Sep reduction. Current: the
-Release 1 workshop plan. Approved and unbuilt: the 2,880-line WorkOS migration,
-design remediation. Executed plans and per-plan detail: `.agents/ARCHIVE.md`.
+LOCKED: `2026-08-31-master-implementation-plan.md`. Current: the Release 1
+workshop plan and the Phase 0 plan above. Approved and unbuilt: the WorkOS
+migration, design remediation. Per-plan detail: `.agents/ARCHIVE.md`.
 
 ## Canonical commands
 
 ```sh
 npm test  # node --test "tests/**/*.test.js"
 npm run typecheck && npm run lint && npm run build
-npm run docker:up
+python3 docs/design/release-1-journey/package.py   # regenerate the atlas
+node docs/design/release-1-journey/check-static.mjs && node docs/design/release-1-journey/check-notes.mjs
 ```
 
-**Last verified:** 278 pass, 0 fail, 10 Sep on the PR #44 merge. **Lint and
-typecheck were NOT re-run on it** — last clean 9 Sep. Nothing ran on 19 Sep:
-docs and branches only. The docker `app` image is from 31 Aug and runs
-stale code — verify the working tree, never that container.
+**Last verified 20 Sep, all green:** 278 pass / 0 fail (62s, needs compose
+Postgres up), typecheck/lint/build clean, atlas 82 screens no errors. The docker
+`app` image is from 31 Aug — verify the working tree, not that container.
 
 ## Open items needing Mark
 
-Eight. The 84-screen review is the urgent one; the other seven are in
+Eight. The screen review is the urgent one, and it now needs re-pointing at the revised atlas; the other seven are in
 `.agents/ARCHIVE.md`.
 
 ## Keeping this file honest
