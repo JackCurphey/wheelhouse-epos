@@ -72,11 +72,12 @@ Older entries moved to `ARCHIVE.md`.
 5. **Split the Release 1 plan into issues** — row IDs, allowed state changes,
    expected failure, test command and proof artefact per package.
 
-**Carried open:** six items including three tenant-isolation gaps confirmed
-ABSENT on `main` 9 Sep, and whether CI should gate `prototype/` and the Python
-runner. **The atlas checks now run in CI** (Jack, 20 Sep), plus a staleness
-check; confirmed as having actually executed, not merely not failed. Detail in `ARCHIVE.md`. **The Hubtiger
-trial lapsed about 15 Sep**; re-entry needs Jack's login.
+**Carried open:** four items, including three tenant-isolation gaps confirmed
+ABSENT on `main` 9 Sep. Three closed 20 Sep (Jack): the atlas checks **run in
+CI**, confirmed as actually executed; `prototype/` and the review-pack Python
+scripts stay **out** of CI; money stays a JS float and is **always totalled in
+SQL, never in JavaScript**. Detail in `ARCHIVE.md`. **The Hubtiger trial lapsed
+about 15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
 

@@ -782,3 +782,33 @@ slept 120ms before sending SIGTERM. Measured: module evaluation finishes ~67ms
 and the server listens by ~145ms, so that sat in a ~78ms window. Adding four
 modules to `server.js`'s import graph lost the race. `server.js` now prints
 `SIGNALS_READY` when its handlers are installed and the test waits for it.
+
+
+## Two open questions closed, 20 September 2026
+
+Both Jack's, both taken after the Phase 3 merge. Recorded here so neither is
+re-opened by default.
+
+**`prototype/` and the review-pack Python scripts stay out of CI.** Decided no,
+not deferred. `prototype/` is a React demo with its own dependency tree; running
+its tests would install a second, unrelated set of libraries on every build of
+the real app, to protect something Phase 4's real screens are meant to replace.
+`assemble-review.py`, `render-review.py` and `check-pdfs.py` build the review
+pack, whose PDFs are already recorded as stale; PDF generation in CI needs fonts
+and rendering tooling and is a common source of slow, flaky builds. `package.py`
+is the exception and does run in CI - it builds the atlas, which Phase 4 is
+built against. Revisit only if the prototype becomes load-bearing or the PDFs
+start being sent to people again.
+
+**Money stays a JavaScript float, and is totalled in SQL.** `server/db.js:31-38`
+parses NUMERIC to a JS float on read, a deliberate existing decision that now
+also covers quote line amounts. The database stores money exactly; the
+imprecision only appears if the application adds amounts up itself, where a
+float can drift a fraction of a penny over many additions or break an exact
+equality comparison. The alternatives - an exact decimal type across the app, or
+storing whole pennies - both mean rewriting the till and every sale for a
+problem that has not bitten.
+
+So the rule, which Phase 4 must follow: **sum money in SQL, never in
+JavaScript.** The Phase 3 quote code totals nothing in JavaScript, so there is
+no existing exposure to unwind.
