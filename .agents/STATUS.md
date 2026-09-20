@@ -2,8 +2,8 @@
 
 **Updated:** 2026-09-20
 **Branch:** `docs/release-1-screen-build-design`, off `main` at `3ecbc66`.
-**Blocked on:** nothing, for the atlas. Mark's issue #50 review is against the
-superseded 84-screen version and he has not been told yet. Other open items are
+**Blocked on:** nothing, for the atlas. Mark's #50 review is against the
+superseded 84-screen version; he was told on 20 Sep. Other open items are
 Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -82,7 +82,7 @@ Older entries (business plan, tenant-scoping checklist) moved to `ARCHIVE.md`.
 2. **Jack: the hardware answers** — printer model, tag dimensions, the Windows
    driver host, 1D or 2D scanner. Scanner arrives Mon 21 Sep; the atlas barcode
    stays a declared specimen until it is proven.
-3. **Jack: the message providers**, and what inbound replies should do.
+3. **Jack: the message providers**, and what inbound replies do.
 4. **Mark: the screen review**, issue #50, outstanding since 17 Sep — now
    against a superseded version. He needs telling that the atlas changed.
 5. **Split the plan into issues** — row IDs, allowed state changes, expected
@@ -98,10 +98,9 @@ needs Jack's login.
 
 ## Done and branches
 
-43 PRs merged (#1–#51), plus the Phase 0 commits on the current branch. Record
-and the 19 Sep branch cleanup: `.agents/ARCHIVE.md`. One branch still matters —
-`docs/jack-ranking-2026-09-10` holds the only copy of the filled **Jack's
-priority** column, empty on `main`.
+43 PRs merged (#1–#51), plus PR #54. Record and the 19 Sep cleanup:
+`ARCHIVE.md`. One branch still matters — `docs/jack-ranking-2026-09-10` holds
+the only copy of the filled **Jack's priority** column, empty on `main`.
 
 ## Decisions in force
 
