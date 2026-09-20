@@ -280,3 +280,92 @@ test('the database refuses a hold state no machine declares', async () => {
     await deleteTestShop(shop.id);
   }
 });
+
+test('a print task starts queued and records which job it is for', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    const task = await runWithShop(shop.id, () =>
+      prepare(`INSERT INTO workshop_print_tasks (workshop_job_id, printer_name)
+               VALUES (?, 'Front desk Zebra') RETURNING *`).get(job.id));
+    assert.equal(task.state, 'queued');
+    assert.equal(task.copies, 1);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('unknown is a storable print state, not an absence', async () => {
+  // The whole point of the printTask machine: an agent can print the tag and
+  // die before acknowledging. "We do not know" has to be recordable, or the
+  // shop is told a label exists that nobody can find.
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    const task = await runWithShop(shop.id, () =>
+      prepare(`INSERT INTO workshop_print_tasks (workshop_job_id, printer_name, state)
+               VALUES (?, 'Front desk Zebra', 'unknown') RETURNING *`).get(job.id));
+    assert.equal(task.state, 'unknown');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('the database refuses a print state no machine declares', async () => {
+  const shop = await createTestShop();
+  try {
+    const job = await insertJob(shop.id);
+    await assert.rejects(
+      runWithShop(shop.id, () =>
+        prepare(`INSERT INTO workshop_print_tasks (workshop_job_id, printer_name, state)
+                 VALUES (?, 'p', 'probably_fine')`).run(job.id)),
+      /violates check constraint/,
+    );
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a message carries a constrained intent state alongside its old status', async () => {
+  // The existing free-text status stays, because existing code writes it.
+  // intent_state is the constrained one the new model uses.
+  const shop = await createTestShop();
+  try {
+    const message = await runWithShop(shop.id, async () => {
+      const customer = await prepare('INSERT INTO customers (name) VALUES (?) RETURNING *')
+        .get('Maya Patel');
+      return prepare(`INSERT INTO customer_messages (customer_id, body, status)
+                      VALUES (?, 'Your bike is ready', 'sent') RETURNING *`).get(customer.id);
+    });
+    assert.equal(message.intent_state, 'intended');
+    assert.equal(message.status, 'sent');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a provider timeout is storable as unknown rather than as a failure', async () => {
+  // Recording a timeout as failed is how a customer gets the same SMS three
+  // times: the message may well have gone.
+  const shop = await createTestShop();
+  try {
+    const customerId = await runWithShop(shop.id, async () => {
+      const customer = await prepare('INSERT INTO customers (name) VALUES (?) RETURNING *')
+        .get('Maya Patel');
+      return customer.id;
+    });
+    const message = await runWithShop(shop.id, () =>
+      prepare(`INSERT INTO customer_messages (customer_id, body, status, intent_state)
+               VALUES (?, 'x', 'sent', 'unknown') RETURNING *`).get(customerId));
+    assert.equal(message.intent_state, 'unknown');
+
+    await assert.rejects(
+      runWithShop(shop.id, () =>
+        prepare(`INSERT INTO customer_messages (customer_id, body, status, intent_state)
+                 VALUES (?, 'x', 'sent', 'probably_sent')`).run(customerId)),
+      /violates check constraint/,
+    );
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
