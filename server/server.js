@@ -4503,6 +4503,11 @@ const server = createServer(async (req, res) => {
 // exiting cleanly one second before that beats being SIGKILLed mid-write.
 const SHUTDOWN_GRACE_MS = 10_000;
 
+// Printed once, as soon as the signal handlers are installed. Exported so the
+// lifecycle test matches on the same string this prints rather than a copy of
+// it that can drift.
+export const SIGNALS_READY = 'Boot: signal handlers installed';
+
 let shuttingDown = false;
 
 // Critical 2: signal handlers are installed before server.listen (see the
@@ -4653,9 +4658,19 @@ const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileUR
 if (isMainModule) {
   installCrashGuard();
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  // Announced because "this process can now shut down cleanly" is a real thing
+  // to know during a rolling deploy: before this line the process dies on
+  // SIGTERM with the default disposition, and nothing else says when that
+  // window closes. It cannot be closed entirely - ES module evaluation runs
+  // before any code here - so the honest answer is to say when it ended rather
+  // than to pretend it does not exist. tests/server-lifecycle.test.js waits for
+  // this instead of guessing a delay; it used to sleep 120ms, which sat in a
+  // ~78ms gap between module evaluation finishing and the server listening, and
+  // lost the race on a slower machine.
   // Same treatment as SIGTERM so Ctrl+C locally behaves consistently with a
   // real rolling deploy rather than Node's raw default (immediate exit).
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  console.log(SIGNALS_READY);
 
   runMigrations()
     // Session-scoped tenancy (the DB_TENANT_SCOPE default) is only safe on a
