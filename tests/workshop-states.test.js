@@ -35,6 +35,16 @@ test('defineMachine rejects an initial state it does not declare', () => {
   );
 });
 
+test('defineMachine refuses a machine that never comes to rest', () => {
+  // Added after the invariants caught custody and work declaring no rest state:
+  // the helper should refuse the mistake rather than leave it for a test to
+  // notice later.
+  assert.throws(
+    () => defineMachine({ name: 'endless', initial: 'a', states: ['a'], transitions: { a: { go: 'a' } } }),
+    /endless: declares no rest state/,
+  );
+});
+
 test('a legal custody transition returns the next state', () => {
   assert.equal(custody.next('expected', 'book_in'), 'in_shop');
   assert.equal(custody.next('in_shop', 'collect'), 'collected');
@@ -79,7 +89,7 @@ test('an expired request cannot be accepted afterwards', () => {
 
 test('a declined request is terminal - a shop that changes its mind starts a new one', () => {
   assert.deepEqual(bookingRequest.events('declined'), []);
-  assert.ok(bookingRequest.terminal.includes('declined'));
+  assert.ok(bookingRequest.rest.includes('declined'));
 });
 
 test('asking to move a confirmed booking keeps the original until the shop agrees', () => {

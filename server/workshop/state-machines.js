@@ -11,7 +11,13 @@
 // machine's state inside another is what produced the ambiguous single status
 // column these replace. Cross-machine rules live in the invariants test.
 
-export function defineMachine({ name, initial, states, transitions, terminal = [] }) {
+// `rest` names the states where the machine has come to rest: nothing further
+// happens on its own. Some rest states have no way out at all (a declined
+// booking), and some can be left only by a deliberate human act (a collected
+// bike the customer brings back). Both are rest; neither is automatic. Calling
+// the second kind "final" would be the same conflation this module exists to
+// remove, so it is not called that.
+export function defineMachine({ name, initial, states, transitions, rest = [] }) {
   const known = new Set(states);
   if (!known.has(initial)) {
     throw new Error(`${name}: initial state ${initial} is not declared`);
@@ -26,15 +32,18 @@ export function defineMachine({ name, initial, states, transitions, terminal = [
       }
     }
   }
-  for (const state of terminal) {
-    if (!known.has(state)) throw new Error(`${name}: terminal state ${state} is not declared`);
+  if (rest.length === 0) {
+    throw new Error(`${name}: declares no rest state, so it describes a process that never settles`);
+  }
+  for (const state of rest) {
+    if (!known.has(state)) throw new Error(`${name}: rest state ${state} is not declared`);
   }
 
   return {
     name,
     initial,
     states,
-    terminal,
+    rest,
     transitions,
     can: (from, event) => Boolean(transitions[from]?.[event]),
     events: from => Object.keys(transitions[from] ?? {}),
@@ -55,9 +64,11 @@ export const custody = defineMachine({
     expected: { book_in: 'in_shop' },
     in_shop: { collect: 'collected' },
     // Shops reopen jobs - a customer returns the next day with the same
-    // complaint. Collection is not the end of the record.
+    // complaint. Collection is not the end of the record, but it is where
+    // custody comes to rest.
     collected: { reopen: 'in_shop' },
   },
+  rest: ['collected'],
 });
 
 // The conversation about whether and when the shop will do the work. Ends
@@ -73,7 +84,7 @@ export const bookingRequest = defineMachine({
     scheduled: { request_reschedule: 'reschedule_requested', cancel: 'cancelled' },
     reschedule_requested: { accept: 'scheduled', decline: 'scheduled', cancel: 'cancelled' },
   },
-  terminal: ['declined', 'expired', 'cancelled'],
+  rest: ['declined', 'expired', 'cancelled'],
 });
 
 // What the mechanic is doing. Independent of custody: a finished bike is still
@@ -90,6 +101,7 @@ export const work = defineMachine({
     // Final checks fail, or the customer rides away and comes straight back.
     complete: { reopen: 'in_progress' },
   },
+  rest: ['complete'],
 });
 
 // How a row written under the old five-value workshop_jobs.status should be
@@ -131,7 +143,7 @@ export const quote = defineMachine({
     partly_approved: { revise: 'superseded' },
     approved: { revise: 'superseded' },
   },
-  terminal: ['declined', 'superseded', 'expired'],
+  rest: ['declined', 'superseded', 'expired'],
 });
 
 const APPROVABLE = new Set(['sent']);
@@ -164,7 +176,7 @@ export const capacityHold = defineMachine({
     held: { confirm: 'confirmed', expire: 'expired', release: 'released' },
     confirmed: { release: 'released' },
   },
-  terminal: ['expired', 'released'],
+  rest: ['expired', 'released'],
 });
 
 export const CONSUMES_CAPACITY = new Set(['held', 'confirmed']);
@@ -192,7 +204,7 @@ export const printTask = defineMachine({
     claimed: { acknowledge: 'acknowledged', fail: 'failed', lose_contact: 'unknown' },
     unknown: { confirm_printed: 'acknowledged', confirm_missing: 'failed' },
   },
-  terminal: ['acknowledged'],
+  rest: ['acknowledged', 'failed'],
 });
 
 // An intention to tell the customer something. Same shape as printTask and for
@@ -209,5 +221,9 @@ export const messageIntent = defineMachine({
     failed: { retry: 'sending' },
     unknown: { confirm_delivered: 'delivered', confirm_not_sent: 'failed' },
   },
-  terminal: ['delivered'],
+  rest: ['delivered'],
 });
+
+// Every machine, so the invariants can check them generically. A new machine
+// that is not added here is invisible to the invariant tests, so add it.
+export const MACHINES = [bookingRequest, custody, work, quote, capacityHold, printTask, messageIntent];
