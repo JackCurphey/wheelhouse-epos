@@ -59,3 +59,19 @@ export const custody = defineMachine({
     collected: { reopen: 'in_shop' },
   },
 });
+
+// The conversation about whether and when the shop will do the work. Ends
+// before the bike arrives; custody takes over from there.
+export const bookingRequest = defineMachine({
+  name: 'bookingRequest',
+  initial: 'pending',
+  states: ['pending', 'scheduled', 'reschedule_requested', 'declined', 'expired', 'cancelled'],
+  transitions: {
+    pending: { accept: 'scheduled', decline: 'declined', expire: 'expired', cancel: 'cancelled' },
+    // A reschedule keeps the original allocation until the shop answers, so a
+    // refused move leaves the customer with the booking they already had.
+    scheduled: { request_reschedule: 'reschedule_requested', cancel: 'cancelled' },
+    reschedule_requested: { accept: 'scheduled', decline: 'scheduled', cancel: 'cancelled' },
+  },
+  terminal: ['declined', 'expired', 'cancelled'],
+});
