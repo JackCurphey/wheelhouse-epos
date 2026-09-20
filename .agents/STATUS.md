@@ -73,8 +73,9 @@ Older entries moved to `ARCHIVE.md`.
    expected failure, test command and proof artefact per package.
 
 **Carried open:** six items including three tenant-isolation gaps confirmed
-ABSENT on `main` 9 Sep, and whether CI should gate the atlas checks,
-`prototype/` and the Python runner. Detail in `ARCHIVE.md`. **The Hubtiger
+ABSENT on `main` 9 Sep, and whether CI should gate `prototype/` and the Python
+runner. **The atlas checks now run in CI** (Jack, 20 Sep), plus a staleness
+check; confirmed as having actually executed, not merely not failed. Detail in `ARCHIVE.md`. **The Hubtiger
 trial lapsed about 15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
@@ -95,23 +96,21 @@ in the Phase 0 and Phase 2 plans' constraint sections.
 
 `server/workshop/state-machines.js` replaces the ambiguous single
 `workshop_jobs.status` with seven machines - 35 states, 48 transitions.
-Migrations 016-020 give them somewhere to live. Phases 0-2 merged to `main`
-20 Sep (PRs #54, #55, #56); detail in `ARCHIVE.md`.
+Migrations 016-020 house them. Phases 0-2 merged to `main` 20 Sep (PRs #54-#56);
+detail in `ARCHIVE.md`.
 
-**Phase 3 is built on `feat/phase-3-api`, not merged.** `status` is now a
-**generated column** Postgres derives from `booking_state` and `work_state`
-(migration 021), so `public/app.js` and the portal keep reading it and **nothing
-can write it** - a direct write is refused. Fifteen action endpoints are
-guarded by the machines and an optimistic `version` check: an illegal move and a
-lost race are both 409 and say different things. Job references (`WH-1000`) are
-per shop. Capacity holds are taken in the job's own transaction, so a race loser
-rolls back rather than keeping a booking for a slot it does not hold. Quotes
-supersede rather than mutate, per-line, with `canApprove` guarding stale links.
+**Phase 3 is built on `feat/phase-3-api`, not merged** (PR #57). `status` is now
+a **generated column** derived from `booking_state` and `work_state` (migration
+021), so the old diary and portal keep reading it and **nothing can write it**.
+Fifteen action endpoints are guarded by the machines and an optimistic `version`
+check: an illegal move and a lost race are both 409 and say different things.
+Job references (`WH-1000`) are per shop. Capacity holds are taken in the job's
+own transaction, so a race loser rolls back. Quotes supersede rather than
+mutate, per-line, with `canApprove` guarding stale links.
 
-**One deliberate hole:** `POST`/`PUT /api/workshop-jobs` still accept a legacy
-`status` and translate it, because the old diary's approve and complete buttons
-send one. That PUT path is **not** version- or machine-guarded. It dies with
-`public/app.js` in Phase 4.
+**One deliberate hole:** the old `status` is still accepted on `POST`/`PUT
+/api/workshop-jobs`, unguarded, for the old diary's buttons. Detail in
+`ARCHIVE.md`. It dies with `public/app.js` in Phase 4.
 
 **Print tasks and message intent are not built** - they need P00b and P00c,
 which have not landed. Seven atlas screens have no backing endpoint as a result.
@@ -141,6 +140,9 @@ node scripts/ci/assert-rls-coverage.mjs
 node scripts/ci/assert-screen-trace.mjs
 python3 docs/design/release-1-journey/package.py && node docs/design/release-1-journey/check-static.mjs && node docs/design/release-1-journey/check-notes.mjs
 ```
+
+All of these run in CI too, so a green PR means they passed.
+
 
 **Last verified 20 Sep on `feat/phase-3-api`, all green:** 393 pass / 0 fail,
 typecheck/lint/build clean, RLS OK across 30 protected tables, screen trace OK,

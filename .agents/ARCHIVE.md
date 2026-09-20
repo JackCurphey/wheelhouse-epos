@@ -725,5 +725,30 @@ both win; all 20 migrations apply cleanly into an empty database. Detail in PRs
 being valid - those ran locally only. Phase 3 closed the narrow half of this by
 adding `scripts/ci/assert-screen-trace.mjs` to CI, which gates the
 endpoint-to-screen trace. Whether the three atlas scripts themselves should run
-in CI is still open and is Jack's decision, alongside `prototype/` and the
-Python runner.
+in CI was Jack's decision, and he took it on 20 Sep: all three now run, in the
+same PR. They could not run as they stood - all three imported jsdom by a
+relative path into `prototype/node_modules`, which root CI never installs, so
+they would have failed every run on a missing module rather than on a real atlas
+fault. jsdom is now a root dev dependency (30.0.1, exact) and nothing reaches
+into `prototype/node_modules`. CI also fails if the committed atlas does not
+match what its source generates, which is the only automated check on the
+"never hand-edit the atlas HTML" trap. **`prototype/` and the Python runner
+remain open**, deliberately separate.
+
+
+## Phase 3's compatibility hole — full text (moved from STATUS.md, 20 Sep 2026)
+
+`POST` and `PUT /api/workshop-jobs` still accept a legacy `status` value and
+translate it into `booking_state` and `work_state` at the boundary, because
+`public/app.js` sends one from its approve button and its complete/reopen
+toggle. Dropping it would have broken the live diary, which is the thing the
+generated-column approach exists to avoid.
+
+That PUT path is deliberately **not** version-guarded and **not**
+machine-guarded: the old app sends no version, so it cannot take part in the
+optimistic-concurrency contract, and some of its moves are not single machine
+events. It is the unguarded legacy path, and the reason the action endpoints
+exist beside it rather than instead of it. It also leaves `custody_state` alone,
+so editing a job cannot reset a bike that is in the shop back to `expected`.
+
+Both die with `public/app.js` in Phase 4.
