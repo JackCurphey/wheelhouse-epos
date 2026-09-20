@@ -8,6 +8,7 @@ import path from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { runWithShop, prepare } from '../../server/db.js';
+import { readLegacyStatus } from '../../server/workshop/state-machines.js';
 
 // Mirrors server.js's UPLOADS_DIR.
 export const UPLOADS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'uploads');
@@ -20,15 +21,43 @@ export async function seedWorkshopJob({
   jobDate = '2026-09-07',
   startTime = '10:00',
   endTime = '11:00',
-  status = 'scheduled',
+  // Was `status = 'scheduled'`. The old column is derived now (migration 021)
+  // and Postgres refuses a direct write, so callers that used to name a legacy
+  // value name the facts instead. readLegacyStatus() turns the old vocabulary
+  // into the new one, so `legacyStatus: 'waiting_parts'` still reads naturally
+  // at the call site and lands as the right three states.
+  legacyStatus = 'scheduled',
   notes = '',
   orderTotal = 0,
+  ...rest
 }) {
+  // The parameter was renamed when status became a derived column. Without
+  // this, a caller still passing `status:` gets it silently ignored and the
+  // default applied - a test that looks like it seeds a complete job and
+  // actually seeds a scheduled one.
+  if (rest.status !== undefined) {
+    throw new Error('seedWorkshopJob: `status` was renamed to `legacyStatus` when the column became derived');
+  }
+  const { booking, work, custody } = readLegacyStatus(legacyStatus);
   return runWithShop(shopId, async () => {
     const { lastInsertRowid: jobId } = await prepare(
-      `INSERT INTO workshop_jobs (title, customer_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())`
-    ).run(title, customerId, mechanicId, jobDate, startTime, endTime, status, notes);
+      `INSERT INTO workshop_jobs (title, customer_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, notes, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())`
+    ).run(
+      title,
+      customerId,
+      mechanicId,
+      jobDate,
+      startTime,
+      endTime,
+      booking,
+      work,
+      // readLegacyStatus('complete') returns custody: null on purpose - the old
+      // column never said whether the bike left. 'expected' is the column
+      // default and the honest choice for a row that never recorded it.
+      custody ?? 'expected',
+      notes
+    );
 
     const { lastInsertRowid: orderId } = await prepare(
       `INSERT INTO sale_documents (kind, customer_id, subtotal, discount, total, note, title, workshop_job_id, updated_at)

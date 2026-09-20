@@ -85,6 +85,52 @@ jobs:
       - name: Fail if the registry is out of date
         run: node scripts/ci/check-registry-drift.mjs
 
+      # ---------- Atlas ----------
+
+      # The 82-screen journey atlas is generated from screens.js, not written by
+      # hand, and it is what Phase 4 builds against. Until now these three ran
+      # only on someone's machine, so a green CI said nothing about whether the
+      # atlas was still valid - #54 merged exactly that way.
+      #
+      # Both checks genuinely fail: breaking a destination in screens.js makes
+      # check-static exit 1 with "Broken action", and removing the service
+      # template wording makes check-notes exit 1 naming the note it broke.
+      # Verified by doing both, 20 Sep, before adding them here.
+      - name: Rebuild the atlas
+        run: python3 docs/design/release-1-journey/package.py
+
+      - name: Check the atlas is valid
+        run: node docs/design/release-1-journey/check-static.mjs
+
+      - name: Check every review note is still applied
+        run: node docs/design/release-1-journey/check-notes.mjs
+
+      # package.py regenerates the HTML and check-static regenerates
+      # screen-index.json, so if either differs from what is committed, the
+      # committed atlas was edited by hand or generated from a since-changed
+      # source. Both are the thing the "never hand-edit the atlas HTML" rule
+      # exists to stop, and neither is visible any other way.
+      # Scoped to the three generated artefacts rather than the whole folder, so
+      # this reports a stale atlas and never a source file someone is editing.
+      - name: Fail if the committed atlas is out of date
+        run: |
+          if ! git diff --exit-code -- \
+            docs/design/release-1-journey/Wheelhouse-Release-1-Journey-Atlas.html \
+            docs/design/release-1-journey/screen-index.json \
+            docs/design/release-1-journey/verification.json; then
+            echo "::error::The committed atlas does not match what its source generates. Run package.py and check-static.mjs locally and commit the result."
+            exit 1
+          fi
+
+      # ---------- Atlas traceability ----------
+
+      # The Release 1 design's one rule for the API layer: every workshop
+      # endpoint names the atlas screen it serves, and an endpoint no screen
+      # consumes is not built. Static, so it runs with the other cheap checks,
+      # before Postgres is involved.
+      - name: Assert every workshop route names a screen
+        run: node scripts/ci/assert-screen-trace.mjs
+
       # ---------- Database ----------
 
       - run: npm run migrate

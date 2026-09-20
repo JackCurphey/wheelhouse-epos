@@ -57,15 +57,29 @@ test('the database refuses a state no machine declares', async () => {
   }
 });
 
-test('the old status column is untouched and still works', async () => {
-  // Phase 2 is additive. server.js, public/app.js and the portal all still
-  // read and write this, and they must keep working until Phase 3 moves them.
+test('the old status column is derived, not written', async () => {
+  // Phase 3 (migration 021) turned this column into one Postgres computes from
+  // booking_state and work_state. public/app.js and the portal still read it
+  // and must keep working; what changed is that nothing can write it, so it
+  // cannot drift from the states the machines actually hold.
   const shop = await createTestShop();
   try {
-    const job = await insertJob(shop.id, { status: 'waiting_parts' });
-    assert.equal(job.status, 'waiting_parts');
+    const job = await insertJob(shop.id, { booking_state: 'scheduled', work_state: 'waiting_parts' });
+    assert.equal(job.status, 'waiting_parts', 'the derived value must follow the work state');
+
     const dflt = await insertJob(shop.id);
-    assert.equal(dflt.status, 'scheduled');
+    assert.equal(dflt.status, 'pending', 'a new job is a pending booking, so the old column reads pending');
+
+    const cancelled = await insertJob(shop.id, { booking_state: 'cancelled' });
+    assert.equal(cancelled.status, 'complete', 'a cancelled booking has no legacy value of its own');
+
+    await assert.rejects(
+      () => insertJob(shop.id, { status: 'complete' }),
+      // Postgres puts "generated column" in the error's detail; the message
+      // itself is "cannot insert a non-DEFAULT value into column ...".
+      /non-DEFAULT value into column "status"/,
+      'a direct write must be refused, or the derived column can drift'
+    );
   } finally {
     await deleteTestShop(shop.id);
   }

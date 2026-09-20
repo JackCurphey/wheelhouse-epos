@@ -649,3 +649,106 @@ and live in the Phase 0 plan's constraints: barcode-now-QR-later, the
 appointment-only walk-in rule, deposits out of Release 1, the two-column
 tablet job page, and services grouped by category.
 
+## Lightspeed and architecture paragraphs, moved from STATUS.md 20 Sep 2026
+
+**There is still no Lightspeed technical spec, and no account.**
+`2026-09-10-release-1-lightspeed-readiness.md` recommends R-Series *conditional
+on the first shop* and leaves proof steps LS-01 to LS-09 all "Pending". None
+start without the shop's series and an authorised test account: Jack's to
+supply.
+
+Architecture stage one merged 7 Sep (PR #37); detail in `ARCHIVE.md`. Recovery
+is outside Release 1. WorkOS auth and design remediation stay approved and
+unbuilt. The **workshop prototype** (PR #45) is an in-memory demo, not product
+code, and has **no week view** — the diary Jack built is in `public/app.js`, the
+customer slot grid in `public-portal/portal.js`.
+
+## Phase plan section, longer version moved from STATUS.md 20 Sep 2026
+
+## Phase plan for building the atlas
+
+Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`,
+which records who decided what. Agreed with Jack 20 Sep: a **new staff app** for
+these screens only, cut over at the end, on the **existing server and schema**,
+sequenced **by layer** because nothing is deployed. The old app keeps till,
+inventory, suppliers and storefront. Phases: 0 atlas, 1 state machines and 2
+schema (all built) → 3 API (each endpoint traced to a named screen) → 4 screens
+→ 5 integration. P00 proofs run alongside, all Jack's. Plans written: phase-0,
+phase-1 and phase-2, all dated 2026-09-20 under `docs/superpowers/plans/`.
+
+## Immediate next actions, 20 Sep pre-close version
+
+## Immediate next actions
+
+0. **Phase 3 — the API layer.** No plan written yet. It is the first phase that
+   changes behaviour: `server.js` moves off `workshop_jobs.status` onto the new
+   columns, each endpoint traced to a named screen in `screen-index.json`.
+1. **Jack: the first shop's Lightspeed series, and an authorised test account.**
+   Nothing in P00-LS moves without it; P07 stays conditional meanwhile.
+2. **Jack: the hardware answers** — printer model, tag dimensions, the Windows
+   driver host, 1D or 2D scanner. Scanner arrives Mon 21 Sep; the atlas barcode
+   stays a declared specimen until it is proven.
+3. **Jack: the message providers**, and what inbound replies do.
+4. **Mark: the screen review**, issue #50, outstanding since 17 Sep — now
+   against a superseded version. He needs telling that the atlas changed.
+5. **Split the plan into issues** — row IDs, allowed state changes, expected
+   failure, test command and proof artefact per package.
+
+**Carried, unchanged, and still open:** six items, including three
+tenant-isolation gaps confirmed ABSENT on `main` 9 Sep. Full text and evidence:
+`ARCHIVE.md`.
+
+**The Hubtiger trial lapsed about 15 Sep**; two tests never ran. Re-entry
+needs Jack's login.
+
+## Atlas paragraph, third version moved from STATUS.md 20 Sep 2026
+
+**The journey atlas is revised: 84 screens → 82**, all 13 notes applied and
+asserted by `check-notes.mjs`. PR #54; Mark told on #50. Carried: the tag
+barcode is a declared **non-scanning specimen** until Jack's scanner, and the
+PDFs and board PNG are **stale**. Detail in `ARCHIVE.md`.
+
+
+## Phases 0-2 detail — moved from STATUS.md, 20 September 2026
+
+Moved to make room for Phase 3 while keeping STATUS under its 8,000-byte cap.
+
+**Proven, not assumed** (Phases 1-2): tests run as `epos_app`
+(`rolsuper = false`); removing `FORCE ROW LEVEL SECURITY` let shop B read shop
+A's quotes; breaking the capacity index predicate let two concurrent bookings
+both win; all 20 migrations apply cleanly into an empty database. Detail in PRs
+#55 and #56.
+
+**CI did not run the atlas checks** (recorded at the Phase 2 close).
+`package.py`, `check-static.mjs` and `check-notes.mjs` appeared nowhere in
+`.github/workflows/test.yml`, so #54's green CI said nothing about the atlas
+being valid - those ran locally only. Phase 3 closed the narrow half of this by
+adding `scripts/ci/assert-screen-trace.mjs` to CI, which gates the
+endpoint-to-screen trace. Whether the three atlas scripts themselves should run
+in CI was Jack's decision, and he took it on 20 Sep: all three now run, in the
+same PR. They could not run as they stood - all three imported jsdom by a
+relative path into `prototype/node_modules`, which root CI never installs, so
+they would have failed every run on a missing module rather than on a real atlas
+fault. jsdom is now a root dev dependency (30.0.1, exact) and nothing reaches
+into `prototype/node_modules`. CI also fails if the committed atlas does not
+match what its source generates, which is the only automated check on the
+"never hand-edit the atlas HTML" trap. **`prototype/` and the Python runner
+remain open**, deliberately separate.
+
+
+## Phase 3's compatibility hole — full text (moved from STATUS.md, 20 Sep 2026)
+
+`POST` and `PUT /api/workshop-jobs` still accept a legacy `status` value and
+translate it into `booking_state` and `work_state` at the boundary, because
+`public/app.js` sends one from its approve button and its complete/reopen
+toggle. Dropping it would have broken the live diary, which is the thing the
+generated-column approach exists to avoid.
+
+That PUT path is deliberately **not** version-guarded and **not**
+machine-guarded: the old app sends no version, so it cannot take part in the
+optimistic-concurrency contract, and some of its moves are not single machine
+events. It is the unguarded legacy path, and the reason the action endpoints
+exist beside it rather than instead of it. It also leaves `custody_state` alone,
+so editing a job cannot reset a bike that is in the shop back to `expected`.
+
+Both die with `public/app.js` in Phase 4.

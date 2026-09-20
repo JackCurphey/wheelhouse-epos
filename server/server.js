@@ -8,6 +8,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
+import { readLegacyStatus, bookingRequest, custody, work } from './workshop/state-machines.js';
+import { applyEvent } from './workshop/transitions.js';
+import { allocateReference } from './workshop/references.js';
+import {
+  createRevision as createQuoteRevision,
+  send as sendQuoteForApproval,
+  recordLineDecision,
+  approve as approveQuote,
+  serializeQuote,
+} from './workshop/quotes.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { runSync } from './suppliers/index.js';
@@ -2201,6 +2211,32 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   if (!doc) return notFound(res, 'Not found');
   if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
+  // Tendering the order for a job is the shop saying the work is done, so it has
+  // to be a legal 'finish' on the work machine. If it is not, the tender is
+  // refused (Jack's decision, 20 Sep, reaffirmed after a day on the other
+  // behaviour): the job record governs, and the shop marks the job's real state
+  // before taking the money.
+  //
+  // Note the breadth. 'finish' is legal only from in_progress, so this refuses a
+  // job that never started AND one that is on hold or waiting for parts. The
+  // shop's way through is to move the job to where it actually is first -
+  // resume, or parts-arrived - which is the point: the refusal is telling them
+  // the record disagrees with what they are about to do.
+  //
+  // Checked HERE, before the sale is created. Refusing further down would leave
+  // a real sale on the books and the job untouched, which is worse than either
+  // outcome.
+  let jobToFinish = null;
+  if (doc.workshop_job_id) {
+    jobToFinish = await db.prepare('SELECT id, work_state, version FROM workshop_jobs WHERE id = ?')
+      .get(doc.workshop_job_id);
+    if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
+      return sendJson(res, 409, {
+        error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
+      });
+    }
+  }
+
   const body = await readJsonBody(req);
   const cashAmount = Math.max(0, Number(body.cashAmount) || 0);
   const cardAmount = Math.max(0, Number(body.cardAmount) || 0);
@@ -2263,14 +2299,27 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // the customer paying for and collecting that job - being tendered off is
   // the real-world signal the job itself is done, so it auto-completes here
   // rather than needing a separate manual step in the diary.
-  if (doc.workshop_job_id) {
-    await db.prepare(`UPDATE workshop_jobs SET status = 'complete', updated_at = ? WHERE id = ?`).run(nowIso(), doc.workshop_job_id);
+  let jobWarning = null;
+  if (jobToFinish) {
+    const finished = await applyEvent({
+      jobId: jobToFinish.id,
+      machine: work,
+      event: 'finish',
+      expectedVersion: jobToFinish.version,
+    });
+    // The pre-flight check above passed, so reaching here means someone moved
+    // the job in between. The sale is already real and cannot be undone, so the
+    // payment stands and the response says the job did not move - a silently
+    // uncompleted job is exactly the ambiguity the state machines exist to
+    // remove.
+    if (!finished.ok) jobWarning = finished.message;
   }
 
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
   const savedPayments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(saleId);
-  sendJson(res, 201, serializeSale(sale, savedItems, savedPayments));
+  const payload = serializeSale(sale, savedItems, savedPayments);
+  sendJson(res, 201, jobWarning ? { ...payload, jobWarning } : payload);
   if (afterRelease && shopifyPushes.length) {
     afterRelease.push(() => firePendingShopifyPushes(shopId, shopifyPushes));
   }
@@ -2292,6 +2341,16 @@ function serializeWorkshopJob(row) {
     startTime: row.start_time,
     endTime: row.end_time,
     status: row.status,
+    // The states the screens actually drive from. `status` above is the derived
+    // legacy field, kept only for public/app.js and the customer portal until
+    // Phase 4 replaces them.
+    reference: row.reference,
+    bookingState: row.booking_state,
+    custodyState: row.custody_state,
+    workState: row.work_state,
+    // Every action endpoint requires the version the caller last saw, so it has
+    // to come back on every read.
+    version: row.version,
     notes: row.notes,
     orderId: row.order_id,
     orderStatus: row.order_status,
@@ -2488,15 +2547,49 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
 // deliberately ignores anything the client sends for customerId/status and
 // forces its own values, same principle as createSale() never trusting a
 // client-sent total).
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, status, notes, skipAutoOrder }) {
+// Takes the three states, not a status: workshop_jobs.status is a generated
+// column since migration 021 and Postgres refuses a direct write. Callers that
+// still speak the old five-value vocabulary (the staff diary's POST, below)
+// translate at the boundary with readLegacyStatus().
+// Throws a pg unique-violation (code 23505) when another request already holds
+// the slot. Callers map that to 409 - the request was well-formed and lost a
+// race, which is not the same thing as being wrong.
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder }) {
   await db.exec('BEGIN');
   try {
+    // Inside the transaction: a reference allocated for a job whose insert then
+    // fails is a number spent for nothing, which is tolerable, but a reference
+    // allocated outside and reused is not.
+    const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, status, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, status, notes, nowIso());
+      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes, nowIso());
+    const jobIdForHold = info.lastInsertRowid;
+
+    // Take the capacity hold in the same transaction as the job. checkJobSlot
+    // above is a SELECT, so two requests can both pass it and both insert; the
+    // partial unique index from migration 018 is what makes exactly one of them
+    // win. Inside the transaction so the loser's job rolls back with its hold
+    // rather than surviving as a booking for a slot it does not hold.
+    //
+    // Only timed jobs take a hold. A job with no start time reserves no slot,
+    // and every such job would otherwise collide with every other one on the
+    // same date (the index COALESCEs a null mechanic to 0).
+    if (startTime) {
+      await db.prepare(
+        `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
+         VALUES (?, ?, ?, ?, ?, 'held')`
+      ).run(
+        jobIdForHold,
+        jobDate,
+        startTime,
+        mechanicId,
+        Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime))
+      );
+    }
     const jobId = info.lastInsertRowid;
 
     // Every workshop job is backed by an order so it's findable from the
@@ -2595,6 +2688,10 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
 
   const status = resolveJobStatus(body.status, null);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+  // The staff diary still sends a legacy status and will until Phase 4 replaces
+  // it. Translating here rather than changing the request contract is what
+  // keeps public/app.js working untouched through this phase.
+  const created = readLegacyStatus(status);
 
   const slotError = await checkJobSlot({
     jobDate,
@@ -2612,7 +2709,9 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
     jobDate,
     startTime: times.startTime,
     endTime: times.endTime,
-    status,
+    bookingState: created.booking,
+    workState: created.work,
+    custodyState: created.custody ?? 'expected',
     notes,
     skipAutoOrder: !!body.skipAutoOrder,
   });
@@ -2646,13 +2745,36 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
-  const status = resolveJobStatus(body.status, existing.status);
-  if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+
+  // The staff diary still changes a job's state by PUTting a legacy status
+  // (public/app.js approveJob() and the complete/reopen toggle), and will until
+  // Phase 4 replaces it. This translates that into the state columns.
+  //
+  // Deliberately NOT routed through applyEvent: the old app sends no version,
+  // so it cannot take part in the optimistic-concurrency contract, and some of
+  // its moves are not single machine events. This is the unguarded legacy path,
+  // and it is the reason the action endpoints exist beside it rather than
+  // instead of it. It dies with public/app.js.
+  //
+  // custody_state is left alone. The old status never expressed custody (Phase
+  // 1: readLegacyStatus('complete') returns custody: null), so deriving one
+  // here would reset a bike that is in the shop back to 'expected'.
+  let legacyStates = null;
+  if (body.status !== undefined) {
+    const requested = resolveJobStatus(body.status, null);
+    if (requested === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
+    const { booking, work: workState } = readLegacyStatus(requested);
+    legacyStates = { booking, workState };
+  }
 
   // A complete job is a record of work already done, so its details are
   // frozen - the browser disables every field on the form. Changing status
   // is the one edit that stays open, because that is how a job is reopened.
-  if (existing.status === 'complete') {
+  // Was `existing.status === 'complete'`. The derived column now also reads
+  // 'complete' for a cancelled, declined or expired booking, and freezing those
+  // against edits is a behaviour change nobody asked for. This guard was always
+  // about finished work.
+  if (existing.work_state === 'complete') {
     const changesBeyondStatus =
       title !== existing.title ||
       jobDate !== existing.job_date ||
@@ -2677,7 +2799,8 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   if (slotError) return badRequest(res, slotError);
 
   await db.prepare(
-    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, status = ?, notes = ?, updated_at = ?
+    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, updated_at = ?,
+       booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)
      WHERE id = ?`
   ).run(
     title,
@@ -2687,14 +2810,150 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
     jobDate,
     times.startTime,
     times.endTime,
-    status,
     notes,
     nowIso(),
+    legacyStates?.booking ?? null,
+    legacyStates?.workState ?? null,
     id
   );
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
   sendJson(res, 200, serializeWorkshopJob(row));
 });
+
+// ---------- Workshop job actions ----------
+//
+// One endpoint per thing a person does, not a status field on the PUT above.
+// The URL names what happened, so the access log, the screen trace and any
+// future per-action permission all read the path instead of the body.
+//
+// Every one of these carries a `screens:` comment naming the atlas screens it
+// serves. scripts/ci/assert-screen-trace.mjs fails the build if a workshop
+// route has no such comment or names an id that is not in screen-index.json -
+// the design's "an endpoint no screen consumes is not built" rule, made into a
+// check that runs rather than a promise in a document.
+function jobActionRoute(action, machine, event) {
+  route('POST', `/api/workshop-jobs/:id/${action}`, async (req, res, params) => {
+    const id = Number(params.id);
+    const body = await readJsonBody(req);
+    // The caller must say which version it saw. Defaulting it would turn every
+    // racing write into a silent last-one-wins, which is the bug the version
+    // column exists to prevent.
+    if (!Number.isInteger(body.version)) {
+      return badRequest(res, 'version is required - send the version you last read');
+    }
+    const result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+    if (!result.ok) {
+      if (result.code === 'not_found') return notFound(res, 'Job not found');
+      return sendJson(res, 409, { error: result.message });
+    }
+    // A hold that outlives its booking is capacity the diary is still promising
+    // away. Released in the same request, not on a timer.
+    if (ENDS_A_BOOKING.has(event)) {
+      await db.prepare(
+        `UPDATE workshop_capacity_holds SET state = 'released'
+         WHERE workshop_job_id = ? AND state IN ('held', 'confirmed')`
+      ).run(id);
+    }
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+}
+
+const ENDS_A_BOOKING = new Set(['cancel', 'decline', 'expire']);
+
+// ---------- Quotes ----------
+//
+// One mapper so a single place decides that a refused move is 409 and a hidden
+// row is 404.
+function sendQuoteResult(res, result, status = 200) {
+  if (result.ok) return sendJson(res, status, serializeQuote(result.quote));
+  if (result.code === 'not_found') return notFound(res, result.message);
+  return sendJson(res, 409, { error: result.message });
+}
+
+// screens: quote-editor
+route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
+  const body = await readJsonBody(req);
+  if (!Array.isArray(body.lines)) return badRequest(res, 'lines must be an array');
+  sendQuoteResult(res, await createQuoteRevision({ jobId: Number(params.id), lines: body.lines }), 201);
+});
+
+// screens: quote-send
+route('POST', '/api/quotes/:id/send', async (req, res, params) => {
+  sendQuoteResult(res, await sendQuoteForApproval({ quoteId: Number(params.id) }));
+});
+
+// screens: approval
+// Under /api/portal/ because the customer makes this decision on their phone,
+// authenticated as a customer - not as staff. Resolved exactly the way every
+// other portal route does it.
+route('POST', '/api/portal/:shopSlug/quotes/:id/lines/:lineId/decision', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+  sendQuoteResult(res, await recordLineDecision({
+    quoteId: Number(params.id),
+    lineId: Number(params.lineId),
+    decision: body.decision,
+    customerId: ctx.login.customer_id,
+  }));
+});
+
+// screens: approval-done, approved, stale
+route('POST', '/api/portal/:shopSlug/quotes/:id/approve', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const body = await readJsonBody(req);
+  // The revision the customer's link was issued for. Required, never defaulted
+  // to the current one - defaulting it would approve whatever the price happens
+  // to be now, which is the exact failure screen 51 exists to show.
+  if (!Number.isInteger(body.revision)) {
+    return badRequest(res, 'revision is required - it comes from the approval link');
+  }
+  sendQuoteResult(res, await approveQuote({
+    quoteId: Number(params.id),
+    linkRevision: body.revision,
+    customerId: ctx.login.customer_id,
+  }));
+});
+
+// screens: requests, review
+jobActionRoute('accept', bookingRequest, 'accept');
+// screens: reject, rejected
+jobActionRoute('decline', bookingRequest, 'decline');
+// screens: reschedule, change-pending
+jobActionRoute('request-reschedule', bookingRequest, 'request_reschedule');
+// screens: cancel, cancelled
+jobActionRoute('cancel', bookingRequest, 'cancel');
+// screens: expired
+jobActionRoute('expire', bookingRequest, 'expire');
+
+// screens: intake, scan
+jobActionRoute('book-in', custody, 'book_in');
+// screens: collection, closed
+jobActionRoute('collect', custody, 'collect');
+// The action is reopen-custody, not reopen, because the work machine has a
+// reopen event too and they are different acts: one is a bike coming back
+// through the door, the other is a final check that failed. One URL for both
+// would be the same conflation the single status column produced.
+// screens: reopen
+jobActionRoute('reopen-custody', custody, 'reopen');
+
+// screens: queue, job-page
+jobActionRoute('start', work, 'start');
+// screens: waiting
+jobActionRoute('await-parts', work, 'await_parts');
+// screens: waiting
+jobActionRoute('parts-arrived', work, 'parts_arrived');
+// screens: job, waiting
+jobActionRoute('hold', work, 'hold');
+// screens: job, waiting
+jobActionRoute('resume', work, 'resume');
+// screens: finished, job-page
+jobActionRoute('finish', work, 'finish');
+// See reopen-custody above: a failed final check is not a bike coming back.
+// screens: reopen
+jobActionRoute('reopen-work', work, 'reopen');
 
 route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
@@ -2705,6 +2964,11 @@ route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   // forever with nothing pointing at it.
   const attachments = await db.prepare('SELECT storage_key FROM workshop_job_attachments WHERE workshop_job_id = ?').all(id);
   await db.prepare('UPDATE sale_documents SET workshop_job_id = NULL WHERE workshop_job_id = ?').run(id);
+  // The capacity hold references this job, so it has to go first or the delete
+  // fails on the foreign key. Deleted rather than released: a released hold is
+  // a record of a slot the shop gave back, and there is no longer a booking for
+  // it to be a record of.
+  await db.prepare('DELETE FROM workshop_capacity_holds WHERE workshop_job_id = ?').run(id);
   await db.prepare('DELETE FROM workshop_jobs WHERE id = ?').run(id);
   await Promise.all(attachments.map((a) => unlink(path.join(UPLOADS_DIR, a.storage_key)).catch(() => {})));
   sendJson(res, 200, { ok: true });
@@ -3853,7 +4117,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   // customer (signed-in, or the matched/created guest above), always
   // 'pending' until a mechanic reviews it, same principle as createSale()
   // never trusting a client-sent total.
-  const jobId = await createWorkshopJob({
+  let jobId;
+  try {
+    jobId = await createWorkshopJob({
     title: `Online booking: ${description}`.slice(0, 200),
     customerId,
     bikeId,
@@ -3861,10 +4127,20 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     jobDate,
     startTime: times.startTime,
     endTime: times.endTime,
-    status: 'pending',
+    bookingState: 'pending',
+    workState: 'not_started',
+    custodyState: 'expected',
     notes: description,
     skipAutoOrder: false,
-  });
+    });
+  } catch (err) {
+    // 23505 is the capacity index: someone else took this slot between the
+    // availability check and now.
+    if (err.code === '23505') {
+      return sendJson(res, 409, { error: 'That time is no longer available - please choose another.' });
+    }
+    throw err;
+  }
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
   sendJson(res, 201, serializePortalBooking(row));
 });
@@ -4238,6 +4514,11 @@ const server = createServer(async (req, res) => {
 // exiting cleanly one second before that beats being SIGKILLed mid-write.
 const SHUTDOWN_GRACE_MS = 10_000;
 
+// Printed once, as soon as the signal handlers are installed. Exported so the
+// lifecycle test matches on the same string this prints rather than a copy of
+// it that can drift.
+export const SIGNALS_READY = 'Boot: signal handlers installed';
+
 let shuttingDown = false;
 
 // Critical 2: signal handlers are installed before server.listen (see the
@@ -4388,9 +4669,19 @@ const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileUR
 if (isMainModule) {
   installCrashGuard();
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  // Announced because "this process can now shut down cleanly" is a real thing
+  // to know during a rolling deploy: before this line the process dies on
+  // SIGTERM with the default disposition, and nothing else says when that
+  // window closes. It cannot be closed entirely - ES module evaluation runs
+  // before any code here - so the honest answer is to say when it ended rather
+  // than to pretend it does not exist. tests/server-lifecycle.test.js waits for
+  // this instead of guessing a delay; it used to sleep 120ms, which sat in a
+  // ~78ms gap between module evaluation finishing and the server listening, and
+  // lost the race on a slower machine.
   // Same treatment as SIGTERM so Ctrl+C locally behaves consistently with a
   // real rolling deploy rather than Node's raw default (immediate exit).
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  console.log(SIGNALS_READY);
 
   runMigrations()
     // Session-scoped tenancy (the DB_TENANT_SCOPE default) is only safe on a

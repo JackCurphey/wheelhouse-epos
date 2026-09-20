@@ -1,4 +1,4 @@
-import { JSDOM, VirtualConsole } from '../../../prototype/node_modules/jsdom/lib/api.js';
+import { JSDOM, VirtualConsole } from 'jsdom';
 import { readFile,writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const url=new URL('./',import.meta.url),path=n=>new URL(n,url);

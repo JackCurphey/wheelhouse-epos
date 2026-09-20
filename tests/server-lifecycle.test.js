@@ -20,6 +20,10 @@ import { createServer as createNetServer } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import '../server/load-env.js';
+// Safe to import: server.js only boots when it is the entry point being run
+// (the isMainModule guard), which is why every other test can import its
+// serializers too.
+import { SIGNALS_READY } from '../server/server.js';
 import pg from 'pg';
 import { checkDatabaseHealth, gracefulShutdown } from '../server/server.js';
 import { pool as realPool } from '../server/db.js';
@@ -96,6 +100,26 @@ async function spawnServer(env = {}) {
     getStderr: () => stderr,
     getStdout: () => stdout,
   };
+}
+
+// Resolves once the child's stdout contains `marker`. Used instead of a fixed
+// delay wherever a test needs the child to have reached a particular point in
+// its boot, since how long that takes depends on the machine.
+function waitForStdout(child, marker, timeoutMs, read) {
+  return new Promise((resolve, reject) => {
+    if (read().includes(marker)) return resolve();
+    const timer = setTimeout(
+      () => reject(new Error(`child never printed ${JSON.stringify(marker)} within ${timeoutMs}ms; stdout:\n${read()}`)),
+      timeoutMs
+    );
+    const onData = () => {
+      if (!read().includes(marker)) return;
+      clearTimeout(timer);
+      child.stdout.off('data', onData);
+      resolve();
+    };
+    child.stdout.on('data', onData);
+  });
 }
 
 function waitForExit(child, timeoutMs) {
@@ -240,12 +264,21 @@ test('SIGTERM landing before the server starts listening exits 0 without a false
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let stderr = '';
+  let stdout = '';
   child.stderr.on('data', (d) => { stderr += d.toString('utf8'); });
+  child.stdout.on('data', (d) => { stdout += d.toString('utf8'); });
   try {
-    // 120ms is well before migrations + the pooler probe normally finish
-    // (spawnServer's own waitForServer allows up to 30s for that), so the
-    // process is still mid-boot chain, pre-listen, when the signal lands.
-    await new Promise((r) => setTimeout(r, 120));
+    // Waits for the process to SAY its handlers are installed, rather than
+    // sleeping and hoping.
+    //
+    // This used to sleep 120ms. Measured on this machine, ES module evaluation
+    // finishes around 67ms and the server is listening by 145ms, so that 120ms
+    // sat inside a ~78ms window: a little early and the SIGTERM handler is not
+    // installed yet, so the process dies on the default disposition (exit code
+    // null) and this test fails; a little late and the server is already
+    // listening, so it is no longer testing the pre-listen path at all. It lost
+    // that race on a CI runner once the import graph grew.
+    await waitForStdout(child, SIGNALS_READY, 15000, () => stdout);
     child.kill('SIGTERM');
     const code = await waitForExit(child, 15000);
     assert.equal(code, 0, `expected a clean exit 0 for a pre-listen SIGTERM, got ${code}; stderr:\n${stderr}`);
