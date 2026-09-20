@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-20
-**Branch:** `docs/release-1-screen-build-design`, off `main` at `3ecbc66`.
+**Branch:** `feat/phase-1-state-machines`, off the Phase 0 branch (PR #54).
 **Blocked on:** nothing, for the atlas. Mark's #50 review is against the
 superseded 84-screen version; he was told on 20 Sep. Other open items are
 Jack's.
@@ -22,17 +22,11 @@ refunds, customer import, reports, group capacity and recovery are Later. It
 **supersedes the #47 Hubtiger ranking**, now closed. The workshop plan is
 packages P00–P09 over 154 of the original 172 rows, not yet split into issues.
 
-**The journey atlas has been revised against Jack's review: 84 screens → 82.**
-His export is committed at `docs/reviews/2026-09-17-release-1-screen-review-jack.md`
-(71 approved, 13 noted) rather than living only in a browser. Phase 0 applied all
-13 notes on 20 Sep: mechanic phone flow (10 screens) → one tablet `job-page`;
-Code 128 tag instead of QR; a third appointment-only booking mode; diary and slot
-picker following `public/app.js` and `public-portal/portal.js`; services grouped
-by category; deposits left out. `check-notes.mjs` asserts each applied note.
-**The PDFs and board PNG are stale** — rendered from the 84-screen version, and
-WeasyPrint/PyMuPDF/Pillow are not installed here. **The barcode is a declared
-non-scanning specimen**; Jack has a scanner from Mon 21 Sep, and a generated,
-verified Code 128 replaces it in P00b.
+**The journey atlas is revised: 84 screens → 82.** All 13 of Jack's notes
+applied 20 Sep, each asserted by `check-notes.mjs`. PR #54, Mark told on #50.
+Detail in `ARCHIVE.md`. Two carried: the tag barcode is a declared
+**non-scanning specimen** until Jack's scanner (Mon 21 Sep), and the PDFs and
+board PNG are **stale** — WeasyPrint/PyMuPDF/Pillow are not installed here.
 
 **There is still no Lightspeed technical spec, and no account.**
 `2026-09-10-release-1-lightspeed-readiness.md` recommends R-Series *conditional
@@ -68,12 +62,11 @@ defaults to `session` until three handlers are restructured.
 ## Read order for a fresh session
 
 1. This file
-2. The Phase 0 plan and the build design, named under **Phase plan** below
+2. **Phase plan** below — the design and the two phase plans it names
 3. `docs/decisions/2026-09-10-release-1-scope-reduction.md` — what Release 1 is
 4. `2026-09-10-release-1-lightspeed-readiness.md` — integration contract, proof
-5. `2026-09-10-release-1-workshop-plan.md` — the package breakdown
 
-Older entries (business plan, tenant-scoping checklist) moved to `ARCHIVE.md`.
+Older entries moved to `ARCHIVE.md`.
 
 ## Immediate next actions
 
@@ -88,10 +81,9 @@ Older entries (business plan, tenant-scoping checklist) moved to `ARCHIVE.md`.
 5. **Split the plan into issues** — row IDs, allowed state changes, expected
    failure, test command and proof artefact per package.
 
-**Carried, unchanged, and still open:** six items — CI gating for `prototype`
-and the Python runner, three tenant-isolation gaps confirmed ABSENT on `main`
-9 Sep, gateway/app health ordering, and five ownership queries needing Mark.
-Full text, evidence and row references: `.agents/ARCHIVE.md`.
+**Carried, unchanged, and still open:** six items, including three
+tenant-isolation gaps confirmed ABSENT on `main` 9 Sep. Full text and evidence:
+`ARCHIVE.md`.
 
 **The Hubtiger trial lapsed about 15 Sep**; two tests never ran. Re-entry
 needs Jack's login.
@@ -113,16 +105,30 @@ and live in the Phase 0 plan's constraints: barcode-now-QR-later, the
 appointment-only walk-in rule, deposits out of Release 1, the two-column
 tablet job page, and services grouped by category.
 
+## Phase 1 — state machines, built
+
+`server/workshop/state-machines.js` replaces the ambiguous single
+`workshop_jobs.status` with seven machines (bookingRequest, custody, work,
+quote, capacityHold, printTask, messageIntent) — 35 states, 48 transitions,
+with `docs/design/workshop-states.md` generated from them. **No schema and no
+endpoint changed**: `JOB_STATUSES` still governs the API, and
+`readLegacyStatus` *reads* the old column rather than migrating it.
+
+Phase 2 inherits one open question: **`readLegacyStatus('complete')` returns
+`custody: null`**, because the old column never recorded whether a finished
+bike went home. A test pins that open so no migration guesses it.
+
 ## Phase plan for building the atlas
 
 Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`,
 which records who decided what. Agreed with Jack 20 Sep: a **new staff app** for
 these screens only, cut over at the end, on the **existing server and schema**,
 sequenced **by layer** because nothing is deployed. The old app keeps till,
-inventory, suppliers and storefront. Phases: 0 atlas revision (done) → 1 state
-machine → 2 schema → 3 API (every endpoint traced to a named screen) → 4 screens
-→ 5 integration. P00 proofs run alongside and are Jack's. Only Phase 0 has a
-written plan: `docs/superpowers/plans/2026-09-20-phase-0-atlas-revision.md`.
+inventory, suppliers and storefront. Phases: 0 atlas revision and 1 state
+machines (both built) → 2 schema → 3 API (each endpoint traced to a named
+screen) → 4 screens → 5 integration. P00 proofs run alongside, all Jack's.
+Plans written: `2026-09-20-phase-0-atlas-revision.md` and
+`2026-09-20-phase-1-state-machines.md`, under `docs/superpowers/plans/`.
 
 ## Plan register
 
@@ -139,8 +145,8 @@ python3 docs/design/release-1-journey/package.py   # regenerate the atlas
 node docs/design/release-1-journey/check-static.mjs && node docs/design/release-1-journey/check-notes.mjs
 ```
 
-**Last verified 20 Sep, all green:** 278 pass / 0 fail (62s, needs compose
-Postgres up), typecheck/lint/build clean, atlas 82 screens no errors. The docker
+**Last verified 20 Sep, all green:** 326 pass / 0 fail (needs compose Postgres
+up), typecheck/lint/build clean, atlas 82 screens no errors. The docker
 `app` image is from 31 Aug — verify the working tree, not that container.
 
 ## Open items needing Mark
