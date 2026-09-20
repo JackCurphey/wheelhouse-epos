@@ -2784,6 +2784,33 @@ jobActionRoute('cancel', bookingRequest, 'cancel');
 // screens: expired
 jobActionRoute('expire', bookingRequest, 'expire');
 
+// screens: intake, scan
+jobActionRoute('book-in', custody, 'book_in');
+// screens: collection, closed
+jobActionRoute('collect', custody, 'collect');
+// The action is reopen-custody, not reopen, because the work machine has a
+// reopen event too and they are different acts: one is a bike coming back
+// through the door, the other is a final check that failed. One URL for both
+// would be the same conflation the single status column produced.
+// screens: reopen
+jobActionRoute('reopen-custody', custody, 'reopen');
+
+// screens: queue, job-page
+jobActionRoute('start', work, 'start');
+// screens: waiting
+jobActionRoute('await-parts', work, 'await_parts');
+// screens: waiting
+jobActionRoute('parts-arrived', work, 'parts_arrived');
+// screens: job, waiting
+jobActionRoute('hold', work, 'hold');
+// screens: job, waiting
+jobActionRoute('resume', work, 'resume');
+// screens: finished, job-page
+jobActionRoute('finish', work, 'finish');
+// See reopen-custody above: a failed final check is not a bike coming back.
+// screens: reopen
+jobActionRoute('reopen-work', work, 'reopen');
+
 route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
