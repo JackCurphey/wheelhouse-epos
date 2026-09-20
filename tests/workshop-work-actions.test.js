@@ -127,13 +127,11 @@ test('tendering the linked order finishes the work through the machine', async (
   }
 });
 
-test('tendering an order for work that never started still takes the payment', async () => {
-  // Jack's decision, 20 Sep: a job-tracking rule must never refuse a customer's
-  // money. The shop tendering the order is the work having happened, whether or
-  // not anyone pressed start. So the payment always goes through, and the job
-  // is walked to complete along the machine's own declared transitions
-  // (not_started -> start -> in_progress -> finish -> complete) rather than
-  // having 'complete' written straight to the column.
+test('tendering an order for work that never started is refused, not forced', async () => {
+  // Jack's decision, 20 Sep, reaffirmed after a day on the opposite behaviour:
+  // the job record governs, and a tender that does not match it is refused
+  // rather than being made true by writing 'complete' behind the machine's
+  // back - which is exactly what the old single status column allowed.
   const { cookie, shop, mechanicId, cashierId } = await newShop();
   try {
     const created = await staffRequest(server.baseUrl, cookie, '/api/workshop-jobs', {
@@ -146,15 +144,53 @@ test('tendering an order for work that never started still takes the payment', a
       method: 'POST',
       body: { cashierId, cashAmount: 0, cashTendered: 0 },
     });
-    assert.equal(converted.status, 201, JSON.stringify(converted.body));
-    assert.equal(converted.body.jobWarning, undefined, 'a job that can be walked to complete is not a warning');
+    assert.equal(converted.status, 409, JSON.stringify(converted.body));
+    assert.match(converted.body.error, /cannot finish a job that is not_started/);
 
-    const job = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`);
-    assert.equal(job.body.workState, 'complete');
-    // Exactly two steps (start, finish) from version 1, so version 3. `> 1`
-    // would also be satisfied by writing 'complete' straight to the column,
-    // which is the thing this is meant to rule out.
-    assert.equal(job.body.version, 3, 'the job must be walked through start and finish, not written directly');
+    // And no sale exists. Refusing after the sale was created would leave the
+    // shop's books and the job disagreeing, which is worse than either answer.
+    const sales = await runWithShop(shop.id, () =>
+      prepare('SELECT COUNT(*)::int AS n FROM sales').get());
+    assert.equal(sales.n, 0, 'a refused tender must not leave a sale behind');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a job on hold or waiting for parts is refused too, and says how to proceed', async () => {
+  // The rule is "finish must be a legal move", and finish is legal only from
+  // in_progress. So this is broader than the never-started case: a job parked
+  // on hold, or waiting for a part, also cannot be tendered until someone moves
+  // it to where it actually is. Tested explicitly so that breadth is visible
+  // rather than discovered at a till.
+  const { cookie, shop, mechanicId, cashierId } = await newShop();
+  try {
+    const created = await staffRequest(server.baseUrl, cookie, '/api/workshop-jobs', {
+      method: 'POST',
+      body: { title: 'On hold', jobDate: MONDAY, startTime: '14:00', endTime: '15:00', mechanicId },
+    });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    const held = await walk(cookie, created.body.id, ['start', 'hold']);
+    assert.equal(held.workState, 'on_hold');
+
+    const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/convert`, {
+      method: 'POST',
+      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+    });
+    assert.equal(converted.status, 409, JSON.stringify(converted.body));
+    assert.match(converted.body.error, /cannot finish a job that is on_hold/);
+    assert.match(converted.body.error, /resume/, 'the refusal must name the way out, not just say no');
+
+    // Resume, and the same tender now goes through.
+    const resumed = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}/resume`, {
+      method: 'POST', body: { version: held.version },
+    });
+    assert.equal(resumed.status, 200, JSON.stringify(resumed.body));
+    const retried = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/convert`, {
+      method: 'POST',
+      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+    });
+    assert.equal(retried.status, 201, JSON.stringify(retried.body));
   } finally {
     await deleteTestShop(shop.id);
   }

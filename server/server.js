@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
 import { readLegacyStatus, bookingRequest, custody, work } from './workshop/state-machines.js';
-import { applyEvent, driveTo } from './workshop/transitions.js';
+import { applyEvent } from './workshop/transitions.js';
 import { allocateReference } from './workshop/references.js';
 import {
   createRevision as createQuoteRevision,
@@ -2211,19 +2211,30 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   if (!doc) return notFound(res, 'Not found');
   if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
-  // Tendering the order for a job is the shop saying the work is done, whether
-  // or not anyone pressed start along the way.
+  // Tendering the order for a job is the shop saying the work is done, so it has
+  // to be a legal 'finish' on the work machine. If it is not, the tender is
+  // refused (Jack's decision, 20 Sep, reaffirmed after a day on the other
+  // behaviour): the job record governs, and the shop marks the job's real state
+  // before taking the money.
   //
-  // This never refuses the payment (Jack's decision, 20 Sep): a job-tracking
-  // rule must not stop a shop taking a customer's money. The job is instead
-  // walked to 'complete' along the work machine's own declared transitions - a
-  // job that never started goes start then finish - so the record says how it
-  // got there rather than having 'complete' written straight to the column,
-  // which is what the old single status column allowed.
+  // Note the breadth. 'finish' is legal only from in_progress, so this refuses a
+  // job that never started AND one that is on hold or waiting for parts. The
+  // shop's way through is to move the job to where it actually is first -
+  // resume, or parts-arrived - which is the point: the refusal is telling them
+  // the record disagrees with what they are about to do.
+  //
+  // Checked HERE, before the sale is created. Refusing further down would leave
+  // a real sale on the books and the job untouched, which is worse than either
+  // outcome.
   let jobToFinish = null;
   if (doc.workshop_job_id) {
     jobToFinish = await db.prepare('SELECT id, work_state, version FROM workshop_jobs WHERE id = ?')
       .get(doc.workshop_job_id);
+    if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
+      return sendJson(res, 409, {
+        error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
+      });
+    }
   }
 
   const body = await readJsonBody(req);
@@ -2290,17 +2301,17 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // rather than needing a separate manual step in the diary.
   let jobWarning = null;
   if (jobToFinish) {
-    const finished = await driveTo({
+    const finished = await applyEvent({
       jobId: jobToFinish.id,
       machine: work,
-      target: 'complete',
+      event: 'finish',
       expectedVersion: jobToFinish.version,
     });
-    // The sale is already real by this point, so a failure here cannot undo it,
-    // and the payment stands either way. Either someone moved the job while
-    // this was running, or its work state has no route to 'complete' at all.
-    // Say so in the response rather than swallowing it - a silently uncompleted
-    // job is exactly the ambiguity the state machines exist to remove.
+    // The pre-flight check above passed, so reaching here means someone moved
+    // the job in between. The sale is already real and cannot be undone, so the
+    // payment stands and the response says the job did not move - a silently
+    // uncompleted job is exactly the ambiguity the state machines exist to
+    // remove.
     if (!finished.ok) jobWarning = finished.message;
   }
 
