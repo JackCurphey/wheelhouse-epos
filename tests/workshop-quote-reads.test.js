@@ -177,3 +177,16 @@ test('lists a job\'s quote revisions newest first, with the superseded one visib
   assert.equal(res.body[1].id, quoteId);
   assert.equal(res.body[1].state, 'superseded');
 });
+
+test('a job with no quotes lists as an empty array, not a 404', async () => {
+  const job = await staffRequest(server.baseUrl, session.cookie, '/api/workshop-jobs', {
+    method: 'POST',
+    body: { title: 'No quotes yet', jobDate: '2026-10-03' },
+  });
+  assert.equal(job.status, 201, JSON.stringify(job.body));
+
+  const res = await staffRequest(server.baseUrl, session.cookie, `/api/workshop-jobs/${job.body.id}/quotes`);
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body, []);
+});
