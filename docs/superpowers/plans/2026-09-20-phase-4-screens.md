@@ -107,7 +107,12 @@ journeys that must exist first.
 Three layers, each proving something the others cannot:
 
 1. **Server tests** (`node:test`, `tests/*.test.js`) — already exist. The API
-   is correct in isolation.
+   is correct in isolation. Any test file that touches the database or boots a
+   server starts with `import '../server/load-env.js';` (see
+   `tests/workshop-booking-actions.test.js:11`); without it the test falls back
+   to Postgres on 5432 and fails with `ECONNREFUSED` rather than the failure it
+   was written to show. That applies to Task 1's `tests/workshop-page.test.js`
+   and Task 8's `tests/legacy-status-closed.test.js`.
 2. **Component tests** (`node:test` + `@testing-library/react` + `jsdom`,
    `tests/screens/*.test.js`) — a screen renders the right thing and its
    controls call the right client function. The API is faked.

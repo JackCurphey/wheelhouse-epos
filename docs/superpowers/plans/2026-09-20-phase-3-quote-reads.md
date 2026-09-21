@@ -58,6 +58,14 @@ session comes from `staffSignup()` in `tests/helpers/staff.js`; tear the shop
 down with `deleteTestShop()` from `tests/helpers/testShop.js` in an `after()`
 hook.
 
+**Every test file that touches the database or boots a server starts with
+`import '../server/load-env.js';`** as its first import — see
+`tests/workshop-booking-actions.test.js:11`. Without it the test process has no
+`DATABASE_URL`, falls back to Postgres on 5432 rather than the compose instance
+on 5433, and fails with `ECONNREFUSED` instead of the failure the test was
+written to show. (Found executing Task 2; the task code blocks below predate
+the correction and omit it.)
+
 **Every new test in this plan is confirmed by breaking the code it covers,**
 watching it fail for the right reason, and restoring. A step for this is
 written into each task. Assert the mutation actually landed before believing
