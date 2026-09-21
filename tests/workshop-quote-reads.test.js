@@ -11,10 +11,20 @@ import { recordLineDecision } from '../server/workshop/quotes.js';
 
 let server;
 let session;
+// One portal customer, shared across every test below except the
+// other-customer ownership test, which needs a genuinely distinct second
+// customer. portalSignupLimiter caps new portal accounts at 5/hour/IP inside
+// this file's own server process - a real anti-abuse control this dispatch
+// does not touch - so tests reuse one signed-up customer for unrelated
+// fixtures rather than minting a fresh one per test.
+let portalCustomer;
+let portalCustomerId;
 
 before(async () => {
   server = await startLiveServer();
   session = await staffSignup(server.baseUrl);
+  portalCustomer = await portalSignup(server.baseUrl, session.shop.slug);
+  portalCustomerId = await customerIdForLogin(session.shop.id, portalCustomer.loginId);
 });
 
 after(async () => {
@@ -81,8 +91,7 @@ test('reads a quote back with its lines and a total', async () => {
 // produce - 85, 49 and 10 are chosen so all four totals (those three plus
 // their sum, 144) are pairwise distinct.
 test('per-decision totals and each line decision read back correctly', async () => {
-  const portal = await portalSignup(server.baseUrl, session.shop.slug);
-  const customerId = await customerIdForLogin(session.shop.id, portal.loginId);
+  const customerId = portalCustomerId;
 
   const job = await staffRequest(server.baseUrl, session.cookie, '/api/workshop-jobs', {
     method: 'POST',
@@ -225,13 +234,12 @@ test('an unauthenticated portal read of a quote is refused', async () => {
 test('a portal read against the wrong shop slug is refused', async () => {
   const otherShop = await staffSignup(server.baseUrl);
   try {
-    const portal = await portalSignup(server.baseUrl, session.shop.slug);
     const { quoteId } = await jobWithQuote([
       { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
     ]);
     const res = await portalRequest(
       server.baseUrl,
-      portal.cookie,
+      portalCustomer.cookie,
       `/api/portal/${otherShop.shop.slug}/quotes/${quoteId}`,
     );
     assert.equal(res.status, 401);
@@ -241,19 +249,25 @@ test('a portal read against the wrong shop slug is refused', async () => {
 });
 
 test('the owning customer reads their quote with the same totals staff see', async () => {
-  const portal = await portalSignup(server.baseUrl, session.shop.slug);
-  const customerId = await customerIdForLogin(session.shop.id, portal.loginId);
-  const { quoteId } = await jobWithQuoteForCustomer(customerId, [
+  const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
     { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
     { kind: 'part', description: 'Chain', quantity: 2, unitAmount: 24.5 },
   ]);
+
+  // A draft is not visible to the customer (showing it is a deliberate staff
+  // act - see send() in server/workshop/quotes.js), so this fixture has to
+  // send it before the portal read can see it at all.
+  const sendResult = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendResult.status, 200, JSON.stringify(sendResult.body));
 
   const staffRes = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}`);
   assert.equal(staffRes.status, 200, JSON.stringify(staffRes.body));
 
   const res = await portalRequest(
     server.baseUrl,
-    portal.cookie,
+    portalCustomer.cookie,
     `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
   );
 
@@ -269,11 +283,15 @@ test('the owning customer reads their quote with the same totals staff see', asy
 // byte-for-byte the same as a quote id that never existed - not 403, which
 // would let a customer learn which ids are real.
 test('a quote belonging to another customer in the same shop is 404, indistinguishable from a nonexistent quote', async () => {
-  const owner = await portalSignup(server.baseUrl, session.shop.slug);
-  const ownerCustomerId = await customerIdForLogin(session.shop.id, owner.loginId);
-  const { quoteId } = await jobWithQuoteForCustomer(ownerCustomerId, [
+  // The shared customer owns this one; send it so the negative case below is
+  // proven by ownership, not incidentally by the draft rule too.
+  const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
     { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
   ]);
+  const sendResult = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendResult.status, 200, JSON.stringify(sendResult.body));
 
   const other = await portalSignup(server.baseUrl, session.shop.slug);
 
@@ -291,4 +309,80 @@ test('a quote belonging to another customer in the same shop is 404, indistingui
   assert.equal(otherCustomersQuote.status, 404);
   assert.equal(nonexistentQuote.status, 404);
   assert.deepEqual(otherCustomersQuote.body, nonexistentQuote.body);
+});
+
+// Showing a quote to a customer is a deliberate staff act (send(), screen 20
+// - see server/workshop/quotes.js). Until that happens the portal must not
+// leak that the draft exists, even to its own owner - same 404, same body as
+// a quote id nobody has ever used.
+test('the owning customer cannot read their own quote while it is still draft', async () => {
+  const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+
+  const draftRes = await portalRequest(
+    server.baseUrl,
+    portalCustomer.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  const nonexistentRes = await portalRequest(
+    server.baseUrl,
+    portalCustomer.cookie,
+    `/api/portal/${session.shop.slug}/quotes/999999`,
+  );
+
+  assert.equal(draftRes.status, 404);
+  assert.equal(nonexistentRes.status, 404);
+  assert.deepEqual(draftRes.body, nonexistentRes.body);
+});
+
+test('the same quote becomes readable to its owner once it is sent', async () => {
+  const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+
+  const sendResult = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendResult.status, 200, JSON.stringify(sendResult.body));
+
+  const res = await portalRequest(
+    server.baseUrl,
+    portalCustomer.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.state, 'sent');
+});
+
+// Screen 51 (stale) shows a customer a revision their approval link named
+// even after a later revision supersedes it - it has to stay readable, not
+// vanish behind the draft rule.
+test("a superseded revision stays readable to its owner, naming its state", async () => {
+  const { jobId, quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+
+  const sendResult = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendResult.status, 200, JSON.stringify(sendResult.body));
+
+  const revision = await staffRequest(
+    server.baseUrl,
+    session.cookie,
+    `/api/workshop-jobs/${jobId}/quotes`,
+    { method: 'POST', body: { lines: [
+      { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 95 },
+    ] } },
+  );
+  assert.equal(revision.status, 201, JSON.stringify(revision.body));
+
+  const res = await portalRequest(
+    server.baseUrl,
+    portalCustomer.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.state, 'superseded');
 });

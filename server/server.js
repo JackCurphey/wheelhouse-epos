@@ -2905,9 +2905,11 @@ route('POST', '/api/quotes/:id/send', async (req, res, params) => {
 // readQuoteForCustomer() (server/workshop/quotes.js), which uses the same
 // ownership check recordLineDecision() and approve() use below - a quote
 // belonging to another customer in this shop is refused exactly like one
-// that does not exist. This read deliberately returns the CURRENT revision,
-// not the one in the link, so screen 51 (stale) can compare the two and say
-// so.
+// that does not exist. This route returns the revision the approval link
+// names - including a superseded one - so screen 51 (stale) can tell the
+// customer the quote has since changed. It cannot compare revisions itself;
+// each revision is its own row (createRevision(), quotes.js), and there is
+// only ever one row here to look at.
 route('GET', '/api/portal/:shopSlug/quotes/:id', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
   if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });

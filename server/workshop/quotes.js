@@ -203,9 +203,17 @@ export async function readQuote({ quoteId }) {
 // that does not exist at all: `reason: 'not_found'` either way. Anything else
 // (a 403, a different message) would let a customer learn which quote ids are
 // real by trying them.
+//
+// A draft is refused the same way. send() documents showing a quote to a
+// customer as a deliberate staff act (screen 20) - a draft is still being
+// composed, so a customer must not be able to read one even if it is their
+// own, by trying ids nearby the one they were sent. This check stays here,
+// on the customer-scoped read, not in readQuote() above: staff read drafts
+// constantly (that is the whole point of the draft state) and this must not
+// touch that path.
 export async function readQuoteForCustomer({ quoteId, customerId }) {
   const quote = await quoteForCustomer(quoteId, customerId);
-  if (!quote) return { ok: false, reason: 'not_found' };
+  if (!quote || quote.state === 'draft') return { ok: false, reason: 'not_found' };
   const lines = await prepare(LINE_TOTALS).all(quoteId);
   const totals = await prepare(QUOTE_TOTALS).get(quoteId);
   return { ok: true, quote, lines, totals };
