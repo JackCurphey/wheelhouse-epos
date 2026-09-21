@@ -18,6 +18,7 @@ import {
   approve as approveQuote,
   serializeQuote,
   readQuote,
+  readQuoteForCustomer,
   serializeQuoteWithLines,
   listRevisions,
 } from './workshop/quotes.js';
@@ -2897,6 +2898,25 @@ route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
 // screens: quote-send
 route('POST', '/api/quotes/:id/send', async (req, res, params) => {
   sendQuoteResult(res, await sendQuoteForApproval({ quoteId: Number(params.id) }));
+});
+
+// screens: approval, approval-done, stale
+// The customer reads the quote their approval link points at. Scoped through
+// readQuoteForCustomer() (server/workshop/quotes.js), which uses the same
+// ownership check recordLineDecision() and approve() use below - a quote
+// belonging to another customer in this shop is refused exactly like one
+// that does not exist. This read deliberately returns the CURRENT revision,
+// not the one in the link, so screen 51 (stale) can compare the two and say
+// so.
+route('GET', '/api/portal/:shopSlug/quotes/:id', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const result = await readQuoteForCustomer({
+    quoteId: Number(params.id),
+    customerId: ctx.login.customer_id,
+  });
+  if (!result.ok) return notFound(res, 'Quote not found');
+  sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
 });
 
 // screens: approval

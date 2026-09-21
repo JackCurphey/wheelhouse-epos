@@ -197,6 +197,20 @@ export async function readQuote({ quoteId }) {
   return { ok: true, quote, lines, totals };
 }
 
+// The portal's read of readQuote(). Scoped through quoteForCustomer - the same
+// ownership check recordLineDecision() and approve() use - so a quote that
+// belongs to another customer in the same shop comes back identical to one
+// that does not exist at all: `reason: 'not_found'` either way. Anything else
+// (a 403, a different message) would let a customer learn which quote ids are
+// real by trying them.
+export async function readQuoteForCustomer({ quoteId, customerId }) {
+  const quote = await quoteForCustomer(quoteId, customerId);
+  if (!quote) return { ok: false, reason: 'not_found' };
+  const lines = await prepare(LINE_TOTALS).all(quoteId);
+  const totals = await prepare(QUOTE_TOTALS).get(quoteId);
+  return { ok: true, quote, lines, totals };
+}
+
 export function serializeQuoteWithLines(quote, lines, totals) {
   return {
     ...serializeQuote(quote),

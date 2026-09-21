@@ -4,7 +4,7 @@ import '../server/load-env.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { portalSignup } from './helpers/portal.js';
+import { portalSignup, portalRequest } from './helpers/portal.js';
 import { customerIdForLogin } from './helpers/workshopFixtures.js';
 import { runWithShop } from '../server/db.js';
 import { recordLineDecision } from '../server/workshop/quotes.js';
@@ -26,6 +26,25 @@ async function jobWithQuote(lines) {
   const job = await staffRequest(server.baseUrl, session.cookie, '/api/workshop-jobs', {
     method: 'POST',
     body: { title: 'Quote read fixture', jobDate: '2026-10-01' },
+  });
+  assert.equal(job.status, 201, JSON.stringify(job.body));
+  const quote = await staffRequest(
+    server.baseUrl,
+    session.cookie,
+    `/api/workshop-jobs/${job.body.id}/quotes`,
+    { method: 'POST', body: { lines } },
+  );
+  assert.equal(quote.status, 201, JSON.stringify(quote.body));
+  return { jobId: job.body.id, quoteId: quote.body.id };
+}
+
+// Like jobWithQuote, but the job is linked to a real customer - required for
+// the portal read, which is only ever visible to the customer the job belongs
+// to (see quoteForCustomer in server/workshop/quotes.js).
+async function jobWithQuoteForCustomer(customerId, lines) {
+  const job = await staffRequest(server.baseUrl, session.cookie, '/api/workshop-jobs', {
+    method: 'POST',
+    body: { title: 'Portal quote read fixture', jobDate: '2026-10-01', customerId },
   });
   assert.equal(job.status, 201, JSON.stringify(job.body));
   const quote = await staffRequest(
@@ -189,4 +208,87 @@ test('a job with no quotes lists as an empty array, not a 404', async () => {
 
   assert.equal(res.status, 200);
   assert.deepEqual(res.body, []);
+});
+
+test('an unauthenticated portal read of a quote is refused', async () => {
+  const { quoteId } = await jobWithQuote([
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+  const res = await staffRequest(
+    server.baseUrl,
+    null,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  assert.equal(res.status, 401);
+});
+
+test('a portal read against the wrong shop slug is refused', async () => {
+  const otherShop = await staffSignup(server.baseUrl);
+  try {
+    const portal = await portalSignup(server.baseUrl, session.shop.slug);
+    const { quoteId } = await jobWithQuote([
+      { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+    ]);
+    const res = await portalRequest(
+      server.baseUrl,
+      portal.cookie,
+      `/api/portal/${otherShop.shop.slug}/quotes/${quoteId}`,
+    );
+    assert.equal(res.status, 401);
+  } finally {
+    await deleteTestShop(otherShop.shop.id);
+  }
+});
+
+test('the owning customer reads their quote with the same totals staff see', async () => {
+  const portal = await portalSignup(server.baseUrl, session.shop.slug);
+  const customerId = await customerIdForLogin(session.shop.id, portal.loginId);
+  const { quoteId } = await jobWithQuoteForCustomer(customerId, [
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+    { kind: 'part', description: 'Chain', quantity: 2, unitAmount: 24.5 },
+  ]);
+
+  const staffRes = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}`);
+  assert.equal(staffRes.status, 200, JSON.stringify(staffRes.body));
+
+  const res = await portalRequest(
+    server.baseUrl,
+    portal.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.id, quoteId);
+  assert.equal(res.body.lines.length, 2);
+  assert.equal(res.body.totals.all, staffRes.body.totals.all);
+});
+
+// This is the test that proves the controller ruling: quoteForCustomer scopes
+// ownership within the shop, so a second customer of the SAME shop cannot
+// read the first customer's quote by trying its id. It must come back 404 -
+// byte-for-byte the same as a quote id that never existed - not 403, which
+// would let a customer learn which ids are real.
+test('a quote belonging to another customer in the same shop is 404, indistinguishable from a nonexistent quote', async () => {
+  const owner = await portalSignup(server.baseUrl, session.shop.slug);
+  const ownerCustomerId = await customerIdForLogin(session.shop.id, owner.loginId);
+  const { quoteId } = await jobWithQuoteForCustomer(ownerCustomerId, [
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+
+  const other = await portalSignup(server.baseUrl, session.shop.slug);
+
+  const otherCustomersQuote = await portalRequest(
+    server.baseUrl,
+    other.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  const nonexistentQuote = await portalRequest(
+    server.baseUrl,
+    other.cookie,
+    `/api/portal/${session.shop.slug}/quotes/999999`,
+  );
+
+  assert.equal(otherCustomersQuote.status, 404);
+  assert.equal(nonexistentQuote.status, 404);
+  assert.deepEqual(otherCustomersQuote.body, nonexistentQuote.body);
 });
