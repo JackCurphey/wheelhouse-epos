@@ -146,6 +146,15 @@ export async function approve({ quoteId, linkRevision, customerId }) {
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
 }
 
+// Newest first. Every revision stays readable: Phase 3 supersedes rather than
+// mutates, and screen 23 (approved) has to show what was agreed even after a
+// later revision exists.
+export async function listRevisions({ jobId }) {
+  return prepare(
+    'SELECT * FROM workshop_quotes WHERE workshop_job_id = ? ORDER BY revision DESC'
+  ).all(jobId);
+}
+
 export function serializeQuote(row) {
   return {
     id: row.id,

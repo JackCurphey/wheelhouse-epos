@@ -142,3 +142,38 @@ test('a quote that does not exist is 404, not an empty quote', async () => {
   const res = await staffRequest(server.baseUrl, session.cookie, '/api/quotes/999999');
   assert.equal(res.status, 404);
 });
+
+test('lists a job\'s quote revisions newest first, with the superseded one visible', async () => {
+  const { jobId, quoteId } = await jobWithQuote([
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+
+  // createRevision() replaces a draft's lines in place rather than spending a
+  // revision number on a proposal nobody has seen yet (see server/workshop/
+  // quotes.js). Revision 1 has to leave 'draft' before creating a second
+  // quote actually produces a new revision, so send it first.
+  const sendFirst = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendFirst.status, 200, JSON.stringify(sendFirst.body));
+
+  const second = await staffRequest(
+    server.baseUrl,
+    session.cookie,
+    `/api/workshop-jobs/${jobId}/quotes`,
+    { method: 'POST', body: { lines: [
+      { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 95 },
+    ] } },
+  );
+  assert.equal(second.status, 201, JSON.stringify(second.body));
+
+  const res = await staffRequest(server.baseUrl, session.cookie, `/api/workshop-jobs/${jobId}/quotes`);
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.length, 2);
+  assert.equal(res.body[0].revision, 2);
+  assert.equal(res.body[1].revision, 1);
+  // Phase 3 supersedes rather than mutates: revision 1 must still be readable.
+  assert.equal(res.body[1].id, quoteId);
+  assert.equal(res.body[1].state, 'superseded');
+});

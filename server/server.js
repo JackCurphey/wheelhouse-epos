@@ -19,6 +19,7 @@ import {
   serializeQuote,
   readQuote,
   serializeQuoteWithLines,
+  listRevisions,
 } from './workshop/quotes.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
@@ -2878,6 +2879,12 @@ route('GET', '/api/quotes/:id', async (req, res, params) => {
   const result = await readQuote({ quoteId: Number(params.id) });
   if (!result.ok) return notFound(res, 'Quote not found');
   sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+});
+
+// screens: quote-editor, approved, job
+route('GET', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
+  const rows = await listRevisions({ jobId: Number(params.id) });
+  sendJson(res, 200, rows.map(serializeQuote));
 });
 
 // screens: quote-editor
