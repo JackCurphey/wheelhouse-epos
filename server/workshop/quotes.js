@@ -155,3 +155,57 @@ export function serializeQuote(row) {
     createdAt: row.created_at,
   };
 }
+
+// Totals are summed by Postgres, never in JavaScript. Money is a JS float in
+// this codebase (decided 20 Sep) and the mitigation that makes that safe is
+// that JS never does the arithmetic - it carries a number the database
+// computed. A reduce() over these lines would reintroduce exactly the drift
+// the decision was taken to avoid.
+const LINE_TOTALS = `
+  SELECT
+    id, kind, description, product_id, quantity, unit_amount, decision,
+    (quantity * unit_amount) AS line_total
+  FROM workshop_quote_lines
+  WHERE workshop_quote_id = ?
+  ORDER BY id
+`;
+
+const QUOTE_TOTALS = `
+  SELECT
+    COALESCE(SUM(quantity * unit_amount), 0) AS all_total,
+    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'approved'), 0) AS approved_total,
+    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'pending'), 0) AS pending_total,
+    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'declined'), 0) AS declined_total
+  FROM workshop_quote_lines
+  WHERE workshop_quote_id = ?
+`;
+
+export async function readQuote({ quoteId }) {
+  const quote = await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId);
+  if (!quote) return { ok: false, reason: 'not_found' };
+  const lines = await prepare(LINE_TOTALS).all(quoteId);
+  const totals = await prepare(QUOTE_TOTALS).get(quoteId);
+  return { ok: true, quote, lines, totals };
+}
+
+export function serializeQuoteWithLines(quote, lines, totals) {
+  return {
+    ...serializeQuote(quote),
+    lines: lines.map((l) => ({
+      id: l.id,
+      kind: l.kind,
+      description: l.description,
+      productId: l.product_id,
+      quantity: Number(l.quantity),
+      unitAmount: Number(l.unit_amount),
+      decision: l.decision,
+      lineTotal: Number(l.line_total),
+    })),
+    totals: {
+      all: Number(totals.all_total),
+      approved: Number(totals.approved_total),
+      pending: Number(totals.pending_total),
+      declined: Number(totals.declined_total),
+    },
+  };
+}

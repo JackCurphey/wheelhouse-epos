@@ -17,6 +17,8 @@ import {
   recordLineDecision,
   approve as approveQuote,
   serializeQuote,
+  readQuote,
+  serializeQuoteWithLines,
 } from './workshop/quotes.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
@@ -2870,6 +2872,13 @@ function sendQuoteResult(res, result, status = 200) {
   if (result.code === 'not_found') return notFound(res, result.message);
   return sendJson(res, 409, { error: result.message });
 }
+
+// screens: quote-editor, quote-send, approved
+route('GET', '/api/quotes/:id', async (req, res, params) => {
+  const result = await readQuote({ quoteId: Number(params.id) });
+  if (!result.ok) return notFound(res, 'Quote not found');
+  sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+});
 
 // screens: quote-editor
 route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
