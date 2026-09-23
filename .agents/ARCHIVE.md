@@ -922,3 +922,11 @@ behind. Run the left-right count against `origin/main` before trusting a tree.
 
 **Stage one's request-wide transaction mode is OFF** — `DB_TENANT_SCOPE` is
 `session` until three handlers are restructured.
+
+### Why `npm run build` dirties the tree (23 Sep)
+
+`public/dist/` is listed in `.gitignore` (line 24), but three build outputs —
+the Vite manifest and the hashed staff JS and CSS — were committed before that
+rule existed, so git tracks them anyway. Every build rewrites them. Revert with
+a checkout of that path. The Phase 4 plan calls `public/dist` "(gitignored)",
+which is only half true, and its Task 1 reads the committed, stale manifest.

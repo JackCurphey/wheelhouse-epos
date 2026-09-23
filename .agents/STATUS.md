@@ -60,11 +60,11 @@ This file → **Phase plan** below and the plans it names →
    specimen until a real printed tag is read.
 3. **Jack: the message providers**, and what inbound replies do.
 4. **Mark: the screen review** (#50), open since 17 Sep.
-5. **Split the Release 1 plan into issues** — row IDs, allowed state changes,
-   expected failure, test command, proof artefact per package.
+5. **Split the Release 1 plan into issues** — row IDs, state changes, expected
+   failure, test command, proof artefact per package.
 
-**Carried open:** four, including three tenant-isolation gaps confirmed ABSENT
-on `main` 9 Sep. Three closed 20 Sep (Jack): atlas checks **run in CI**;
+**Carried open:** four, incl. three tenant-isolation gaps confirmed ABSENT on
+`main` 9 Sep. Three closed 20 Sep (Jack): atlas checks **run in CI**;
 `prototype/` and review-pack scripts stay **out** of CI; money stays a JS
 float, **always totalled in SQL, never in JavaScript** — binds Phase 4. **The
 Hubtiger trial lapsed ~15 Sep**; re-entry needs Jack's login.
@@ -75,19 +75,19 @@ Hubtiger trial lapsed ~15 Sep**; re-entry needs Jack's login.
 matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
 **Jack's priority** column, empty on `main`.
 
-**Unpushed:** `plan/phase-4-screens` holds an older Phase 4 plan copy; this
+**Unpushed:** `plan/phase-4-screens` holds an older Phase 4 plan; this
 branch's is authoritative.
 
 ## Decisions in force
 
-Each decision is a file under `docs/decisions/`; summary table in `ARCHIVE.md`.
-Still undecided: `2026-09-04-job-type-before-diary.md` and the downtime model
-in `2026-09-04-booking-mode-and-downtime.md`. The eight taken 20 Sep are in the
+Each decision is a file under `docs/decisions/`; summary in `ARCHIVE.md`. Still
+undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
+`2026-09-04-booking-mode-and-downtime.md`. The eight taken 20 Sep are in the
 Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
 
-**Open product question for Jack:** a customer can re-decide a line they
-already approved or declined while the quote is `sent`. Intended, or one-shot
-per line? Owned by the plan that builds screen 21.
+**Quote line decisions are final** (`2026-09-23-quote-line-decisions-are-final`,
+Jack). The code does **not** do this yet — `recordLineDecision` still lets a
+customer re-decide. Not in #58; own change, plus screen 21's plan.
 
 ## Phases 0-3
 
