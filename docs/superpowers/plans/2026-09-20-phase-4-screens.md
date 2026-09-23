@@ -889,7 +889,18 @@ This is not a style preference. A stub that reports success is fabricated data
 — the screen would be stating a fact about the physical world that nothing
 observed.
 
-- [ ] **Step 1: Write the failing test**
+> **Executed 23 Sep — where it departed from the steps below, and why:**
+> - **Nothing is stored.** Step 3 says records are "held in memory"; a list
+>   that nothing reads is dead code that implies a record exists somewhere. A
+>   record is only the object returned to the calling screen, gone on reload —
+>   so a screen must not suggest the shop holds a lasting record.
+> - **Ids are a counter**, not `crypto.randomUUID()`, which exists only in a
+>   secure context — a till on plain `http` over the shop LAN is not one.
+> - A fourth test: distinct ids and a parseable `createdAt`.
+> - Seen to fail against Step 5's mutation and against setting `deliveredAt`;
+>   both also fail `tsc`, even through an `as IntentBase` cast.
+
+- [x] **Step 1: Write the failing test**
 
 ```js
 test('a recorded print intent never claims it printed', async () => {
@@ -916,12 +927,12 @@ The second test is a source assertion rather than a behavioural one. It is
 there because the failure it guards against is a future edit, not a current
 bug, and it will be read by whoever writes the Phase 5 real adapter.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `node --test tests/screens/intent-adapter.test.js`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Write the adapter**
+- [x] **Step 3: Write the adapter**
 
 Records are held in memory for now — there is no print-task or message-intent
 endpoint (that is P00b/P00c work in Phase 5), and inventing a table here would
@@ -929,17 +940,17 @@ be schema work this phase does not own. The module exposes the same function
 signatures the real adapter will, so Phase 5 replaces the body and no screen
 changes.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/screens/intent-adapter.test.js`
 Expected: PASS, three cases.
 
-- [ ] **Step 5: Break it on purpose**
+- [x] **Step 5: Break it on purpose**
 
 Change `state: 'recorded'` to `state: 'sent'`. Run the test.
 Expected: FAIL on both the first and second cases. Confirm, restore, re-run.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/adapters tests/screens/intent-adapter.test.js
@@ -950,7 +961,16 @@ git commit -m "feat: intent adapter recording print and message intent, claiming
 
 ### Task 6: Close the foundation
 
-- [ ] **Step 1: Run every canonical command**
+> **Executed 23 Sep.** Step 1, on `feat/phase-4-intent-adapter`, every exit
+> code 0: `npm test` 437/437; typecheck; lint (0 problems); build (142
+> modules); RLS 32 tables with `shop_id`, 30 protected, 2 exempt; screen trace
+> OK; registry validate and drift OK (9 files); atlas packaged 145,113
+> characters, `check-static` no errors, `check-notes` all pass; browser 2/2.
+> The atlas regeneration changed no files. Step 2: STATUS already read `:1496`
+> (the `:1493` pointer was fixed earlier); the three functions and the
+> `:1878`-`:2285` range were confirmed in `public/app.js` and added.
+
+- [x] **Step 1: Run every canonical command**
 
 ```bash
 npm run docker:up
@@ -964,7 +984,7 @@ npm run test:browser
 
 Record the actual counts. "All green" without numbers is not a report.
 
-- [ ] **Step 2: Update `.agents/STATUS.md`**
+- [x] **Step 2: Update `.agents/STATUS.md`**
 
 State that the foundation is built and what it does not yet include. Check the
 byte count against the 8,000 cap **before** committing; trim by moving content
@@ -979,7 +999,7 @@ wiring at `:1878`–`:2285`.
 Add the trap that cost Task 1: `public/index.html` loads `/app.js` and never
 `/dist/`, so before Task 1 the built bundle was loaded by no page at all.
 
-- [ ] **Step 3: Open the PR and confirm CI ran**
+- [x] **Step 3: Open the PR and confirm CI ran** — #62, run 35904740505 on `673658b`: all 27 steps `success`, none skipped; `npm test` logged 437/437, Journey tests `Running 2 tests`, `2 passed`.
 
 Read the check log and confirm every step executed, including the new journey
 step. A clean merge state is not a passing check.
