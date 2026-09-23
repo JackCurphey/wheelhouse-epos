@@ -961,7 +961,16 @@ git commit -m "feat: intent adapter recording print and message intent, claiming
 
 ### Task 6: Close the foundation
 
-- [ ] **Step 1: Run every canonical command**
+> **Executed 23 Sep.** Step 1, on `feat/phase-4-intent-adapter`, every exit
+> code 0: `npm test` 437/437; typecheck; lint (0 problems); build (142
+> modules); RLS 32 tables with `shop_id`, 30 protected, 2 exempt; screen trace
+> OK; registry validate and drift OK (9 files); atlas packaged 145,113
+> characters, `check-static` no errors, `check-notes` all pass; browser 2/2.
+> The atlas regeneration changed no files. Step 2: STATUS already read `:1496`
+> (the `:1493` pointer was fixed earlier); the three functions and the
+> `:1878`-`:2285` range were confirmed in `public/app.js` and added.
+
+- [x] **Step 1: Run every canonical command**
 
 ```bash
 npm run docker:up
@@ -975,7 +984,7 @@ npm run test:browser
 
 Record the actual counts. "All green" without numbers is not a report.
 
-- [ ] **Step 2: Update `.agents/STATUS.md`**
+- [x] **Step 2: Update `.agents/STATUS.md`**
 
 State that the foundation is built and what it does not yet include. Check the
 byte count against the 8,000 cap **before** committing; trim by moving content

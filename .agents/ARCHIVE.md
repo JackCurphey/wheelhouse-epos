@@ -972,3 +972,46 @@ deployed. The old app keeps till, inventory, suppliers, storefront. 0-3 built;
 4 → 5 remain. P00 proofs run alongside. Full text and the five Phase 4
 decisions (A-E): `ARCHIVE.md`.
 ````
+
+## Moved from STATUS 2026-09-23 (Phase 4 foundation, Task 6)
+
+Replaced by a shorter "Phases 0-3" section and a new "Phase 4 foundation"
+section. Verbatim:
+
+````markdown
+## Phases 0-3
+
+`server/workshop/state-machines.js` replaces the ambiguous single
+`workshop_jobs.status` with seven machines — 35 states, 48 transitions,
+migrations 016-021. 0-2 merged 20 Sep (#54-#56); **3 merged** (#57). `status`
+is a **generated column** — nothing can write it. Fifteen action endpoints are
+guarded by the machines and an optimistic `version` check, **which every Phase
+4 mutation must echo**. `ARCHIVE.md`.
+
+**One deliberate hole:** the old `status` is still accepted unguarded on
+`POST`/`PUT /api/workshop-jobs` for the old diary. It dies with the workshop
+half of `public/app.js` in Phase 4's last task.
+
+**Quote line decisions are final** (`2026-09-23-quote-line-decisions-are-final`,
+Jack), enforced in `recordLineDecision` (#59). Screen 21 must
+show decided lines as settled, not as live controls.
+
+**Print tasks and message intent are not built** — P00b/P00c, so seven screens
+have no endpoint: 12, 28, 29, 39, 56, 57, 58. Three more wait on the auth
+model: 13, 59, 60.
+
+**Quote reads (#58, merged)** added the three GETs Phase 3 omitted; totals from
+SQL; the portal read is owner-scoped and hides drafts. Four things it carries
+into Phase 4 — the `COVERED` widening, the 500 on a non-numeric id, the
+`200 []` for a missing job, and one-revision drafts — are in `ARCHIVE.md`.
+
+**A 409 carries `code: 'stale' | 'illegal'`** beside `error` on job actions,
+quotes and tender (#60, Jack 23 Sep). Screens branch on the code, never the
+wording; the client leaves a codeless 409 `unknown`.
+
+**Verified 23 Sep on `feat/phase-4-foundation`, locally:** 432 pass / 0 fail,
+typecheck, lint, screen trace, against the committed `public/dist`; browser
+check of `/workshop` and deep links. #59 was re-run after its rebase (413/413)
+and green in CI on its head `ec15e75` before merging. Check a PR's CI against
+the run's own SHA, not the PR pane. The docker `app` image is from 31 Aug.
+````

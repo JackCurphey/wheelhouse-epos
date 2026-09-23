@@ -1,10 +1,9 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-23
-**Branch:** `feat/phase-4-foundation`, **PR #60 open**.
-**Phases 0-3 merged** (#54-#57), plus #58 quote reads and **#59 quote line
-decisions final, both merged 23 Sep** (`c99f441`, `f871d95`). **Phase 4:
-Tasks 1-3 built on #60; start at Task 4.**
+**Branch:** `feat/phase-4-intent-adapter`, PR open — Phase 4 Tasks 5-6.
+**Phases 0-3 merged** (#54-#59). **Phase 4 foundation built** (Tasks 1-6:
+#60, #61, this branch). **Next: the first journey plan** (4a, book).
 **Blocked on:** nothing. Mark's #50 review is against the superseded 84-screen
 version; told 20 Sep. Other open items are Jack's.
 
@@ -24,7 +23,8 @@ barcode is a declared **non-scanning specimen**; PDFs and board PNG **stale**.
 "Pending", needing the first shop's series and an authorised test account.
 Recovery is outside Release 1; WorkOS auth and design remediation stay approved
 and unbuilt. The `prototype/` demo has **no week view** — the staff diary
-(`public/app.js:1496`) and customer slot grid (`public-portal/portal.js:364`)
+(`public/app.js:1496`; `buildWeekGridHtml` :2038, `renderWeekGrid` :2072,
+interactions :1878-2285) and customer slot grid (`public-portal/portal.js:364`)
 are the spec for screens 38/39/44.
 
 **Check the checkout before judging state** (on 9 Sep work sat 156 commits
@@ -43,21 +43,25 @@ in `ARCHIVE.md`.
 - **`npm run docker:down` keeps the volume** — not a clean database. Use a
   scratch one to test migrations from empty.
 - **`npm test` hangs silently** without the compose Postgres up.
+- **`public/index.html` loads `/app.js`, never `/dist/`** — before Task 1 the
+  bundle loaded on no page. The React app is only `/workshop` and below.
+- **`npm run test:browser` builds and boots its own server on 8091**, never
+  reusing one: 8080 is the docker `app`, from a 31 Aug image.
 
 ## Read order for a fresh session
 
-This file → **Phase plan** below and the plans it names →
+This file → **Plan register** below and the plans it names →
 `2026-09-10-release-1-scope-reduction.md` → `…-lightspeed-readiness.md`.
 
 ## Immediate next actions
 
-0. **#60: check CI on its real head, then merge.**
-1. **Phase 4 Task 4.** Plan:
-   `docs/superpowers/plans/2026-09-20-phase-4-screens.md`; each task carries
-   an "Executed" note of where the code overruled it. **Blocker for the journey
-   plans:** `node --test` cannot load `.tsx`, so screen component tests need a
-   loader (a new dependency — ask Jack) or a build step. Six journey plans
-   follow, one per group, to its Task 7 contract.
+0. **This branch's PR: check CI on its real head, then merge.**
+1. **Settle `.tsx` component tests** — `node --test` cannot load them: a
+   loader (a new dependency — ask Jack) or a build step. Then **write journey
+   plan 4a** to Task 7's contract in
+   `docs/superpowers/plans/2026-09-20-phase-4-screens.md`, whose tasks carry
+   "Executed" notes where the code overruled the plan. Before screens build
+   URLs from `:jobId`, fix the non-numeric-id 500 route-wide.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
@@ -78,7 +82,7 @@ trial lapsed ~15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
 
-43 PRs merged (#1–#51), plus #54-#59; record in `ARCHIVE.md`. One branch still
+43 PRs merged (#1–#51), plus #54-#61; record in `ARCHIVE.md`. One branch still
 matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
 **Jack's priority** column, empty on `main`. `plan/phase-4-screens` was
 deleted 23 Sep (its plans are on `main`, newer).
@@ -92,33 +96,24 @@ Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
 
 ## Phases 0-3
 
-`server/workshop/state-machines.js` replaces the ambiguous single
-`workshop_jobs.status` with seven machines — 35 states, 48 transitions,
-migrations 016-021. 0-2 merged 20 Sep (#54-#56); **3 merged** (#57). `status`
-is a **generated column** — nothing can write it. Fifteen action endpoints are
-guarded by the machines and an optimistic `version` check, **which every Phase
-4 mutation must echo**. `ARCHIVE.md`.
+Seven state machines replace `workshop_jobs.status`, now a **generated
+column**; fifteen action endpoints are guarded by them and an optimistic
+`version`, **which every Phase 4 mutation must echo**. **A 409 carries `code:
+'stale' | 'illegal'`** (#60, Jack): screens branch on the code, never the
+wording. **The old `status` is still writable** on `POST`/`PUT
+/api/workshop-jobs` until Phase 4's last task. **Quote line decisions are
+final** (#59) — screen 21 shows decided lines as settled. Full detail,
+including #58's four carried items: `ARCHIVE.md`.
 
-**One deliberate hole:** the old `status` is still accepted unguarded on
-`POST`/`PUT /api/workshop-jobs` for the old diary. It dies with the workshop
-half of `public/app.js` in Phase 4's last task.
+## Phase 4 foundation (Tasks 1-6)
 
-**Quote line decisions are final** (`2026-09-23-quote-line-decisions-are-final`,
-Jack), enforced in `recordLineDecision` (#59). Screen 21 must
-show decided lines as settled, not as live controls.
-
-**Print tasks and message intent are not built** — P00b/P00c, so seven screens
-have no endpoint: 12, 28, 29, 39, 56, 57, 58. Three more wait on the auth
-model: 13, 59, 60.
-
-**Quote reads (#58, merged)** added the three GETs Phase 3 omitted; totals from
-SQL; the portal read is owner-scoped and hides drafts. Four things it carries
-into Phase 4 — the `COVERED` widening, the 500 on a non-numeric id, the
-`200 []` for a missing job, and one-revision drafts — are in `ARCHIVE.md`.
-
-**A 409 carries `code: 'stale' | 'illegal'`** beside `error` on job actions,
-quotes and tender (#60, Jack 23 Sep). Screens branch on the code, never the
-wording; the client leaves a codeless 409 `unknown`.
+`/workshop/*` serves the React app (`src/staff/`). `ROUTES` (`routes.ts`)
+maps atlas id → URL; `SCREENS` (`app-shell.tsx`) registers built screens.
+Server calls go through `src/lib/api/client.ts` (`jobAction` needs
+`version`); identity only via `useSession`. `src/lib/adapters/intent.ts`
+records print/message intent, stores nothing, never claims delivery — screens
+12, 28, 29, 39, 56-58 have no endpoint until P00b/P00c; 13, 59, 60 wait on
+auth. **Not yet:** nav, styling, shop theme (Jack's calls), auth guard.
 
 ## Plan register
 
@@ -134,17 +129,18 @@ npm run docker:up   # the suite hangs silently without it
 npm test && npm run typecheck && npm run lint && npm run build
 node scripts/ci/assert-rls-coverage.mjs
 node scripts/ci/assert-screen-trace.mjs
+npm run registry:validate && node scripts/ci/check-registry-drift.mjs
 python3 docs/design/release-1-journey/package.py && node docs/design/release-1-journey/check-static.mjs && node docs/design/release-1-journey/check-notes.mjs
+npm run test:browser
 ```
 
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 23 Sep on `feat/phase-4-foundation`, locally:** 432 pass / 0 fail,
-typecheck, lint, screen trace, against the committed `public/dist`; browser
-check of `/workshop` and deep links. #59 was re-run after its rebase (413/413)
-and green in CI on its head `ec15e75` before merging. Check a PR's CI against
-the run's own SHA, not the PR pane. The docker `app` image is from 31 Aug.
+**Verified 23 Sep on `feat/phase-4-intent-adapter` (Task 6), every exit 0:**
+437/437 tests; typecheck; lint; build; RLS 30 protected, 2 exempt; screen
+trace; registry, 9 files, no drift; atlas packaged, no errors, notes pass;
+browser 2/2. Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
 without it the server uses 5432 not 5433 and every server-booting test fails
