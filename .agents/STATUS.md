@@ -1,10 +1,10 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-23
-**Branch:** `feat/phase-4-component-tests`, off `main` at `3f9ffe0`, **no
-commits yet**. **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged**
-(Tasks 1-6: #60, #61, #62). **Next: the `.tsx` component-test build step.**
-**Blocked on:** nothing. Mark's #50 review is against the superseded 84-screen
+**Branch:** `feat/phase-4-component-tests`, off `main` at `3f9ffe0`: the
+component-test build step, the malformed-id 404 fix, plan 4a (stopped). No PR
+yet. **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
+**Blocked on:** Jack's J1-J4 in plan 4a before any book screen. Mark's #50 review is against the superseded 84-screen
 version; told 20 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -55,24 +55,22 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-0. **`.tsx` component tests by a BUILD STEP** (Jack 23 Sep; no loader
-   dependency). Spec first. `node --test` cannot parse JSX, and plain `tsc`
-   emit keeps the `@/` alias - so likely a Vite SSR build of `src/` into a
-   gitignored dir via `pretest` (Vite 8: `rolldownOptions`), a jsdom helper
-   (30.0.1, installed) and `.js` tests using `createElement`. Ignore the dir in
-   eslint. Prove it with an AppShell render test seen to fail.
-1. **Then write journey plan 4a** to Task 7's contract in
-   `docs/superpowers/plans/2026-09-20-phase-4-screens.md`, whose tasks carry
-   "Executed" notes where the code overruled the plan. Before screens build
-   URLs from `:jobId`, fix the non-numeric-id 500 route-wide.
+0. **Open a PR for this branch.** Component tests: `pretest` builds `src/`
+   to `.test-build/` (`vite.test.config.ts`); tests import it via
+   `tests/helpers/dom.js`; use `render()`'s queries, not `screen`. A malformed
+   id param is now 404 (`ID_PARAMS`); the print-agent route is `:printJobId`.
+1. **Plan 4a (book) STOPPED at Task 7 item 3** - every book screen lacks an
+   endpoint, and all six are customer screens. Jack: J1-J4 in
+   `docs/superpowers/plans/2026-09-20-phase-4a-book.md`. Then a server
+   prerequisite plan, then 4a's tasks.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
    the tag carries Code 128 as note 11 has it. No tag from our printer has been
    scanned — the atlas barcode stays a non-scanning specimen.
 4. **Jack: the message providers**, and what inbound replies do.
-4a. **Jack:** untrack stale `public/dist`? Five customer edge screens sit
-   under staff `/workshop` per the plan — keep, or `/book`?
+4a. **Jack:** untrack stale `public/dist`? (Where customer screens live is
+   now J1 in plan 4a.)
 5. **Mark: the screen review** (#50), open since 17 Sep.
 6. **Split the Release 1 plan into issues** — row IDs, state changes, expected
    failure, test command, proof per package.
