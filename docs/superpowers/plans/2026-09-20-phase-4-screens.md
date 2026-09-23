@@ -889,7 +889,18 @@ This is not a style preference. A stub that reports success is fabricated data
 — the screen would be stating a fact about the physical world that nothing
 observed.
 
-- [ ] **Step 1: Write the failing test**
+> **Executed 23 Sep — where it departed from the steps below, and why:**
+> - **Nothing is stored.** Step 3 says records are "held in memory"; a list
+>   that nothing reads is dead code that implies a record exists somewhere. A
+>   record is only the object returned to the calling screen, gone on reload —
+>   so a screen must not suggest the shop holds a lasting record.
+> - **Ids are a counter**, not `crypto.randomUUID()`, which exists only in a
+>   secure context — a till on plain `http` over the shop LAN is not one.
+> - A fourth test: distinct ids and a parseable `createdAt`.
+> - Seen to fail against Step 5's mutation and against setting `deliveredAt`;
+>   both also fail `tsc`, even through an `as IntentBase` cast.
+
+- [x] **Step 1: Write the failing test**
 
 ```js
 test('a recorded print intent never claims it printed', async () => {
@@ -916,12 +927,12 @@ The second test is a source assertion rather than a behavioural one. It is
 there because the failure it guards against is a future edit, not a current
 bug, and it will be read by whoever writes the Phase 5 real adapter.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `node --test tests/screens/intent-adapter.test.js`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Write the adapter**
+- [x] **Step 3: Write the adapter**
 
 Records are held in memory for now — there is no print-task or message-intent
 endpoint (that is P00b/P00c work in Phase 5), and inventing a table here would
@@ -929,17 +940,17 @@ be schema work this phase does not own. The module exposes the same function
 signatures the real adapter will, so Phase 5 replaces the body and no screen
 changes.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/screens/intent-adapter.test.js`
 Expected: PASS, three cases.
 
-- [ ] **Step 5: Break it on purpose**
+- [x] **Step 5: Break it on purpose**
 
 Change `state: 'recorded'` to `state: 'sent'`. Run the test.
 Expected: FAIL on both the first and second cases. Confirm, restore, re-run.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/adapters tests/screens/intent-adapter.test.js
