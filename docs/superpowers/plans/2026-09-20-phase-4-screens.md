@@ -335,7 +335,25 @@ default is a parameter a screen can forget. Making it required means a screen
 that does not have the version cannot compile, which is the earliest possible
 place to catch it.
 
-- [ ] **Step 1: Install the dependencies**
+> **Executed 23 Sep — where it departed from the steps below, and why:**
+> - **A 409 is classified from a `code` the server now sends**, not from its
+>   wording. The server's 409 bodies were `{ error }` only, and no real message
+>   contains the word "illegal", so `classify` below would have called every
+>   illegal move stale. Jack chose, 23 Sep, to add `code: 'stale' | 'illegal'`
+>   to the job-action, quote and tender 409s (additive; commit `693aea4`) over
+>   matching text or treating every 409 alike. A 409 with no code is
+>   `unknown`, never guessed stale.
+> - **The test stubs the server's real bodies.** The ones below (`{ error:
+>   'stale' }`) are shapes the server never sent, which is how the bug passed.
+> - `jobAction` spreads `version` last, so a `version` in `body` cannot
+>   override it; tested.
+> - `types.ts` holds `WorkshopJob` (from `serializeWorkshopJob`) and the error
+>   body. Files a test loads import each other by relative `.ts` path: Node
+>   strips types natively but does not know the `@/` alias.
+> - `react-router` installed at 8.4.0, which needs Node >=22.22. In v8,
+>   `RouterProvider` comes from `react-router/dom`.
+
+- [x] **Step 1: Install the dependencies**
 
 ```bash
 npm install --save-dev @tanstack/react-query react-router @testing-library/react @testing-library/dom
@@ -347,7 +365,7 @@ this is what starts using it.
 These four were approved by Jack on 20 Sep (decision D). **Adding any
 dependency beyond this list needs asking first.**
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `tests/screens/api-client.test.js`. It runs under `node:test` with a
 stubbed `globalThis.fetch` — no server, no browser:
@@ -405,12 +423,12 @@ which is available on the `>=22.5.0` engine this repo pins. If the import
 fails, add `--experimental-strip-types` to the test command in `package.json`
 rather than compiling a separate build step for tests.
 
-- [ ] **Step 3: Run it to verify it fails**
+- [x] **Step 3: Run it to verify it fails**
 
 Run: `node --test tests/screens/api-client.test.js`
 Expected: FAIL — module not found.
 
-- [ ] **Step 4: Write the client**
+- [x] **Step 4: Write the client**
 
 Create `src/lib/api/client.ts`:
 
@@ -499,12 +517,12 @@ export function jobAction<T>(
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `node --test tests/screens/api-client.test.js`
 Expected: PASS, four cases.
 
-- [ ] **Step 6: Break it on purpose**
+- [x] **Step 6: Break it on purpose**
 
 In `jobAction`, change `{ ...body, version }` to `{ ...body }`.
 Run the test. Expected: FAIL on the first case — the body is `{}` not
@@ -515,14 +533,14 @@ This break matters more than the others in this task: it is the exact defect
 the whole contract exists to prevent, and if the test does not catch it, 82
 screens are unprotected.
 
-- [ ] **Step 7: Typecheck and lint**
+- [x] **Step 7: Typecheck and lint**
 
 Run: `npm run typecheck && npm run lint`
 Expected: clean. The repo runs `strict` with `noUnusedLocals`,
 `verbatimModuleSyntax` and `erasableSyntaxOnly` — use `import type` for
 type-only imports.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add package.json package-lock.json src/lib/api tests/screens/api-client.test.js
@@ -553,7 +571,30 @@ link or a stale bookmark. They must be routable URLs from this task, not
 in-flow states reachable only by navigation. Add placeholder routes for them
 now that render "not built yet"; the edges plan replaces the components.
 
-- [ ] **Step 1: Write the failing session test**
+> **Executed 23 Sep — where it departed from the steps below, and why:**
+> - **The session shape is the real one**: `/api/auth/me` returns
+>   `{ id, name, email, isOwner, shopName, shopSlug }` — flat, no shop id. So
+>   `SessionShop` is `{ name, slug }` and `SessionUser` gains `isOwner`.
+> - **`useSession` has a fourth state, `error`.** As written below, a failed
+>   lookup leaves `data` undefined and the app shows "loading" forever.
+> - **`routes.ts`, not `routes.tsx`.** Node cannot load `.tsx` at all, so a
+>   test importing the table needs it JSX-free. The same limit means
+>   **component tests of `.tsx` screens cannot run under plain `node --test`**
+>   — the test-layer 2 convention above needs a loader or a build step before
+>   the first journey plan. Not solved here.
+> - The route test also checks every key is a `screen-index.json` id, every
+>   path is under `/workshop` (the only prefix the server hands this app) and
+>   no two paths collide.
+> - The shell is unstyled: no nav, layout or shop theme, which no step
+>   specifies and which are Jack's design calls. Screens register in a
+>   `SCREENS` map in `app-shell.tsx`; an unregistered id renders "Not built
+>   yet: <id>", and an unknown `/workshop/*` path says there is no screen.
+>   Queries do not retry a 4xx.
+> - The five edge screens are customer screens (`role: Customer · phone`) but
+>   route under `/workshop`, the staff app, as this plan specifies. Worth
+>   settling in the edges plan; not changed here.
+
+- [x] **Step 1: Write the failing session test**
 
 Create `tests/screens/session.test.js`, stubbing `fetch` as in Task 2:
 
@@ -575,12 +616,12 @@ Export the plain async `resolveSession()` from `use-session.ts` alongside the
 hook, so the contract is testable without rendering. The hook wraps it in
 `useQuery`.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `node --test tests/screens/session.test.js`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Write the session module**
+- [x] **Step 3: Write the session module**
 
 ```ts
 import { useQuery } from '@tanstack/react-query';
@@ -624,17 +665,17 @@ Before writing this, run `curl -s localhost:8080/api/auth/me` against a signed-i
 session and match the real response shape. If it differs from the shape above,
 **the real shape wins** — correct the types rather than the server.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/screens/session.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Break it on purpose**
+- [x] **Step 5: Break it on purpose**
 
 Change the `err.status === 401` check to `err.status === 403`. Run the test.
 Expected: FAIL — the signed-out case now throws. Confirm, restore, re-run.
 
-- [ ] **Step 6: Write the route table**
+- [x] **Step 6: Write the route table**
 
 Create `src/staff/routes.tsx` with the five standalone edge paths present from
 the start:
@@ -662,7 +703,7 @@ export type ScreenId = keyof typeof ROUTES;
 Each journey plan extends this object. Nothing else in the app writes a URL
 string.
 
-- [ ] **Step 7: Write the failing route test, then the shell**
+- [x] **Step 7: Write the failing route test, then the shell**
 
 ```js
 test('the five standalone edge screens have their own URLs', () => {
@@ -676,13 +717,13 @@ Run it, watch it fail, then wire `AppShell` (QueryClientProvider +
 RouterProvider + error boundary) and update `main.tsx` to render `<AppShell />`
 instead of an empty `StrictMode`.
 
-- [ ] **Step 8: Verify in the browser**
+- [x] **Step 8: Verify in the browser**
 
 Run: `npm run build && npm start`, open `http://localhost:8080/workshop`.
 Expected: the shell renders, `/workshop/link-expired` renders its placeholder,
 no console errors.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src tests/screens

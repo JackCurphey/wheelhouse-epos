@@ -1,17 +1,22 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../styles/theme.css';
+import { AppShell } from './app-shell.tsx';
 
 /**
- * Phase-one staff entry point.
+ * Staff entry point.
  *
- * This bundle is deliberately INERT. The existing vanilla-JS staff app
- * (public/app.js) renders the whole UI and has no #wh-root element, so when
- * this script loads it finds nothing to mount into and does nothing at all.
- * React screens are opted into later, one at a time, by adding #wh-root.
+ * Mounts only where #wh-root exists, which is public/workshop.html - served at
+ * /workshop and /workshop/* (server/server.js). The old vanilla app
+ * (public/app.js) has no #wh-root, so if this bundle ever loads there it
+ * still does nothing.
  */
 const container = document.getElementById('wh-root');
 
 if (container) {
-  createRoot(container).render(<StrictMode />);
+  createRoot(container).render(
+    <StrictMode>
+      <AppShell />
+    </StrictMode>,
+  );
 }
