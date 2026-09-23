@@ -137,6 +137,7 @@ test('an expired quote cannot be approved even at the current revision number', 
     const res = await approve(ctx, q.body.id, q.body.revision);
     assert.equal(res.status, 409, JSON.stringify(res.body));
     assert.match(res.body.error, /a quote that is expired cannot be approved/);
+    assert.equal(res.body.code, 'illegal');
   }
 });
 

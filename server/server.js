@@ -2239,6 +2239,7 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
     if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
       return sendJson(res, 409, {
         error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
+        code: 'illegal',
       });
     }
   }
@@ -2850,7 +2851,10 @@ function jobActionRoute(action, machine, event) {
     const result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
     if (!result.ok) {
       if (result.code === 'not_found') return notFound(res, 'Job not found');
-      return sendJson(res, 409, { error: result.message });
+      // `code` is what a screen branches on: 'stale' means reload and look
+      // again, 'illegal' means the move was never allowed and retrying cannot
+      // help. The message is for people and may be reworded; the code may not.
+      return sendJson(res, 409, { error: result.message, code: result.code });
     }
     // A hold that outlives its booking is capacity the diary is still promising
     // away. Released in the same request, not on a timer.
@@ -2874,7 +2878,7 @@ const ENDS_A_BOOKING = new Set(['cancel', 'decline', 'expire']);
 function sendQuoteResult(res, result, status = 200) {
   if (result.ok) return sendJson(res, status, serializeQuote(result.quote));
   if (result.code === 'not_found') return notFound(res, result.message);
-  return sendJson(res, 409, { error: result.message });
+  return sendJson(res, 409, { error: result.message, code: result.code });
 }
 
 // screens: quote-editor, quote-send, approved
