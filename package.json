@@ -22,13 +22,15 @@
     "registry:validate": "shadcn registry validate registry/registry.json",
     "docker:up": "docker compose up -d --wait",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "pg": "^8.13.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/react-query": "^5.103.2",
     "@testing-library/dom": "^10.4.2",

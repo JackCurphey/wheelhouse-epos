@@ -39,3 +39,7 @@ uploads/
 
 # Subagent-driven-development scratch: ledgers, briefs, review packages.
 .superpowers/
+
+# Playwright output (npm run test:browser)
+test-results/
+playwright-report/

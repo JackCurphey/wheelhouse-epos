@@ -747,7 +747,20 @@ first journey has no end-to-end proof and the done-condition is retrofitted.
 Six journey tests are the phase's done-condition; the harness is part of the
 foundation.
 
-- [ ] **Step 1: Install**
+> **Executed 23 Sep — where it departed from the steps below, and why:**
+> - **Port 8091 and `reuseExistingServer: false`**, not 8080 with reuse. On a
+>   dev machine 8080 is the docker `app` container (image from 31 Aug), so the
+>   config below would have tested old code whenever docker was up.
+> - A second smoke test: a cold load of `/workshop/link-expired` reaches its
+>   screen, since the edge screens are entered from outside the app.
+> - Seen to fail against the Step 5 mutation and against moving the `expired`
+>   route; restored and green.
+> - `test-results/` and `playwright-report/` added to `.gitignore`.
+> - The harness files are outside `npm run typecheck` (`tsconfig.json`
+>   includes `src` and `registry` only); checked once with a direct `tsc`.
+> - Playwright 1.63.0. It installs Chrome Headless Shell for `chromium`.
+
+- [x] **Step 1: Install**
 
 ```bash
 npm install --save-dev @playwright/test
@@ -757,7 +770,7 @@ npx playwright install chromium
 Approved under decision D. Chromium only — three browsers triples CI time for
 an internal staff app that runs on one.
 
-- [ ] **Step 2: Write the config**
+- [x] **Step 2: Write the config**
 
 Create `playwright.config.ts`. `webServer` builds and boots the real server so
 the test drives the real bundle, not a dev server:
@@ -784,7 +797,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3: Write the failing smoke test**
+- [x] **Step 3: Write the failing smoke test**
 
 Create `tests/browser/smoke.spec.ts`:
 
@@ -800,7 +813,7 @@ test('the workshop app mounts in a real browser', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 4: Add the script and run it**
+- [x] **Step 4: Add the script and run it**
 
 In `package.json`: `"test:browser": "playwright test"`.
 
@@ -808,14 +821,14 @@ Run: `npm run docker:up && npm run test:browser`
 Expected: PASS. If `#wh-root` is empty, Task 3's shell is not rendering —
 fix that before continuing rather than weakening the assertion.
 
-- [ ] **Step 5: Break it on purpose**
+- [x] **Step 5: Break it on purpose**
 
 In `src/staff/main.tsx`, change `getElementById('wh-root')` to
 `getElementById('wh-root-nope')`. Run `npm run test:browser`.
 Expected: FAIL — `#wh-root` is empty. Confirm the edit landed, restore,
 re-run to green.
 
-- [ ] **Step 6: Add it to CI**
+- [x] **Step 6: Add it to CI**
 
 In `.github/workflows/test.yml`, after the existing `npm test` step:
 
