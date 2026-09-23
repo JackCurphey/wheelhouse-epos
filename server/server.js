@@ -541,6 +541,23 @@ function route(method, pattern, handler) {
   routes.push({ method, regex, paramNames, handler });
 }
 
+// URL params that name a row by its SERIAL id. A malformed one - "abc", "NaN",
+// "1.5", or past int4's 2147483647 - would reach Postgres and come back as a
+// 500 carrying the database's own message. It names no row, so it is a 404,
+// answered before any handler runs. Phase 4 screens build URLs from route
+// params, where a missing param arrives as "undefined".
+// :shopSlug and :deviceId are not ids and are not checked.
+const ID_PARAMS = new Set(['id', 'jobId', 'lineId', 'loginId']);
+const MAX_SERIAL = 2147483647;
+
+function idParamsWellFormed(params) {
+  for (const [name, value] of Object.entries(params)) {
+    if (!ID_PARAMS.has(name)) continue;
+    if (!/^[1-9][0-9]{0,9}$/.test(value) || Number(value) > MAX_SERIAL) return false;
+  }
+  return true;
+}
+
 // ---------- Auth ----------
 // Unlike every other route in this file, everything under /api/auth/ doesn't
 // run inside runWithShop (see the request handler at the bottom) - it only
@@ -3820,12 +3837,14 @@ route('POST', '/api/print-agents/:deviceId/jobs', async (req, res, params) => {
   sendJson(res, 201, { jobId });
 });
 
-route('POST', '/api/print-agents/jobs/:jobId/complete', async (req, res, params) => {
+// :printJobId, not :jobId - it is the hex id minted above, not a workshop
+// job's SERIAL id, and :jobId is checked as one (ID_PARAMS).
+route('POST', '/api/print-agents/jobs/:printJobId/complete', async (req, res, params) => {
   const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   const body = await readJsonBody(req);
-  printJobStatus.set(params.jobId, { status: body.ok ? 'done' : 'error', error: body.error });
-  if (!body.ok) console.error(`Print job ${params.jobId} failed: ${body.error}`);
+  printJobStatus.set(params.printJobId, { status: body.ok ? 'done' : 'error', error: body.error });
+  if (!body.ok) console.error(`Print job ${params.printJobId} failed: ${body.error}`);
   sendJson(res, 200, { ok: true });
 });
 
@@ -4434,6 +4453,7 @@ const server = createServer(async (req, res) => {
       if (!match) continue;
       const params = {};
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+      if (!idParamsWellFormed(params)) return notFound(res);
 
       // signup/login/logout resolve their own shop (or need none at all, for
       // logout) and never touch RLS-protected tables directly, same as
@@ -4473,6 +4493,7 @@ const server = createServer(async (req, res) => {
       if (!match) continue;
       const params = {};
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+      if (!idParamsWellFormed(params)) return notFound(res);
 
       // Auth routes manage the session cookie themselves and never touch shop
       // data, so they run outside runWithShop. Every other /api/ route needs
