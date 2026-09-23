@@ -1,9 +1,9 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-23
-**Branch:** `feat/phase-4-intent-adapter`, PR open — Phase 4 Tasks 5-6.
-**Phases 0-3 merged** (#54-#59). **Phase 4 foundation built** (Tasks 1-6:
-#60, #61, this branch). **Next: the first journey plan** (4a, book).
+**Branch:** `feat/phase-4-component-tests`, off `main` at `3f9ffe0`, **no
+commits yet**. **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged**
+(Tasks 1-6: #60, #61, #62). **Next: the `.tsx` component-test build step.**
 **Blocked on:** nothing. Mark's #50 review is against the superseded 84-screen
 version; told 20 Sep. Other open items are Jack's.
 
@@ -55,10 +55,13 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-0. **This branch's PR: check CI on its real head, then merge.**
-1. **Settle `.tsx` component tests** — `node --test` cannot load them: a
-   loader (a new dependency — ask Jack) or a build step. Then **write journey
-   plan 4a** to Task 7's contract in
+0. **`.tsx` component tests by a BUILD STEP** (Jack 23 Sep; no loader
+   dependency). Spec first. `node --test` cannot parse JSX, and plain `tsc`
+   emit keeps the `@/` alias - so likely a Vite SSR build of `src/` into a
+   gitignored dir via `pretest` (Vite 8: `rolldownOptions`), a jsdom helper
+   (30.0.1, installed) and `.js` tests using `createElement`. Ignore the dir in
+   eslint. Prove it with an AppShell render test seen to fail.
+1. **Then write journey plan 4a** to Task 7's contract in
    `docs/superpowers/plans/2026-09-20-phase-4-screens.md`, whose tasks carry
    "Executed" notes where the code overruled the plan. Before screens build
    URLs from `:jobId`, fix the non-numeric-id 500 route-wide.
@@ -87,13 +90,6 @@ matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
 **Jack's priority** column, empty on `main`. `plan/phase-4-screens` was
 deleted 23 Sep (its plans are on `main`, newer).
 
-## Decisions in force
-
-Each decision is a file under `docs/decisions/`; summary in `ARCHIVE.md`. Still
-undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
-`2026-09-04-booking-mode-and-downtime.md`. The eight taken 20 Sep are in the
-Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
-
 ## Phases 0-3
 
 Seven state machines replace `workshop_jobs.status`, now a **generated
@@ -117,6 +113,7 @@ auth. **Not yet:** nav, styling, shop theme (Jack's calls), auth guard.
 
 ## Plan register
 
+Decisions: files under `docs/decisions/`; undecided ones in `ARCHIVE.md`.
 LOCKED: `2026-08-31-master-implementation-plan.md`. Current: the Release 1
 workshop plan and the Phase 4 screens plan; the phase plan summary is in
 `ARCHIVE.md`. Approved, unbuilt: WorkOS, design
