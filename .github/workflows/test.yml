@@ -144,6 +144,14 @@ jobs:
 
       - run: npm test
 
+      # The real bundle on the real server in a real browser: the only layer
+      # that catches a screen wired to the wrong endpoint or dropping the
+      # version echo. The config builds and starts its own server on 8091.
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Journey tests
+        run: npm run test:browser
+
       # A second migrate must be a no-op. run-migrations.js skips anything
       # already recorded in schema_migrations, so re-applying means a
       # migration ran without being recorded, or a committed migration file
