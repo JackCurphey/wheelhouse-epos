@@ -1,9 +1,9 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-23
-**Branch:** `fix/phase-3-quote-reads` (PR open). **Phases 0-3 merged to `main`**
-(#54-#57, 20 Sep, CI green). **Phase 4 is planned, not started.** The quote read
-endpoints Phase 3 omitted ship in this branch, and must merge before Phase 4
+**Branches:** `fix/phase-3-quote-reads` (PR #58, CI green) and
+`fix/phase-3-loose-ends` stacked on it. **Phases 0-3 merged to `main`**
+(#54-#57). **Phase 4 is planned, not started**; #58 must merge before its
 Task 1.
 **Blocked on:** nothing. Mark's #50 review is against the superseded 84-screen
 version; told 20 Sep. Other open items are Jack's.
@@ -25,8 +25,7 @@ barcode is a declared **non-scanning specimen**; PDFs and board PNG **stale**.
 Jack's. Recovery is outside Release 1; WorkOS auth and design remediation stay
 approved and unbuilt. The `prototype/` demo has **no week view** — the staff
 diary (`public/app.js:1496`) and customer slot grid
-(`public-portal/portal.js:364`) are the spec for screens 38/39/44; line map in
-the screen-build design.
+(`public-portal/portal.js:364`) are the spec for screens 38/39/44.
 
 **Check the checkout before judging state** (on 9 Sep work sat 156 commits
 behind), and note **stage one's request-wide transaction mode is OFF**. Both
@@ -55,9 +54,10 @@ This file → **Phase plan** below and the plans it names →
    nothing mounts today, no page creates `#wh-root`. Six journey plans follow,
    one per group as reached, to its Task 7 contract.
 1. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
-2. **Jack: the hardware answers** — printer, tag dimensions, driver host,
-   scanner (due 21 Sep). The atlas barcode stays a declared non-scanning
-   specimen until a real printed tag is read.
+2. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
+   is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
+   the tag carries Code 128 as note 11 has it. No tag from our own printer has
+   been scanned — the atlas barcode stays a non-scanning specimen.
 3. **Jack: the message providers**, and what inbound replies do.
 4. **Mark: the screen review** (#50), open since 17 Sep.
 5. **Split the Release 1 plan into issues** — row IDs, state changes, expected
@@ -86,8 +86,8 @@ undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
 Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
 
 **Quote line decisions are final** (`2026-09-23-quote-line-decisions-are-final`,
-Jack). The code does **not** do this yet — `recordLineDecision` still lets a
-customer re-decide. Not in #58; own change, plus screen 21's plan.
+Jack), enforced in `recordLineDecision`. Screen 21's plan must show decided
+lines as settled, not as live controls.
 
 ## Phases 0-3
 
@@ -104,15 +104,14 @@ half of `public/app.js` in Phase 4's last task.
 
 **Print tasks and message intent are not built** — they need P00b/P00c, so
 seven screens have no endpoint: 12, 28, 29, 39, 56, 57, 58. Three more wait on
-the scanner and the auth model: 13, 59, 60.
+the auth model: 13, 59, 60.
 
-**Quote reads (this branch)** add the three GETs Phase 3 omitted; totals from
-SQL; the portal read is owner-scoped and hides drafts, both 404. Carried into
-Phase 4, detailed in `ARCHIVE.md`: **widen `COVERED` again** as read endpoints
-land or they escape the trace; a non-numeric id **500s echoing the Postgres
-message** (`server.js:4439`), fix route-wide first; a missing job's quote list
-answers `200 []`; **a draft quote has exactly one revision** however often it
-is edited.
+**Quote reads (#58)** add the three GETs Phase 3 omitted; totals from SQL; the
+portal read is owner-scoped and hides drafts, both 404. Carried into Phase 4,
+detailed in `ARCHIVE.md`: **widen `COVERED` again** as read endpoints land or
+they escape the trace; a non-numeric id **500s echoing the Postgres message**
+(`server.js:4439`), fix route-wide first; a missing job's quote list answers
+`200 []`; **a draft quote has one revision** however often it is edited.
 
 ## Phase plan for building the atlas
 
