@@ -146,6 +146,7 @@ test('tendering an order for work that never started is refused, not forced', as
     });
     assert.equal(converted.status, 409, JSON.stringify(converted.body));
     assert.match(converted.body.error, /cannot finish a job that is not_started/);
+    assert.equal(converted.body.code, 'illegal');
 
     // And no sale exists. Refusing after the sale was created would leave the
     // shop's books and the job disagreeing, which is worse than either answer.

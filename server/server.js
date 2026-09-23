@@ -276,6 +276,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
 const STOREFRONT_DIR = path.join(__dirname, '..', 'public-storefront');
+const WORKSHOP_HTML = path.join(PUBLIC_DIR, 'workshop.html');
+const VITE_MANIFEST = path.join(PUBLIC_DIR, 'dist', '.vite', 'manifest.json');
 const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
 // Attachment bytes live here as flat files named by a random per-file token
 // (see workshop_job_attachments.storage_key) - never the customer's original
@@ -2237,6 +2239,7 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
     if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
       return sendJson(res, 409, {
         error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
+        code: 'illegal',
       });
     }
   }
@@ -2848,7 +2851,10 @@ function jobActionRoute(action, machine, event) {
     const result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
     if (!result.ok) {
       if (result.code === 'not_found') return notFound(res, 'Job not found');
-      return sendJson(res, 409, { error: result.message });
+      // `code` is what a screen branches on: 'stale' means reload and look
+      // again, 'illegal' means the move was never allowed and retrying cannot
+      // help. The message is for people and may be reworded; the code may not.
+      return sendJson(res, 409, { error: result.message, code: result.code });
     }
     // A hold that outlives its booking is capacity the diary is still promising
     // away. Released in the same request, not on a timer.
@@ -2872,7 +2878,7 @@ const ENDS_A_BOOKING = new Set(['cancel', 'decline', 'expire']);
 function sendQuoteResult(res, result, status = 200) {
   if (result.ok) return sendJson(res, status, serializeQuote(result.quote));
   if (result.code === 'not_found') return notFound(res, result.message);
-  return sendJson(res, 409, { error: result.message });
+  return sendJson(res, 409, { error: result.message, code: result.code });
 }
 
 // screens: quote-editor, quote-send, approved
@@ -4241,6 +4247,21 @@ async function serveStatic(req, res, pathname, baseDir) {
   stream.pipe(res);
 }
 
+// The React workshop app's entry tags. Vite content-hashes its output, so the
+// entry filename is not knowable at author time - it is read from the manifest
+// Vite writes into the bundle. Read per request rather than cached: the file is
+// small, no shop is live on this page yet, and a cache would serve a deleted
+// filename after a rebuild until the process restarts.
+async function workshopEntryTags() {
+  const manifest = JSON.parse(await readFile(VITE_MANIFEST, 'utf8'));
+  const entry = manifest['src/staff/main.tsx'];
+  if (!entry) throw new Error('vite manifest has no src/staff/main.tsx entry - run npm run build');
+  const css = (entry.css || [])
+    .map((href) => `<link rel="stylesheet" href="/dist/${href}" />`)
+    .join('\n  ');
+  return `${css}\n  <script type="module" src="/dist/${entry.file}"></script>`;
+}
+
 async function handleStorefrontRequest(req, res, pathname, shop) {
   if (pathname === '/api/storefront/info' && req.method === 'GET') {
     return sendJson(res, 200, await getStorefrontInfo(shop));
@@ -4518,6 +4539,26 @@ const server = createServer(async (req, res) => {
     } catch (err) {
       console.error(err);
       sendJson(res, 500, { error: 'Internal server error' });
+    }
+    return;
+  }
+
+  // The React workshop app. Every path under /workshop gets the same page,
+  // because the client-side router owns those URLs: a browser opening
+  // /workshop/<anything> directly must get this page, not the old app's
+  // index.html that the static fallback below would hand it.
+  if (pathname === '/workshop' || pathname.startsWith('/workshop/')) {
+    try {
+      const [html, tags] = await Promise.all([readFile(WORKSHOP_HTML, 'utf8'), workshopEntryTags()]);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(html.replace('<!--WH_ENTRY-->', tags));
+    } catch (err) {
+      // A missing manifest means the bundle was never built. Say that, rather
+      // than serving a blank page that looks like a broken app. Plain text, so
+      // the message needs no HTML escaping.
+      console.error(err);
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(`workshop bundle not built: ${err.message}`);
     }
     return;
   }

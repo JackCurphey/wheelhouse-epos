@@ -944,3 +944,31 @@ from its manual, which is the cheaper fix than working around it in code. Caps
 Lock inverts letters, so tag resolution must be case-insensitive. The printer
 half of P00b is untouched: no tag from our own printer has been scanned, so
 the atlas barcode stays a declared non-scanning specimen.
+
+## Moved from STATUS 2026-09-23 (#59 merged)
+
+The verification paragraph for `fix/phase-3-loose-ends`, superseded when #59
+merged as `f871d95` (CI green on `ec15e75`; suite re-run after the rebase,
+413/413). Verbatim:
+
+**Verified 23 Sep on `fix/phase-3-loose-ends`, locally, every exit code 0:**
+413 pass / 0 fail, typecheck, lint, RLS (30 protected, 2 exempt), screen
+trace. Run BEFORE the rebase onto `main`; **re-run after it** — a clean rebase
+is not a passing suite. **CI has never run this branch.** #58 was green on its
+real head `18e8341`, checked against the run's own SHA: the PR pane reported
+the session's branch as the PR head, so do not trust that field. The docker
+`app` image is from 31 Aug — verify the working tree, not it.
+
+The "Phase plan for building the atlas" section, moved for the byte cap
+(the fuller text is under "Moved from STATUS 2026-09-23 (byte cap)"). Verbatim:
+
+````markdown
+## Phase plan for building the atlas
+
+Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`.
+A **new staff app** for these screens only, cut over at the end, on the
+**existing server and schema**, sequenced **by layer** because nothing is
+deployed. The old app keeps till, inventory, suppliers, storefront. 0-3 built;
+4 → 5 remain. P00 proofs run alongside. Full text and the five Phase 4
+decisions (A-E): `ARCHIVE.md`.
+````

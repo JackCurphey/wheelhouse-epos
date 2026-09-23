@@ -45,6 +45,8 @@ test('accepting a job that is already scheduled is a 409, not a 400', async () =
     const res = await act(cookie, jobId, 'accept', { version: 1 });
     assert.equal(res.status, 409, JSON.stringify(res.body));
     assert.match(res.body.error, /cannot accept a job that is scheduled/);
+    // The screen reads the code, never the wording: an illegal move is not retried.
+    assert.equal(res.body.code, 'illegal');
   } finally {
     await deleteTestShop(shop.id);
   }
@@ -59,6 +61,7 @@ test('a stale version is refused with 409 and a reload message', async () => {
     const second = await act(cookie, jobId, 'cancel', { version: 1 });
     assert.equal(second.status, 409);
     assert.match(second.body.error, /changed while you were looking at it/);
+    assert.equal(second.body.code, 'stale');
   } finally {
     await deleteTestShop(shop.id);
   }
