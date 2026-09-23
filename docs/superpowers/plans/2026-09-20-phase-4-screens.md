@@ -999,7 +999,7 @@ wiring at `:1878`–`:2285`.
 Add the trap that cost Task 1: `public/index.html` loads `/app.js` and never
 `/dist/`, so before Task 1 the built bundle was loaded by no page at all.
 
-- [ ] **Step 3: Open the PR and confirm CI ran**
+- [x] **Step 3: Open the PR and confirm CI ran** — #62, run 35904740505 on `673658b`: all 27 steps `success`, none skipped; `npm test` logged 437/437, Journey tests `Running 2 tests`, `2 passed`.
 
 Read the check log and confirm every step executed, including the new journey
 step. A clean merge state is not a passing check.
