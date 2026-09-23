@@ -67,6 +67,8 @@ export default tseslint.config(
       // tests/ below: this config lints src/ and registry/ only.
       '.claude/**',
       'public/**',
+      // Compiled output of src/ for component tests (vite.test.config.ts).
+      '.test-build/**',
       'public-demo/**',
       'public-portal/**',
       'public-storefront/**',
