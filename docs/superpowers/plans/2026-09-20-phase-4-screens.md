@@ -839,14 +839,14 @@ In `.github/workflows/test.yml`, after the existing `npm test` step:
         run: npm run test:browser
 ```
 
-- [ ] **Step 7: Confirm CI actually ran it**
+- [x] **Step 7: Confirm CI actually ran it** — run 35898384777 on `4f05377`: the "Journey tests" step logged `Running 2 tests using 1 worker`, `2 passed`.
 
 Push the branch, open the PR, and read the check's log to confirm the journey
 step executed and reported a pass count. A workflow edited but not observed
 running is not a gate. If the step is skipped or the browser install fails,
 fix it now — every later journey depends on this step working.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add playwright.config.ts tests/browser package.json package-lock.json .github/workflows/test.yml
