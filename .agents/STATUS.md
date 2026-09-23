@@ -37,9 +37,9 @@ in `ARCHIVE.md`.
 - **Never delete the `cf-*` header names in `server/gateway.js`** — the strip
   list; removing it reopens a login brute-force bypass.
 - **Never hand-edit the atlas HTML**; `package.py` regenerates it.
-- **`npm run build` dirties `public/dist`**: gitignored, yet the manifest and
-  one CSS/JS pair are tracked (stale; Docker rebuilds). `git checkout --
-  public/dist`, then delete the new hashed pair.
+- **`public/dist` is untracked** (23 Sep; three stale files were committed
+  in `fa32b60`). A fresh checkout must `npm run build` before `/workshop`
+  serves or `tests/workshop-page.test.js` passes.
 - **`npm run docker:down` keeps the volume** — not a clean database. Use a
   scratch one to test migrations from empty.
 - **`npm test` hangs silently** without the compose Postgres up.
@@ -70,7 +70,6 @@ This file → **Plan register** below and the plans it names →
    the tag carries Code 128 as note 11 has it. No tag from our printer has been
    scanned — the atlas barcode stays a non-scanning specimen.
 4. **Jack: the message providers**, and what inbound replies do.
-4a. **Jack:** untrack stale `public/dist`?
 5. **Mark: the screen review** (#50), open since 17 Sep.
 6. **Split the Release 1 plan into issues** — row IDs, state changes, expected
    failure, test command, proof per package.

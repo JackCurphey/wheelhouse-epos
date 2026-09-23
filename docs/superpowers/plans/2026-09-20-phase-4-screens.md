@@ -54,8 +54,8 @@ Playwright, `node:test`.
   regenerates them.
 - **`npm test` hangs silently without the compose Postgres up** (`npm run
   docker:up`). The app is on `localhost:8080`, Postgres on `5433`.
-- **`npm run build` dirties `public/dist`** (gitignored) — check `git status`
-  before committing.
+- **`public/dist` is gitignored and untracked** (23 Sep). Run `npm run build`
+  before any test that serves `/workshop`.
 - **Never delete the `cf-*` header names in `server/gateway.js`** — removing
   that strip list reintroduces a login brute-force bypass.
 
@@ -187,7 +187,8 @@ task lands, no screen can be seen in a browser and no Playwright test can run.
 > - **`public/dist/` is gitignored but three files in it are tracked** (the
 >   manifest and one CSS/JS pair). `npm run build` rewrites the manifest and
 >   deletes those two, so restore all three with `git checkout -- public/dist`
->   and delete the new hashed pair before committing.
+>   and delete the new hashed pair before committing. *(No longer applies:
+>   the three were untracked 23 Sep.)*
 > - `src/staff/main.tsx` was not modified: nothing in Steps 1–8 needs it.
 
 - [x] **Step 1: Write the failing test**
