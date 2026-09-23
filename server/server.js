@@ -17,6 +17,10 @@ import {
   recordLineDecision,
   approve as approveQuote,
   serializeQuote,
+  readQuote,
+  readQuoteForCustomer,
+  serializeQuoteWithLines,
+  listRevisions,
 } from './workshop/quotes.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
@@ -2871,6 +2875,19 @@ function sendQuoteResult(res, result, status = 200) {
   return sendJson(res, 409, { error: result.message });
 }
 
+// screens: quote-editor, quote-send, approved
+route('GET', '/api/quotes/:id', async (req, res, params) => {
+  const result = await readQuote({ quoteId: Number(params.id) });
+  if (!result.ok) return notFound(res, 'Quote not found');
+  sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
+});
+
+// screens: quote-editor, approved, job
+route('GET', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
+  const rows = await listRevisions({ jobId: Number(params.id) });
+  sendJson(res, 200, rows.map(serializeQuote));
+});
+
 // screens: quote-editor
 route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
   const body = await readJsonBody(req);
@@ -2881,6 +2898,27 @@ route('POST', '/api/workshop-jobs/:id/quotes', async (req, res, params) => {
 // screens: quote-send
 route('POST', '/api/quotes/:id/send', async (req, res, params) => {
   sendQuoteResult(res, await sendQuoteForApproval({ quoteId: Number(params.id) }));
+});
+
+// screens: approval, approval-done, stale
+// The customer reads the quote their approval link points at. Scoped through
+// readQuoteForCustomer() (server/workshop/quotes.js), which uses the same
+// ownership check recordLineDecision() and approve() use below - a quote
+// belonging to another customer in this shop is refused exactly like one
+// that does not exist. This route returns the revision the approval link
+// names - including a superseded one - so screen 51 (stale) can tell the
+// customer the quote has since changed. It cannot compare revisions itself;
+// each revision is its own row (createRevision(), quotes.js), and there is
+// only ever one row here to look at.
+route('GET', '/api/portal/:shopSlug/quotes/:id', async (req, res, params) => {
+  const ctx = await currentCustomerSession(req);
+  if (!ctx || ctx.shop.slug !== params.shopSlug) return sendJson(res, 401, { error: 'Not signed in' });
+  const result = await readQuoteForCustomer({
+    quoteId: Number(params.id),
+    customerId: ctx.login.customer_id,
+  });
+  if (!result.ok) return notFound(res, 'Quote not found');
+  sendJson(res, 200, serializeQuoteWithLines(result.quote, result.lines, result.totals));
 });
 
 // screens: approval

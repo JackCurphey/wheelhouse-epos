@@ -92,7 +92,7 @@ build contradicts. The substantive changes:
 | 11 | Barcode rather than QR; shop chooses what the tag's top line shows (job number, customer name or bike) | Changes the tag layout and the resolver contract in P08 |
 | 01 | Three service options lead to a second page of detailed options (e.g. individual services) | Adds a screen |
 | 03, 70 | Booking mode is a shop setting; third mode "appointment only" | Changes P04/P05 capacity behaviour, not just settings UI |
-| 38, 39, 44 | Week view as built in `public/app.js:1493`; customer calendar with filled slots blocked out as in `public-portal/portal.js`; month boxes coloured with "full" / "space available"; right-click to set default diary view | Existing working code becomes the spec for three screens |
+| 38, 39, 44 | Week view as built in `public/app.js:1496` (the `else` branch; `:1493` is the month label. The rest of the surface: `buildWeekGridHtml` `:2038`, `renderWeekGrid` `:2072`, drag/resize/context-menu wiring `:1878`-`:2285`); customer calendar with filled slots blocked out as in `public-portal/portal.js`; month boxes coloured with "full" / "space available"; right-click to set default diary view | Existing working code becomes the spec for three screens |
 | 27, 68 | Shop-authored service checklist templates; editable inspection checklist and variable number of customer questions | Extends P03 |
 | 04 | Optional shop deposit option, "as it works at Tallboys" | **Blocked on Mark** — the reference is his |
 | 82 | Bike dropdown, since a customer may have several bikes | Small, contained |

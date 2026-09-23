@@ -36,3 +36,6 @@ uploads/
 
 # Browser-test screenshots and run evidence from the workshop prototype.
 .prototype-overnight/
+
+# Subagent-driven-development scratch: ledgers, briefs, review packages.
+.superpowers/

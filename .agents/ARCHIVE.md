@@ -752,3 +752,181 @@ exist beside it rather than instead of it. It also leaves `custody_state` alone,
 so editing a job cannot reset a bike that is in the shop back to `expected`.
 
 Both die with `public/app.js` in Phase 4.
+
+
+## Phase 3 — detail at the merge, 20 September 2026 (PR #57)
+
+Fifteen action endpoints, one per thing a person does, each guarded by its Phase
+1 machine and by an optimistic `version` check. An illegal move and a lost race
+are both 409 and say different things, because a screen can only offer "reload
+and look again" for the second.
+
+**The tender rule, decided twice.** Tendering the order for a job requires
+`finish` to be a legal move on the work machine, and `finish` is legal only from
+`in_progress`. So a tender is refused for a job that never started AND for one
+on hold or waiting for parts; the refusal names the way out (`resume`,
+`parts_arrived`). Checked before the sale is created, so a refused tender leaves
+no sale behind. Jack chose refusal in the plan, reversed it on 20 Sep to "never
+refuse a payment", then reversed back the same day. If the breadth proves wrong
+at a real till, narrowing it to `not_started` only is a one-line change in the
+convert handler's pre-flight.
+
+**Three tests were found to prove nothing** and were fixed: one asserted only a
+200 and passed against a PUT that wrote nothing; one ran two HTTP requests in a
+`Promise.all` and passed against a deliberately broken check-then-act allocator,
+because the requests never actually overlapped; one crossed shops, so RLS hid the
+row and the customer-ownership join it claimed to test never ran.
+
+**A CI failure that was real, not flaky.** `tests/server-lifecycle.test.js`
+slept 120ms before sending SIGTERM. Measured: module evaluation finishes ~67ms
+and the server listens by ~145ms, so that sat in a ~78ms window. Adding four
+modules to `server.js`'s import graph lost the race. `server.js` now prints
+`SIGNALS_READY` when its handlers are installed and the test waits for it.
+
+
+## Two open questions closed, 20 September 2026
+
+Both Jack's, both taken after the Phase 3 merge. Recorded here so neither is
+re-opened by default.
+
+**`prototype/` and the review-pack Python scripts stay out of CI.** Decided no,
+not deferred. `prototype/` is a React demo with its own dependency tree; running
+its tests would install a second, unrelated set of libraries on every build of
+the real app, to protect something Phase 4's real screens are meant to replace.
+`assemble-review.py`, `render-review.py` and `check-pdfs.py` build the review
+pack, whose PDFs are already recorded as stale; PDF generation in CI needs fonts
+and rendering tooling and is a common source of slow, flaky builds. `package.py`
+is the exception and does run in CI - it builds the atlas, which Phase 4 is
+built against. Revisit only if the prototype becomes load-bearing or the PDFs
+start being sent to people again.
+
+**Money stays a JavaScript float, and is totalled in SQL.** `server/db.js:31-38`
+parses NUMERIC to a JS float on read, a deliberate existing decision that now
+also covers quote line amounts. The database stores money exactly; the
+imprecision only appears if the application adds amounts up itself, where a
+float can drift a fraction of a penny over many additions or break an exact
+equality comparison. The alternatives - an exact decimal type across the app, or
+storing whole pennies - both mean rewriting the till and every sale for a
+problem that has not bitten.
+
+So the rule, which Phase 4 must follow: **sum money in SQL, never in
+JavaScript.** The Phase 3 quote code totals nothing in JavaScript, so there is
+no existing exposure to unwind.
+
+## Moved from STATUS 2026-09-23 (byte cap)
+
+### Phase 3 detail (merged, PR #57, 20 Sep)
+
+`status` is a **generated column** derived from `booking_state` and
+`work_state` (migration 021), so the old diary and portal keep reading it and
+**nothing can write it**. Fifteen action endpoints are guarded by the machines
+and an optimistic `version` check. Job references (`WH-1000`) are per shop;
+capacity holds are taken in the job's transaction; quotes supersede rather
+than mutate, per-line.
+
+### Phase plan for building the atlas (full text)
+
+Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`,
+which records who decided what. A **new staff app** for these screens only, cut
+over at the end, on the **existing server and schema**, sequenced **by layer**
+because nothing is deployed. The old app keeps till, inventory, suppliers and
+storefront. Phases 0-2 built; 3 API → 4 screens → 5 integration remain. P00
+proofs run alongside, all Jack's. Plans for phases 0-3 are under
+`docs/superpowers/plans/`, all dated 2026-09-20.
+
+### Release 1 scope and atlas revision (unchanged, settled)
+
+**Release 1 has a narrowed scope and a plan.** PR #51.
+`docs/decisions/2026-09-10-release-1-scope-reduction.md` is the live scope;
+invoicing, payments, refunds, import, reports, group capacity and recovery are
+Later. The workshop plan is packages P00–P09, not yet split into issues.
+
+**The journey atlas is revised: 84 screens → 82**, all 13 notes applied and
+asserted by `check-notes.mjs` (#54). Carried: the tag barcode is a declared
+**non-scanning specimen**, and the PDFs and board PNG are **stale**.
+
+### Phase 4 planning decisions (20 Sep, Jack)
+
+A: the seven print/message screens build against a stub adapter that records
+intent and never claims delivery. B: the mechanic auth screens build on the
+existing team-login, reading identity only via `GET /api/auth/me`, so the
+approved-but-unbuilt WorkOS migration stays a provider swap. C: the quote read
+endpoints ship as a Phase 3 patch on their own branch before Phase 4 starts.
+D: `react-router`, `@tanstack/react-query`, `@testing-library/react` and
+Playwright approved as dependencies. E: the workshop half of `public/app.js`
+is cut over in Phase 4's final task, closing the legacy `status` hole.
+
+### Plan defects found executing the quote-reads plan (23 Sep)
+
+Four, all corrected in the plan files: a non-existent export name
+(`findProblems`, really `checkSource`); a `COVERED` regex widened so far it
+captured three pre-existing untraced routes; a missing
+`import '../server/load-env.js'` in the test-setup convention; and a test that
+revised a DRAFT quote, which `createRevision` replaces in place, so it never
+created the second revision it meant to assert on. A fifth was a security gap
+in the plan itself: the portal read checked shop but not quote ownership.
+
+### Quote read endpoints (branch `fix/phase-3-quote-reads`, 23 Sep)
+
+Phase 3 shipped four quote WRITE paths and no read path, so the seven quote
+screens had nothing to render from. Added three endpoints:
+`GET /api/quotes/:id` (one quote, its lines, and `all`/`approved`/`pending`/
+`declined` totals), `GET /api/workshop-jobs/:id/quotes` (revisions, newest
+first; a job with no quotes is `200 []`, not 404 — screen 19 opens in that
+state), and `GET /api/portal/:shopSlug/quotes/:id` (the customer's read).
+
+Totals are `SUM(quantity * unit_amount)` with `FILTER (WHERE decision = …)`
+in SQL. No JavaScript arithmetic on money anywhere.
+
+The portal read is scoped to the owning customer through the same private
+`quoteForCustomer(quoteId, customerId)` the portal writes use, and refuses any
+state outside a named readable set (`sent`, `partly_approved`, `approved`,
+`declined`, `superseded`, `expired`) — an allow-list, so a state added to the
+quote machine later stays hidden from customers until someone lists it. Both
+refusals return a 404 byte-identical to a nonexistent quote. A test iterates
+`quote.states` and fails if any state is classified in neither set or in both.
+
+The portal WRITE routes still distinguish a draft by a 409 naming its state,
+so a customer can learn their own draft exists — never its prices. Moving the
+state rule into `quoteForCustomer` would fix that and change the write routes,
+which this patch put out of scope.
+
+`COVERED` in `assert-screen-trace.mjs` was widened for `/api/quotes/:id` only.
+The wider pattern the plan proposed would have captured three pre-existing
+untraced routes (GET/PUT/DELETE `/api/workshop-jobs/:id`) and forced screen-id
+choices this patch had no basis to make.
+
+### Two id-handling behaviours Phase 4 must handle (found 23 Sep, not fixed)
+
+A non-numeric or fractional id on any of the new read routes — and on the
+pre-existing routes that share the pattern — reaches Postgres and the
+dispatcher answers **500 with `err.message`** (`server/server.js:4439`), e.g.
+`{"error":"invalid input syntax for type integer: \"abc\""}`. It behaves
+identically for ids that exist and ids that do not, so it leaks no existence
+information, but it echoes a database error to the internet. Phase 4 will hit
+it directly: a React route param of `undefined` becomes `NaN` and 500s instead
+of 404ing. Fix route-wide (`if (!Number.isInteger(id)) return notFound(...)`)
+in its own change, BEFORE the screens start building URLs from route params.
+
+`GET /api/workshop-jobs/:id/quotes` answers `200 []` for a job that does not
+exist, while `GET /api/workshop-jobs/:id` answers 404 for the same id. Staff
+are authenticated and RLS hides other shops, so nothing leaks; but screen 19
+given a stale job id would show "no quotes yet" rather than "job not found".
+A behaviour call for the Phase 4 quote journey plan; the fix is to look the
+job up first, as `createRevision` already does.
+
+### Moved from STATUS 2026-09-23 (second pass)
+
+**Check the checkout before judging state.** On 9 Sep work sat 156 commits
+behind. Run the left-right count against `origin/main` before trusting a tree.
+
+**Stage one's request-wide transaction mode is OFF** — `DB_TENANT_SCOPE` is
+`session` until three handlers are restructured.
+
+### Why `npm run build` dirties the tree (23 Sep)
+
+`public/dist/` is listed in `.gitignore` (line 24), but three build outputs —
+the Vite manifest and the hashed staff JS and CSS — were committed before that
+rule existed, so git tracks them anyway. Every build rewrites them. Revert with
+a checkout of that path. The Phase 4 plan calls `public/dist` "(gitignored)",
+which is only half true, and its Task 1 reads the committed, stale manifest.

@@ -146,6 +146,15 @@ export async function approve({ quoteId, linkRevision, customerId }) {
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
 }
 
+// Newest first. Every revision stays readable: Phase 3 supersedes rather than
+// mutates, and screen 23 (approved) has to show what was agreed even after a
+// later revision exists.
+export async function listRevisions({ jobId }) {
+  return prepare(
+    'SELECT * FROM workshop_quotes WHERE workshop_job_id = ? ORDER BY revision DESC'
+  ).all(jobId);
+}
+
 export function serializeQuote(row) {
   return {
     id: row.id,
@@ -153,5 +162,104 @@ export function serializeQuote(row) {
     revision: row.revision,
     state: row.state,
     createdAt: row.created_at,
+  };
+}
+
+// Totals are summed by Postgres, never in JavaScript. Money is a JS float in
+// this codebase (decided 20 Sep) and the mitigation that makes that safe is
+// that JS never does the arithmetic - it carries a number the database
+// computed. A reduce() over these lines would reintroduce exactly the drift
+// the decision was taken to avoid.
+const LINE_TOTALS = `
+  SELECT
+    id, kind, description, product_id, quantity, unit_amount, decision,
+    (quantity * unit_amount) AS line_total
+  FROM workshop_quote_lines
+  WHERE workshop_quote_id = ?
+  ORDER BY id
+`;
+
+const QUOTE_TOTALS = `
+  SELECT
+    COALESCE(SUM(quantity * unit_amount), 0) AS all_total,
+    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'approved'), 0) AS approved_total,
+    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'pending'), 0) AS pending_total,
+    COALESCE(SUM(quantity * unit_amount) FILTER (WHERE decision = 'declined'), 0) AS declined_total
+  FROM workshop_quote_lines
+  WHERE workshop_quote_id = ?
+`;
+
+export async function readQuote({ quoteId }) {
+  const quote = await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId);
+  if (!quote) return { ok: false, reason: 'not_found' };
+  const lines = await prepare(LINE_TOTALS).all(quoteId);
+  const totals = await prepare(QUOTE_TOTALS).get(quoteId);
+  return { ok: true, quote, lines, totals };
+}
+
+// States a customer may read over the portal. Named explicitly, rather than
+// excluding 'draft' alone, so that a state added to the quote machine later
+// (state-machines.js) stays hidden from customers by default until someone
+// lists it here deliberately - an oversight then fails closed (404) instead
+// of silently exposing a new state nobody reviewed for customer visibility.
+export const CUSTOMER_READABLE_STATES = new Set([
+  'sent',
+  'partly_approved',
+  'approved',
+  'declined',
+  'superseded',
+  'expired',
+]);
+
+// The complement, kept explicit so a test can assert every declared quote
+// state is classified as exactly one of readable or hidden.
+export const CUSTOMER_HIDDEN_STATES = new Set(['draft']);
+
+// The portal's read of readQuote(). Scoped through quoteForCustomer - the same
+// ownership check recordLineDecision() and approve() use - so a quote that
+// belongs to another customer in the same shop comes back identical to one
+// that does not exist at all: `reason: 'not_found'` either way. Anything else
+// (a 403, a different message) would let a customer learn which quote ids are
+// real by trying them.
+//
+// A draft is refused the same way, via CUSTOMER_READABLE_STATES above. This
+// read does not show a draft or its prices - a nonexistent quote and a draft
+// come back as the identical 404. send() documents showing a quote to a
+// customer as a deliberate staff act (screen 20) - a draft is still being
+// composed, so a customer must not be able to read one even if it is their
+// own, by trying ids nearby the one they were sent. The portal WRITE routes
+// (recordLineDecision, approve) are a separate path with their own state
+// check, and they do distinguish a draft: their 409 message names the
+// quote's state, which reveals that the draft exists (though never its
+// prices or lines). This check stays here, on the customer-scoped read, not
+// in readQuote() above: staff read drafts constantly (that is the whole
+// point of the draft state) and this must not touch that path.
+export async function readQuoteForCustomer({ quoteId, customerId }) {
+  const quote = await quoteForCustomer(quoteId, customerId);
+  if (!quote || !CUSTOMER_READABLE_STATES.has(quote.state)) return { ok: false, reason: 'not_found' };
+  const lines = await prepare(LINE_TOTALS).all(quoteId);
+  const totals = await prepare(QUOTE_TOTALS).get(quoteId);
+  return { ok: true, quote, lines, totals };
+}
+
+export function serializeQuoteWithLines(quote, lines, totals) {
+  return {
+    ...serializeQuote(quote),
+    lines: lines.map((l) => ({
+      id: l.id,
+      kind: l.kind,
+      description: l.description,
+      productId: l.product_id,
+      quantity: Number(l.quantity),
+      unitAmount: Number(l.unit_amount),
+      decision: l.decision,
+      lineTotal: Number(l.line_total),
+    })),
+    totals: {
+      all: Number(totals.all_total),
+      approved: Number(totals.approved_total),
+      pending: Number(totals.pending_total),
+      declined: Number(totals.declined_total),
+    },
   };
 }
