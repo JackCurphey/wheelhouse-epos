@@ -197,6 +197,24 @@ export async function readQuote({ quoteId }) {
   return { ok: true, quote, lines, totals };
 }
 
+// States a customer may read over the portal. Named explicitly, rather than
+// excluding 'draft' alone, so that a state added to the quote machine later
+// (state-machines.js) stays hidden from customers by default until someone
+// lists it here deliberately - an oversight then fails closed (404) instead
+// of silently exposing a new state nobody reviewed for customer visibility.
+export const CUSTOMER_READABLE_STATES = new Set([
+  'sent',
+  'partly_approved',
+  'approved',
+  'declined',
+  'superseded',
+  'expired',
+]);
+
+// The complement, kept explicit so a test can assert every declared quote
+// state is classified as exactly one of readable or hidden.
+export const CUSTOMER_HIDDEN_STATES = new Set(['draft']);
+
 // The portal's read of readQuote(). Scoped through quoteForCustomer - the same
 // ownership check recordLineDecision() and approve() use - so a quote that
 // belongs to another customer in the same shop comes back identical to one
@@ -204,16 +222,21 @@ export async function readQuote({ quoteId }) {
 // (a 403, a different message) would let a customer learn which quote ids are
 // real by trying them.
 //
-// A draft is refused the same way. send() documents showing a quote to a
+// A draft is refused the same way, via CUSTOMER_READABLE_STATES above. This
+// read does not show a draft or its prices - a nonexistent quote and a draft
+// come back as the identical 404. send() documents showing a quote to a
 // customer as a deliberate staff act (screen 20) - a draft is still being
 // composed, so a customer must not be able to read one even if it is their
-// own, by trying ids nearby the one they were sent. This check stays here,
-// on the customer-scoped read, not in readQuote() above: staff read drafts
-// constantly (that is the whole point of the draft state) and this must not
-// touch that path.
+// own, by trying ids nearby the one they were sent. The portal WRITE routes
+// (recordLineDecision, approve) are a separate path with their own state
+// check, and they do distinguish a draft: their 409 message names the
+// quote's state, which reveals that the draft exists (though never its
+// prices or lines). This check stays here, on the customer-scoped read, not
+// in readQuote() above: staff read drafts constantly (that is the whole
+// point of the draft state) and this must not touch that path.
 export async function readQuoteForCustomer({ quoteId, customerId }) {
   const quote = await quoteForCustomer(quoteId, customerId);
-  if (!quote || quote.state === 'draft') return { ok: false, reason: 'not_found' };
+  if (!quote || !CUSTOMER_READABLE_STATES.has(quote.state)) return { ok: false, reason: 'not_found' };
   const lines = await prepare(LINE_TOTALS).all(quoteId);
   const totals = await prepare(QUOTE_TOTALS).get(quoteId);
   return { ok: true, quote, lines, totals };

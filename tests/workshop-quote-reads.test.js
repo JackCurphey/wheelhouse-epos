@@ -7,7 +7,13 @@ import { deleteTestShop } from './helpers/testShop.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { customerIdForLogin } from './helpers/workshopFixtures.js';
 import { runWithShop } from '../server/db.js';
-import { recordLineDecision } from '../server/workshop/quotes.js';
+import {
+  recordLineDecision,
+  approve,
+  CUSTOMER_READABLE_STATES,
+  CUSTOMER_HIDDEN_STATES,
+} from '../server/workshop/quotes.js';
+import { quote as quoteMachine } from '../server/workshop/state-machines.js';
 
 let server;
 let session;
@@ -272,9 +278,7 @@ test('the owning customer reads their quote with the same totals staff see', asy
   );
 
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal(res.body.id, quoteId);
-  assert.equal(res.body.lines.length, 2);
-  assert.equal(res.body.totals.all, staffRes.body.totals.all);
+  assert.deepEqual(res.body, staffRes.body);
 });
 
 // This is the test that proves the controller ruling: quoteForCustomer scopes
@@ -312,9 +316,12 @@ test('a quote belonging to another customer in the same shop is 404, indistingui
 });
 
 // Showing a quote to a customer is a deliberate staff act (send(), screen 20
-// - see server/workshop/quotes.js). Until that happens the portal must not
-// leak that the draft exists, even to its own owner - same 404, same body as
-// a quote id nobody has ever used.
+// - see server/workshop/quotes.js). Until that happens this READ must not
+// show a draft or its prices - same 404, same body as a quote id nobody has
+// ever used. The portal WRITE routes (line decision, approve) are a separate
+// path: their 409 does name the quote's state, which reveals a draft exists
+// (though never its prices) - see readQuoteForCustomer() in
+// server/workshop/quotes.js for that distinction.
 test('the owning customer cannot read their own quote while it is still draft', async () => {
   const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
     { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
@@ -385,4 +392,128 @@ test("a superseded revision stays readable to its owner, naming its state", asyn
   );
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.state, 'superseded');
+});
+
+// readQuoteForCustomer (server/workshop/quotes.js) classifies every quote
+// state as either customer-readable or customer-hidden by name, rather than
+// hiding 'draft' alone. This loop is what makes that safe: if a state is ever
+// added to the quote machine (state-machines.js) without also being sorted
+// into one of the two sets here, this fails and names the state - the state
+// stays hidden from the portal (fails closed) until someone decides on
+// purpose, but the gap does not go unnoticed. It needs no database.
+test('every declared quote state is classified as customer-readable or customer-hidden, never both or neither', () => {
+  for (const state of quoteMachine.states) {
+    const readable = CUSTOMER_READABLE_STATES.has(state);
+    const hidden = CUSTOMER_HIDDEN_STATES.has(state);
+    assert.ok(
+      readable || hidden,
+      `quote state '${state}' is classified as neither customer-readable nor customer-hidden`,
+    );
+    assert.ok(
+      !(readable && hidden),
+      `quote state '${state}' is classified as both customer-readable and customer-hidden`,
+    );
+  }
+});
+
+// A fresh quote's only revision is always revision 1 (createRevision() in
+// server/workshop/quotes.js), and none of these fixtures ever revise it, so
+// linkRevision always matches currentRevision here.
+const FIRST_REVISION = 1;
+
+test('the owning customer reads their quote once it is partly_approved', async () => {
+  const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
+    { kind: 'labour', description: 'Approved line', quantity: 1, unitAmount: 85 },
+    { kind: 'part', description: 'Declined line', quantity: 1, unitAmount: 49 },
+  ]);
+  const sendResult = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendResult.status, 200, JSON.stringify(sendResult.body));
+
+  const before = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}`);
+  assert.equal(before.status, 200);
+  const [approvedLine, declinedLine] = before.body.lines;
+
+  await runWithShop(session.shop.id, () =>
+    recordLineDecision({ quoteId, lineId: approvedLine.id, decision: 'approved', customerId: portalCustomerId }),
+  );
+  await runWithShop(session.shop.id, () =>
+    recordLineDecision({ quoteId, lineId: declinedLine.id, decision: 'declined', customerId: portalCustomerId }),
+  );
+  const approveResult = await runWithShop(session.shop.id, () =>
+    approve({ quoteId, linkRevision: FIRST_REVISION, customerId: portalCustomerId }),
+  );
+  assert.equal(approveResult.ok, true, JSON.stringify(approveResult));
+  assert.equal(approveResult.quote.state, 'partly_approved');
+
+  const res = await portalRequest(
+    server.baseUrl,
+    portalCustomer.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.state, 'partly_approved');
+});
+
+test('the owning customer reads their quote once it is approved', async () => {
+  const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+  const sendResult = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendResult.status, 200, JSON.stringify(sendResult.body));
+
+  const before = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}`);
+  assert.equal(before.status, 200);
+  const [line] = before.body.lines;
+
+  await runWithShop(session.shop.id, () =>
+    recordLineDecision({ quoteId, lineId: line.id, decision: 'approved', customerId: portalCustomerId }),
+  );
+  const approveResult = await runWithShop(session.shop.id, () =>
+    approve({ quoteId, linkRevision: FIRST_REVISION, customerId: portalCustomerId }),
+  );
+  assert.equal(approveResult.ok, true, JSON.stringify(approveResult));
+  assert.equal(approveResult.quote.state, 'approved');
+
+  const res = await portalRequest(
+    server.baseUrl,
+    portalCustomer.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.state, 'approved');
+});
+
+test('the owning customer reads their quote once it is declined', async () => {
+  const { quoteId } = await jobWithQuoteForCustomer(portalCustomerId, [
+    { kind: 'labour', description: 'Full service', quantity: 1, unitAmount: 85 },
+  ]);
+  const sendResult = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}/send`, {
+    method: 'POST',
+  });
+  assert.equal(sendResult.status, 200, JSON.stringify(sendResult.body));
+
+  const before = await staffRequest(server.baseUrl, session.cookie, `/api/quotes/${quoteId}`);
+  assert.equal(before.status, 200);
+  const [line] = before.body.lines;
+
+  await runWithShop(session.shop.id, () =>
+    recordLineDecision({ quoteId, lineId: line.id, decision: 'declined', customerId: portalCustomerId }),
+  );
+  const approveResult = await runWithShop(session.shop.id, () =>
+    approve({ quoteId, linkRevision: FIRST_REVISION, customerId: portalCustomerId }),
+  );
+  assert.equal(approveResult.ok, true, JSON.stringify(approveResult));
+  assert.equal(approveResult.quote.state, 'declined');
+
+  const res = await portalRequest(
+    server.baseUrl,
+    portalCustomer.cookie,
+    `/api/portal/${session.shop.slug}/quotes/${quoteId}`,
+  );
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.state, 'declined');
 });
