@@ -1204,4 +1204,5 @@ every test updated or deleted with its reason, and the pass counts.
   the superseded 84-screen atlas. Decision B in the design accepts the rework
   risk; if he objects structurally, the affected journey plan is rewritten
   rather than this one.
-- **Deposits.** The screen 04 note is blocked on Mark's Tallboys reference.
+- **Deposits.** Out of Release 1, not blocked on Mark (Jack, 23 Sep:
+  `docs/decisions/2026-09-23-book-journey-routing-and-modes.md`).
