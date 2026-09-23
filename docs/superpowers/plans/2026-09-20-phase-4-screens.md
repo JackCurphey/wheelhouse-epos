@@ -170,7 +170,27 @@ page loads. `public/index.html` references `/app.js` and never `/dist/`, and
 `main.tsx` only mounts when `#wh-root` exists, which it never does. Until this
 task lands, no screen can be seen in a browser and no Playwright test can run.
 
-- [ ] **Step 1: Write the failing test**
+> **Executed 23 Sep — where it departed from the steps below, and why:**
+> - **`/workshop/*` is served too, not only `/workshop`.** Task 3 opens
+>   `/workshop/link-expired` directly; without this the static fallback hands
+>   deep links the old app's `index.html`. A third test covers it.
+> - **The server code follows the `/sdbdemo` branch in the dispatcher**, not
+>   the snippet in Step 4 — `server.js` has no `route()` for pages, no
+>   `sendHtml` and no `esc`. The not-built error is plain text, so it needs no
+>   escaping.
+> - **The bundle test also checks the script's content type.** A 200 alone
+>   proved nothing: with the tag pointed at a missing file it still passed,
+>   because the static fallback answers a missing file with `index.html` and
+>   a 200.
+> - **Step 2 failed with 200, not 404** — `/workshop` was answered by that
+>   same fallback, with the old app.
+> - **`public/dist/` is gitignored but three files in it are tracked** (the
+>   manifest and one CSS/JS pair). `npm run build` rewrites the manifest and
+>   deletes those two, so restore all three with `git checkout -- public/dist`
+>   and delete the new hashed pair before committing.
+> - `src/staff/main.tsx` was not modified: nothing in Steps 1–8 needs it.
+
+- [x] **Step 1: Write the failing test**
 
 Create `tests/workshop-page.test.js`:
 
@@ -199,12 +219,12 @@ test('the page loads the hashed bundle from the manifest, not a guessed path', a
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `npm run docker:up && node --test tests/workshop-page.test.js`
 Expected: FAIL with status 404 — `/workshop` is not a route.
 
-- [ ] **Step 3: Create the host page**
+- [x] **Step 3: Create the host page**
 
 Create `public/workshop.html`:
 
@@ -228,7 +248,7 @@ No stylesheet link: Tailwind and the tokens are compiled into the bundle's own
 CSS, which the entry tag pulls in. `public/styles.css` belongs to the old app
 and must not be loaded here, or its global selectors will fight the new one.
 
-- [ ] **Step 4: Serve it with the manifest entry injected**
+- [x] **Step 4: Serve it with the manifest entry injected**
 
 In `server/server.js`, beside the existing static handling (~`:4179`):
 
@@ -267,26 +287,26 @@ Use whatever the file already calls its HTML sender and its path/fs imports —
 read the surrounding 40 lines first and match them. If there is no `sendHtml`,
 use the existing static-file response helper rather than adding a new one.
 
-- [ ] **Step 5: Build, then run the test**
+- [x] **Step 5: Build, then run the test**
 
 Run: `npm run build && node --test tests/workshop-page.test.js`
 Expected: PASS, both cases.
 
-- [ ] **Step 6: Break it on purpose**
+- [x] **Step 6: Break it on purpose**
 
 Rename the manifest key lookup from `'src/staff/main.tsx'` to
 `'src/staff/nope.tsx'`. Run the test.
 Expected: FAIL — status 500, no script tag. Confirm the edit landed, restore,
 re-run to green.
 
-- [ ] **Step 7: See it in a browser**
+- [x] **Step 7: See it in a browser**
 
 Run: `npm start`, open `http://localhost:8080/workshop`.
 Expected: a blank page with no console errors. Blank is correct — `main.tsx`
 still renders an empty `StrictMode`. Confirm in devtools that `#wh-root` exists
 and the bundle loaded with status 200.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add public/workshop.html server/server.js tests/workshop-page.test.js
