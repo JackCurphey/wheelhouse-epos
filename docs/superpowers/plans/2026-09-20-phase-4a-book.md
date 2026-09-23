@@ -7,9 +7,10 @@
 > decisions Jack needs to make before the tasks can be written. No code comes
 > from it yet.
 >
-> **23 Sep, Jack decided J1, J3 and J4** (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer screens under
+> **23 Sep, Jack decided J1-J4** (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer screens under
 > `/book`; timed, drop-off and appointment-only all Release 1; deposits out,
-> not blocked. **J2 is still open.**
+> not blocked; all four J2 gaps are Release 1. **Next: the server
+> prerequisite plan**, then this plan's tasks.
 
 **Parent plan:** `docs/superpowers/plans/2026-09-20-phase-4-screens.md` (Task 7
 is the contract; execution order row 2).
@@ -82,7 +83,7 @@ fields), which are ask-first changes under the project rules.
   replacing the current `public-portal/` booking page. Matches where
   customers already go; needs a second Vite entry and a `/book` route table,
   and it replaces the live booking page when it ships.
-- **J2 - which gaps are Release 1.** Service questions, customer photo
+- **J2 - DECIDED 23 Sep: all four are Release 1.** Which gaps are Release 1. Service questions, customer photo
   upload, the update-channel choice, and guest read-back could each be in or
   deferred. (The spec's note table, rows 27 and 68, records Jack's note for
   "a variable number of customer questions" - that may already settle service

@@ -1,8 +1,8 @@
 # Book journey: customer screens under /book; all three booking modes in Release 1
 
 Date: 23 September 2026. **Status: decided by Jack in session.** Record of
-three decisions raised by the stopped journey plan 4a
-(`docs/superpowers/plans/2026-09-20-phase-4a-book.md`, J1, J3, J4). No code
+four decisions raised by the stopped journey plan 4a
+(`docs/superpowers/plans/2026-09-20-phase-4a-book.md`, J1-J4). No code
 behaves this way yet.
 
 ## J1 - the customer screens live under `/book`
@@ -39,7 +39,9 @@ atlas revision already said. The two lines that still said "blocked on Mark's
 Tallboys reference" (the Phase 4 screens plan, and the screen-build design's
 note table) are corrected to point here.
 
-## Still open
+## J2 - all four gaps are Release 1
 
-J2: which of service questions, customer photo upload, the update-channel
-choice, and guest read-back are Release 1.
+Service questions, customer photo/video upload, the update-channel choice
+(Email / SMS / WhatsApp), and guest read-back of a booking request are all in
+Release 1, and belong in the server prerequisite plan for 4a with the
+endpoints listed in the plan's item 3 table.
