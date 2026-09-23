@@ -930,3 +930,17 @@ the Vite manifest and the hashed staff JS and CSS — were committed before that
 rule existed, so git tracks them anyway. Every build rewrites them. Revert with
 a checkout of that path. The Phase 4 plan calls `public/dist` "(gitignored)",
 which is only half true, and its Task 1 reads the committed, stale manifest.
+
+### P00b scanner evidence, summarised (23 Sep)
+
+Full record: `docs/decisions/2026-09-23-p00b-scanner-evidence.md`. AURES
+PS-50IIBL, USB keyboard-wedge, 1D laser. Cannot read QR — tested against a
+printed QR, no beep, no output. Suffix a single Enter, no prefix. Keys arrive
+1.6-16.5 ms apart; a whole code lands inside a quarter of a second, against
+roughly 100 ms per key for a person. The scanner is on a US layout against UK
+Windows, so the symbol set mangles while `A-Z 0-9` and hyphen do not — job
+references are safe, and the scanner's own keyboard language can be set to UK
+from its manual, which is the cheaper fix than working around it in code. Caps
+Lock inverts letters, so tag resolution must be case-insensitive. The printer
+half of P00b is untouched: no tag from our own printer has been scanned, so
+the atlas barcode stays a declared non-scanning specimen.

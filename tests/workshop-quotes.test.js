@@ -34,11 +34,18 @@ after(async () => {
   await pool.end();
 });
 
-let slot = 9;
+// Every test takes its own job on the shared tenant, and each job needs a slot
+// inside the shop's 09:00-18:00 opening hours that does not overlap the last
+// one. Half-hour slots give eighteen; whole hours gave nine, and the ninth test
+// to want a job failed on opening hours rather than on what it was testing.
+let slotMinutes = 9 * 60;
+function clock(minutes) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
 function nextTimes() {
-  const startTime = `${String(slot++).padStart(2, '0')}:00`;
-  const endTime = `${String(slot).padStart(2, '0')}:00`;
-  return { startTime, endTime };
+  const startTime = clock(slotMinutes);
+  slotMinutes += 30;
+  return { startTime, endTime: clock(slotMinutes) };
 }
 
 // Portal signup is rate-limited to a handful of accounts per IP per hour, and
@@ -255,4 +262,42 @@ test('a customer cannot decide lines on another customer of the same shop', asyn
   // And the line is untouched.
   const after = await readLines(ctx.shop.id, q.body.id);
   assert.equal(after[0].decision, 'pending');
+});
+
+// A line decision is final (docs/decisions/2026-09-23-quote-line-decisions-are-final.md).
+// A customer who changes their mind contacts the shop, and the shop issues a new
+// revision - which supersedes per line and already exists. Without this guard a
+// customer can flip a line between approved and declined right up to submitting,
+// so work the shop has already started can silently become un-agreed, with no
+// record of why.
+test('a line already decided cannot be decided again', async () => {
+  const ctx = await newJob(tenant);
+  const q = await createQuote(ctx, [{ kind: 'labour', description: 'Service', unitAmount: 60 }]);
+  await sendQuote(ctx, q.body.id);
+  const [line] = await readLines(ctx.shop.id, q.body.id);
+
+  const first = await runWithShop(ctx.shop.id, () =>
+    recordLineDecision({
+      quoteId: q.body.id,
+      lineId: line.id,
+      decision: 'approved',
+      customerId: tenant.customerId,
+    }));
+  assert.equal(first.ok, true, JSON.stringify(first));
+
+  const second = await runWithShop(ctx.shop.id, () =>
+    recordLineDecision({
+      quoteId: q.body.id,
+      lineId: line.id,
+      decision: 'declined',
+      customerId: tenant.customerId,
+    }));
+
+  assert.equal(second.ok, false, 'a decided line must not be re-decided');
+  assert.equal(second.code, 'illegal');
+  assert.match(second.message, /already/);
+
+  // The first answer stands, unchanged.
+  const settled = await readLines(ctx.shop.id, q.body.id);
+  assert.equal(settled[0].decision, 'approved');
 });
