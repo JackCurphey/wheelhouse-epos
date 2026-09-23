@@ -105,10 +105,26 @@ export async function recordLineDecision({ quoteId, lineId, decision, customerId
   if (row.state !== 'sent') {
     return { ok: false, code: 'illegal', message: `a quote that is ${row.state} is not open for decisions` };
   }
+  // A decision is final (docs/decisions/2026-09-23-quote-line-decisions-are-final.md).
+  // The UPDATE is constrained to a still-pending line rather than checked
+  // first and written second: two taps on a slow phone would both pass a
+  // prior read and the second would overwrite the first. Postgres decides,
+  // once, and `changes === 0` then means the line is missing OR already
+  // decided - so the two are told apart afterwards, by reading it back.
   const { changes } = await prepare(
-    'UPDATE workshop_quote_lines SET decision = ? WHERE id = ? AND workshop_quote_id = ?'
+    "UPDATE workshop_quote_lines SET decision = ? WHERE id = ? AND workshop_quote_id = ? AND decision = 'pending'"
   ).run(decision, lineId, quoteId);
-  if (changes === 0) return { ok: false, code: 'not_found', message: 'Quote line not found' };
+  if (changes === 0) {
+    const line = await prepare(
+      'SELECT decision FROM workshop_quote_lines WHERE id = ? AND workshop_quote_id = ?'
+    ).get(lineId, quoteId);
+    if (!line) return { ok: false, code: 'not_found', message: 'Quote line not found' };
+    return {
+      ok: false,
+      code: 'illegal',
+      message: `that line is already ${line.decision} - to change it, the shop issues a new quote revision`,
+    };
+  }
   return { ok: true, quote: row };
 }
 

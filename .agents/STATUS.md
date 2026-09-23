@@ -1,10 +1,10 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-23
-**Branch:** `fix/phase-3-quote-reads` (PR open). **Phases 0-3 merged to `main`**
-(#54-#57, 20 Sep, CI green). **Phase 4 is planned, not started.** The quote read
-endpoints Phase 3 omitted ship in this branch, and must merge before Phase 4
-Task 1.
+**Branch:** `fix/phase-3-loose-ends`, rebased onto `main`, committed,
+**UNPUSHED — it exists only in the worktree on this Mac.** **Phases 0-3
+merged** (#54-#57), plus **#58 quote reads, merged 23 Sep** (`c99f441`).
+**Phase 4 is planned, not started** — start at its Task 1.
 **Blocked on:** nothing. Mark's #50 review is against the superseded 84-screen
 version; told 20 Sep. Other open items are Jack's.
 
@@ -17,16 +17,15 @@ version; told 20 Sep. Other open items are Jack's.
 
 **Release 1 scope is narrowed and settled** (#51); live scope file
 `docs/decisions/2026-09-10-release-1-scope-reduction.md`. **The atlas is 82
-screens**, 13 notes applied and asserted by `check-notes.mjs` (#54). The tag
+screens**, 13 notes applied, asserted by `check-notes.mjs` (#54). The tag
 barcode is a declared **non-scanning specimen**; PDFs and board PNG **stale**.
 
 **Still no Lightspeed technical spec and no account.** LS-01 to LS-09 are
-"Pending", needing the first shop's series and an authorised test account:
-Jack's. Recovery is outside Release 1; WorkOS auth and design remediation stay
-approved and unbuilt. The `prototype/` demo has **no week view** — the staff
-diary (`public/app.js:1496`) and customer slot grid
-(`public-portal/portal.js:364`) are the spec for screens 38/39/44; line map in
-the screen-build design.
+"Pending", needing the first shop's series and an authorised test account.
+Recovery is outside Release 1; WorkOS auth and design remediation stay approved
+and unbuilt. The `prototype/` demo has **no week view** — the staff diary
+(`public/app.js:1496`) and customer slot grid (`public-portal/portal.js:364`)
+are the spec for screens 38/39/44.
 
 **Check the checkout before judging state** (on 9 Sep work sat 156 commits
 behind), and note **stage one's request-wide transaction mode is OFF**. Both
@@ -50,33 +49,34 @@ This file → **Phase plan** below and the plans it names →
 
 ## Immediate next actions
 
-0. **Phase 4 — the screens.** Plan:
+0. **Push `fix/phase-3-loose-ends` and open its PR.** Rebased, committed,
+   unpushed; 5 files.
+1. **Phase 4 — the screens.** Plan:
    `docs/superpowers/plans/2026-09-20-phase-4-screens.md`. Start at Task 1 —
    nothing mounts today, no page creates `#wh-root`. Six journey plans follow,
    one per group as reached, to its Task 7 contract.
-1. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
-2. **Jack: the hardware answers** — printer, tag dimensions, driver host,
-   scanner (due 21 Sep). The atlas barcode stays a declared non-scanning
-   specimen until a real printed tag is read.
-3. **Jack: the message providers**, and what inbound replies do.
-4. **Mark: the screen review** (#50), open since 17 Sep.
-5. **Split the Release 1 plan into issues** — row IDs, state changes, expected
-   failure, test command, proof artefact per package.
+2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
+3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
+   is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
+   the tag carries Code 128 as note 11 has it. No tag from our printer has been
+   scanned — the atlas barcode stays a non-scanning specimen.
+4. **Jack: the message providers**, and what inbound replies do.
+5. **Mark: the screen review** (#50), open since 17 Sep.
+6. **Split the Release 1 plan into issues** — row IDs, state changes, expected
+   failure, test command, proof per package.
 
 **Carried open:** four, incl. three tenant-isolation gaps confirmed ABSENT on
 `main` 9 Sep. Three closed 20 Sep (Jack): atlas checks **run in CI**;
 `prototype/` and review-pack scripts stay **out** of CI; money stays a JS
-float, **always totalled in SQL, never in JavaScript** — binds Phase 4. **The
-Hubtiger trial lapsed ~15 Sep**; re-entry needs Jack's login.
+float, **totalled in SQL, never in JavaScript** — binds Phase 4. **Hubtiger
+trial lapsed ~15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
 
-43 PRs merged (#1–#51), plus #54-#57; record in `ARCHIVE.md`. One branch still
+43 PRs merged (#1–#51), plus #54-#58; record in `ARCHIVE.md`. One branch still
 matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
-**Jack's priority** column, empty on `main`.
-
-**Unpushed:** `plan/phase-4-screens` holds an older Phase 4 plan; this
-branch's is authoritative.
+**Jack's priority** column, empty on `main`. **`plan/phase-4-screens` is
+superseded by #58 and can be deleted.**
 
 ## Decisions in force
 
@@ -85,10 +85,6 @@ undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
 `2026-09-04-booking-mode-and-downtime.md`. The eight taken 20 Sep are in the
 Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
 
-**Quote line decisions are final** (`2026-09-23-quote-line-decisions-are-final`,
-Jack). The code does **not** do this yet — `recordLineDecision` still lets a
-customer re-decide. Not in #58; own change, plus screen 21's plan.
-
 ## Phases 0-3
 
 `server/workshop/state-machines.js` replaces the ambiguous single
@@ -96,23 +92,24 @@ customer re-decide. Not in #58; own change, plus screen 21's plan.
 migrations 016-021. 0-2 merged 20 Sep (#54-#56); **3 merged** (#57). `status`
 is a **generated column** — nothing can write it. Fifteen action endpoints are
 guarded by the machines and an optimistic `version` check, **which every Phase
-4 mutation must echo**. Detail: `ARCHIVE.md`.
+4 mutation must echo**. `ARCHIVE.md`.
 
 **One deliberate hole:** the old `status` is still accepted unguarded on
 `POST`/`PUT /api/workshop-jobs` for the old diary. It dies with the workshop
 half of `public/app.js` in Phase 4's last task.
 
-**Print tasks and message intent are not built** — they need P00b/P00c, so
-seven screens have no endpoint: 12, 28, 29, 39, 56, 57, 58. Three more wait on
-the scanner and the auth model: 13, 59, 60.
+**Quote line decisions are final** (`2026-09-23-quote-line-decisions-are-final`,
+Jack), enforced in `recordLineDecision` on the unpushed branch. Screen 21 must
+show decided lines as settled, not as live controls.
 
-**Quote reads (this branch)** add the three GETs Phase 3 omitted; totals from
-SQL; the portal read is owner-scoped and hides drafts, both 404. Carried into
-Phase 4, detailed in `ARCHIVE.md`: **widen `COVERED` again** as read endpoints
-land or they escape the trace; a non-numeric id **500s echoing the Postgres
-message** (`server.js:4439`), fix route-wide first; a missing job's quote list
-answers `200 []`; **a draft quote has exactly one revision** however often it
-is edited.
+**Print tasks and message intent are not built** — P00b/P00c, so seven screens
+have no endpoint: 12, 28, 29, 39, 56, 57, 58. Three more wait on the auth
+model: 13, 59, 60.
+
+**Quote reads (#58, merged)** added the three GETs Phase 3 omitted; totals from
+SQL; the portal read is owner-scoped and hides drafts. Four things it carries
+into Phase 4 — the `COVERED` widening, the 500 on a non-numeric id, the
+`200 []` for a missing job, and one-revision drafts — are in `ARCHIVE.md`.
 
 ## Phase plan for building the atlas
 
@@ -120,8 +117,8 @@ Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`.
 A **new staff app** for these screens only, cut over at the end, on the
 **existing server and schema**, sequenced **by layer** because nothing is
 deployed. The old app keeps till, inventory, suppliers, storefront. 0-3 built;
-4 → 5 remain. P00 proofs run alongside, all Jack's. Full text and the five
-Phase 4 decisions (A-E): `ARCHIVE.md`.
+4 → 5 remain. P00 proofs run alongside. Full text and the five Phase 4
+decisions (A-E): `ARCHIVE.md`.
 
 ## Plan register
 
@@ -142,22 +139,23 @@ python3 docs/design/release-1-journey/package.py && node docs/design/release-1-j
 All run in CI too, so a green PR means they passed.
 
 
-**Last verified 23 Sep, `fix/phase-3-quote-reads` head `9beb7e7`, locally,
-every exit code 0:** 412 pass / 0 fail, typecheck/lint/build clean, RLS OK (30
-protected, 2 exempt), screen trace, registry validate + drift, atlas 82 screens
-no errors. **CI has not run this branch** — a local pass is not a CI pass.
-**`main` has still not been run since #57.** The docker `app` image is from
-31 Aug — verify the working tree, not that container.
+**Verified 23 Sep on `fix/phase-3-loose-ends`, locally, every exit code 0:**
+413 pass / 0 fail, typecheck, lint, RLS (30 protected, 2 exempt), screen
+trace. Run BEFORE the rebase onto `main`; **re-run after it** — a clean rebase
+is not a passing suite. **CI has never run this branch.** #58 was green on its
+real head `18e8341`, checked against the run's own SHA: the PR pane reported
+the session's branch as the PR head, so do not trust that field. The docker
+`app` image is from 31 Aug — verify the working tree, not it.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
 without it the server uses 5432 not 5433 and every server-booting test fails
-with `ECONNREFUSED`, which looks like broken code and is not. Live-server
-tests must `import '../server/load-env.js'` first.
+with `ECONNREFUSED`, which looks like broken code and is not. Live-server tests
+must `import '../server/load-env.js'` first.
 
 ## Open items needing Mark
 
 Eight. The screen review (#50) is urgent, needs re-pointing at the 82-screen
-atlas; the other seven are in `ARCHIVE.md`.
+atlas; the other seven in `ARCHIVE.md`.
 
 ## Keeping this file honest
 
