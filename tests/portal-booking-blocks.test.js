@@ -4,11 +4,12 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
+import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { futureDate } from './helpers/workshopFixtures.js';
+import { seedWorkshopJob, futureDate } from './helpers/workshopFixtures.js';
 
 let server;
 let owner;
@@ -65,4 +66,27 @@ test('a booking on a shop closure is refused', async () => {
   });
   const res = await book({ jobDate: wednesday, startTime: '10:00' });
   assert.equal(res.status, 400, JSON.stringify(res.body));
+});
+
+test('a cancelled job leaves its slot free - a customer can book over it', async () => {
+  const thursday = futureDate(4);
+  const { jobId } = await seedWorkshopJob({
+    shopId: owner.shop.id, customerId: null, mechanicId: sam, jobDate: thursday, startTime: '10:00', endTime: '11:00',
+  });
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET booking_state = 'cancelled' WHERE id = ?").run(jobId));
+  const res = await book({ jobDate: thursday, startTime: '10:00' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+});
+
+test('a cancelled job leaves its slot free - staff can also book over it', async () => {
+  const friday = futureDate(5);
+  const { jobId } = await seedWorkshopJob({
+    shopId: owner.shop.id, customerId: null, mechanicId: sam, jobDate: friday, startTime: '10:00', endTime: '11:00',
+  });
+  await runWithShop(owner.shop.id, () => prepare("UPDATE workshop_jobs SET booking_state = 'cancelled' WHERE id = ?").run(jobId));
+  const res = await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-jobs', {
+    method: 'POST',
+    body: { title: 'Staff over cancelled slot', jobDate: friday, startTime: '10:00', endTime: '11:00', mechanicId: sam },
+  });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
 });

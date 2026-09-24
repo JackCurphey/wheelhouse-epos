@@ -2667,6 +2667,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
       `SELECT id FROM workshop_jobs
        WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''
        AND start_time < ? AND end_time > ? AND (?::int IS NULL OR id != ?::int)
+       AND booking_state IN (${LIVE_STATES_SQL})
        LIMIT 1`
     )
     .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
