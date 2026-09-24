@@ -114,6 +114,13 @@ test('an unassigned walk-in is split across the mechanics working that day', () 
   assert.equal(mech(d, 2).freeMinutes, 540 - 30);
 });
 
+test('an unassigned timed job also joins the shared queue, not just untimed ones', () => {
+  const d = day({ jobs: [job({ mechanicId: null, startTime: '10:00', endTime: '11:00' })] });
+  assert.equal(d.queueMinutes, 60);
+  assert.equal(mech(d, 1).freeMinutes, 540 - 30);
+  assert.equal(mech(d, 2).freeMinutes, 540 - 30);
+});
+
 test('a mechanic on leave takes no share of the walk-in queue', () => {
   const leave = { id: 12, mechanicId: 2, kind: 'dates', weekdays: null, startDate: MONDAY, endDate: MONDAY, startTime: null, endTime: null, reason: '' };
   const d = day({ blocks: [leave], jobs: [job({ mechanicId: null, plannedMinutes: 60 })] });
