@@ -1028,3 +1028,45 @@ undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
 `2026-09-04-booking-mode-and-downtime.md`. The eight taken 20 Sep are in the
 Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
 ````
+
+---
+
+## Verified 23 Sep on `feat/phase-4-intent-adapter` (Task 6)
+
+Every gate exit 0: 437/437 tests; typecheck; lint; build; RLS 30 protected, 2
+exempt; screen trace; registry, 9 files, no drift; atlas packaged, no errors,
+notes pass; browser 2/2. Superseded 24 Sep by 466/466 on
+`feat/book-server-1-services` (adds the book server piece 1 tests: migration
+022, category routes, service placement, public service list, screen trace).
+
+---
+
+## Component-test build step detail (`feat/phase-4-component-tests`)
+
+`pretest` builds `src/` to `.test-build/` (`vite.test.config.ts`); tests
+import it via `tests/helpers/dom.js`; use `render()`'s queries, not `screen`.
+A malformed id param is now 404 (`ID_PARAMS`); the print-agent route is
+`:printJobId`.
+
+---
+
+## Phases 0-3 detail trimmed from STATUS 24 Sep
+
+Screens branch on the 409's `code`, never the wording. The old `status` is
+still writable on `POST`/`PUT /api/workshop-jobs` until Phase 4's last task.
+Screen 21 shows decided quote lines as settled (#59).
+
+---
+
+## Phase 4 foundation endpoint gaps, trimmed from STATUS 24 Sep
+
+Screens 12, 28, 29, 39, 56-58 have no endpoint until P00b/P00c; 13, 59, 60
+wait on auth.
+
+---
+
+## 24 Sep gate list detail, trimmed from STATUS
+
+The 466/466 run's gates, all exit 0: npm test; typecheck; lint; build; RLS
+coverage; screen trace; registry validate; registry drift; browser tests
+(`npm run test:browser`, port 8091).
