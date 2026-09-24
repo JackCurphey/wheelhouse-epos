@@ -31,6 +31,16 @@ export function weekdayOf(date) {
   return new Date(`${date}T00:00:00Z`).getUTCDay();
 }
 
+// DATE_RE only checks the shape (e.g. 2026-02-30 matches it); this also
+// rejects a date that does not exist, by round-tripping through Date and
+// checking nothing shifted (an invalid day/month rolls over rather than
+// erroring).
+export function isRealDate(s) {
+  if (!DATE_RE.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
 export function dayCount(start, end) {
   return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY_MS) + 1;
 }
@@ -139,7 +149,7 @@ export function validateBlock(input) {
     }
     return { block: { mechanicId, kind, weekdays, startDate: null, endDate: null, startTime, endTime, reason } };
   }
-  if (!DATE_RE.test(input.startDate || '') || !DATE_RE.test(input.endDate || '')) {
+  if (!isRealDate(input.startDate || '') || !isRealDate(input.endDate || '')) {
     return { error: 'startDate and endDate must look like 2026-12-25' };
   }
   if (input.endDate < input.startDate) return { error: 'The end date must be on or after the start date' };

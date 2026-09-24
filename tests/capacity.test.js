@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {
   effectiveHours, widestHours, resolveOpeningHours, parseWeekdayHours, modeForDate,
   subtractIntervals, computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime,
-  legacyView, blockClashes, validateBlock, dayCount, datesBetween,
+  legacyView, blockClashes, validateBlock, dayCount, datesBetween, isRealDate,
 } from '../server/capacity.js';
 
 const MONDAY = '2026-09-07';
@@ -185,6 +185,14 @@ test('blocks are validated before they are stored', () => {
   assert.match(validateBlock({ kind: 'dates', mechanicId: null, startDate: '2026-12-25', endDate: '2026-12-26', startTime: '09:00', endTime: '12:00' }).error, /whole days/);
   assert.match(validateBlock({ kind: 'dates', mechanicId: 1, startDate: '2026-12-26', endDate: '2026-12-25' }).error, /on or after/);
   assert.match(validateBlock({ kind: 'monthly' }).error, /kind/);
+  assert.match(validateBlock({ kind: 'dates', mechanicId: 1, startDate: '2026-02-30', endDate: '2026-02-30' }).error, /2026-12-25/);
+});
+
+test('isRealDate refuses a date that looks right but does not exist', () => {
+  assert.equal(isRealDate('2026-02-28'), true);
+  assert.equal(isRealDate('2026-02-30'), false);
+  assert.equal(isRealDate('2026-13-01'), false);
+  assert.equal(isRealDate('not-a-date'), false);
 });
 
 test('date ranges are counted without building them first', () => {

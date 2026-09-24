@@ -12,7 +12,7 @@ import { readLegacyStatus, bookingRequest, custody, work } from './workshop/stat
 import { applyEvent } from './workshop/transitions.js';
 import { allocateReference } from './workshop/references.js';
 import {
-  DATE_RE, HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, dayCount, datesBetween, parseWeekdayHours,
+  HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, isRealDate, dayCount, datesBetween, parseWeekdayHours,
   effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
   computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
 } from './capacity.js';
@@ -3598,7 +3598,7 @@ route('GET', '/api/workshop-unavailability', async (req, res, params, query) => 
   const end = query.get('end');
   let rows;
   if (start || end) {
-    if (!DATE_RE.test(start || '') || !DATE_RE.test(end || '')) return badRequest(res, 'Give both start and end dates, or neither');
+    if (!isRealDate(start || '') || !isRealDate(end || '')) return badRequest(res, 'Give both start and end dates, or neither');
     rows = await db.prepare(
       `SELECT * FROM workshop_unavailability
        WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?) ORDER BY id`
@@ -3656,9 +3656,10 @@ route('DELETE', '/api/workshop-unavailability/:id', async (req, res, params) => 
 route('GET', '/api/workshop-capacity', async (req, res, params, query) => {
   const start = query.get('start');
   const end = query.get('end');
-  if (!DATE_RE.test(start || '') || !DATE_RE.test(end || '')) {
+  if (!isRealDate(start || '') || !isRealDate(end || '')) {
     return badRequest(res, 'Valid start and end dates are required');
   }
+  if (end < start) return badRequest(res, 'The end date must be on or after the start date');
   if (dayCount(start, end) > MAX_RANGE_DAYS) {
     return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
   }
@@ -4333,9 +4334,10 @@ async function loadCapacity(start, end) {
 route('GET', '/api/portal/:shopSlug/availability', async (req, res, params, query) => {
   const start = query.get('start');
   const end = query.get('end');
-  if (!DATE_RE.test(start || '') || !DATE_RE.test(end || '')) {
+  if (!isRealDate(start || '') || !isRealDate(end || '')) {
     return badRequest(res, 'Valid start and end dates are required');
   }
+  if (end < start) return badRequest(res, 'The end date must be on or after the start date');
   if (dayCount(start, end) > MAX_RANGE_DAYS) {
     return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
   }
@@ -4346,7 +4348,11 @@ route('GET', '/api/portal/:shopSlug/availability', async (req, res, params, quer
       return badRequest(res, 'minutes must be a whole number between 1 and 720');
     }
   }
-  const mechanicFilter = query.get('mechanicId') ? Number(query.get('mechanicId')) : null;
+  let mechanicFilter = null;
+  if (query.get('mechanicId')) {
+    mechanicFilter = Number(query.get('mechanicId'));
+    if (!Number.isInteger(mechanicFilter)) return badRequest(res, 'mechanicId must be a whole number');
+  }
   const keep = (x) => mechanicFilter === null || x.mechanicId === mechanicFilter;
 
   const { settings, jobs, days } = await loadCapacity(start, end);

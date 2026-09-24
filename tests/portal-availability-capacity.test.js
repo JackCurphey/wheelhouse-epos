@@ -124,3 +124,21 @@ test('a range over 62 days, or a bad minutes value, is refused', async () => {
   assert.equal((await availability({ start: MONDAY, end: MONDAY, minutes: 'lots' })).status, 400);
   assert.equal((await availability({ start: '2026-09-01', end: '2026-11-01' })).status, 200);
 });
+
+test('a date that looks right but does not exist is refused', async () => {
+  await freshShop();
+  assert.equal((await availability({ start: '2026-02-30', end: '2026-02-30' })).status, 400);
+  assert.equal((await availability({ start: MONDAY, end: '2026-13-01' })).status, 400);
+});
+
+test('an end date before the start date is refused', async () => {
+  await freshShop();
+  const res = await availability({ start: SATURDAY, end: MONDAY });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+});
+
+test('a non-numeric mechanicId is refused, not silently emptied', async () => {
+  await freshShop();
+  const res = await availability({ start: MONDAY, end: MONDAY, mechanicId: 'not-a-number' });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+});
