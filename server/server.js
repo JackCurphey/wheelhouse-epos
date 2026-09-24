@@ -541,6 +541,23 @@ function route(method, pattern, handler) {
   routes.push({ method, regex, paramNames, handler });
 }
 
+// URL params that name a row by its SERIAL id. A malformed one - "abc", "NaN",
+// "1.5", or past int4's 2147483647 - would reach Postgres and come back as a
+// 500 carrying the database's own message. It names no row, so it is a 404,
+// answered before any handler runs. Phase 4 screens build URLs from route
+// params, where a missing param arrives as "undefined".
+// :shopSlug and :deviceId are not ids and are not checked.
+const ID_PARAMS = new Set(['id', 'jobId', 'lineId', 'loginId']);
+const MAX_SERIAL = 2147483647;
+
+function idParamsWellFormed(params) {
+  for (const [name, value] of Object.entries(params)) {
+    if (!ID_PARAMS.has(name)) continue;
+    if (!/^[1-9][0-9]{0,9}$/.test(value) || Number(value) > MAX_SERIAL) return false;
+  }
+  return true;
+}
+
 // ---------- Auth ----------
 // Unlike every other route in this file, everything under /api/auth/ doesn't
 // run inside runWithShop (see the request handler at the bottom) - it only
@@ -3820,12 +3837,14 @@ route('POST', '/api/print-agents/:deviceId/jobs', async (req, res, params) => {
   sendJson(res, 201, { jobId });
 });
 
-route('POST', '/api/print-agents/jobs/:jobId/complete', async (req, res, params) => {
+// :printJobId, not :jobId - it is the hex id minted above, not a workshop
+// job's SERIAL id, and :jobId is checked as one (ID_PARAMS).
+route('POST', '/api/print-agents/jobs/:printJobId/complete', async (req, res, params) => {
   const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
   const body = await readJsonBody(req);
-  printJobStatus.set(params.jobId, { status: body.ok ? 'done' : 'error', error: body.error });
-  if (!body.ok) console.error(`Print job ${params.jobId} failed: ${body.error}`);
+  printJobStatus.set(params.printJobId, { status: body.ok ? 'done' : 'error', error: body.error });
+  if (!body.ok) console.error(`Print job ${params.printJobId} failed: ${body.error}`);
   sendJson(res, 200, { ok: true });
 });
 
@@ -4252,8 +4271,21 @@ async function serveStatic(req, res, pathname, baseDir) {
 // Vite writes into the bundle. Read per request rather than cached: the file is
 // small, no shop is live on this page yet, and a cache would serve a deleted
 // filename after a rebuild until the process restarts.
-async function workshopEntryTags() {
-  const manifest = JSON.parse(await readFile(VITE_MANIFEST, 'utf8'));
+//
+// public/dist is untracked, so a fresh checkout has no manifest until a build.
+// The request answers 500 either way; this error is what the server log shows,
+// so a missing file says what to run rather than a bare ENOENT.
+export async function workshopEntryTags(manifestPath = VITE_MANIFEST) {
+  let raw;
+  try {
+    raw = await readFile(manifestPath, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw new Error(`no staff app build at ${manifestPath} - run npm run build`, { cause: err });
+    }
+    throw err;
+  }
+  const manifest = JSON.parse(raw);
   const entry = manifest['src/staff/main.tsx'];
   if (!entry) throw new Error('vite manifest has no src/staff/main.tsx entry - run npm run build');
   const css = (entry.css || [])
@@ -4434,6 +4466,7 @@ const server = createServer(async (req, res) => {
       if (!match) continue;
       const params = {};
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+      if (!idParamsWellFormed(params)) return notFound(res);
 
       // signup/login/logout resolve their own shop (or need none at all, for
       // logout) and never touch RLS-protected tables directly, same as
@@ -4473,6 +4506,7 @@ const server = createServer(async (req, res) => {
       if (!match) continue;
       const params = {};
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+      if (!idParamsWellFormed(params)) return notFound(res);
 
       // Auth routes manage the session cookie themselves and never touch shop
       // data, so they run outside runWithShop. Every other /api/ route needs

@@ -23,6 +23,9 @@ _delete_me_test_artifacts/
 # Vite bundle - rebuilt from src/ on every deploy, never committed.
 public/dist/
 
+# Component-test build of src/, made by `pretest` (vite.test.config.ts).
+.test-build/
+
 # public/r/ (the built shadcn registry) is deliberately NOT ignored. The CI
 # drift gate diffs a fresh `shadcn build` against the committed output to
 # catch hand-edited components; with nothing committed there is nothing to

@@ -1015,3 +1015,16 @@ check of `/workshop` and deep links. #59 was re-run after its rebase (413/413)
 and green in CI on its head `ec15e75` before merging. Check a PR's CI against
 the run's own SHA, not the PR pane. The docker `app` image is from 31 Aug.
 ````
+
+## Moved from STATUS 2026-09-23 (session close, byte cap)
+
+Verbatim:
+
+````markdown
+## Decisions in force
+
+Each decision is a file under `docs/decisions/`; summary in `ARCHIVE.md`. Still
+undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
+`2026-09-04-booking-mode-and-downtime.md`. The eight taken 20 Sep are in the
+Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
+````

@@ -1,10 +1,10 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-23
-**Branch:** `feat/phase-4-intent-adapter`, PR open — Phase 4 Tasks 5-6.
-**Phases 0-3 merged** (#54-#59). **Phase 4 foundation built** (Tasks 1-6:
-#60, #61, this branch). **Next: the first journey plan** (4a, book).
-**Blocked on:** nothing. Mark's #50 review is against the superseded 84-screen
+**Branch:** `feat/phase-4-component-tests`, off `main` at `3f9ffe0`: the
+component-test build step, the malformed-id 404 fix, plan 4a (stopped). No PR
+yet. **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
+**Blocked on:** nothing; plan 4a's J1-J4 decided 23 Sep. Mark's #50 review is against the superseded 84-screen
 version; told 20 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -37,9 +37,9 @@ in `ARCHIVE.md`.
 - **Never delete the `cf-*` header names in `server/gateway.js`** — the strip
   list; removing it reopens a login brute-force bypass.
 - **Never hand-edit the atlas HTML**; `package.py` regenerates it.
-- **`npm run build` dirties `public/dist`**: gitignored, yet the manifest and
-  one CSS/JS pair are tracked (stale; Docker rebuilds). `git checkout --
-  public/dist`, then delete the new hashed pair.
+- **`public/dist` is untracked** (23 Sep; three stale files were committed
+  in `fa32b60`). A fresh checkout must `npm run build` before `/workshop`
+  serves or `tests/workshop-page.test.js` passes.
 - **`npm run docker:down` keeps the volume** — not a clean database. Use a
   scratch one to test migrations from empty.
 - **`npm test` hangs silently** without the compose Postgres up.
@@ -55,21 +55,21 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-0. **This branch's PR: check CI on its real head, then merge.**
-1. **Settle `.tsx` component tests** — `node --test` cannot load them: a
-   loader (a new dependency — ask Jack) or a build step. Then **write journey
-   plan 4a** to Task 7's contract in
-   `docs/superpowers/plans/2026-09-20-phase-4-screens.md`, whose tasks carry
-   "Executed" notes where the code overruled the plan. Before screens build
-   URLs from `:jobId`, fix the non-numeric-id 500 route-wide.
+0. **Open a PR for this branch.** Component tests: `pretest` builds `src/`
+   to `.test-build/` (`vite.test.config.ts`); tests import it via
+   `tests/helpers/dom.js`; use `render()`'s queries, not `screen`. A malformed
+   id param is now 404 (`ID_PARAMS`); the print-agent route is `:printJobId`.
+1. **Plan 4a (book) STOPPED at Task 7 item 3** - every book screen lacks an
+   endpoint. Decided 23 Sep (`docs/decisions/2026-09-23-book-journey-routing-
+   and-modes.md`): customer screens under **`/book`**; two modes
+   (appointments, drop-off days), both Release 1; deposits out; all four J2 gaps in. Next: a
+   server prerequisite plan for 4a's endpoints, then 4a's tasks.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
    the tag carries Code 128 as note 11 has it. No tag from our printer has been
    scanned — the atlas barcode stays a non-scanning specimen.
 4. **Jack: the message providers**, and what inbound replies do.
-4a. **Jack:** untrack stale `public/dist`? Five customer edge screens sit
-   under staff `/workshop` per the plan — keep, or `/book`?
 5. **Mark: the screen review** (#50), open since 17 Sep.
 6. **Split the Release 1 plan into issues** — row IDs, state changes, expected
    failure, test command, proof per package.
@@ -86,13 +86,6 @@ trial lapsed ~15 Sep**; re-entry needs Jack's login.
 matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
 **Jack's priority** column, empty on `main`. `plan/phase-4-screens` was
 deleted 23 Sep (its plans are on `main`, newer).
-
-## Decisions in force
-
-Each decision is a file under `docs/decisions/`; summary in `ARCHIVE.md`. Still
-undecided: `2026-09-04-job-type-before-diary.md` and the downtime model in
-`2026-09-04-booking-mode-and-downtime.md`. The eight taken 20 Sep are in the
-Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
 
 ## Phases 0-3
 
@@ -117,6 +110,7 @@ auth. **Not yet:** nav, styling, shop theme (Jack's calls), auth guard.
 
 ## Plan register
 
+Decisions: files under `docs/decisions/`; undecided ones in `ARCHIVE.md`.
 LOCKED: `2026-08-31-master-implementation-plan.md`. Current: the Release 1
 workshop plan and the Phase 4 screens plan; the phase plan summary is in
 `ARCHIVE.md`. Approved, unbuilt: WorkOS, design
