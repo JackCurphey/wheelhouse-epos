@@ -15,6 +15,7 @@ import {
   HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, isRealDate, dayCount, datesBetween, parseWeekdayHours,
   effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
   computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
+  settleModeChange, validateModeChange,
 } from './capacity.js';
 import {
   createRevision as createQuoteRevision,
@@ -3399,6 +3400,11 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
 
 // ---------- Workshop settings ----------
 
+// The server's date convention: UTC, as job_date comparisons elsewhere.
+function utcToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // A workshop_settings row in the capacity calculator's shape (server/capacity.js).
 function toCapacitySettings(row) {
   return {
@@ -3424,7 +3430,9 @@ function serializeWorkshopSettings(row) {
     // the usual opening/closing time above.
     openingHours: openingHoursFor(toCapacitySettings(row)),
     fullDayThresholdMinutes: row.full_day_threshold_minutes,
-    bookingMode: row.booking_mode,
+    // Today's mode: a scheduled change whose date has arrived counts as made,
+    // even before a save writes it into booking_mode.
+    ...settleModeChange(toCapacitySettings(row), utcToday()),
     dropoffWindowStart: row.dropoff_window_start,
     dropoffWindowEnd: row.dropoff_window_end,
     timedLeadMinutes: row.timed_lead_minutes,
@@ -3481,9 +3489,20 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
     }
   }
 
-  const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : existing.booking_mode;
+  // A scheduled change whose date has arrived is written into booking_mode
+  // now, so the next schedule never overwrites a change that already happened.
+  const settled = settleModeChange(toCapacitySettings(existing), utcToday());
+  const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : settled.bookingMode;
   if (bookingMode !== 'timed' && bookingMode !== 'dropoff') {
     return badRequest(res, "Booking mode must be either 'timed' or 'dropoff'");
+  }
+  let nextMode = { nextBookingMode: settled.nextBookingMode, nextBookingModeFrom: settled.nextBookingModeFrom };
+  if (body.nextBookingMode !== undefined || body.nextBookingModeFrom !== undefined) {
+    nextMode = validateModeChange(
+      { nextBookingMode: body.nextBookingMode ?? null, nextBookingModeFrom: body.nextBookingModeFrom ?? null },
+      { today: utcToday(), bookingMode },
+    );
+    if (nextMode.error) return badRequest(res, nextMode.error);
   }
 
   const dropoffWindowStart = body.dropoffWindowStart !== undefined
@@ -3518,10 +3537,12 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
 
   await db.prepare(
     `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, weekday_hours = ?,
-       full_day_threshold_minutes = ?, booking_mode = ?, dropoff_window_start = ?,
+       full_day_threshold_minutes = ?, booking_mode = ?, next_booking_mode = ?, next_booking_mode_from = ?,
+       dropoff_window_start = ?,
        dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
        show_prices_online = ?, updated_at = ? WHERE id = ?`
   ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
+        nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
         dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
         showPricesOnline, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
