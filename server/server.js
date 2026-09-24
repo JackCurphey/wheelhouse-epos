@@ -3528,6 +3528,79 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
+// ---------- Workshop service categories ----------
+// One level deep (Jack, 24 Sep): a category holds individual services, never
+// other categories. Full services carry no category. Deleting a category moves
+// its services to uncategorised (ON DELETE SET NULL in migration 022).
+// Spec: docs/superpowers/specs/2026-09-24-book-server-1-service-list-design.md
+
+function serializeServiceCategory(row) {
+  return { id: row.id, name: row.name, position: row.position };
+}
+
+// Shared by POST and PUT; `existing` is null on POST. An omitted field keeps
+// its stored value on PUT.
+function readCategoryBody(body, existing) {
+  const name = body.name !== undefined ? String(body.name).trim() : (existing ? existing.name : '');
+  if (!name) throw new ValidationError('A category needs a name');
+  let position = existing ? existing.position : 0;
+  if (body.position !== undefined) {
+    position = Number(body.position);
+    if (!Number.isInteger(position)) throw new ValidationError('Position must be a whole number');
+  }
+  return { name, position };
+}
+
+// screens: services, service-edit
+route('GET', '/api/workshop-service-categories', async (req, res) => {
+  const rows = await db.prepare('SELECT * FROM workshop_service_categories ORDER BY position, name').all();
+  sendJson(res, 200, rows.map(serializeServiceCategory));
+});
+
+// screens: services, service-edit
+route('POST', '/api/workshop-service-categories', async (req, res) => {
+  const body = await readJsonBody(req);
+  let fields;
+  try {
+    fields = readCategoryBody(body, null);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  const info = await db.prepare('INSERT INTO workshop_service_categories (name, position) VALUES (?, ?)')
+    .run(fields.name, fields.position);
+  const row = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(info.lastInsertRowid);
+  sendJson(res, 201, serializeServiceCategory(row));
+});
+
+// screens: services, service-edit
+route('PUT', '/api/workshop-service-categories/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Not found');
+  const body = await readJsonBody(req);
+  let fields;
+  try {
+    fields = readCategoryBody(body, existing);
+  } catch (err) {
+    if (err instanceof ValidationError) return badRequest(res, err.message);
+    throw err;
+  }
+  await db.prepare('UPDATE workshop_service_categories SET name = ?, position = ?, updated_at = ? WHERE id = ?')
+    .run(fields.name, fields.position, nowIso(), id);
+  const row = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
+  sendJson(res, 200, serializeServiceCategory(row));
+});
+
+// screens: services, service-edit
+route('DELETE', '/api/workshop-service-categories/:id', async (req, res, params) => {
+  const id = Number(params.id);
+  const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
+  if (!existing) return notFound(res, 'Not found');
+  await db.prepare('DELETE FROM workshop_service_categories WHERE id = ?').run(id);
+  sendJson(res, 200, { ok: true });
+});
+
 // ---------- Workshop services (the fixed-price labour catalogue) ----------
 
 export function serializeWorkshopService(row) {
