@@ -122,10 +122,18 @@ export function modeForDate(settings, date) {
 
 // ---- Blocks ----
 
+// A real whole number, from a number or a numeric string ('1') - never from
+// '', null, false or anything else Number() would otherwise coerce into 0.
+function toWholeNumber(v) {
+  if (typeof v === 'number') return Number.isInteger(v) ? v : NaN;
+  if (typeof v === 'string' && /^-?\d+$/.test(v)) return Number(v);
+  return NaN;
+}
+
 export function validateBlock(input) {
   const { kind } = input;
   if (kind !== 'weekly' && kind !== 'dates') return { error: "kind must be 'weekly' or 'dates'" };
-  const mechanicId = input.mechanicId === null || input.mechanicId === undefined ? null : Number(input.mechanicId);
+  const mechanicId = input.mechanicId === null || input.mechanicId === undefined ? null : toWholeNumber(input.mechanicId);
   if (mechanicId !== null && !Number.isInteger(mechanicId)) {
     return { error: 'mechanicId must be a whole number, or null for the whole shop' };
   }
@@ -143,7 +151,7 @@ export function validateBlock(input) {
     if (mechanicId === null) return { error: 'A weekly block needs a mechanic' };
     if (!startTime) return { error: 'A weekly block needs a start and end time' };
     const weekdays = Array.isArray(input.weekdays)
-      ? [...new Set(input.weekdays.map(Number))].sort((a, b) => a - b) : [];
+      ? [...new Set(input.weekdays.map(toWholeNumber))].sort((a, b) => a - b) : [];
     if (!weekdays.length || weekdays.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
       return { error: 'weekdays must be day numbers 0-6 (0 is Sunday)' };
     }

@@ -188,6 +188,14 @@ test('blocks are validated before they are stored', () => {
   assert.match(validateBlock({ kind: 'dates', mechanicId: 1, startDate: '2026-02-30', endDate: '2026-02-30' }).error, /2026-12-25/);
 });
 
+test('validateBlock does not coerce junk into 0 or Sunday', () => {
+  assert.match(validateBlock({ kind: 'weekly', mechanicId: '', weekdays: [1], startTime: '13:00', endTime: '13:30' }).error, /whole number/);
+  assert.match(validateBlock({ kind: 'weekly', mechanicId: 1, weekdays: [null], startTime: '13:00', endTime: '13:30' }).error, /0-6/);
+  assert.match(validateBlock({ kind: 'weekly', mechanicId: 1, weekdays: [''], startTime: '13:00', endTime: '13:30' }).error, /0-6/);
+  assert.match(validateBlock({ kind: 'weekly', mechanicId: 1, weekdays: [false], startTime: '13:00', endTime: '13:30' }).error, /0-6/);
+  assert.deepEqual(validateBlock({ kind: 'weekly', mechanicId: 1, weekdays: ['1'], startTime: '13:00', endTime: '13:30' }).block.weekdays, [1]);
+});
+
 test('isRealDate refuses a date that looks right but does not exist', () => {
   assert.equal(isRealDate('2026-02-28'), true);
   assert.equal(isRealDate('2026-02-30'), false);
