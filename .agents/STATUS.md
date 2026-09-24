@@ -23,7 +23,7 @@ screens**, 13 notes applied, asserted by `check-notes.mjs` (#54). The tag
 barcode is a declared **non-scanning specimen**; PDFs and board PNG **stale**.
 
 **Still no Lightspeed technical spec and no account.** LS-01 to LS-09 are
-"Pending", needing the first shop's series and an authorised test account.
+"Pending", needing the first shop's series and an authorised account.
 Recovery is outside Release 1; WorkOS auth and design remediation stay approved
 and unbuilt. The `prototype/` demo has **no week view** — the staff diary
 (`public/app.js:1496`; `buildWeekGridHtml` :2038, `renderWeekGrid` :2072,
@@ -48,7 +48,7 @@ OFF.** Detail: `ARCHIVE.md`.
 - **`public/index.html` loads `/app.js`, never `/dist/`** — before Task 1 the
   bundle loaded on no page. The React app is only `/workshop` and below.
 - **`npm run test:browser` builds and boots its own server on 8091**, never
-  reusing one: 8080 is the docker `app`, from a 31 Aug image.
+  reusing one: 8080 is the docker `app`, 31 Aug image.
 
 ## Read order for a fresh session
 
@@ -63,10 +63,12 @@ This file → **Plan register** below and the plans it names →
    per-(shop, date) advisory booking lock, the 409 `capacity` / 400
    shop-rule split, one live hold per live job (`syncJobHold`), walk-in
    queue lengths, and settle-on-read-and-write for a scheduled mode change.
-   Rulings made during build, not in the original spec: plan's Decision log,
+   Rulings, not in the original spec: plan's Decision log,
    `docs/superpowers/plans/2026-09-24-book-server-2b-booking-modes.md`,
-   decisions 1-11; spec updated to match. Its pull request waits on #65
-   merging first. **Next: piece 3** (the booking request). Plan 4a stays
+   decisions 1-11; spec updated to match. Follow-up: holds left stale by
+   pre-2b staff moves are not backfilled — a stale hold now answers 409
+   `capacity` (2b decision 11); a one-off realign is due if any shop has
+   live data. **Next: piece 3** (the booking request). Plan 4a stays
    STOPPED at Task 7 item 3 until piece 2 merges; routing decided 23 Sep
    (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer
    screens under `/book`, two modes, deposits out, all four J2 gaps in.
@@ -83,7 +85,7 @@ This file → **Plan register** below and the plans it names →
 **Carried open:** four, incl. three tenant-isolation gaps confirmed ABSENT on
 `main` 9 Sep. Three closed 20 Sep (Jack): atlas checks **run in CI**;
 `prototype/` and review-pack scripts stay **out** of CI; money stays a JS
-float, **totalled in SQL, never in JavaScript** — binds Phase 4. **Hubtiger
+float, **totalled in SQL, never JavaScript** — binds Phase 4. **Hubtiger
 trial lapsed ~15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
@@ -99,7 +101,7 @@ Seven state machines replace `workshop_jobs.status`, now a **generated
 column**; fifteen action endpoints are guarded by them and an optimistic
 `version`, **which every Phase 4 mutation must echo**. **A 409 carries `code:
 'stale' | 'illegal'`** (#60, Jack). **Quote line decisions are final** (#59).
-Full detail, including #58's four carried items: `ARCHIVE.md`.
+Detail, incl. #58's carried items: `ARCHIVE.md`.
 
 ## Phase 4 foundation (Tasks 1-6)
 
@@ -108,8 +110,7 @@ maps atlas id → URL; `SCREENS` (`app-shell.tsx`) registers built screens.
 Server calls go through `src/lib/api/client.ts` (`jobAction` needs
 `version`); identity only via `useSession`. `src/lib/adapters/intent.ts`
 records print/message intent, stores nothing, never claims delivery. **Not
-yet:** nav, styling, shop theme (Jack's calls), auth guard. Full endpoint gap
-list (screens without one, and why): `ARCHIVE.md`.
+yet:** nav, styling, shop theme, auth guard. Endpoint gap list: `ARCHIVE.md`.
 
 ## Plan register
 
@@ -135,9 +136,9 @@ All run in CI too, so a green PR means they passed.
 
 
 **Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day, piece 2b
-on `feat/book-server-2b-modes` (not yet pushed): every gate above exits 0,
-563/563. Prior verification (piece 2a 528/528, 23 Sep 437/437): `ARCHIVE.md`.
-Check a PR's CI against the run's own SHA, not the PR pane.
+on `feat/book-server-2b-modes` (not pushed): every gate above exits 0,
+563/563. Prior (2a 528/528, 23 Sep 437/437): `ARCHIVE.md`. Check a PR's CI
+against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
 without it the server uses 5432 not 5433 and every server-booting test fails
@@ -146,8 +147,8 @@ must `import '../server/load-env.js'` first.
 
 ## Open items needing Mark
 
-Eight. The screen review (#50) is urgent, needs re-pointing at the 82-screen
-atlas; the other seven in `ARCHIVE.md`.
+Eight. The screen review (#50) is urgent, re-point at the 82-screen atlas;
+the other seven in `ARCHIVE.md`.
 
 ## Keeping this file honest
 
