@@ -90,3 +90,29 @@ test('two unassigned timed jobs at the same start do not collide, because an una
   assert.equal(moved.status, 200, JSON.stringify(moved.body));
   assert.equal((await liveHolds(third.id))[0].start_time, '');
 });
+
+test('declining a reschedule request returns a live job to scheduled, and its hold survives', async () => {
+  const date = futureDate(6);
+  const job = (await createJob({ jobDate: date, mechanicId: sam, startTime: '10:00', endTime: '11:00' })).body;
+
+  const requested = await as(`/api/workshop-jobs/${job.id}/request-reschedule`, { method: 'POST', body: { version: 1 } });
+  assert.equal(requested.status, 200, JSON.stringify(requested.body));
+  assert.equal(requested.body.bookingState, 'reschedule_requested');
+
+  const declined = await as(`/api/workshop-jobs/${job.id}/decline`, { method: 'POST', body: { version: 2 } });
+  assert.equal(declined.status, 200, JSON.stringify(declined.body));
+  assert.equal(declined.body.bookingState, 'scheduled', 'declining a reschedule request returns the job to its prior booking, which is live');
+
+  assert.equal((await liveHolds(job.id)).length, 1, 'a live job must keep exactly one hold');
+});
+
+test('cancelling a job runs the release through syncJobHold, which leaves no held hold', async () => {
+  const date = futureDate(0);
+  const job = (await createJob({ jobDate: date, mechanicId: sam, startTime: '10:00', endTime: '11:00' })).body;
+  assert.equal((await liveHolds(job.id)).length, 1);
+
+  const cancelled = await as(`/api/workshop-jobs/${job.id}/cancel`, { method: 'POST', body: { version: 1 } });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+
+  assert.equal((await liveHolds(job.id)).length, 0, 'a cancelled job is no longer live and must hold nothing');
+});

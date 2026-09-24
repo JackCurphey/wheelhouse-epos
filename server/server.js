@@ -2950,19 +2950,16 @@ function jobActionRoute(action, machine, event) {
       return sendJson(res, 409, { error: result.message, code: result.code });
     }
     // A hold that outlives its booking is capacity the diary is still promising
-    // away. Released in the same request, not on a timer.
-    if (ENDS_A_BOOKING.has(event)) {
-      await db.prepare(
-        `UPDATE workshop_capacity_holds SET state = 'released'
-         WHERE workshop_job_id = ? AND state IN ('held', 'confirmed')`
-      ).run(id);
-    }
+    // away, released in the same request rather than on a timer - but a
+    // reschedule declined back onto a still-live booking (scheduled) must keep
+    // its hold. syncJobHold decides from the job's current state, not from
+    // which event fired, so it releases only when the job is no longer live
+    // and otherwise keeps (or realigns) the one hold a live job holds.
+    await syncJobHold(id);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
     sendJson(res, 200, serializeWorkshopJob(row));
   });
 }
-
-const ENDS_A_BOOKING = new Set(['cancel', 'decline', 'expire']);
 
 // ---------- Quotes ----------
 //
