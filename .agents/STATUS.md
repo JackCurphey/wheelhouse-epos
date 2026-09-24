@@ -1,16 +1,11 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-24
-**Branch:** `feat/book-server-1-services`, off `feat/phase-4-component-tests`
-(contains that branch's commits in full, which is itself off `main`): book
-server piece 1 - migration 022, service categories, staff category routes,
-services carrying kind/category/position, `GET
-/api/portal/:shopSlug/services`, screen-trace coverage. **No PR open yet, for
-this branch or for `feat/phase-4-component-tests`**; since this branch holds
-that one's commits, the order of the two PRs is pending the owner's call.
+**Branch:** `main` at `9291119`. #63 (component tests, malformed-id 404)
+and #64 (book server piece 1: migration 022, service categories, `GET
+/api/portal/:shopSlug/services`) merged 24 Sep; CI on `9291119` 471/471.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Blocked on:** nothing to build; two PRs waiting on the owner's call on
-order. Mark's #50 review is against the superseded 84-screen version; told 20
+**Next:** book server piece 2 (booking modes and capacity), brainstorm first. Mark's #50 review is against the superseded 84-screen version; told 20
 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -61,12 +56,7 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-0. **Open a PR for `feat/phase-4-component-tests`** (component-test build
-   step, malformed-id 404 fix). Detail: `ARCHIVE.md`.
-1. **Book server piece 1 built** (`feat/book-server-1-services`, 24 Sep):
-   migration 022, category routes, service kind/category/position,
-   `GET /api/portal/:shopSlug/services` (full, by category, uncategorised).
-   Every gate exit 0; 471/471 after final-review fixes. No PR open yet. **Next: piece 2**
+1. **Book server piece 1 merged** (#64). **Next: piece 2**
    (booking modes and capacity) - starts with its own brainstorm and spec.
    Plan 4a (book, the staff-side screens) stays STOPPED at Task 7 item 3
    until piece 2's endpoints land; routing decided 23 Sep
@@ -91,7 +81,7 @@ trial lapsed ~15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
 
-43 PRs merged (#1–#51), plus #54-#61; record in `ARCHIVE.md`. One branch still
+43 PRs merged (#1–#51), plus #54-#64; record in `ARCHIVE.md`. One branch still
 matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
 **Jack's priority** column, empty on `main`. `plan/phase-4-screens` was
 deleted 23 Sep (its plans are on `main`, newer).
@@ -137,8 +127,7 @@ npm run test:browser
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 24 Sep on `feat/book-server-1-services`, every gate exit 0:**
-471/471 tests. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
+**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
 Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
