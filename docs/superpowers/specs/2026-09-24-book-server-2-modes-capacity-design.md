@@ -235,13 +235,15 @@ named break, and the break is confirmed to have landed. At least:
 - an unassigned walk-in's minutes split across the mechanics working;
 - a moved booking's hold moves with it;
 - adding a block returns the bookings it clashes with;
-- every existing old-page test passes unchanged.
+- every existing old-page test passes unchanged, except two: 2b changes the
+  overlap and race refusals in `tests/portal-capacity-reserve.test.js` from
+  400 to 409 `capacity` (decision 2 of the 2b plan) - staff routes keep 400.
 
 ## Done when
 
 For each of 2a and 2b: every command in STATUS's canonical list exits 0 on
 the branch and in CI, each new test has been seen to fail against its break,
-and migration 023 applies on an empty database.
+and migration 023 (2a) and migration 024 (2b) each apply on an empty database.
 
 ## Not in scope
 
