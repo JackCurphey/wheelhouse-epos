@@ -5,8 +5,9 @@
 and #64 (book server piece 1: migration 022, service categories, `GET
 /api/portal/:shopSlug/services`) merged 24 Sep; CI on `9291119` 471/471.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Working branch:** `feat/book-server-2-modes` (piece 2 spec). Mark's #50 review is against the superseded 84-screen version; told 20
-Sep. Other open items are Jack's.
+**Working branch:** `feat/book-server-2-modes` - piece 2a built, not yet
+pushed or PR'd (see Immediate next actions). Mark's #50 review is against the
+superseded 84-screen version; told 20 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
@@ -56,12 +57,16 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Book server piece 1 merged** (#64). **Piece 2** (modes and capacity)
-   spec approved in design 24 Sep, awaiting Jack's review of the file:
-   `docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md`.
-   Built as 2a (hours, blocks, calculator) then 2b (both modes); plans next.
-   Plan 4a (book, the staff-side screens) stays STOPPED at Task 7 item 3
-   until piece 2's endpoints land; routing decided 23 Sep
+1. **Book server piece 2a built** (24 Sep) on `feat/book-server-2-modes`, not
+   yet pushed or PR'd: migration 023 (`weekday_hours`,
+   `workshop_unavailability`, `next_booking_mode*`), `server/capacity.js`
+   (the calculator), staff blocks routes, weekday hours, the customer
+   calendar and booking check on the calculator, and staff capacity view.
+   Schema changed from the approved spec during build (owner-approved,
+   `.superpowers/sdd/2026-09-24-book-server-2a-availability/decision-log.md`),
+   spec updated to match. **Next: piece 2b** (booking in either mode),
+   needing its own plan. Plan 4a stays STOPPED at Task 7 item 3 until piece
+   2's endpoints land; routing decided 23 Sep
    (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`):
    customer screens under `/book`, two modes, deposits out, all four J2
    gaps in.
@@ -129,7 +134,9 @@ npm run test:browser
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
+**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day, piece 2a
+on `feat/book-server-2-modes` (not yet pushed): every gate above exits 0,
+528/528. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
 Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;

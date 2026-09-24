@@ -10,6 +10,11 @@ here.
 (`2026-09-24-book-server-1-service-list-design.md:8`). **Built as two pull
 requests, 2a then 2b, each with its own plan.**
 
+**Changed during build (24 Sep):** the 2a schema section below was updated to
+match what 2a actually built - see the plan's decision log,
+`.superpowers/sdd/2026-09-24-book-server-2a-availability/decision-log.md`,
+decisions 1-5.
+
 ## Decisions this rests on
 
 Earlier, and not re-opened:
@@ -69,11 +74,12 @@ Decided by Jack in this session (24 Sep):
 
 ### Schema: migration `023_capacity_blocks.sql` (one file)
 
-- **`workshop_opening_hours`**: `shop_id` (default from
-  `app.current_shop_id`), `weekday SMALLINT` 0-6 (0 = Sunday, as
-  `opening_days`), `open_time`, `close_time` (`close_time > open_time`),
-  unique `(shop_id, weekday)`. No row = closed that day. **Backfilled** from
-  each shop's `opening_time`, `closing_time`, `opening_days`.
+- **`workshop_settings.weekday_hours`**: `TEXT NOT NULL DEFAULT '{}'`, JSON
+  keyed by weekday (0 = Sunday, as `opening_days`), holding **only the days
+  whose hours differ** from `opening_time`/`closing_time` -
+  `{"6": {"open": "09:00", "close": "17:00"}}`. `'{}'` means every open day
+  uses the usual hours, which is today's behaviour, so **no backfill** is
+  needed. `opening_days` still says which days are open.
 - **`workshop_unavailability`**: `id`, `shop_id`, `employee_id` (NULL =
   shop-wide), `kind TEXT CHECK IN ('weekly','dates')`, `weekdays SMALLINT[]`
   (weekly only), `start_date`, `end_date` (dates only, `end_date >=
@@ -81,10 +87,13 @@ Decided by Jack in this session (24 Sep):
   timestamps. Checks: weekly rows have a mechanic and times; shop-wide rows are
   `dates` and all-day.
 - **`workshop_settings`** gains `next_booking_mode` (NULL or `timed`/`dropoff`)
-  and `next_booking_mode_from DATE`, both NULL or both set. (Written by 2b;
-  added here so the schema is one migration.)
-- `full_day_threshold_minutes` default changes to 0 (`ALTER ... SET DEFAULT`;
-  existing rows untouched).
+  and `next_booking_mode_from TEXT` (format-checked `YYYY-MM-DD`, matching
+  `job_date` - `pg` would otherwise hand back JavaScript `Date` objects that
+  compare wrongly against string dates), both NULL or both set. (Written by
+  2b; added here so the schema is one migration.)
+- `full_day_threshold_minutes` stays default 120 at the column; `createShop`
+  inserts 0 for every new shop, so existing tests that rely on the column
+  default keep working. Existing shops keep theirs.
 - Both new tables: ENABLE and FORCE row-level security with a
   `*_shop_isolation` policy, as `014`/`022`.
 
@@ -130,8 +139,11 @@ the date (`next_booking_mode` if `date >= next_booking_mode_from`, else
 
 - **Opening hours**: `GET/PUT /api/workshop-settings` gains `openingHours:
   [{weekday, open, close}]`. The legacy `openingTime`/`closingTime`/
-  `openingDays` still work: saving them rewrites every open weekday with those
-  hours.
+  `openingDays` still work: saving them changes the usual hours; a day with
+  its own hours (in `weekday_hours`) keeps them, since the old page sends
+  opening time on every save (including a save that only changes the
+  reserve), and rewriting every open weekday would silently delete a day's
+  own shorter hours.
 - **Blocks**: `GET /api/workshop-unavailability?start&end`, `POST`, `PUT /:id`,
   `DELETE /:id`. `POST`/`PUT` return `{block, clashes: [...]}` - live bookings
   the block overlaps.
@@ -146,6 +158,11 @@ the date (`next_booking_mode` if `date >= next_booking_mode_from`, else
 End before start; weekly block without a mechanic or times; shop-wide block
 that is not whole days; a mechanic from another shop (404, no disclosure);
 weekday outside 0-6; opening close not after open.
+
+Note: the customer booking POST already uses the calculator in 2a (not only
+from 2b) - without it, 2a would show lunch as unavailable on the calendar
+while the booking route still accepted a booking into it. 2b still owns
+drop-off bookings, the lock, and the `capacity` code.
 
 ## 2b - booking in either mode
 
