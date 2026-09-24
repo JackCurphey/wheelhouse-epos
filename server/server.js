@@ -2541,11 +2541,14 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
 // race, which is not the same thing as being wrong.
-// A job's capacity hold follows the job. One live hold per live job: timed at
-// its start with its length, untimed (drop-off, a walk-in) with its planned
-// minutes and no start. A job that stops being live has its hold released.
-// Called inside the same transaction as every job write, so a hold never
-// describes a job that has since moved.
+// A job's capacity hold follows the job. One live hold per live job: an
+// assigned job holds a timed slot at its start with its length; an unassigned
+// job (no mechanic - drop-off, a walk-in, or a timed job nobody has taken yet)
+// holds no slot, so its hold is untimed and carries only its length - the
+// shared queue counts it, never a slot on the grid. A timed job's length
+// still comes from its times regardless of assignment. A job that stops being
+// live has its hold released. Called inside createWorkshopJob's transaction;
+// the booking lock (Task 5) wraps the other writes.
 async function syncJobHold(jobId) {
   const job = await db.prepare(
     'SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes, booking_state FROM workshop_jobs WHERE id = ?'
@@ -2561,6 +2564,8 @@ async function syncJobHold(jobId) {
   const minutes = startTime
     ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(startTime))
     : (job.planned_minutes || 0);
+  // An unassigned job's hold is untimed - the shared queue is counted, never slotted.
+  const holdStartTime = job.mechanic_id ? startTime : '';
   const hold = await db.prepare(
     `SELECT id FROM workshop_capacity_holds
      WHERE workshop_job_id = ? AND state IN ('held', 'confirmed') ORDER BY id LIMIT 1`
@@ -2568,12 +2573,12 @@ async function syncJobHold(jobId) {
   if (hold) {
     await db.prepare(
       'UPDATE workshop_capacity_holds SET job_date = ?, start_time = ?, mechanic_id = ?, minutes = ? WHERE id = ?'
-    ).run(job.job_date, startTime, job.mechanic_id, minutes, hold.id);
+    ).run(job.job_date, holdStartTime, job.mechanic_id, minutes, hold.id);
   } else {
     await db.prepare(
       `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
        VALUES (?, ?, ?, ?, ?, 'held')`
-    ).run(jobId, job.job_date, startTime, job.mechanic_id, minutes);
+    ).run(jobId, job.job_date, holdStartTime, job.mechanic_id, minutes);
   }
 }
 

@@ -77,3 +77,16 @@ test('a planned length must be whole minutes between 1 and 720', async () => {
   assert.equal((await createJob({ plannedMinutes: 0 })).status, 400);
   assert.equal((await createJob({ plannedMinutes: 'an hour' })).status, 400);
 });
+
+test('two unassigned timed jobs at the same start do not collide, because an unassigned hold is untimed', async () => {
+  const date = futureDate(5);
+  const first = await createJob({ jobDate: date, startTime: '10:00', endTime: '11:00' });
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  const second = await createJob({ jobDate: date, startTime: '10:00', endTime: '11:00' });
+  assert.equal(second.status, 201, JSON.stringify(second.body));
+
+  const third = (await createJob({ jobDate: date, startTime: '14:00', endTime: '15:00' })).body;
+  const moved = await as(`/api/workshop-jobs/${third.id}`, { method: 'PUT', body: { startTime: '10:00', endTime: '11:00' } });
+  assert.equal(moved.status, 200, JSON.stringify(moved.body));
+  assert.equal((await liveHolds(third.id))[0].start_time, '');
+});
