@@ -1,17 +1,13 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-24
-**Branch:** `feat/book-server-1-services`, off `feat/phase-4-component-tests`
-(contains that branch's commits in full, which is itself off `main`): book
-server piece 1 - migration 022, service categories, staff category routes,
-services carrying kind/category/position, `GET
-/api/portal/:shopSlug/services`, screen-trace coverage. **No PR open yet, for
-this branch or for `feat/phase-4-component-tests`**; since this branch holds
-that one's commits, the order of the two PRs is pending the owner's call.
+**Branch:** `main` at `9291119`. #63 (component tests, malformed-id 404)
+and #64 (book server piece 1: migration 022, service categories, `GET
+/api/portal/:shopSlug/services`) merged 24 Sep; CI on `9291119` 471/471.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Blocked on:** nothing to build; two PRs waiting on the owner's call on
-order. Mark's #50 review is against the superseded 84-screen version; told 20
-Sep. Other open items are Jack's.
+**Working branch:** `feat/book-server-2-modes` - piece 2a built, not yet
+pushed or PR'd (see Immediate next actions). Mark's #50 review is against the
+superseded 84-screen version; told 20 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
@@ -61,15 +57,17 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-0. **Open a PR for `feat/phase-4-component-tests`** (component-test build
-   step, malformed-id 404 fix). Detail: `ARCHIVE.md`.
-1. **Book server piece 1 built** (`feat/book-server-1-services`, 24 Sep):
-   migration 022, category routes, service kind/category/position,
-   `GET /api/portal/:shopSlug/services` (full, by category, uncategorised).
-   Every gate exit 0; 471/471 after final-review fixes. No PR open yet. **Next: piece 2**
-   (booking modes and capacity) - starts with its own brainstorm and spec.
-   Plan 4a (book, the staff-side screens) stays STOPPED at Task 7 item 3
-   until piece 2's endpoints land; routing decided 23 Sep
+1. **Book server piece 2a built** (24 Sep) on `feat/book-server-2-modes`, not
+   yet pushed or PR'd: migration 023 (`weekday_hours`,
+   `workshop_unavailability`, `next_booking_mode*`), `server/capacity.js`
+   (the calculator), staff blocks routes, weekday hours, the customer
+   calendar and booking check on the calculator, and staff capacity view.
+   Schema changed from the approved spec during build (owner-approved, see
+   the plan's Decision log,
+   `docs/superpowers/plans/2026-09-24-book-server-2a-availability.md`),
+   spec updated to match. **Next: piece 2b** (booking in either mode),
+   needing its own plan. Plan 4a stays STOPPED at Task 7 item 3 until piece
+   2's endpoints land; routing decided 23 Sep
    (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`):
    customer screens under `/book`, two modes, deposits out, all four J2
    gaps in.
@@ -91,7 +89,7 @@ trial lapsed ~15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
 
-43 PRs merged (#1–#51), plus #54-#61; record in `ARCHIVE.md`. One branch still
+43 PRs merged (#1–#51), plus #54-#64; record in `ARCHIVE.md`. One branch still
 matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
 **Jack's priority** column, empty on `main`. `plan/phase-4-screens` was
 deleted 23 Sep (its plans are on `main`, newer).
@@ -137,8 +135,9 @@ npm run test:browser
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 24 Sep on `feat/book-server-1-services`, every gate exit 0:**
-471/471 tests. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
+**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day, piece 2a
+on `feat/book-server-2-modes` (not yet pushed): every gate above exits 0,
+528/528. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
 Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;

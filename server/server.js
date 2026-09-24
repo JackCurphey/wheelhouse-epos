@@ -12,6 +12,11 @@ import { readLegacyStatus, bookingRequest, custody, work } from './workshop/stat
 import { applyEvent } from './workshop/transitions.js';
 import { allocateReference } from './workshop/references.js';
 import {
+  HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, isRealDate, dayCount, datesBetween, parseWeekdayHours,
+  effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
+  computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
+} from './capacity.js';
+import {
   createRevision as createQuoteRevision,
   send as sendQuoteForApproval,
   recordLineDecision,
@@ -2479,49 +2484,6 @@ function timeToMinutes(timeStr) {
   return h * 60 + m;
 }
 
-// Merges overlapping/adjacent [start,end) minute intervals before summing
-// them, so two jobs that overlap (or just touch) don't get their shared
-// time counted twice - that would understate how much of the day is
-// actually still free.
-function mergedMinutes(intervals) {
-  if (!intervals.length) return 0;
-  const sorted = intervals.slice().sort((a, b) => a[0] - b[0]);
-  let total = 0;
-  let [curStart, curEnd] = sorted[0];
-  for (let i = 1; i < sorted.length; i++) {
-    const [s, e] = sorted[i];
-    if (s <= curEnd) {
-      curEnd = Math.max(curEnd, e);
-    } else {
-      total += curEnd - curStart;
-      [curStart, curEnd] = [s, e];
-    }
-  }
-  total += curEnd - curStart;
-  return total;
-}
-
-// How many minutes of a mechanic's working day (clamped to opening/closing
-// time) are still free, given every job already on the books for that
-// date - the basis for both the portal's "this day is full" display and
-// the authoritative reject-on-booking check below.
-async function mechanicFreeMinutes(mechanicId, jobDate, openingTime, closingTime) {
-  const openMin = timeToMinutes(openingTime);
-  const closeMin = timeToMinutes(closingTime);
-  const rows = await db
-    .prepare(
-      `SELECT start_time, end_time FROM workshop_jobs
-       WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''`
-    )
-    .all(mechanicId, jobDate);
-  const intervals = rows.map((r) => [
-    Math.max(openMin, timeToMinutes(r.start_time)),
-    Math.min(closeMin, timeToMinutes(r.end_time)),
-  ]);
-  const busy = mergedMinutes(intervals);
-  return Math.max(0, closeMin - openMin - busy);
-}
-
 // A job with a start time always gets an end time - defaulting to +1 hour
 // keeps every scheduled job a draggable/resizable block on the diary grid.
 function resolveJobTimes(startTime, endTimeInput) {
@@ -2671,8 +2633,10 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   // slot, so there is nothing to check it against.
   if (!startTime || !endTime) return null;
 
-  if (startTime < settings.opening_time || endTime > settings.closing_time) {
-    return `That job doesn't fit in the shop's opening hours (${settings.opening_time}\u2013${settings.closing_time}) - please choose an earlier time or a shorter job type.`;
+  // The day's own hours - Saturday may close earlier than the week.
+  const hours = effectiveHours(toCapacitySettings(settings), dayOfWeek);
+  if (startTime < hours.open || endTime > hours.close) {
+    return `That job doesn't fit in the shop's opening hours (${hours.open}\u2013${hours.close}) - please choose an earlier time or a shorter job type.`;
   }
 
   if (!mechanicId) return null;
@@ -2681,6 +2645,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
       `SELECT id FROM workshop_jobs
        WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''
        AND start_time < ? AND end_time > ? AND (?::int IS NULL OR id != ?::int)
+       AND booking_state IN (${LIVE_STATES_SQL})
        LIMIT 1`
     )
     .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
@@ -3434,11 +3399,30 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
 
 // ---------- Workshop settings ----------
 
+// A workshop_settings row in the capacity calculator's shape (server/capacity.js).
+function toCapacitySettings(row) {
+  return {
+    openingTime: row.opening_time,
+    closingTime: row.closing_time,
+    openingDays: parseWorkingDays(row.opening_days),
+    weekdayHours: parseWeekdayHours(row.weekday_hours),
+    reserveMinutes: row.full_day_threshold_minutes,
+    bookingMode: row.booking_mode,
+    nextBookingMode: row.next_booking_mode ?? null,
+    nextBookingModeFrom: row.next_booking_mode_from ?? null,
+    dropoffWindowStart: row.dropoff_window_start,
+    dropoffWindowEnd: row.dropoff_window_end,
+  };
+}
+
 function serializeWorkshopSettings(row) {
   return {
     openingTime: row.opening_time,
     closingTime: row.closing_time,
     openingDays: parseWorkingDays(row.opening_days),
+    // Every open day with its hours - its own where the shop set them, else
+    // the usual opening/closing time above.
+    openingHours: openingHoursFor(toCapacitySettings(row)),
     fullDayThresholdMinutes: row.full_day_threshold_minutes,
     bookingMode: row.booking_mode,
     dropoffWindowStart: row.dropoff_window_start,
@@ -3452,16 +3436,16 @@ function serializeWorkshopSettings(row) {
   };
 }
 
-const HOUR_RE = /^([01]\d|2[0-3]):00$/;
-
 // One row per shop (RLS scopes it), rather than the old global single-row
 // (id=1) singleton - a shop's id is assigned by Postgres, not fixed at 1, so
 // lookups just take whichever single row RLS makes visible.
+// screens: booking-settings, hours
 route('GET', '/api/workshop-settings', async (req, res) => {
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
+// screens: booking-settings, hours
 route('PUT', '/api/workshop-settings', async (req, res) => {
   const existing = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   const body = await readJsonBody(req);
@@ -3473,6 +3457,22 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   if (closingTime <= openingTime) return badRequest(res, 'Closing time must be after opening time');
   const openingDays = resolveWorkingDays(body.openingDays, existing.opening_days);
   if (openingDays === null) return badRequest(res, 'openingDays must be an array of day numbers (0-6)');
+  // openingHours sets which days are open and each day's hours at once. The
+  // old fields still work: openingTime/closingTime move the usual hours, and a
+  // day with its own hours keeps them, so the old settings page (which sends
+  // openingTime on every save) never wipes a shorter Saturday.
+  let openingDaysJson = openingDays;
+  let weekdayHours = parseWeekdayHours(existing.weekday_hours);
+  if (body.openingHours !== undefined) {
+    if (body.openingDays !== undefined) return badRequest(res, 'Send openingHours or openingDays, not both');
+    const resolved = resolveOpeningHours(body.openingHours, { openingTime, closingTime });
+    if (resolved.error) return badRequest(res, resolved.error);
+    openingDaysJson = JSON.stringify(resolved.openingDays);
+    weekdayHours = resolved.weekdayHours;
+  }
+  // A closed day keeps no hours of its own, so re-opening it starts from the usual ones.
+  const openNow = JSON.parse(openingDaysJson);
+  weekdayHours = Object.fromEntries(Object.entries(weekdayHours).filter(([w]) => openNow.includes(Number(w))));
   let fullDayThresholdMinutes = existing.full_day_threshold_minutes;
   if (body.fullDayThresholdMinutes !== undefined) {
     fullDayThresholdMinutes = Number(body.fullDayThresholdMinutes);
@@ -3517,15 +3517,175 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
     ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
 
   await db.prepare(
-    `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?,
+    `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, weekday_hours = ?,
        full_day_threshold_minutes = ?, booking_mode = ?, dropoff_window_start = ?,
        dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
        show_prices_online = ?, updated_at = ? WHERE id = ?`
-  ).run(openingTime, closingTime, openingDays, fullDayThresholdMinutes, bookingMode,
+  ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
         dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
         showPricesOnline, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
+});
+
+// ---------- Workshop unavailability (lunch, leave, closures) ----------
+// Blocks take time away from what customers can book. They never refuse or
+// move a staff booking (4 Sep decision §7.7): adding one reports the live
+// bookings it clashes with, and staff decide what to do.
+// Spec: docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md
+
+const LIVE_STATES_SQL = LIVE_BOOKING_STATES.map((s) => `'${s}'`).join(', ');
+
+function toBlock(row) {
+  return {
+    id: row.id,
+    mechanicId: row.employee_id ?? null,
+    kind: row.kind,
+    weekdays: row.weekdays ? JSON.parse(row.weekdays) : null,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    reason: row.reason,
+  };
+}
+
+function toCapacityJob(row) {
+  return {
+    id: row.id,
+    mechanicId: row.mechanic_id ?? null,
+    jobDate: row.job_date,
+    startTime: row.start_time || '',
+    endTime: row.end_time || '',
+    plannedMinutes: row.planned_minutes ?? null,
+  };
+}
+
+// Live bookings a block overlaps, from today on - a block's past is history.
+async function clashesFor(block) {
+  const today = new Date().toISOString().slice(0, 10);
+  const from = block.kind === 'dates' && block.startDate > today ? block.startDate : today;
+  let sql = `SELECT id, reference, title, mechanic_id, job_date, start_time, end_time, planned_minutes
+    FROM workshop_jobs WHERE job_date >= ? AND booking_state IN (${LIVE_STATES_SQL})`;
+  const args = [from];
+  if (block.kind === 'dates') {
+    sql += ' AND job_date <= ?';
+    args.push(block.endDate);
+  }
+  const rows = await db.prepare(`${sql} ORDER BY job_date, start_time`).all(...args);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return blockClashes(block, rows.map(toCapacityJob)).map((j) => ({
+    id: j.id,
+    reference: byId.get(j.id).reference,
+    title: byId.get(j.id).title,
+    mechanicId: j.mechanicId,
+    jobDate: j.jobDate,
+    startTime: j.startTime,
+    endTime: j.endTime,
+  }));
+}
+
+// Through the shop-scoped db: a foreign key check bypasses row-level security,
+// so another shop's mechanic id must be refused here, not by the constraint.
+async function blockMechanicExists(mechanicId) {
+  if (mechanicId === null) return true;
+  return !!(await db.prepare('SELECT id FROM employees WHERE id = ? AND is_mechanic = 1').get(mechanicId));
+}
+
+// screens: hours, diary, week, month
+route('GET', '/api/workshop-unavailability', async (req, res, params, query) => {
+  const start = query.get('start');
+  const end = query.get('end');
+  let rows;
+  if (start || end) {
+    if (!isRealDate(start || '') || !isRealDate(end || '')) return badRequest(res, 'Give both start and end dates, or neither');
+    rows = await db.prepare(
+      `SELECT * FROM workshop_unavailability
+       WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?) ORDER BY id`
+    ).all(end, start);
+  } else {
+    rows = await db.prepare('SELECT * FROM workshop_unavailability ORDER BY id').all();
+  }
+  sendJson(res, 200, { blocks: rows.map(toBlock) });
+});
+
+// screens: hours
+route('POST', '/api/workshop-unavailability', async (req, res) => {
+  const checked = validateBlock(await readJsonBody(req));
+  if (checked.error) return badRequest(res, checked.error);
+  const b = checked.block;
+  if (!(await blockMechanicExists(b.mechanicId))) return notFound(res, 'Mechanic not found');
+  const { lastInsertRowid } = await db.prepare(
+    `INSERT INTO workshop_unavailability (employee_id, kind, weekdays, start_date, end_date, start_time, end_time, reason)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
+        b.startDate, b.endDate, b.startTime, b.endTime, b.reason);
+  const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(lastInsertRowid));
+  sendJson(res, 201, { block, clashes: await clashesFor(block) });
+});
+
+// screens: hours
+route('PUT', '/api/workshop-unavailability/:id', async (req, res, params) => {
+  const row = await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
+  if (!row) return notFound(res, 'Block not found');
+  const body = await readJsonBody(req);
+  const checked = validateBlock({ ...toBlock(row), ...body });
+  if (checked.error) return badRequest(res, checked.error);
+  const b = checked.block;
+  if (!(await blockMechanicExists(b.mechanicId))) return notFound(res, 'Mechanic not found');
+  await db.prepare(
+    `UPDATE workshop_unavailability SET employee_id = ?, kind = ?, weekdays = ?, start_date = ?, end_date = ?,
+       start_time = ?, end_time = ?, reason = ?, updated_at = now() WHERE id = ?`
+  ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
+        b.startDate, b.endDate, b.startTime, b.endTime, b.reason, row.id);
+  const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(row.id));
+  sendJson(res, 200, { block, clashes: await clashesFor(block) });
+});
+
+// screens: hours
+route('DELETE', '/api/workshop-unavailability/:id', async (req, res, params) => {
+  const row = await db.prepare('SELECT id FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
+  if (!row) return notFound(res, 'Block not found');
+  await db.prepare('DELETE FROM workshop_unavailability WHERE id = ?').run(row.id);
+  sendJson(res, 200, { ok: true });
+});
+
+// The calculator's full answer for staff: reasons, clashes and minutes
+// included. Read by the diary, queue, week, month and hours screens.
+// screens: diary, queue, week, month, hours
+route('GET', '/api/workshop-capacity', async (req, res, params, query) => {
+  const start = query.get('start');
+  const end = query.get('end');
+  if (!isRealDate(start || '') || !isRealDate(end || '')) {
+    return badRequest(res, 'Valid start and end dates are required');
+  }
+  if (end < start) return badRequest(res, 'The end date must be on or after the start date');
+  if (dayCount(start, end) > MAX_RANGE_DAYS) {
+    return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
+  }
+  const { blocks, jobs, days } = await loadCapacity(start, end);
+  const range = ([s, e]) => ({ start: toHHMM(s), end: toHHMM(e) });
+  sendJson(res, 200, {
+    days: days.map((day) => {
+      const dayJobs = jobs.filter((j) => j.jobDate === day.date);
+      const clashes = blocks.flatMap((b) => blockClashes(b, dayJobs).map((j) => ({ jobId: j.id, blockId: b.id })));
+      return {
+        date: day.date,
+        mode: day.mode,
+        shopClosed: day.shopClosed,
+        closures: day.shopBlocks,
+        queueMinutes: day.queueMinutes,
+        clashes,
+        mechanics: day.mechanics.map((m) => ({
+          mechanicId: m.mechanicId,
+          working: m.working,
+          freeMinutes: Math.max(0, Math.floor(m.freeMinutes)),
+          freeWindows: m.freeWindows.map(range),
+          blocks: m.blocks,
+        })),
+      };
+    }),
+  });
 });
 
 // ---------- Workshop service categories ----------
@@ -4103,8 +4263,10 @@ route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, {
     mechanics: mechanics.map((m) => ({ id: m.id, name: m.name, workingDays: parseWorkingDays(m.working_days) })),
-    openingTime: settings.opening_time,
-    closingTime: settings.closing_time,
+    // The widest day, so the old booking page's grid covers every open hour;
+    // a shorter day comes back from /availability as busy time.
+    openingTime: widestHours(toCapacitySettings(settings)).open,
+    closingTime: widestHours(toCapacitySettings(settings)).close,
     openingDays: parseWorkingDays(settings.opening_days),
     jobTypes: Object.entries(PORTAL_JOB_TYPES).map(([value, t]) => ({ value, label: t.label, minutes: t.minutes })),
   });
@@ -4143,56 +4305,77 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res) => {
   });
 });
 
-// Public. Returns only mechanic/date/time for whatever's already booked -
-// deliberately never reuses serializeWorkshopJob (title/customer/notes),
-// since that's exactly the private detail this endpoint must not leak.
-// Every job counts as busy regardless of status, including 'pending', so
-// two customers can't unknowingly grab the same slot.
+// Everything the capacity calculator needs for a date range, read inside the
+// request's shop context. Every active mechanic, even when a caller wants one:
+// the walk-in queue is split across everyone working.
+async function loadCapacity(start, end) {
+  const settings = toCapacitySettings(await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get());
+  const mechanics = (await db.prepare(
+    'SELECT id, working_days FROM employees WHERE is_mechanic = 1 AND active = 1 ORDER BY name'
+  ).all()).map((m) => ({ id: m.id, workingDays: parseWorkingDays(m.working_days) }));
+  const blocks = (await db.prepare(
+    `SELECT * FROM workshop_unavailability WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?)`
+  ).all(end, start)).map(toBlock);
+  const jobs = (await db.prepare(
+    `SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes FROM workshop_jobs
+     WHERE job_date >= ? AND job_date <= ? AND booking_state IN (${LIVE_STATES_SQL})`
+  ).all(start, end)).map(toCapacityJob);
+  const days = computeCapacity({ settings, mechanics, blocks, jobs, dates: datesBetween(start, end) });
+  return { settings, blocks, jobs, days };
+}
+
+// Public: the customer calendar. `busy` and `fullDays` keep the shape the old
+// booking page reads (public-portal/portal.js:263) - blocks, closures and a
+// shorter day come back as busy time with no reason. With `minutes`, `days`
+// adds what the new screens need: the mode per date, and per mechanic the
+// start times (timed) or whether the job fits (drop-off). Never returned: a
+// block's reason, other customers' jobs, minute totals.
+// screens: date, appointment, full
 route('GET', '/api/portal/:shopSlug/availability', async (req, res, params, query) => {
   const start = query.get('start');
   const end = query.get('end');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(start || '') || !/^\d{4}-\d{2}-\d{2}$/.test(end || '')) {
+  if (!isRealDate(start || '') || !isRealDate(end || '')) {
     return badRequest(res, 'Valid start and end dates are required');
   }
-  let sql = `SELECT mechanic_id, job_date, start_time, end_time FROM workshop_jobs
-    WHERE job_date >= ? AND job_date <= ? AND start_time IS NOT NULL AND start_time != ''`;
-  const args = [start, end];
-  const mechanicId = query.get('mechanicId');
-  if (mechanicId) {
-    sql += ' AND mechanic_id = ?';
-    args.push(Number(mechanicId));
+  if (end < start) return badRequest(res, 'The end date must be on or after the start date');
+  if (dayCount(start, end) > MAX_RANGE_DAYS) {
+    return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
   }
-  sql += ' ORDER BY job_date, start_time';
-  const rows = await db.prepare(sql).all(...args);
+  let minutes = null;
+  if (query.get('minutes') !== null) {
+    minutes = Number(query.get('minutes'));
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 720) {
+      return badRequest(res, 'minutes must be a whole number between 1 and 720');
+    }
+  }
+  let mechanicFilter = null;
+  if (query.get('mechanicId')) {
+    mechanicFilter = Number(query.get('mechanicId'));
+    if (!Number.isInteger(mechanicFilter)) return badRequest(res, 'mechanicId must be a whole number');
+  }
+  const keep = (x) => mechanicFilter === null || x.mechanicId === mechanicFilter;
 
-  // Alongside the raw busy blocks, work out which mechanic/day combinations
-  // already have less than workshop_settings.full_day_threshold_minutes of
-  // genuinely free time left (small gaps between jobs merged, not summed
-  // twice) - the portal treats those the same as a closed day, even though
-  // technically-free slivers of time remain here and there.
-  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-  const openMin = timeToMinutes(settings.opening_time);
-  const closeMin = timeToMinutes(settings.closing_time);
-  const workingMinutes = closeMin - openMin;
-  const byMechanicDay = new Map();
-  for (const r of rows) {
-    const key = `${r.mechanic_id}|${r.job_date}`;
-    if (!byMechanicDay.has(key)) byMechanicDay.set(key, { mechanicId: r.mechanic_id, jobDate: r.job_date, intervals: [] });
-    byMechanicDay.get(key).intervals.push([
-      Math.max(openMin, timeToMinutes(r.start_time)),
-      Math.min(closeMin, timeToMinutes(r.end_time)),
-    ]);
-  }
+  const { settings, jobs, days } = await loadCapacity(start, end);
+  const busy = [];
   const fullDays = [];
-  for (const { mechanicId: mId, jobDate, intervals } of byMechanicDay.values()) {
-    const free = workingMinutes - mergedMinutes(intervals);
-    if (free < settings.full_day_threshold_minutes) fullDays.push({ mechanicId: mId, jobDate });
+  for (const day of days) {
+    const view = legacyView(day, settings, jobs);
+    busy.push(...view.busy);
+    fullDays.push(...view.fullDays);
   }
-
-  sendJson(res, 200, {
-    busy: rows.map((r) => ({ mechanicId: r.mechanic_id, jobDate: r.job_date, startTime: r.start_time, endTime: r.end_time })),
-    fullDays,
-  });
+  const body = { busy: busy.filter(keep), fullDays: fullDays.filter(keep) };
+  if (minutes !== null) {
+    body.days = days.map((day) => ({
+      date: day.date,
+      mode: day.mode,
+      ...(day.mode === 'dropoff'
+        ? { dropoffWindow: { start: settings.dropoffWindowStart, end: settings.dropoffWindowEnd } } : {}),
+      mechanics: day.mechanics.filter(keep).map((m) => (day.mode === 'timed'
+        ? { mechanicId: m.mechanicId, startTimes: startTimesFor(m, minutes) }
+        : { mechanicId: m.mechanicId, bookable: fitsDropoff(m, minutes) })),
+    }));
+  }
+  sendJson(res, 200, body);
 });
 
 route('GET', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
@@ -4273,30 +4456,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
-  // The grid only ever showed a fixed 60-minute proxy as "free" - the real
-  // length depends on the job type chosen in this same request, so a
-  // "service" (120 min) booked into what looked like an open slot could
-  // actually run past closing or straight into another job. Check both
-  // here, authoritatively, rather than trusting whatever the client showed.
-  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-
-  // The shop holds back full_day_threshold_minutes of each mechanic's day for
-  // lunch, admin, and the parts of a shift that are not spent on a bike. The
-  // check subtracts the job being booked: testing only the free time already
-  // left let one booking consume the entire reserve (540-minute day, 120-minute
-  // threshold, 420 booked, `120 < 120` false, a 120-minute service accepted,
-  // zero minutes left). Staff routes deliberately do NOT apply this - a shop
-  // may choose to work through its own lunch; a customer may not choose it for
-  // them.
-  const freeMinutes = await mechanicFreeMinutes(mechResolved.mechanicId, jobDate, settings.opening_time, settings.closing_time);
-  if (freeMinutes - jobType.minutes < settings.full_day_threshold_minutes) {
-    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
-  }
-
-  // Closed days, opening hours and mechanic overlap - the same rules the
-  // staff routes enforce, from the same place. Previously this route checked
-  // hours and overlap with its own copy and never checked opening days at
-  // all, so a customer could book a slot the diary showed as closed.
+  // Closed days, the day's own opening hours and mechanic overlap first - the
+  // same rules the staff routes enforce, from the same place, so their
+  // specific messages win.
   const slotError = await checkJobSlot({
     jobDate,
     startTime: times.startTime,
@@ -4304,6 +4466,22 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     mechanicId: mechResolved.mechanicId,
   });
   if (slotError) return badRequest(res, slotError);
+
+  // Then the capacity calculator: blocks, closures, the walk-in queue and the
+  // reserve, the same answer the calendar gave. The reserve check subtracts the
+  // job being booked (freeMinutes has the reserve taken off already): testing
+  // only the free time already left let one booking consume the entire
+  // reserve. Staff routes deliberately do NOT apply this - a shop may choose to
+  // work through its own lunch; a customer may not choose it for them. A
+  // block's reason is never given to the customer.
+  const capacity = await loadCapacity(jobDate, jobDate);
+  const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechResolved.mechanicId);
+  if (!mech || !mech.working || !fitsFreeTime(mech, times.startTime, times.endTime)) {
+    return badRequest(res, 'That mechanic is unavailable at that time - please choose another time or day.');
+  }
+  if (mech.freeMinutes < jobType.minutes) {
+    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
+  }
 
   // Either an existing bike of theirs, or a new one registered inline -
   // never a bike belonging to another customer (checked below).

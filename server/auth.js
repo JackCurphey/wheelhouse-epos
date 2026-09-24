@@ -112,7 +112,10 @@ export async function createShop({ shopName, ownerName, email, password }) {
       'INSERT INTO customer_groups (shop_id, name) VALUES ($1, $2), ($1, $3)',
       [shop.id, 'Blue Light', 'ACC']
     );
-    await client.query('INSERT INTO workshop_settings (shop_id) VALUES ($1)', [shop.id]);
+    // No reserve for a new shop: lunch and admin are blocks now (migration 023),
+    // and a reserve on top would charge for them twice. The column default stays
+    // 120 so existing shops, and the test fixtures that rely on it, are unchanged.
+    await client.query('INSERT INTO workshop_settings (shop_id, full_day_threshold_minutes) VALUES ($1, 0)', [shop.id]);
     await client.query('INSERT INTO label_settings (shop_id) VALUES ($1)', [shop.id]);
     await client.query('INSERT INTO shop_theme (shop_id) VALUES ($1)', [shop.id]);
     // Every shop starts with a mock supplier so the catalogue-sync feature
