@@ -6,6 +6,7 @@ import {
   effectiveHours, widestHours, resolveOpeningHours, parseWeekdayHours, modeForDate,
   subtractIntervals, computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime,
   legacyView, blockClashes, validateBlock, dayCount, datesBetween, isRealDate,
+  bookingLockKey, settleModeChange, validateModeChange,
 } from '../server/capacity.js';
 
 const MONDAY = '2026-09-07';
@@ -206,4 +207,25 @@ test('isRealDate refuses a date that looks right but does not exist', () => {
 test('date ranges are counted without building them first', () => {
   assert.equal(dayCount('2026-09-07', '2026-09-13'), 7);
   assert.deepEqual(datesBetween('2026-09-30', '2026-10-01'), ['2026-09-30', '2026-10-01']);
+});
+
+test('a booking lock key is the date as a whole number', () => {
+  assert.equal(bookingLockKey('2026-09-07'), 20260907);
+});
+
+test('a scheduled mode change settles once its date arrives, not before', () => {
+  const s = settings({ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-11-01' });
+  assert.deepEqual(settleModeChange(s, '2026-10-31'), { bookingMode: 'timed', nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-11-01' });
+  assert.deepEqual(settleModeChange(s, '2026-11-01'), { bookingMode: 'dropoff', nextBookingMode: null, nextBookingModeFrom: null });
+});
+
+test('a mode change needs both parts, a real future date, and a different mode', () => {
+  const ctx = { today: '2026-09-24', bookingMode: 'timed' };
+  assert.deepEqual(validateModeChange({ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-09-25' }, ctx), { nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-09-25' });
+  assert.deepEqual(validateModeChange({ nextBookingMode: null, nextBookingModeFrom: null }, ctx), { nextBookingMode: null, nextBookingModeFrom: null });
+  assert.match(validateModeChange({ nextBookingMode: 'dropoff', nextBookingModeFrom: null }, ctx).error, /both/);
+  assert.match(validateModeChange({ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-09-24' }, ctx).error, /tomorrow/);
+  assert.match(validateModeChange({ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-02-30' }, ctx).error, /look like/);
+  assert.match(validateModeChange({ nextBookingMode: 'weekly', nextBookingModeFrom: '2026-10-01' }, ctx).error, /timed' or 'dropoff/);
+  assert.match(validateModeChange({ nextBookingMode: 'timed', nextBookingModeFrom: '2026-10-01' }, ctx).error, /already/);
 });
