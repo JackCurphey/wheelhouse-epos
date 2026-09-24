@@ -138,7 +138,7 @@ All run in CI too, so a green PR means they passed.
 
 
 **Verified 24 Sep on `feat/book-server-1-services`, every gate exit 0:**
-471/471 tests (466 + 5 from the final-review fixes, d646cc9). Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
+471/471 tests. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
 Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
