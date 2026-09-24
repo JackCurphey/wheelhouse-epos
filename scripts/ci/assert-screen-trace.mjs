@@ -36,6 +36,7 @@ const COVERED = [
   /^\/api\/workshop-settings$/,
   /^\/api\/workshop-unavailability(\/|$)/,
   /^\/api\/portal\/:shopSlug\/availability$/,
+  /^\/api\/workshop-capacity$/,
 ];
 
 export function screenIdsFromIndex(indexPath = path.join(ROOT, 'docs/design/release-1-journey/screen-index.json')) {

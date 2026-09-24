@@ -14,7 +14,7 @@ import { allocateReference } from './workshop/references.js';
 import {
   DATE_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, dayCount, datesBetween, parseWeekdayHours,
   effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
-  computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView,
+  computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
 } from './capacity.js';
 import {
   createRevision as createQuoteRevision,
@@ -3671,6 +3671,43 @@ route('DELETE', '/api/workshop-unavailability/:id', async (req, res, params) => 
   if (!row) return notFound(res, 'Block not found');
   await db.prepare('DELETE FROM workshop_unavailability WHERE id = ?').run(row.id);
   sendJson(res, 200, { ok: true });
+});
+
+// The calculator's full answer for staff: reasons, clashes and minutes
+// included. Read by the diary, queue, week, month and hours screens.
+// screens: diary, queue, week, month, hours
+route('GET', '/api/workshop-capacity', async (req, res, params, query) => {
+  const start = query.get('start');
+  const end = query.get('end');
+  if (!DATE_RE.test(start || '') || !DATE_RE.test(end || '')) {
+    return badRequest(res, 'Valid start and end dates are required');
+  }
+  if (dayCount(start, end) > MAX_RANGE_DAYS) {
+    return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
+  }
+  const { blocks, jobs, days } = await loadCapacity(start, end);
+  const range = ([s, e]) => ({ start: toHHMM(s), end: toHHMM(e) });
+  sendJson(res, 200, {
+    days: days.map((day) => {
+      const dayJobs = jobs.filter((j) => j.jobDate === day.date);
+      const clashes = blocks.flatMap((b) => blockClashes(b, dayJobs).map((j) => ({ jobId: j.id, blockId: b.id })));
+      return {
+        date: day.date,
+        mode: day.mode,
+        shopClosed: day.shopClosed,
+        closures: day.shopBlocks,
+        queueMinutes: day.queueMinutes,
+        clashes,
+        mechanics: day.mechanics.map((m) => ({
+          mechanicId: m.mechanicId,
+          working: m.working,
+          freeMinutes: Math.max(0, Math.floor(m.freeMinutes)),
+          freeWindows: m.freeWindows.map(range),
+          blocks: m.blocks,
+        })),
+      };
+    }),
+  });
 });
 
 // ---------- Workshop service categories ----------
