@@ -108,6 +108,16 @@ test('a date-range list includes weekly blocks and overlapping date blocks only'
   assert.ok(list.some((x) => x.kind === 'weekly'));
 });
 
+test('staff are never refused by a block - a lunch slot is bookable for them', async () => {
+  const tuesday = futureDate(2);
+  await as(shopA, '/api/workshop-unavailability', { method: 'POST', body: { kind: 'weekly', mechanicId: sam, weekdays: [2], startTime: '13:00', endTime: '13:30', reason: 'Lunch' } });
+  const res = await as(shopA, '/api/workshop-jobs', {
+    method: 'POST',
+    body: { title: 'Staff booking into lunch', jobDate: tuesday, startTime: '13:00', endTime: '13:30', mechanicId: sam },
+  });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+});
+
 test('a non-numeric block id is a 404, not a 500', async () => {
   const put = await as(shopA, '/api/workshop-unavailability/abc', { method: 'PUT', body: { reason: 'x' } });
   assert.equal(put.status, 404);
