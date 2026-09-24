@@ -15,7 +15,7 @@ import {
   HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, isRealDate, dayCount, datesBetween, parseWeekdayHours,
   effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
   computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
-  settleModeChange, validateModeChange,
+  settleModeChange, validateModeChange, bookingLockKey,
 } from './capacity.js';
 import {
   createRevision as createQuoteRevision,
@@ -2527,6 +2527,35 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
   sendJson(res, 200, serializeWorkshopJob(row));
 });
 
+// Booking writes for one shop and date run one at a time: check, then write,
+// with nothing between them. A transaction-scoped advisory lock keyed (shop,
+// date), released at COMMIT or ROLLBACK. Several dates (a move) are locked in
+// date order, so two moves between the same days cannot deadlock. Nested
+// BEGIN/COMMIT inside fn (createWorkshopJob) becomes a savepoint (server/db.js).
+async function withBookingLock(dates, fn) {
+  await db.exec('BEGIN');
+  try {
+    for (const date of [...new Set(dates)].sort()) {
+      await db.prepare(
+        "SELECT pg_advisory_xact_lock(current_setting('app.current_shop_id')::int, ?::int)"
+      ).get(bookingLockKey(date));
+    }
+    const result = await fn();
+    await db.exec('COMMIT');
+    return result;
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+// A refusal because other bookings have used the time. The code is what a
+// screen branches on; the words are what the old booking page shows.
+const capacityRefusal = (error) => ({ status: 409, body: { error, code: 'capacity' } });
+const refusal = (error) => ({ status: 400, body: { error } });
+// The 024 hold index firing: another live hold already sits on the slot.
+const SLOT_GONE = 'That time is no longer available - please choose another.';
+
 // Shared by the staff "create job" route below and the customer portal's
 // booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
 // linked order in one transaction. Trusts every field completely; callers
@@ -2645,8 +2674,9 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
 // staff routes and the portal booking route go through here now, so there is
 // one implementation of "is this slot legal" rather than three that drift.
 //
-// Returns an error string, or null when the slot is fine. `ignoreJobId` is
-// the job being edited - a job must not collide with itself.
+// Returns null when the slot is fine, or { error, taken } - taken means another
+// live booking holds the time. `ignoreJobId` is the job being edited - a job
+// must not collide with itself.
 async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJobId = null }) {
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   if (!settings) return null;
@@ -2657,7 +2687,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   const dayOfWeek = new Date(`${jobDate}T00:00:00Z`).getUTCDay();
   const openingDays = parseWorkingDays(settings.opening_days);
   if (Array.isArray(openingDays) && !openingDays.includes(dayOfWeek)) {
-    return 'The shop is closed that day - please choose another date.';
+    return { error: 'The shop is closed that day - please choose another date.', taken: false };
   }
 
   // A mechanic's own days off are separate from the shop's closing days - a
@@ -2667,7 +2697,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
     const mechanic = await db.prepare('SELECT working_days FROM employees WHERE id = ?').get(mechanicId);
     const workingDays = mechanic ? parseWorkingDays(mechanic.working_days) : null;
     if (Array.isArray(workingDays) && !workingDays.includes(dayOfWeek)) {
-      return 'That mechanic does not work that day - please choose another day or another mechanic.';
+      return { error: 'That mechanic does not work that day - please choose another day or another mechanic.', taken: false };
     }
   }
 
@@ -2678,7 +2708,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   // The day's own hours - Saturday may close earlier than the week.
   const hours = effectiveHours(toCapacitySettings(settings), dayOfWeek);
   if (startTime < hours.open || endTime > hours.close) {
-    return `That job doesn't fit in the shop's opening hours (${hours.open}\u2013${hours.close}) - please choose an earlier time or a shorter job type.`;
+    return { error: `That job doesn't fit in the shop's opening hours (${hours.open}\u2013${hours.close}) - please choose an earlier time or a shorter job type.`, taken: false };
   }
 
   if (!mechanicId) return null;
@@ -2692,7 +2722,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
     )
     .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
   if (overlap) {
-    return 'That mechanic is already booked over part of that window - please choose another time.';
+    return { error: 'That mechanic is already booked over part of that window - please choose another time.', taken: true };
   }
   return null;
 }
@@ -2728,31 +2758,43 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
   // keeps public/app.js working untouched through this phase.
   const created = readLegacyStatus(status);
 
-  const slotError = await checkJobSlot({
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    mechanicId: mechResolved.mechanicId,
-  });
-  if (slotError) return badRequest(res, slotError);
+  // Staff are held to the shop's rules, never to capacity: no calculator here.
+  // The only capacity answer is the 024 index firing on a stale pre-2b hold,
+  // which rolls the whole write back.
+  let out;
+  try {
+    out = await withBookingLock([jobDate], async () => {
+      const slotError = await checkJobSlot({
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        mechanicId: mechResolved.mechanicId,
+      });
+      if (slotError) return refusal(slotError.error);
 
-  const jobId = await createWorkshopJob({
-    title,
-    customerId: resolved.customerId,
-    bikeId: bikeResolved.bikeId,
-    mechanicId: mechResolved.mechanicId,
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    bookingState: created.booking,
-    workState: created.work,
-    custodyState: created.custody ?? 'expected',
-    notes,
-    skipAutoOrder: !!body.skipAutoOrder,
-    plannedMinutes: planned.value,
-  });
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-  sendJson(res, 201, serializeWorkshopJob(row));
+      const jobId = await createWorkshopJob({
+        title,
+        customerId: resolved.customerId,
+        bikeId: bikeResolved.bikeId,
+        mechanicId: mechResolved.mechanicId,
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        bookingState: created.booking,
+        workState: created.work,
+        custodyState: created.custody ?? 'expected',
+        notes,
+        skipAutoOrder: !!body.skipAutoOrder,
+        plannedMinutes: planned.value,
+      });
+      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+      return { status: 201, body: serializeWorkshopJob(row) };
+    });
+  } catch (err) {
+    if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
+    else throw err;
+  }
+  sendJson(res, out.status, out.body);
 });
 
 route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
@@ -2831,37 +2873,49 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
     }
   }
 
-  const slotError = await checkJobSlot({
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    mechanicId: mechResolved.mechanicId,
-    ignoreJobId: id,
-  });
-  if (slotError) return badRequest(res, slotError);
+  // Both days are locked: the one the job leaves and the one it joins. The
+  // UPDATE and its hold commit or roll back together.
+  let out;
+  try {
+    out = await withBookingLock([existing.job_date, jobDate], async () => {
+      const slotError = await checkJobSlot({
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        mechanicId: mechResolved.mechanicId,
+        ignoreJobId: id,
+      });
+      if (slotError) return refusal(slotError.error);
 
-  await db.prepare(
-    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
-       booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)
-     WHERE id = ?`
-  ).run(
-    title,
-    resolved.customerId,
-    bikeResolved.bikeId,
-    mechResolved.mechanicId,
-    jobDate,
-    times.startTime,
-    times.endTime,
-    notes,
-    plannedMinutes,
-    nowIso(),
-    legacyStates?.booking ?? null,
-    legacyStates?.workState ?? null,
-    id
-  );
-  await syncJobHold(id);
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-  sendJson(res, 200, serializeWorkshopJob(row));
+      await db.prepare(
+        `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
+           booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)
+         WHERE id = ?`
+      ).run(
+        title,
+        resolved.customerId,
+        bikeResolved.bikeId,
+        mechResolved.mechanicId,
+        jobDate,
+        times.startTime,
+        times.endTime,
+        notes,
+        plannedMinutes,
+        nowIso(),
+        legacyStates?.booking ?? null,
+        legacyStates?.workState ?? null,
+        id
+      );
+      await syncJobHold(id);
+      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+      return { status: 200, body: serializeWorkshopJob(row) };
+    });
+  } catch (err) {
+    // Only a stale pre-2b hold can trip the 024 index for staff.
+    if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
+    else throw err;
+  }
+  sendJson(res, out.status, out.body);
 });
 
 // ---------- Workshop job actions ----------
@@ -4537,91 +4591,94 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
-  // Closed days, the day's own opening hours and mechanic overlap first - the
-  // same rules the staff routes enforce, from the same place, so their
-  // specific messages win.
-  const slotError = await checkJobSlot({
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    mechanicId: mechResolved.mechanicId,
-  });
-  if (slotError) return badRequest(res, slotError);
-
-  // Then the capacity calculator: blocks, closures, the walk-in queue and the
-  // reserve, the same answer the calendar gave. The reserve check subtracts the
-  // job being booked (freeMinutes has the reserve taken off already): testing
-  // only the free time already left let one booking consume the entire
-  // reserve. Staff routes deliberately do NOT apply this - a shop may choose to
-  // work through its own lunch; a customer may not choose it for them. A
-  // block's reason is never given to the customer.
-  const capacity = await loadCapacity(jobDate, jobDate);
-  const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechResolved.mechanicId);
-  if (!mech || !mech.working || !fitsFreeTime(mech, times.startTime, times.endTime)) {
-    return badRequest(res, 'That mechanic is unavailable at that time - please choose another time or day.');
-  }
-  if (mech.freeMinutes < jobType.minutes) {
-    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
-  }
-
-  // Either an existing bike of theirs, or a new one registered inline -
-  // never a bike belonging to another customer (checked below).
-  let bikeId = null;
-  if (body.newBike) {
-    const make = (body.newBike.make || '').trim();
-    const model = (body.newBike.model || '').trim();
-    if (!make && !model) return badRequest(res, 'Bike make or model is required');
-    const info = await db
-      .prepare(
-        `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        customerId,
-        make,
-        model,
-        (body.newBike.colour || '').trim(),
-        (body.newBike.serialNumber || '').trim(),
-        nowIso()
-      );
-    bikeId = info.lastInsertRowid;
-  } else if (body.bikeId) {
-    const bike = await db
-      .prepare('SELECT * FROM customer_bikes WHERE id = ? AND customer_id = ? AND active = 1')
-      .get(Number(body.bikeId), customerId);
-    if (!bike) return badRequest(res, 'Bike not found');
-    bikeId = bike.id;
-  }
-
-  // Never trusts a client-sent customerId or status - always the resolved
-  // customer (signed-in, or the matched/created guest above), always
-  // 'pending' until a mechanic reviews it, same principle as createSale()
-  // never trusting a client-sent total.
-  let jobId;
-  try {
-    jobId = await createWorkshopJob({
-    title: `Online booking: ${description}`.slice(0, 200),
-    customerId,
-    bikeId,
-    mechanicId: mechResolved.mechanicId,
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    bookingState: 'pending',
-    workState: 'not_started',
-    custodyState: 'expected',
-    notes: description,
-    skipAutoOrder: false,
+  // Inside the lock: closed days, the day's own opening hours and mechanic
+  // overlap first - the same rules the staff routes enforce, from the same
+  // place, so their specific messages win.
+  const out = await withBookingLock([jobDate], async () => {
+    const slot = await checkJobSlot({
+      jobDate,
+      startTime: times.startTime,
+      endTime: times.endTime,
+      mechanicId: mechResolved.mechanicId,
     });
-  } catch (err) {
-    // 23505 is the capacity index: someone else took this slot between the
-    // availability check and now.
-    if (err.code === '23505') {
-      return sendJson(res, 409, { error: 'That time is no longer available - please choose another.' });
+    if (slot) return slot.taken ? capacityRefusal(slot.error) : refusal(slot.error);
+
+    // The capacity calculator, inside the lock: the same answer the calendar
+    // gave, now certain to include every booking committed before this one.
+    // Blocks and the shop's hours are shop rules (400); minutes other bookings
+    // have used are capacity (409). The reserve check subtracts the job being
+    // booked (freeMinutes has the reserve taken off already). Staff routes
+    // deliberately do NOT apply this - a shop may choose to work through its
+    // own lunch; a customer may not choose it for them. A block's reason is
+    // never given.
+    const capacity = await loadCapacity(jobDate, jobDate);
+    const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechResolved.mechanicId);
+    if (!mech || !mech.working || !fitsFreeTime(mech, times.startTime, times.endTime)) {
+      return refusal('That mechanic is unavailable at that time - please choose another time or day.');
     }
-    throw err;
-  }
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-  sendJson(res, 201, serializePortalBooking(row));
+    if (mech.freeMinutes < jobType.minutes) {
+      return capacityRefusal('That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
+    }
+
+    // Either an existing bike of theirs, or a new one registered inline -
+    // never a bike belonging to another customer (checked below).
+    let bikeId = null;
+    if (body.newBike) {
+      const make = (body.newBike.make || '').trim();
+      const model = (body.newBike.model || '').trim();
+      if (!make && !model) return refusal('Bike make or model is required');
+      const info = await db
+        .prepare(
+          `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          customerId,
+          make,
+          model,
+          (body.newBike.colour || '').trim(),
+          (body.newBike.serialNumber || '').trim(),
+          nowIso()
+        );
+      bikeId = info.lastInsertRowid;
+    } else if (body.bikeId) {
+      const bike = await db
+        .prepare('SELECT * FROM customer_bikes WHERE id = ? AND customer_id = ? AND active = 1')
+        .get(Number(body.bikeId), customerId);
+      if (!bike) return refusal('Bike not found');
+      bikeId = bike.id;
+    }
+
+    // Never trusts a client-sent customerId or status - always the resolved
+    // customer (signed-in, or the matched/created guest above), always
+    // 'pending' until a mechanic reviews it, same principle as createSale()
+    // never trusting a client-sent total.
+    let jobId;
+    try {
+      jobId = await createWorkshopJob({
+        title: `Online booking: ${description}`.slice(0, 200),
+        customerId,
+        bikeId,
+        mechanicId: mechResolved.mechanicId,
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        bookingState: 'pending',
+        workState: 'not_started',
+        custodyState: 'expected',
+        notes: description,
+        skipAutoOrder: false,
+        plannedMinutes: jobType.minutes,
+      });
+    } catch (err) {
+      // The 024 index, a second guard behind the lock. createWorkshopJob's own
+      // ROLLBACK was a savepoint, so this transaction is still usable.
+      if (err.code === '23505') return capacityRefusal(SLOT_GONE);
+      throw err;
+    }
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+    return { status: 201, body: serializePortalBooking(row) };
+  });
+  sendJson(res, out.status, out.body);
 });
 
 // ---------- Static file serving ----------
