@@ -66,7 +66,7 @@ This file → **Plan register** below and the plans it names →
 1. **Book server piece 1 built** (`feat/book-server-1-services`, 24 Sep):
    migration 022, category routes, service kind/category/position,
    `GET /api/portal/:shopSlug/services` (full, by category, uncategorised).
-   Every gate exit 0, 466/466 tests. No PR open yet. **Next: piece 2**
+   Every gate exit 0; 471/471 after the final-review fixes. No PR open yet. **Next: piece 2**
    (booking modes and capacity) - starts with its own brainstorm and spec.
    Plan 4a (book, the staff-side screens) stays STOPPED at Task 7 item 3
    until piece 2's endpoints land; routing decided 23 Sep
@@ -138,7 +138,7 @@ All run in CI too, so a green PR means they passed.
 
 
 **Verified 24 Sep on `feat/book-server-1-services`, every gate exit 0:**
-466/466 tests, 0 failures. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
+471/471 tests (466 + 5 from the final-review fixes, d646cc9). Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
 Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
