@@ -3616,6 +3616,12 @@ export function serializeWorkshopService(row) {
     // subset a shop ticks belongs in front of a customer. See
     // docs/decisions/2026-09-04-booking-mode-and-downtime.md §7.
     bookableOnline: row.bookable_online === 1,
+    // Where the customer booking page lists it: 'full' services in a short
+    // list of their own, 'individual' ones under their category (or "Other"
+    // when uncategorised). One level deep; see migration 022.
+    kind: row.kind,
+    categoryId: row.category_id,
+    position: row.position,
   };
 }
 
@@ -3634,6 +3640,34 @@ function readServiceBody(body) {
   return { name, price, minutes };
 }
 
+// Where a service sits in the customer's list. `existing` is null on POST; on
+// PUT an omitted field keeps its stored value, so a caller that predates these
+// fields (the old staff app) cannot wipe them. A category id is looked up
+// through the shop-scoped db first: the foreign key alone bypasses row-level
+// security and would accept another shop's category.
+async function readServicePlacement(body, existing) {
+  const kind = body.kind !== undefined ? body.kind : (existing ? existing.kind : 'individual');
+  if (kind !== 'full' && kind !== 'individual') {
+    throw new ValidationError("A service's kind must be 'full' or 'individual'");
+  }
+  let categoryId = body.categoryId !== undefined ? body.categoryId : (existing ? existing.category_id : null);
+  if (kind === 'full') {
+    categoryId = null;
+  } else if (categoryId !== null) {
+    categoryId = Number(categoryId);
+    const found = Number.isInteger(categoryId)
+      ? await db.prepare('SELECT id FROM workshop_service_categories WHERE id = ?').get(categoryId)
+      : null;
+    if (!found) throw new ValidationError('That category does not exist');
+  }
+  let position = existing ? existing.position : 0;
+  if (body.position !== undefined) {
+    position = Number(body.position);
+    if (!Number.isInteger(position)) throw new ValidationError('Position must be a whole number');
+  }
+  return { kind, categoryId, position };
+}
+
 route('GET', '/api/workshop-services', async (req, res) => {
   const rows = await db.prepare('SELECT * FROM workshop_services ORDER BY active DESC, name').all();
   sendJson(res, 200, rows.map(serializeWorkshopService));
@@ -3642,16 +3676,18 @@ route('GET', '/api/workshop-services', async (req, res) => {
 route('POST', '/api/workshop-services', async (req, res) => {
   const body = await readJsonBody(req);
   let fields;
+  let placement;
   try {
     fields = readServiceBody(body);
+    placement = await readServicePlacement(body, null);
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
   }
   const bookableOnline = body.bookableOnline ? 1 : 0;
   const info = await db.prepare(
-    'INSERT INTO workshop_services (name, price, minutes, bookable_online) VALUES (?, ?, ?, ?)'
-  ).run(fields.name, fields.price, fields.minutes, bookableOnline);
+    'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position);
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
   sendJson(res, 201, serializeWorkshopService(row));
 });
@@ -3662,8 +3698,10 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
   if (!existing) return notFound(res, 'Not found');
   const body = await readJsonBody(req);
   let fields;
+  let placement;
   try {
     fields = readServiceBody(body);
+    placement = await readServicePlacement(body, existing);
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -3672,8 +3710,9 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
   const bookableOnline = body.bookableOnline === undefined
     ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
   await db.prepare(
-    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, updated_at = ? WHERE id = ?'
-  ).run(fields.name, fields.price, fields.minutes, active, bookableOnline, nowIso(), id);
+    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, updated_at = ? WHERE id = ?'
+  ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
+    placement.kind, placement.categoryId, placement.position, nowIso(), id);
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
   sendJson(res, 200, serializeWorkshopService(row));
 });
