@@ -2541,7 +2541,54 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
 // race, which is not the same thing as being wrong.
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder }) {
+// A job's capacity hold follows the job. One live hold per live job: timed at
+// its start with its length, untimed (drop-off, a walk-in) with its planned
+// minutes and no start. A job that stops being live has its hold released.
+// Called inside the same transaction as every job write, so a hold never
+// describes a job that has since moved.
+async function syncJobHold(jobId) {
+  const job = await db.prepare(
+    'SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes, booking_state FROM workshop_jobs WHERE id = ?'
+  ).get(jobId);
+  if (!job || !LIVE_BOOKING_STATES.includes(job.booking_state)) {
+    await db.prepare(
+      `UPDATE workshop_capacity_holds SET state = 'released'
+       WHERE workshop_job_id = ? AND state IN ('held', 'confirmed')`
+    ).run(jobId);
+    return;
+  }
+  const startTime = job.start_time || '';
+  const minutes = startTime
+    ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(startTime))
+    : (job.planned_minutes || 0);
+  const hold = await db.prepare(
+    `SELECT id FROM workshop_capacity_holds
+     WHERE workshop_job_id = ? AND state IN ('held', 'confirmed') ORDER BY id LIMIT 1`
+  ).get(jobId);
+  if (hold) {
+    await db.prepare(
+      'UPDATE workshop_capacity_holds SET job_date = ?, start_time = ?, mechanic_id = ?, minutes = ? WHERE id = ?'
+    ).run(job.job_date, startTime, job.mechanic_id, minutes, hold.id);
+  } else {
+    await db.prepare(
+      `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
+       VALUES (?, ?, ?, ?, ?, 'held')`
+    ).run(jobId, job.job_date, startTime, job.mechanic_id, minutes);
+  }
+}
+
+// A job's length when it has no times: whole minutes, 1 to 720, or null.
+function resolvePlannedMinutes(input, fallback) {
+  if (input === undefined) return { value: fallback ?? null };
+  if (input === null || input === '') return { value: null };
+  const n = Number(input);
+  if (!Number.isInteger(n) || n < 1 || n > 720) {
+    return { error: 'The planned length must be a whole number of minutes between 1 and 720' };
+  }
+  return { value: n };
+}
+
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2550,10 +2597,14 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes, nowIso());
+      .run(
+        title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
+        plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
+        nowIso()
+      );
     const jobIdForHold = info.lastInsertRowid;
 
     // Take the capacity hold in the same transaction as the job. checkJobSlot
@@ -2561,22 +2612,7 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     // partial unique index from migration 018 is what makes exactly one of them
     // win. Inside the transaction so the loser's job rolls back with its hold
     // rather than surviving as a booking for a slot it does not hold.
-    //
-    // Only timed jobs take a hold. A job with no start time reserves no slot,
-    // and every such job would otherwise collide with every other one on the
-    // same date (the index COALESCEs a null mechanic to 0).
-    if (startTime) {
-      await db.prepare(
-        `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
-         VALUES (?, ?, ?, ?, ?, 'held')`
-      ).run(
-        jobIdForHold,
-        jobDate,
-        startTime,
-        mechanicId,
-        Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime))
-      );
-    }
+    await syncJobHold(jobIdForHold);
     const jobId = info.lastInsertRowid;
 
     // Every workshop job is backed by an order so it's findable from the
@@ -2676,6 +2712,10 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
+  // A walk-in for the shared queue carries a length and no mechanic or time.
+  const planned = resolvePlannedMinutes(body.plannedMinutes, null);
+  if (planned.error) return badRequest(res, planned.error);
+
   const status = resolveJobStatus(body.status, null);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
   // The staff diary still sends a legacy status and will until Phase 4 replaces
@@ -2704,6 +2744,7 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
     custodyState: created.custody ?? 'expected',
     notes,
     skipAutoOrder: !!body.skipAutoOrder,
+    plannedMinutes: planned.value,
   });
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
   sendJson(res, 201, serializeWorkshopJob(row));
@@ -2735,6 +2776,12 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
+  const planned = resolvePlannedMinutes(body.plannedMinutes, existing.planned_minutes);
+  if (planned.error) return badRequest(res, planned.error);
+  // A timed job's length is its times; planned_minutes only speaks for untimed work.
+  const plannedMinutes = times.startTime
+    ? Math.max(0, timeToMinutes(times.endTime) - timeToMinutes(times.startTime))
+    : planned.value;
 
   // The staff diary still changes a job's state by PUTting a legacy status
   // (public/app.js approveJob() and the complete/reopen toggle), and will until
@@ -2789,7 +2836,7 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   if (slotError) return badRequest(res, slotError);
 
   await db.prepare(
-    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, updated_at = ?,
+    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
        booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)
      WHERE id = ?`
   ).run(
@@ -2801,11 +2848,13 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
     times.startTime,
     times.endTime,
     notes,
+    plannedMinutes,
     nowIso(),
     legacyStates?.booking ?? null,
     legacyStates?.workState ?? null,
     id
   );
+  await syncJobHold(id);
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
   sendJson(res, 200, serializeWorkshopJob(row));
 });
