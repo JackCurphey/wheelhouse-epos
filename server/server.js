@@ -12,6 +12,11 @@ import { readLegacyStatus, bookingRequest, custody, work } from './workshop/stat
 import { applyEvent } from './workshop/transitions.js';
 import { allocateReference } from './workshop/references.js';
 import {
+  DATE_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, dayCount, datesBetween, parseWeekdayHours,
+  effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
+  computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView,
+} from './capacity.js';
+import {
   createRevision as createQuoteRevision,
   send as sendQuoteForApproval,
   recordLineDecision,
@@ -2671,8 +2676,10 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   // slot, so there is nothing to check it against.
   if (!startTime || !endTime) return null;
 
-  if (startTime < settings.opening_time || endTime > settings.closing_time) {
-    return `That job doesn't fit in the shop's opening hours (${settings.opening_time}\u2013${settings.closing_time}) - please choose an earlier time or a shorter job type.`;
+  // The day's own hours - Saturday may close earlier than the week.
+  const hours = effectiveHours(toCapacitySettings(settings), dayOfWeek);
+  if (startTime < hours.open || endTime > hours.close) {
+    return `That job doesn't fit in the shop's opening hours (${hours.open}\u2013${hours.close}) - please choose an earlier time or a shorter job type.`;
   }
 
   if (!mechanicId) return null;
@@ -3434,11 +3441,30 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
 
 // ---------- Workshop settings ----------
 
+// A workshop_settings row in the capacity calculator's shape (server/capacity.js).
+function toCapacitySettings(row) {
+  return {
+    openingTime: row.opening_time,
+    closingTime: row.closing_time,
+    openingDays: parseWorkingDays(row.opening_days),
+    weekdayHours: parseWeekdayHours(row.weekday_hours),
+    reserveMinutes: row.full_day_threshold_minutes,
+    bookingMode: row.booking_mode,
+    nextBookingMode: row.next_booking_mode ?? null,
+    nextBookingModeFrom: row.next_booking_mode_from ?? null,
+    dropoffWindowStart: row.dropoff_window_start,
+    dropoffWindowEnd: row.dropoff_window_end,
+  };
+}
+
 function serializeWorkshopSettings(row) {
   return {
     openingTime: row.opening_time,
     closingTime: row.closing_time,
     openingDays: parseWorkingDays(row.opening_days),
+    // Every open day with its hours - its own where the shop set them, else
+    // the usual opening/closing time above.
+    openingHours: openingHoursFor(toCapacitySettings(row)),
     fullDayThresholdMinutes: row.full_day_threshold_minutes,
     bookingMode: row.booking_mode,
     dropoffWindowStart: row.dropoff_window_start,
@@ -3457,11 +3483,13 @@ const HOUR_RE = /^([01]\d|2[0-3]):00$/;
 // One row per shop (RLS scopes it), rather than the old global single-row
 // (id=1) singleton - a shop's id is assigned by Postgres, not fixed at 1, so
 // lookups just take whichever single row RLS makes visible.
+// screens: booking-settings, hours
 route('GET', '/api/workshop-settings', async (req, res) => {
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
+// screens: booking-settings, hours
 route('PUT', '/api/workshop-settings', async (req, res) => {
   const existing = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   const body = await readJsonBody(req);
@@ -3473,6 +3501,22 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   if (closingTime <= openingTime) return badRequest(res, 'Closing time must be after opening time');
   const openingDays = resolveWorkingDays(body.openingDays, existing.opening_days);
   if (openingDays === null) return badRequest(res, 'openingDays must be an array of day numbers (0-6)');
+  // openingHours sets which days are open and each day's hours at once. The
+  // old fields still work: openingTime/closingTime move the usual hours, and a
+  // day with its own hours keeps them, so the old settings page (which sends
+  // openingTime on every save) never wipes a shorter Saturday.
+  let openingDaysJson = openingDays;
+  let weekdayHours = parseWeekdayHours(existing.weekday_hours);
+  if (body.openingHours !== undefined) {
+    if (body.openingDays !== undefined) return badRequest(res, 'Send openingHours or openingDays, not both');
+    const resolved = resolveOpeningHours(body.openingHours, { openingTime, closingTime });
+    if (resolved.error) return badRequest(res, resolved.error);
+    openingDaysJson = JSON.stringify(resolved.openingDays);
+    weekdayHours = resolved.weekdayHours;
+  }
+  // A closed day keeps no hours of its own, so re-opening it starts from the usual ones.
+  const openNow = JSON.parse(openingDaysJson);
+  weekdayHours = Object.fromEntries(Object.entries(weekdayHours).filter(([w]) => openNow.includes(Number(w))));
   let fullDayThresholdMinutes = existing.full_day_threshold_minutes;
   if (body.fullDayThresholdMinutes !== undefined) {
     fullDayThresholdMinutes = Number(body.fullDayThresholdMinutes);
@@ -3517,11 +3561,11 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
     ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
 
   await db.prepare(
-    `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?,
+    `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, weekday_hours = ?,
        full_day_threshold_minutes = ?, booking_mode = ?, dropoff_window_start = ?,
        dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
        show_prices_online = ?, updated_at = ? WHERE id = ?`
-  ).run(openingTime, closingTime, openingDays, fullDayThresholdMinutes, bookingMode,
+  ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
         dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
         showPricesOnline, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
@@ -4103,8 +4147,10 @@ route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, {
     mechanics: mechanics.map((m) => ({ id: m.id, name: m.name, workingDays: parseWorkingDays(m.working_days) })),
-    openingTime: settings.opening_time,
-    closingTime: settings.closing_time,
+    // The widest day, so the old booking page's grid covers every open hour;
+    // a shorter day comes back from /availability as busy time.
+    openingTime: widestHours(toCapacitySettings(settings)).open,
+    closingTime: widestHours(toCapacitySettings(settings)).close,
     openingDays: parseWorkingDays(settings.opening_days),
     jobTypes: Object.entries(PORTAL_JOB_TYPES).map(([value, t]) => ({ value, label: t.label, minutes: t.minutes })),
   });
