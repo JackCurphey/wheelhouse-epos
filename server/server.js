@@ -2484,28 +2484,6 @@ function timeToMinutes(timeStr) {
   return h * 60 + m;
 }
 
-// Merges overlapping/adjacent [start,end) minute intervals before summing
-// them, so two jobs that overlap (or just touch) don't get their shared
-// time counted twice - that would understate how much of the day is
-// actually still free.
-function mergedMinutes(intervals) {
-  if (!intervals.length) return 0;
-  const sorted = intervals.slice().sort((a, b) => a[0] - b[0]);
-  let total = 0;
-  let [curStart, curEnd] = sorted[0];
-  for (let i = 1; i < sorted.length; i++) {
-    const [s, e] = sorted[i];
-    if (s <= curEnd) {
-      curEnd = Math.max(curEnd, e);
-    } else {
-      total += curEnd - curStart;
-      [curStart, curEnd] = [s, e];
-    }
-  }
-  total += curEnd - curStart;
-  return total;
-}
-
 // A job with a start time always gets an end time - defaulting to +1 hour
 // keeps every scheduled job a draggable/resizable block on the diary grid.
 function resolveJobTimes(startTime, endTimeInput) {
