@@ -61,8 +61,8 @@ This file → **Plan register** below and the plans it names →
    id param is now 404 (`ID_PARAMS`); the print-agent route is `:printJobId`.
 1. **Plan 4a (book) STOPPED at Task 7 item 3** - every book screen lacks an
    endpoint. Decided 23 Sep (`docs/decisions/2026-09-23-book-journey-routing-
-   and-modes.md`): customer screens under **`/book`**; timed, drop-off and
-   appointment-only all Release 1; deposits out; all four J2 gaps in. Next: a
+   and-modes.md`): customer screens under **`/book`**; two modes
+   (appointments, drop-off days), both Release 1; deposits out; all four J2 gaps in. Next: a
    server prerequisite plan for 4a's endpoints, then 4a's tasks.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b

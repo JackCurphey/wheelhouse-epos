@@ -1,4 +1,4 @@
-# Book journey: customer screens under /book; all three booking modes in Release 1
+# Book journey: customer screens under /book; two booking modes, both in Release 1
 
 Date: 23 September 2026. **Status: decided by Jack in session.** Record of
 four decisions raised by the stopped journey plan 4a
@@ -22,15 +22,23 @@ Consequences:
   `/workshop`. Moving them is a follow-on this decision implies; it is not
   done yet.
 
-## J3 - drop-off and "appointment only" are both Release 1
+## J3 - two booking modes, both Release 1 (corrected 24 Sep)
 
-The shop's booking mode has three values: timed, drop-off, and appointment
-only, where walk-ins join an untimed shared queue (recorded in
-`docs/superpowers/plans/2026-09-20-phase-0-atlas-revision.md:24`). Today the
-settings route accepts only `timed` or `dropoff` (`server/server.js:3484`),
-and the portal booking POST can make only a timed booking (it requires
-`startTime` and `mechanicId`). Both gaps belong in the server prerequisite
-plan for 4a.
+The shop picks one of **two** modes: **exact appointments only** or
+**drop-off days only**. There is no "both, customer chooses" option.
+
+*Correction:* on 23 Sep this record said three modes (timed, drop-off,
+appointment only). Jack clarified on 24 Sep: two. The atlas `booking-settings`
+screen offers a third, "Both - customer chooses"; that option is not to be
+built. "Appointment only" in the Phase 0 plan (:24, :236) is the exact-
+appointments mode. Under it customers get no drop-off day, and staff put a
+walk-in into an untimed shared queue that uses capacity without holding a slot.
+
+The settings route already accepts exactly these two, as `timed` and
+`dropoff` (`server/server.js:3484`). What is missing is the booking itself:
+the portal booking POST can make only a timed booking (it requires
+`startTime` and `mechanicId`), and the portal does not read the mode. Both
+belong in the server prerequisite work for 4a.
 
 ## J4 - deposits are not blocked on Mark
 

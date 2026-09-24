@@ -8,7 +8,8 @@
 > from it yet.
 >
 > **23 Sep, Jack decided J1-J4** (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer screens under
-> `/book`; timed, drop-off and appointment-only all Release 1; deposits out,
+> `/book`; two booking modes (exact appointments, drop-off days), both
+> Release 1; deposits out,
 > not blocked; all four J2 gaps are Release 1. **Next: the server
 > prerequisite plan**, then this plan's tasks.
 
@@ -92,11 +93,11 @@ fields), which are ask-first changes under the project rules.
   them. Service categories are already decided in:
   `2026-09-20-phase-0-atlas-revision.md:24` says "grouped by shop-defined
   category on the second page".
-- **J3 - DECIDED 23 Sep: all three modes are Release 1.** Booking modes. The same line records three modes: timed,
-  drop-off, and "appointment only", where walk-ins join an untimed shared
-  queue. The settings route accepts only `timed` or `dropoff` (:3484), and
-  the portal can make only a timed booking. So the prerequisite plan needs
-  the third mode and an untimed booking. Confirm both are Release 1.
+- **J3 - DECIDED (corrected 24 Sep): two modes, exact appointments or
+  drop-off days, both Release 1; no "both" option.** The settings route
+  already accepts these two (`timed`/`dropoff`, :3484), but the portal can
+  make only a timed booking and never reads the mode. So the prerequisite
+  work needs an untimed (drop-off) booking.
 - **J4 - DECIDED 23 Sep: out, not blocked; the two stale lines are
   corrected.** Deposits (note 04). The sources disagree. Out: the scope reduction
   (Later, :19), `docs/design/release-1-journey/README.md:54`, and the Phase 0
