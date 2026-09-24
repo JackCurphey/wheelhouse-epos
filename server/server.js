@@ -4271,8 +4271,21 @@ async function serveStatic(req, res, pathname, baseDir) {
 // Vite writes into the bundle. Read per request rather than cached: the file is
 // small, no shop is live on this page yet, and a cache would serve a deleted
 // filename after a rebuild until the process restarts.
-async function workshopEntryTags() {
-  const manifest = JSON.parse(await readFile(VITE_MANIFEST, 'utf8'));
+//
+// public/dist is untracked, so a fresh checkout has no manifest until a build.
+// The request answers 500 either way; this error is what the server log shows,
+// so a missing file says what to run rather than a bare ENOENT.
+export async function workshopEntryTags(manifestPath = VITE_MANIFEST) {
+  let raw;
+  try {
+    raw = await readFile(manifestPath, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw new Error(`no staff app build at ${manifestPath} - run npm run build`, { cause: err });
+    }
+    throw err;
+  }
+  const manifest = JSON.parse(raw);
   const entry = manifest['src/staff/main.tsx'];
   if (!entry) throw new Error('vite manifest has no src/staff/main.tsx entry - run npm run build');
   const css = (entry.css || [])
