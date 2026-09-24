@@ -1,11 +1,17 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-23
-**Branch:** `feat/phase-4-component-tests`, off `main` at `3f9ffe0`: the
-component-test build step, the malformed-id 404 fix, plan 4a (stopped). No PR
-yet. **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Blocked on:** nothing; plan 4a's J1-J4 decided 23 Sep. Mark's #50 review is against the superseded 84-screen
-version; told 20 Sep. Other open items are Jack's.
+**Updated:** 2026-09-24
+**Branch:** `feat/book-server-1-services`, off `feat/phase-4-component-tests`
+(contains that branch's commits in full, which is itself off `main`): book
+server piece 1 - migration 022, service categories, staff category routes,
+services carrying kind/category/position, `GET
+/api/portal/:shopSlug/services`, screen-trace coverage. **No PR open yet, for
+this branch or for `feat/phase-4-component-tests`**; since this branch holds
+that one's commits, the order of the two PRs is pending the owner's call.
+**Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
+**Blocked on:** nothing to build; two PRs waiting on the owner's call on
+order. Mark's #50 review is against the superseded 84-screen version; told 20
+Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
@@ -55,15 +61,18 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-0. **Open a PR for this branch.** Component tests: `pretest` builds `src/`
-   to `.test-build/` (`vite.test.config.ts`); tests import it via
-   `tests/helpers/dom.js`; use `render()`'s queries, not `screen`. A malformed
-   id param is now 404 (`ID_PARAMS`); the print-agent route is `:printJobId`.
-1. **Plan 4a (book) STOPPED at Task 7 item 3** - every book screen lacks an
-   endpoint. Decided 23 Sep (`docs/decisions/2026-09-23-book-journey-routing-
-   and-modes.md`): customer screens under **`/book`**; two modes
-   (appointments, drop-off days), both Release 1; deposits out; all four J2 gaps in. Next: a
-   server prerequisite plan for 4a's endpoints, then 4a's tasks.
+0. **Open a PR for `feat/phase-4-component-tests`** (component-test build
+   step, malformed-id 404 fix). Detail: `ARCHIVE.md`.
+1. **Book server piece 1 built** (`feat/book-server-1-services`, 24 Sep):
+   migration 022, category routes, service kind/category/position,
+   `GET /api/portal/:shopSlug/services` (full, by category, uncategorised).
+   Every gate exit 0; 471/471 after final-review fixes. No PR open yet. **Next: piece 2**
+   (booking modes and capacity) - starts with its own brainstorm and spec.
+   Plan 4a (book, the staff-side screens) stays STOPPED at Task 7 item 3
+   until piece 2's endpoints land; routing decided 23 Sep
+   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`):
+   customer screens under `/book`, two modes, deposits out, all four J2
+   gaps in.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
@@ -92,11 +101,8 @@ deleted 23 Sep (its plans are on `main`, newer).
 Seven state machines replace `workshop_jobs.status`, now a **generated
 column**; fifteen action endpoints are guarded by them and an optimistic
 `version`, **which every Phase 4 mutation must echo**. **A 409 carries `code:
-'stale' | 'illegal'`** (#60, Jack): screens branch on the code, never the
-wording. **The old `status` is still writable** on `POST`/`PUT
-/api/workshop-jobs` until Phase 4's last task. **Quote line decisions are
-final** (#59) — screen 21 shows decided lines as settled. Full detail,
-including #58's four carried items: `ARCHIVE.md`.
+'stale' | 'illegal'`** (#60, Jack). **Quote line decisions are final** (#59).
+Full detail, including #58's four carried items: `ARCHIVE.md`.
 
 ## Phase 4 foundation (Tasks 1-6)
 
@@ -104,9 +110,9 @@ including #58's four carried items: `ARCHIVE.md`.
 maps atlas id → URL; `SCREENS` (`app-shell.tsx`) registers built screens.
 Server calls go through `src/lib/api/client.ts` (`jobAction` needs
 `version`); identity only via `useSession`. `src/lib/adapters/intent.ts`
-records print/message intent, stores nothing, never claims delivery — screens
-12, 28, 29, 39, 56-58 have no endpoint until P00b/P00c; 13, 59, 60 wait on
-auth. **Not yet:** nav, styling, shop theme (Jack's calls), auth guard.
+records print/message intent, stores nothing, never claims delivery. **Not
+yet:** nav, styling, shop theme (Jack's calls), auth guard. Full endpoint gap
+list (screens without one, and why): `ARCHIVE.md`.
 
 ## Plan register
 
@@ -131,10 +137,9 @@ npm run test:browser
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 23 Sep on `feat/phase-4-intent-adapter` (Task 6), every exit 0:**
-437/437 tests; typecheck; lint; build; RLS 30 protected, 2 exempt; screen
-trace; registry, 9 files, no drift; atlas packaged, no errors, notes pass;
-browser 2/2. Check a PR's CI against the run's own SHA, not the PR pane.
+**Verified 24 Sep on `feat/book-server-1-services`, every gate exit 0:**
+471/471 tests. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
+Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
 without it the server uses 5432 not 5433 and every server-booting test fails

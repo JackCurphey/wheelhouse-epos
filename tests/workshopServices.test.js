@@ -58,7 +58,8 @@ test('a labour line cannot carry a product, and a product line must have one', a
 });
 
 test('serializeWorkshopService converts a row to camelCase with active as a boolean', () => {
-  const row = { id: 7, name: 'Puncture repair', price: '12.00', minutes: 15, active: 1, bookable_online: 1 };
+  const row = { id: 7, name: 'Puncture repair', price: '12.00', minutes: 15, active: 1, bookable_online: 1,
+    kind: 'full', category_id: null, position: 2 };
   assert.deepEqual(serializeWorkshopService(row), {
     id: 7,
     name: 'Puncture repair',
@@ -66,6 +67,9 @@ test('serializeWorkshopService converts a row to camelCase with active as a bool
     minutes: 15,
     active: true,
     bookableOnline: true,
+    kind: 'full',
+    categoryId: null,
+    position: 2,
   });
 });
 

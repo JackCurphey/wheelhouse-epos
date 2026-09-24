@@ -53,3 +53,12 @@ Service questions, customer photo/video upload, the update-channel choice
 (Email / SMS / WhatsApp), and guest read-back of a booking request are all in
 Release 1, and belong in the server prerequisite plan for 4a with the
 endpoints listed in the plan's item 3 table.
+
+## 24 Sep - service categories and the first booking screen
+
+- **Categories are one level deep:** category -> services, no subcategories.
+- **The first booking screen has three fixed options:** Full services (opens
+  a short list of the shop's full services), Individual services (opens the
+  category list), and Not sure (skips to describing the problem). Each online
+  service is marked full or individual. Detail:
+  `docs/superpowers/specs/2026-09-24-book-server-1-service-list-design.md`.
