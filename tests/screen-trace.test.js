@@ -66,3 +66,15 @@ test('a GET quote route naming a real screen passes', () => {
   );
   assert.equal(result.ok, true, result.problems.join('\n'));
 });
+
+test('the service catalogue and public service list routes must name their screens', () => {
+  for (const line of [
+    "route('GET', '/api/portal/:shopSlug/services', h);",
+    "route('POST', '/api/workshop-services', h);",
+    "route('PUT', '/api/workshop-service-categories/:id', h);",
+  ]) {
+    const result = checkSource(line, screenIds);
+    assert.equal(result.ok, false, `${line} passed with no screens comment`);
+    assert.match(result.problems.join('\n'), /names no screen/);
+  }
+});

@@ -3668,11 +3668,13 @@ async function readServicePlacement(body, existing) {
   return { kind, categoryId, position };
 }
 
+// screens: services, service-edit
 route('GET', '/api/workshop-services', async (req, res) => {
   const rows = await db.prepare('SELECT * FROM workshop_services ORDER BY active DESC, name').all();
   sendJson(res, 200, rows.map(serializeWorkshopService));
 });
 
+// screens: services, service-edit
 route('POST', '/api/workshop-services', async (req, res) => {
   const body = await readJsonBody(req);
   let fields;
@@ -3692,6 +3694,7 @@ route('POST', '/api/workshop-services', async (req, res) => {
   sendJson(res, 201, serializeWorkshopService(row));
 });
 
+// screens: services, service-edit
 route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
@@ -3719,6 +3722,7 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
 
 // Deactivate rather than delete: a job line keeps its service_id, and that
 // link must not dangle.
+// screens: services, service-edit
 route('DELETE', '/api/workshop-services/:id', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
