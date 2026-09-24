@@ -2506,27 +2506,6 @@ function mergedMinutes(intervals) {
   return total;
 }
 
-// How many minutes of a mechanic's working day (clamped to opening/closing
-// time) are still free, given every job already on the books for that
-// date - the basis for both the portal's "this day is full" display and
-// the authoritative reject-on-booking check below.
-async function mechanicFreeMinutes(mechanicId, jobDate, openingTime, closingTime) {
-  const openMin = timeToMinutes(openingTime);
-  const closeMin = timeToMinutes(closingTime);
-  const rows = await db
-    .prepare(
-      `SELECT start_time, end_time FROM workshop_jobs
-       WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''`
-    )
-    .all(mechanicId, jobDate);
-  const intervals = rows.map((r) => [
-    Math.max(openMin, timeToMinutes(r.start_time)),
-    Math.min(closeMin, timeToMinutes(r.end_time)),
-  ]);
-  const busy = mergedMinutes(intervals);
-  return Math.max(0, closeMin - openMin - busy);
-}
-
 // A job with a start time always gets an end time - defaulting to +1 hour
 // keeps every scheduled job a draggable/resizable block on the diary grid.
 function resolveJobTimes(startTime, endTimeInput) {
@@ -4457,30 +4436,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
-  // The grid only ever showed a fixed 60-minute proxy as "free" - the real
-  // length depends on the job type chosen in this same request, so a
-  // "service" (120 min) booked into what looked like an open slot could
-  // actually run past closing or straight into another job. Check both
-  // here, authoritatively, rather than trusting whatever the client showed.
-  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-
-  // The shop holds back full_day_threshold_minutes of each mechanic's day for
-  // lunch, admin, and the parts of a shift that are not spent on a bike. The
-  // check subtracts the job being booked: testing only the free time already
-  // left let one booking consume the entire reserve (540-minute day, 120-minute
-  // threshold, 420 booked, `120 < 120` false, a 120-minute service accepted,
-  // zero minutes left). Staff routes deliberately do NOT apply this - a shop
-  // may choose to work through its own lunch; a customer may not choose it for
-  // them.
-  const freeMinutes = await mechanicFreeMinutes(mechResolved.mechanicId, jobDate, settings.opening_time, settings.closing_time);
-  if (freeMinutes - jobType.minutes < settings.full_day_threshold_minutes) {
-    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
-  }
-
-  // Closed days, opening hours and mechanic overlap - the same rules the
-  // staff routes enforce, from the same place. Previously this route checked
-  // hours and overlap with its own copy and never checked opening days at
-  // all, so a customer could book a slot the diary showed as closed.
+  // Closed days, the day's own opening hours and mechanic overlap first - the
+  // same rules the staff routes enforce, from the same place, so their
+  // specific messages win.
   const slotError = await checkJobSlot({
     jobDate,
     startTime: times.startTime,
@@ -4488,6 +4446,22 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     mechanicId: mechResolved.mechanicId,
   });
   if (slotError) return badRequest(res, slotError);
+
+  // Then the capacity calculator: blocks, closures, the walk-in queue and the
+  // reserve, the same answer the calendar gave. The reserve check subtracts the
+  // job being booked (freeMinutes has the reserve taken off already): testing
+  // only the free time already left let one booking consume the entire
+  // reserve. Staff routes deliberately do NOT apply this - a shop may choose to
+  // work through its own lunch; a customer may not choose it for them. A
+  // block's reason is never given to the customer.
+  const capacity = await loadCapacity(jobDate, jobDate);
+  const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechResolved.mechanicId);
+  if (!mech || !mech.working || !fitsFreeTime(mech, times.startTime, times.endTime)) {
+    return badRequest(res, 'That mechanic is unavailable at that time - please choose another time or day.');
+  }
+  if (mech.freeMinutes < jobType.minutes) {
+    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
+  }
 
   // Either an existing bike of theirs, or a new one registered inline -
   // never a bike belonging to another customer (checked below).
