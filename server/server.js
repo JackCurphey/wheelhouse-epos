@@ -12,7 +12,7 @@ import { readLegacyStatus, bookingRequest, custody, work } from './workshop/stat
 import { applyEvent } from './workshop/transitions.js';
 import { allocateReference } from './workshop/references.js';
 import {
-  DATE_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, dayCount, datesBetween, parseWeekdayHours,
+  DATE_RE, HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, dayCount, datesBetween, parseWeekdayHours,
   effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
   computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
 } from './capacity.js';
@@ -3435,8 +3435,6 @@ function serializeWorkshopSettings(row) {
     updatedAt: row.updated_at,
   };
 }
-
-const HOUR_RE = /^([01]\d|2[0-3]):00$/;
 
 // One row per shop (RLS scopes it), rather than the old global single-row
 // (id=1) singleton - a shop's id is assigned by Postgres, not fixed at 1, so
