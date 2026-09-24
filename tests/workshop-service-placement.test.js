@@ -79,6 +79,35 @@ test('a PUT that omits kind, categoryId and position keeps them', async () => {
   assert.equal(res.body.position, 5);
 });
 
+test('a PUT that omits kind keeps a full service full', async () => {
+  const made = await service(shopA, { kind: 'full', position: 4 });
+  const res = await as(shopA, `/api/workshop-services/${made.body.id}`, {
+    method: 'PUT',
+    body: { name: 'Full svc renamed', price: 20 },
+  });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.kind, 'full');
+  assert.equal(res.body.position, 4);
+});
+
+test('categoryId over the database\'s integer range is rejected, not a 500', async () => {
+  const res = await service(shopA, { categoryId: 99999999999 });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.doesNotMatch(res.body.error || '', /out of range|integer/i);
+});
+
+test('position over the database\'s integer range is rejected, not a 500', async () => {
+  const res = await service(shopA, { position: 99999999999 });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.doesNotMatch(res.body.error || '', /out of range|integer/i);
+});
+
+test('an empty categoryId from a form dropdown is treated as uncategorised', async () => {
+  const res = await service(shopA, { categoryId: '' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(res.body.categoryId, null);
+});
+
 test('deleting a category leaves its services, uncategorised', async () => {
   const wheels = await category(shopA, 'Wheels');
   const made = await service(shopA, { categoryId: wheels.id });

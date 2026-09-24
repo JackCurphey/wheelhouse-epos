@@ -3546,7 +3546,9 @@ function readCategoryBody(body, existing) {
   let position = existing ? existing.position : 0;
   if (body.position !== undefined) {
     position = Number(body.position);
-    if (!Number.isInteger(position)) throw new ValidationError('Position must be a whole number');
+    if (!Number.isInteger(position) || position < -MAX_SERIAL - 1 || position > MAX_SERIAL) {
+      throw new ValidationError('Position must be a whole number');
+    }
   }
   return { name, position };
 }
@@ -3653,9 +3655,13 @@ async function readServicePlacement(body, existing) {
   let categoryId = body.categoryId !== undefined ? body.categoryId : (existing ? existing.category_id : null);
   if (kind === 'full') {
     categoryId = null;
+  } else if (categoryId === '') {
+    // An empty form dropdown - treat exactly like null (uncategorised).
+    categoryId = null;
   } else if (categoryId !== null) {
     categoryId = Number(categoryId);
-    const found = Number.isInteger(categoryId)
+    const valid = Number.isInteger(categoryId) && categoryId >= 1 && categoryId <= MAX_SERIAL;
+    const found = valid
       ? await db.prepare('SELECT id FROM workshop_service_categories WHERE id = ?').get(categoryId)
       : null;
     if (!found) throw new ValidationError('That category does not exist');
@@ -3663,7 +3669,9 @@ async function readServicePlacement(body, existing) {
   let position = existing ? existing.position : 0;
   if (body.position !== undefined) {
     position = Number(body.position);
-    if (!Number.isInteger(position)) throw new ValidationError('Position must be a whole number');
+    if (!Number.isInteger(position) || position < -MAX_SERIAL - 1 || position > MAX_SERIAL) {
+      throw new ValidationError('Position must be a whole number');
+    }
   }
   return { kind, categoryId, position };
 }

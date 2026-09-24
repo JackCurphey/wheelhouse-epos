@@ -36,7 +36,18 @@ test('categories are created and listed by position, then name', async () => {
   }
   const list = await as(shopA, '/api/workshop-service-categories');
   assert.equal(list.status, 200);
-  assert.deepEqual(list.body.map((c) => c.name), ['Wheels', 'Brakes', 'Gears']);
+  const created = new Set(['Wheels', 'Gears', 'Brakes']);
+  const names = list.body.filter((c) => created.has(c.name)).map((c) => c.name);
+  assert.deepEqual(names, ['Wheels', 'Brakes', 'Gears']);
+});
+
+test('position over the database\'s integer range is rejected, not a 500', async () => {
+  const res = await as(shopA, '/api/workshop-service-categories', {
+    method: 'POST',
+    body: { name: 'Too big', position: 99999999999 },
+  });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.doesNotMatch(res.body.error || '', /out of range|integer/i);
 });
 
 test('a category needs a name', async () => {

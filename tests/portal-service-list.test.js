@@ -62,16 +62,29 @@ test('only this shop\'s active, bookable-online services are listed, with no sig
 });
 
 test('prices are null unless the shop shows prices online', async () => {
+  const cat = await category(shopA, 'Priced category');
   await service(shopA, { name: 'Priced', price: 42.5 });
+  await service(shopA, { name: 'Priced full', price: 55, kind: 'full' });
+  await service(shopA, { name: 'Priced categorised', price: 30, categoryId: cat.id });
   await setShowPrices(shopA, false);
   let res = await publicList(shopA);
   assert.equal(res.body.showPrices, false);
+  assert.ok(res.body.full.every((s) => s.price === null), 'a price leaked in full with the setting off');
+  assert.ok(
+    res.body.categories.every((c) => c.services.every((s) => s.price === null)),
+    'a price leaked in a category with the setting off'
+  );
   assert.ok(res.body.uncategorised.every((s) => s.price === null), 'a price leaked with the setting off');
 
   await setShowPrices(shopA, true);
   res = await publicList(shopA);
   assert.equal(res.body.showPrices, true);
   assert.equal(res.body.uncategorised.find((s) => s.name === 'Priced').price, 42.5);
+  assert.equal(res.body.full.find((s) => s.name === 'Priced full').price, 55);
+  assert.equal(
+    res.body.categories.find((c) => c.id === cat.id).services.find((s) => s.name === 'Priced categorised').price,
+    30
+  );
 });
 
 test('full, categorised and uncategorised services are grouped and ordered', async () => {
