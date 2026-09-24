@@ -4311,56 +4311,72 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res) => {
   });
 });
 
-// Public. Returns only mechanic/date/time for whatever's already booked -
-// deliberately never reuses serializeWorkshopJob (title/customer/notes),
-// since that's exactly the private detail this endpoint must not leak.
-// Every job counts as busy regardless of status, including 'pending', so
-// two customers can't unknowingly grab the same slot.
+// Everything the capacity calculator needs for a date range, read inside the
+// request's shop context. Every active mechanic, even when a caller wants one:
+// the walk-in queue is split across everyone working.
+async function loadCapacity(start, end) {
+  const settings = toCapacitySettings(await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get());
+  const mechanics = (await db.prepare(
+    'SELECT id, working_days FROM employees WHERE is_mechanic = 1 AND active = 1 ORDER BY name'
+  ).all()).map((m) => ({ id: m.id, workingDays: parseWorkingDays(m.working_days) }));
+  const blocks = (await db.prepare(
+    `SELECT * FROM workshop_unavailability WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?)`
+  ).all(end, start)).map(toBlock);
+  const jobs = (await db.prepare(
+    `SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes FROM workshop_jobs
+     WHERE job_date >= ? AND job_date <= ? AND booking_state IN (${LIVE_STATES_SQL})`
+  ).all(start, end)).map(toCapacityJob);
+  const days = computeCapacity({ settings, mechanics, blocks, jobs, dates: datesBetween(start, end) });
+  return { settings, blocks, jobs, days };
+}
+
+// Public: the customer calendar. `busy` and `fullDays` keep the shape the old
+// booking page reads (public-portal/portal.js:263) - blocks, closures and a
+// shorter day come back as busy time with no reason. With `minutes`, `days`
+// adds what the new screens need: the mode per date, and per mechanic the
+// start times (timed) or whether the job fits (drop-off). Never returned: a
+// block's reason, other customers' jobs, minute totals.
+// screens: date, appointment, full
 route('GET', '/api/portal/:shopSlug/availability', async (req, res, params, query) => {
   const start = query.get('start');
   const end = query.get('end');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(start || '') || !/^\d{4}-\d{2}-\d{2}$/.test(end || '')) {
+  if (!DATE_RE.test(start || '') || !DATE_RE.test(end || '')) {
     return badRequest(res, 'Valid start and end dates are required');
   }
-  let sql = `SELECT mechanic_id, job_date, start_time, end_time FROM workshop_jobs
-    WHERE job_date >= ? AND job_date <= ? AND start_time IS NOT NULL AND start_time != ''`;
-  const args = [start, end];
-  const mechanicId = query.get('mechanicId');
-  if (mechanicId) {
-    sql += ' AND mechanic_id = ?';
-    args.push(Number(mechanicId));
+  if (dayCount(start, end) > MAX_RANGE_DAYS) {
+    return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
   }
-  sql += ' ORDER BY job_date, start_time';
-  const rows = await db.prepare(sql).all(...args);
+  let minutes = null;
+  if (query.get('minutes') !== null) {
+    minutes = Number(query.get('minutes'));
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 720) {
+      return badRequest(res, 'minutes must be a whole number between 1 and 720');
+    }
+  }
+  const mechanicFilter = query.get('mechanicId') ? Number(query.get('mechanicId')) : null;
+  const keep = (x) => mechanicFilter === null || x.mechanicId === mechanicFilter;
 
-  // Alongside the raw busy blocks, work out which mechanic/day combinations
-  // already have less than workshop_settings.full_day_threshold_minutes of
-  // genuinely free time left (small gaps between jobs merged, not summed
-  // twice) - the portal treats those the same as a closed day, even though
-  // technically-free slivers of time remain here and there.
-  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-  const openMin = timeToMinutes(settings.opening_time);
-  const closeMin = timeToMinutes(settings.closing_time);
-  const workingMinutes = closeMin - openMin;
-  const byMechanicDay = new Map();
-  for (const r of rows) {
-    const key = `${r.mechanic_id}|${r.job_date}`;
-    if (!byMechanicDay.has(key)) byMechanicDay.set(key, { mechanicId: r.mechanic_id, jobDate: r.job_date, intervals: [] });
-    byMechanicDay.get(key).intervals.push([
-      Math.max(openMin, timeToMinutes(r.start_time)),
-      Math.min(closeMin, timeToMinutes(r.end_time)),
-    ]);
-  }
+  const { settings, jobs, days } = await loadCapacity(start, end);
+  const busy = [];
   const fullDays = [];
-  for (const { mechanicId: mId, jobDate, intervals } of byMechanicDay.values()) {
-    const free = workingMinutes - mergedMinutes(intervals);
-    if (free < settings.full_day_threshold_minutes) fullDays.push({ mechanicId: mId, jobDate });
+  for (const day of days) {
+    const view = legacyView(day, settings, jobs);
+    busy.push(...view.busy);
+    fullDays.push(...view.fullDays);
   }
-
-  sendJson(res, 200, {
-    busy: rows.map((r) => ({ mechanicId: r.mechanic_id, jobDate: r.job_date, startTime: r.start_time, endTime: r.end_time })),
-    fullDays,
-  });
+  const body = { busy: busy.filter(keep), fullDays: fullDays.filter(keep) };
+  if (minutes !== null) {
+    body.days = days.map((day) => ({
+      date: day.date,
+      mode: day.mode,
+      ...(day.mode === 'dropoff'
+        ? { dropoffWindow: { start: settings.dropoffWindowStart, end: settings.dropoffWindowEnd } } : {}),
+      mechanics: day.mechanics.filter(keep).map((m) => (day.mode === 'timed'
+        ? { mechanicId: m.mechanicId, startTimes: startTimesFor(m, minutes) }
+        : { mechanicId: m.mechanicId, bookable: fitsDropoff(m, minutes) })),
+    }));
+  }
+  sendJson(res, 200, body);
 });
 
 route('GET', '/api/portal/:shopSlug/bikes', async (req, res, params) => {
