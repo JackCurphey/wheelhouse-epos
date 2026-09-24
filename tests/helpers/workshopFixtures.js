@@ -29,6 +29,7 @@ export async function seedWorkshopJob({
   legacyStatus = 'scheduled',
   notes = '',
   orderTotal = 0,
+  plannedMinutes = null,
   ...rest
 }) {
   // The parameter was renamed when status became a derived column. Without
@@ -41,8 +42,8 @@ export async function seedWorkshopJob({
   const { booking, work, custody } = readLegacyStatus(legacyStatus);
   return runWithShop(shopId, async () => {
     const { lastInsertRowid: jobId } = await prepare(
-      `INSERT INTO workshop_jobs (title, customer_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, notes, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())`
+      `INSERT INTO workshop_jobs (title, customer_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, notes, planned_minutes, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())`
     ).run(
       title,
       customerId,
@@ -56,7 +57,8 @@ export async function seedWorkshopJob({
       // column never said whether the bike left. 'expected' is the column
       // default and the honest choice for a row that never recorded it.
       custody ?? 'expected',
-      notes
+      notes,
+      plannedMinutes
     );
 
     const { lastInsertRowid: orderId } = await prepare(
@@ -101,4 +103,14 @@ export async function purgeAttachmentFiles(shopId) {
   await Promise.all(
     keys.map((k) => unlink(path.join(UPLOADS_DIR, k.storage_key)).catch(() => {}))
   );
+}
+
+// A date at least three weeks out on the given weekday (0 = Sunday), for tests
+// of anything that only looks from today forward, such as block clashes.
+export function futureDate(weekday) {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + 21);
+  while (d.getUTCDay() !== weekday) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
 }

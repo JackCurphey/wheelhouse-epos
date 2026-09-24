@@ -3572,6 +3572,128 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
 
+// ---------- Workshop unavailability (lunch, leave, closures) ----------
+// Blocks take time away from what customers can book. They never refuse or
+// move a staff booking (4 Sep decision §7.7): adding one reports the live
+// bookings it clashes with, and staff decide what to do.
+// Spec: docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md
+
+const LIVE_STATES_SQL = LIVE_BOOKING_STATES.map((s) => `'${s}'`).join(', ');
+
+function toBlock(row) {
+  return {
+    id: row.id,
+    mechanicId: row.employee_id ?? null,
+    kind: row.kind,
+    weekdays: row.weekdays ? JSON.parse(row.weekdays) : null,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    reason: row.reason,
+  };
+}
+
+function toCapacityJob(row) {
+  return {
+    id: row.id,
+    mechanicId: row.mechanic_id ?? null,
+    jobDate: row.job_date,
+    startTime: row.start_time || '',
+    endTime: row.end_time || '',
+    plannedMinutes: row.planned_minutes ?? null,
+  };
+}
+
+// Live bookings a block overlaps, from today on - a block's past is history.
+async function clashesFor(block) {
+  const today = new Date().toISOString().slice(0, 10);
+  const from = block.kind === 'dates' && block.startDate > today ? block.startDate : today;
+  let sql = `SELECT id, reference, title, mechanic_id, job_date, start_time, end_time, planned_minutes
+    FROM workshop_jobs WHERE job_date >= ? AND booking_state IN (${LIVE_STATES_SQL})`;
+  const args = [from];
+  if (block.kind === 'dates') {
+    sql += ' AND job_date <= ?';
+    args.push(block.endDate);
+  }
+  const rows = await db.prepare(`${sql} ORDER BY job_date, start_time`).all(...args);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return blockClashes(block, rows.map(toCapacityJob)).map((j) => ({
+    id: j.id,
+    reference: byId.get(j.id).reference,
+    title: byId.get(j.id).title,
+    mechanicId: j.mechanicId,
+    jobDate: j.jobDate,
+    startTime: j.startTime,
+    endTime: j.endTime,
+  }));
+}
+
+// Through the shop-scoped db: a foreign key check bypasses row-level security,
+// so another shop's mechanic id must be refused here, not by the constraint.
+async function blockMechanicExists(mechanicId) {
+  if (mechanicId === null) return true;
+  return !!(await db.prepare('SELECT id FROM employees WHERE id = ? AND is_mechanic = 1').get(mechanicId));
+}
+
+// screens: hours, diary, week, month
+route('GET', '/api/workshop-unavailability', async (req, res, params, query) => {
+  const start = query.get('start');
+  const end = query.get('end');
+  let rows;
+  if (start || end) {
+    if (!DATE_RE.test(start || '') || !DATE_RE.test(end || '')) return badRequest(res, 'Give both start and end dates, or neither');
+    rows = await db.prepare(
+      `SELECT * FROM workshop_unavailability
+       WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?) ORDER BY id`
+    ).all(end, start);
+  } else {
+    rows = await db.prepare('SELECT * FROM workshop_unavailability ORDER BY id').all();
+  }
+  sendJson(res, 200, { blocks: rows.map(toBlock) });
+});
+
+// screens: hours
+route('POST', '/api/workshop-unavailability', async (req, res) => {
+  const checked = validateBlock(await readJsonBody(req));
+  if (checked.error) return badRequest(res, checked.error);
+  const b = checked.block;
+  if (!(await blockMechanicExists(b.mechanicId))) return notFound(res, 'Mechanic not found');
+  const { lastInsertRowid } = await db.prepare(
+    `INSERT INTO workshop_unavailability (employee_id, kind, weekdays, start_date, end_date, start_time, end_time, reason)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
+        b.startDate, b.endDate, b.startTime, b.endTime, b.reason);
+  const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(lastInsertRowid));
+  sendJson(res, 201, { block, clashes: await clashesFor(block) });
+});
+
+// screens: hours
+route('PUT', '/api/workshop-unavailability/:id', async (req, res, params) => {
+  const row = await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
+  if (!row) return notFound(res, 'Block not found');
+  const body = await readJsonBody(req);
+  const checked = validateBlock({ ...toBlock(row), ...body });
+  if (checked.error) return badRequest(res, checked.error);
+  const b = checked.block;
+  if (!(await blockMechanicExists(b.mechanicId))) return notFound(res, 'Mechanic not found');
+  await db.prepare(
+    `UPDATE workshop_unavailability SET employee_id = ?, kind = ?, weekdays = ?, start_date = ?, end_date = ?,
+       start_time = ?, end_time = ?, reason = ?, updated_at = now() WHERE id = ?`
+  ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
+        b.startDate, b.endDate, b.startTime, b.endTime, b.reason, row.id);
+  const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(row.id));
+  sendJson(res, 200, { block, clashes: await clashesFor(block) });
+});
+
+// screens: hours
+route('DELETE', '/api/workshop-unavailability/:id', async (req, res, params) => {
+  const row = await db.prepare('SELECT id FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
+  if (!row) return notFound(res, 'Block not found');
+  await db.prepare('DELETE FROM workshop_unavailability WHERE id = ?').run(row.id);
+  sendJson(res, 200, { ok: true });
+});
+
 // ---------- Workshop service categories ----------
 // One level deep (Jack, 24 Sep): a category holds individual services, never
 // other categories. Full services carry no category. Deleting a category moves
