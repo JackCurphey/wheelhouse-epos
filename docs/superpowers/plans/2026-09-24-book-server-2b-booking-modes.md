@@ -45,6 +45,9 @@ Record further decisions here as tasks run.
 6. **The old booking page cannot book a drop-off day,** because it always sends a time. No shop runs drop-off mode today (nothing read the setting before 2a), and the new `/book` screens replace that page (J1). Recorded, not fixed.
 7. **Drop-off booking length still comes from `PORTAL_JOB_TYPES`.** Piece 3 swaps it to the chosen service. Every new booking writes `planned_minutes` = the job type's minutes.
 8. **Locks are keyed `pg_advisory_xact_lock(shop_id, yyyymmdd)`,** the two-integer form. The only other advisory lock in the app, the migration lock (`server/migrations/run-migrations.js:52`), uses the one-integer form, which is a separate key space.
+9. **PUT `bookingMode` equal to a scheduled `nextBookingMode` clears the schedule.** Setting the mode straight to the mode already scheduled would otherwise leave `booking_mode` and `next_booking_mode` equal - a self-contradictory state, since the settled read already reports the scheduled mode once its date arrives. The PUT clears `nextBookingMode`/`nextBookingModeFrom` instead of leaving a dangling future date.
+10. **An unassigned job's hold is untimed** (`start_time ''`), even when the job is timed: the shared queue is counted, never slotted. So the 024 index only ever sees assigned timed holds - two unassigned timed jobs on the same mechanic-day no longer collide on the hold index.
+11. **A `23505` on a staff write** (possible only from holds left stale before 2b) rolls the write back and answers 409 `code: 'capacity'` instead of 500; staff routes otherwise have no capacity check.
 
 ---
 

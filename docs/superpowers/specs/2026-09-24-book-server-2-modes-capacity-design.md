@@ -166,6 +166,17 @@ drop-off bookings, the lock, and the `capacity` code.
 
 ## 2b - booking in either mode
 
+**Built as PR against `feat/book-server-2b-modes`; changed during build in
+several places - see the plan's Decision log,
+`docs/superpowers/plans/2026-09-24-book-server-2b-booking-modes.md`,
+decisions 1-11.**
+
+- **Migration 024** narrows the 018 hold index to timed holds
+  (`start_time <> ''`): every drop-off hold has `start_time = ''`, so the
+  018 index as originally written would collide a mechanic's second
+  drop-off booking on a day with the first. The per-(shop, date) advisory
+  lock is the main guard for both timed and untimed holds; the narrowed
+  index is the second guard (decision 1).
 - **Customer booking POST** reads the mode for `jobDate`:
   - timed: `startTime` and `mechanicId` required (as now);
   - dropoff: `mechanicId` required, `startTime` refused (400).
@@ -174,17 +185,38 @@ drop-off bookings, the lock, and the `capacity` code.
   create or move) takes a transaction-scoped advisory lock on `(shop_id,
   job_date)`, runs the calculator, then writes. A move to another date locks
   both dates, lower first. The `018` unique index stays as a second guard.
-- **Capacity refusal**: 409 with `code: 'capacity'`; the message text the old
-  page shows is unchanged. `src/lib/api/client.ts` learns the code.
-- **Holds**: drop-off bookings take a hold with minutes and no start time.
-  Moving or resizing a job moves its hold (fixes `PUT /api/workshop-jobs/:id`).
+- **The 409-capacity / 400-shop-rule split**: 409 `code: 'capacity'` is only
+  for a refusal caused by other bookings having used the time - overlap with
+  another live job, not enough free minutes, or the hold-index race. 400 is
+  for the shop's own rules: closed day, hours, a block or leave, a time sent
+  for a drop-off day, or bad input. The message text the old page shows is
+  unchanged either way. `src/lib/api/client.ts` learns the `capacity` code
+  (decision 2).
+- **Holds - one live hold per live job**, staff jobs included
+  (`syncJobHold`): a timed, assigned hold sits at its start time; an
+  unassigned job's hold is untimed even when the job itself is timed (the
+  shared queue counts it, never slots it, so the 024 index only ever sees
+  assigned timed holds), and an untimed hold's minutes come from
+  `planned_minutes`, or 0 if it has none. A job that stops being live has its
+  hold released. Moving or resizing a job moves its hold (fixes
+  `PUT /api/workshop-jobs/:id`) (decisions 3, 10). A `23505` on a staff write
+  is possible only from a hold left stale before 2b; it rolls the write back
+  and answers 409 `capacity` rather than 500 - staff routes otherwise have no
+  capacity check (decision 11).
 - **Walk-in queue**: `POST /api/workshop-jobs` accepts `plannedMinutes` with no
   mechanic and no time. Assigning a mechanic moves its whole length onto that
   mechanic. Staff are never refused for capacity.
-- **Scheduled mode change**: `PUT /api/workshop-settings` accepts
-  `nextBookingMode` + `nextBookingModeFrom` (must be after today, UTC as the
-  server's existing convention), or both null to cancel. Existing bookings are
-  untouched.
+- **Scheduled mode change, settled on read and write, with no timer**:
+  `PUT /api/workshop-settings` accepts `nextBookingMode` +
+  `nextBookingModeFrom` (must be after today, UTC as the server's existing
+  convention), or both null to cancel. When `nextBookingModeFrom` has
+  arrived, the settings serializer reports it as the current `bookingMode`,
+  and the next PUT writes it into `booking_mode` and clears the schedule
+  (decision 4); `modeForDate` already gives the right mode per date in
+  between. A PUT that sets `bookingMode` directly to the already-scheduled
+  `nextBookingMode` also clears the schedule, rather than leaving a
+  self-contradictory state where the two agree but a dangling future date
+  remains (decision 9). Existing bookings are untouched.
 
 ## Testing
 

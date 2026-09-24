@@ -5,9 +5,10 @@
 and #64 (book server piece 1: migration 022, service categories, `GET
 /api/portal/:shopSlug/services`) merged 24 Sep; CI on `9291119` 471/471.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Working branch:** `feat/book-server-2-modes` - piece 2a built, not yet
-pushed or PR'd (see Immediate next actions). Mark's #50 review is against the
-superseded 84-screen version; told 20 Sep. Other open items are Jack's.
+**Working branches:** `feat/book-server-2-modes` (2a, PR #65 open) and
+`feat/book-server-2b-modes` cut from it - piece 2b built, not yet pushed;
+its PR waits on #65 merging. Mark's #50 review is against the superseded
+84-screen version; told 20 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
 > exceptions to the gitignore on `.agents/`. If it is wrong, that is a bug.
@@ -29,9 +30,8 @@ and unbuilt. The `prototype/` demo has **no week view** — the staff diary
 interactions :1878-2285) and customer slot grid (`public-portal/portal.js:364`)
 are the spec for screens 38/39/44.
 
-**Check the checkout before judging state** (on 9 Sep work sat 156 commits
-behind), and note **stage one's request-wide transaction mode is OFF**. Both
-in `ARCHIVE.md`.
+**Check the checkout before judging state; stage one's transaction mode is
+OFF.** Detail: `ARCHIVE.md`.
 
 ## Operational traps
 
@@ -57,20 +57,19 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Book server piece 2a built** (24 Sep) on `feat/book-server-2-modes`, not
-   yet pushed or PR'd: migration 023 (`weekday_hours`,
-   `workshop_unavailability`, `next_booking_mode*`), `server/capacity.js`
-   (the calculator), staff blocks routes, weekday hours, the customer
-   calendar and booking check on the calculator, and staff capacity view.
-   Schema changed from the approved spec during build (owner-approved, see
-   the plan's Decision log,
-   `docs/superpowers/plans/2026-09-24-book-server-2a-availability.md`),
-   spec updated to match. **Next: piece 2b** (booking in either mode),
-   needing its own plan. Plan 4a stays STOPPED at Task 7 item 3 until piece
-   2's endpoints land; routing decided 23 Sep
-   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`):
-   customer screens under `/book`, two modes, deposits out, all four J2
-   gaps in.
+1. **Book server piece 2b built** (24 Sep) on `feat/book-server-2b-modes`
+   (cut from `feat/book-server-2-modes`, PR #65): migration 024 (hold index
+   narrowed to timed holds), mode-aware customer booking POST, the
+   per-(shop, date) advisory booking lock, the 409 `capacity` / 400
+   shop-rule split, one live hold per live job (`syncJobHold`), walk-in
+   queue lengths, and settle-on-read-and-write for a scheduled mode change.
+   Rulings made during build, not in the original spec: plan's Decision log,
+   `docs/superpowers/plans/2026-09-24-book-server-2b-booking-modes.md`,
+   decisions 1-11; spec updated to match. Its pull request waits on #65
+   merging first. **Next: piece 3** (the booking request). Plan 4a stays
+   STOPPED at Task 7 item 3 until piece 2 merges; routing decided 23 Sep
+   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer
+   screens under `/book`, two modes, deposits out, all four J2 gaps in.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
@@ -89,7 +88,7 @@ trial lapsed ~15 Sep**; re-entry needs Jack's login.
 
 ## Done and branches
 
-43 PRs merged (#1–#51), plus #54-#64; record in `ARCHIVE.md`. One branch still
+43 PRs merged (#1–#51), plus #54-#64. Record in `ARCHIVE.md`. One branch still
 matters — `docs/jack-ranking-2026-09-10` holds the only copy of the filled
 **Jack's priority** column, empty on `main`. `plan/phase-4-screens` was
 deleted 23 Sep (its plans are on `main`, newer).
@@ -135,9 +134,9 @@ npm run test:browser
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day, piece 2a
-on `feat/book-server-2-modes` (not yet pushed): every gate above exits 0,
-528/528. Prior verification (23 Sep, 437/437): `ARCHIVE.md`.
+**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day, piece 2b
+on `feat/book-server-2b-modes` (not yet pushed): every gate above exits 0,
+563/563. Prior verification (piece 2a 528/528, 23 Sep 437/437): `ARCHIVE.md`.
 Check a PR's CI against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
