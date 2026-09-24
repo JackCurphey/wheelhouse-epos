@@ -2544,7 +2544,9 @@ async function withBookingLock(dates, fn) {
     await db.exec('COMMIT');
     return result;
   } catch (err) {
-    await db.exec('ROLLBACK');
+    // A failed ROLLBACK (e.g. the connection already dropped) must not hide
+    // the original error - that's the one the caller needs to see.
+    await db.exec('ROLLBACK').catch(() => {});
     throw err;
   }
 }
