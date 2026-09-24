@@ -73,3 +73,18 @@ test('a change whose date has arrived becomes the mode, and a save settles it', 
   ).get());
   assert.deepEqual({ ...row }, { booking_mode: 'dropoff', next_booking_mode: null, next_booking_mode_from: null });
 });
+
+test('setting bookingMode directly to the already-scheduled mode clears the schedule', async () => {
+  await freshShop();
+  const from = futureDate(1);
+  await settings({ nextBookingMode: 'dropoff', nextBookingModeFrom: from });
+  const put = await settings({ bookingMode: 'dropoff' });
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  assert.equal(put.body.bookingMode, 'dropoff');
+  assert.equal(put.body.nextBookingMode, null);
+  assert.equal(put.body.nextBookingModeFrom, null);
+  const row = await runWithShop(owner.shop.id, () => prepare(
+    'SELECT next_booking_mode, next_booking_mode_from FROM workshop_settings LIMIT 1'
+  ).get());
+  assert.deepEqual({ ...row }, { next_booking_mode: null, next_booking_mode_from: null });
+});

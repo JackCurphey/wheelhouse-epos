@@ -3553,6 +3553,12 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
     );
     if (nextMode.error) return badRequest(res, nextMode.error);
   }
+  // Setting bookingMode straight to the already-scheduled mode makes the
+  // schedule self-contradictory (booking_mode and next_booking_mode equal);
+  // clear it rather than leave a dangling future date.
+  if (nextMode.nextBookingMode === bookingMode) {
+    nextMode = { nextBookingMode: null, nextBookingModeFrom: null };
+  }
 
   const dropoffWindowStart = body.dropoffWindowStart !== undefined
     ? String(body.dropoffWindowStart).trim() : existing.dropoff_window_start;
