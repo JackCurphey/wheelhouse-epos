@@ -5,6 +5,9 @@
 **What the customer picks — DECIDED by Jack, 5 September 2026** (§7), including
 both sub-decisions (§7.6).
 **Downtime model — PROPOSED**, direction agreed by Jack, shape not specced (§4).
+**24 Sep:** §4's blocks, §6.1 (mode change: from a chosen date) and §6.2
+(drop-off: customer picks a mechanic) decided and specced in
+`docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md`.
 **Raised by:** Jack, while reviewing the customer-facing content work on the
 booking portal.
 

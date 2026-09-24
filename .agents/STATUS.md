@@ -5,7 +5,7 @@
 and #64 (book server piece 1: migration 022, service categories, `GET
 /api/portal/:shopSlug/services`) merged 24 Sep; CI on `9291119` 471/471.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Next:** book server piece 2 (booking modes and capacity), brainstorm first. Mark's #50 review is against the superseded 84-screen version; told 20
+**Working branch:** `feat/book-server-2-modes` (piece 2 spec). Mark's #50 review is against the superseded 84-screen version; told 20
 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -56,8 +56,10 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Book server piece 1 merged** (#64). **Next: piece 2**
-   (booking modes and capacity) - starts with its own brainstorm and spec.
+1. **Book server piece 1 merged** (#64). **Piece 2** (modes and capacity)
+   spec approved in design 24 Sep, awaiting Jack's review of the file:
+   `docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md`.
+   Built as 2a (hours, blocks, calculator) then 2b (both modes); plans next.
    Plan 4a (book, the staff-side screens) stays STOPPED at Task 7 item 3
    until piece 2's endpoints land; routing decided 23 Sep
    (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`):

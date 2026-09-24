@@ -62,3 +62,18 @@ endpoints listed in the plan's item 3 table.
   category list), and Not sure (skips to describing the problem). Each online
   service is marked full or individual. Detail:
   `docs/superpowers/specs/2026-09-24-book-server-1-service-list-design.md`.
+
+## 24 Sep - booking modes and capacity (piece 2)
+
+Decided by Jack in session. Detail:
+`docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md`.
+- **Drop-off mode: the customer picks a mechanic**; capacity is per mechanic
+  per day.
+- **A mode change takes effect from a date the shop picks**; existing
+  bookings keep their shape.
+- **Timed-mode walk-ins** with no mechanic use capacity split evenly across
+  the mechanics working that day.
+- **Blocks are Release 1**: per-mechanic weekly (lunch), per-mechanic dates
+  (leave), shop-wide closed dates. Bookings on a newly blocked date stay and
+  are reported to staff.
+- **Opening hours per weekday.**
