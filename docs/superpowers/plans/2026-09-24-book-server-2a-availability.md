@@ -38,6 +38,8 @@ Record further decisions here as tasks run.
 5. **The customer booking POST uses the calculator in 2a** (Task 6), not only in 2b. Without it, 2a would show lunch as unavailable on the calendar while the booking route still accepted a 13:00 booking. The spec says "the server's booking check is the authority". 2b still owns drop-off bookings, the lock, and the `capacity` code.
 6. **Timed jobs with no mechanic join the shared queue's minutes.** The spec names only unassigned *untimed* jobs. A timed unassigned staff job is equally work nobody has been given yet, and leaving it out would count it nowhere.
 7. **The old page's "full days" list covers only a mechanic's normal working days**, i.e. an open weekday the mechanic works. Closed weekdays and days off were never in that list; the old page greys them itself from `openingDays`/`workingDays`. A day counts as full when free minutes, after the reserve, are 0 or less. That matches the old rule (`free < threshold`) everywhere except exactly `free == threshold`, where nothing could have been booked anyway.
+8. **`weekdays` on `workshop_unavailability` is `TEXT` holding a JSON list, like `working_days` and `opening_days`, not `SMALLINT[]` as the spec first said** - one parsing convention across the codebase.
+9. **`checkJobSlot`'s overlap check counts live jobs only** (final review), so the calendar and the booking check agree about cancelled bookings; this applies to staff too.
 
 ---
 

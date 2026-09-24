@@ -11,8 +11,8 @@ here.
 requests, 2a then 2b, each with its own plan.**
 
 **Changed during build (24 Sep):** the 2a schema section below was updated to
-match what 2a actually built - see the plan's decision log,
-`.superpowers/sdd/2026-09-24-book-server-2a-availability/decision-log.md`,
+match what 2a actually built - see the plan's Decision log,
+`docs/superpowers/plans/2026-09-24-book-server-2a-availability.md`,
 decisions 1-5.
 
 ## Decisions this rests on
@@ -81,8 +81,8 @@ Decided by Jack in this session (24 Sep):
   uses the usual hours, which is today's behaviour, so **no backfill** is
   needed. `opening_days` still says which days are open.
 - **`workshop_unavailability`**: `id`, `shop_id`, `employee_id` (NULL =
-  shop-wide), `kind TEXT CHECK IN ('weekly','dates')`, `weekdays SMALLINT[]`
-  (weekly only), `start_date`, `end_date` (dates only, `end_date >=
+  shop-wide), `kind TEXT CHECK IN ('weekly','dates')`, `weekdays TEXT`
+  (weekly only, a JSON list, like `working_days`/`opening_days`), `start_date`, `end_date` (dates only, `end_date >=
   start_date`), `start_time`, `end_time` (both NULL = all day), `reason TEXT`,
   timestamps. Checks: weekly rows have a mechanic and times; shop-wide rows are
   `dates` and all-day.
@@ -193,8 +193,8 @@ named break, and the break is confirmed to have landed. At least:
 - a weekly lunch block removes those start times; a shop-wide closed date
   removes the day for every mechanic; leave removes it for one;
 - no block reason appears in any portal response;
-- Saturday's shorter hours are honoured; the backfill copies existing hours
-  onto each open day, on a database with shops in it and from empty;
+- Saturday's shorter hours are honoured; a new shop reports every open day at
+  the usual hours, and a shorter Saturday round-trips;
 - cancelled, declined and expired jobs no longer use capacity;
 - a date before the switch uses the old mode, on/after it the new one;
 - a drop-off day accepts bookings until full, then refuses with `capacity`;

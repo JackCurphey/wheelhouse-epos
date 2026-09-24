@@ -62,8 +62,9 @@ This file → **Plan register** below and the plans it names →
    `workshop_unavailability`, `next_booking_mode*`), `server/capacity.js`
    (the calculator), staff blocks routes, weekday hours, the customer
    calendar and booking check on the calculator, and staff capacity view.
-   Schema changed from the approved spec during build (owner-approved,
-   `.superpowers/sdd/2026-09-24-book-server-2a-availability/decision-log.md`),
+   Schema changed from the approved spec during build (owner-approved, see
+   the plan's Decision log,
+   `docs/superpowers/plans/2026-09-24-book-server-2a-availability.md`),
    spec updated to match. **Next: piece 2b** (booking in either mode),
    needing its own plan. Plan 4a stays STOPPED at Task 7 item 3 until piece
    2's endpoints land; routing decided 23 Sep
