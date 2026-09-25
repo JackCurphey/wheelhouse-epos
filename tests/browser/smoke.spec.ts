@@ -14,3 +14,11 @@ test('a deep link opened directly reaches its screen', async ({ page }) => {
   await page.goto('/workshop/link-expired');
   await expect(page.locator('#wh-root')).toContainText('expired');
 });
+
+test('the customer app mounts at /book in a real browser', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await page.goto('/book/any-shop');
+  await expect(page.locator('#wh-book-root')).toContainText('Not built yet: service');
+  expect(errors).toEqual([]);
+});
