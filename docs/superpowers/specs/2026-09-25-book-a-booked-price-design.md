@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-25. **Follows:** piece 3b (#68), which saved `booked_price`
 on the job but deliberately returned it nowhere. **Parent:** plan 4a
-(`docs/superpowers/plans/2026-09-20-phase-4a-book.md`), open item 2.
+(`docs/superpowers/plans/2026-09-20-phase-4a-book.md`), "Decided 25 Sep" item 2.
 
 ## Intent
 

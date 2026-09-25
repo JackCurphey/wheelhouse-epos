@@ -2,8 +2,9 @@
 
 > **Status (25 Sep): the Task 7 item 3 stop is lifted.** The server
 > prerequisite pieces 1-6 are merged (#64-#71) and every book screen has a
-> supplying route (re-checked below against `main` at `86f814b`). Two things
-> still block the `pending` screen (below), and the design calls (Task 7 item
+> supplying route (re-checked below against `main` at `86f814b`). The two
+> decisions that blocked the `pending` screen (A1, B1) were taken 25 Sep
+> (below); piece (a) supplies the booked price. The design calls (Task 7 item
 > 12) are Jack's. The task list is not written yet; no code has come from this
 > plan.
 >
@@ -57,7 +58,7 @@ from that commit and will drift.
 | `problem` | Booking POST (:4597): `description` (required), bike as `newBike` or `bikeId`, `answers` checked against the service's `questions`, `photos` (up to 5, 10 MB each, JPEG/PNG/WebP, sent as bare base64 - see `server/booking-photos.js`). | Ready |
 | `date` | `GET .../mechanics` (:4442) and `GET .../availability?start&end&minutes` (:4516): mode is **per date** (`timed` or `dropoff`), with start times per mechanic or a drop-off window. A mechanic must be chosen in both modes. 409 refusals carry `code: 'capacity'`. | Ready |
 | `details` | Booking POST: `guestName`, `guestPhone`, `email`, `updateChannel` (one choice, not several), `termsAccepted` (must be true), `marketingPermission`. Rules in `server/booking-request.js`. | Ready |
-| `pending` | POST 201: `reference`, `jobDate`, `startTime`, `status`, plus `privateLink` (shown once). `GET .../booking-links/:code` (:4829): `reference`, `shopName`, `jobDate`, `startTime`, `serviceName`, `description`, `answers`, `bike`, `stage`, `photoCount`; 404 unknown, 410 after 30 days past the booked date, 429 over 30 tries per 15 minutes. | **Partial** - see below |
+| `pending` | POST 201: `reference`, `jobDate`, `startTime`, `status`, plus `privateLink` (shown once). `GET .../booking-links/:code` (:4829): `reference`, `shopName`, `jobDate`, `startTime`, `serviceName`, `description`, `answers`, `bike`, `stage`, `photoCount`; 404 unknown, 410 after 30 days past the booked date, 429 over 30 tries per 15 minutes. | **Partial** - see below (Ready once piece (a) merges) |
 
 **Item 4 (version rule):** does not apply; the booking POST is not one of the
 version-guarded job actions, so the client uses `apiMutate`.
