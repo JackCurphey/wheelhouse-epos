@@ -2626,7 +2626,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceId }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2635,13 +2635,15 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, service_id, booked_price, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
         termsAcceptedAt ?? null,
+        // The price is copied in SQL so it never passes through a JavaScript number.
+        serviceId ?? null, serviceId ?? null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
@@ -4686,6 +4688,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         skipAutoOrder: false,
         plannedMinutes: chosen.minutes,
         termsAcceptedAt: nowIso(),
+        serviceId: chosen.id ?? null,
       });
     } catch (err) {
       // The 024 index, a second guard behind the lock. createWorkshopJob's own

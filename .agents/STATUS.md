@@ -1,9 +1,9 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-25
-**Branch:** `main` at `5dd2086`: #66 (piece 2b, merge commit) merged 25 Sep;
-#65 (piece 2a - weekday hours, blocks, capacity calculator, migration 023)
-merged 24 Sep; #63-#64 before it.
+**Branch:** `main` at `4f5f5b9`: #67 (piece 3 - the booking request,
+migration 025, merge commit) merged 25 Sep, main CI green on that SHA; #66
+(piece 2b) merged 25 Sep; #65 (piece 2a) merged 24 Sep; #63-#64 before it.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
 **Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.
@@ -55,22 +55,17 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Piece 3 (the booking request) built on
-   `feat/book-server-3-booking-request`, not merged;** 598 tests pass, all
-   gates exit 0. Migration 025; the POST names a shop service or "not
-   sure"; contact, consent and reference stored. Spec
-   `docs/superpowers/specs/2026-09-25-book-server-3-booking-request-design.md`;
-   plan (decision log, spec walk)
+1. **Piece 3b (the booked price) on `feat/book-server-3b-job-price`.** Piece
+   3 (#67) merged. Jack, 25 Sep: (a) guests keep needing a phone for every
+   channel - settled, no change; (b) the price is stored as a separate
+   change: the booking records which service was booked and a copy of its
+   price at booking time (two columns on `workshop_jobs`), not a draft quote;
+   "not sure" bookings have neither. `/sdbdemo` no longer books; that is
+   accepted (it is a disposable demo). **Next: piece 4** (guest private
+   link). Plan 4a stays STOPPED at Task 7 item 3; routing decided 23 Sep
+   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`). Piece 3
+   spec and plan: `docs/superpowers/specs/2026-09-25-book-server-3-booking-request-design.md`,
    `docs/superpowers/plans/2026-09-25-book-server-3-booking-request.md`.
-   **Open for Jack:** (a) a guest still needs a phone for every channel
-   (decision 1); (b) the service price is not stored on the job (decision
-   3, spec line dropped); (c) `public-demo/sdbdemo.html` (served at
-   /sdbdemo) reads `jobTypes` and sends `jobType`, so it stops booking
-   after this piece. Options: accept the break, remove the page, or send
-   `notSure: true` plus the new fields (a UI decision, not made). **Next: piece 4** (guest private link). Plan 4a
-   stays STOPPED at Task 7 item 3; routing decided 23 Sep
-   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`).
-   Piece 2b (merged, #66) detail moved to `ARCHIVE.md`.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so

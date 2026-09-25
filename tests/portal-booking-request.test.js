@@ -103,6 +103,40 @@ test('the old jobType input no longer books', async () => {
   assert.equal(res.status, 400, JSON.stringify(res.body));
 });
 
+const priced = (jobId) => runWithShop(owner.shop.id, () => prepare(
+  'SELECT service_id, booked_price::text AS booked_price FROM workshop_jobs WHERE id = ?'
+).get(jobId));
+const pricedService = (price) => runWithShop(owner.shop.id, async () => (await prepare(
+  "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Priced', ?, 30, 1, 1, now())"
+).run(price)).lastInsertRowid);
+
+test('a named service stores its id and its price on the booking', async () => {
+  const id = await pricedService('49.99');
+  const res = await book({ serviceId: id });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual({ ...(await priced(res.body.id)) }, { service_id: id, booked_price: '49.99' });
+});
+
+test('changing the service price afterwards leaves the booked price alone', async () => {
+  const id = await pricedService('30.00');
+  const res = await book({ serviceId: id });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET price = 99 WHERE id = ?').run(id));
+  assert.equal((await priced(res.body.id)).booked_price, '30.00');
+});
+
+test('not sure stores no service and no price', async () => {
+  const res = await book({ serviceId: undefined, notSure: true });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual({ ...(await priced(res.body.id)) }, { service_id: null, booked_price: null });
+});
+
+test('the booking response does not carry the price', async () => {
+  const res = await book({ serviceId: await pricedService('12.50') });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.ok(!JSON.stringify(res.body).includes('12.5'), JSON.stringify(res.body));
+});
+
 const customerRow = (id) => runWithShop(owner.shop.id, () => prepare(
   'SELECT email, update_channel, marketing_permission FROM customers WHERE id = ?'
 ).get(id));
