@@ -63,7 +63,16 @@ are merged (#64-#70).
   default to fit 5 photos of 10 MB after base64 (`Math.ceil(5 * 10 MB * 1.4)`).
   - A request over that cap is refused with 400 "Those photos are too large
     to send — please add fewer or smaller photos".
-  - It must not give a 500.
+  - It must not give a 500. **It also must not be a dropped connection:**
+    `readJsonBody` calls `req.destroy()` when the cap is passed, which closes
+    the socket, so the caller sees a connection error and never receives the
+    400 (checked 25 Sep with a throwaway server: client got `EPIPE`). This route
+    needs a read that stops buffering at the cap but lets the request finish, then
+    answers 400 with `Connection: close`. Done as an opt-in third parameter on
+    `readJsonBody`, so the other routes keep their behaviour.
+  - The route currently has no `try/catch` around `readJsonBody`, so any body
+    error (too big, or invalid JSON) becomes the dispatcher's 500. The new
+    read gets a `try/catch` that returns 400 for both.
 - **When photos are checked:** `readBookingPhotos` runs with the other checks,
   before any database write. That is after the service lookup and answers
   check, and before the guest branch, as pieces 3 and 5 order it.
@@ -136,13 +145,23 @@ are merged (#64-#70).
 - **Moving the files to hosted storage;** that happens when hosting is chosen
   (PL-1).
 
-## To verify when planning
+## Checked against the code (25 Sep, at planning)
 
-- **The booking route:** where it catches `readJsonBody` errors today (an
-  over-cap body must give a 400), and exactly where the photo check and the
-  photo writes slot in (`server/server.js`, `POST /api/portal/:shopSlug/bookings`).
-- **`createWorkshopJob` and `withBookingLock`:** confirm that an error thrown
-  after the job insert rolls back the job and its hold.
-- **The guest limiter:** confirm it runs after the photo check, so refused guest
-  test bookings don't use its 5 per hour.
-- **Migration number:** 028 is the latest merged, so this is 029.
+- **Body errors:** the booking route has no `try/catch` around `readJsonBody`
+  (`server/server.js:4589`), so an over-cap body or bad JSON is a 500 today.
+  Worse, the over-cap path destroys the socket, so even a 400 would not arrive.
+  Corrected in the request-size section above.
+- **Rollback:** confirmed. `withBookingLock` (:2563) runs `ROLLBACK` on any throw
+  from its callback; `createWorkshopJob`'s own transaction is a savepoint. So an
+  error thrown after the job insert removes the job and its hold. A returned
+  refusal, by contrast, still `COMMIT`s, so photo-save failures must throw, as
+  the spec says. Files already on disk are not rolled back, so they are deleted
+  by hand before the throw.
+- **Guest limiter:** confirmed. The limiter (:4646) runs after the service and
+  answers checks and before the guest customer row is created, so a photo check
+  placed beside those checks runs before it. The body is read before the
+  limiter, so the raised size cap applies to guests too (a guest can make the
+  server read up to about 70 MB per request before being counted). This is the
+  price of accepting photos from guests; the limiter only counts requests that
+  pass the checks.
+- **Migration number:** latest is `028_service_questions.sql`, so this is 029.
