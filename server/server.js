@@ -75,6 +75,7 @@ import {
   listStorefrontProducts,
 } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
+import { readServiceQuestions } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 import {
@@ -3946,6 +3947,9 @@ export function serializeWorkshopService(row) {
     kind: row.kind,
     categoryId: row.category_id,
     position: row.position,
+    // Ordered; each { id, wording, kind, required, choices?, allowNotSure? }.
+    // See server/service-questions.js and migration 028.
+    questions: row.questions ?? [],
   };
 }
 
@@ -3998,6 +4002,15 @@ async function readServicePlacement(body, existing) {
   return { kind, categoryId, position };
 }
 
+// A service's questions, saved as one whole list. Omitted on PUT keeps the
+// stored list, like the placement fields above.
+function readQuestionsOrKeep(body, stored) {
+  if (body.questions === undefined) return stored;
+  const r = readServiceQuestions(body.questions, stored);
+  if (r.error) throw new ValidationError(r.error);
+  return r.value;
+}
+
 // screens: services, service-edit
 route('GET', '/api/workshop-services', async (req, res) => {
   const rows = await db.prepare('SELECT * FROM workshop_services ORDER BY active DESC, name').all();
@@ -4009,17 +4022,19 @@ route('POST', '/api/workshop-services', async (req, res) => {
   const body = await readJsonBody(req);
   let fields;
   let placement;
+  let questions;
   try {
     fields = readServiceBody(body);
     placement = await readServicePlacement(body, null);
+    questions = readQuestionsOrKeep(body, []);
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
   }
   const bookableOnline = body.bookableOnline ? 1 : 0;
   const info = await db.prepare(
-    'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position);
+    'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
+  ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
   sendJson(res, 201, serializeWorkshopService(row));
 });
@@ -4032,9 +4047,11 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
   const body = await readJsonBody(req);
   let fields;
   let placement;
+  let questions;
   try {
     fields = readServiceBody(body);
     placement = await readServicePlacement(body, existing);
+    questions = readQuestionsOrKeep(body, existing.questions ?? []);
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -4043,9 +4060,9 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
   const bookableOnline = body.bookableOnline === undefined
     ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
   await db.prepare(
-    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, updated_at = ? WHERE id = ?'
+    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
   ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
-    placement.kind, placement.categoryId, placement.position, nowIso(), id);
+    placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
   sendJson(res, 200, serializeWorkshopService(row));
 });
