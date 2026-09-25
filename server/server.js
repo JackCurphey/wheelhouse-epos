@@ -4450,13 +4450,13 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res) => {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
   const services = await db.prepare(
-    `SELECT id, name, price, minutes, kind, category_id FROM workshop_services
+    `SELECT id, name, price, minutes, kind, category_id, questions FROM workshop_services
      WHERE active = 1 AND bookable_online = 1 ORDER BY position, name`
   ).all();
   const categories = await db.prepare(
     'SELECT id, name FROM workshop_service_categories ORDER BY position, name'
   ).all();
-  const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price : null, minutes: s.minutes });
+  const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price : null, minutes: s.minutes, questions: s.questions });
   const individual = services.filter((s) => s.kind === 'individual');
   sendJson(res, 200, {
     showPrices,
