@@ -75,6 +75,7 @@ import {
   listStorefrontProducts,
 } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
+import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
@@ -441,13 +442,20 @@ function badRequest(res, msg = 'Bad request') {
 // boundary - turning it into replacement characters and breaking anything
 // that depends on the exact bytes (notably readRawBody's caller, which HMAC-
 // verifies the raw body against Shopify's signature).
-async function readJsonBody(req, maxBytes = 2_000_000) {
+async function readJsonBody(req, maxBytes = 2_000_000, { answerOverflow = false } = {}) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let bytes = 0;
+    let overflowed = false;
     req.on('data', (chunk) => {
       bytes += chunk.length;
+      if (overflowed) {
+        // Still reading so the client can be answered; stop at twice the cap.
+        if (bytes > maxBytes * 2) { reject(new Error('Payload too large')); req.destroy(); }
+        return;
+      }
       if (bytes > maxBytes) {
+        if (answerOverflow) { overflowed = true; chunks.length = 0; return; }
         reject(new Error('Payload too large'));
         req.destroy();
         return;
@@ -455,6 +463,7 @@ async function readJsonBody(req, maxBytes = 2_000_000) {
       chunks.push(chunk);
     });
     req.on('end', () => {
+      if (overflowed) return reject(new Error('Payload too large'));
       if (bytes === 0) return resolve({});
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
@@ -4587,7 +4596,16 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
   const signedIn = ctx && ctx.shop.slug === params.shopSlug;
-  const body = await readJsonBody(req);
+  let body;
+  try {
+    body = await readJsonBody(req, MAX_BOOKING_BODY_BYTES, { answerOverflow: true });
+  } catch (err) {
+    // The rest of a too-big body may still be arriving; close after answering.
+    res.setHeader('connection', 'close');
+    return badRequest(res, err.message === 'Payload too large'
+      ? 'Those photos are too large to send — please add fewer or smaller photos'
+      : 'Invalid request body');
+  }
 
   // The request's own fields are checked before any customer row is created, so
   // a bad request leaves nothing behind. The phone the channel rule needs is the
