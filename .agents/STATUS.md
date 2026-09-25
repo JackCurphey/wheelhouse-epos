@@ -6,14 +6,12 @@ migration 027), #68 (piece 3b - booked price, 026) and #67 (piece 3 - booking
 request, 025) merged 25 Sep, main CI green on all three; #66 and #65 before.
 **Piece 5 (service questions, migration 028), from branch
 `feat/book-server-5-service-questions`, merged as #70** (main `602bab2`, 25
-Sep; PR CI green). **Piece 6 (customer photos) designed** — spec
-`docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md` on
-branch `feat/book-server-6-customer-uploads`; **Jack approved the written spec
-25 Sep**; no code or plan yet. **Next:** check the spec's "To verify when
-planning" list against the code (correct the spec if it differs), write the
-plan with superpowers:writing-plans (migration 029; tests first), then build
-with superpowers:subagent-driven-development (Jack chose fresh helpers per
-task), push and open a PR; merging is Jack's call.
+Sep; PR CI green). **Piece 6 (customer photos, migration 029) built** on branch
+`feat/book-server-6-customer-uploads`; spec
+`docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md`
+(Jack approved 25 Sep), plan
+`docs/superpowers/plans/2026-09-25-book-server-6-customer-photos.md`. PR to
+follow after a final review; merging is Jack's call.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
 **Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.

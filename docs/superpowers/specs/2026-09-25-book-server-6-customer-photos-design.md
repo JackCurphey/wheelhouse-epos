@@ -1,8 +1,7 @@
 # Book server work, piece 6: customer photos
 
 **Date:** 2026-09-25. **Approved in session by Jack** (design, 25 Sep, in two
-sections). **Not yet reviewed as a written spec**: Jack reviews this file
-before the plan is written.
+sections). **Approved as a written spec by Jack, 25 Sep.**
 
 **Serves:** book screen `problem` (03), which says "Add photos or a short
 video … Optional · you can also show us at drop-off". Also the staff job view:
@@ -79,7 +78,7 @@ are merged (#64-#70).
 - **Not-sure bookings:** photos are allowed on a "not sure" booking, because
   they describe the problem, not the service.
 - **When photos are saved:** inside the booking lock, right after the job is
-  inserted.
+  inserted. Saving is the last write inside the lock.
   - Each file is written to disk and a `workshop_job_attachments` row is
     inserted with `from_customer = true`.
   - The row's `original_name` is `Customer photo N.<ext>` (`N` counts from 1 in

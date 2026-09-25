@@ -4835,6 +4835,8 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
       `SELECT w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
               w.booking_state, w.custody_state, w.work_state,
               s.name AS service_name, b.make AS bike_make, b.model AS bike_model
+              , (SELECT count(*)::int FROM workshop_job_attachments a
+                 WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
        FROM workshop_jobs w
        LEFT JOIN workshop_services s ON s.id = w.service_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
@@ -4856,6 +4858,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     answers: (row.question_answers ?? []).map(({ wording, answer }) => ({ wording, answer })),
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
+    photoCount: row.photo_count,
   });
 });
 

@@ -13,6 +13,7 @@ import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
+import { jsonRequest } from './helpers/http.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { futureDate, UPLOADS_DIR, purgeAttachmentFiles } from './helpers/workshopFixtures.js';
 import { BOOKING_CONTACT } from './helpers/bookable.js';
@@ -169,4 +170,17 @@ test('staff see the photos as from-customer attachments and can download them', 
   const file = await fetch(`${server.baseUrl}/api/workshop-jobs/${res.body.id}/attachments/${list.body[0].id}`, { headers: { cookie: owner.cookie } });
   assert.equal(file.status, 200);
   assert.deepEqual(Buffer.from(await file.arrayBuffer()), Buffer.concat([JPEG_HEAD, Buffer.from(marker), Buffer.alloc(64)]));
+});
+
+test('the private link says how many photos were sent, and nothing else about them', async () => {
+  const two = await book({ photos: [photoOf('link1'), photoOf('link2')] });
+  const none = await book({});
+  const read = (res) => jsonRequest(server.baseUrl, null,
+    `/api/portal/${owner.shop.slug}/booking-links/${res.body.privateLink.split('/').pop()}`);
+  const a = await read(two);
+  const b = await read(none);
+  assert.equal(a.status, 200, JSON.stringify(a.body));
+  assert.equal(a.body.photoCount, 2);
+  assert.equal(b.body.photoCount, 0);
+  assert.doesNotMatch(JSON.stringify(a.body), /Customer photo|storage|attachment/i);
 });
