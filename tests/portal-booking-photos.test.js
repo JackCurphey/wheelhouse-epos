@@ -100,3 +100,73 @@ test('a body that is not JSON gets a 400, not a 500', async () => {
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, 'Invalid request body');
 });
+
+const storedPhotos = (jobId) => runWithShop(owner.shop.id, () => prepare(
+  'SELECT storage_key, original_name, content_type, size_bytes, from_customer FROM workshop_job_attachments WHERE workshop_job_id = ? ORDER BY id'
+).all(jobId));
+
+test('photos are stored as from-customer attachments, named by us, typed by their bytes', async () => {
+  const marker = `ok-${randomBytes(6).toString('hex')}`;
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const res = await book({ photos: [photoOf(marker), photoOf(marker, png)] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const rows = await storedPhotos(res.body.id);
+  assert.deepEqual(rows.map((r) => [r.original_name, r.content_type, r.from_customer]), [
+    ['Customer photo 1.jpg', 'image/jpeg', true], ['Customer photo 2.png', 'image/png', true],
+  ]);
+  const onDisk = await readFile(path.join(UPLOADS_DIR, rows[0].storage_key));
+  assert.deepEqual(onDisk, Buffer.concat([JPEG_HEAD, Buffer.from(marker), Buffer.alloc(64)]));
+});
+
+test('the customer\'s own file name and claimed type are never stored', async () => {
+  const res = await book({ photos: [{ ...photoOf('names'), filename: '../../evil.exe', contentType: 'text/html' }] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const [row] = await storedPhotos(res.body.id);
+  assert.equal(row.original_name, 'Customer photo 1.jpg');
+  assert.equal(row.content_type, 'image/jpeg');
+});
+
+test('a booking with no photos works as before and has no attachments', async () => {
+  for (const extra of [{}, { photos: null }, { photos: [] }]) {
+    const res = await book(extra);
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.deepEqual(await storedPhotos(res.body.id), []);
+  }
+});
+
+test('a not-sure booking can carry photos', async () => {
+  const res = await book({ notSure: true, serviceId: undefined, photos: [photoOf('notsure')] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal((await storedPhotos(res.body.id)).length, 1);
+});
+
+const bigJpeg = Buffer.concat([JPEG_HEAD, Buffer.alloc(10 * 1024 * 1024)]).toString('base64');
+for (const [label, makePhotos, message] of [
+  ['too many photos', (m) => Array(6).fill(photoOf(m)), 'You can add up to 5 photos'],
+  ['a photo that is too big', () => [{ dataBase64: bigJpeg }], 'Each photo can be up to 10 MB'],
+  ['not a photo', () => [{ dataBase64: Buffer.from('just text').toString('base64') }], 'Only photos can be added (JPEG, PNG or WebP)'],
+]) {
+  test(`a guest booking with ${label} is refused, leaving no job, customer or file`, async () => {
+    const marker = `refuse-${randomBytes(6).toString('hex')}`;
+    const before = await filesNow();
+    const c = await counts();
+    const res = await book({ photos: makePhotos(marker) }, { guest: true });
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    assert.equal(res.body.error, message);
+    assert.deepEqual(await counts(), c);
+    assert.deepEqual(await newFilesWith(before, marker), []);
+  });
+}
+
+test('staff see the photos as from-customer attachments and can download them', async () => {
+  const marker = `staff-${randomBytes(6).toString('hex')}`;
+  const res = await book({ photos: [photoOf(marker)] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const list = await staff(`/api/workshop-jobs/${res.body.id}/attachments`);
+  assert.equal(list.body.length, 1);
+  assert.equal(list.body[0].fromCustomer, true);
+  assert.equal(list.body[0].originalName, 'Customer photo 1.jpg');
+  const file = await fetch(`${server.baseUrl}/api/workshop-jobs/${res.body.id}/attachments/${list.body[0].id}`, { headers: { cookie: owner.cookie } });
+  assert.equal(file.status, 200);
+  assert.deepEqual(Buffer.from(await file.arrayBuffer()), Buffer.concat([JPEG_HEAD, Buffer.from(marker), Buffer.alloc(64)]));
+});

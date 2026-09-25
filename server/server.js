@@ -76,6 +76,7 @@ import {
 } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
+import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
@@ -4653,6 +4654,13 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     questionAnswers = checked.value;
   }
 
+  // Photos are checked here with the other request checks: before the guest
+  // limiter and before any write, so a refusal leaves nothing behind. They are
+  // allowed on a "not sure" booking too - they describe the problem, not the service.
+  const checkedPhotos = readBookingPhotos(body.photos);
+  if (checkedPhotos.error) return badRequest(res, checkedPhotos.error);
+  const photos = checkedPhotos.value;
+
   // No account required to book: an out-of-towner booking a single job
   // shouldn't be forced through signup. Falls back to a guest customer
   // (a new row each time, see resolveGuestCustomer) instead of the
@@ -4794,6 +4802,19 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       )
       .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+    // The last write, so nothing after it can fail and leave files behind for a
+    // booking that rolled back. saveBookingPhotos removes its own files if a
+    // write or insert fails, and the error rolls the whole booking back.
+    await saveBookingPhotos({
+      photos,
+      uploadsDir: UPLOADS_DIR,
+      insertRow: ({ storageKey, originalName, contentType, sizeBytes }) => db
+        .prepare(
+          `INSERT INTO workshop_job_attachments (workshop_job_id, storage_key, original_name, content_type, size_bytes, from_customer)
+           VALUES (?, ?, ?, ?, ?, true)`
+        )
+        .run(jobId, storageKey, originalName, contentType, sizeBytes),
+    });
     // The only time the code leaves the server: the database keeps its hash.
     return { status: 201, body: { ...serializePortalBooking(row), privateLink: linkPath(params.shopSlug, linkCode) } };
   });
