@@ -10,11 +10,13 @@ import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { futureDate } from './helpers/workshopFixtures.js';
+import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
 
 let server;
 let owner;
 let sam;
 let customer;
+let types;
 // The same day futureDate() counts from (today + 21, UTC).
 const SWITCH = new Date(Date.now() + 86_400_000 * 21).toISOString().slice(0, 10);
 
@@ -22,6 +24,7 @@ before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl);
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
+  types = await seedJobTypes(owner.shop.id);
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
   // Drop-off from three weeks out; every futureDate() is on or after it.
   const res = await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', {
@@ -37,7 +40,7 @@ after(async () => {
 
 const book = (body) => portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
   method: 'POST',
-  body: { mechanicId: sam, jobType: 'repair', description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...body },
+  body: { mechanicId: sam, serviceId: types.repair, description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT, ...body },
 });
 const job = (id) => runWithShop(owner.shop.id, () => prepare('SELECT start_time, end_time, planned_minutes FROM workshop_jobs WHERE id = ?').get(id));
 const hold = (id) => runWithShop(owner.shop.id, () => prepare(

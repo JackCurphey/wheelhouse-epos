@@ -1,13 +1,11 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-24
-**Branch:** `main` at `9291119`. #63 (component tests, malformed-id 404)
-and #64 (book server piece 1: migration 022, service categories, `GET
-/api/portal/:shopSlug/services`) merged 24 Sep; CI on `9291119` 471/471.
+**Updated:** 2026-09-25
+**Branch:** `main` at `5dd2086`: #66 (piece 2b, merge commit) merged 25 Sep;
+#65 (piece 2a - weekday hours, blocks, capacity calculator, migration 023)
+merged 24 Sep; #63-#64 before it.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Working branches:** `feat/book-server-2-modes` (2a, PR #65 open) and
-`feat/book-server-2b-modes` cut from it - piece 2b built, not yet pushed;
-its PR waits on #65 merging. Mark's #50 review is against the superseded
+**Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -57,21 +55,22 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Book server piece 2b built** (24 Sep) on `feat/book-server-2b-modes`
-   (cut from `feat/book-server-2-modes`, PR #65): migration 024 (hold index
-   narrowed to timed holds), mode-aware customer booking POST, the
-   per-(shop, date) advisory booking lock, the 409 `capacity` / 400
-   shop-rule split, one live hold per live job (`syncJobHold`), walk-in
-   queue lengths, and settle-on-read-and-write for a scheduled mode change.
-   Rulings, not in the original spec: plan's Decision log,
-   `docs/superpowers/plans/2026-09-24-book-server-2b-booking-modes.md`,
-   decisions 1-11; spec updated to match. Follow-up: holds left stale by
-   pre-2b staff moves are not backfilled — a stale hold now answers 409
-   `capacity` (2b decision 11); a one-off realign is due if any shop has
-   live data. **Next: piece 3** (the booking request). Plan 4a stays
-   STOPPED at Task 7 item 3 until piece 2 merges; routing decided 23 Sep
-   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer
-   screens under `/book`, two modes, deposits out, all four J2 gaps in.
+1. **Piece 3 (the booking request) built on
+   `feat/book-server-3-booking-request`, not merged;** 598 tests pass, all
+   gates exit 0. Migration 025; the POST names a shop service or "not
+   sure"; contact, consent and reference stored. Spec
+   `docs/superpowers/specs/2026-09-25-book-server-3-booking-request-design.md`;
+   plan (decision log, spec walk)
+   `docs/superpowers/plans/2026-09-25-book-server-3-booking-request.md`.
+   **Open for Jack:** (a) a guest still needs a phone for every channel
+   (decision 1); (b) the service price is not stored on the job (decision
+   3, spec line dropped); (c) `public-demo/sdbdemo.html` (served at
+   /sdbdemo) reads `jobTypes` and sends `jobType`, so it stops booking
+   after this piece. Options: accept the break, remove the page, or send
+   `notSure: true` plus the new fields (a UI decision, not made). **Next: piece 4** (guest private link). Plan 4a
+   stays STOPPED at Task 7 item 3; routing decided 23 Sep
+   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`).
+   Piece 2b (merged, #66) detail moved to `ARCHIVE.md`.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
@@ -135,9 +134,8 @@ npm run test:browser
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day, piece 2b
-on `feat/book-server-2b-modes` (not pushed): every gate above exits 0,
-563/563. Prior (2a 528/528, 23 Sep 437/437): `ARCHIVE.md`. Check a PR's CI
+**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day: #65 CI
+green; #66 CI green against main on `50785ac`, 565/565 locally. Prior (2a 528/528, 23 Sep 437/437): `ARCHIVE.md`. Check a PR's CI
 against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;

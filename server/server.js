@@ -74,6 +74,7 @@ import {
   getStorefrontInfo,
   listStorefrontProducts,
 } from './storefront.js';
+import { parseBookingRequest } from './booking-request.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 import {
   getShopifyConnectionByShopId,
@@ -2401,6 +2402,7 @@ function serializeWorkshopJob(row) {
 function serializePortalBooking(row) {
   return {
     id: row.id,
+    reference: row.reference,
     title: row.title,
     bikeLabel: row.bike_label !== undefined ? row.bike_label : undefined,
     mechanicName: row.mechanic_name !== undefined ? row.mechanic_name : undefined,
@@ -2624,7 +2626,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2633,12 +2635,13 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
+        termsAcceptedAt ?? null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
@@ -4378,17 +4381,6 @@ route('GET', '/api/portal/:shopSlug/me', async (req, res, params) => {
   });
 });
 
-// A rough first pass at "jobs take different amounts of time" - the
-// customer picks the closest job type rather than typing a duration, and
-// the server (not the client) decides what that maps to in minutes. Not
-// meant to be the final word on estimating job length, just enough that a
-// general service doesn't eat the same single slot as a brake adjustment.
-const PORTAL_JOB_TYPES = {
-  quick: { label: 'Quick fix (puncture, brake or gear adjustment)', minutes: 30 },
-  repair: { label: 'Repair (part replacement, wheel truing, etc.)', minutes: 60 },
-  service: { label: 'General service (full safety check & tune)', minutes: 120 },
-};
-
 // Public - no login required to see what's open, only to actually book.
 route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
   const mechanics = await db
@@ -4402,7 +4394,6 @@ route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
     openingTime: widestHours(toCapacitySettings(settings)).open,
     closingTime: widestHours(toCapacitySettings(settings)).close,
     openingDays: parseWorkingDays(settings.opening_days),
-    jobTypes: Object.entries(PORTAL_JOB_TYPES).map(([value, t]) => ({ value, label: t.label, minutes: t.minutes })),
   });
 });
 
@@ -4551,6 +4542,34 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const signedIn = ctx && ctx.shop.slug === params.shopSlug;
   const body = await readJsonBody(req);
 
+  // The request's own fields are checked before any customer row is created, so
+  // a bad request leaves nothing behind. The phone the channel rule needs is the
+  // guest's, or the signed-in customer's own.
+  const phoneForChannel = signedIn
+    ? ((await db.prepare('SELECT phone FROM customers WHERE id = ?').get(ctx.login.customer_id))?.phone || '') || (body.guestPhone || '')
+    : body.guestPhone;
+  const parsed = parseBookingRequest(body, phoneForChannel);
+  if (parsed.error) return badRequest(res, parsed.error);
+  const request = parsed.value;
+
+  const jobDate = (body.jobDate || '').trim();
+  if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
+  const description = (body.description || '').trim();
+  if (!description) return badRequest(res, 'Please describe what you need done');
+
+  // What the customer chose: a service this shop ticked bookable online, or the
+  // "not sure" hour. Read through the shop's row-level security, so another
+  // shop's service id finds nothing.
+  let chosen;
+  if (request.notSure) {
+    chosen = { name: 'Not sure', minutes: 60 };
+  } else {
+    chosen = await db
+      .prepare('SELECT id, name, minutes FROM workshop_services WHERE id = ? AND active = 1 AND bookable_online = 1')
+      .get(request.serviceId);
+    if (!chosen) return badRequest(res, 'That service is not available to book');
+  }
+
   // No account required to book: an out-of-towner booking a single job
   // shouldn't be forced through signup. Falls back to a guest customer
   // (matched/created by phone, see resolveGuestCustomer) instead of the
@@ -4574,14 +4593,6 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     }
   }
 
-  const jobDate = (body.jobDate || '').trim();
-  if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
-  const description = (body.description || '').trim();
-  if (!description) return badRequest(res, 'Please describe what you need done');
-
-  const jobType = PORTAL_JOB_TYPES[body.jobType];
-  if (!jobType) return badRequest(res, 'Please choose the kind of job this is');
-
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
@@ -4599,7 +4610,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       if (startTime) return refusal('This shop takes drop-offs on that day - choose the day, not a time.');
       times = { startTime: '', endTime: '' };
     } else {
-      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, jobType.minutes) : '');
+      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, chosen.minutes) : '');
       if (!times.startTime) return refusal('A start time is required');
       if (times.error) return refusal(times.error);
     }
@@ -4622,7 +4633,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     if (!mech || !mech.working || (times.startTime && !fitsFreeTime(mech, times.startTime, times.endTime))) {
       return refusal('That mechanic is unavailable at that time - please choose another time or day.');
     }
-    if (mech.freeMinutes < jobType.minutes) {
+    if (mech.freeMinutes < chosen.minutes) {
       return capacityRefusal('That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
     }
 
@@ -4661,7 +4672,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     let jobId;
     try {
       jobId = await createWorkshopJob({
-        title: `Online booking: ${description}`.slice(0, 200),
+        title: `Online booking: ${chosen.name} - ${description}`.slice(0, 200),
         customerId,
         bikeId,
         mechanicId: mechResolved.mechanicId,
@@ -4673,7 +4684,8 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         custodyState: 'expected',
         notes: description,
         skipAutoOrder: false,
-        plannedMinutes: jobType.minutes,
+        plannedMinutes: chosen.minutes,
+        termsAcceptedAt: nowIso(),
       });
     } catch (err) {
       // The 024 index, a second guard behind the lock. createWorkshopJob's own
@@ -4681,6 +4693,18 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       if (err.code === '23505') return capacityRefusal(SLOT_GONE);
       throw err;
     }
+    // Saved only now, after the job is in, inside the lock: every refusal path
+    // above (including the 409 from the index) returns before this, and that
+    // return still COMMITs, so writing earlier would keep the change on a
+    // refused booking. Email is written only when one was sent; a phone is
+    // filled in only when the customer has none, never overwritten. For a guest
+    // this row is brand new each time (see resolveGuestCustomer); for a
+    // signed-in customer it overwrites.
+    await db
+      .prepare(
+        `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
+      )
+      .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
     return { status: 201, body: serializePortalBooking(row) };
   });
