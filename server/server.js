@@ -4840,7 +4840,8 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 // The private booking link, read back without sign-in. The dispatcher has
 // already bound the shop from :shopSlug, so row-level security keeps another
 // shop's code from finding anything. Deliberately narrow: nothing that
-// identifies the customer, no price, no staff notes.
+// identifies the customer, no staff notes. The booked price only when the
+// shop shows prices online (customerBookedPrice).
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
   if (!bookingLinkLimiter.check(clientIp(req))) {
@@ -4849,7 +4850,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
   const row = /^[0-9a-f]{64}$/.test(params.code)
     ? await db.prepare(
       `SELECT w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
-              w.booking_state, w.custody_state, w.work_state,
+              w.booking_state, w.custody_state, w.work_state, w.booked_price,
               s.name AS service_name, b.make AS bike_make, b.model AS bike_model
               , (SELECT count(*)::int FROM workshop_job_attachments a
                  WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
@@ -4875,6 +4876,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
     photoCount: row.photo_count,
+    bookedPrice: await customerBookedPrice(row.booked_price),
   });
 });
 

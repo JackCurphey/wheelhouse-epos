@@ -83,3 +83,33 @@ test('not sure: the booking reply carries no price even when prices are shown', 
   assert.ok('bookedPrice' in booked, 'field present, empty');
   assert.equal(booked.bookedPrice, null);
 });
+
+test('prices shown: the private link carries the booked price', async () => {
+  await setShowPrices(true);
+  const res = await read(codeOf((await book()).privateLink));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.bookedPrice, 65.5);
+});
+
+test('prices hidden: the private link carries no price', async () => {
+  await setShowPrices(false);
+  const res = await read(codeOf((await book()).privateLink));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok('bookedPrice' in res.body, 'field present, empty');
+  assert.equal(res.body.bookedPrice, null);
+});
+
+test('not sure: the private link carries no price even when prices are shown', async () => {
+  await setShowPrices(true);
+  const res = await read(codeOf((await book({ serviceId: undefined, notSure: true })).privateLink));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok('bookedPrice' in res.body, 'field present, empty');
+  assert.equal(res.body.bookedPrice, null);
+});
+
+test('the setting is read when the link is opened, not when it was booked', async () => {
+  await setShowPrices(false);
+  const code = codeOf((await book()).privateLink);
+  await setShowPrices(true);
+  assert.equal((await read(code)).body.bookedPrice, 65.5);
+});
