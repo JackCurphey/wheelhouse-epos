@@ -1042,3 +1042,59 @@ git commit -m "docs: STATUS for piece 5; plan decision log and spec walk"
 - **Duplicate choices are compared ignoring case and surrounding spaces.**
 - **"Not sure" with an empty `answers: []` is accepted.** Only a non-empty list is refused.
 - **Question ids are `q_` plus 12 random hex characters.**
+
+---
+
+## Decision log (build)
+
+- Ruling: T4 imports only `readServiceQuestions`; T6 adds `checkAnswers` to the same import line — avoids an unused import failing lint between tasks. Cost if wrong: none (one-line import change).
+- Task 1: Ruling: reviewer flagged commit c59d495's `Co-Authored-By` naming Claude Haiku 4.5, not Opus 5.5 — kept as-is: it names the model that actually wrote the commit; fixing it means rewriting history. Cost if wrong: one trailer line differs on one commit.
+- Ruling: Tasks 2 and 3 dispatched to one implementer and reviewed as one unit — same pure file and test file, complete code in the plan, no DB involved. Cost if wrong: one larger review diff.
+- Task 6: Ruling: the plan-mandated rewording test passed vacuously (never asserted `before` was non-empty) — fixed to assert `before` equals the expected 3-item copy and that each PUT actually changed the stored questions; watched it fail with storage disabled first.
+
+Deferred minors (not fixed in this piece):
+
+- Task 2-3: `'An answer can be up to 1,000 characters'` is hardcoded in the message text, not interpolated from `MAX_ANSWER` (`server/service-questions.js`).
+- Task 5: the new portal-service-list test compares against the staff route's echoed questions, not the literal input sent — an indirect check.
+- Task 6: a "not sure" booking with malformed non-list `answers` (e.g. `"x"`, `{}`) is accepted and silently ignored (`server/server.js` ~4599).
+- Task 6: `chosen.questions ?? []` is dead code — the `questions` column is `NOT NULL`, so the row always has a value.
+- Task 6: no route-level test for a "not sure" customer answering a required choice, or a blank required text answer — covered only in the `checkAnswers` unit tests.
+- Task 7: the private-link route's `(row.question_answers ?? []).map(...)` would throw on a non-array legacy value; none exist today because the column is new to this piece.
+
+## Spec walk (2026-09-25-book-server-5-service-questions-design.md)
+
+**Decision 1 — server side of both halves, no screens.** Met. Tasks 1-7 build storage, staff routes, the customer list and the booking route; no screen code was touched.
+
+**Decision 2 — two kinds of question, yes/no as a two-choice list.** Met. `server/service-questions.js` (Task 2) defines `'text'` and `'choice'` only; there is no separate yes/no kind, as the spec asked.
+
+**Decision 3 — required switch, off by default.** Met. Task 2's `readServiceQuestions` defaults `required` to `false`; Task 3/6's `checkAnswers` refuses a missing answer to a required question.
+
+**Decision 4 — "I'm not sure" switch on choice questions, on by default.** Met. Task 2 defaults `allowNotSure` to `true` on choice questions only; Task 3 accepts `{ notSure: true }` as satisfying a required question when the switch is on.
+
+**Decision 5 — the private link shows the questions and the customer's answers.** Met, Task 7: the private-link read-back gains `answers`.
+
+**Decision 6 — one ordered list stored on the service; staff save the whole list at once.** Met. Task 1 adds `workshop_services.questions JSONB`; Task 4's staff `PUT`/`POST` take and return the whole ordered list.
+
+**Decision 7 — frozen copy of answers on the booking.** Met, Task 6: `question_answers` is written in the same insert as the job, through `createWorkshopJob`, and is untouched by later edits to the service's questions (tested).
+
+**Decision 8 — limits (10 questions, 200-char wording, 2-10 choices of up to 100 chars, 1,000-char text answer).** Met. Enforced in `readServiceQuestions` (Task 2) and `checkAnswers` (Task 3); every limit has a refusal test.
+
+**Decision 9 — permanent hidden id, given by the server, kept across a reword.** Met. Task 2 assigns `q_` + 12 random hex characters; Task 4's staff routes keep a caller-sent id only if it already belongs to that service's stored list. Reword-keeps-id and delete-and-readd-gets-new-id are both tested.
+
+**Decision 10 — mid-booking question changes matched by id, refused with the exact "changed" message.** Met, with one confirmed change: a *missing required answer* is refused with `Please answer: <wording>` rather than the "questions changed" copy, because the server cannot distinguish that case from a skipped answer, and naming the question is more useful to the customer either way. Every other mismatch (unknown id, choice not on the current list, `notSure` where switched off, wrong kind) uses the exact decision-10 message, confirmed by Jack 25 Sep (see decision log above). The required-answer message and the changed-message wording are both under test.
+
+**Storage (migration 028).** Met, Task 1. `workshop_services.questions JSONB NOT NULL DEFAULT '[]'`; `workshop_jobs.question_answers JSONB` nullable. `question_answers` is `null` for "not sure" bookings, staff-made jobs and bookings made before this piece — confirmed directly: staff `questionAnswers` is `null` for jobs with no copy (Task 7), and a service with no questions stores `[]` (not `null`) on its own bookings, per the build decision log.
+
+**Staff: `POST`/`PUT /api/workshop-services`, `GET` the service.** Met, Task 4. `questions` is taken and returned via `serializeWorkshopService`; a `PUT` omitting `questions` keeps the stored list. Validation refuses missing wording, unknown kind, out-of-range choice counts, duplicate choices, over 10 questions, and any length over its limit, each with its own test. The `// screens: services, service-edit` lines needed no change, as the spec predicted and Task 4 confirmed.
+
+**Customer service list: `GET /api/portal/:shopSlug/services`.** Met, Task 5. Each service gains `questions` (`id`, `wording`, `kind`, `required`, `choices`, `allowNotSure`); the existing `active = 1 AND bookable_online = 1` filter is unchanged, so staff-only and retired services stay excluded (tested).
+
+**Booking: `POST /api/portal/:shopSlug/bookings`.** Met, Task 6. `answers` is optional; the check runs right after the service lookup and before `resolveGuestCustomer` (the first write) — confirmed both by the code and by the Task 8 mutation test, which moved the check after `resolveGuestCustomer` and watched the refusal tests fail on a stray customer row, then restored to green. Every listed refusal (missing required answer, choice not on the list, `notSure` without the switch, text over the limit, unknown question id, answers on a `notSure` booking) is refused and leaves no job and no stray customer.
+
+**Where answers appear.** Met, Task 7. `serializeWorkshopJob` gains `questionAnswers`; the private-link read-back gains `answers` as `{ wording, answer }` in order — confirmed directly: it shows `answers: []` when there are none, rather than omitting the field or returning `null`.
+
+**Tests.** Met. Each task wrote its tests first (migration, staff validation and id assignment, `checkAnswers`/`readServiceQuestions` unit tests, customer-list inclusion, booking success/refusal/round-trip, staff job view and private link). `npm test` is 691/691 passing at the end of Task 8, including all of this piece's files.
+
+**Out of scope.** Respected. No screen code (question editor, booking-page questions, staff answer display) was built; conditional questions and photo answers were not attempted; no reporting on answers was added.
+
+**Constraint check.** The private-link test file stayed under the 30-lookup ceiling (grew from 13 to 14, per the ledger); guest booking tests that expect success sign in first so they don't count against the 5/hour/IP guest limiter; refused guest bookings stop before the limiter runs, so they don't count either.
