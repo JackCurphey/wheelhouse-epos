@@ -23,6 +23,7 @@ export function linkPath(shopSlug, code) {
 // booking moves its link's expiry with it.
 export function isLinkExpired(jobDate, today) {
   const last = new Date(`${jobDate}T00:00:00Z`);
+  if (Number.isNaN(last.getTime())) return true;
   last.setUTCDate(last.getUTCDate() + LINK_DAYS);
   return today > last.toISOString().slice(0, 10);
 }

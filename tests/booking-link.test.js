@@ -34,6 +34,10 @@ test('expiry counts across a month and a year end', () => {
   assert.equal(isLinkExpired('2030-12-15', '2031-01-15'), true);
 });
 
+test('an unparseable job date reads as expired rather than throwing', () => {
+  assert.equal(isLinkExpired('2026-13-01', '2026-01-01'), true);
+});
+
 const stage = (booking_state, custody_state = 'expected', work_state = 'not_started') =>
   bookingStage({ booking_state, custody_state, work_state });
 

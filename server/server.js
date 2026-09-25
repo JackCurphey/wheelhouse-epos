@@ -4691,9 +4691,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     }
 
     // Never trusts a client-sent customerId or status - always the resolved
-    // customer (signed-in, or the matched/created guest above), always
-    // 'pending' until a mechanic reviews it, same principle as createSale()
-    // never trusting a client-sent total.
+    // customer (signed-in, or a new guest row each time, see
+    // resolveGuestCustomer), always 'pending' until a mechanic reviews it,
+    // same principle as createSale() never trusting a client-sent total.
     const linkCode = newLinkCode();
     let jobId;
     try {

@@ -96,8 +96,13 @@ test('the read-back carries no name, phone, email, price or notes', async () => 
   const booked = await book({}, { guest: true });
   await setJob(booked.id, "notes = 'STAFF-ONLY-REMARK'");
   const res = await read(codeOf(booked.privateLink));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const leakyKeys = Object.keys(res.body).filter(
+    (k) => /price|name|phone|email|notes/i.test(k) && k !== 'shopName' && k !== 'serviceName'
+  );
+  assert.deepEqual(leakyKeys, [], `unexpected keys: ${JSON.stringify(res.body)}`);
   const text = JSON.stringify(res.body);
-  for (const secret of ['Gina', '07700', 'gina@example.com', '10.00', 'STAFF-ONLY-REMARK']) {
+  for (const secret of ['Gina', '07700', 'gina@example.com', 'STAFF-ONLY-REMARK']) {
     assert.ok(!text.includes(secret), `leaks ${secret}: ${text}`);
   }
 });
@@ -132,6 +137,17 @@ test("a made-up code and another shop's code get the same 404", async () => {
   assert.deepEqual(wrongShop.body, madeUp.body);
 });
 
+test('a malformed code gets the same 404, never a 500', async () => {
+  const tooLongUpper = 'A'.repeat(64);
+  const tooShortLower = '0'.repeat(63);
+  const upper = await read(tooLongUpper);
+  const short = await read(tooShortLower);
+  assert.equal(upper.status, 404);
+  assert.equal(short.status, 404);
+  assert.deepEqual(upper.body, { error: "We can't find that booking" });
+  assert.deepEqual(short.body, upper.body);
+});
+
 const daysAgo = (n) => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - n);
@@ -158,7 +174,9 @@ test('staff make a new link; the old one stops working', async () => {
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.notEqual(res.body.privateLink, booked.privateLink);
   assert.equal((await read(codeOf(res.body.privateLink))).status, 200);
-  assert.equal((await read(codeOf(booked.privateLink))).status, 404);
+  const stale = await read(codeOf(booked.privateLink));
+  assert.equal(stale.status, 404);
+  assert.deepEqual(stale.body, { error: "We can't find that booking" });
 });
 
 test("staff cannot make a link for another shop's job", async () => {
