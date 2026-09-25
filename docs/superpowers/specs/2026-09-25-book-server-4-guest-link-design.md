@@ -23,6 +23,11 @@ of scope.
    than looking up the old one. A new link switches the old one off.
 5. **One field on the booking**, not a separate links table. A booking has one
    current link.
+6. **The customer's own words are kept apart from staff notes** (Jack, 25 Sep,
+   raised while planning). Today the description is saved into
+   `workshop_jobs.notes`, which staff edit (`PUT /api/workshop-jobs/:id`). The
+   link shows a separate copy that no staff route writes, so a staff comment
+   can never reach the customer. Bookings made before piece 4 show none.
 
 ## What is built
 
@@ -31,6 +36,8 @@ of scope.
 - `workshop_jobs.link_token_hash TEXT`, nullable, with a unique index where
   not null. Holds the SHA-256 hex digest of the code; the code itself is never
   stored.
+- `workshop_jobs.customer_description TEXT`, nullable. What the customer wrote
+  when booking online, written once by the booking route and by nothing else.
 
 ### The code
 
@@ -45,8 +52,8 @@ of scope.
 
 ### Issued on booking
 
-- `POST /api/portal/:shopSlug/bookings` stores the hash on the new job in the
-  same insert, and the 201 response gains `privateLink` (the path). This is
+- `POST /api/portal/:shopSlug/bookings` stores the hash and the customer's
+  description on the new job in the same insert, and the 201 response gains `privateLink` (the path). This is
   the only time the code is returned by that route.
 - Applies to guest and signed-in bookings alike.
 
@@ -62,7 +69,8 @@ nothing.
   - `jobDate`, `startTime` (empty for an untimed booking)
   - `serviceName` (from `service_id`; null for "not sure" and for bookings
     made before piece 3b)
-  - `description` (what the customer wrote)
+  - `description` (from `customer_description`; null for bookings made before
+    piece 4)
   - `bike` (`make`, `model`), or null
   - `stage`: one key for where the booking is up to. The page turns it into
     words; the wording is decided with the page.
@@ -82,9 +90,11 @@ nothing.
     Booking states other than `scheduled` win over custody and work.
 - **Never included:** customer name, phone, email, price, staff notes,
   mechanic notes, customer or job ids.
-- **404** "We can't find that booking" for an unknown code, a replaced code, a
-  code from another shop, or an unknown shop. One answer for all, so guessing
-  teaches nothing.
+- **404** "We can't find that booking" for an unknown code, a replaced code, or
+  a code from another shop. One answer for all, so guessing teaches nothing.
+  An unknown shop slug gets the portal's existing 404 "Shop not found",
+  answered before this route runs; shop slugs are public, so it reveals
+  nothing about bookings.
 - **410** "This link has expired" when today is more than 30 days after
   `job_date`. The `expired` screen needs this told apart from 404.
 - **429** after 30 lookups in 15 minutes from one IP, using the existing
@@ -101,8 +111,10 @@ nothing.
 
 ## Tests (written first, each seen failing)
 
-- Migration: the column exists, is nullable text, and two jobs cannot share a
+- Migration: both columns exist as nullable text, and two jobs cannot share a
   hash.
+- A staff edit of the job's notes does not change the description the link
+  shows.
 - Pure module: code length and randomness, hash is not the code, expiry is
   exactly day 30 inclusive and day 31 expired.
 - Booking returns `privateLink`; reading it back returns the booking.
