@@ -69,18 +69,20 @@ version-guarded job actions, so the client uses `apiMutate`.
 screens show a service's `price` as given.
 **Items 7-12:** client, test and design work; unaffected by the server.
 
-### What still blocks or needs deciding (both checked directly in the code)
+### Decided 25 Sep (Jack), both checked directly in the code first
 
-1. **Automatic acceptance does not exist.** Screen 06 branches to `confirmed`
-   on "automatic acceptance"; the booking POST always writes
-   `booking_state = 'pending'`, and nothing in `server/` or the migrations
-   mentions auto-accepting. Either it stays out of Release 1 (`pending` is
-   then the only outcome) or it is a seventh server piece. Jack's call.
-2. **The booked price never reaches the customer.** It is saved on the job
-   (`booked_price`, :2674) but no customer route returns it; the link route
-   leaves price out on purpose. Screens `service` and `pending` in the atlas
-   show prices. Decide whether `pending` shows the price the customer was
-   quoted, then it is a small server change.
+1. **Automatic acceptance does not exist** (the booking POST always writes
+   `booking_state = 'pending'`). **Decision A1:** it stays out of Release 1;
+   `pending` is the only outcome and screen 06 loses its `confirmed` branch.
+2. **The booked price never reached the customer.** **Decision B1:** `pending`
+   shows it, following the shop's `show_prices_online` setting (off means no
+   price after booking either). Server change is piece (a):
+   `docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`.
+3. **Split into four pieces, each with its own spec and pull request:**
+   (a) booked price in the booking reply and link read-back; (b) the customer
+   shell at `/book` (second Vite entry, customer route table, serving); (c) the
+   missing form controls in the registry, each approved by Jack; (d) the six
+   screens and their journey test.
 
 ### Smaller points
 

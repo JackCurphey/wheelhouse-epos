@@ -7,13 +7,15 @@ journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 `docs/superpowers/`; piece 6's are
 `docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md` and
 `docs/superpowers/plans/2026-09-25-book-server-6-customer-photos.md`.
-**Plan 4a's endpoint check re-run 25 Sep** (branch
-`docs/book-4a-endpoint-recheck`, in
-`docs/superpowers/plans/2026-09-20-phase-4a-book.md`): every book screen has a
-supplying route. Open before `pending` can be built: automatic acceptance does
-not exist in the server, and the booked price is not returned to the customer.
-Both are Jack's decisions. **Next:** spec and plan the book screens (design
-calls are Jack's).
+**Plan 4a's endpoint check re-run 25 Sep**
+(`docs/superpowers/plans/2026-09-20-phase-4a-book.md`): every book screen has a
+supplying route. **Jack decided 25 Sep:** no automatic acceptance in Release 1
+(A1); `pending` shows the booked price, following the shop's "show prices
+online" setting (B1); the work splits into four pieces with their own spec and
+PR: (a) booked price in the booking reply and link read-back, (b) customer
+shell at `/book`, (c) missing form controls (each approved by Jack), (d) the
+six screens. **Now:** piece (a) on branch `feat/book-a-booked-price`, spec
+`docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per
