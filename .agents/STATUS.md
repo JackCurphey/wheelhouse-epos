@@ -1,13 +1,11 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-24
-**Branch:** `main` at `9291119`. #63 (component tests, malformed-id 404)
-and #64 (book server piece 1: migration 022, service categories, `GET
-/api/portal/:shopSlug/services`) merged 24 Sep; CI on `9291119` 471/471.
+**Branch:** `main` at `5dd2086`: #66 (piece 2b, merge commit) merged 25 Sep;
+#65 (piece 2a - weekday hours, blocks, capacity calculator, migration 023)
+merged 24 Sep; #63-#64 before it.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
-**Working branches:** `feat/book-server-2-modes` (2a, PR #65 open) and
-`feat/book-server-2b-modes` cut from it - piece 2b built, not yet pushed;
-its PR waits on #65 merging. Mark's #50 review is against the superseded
+**Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.
 
 > **Tracked and authoritative.** This file and `ARCHIVE.md` are the only
@@ -57,8 +55,7 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Book server piece 2b built** (24 Sep) on `feat/book-server-2b-modes`
-   (cut from `feat/book-server-2-modes`, PR #65): migration 024 (hold index
+1. **Piece 2b merged** (#66, 25 Sep). It added migration 024 (hold index
    narrowed to timed holds), mode-aware customer booking POST, the
    per-(shop, date) advisory booking lock, the 409 `capacity` / 400
    shop-rule split, one live hold per live job (`syncJobHold`), walk-in
@@ -69,7 +66,7 @@ This file → **Plan register** below and the plans it names →
    pre-2b staff moves are not backfilled — a stale hold now answers 409
    `capacity` (2b decision 11); a one-off realign is due if any shop has
    live data. **Next: piece 3** (the booking request). Plan 4a stays
-   STOPPED at Task 7 item 3 until piece 2 merges; routing decided 23 Sep
+   STOPPED at Task 7 item 3 until piece 3 lands; routing decided 23 Sep
    (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer
    screens under `/book`, two modes, deposits out, all four J2 gaps in.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
@@ -135,9 +132,8 @@ npm run test:browser
 All run in CI too, so a green PR means they passed.
 
 
-**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day, piece 2b
-on `feat/book-server-2b-modes` (not pushed): every gate above exits 0,
-563/563. Prior (2a 528/528, 23 Sep 437/437): `ARCHIVE.md`. Check a PR's CI
+**Verified 24 Sep: CI on `main` `9291119` green, 471/471.** Same day: #65 CI
+green; #66 CI green against main on `50785ac`, 565/565 locally. Prior (2a 528/528, 23 Sep 437/437): `ARCHIVE.md`. Check a PR's CI
 against the run's own SHA, not the PR pane.
 
 **A worktree needs its own `.env`** — gitignored, so it does not travel;
