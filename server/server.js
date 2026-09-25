@@ -2534,6 +2534,23 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
   sendJson(res, 200, serializeWorkshopJob(row));
 });
 
+// A new private link for a job: the old one stops working at once, because a
+// job holds one hash. Returned once; staff text it or read it out.
+// Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
+// Staff handlers get (req, res, params, query, afterRelease, shopId); the slug
+// for the path comes from shops, which is outside row-level security.
+// screens: expired
+route('POST', '/api/workshop-jobs/:id/private-link', async (req, res, params, query, afterRelease, shopId) => {
+  const job = await db.prepare('SELECT id, customer_id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
+  if (!job) return notFound(res, 'Job not found');
+  if (!job.customer_id) return badRequest(res, 'This job has no customer to send a link to');
+  const code = newLinkCode();
+  await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?')
+    .run(hashLinkCode(code), nowIso(), job.id);
+  const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
+  sendJson(res, 201, { privateLink: linkPath(shop.slug, code) });
+});
+
 // Booking writes for one shop and date run one at a time: check, then write,
 // with nothing between them. A transaction-scoped advisory lock keyed (shop,
 // date), released at COMMIT or ROLLBACK. Several dates (a move) are locked in

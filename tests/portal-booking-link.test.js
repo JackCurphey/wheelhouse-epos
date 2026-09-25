@@ -10,7 +10,7 @@ import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { jsonRequest } from './helpers/http.js';
 import { deleteTestShop } from './helpers/testShop.js';
-import { futureDate } from './helpers/workshopFixtures.js';
+import { futureDate, seedWorkshopJob } from './helpers/workshopFixtures.js';
 import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
 import { hashLinkCode } from '../server/booking-link.js';
 
@@ -147,4 +147,32 @@ test('31 days after the booked date the link has expired; moving the date revive
   assert.deepEqual(expired.body, { error: 'This link has expired' });
   await setJob(booked.id, 'job_date = ?', daysAgo(30));
   assert.equal((await read(code)).status, 200);
+});
+
+const newLink = (id, who = owner) =>
+  staffRequest(server.baseUrl, who?.cookie ?? null, `/api/workshop-jobs/${id}/private-link`, { method: 'POST', body: {} });
+
+test('staff make a new link; the old one stops working', async () => {
+  const booked = await book();
+  const res = await newLink(booked.id);
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.notEqual(res.body.privateLink, booked.privateLink);
+  assert.equal((await read(codeOf(res.body.privateLink))).status, 200);
+  assert.equal((await read(codeOf(booked.privateLink))).status, 404);
+});
+
+test("staff cannot make a link for another shop's job", async () => {
+  const booked = await book();
+  assert.equal((await newLink(booked.id, other)).status, 404);
+});
+
+test('a job with no customer gets no link', async () => {
+  const { jobId } = await seedWorkshopJob({ shopId: owner.shop.id, customerId: null });
+  const res = await newLink(jobId);
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+});
+
+test('making a link needs a staff sign-in', async () => {
+  const booked = await book();
+  assert.equal((await newLink(booked.id, null)).status, 401);
 });
