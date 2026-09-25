@@ -70,6 +70,7 @@ test('serializeWorkshopService converts a row to camelCase with active as a bool
     kind: 'full',
     categoryId: null,
     position: 2,
+    questions: [],
   });
 });
 

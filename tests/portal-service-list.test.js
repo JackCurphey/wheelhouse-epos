@@ -106,7 +106,7 @@ test('full, categorised and uncategorised services are grouped and ordered', asy
     assert.deepEqual(res.body.categories.map((c) => c.name), ['Wheels', 'Brakes']);
     assert.deepEqual(res.body.categories[1].services.map((s) => s.name), ['Pad swap', 'Bleed']);
     assert.deepEqual(res.body.uncategorised.map((s) => s.name), ['Tubeless setup']);
-    assert.deepEqual(Object.keys(res.body.full[0]).sort(), ['id', 'minutes', 'name', 'price']);
+    assert.deepEqual(Object.keys(res.body.full[0]).sort(), ['id', 'minutes', 'name', 'price', 'questions']);
   } finally {
     await deleteTestShop(shop.shop.id);
   }
@@ -117,4 +117,19 @@ test('a category with no bookable service is left out', async () => {
   await service(shopA, { name: 'Staff only', categoryId: empty.id, bookableOnline: false });
   const res = await publicList(shopA);
   assert.ok(!res.body.categories.some((c) => c.id === empty.id), 'an empty category was listed');
+});
+
+test('each service carries its questions; a staff-only service stays hidden', async () => {
+  const shop = await staffSignup(server.baseUrl);
+  try {
+    const q = [{ wording: 'Which brakes?', kind: 'choice', choices: ['Front', 'Rear'], required: true }];
+    const shown = await service(shop, { name: 'Bleed', questions: q });
+    const hidden = await service(shop, { name: 'Staff bleed', bookableOnline: false, questions: q });
+    const res = await publicList(shop);
+    const found = [...res.body.full, ...res.body.uncategorised, ...res.body.categories.flatMap((c) => c.services)];
+    assert.deepEqual(found.find((s) => s.id === shown.id).questions, shown.questions);
+    assert.equal(found.find((s) => s.id === hidden.id), undefined);
+  } finally {
+    await deleteTestShop(shop.shop.id);
+  }
 });
