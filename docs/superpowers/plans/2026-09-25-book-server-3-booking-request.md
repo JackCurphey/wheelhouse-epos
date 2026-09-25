@@ -31,8 +31,8 @@
 4. **Job title:** `Online booking: <service name> - <description>`, cut to 200 characters; for "not sure", `Online booking: Not sure - <description>`. The old title was `Online booking: <description>`.
 5. **`updateChannel` is required on every booking**, and `termsAccepted` must be the boolean `true`. `marketingPermission` defaults to false; anything other than `true` is false.
 6. **Email check is deliberately light:** one `@` with text either side, no spaces. Real verification is a message being delivered, which is not built.
-7. **Preferences are saved inside the booking lock, just before the job insert,** so a refused booking (400 or 409) changes nothing on the customer. An email is only written when one was sent.
-8. **Validation runs before the guest customer row is created,** so a bad request no longer leaves a stray customer. The existing checks (date, description, mechanic) keep their order after it.
+7. **Preferences are saved inside the booking lock, after the job insert succeeds,** so every refusal (400, or the 409 from the slot index) leaves the customer untouched. An email is only written when one was sent, and a phone only when the customer has none.
+8. **Validation runs before the guest customer row is created,** so a bad request no longer leaves a stray customer: the new field checks, then date, description and the service lookup. The mechanic check and the shop rules still follow the guest row.
 9. **`serializePortalBooking` gains `reference`.** It also feeds `GET /api/portal/:shopSlug/bookings` (a signed-in customer's own bookings), where the reference is the customer's own and safe to show.
 10. **The `jobTypes` key leaves `GET /api/portal/:shopSlug/mechanics`.** The old `public-portal/portal.js` reads it and breaks; that is decision 3 in the spec.
 

@@ -1,6 +1,6 @@
 # STATUS — Wheelhouse EPOS
 
-**Updated:** 2026-09-24
+**Updated:** 2026-09-25
 **Branch:** `main` at `5dd2086`: #66 (piece 2b, merge commit) merged 25 Sep;
 #65 (piece 2a - weekday hours, blocks, capacity calculator, migration 023)
 merged 24 Sep; #63-#64 before it.
@@ -56,7 +56,7 @@ This file → **Plan register** below and the plans it names →
 ## Immediate next actions
 
 1. **Piece 3 (the booking request) built on
-   `feat/book-server-3-booking-request`, not merged;** 595 tests pass, all
+   `feat/book-server-3-booking-request`, not merged;** 598 tests pass, all
    gates exit 0. Migration 025; the POST names a shop service or "not
    sure"; contact, consent and reference stored. Spec
    `docs/superpowers/specs/2026-09-25-book-server-3-booking-request-design.md`;
@@ -64,7 +64,10 @@ This file → **Plan register** below and the plans it names →
    `docs/superpowers/plans/2026-09-25-book-server-3-booking-request.md`.
    **Open for Jack:** (a) a guest still needs a phone for every channel
    (decision 1); (b) the service price is not stored on the job (decision
-   3, spec line dropped). **Next: piece 4** (guest private link). Plan 4a
+   3, spec line dropped); (c) `public-demo/sdbdemo.html` (served at
+   /sdbdemo) reads `jobTypes` and sends `jobType`, so it stops booking
+   after this piece. Options: accept the break, remove the page, or send
+   `notSure: true` plus the new fields (a UI decision, not made). **Next: piece 4** (guest private link). Plan 4a
    stays STOPPED at Task 7 item 3; routing decided 23 Sep
    (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`).
    Piece 2b (merged, #66) detail moved to `ARCHIVE.md`.
