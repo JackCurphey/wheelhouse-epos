@@ -4,10 +4,32 @@
 **Branch:** `main` at `41f48e8`: #69 (piece 4 - private booking link,
 migration 027), #68 (piece 3b - booked price, 026) and #67 (piece 3 - booking
 request, 025) merged 25 Sep, main CI green on all three; #66 and #65 before.
-**Piece 5 (service questions, migration 028) built on branch
-`feat/book-server-5-service-questions`, off `41f48e8`, open as PR #70** —
-`npm test` 693/693, lint, typecheck and `assert-screen-trace.mjs` clean
-locally before the push; CI on #70 not yet read. **Merging is Jack's call.**
+**Piece 5 (service questions, migration 028), from branch
+`feat/book-server-5-service-questions`, merged as #70** (main `602bab2`, 25
+Sep; PR CI green). **Piece 6 (customer photos, migration 029) built** on branch
+`feat/book-server-6-customer-uploads`; spec
+`docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md`
+(Jack approved 25 Sep), plan
+`docs/superpowers/plans/2026-09-25-book-server-6-customer-photos.md`. PR to
+follow after a final review; merging is Jack's call.
+**Piece 6 open items** (facts only):
+- Memory risk before public exposure: the booking route reads a body up to
+  73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per
+  request is roughly 300 MB (received chunks, Buffer.concat copy, utf8 string,
+  JSON.parse copy, plus base64 decode). No concurrency limit exists and the
+  Dockerfile/compose set no memory limit, so about 10-15 simultaneous max-size
+  posts could exhaust Node memory (the same process serves the staff tills).
+  Cheapest fix: cap concurrent large-body reads (503 beyond 2-3), reject early
+  on Content-Length over the cap, free chunks before parsing. Needs Jack's
+  decision before this route is publicly reachable (hosting not chosen, PL-1).
+- Files can be left on disk if COMMIT fails after photos were saved (rare,
+  up to 50 MB per booking).
+- Customer photos must be sent as bare base64; a `data:image/...;base64,`
+  prefix or line breaks is refused as "could not be read". Note for whoever
+  builds the booking page's photo picker.
+- Pre-existing, not from piece 6: a guest's customer row and a newBike row can
+  remain after some refusals inside the lock ("Please choose a mechanic",
+  capacity refusals, the 23505 case); a JSON body of `null` gives 500.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
 **Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.

@@ -75,6 +75,8 @@ import {
   listStorefrontProducts,
 } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
+import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
+import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
@@ -441,13 +443,20 @@ function badRequest(res, msg = 'Bad request') {
 // boundary - turning it into replacement characters and breaking anything
 // that depends on the exact bytes (notably readRawBody's caller, which HMAC-
 // verifies the raw body against Shopify's signature).
-async function readJsonBody(req, maxBytes = 2_000_000) {
+async function readJsonBody(req, maxBytes = 2_000_000, { answerOverflow = false } = {}) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let bytes = 0;
+    let overflowed = false;
     req.on('data', (chunk) => {
       bytes += chunk.length;
+      if (overflowed) {
+        // Still reading so the client can be answered; stop at twice the cap.
+        if (bytes > maxBytes * 2) { reject(new Error('Payload too large')); req.destroy(); }
+        return;
+      }
       if (bytes > maxBytes) {
+        if (answerOverflow) { overflowed = true; chunks.length = 0; return; }
         reject(new Error('Payload too large'));
         req.destroy();
         return;
@@ -455,6 +464,7 @@ async function readJsonBody(req, maxBytes = 2_000_000) {
       chunks.push(chunk);
     });
     req.on('end', () => {
+      if (overflowed) return reject(new Error('Payload too large'));
       if (bytes === 0) return resolve({});
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
@@ -3162,6 +3172,7 @@ function serializeAttachment(row) {
     contentType: row.content_type,
     sizeBytes: row.size_bytes,
     uploadedAt: row.uploaded_at,
+    fromCustomer: row.from_customer,
   };
 }
 
@@ -4586,7 +4597,16 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
   const signedIn = ctx && ctx.shop.slug === params.shopSlug;
-  const body = await readJsonBody(req);
+  let body;
+  try {
+    body = await readJsonBody(req, MAX_BOOKING_BODY_BYTES, { answerOverflow: true });
+  } catch (err) {
+    // The rest of a too-big body may still be arriving; close after answering.
+    res.setHeader('connection', 'close');
+    return badRequest(res, err.message === 'Payload too large'
+      ? 'Those photos are too large to send — please add fewer or smaller photos'
+      : 'Invalid request body');
+  }
 
   // The request's own fields are checked before any customer row is created, so
   // a bad request leaves nothing behind. The phone the channel rule needs is the
@@ -4633,6 +4653,13 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     if (checked.error) return badRequest(res, checked.error);
     questionAnswers = checked.value;
   }
+
+  // Photos are checked here with the other request checks: before the guest
+  // limiter and before any write, so a refusal leaves nothing behind. They are
+  // allowed on a "not sure" booking too - they describe the problem, not the service.
+  const checkedPhotos = readBookingPhotos(body.photos);
+  if (checkedPhotos.error) return badRequest(res, checkedPhotos.error);
+  const photos = checkedPhotos.value;
 
   // No account required to book: an out-of-towner booking a single job
   // shouldn't be forced through signup. Falls back to a guest customer
@@ -4775,6 +4802,19 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       )
       .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+    // The last write, so nothing after it can fail and leave files behind for a
+    // booking that rolled back. saveBookingPhotos removes its own files if a
+    // write or insert fails, and the error rolls the whole booking back.
+    await saveBookingPhotos({
+      photos,
+      uploadsDir: UPLOADS_DIR,
+      insertRow: ({ storageKey, originalName, contentType, sizeBytes }) => db
+        .prepare(
+          `INSERT INTO workshop_job_attachments (workshop_job_id, storage_key, original_name, content_type, size_bytes, from_customer)
+           VALUES (?, ?, ?, ?, ?, true)`
+        )
+        .run(jobId, storageKey, originalName, contentType, sizeBytes),
+    });
     // The only time the code leaves the server: the database keeps its hash.
     return { status: 201, body: { ...serializePortalBooking(row), privateLink: linkPath(params.shopSlug, linkCode) } };
   });
@@ -4795,6 +4835,8 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
       `SELECT w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
               w.booking_state, w.custody_state, w.work_state,
               s.name AS service_name, b.make AS bike_make, b.model AS bike_model
+              , (SELECT count(*)::int FROM workshop_job_attachments a
+                 WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
        FROM workshop_jobs w
        LEFT JOIN workshop_services s ON s.id = w.service_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
@@ -4816,6 +4858,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     answers: (row.question_answers ?? []).map(({ wording, answer }) => ({ wording, answer })),
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
+    photoCount: row.photo_count,
   });
 });
 

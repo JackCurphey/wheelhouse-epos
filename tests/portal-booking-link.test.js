@@ -80,6 +80,7 @@ test('a booking returns a private link, and the link reads the booking back', as
     bike: { make: 'Dawes', model: 'Galaxy' },
     stage: 'awaiting_confirmation',
     answers: [],
+    photoCount: 0,
   });
 });
 
