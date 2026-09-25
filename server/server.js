@@ -4970,7 +4970,8 @@ export async function appEntryTags(entryKey, manifestPath = VITE_MANIFEST) {
 // One of the React apps' pages: its HTML with the entry's tags put in. Every
 // address the app's router owns gets this same page, so a link opened cold
 // reaches its screen. No build means a 500 that says so, not a blank page.
-// Plain text, so the message needs no HTML escaping.
+// The response body is a fixed string - the real error (which can include an
+// absolute manifest path) goes to the server log only, never to the visitor.
 async function serveAppPage(res, htmlPath, entryKey, label) {
   try {
     const [html, tags] = await Promise.all([readFile(htmlPath, 'utf8'), appEntryTags(entryKey)]);
@@ -4979,7 +4980,7 @@ async function serveAppPage(res, htmlPath, entryKey, label) {
   } catch (err) {
     console.error(err);
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
-    res.end(`${label} bundle not built: ${err.message}`);
+    res.end(`${label} bundle not built - see the server log`);
   }
 }
 
@@ -4993,12 +4994,13 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
   // On a subdomain-hosted storefront (<slug>.wheelhouseepos.com),
   // parseStorefrontSlugCandidate matches every path on that host, not just
   // storefront-specific ones - so requests for uploaded images and the
-  // the customer booking app have to be forwarded to their real handlers here instead
-  // of falling through to the storefront's own static bundle below (whose
-  // serveStatic fallback would otherwise return the storefront's index.html
-  // for these paths instead of the actual image or portal page). The caller
-  // (the request dispatcher) already wraps this whole call in a try/catch,
-  // so errors from these forwarded calls propagate up to that handler.
+  // customer booking app have to be forwarded to their real handlers here
+  // instead of falling through to the storefront's own static bundle below
+  // (whose serveStatic fallback would otherwise return the storefront's
+  // index.html for these paths instead of the actual image or booking app
+  // page). The caller (the request dispatcher) already wraps this whole
+  // call in a try/catch, so errors from these forwarded calls propagate up
+  // to that handler.
   if (pathname.startsWith('/api/uploaded-images/')) {
     return serveUploadedImage(req, res, pathname.slice('/api/uploaded-images/'.length));
   }

@@ -35,3 +35,8 @@ test('an unknown /book address says there is no screen there', async () => {
   const screen = await renderAt('/book/demo/nope/nope');
   assert.ok(await screen.findByText('There is no screen at this address.'));
 });
+
+test('bare /book, which storefronts link to, says there is no screen there', async () => {
+  const screen = await renderAt('/book');
+  assert.ok(await screen.findByText('There is no screen at this address.'));
+});
