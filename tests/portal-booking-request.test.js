@@ -131,10 +131,12 @@ test('not sure stores no service and no price', async () => {
   assert.deepEqual({ ...(await priced(res.body.id)) }, { service_id: null, booked_price: null });
 });
 
-test('the booking response does not carry the price', async () => {
+test('with prices hidden, the booking response carries no price', async () => {
   const res = await book({ serviceId: await pricedService('987.65') });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.ok(!Object.keys(res.body).some((k) => /price/i.test(k)), JSON.stringify(res.body));
+  assert.ok('bookedPrice' in res.body, 'bookedPrice field present');
+  assert.equal(res.body.bookedPrice, null, 'bookedPrice is null');
+  assert.ok(!Object.keys(res.body).filter((k) => k !== 'bookedPrice').some((k) => /price/i.test(k)), JSON.stringify(res.body));
   assert.ok(!Object.values(res.body).some((v) => v === 987.65 || v === '987.65'), JSON.stringify(res.body));
 });
 

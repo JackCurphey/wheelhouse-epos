@@ -1,17 +1,23 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-25
-**Branch:** `main` at `41f48e8`: #69 (piece 4 - private booking link,
-migration 027), #68 (piece 3b - booked price, 026) and #67 (piece 3 - booking
-request, 025) merged 25 Sep, main CI green on all three; #66 and #65 before.
-**Piece 5 (service questions, migration 028), from branch
-`feat/book-server-5-service-questions`, merged as #70** (main `602bab2`, 25
-Sep; PR CI green). **Piece 6 (customer photos, migration 029) built** on branch
-`feat/book-server-6-customer-uploads`; spec
-`docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md`
-(Jack approved 25 Sep), plan
-`docs/superpowers/plans/2026-09-25-book-server-6-customer-photos.md`. PR to
-follow after a final review; merging is Jack's call.
+**Branch:** `main` at `86f814b`. Server prerequisite pieces 1-6 for the book
+journey are all merged: #64-#70, then **piece 6 (customer photos, migration
+029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
+`docs/superpowers/`; piece 6's are
+`docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md` and
+`docs/superpowers/plans/2026-09-25-book-server-6-customer-photos.md`.
+**Plan 4a's endpoint check re-run 25 Sep**
+(`docs/superpowers/plans/2026-09-20-phase-4a-book.md`): every book screen has a
+supplying route. **Jack decided 25 Sep:** no automatic acceptance in Release 1
+(A1); `pending` shows the booked price, following the shop's "show prices
+online" setting (B1); the work splits into four pieces with their own spec and
+PR: (a) booked price in the booking reply and link read-back, (b) customer
+shell at `/book`, (c) missing form controls (each approved by Jack), (d) the
+six screens. **Piece (a) built: PR #72** (branch `feat/book-a-booked-price`;
+spec `docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`; local
+`npm test` 725/725 before push). Merging is Jack's call. **Next:** piece (b),
+the customer shell at `/book` (spec first).
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

@@ -81,6 +81,7 @@ test('a booking returns a private link, and the link reads the booking back', as
     stage: 'awaiting_confirmation',
     answers: [],
     photoCount: 0,
+    bookedPrice: null,
   });
 });
 
@@ -94,13 +95,13 @@ test('the database holds the hash, never the code', async () => {
   assert.equal(row.leaks, false);
 });
 
-test('the read-back carries no name, phone, email, price or notes', async () => {
+test('the read-back carries no name, phone, email or notes, and price only as bookedPrice', async () => {
   const booked = await book({}, { guest: true });
   await setJob(booked.id, "notes = 'STAFF-ONLY-REMARK'");
   const res = await read(codeOf(booked.privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const leakyKeys = Object.keys(res.body).filter(
-    (k) => /price|name|phone|email|notes/i.test(k) && k !== 'shopName' && k !== 'serviceName'
+    (k) => /price|name|phone|email|notes/i.test(k) && !['shopName', 'serviceName', 'bookedPrice'].includes(k)
   );
   assert.deepEqual(leakyKeys, [], `unexpected keys: ${JSON.stringify(res.body)}`);
   const text = JSON.stringify(res.body);
