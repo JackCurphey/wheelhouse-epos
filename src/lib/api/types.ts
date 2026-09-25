@@ -37,5 +37,5 @@ export type WorkshopJob = {
 /** The body of every error response. `code` is sent on 409s only. */
 export type ApiErrorBody = {
   error: string;
-  code?: 'stale' | 'illegal';
+  code?: 'stale' | 'illegal' | 'capacity';
 };

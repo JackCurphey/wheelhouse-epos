@@ -86,3 +86,12 @@ test('requests send the session cookie and mutations declare JSON', async () => 
   assert.equal(calls[0].options.method, 'PUT');
   assert.equal(calls[0].options.headers['content-type'], 'application/json');
 });
+
+test('a 409 for used-up capacity is its own code, not stale', async () => {
+  // The body server/server.js's capacityRefusal() sends.
+  stubFetch(409, { error: 'That time is no longer available - please choose another.', code: 'capacity' });
+  await assert.rejects(
+    () => apiMutate('/api/portal/shop/bookings', {}),
+    (err) => err instanceof ApiError && err.status === 409 && err.code === 'capacity'
+  );
+});

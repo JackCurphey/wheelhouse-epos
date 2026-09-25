@@ -9,9 +9,11 @@
  *    screen that does not have it cannot compile.
  * 2. A 409 is not a generic failure. `stale` means someone else moved the job
  *    and the screen must refetch and say so; `illegal` means the action was
- *    never allowed from this state and refetching changes nothing. Screens
- *    behave differently for the two, so the client tells them apart - from the
- *    `code` the server sends, never from the wording of its message.
+ *    never allowed from this state and refetching changes nothing; `capacity`
+ *    means the time or day has been used up by other bookings - pick another;
+ *    retrying the same one cannot help. Screens behave differently for the
+ *    three, so the client tells them apart - from the `code` the server sends,
+ *    never from the wording of its message.
  *
  * Imports in this directory are relative with a `.ts` extension, not `@/`:
  * the tests load these files straight into Node, which knows no Vite alias.
@@ -21,6 +23,7 @@ import type { ApiErrorBody } from './types.ts';
 export type ApiErrorCode =
   | 'stale'
   | 'illegal'
+  | 'capacity'
   | 'not_found'
   | 'bad_request'
   | 'unauthorized'
@@ -49,7 +52,9 @@ function classify(status: number, serverCode: ApiErrorBody['code']): ApiErrorCod
   // A 409 with no code is left unknown rather than assumed stale: guessing
   // stale would reload and invite a retry of something that may never be
   // allowed.
-  if (status === 409) return serverCode === 'stale' || serverCode === 'illegal' ? serverCode : 'unknown';
+  if (status === 409) {
+    return serverCode === 'stale' || serverCode === 'illegal' || serverCode === 'capacity' ? serverCode : 'unknown';
+  }
   if (status === 404) return 'not_found';
   if (status === 401) return 'unauthorized';
   if (status === 400) return 'bad_request';

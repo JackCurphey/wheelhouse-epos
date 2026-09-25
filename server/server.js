@@ -15,6 +15,7 @@ import {
   HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, isRealDate, dayCount, datesBetween, parseWeekdayHours,
   effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
   computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
+  settleModeChange, validateModeChange, bookingLockKey,
 } from './capacity.js';
 import {
   createRevision as createQuoteRevision,
@@ -2526,6 +2527,37 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
   sendJson(res, 200, serializeWorkshopJob(row));
 });
 
+// Booking writes for one shop and date run one at a time: check, then write,
+// with nothing between them. A transaction-scoped advisory lock keyed (shop,
+// date), released at COMMIT or ROLLBACK. Several dates (a move) are locked in
+// date order, so two moves between the same days cannot deadlock. Nested
+// BEGIN/COMMIT inside fn (createWorkshopJob) becomes a savepoint (server/db.js).
+async function withBookingLock(dates, fn) {
+  await db.exec('BEGIN');
+  try {
+    for (const date of [...new Set(dates)].sort()) {
+      await db.prepare(
+        "SELECT pg_advisory_xact_lock(current_setting('app.current_shop_id')::int, ?::int)"
+      ).get(bookingLockKey(date));
+    }
+    const result = await fn();
+    await db.exec('COMMIT');
+    return result;
+  } catch (err) {
+    // A failed ROLLBACK (e.g. the connection already dropped) must not hide
+    // the original error - that's the one the caller needs to see.
+    await db.exec('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
+// A refusal because other bookings have used the time. The code is what a
+// screen branches on; the words are what the old booking page shows.
+const capacityRefusal = (error) => ({ status: 409, body: { error, code: 'capacity' } });
+const refusal = (error) => ({ status: 400, body: { error } });
+// The 024 hold index firing: another live hold already sits on the slot.
+const SLOT_GONE = 'That time is no longer available - please choose another.';
+
 // Shared by the staff "create job" route below and the customer portal's
 // booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
 // linked order in one transaction. Trusts every field completely; callers
@@ -2540,7 +2572,59 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
 // race, which is not the same thing as being wrong.
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder }) {
+// A job's capacity hold follows the job. One live hold per live job: an
+// assigned job holds a timed slot at its start with its length; an unassigned
+// job (no mechanic - drop-off, a walk-in, or a timed job nobody has taken yet)
+// holds no slot, so its hold is untimed and carries only its length - the
+// shared queue counts it, never a slot on the grid. A timed job's length
+// still comes from its times regardless of assignment. A job that stops being
+// live has its hold released. Called inside createWorkshopJob's transaction;
+// the booking lock (Task 5) wraps the other writes.
+async function syncJobHold(jobId) {
+  const job = await db.prepare(
+    'SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes, booking_state FROM workshop_jobs WHERE id = ?'
+  ).get(jobId);
+  if (!job || !LIVE_BOOKING_STATES.includes(job.booking_state)) {
+    await db.prepare(
+      `UPDATE workshop_capacity_holds SET state = 'released'
+       WHERE workshop_job_id = ? AND state IN ('held', 'confirmed')`
+    ).run(jobId);
+    return;
+  }
+  const startTime = job.start_time || '';
+  const minutes = startTime
+    ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(startTime))
+    : (job.planned_minutes || 0);
+  // An unassigned job's hold is untimed - the shared queue is counted, never slotted.
+  const holdStartTime = job.mechanic_id ? startTime : '';
+  const hold = await db.prepare(
+    `SELECT id FROM workshop_capacity_holds
+     WHERE workshop_job_id = ? AND state IN ('held', 'confirmed') ORDER BY id LIMIT 1`
+  ).get(jobId);
+  if (hold) {
+    await db.prepare(
+      'UPDATE workshop_capacity_holds SET job_date = ?, start_time = ?, mechanic_id = ?, minutes = ? WHERE id = ?'
+    ).run(job.job_date, holdStartTime, job.mechanic_id, minutes, hold.id);
+  } else {
+    await db.prepare(
+      `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
+       VALUES (?, ?, ?, ?, ?, 'held')`
+    ).run(jobId, job.job_date, holdStartTime, job.mechanic_id, minutes);
+  }
+}
+
+// A job's length when it has no times: whole minutes, 1 to 720, or null.
+function resolvePlannedMinutes(input, fallback) {
+  if (input === undefined) return { value: fallback ?? null };
+  if (input === null || input === '') return { value: null };
+  const n = Number(input);
+  if (!Number.isInteger(n) || n < 1 || n > 720) {
+    return { error: 'The planned length must be a whole number of minutes between 1 and 720' };
+  }
+  return { value: n };
+}
+
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2549,10 +2633,14 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes, nowIso());
+      .run(
+        title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
+        plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
+        nowIso()
+      );
     const jobIdForHold = info.lastInsertRowid;
 
     // Take the capacity hold in the same transaction as the job. checkJobSlot
@@ -2560,22 +2648,7 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     // partial unique index from migration 018 is what makes exactly one of them
     // win. Inside the transaction so the loser's job rolls back with its hold
     // rather than surviving as a booking for a slot it does not hold.
-    //
-    // Only timed jobs take a hold. A job with no start time reserves no slot,
-    // and every such job would otherwise collide with every other one on the
-    // same date (the index COALESCEs a null mechanic to 0).
-    if (startTime) {
-      await db.prepare(
-        `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
-         VALUES (?, ?, ?, ?, ?, 'held')`
-      ).run(
-        jobIdForHold,
-        jobDate,
-        startTime,
-        mechanicId,
-        Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime))
-      );
-    }
+    await syncJobHold(jobIdForHold);
     const jobId = info.lastInsertRowid;
 
     // Every workshop job is backed by an order so it's findable from the
@@ -2603,8 +2676,9 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
 // staff routes and the portal booking route go through here now, so there is
 // one implementation of "is this slot legal" rather than three that drift.
 //
-// Returns an error string, or null when the slot is fine. `ignoreJobId` is
-// the job being edited - a job must not collide with itself.
+// Returns null when the slot is fine, or { error, taken } - taken means another
+// live booking holds the time. `ignoreJobId` is the job being edited - a job
+// must not collide with itself.
 async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJobId = null }) {
   const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   if (!settings) return null;
@@ -2615,7 +2689,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   const dayOfWeek = new Date(`${jobDate}T00:00:00Z`).getUTCDay();
   const openingDays = parseWorkingDays(settings.opening_days);
   if (Array.isArray(openingDays) && !openingDays.includes(dayOfWeek)) {
-    return 'The shop is closed that day - please choose another date.';
+    return { error: 'The shop is closed that day - please choose another date.', taken: false };
   }
 
   // A mechanic's own days off are separate from the shop's closing days - a
@@ -2625,7 +2699,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
     const mechanic = await db.prepare('SELECT working_days FROM employees WHERE id = ?').get(mechanicId);
     const workingDays = mechanic ? parseWorkingDays(mechanic.working_days) : null;
     if (Array.isArray(workingDays) && !workingDays.includes(dayOfWeek)) {
-      return 'That mechanic does not work that day - please choose another day or another mechanic.';
+      return { error: 'That mechanic does not work that day - please choose another day or another mechanic.', taken: false };
     }
   }
 
@@ -2636,7 +2710,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   // The day's own hours - Saturday may close earlier than the week.
   const hours = effectiveHours(toCapacitySettings(settings), dayOfWeek);
   if (startTime < hours.open || endTime > hours.close) {
-    return `That job doesn't fit in the shop's opening hours (${hours.open}\u2013${hours.close}) - please choose an earlier time or a shorter job type.`;
+    return { error: `That job doesn't fit in the shop's opening hours (${hours.open}\u2013${hours.close}) - please choose an earlier time or a shorter job type.`, taken: false };
   }
 
   if (!mechanicId) return null;
@@ -2650,7 +2724,7 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
     )
     .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
   if (overlap) {
-    return 'That mechanic is already booked over part of that window - please choose another time.';
+    return { error: 'That mechanic is already booked over part of that window - please choose another time.', taken: true };
   }
   return null;
 }
@@ -2675,6 +2749,10 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
+  // A walk-in for the shared queue carries a length and no mechanic or time.
+  const planned = resolvePlannedMinutes(body.plannedMinutes, null);
+  if (planned.error) return badRequest(res, planned.error);
+
   const status = resolveJobStatus(body.status, null);
   if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
   // The staff diary still sends a legacy status and will until Phase 4 replaces
@@ -2682,30 +2760,43 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
   // keeps public/app.js working untouched through this phase.
   const created = readLegacyStatus(status);
 
-  const slotError = await checkJobSlot({
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    mechanicId: mechResolved.mechanicId,
-  });
-  if (slotError) return badRequest(res, slotError);
+  // Staff are held to the shop's rules, never to capacity: no calculator here.
+  // The only capacity answer is the 024 index firing on a stale pre-2b hold,
+  // which rolls the whole write back.
+  let out;
+  try {
+    out = await withBookingLock([jobDate], async () => {
+      const slotError = await checkJobSlot({
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        mechanicId: mechResolved.mechanicId,
+      });
+      if (slotError) return refusal(slotError.error);
 
-  const jobId = await createWorkshopJob({
-    title,
-    customerId: resolved.customerId,
-    bikeId: bikeResolved.bikeId,
-    mechanicId: mechResolved.mechanicId,
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    bookingState: created.booking,
-    workState: created.work,
-    custodyState: created.custody ?? 'expected',
-    notes,
-    skipAutoOrder: !!body.skipAutoOrder,
-  });
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-  sendJson(res, 201, serializeWorkshopJob(row));
+      const jobId = await createWorkshopJob({
+        title,
+        customerId: resolved.customerId,
+        bikeId: bikeResolved.bikeId,
+        mechanicId: mechResolved.mechanicId,
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        bookingState: created.booking,
+        workState: created.work,
+        custodyState: created.custody ?? 'expected',
+        notes,
+        skipAutoOrder: !!body.skipAutoOrder,
+        plannedMinutes: planned.value,
+      });
+      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+      return { status: 201, body: serializeWorkshopJob(row) };
+    });
+  } catch (err) {
+    if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
+    else throw err;
+  }
+  sendJson(res, out.status, out.body);
 });
 
 route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
@@ -2734,6 +2825,12 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
   if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
 
+  const planned = resolvePlannedMinutes(body.plannedMinutes, existing.planned_minutes);
+  if (planned.error) return badRequest(res, planned.error);
+  // A timed job's length is its times; planned_minutes only speaks for untimed work.
+  const plannedMinutes = times.startTime
+    ? Math.max(0, timeToMinutes(times.endTime) - timeToMinutes(times.startTime))
+    : planned.value;
 
   // The staff diary still changes a job's state by PUTting a legacy status
   // (public/app.js approveJob() and the complete/reopen toggle), and will until
@@ -2778,35 +2875,49 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
     }
   }
 
-  const slotError = await checkJobSlot({
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    mechanicId: mechResolved.mechanicId,
-    ignoreJobId: id,
-  });
-  if (slotError) return badRequest(res, slotError);
+  // Both days are locked: the one the job leaves and the one it joins. The
+  // UPDATE and its hold commit or roll back together.
+  let out;
+  try {
+    out = await withBookingLock([existing.job_date, jobDate], async () => {
+      const slotError = await checkJobSlot({
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        mechanicId: mechResolved.mechanicId,
+        ignoreJobId: id,
+      });
+      if (slotError) return refusal(slotError.error);
 
-  await db.prepare(
-    `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, updated_at = ?,
-       booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)
-     WHERE id = ?`
-  ).run(
-    title,
-    resolved.customerId,
-    bikeResolved.bikeId,
-    mechResolved.mechanicId,
-    jobDate,
-    times.startTime,
-    times.endTime,
-    notes,
-    nowIso(),
-    legacyStates?.booking ?? null,
-    legacyStates?.workState ?? null,
-    id
-  );
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-  sendJson(res, 200, serializeWorkshopJob(row));
+      await db.prepare(
+        `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
+           booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)
+         WHERE id = ?`
+      ).run(
+        title,
+        resolved.customerId,
+        bikeResolved.bikeId,
+        mechResolved.mechanicId,
+        jobDate,
+        times.startTime,
+        times.endTime,
+        notes,
+        plannedMinutes,
+        nowIso(),
+        legacyStates?.booking ?? null,
+        legacyStates?.workState ?? null,
+        id
+      );
+      await syncJobHold(id);
+      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+      return { status: 200, body: serializeWorkshopJob(row) };
+    });
+  } catch (err) {
+    // Only a stale pre-2b hold can trip the 024 index for staff.
+    if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
+    else throw err;
+  }
+  sendJson(res, out.status, out.body);
 });
 
 // ---------- Workshop job actions ----------
@@ -2839,19 +2950,16 @@ function jobActionRoute(action, machine, event) {
       return sendJson(res, 409, { error: result.message, code: result.code });
     }
     // A hold that outlives its booking is capacity the diary is still promising
-    // away. Released in the same request, not on a timer.
-    if (ENDS_A_BOOKING.has(event)) {
-      await db.prepare(
-        `UPDATE workshop_capacity_holds SET state = 'released'
-         WHERE workshop_job_id = ? AND state IN ('held', 'confirmed')`
-      ).run(id);
-    }
+    // away, released in the same request rather than on a timer - but a
+    // reschedule declined back onto a still-live booking (scheduled) must keep
+    // its hold. syncJobHold decides from the job's current state, not from
+    // which event fired, so it releases only when the job is no longer live
+    // and otherwise keeps (or realigns) the one hold a live job holds.
+    await syncJobHold(id);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
     sendJson(res, 200, serializeWorkshopJob(row));
   });
 }
-
-const ENDS_A_BOOKING = new Set(['cancel', 'decline', 'expire']);
 
 // ---------- Quotes ----------
 //
@@ -3399,6 +3507,11 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
 
 // ---------- Workshop settings ----------
 
+// The server's date convention: UTC, as job_date comparisons elsewhere.
+function utcToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // A workshop_settings row in the capacity calculator's shape (server/capacity.js).
 function toCapacitySettings(row) {
   return {
@@ -3424,7 +3537,9 @@ function serializeWorkshopSettings(row) {
     // the usual opening/closing time above.
     openingHours: openingHoursFor(toCapacitySettings(row)),
     fullDayThresholdMinutes: row.full_day_threshold_minutes,
-    bookingMode: row.booking_mode,
+    // Today's mode: a scheduled change whose date has arrived counts as made,
+    // even before a save writes it into booking_mode.
+    ...settleModeChange(toCapacitySettings(row), utcToday()),
     dropoffWindowStart: row.dropoff_window_start,
     dropoffWindowEnd: row.dropoff_window_end,
     timedLeadMinutes: row.timed_lead_minutes,
@@ -3481,9 +3596,26 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
     }
   }
 
-  const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : existing.booking_mode;
+  // A scheduled change whose date has arrived is written into booking_mode
+  // now, so the next schedule never overwrites a change that already happened.
+  const settled = settleModeChange(toCapacitySettings(existing), utcToday());
+  const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : settled.bookingMode;
   if (bookingMode !== 'timed' && bookingMode !== 'dropoff') {
     return badRequest(res, "Booking mode must be either 'timed' or 'dropoff'");
+  }
+  let nextMode = { nextBookingMode: settled.nextBookingMode, nextBookingModeFrom: settled.nextBookingModeFrom };
+  if (body.nextBookingMode !== undefined || body.nextBookingModeFrom !== undefined) {
+    nextMode = validateModeChange(
+      { nextBookingMode: body.nextBookingMode ?? null, nextBookingModeFrom: body.nextBookingModeFrom ?? null },
+      { today: utcToday(), bookingMode },
+    );
+    if (nextMode.error) return badRequest(res, nextMode.error);
+  }
+  // Setting bookingMode straight to the already-scheduled mode makes the
+  // schedule self-contradictory (booking_mode and next_booking_mode equal);
+  // clear it rather than leave a dangling future date.
+  if (nextMode.nextBookingMode === bookingMode) {
+    nextMode = { nextBookingMode: null, nextBookingModeFrom: null };
   }
 
   const dropoffWindowStart = body.dropoffWindowStart !== undefined
@@ -3518,10 +3650,12 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
 
   await db.prepare(
     `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, weekday_hours = ?,
-       full_day_threshold_minutes = ?, booking_mode = ?, dropoff_window_start = ?,
+       full_day_threshold_minutes = ?, booking_mode = ?, next_booking_mode = ?, next_booking_mode_from = ?,
+       dropoff_window_start = ?,
        dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
        show_prices_online = ?, updated_at = ? WHERE id = ?`
   ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
+        nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
         dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
         showPricesOnline, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
@@ -4441,106 +4575,116 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   }
 
   const jobDate = (body.jobDate || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
+  if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
   const description = (body.description || '').trim();
   if (!description) return badRequest(res, 'Please describe what you need done');
 
   const jobType = PORTAL_JOB_TYPES[body.jobType];
   if (!jobType) return badRequest(res, 'Please choose the kind of job this is');
 
-  const startTime = (body.startTime || '').trim();
-  const times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, jobType.minutes) : '');
-  if (!times.startTime) return badRequest(res, 'A start time is required');
-  if (times.error) return badRequest(res, times.error);
-
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
-  // Closed days, the day's own opening hours and mechanic overlap first - the
-  // same rules the staff routes enforce, from the same place, so their
-  // specific messages win.
-  const slotError = await checkJobSlot({
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    mechanicId: mechResolved.mechanicId,
-  });
-  if (slotError) return badRequest(res, slotError);
-
-  // Then the capacity calculator: blocks, closures, the walk-in queue and the
-  // reserve, the same answer the calendar gave. The reserve check subtracts the
-  // job being booked (freeMinutes has the reserve taken off already): testing
-  // only the free time already left let one booking consume the entire
-  // reserve. Staff routes deliberately do NOT apply this - a shop may choose to
-  // work through its own lunch; a customer may not choose it for them. A
-  // block's reason is never given to the customer.
-  const capacity = await loadCapacity(jobDate, jobDate);
-  const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechResolved.mechanicId);
-  if (!mech || !mech.working || !fitsFreeTime(mech, times.startTime, times.endTime)) {
-    return badRequest(res, 'That mechanic is unavailable at that time - please choose another time or day.');
-  }
-  if (mech.freeMinutes < jobType.minutes) {
-    return badRequest(res, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
-  }
-
-  // Either an existing bike of theirs, or a new one registered inline -
-  // never a bike belonging to another customer (checked below).
-  let bikeId = null;
-  if (body.newBike) {
-    const make = (body.newBike.make || '').trim();
-    const model = (body.newBike.model || '').trim();
-    if (!make && !model) return badRequest(res, 'Bike make or model is required');
-    const info = await db
-      .prepare(
-        `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        customerId,
-        make,
-        model,
-        (body.newBike.colour || '').trim(),
-        (body.newBike.serialNumber || '').trim(),
-        nowIso()
-      );
-    bikeId = info.lastInsertRowid;
-  } else if (body.bikeId) {
-    const bike = await db
-      .prepare('SELECT * FROM customer_bikes WHERE id = ? AND customer_id = ? AND active = 1')
-      .get(Number(body.bikeId), customerId);
-    if (!bike) return badRequest(res, 'Bike not found');
-    bikeId = bike.id;
-  }
-
-  // Never trusts a client-sent customerId or status - always the resolved
-  // customer (signed-in, or the matched/created guest above), always
-  // 'pending' until a mechanic reviews it, same principle as createSale()
-  // never trusting a client-sent total.
-  let jobId;
-  try {
-    jobId = await createWorkshopJob({
-    title: `Online booking: ${description}`.slice(0, 200),
-    customerId,
-    bikeId,
-    mechanicId: mechResolved.mechanicId,
-    jobDate,
-    startTime: times.startTime,
-    endTime: times.endTime,
-    bookingState: 'pending',
-    workState: 'not_started',
-    custodyState: 'expected',
-    notes: description,
-    skipAutoOrder: false,
-    });
-  } catch (err) {
-    // 23505 is the capacity index: someone else took this slot between the
-    // availability check and now.
-    if (err.code === '23505') {
-      return sendJson(res, 409, { error: 'That time is no longer available - please choose another.' });
+  // Inside the lock: closed days, the day's own opening hours and mechanic
+  // overlap first - the same rules the staff routes enforce, from the same
+  // place, so their specific messages win.
+  const out = await withBookingLock([jobDate], async () => {
+    // The mode for this date decides what the customer chose: a day (drop-off)
+    // or a time (timed). Read inside the lock, from the calculator.
+    const capacity = await loadCapacity(jobDate, jobDate);
+    const mode = capacity.days[0].mode;
+    const startTime = (body.startTime || '').trim();
+    let times;
+    if (mode === 'dropoff') {
+      if (startTime) return refusal('This shop takes drop-offs on that day - choose the day, not a time.');
+      times = { startTime: '', endTime: '' };
+    } else {
+      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, jobType.minutes) : '');
+      if (!times.startTime) return refusal('A start time is required');
+      if (times.error) return refusal(times.error);
     }
-    throw err;
-  }
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-  sendJson(res, 201, serializePortalBooking(row));
+
+    const slot = await checkJobSlot({
+      jobDate,
+      startTime: times.startTime,
+      endTime: times.endTime,
+      mechanicId: mechResolved.mechanicId,
+    });
+    if (slot) return slot.taken ? capacityRefusal(slot.error) : refusal(slot.error);
+
+    // Blocks and the shop's hours are shop rules (400); minutes other bookings
+    // have used are capacity (409). The reserve check subtracts the job being
+    // booked (freeMinutes has the reserve taken off already). Staff routes
+    // deliberately do NOT apply this - a shop may choose to work through its
+    // own lunch; a customer may not choose it for them. A block's reason is
+    // never given.
+    const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechResolved.mechanicId);
+    if (!mech || !mech.working || (times.startTime && !fitsFreeTime(mech, times.startTime, times.endTime))) {
+      return refusal('That mechanic is unavailable at that time - please choose another time or day.');
+    }
+    if (mech.freeMinutes < jobType.minutes) {
+      return capacityRefusal('That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
+    }
+
+    // Either an existing bike of theirs, or a new one registered inline -
+    // never a bike belonging to another customer (checked below).
+    let bikeId = null;
+    if (body.newBike) {
+      const make = (body.newBike.make || '').trim();
+      const model = (body.newBike.model || '').trim();
+      if (!make && !model) return refusal('Bike make or model is required');
+      const info = await db
+        .prepare(
+          `INSERT INTO customer_bikes (customer_id, make, model, colour, serial_number, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          customerId,
+          make,
+          model,
+          (body.newBike.colour || '').trim(),
+          (body.newBike.serialNumber || '').trim(),
+          nowIso()
+        );
+      bikeId = info.lastInsertRowid;
+    } else if (body.bikeId) {
+      const bike = await db
+        .prepare('SELECT * FROM customer_bikes WHERE id = ? AND customer_id = ? AND active = 1')
+        .get(Number(body.bikeId), customerId);
+      if (!bike) return refusal('Bike not found');
+      bikeId = bike.id;
+    }
+
+    // Never trusts a client-sent customerId or status - always the resolved
+    // customer (signed-in, or the matched/created guest above), always
+    // 'pending' until a mechanic reviews it, same principle as createSale()
+    // never trusting a client-sent total.
+    let jobId;
+    try {
+      jobId = await createWorkshopJob({
+        title: `Online booking: ${description}`.slice(0, 200),
+        customerId,
+        bikeId,
+        mechanicId: mechResolved.mechanicId,
+        jobDate,
+        startTime: times.startTime,
+        endTime: times.endTime,
+        bookingState: 'pending',
+        workState: 'not_started',
+        custodyState: 'expected',
+        notes: description,
+        skipAutoOrder: false,
+        plannedMinutes: jobType.minutes,
+      });
+    } catch (err) {
+      // The 024 index, a second guard behind the lock. createWorkshopJob's own
+      // ROLLBACK was a savepoint, so this transaction is still usable.
+      if (err.code === '23505') return capacityRefusal(SLOT_GONE);
+      throw err;
+    }
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+    return { status: 201, body: serializePortalBooking(row) };
+  });
+  sendJson(res, out.status, out.body);
 });
 
 // ---------- Static file serving ----------

@@ -306,3 +306,37 @@ export function legacyView(day, settings, jobs) {
   }
   return { busy, fullDays };
 }
+
+// ---- Booking modes over time, and the booking lock ----
+
+// Advisory-lock key for one shop's bookings on one date: 2026-09-07 -> 20260907.
+export function bookingLockKey(date) {
+  return Number(date.replace(/-/g, ''));
+}
+
+// A scheduled mode change whose date has arrived is the shop's mode. Nothing
+// runs at midnight: this settles it whenever settings are read or written.
+export function settleModeChange(settings, today) {
+  if (settings.nextBookingMode && settings.nextBookingModeFrom && settings.nextBookingModeFrom <= today) {
+    return { bookingMode: settings.nextBookingMode, nextBookingMode: null, nextBookingModeFrom: null };
+  }
+  return {
+    bookingMode: settings.bookingMode,
+    nextBookingMode: settings.nextBookingMode ?? null,
+    nextBookingModeFrom: settings.nextBookingModeFrom ?? null,
+  };
+}
+
+// Scheduling a change: both parts or neither (neither cancels), from tomorrow
+// on, and to a mode the shop does not already use.
+export function validateModeChange(input, { today, bookingMode }) {
+  const mode = input.nextBookingMode ?? null;
+  const from = input.nextBookingModeFrom ?? null;
+  if (mode === null && from === null) return { nextBookingMode: null, nextBookingModeFrom: null };
+  if (mode === null || from === null) return { error: 'Give both the new mode and the date it starts, or neither to cancel' };
+  if (mode !== 'timed' && mode !== 'dropoff') return { error: "The new mode must be 'timed' or 'dropoff'" };
+  if (!isRealDate(from)) return { error: 'The start date must look like 2026-11-01' };
+  if (from <= today) return { error: 'A mode change must start tomorrow or later' };
+  if (mode === bookingMode) return { error: 'The shop already uses that mode' };
+  return { nextBookingMode: mode, nextBookingModeFrom: from };
+}

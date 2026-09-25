@@ -92,6 +92,7 @@ test('a slot already held by an in-flight request is refused with 409', async ()
     const res = await book(cookie, shop.slug, mechanicId, '11:00');
     assert.equal(res.status, 409, `expected the held slot to be refused: ${JSON.stringify(res.body)}`);
     assert.match(res.body.error, /no longer available/);
+    assert.equal(res.body.code, 'capacity');
 
     const jobs = await runWithShop(shop.id, () =>
       prepare('SELECT COUNT(*)::int AS n FROM workshop_jobs WHERE job_date = ?').get(WEDNESDAY));

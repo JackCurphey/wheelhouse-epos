@@ -54,7 +54,8 @@ test('a booking that would consume the whole reserve is refused', async () => {
     const res = await book(server.baseUrl, cookie, shop.slug, {
       mechanicId, startTime: '16:00', jobType: 'service', // 120 minutes
     });
-    assert.equal(res.status, 400, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.status, 409, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.body.code, 'capacity');
 
     const left = await runWithShop(shop.id, () =>
       prepare('SELECT COUNT(*)::int AS n FROM workshop_jobs WHERE mechanic_id = ? AND job_date = ?')
@@ -88,7 +89,8 @@ test('the same day refuses a long job while accepting a short one', async () => 
     const res = await book(server.baseUrl, cookie, shop.slug, {
       mechanicId, startTime: '15:00', jobType: 'service',
     });
-    assert.equal(res.status, 400, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.status, 409, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.body.code, 'capacity');
     assert.match(res.body.error, /enough free time/i, 'the refusal should say there is not enough free time');
   } finally {
     await deleteTestShop(shop.id);
