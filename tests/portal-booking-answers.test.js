@@ -93,13 +93,22 @@ test('rewording and then deleting the questions leaves the booking unchanged', a
   const res = await book({ serviceId: own.id, answers: goodAnswers(own) });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const before = await stored(res.body.id);
+  assert.deepEqual(before, [
+    { id: idOf(own, 'What is wrong?'), wording: 'What is wrong?', kind: 'text', answer: 'Rubs at the back' },
+    { id: idOf(own, 'E-bike?'), wording: 'E-bike?', kind: 'choice', answer: null },
+    { id: idOf(own, 'Tubeless?'), wording: 'Tubeless?', kind: 'choice', answer: 'No' },
+  ]);
   const reworded = own.questions.map((q) => ({ ...q, wording: `${q.wording} (new)` }));
   const put = (questions) => staff(`/api/workshop-services/${own.id}`, {
     method: 'PUT', body: { name: own.name, price: 20, minutes: 60, questions },
   });
-  assert.equal((await put(reworded)).status, 200);
+  const putReworded = await put(reworded);
+  assert.equal(putReworded.status, 200);
+  assert.deepEqual(putReworded.body.questions.map((q) => q.wording), reworded.map((q) => q.wording));
   assert.deepEqual(await stored(res.body.id), before);
-  assert.equal((await put([])).status, 200);
+  const putEmptied = await put([]);
+  assert.equal(putEmptied.status, 200);
+  assert.deepEqual(putEmptied.body.questions, []);
   assert.deepEqual(await stored(res.body.id), before);
 });
 
