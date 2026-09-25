@@ -4594,6 +4594,15 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
 });
 
+// The booked price as a customer may see it after booking: only when the shop
+// shows prices online, the same rule /services follows. Passed through as
+// stored, never totalled. Runs inside the request's shop context.
+// Spec: docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md
+async function customerBookedPrice(bookedPrice) {
+  const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
+  return settings?.show_prices_online === 1 ? (bookedPrice ?? null) : null;
+}
+
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
   const signedIn = ctx && ctx.shop.slug === params.shopSlug;
@@ -4816,7 +4825,14 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         .run(jobId, storageKey, originalName, contentType, sizeBytes),
     });
     // The only time the code leaves the server: the database keeps its hash.
-    return { status: 201, body: { ...serializePortalBooking(row), privateLink: linkPath(params.shopSlug, linkCode) } };
+    return {
+      status: 201,
+      body: {
+        ...serializePortalBooking(row),
+        bookedPrice: await customerBookedPrice(row.booked_price),
+        privateLink: linkPath(params.shopSlug, linkCode),
+      },
+    };
   });
   sendJson(res, out.status, out.body);
 });
