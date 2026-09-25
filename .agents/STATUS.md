@@ -5,10 +5,9 @@
 migration 027), #68 (piece 3b - booked price, 026) and #67 (piece 3 - booking
 request, 025) merged 25 Sep, main CI green on all three; #66 and #65 before.
 **Piece 5 (service questions, migration 028) built on branch
-`feat/book-server-5-service-questions`, off `41f48e8`, awaiting review and
-PR** — 8 tasks done, `npm test` 691/691, lint, typecheck and
-`assert-screen-trace.mjs` all clean at Task 8. **Not pushed yet; no PR opened
-yet; merging is Jack's call.**
+`feat/book-server-5-service-questions`, off `41f48e8`, open as PR #70** —
+`npm test` 693/693, lint, typecheck and `assert-screen-trace.mjs` clean
+locally before the push; CI on #70 not yet read. **Merging is Jack's call.**
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
 **Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.
@@ -61,13 +60,15 @@ This file → **Plan register** below and the plans it names →
 ## Immediate next actions
 
 1. **Piece 5 (service questions): built on branch
-   `feat/book-server-5-service-questions`, awaiting review and PR** (local,
-   off `41f48e8`, not pushed; all 8 tasks done). Spec
+   `feat/book-server-5-service-questions`, open as PR #70** (off
+   `41f48e8`). Spec
    `docs/superpowers/specs/2026-09-25-book-server-5-service-questions-design.md`;
    plan `docs/superpowers/plans/2026-09-25-book-server-5-service-questions.md`
    carries the decision log and a full spec walk at its end. Migration 028
    adds `workshop_services.questions` and `workshop_jobs.question_answers`.
-   **Next:** push the branch and open a PR; Jack decides whether to merge.
+   **Next:** read CI on #70; Jack decides whether to merge. Follow-up: a
+   null byte in answer or description text gives a 500 after the guest
+   customer row is written — needs one shared text clean-up step.
    **Piece 4 merged (#69):** private link `/book/<shop>/booking/<code>`,
    read-only until 30 days after the booked date, hash-only storage, staff
    replace route (no button), 30 lookups/15 min/IP, `customer_description`
