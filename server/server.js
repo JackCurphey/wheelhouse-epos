@@ -75,7 +75,7 @@ import {
   listStorefrontProducts,
 } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
-import { readServiceQuestions } from './service-questions.js';
+import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 import {
@@ -2649,7 +2649,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceId, linkTokenHash, customerDescription }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceId, linkTokenHash, customerDescription, questionAnswers }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2658,8 +2658,8 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, service_id, booked_price, link_token_hash, customer_description, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, service_id, booked_price, link_token_hash, customer_description, question_answers, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?, ?, CAST(? AS jsonb), ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
@@ -2668,6 +2668,7 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
         // The price is copied in SQL so it never passes through a JavaScript number.
         serviceId ?? null, serviceId ?? null,
         linkTokenHash ?? null, customerDescription ?? null,
+        questionAnswers ? JSON.stringify(questionAnswers) : null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
@@ -4594,6 +4595,11 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   if (parsed.error) return badRequest(res, parsed.error);
   const request = parsed.value;
 
+  // Answers belong to a chosen service's questions; "not sure" has none.
+  if (request.notSure && Array.isArray(body.answers) && body.answers.length > 0) {
+    return badRequest(res, 'Answers can only be given for a chosen service');
+  }
+
   const jobDate = (body.jobDate || '').trim();
   if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
   const description = (body.description || '').trim();
@@ -4607,9 +4613,19 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     chosen = { name: 'Not sure', minutes: 60 };
   } else {
     chosen = await db
-      .prepare('SELECT id, name, minutes FROM workshop_services WHERE id = ? AND active = 1 AND bookable_online = 1')
+      .prepare('SELECT id, name, minutes, questions FROM workshop_services WHERE id = ? AND active = 1 AND bookable_online = 1')
       .get(request.serviceId);
     if (!chosen) return badRequest(res, 'That service is not available to book');
+  }
+
+  // The customer's answers, checked against the service's questions as they are
+  // now, before the guest customer row - the first write. A frozen copy goes on
+  // the job so later edits to the questions never change this booking.
+  let questionAnswers = null;
+  if (!request.notSure) {
+    const checked = checkAnswers(chosen.questions ?? [], body.answers);
+    if (checked.error) return badRequest(res, checked.error);
+    questionAnswers = checked.value;
   }
 
   // No account required to book: an out-of-towner booking a single job
@@ -4732,6 +4748,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         serviceId: chosen.id ?? null,
         linkTokenHash: hashLinkCode(linkCode),
         customerDescription: description,
+        questionAnswers,
       });
     } catch (err) {
       // The 024 index, a second guard behind the lock. createWorkshopJob's own
