@@ -123,9 +123,14 @@ test('terms consent is stored as a timestamp on the job', async () => {
   assert.ok(stamp >= before - 5000 && stamp <= Date.now() + 5000, 'timestamp is not "now"');
 });
 
+const jobCount = () => runWithShop(owner.shop.id, async () =>
+  Number((await prepare('SELECT COUNT(*) AS n FROM workshop_jobs').get()).n));
+
 test('a booking without accepted terms is refused and creates no job', async () => {
+  const before = await jobCount();
   const res = await book({ termsAccepted: false });
   assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal(await jobCount(), before, 'a job was created');
   assert.match(res.body.error, /terms/i);
 });
 
@@ -176,6 +181,27 @@ test('a guest books with a phone and the sms channel, and gets a reference', asy
   assert.equal(row.update_channel, 'sms');
 });
 
+const setPhone = (id, phone) => runWithShop(owner.shop.id, () =>
+  prepare('UPDATE customers SET phone = ? WHERE id = ?').run(phone, id));
+const phoneOf = async (id) => (await runWithShop(owner.shop.id, () =>
+  prepare('SELECT phone FROM customers WHERE id = ?').get(id))).phone;
+
+test('a signed-in customer with no phone who picks sms has the phone they sent saved', async () => {
+  const id = await customerIdOf((await book({})).body.id);
+  await setPhone(id, '');
+  const res = await book({ updateChannel: 'sms', guestPhone: '07700 900555' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(await phoneOf(id), '07700 900555');
+});
+
+test('a customer who already has a phone keeps it when another is sent', async () => {
+  const id = await customerIdOf((await book({})).body.id);
+  await setPhone(id, '01111 111111');
+  const res = await book({ updateChannel: 'sms', guestPhone: '07700 900666' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(await phoneOf(id), '01111 111111');
+});
+
 test('a refused booking changes nothing on the customer', async () => {
   const c = customer;
   const okRes = await book({ email: 'keep@example.com', updateChannel: 'email' }, c);
@@ -194,4 +220,21 @@ test('a refused booking changes nothing on the customer', async () => {
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.match(res.body.error, /closed/);
   assert.equal((await customerRow(customerId)).email, 'keep@example.com');
+});
+
+test('a guest booking for a service that is not available leaves no customer row behind', async () => {
+  const count = () => runWithShop(owner.shop.id, async () =>
+    Number((await prepare('SELECT COUNT(*) AS n FROM customers').get()).n));
+  const before = await count();
+  const res = await jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/bookings`, {
+    method: 'POST',
+    body: {
+      mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'x',
+      newBike: { make: 'T', model: 'B' }, serviceId: 999999999,
+      guestName: 'Nobody', guestPhone: '07700 900777', updateChannel: 'sms', termsAccepted: true,
+    },
+  });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /not available/);
+  assert.equal(await count(), before, 'a customer row was created');
 });

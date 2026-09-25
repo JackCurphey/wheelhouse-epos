@@ -4552,6 +4552,24 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   if (parsed.error) return badRequest(res, parsed.error);
   const request = parsed.value;
 
+  const jobDate = (body.jobDate || '').trim();
+  if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
+  const description = (body.description || '').trim();
+  if (!description) return badRequest(res, 'Please describe what you need done');
+
+  // What the customer chose: a service this shop ticked bookable online, or the
+  // "not sure" hour. Read through the shop's row-level security, so another
+  // shop's service id finds nothing.
+  let chosen;
+  if (request.notSure) {
+    chosen = { name: 'Not sure', minutes: 60 };
+  } else {
+    chosen = await db
+      .prepare('SELECT id, name, minutes FROM workshop_services WHERE id = ? AND active = 1 AND bookable_online = 1')
+      .get(request.serviceId);
+    if (!chosen) return badRequest(res, 'That service is not available to book');
+  }
+
   // No account required to book: an out-of-towner booking a single job
   // shouldn't be forced through signup. Falls back to a guest customer
   // (matched/created by phone, see resolveGuestCustomer) instead of the
@@ -4573,24 +4591,6 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       if (err instanceof CustomerAuthError) return badRequest(res, err.message);
       throw err;
     }
-  }
-
-  const jobDate = (body.jobDate || '').trim();
-  if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
-  const description = (body.description || '').trim();
-  if (!description) return badRequest(res, 'Please describe what you need done');
-
-  // What the customer chose: a service this shop ticked bookable online, or the
-  // "not sure" hour. Read through the shop's row-level security, so another
-  // shop's service id finds nothing.
-  let chosen;
-  if (request.notSure) {
-    chosen = { name: 'Not sure', minutes: 60 };
-  } else {
-    chosen = await db
-      .prepare('SELECT id, name, minutes FROM workshop_services WHERE id = ? AND active = 1 AND bookable_online = 1')
-      .get(request.serviceId);
-    if (!chosen) return badRequest(res, 'That service is not available to book');
   }
 
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
@@ -4696,14 +4696,15 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     // Saved only now, after the job is in, inside the lock: every refusal path
     // above (including the 409 from the index) returns before this, and that
     // return still COMMITs, so writing earlier would keep the change on a
-    // refused booking. Email is written only when one was sent. For a guest
+    // refused booking. Email is written only when one was sent; a phone is
+    // filled in only when the customer has none, never overwritten. For a guest
     // this row is brand new each time (see resolveGuestCustomer); for a
     // signed-in customer it overwrites.
     await db
       .prepare(
-        `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), updated_at = ? WHERE id = ?`
+        `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), phone = COALESCE(NULLIF(phone, ''), NULLIF(?, ''), phone), updated_at = ? WHERE id = ?`
       )
-      .run(request.updateChannel, request.marketingPermission, request.email, nowIso(), customerId);
+      .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
     return { status: 201, body: serializePortalBooking(row) };
   });
