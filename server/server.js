@@ -4598,8 +4598,11 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   if (parsed.error) return badRequest(res, parsed.error);
   const request = parsed.value;
 
-  // Answers belong to a chosen service's questions; "not sure" has none.
-  if (request.notSure && Array.isArray(body.answers) && body.answers.length > 0) {
+  // Answers belong to a chosen service's questions; "not sure" has none. Any
+  // answers value other than absent, null or an empty list is refused —
+  // including a non-list value, which would otherwise be silently dropped.
+  if (request.notSure && !(body.answers === undefined || body.answers === null ||
+    (Array.isArray(body.answers) && body.answers.length === 0))) {
     return badRequest(res, 'Answers can only be given for a chosen service');
   }
 

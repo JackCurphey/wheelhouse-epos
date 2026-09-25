@@ -5,9 +5,10 @@
 migration 027), #68 (piece 3b - booked price, 026) and #67 (piece 3 - booking
 request, 025) merged 25 Sep, main CI green on all three; #66 and #65 before.
 **Piece 5 (service questions, migration 028) built on branch
-`feat/book-server-5-service-questions`, off `41f48e8`** — 8 tasks complete,
-`npm test` 691/691, lint, typecheck and `assert-screen-trace.mjs` all clean at
-Task 8. **Not pushed yet; no PR opened yet; merging is Jack's call.**
+`feat/book-server-5-service-questions`, off `41f48e8`, awaiting review and
+PR** — 8 tasks done, `npm test` 691/691, lint, typecheck and
+`assert-screen-trace.mjs` all clean at Task 8. **Not pushed yet; no PR opened
+yet; merging is Jack's call.**
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
 **Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.
@@ -59,9 +60,9 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Piece 5 (service questions): built, all 8 tasks complete, on branch
-   `feat/book-server-5-service-questions`** (local, off `41f48e8`, not
-   pushed). Spec
+1. **Piece 5 (service questions): built on branch
+   `feat/book-server-5-service-questions`, awaiting review and PR** (local,
+   off `41f48e8`, not pushed; all 8 tasks done). Spec
    `docs/superpowers/specs/2026-09-25-book-server-5-service-questions-design.md`;
    plan `docs/superpowers/plans/2026-09-25-book-server-5-service-questions.md`
    carries the decision log and a full spec walk at its end. Migration 028
