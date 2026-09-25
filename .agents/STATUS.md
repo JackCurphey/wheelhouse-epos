@@ -23,7 +23,7 @@ follow after a final review; merging is Jack's call.
   on Content-Length over the cap, free chunks before parsing. Needs Jack's
   decision before this route is publicly reachable (hosting not chosen, PL-1).
 - Files can be left on disk if COMMIT fails after photos were saved (rare,
-  up to 50 MB each).
+  up to 50 MB per booking).
 - Customer photos must be sent as bare base64; a `data:image/...;base64,`
   prefix or line breaks is refused as "could not be read". Note for whoever
   builds the booking page's photo picker.
