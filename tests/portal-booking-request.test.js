@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, seedMechanic } from './helpers/staff.js';
+import { staffSignup, seedMechanic, setOpeningDays } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { jsonRequest } from './helpers/http.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -37,7 +37,14 @@ after(async () => {
 
 let day = 0;
 // A different Monday-to-Friday date per call, so no two tests share a day's capacity.
-const nextDate = () => futureDate(1 + (day++ % 5));
+// The weekday cycles through five; the week advances each time the cycle wraps,
+// so a date never repeats.
+const nextDate = () => {
+  const n = day++;
+  const d = new Date(`${futureDate(1 + (n % 5))}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 7 * Math.floor(n / 5));
+  return d.toISOString().slice(0, 10);
+};
 const book = (body, who = customer) => portalRequest(server.baseUrl, who.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
   method: 'POST',
   body: {
@@ -70,6 +77,7 @@ test('a service from another shop is refused', async () => {
   const foreign = (await seedJobTypes(other.shop.id)).repair;
   const res = await book({ serviceId: foreign });
   assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /not available/);
 });
 
 test('a service the shop has not ticked bookable online is refused', async () => {
@@ -78,6 +86,7 @@ test('a service the shop has not ticked bookable online is refused', async () =>
   ).run()).lastInsertRowid);
   const res = await book({ serviceId: id });
   assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /not available/);
 });
 
 test('a retired service is refused', async () => {
@@ -86,9 +95,95 @@ test('a retired service is refused', async () => {
   ).run()).lastInsertRowid);
   const res = await book({ serviceId: id });
   assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /not available/);
 });
 
 test('the old jobType input no longer books', async () => {
   const res = await book({ serviceId: undefined, jobType: 'repair' });
   assert.equal(res.status, 400, JSON.stringify(res.body));
+});
+
+const customerRow = (id) => runWithShop(owner.shop.id, () => prepare(
+  'SELECT email, update_channel, marketing_permission FROM customers WHERE id = ?'
+).get(id));
+const customerIdOf = (jobId) => runWithShop(owner.shop.id, async () =>
+  (await prepare('SELECT customer_id FROM workshop_jobs WHERE id = ?').get(jobId)).customer_id);
+
+test('the response carries the booking reference, and it is the one stored on the job', async () => {
+  const res = await book({});
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.ok(res.body.reference, 'no reference in the response');
+  assert.equal((await job(res.body.id)).reference, res.body.reference);
+});
+
+test('terms consent is stored as a timestamp on the job', async () => {
+  const before = Date.now();
+  const res = await book({});
+  const stamp = new Date((await job(res.body.id)).terms_accepted_at).getTime();
+  assert.ok(stamp >= before - 5000 && stamp <= Date.now() + 5000, 'timestamp is not "now"');
+});
+
+test('a booking without accepted terms is refused and creates no job', async () => {
+  const res = await book({ termsAccepted: false });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /terms/i);
+});
+
+test('preferences are saved on the customer', async () => {
+  const c = customer;
+  const res = await book({ email: 'saved@example.com', updateChannel: 'email', marketingPermission: true }, c);
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual({ ...(await customerRow(await customerIdOf(res.body.id))) },
+    { email: 'saved@example.com', update_channel: 'email', marketing_permission: true });
+});
+
+test('marketing permission defaults to false when it is not sent', async () => {
+  const c = customer;
+  const res = await book({}, c);
+  assert.equal((await customerRow(await customerIdOf(res.body.id))).marketing_permission, false);
+});
+
+test('a returning customer\'s newer preferences overwrite the old ones', async () => {
+  const c = customer;
+  await book({ email: 'first@example.com', updateChannel: 'email', marketingPermission: true }, c);
+  const res = await book({ email: 'second@example.com', updateChannel: 'email', marketingPermission: false }, c);
+  assert.deepEqual({ ...(await customerRow(await customerIdOf(res.body.id))) },
+    { email: 'second@example.com', update_channel: 'email', marketing_permission: false });
+});
+
+test('sms needs a phone number; a signed-in customer with none on file is refused', async () => {
+  const c = customer;
+  const res = await book({ updateChannel: 'sms', email: '' }, c);
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /phone number/i);
+});
+
+test('a guest books with a phone and the sms channel, and gets a reference', async () => {
+  const res = await jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/bookings`, {
+    method: 'POST',
+    body: {
+      mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'Guest booking',
+      newBike: { make: 'Test', model: 'Bike' }, serviceId: types.quick,
+      guestName: 'Gail Guest', guestPhone: '07700 900123',
+      updateChannel: 'sms', termsAccepted: true,
+    },
+  });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.ok(res.body.reference);
+  const row = await customerRow(await customerIdOf(res.body.id));
+  assert.equal(row.update_channel, 'sms');
+});
+
+test('a refused booking changes nothing on the customer', async () => {
+  const c = customer;
+  const okRes = await book({ email: 'keep@example.com', updateChannel: 'email' }, c);
+  const customerId = await customerIdOf(okRes.body.id);
+  // A shop-rule refusal is enough: a closed Sunday. A default test shop opens
+  // on Sundays, so close it explicitly (Monday to Saturday).
+  await setOpeningDays(owner.shop.id, [1, 2, 3, 4, 5, 6]);
+  const closed = futureDate(0);
+  const res = await book({ jobDate: closed, email: 'lost@example.com' }, c);
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /closed/);
+  assert.equal((await customerRow(customerId)).email, 'keep@example.com');
 });

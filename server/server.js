@@ -2402,6 +2402,7 @@ function serializeWorkshopJob(row) {
 function serializePortalBooking(row) {
   return {
     id: row.id,
+    reference: row.reference,
     title: row.title,
     bikeLabel: row.bike_label !== undefined ? row.bike_label : undefined,
     mechanicName: row.mechanic_name !== undefined ? row.mechanic_name : undefined,
@@ -2625,7 +2626,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2634,12 +2635,13 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
+        termsAcceptedAt ?? null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
@@ -4667,6 +4669,16 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     // customer (signed-in, or the matched/created guest above), always
     // 'pending' until a mechanic reviews it, same principle as createSale()
     // never trusting a client-sent total.
+    // Saved only now, inside the lock and past every refusal, so a booking that
+    // is turned away changes nothing about the customer. Email is written only
+    // when one was sent. For a guest this row is brand new each time (see
+    // resolveGuestCustomer); for a signed-in customer it overwrites.
+    await db
+      .prepare(
+        `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), updated_at = ? WHERE id = ?`
+      )
+      .run(request.updateChannel, request.marketingPermission, request.email, nowIso(), customerId);
+
     let jobId;
     try {
       jobId = await createWorkshopJob({
@@ -4683,6 +4695,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         notes: description,
         skipAutoOrder: false,
         plannedMinutes: chosen.minutes,
+        termsAcceptedAt: nowIso(),
       });
     } catch (err) {
       // The 024 index, a second guard behind the lock. createWorkshopJob's own
