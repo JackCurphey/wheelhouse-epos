@@ -14,8 +14,10 @@ supplying route. **Jack decided 25 Sep:** no automatic acceptance in Release 1
 online" setting (B1); the work splits into four pieces with their own spec and
 PR: (a) booked price in the booking reply and link read-back, (b) customer
 shell at `/book`, (c) missing form controls (each approved by Jack), (d) the
-six screens. **Now:** piece (a) on branch `feat/book-a-booked-price`, spec
-`docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`.
+six screens. **Piece (a) built: PR #72** (branch `feat/book-a-booked-price`;
+spec `docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`; local
+`npm test` 725/725 before push). Merging is Jack's call. **Next:** piece (b),
+the customer shell at `/book` (spec first).
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per
