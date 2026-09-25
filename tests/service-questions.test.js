@@ -3,7 +3,7 @@
 // Spec: docs/superpowers/specs/2026-09-25-book-server-5-service-questions-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readServiceQuestions } from '../server/service-questions.js';
+import { readServiceQuestions, checkAnswers, QUESTIONS_CHANGED } from '../server/service-questions.js';
 
 const ID = /^q_[0-9a-f]{12}$/;
 const text = (over = {}) => ({ wording: 'What is wrong?', kind: 'text', ...over });
@@ -76,3 +76,68 @@ test('an empty choice is refused', () => refuses([choice({ choices: ['Yes', ' ']
 test('a choice over 100 characters is refused', () => refuses([choice({ choices: ['Yes', 'x'.repeat(101)] })], /100 characters/));
 test('duplicate choices are refused, ignoring case and spaces', () =>
   refuses([choice({ choices: ['Yes', ' yes '] })], /repeat a choice/));
+
+const Q = [
+  { id: 'q_000000000001', wording: 'What is wrong?', kind: 'text', required: true },
+  { id: 'q_000000000002', wording: 'E-bike?', kind: 'choice', required: false, choices: ['Yes', 'No'], allowNotSure: true },
+  { id: 'q_000000000003', wording: 'Tubeless?', kind: 'choice', required: true, choices: ['Yes', 'No'], allowNotSure: false },
+];
+const good = [
+  { questionId: 'q_000000000001', text: '  Squeaks  ' },
+  { questionId: 'q_000000000003', choice: 'No' },
+];
+
+test('answers become a frozen copy in question order, skipped optional as null', () => {
+  assert.deepEqual(checkAnswers(Q, [...good].reverse()), {
+    value: [
+      { id: 'q_000000000001', wording: 'What is wrong?', kind: 'text', answer: 'Squeaks' },
+      { id: 'q_000000000002', wording: 'E-bike?', kind: 'choice', answer: null },
+      { id: 'q_000000000003', wording: 'Tubeless?', kind: 'choice', answer: 'No' },
+    ],
+  });
+});
+
+test('not sure is stored as { notSure: true } and answers a required question', () => {
+  const qs = [{ ...Q[1], required: true }];
+  assert.deepEqual(checkAnswers(qs, [{ questionId: 'q_000000000002', notSure: true }]).value[0].answer, { notSure: true });
+});
+
+test('a service with no questions and no answers gives an empty copy', () => {
+  assert.deepEqual(checkAnswers([], undefined), { value: [] });
+});
+
+test('a blank text answer to an optional question is stored as null', () => {
+  const qs = [{ ...Q[0], required: false }];
+  assert.equal(checkAnswers(qs, [{ questionId: 'q_000000000001', text: '   ' }]).value[0].answer, null);
+});
+
+const refused = (answers, pattern, qs = Q) => {
+  const r = checkAnswers(qs, answers);
+  assert.ok(r.error, `expected a refusal, got ${JSON.stringify(r)}`);
+  assert.match(r.error, pattern);
+};
+
+test('the changed message is exact', () =>
+  assert.equal(QUESTIONS_CHANGED, 'The questions for this service have changed — please check them and try again'));
+test('answers that are not a list are refused', () => refused({}, /must be a list/));
+test('a missing required answer is refused, naming the question', () =>
+  refused([good[1]], /^Please answer: What is wrong\?$/));
+test('a blank answer to a required text question is refused', () =>
+  refused([{ questionId: 'q_000000000001', text: ' ' }, good[1]], /Please answer: What is wrong/));
+test('an unknown question id is refused as changed', () =>
+  refused([...good, { questionId: 'q_gone00000000', text: 'x' }], /questions for this service have changed/));
+test('a choice not on the list is refused as changed', () =>
+  refused([good[0], { questionId: 'q_000000000003', choice: 'Maybe' }], /have changed/));
+test('not sure where it is switched off is refused as changed', () =>
+  refused([good[0], { questionId: 'q_000000000003', notSure: true }], /have changed/));
+test('not sure on a text question is refused as changed', () =>
+  refused([{ questionId: 'q_000000000001', notSure: true }, good[1]], /have changed/));
+test('text sent for a choice question is refused as changed', () =>
+  refused([good[0], { questionId: 'q_000000000003', text: 'No' }], /have changed/));
+test('a text answer over 1,000 characters is refused', () =>
+  refused([{ questionId: 'q_000000000001', text: 'x'.repeat(1001) }, good[1]], /1,000 characters/));
+test('a text answer of exactly 1,000 characters is allowed', () =>
+  assert.ok(checkAnswers(Q, [{ questionId: 'q_000000000001', text: 'x'.repeat(1000) }, good[1]]).value));
+test('the same question answered twice is refused', () =>
+  refused([...good, good[0]], /answered only once/));
+test('an answer without a question id is refused', () => refused([{ text: 'x' }], /needs a question/));
