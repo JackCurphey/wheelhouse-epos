@@ -1037,7 +1037,7 @@ git commit -m "docs: STATUS for piece 5; plan decision log and spec walk"
 
 ## Decision log (planning)
 
-- **Missing required answer → `Please answer: <wording>`**, not the "questions changed" message. Decision 10 gives the changed message for "a new required one appeared". The server can't tell that apart from a skipped answer, and naming the question tells the customer what to do either way. Every other mismatch (unknown id, choice not on the list, not sure switched off, wrong kind) uses the exact decision-10 message. **For Jack to confirm.**
+- **Missing required answer → `Please answer: <wording>`**, not the "questions changed" message. Decision 10 gives the changed message for "a new required one appeared". The server can't tell that apart from a skipped answer, and naming the question tells the customer what to do either way. Every other mismatch (unknown id, choice not on the list, not sure switched off, wrong kind) uses the exact decision-10 message. **Confirmed by Jack, 25 Sep (option 1).**
 - **A service with no questions stores `[]`** on its bookings; `null` is kept for "not sure", staff jobs and older bookings, as the spec says.
 - **Duplicate choices are compared ignoring case and surrounding spaces.**
 - **"Not sure" with an empty `answers: []` is accepted.** Only a non-empty list is refused.
