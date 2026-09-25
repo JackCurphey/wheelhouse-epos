@@ -132,9 +132,10 @@ test('not sure stores no service and no price', async () => {
 });
 
 test('the booking response does not carry the price', async () => {
-  const res = await book({ serviceId: await pricedService('12.50') });
+  const res = await book({ serviceId: await pricedService('987.65') });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.ok(!JSON.stringify(res.body).includes('12.5'), JSON.stringify(res.body));
+  assert.ok(!Object.keys(res.body).some((k) => /price/i.test(k)), JSON.stringify(res.body));
+  assert.ok(!Object.values(res.body).some((v) => v === 987.65 || v === '987.65'), JSON.stringify(res.body));
 });
 
 const customerRow = (id) => runWithShop(owner.shop.id, () => prepare(
