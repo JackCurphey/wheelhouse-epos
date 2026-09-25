@@ -1,17 +1,15 @@
 # Phase 4a - Book journey plan
 
-> **Status: STOPPED at the Task 7 contract, item 3** (written 23 Sep). Every
-> book screen needs at least one endpoint that does not exist. Task 7 says a
-> plan in that position "says so and stops - it does not invent one". This
-> file records the contract check so far, the missing endpoints, and the
-> decisions Jack needs to make before the tasks can be written. No code comes
-> from it yet.
+> **Status (25 Sep): the Task 7 item 3 stop is lifted.** The server
+> prerequisite pieces 1-6 are merged (#64-#71) and every book screen has a
+> supplying route (re-checked below against `main` at `86f814b`). Two things
+> still block the `pending` screen (below), and the design calls (Task 7 item
+> 12) are Jack's. The task list is not written yet; no code has come from this
+> plan.
 >
 > **23 Sep, Jack decided J1-J4** (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer screens under
 > `/book`; two booking modes (exact appointments, drop-off days), both
-> Release 1; deposits out,
-> not blocked; all four J2 gaps are Release 1. **Next: the server
-> prerequisite plan**, then this plan's tasks.
+> Release 1; deposits out, not blocked; all four J2 gaps are Release 1.
 
 **Parent plan:** `docs/superpowers/plans/2026-09-20-phase-4-screens.md` (Task 7
 is the contract; execution order row 2).
@@ -47,34 +45,56 @@ whole of the customer's first journey. **Decided (J1): `/book`**, with a
 second Vite entry and a customer route table, `src/screens/book/<id>.tsx`
 unchanged.
 
-## Contract item 3: endpoints - STOP
+## Contract item 3: endpoints - re-checked 25 Sep, no longer a stop
 
-Checked 23 Sep against `server/server.js` on this branch. No route's
-`screens:` comment names a book screen.
+Re-read against `server/server.js` on `main` at `86f814b` (a read of the code,
+no requests run). The 23 Sep gap table is closed by #64-#71. Line numbers are
+from that commit and will drift.
 
-| Screen | Exists | Missing |
+| Screen | Supplied by | Status |
 |---|---|---|
-| `service` | `GET /api/portal/:shopSlug/mechanics` (:3975) returns three hardcoded job types (`PORTAL_JOB_TYPES`, :3968), no prices | **A public list of the shop's bookable services with prices.** `GET /api/workshop-services` (:3564) exists but is staff-only. `bookable_online` exists in the schema (migration 015) and the portal ignores it. |
-| `service-list` | - | **Services grouped by shop-defined category** (note 01). There is no category column (migration 014), so this is a schema change too. |
-| `problem` | Bike inline as `newBike` on the booking POST (:4154-4170) | **Service questions** (the atlas's radio question): no table, no route. Customer photo/video upload: attachments (:3072) are staff-only. |
-| `date` | `GET /api/portal/:shopSlug/availability` (:3994) returns `{busy, fullDays}` | **A drop-off (untimed) booking**: the POST rejects a request with no `startTime` (:4113) or no `mechanicId` (:4117). **The shop's booking mode** (note 03) is not returned to the portal. |
-| `details` | `POST /api/portal/:shopSlug/bookings` (:4075): `guestName`, `guestPhone`, `jobDate`, `description`, `jobType`, `startTime`, `mechanicId`, `bikeId`/`newBike` | **Email, update channel (Email/SMS/WhatsApp), terms consent, marketing permission**: no field, no column. |
-| `pending` | The POST's response (`serializePortalBooking`, :2395) | **A booking reference** (atlas shows WH-1042) and **a way for a guest to read the request back**: `GET /api/portal/:shopSlug/bookings` (:4066) needs a customer session, which a guest does not have. |
+| `service`, `service-list` | `GET /api/portal/:shopSlug/services` (:4464). `showPrices`, `full[]`, `categories[]`, `uncategorised[]`; each service `{id, name, price, minutes, questions}`; `price` is null when the shop hides prices; only active, bookable-online services. "Not sure" is `notSure: true` on the booking POST. | Ready |
+| `problem` | Booking POST (:4597): `description` (required), bike as `newBike` or `bikeId`, `answers` checked against the service's `questions`, `photos` (up to 5, 10 MB each, JPEG/PNG/WebP, sent as bare base64 - see `server/booking-photos.js`). | Ready |
+| `date` | `GET .../mechanics` (:4442) and `GET .../availability?start&end&minutes` (:4516): mode is **per date** (`timed` or `dropoff`), with start times per mechanic or a drop-off window. A mechanic must be chosen in both modes. 409 refusals carry `code: 'capacity'`. | Ready |
+| `details` | Booking POST: `guestName`, `guestPhone`, `email`, `updateChannel` (one choice, not several), `termsAccepted` (must be true), `marketingPermission`. Rules in `server/booking-request.js`. | Ready |
+| `pending` | POST 201: `reference`, `jobDate`, `startTime`, `status`, plus `privateLink` (shown once). `GET .../booking-links/:code` (:4829): `reference`, `shopName`, `jobDate`, `startTime`, `serviceName`, `description`, `answers`, `bike`, `stage`, `photoCount`; 404 unknown, 410 after 30 days past the booked date, 429 over 30 tries per 15 minutes. | **Partial** - see below |
 
-**None of the book writes is a version-guarded job action** (the fifteen are
-at :2982-3017), so contract item 4's `version` rule does not apply here. The
-booking POST's capacity-race 409 (:4203) carries no `code`, so
-`src/lib/api/client.ts` classifies it `unknown`. That matters for contract
-item 5 on `date`/`details`, and it is a server change as well.
+**Item 4 (version rule):** does not apply; the booking POST is not one of the
+version-guarded job actions, so the client uses `apiMutate`.
+**Item 5 (409 with a code):** closed; the booking POST's capacity 409s now carry
+`code: 'capacity'`, which `src/lib/api/client.ts` classifies. 400s are
+`{ error }` with a message written to be shown, which the client classes
+`unknown`.
+**Item 6 (money never totalled in JavaScript):** the server totals nothing;
+screens show a service's `price` as given.
+**Items 7-12:** client, test and design work; unaffected by the server.
 
-Items 4-12 are not assessed until the endpoints exist.
+### What still blocks or needs deciding (both checked directly in the code)
 
-## What unblocks it
+1. **Automatic acceptance does not exist.** Screen 06 branches to `confirmed`
+   on "automatic acceptance"; the booking POST always writes
+   `booking_state = 'pending'`, and nothing in `server/` or the migrations
+   mentions auto-accepting. Either it stays out of Release 1 (`pending` is
+   then the only outcome) or it is a seventh server piece. Jack's call.
+2. **The booked price never reaches the customer.** It is saved on the job
+   (`booked_price`, :2674) but no customer route returns it; the link route
+   leaves price out on purpose. Screens `service` and `pending` in the atlas
+   show prices. Decide whether `pending` shows the price the customer was
+   quoted, then it is a small server change.
 
-A server-side prerequisite plan, like Phase 3's quote reads were for the quote
-journey. Its scope depends on J2-J4 below. Each gap above is one task with a
-test first. Two need schema changes (service categories; contact and consent
-fields), which are ask-first changes under the project rules.
+### Smaller points
+
+- `/mechanics`, the booking POST and `/booking-links/:code` have no `screens:`
+  comment; `/services` and `/availability` do. Whether the screen-trace check
+  needs them has not been looked at.
+- Nothing serves the private-link page: the link is `/book/<slug>/booking/<code>`
+  but `/book` still serves `public-portal/`. Front-end scope (J1's second Vite
+  entry), not a server gap.
+- The atlas `date` note says a shop can offer both modes; J3 forbids it and the
+  server supports one mode per date. The atlas wording is stale.
+- The server records `update_channel` but sends nothing; screens must not
+  promise a message goes out.
+- A "not sure" booking takes a 60-minute slot.
 
 ## Decisions for Jack
 
