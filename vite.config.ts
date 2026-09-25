@@ -26,10 +26,10 @@ export default defineConfig({
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {
-      // Named entry points: later phases add e.g. `portal` here without
-      // restructuring the build.
+      // Named entry points: staff (/workshop) and book (/book).
       input: {
         staff: fileURLToPath(new URL('./src/staff/main.tsx', import.meta.url)),
+        book: fileURLToPath(new URL('./src/customer/main.tsx', import.meta.url)),
       },
     },
   },

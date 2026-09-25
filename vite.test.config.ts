@@ -14,11 +14,12 @@ import { fileURLToPath, URL } from 'node:url';
  * Spec: docs/superpowers/specs/2026-09-23-component-test-build-step.md
  */
 
-// Everything but the browser entry, which mounts into a page and imports CSS.
+// Everything but the browser entries, which mount into a page and import CSS.
 // Filtered here rather than with globSync's `exclude`, whose array form is
 // newer than the Node 22 CI runs.
+const BROWSER_ENTRIES = new Set(['src/staff/main.tsx', 'src/customer/main.tsx']);
 const input = globSync('src/**/*.{ts,tsx}').filter(
-  (file) => !file.endsWith('.d.ts') && file !== 'src/staff/main.tsx',
+  (file) => !file.endsWith('.d.ts') && !BROWSER_ENTRIES.has(file),
 );
 
 export default defineConfig({
