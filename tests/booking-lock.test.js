@@ -11,16 +11,19 @@ import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { futureDate } from './helpers/workshopFixtures.js';
+import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
 
 let server;
 let owner;
 let sam;
 let customer;
+let types;
 
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl);
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
+  types = await seedJobTypes(owner.shop.id);
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
 });
 
@@ -30,10 +33,10 @@ after(async () => {
   await pool.end();
 });
 
-const book = (jobDate, startTime, jobType = 'repair') =>
+const book = (jobDate, startTime, serviceId = types.repair) =>
   portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
     method: 'POST',
-    body: { mechanicId: sam, jobDate, startTime, jobType, description: 'Test booking', newBike: { make: 'Test', model: 'Bike' } },
+    body: { mechanicId: sam, jobDate, startTime, serviceId, description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT },
   });
 
 test('a booking waits while another booking holds the same shop and date', async () => {
@@ -61,7 +64,7 @@ test('overlapping bookings sent at once: exactly one wins, the rest get capacity
   const results = await Promise.all([
     // 14:00-16:00, 14:30-15:30, 15:00-16:00, 15:15-16:15: every pair overlaps,
     // so exactly one can ever be accepted, whichever arrives first.
-    book(date, '14:00', 'service'),
+    book(date, '14:00', types.service),
     book(date, '14:30'),
     book(date, '15:00'),
     book(date, '15:15'),
@@ -74,7 +77,7 @@ test('overlapping bookings sent at once: exactly one wins, the rest get capacity
 test('a booking into time another booking holds refuses with capacity', async () => {
   const date = futureDate(3);
   assert.equal((await book(date, '17:00')).status, 201);
-  const res = await book(date, '17:00', 'quick');
+  const res = await book(date, '17:00', types.quick);
   assert.equal(res.status, 409, JSON.stringify(res.body));
   assert.equal(res.body.code, 'capacity');
 });

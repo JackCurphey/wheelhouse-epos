@@ -10,17 +10,20 @@ import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedWorkshopJob, futureDate } from './helpers/workshopFixtures.js';
+import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
 
 let server;
 let owner;
 let sam;
 let customer;
+let types;
 const MONDAY = futureDate(1);
 
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl);
   sam = await seedMechanic(owner.shop.id, { name: 'Sam' });
+  types = await seedJobTypes(owner.shop.id);
   customer = await portalSignup(server.baseUrl, owner.shop.slug, {});
   await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-unavailability', {
     method: 'POST', body: { kind: 'weekly', mechanicId: sam, weekdays: [1], startTime: '13:00', endTime: '13:30', reason: 'Lunch' },
@@ -34,7 +37,7 @@ after(async () => {
 
 const book = (body) => portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
   method: 'POST',
-  body: { mechanicId: sam, jobDate: MONDAY, jobType: 'repair', description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...body },
+  body: { mechanicId: sam, jobDate: MONDAY, serviceId: types.repair, description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT, ...body },
 });
 
 test('a booking that runs into lunch is refused, and the reason is not given', async () => {

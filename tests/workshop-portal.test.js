@@ -14,6 +14,7 @@ import { createTestShop, deleteTestShop } from './helpers/testShop.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { seedWorkshopJob, customerIdForLogin, seedBookableShop } from './helpers/workshopFixtures.js';
 import { setOpeningDays } from './helpers/staff.js';
+import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
 
 let server;
 
@@ -80,6 +81,7 @@ test('creating a booking does not return the shop internal order either', async 
   try {
     const { cookie } = await portalSignup(server.baseUrl, shop.slug);
     const { mechanicId } = await seedBookableShop(shop.id);
+    const types = await seedJobTypes(shop.id);
 
     const { status, body } = await portalRequest(
       server.baseUrl,
@@ -90,10 +92,11 @@ test('creating a booking does not return the shop internal order either', async 
         body: {
           jobDate: '2026-09-07', // a Monday, inside the default opening days
           startTime: '10:00',
-          jobType: 'quick',
+          serviceId: types.quick,
           description: 'Front brake rubbing',
           mechanicId,
           newBike: { make: 'Test', model: 'Bike' },
+          ...BOOKING_CONTACT,
         },
       }
     );
@@ -112,6 +115,7 @@ test('a customer cannot book on a day the shop is closed', async () => {
   try {
     const { cookie } = await portalSignup(server.baseUrl, shop.slug);
     const { mechanicId } = await seedBookableShop(shop.id);
+    const types = await seedJobTypes(shop.id);
     await setOpeningDays(shop.id, [1, 2, 3, 4, 5]); // Monday to Friday
 
     const { status } = await portalRequest(
@@ -123,10 +127,11 @@ test('a customer cannot book on a day the shop is closed', async () => {
         body: {
           jobDate: '2026-09-06', // a Sunday
           startTime: '10:00',
-          jobType: 'quick',
+          serviceId: types.quick,
           description: 'Sunday puncture',
           mechanicId,
           newBike: { make: 'Test', model: 'Bike' },
+          ...BOOKING_CONTACT,
         },
       }
     );
@@ -142,6 +147,7 @@ test('a customer cannot book a mechanic on their day off', async () => {
   try {
     const { cookie } = await portalSignup(server.baseUrl, shop.slug);
     const { mechanicId } = await seedBookableShop(shop.id, { workingDays: [2, 3, 4, 5] });
+    const types = await seedJobTypes(shop.id);
 
     const { status } = await portalRequest(
       server.baseUrl,
@@ -152,10 +158,11 @@ test('a customer cannot book a mechanic on their day off', async () => {
         body: {
           jobDate: '2026-09-07', // a Monday - shop open, this mechanic off
           startTime: '10:00',
-          jobType: 'quick',
+          serviceId: types.quick,
           description: 'Monday puncture',
           mechanicId,
           newBike: { make: 'Test', model: 'Bike' },
+          ...BOOKING_CONTACT,
         },
       }
     );

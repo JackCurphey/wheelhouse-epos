@@ -18,6 +18,7 @@ import { deleteTestShop } from './helpers/testShop.js';
 
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
+import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
 
 const WEDNESDAY = '2026-10-14';
 let server;
@@ -41,19 +42,21 @@ async function bookableShop() {
   // workshop_settings, and seeding it twice trips its unique index on shop_id.
   const mechanicId = await seedMechanic(shop.id, { name: 'Holds Mechanic' });
   const signup = await portalSignup(server.baseUrl, shop.slug, {});
-  return { shop, mechanicId, cookie: signup.cookie, staffCookie };
+  const types = await seedJobTypes(shop.id);
+  return { shop, mechanicId, cookie: signup.cookie, staffCookie, types };
 }
 
-const book = (cookie, slug, mechanicId, startTime) =>
+const book = (cookie, slug, mechanicId, startTime, serviceId) =>
   portalRequest(server.baseUrl, cookie, `/api/portal/${slug}/bookings`, {
     method: 'POST',
     body: {
       mechanicId,
       jobDate: WEDNESDAY,
       startTime,
-      jobType: 'service',
+      serviceId,
       description: 'Test booking',
       newBike: { make: 'Test', model: 'Bike' },
+      ...BOOKING_CONTACT,
     },
   });
 
@@ -62,9 +65,9 @@ const holdsFor = (shopId, jobId) =>
     prepare('SELECT * FROM workshop_capacity_holds WHERE workshop_job_id = ?').all(jobId));
 
 test('a booking takes a live hold on the slot it booked', async () => {
-  const { shop, mechanicId, cookie } = await bookableShop();
+  const { shop, mechanicId, cookie, types } = await bookableShop();
   try {
-    const res = await book(cookie, shop.slug, mechanicId, '10:00');
+    const res = await book(cookie, shop.slug, mechanicId, '10:00', types.service);
     assert.equal(res.status, 201, JSON.stringify(res.body));
 
     const holds = await holdsFor(shop.id, res.body.id);
@@ -83,13 +86,13 @@ test('a slot already held by an in-flight request is refused with 409', async ()
   // A hold with no job behind it is what a competing request looks like between
   // taking its hold and committing its booking. The diary's overlap check sees
   // no job and lets the booking through; the index is what stops it.
-  const { shop, mechanicId, cookie } = await bookableShop();
+  const { shop, mechanicId, cookie, types } = await bookableShop();
   try {
     await runWithShop(shop.id, () =>
       prepare(`INSERT INTO workshop_capacity_holds (job_date, start_time, mechanic_id, minutes)
                VALUES (?, ?, ?, 60)`).run(WEDNESDAY, '11:00', mechanicId));
 
-    const res = await book(cookie, shop.slug, mechanicId, '11:00');
+    const res = await book(cookie, shop.slug, mechanicId, '11:00', types.service);
     assert.equal(res.status, 409, `expected the held slot to be refused: ${JSON.stringify(res.body)}`);
     assert.match(res.body.error, /no longer available/);
     assert.equal(res.body.code, 'capacity');
@@ -103,9 +106,9 @@ test('a slot already held by an in-flight request is refused with 409', async ()
 });
 
 test('cancelling a booking releases its hold, and the slot frees up', async () => {
-  const { shop, mechanicId, cookie, staffCookie } = await bookableShop();
+  const { shop, mechanicId, cookie, staffCookie, types } = await bookableShop();
   try {
-    const booked = await book(cookie, shop.slug, mechanicId, '12:00');
+    const booked = await book(cookie, shop.slug, mechanicId, '12:00', types.service);
     assert.equal(booked.status, 201, JSON.stringify(booked.body));
 
     const before = await holdsFor(shop.id, booked.body.id);
@@ -133,9 +136,9 @@ test('deleting a job removes its hold rather than stranding it', async () => {
   // failed outright - and a hold left behind would go on consuming a slot for a
   // booking that no longer exists. Covered incidentally by the existing delete
   // test; asserted here on purpose.
-  const { shop, mechanicId, cookie, staffCookie } = await bookableShop();
+  const { shop, mechanicId, cookie, staffCookie, types } = await bookableShop();
   try {
-    const booked = await book(cookie, shop.slug, mechanicId, '14:00');
+    const booked = await book(cookie, shop.slug, mechanicId, '14:00', types.service);
     assert.equal(booked.status, 201, JSON.stringify(booked.body));
     assert.equal((await holdsFor(shop.id, booked.body.id)).length, 1);
 
@@ -146,7 +149,7 @@ test('deleting a job removes its hold rather than stranding it', async () => {
     assert.equal((await holdsFor(shop.id, booked.body.id)).length, 0, 'the hold must go with the job');
 
     // And the slot is bookable again.
-    const again = await book(cookie, shop.slug, mechanicId, '14:00');
+    const again = await book(cookie, shop.slug, mechanicId, '14:00', types.service);
     assert.equal(again.status, 201, JSON.stringify(again.body));
   } finally {
     await deleteTestShop(shop.id);

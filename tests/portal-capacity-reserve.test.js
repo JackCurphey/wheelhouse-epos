@@ -10,6 +10,7 @@ import { startLiveServer } from './helpers/liveServer.js';
 import { createTestShop, deleteTestShop } from './helpers/testShop.js';
 import { seedBookableShop, seedWorkshopJob, customerIdForLogin } from './helpers/workshopFixtures.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
+import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
 
 const WEDNESDAY = '2026-10-14';
 
@@ -34,25 +35,26 @@ async function shopWithBookedMinutes(endTime) {
     shopId: shop.id, customerId, mechanicId, title: 'Existing work',
     jobDate: WEDNESDAY, startTime: '09:00', endTime, legacyStatus: 'scheduled',
   });
-  return { shop, mechanicId, cookie: signup.cookie };
+  const types = await seedJobTypes(shop.id);
+  return { shop, mechanicId, cookie: signup.cookie, types };
 }
 
-function book(baseUrl, cookie, slug, { mechanicId, startTime, jobType }) {
+function book(baseUrl, cookie, slug, { mechanicId, startTime, serviceId }) {
   return portalRequest(baseUrl, cookie, `/api/portal/${slug}/bookings`, {
     method: 'POST',
     body: {
-      mechanicId, jobDate: WEDNESDAY, startTime, jobType,
-      description: 'Test booking', newBike: { make: 'Test', model: 'Bike' },
+      mechanicId, jobDate: WEDNESDAY, startTime, serviceId,
+      description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT,
     },
   });
 }
 
 test('a booking that would consume the whole reserve is refused', async () => {
   // 420 booked, so exactly 120 free - the reserve and nothing more.
-  const { shop, mechanicId, cookie } = await shopWithBookedMinutes('16:00');
+  const { shop, mechanicId, cookie, types } = await shopWithBookedMinutes('16:00');
   try {
     const res = await book(server.baseUrl, cookie, shop.slug, {
-      mechanicId, startTime: '16:00', jobType: 'service', // 120 minutes
+      mechanicId, startTime: '16:00', serviceId: types.service, // 120 minutes
     });
     assert.equal(res.status, 409, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
     assert.equal(res.body.code, 'capacity');
@@ -71,10 +73,10 @@ test('a booking that leaves the reserve intact is still accepted', async () => {
   // This is a control, not evidence of the fix: it passes whether the reserve
   // gate is present or reverted, because it never touches the reserve. It only
   // proves the gate does not over-reject a booking that leaves it intact.
-  const { shop, mechanicId, cookie } = await shopWithBookedMinutes('15:00');
+  const { shop, mechanicId, cookie, types } = await shopWithBookedMinutes('15:00');
   try {
     const res = await book(server.baseUrl, cookie, shop.slug, {
-      mechanicId, startTime: '15:00', jobType: 'quick', // 30 minutes
+      mechanicId, startTime: '15:00', serviceId: types.quick, // 30 minutes
     });
     assert.equal(res.status, 201, `expected acceptance, got ${res.status}: ${JSON.stringify(res.body)}`);
   } finally {
@@ -84,10 +86,10 @@ test('a booking that leaves the reserve intact is still accepted', async () => {
 
 test('the same day refuses a long job while accepting a short one', async () => {
   // 180 free: a 120-minute service would leave 60, below the reserve.
-  const { shop, mechanicId, cookie } = await shopWithBookedMinutes('15:00');
+  const { shop, mechanicId, cookie, types } = await shopWithBookedMinutes('15:00');
   try {
     const res = await book(server.baseUrl, cookie, shop.slug, {
-      mechanicId, startTime: '15:00', jobType: 'service',
+      mechanicId, startTime: '15:00', serviceId: types.service,
     });
     assert.equal(res.status, 409, `expected refusal, got ${res.status}: ${JSON.stringify(res.body)}`);
     assert.equal(res.body.code, 'capacity');
