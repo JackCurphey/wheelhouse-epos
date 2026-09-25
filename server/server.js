@@ -4669,10 +4669,6 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     // customer (signed-in, or the matched/created guest above), always
     // 'pending' until a mechanic reviews it, same principle as createSale()
     // never trusting a client-sent total.
-    // Never trusts a client-sent customerId or status - always the resolved
-    // customer (signed-in, or the matched/created guest above), always
-    // 'pending' until a mechanic reviews it, same principle as createSale()
-    // never trusting a client-sent total.
     let jobId;
     try {
       jobId = await createWorkshopJob({
