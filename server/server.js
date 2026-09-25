@@ -75,6 +75,7 @@ import {
   listStorefrontProducts,
 } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
+import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 import {
   getShopifyConnectionByShopId,
@@ -400,6 +401,10 @@ const portalSignupLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // network can create jobs/customers - mirrors portalSignupLimiter's limits
 // since it's standing in for that same missing gate.
 const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
+
+// Private booking links need no sign-in. The code is unguessable; this is the
+// second line, so nobody can churn through codes.
+const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -2626,7 +2631,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceId }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceId, linkTokenHash, customerDescription }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2635,8 +2640,8 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, service_id, booked_price, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, service_id, booked_price, link_token_hash, customer_description, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?, ?, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
@@ -2644,6 +2649,7 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
         termsAcceptedAt ?? null,
         // The price is copied in SQL so it never passes through a JavaScript number.
         serviceId ?? null, serviceId ?? null,
+        linkTokenHash ?? null, customerDescription ?? null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
@@ -4574,7 +4580,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 
   // No account required to book: an out-of-towner booking a single job
   // shouldn't be forced through signup. Falls back to a guest customer
-  // (matched/created by phone, see resolveGuestCustomer) instead of the
+  // (a new row each time, see resolveGuestCustomer) instead of the
   // signed-in customer's own record - rate-limited per IP since guests skip
   // portalSignupLimiter, the only other gate on how fast jobs/customers get
   // created here.
@@ -4671,6 +4677,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     // customer (signed-in, or the matched/created guest above), always
     // 'pending' until a mechanic reviews it, same principle as createSale()
     // never trusting a client-sent total.
+    const linkCode = newLinkCode();
     let jobId;
     try {
       jobId = await createWorkshopJob({
@@ -4689,6 +4696,8 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         plannedMinutes: chosen.minutes,
         termsAcceptedAt: nowIso(),
         serviceId: chosen.id ?? null,
+        linkTokenHash: hashLinkCode(linkCode),
+        customerDescription: description,
       });
     } catch (err) {
       // The 024 index, a second guard behind the lock. createWorkshopJob's own
@@ -4709,9 +4718,46 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       )
       .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-    return { status: 201, body: serializePortalBooking(row) };
+    // The only time the code leaves the server: the database keeps its hash.
+    return { status: 201, body: { ...serializePortalBooking(row), privateLink: linkPath(params.shopSlug, linkCode) } };
   });
   sendJson(res, out.status, out.body);
+});
+
+// The private booking link, read back without sign-in. The dispatcher has
+// already bound the shop from :shopSlug, so row-level security keeps another
+// shop's code from finding anything. Deliberately narrow: nothing that
+// identifies the customer, no price, no staff notes.
+// Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
+route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
+  if (!bookingLinkLimiter.check(clientIp(req))) {
+    return sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+  }
+  const row = /^[0-9a-f]{64}$/.test(params.code)
+    ? await db.prepare(
+      `SELECT w.reference, w.job_date, w.start_time, w.customer_description,
+              w.booking_state, w.custody_state, w.work_state,
+              s.name AS service_name, b.make AS bike_make, b.model AS bike_model
+       FROM workshop_jobs w
+       LEFT JOIN workshop_services s ON s.id = w.service_id
+       LEFT JOIN customer_bikes b ON b.id = w.bike_id
+       WHERE w.link_token_hash = ?`
+    ).get(hashLinkCode(params.code))
+    : null;
+  if (!row) return sendJson(res, 404, { error: "We can't find that booking" });
+  if (isLinkExpired(row.job_date, new Date().toISOString().slice(0, 10))) {
+    return sendJson(res, 410, { error: 'This link has expired' });
+  }
+  sendJson(res, 200, {
+    reference: row.reference,
+    shopName: shop.name,
+    jobDate: row.job_date,
+    startTime: row.start_time || '',
+    serviceName: row.service_name ?? null,
+    description: row.customer_description ?? null,
+    bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
+    stage: bookingStage(row),
+  });
 });
 
 // ---------- Static file serving ----------
