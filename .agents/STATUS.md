@@ -4,8 +4,8 @@
 **Branch:** `main` at `41f48e8`: #69 (piece 4 - private booking link,
 migration 027), #68 (piece 3b - booked price, 026) and #67 (piece 3 - booking
 request, 025) merged 25 Sep, main CI green on all three; #66 and #65 before.
-**Piece 5 (service questions, migration 028) built on branch
-`feat/book-server-5-service-questions`) merged as #70** (main `602bab2`, 25
+**Piece 5 (service questions, migration 028), from branch
+`feat/book-server-5-service-questions`, merged as #70** (main `602bab2`, 25
 Sep; PR CI green). **Piece 6 (customer photos) designed** — spec
 `docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md` on
 branch `feat/book-server-6-customer-uploads`, awaiting Jack's review of the
