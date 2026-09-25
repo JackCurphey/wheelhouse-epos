@@ -3162,6 +3162,7 @@ function serializeAttachment(row) {
     contentType: row.content_type,
     sizeBytes: row.size_bytes,
     uploadedAt: row.uploaded_at,
+    fromCustomer: row.from_customer,
   };
 }
 
