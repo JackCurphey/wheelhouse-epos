@@ -58,32 +58,37 @@ Pieces 1-4 merged (#64-#69). Piece 6 (customer uploads) is out of scope.
 
 ### Staff: `POST` / `PUT /api/workshop-services`, `GET` the service
 
-- Take and return `questions`. A `PUT` that omits `questions` keeps the stored
-  list (as the other fields already behave).
+- Take and return `questions` (added to `serializeWorkshopService`). A `PUT`
+  that omits `questions` keeps the stored list, as `active`, `bookableOnline`
+  and the placement fields already do (`name` and `price` stay required;
+  `minutes` is cleared when omitted — unchanged by this piece).
 - Validation refuses, with a plain message: missing wording, an unknown kind,
   a choice question with fewer than 2 or more than 10 choices, duplicate
   choices, more than 10 questions, anything over its length limit.
 - The server assigns ids to questions that have none; an id sent by the caller
   is kept only if it already belongs to this service's stored list.
-- The routes are already covered by `scripts/ci/assert-screen-trace.mjs`;
-  their `// screens:` lines gain `service-edit` where missing.
+- The routes are already covered by `scripts/ci/assert-screen-trace.mjs`, and
+  every one already reads `// screens: services, service-edit`; no change.
 
 ### Customer service list: `GET /api/portal/:shopSlug/services`
 
-- Each service gains `questions`: `id`, `wording`, `kind`, `required`,
-  `choices`, `allowNotSure`. Staff-only and retired services stay excluded.
+- Each service (today `{ id, name, price, minutes }`) gains `questions`:
+  `id`, `wording`, `kind`, `required`, `choices`, `allowNotSure`. The route's
+  `WHERE active = 1 AND bookable_online = 1` keeps staff-only and retired
+  services excluded.
 
 ### Booking: `POST /api/portal/:shopSlug/bookings`
 
 - New optional input `answers`: a list of `{ questionId, text }`,
   `{ questionId, choice }`, or `{ questionId, notSure: true }`.
-- Checked before any database write, with the service lookup and before the
-  guest customer row (as piece 3 orders it): every required question answered;
+- Checked before any database write: right after the service lookup and
+  before the guest branch (`resolveGuestCustomer`, the first write): every required question answered;
   a choice is one of the question's current choices; `notSure` only where
   `allowNotSure`; text within its limit; no answer for a question this service
   does not have (that is the "questions have changed" refusal, decision 10);
   answers sent with `notSure: true` bookings refused.
-- The frozen copy is written in the same insert as the job.
+- The frozen copy is written in the same insert as the job, passed through
+  `createWorkshopJob` (as `booked_price` is).
 
 ### Where answers appear
 
@@ -113,11 +118,12 @@ Pieces 1-4 merged (#64-#69). Piece 6 (customer uploads) is out of scope.
   notes the brake example should be conditional "in production" with no rule.
 - Photo answers (piece 6), inspection checklists, reporting on answers.
 
-## To verify when planning (not yet read in code)
+## Checked against the code (25 Sep, before planning)
 
-- `readServiceBody` / `readServicePlacement` (server/server.js ~3954-3990) and
-  the service routes (~4008-4060): where `questions` validation slots in, and
-  what the staff service serializer returns.
-- The portal service list route (~4432): its per-service shape.
-- `serializeWorkshopJob` (~2366).
-- Migration number: 027 is the latest merged.
+`readServiceBody` / `readServicePlacement` and the service routes
+(server/server.js 3954-4060), the portal service list (4432),
+`serializeWorkshopJob` (2366), the booking route (4565) and the private-link
+read-back (4749) were read. Corrections made above: the `// screens:` lines
+already name `service-edit`; "PUT keeps omitted fields" is true only of some
+fields; the answers check sits after the service lookup, before the guest
+branch. Migration 027 is the latest merged, so this is 028.
