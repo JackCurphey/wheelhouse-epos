@@ -113,3 +113,16 @@ test('the setting is read when the link is opened, not when it was booked', asyn
   await setShowPrices(true);
   assert.equal((await read(code)).body.bookedPrice, 65.5);
 });
+
+// Out of scope (spec): the bookings list is unaffected by this change -
+// serializePortalBooking deliberately does not carry bookedPrice.
+test('the bookings list carries no bookedPrice, even with prices shown', async () => {
+  await setShowPrices(true);
+  await book();
+  const res = await portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(Array.isArray(res.body) && res.body.length > 0, JSON.stringify(res.body));
+  for (const row of res.body) {
+    assert.ok(!('bookedPrice' in row), JSON.stringify(row));
+  }
+});

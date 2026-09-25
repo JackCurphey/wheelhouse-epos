@@ -4811,6 +4811,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       )
       .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
+    const bookedPrice = await customerBookedPrice(row.booked_price);
     // The last write, so nothing after it can fail and leave files behind for a
     // booking that rolled back. saveBookingPhotos removes its own files if a
     // write or insert fails, and the error rolls the whole booking back.
@@ -4829,7 +4830,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       status: 201,
       body: {
         ...serializePortalBooking(row),
-        bookedPrice: await customerBookedPrice(row.booked_price),
+        bookedPrice,
         privateLink: linkPath(params.shopSlug, linkCode),
       },
     };
