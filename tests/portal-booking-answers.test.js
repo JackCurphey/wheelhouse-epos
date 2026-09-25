@@ -148,3 +148,11 @@ test('an unknown question id is refused with the changed message', () =>
     /^The questions for this service have changed — please check them and try again$/));
 test('answers on a not sure booking are refused', () =>
   refusedAsGuest({ serviceId: undefined, notSure: true, answers: goodAnswers() }, /chosen service/));
+
+test('the staff job view shows the answers', async () => {
+  const res = await book({ answers: goodAnswers() });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const job = await staff(`/api/workshop-jobs/${res.body.id}`);
+  assert.equal(job.status, 200, JSON.stringify(job.body));
+  assert.deepEqual(job.body.questionAnswers, await stored(res.body.id));
+});

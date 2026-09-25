@@ -79,6 +79,7 @@ test('a booking returns a private link, and the link reads the booking back', as
     description: 'Squeaky brakes',
     bike: { make: 'Dawes', model: 'Galaxy' },
     stage: 'awaiting_confirmation',
+    answers: [],
   });
 });
 
@@ -193,4 +194,21 @@ test('a job with no customer gets no link', async () => {
 test('making a link needs a staff sign-in', async () => {
   const booked = await book();
   assert.equal((await newLink(booked.id, null)).status, 401);
+});
+
+test('the link shows the questions as asked and the answers', async () => {
+  const svc = (await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-services', {
+    method: 'POST',
+    body: {
+      name: 'Asks', price: 10, minutes: 60, bookableOnline: true,
+      questions: [{ wording: 'E-bike?', kind: 'choice', choices: ['Yes', 'No'] }, { wording: 'Notes?', kind: 'text' }],
+    },
+  })).body;
+  const booked = await book({ serviceId: svc.id, answers: [{ questionId: svc.questions[0].id, notSure: true }] });
+  const res = await read(codeOf(booked.privateLink));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.answers, [
+    { wording: 'E-bike?', answer: { notSure: true } },
+    { wording: 'Notes?', answer: null },
+  ]);
 });

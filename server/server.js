@@ -2389,6 +2389,9 @@ function serializeWorkshopJob(row) {
     // to come back on every read.
     version: row.version,
     notes: row.notes,
+    // The customer's answers to the service's questions, frozen at booking
+    // (migration 028). Null for staff jobs, "not sure" and older bookings.
+    questionAnswers: row.question_answers ?? null,
     orderId: row.order_id,
     orderStatus: row.order_status,
     orderTotal: row.order_total,
@@ -4786,7 +4789,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
   }
   const row = /^[0-9a-f]{64}$/.test(params.code)
     ? await db.prepare(
-      `SELECT w.reference, w.job_date, w.start_time, w.customer_description,
+      `SELECT w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
               w.booking_state, w.custody_state, w.work_state,
               s.name AS service_name, b.make AS bike_make, b.model AS bike_model
        FROM workshop_jobs w
@@ -4806,6 +4809,8 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     startTime: row.start_time || '',
     serviceName: row.service_name ?? null,
     description: row.customer_description ?? null,
+    // As asked at booking, from the frozen copy - never the service's current wording.
+    answers: (row.question_answers ?? []).map(({ wording, answer }) => ({ wording, answer })),
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
   });
