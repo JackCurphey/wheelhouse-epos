@@ -55,20 +55,19 @@ This file → **Plan register** below and the plans it names →
 
 ## Immediate next actions
 
-1. **Piece 2b merged** (#66, 25 Sep). It added migration 024 (hold index
-   narrowed to timed holds), mode-aware customer booking POST, the
-   per-(shop, date) advisory booking lock, the 409 `capacity` / 400
-   shop-rule split, one live hold per live job (`syncJobHold`), walk-in
-   queue lengths, and settle-on-read-and-write for a scheduled mode change.
-   Rulings, not in the original spec: plan's Decision log,
-   `docs/superpowers/plans/2026-09-24-book-server-2b-booking-modes.md`,
-   decisions 1-11; spec updated to match. Follow-up: holds left stale by
-   pre-2b staff moves are not backfilled — a stale hold now answers 409
-   `capacity` (2b decision 11); a one-off realign is due if any shop has
-   live data. **Next: piece 3** (the booking request). Plan 4a stays
-   STOPPED at Task 7 item 3 until piece 3 lands; routing decided 23 Sep
-   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer
-   screens under `/book`, two modes, deposits out, all four J2 gaps in.
+1. **Piece 3 (the booking request) built on
+   `feat/book-server-3-booking-request`, not merged;** 595 tests pass, all
+   gates exit 0. Migration 025; the POST names a shop service or "not
+   sure"; contact, consent and reference stored. Spec
+   `docs/superpowers/specs/2026-09-25-book-server-3-booking-request-design.md`;
+   plan (decision log, spec walk)
+   `docs/superpowers/plans/2026-09-25-book-server-3-booking-request.md`.
+   **Open for Jack:** (a) a guest still needs a phone for every channel
+   (decision 1); (b) the service price is not stored on the job (decision
+   3, spec line dropped). **Next: piece 4** (guest private link). Plan 4a
+   stays STOPPED at Task 7 item 3; routing decided 23 Sep
+   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`).
+   Piece 2b (merged, #66) detail moved to `ARCHIVE.md`.
 2. **Jack: Lightspeed series + test account.** P00-LS and P07 wait on it.
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so

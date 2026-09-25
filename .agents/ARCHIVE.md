@@ -1070,3 +1070,21 @@ wait on auth.
 The 466/466 run's gates, all exit 0: npm test; typecheck; lint; build; RLS
 coverage; screen trace; registry validate; registry drift; browser tests
 (`npm run test:browser`, port 8091).
+
+## Piece 2b, moved from STATUS 25 Sep
+
+**Piece 2b merged** (#66, 25 Sep). It added migration 024 (hold index
+   narrowed to timed holds), mode-aware customer booking POST, the
+   per-(shop, date) advisory booking lock, the 409 `capacity` / 400
+   shop-rule split, one live hold per live job (`syncJobHold`), walk-in
+   queue lengths, and settle-on-read-and-write for a scheduled mode change.
+   Rulings, not in the original spec: plan's Decision log,
+   `docs/superpowers/plans/2026-09-24-book-server-2b-booking-modes.md`,
+   decisions 1-11; spec updated to match. Follow-up: holds left stale by
+   pre-2b staff moves are not backfilled — a stale hold now answers 409
+   `capacity` (2b decision 11); a one-off realign is due if any shop has
+   live data. **Next: piece 3** (the booking request). Plan 4a stays
+   STOPPED at Task 7 item 3 until piece 3 lands; routing decided 23 Sep
+   (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer
+   screens under `/book`, two modes, deposits out, all four J2 gaps in.
+

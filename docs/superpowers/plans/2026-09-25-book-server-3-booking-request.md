@@ -709,7 +709,17 @@ For each spec section, write in this plan's "Spec walk" below one line: met / dr
 
 ### Spec walk
 
-*(filled in at Step 3)*
+- Schema (migration 025): **met** - `tests/migration-025.test.js`.
+- `serviceId` / `notSure` (exactly one; other shop, not bookable, retired refused): **met** - `tests/portal-booking-request.test.js` (service, not sure, other shop, not bookable, retired, old `jobType`), `tests/booking-request.test.js`.
+- Title, planned minutes from the service: **met**. Price from the service row: **dropped** (decision 3; `workshop_jobs` has no price column). Open question for Jack.
+- Channel rule (email needs email; sms/whatsapp need phone): **changed** - guest phone is required for every channel (decision 1). Proved by `tests/booking-request.test.js` and the sms tests in `tests/portal-booking-request.test.js`.
+- Terms (must be `true`, stored as `terms_accepted_at`): **met** - the two terms tests in `tests/portal-booking-request.test.js`, plus parser tests.
+- Customer record (channel, email, marketing permission; newer overwrite): **changed** - overwrite applies to signed-in customers only, a guest gets a fresh row (decision 2). Tests: preferences saved, marketing default false, overwrite on repeat.
+- Refused booking changes nothing: **met by construction, untested on the 23505 path**; the 400 case is tested ("a refused booking changes nothing on the customer").
+- Unchanged 2b behaviour: **met** - existing suite, 595 pass, 0 fail.
+- Reference in the response: **met** - "the response carries the booking reference".
+- The 409 `capacity` code: **already shipped in 2b**, no change here.
+- Migration applies from empty: covered by the CI gate run and `migration-025.test.js`; no separate scratch-database run recorded.
 
 - [ ] **Step 4: Commit, push, open the PR**
 
