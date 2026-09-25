@@ -700,6 +700,33 @@ git commit -m "feat: staff can replace a booking's private link; lookups are rat
 
 ---
 
-## Spec walk (fill in after building)
+## Decisions made while building
 
-For each spec line: met / dropped / changed, with the reason.
+5. (Task 3) The plan's test helper booked as a guest every time; the existing guest limit (5 per hour per IP) refused the sixth. Tests book as a signed-in customer by default; two tests book as a guest. The production limit is unchanged.
+6. (Task 4) `scripts/ci/assert-screen-trace.mjs` requires a `// screens:` comment on `/api/workshop-jobs/:id/<action>` routes. The staff route names `expired`, the atlas screen that promises a fresh link. The staff screen id is added when the button is designed.
+7. (Final review) `isLinkExpired` treats an impossible date (staff routes accept `2026-13-01`) as expired, so the read route answers 410 instead of 500.
+8. (Final review) The no-leak tests check the body's keys rather than searching for price digits. The same change fixed a flaky test from #68 that matched `12.5` inside a timestamp.
+9. (Final review, deferred) `Cache-Control: no-store` on link responses, `Referrer-Policy` on the future page, no tight polling from the page, and an audit entry when staff replace a link: all belong with the page and button design.
+
+## Spec walk
+
+| Spec line | Result |
+|---|---|
+| Decision 1, view only | Met. No write route for customers. |
+| Decision 2, every online booking gets a link | Met. One issuing line for guest and signed-in; both tested. |
+| Decision 3, 30 days after the booked date, worked out at read time | Met. Day 30 reads, day 31 is 410, moving the date revives it. Today is the UTC date (at most an hour lenient). |
+| Decision 4, stored hashed; staff make a new link | Met. The row holds only the SHA-256; the whole row is searched for the code in a test. |
+| Decision 5, one field on the booking | Met. `link_token_hash`, unique where not null. |
+| Decision 6, customer's words apart from notes | Met. `customer_description`, written only by the booking route; a staff notes edit leaves it alone (tested). |
+| Storage (migration 027) | Met. |
+| The code: 32 random bytes, SHA-256, path, pure module | Met. `server/booking-link.js`. |
+| Issued on booking, `privateLink` in the 201 | Met. |
+| Read-back 200 fields | Met, pinned by an exact comparison. |
+| Stage table | Met. All nine rows tested as a pure function; one through the route. |
+| Never included | Met. Tested by exact shape and by key and value checks. |
+| 404 one answer; unknown shop keeps "Shop not found" | Met. Made-up, replaced, other-shop and malformed codes give the same body. |
+| 410 expired | Met. |
+| 429 after 30 lookups in 15 minutes | Met. Own test file, proved by changing the limit. |
+| Staff route: sign-in, own shop, customer required, old link dies, 201 | Met. All four cases tested. |
+| Tests section | Met, with decision 5's change to who books. |
+| Out of scope | Held. No page, no button, no sending, no cancel or change. |
