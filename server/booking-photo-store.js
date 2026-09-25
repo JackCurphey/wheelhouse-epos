@@ -11,8 +11,8 @@ export async function saveBookingPhotos({ photos, uploadsDir, insertRow }) {
   try {
     for (const [i, photo] of photos.entries()) {
       const storageKey = randomBytes(24).toString('hex');
+      written.push(storageKey); // before the write, so a half-written file is cleaned up too
       await writeFile(path.join(uploadsDir, storageKey), photo.buffer);
-      written.push(storageKey);
       await insertRow({
         storageKey,
         originalName: `Customer photo ${i + 1}.${photo.extension}`,

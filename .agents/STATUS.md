@@ -12,6 +12,24 @@ Sep; PR CI green). **Piece 6 (customer photos, migration 029) built** on branch
 (Jack approved 25 Sep), plan
 `docs/superpowers/plans/2026-09-25-book-server-6-customer-photos.md`. PR to
 follow after a final review; merging is Jack's call.
+**Piece 6 open items** (facts only):
+- Memory risk before public exposure: the booking route reads a body up to
+  73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per
+  request is roughly 300 MB (received chunks, Buffer.concat copy, utf8 string,
+  JSON.parse copy, plus base64 decode). No concurrency limit exists and the
+  Dockerfile/compose set no memory limit, so about 10-15 simultaneous max-size
+  posts could exhaust Node memory (the same process serves the staff tills).
+  Cheapest fix: cap concurrent large-body reads (503 beyond 2-3), reject early
+  on Content-Length over the cap, free chunks before parsing. Needs Jack's
+  decision before this route is publicly reachable (hosting not chosen, PL-1).
+- Files can be left on disk if COMMIT fails after photos were saved (rare,
+  up to 50 MB each).
+- Customer photos must be sent as bare base64; a `data:image/...;base64,`
+  prefix or line breaks is refused as "could not be read". Note for whoever
+  builds the booking page's photo picker.
+- Pre-existing, not from piece 6: a guest's customer row and a newBike row can
+  remain after some refusals inside the lock ("Please choose a mechanic",
+  capacity refusals, the 23505 case); a JSON body of `null` gives 500.
 **Phases 0-3 merged** (#54-#59). **Phase 4 foundation merged** (#60-#62).
 **Open:** Mark's #50 review is against the superseded
 84-screen version; told 20 Sep. Other open items are Jack's.

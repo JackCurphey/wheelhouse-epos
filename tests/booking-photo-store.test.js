@@ -39,3 +39,30 @@ test('if a row fails, every file already written is removed and the error is rai
     assert.deepEqual(await readdir(dir), []);
   } finally { await rm(dir, { recursive: true }); }
 });
+
+test('a photo whose write fails raises, adds no row, and cleanup does not throw', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'photos-'));
+  const rows = [];
+  try {
+    await assert.rejects(
+      saveBookingPhotos({ photos, uploadsDir: path.join(dir, 'missing'), insertRow: async (r) => { rows.push(r); } }),
+      { code: 'ENOENT' }
+    );
+    assert.deepEqual(rows, []);
+    assert.deepEqual(await readdir(dir), []);
+  } finally { await rm(dir, { recursive: true }); }
+});
+
+test('if the second photo\'s write fails, the first photo\'s file is removed too', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'photos-'));
+  const rows = [];
+  try {
+    const bad = [photos[0], { ...photos[1], buffer: 12345 }];
+    await assert.rejects(
+      saveBookingPhotos({ photos: bad, uploadsDir: dir, insertRow: async (r) => { rows.push(r); } }),
+      { code: 'ERR_INVALID_ARG_TYPE' }
+    );
+    assert.equal(rows.length, 1);
+    assert.deepEqual(await readdir(dir), []);
+  } finally { await rm(dir, { recursive: true }); }
+});

@@ -86,7 +86,7 @@ test('a request over the size cap gets a 400, not a dropped connection or a 500'
   const marker = `cap-${randomBytes(6).toString('hex')}`;
   const before = await filesNow();
   const c = await counts();
-  const big = 'A'.repeat(MAX_BOOKING_BODY_BYTES + 1_000_000);
+  const big = Buffer.concat([JPEG_HEAD, Buffer.from(marker)]).toString('base64').replace(/=+$/, '').padEnd(MAX_BOOKING_BODY_BYTES + 1_000_000, 'A');
   const res = await book({ photos: [{ dataBase64: big }], marker }, { guest: true });
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.equal(res.body.error, 'Those photos are too large to send — please add fewer or smaller photos');
@@ -141,11 +141,11 @@ test('a not-sure booking can carry photos', async () => {
   assert.equal((await storedPhotos(res.body.id)).length, 1);
 });
 
-const bigJpeg = Buffer.concat([JPEG_HEAD, Buffer.alloc(10 * 1024 * 1024)]).toString('base64');
+const bigJpeg = (m) => Buffer.concat([JPEG_HEAD, Buffer.from(m), Buffer.alloc(10 * 1024 * 1024)]).toString('base64');
 for (const [label, makePhotos, message] of [
   ['too many photos', (m) => Array(6).fill(photoOf(m)), 'You can add up to 5 photos'],
-  ['a photo that is too big', () => [{ dataBase64: bigJpeg }], 'Each photo can be up to 10 MB'],
-  ['not a photo', () => [{ dataBase64: Buffer.from('just text').toString('base64') }], 'Only photos can be added (JPEG, PNG or WebP)'],
+  ['a photo that is too big', (m) => [{ dataBase64: bigJpeg(m) }], 'Each photo can be up to 10 MB'],
+  ['not a photo', (m) => [{ dataBase64: Buffer.from(`just text ${m}`).toString('base64') }], 'Only photos can be added (JPEG, PNG or WebP)'],
 ]) {
   test(`a guest booking with ${label} is refused, leaving no job, customer or file`, async () => {
     const marker = `refuse-${randomBytes(6).toString('hex')}`;
@@ -175,6 +175,10 @@ test('staff see the photos as from-customer attachments and can download them', 
 test('the private link says how many photos were sent, and nothing else about them', async () => {
   const two = await book({ photos: [photoOf('link1'), photoOf('link2')] });
   const none = await book({});
+  const att = await staff(`/api/workshop-jobs/${two.body.id}/attachments`, {
+    method: 'POST', body: { filename: 'bench.jpg', contentType: 'image/jpeg', dataBase64: photoOf('staffpic').dataBase64 },
+  });
+  assert.ok(att.status < 300, JSON.stringify(att.body));
   const read = (res) => jsonRequest(server.baseUrl, null,
     `/api/portal/${owner.shop.slug}/booking-links/${res.body.privateLink.split('/').pop()}`);
   const a = await read(two);
