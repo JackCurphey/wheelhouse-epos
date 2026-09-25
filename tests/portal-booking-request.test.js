@@ -139,6 +139,8 @@ test('preferences are saved on the customer', async () => {
 
 test('marketing permission defaults to false when it is not sent', async () => {
   const c = customer;
+  const first = await book({ marketingPermission: true }, c);
+  assert.equal((await customerRow(await customerIdOf(first.body.id))).marketing_permission, true);
   const res = await book({}, c);
   assert.equal((await customerRow(await customerIdOf(res.body.id))).marketing_permission, false);
 });
@@ -180,9 +182,15 @@ test('a refused booking changes nothing on the customer', async () => {
   const customerId = await customerIdOf(okRes.body.id);
   // A shop-rule refusal is enough: a closed Sunday. A default test shop opens
   // on Sundays, so close it explicitly (Monday to Saturday).
+  const days = await runWithShop(owner.shop.id, async () =>
+    (await prepare('SELECT opening_days FROM workshop_settings').get()).opening_days);
   await setOpeningDays(owner.shop.id, [1, 2, 3, 4, 5, 6]);
-  const closed = futureDate(0);
-  const res = await book({ jobDate: closed, email: 'lost@example.com' }, c);
+  let res;
+  try {
+    res = await book({ jobDate: futureDate(0), email: 'lost@example.com' }, c);
+  } finally {
+    await setOpeningDays(owner.shop.id, typeof days === 'string' ? JSON.parse(days) : days);
+  }
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.match(res.body.error, /closed/);
   assert.equal((await customerRow(customerId)).email, 'keep@example.com');

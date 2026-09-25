@@ -4669,16 +4669,10 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     // customer (signed-in, or the matched/created guest above), always
     // 'pending' until a mechanic reviews it, same principle as createSale()
     // never trusting a client-sent total.
-    // Saved only now, inside the lock and past every refusal, so a booking that
-    // is turned away changes nothing about the customer. Email is written only
-    // when one was sent. For a guest this row is brand new each time (see
-    // resolveGuestCustomer); for a signed-in customer it overwrites.
-    await db
-      .prepare(
-        `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), updated_at = ? WHERE id = ?`
-      )
-      .run(request.updateChannel, request.marketingPermission, request.email, nowIso(), customerId);
-
+    // Never trusts a client-sent customerId or status - always the resolved
+    // customer (signed-in, or the matched/created guest above), always
+    // 'pending' until a mechanic reviews it, same principle as createSale()
+    // never trusting a client-sent total.
     let jobId;
     try {
       jobId = await createWorkshopJob({
@@ -4703,6 +4697,17 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       if (err.code === '23505') return capacityRefusal(SLOT_GONE);
       throw err;
     }
+    // Saved only now, after the job is in, inside the lock: every refusal path
+    // above (including the 409 from the index) returns before this, and that
+    // return still COMMITs, so writing earlier would keep the change on a
+    // refused booking. Email is written only when one was sent. For a guest
+    // this row is brand new each time (see resolveGuestCustomer); for a
+    // signed-in customer it overwrites.
+    await db
+      .prepare(
+        `UPDATE customers SET update_channel = ?, marketing_permission = ?, email = COALESCE(NULLIF(?, ''), email), updated_at = ? WHERE id = ?`
+      )
+      .run(request.updateChannel, request.marketingPermission, request.email, nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
     return { status: 201, body: serializePortalBooking(row) };
   });
