@@ -189,3 +189,62 @@ test('a time zone the server does not recognise is refused', async () => {
     await deleteTestShop(shop.id);
   }
 });
+
+// Piece 11: booking terms.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-11-terms-design.md
+test('a new shop has no terms of its own', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    const { body } = await staffRequest(server.baseUrl, cookie, '/api/workshop-settings');
+    assert.equal(body.bookingTerms, null);
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('booking terms are saved, kept when a PUT leaves them out, and reverted by null or blank', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    const saved = await putSettings(cookie, { bookingTerms: '  Our own terms.  ' });
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    assert.equal(saved.body.bookingTerms, 'Our own terms.', 'not trimmed');
+
+    const kept = await putSettings(cookie, { showPricesOnline: true });
+    assert.equal(kept.body.bookingTerms, 'Our own terms.', 'an omitted bookingTerms was changed');
+
+    const blanked = await putSettings(cookie, { bookingTerms: '   ' });
+    assert.equal(blanked.status, 200, JSON.stringify(blanked.body));
+    assert.equal(blanked.body.bookingTerms, null, 'a blank string did not revert to standard');
+
+    await putSettings(cookie, { bookingTerms: 'Our own terms again.' });
+    const nulled = await putSettings(cookie, { bookingTerms: null });
+    assert.equal(nulled.status, 200, JSON.stringify(nulled.body));
+    assert.equal(nulled.body.bookingTerms, null, 'null did not revert to standard');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('booking terms over 20,000 characters are refused', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    const res = await putSettings(cookie, { bookingTerms: 'x'.repeat(20001) });
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    assert.equal(res.body.error, 'Booking terms can be up to 20,000 characters');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('booking terms that are not text or null are refused', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    for (const bookingTerms of [42, true, ['a']]) {
+      const res = await putSettings(cookie, { bookingTerms });
+      assert.equal(res.status, 400, `${JSON.stringify(bookingTerms)} was accepted`);
+      assert.equal(res.body.error, 'Booking terms must be text');
+    }
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
