@@ -38,3 +38,12 @@ test('a card used to navigate, with no selected prop, is a plain button', async 
   const ui = render(h(mod.ChoiceCard, { title: 'Not sure' }));
   assert.equal(ui.getByRole('button', { name: /Not sure/ }).hasAttribute('aria-pressed'), false);
 });
+
+test('a screen reader hears the title, detail and price as separate words', async () => {
+  const { render, h, mod } = await setup();
+  const ui = render(h('div', null,
+    h(mod.ChoiceCard, { title: 'Full service', detail: 'Everything checked', price: '£65' }),
+    h(mod.ChoiceCard, { title: 'Service 1', price: 'From £20' })));
+  assert.ok(ui.getByRole('button', { name: 'Full service Everything checked £65' }));
+  assert.ok(ui.getByRole('button', { name: 'Service 1 From £20' }));
+});
