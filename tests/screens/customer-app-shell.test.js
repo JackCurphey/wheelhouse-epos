@@ -7,9 +7,17 @@ import { installDom, importFresh } from '../helpers/dom.js';
 const SHELL = new URL('../../.test-build/customer/app-shell.js', import.meta.url).href;
 
 let uninstall;
+// The shell's query client is module-level (not per-render), so its cache
+// must be cleared unconditionally after every render - otherwise a test that
+// resolves a real query leaves the cache's own cleanup pending and keeps this
+// file from exiting promptly (see tests/customer/frame.test.js). Captured
+// here rather than per-test so a future test that adds a fetch can't forget it.
+let currentClient;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
+  currentClient?.clear();
+  currentClient = undefined;
   uninstall?.();
 });
 
@@ -18,7 +26,8 @@ async function renderAt(path) {
   const { render } = await import('@testing-library/react');
   const { createElement } = await import('react');
   const { CustomerAppShell, queryClient } = await importFresh(SHELL);
-  return { ...render(createElement(CustomerAppShell)), queryClient };
+  currentClient = queryClient;
+  return render(createElement(CustomerAppShell));
 }
 
 const SERVICES = {
@@ -32,11 +41,7 @@ test('the first book screen renders the service screen at /book/<shop>', async (
     new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } });
   const screen = await renderAt('/book/demo');
   assert.ok(await screen.findByRole('heading', { level: 1, name: 'What do you need?' }));
-  // The shell's query client is module-level (not per-render), so its cache
-  // must be cleared explicitly - otherwise the resolved query's own cleanup
-  // keeps this test file from exiting promptly (see tests/customer/frame.test.js).
   screen.unmount();
-  screen.queryClient.clear();
 });
 
 test('a private link opened cold reaches the pending screen', async () => {

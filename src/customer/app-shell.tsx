@@ -78,9 +78,8 @@ const router = createBrowserRouter([
   },
 ]);
 
-// Exported so a test that renders the whole shell (a real fetch resolving
-// through this client) can clear it before tearing its DOM down - otherwise
-// the query cache's own cleanup keeps the test file from exiting promptly.
+// Exported only so tests can clear it after rendering the whole shell - a
+// resolved query left uncleared keeps a test file from exiting promptly.
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
