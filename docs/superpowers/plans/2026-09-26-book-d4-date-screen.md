@@ -1763,4 +1763,53 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 
 ## Spec walk
 
-Filled in by Task 6 Step 5.
+**Changes**
+- Atlas mock-up (`docs/design/release-1-journey/screens.js`, `date` entry): **dropped**. The plan's own constraints (line 63) chose not to hand-edit the mock-up and to record the departure in the spec's "Changes" list instead; `date.tsx`'s header comment carries the same summary. The mock-up still shows the old "Drop-off day / Exact appointment" toggle and the "No suitable day?" link.
+- `RequireDraft` gains a redirect target: **met** — `to` prop, `require-draft.test.js` "with a redirect target, a screen opened without its answers goes there instead" and "...and the answers present, the screen shows".
+
+**Decisions 1-5**
+1. "Any mechanic" by default, with the option to choose: **met** — `date-rules.test.js` "the drop-off choice is..." tests; `date-screen.test.js` "a drop-off day: the window, the note, and 'Any mechanic' first with an unavailable mechanic greyed".
+2. Timed days use the one-day mechanic diary, every mechanic shown one column each, tapping a free time picks mechanic and time: **met** — `date-screen.test.js` "a timed day: every mechanic on, one diary column each, busy time greyed" and "tapping a free time saves the day, mechanic and time...".
+3. Drop-off days show the window and a mechanic choice starting on "Any mechanic", unavailable mechanics greyed: **met** — same drop-off test above.
+4. About two months ahead, this month and next, starting today: **met** — `date-rules.test.js` "the range is today to the last day of next month" and "the range never asks for more than the server allows (62 days)"; decision log 1-2 record the local-date and 62-day choices made to implement it.
+5. No past or too-soon times, enforced by the server (piece 10), not only hidden on screen: **met** — availability comes from piece 10's `/availability`, which already excludes those; no client-side re-check is added, matching the decision.
+
+**The screen**
+- `BookFrame` step 3, back to `problem`, heading "When can you drop in?", action "Continue": **met** — `date-screen.test.js` "step 3, the heading, and Back goes to the problem screen".
+- Guard on `hasProblem` once `/services` has loaded, else redirect to `problem`: **met** — `date-screen.test.js` "with the problem screen unfinished it goes back to problem, and asks for no free days"; `date.tsx`'s `DateScreen` waits on `useServices` before mounting `RequireDraft`.
+- Job length: ticked services' summed minutes, or 60 for "Not sure": **met** — `date-rules.test.js` "the job length is the ticked services' minutes, or an hour for Not sure"; `date-screen.test.js` "'Not sure' asks for an hour".
+- Calendar: `MonthCalendar`, this month and next only, available when `/availability` returns a mechanic with a start time or bookable: **met** — `date-rules.test.js` "a day is free when a mechanic has a start time (timed) or is bookable (drop-off)"; `date-screen.test.js` "only this month and next can be shown" and "free days can be picked; a full day and a past day are greyed; the summary starts empty".
+- Timed day pills all on when picked, last one can't be turned off, diary columns with hours/busy/start times, tapping a free time saves: **met** — `date-screen.test.js` "the mechanic pills hide columns, but the last one on stays on"; `date-rules.test.js` "the diary has a column per shown mechanic..." and "a mechanic with no start time that day is unavailable all day, not blank" (decision log 4).
+- Drop-off day text, window, "We'll confirm...", single-choice mechanic pills with unbookable disabled: **met** — same drop-off test above.
+- Pinned summary format for both modes, empty until a day is picked: **met** — `date-rules.test.js` "the summary: the day, then the time and mechanic (timed) or the drop-off window"; decision log 7 covers the day-alone case.
+- Continue stays with a message ("Choose a day" / "Choose a time"), else saves and goes to `details`: **met** — `date-rules.test.js` "the Continue message: a day first, then a time on a timed day"; `date-screen.test.js` "Continue with no day says...", "...on a timed day with no time says...", "a good Continue on a timed day goes to details and sends nothing".
+- Saved choice no longer free is cleared with the "just been taken" message: **met** — `date-rules.test.js` "a saved choice is still free only while the same day, mechanic and time are offered"; `date-screen.test.js` "a saved time no longer free is cleared..." and "a picked time taken while the screen is open is cleared...".
+- No free day at all: message in place of the calendar: **met** — `date-screen.test.js` "no free day in the two months: a message in place of the calendar, and no Continue" (decision log 12 drops the pinned Continue too, changed from a literal read of "in place of the calendar" alone).
+- Loading/error follow `BookFrame`'s states: **changed** — decision log 19: the screen's own loading/failure states sit inside the frame under its heading (BookFrame's own states cover only `/services`); the copy "We couldn't load the free days" above "Try again" is new, not in the spec (decision log 11), and awaits Jack's approval per STATUS.
+
+**Draft changes**
+- `date`/`mechanicId`/`startTime` used as-is, no `startTime` on drop-off, `mechanicId` always real: **met** — `date-rules.test.js` "the addresses carry the shop, the range and the job length" (query shape) and the "Any mechanic" resolution tests; `date.tsx`'s `onContinue` resolves before storing.
+- `RequireDraft`'s redirect target, default first screen: **met** — see "Changes" above.
+- `hasDate(draft)` guard, tested but not applied: **met** — `require-draft.test.js` "hasDate needs a day and a real mechanic, and a start time only when one was chosen"; not wired into any screen yet, matching "for d5 to apply".
+
+**Rules**
+- Pure functions in `date-rules.ts`, screen only calls these: **met** — `src/screens/book/date-rules.ts` holds `bookingRange`, `jobMinutes`, `availableDays`, `diaryColumns`, `choiceStillFree`, `resolveMechanic`, `summaryText`, `continueMessage`; `date.tsx` imports and calls them rather than reimplementing.
+
+**Data**
+- `/mechanics` and `/availability` hooks beside `services-query.ts`: **met** — `src/screens/book/date-query.ts`; `date-rules.test.js` "the addresses carry the shop, the range and the job length".
+
+**Open items settled here**
+- Diary stretching for very short services: **met** (left as is, per spec) — no change made; judged on the screenshot per STATUS.
+- `MonthCalendar`'s `h2` under the screen's `h1`: **met** (no change needed) — `MonthCalendar` renders inside the frame's body, under the frame's `h1`.
+- Whether available days stand out: **met** (deferred to Jack, screenshot supplied) — `/tmp/d4-date-timed-320.png`, STATUS "Jack to judge".
+- A shop subdomain showing another shop's booking page: **dropped**, as specified ("not d4; waits for the hosting decision") — no code touches this.
+
+**Tests**
+- `date-rules.test.js` coverage (available days, columns/busy, saved-choice, "Any mechanic", summary, Continue message): **met** — test names listed above.
+- `date-screen.test.js` coverage (both day kinds, pills, picking a time, drop-off choice, summary, Continue messages, good Continue, back link, guard redirect, "just been taken", "no free days"): **met** — 25 test cases in the file cover each bullet.
+- `require-draft.test.js` (`hasDate`, redirect target): **met**.
+- `book-date.spec.ts` (320×568, diary's last row above the pinned area): **met** — `book-date.spec.ts` "at 320px with three mechanics, the diary's last row is fully above the pinned Continue", proved again in this task's foreground `test:browser` run.
+
+**Not in this piece**
+- Sending the booking, the "that day was just taken" `full` screen, `details`, `pending`: **met** (correctly out of scope) — none implemented; STATUS records them as d5 work.
+- A per-shop limit on how far ahead customers can book: **met** (correctly out of scope) — no such limit added; the range is fixed at "this month and next" only.
