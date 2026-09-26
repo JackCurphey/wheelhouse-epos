@@ -30,15 +30,15 @@ async function renderAt(path) {
     return h(
       'div',
       null,
-      h('p', null, `serviceId:${draft.serviceId ?? ''}`),
-      h('button', { onClick: () => update({ serviceId: 7 }) }, 'Choose service'),
+      h('p', null, `serviceIds:${(draft.serviceIds ?? []).join(',')}`),
+      h('button', { onClick: () => update({ serviceIds: [7] }) }, 'Choose service'),
       h(Link, { to: '../date' }, 'Go to date'),
     );
   }
 
   function DateProbe() {
     const { draft } = useDraft();
-    return h('p', null, `date-screen serviceId:${draft.serviceId ?? ''}`);
+    return h('p', null, `date-screen serviceIds:${(draft.serviceIds ?? []).join(',')}`);
   }
 
   const router = createMemoryRouter(
@@ -61,22 +61,22 @@ async function renderAt(path) {
 test('an update on one screen is visible on another screen for the same shop', async () => {
   const { ui, navigate } = await renderAt('/book/north/problem');
   const { fireEvent } = await import('@testing-library/react');
-  await ui.findByText('serviceId:');
+  await ui.findByText('serviceIds:');
   fireEvent.click(ui.getByRole('button', { name: 'Choose service' }));
-  await ui.findByText('serviceId:7');
+  await ui.findByText('serviceIds:7');
 
   await navigate('/book/north/date');
-  assert.ok(await ui.findByText('date-screen serviceId:7'));
+  assert.ok(await ui.findByText('date-screen serviceIds:7'));
 });
 
 test('moving to another shop starts that shop\'s own draft, not the old one', async () => {
   const { ui, navigate } = await renderAt('/book/north/problem');
   const { fireEvent } = await import('@testing-library/react');
-  await ui.findByText('serviceId:');
+  await ui.findByText('serviceIds:');
   fireEvent.click(ui.getByRole('button', { name: 'Choose service' }));
-  await ui.findByText('serviceId:7');
+  await ui.findByText('serviceIds:7');
 
   await navigate('/book/south/problem');
-  assert.ok(await ui.findByText('serviceId:'));
+  assert.ok(await ui.findByText('serviceIds:'));
   assert.equal(window.sessionStorage.getItem('wh-book-draft:south'), null);
 });

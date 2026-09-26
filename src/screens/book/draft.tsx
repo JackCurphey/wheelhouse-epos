@@ -10,13 +10,15 @@ import * as React from 'react';
  * Spec: docs/superpowers/specs/2026-09-26-book-d1-groundwork-design.md
  */
 
-export type Answer = { questionId: string; text?: string; choice?: string; notSure?: true };
+// Each answer names its service (server piece 7).
+export type Answer = { serviceId: number; questionId: string; text?: string; choice?: string; notSure?: true };
 
 export type BookingDraft = {
-  serviceId?: number;
+  // The ticked services, in list order (d2). Minutes are derived from these
+  // and /services when needed, never stored. A draft saved before d2 has no
+  // serviceIds and so counts as no service chosen.
+  serviceIds?: number[];
   notSure?: boolean;
-  serviceName?: string;
-  serviceMinutes?: number;
   answers?: Answer[];
   bike?: { make: string; model: string; colour: string };
   description?: string;

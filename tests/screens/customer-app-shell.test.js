@@ -7,9 +7,17 @@ import { installDom, importFresh } from '../helpers/dom.js';
 const SHELL = new URL('../../.test-build/customer/app-shell.js', import.meta.url).href;
 
 let uninstall;
+// The shell's query client is module-level (not per-render), so its cache
+// must be cleared unconditionally after every render - otherwise a test that
+// resolves a real query leaves the cache's own cleanup pending and keeps this
+// file from exiting promptly (see tests/customer/frame.test.js). Captured
+// here rather than per-test so a future test that adds a fetch can't forget it.
+let currentClient;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
+  currentClient?.clear();
+  currentClient = undefined;
   uninstall?.();
 });
 
@@ -17,13 +25,23 @@ async function renderAt(path) {
   uninstall = installDom(`http://localhost${path}`);
   const { render } = await import('@testing-library/react');
   const { createElement } = await import('react');
-  const { CustomerAppShell } = await importFresh(SHELL);
+  const { CustomerAppShell, queryClient } = await importFresh(SHELL);
+  currentClient = queryClient;
   return render(createElement(CustomerAppShell));
 }
 
-test('the first book screen renders its placeholder at /book/<shop>', async () => {
+const SERVICES = {
+  shopName: 'Demo Cycles', showPrices: false,
+  full: [{ id: 1, name: 'General service', price: null, minutes: 30, questions: [], includes: [] }],
+  categories: [], uncategorised: [],
+};
+
+test('the first book screen renders the service screen at /book/<shop>', async () => {
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } });
   const screen = await renderAt('/book/demo');
-  assert.ok(await screen.findByText('Not built yet: service'));
+  assert.ok(await screen.findByRole('heading', { level: 1, name: 'What do you need?' }));
+  screen.unmount();
 });
 
 test('a private link opened cold reaches the pending screen', async () => {
