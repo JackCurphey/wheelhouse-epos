@@ -101,17 +101,17 @@ test("the calendar opens on the saved day's month, else the first free day's, el
 // Sam's row is likewise replaced by the gaps around his one start time.
 // Jack, 26 Sep (.superpowers/sdd/d4-gaps/brief.md).
 test("the diary has a column per shown mechanic, in the shop's order, with that day's busy time (the gaps between start times) and start times", () => {
-  assert.deepEqual(r.diaryColumns(AV, TIMED, MECHANICS, [3, 1], HOURS), [
+  assert.deepEqual(r.diaryColumns(TIMED, MECHANICS, [3, 1], HOURS), [
     { id: '1', name: 'Alex', busy: [{ start: '10:00', end: '14:00' }, { start: '14:30', end: '17:00' }], startTimes: ['09:00', '09:30', '14:00'] },
     { id: '3', name: 'Sam', busy: [{ start: '09:00', end: '10:00' }, { start: '10:30', end: '17:00' }], startTimes: ['10:00'] },
   ]);
 });
 
 test('a mechanic with no start time that day is unavailable all day, not blank', () => {
-  assert.deepEqual(r.diaryColumns(AV, TIMED, MECHANICS, [2], HOURS),
+  assert.deepEqual(r.diaryColumns(TIMED, MECHANICS, [2], HOURS),
     [{ id: '2', name: 'Jo', busy: [{ start: '09:00', end: '17:00' }], startTimes: [] }]);
   const samMissing = { ...TIMED, mechanics: TIMED.mechanics.filter((m) => m.mechanicId !== 3) };
-  assert.deepEqual(r.diaryColumns(AV, samMissing, MECHANICS, [3], HOURS)[0].busy, [{ start: '09:00', end: '17:00' }]);
+  assert.deepEqual(r.diaryColumns(samMissing, MECHANICS, [3], HOURS)[0].busy, [{ start: '09:00', end: '17:00' }]);
 });
 
 // Every gap without a start time is "Unavailable" (Jack, 26 Sep,
@@ -121,7 +121,7 @@ test('a mechanic with no start time that day is unavailable all day, not blank',
 test('busy is every 30-minute step that is not a start time, merged into blocks', () => {
   const oneMechDay = (times) => ({ date: '2026-10-05', mode: 'timed', mechanics: [{ mechanicId: 9, startTimes: times }] });
   const MECH9 = [{ id: 9, name: 'Test', workingDays: [1, 2, 3, 4, 5] }];
-  const busyFor = (times, hours) => r.diaryColumns(AV, oneMechDay(times), MECH9, [9], hours)[0].busy;
+  const busyFor = (times, hours) => r.diaryColumns(oneMechDay(times), MECH9, [9], hours)[0].busy;
 
   assert.deepEqual(
     busyFor(['09:00', '09:30', '11:00'], { open: '08:00', close: '12:00' }),
@@ -132,13 +132,13 @@ test('busy is every 30-minute step that is not a start time, merged into blocks'
 test('starts only late in the day (too soon for an earlier slot): one block from open to the first start', () => {
   const oneMechDay = { date: '2026-10-05', mode: 'timed', mechanics: [{ mechanicId: 9, startTimes: ['15:00', '15:30', '16:00', '16:30'] }] };
   const MECH9 = [{ id: 9, name: 'Test', workingDays: [1, 2, 3, 4, 5] }];
-  assert.deepEqual(r.diaryColumns(AV, oneMechDay, MECH9, [9], HOURS)[0].busy, [{ start: '09:00', end: '15:00' }]);
+  assert.deepEqual(r.diaryColumns(oneMechDay, MECH9, [9], HOURS)[0].busy, [{ start: '09:00', end: '15:00' }]);
 });
 
 test('no start times: one busy block open..close', () => {
   const oneMechDay = { date: '2026-10-05', mode: 'timed', mechanics: [{ mechanicId: 9, startTimes: [] }] };
   const MECH9 = [{ id: 9, name: 'Test', workingDays: [1, 2, 3, 4, 5] }];
-  assert.deepEqual(r.diaryColumns(AV, oneMechDay, MECH9, [9], HOURS)[0].busy, [{ start: '09:00', end: '17:00' }]);
+  assert.deepEqual(r.diaryColumns(oneMechDay, MECH9, [9], HOURS)[0].busy, [{ start: '09:00', end: '17:00' }]);
 });
 
 test('start times covering the whole day: no busy blocks', () => {
@@ -146,14 +146,14 @@ test('start times covering the whole day: no busy blocks', () => {
   for (let t = 9 * 60; t < 17 * 60; t += 30) allDay.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${t % 60 === 0 ? '00' : '30'}`);
   const oneMechDay = { date: '2026-10-05', mode: 'timed', mechanics: [{ mechanicId: 9, startTimes: allDay }] };
   const MECH9 = [{ id: 9, name: 'Test', workingDays: [1, 2, 3, 4, 5] }];
-  assert.deepEqual(r.diaryColumns(AV, oneMechDay, MECH9, [9], HOURS)[0].busy, []);
+  assert.deepEqual(r.diaryColumns(oneMechDay, MECH9, [9], HOURS)[0].busy, []);
 });
 
 test('an open/close off the 30-minute boundary clamps the first/last busy block', () => {
   const oneMechDay = { date: '2026-10-05', mode: 'timed', mechanics: [{ mechanicId: 9, startTimes: [] }] };
   const MECH9 = [{ id: 9, name: 'Test', workingDays: [1, 2, 3, 4, 5] }];
   assert.deepEqual(
-    r.diaryColumns(AV, oneMechDay, MECH9, [9], { open: '09:10', close: '16:50' })[0].busy,
+    r.diaryColumns(oneMechDay, MECH9, [9], { open: '09:10', close: '16:50' })[0].busy,
     [{ start: '09:10', end: '16:50' }],
   );
 });

@@ -191,7 +191,6 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
           {day?.mode === 'timed' && (
             <TimedDayPicker
               day={day}
-              availability={availability}
               mechanics={mechanics}
               shown={shown ?? mechanics.mechanics.map((m) => m.id)}
               onShow={setShown}
@@ -208,7 +207,6 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
 
 type TimedProps = {
   day: TimedDay;
-  availability: AvailabilityResponse;
   mechanics: MechanicsResponse;
   shown: number[];
   onShow: (ids: number[]) => void;
@@ -216,7 +214,7 @@ type TimedProps = {
   onPick: (mechanicId: number, startTime: string) => void;
 };
 
-function TimedDayPicker({ day, availability, mechanics, shown, onShow, draft, onPick }: TimedProps) {
+function TimedDayPicker({ day, mechanics, shown, onShow, draft, onPick }: TimedProps) {
   const hours = { open: mechanics.openingTime, close: mechanics.closingTime };
   const picked = draft.mechanicId !== undefined && draft.startTime
     ? { columnId: String(draft.mechanicId), time: draft.startTime }
@@ -238,7 +236,7 @@ function TimedDayPicker({ day, availability, mechanics, shown, onShow, draft, on
       <DayDiary
         open={hours.open}
         close={hours.close}
-        columns={diaryColumns(availability, day, mechanics.mechanics, shown, hours)}
+        columns={diaryColumns(day, mechanics.mechanics, shown, hours)}
         value={picked}
         onChange={(v) => onPick(Number(v.columnId), v.time)}
       />

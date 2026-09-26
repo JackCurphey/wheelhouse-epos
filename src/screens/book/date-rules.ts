@@ -106,7 +106,6 @@ function busyBlocks(startTimes: string[], hours: Hours): { start: string; end: s
 
 /** One diary column per shown mechanic, in the shop's order, busy being the gaps between that day's start times. */
 export function diaryColumns(
-  _availability: AvailabilityResponse,
   day: TimedDay,
   mechanics: PortalMechanic[],
   shown: number[],
