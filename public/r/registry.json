@@ -194,6 +194,21 @@
         }
       ],
       "type": "registry:ui"
+    },
+    {
+      "name": "photo-picker",
+      "title": "Photo Picker",
+      "author": "Wheelhouse EPOS",
+      "description": "Opens the phone's chooser for JPEG, PNG or WebP photos, up to 5 of up to 10 MB each by default. Refuses anything else with a message naming the file; shows thumbnails with a remove button each. Converting to base64 for the server is left to the screen.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "patterns/photo-picker.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
     }
   ]
 }
