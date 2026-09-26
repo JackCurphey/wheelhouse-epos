@@ -133,3 +133,12 @@ test('each service carries its questions; a staff-only service stays hidden', as
     await deleteTestShop(shop.shop.id);
   }
 });
+
+test('the list carries the shop\'s own name, for the booking screens\' header', async () => {
+  const a = await publicList(shopA);
+  const b = await publicList(shopB);
+  assert.equal(a.status, 200, JSON.stringify(a.body));
+  assert.equal(a.body.shopName, shopA.shop.name);
+  assert.equal(b.body.shopName, shopB.shop.name);
+  assert.notEqual(shopA.shop.name, shopB.shop.name, 'test shops share a name, so this proves nothing');
+});
