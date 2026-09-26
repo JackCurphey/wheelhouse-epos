@@ -136,6 +136,27 @@ export function resolveMechanic(day: DropoffDay, mechanics: PortalMechanic[]): n
 }
 
 /**
+ * A saved drop-off choice made with "Any mechanic" (`anyMechanic`) whose
+ * stored mechanic has stopped being bookable: the other bookable mechanic to
+ * silently switch to, or null when nothing needs to change (no `anyMechanic`,
+ * not a drop-off day, no saved day, the stored mechanic is still bookable, or
+ * no mechanic is bookable that day at all - the last of which the caller
+ * treats as taken via `choiceStillFree`, not silently resolved).
+ * Jack, 26 Sep (.superpowers/sdd/d4-followups/brief.md).
+ */
+export function reresolveMechanic(
+  availability: AvailabilityResponse,
+  draft: BookingDraft,
+  mechanics: PortalMechanic[],
+): number | null {
+  if (!draft.anyMechanic || draft.date === undefined) return null;
+  const day = pickedDay(availability, draft.date);
+  if (!day || day.mode !== 'dropoff') return null;
+  if (draft.mechanicId !== undefined && bookableOn(day, draft.mechanicId)) return null;
+  return resolveMechanic(day, mechanics);
+}
+
+/**
  * Whether the saved day, mechanic and time are still offered. Nothing saved
  * counts as free (nothing to clear). A timed day with only a day saved is
  * free while the day is; a mechanic and time must still be that mechanic's
@@ -152,6 +173,11 @@ export function choiceStillFree(availability: AvailabilityResponse, draft: Booki
     return time !== undefined && day.mechanics.some((m) => m.mechanicId === draft.mechanicId && m.startTimes.includes(time));
   }
   if (draft.startTime !== undefined) return false;
+  // An "Any mechanic" choice stays free as long as the day itself still has
+  // room (guaranteed above, via pickedDay/hasRoom): a stored mechanic that
+  // stopped being bookable is silently re-resolved (reresolveMechanic), not
+  // treated as taken. Jack, 26 Sep (.superpowers/sdd/d4-followups/brief.md).
+  if (draft.anyMechanic) return true;
   return draft.mechanicId === undefined || bookableOn(day, draft.mechanicId);
 }
 

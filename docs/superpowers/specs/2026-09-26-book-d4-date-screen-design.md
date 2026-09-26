@@ -59,7 +59,9 @@ picks a day, and on a timed-appointment day a mechanic and a start time.
   - a single-choice `PillGroup` "Mechanic": "Any mechanic" (default), then
     each mechanic, those not `bookable` that day disabled;
   - on Continue, "Any mechanic" becomes the first bookable mechanic in the
-    shop's order.
+    shop's order; the draft records `anyMechanic` too, so going back shows
+    "Any mechanic" selected again rather than the resolved mechanic (Jack,
+    26 Sep, `.superpowers/sdd/d4-followups/brief.md`).
 - **Pinned summary** above Continue: "<Weekday> <d> <Month>, <HH:MM> with
   <mechanic>" (timed) or "<Weekday> <d> <Month>, drop off <start>–<end>"
   (drop-off); empty until a day is picked.
@@ -69,9 +71,14 @@ picks a day, and on a timed-appointment day a mechanic and a start time.
   - a timed day with no time: "Choose a time";
   - otherwise it saves and goes to `/book/:shopSlug/details`.
 - **Saved choice no longer free** (after a refresh, or availability
-  refetched): the day, mechanic and time are cleared and "That time has just
-  been taken - please choose another" shows above the calendar until the
-  next pick.
+  refetched): the day, mechanic and time are cleared and "Your chosen time is
+  no longer available - please choose another" shows above the calendar
+  until the next pick (wording, Jack, 26 Sep,
+  `.superpowers/sdd/d4-followups/brief.md`). A drop-off choice made with "Any
+  mechanic" whose stored mechanic stops being bookable is not treated as
+  taken: it is silently re-resolved to another bookable mechanic, with no
+  message; only when no mechanic is bookable that day is it cleared as taken
+  (same brief).
 - **No free day at all** in the range: "There are no free days in the next
   two months - please contact the shop" in place of the calendar.
 - Loading and errors for `/availability` and `/mechanics` follow
@@ -81,7 +88,12 @@ picks a day, and on a timed-appointment day a mechanic and a start time.
 
 - The draft's existing `date`, `mechanicId` and `startTime` are used as they
   are. A drop-off day stores no `startTime`. `mechanicId` is always a real
-  mechanic; "Any mechanic" is resolved on Continue and not stored.
+  mechanic, resolved on Continue when "Any mechanic" was chosen. A new
+  optional `anyMechanic?: true` (drop-off days only) records that the
+  customer chose "Any mechanic": it is not resolved away, so going back shows
+  it selected again; picking a named mechanic, a new day, or a timed time
+  clears it (Jack, 26 Sep, `.superpowers/sdd/d4-followups/brief.md`). d5 must
+  send the real `mechanicId` and may ignore `anyMechanic`.
 - `RequireDraft` gains an optional redirect target (default: the first
   screen, as today). `date` uses `problem`.
 - A new guard `hasDate(draft)` (a date and a mechanic, and a start time

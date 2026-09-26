@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `bae6547` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81 merged); d3 #82 merged at `8e8db72`; server piece 10 #83 merged; d4 on `feat/book-d4-date-screen` (PR #84, open). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `bae6547` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81 merged); d3 #82 merged at `8e8db72`; server piece 10 #83 merged; d4 merged: #84 at `d7638eb` (CI green on `b57f87e`); two d4 follow-ups (anyMechanic remembered on drop-off, message wording) built on `fix/book-d4-followups`, off `main` at `d7638eb`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -115,9 +115,9 @@ items: the blank header while `/services` loads or fails now shows a proper
 loading/error state, focus moves to the screen's `h1` on a screen change, and
 a Playwright check (`tests/browser/book-service-list.spec.ts`) proves the
 pinned Continue never covers the last service at 320px.
-**(d4) built on `feat/book-d4-date-screen`, PR #84 (open, not merged)** (26 Sep; spec
-`docs/superpowers/specs/2026-09-26-book-d4-date-screen-design.md`, plan
-`docs/superpowers/plans/2026-09-26-book-d4-date-screen.md`, which carries the
+**(d4) merged: #84 at `d7638eb`** (26 Sep, CI green on its final commit
+`b57f87e`; spec `docs/superpowers/specs/2026-09-26-book-d4-date-screen-design.md`,
+plan `docs/superpowers/plans/2026-09-26-book-d4-date-screen.md`, which carries the
 decision log and the spec walk; server piece 10, PR #83, merged into this
 branch). Built: the `date` screen (a month calendar for this month and next; a
 timed day shows mechanic pills, all on, and the one-day diary, one column per
@@ -125,26 +125,36 @@ mechanic, a mechanic with no free time shown as unavailable all day; a
 drop-off day shows the drop-off window and a mechanic choice starting on "Any
 mechanic", which Continue turns into the first bookable mechanic in the
 shop's order; a pinned summary; "Choose a day" / "Choose a time"; a saved time
-that has been taken is cleared with "That time has just been taken - please
-choose another"; "There are no free days in the next two months - please
-contact the shop"); the rules in `src/screens/book/date-rules.ts`; the
+that has been taken is cleared with "Your chosen time is no longer available
+- please choose another"; "There are no free days in the next two months -
+please contact the shop"); the rules in `src/screens/book/date-rules.ts`; the
 `/mechanics` and `/availability` hooks in `src/screens/book/date-query.ts`;
 `RequireDraft` gained `to` (the screen to send the customer to; default the
 first screen); `hasDate(draft)` in `require-draft.tsx`, tested but not
 applied. The calendar's range uses the device's date (the client can't know
 the shop's time zone); the server (piece 10) offers nothing before the shop's
-earliest bookable moment. **For d5:** wrap `details` in `RequireDraft` with
-`hasDate` and `to="date"`; send `date`, `mechanicId` and, on a timed day only,
-`startTime` (a drop-off day stores none; `mechanicId` is always a real
-mechanic); build the "that day was just taken" refusal screen (`full`) for a
-capacity or "too soon" refusal when sending. The line "We couldn't load the
-free days" (not in the spec) and the "just been taken" note's look (d3's
-`--wh-warn-bg` / `--wh-warn-ink`) are both approved by Jack (26 Sep). **Jack
-to judge** from `/tmp/d4-date-timed-320.png`: whether available days stand
-out on the page, and the diary's height with real service lengths. Carried
-from piece 10: dashboard and sales "today" still query a UTC-midnight window
-(follow-up
-piece).
+earliest bookable moment. **Two follow-ups (Jack, 26 Sep,
+`.superpowers/sdd/d4-followups/brief.md`), built on `fix/book-d4-followups`
+off `main` at `d7638eb`:** (1) the draft now records `anyMechanic?: true` on a
+drop-off choice (`mechanicId` still holds the resolved real mechanic); going
+back shows "Any mechanic" selected again; a stored mechanic that stops being
+bookable is silently re-resolved to another bookable mechanic
+(`reresolveMechanic` in `date-rules.ts`) rather than cleared as taken, unless
+none is bookable that day; picking a named mechanic, a new day, or a timed
+time clears `anyMechanic`. (2) the "saved choice no longer free" message
+reworded to "Your chosen time is no longer available - please choose
+another". **For d5:** wrap `details` in `RequireDraft` with `hasDate` and
+`to="date"`; send `date`, `mechanicId` (always the real, resolved mechanic)
+and, on a timed day only, `startTime` (a drop-off day stores none); `d5` may
+ignore `anyMechanic` entirely - it exists only so the date screen can restore
+the "Any mechanic" pill; build the "that day was just taken" refusal screen
+(`full`) for a capacity or "too soon" refusal when sending. The line "We
+couldn't load the free days" (not in the spec) and the "no longer available"
+note's look (d3's `--wh-warn-bg` / `--wh-warn-ink`) are both approved by Jack
+(26 Sep). **Jack to judge** from `/tmp/d4-date-timed-320.png`: whether
+available days stand out on the page, and the diary's height with real
+service lengths. Carried from piece 10: dashboard and sales "today" still
+query a UTC-midnight window (follow-up piece).
 **(d3) merged: #82** (26 Sep at `8e8db72`, CI green on its final commit `6d45c88`) (26 Sep; spec
 `docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md`, plan
 `docs/superpowers/plans/2026-09-26-book-d3-problem-screen.md`, which carries

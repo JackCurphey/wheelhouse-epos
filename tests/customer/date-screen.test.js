@@ -223,6 +223,48 @@ test('a drop-off day: the window, the note, and "Any mechanic" first with an una
   assert.equal(readDraft().mechanicId, 3, 'an unavailable mechanic cannot be picked');
 });
 
+// "Any mechanic" (Jack, 26 Sep, .superpowers/sdd/d4-followups/brief.md): the
+// draft records anyMechanic, so going back shows "Any mechanic" selected
+// (not the real mechanic Continue resolved it to), and a stored mechanic that
+// stops being bookable is silently re-resolved to another rather than being
+// cleared as taken - unless none is bookable that day.
+test('going back to a saved anyMechanic drop-off choice shows "Any mechanic" selected, not the resolved mechanic', async () => {
+  const { ui } = await open({ draft: { serviceIds: [11, 12], date: '2026-10-06', mechanicId: 2, anyMechanic: true } });
+  await ready(ui, 'October 2026');
+  assert.equal(ui.getByRole('radio', { name: 'Any mechanic' }).checked, true);
+  assert.equal(ui.getByRole('radio', { name: 'Jo' }).checked, false);
+});
+
+test('an anyMechanic choice whose stored mechanic stops being bookable is silently re-resolved: no message', async () => {
+  const { ui, readDraft } = await open({ draft: { serviceIds: [11, 12], date: '2026-10-06', mechanicId: 1, anyMechanic: true } });
+  await ready(ui, 'October 2026');
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.equal(readDraft().mechanicId, 2, 'Jo, the first bookable mechanic in the shop\'s order'));
+  assert.equal(readDraft().anyMechanic, true);
+  assert.equal(ui.queryByRole('alert'), null, 'no "taken" message for a silent re-resolve');
+  assert.equal(ui.getByRole('radio', { name: 'Any mechanic' }).checked, true);
+});
+
+test('an anyMechanic choice with no mechanic bookable that day is cleared, with the message', async () => {
+  const noneBookable = {
+    ...AVAILABILITY,
+    days: AVAILABILITY.days.map((d) => (d.date === '2026-10-06'
+      ? { ...d, mechanics: d.mechanics.map((m) => ({ ...m, bookable: false })) }
+      : d)),
+  };
+  const { ui, readDraft } = await open({
+    draft: { serviceIds: [11, 12], date: '2026-10-06', mechanicId: 1, anyMechanic: true },
+    availability: noneBookable,
+  });
+  await ready(ui);
+  await ui.findByText('Your chosen time is no longer available - please choose another');
+  const { waitFor } = await rtl();
+  await waitFor(() => {
+    const saved = readDraft();
+    assert.deepEqual([saved.date, saved.mechanicId, saved.anyMechanic], [undefined, undefined, undefined]);
+  });
+});
+
 test('picking another day clears the mechanic and time chosen before', async () => {
   const { ui, readDraft } = await open();
   await ready(ui);
@@ -350,7 +392,7 @@ test('a background refetch that fails keeps the calendar and diary shown, not th
   assert.equal(ui.queryByText("We couldn't load the free days"), null);
 });
 
-const TAKEN = 'That time has just been taken - please choose another';
+const TAKEN = 'Your chosen time is no longer available - please choose another';
 
 test('a saved time no longer free is cleared, with a message above the calendar until the next pick', async () => {
   const { ui, readDraft } = await open({ draft: { serviceIds: [11, 12], date: '2026-10-05', mechanicId: 1, startTime: '11:00' } });

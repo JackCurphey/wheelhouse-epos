@@ -13,7 +13,7 @@ import {
 } from './date-query.ts';
 import {
   ANY_MECHANIC, availableDays, bookingRange, choiceStillFree, continueMessage, diaryColumns, dropoffOptions, initialMonth,
-  jobMinutes, localToday, pickedDay, resolveMechanic, summaryText, type BookingRange,
+  jobMinutes, localToday, pickedDay, reresolveMechanic, resolveMechanic, summaryText, type BookingRange,
 } from './date-rules.ts';
 
 /**
@@ -112,14 +112,20 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
   // The effect then clears the stored choice, one render later.
   const [checkedAvailability, setCheckedAvailability] = React.useState<AvailabilityResponse | null>(null);
   const [taken, setTaken] = React.useState(false);
-  const stale = !choiceStillFree(availability, draft);
+  // An "Any mechanic" drop-off choice whose stored mechanic stops being
+  // bookable is silently switched to another bookable mechanic - never shown
+  // as taken - unless no mechanic is bookable at all, which choiceStillFree
+  // then treats as stale. Jack, 26 Sep (.superpowers/sdd/d4-followups/brief.md).
+  const resolved = reresolveMechanic(availability, draft, mechanics.mechanics);
+  const stale = resolved === null && !choiceStillFree(availability, draft);
   if (checkedAvailability !== availability) {
     setCheckedAvailability(availability);
     if (stale) setTaken(true);
   }
   React.useEffect(() => {
-    if (stale) update({ date: undefined, mechanicId: undefined, startTime: undefined });
-  }, [stale, update]);
+    if (resolved !== null) update({ mechanicId: resolved });
+    else if (stale) update({ date: undefined, mechanicId: undefined, startTime: undefined, anyMechanic: undefined });
+  }, [resolved, stale, update]);
 
   const day = pickedDay(availability, draft.date);
   const message = checked ? continueMessage(availability, draft) : null;
@@ -129,15 +135,17 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
     setTaken(false);
     setChecked(false);
     setShown(null);
-    if (date !== draft.date) update({ date, mechanicId: undefined, startTime: undefined });
+    if (date !== draft.date) update({ date, mechanicId: undefined, startTime: undefined, anyMechanic: undefined });
   };
   const pickTime = (date: string, mechanicId: number, startTime: string) => {
     setTaken(false);
-    update({ date, mechanicId, startTime });
+    update({ date, mechanicId, startTime, anyMechanic: undefined });
   };
   const pickMechanic = (value: string) => {
     setTaken(false);
-    update({ mechanicId: value === ANY_MECHANIC ? undefined : Number(value), startTime: undefined });
+    update(value === ANY_MECHANIC
+      ? { mechanicId: undefined, anyMechanic: true, startTime: undefined }
+      : { mechanicId: Number(value), anyMechanic: undefined, startTime: undefined });
   };
 
   const onContinue = () => {
@@ -146,10 +154,12 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
       setAttempt((a) => a + 1);
       return;
     }
-    // "Any mechanic" is never stored: it becomes the first bookable mechanic
-    // in the shop's order now.
+    // "Any mechanic" becomes the first bookable mechanic in the shop's order;
+    // the draft still records anyMechanic (Jack, 26 Sep,
+    // .superpowers/sdd/d4-followups/brief.md), so going back shows "Any
+    // mechanic" selected rather than the resolved mechanic.
     if (day?.mode === 'dropoff' && draft.mechanicId === undefined) {
-      update({ mechanicId: resolveMechanic(day, mechanics.mechanics) ?? undefined });
+      update({ mechanicId: resolveMechanic(day, mechanics.mechanics) ?? undefined, anyMechanic: true });
     }
     navigate(`/book/${shopSlug}/details`);
   };
@@ -171,7 +181,7 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
     >
       {taken && (
         <p role="alert" className="m-0 mb-3 rounded-md bg-[var(--wh-warn-bg)] p-2.5 text-sm text-[var(--wh-warn-ink)]">
-          That time has just been taken - please choose another
+          Your chosen time is no longer available - please choose another
         </p>
       )}
       {noDays ? (
@@ -254,7 +264,7 @@ function DropoffDayPicker({ day, mechanics, draft, onPick }: DropoffProps) {
       <PillGroup
         legend="Mechanic"
         options={dropoffOptions(day, mechanics.mechanics)}
-        value={draft.mechanicId !== undefined ? String(draft.mechanicId) : ANY_MECHANIC}
+        value={!draft.anyMechanic && draft.mechanicId !== undefined ? String(draft.mechanicId) : ANY_MECHANIC}
         onChange={onPick}
       />
     </>
