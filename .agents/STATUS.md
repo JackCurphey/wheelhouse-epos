@@ -18,10 +18,16 @@ six screens. **Piece (a) merged: #72** (25 Sep, CI green on its final
 commit; spec `docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`).
 **Piece (b) merged: #73** (26 Sep, CI green on its final commit). Every
 `/book` address serves the React customer app (`src/customer/`, placeholders
-for the six screens). **Now:** piece (c), the form controls, on branch
-`feat/book-c-form-controls`; spec
-`docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md` (Jack's
-design calls of 26 Sep are in it). **Open for pieces (c)/(d):**
+for the six screens). **Piece (c) built** on branch `feat/book-c-form-controls` (seven registry
+controls plus the registry colour-name fix; spec
+`docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md`, Jack's
+design calls of 26 Sep are in it; local checks green, `npm test` 798/798,
+Playwright 3/3). **Open for piece (d) from (c):** `day-diary` scales so every
+start time is 44px, so a service shorter than 30 minutes (start time under 30
+minutes before a booking) stretches the whole diary - decide with real service
+lengths; `month-calendar` hard-codes an `h2` (fit the screen's heading order);
+Jack to decide whether available days need more contrast on a grey page.
+**Open for piece (d):**
 on a storefront subdomain the app reads the shop from the address
 (`/book/<slug>`), not the host, so `/book/<other-shop>` on one shop's subdomain
 shows the other shop; decide which wins. No request-level test covers the
