@@ -49,7 +49,7 @@ const book = (body, who = customer) => portalRequest(server.baseUrl, who.cookie,
   method: 'POST',
   body: {
     mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'Test booking',
-    newBike: { make: 'Test', model: 'Bike' }, serviceId: types.repair, ...BOOKING_CONTACT, ...body,
+    newBike: { make: 'Test', model: 'Bike' }, serviceIds: [types.repair], ...BOOKING_CONTACT, ...body,
   },
 });
 const job = (id) => runWithShop(owner.shop.id, () => prepare(
@@ -57,7 +57,7 @@ const job = (id) => runWithShop(owner.shop.id, () => prepare(
 ).get(id));
 
 test('a service of this shop books, taking its length and name', async () => {
-  const res = await book({ serviceId: types.service });
+  const res = await book({ serviceIds: [types.service] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const j = await job(res.body.id);
   assert.equal(j.planned_minutes, 120);
@@ -66,7 +66,7 @@ test('a service of this shop books, taking its length and name', async () => {
 });
 
 test('not sure books one hour under a generic title', async () => {
-  const res = await book({ serviceId: undefined, notSure: true });
+  const res = await book({ serviceIds: undefined, notSure: true });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   const j = await job(res.body.id);
   assert.equal(j.planned_minutes, 60);
@@ -75,7 +75,7 @@ test('not sure books one hour under a generic title', async () => {
 
 test('a service from another shop is refused', async () => {
   const foreign = (await seedJobTypes(other.shop.id)).repair;
-  const res = await book({ serviceId: foreign });
+  const res = await book({ serviceIds: [foreign] });
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.match(res.body.error, /not available/);
 });
@@ -84,7 +84,7 @@ test('a service the shop has not ticked bookable online is refused', async () =>
   const id = await runWithShop(owner.shop.id, async () => (await prepare(
     "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Staff only', 10, 30, 0, 1, now())"
   ).run()).lastInsertRowid);
-  const res = await book({ serviceId: id });
+  const res = await book({ serviceIds: [id] });
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.match(res.body.error, /not available/);
 });
@@ -93,51 +93,56 @@ test('a retired service is refused', async () => {
   const id = await runWithShop(owner.shop.id, async () => (await prepare(
     "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Retired', 10, 30, 1, 0, now())"
   ).run()).lastInsertRowid);
-  const res = await book({ serviceId: id });
+  const res = await book({ serviceIds: [id] });
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.match(res.body.error, /not available/);
 });
 
 test('the old jobType input no longer books', async () => {
-  const res = await book({ serviceId: undefined, jobType: 'repair' });
+  const res = await book({ serviceIds: undefined, jobType: 'repair' });
   assert.equal(res.status, 400, JSON.stringify(res.body));
 });
 
-const priced = (jobId) => runWithShop(owner.shop.id, () => prepare(
-  'SELECT service_id, booked_price::text AS booked_price FROM workshop_jobs WHERE id = ?'
-).get(jobId));
+// service_id/booked_price moved from workshop_jobs into workshop_job_services
+// (migration 030, server piece 7) - one row per booked service. Bookings can
+// now hold several (tests/portal-booking-multi.test.js); every booking in
+// this file still chooses exactly one, so reading position 0 is enough here.
+const priced = (jobId) => runWithShop(owner.shop.id, async () => (await prepare(
+  'SELECT service_id, booked_price::text AS booked_price FROM workshop_job_services WHERE workshop_job_id = ? ORDER BY position LIMIT 1'
+).get(jobId)) ?? { service_id: null, booked_price: null });
 const pricedService = (price) => runWithShop(owner.shop.id, async () => (await prepare(
   "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Priced', ?, 30, 1, 1, now())"
 ).run(price)).lastInsertRowid);
 
 test('a named service stores its id and its price on the booking', async () => {
   const id = await pricedService('49.99');
-  const res = await book({ serviceId: id });
+  const res = await book({ serviceIds: [id] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.deepEqual({ ...(await priced(res.body.id)) }, { service_id: id, booked_price: '49.99' });
 });
 
 test('changing the service price afterwards leaves the booked price alone', async () => {
   const id = await pricedService('30.00');
-  const res = await book({ serviceId: id });
+  const res = await book({ serviceIds: [id] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   await runWithShop(owner.shop.id, () => prepare('UPDATE workshop_services SET price = 99 WHERE id = ?').run(id));
   assert.equal((await priced(res.body.id)).booked_price, '30.00');
 });
 
 test('not sure stores no service and no price', async () => {
-  const res = await book({ serviceId: undefined, notSure: true });
+  const res = await book({ serviceIds: undefined, notSure: true });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.deepEqual({ ...(await priced(res.body.id)) }, { service_id: null, booked_price: null });
 });
 
 test('with prices hidden, the booking response carries no price', async () => {
-  const res = await book({ serviceId: await pricedService('987.65') });
+  const res = await book({ serviceIds: [await pricedService('987.65')] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.ok('bookedPrice' in res.body, 'bookedPrice field present');
-  assert.equal(res.body.bookedPrice, null, 'bookedPrice is null');
-  assert.ok(!Object.keys(res.body).filter((k) => k !== 'bookedPrice').some((k) => /price/i.test(k)), JSON.stringify(res.body));
-  assert.ok(!Object.values(res.body).some((v) => v === 987.65 || v === '987.65'), JSON.stringify(res.body));
+  assert.equal(res.body.totalPrice, null, 'totalPrice is null');
+  assert.ok(res.body.services.every((s) => s.price === null), JSON.stringify(res.body));
+  assert.ok(!Object.keys(res.body).filter((k) => k !== 'totalPrice').some((k) => /price/i.test(k)), JSON.stringify(res.body));
+  const text = JSON.stringify(res.body);
+  assert.ok(!text.includes('987.65'), text);
 });
 
 const customerRow = (id) => runWithShop(owner.shop.id, () => prepare(
@@ -207,7 +212,7 @@ test('a guest books with a phone and the sms channel, and gets a reference', asy
     method: 'POST',
     body: {
       mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'Guest booking',
-      newBike: { make: 'Test', model: 'Bike' }, serviceId: types.quick,
+      newBike: { make: 'Test', model: 'Bike' }, serviceIds: [types.quick],
       guestName: 'Gail Guest', guestPhone: '07700 900123',
       updateChannel: 'sms', termsAccepted: true,
     },
@@ -267,7 +272,7 @@ test('a guest booking for a service that is not available leaves no customer row
     method: 'POST',
     body: {
       mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'x',
-      newBike: { make: 'T', model: 'B' }, serviceId: 999999999,
+      newBike: { make: 'T', model: 'B' }, serviceIds: [999999999],
       guestName: 'Nobody', guestPhone: '07700 900777', updateChannel: 'sms', termsAccepted: true,
     },
   });

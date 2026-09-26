@@ -1,5 +1,8 @@
 # Book screens piece (d1): groundwork for the six screens
 
+**Changed by piece 7** (`2026-09-26-book-server-7-multiple-services-design.md`):
+the draft's single `serviceId` must become `serviceIds` in d2.
+
 **Date:** 2026-09-26. **Follows:** piece (c) (#74). **Parent:** plan 4a
 (`docs/superpowers/plans/2026-09-20-phase-4a-book.md`), piece (d).
 

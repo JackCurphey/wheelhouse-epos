@@ -1,5 +1,9 @@
 # Book server work, piece 4: the private booking link
 
+**Changed by piece 7** (`2026-09-26-book-server-7-multiple-services-design.md`):
+the link returns `services` (a list of `{name, price}`) and `totalPrice`, not
+a single `serviceName`.
+
 **Date:** 2026-09-25. **Approved in session by Jack** (design, 25 Sep, in
 three parts).
 **Serves:** the "Keep your private progress link" promise on book screen

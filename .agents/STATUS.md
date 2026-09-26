@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `47d57d1` (pieces (a) #72, (b) #73, (c) #74 merged). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `ee55844` (pieces (a) #72, (b) #73, (c) #74, (d1) #75 merged). Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -23,7 +23,7 @@ registry controls plus the registry colour-name fix; spec
 `docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md`). **Piece
 (d) is five parts** (Jack, 26 Sep): (d1) groundwork, (d2) service screens,
 (d3) problem, (d4) date, (d5) details + sending + pending + journey test.
-**(d1) built** on branch `feat/book-d-screens` (plan
+**(d1) merged: #75** (26 Sep, CI green on its final commit; plan
 `docs/superpowers/plans/2026-09-26-book-d1-groundwork.md`; spec
 `docs/superpowers/specs/2026-09-26-book-d1-groundwork-design.md`). A screen
 plugs in as `src/screens/book/<id>.tsx`, wrapped in `BookFrame` (shop name,
@@ -69,7 +69,27 @@ The diary's open/close can likely come from `GET /api/portal/:shopSlug/mechanics
 ~:4441-4453), with a shorter day already returned by `/availability` as busy
 time - piece (d) to confirm. Jack changed J1 on 25 Sep: the new app takes all
 of `/book` now (nobody uses the old page); `public-portal/` files are deleted
-in a later clean-up. **Next:** (d2) service and service-list.
+in a later clean-up. **d2 paused (Jack, 26 Sep):** a booking must hold
+several services, and a full service will list the individual services it
+includes (so d2 can say "already part of your general service"). Order:
+**piece 7: PR #76** (26 Sep; Jack approved merging on green CI - check `gh pr view 76` for whether it merged; branch `feat/book-server-7-multi-service`, plan
+`docs/superpowers/plans/2026-09-26-book-server-7-multiple-services.md`); the
+contract: POST takes `serviceIds` (1-10) or `notSure` alone; answers are
+`{serviceId, questionId, ...}`; the 201 and `/booking-links` reply return
+`services` (`[{name, price}]`) and `totalPrice`, `bookedPrice`/`serviceName`
+gone; `workshop_job_services` is the only source; migration 030 drops
+`workshop_jobs.service_id`/`booked_price`, with a count guard that rolls the
+whole migration back if the backfill ever copies fewer rows than a shop has.
+**Deploy note:** back up any real shop database before deploying - 030 drops
+columns and old code can't run against the migrated schema (no code-only
+rollback). **For d2:** change `BookingDraft` to `serviceIds[]` (drop
+`serviceId`/`serviceName`, keep a summed `serviceMinutes` or derive it), give
+each `Answer` a `serviceId`, update `hasService` in `require-draft.tsx`, read
+`services`/`totalPrice` on `pending`; the link's answers and "Please answer:
+..." errors don't name which service a question belongs to, and service names
+on links are live (a rename changes past links) - decide in d2/d5. Then
+**server piece 8** (what a full service includes, with staff settings), then
+**(d2)** service screens with multi-select and a Continue button.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

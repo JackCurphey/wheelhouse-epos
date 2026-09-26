@@ -92,7 +92,7 @@ test('creating a booking does not return the shop internal order either', async 
         body: {
           jobDate: '2026-09-07', // a Monday, inside the default opening days
           startTime: '10:00',
-          serviceId: types.quick,
+          serviceIds: [types.quick],
           description: 'Front brake rubbing',
           mechanicId,
           newBike: { make: 'Test', model: 'Bike' },
@@ -127,7 +127,7 @@ test('a customer cannot book on a day the shop is closed', async () => {
         body: {
           jobDate: '2026-09-06', // a Sunday
           startTime: '10:00',
-          serviceId: types.quick,
+          serviceIds: [types.quick],
           description: 'Sunday puncture',
           mechanicId,
           newBike: { make: 'Test', model: 'Bike' },
@@ -158,7 +158,7 @@ test('a customer cannot book a mechanic on their day off', async () => {
         body: {
           jobDate: '2026-09-07', // a Monday - shop open, this mechanic off
           startTime: '10:00',
-          serviceId: types.quick,
+          serviceIds: [types.quick],
           description: 'Monday puncture',
           mechanicId,
           newBike: { make: 'Test', model: 'Bike' },

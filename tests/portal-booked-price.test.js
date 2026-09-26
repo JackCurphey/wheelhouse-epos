@@ -1,6 +1,7 @@
-// The booked price reaches the customer after booking, only when the shop
-// shows prices online.
+// The booked service and its price reach the customer after booking, only
+// when the shop shows prices online.
 // Spec: docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md
+// Spec (several services): docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
@@ -55,7 +56,7 @@ const book = async (body = {}) => {
     method: 'POST',
     body: {
       mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'Squeaky brakes',
-      newBike: { make: 'Dawes', model: 'Galaxy' }, serviceId, ...BOOKING_CONTACT, ...body,
+      newBike: { make: 'Dawes', model: 'Galaxy' }, serviceIds: [serviceId], ...BOOKING_CONTACT, ...body,
     },
   });
   assert.equal(res.status, 201, JSON.stringify(res.body));
@@ -64,59 +65,63 @@ const book = async (body = {}) => {
 const codeOf = (privateLink) => privateLink.split('/').pop();
 const read = (code) => jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/booking-links/${code}`);
 
-test('prices shown: the booking reply carries the booked price', async () => {
+test('prices shown: the booking reply carries the service and its price', async () => {
   await setShowPrices(true);
   const booked = await book();
-  assert.equal(booked.bookedPrice, 65.5);
+  assert.equal(booked.services[0].price, 65.5);
+  assert.equal(booked.totalPrice, 65.5);
 });
 
-test('prices hidden: the booking reply carries no price', async () => {
+test('prices hidden: the booking reply carries the service with no price', async () => {
   await setShowPrices(false);
   const booked = await book();
-  assert.ok('bookedPrice' in booked, 'field present, empty');
-  assert.equal(booked.bookedPrice, null);
+  assert.equal(booked.services[0].name, 'Priced service');
+  assert.equal(booked.services[0].price, null);
+  assert.equal(booked.totalPrice, null);
 });
 
-test('not sure: the booking reply carries no price even when prices are shown', async () => {
+test('not sure: the booking reply carries no services and no total even when prices are shown', async () => {
   await setShowPrices(true);
-  const booked = await book({ serviceId: undefined, notSure: true });
-  assert.ok('bookedPrice' in booked, 'field present, empty');
-  assert.equal(booked.bookedPrice, null);
+  const booked = await book({ serviceIds: undefined, notSure: true });
+  assert.deepEqual(booked.services, []);
+  assert.equal(booked.totalPrice, null);
 });
 
-test('prices shown: the private link carries the booked price', async () => {
+test('prices shown: the private link carries the service and its price', async () => {
   await setShowPrices(true);
   const res = await read(codeOf((await book()).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.equal(res.body.bookedPrice, 65.5);
+  assert.equal(res.body.services[0].price, 65.5);
+  assert.equal(res.body.totalPrice, 65.5);
 });
 
-test('prices hidden: the private link carries no price', async () => {
+test('prices hidden: the private link carries the service with no price', async () => {
   await setShowPrices(false);
   const res = await read(codeOf((await book()).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.ok('bookedPrice' in res.body, 'field present, empty');
-  assert.equal(res.body.bookedPrice, null);
+  assert.equal(res.body.services[0].name, 'Priced service');
+  assert.equal(res.body.services[0].price, null);
+  assert.equal(res.body.totalPrice, null);
 });
 
-test('not sure: the private link carries no price even when prices are shown', async () => {
+test('not sure: the private link carries no services and no total even when prices are shown', async () => {
   await setShowPrices(true);
-  const res = await read(codeOf((await book({ serviceId: undefined, notSure: true })).privateLink));
+  const res = await read(codeOf((await book({ serviceIds: undefined, notSure: true })).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
-  assert.ok('bookedPrice' in res.body, 'field present, empty');
-  assert.equal(res.body.bookedPrice, null);
+  assert.deepEqual(res.body.services, []);
+  assert.equal(res.body.totalPrice, null);
 });
 
 test('the setting is read when the link is opened, not when it was booked', async () => {
   await setShowPrices(false);
   const code = codeOf((await book()).privateLink);
   await setShowPrices(true);
-  assert.equal((await read(code)).body.bookedPrice, 65.5);
+  assert.equal((await read(code)).body.services[0].price, 65.5);
 });
 
 // Out of scope (spec): the bookings list is unaffected by this change -
-// serializePortalBooking deliberately does not carry bookedPrice.
-test('the bookings list carries no bookedPrice, even with prices shown', async () => {
+// serializePortalBooking deliberately does not carry bookedPrice, services or totalPrice.
+test('the bookings list carries no bookedPrice, services or totalPrice, even with prices shown', async () => {
   await setShowPrices(true);
   await book();
   const res = await portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`);
@@ -124,5 +129,7 @@ test('the bookings list carries no bookedPrice, even with prices shown', async (
   assert.ok(Array.isArray(res.body) && res.body.length > 0, JSON.stringify(res.body));
   for (const row of res.body) {
     assert.ok(!('bookedPrice' in row), JSON.stringify(row));
+    assert.ok(!('services' in row), JSON.stringify(row));
+    assert.ok(!('totalPrice' in row), JSON.stringify(row));
   }
 });

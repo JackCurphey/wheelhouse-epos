@@ -53,7 +53,7 @@ const book = (cookie, slug, mechanicId, startTime, serviceId) =>
       mechanicId,
       jobDate: WEDNESDAY,
       startTime,
-      serviceId,
+      serviceIds: [serviceId],
       description: 'Test booking',
       newBike: { make: 'Test', model: 'Bike' },
       ...BOOKING_CONTACT,

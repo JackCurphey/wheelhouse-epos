@@ -37,7 +37,7 @@ after(async () => {
 
 const book = (body) => portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
   method: 'POST',
-  body: { mechanicId: sam, jobDate: MONDAY, serviceId: types.repair, description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT, ...body },
+  body: { mechanicId: sam, jobDate: MONDAY, serviceIds: [types.repair], description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT, ...body },
 });
 
 test('a booking that runs into lunch is refused, and the reason is not given', async () => {

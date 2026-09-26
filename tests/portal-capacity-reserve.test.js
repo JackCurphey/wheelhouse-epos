@@ -43,7 +43,7 @@ function book(baseUrl, cookie, slug, { mechanicId, startTime, serviceId }) {
   return portalRequest(baseUrl, cookie, `/api/portal/${slug}/bookings`, {
     method: 'POST',
     body: {
-      mechanicId, jobDate: WEDNESDAY, startTime, serviceId,
+      mechanicId, jobDate: WEDNESDAY, startTime, serviceIds: [serviceId],
       description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT,
     },
   });

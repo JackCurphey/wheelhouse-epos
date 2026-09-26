@@ -1,5 +1,9 @@
 # Book server work, piece 5: service questions
 
+**Changed by piece 7** (`2026-09-26-book-server-7-multiple-services-design.md`):
+each answer now carries a `serviceId`, since a booking can hold more than one
+service's questions.
+
 **Date:** 2026-09-25. **Approved in session by Jack** (design, 25 Sep, in
 three parts). **Not yet reviewed as a written spec** — Jack reviews this file
 before the plan is written.

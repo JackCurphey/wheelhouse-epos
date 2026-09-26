@@ -1,5 +1,9 @@
 # Book screens piece (a): the booked price reaches the customer
 
+**Changed by piece 7** (`2026-09-26-book-server-7-multiple-services-design.md`):
+`bookedPrice` is replaced by `services` (a list of `{name, price}`) and
+`totalPrice`.
+
 **Date:** 2026-09-25. **Follows:** piece 3b (#68), which saved `booked_price`
 on the job but deliberately returned it nowhere. **Parent:** plan 4a
 (`docs/superpowers/plans/2026-09-20-phase-4a-book.md`), "Decided 25 Sep" item 2.

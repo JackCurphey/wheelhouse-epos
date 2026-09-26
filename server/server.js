@@ -2662,7 +2662,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceId, linkTokenHash, customerDescription, questionAnswers }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, questionAnswers }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2671,20 +2671,27 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, service_id, booked_price, link_token_hash, customer_description, question_answers, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?, ?, CAST(? AS jsonb), ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, link_token_hash, customer_description, question_answers, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
         termsAcceptedAt ?? null,
-        // The price is copied in SQL so it never passes through a JavaScript number.
-        serviceId ?? null, serviceId ?? null,
         linkTokenHash ?? null, customerDescription ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
+
+    // One row per booked service, in the order chosen, each price copied in SQL
+    // so it never passes through a JavaScript number (piece 7).
+    for (const [position, serviceId] of (serviceIds ?? []).entries()) {
+      await db.prepare(
+        `INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position)
+         VALUES (?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?)`
+      ).run(info.lastInsertRowid, serviceId, serviceId, position);
+    }
 
     // Take the capacity hold in the same transaction as the job. checkJobSlot
     // above is a SELECT, so two requests can both pass it and both insert; the
@@ -4596,13 +4603,27 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
 });
 
-// The booked price as a customer may see it after booking: only when the shop
-// shows prices online, the same rule /services follows. Passed through as
-// stored, never totalled. Runs inside the request's shop context.
-// Spec: docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md
-async function customerBookedPrice(bookedPrice) {
+// The booked services as a customer may see them: names always; prices and the
+// total only when the shop shows prices online (the /services rule). The total
+// is summed in SQL, and left out when any service had no price - a total that
+// ignored one job would mislead. Runs inside the request's shop context.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
+async function bookedServices(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
-  return settings?.show_prices_online === 1 ? (bookedPrice ?? null) : null;
+  const showPrices = settings?.show_prices_online === 1;
+  const rows = await db.prepare(
+    `SELECT s.name, js.booked_price FROM workshop_job_services js
+     JOIN workshop_services s ON s.id = js.service_id
+     WHERE js.workshop_job_id = ? ORDER BY js.position`
+  ).all(jobId);
+  const total = await db.prepare(
+    `SELECT CASE WHEN count(*) > 0 AND count(booked_price) = count(*) THEN sum(booked_price) END AS total
+     FROM workshop_job_services WHERE workshop_job_id = ?`
+  ).get(jobId);
+  return {
+    services: rows.map((r) => ({ name: r.name, price: showPrices ? r.booked_price ?? null : null })),
+    totalPrice: showPrices ? total?.total ?? null : null,
+  };
 }
 
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
@@ -4642,27 +4663,43 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const description = (body.description || '').trim();
   if (!description) return badRequest(res, 'Please describe what you need done');
 
-  // What the customer chose: a service this shop ticked bookable online, or the
-  // "not sure" hour. Read through the shop's row-level security, so another
-  // shop's service id finds nothing.
-  let chosen;
+  // What the customer chose: one or more services this shop ticked bookable
+  // online, in the order chosen, or the "not sure" hour. Read through the
+  // shop's row-level security, so another shop's service id finds nothing.
+  let chosen; // [{ id, name, minutes, questions }] in the order chosen
   if (request.notSure) {
-    chosen = { name: 'Not sure', minutes: 60 };
+    chosen = [];
   } else {
-    chosen = await db
-      .prepare('SELECT id, name, minutes, questions FROM workshop_services WHERE id = ? AND active = 1 AND bookable_online = 1')
-      .get(request.serviceId);
-    if (!chosen) return badRequest(res, 'That service is not available to book');
+    const found = await db
+      .prepare('SELECT id, name, minutes, questions FROM workshop_services WHERE id = ANY(?) AND active = 1 AND bookable_online = 1')
+      .all(request.serviceIds);
+    if (found.length !== request.serviceIds.length) return badRequest(res, 'That service is not available to book');
+    const byId = new Map(found.map((s) => [s.id, s]));
+    chosen = request.serviceIds.map((id) => byId.get(id));
   }
+  const minutes = request.notSure ? 60 : chosen.reduce((sum, s) => sum + s.minutes, 0);
+  if (minutes > 720) return badRequest(res, "That's too much work for one visit - please book the jobs separately");
+  const serviceNames = request.notSure ? 'Not sure' : chosen.map((s) => s.name).join(' + ');
 
-  // The customer's answers, checked against the service's questions as they are
+  // Each chosen service's answers, checked against its questions as they are
   // now, before the guest customer row - the first write. A frozen copy goes on
-  // the job so later edits to the questions never change this booking.
+  // the job so later edits to the questions never change this booking. Not
+  // sure has no services, so no answers to check.
   let questionAnswers = null;
   if (!request.notSure) {
-    const checked = checkAnswers(chosen.questions ?? [], body.answers);
-    if (checked.error) return badRequest(res, checked.error);
-    questionAnswers = checked.value;
+    const list = body.answers === undefined || body.answers === null ? [] : body.answers;
+    if (!Array.isArray(list)) return badRequest(res, 'Answers must be a list');
+    const chosenIds = new Set(chosen.map((s) => s.id));
+    if (list.some((a) => !chosenIds.has(a?.serviceId))) {
+      return badRequest(res, "Those answers don't match the services chosen");
+    }
+    questionAnswers = [];
+    for (const s of chosen) {
+      const mine = list.filter((a) => a.serviceId === s.id).map(({ serviceId: _drop, ...rest }) => rest);
+      const checked = checkAnswers(s.questions ?? [], mine);
+      if (checked.error) return badRequest(res, checked.error);
+      questionAnswers.push(...checked.value.map((x) => ({ serviceId: s.id, ...x })));
+    }
   }
 
   // Photos are checked here with the other request checks: before the guest
@@ -4712,7 +4749,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       if (startTime) return refusal('This shop takes drop-offs on that day - choose the day, not a time.');
       times = { startTime: '', endTime: '' };
     } else {
-      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, chosen.minutes) : '');
+      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
       if (!times.startTime) return refusal('A start time is required');
       if (times.error) return refusal(times.error);
     }
@@ -4735,7 +4772,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     if (!mech || !mech.working || (times.startTime && !fitsFreeTime(mech, times.startTime, times.endTime))) {
       return refusal('That mechanic is unavailable at that time - please choose another time or day.');
     }
-    if (mech.freeMinutes < chosen.minutes) {
+    if (mech.freeMinutes < minutes) {
       return capacityRefusal('That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
     }
 
@@ -4775,7 +4812,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     let jobId;
     try {
       jobId = await createWorkshopJob({
-        title: `Online booking: ${chosen.name} - ${description}`.slice(0, 200),
+        title: `Online booking: ${serviceNames} - ${description}`.slice(0, 200),
         customerId,
         bikeId,
         mechanicId: mechResolved.mechanicId,
@@ -4787,9 +4824,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         custodyState: 'expected',
         notes: description,
         skipAutoOrder: false,
-        plannedMinutes: chosen.minutes,
+        plannedMinutes: minutes,
         termsAcceptedAt: nowIso(),
-        serviceId: chosen.id ?? null,
+        serviceIds: request.serviceIds,
         linkTokenHash: hashLinkCode(linkCode),
         customerDescription: description,
         questionAnswers,
@@ -4813,7 +4850,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       )
       .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-    const bookedPrice = await customerBookedPrice(row.booked_price);
+    const booked = await bookedServices(jobId);
     // The last write, so nothing after it can fail and leave files behind for a
     // booking that rolled back. saveBookingPhotos removes its own files if a
     // write or insert fails, and the error rolls the whole booking back.
@@ -4832,7 +4869,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       status: 201,
       body: {
         ...serializePortalBooking(row),
-        bookedPrice,
+        ...booked,
         privateLink: linkPath(params.shopSlug, linkCode),
       },
     };
@@ -4843,22 +4880,21 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 // The private booking link, read back without sign-in. The dispatcher has
 // already bound the shop from :shopSlug, so row-level security keeps another
 // shop's code from finding anything. Deliberately narrow: nothing that
-// identifies the customer, no staff notes. The booked price only when the
-// shop shows prices online (customerBookedPrice).
-// Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
+// identifies the customer, no staff notes. The booked services and total only
+// when the shop shows prices online (bookedServices).
+// Spec: docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
 route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
   if (!bookingLinkLimiter.check(clientIp(req))) {
     return sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
   }
   const row = /^[0-9a-f]{64}$/.test(params.code)
     ? await db.prepare(
-      `SELECT w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
-              w.booking_state, w.custody_state, w.work_state, w.booked_price,
-              s.name AS service_name, b.make AS bike_make, b.model AS bike_model
+      `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
+              w.booking_state, w.custody_state, w.work_state,
+              b.make AS bike_make, b.model AS bike_model
               , (SELECT count(*)::int FROM workshop_job_attachments a
                  WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
        FROM workshop_jobs w
-       LEFT JOIN workshop_services s ON s.id = w.service_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
        WHERE w.link_token_hash = ?`
     ).get(hashLinkCode(params.code))
@@ -4872,14 +4908,13 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     shopName: shop.name,
     jobDate: row.job_date,
     startTime: row.start_time || '',
-    serviceName: row.service_name ?? null,
     description: row.customer_description ?? null,
     // As asked at booking, from the frozen copy - never the service's current wording.
     answers: (row.question_answers ?? []).map(({ wording, answer }) => ({ wording, answer })),
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
     photoCount: row.photo_count,
-    bookedPrice: await customerBookedPrice(row.booked_price),
+    ...(await bookedServices(row.id)),
   });
 });
 

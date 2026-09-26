@@ -36,7 +36,7 @@ after(async () => {
 const book = (jobDate, startTime, serviceId = types.repair) =>
   portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
     method: 'POST',
-    body: { mechanicId: sam, jobDate, startTime, serviceId, description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT },
+    body: { mechanicId: sam, jobDate, startTime, serviceIds: [serviceId], description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT },
   });
 
 test('a booking waits while another booking holds the same shop and date', async () => {
