@@ -206,12 +206,18 @@ const CHANGED = 'The questions for this service have changed — please check th
 
 test('a good request reads the services again, then sends the booking', async () => {
   const { ui, requests } = await open({ draft: READY });
+  // Counted from here, not just "the request right before the POST": the
+  // frame reads /services too, so an incidental background refetch at mount
+  // (React Query's default staleTime is 0) must not be mistaken for the
+  // send's own refetch.
+  const before = requests.length;
   await press(ui);
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
-  const i = requests.findIndex((r) => r.method === 'POST');
-  assert.equal(`${requests[i - 1].method} ${requests[i - 1].url}`, 'GET /api/portal/north/services');
-  assert.equal(requests[i].url, '/api/portal/north/bookings');
-  assert.deepEqual(requests[i].body, {
+  const sent = requests.slice(before);
+  assert.equal(sent.length, 2, JSON.stringify(sent));
+  assert.equal(`${sent[0].method} ${sent[0].url}`, 'GET /api/portal/north/services');
+  assert.equal(sent[1].url, '/api/portal/north/bookings');
+  assert.deepEqual(sent[1].body, {
     serviceIds: [11, 12], answers: [{ serviceId: 11, questionId: 'b1', choice: 'Squeaking' }],
     bikeNote: 'Blue Trek road bike', photos: [],
     jobDate: '2026-10-05', mechanicId: 1, startTime: '09:30',
@@ -272,10 +278,12 @@ test('while sending, the button reads "Sending…" and cannot be pressed again',
 });
 
 test('success clears the draft and opens the private link', async () => {
-  const { ui } = await open({ draft: { ...READY, hadPhotos: true }, photos: [pngFile()] });
+  const { ui, readPhotos } = await open({ draft: { ...READY, hadPhotos: true }, photos: [pngFile()] });
   await press(ui);
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
   assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), null);
+  // Not only the saved draft: the photos held in the provider's memory too.
+  assert.equal(readPhotos().length, 0);
 });
 
 test('photos cleared by a refresh: the question, and "Add photos" goes back to problem without sending', async () => {
@@ -313,6 +321,9 @@ for (const error of [
   "That's too soon for the shop - please choose a later time or day.",
   'That date has passed - please choose another day.',
   'That mechanic is unavailable at that time - please choose another time or day.',
+  'This shop takes drop-offs on that day - please choose a timed slot or another day.',
+  'A start time is required - please choose one.',
+  'Please choose a mechanic to book this time.',
 ]) {
   test(`"${error}" goes back to date`, async () => {
     const { ui, readDraft } = await open({ draft: READY, booking: refuse(400, error) });
@@ -328,10 +339,33 @@ test("changed questions go back to problem with the server's message", async () 
   assert.ok(await ui.findByText(`At /book/north/problem ${JSON.stringify({ questionsChanged: CHANGED })}`));
 });
 
+test("if the services refetch fails, it stays on details with the server's message", async () => {
+  // Flipped only once the screen (and everything else reading /services) has
+  // settled - as in "answers are cleaned..." above - so this fails the
+  // refetch just before sending, not the screen's own load.
+  let failing = false;
+  const services = () => (failing
+    ? { status: 500, body: { error: 'Something went wrong' } }
+    : { status: 200, body: SERVICES });
+  const { within } = await rtl();
+  const { ui, requests } = await open({ draft: READY, services });
+  failing = true;
+  await press(ui);
+  const alert = await within(pinned()).findByRole('alert');
+  assert.equal(alert.textContent, 'Something went wrong');
+  assert.equal(ui.getByRole('button', { name: 'Request booking' }).disabled, false);
+  assert.equal(posts(requests).length, 0, 'the booking is never sent');
+});
+
 const staysWith = async (booking, message) => {
+  // `within` is fetched before pressing, not after: an `await` between the
+  // press and the first testing-library query would let the refused POST's
+  // state update land outside act() (a bare import await isn't wrapped the
+  // way findBy/within's own waiting is), which prints an act() warning even
+  // though every assertion still passes.
+  const { within } = await rtl();
   const { ui, readDraft } = await open({ draft: READY, booking });
   await press(ui);
-  const { within } = await rtl();
   const alert = await within(pinned()).findByRole('alert');
   assert.equal(alert.textContent, message);
   assert.equal(ui.getByRole('button', { name: 'Request booking' }).disabled, false);

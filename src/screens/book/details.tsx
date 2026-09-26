@@ -11,7 +11,7 @@ import { PillGroup } from '@/components/ui/pill-group';
 import { BookFrame } from './frame.tsx';
 import { useDraft, type BookingDraft } from './draft.tsx';
 import { RequireDraft, hasDate } from './require-draft.tsx';
-import { servicesPath, useServices, type ServicesResponse } from './services-query.ts';
+import { servicesPath, servicesQueryKey, useServices, type ServicesResponse } from './services-query.ts';
 import { useAvailability, useMechanics } from './date-query.ts';
 import { jobMinutes } from './date-rules.ts';
 import { photosCleared } from './problem-rules.ts';
@@ -90,7 +90,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       // so a failed read can't put the frame into its failed state; the copy
       // then replaces the cached one.
       const fresh = await apiGet<ServicesResponse>(servicesPath(shopSlug));
-      queryClient.setQueryData(['portal', shopSlug, 'services'], fresh);
+      queryClient.setQueryData(servicesQueryKey(shopSlug), fresh);
       const photoData = await Promise.all(photos.map(photoBase64));
       const reply = await sendBooking(shopSlug, bookingBody(fresh, draft, photoData));
       clear();

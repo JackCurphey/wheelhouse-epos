@@ -13,7 +13,9 @@
 // ({ status, body }), which may be async - a test that holds an answer back
 // must release it before it ends - or may throw, which the screen sees as a
 // lost connection. `photos` are held in the draft's memory (they are never
-// stored). `state` is the first address's navigation state.
+// stored); `readPhotos()` reads them back, so a test can prove a send that
+// succeeds clears the held photos too, not only the saved draft. `state` is
+// the first address's navigation state.
 // scrollIntoView (missing in jsdom) is recorded in `scrolled`; <dialog>'s
 // showModal and close (missing in jsdom) are stubbed.
 import { installDom, importFresh } from './dom.js';
@@ -84,9 +86,17 @@ export async function renderBookScreen({
     }, []);
     return null;
   }
+  // The provider's own photos, read back after an action (e.g. a successful
+  // send should clear them, not only the saved draft). Mounted alongside the
+  // screen, inside the same DraftProvider, so it sees every update.
+  const photosBox = { current: [] };
+  function PhotosProbe() {
+    photosBox.current = useDraft().photos;
+    return null;
+  }
   function Layout() {
     const { shopSlug = '' } = useParams();
-    return h(DraftProvider, { shopSlug }, photos ? h(SeedPhotos) : null, h(Outlet));
+    return h(DraftProvider, { shopSlug }, photos ? h(SeedPhotos) : null, h(PhotosProbe), h(Outlet));
   }
   function Where() {
     const l = useLocation();
@@ -101,5 +111,6 @@ export async function renderBookScreen({
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = render(h(QueryClientProvider, { client }, h(RouterProvider, { router })));
   const readDraft = () => JSON.parse(window.sessionStorage.getItem('wh-book-draft:north') ?? '{}');
-  return { ui, client, uninstall, scrolled, scrollCalls, requests, readDraft };
+  const readPhotos = () => photosBox.current;
+  return { ui, client, uninstall, scrolled, scrollCalls, requests, readDraft, readPhotos };
 }

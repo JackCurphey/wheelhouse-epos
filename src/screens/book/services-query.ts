@@ -27,9 +27,12 @@ export type ServicesResponse = {
 
 export const servicesPath = (shopSlug: string) => `/api/portal/${encodeURIComponent(shopSlug)}/services`;
 
+/** Shared with the details screen, which replaces the cached copy with a fresh one just before sending. */
+export const servicesQueryKey = (shopSlug: string) => ['portal', shopSlug, 'services'] as const;
+
 export function useServices(shopSlug: string) {
   return useQuery({
-    queryKey: ['portal', shopSlug, 'services'],
+    queryKey: servicesQueryKey(shopSlug),
     queryFn: () => apiGet<ServicesResponse>(servicesPath(shopSlug)),
   });
 }
