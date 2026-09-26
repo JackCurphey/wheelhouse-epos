@@ -28,6 +28,9 @@ export type BookingDraft = {
   // Photos were added in this tab. They live in memory only, so after a
   // refresh the problem screen says they were cleared (d3).
   hadPhotos?: boolean;
+  // The date screen (d4): the day, and always a real mechanic ("Any
+  // mechanic" is resolved on Continue and never stored). A drop-off day
+  // stores no startTime.
   date?: string;
   mechanicId?: number;
   startTime?: string;
