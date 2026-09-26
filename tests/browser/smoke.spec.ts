@@ -19,6 +19,6 @@ test('the customer app mounts at /book in a real browser', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
   await page.goto('/book/any-shop');
-  await expect(page.locator('#wh-book-root')).toContainText('Not built yet: service');
+  await expect(page.locator('#wh-book-root')).toContainText("We can't find this shop");
   expect(errors).toEqual([]);
 });

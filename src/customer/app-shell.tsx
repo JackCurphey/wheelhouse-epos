@@ -4,6 +4,7 @@ import { createBrowserRouter, Outlet, useParams, useRouteError } from 'react-rou
 import { RouterProvider } from 'react-router/dom';
 import { ApiError } from '@/lib/api/client.ts';
 import { DraftProvider } from '@/screens/book/draft.tsx';
+import { ServiceScreen } from '@/screens/book/service.tsx';
 import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
 
 /**
@@ -33,7 +34,7 @@ export function BookLayout() {
 
 // Screens by atlas id. An id with no entry renders the placeholder, so every
 // address in CUSTOMER_ROUTES works from day one - including a private link.
-const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = {};
+const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = { service: ServiceScreen };
 
 function notBuilt(id: CustomerScreenId): ComponentType {
   function NotBuilt() {
@@ -77,7 +78,10 @@ const router = createBrowserRouter([
   },
 ]);
 
-const queryClient = new QueryClient({
+// Exported so a test that renders the whole shell (a real fetch resolving
+// through this client) can clear it before tearing its DOM down - otherwise
+// the query cache's own cleanup keeps the test file from exiting promptly.
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       // A 4xx will not change on retry - a 404 stays missing - so only server

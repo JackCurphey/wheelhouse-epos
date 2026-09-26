@@ -17,13 +17,26 @@ async function renderAt(path) {
   uninstall = installDom(`http://localhost${path}`);
   const { render } = await import('@testing-library/react');
   const { createElement } = await import('react');
-  const { CustomerAppShell } = await importFresh(SHELL);
-  return render(createElement(CustomerAppShell));
+  const { CustomerAppShell, queryClient } = await importFresh(SHELL);
+  return { ...render(createElement(CustomerAppShell)), queryClient };
 }
 
-test('the first book screen renders its placeholder at /book/<shop>', async () => {
+const SERVICES = {
+  shopName: 'Demo Cycles', showPrices: false,
+  full: [{ id: 1, name: 'General service', price: null, minutes: 30, questions: [], includes: [] }],
+  categories: [], uncategorised: [],
+};
+
+test('the first book screen renders the service screen at /book/<shop>', async () => {
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } });
   const screen = await renderAt('/book/demo');
-  assert.ok(await screen.findByText('Not built yet: service'));
+  assert.ok(await screen.findByRole('heading', { level: 1, name: 'What do you need?' }));
+  // The shell's query client is module-level (not per-render), so its cache
+  // must be cleared explicitly - otherwise the resolved query's own cleanup
+  // keeps this test file from exiting promptly (see tests/customer/frame.test.js).
+  screen.unmount();
+  screen.queryClient.clear();
 });
 
 test('a private link opened cold reaches the pending screen', async () => {

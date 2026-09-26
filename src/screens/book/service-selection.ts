@@ -1,4 +1,5 @@
 import type { PortalFullService, PortalService, ServicesResponse } from './services-query.ts';
+import type { BookingDraft } from './draft.tsx';
 
 /**
  * The service list's rules, kept apart from the screens so they can be tested
@@ -7,6 +8,12 @@ import type { PortalFullService, PortalService, ServicesResponse } from './servi
  * lock); the server refuses the pair too (piece 8, as changed by d2).
  * Spec: docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md
  */
+
+// Shared by the service screen and the service list: choosing "Not sure"
+// clears any ticks and answers as well as setting the flag itself, so a
+// customer who backs into Not sure after ticking something doesn't carry
+// stale choices into the problem screen.
+export const notSurePatch = { notSure: true, serviceIds: [], answers: [] } satisfies Partial<BookingDraft>;
 
 export const MAX_SERVICES = 10;
 export const MAX_MINUTES = 720;
