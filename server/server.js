@@ -3950,7 +3950,7 @@ route('DELETE', '/api/workshop-service-categories/:id', async (req, res, params)
 
 // ---------- Workshop services (the fixed-price labour catalogue) ----------
 
-export function serializeWorkshopService(row) {
+export function serializeWorkshopService(row, includes = []) {
   return {
     id: row.id,
     name: row.name,
@@ -3972,6 +3972,10 @@ export function serializeWorkshopService(row) {
     // Ordered; each { id, wording, kind, required, choices?, allowNotSure? }.
     // See server/service-questions.js and migration 028.
     questions: row.questions ?? [],
+    // Ordered ids of the individual services a full service includes,
+    // removed ones too (a future staff screen marks them). Always [] for an
+    // individual service. See migration 031.
+    includes,
   };
 }
 
@@ -4033,10 +4037,70 @@ function readQuestionsOrKeep(body, stored) {
   return r.value;
 }
 
+const MAX_INCLUDES = 50;
+
+// A full service's included services, saved as one whole ordered list.
+// `kind` is the service's kind after this save; `stored` the saved ids (null
+// on POST). `selfId`/`selfName` identify the service being saved (null on
+// POST, since it has no id yet) so it can be refused as its own include -
+// migration 031's CHECK would otherwise reject that as a database error
+// (500) rather than a clean 400, and on PUT the lookup below runs before the
+// UPDATE that changes this service's own kind, so a currently-individual
+// service promoting itself would otherwise look like a valid individual
+// service to include. Omitted keeps the stored list, as questions and
+// placement do, so a caller that predates the field cannot wipe it - except
+// that an individual service never includes anything. Each id is looked up
+// through the shop-scoped db: the foreign key alone bypasses row-level
+// security and would accept another shop's service.
+async function readIncludes(body, kind, stored, selfId, selfName) {
+  if (body.includes === undefined) return kind === 'full' ? (stored ?? []) : [];
+  const ids = body.includes;
+  if (!Array.isArray(ids)) throw new ValidationError('That service does not exist');
+  if (kind !== 'full') {
+    if (ids.length > 0) throw new ValidationError('Only a full service can include other services');
+    return [];
+  }
+  if (ids.length > MAX_INCLUDES) throw new ValidationError(`A full service can include at most ${MAX_INCLUDES} services`);
+  if (new Set(ids).size !== ids.length) throw new ValidationError("A service can't be included twice");
+  if (selfId !== null && ids.includes(selfId)) throw new ValidationError(`${selfName} is not an individual service`);
+  for (const id of ids) {
+    const found = Number.isInteger(id) && id >= 1 && id <= MAX_SERIAL
+      ? await db.prepare('SELECT name, kind FROM workshop_services WHERE id = ?').get(id)
+      : null;
+    if (!found) throw new ValidationError('That service does not exist');
+    if (found.kind !== 'individual') throw new ValidationError(`${found.name} is not an individual service`);
+  }
+  return ids;
+}
+
+// Replaces a service's list whole. Callers run it inside their transaction.
+async function replaceIncludes(serviceId, ids) {
+  await db.prepare('DELETE FROM workshop_service_includes WHERE service_id = ?').run(serviceId);
+  for (const [position, id] of ids.entries()) {
+    await db.prepare(
+      'INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, ?)'
+    ).run(serviceId, id, position);
+  }
+}
+
+// Ordered included ids for every service that has any, as Map<serviceId, id[]>.
+async function loadIncludes() {
+  const rows = await db.prepare(
+    'SELECT service_id, included_service_id FROM workshop_service_includes ORDER BY service_id, position'
+  ).all();
+  const map = new Map();
+  for (const r of rows) {
+    if (!map.has(r.service_id)) map.set(r.service_id, []);
+    map.get(r.service_id).push(r.included_service_id);
+  }
+  return map;
+}
+
 // screens: services, service-edit
 route('GET', '/api/workshop-services', async (req, res) => {
   const rows = await db.prepare('SELECT * FROM workshop_services ORDER BY active DESC, name').all();
-  sendJson(res, 200, rows.map(serializeWorkshopService));
+  const includes = await loadIncludes();
+  sendJson(res, 200, rows.map((r) => serializeWorkshopService(r, includes.get(r.id) ?? [])));
 });
 
 // screens: services, service-edit
@@ -4045,20 +4109,31 @@ route('POST', '/api/workshop-services', async (req, res) => {
   let fields;
   let placement;
   let questions;
+  let includes;
   try {
     fields = readServiceBody(body);
     placement = await readServicePlacement(body, null);
     questions = readQuestionsOrKeep(body, []);
+    includes = await readIncludes(body, placement.kind, null, null, null);
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
   }
   const bookableOnline = body.bookableOnline ? 1 : 0;
-  const info = await db.prepare(
-    'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
-  ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
+  await db.exec('BEGIN');
+  let info;
+  try {
+    info = await db.prepare(
+      'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
+    ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
+    await replaceIncludes(info.lastInsertRowid, includes);
+    await db.exec('COMMIT');
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
-  sendJson(res, 201, serializeWorkshopService(row));
+  sendJson(res, 201, serializeWorkshopService(row, includes));
 });
 
 // screens: services, service-edit
@@ -4070,10 +4145,22 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
   let fields;
   let placement;
   let questions;
+  let includes;
   try {
     fields = readServiceBody(body);
     placement = await readServicePlacement(body, existing);
     questions = readQuestionsOrKeep(body, existing.questions ?? []);
+    const stored = (await db.prepare(
+      'SELECT included_service_id FROM workshop_service_includes WHERE service_id = ? ORDER BY position'
+    ).all(id)).map((r) => r.included_service_id);
+    includes = await readIncludes(body, placement.kind, stored, id, fields.name);
+    if (existing.kind === 'individual' && placement.kind === 'full') {
+      const holder = await db.prepare(
+        `SELECT f.name FROM workshop_service_includes i JOIN workshop_services f ON f.id = i.service_id
+         WHERE i.included_service_id = ? ORDER BY f.name LIMIT 1`
+      ).get(id);
+      if (holder) throw new ValidationError(`${fields.name} is part of ${holder.name} - take it out of that first`);
+    }
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -4081,12 +4168,27 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
   const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
   const bookableOnline = body.bookableOnline === undefined
     ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
-  await db.prepare(
-    'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
-  ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
-    placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
+  await db.exec('BEGIN');
+  try {
+    await db.prepare(
+      'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
+    ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
+      placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
+    // Only touch the stored list when the caller actually sent one, or when
+    // the demotion to individual must clear it - a save that leaves
+    // `includes` out (as `questions` and placement work) must not delete and
+    // reinsert rows that did not change.
+    const demotedToIndividual = existing.kind === 'full' && placement.kind === 'individual';
+    if (body.includes !== undefined || demotedToIndividual) {
+      await replaceIncludes(id, includes);
+    }
+    await db.exec('COMMIT');
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
   const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
-  sendJson(res, 200, serializeWorkshopService(row));
+  sendJson(res, 200, serializeWorkshopService(row, includes));
 });
 
 // Deactivate rather than delete: a job line keeps its service_id, and that
@@ -4469,6 +4571,7 @@ route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
 // through as stored - nothing is totalled here.
 // shopName: the booking screens' header (d1 spec).
 // screens: service, service-list
+// Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
 route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
@@ -4481,10 +4584,19 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, s
   ).all();
   const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price : null, minutes: s.minutes, questions: s.questions });
   const individual = services.filter((s) => s.kind === 'individual');
+  // What each full service includes, for its card and for d2's "already part
+  // of your <full service>" warning: services still in use, bookable online
+  // or not (piece 8 decision 4), in the shop's order.
+  const links = await db.prepare(
+    `SELECT i.service_id, s.id, s.name FROM workshop_service_includes i
+     JOIN workshop_services s ON s.id = i.included_service_id
+     WHERE s.active = 1 AND s.kind = 'individual' ORDER BY i.service_id, i.position`
+  ).all();
+  const includesOf = (id) => links.filter((l) => l.service_id === id).map((l) => ({ id: l.id, name: l.name }));
   sendJson(res, 200, {
     shopName: shop.name,
     showPrices,
-    full: services.filter((s) => s.kind === 'full').map(toPublic),
+    full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
     categories: categories
       .map((c) => ({
         id: c.id,
@@ -4676,6 +4788,18 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     if (found.length !== request.serviceIds.length) return badRequest(res, 'That service is not available to book');
     const byId = new Map(found.map((s) => [s.id, s]));
     chosen = request.serviceIds.map((id) => byId.get(id));
+    // A full service already covers the individual services it includes
+    // (piece 8), so booking one alongside it would charge twice for the same
+    // work. The booking screen locks them; this holds however a booking
+    // arrives (d2 decision, 26 Sep).
+    const overlap = await db.prepare(
+      `SELECT f.name AS full_name, p.name AS part_name FROM workshop_service_includes i
+       JOIN workshop_services f ON f.id = i.service_id
+       JOIN workshop_services p ON p.id = i.included_service_id
+       WHERE i.service_id = ANY(?) AND i.included_service_id = ANY(?)
+       ORDER BY f.name, i.position LIMIT 1`
+    ).get(request.serviceIds, request.serviceIds);
+    if (overlap) return badRequest(res, `${overlap.full_name} already includes ${overlap.part_name}`);
   }
   const minutes = request.notSure ? 60 : chosen.reduce((sum, s) => sum + s.minutes, 0);
   if (minutes > 720) return badRequest(res, "That's too much work for one visit - please book the jobs separately");

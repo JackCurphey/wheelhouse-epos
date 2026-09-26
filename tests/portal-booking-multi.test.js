@@ -172,3 +172,27 @@ test('not sure has no services and no total', async () => {
   assert.deepEqual(booked.body.services, []);
   assert.equal(booked.body.totalPrice, null);
 });
+
+// Piece 8, changed by d2 (Jack, 26 Sep): the booking screen locks a service
+// its ticked full service already includes, and the server refuses the pair
+// too, so the rule holds however the booking arrives.
+test('a full service and a service it includes are refused together, and nothing is saved', async () => {
+  const part = await svc('Included brake', '25.00', 30);
+  const other = await svc('Not included wheel', '15.00', 30);
+  const full = await runWithShop(owner.shop.id, async () => (await prepare(
+    "INSERT INTO workshop_services (name, price, minutes, kind, bookable_online, active, updated_at) VALUES ('Full with brake', '80.00', 90, 'full', 1, 1, now())"
+  ).run()).lastInsertRowid);
+  await runWithShop(owner.shop.id, () => prepare(
+    'INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, 0)'
+  ).run(full, part));
+  const before = await counts();
+  for (const serviceIds of [[full, part], [part, full]]) {
+    const res = await book({ serviceIds }, { guest: true });
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    assert.equal(res.body.error, 'Full with brake already includes Included brake');
+  }
+  assert.deepEqual(await counts(), before);
+  const ok = await book({ serviceIds: [full, other] });
+  assert.equal(ok.status, 201, JSON.stringify(ok.body));
+  assert.deepEqual((await rows(ok.body.id)).map((r) => r.service_id), [full, other]);
+});

@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `ee55844` (pieces (a) #72, (b) #73, (c) #74, (d1) #75 merged). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `0456294` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server piece 7 #76 merged); piece 8 on `feat/book-server-8-service-includes`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -72,7 +72,7 @@ of `/book` now (nobody uses the old page); `public-portal/` files are deleted
 in a later clean-up. **d2 paused (Jack, 26 Sep):** a booking must hold
 several services, and a full service will list the individual services it
 includes (so d2 can say "already part of your general service"). Order:
-**piece 7: PR #76** (26 Sep; Jack approved merging on green CI - check `gh pr view 76` for whether it merged; branch `feat/book-server-7-multi-service`, plan
+**piece 7 merged: #76** (26 Sep at `0456294`, CI green on its final commit; plan
 `docs/superpowers/plans/2026-09-26-book-server-7-multiple-services.md`); the
 contract: POST takes `serviceIds` (1-10) or `notSure` alone; answers are
 `{serviceId, questionId, ...}`; the 201 and `/booking-links` reply return
@@ -88,8 +88,23 @@ each `Answer` a `serviceId`, update `hasService` in `require-draft.tsx`, read
 `services`/`totalPrice` on `pending`; the link's answers and "Please answer:
 ..." errors don't name which service a question belongs to, and service names
 on links are live (a rename changes past links) - decide in d2/d5. Then
-**server piece 8** (what a full service includes, with staff settings), then
-**(d2)** service screens with multi-select and a Continue button.
+**server piece 8** (what a full service includes; branch
+`feat/book-server-8-service-includes`, **PR #77** (merge only when Jack says, after CI passes on the final commit); spec
+`docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md`, plan
+`docs/superpowers/plans/2026-09-26-book-server-8-service-includes.md`). Server
+only: migration 031 `workshop_service_includes`; staff `includes: number[]` on
+`/api/workshop-services` (omitted on PUT keeps; individual services `[]`);
+customer `/services` gives each `full[]` item `includes: [{id, name}]` (active
+individual services, bookable online or not, shop's order); a booking with a
+full service and a service it includes is refused ("<full> already includes
+<service>", d2 decision 26 Sep). No staff screen sets it yet - screens 65/66 are a later
+piece, which must first lock rows so a simultaneous "add X to F" and "promote X
+to full" can't both commit (checks run before the transaction today; customers
+are guarded by a kind filter). Then **(d2)** service screens with multi-select
+and a Continue button, using `PortalFullService.includes` for the "Includes ..."
+line (shortened past a few items); ticking a full service hints "Included in
+your <full service>" on the services it includes and locks them (Jack, 26 Sep,
+replacing piece 8's warn-and-remove). d2 is being brainstormed.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

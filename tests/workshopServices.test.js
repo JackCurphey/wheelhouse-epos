@@ -71,7 +71,9 @@ test('serializeWorkshopService converts a row to camelCase with active as a bool
     categoryId: null,
     position: 2,
     questions: [],
+    includes: [],
   });
+  assert.deepEqual(serializeWorkshopService(row, [3, 1]).includes, [3, 1]);
 });
 
 test('a shop cannot see another shop\'s services', async () => {

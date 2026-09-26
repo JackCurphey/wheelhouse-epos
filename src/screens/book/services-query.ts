@@ -14,10 +14,13 @@ export type PortalQuestion =
 
 export type PortalService = { id: number; name: string; price: number | null; minutes: number; questions: PortalQuestion[] };
 
+/** A full service also names the services it includes (server piece 8). */
+export type PortalFullService = PortalService & { includes: { id: number; name: string }[] };
+
 export type ServicesResponse = {
   shopName: string;
   showPrices: boolean;
-  full: PortalService[];
+  full: PortalFullService[];
   categories: { id: number; name: string; services: PortalService[] }[];
   uncategorised: PortalService[];
 };
