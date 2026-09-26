@@ -43,15 +43,13 @@ comparison to normalise `@/registry/(primitives|patterns)/` to
 current ten need it. `key={shopSlug}` on `DraftProvider` in the `/book/:shopSlug`
 layout route is load-bearing - remove it and a shop change carries the
 previous shop's draft over instead of starting that shop's own
-(`tests/customer/book-layout.test.js`). **Deferred for d2 (and later):** the
-frame shows a blank header while `/services` loads or fails - decide the
-unknown-shop page; no `env(safe-area-inset-bottom)` (fine unless `book.html`
-gains `viewport-fit=cover`); a Playwright check at 320px that the pinned
-button doesn't cover the last field, and where it sits with the on-screen
-keyboard open; long action labels (`Button` is `whitespace-nowrap`); moving
-focus to the screen's `h1` on a screen change; Enter-to-submit on `details`
-(the action sits outside any `form`); `/book` doesn't pick up the shop's own
-accent colour (`book.html` doesn't load `public/app.js`). **Jack, 26 Sep
+(`tests/customer/book-layout.test.js`). **Deferred for d2 (and later):** no
+`env(safe-area-inset-bottom)` (fine unless `book.html` gains
+`viewport-fit=cover`); where the pinned button sits with the on-screen
+keyboard open (moves to d3); long action labels (`Button` is
+`whitespace-nowrap`); Enter-to-submit on `details` (the action sits outside
+any `form`); `/book` doesn't pick up the shop's own accent colour
+(`book.html` doesn't load `public/app.js`). **Jack, 26 Sep
 (direction, not yet scheduled):** each shop will eventually choose one colour
 scheme that applies everywhere (staff and customer apps); not built now.
 Until then `/book` uses the default Wheelhouse colours. **Open for piece (d) from (c):** `day-diary` scales so every
@@ -104,12 +102,32 @@ are guarded by a kind filter). Then **(d2)** service screens with multi-select
 and a Continue button, using `PortalFullService.includes` for the "Includes ..."
 line (shortened past a few items); ticking a full service hints "Included in
 your <full service>" on the services it includes and locks them (Jack, 26 Sep,
-replacing piece 8's warn-and-remove). **d2 next: build it** - spec
-`docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md` and plan
-`docs/superpowers/plans/2026-09-26-book-d2-service-screens.md` approved by Jack
-26 Sep; branch `feat/book-d2-service-screens` (spec, plan, STATUS commits only,
-not pushed); Jack chose subagent-driven development (fresh helper per task,
-task reviews, final review on the most capable model). No task started.
+replacing piece 8's warn-and-remove). **(d2) built on branch
+`feat/book-d2-service-screens` (PR: to be opened; spec
+`docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md`, plan
+`docs/superpowers/plans/2026-09-26-book-d2-service-screens.md`; subagent-driven
+development, fresh helper per task, task reviews, final review on the most
+capable model).** Built: the `service` screen (three fixed options: full,
+individual, not sure) and the `service-list` screen (full services, each
+category, then Other, multi-select with a Continue button, hint-and-lock on a
+full service's included items); `serviceIds[]` on the draft and `serviceId` on
+each `Answer`; `BookFrame`'s loading/unknown-shop/failed/focus behaviour and
+its `actionNote` slot above the pinned button. Closes three carried-over
+items: the blank header while `/services` loads or fails now shows a proper
+loading/error state, focus moves to the screen's `h1` on a screen change, and
+a Playwright check (`tests/browser/book-service-list.spec.ts`) proves the
+pinned Continue never covers the last service at 320px. For d3:
+`service-selection.ts` already has `chosenServices`/`totalMinutes`, and
+answers carry `serviceId`. The on-screen keyboard check (where the pinned
+button sits with it open) moves to d3. Notes: `queryClient` is exported from
+`src/customer/app-shell.tsx` only so tests can clear it; `notSurePatch` is
+shared by both screens; the locked-row background uses `--wh-hover` (Jack to
+confirm the look). `ChoiceCard`'s accessible name runs title, detail and price
+together with no space (e.g. "Service 1From £20") - a registry fix, not yet
+made; the browser check locates cards by visible title text instead. Fixed in
+d2 (e76c5a2): `/book` and `/workshop` were served with no stylesheet since
+piece (b) (82da9ac) - Vite puts shared CSS on the common chunk once there are
+two entries, and `appEntryTags` only read the entry's own `css`.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per
