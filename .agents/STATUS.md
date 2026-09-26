@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `69d024e` (piece (a) merged as #72). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `14b824b` (piece (a) #72 and piece (b) #73 merged). Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -16,16 +16,26 @@ PR: (a) booked price in the booking reply and link read-back, (b) customer
 shell at `/book`, (c) missing form controls (each approved by Jack), (d) the
 six screens. **Piece (a) merged: #72** (25 Sep, CI green on its final
 commit; spec `docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`).
-**Piece (b) built: PR #73** (branch `feat/book-b-customer-shell`; spec
-`docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md`; local
-typecheck/lint clean, `npm test` 736/736, Playwright 3/3 before push). Merging
-is Jack's call. Every `/book` address now serves the React customer app
-(`src/customer/`, placeholders for the six screens). **Open for pieces (c)/(d):**
+**Piece (b) merged: #73** (26 Sep, CI green on its final commit). Every
+`/book` address serves the React customer app (`src/customer/`, placeholders
+for the six screens). **Piece (c) built** on branch `feat/book-c-form-controls` (seven registry
+controls plus the registry colour-name fix; spec
+`docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md`, Jack's
+design calls of 26 Sep are in it; local checks green, `npm test` 798/798,
+Playwright 3/3). **Open for piece (d) from (c):** `day-diary` scales so every
+start time is 44px, so a service shorter than 30 minutes (start time under 30
+minutes before a booking) stretches the whole diary - decide with real service
+lengths; `month-calendar` hard-codes an `h2` (fit the screen's heading order);
+Jack to decide whether available days need more contrast on a grey page.
+**Open for piece (d):**
 on a storefront subdomain the app reads the shop from the address
 (`/book/<slug>`), not the host, so `/book/<other-shop>` on one shop's subdomain
 shows the other shop; decide which wins. No request-level test covers the
 `/book` 500 page when the app is not built (only `appEntryTags` is tested).
-**Next:** piece (c), the missing form controls (each approved by Jack). Jack
+**Next:** piece (d), the six screens; the diary's open/close can likely come
+from `GET /api/portal/:shopSlug/mechanics` (`openingTime`/`closingTime`, the
+widest hours; `server/server.js` ~:4441-4453), with a shorter day already
+returned by `/availability` as busy time - piece (d) to confirm. Jack
 changed J1 on 25 Sep: the new app takes all of `/book` now (nobody uses the old
 page); `public-portal/` files are deleted in a later clean-up.
 **Piece 6 open items** (facts only):

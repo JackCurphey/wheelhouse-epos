@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * Wheelhouse field label - the small muted caption above an input, matching
- * `.field label` in public/styles.css (12px, 600, --muted).
+ * `.field label` in public/styles.css (12px, 600, --wh-muted).
  *
  * Deliberately a plain <label>: pairing is by htmlFor/id, which keeps the
  * component dependency-free and works inside the native <dialog> the
@@ -14,7 +14,7 @@ export function Label({ className, ...props }: React.ComponentProps<'label'>) {
   return (
     <label
       className={cn(
-        'text-xs font-semibold text-[var(--muted)]',
+        'text-xs font-semibold text-[var(--wh-muted)]',
         'peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
         className,
       )}
@@ -33,5 +33,5 @@ export function Field({ className, ...props }: React.ComponentProps<'div'>) {
 
 /** Validation message under a field - `.field-error` in public/styles.css. */
 export function FieldError({ className, ...props }: React.ComponentProps<'p'>) {
-  return <p className={cn('mt-1 text-[12.5px] text-[var(--danger)]', className)} {...props} />;
+  return <p className={cn('mt-1 text-[12.5px] text-[var(--wh-danger)]', className)} {...props} />;
 }

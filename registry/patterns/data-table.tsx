@@ -76,7 +76,7 @@ export function DataTable<Row>({
       {error ? (
         <div
           role="alert"
-          className="mb-3.5 flex items-center justify-between gap-3 rounded-lg bg-[var(--danger-bg)] px-3.5 py-2.5 text-[13.5px] text-[var(--danger)]"
+          className="mb-3.5 flex items-center justify-between gap-3 rounded-lg bg-[var(--wh-danger-bg)] px-3.5 py-2.5 text-[13.5px] text-[var(--wh-danger)]"
         >
           <span>
             Could not load {scopeLabel} for this shop. {error}
@@ -105,7 +105,7 @@ export function DataTable<Row>({
             <TableRow className="hover:bg-transparent">
               <TableCell
                 colSpan={columns.length}
-                className="px-5 py-10 text-center text-[var(--muted)]"
+                className="px-5 py-10 text-center text-[var(--wh-muted)]"
               >
                 Loading {scopeLabel}…
               </TableCell>
@@ -117,7 +117,7 @@ export function DataTable<Row>({
             <TableRow className="hover:bg-transparent">
               <TableCell
                 colSpan={columns.length}
-                className="px-5 py-10 text-center text-[var(--muted)]"
+                className="px-5 py-10 text-center text-[var(--wh-muted)]"
               >
                 {emptyMessage ?? `No ${scopeLabel} for this shop yet.`}
               </TableCell>
