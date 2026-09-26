@@ -72,6 +72,12 @@ const STALE_CHOICE = [
   'This shop takes drop-offs on that day',
   'A start time is required',
   'Please choose a mechanic',
+  // Jack decided 26 Sep: these three also mean the date screen's choice has
+  // gone stale since it was made (server/server.js checkJobSlot), so they
+  // route the same way.
+  'The shop is closed that day',
+  'That mechanic does not work that day',
+  "That job doesn't fit in the shop's opening hours",
 ];
 const QUESTIONS_CHANGED = 'The questions for this service have changed';
 // The server's own required-question refusal (server/service-questions.js

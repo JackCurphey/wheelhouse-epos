@@ -186,6 +186,14 @@ test('a choice made stale since the date screen also goes back to date (decision
   ]) assert.deepEqual(refused(400, { error }), { to: 'date' }, error);
 });
 
+test('a booking refusal (shop closed, mechanic off that day, or outside opening hours) also goes back to date (26 Sep, Jack approves)', () => {
+  for (const error of [
+    'The shop is closed that day - please choose another date.',
+    'That mechanic does not work that day - please choose another day or another mechanic.',
+    "That job doesn't fit in the shop's opening hours (09:00–17:30) - please choose an earlier time or a shorter job type.",
+  ]) assert.deepEqual(refused(400, { error }), { to: 'date' }, error);
+});
+
 test('a photo is read as bare base64: no data: prefix, no line breaks, a large file in chunks', async () => {
   const bytes = Uint8Array.from({ length: 100_000 }, (_, i) => (i * 7) % 256);
   const encoded = await s.photoBase64(new File([bytes], 'brake.png', { type: 'image/png' }));

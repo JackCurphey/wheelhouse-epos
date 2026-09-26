@@ -324,6 +324,9 @@ for (const error of [
   'This shop takes drop-offs on that day - please choose a timed slot or another day.',
   'A start time is required - please choose one.',
   'Please choose a mechanic to book this time.',
+  'The shop is closed that day - please choose another date.',
+  'That mechanic does not work that day - please choose another day or another mechanic.',
+  "That job doesn't fit in the shop's opening hours (09:00–17:30) - please choose an earlier time or a shorter job type.",
 ]) {
   test(`"${error}" goes back to date`, async () => {
     const { ui, readDraft } = await open({ draft: READY, booking: refuse(400, error) });
