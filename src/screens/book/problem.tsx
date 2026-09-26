@@ -3,14 +3,15 @@ import { useNavigate, useParams } from 'react-router';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, Label } from '@/components/ui/label';
 import { PillGroup } from '@/components/ui/pill-group';
+import { PhotoPicker } from '@/components/ui/photo-picker';
 import { Textarea } from '@/components/ui/textarea';
 import { BookFrame } from './frame.tsx';
 import { useDraft, type Answer } from './draft.tsx';
 import { RequireDraft, hasService } from './require-draft.tsx';
 import { useServices, type PortalQuestion } from './services-query.ts';
 import {
-  ANSWER_TEXT_MAX, BIKE_NOTE_MAX, descriptionError, findAnswer, missingAnswers, pillChange, pillOptions, pillValue,
-  questionGroups, questionLabel, setAnswer, type AnswerChange,
+  ANSWER_TEXT_MAX, BIKE_NOTE_MAX, MAX_PHOTOS, MAX_PHOTO_BYTES, descriptionError, findAnswer, missingAnswers, photosCleared,
+  pillChange, pillOptions, pillValue, questionGroups, questionLabel, setAnswer, type AnswerChange,
 } from './problem-rules.ts';
 
 /**
@@ -38,7 +39,7 @@ function ProblemForm() {
   const { shopSlug = '' } = useParams();
   const navigate = useNavigate();
   const { data } = useServices(shopSlug);
-  const { draft, update } = useDraft();
+  const { draft, update, photos, setPhotos } = useDraft();
   // Messages show only after a Continue press, then follow the draft, so each
   // goes as soon as it is fixed.
   const [checked, setChecked] = React.useState(false);
@@ -75,6 +76,9 @@ function ProblemForm() {
       target?.focus();
       return;
     }
+    // Continuing ends the "photos were cleared" message (spec): the flag now
+    // matches the photos actually held.
+    update({ hadPhotos: photos.length > 0 ? true : undefined });
     navigate(`/book/${shopSlug}/date`);
   };
 
@@ -129,6 +133,24 @@ function ProblemForm() {
         />
         {descError && <FieldError id={`${descId}-error`}>{descError}</FieldError>}
       </Field>
+      <section className="mb-4">
+        {photosCleared(draft, photos.length) && (
+          <p role="status" className="m-0 mb-2 rounded-md bg-[var(--wh-warn-bg)] p-2.5 text-sm text-[var(--wh-warn-ink)]">
+            Your photos were cleared - please add them again
+          </p>
+        )}
+        <PhotoPicker
+          label="Add photos (optional)"
+          value={photos}
+          max={MAX_PHOTOS}
+          maxBytes={MAX_PHOTO_BYTES}
+          onChange={(files) => {
+            setPhotos(files);
+            update({ hadPhotos: files.length > 0 ? true : undefined });
+          }}
+        />
+        <p className="m-0 mt-2 text-sm text-[var(--wh-muted)]">You can also show us at drop-off.</p>
+      </section>
     </BookFrame>
   );
 }

@@ -203,3 +203,49 @@ test('Not sure with a description continues to the date screen', async () => {
   await click(ui.getByRole('button', { name: 'Continue' }));
   assert.ok(await ui.findByText('At /book/north/date'));
 });
+
+const photo = (name) => new File([new Uint8Array(1000)], name, { type: 'image/jpeg' });
+const addPhotos = async (ui, files) =>
+  (await rtl()).fireEvent.change(ui.container.querySelector('input[type="file"]'), { target: { files } });
+
+test('photos: the picker, its label and the drop-off line', async () => {
+  const { ui } = await open({ serviceIds: [12] });
+  assert.ok(ui.getByText('Add photos (optional)'));
+  assert.ok(ui.getByText('You can also show us at drop-off.'));
+  assert.equal(ui.container.querySelector('input[type="file"]').getAttribute('accept'), 'image/jpeg,image/png,image/webp');
+  assert.equal(ui.queryByText('Your photos were cleared - please add them again'), null);
+});
+
+test('adding photos records it in the draft, never the photos themselves', async () => {
+  const { ui, readDraft } = await open({ serviceIds: [12] });
+  await addPhotos(ui, [photo('wheel.jpg')]);
+  assert.ok(ui.getByRole('button', { name: 'Remove wheel.jpg' }));
+  assert.equal(readDraft().hadPhotos, true);
+  assert.doesNotMatch(JSON.stringify(readDraft()), /wheel\.jpg/);
+  await click(ui.getByRole('button', { name: 'Remove wheel.jpg' }));
+  assert.equal(readDraft().hadPhotos, undefined);
+});
+
+test('after a remount, photos added before are reported cleared, above the picker, until added again', async () => {
+  const first = await open({ serviceIds: [12] });
+  await addPhotos(first.ui, [photo('wheel.jpg')]);
+  const stored = first.readDraft();
+  first.ui.unmount();
+  current.client.clear();
+  current.uninstall();
+  current = undefined;
+
+  const { ui } = await open(stored);
+  const message = ui.getByText('Your photos were cleared - please add them again');
+  assert.ok(message.compareDocumentPosition(ui.getByText('Add photos (optional)')) & Node.DOCUMENT_POSITION_FOLLOWING, 'the message is not above the picker');
+  await addPhotos(ui, [photo('wheel.jpg')]);
+  assert.equal(ui.queryByText('Your photos were cleared - please add them again'), null);
+});
+
+test('continuing without re-adding photos drops the cleared message', async () => {
+  const { ui, readDraft } = await open({ serviceIds: [12], hadPhotos: true });
+  assert.ok(ui.getByText('Your photos were cleared - please add them again'));
+  await click(ui.getByRole('button', { name: 'Continue' }));
+  assert.ok(await ui.findByText('At /book/north/date'));
+  assert.equal(readDraft().hadPhotos, undefined);
+});
