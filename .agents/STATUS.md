@@ -139,7 +139,7 @@ approvals (26 Sep):** the booking terms text; Text message as the default
 update channel; no marketing-permission checkbox; the four extra refusals
 ("That mechanic is unavailable at that time", "This shop takes drop-offs on
 that day" / "A start time is required", "Please choose a mechanic") also
-routed to `date` alongside the spec's three; and the copy not in the spec -
+routed to `date` alongside the spec's three, plus three more after the final review ("The shop is closed that day", "That mechanic does not work that day", "That job doesn't fit in the shop's opening hours"; Jack, 26 Sep); a 400 "Please answer: …" goes to `problem` like changed questions; a non-JSON or 5xx failure shows the no-connection message; and the copy not in the spec -
 "Please check the answers marked above" (reused from d3 on a failed Request
 booking), "We couldn't load the booking terms", "We couldn't load this
 booking", "Reference" (the pending summary's only label), and "Loading…" as
