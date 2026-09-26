@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, Label } from '@/components/ui/label';
 import { PillGroup } from '@/components/ui/pill-group';
@@ -13,6 +13,7 @@ import {
   ANSWER_TEXT_MAX, BIKE_NOTE_MAX, MAX_PHOTOS, MAX_PHOTO_BYTES, cleanAnswers, descriptionError, findAnswer, missingAnswers,
   photosCleared, pillChange, pillOptions, pillValue, questionGroups, questionLabel, setAnswer, type AnswerChange,
 } from './problem-rules.ts';
+import type { SendRefusalState } from './details-rules.ts';
 
 /**
  * The problem screen (atlas `problem`, step 2): the bike in the customer's own
@@ -38,6 +39,9 @@ const blockId = (base: string, serviceId: number, questionId: string) =>
 function ProblemForm() {
   const { shopSlug = '' } = useParams();
   const navigate = useNavigate();
+  // A booking refused at sending because the shop changed its questions (d5)
+  // comes back here with the server's message.
+  const questionsChanged = (useLocation().state as SendRefusalState | null)?.questionsChanged;
   const { data } = useServices(shopSlug);
   const { draft, update, photos, setPhotos } = useDraft();
   // Messages show only after a Continue press, then follow the draft, so each
@@ -99,6 +103,11 @@ function ProblemForm() {
         ) : undefined
       }
     >
+      {questionsChanged && (
+        <p role="alert" className="m-0 mb-3 rounded-md bg-[var(--wh-warn-bg)] p-2.5 text-sm text-[var(--wh-warn-ink)]">
+          {questionsChanged}
+        </p>
+      )}
       <Field>
         <Label htmlFor={`${base}-bike`}>Your bike (optional)</Label>
         <Input

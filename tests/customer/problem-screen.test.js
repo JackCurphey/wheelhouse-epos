@@ -271,3 +271,26 @@ test('continuing without re-adding photos drops the cleared message', async () =
   assert.ok(await ui.findByText('At /book/north/date'));
   assert.equal(readDraft().hadPhotos, undefined);
 });
+
+// d5: a booking refused because the shop changed its questions comes back
+// here with the server's message.
+// Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
+const CHANGED = 'The questions for this service have changed — please check them and try again';
+
+test("after the questions changed while sending, it shows the server's message above the bike box", async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/problem.js', exportName: 'ProblemScreen', at: 'problem', url: '/book/north/problem',
+    services: DATA, draft: { serviceIds: [11] }, state: { questionsChanged: CHANGED },
+  });
+  const { ui } = current;
+  await ui.findByRole('heading', { level: 1, name: 'Tell us about your bike' });
+  const note = ui.getByText(CHANGED);
+  assert.equal(note.getAttribute('role'), 'alert');
+  assert.ok(note.compareDocumentPosition(ui.getByRole('textbox', { name: 'Your bike (optional)' })) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'the message is not above the bike box');
+});
+
+test('opened normally, it shows no such message', async () => {
+  const { ui } = await open({ serviceIds: [11] });
+  assert.ok(ui.queryByText(CHANGED) === null);
+});

@@ -431,3 +431,30 @@ test('no free day in the two months: a message in place of the calendar, and no 
   assert.equal(ui.queryByRole('group', { name: 'October 2026' }), null);
   assert.equal(ui.queryByRole('button', { name: 'Continue' }), null);
 });
+
+// d5: a booking refused because its time went while the customer filled in
+// their details comes back here with the time cleared.
+// Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
+const SORRY = 'Sorry, that time was booked while you were filling in your details - please choose another';
+
+test('after a refused booking it says the time was booked, above the calendar, until the next pick', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/date.js', exportName: 'DateScreen', at: 'date', url: '/book/north/date',
+    services: SERVICES, mechanics: MECHANICS, availability: AVAILABILITY, draft: { serviceIds: [11, 12] },
+    state: { timeTaken: true },
+  });
+  const { ui } = current;
+  await ready(ui);
+  const message = ui.getByText(SORRY);
+  assert.equal(message.getAttribute('role'), 'alert');
+  assert.ok(message.compareDocumentPosition(ui.getByRole('group', { name: 'October 2026' })) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'the message is not above the calendar');
+  await click(day(ui, TUE_6));
+  assert.ok(ui.queryByText(SORRY) === null);
+});
+
+test('opened normally, it says nothing about a refused booking', async () => {
+  const { ui } = await open();
+  await ready(ui);
+  assert.ok(ui.queryByText(SORRY) === null);
+});
