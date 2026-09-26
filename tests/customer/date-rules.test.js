@@ -189,6 +189,32 @@ test('a saved choice is still free only while the same day, mechanic and time ar
   assert.equal(free({ date: '2026-10-06', mechanicId: 3, startTime: '09:00' }), false, 'the day changed to drop-off');
 });
 
+// "Any mechanic" (Jack, 26 Sep, .superpowers/sdd/d4-followups/brief.md): the
+// draft now records anyMechanic, and a stored mechanic that stops being
+// bookable is silently re-resolved to another bookable mechanic rather than
+// being cleared as taken - unless none is bookable that day.
+test('reresolveMechanic: an anyMechanic drop-off choice whose mechanic is no longer bookable silently re-resolves to another', () => {
+  assert.equal(r.reresolveMechanic(AV, { date: '2026-10-06', mechanicId: 1, anyMechanic: true }, MECHANICS), 2);
+});
+
+test('reresolveMechanic: nothing to do when the stored mechanic is still bookable', () => {
+  assert.equal(r.reresolveMechanic(AV, { date: '2026-10-06', mechanicId: 3, anyMechanic: true }, MECHANICS), null);
+});
+
+test('reresolveMechanic: no mechanic bookable that day - not resolvable (the caller falls back to "taken")', () => {
+  assert.equal(r.reresolveMechanic(AV, { date: '2026-10-08', mechanicId: 1, anyMechanic: true }, MECHANICS), null);
+});
+
+test('reresolveMechanic: not applicable without anyMechanic, on a timed day, or with no saved day', () => {
+  assert.equal(r.reresolveMechanic(AV, { date: '2026-10-06', mechanicId: 1 }, MECHANICS), null, 'no anyMechanic');
+  assert.equal(r.reresolveMechanic(AV, { date: '2026-10-05', mechanicId: 1, anyMechanic: true }, MECHANICS), null, 'timed day');
+  assert.equal(r.reresolveMechanic(AV, { anyMechanic: true }, MECHANICS), null, 'no saved day');
+});
+
+test('a saved choice with anyMechanic and a re-resolvable mechanic still counts as free', () => {
+  assert.equal(r.choiceStillFree(AV, { date: '2026-10-06', mechanicId: 1, anyMechanic: true }), true);
+});
+
 test('the summary: the day, then the time and mechanic (timed) or the drop-off window', () => {
   const s = (draft) => r.summaryText(AV, draft, MECHANICS);
   assert.equal(s({}), '');
