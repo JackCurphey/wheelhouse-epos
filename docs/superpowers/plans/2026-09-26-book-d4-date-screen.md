@@ -1760,6 +1760,7 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 20. **The jsdom tests pin only `Date`** (`mock.timers`, `apis: ['Date']`), so "today" is 5 October 2026 while timers stay real. Checked on this machine's Node while writing the plan; CI's Node 22 has the same API.
 21. **The Playwright mutation is in `frame.tsx`'s bottom padding**, the thing that keeps the last row clear. The date screen always passes an `actionNote` (the summary line), so the frame uses `pb-36`.
 22. **The diary's hours come from `/mechanics`' `openingTime`/`closingTime`** (the shop's widest day); a shorter day already comes back from `/availability` as busy time. This settles piece (c)'s open item.
+23. **`diaryColumns`' busy is now the complement of `startTimes` within `[hours.open, hours.close)`, on 30-minute steps, merged and clamped** — Jack, 26 Sep (`.superpowers/sdd/d4-gaps/brief.md`): `availability.busy` only covered gaps the server had already scheduled and missed every other "no start time" case (too soon, too short, not working), so a real gap could render blank instead of "Unavailable". `diaryColumns` no longer reads `availability.busy` at all; the `AvailabilityResponse` type is unchanged.
 
 ## Spec walk
 

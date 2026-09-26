@@ -49,8 +49,9 @@ picks a day, and on a timed-appointment day a mechanic and a start time.
   - a multi-select `PillGroup` of the shop's mechanics, all on when the day
     is picked; the last one on cannot be turned off;
   - a `DayDiary` with one column per selected mechanic: hours from the
-    shop's widest opening and closing times (`/mechanics`), busy blocks from
-    `/availability`'s `busy`, start times from that day's `startTimes`;
+    shop's widest opening and closing times (`/mechanics`), start times from
+    that day's `startTimes`, and grey "Unavailable" wherever the column has
+    no start time (too soon, too short, booked, not working) — Jack, 26 Sep;
   - tapping a free time saves the day, mechanic and start time.
 - **Drop-off day:**
   - "Drop off between <start> and <end>" from the day's `dropoffWindow`,

@@ -70,13 +70,43 @@ export function initialMonth(range: BookingRange, draft: BookingDraft, available
   return first ? first.slice(0, 7) : range.months[0];
 }
 
+const toMin = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+};
+const toTime = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${pad(mins % 60)}`;
+
+// The server's slot step: start times are always on a 30-minute boundary.
+const SLOT_MINUTES = 30;
+
 /**
- * One diary column per shown mechanic, in the shop's order. A mechanic with no
- * start time that day (not working, fully booked, or no gap long enough) is
- * one busy block from open to close: a blank column would read as free time.
+ * The gap time in one column: every 30-minute step within [open, close) that
+ * is not a start time, merged into blocks (a mechanic with no start times is
+ * one block open..close). open/close off a 30-minute boundary clamp the
+ * first/last block. Jack, 26 Sep (.superpowers/sdd/d4-gaps/brief.md): this
+ * replaces availability.busy for the diary, which only had cases the server
+ * had already scheduled and missed every other kind of "no start time" gap.
  */
+function busyBlocks(startTimes: string[], hours: Hours): { start: string; end: string }[] {
+  const openMin = toMin(hours.open);
+  const closeMin = toMin(hours.close);
+  const starts = new Set(startTimes);
+  const blocks: { start: number; end: number }[] = [];
+  for (let t = Math.floor(openMin / SLOT_MINUTES) * SLOT_MINUTES; t < closeMin; t += SLOT_MINUTES) {
+    if (starts.has(toTime(t))) continue;
+    const start = Math.max(t, openMin);
+    const end = Math.min(t + SLOT_MINUTES, closeMin);
+    if (start >= end) continue;
+    const last = blocks[blocks.length - 1];
+    if (last && last.end === start) last.end = end;
+    else blocks.push({ start, end });
+  }
+  return blocks.map((b) => ({ start: toTime(b.start), end: toTime(b.end) }));
+}
+
+/** One diary column per shown mechanic, in the shop's order, busy being the gaps between that day's start times. */
 export function diaryColumns(
-  availability: AvailabilityResponse,
+  _availability: AvailabilityResponse,
   day: TimedDay,
   mechanics: PortalMechanic[],
   shown: number[],
@@ -86,12 +116,7 @@ export function diaryColumns(
     .filter((m) => shown.includes(m.id))
     .map((m) => {
       const startTimes = day.mechanics.find((x) => x.mechanicId === m.id)?.startTimes ?? [];
-      const busy = startTimes.length === 0
-        ? [{ start: hours.open, end: hours.close }]
-        : availability.busy
-          .filter((b) => b.mechanicId === m.id && b.jobDate === day.date)
-          .map((b) => ({ start: b.startTime, end: b.endTime }));
-      return { id: String(m.id), name: m.name, busy, startTimes };
+      return { id: String(m.id), name: m.name, busy: busyBlocks(startTimes, hours), startTimes };
     });
 }
 

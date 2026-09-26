@@ -165,7 +165,11 @@ test('a timed day: every mechanic on, one diary column each, busy time greyed', 
   assert.deepEqual(pills.map((p) => [p.closest('label').textContent, p.checked]), [['Alex', true], ['Jo', true], ['Sam', true]]);
   const alex = ui.getByRole('group', { name: 'Alex' });
   assert.deepEqual(within(alex).getAllByRole('button').map((b) => b.getAttribute('aria-label')), ['Alex, 09:00', 'Alex, 09:30', 'Alex, 14:00']);
-  assert.equal(within(alex).getAllByText('Unavailable').length, 1);
+  // Two grey blocks: 10:00-14:00 (the server's busy row was only 10:00-12:00;
+  // 12:00-14:00 had no start time either and is now folded into the same
+  // gap) and 14:30-17:00, a gap after the last start time with no server
+  // busy row at all. Jack, 26 Sep (.superpowers/sdd/d4-gaps/brief.md).
+  assert.equal(within(alex).getAllByText('Unavailable').length, 2);
   const jo = ui.getByRole('group', { name: 'Jo' });
   assert.equal(within(jo).queryAllByRole('button').length, 0);
   assert.equal(within(jo).getAllByText('Unavailable').length, 1, 'a mechanic with no free time shows as unavailable all day');
