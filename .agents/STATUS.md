@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `6ba19b5` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81, d3 #82, piece 10 #83, d4 #84 and its follow-ups #85, server piece 11 (terms) #86 merged); d5 built on `feat/book-d5-details-send-pending`. Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `602af26` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81, d3 #82, piece 10 #83, d4 #84 and its follow-ups #85, server piece 11 (terms) #86 merged; **d5 merged: #87**, CI green on `fc49f9b`). Two look tweaks (Jack, 26 Sep, `.superpowers/sdd/look-tweaks/brief.md`) built on `fix/book-look-tweaks` off `main` at `602af26`: (1) `details` gets a separate full-width "Read the booking terms" button above the tick box (whose label is now plain text, no button inside it); (2) `pending`'s `totalLine` ("From £T") shows only with two or more services - one service shows only its own price line. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -51,7 +51,10 @@ any `form`); `/book` doesn't pick up the shop's own accent colour
 (`book.html` doesn't load `public/app.js`). **Jack, 26 Sep
 (direction, not yet scheduled):** each shop will eventually choose one colour
 scheme that applies everywhere (staff and customer apps); not built now.
-Until then `/book` uses the default Wheelhouse colours. **Open for piece (d) from (c):** `day-diary` scales so every
+Until then `/book` uses the default Wheelhouse colours. **Jack, 26 Sep
+(further direction, not yet scheduled):** each shop will also choose
+"Pop-ups: our colours / plain white", applied in both the staff app and the
+booking app. Until then, booking pop-ups use `--modal-bg` as built. **Open for piece (d) from (c):** `day-diary` scales so every
 start time is 44px, so a service shorter than 30 minutes (start time under 30
 minutes before a booking) stretches the whole diary - decide with real service
 lengths; `month-calendar` hard-codes an `h2` (fit the screen's heading order);
@@ -152,8 +155,7 @@ no "View request" / "Change or cancel request" buttons yet - it says
 (their screens) will replace `contactLine` in `pending-rules.ts` with those
 buttons. **Known follow-ups:** pressing Back while a booking is "Sending…"
 leaves the customer without their private link - not built, no screen
-covers it; "booking terms" is a small tap target inside the tick-box label -
-Jack to judge from `/tmp/d5-terms-320.png`; the terms dialog's backdrop-tap
+covers it; the terms dialog's backdrop-tap
 focus return is unchecked; a journey test whose `beforeAll` fails partway
 through seeding can leave a throwaway test shop stored (its `afterAll`
 never runs) - clean up manually if `book-journey.spec.ts` ever fails there.

@@ -38,9 +38,14 @@ export function serviceLines(link: BookingLink): { name: string; price: string |
   return link.services.map((s) => ({ name: s.name, price: s.price === null ? null : formatMoney(s.price) }));
 }
 
-/** "From £T", when the shop shows prices and every service had one. */
+/**
+ * "From £T", when the shop shows prices, every service had one, and there
+ * are two or more services (Jack, 26 Sep: a single service already shows its
+ * own price on its line, so the total would only repeat it).
+ */
 export function totalLine(link: BookingLink): string | null {
-  return link.totalPrice === null ? null : formatFrom(link.totalPrice);
+  if (link.totalPrice === null || link.services.length < 2) return null;
+  return formatFrom(link.totalPrice);
 }
 
 /**

@@ -100,6 +100,14 @@ test('with prices hidden only the names show; a drop-off booking shows the day a
   assert.ok(ui.getByText('Monday 5 October'));
 });
 
+test('with a single service there is no "From £" total line, only the service\'s own price', async () => {
+  const { ui } = await open({ ...LINK, services: [{ name: 'Brake service', price: 20 }], totalPrice: 20 });
+  await heading(ui, 'Awaiting shop confirmation');
+  assert.ok(ui.getByText('Brake service'));
+  assert.ok(ui.getByText('£20'));
+  assert.ok(ui.queryByText(/^From £/) === null);
+});
+
 test('Copy link copies this page\'s address and says "Copied" briefly', async () => {
   const { ui } = await open();
   await heading(ui, 'Awaiting shop confirmation');
