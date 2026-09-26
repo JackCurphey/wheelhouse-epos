@@ -128,6 +128,16 @@ correctly - the run-together name came from the missing stylesheet). Fixed in
 d2 (e76c5a2): `/book` and `/workshop` were served with no stylesheet since
 piece (b) (82da9ac) - Vite puts shared CSS on the common chunk once there are
 two entries, and `appEntryTags` only read the entry's own `css`.
+**d3 next (problem screen):** spec
+`docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md` approved
+by Jack 26 Sep (on branch `feat/book-d3-problem-screen`, not pushed). It needs
+**server piece 9** first: branch `feat/book-server-9-bike-note`, spec
+`docs/superpowers/specs/2026-09-26-book-server-9-bike-note-design.md`
+(approved 26 Sep, incl. migration 032). Piece 9: booking takes `bikeNote`
+(<=200, a note, no bike record); description required only for "Not sure";
+choice answers may carry typed `text`; the job's Notes carry the bike note,
+each answer and the description (staff saw no answers anywhere before); the
+link read-back returns `bikeNote` and answer `text`.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

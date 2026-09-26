@@ -91,11 +91,33 @@ test('answers become a frozen copy in question order, skipped optional as null',
   assert.deepEqual(checkAnswers(Q, [...good].reverse()), {
     value: [
       { id: 'q_000000000001', wording: 'What is wrong?', kind: 'text', answer: 'Squeaks' },
-      { id: 'q_000000000002', wording: 'E-bike?', kind: 'choice', answer: null },
-      { id: 'q_000000000003', wording: 'Tubeless?', kind: 'choice', answer: 'No' },
+      { id: 'q_000000000002', wording: 'E-bike?', kind: 'choice', answer: null, text: null },
+      { id: 'q_000000000003', wording: 'Tubeless?', kind: 'choice', answer: 'No', text: null },
     ],
   });
 });
+
+test('a choice answer may carry words with no choice', () => {
+  const qs = [{ ...Q[1], required: false }];
+  assert.deepEqual(checkAnswers(qs, [{ questionId: 'q_000000000002', text: 'Not sure, will check' }]).value[0],
+    { id: 'q_000000000002', wording: 'E-bike?', kind: 'choice', answer: null, text: 'Not sure, will check' });
+});
+
+test('a choice answer may carry a choice and words together', () => {
+  assert.deepEqual(checkAnswers(Q, [good[0], { questionId: 'q_000000000003', choice: 'No', text: 'Fitted last month' }]).value[2],
+    { id: 'q_000000000003', wording: 'Tubeless?', kind: 'choice', answer: 'No', text: 'Fitted last month' });
+});
+
+test('a required choice question is answered by words alone', () => {
+  assert.deepEqual(checkAnswers(Q, [good[0], { questionId: 'q_000000000003', text: 'No idea, ask at drop-off' }]).value[2],
+    { id: 'q_000000000003', wording: 'Tubeless?', kind: 'choice', answer: null, text: 'No idea, ask at drop-off' });
+});
+
+test('a required choice question with no choice, no notSure and no words is refused', () =>
+  refused([good[0]], /^Please answer: Tubeless\?$/));
+
+test('words on a choice question over 1,000 characters are refused', () =>
+  refused([good[0], { questionId: 'q_000000000003', choice: 'No', text: 'x'.repeat(1001) }], /1,000 characters/));
 
 test('not sure is stored as { notSure: true } and answers a required question', () => {
   const qs = [{ ...Q[1], required: true }];
@@ -132,8 +154,10 @@ test('not sure where it is switched off is refused as changed', () =>
   refused([good[0], { questionId: 'q_000000000003', notSure: true }], /have changed/));
 test('not sure on a text question is refused as changed', () =>
   refused([{ questionId: 'q_000000000001', notSure: true }, good[1]], /have changed/));
-test('text sent for a choice question is refused as changed', () =>
-  refused([good[0], { questionId: 'q_000000000003', text: 'No' }], /have changed/));
+test('a non-string choice on a choice question is refused as changed', () =>
+  refused([good[0], { questionId: 'q_000000000003', choice: 42 }], /have changed/));
+test('a non-string words value on a choice question is refused as changed', () =>
+  refused([good[0], { questionId: 'q_000000000003', text: 42 }], /have changed/));
 test('a text answer over 1,000 characters is refused', () =>
   refused([{ questionId: 'q_000000000001', text: 'x'.repeat(1001) }, good[1]], /1,000 characters/));
 test('a text answer of exactly 1,000 characters is allowed', () =>
