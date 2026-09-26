@@ -95,14 +95,16 @@ on links are live (a rename changes past links) - decide in d2/d5. Then
 only: migration 031 `workshop_service_includes`; staff `includes: number[]` on
 `/api/workshop-services` (omitted on PUT keeps; individual services `[]`);
 customer `/services` gives each `full[]` item `includes: [{id, name}]` (active
-individual services, bookable online or not, shop's order); booking unchanged
-(both can be booked). No staff screen sets it yet - screens 65/66 are a later
+individual services, bookable online or not, shop's order); a booking with a
+full service and a service it includes is refused ("<full> already includes
+<service>", d2 decision 26 Sep). No staff screen sets it yet - screens 65/66 are a later
 piece, which must first lock rows so a simultaneous "add X to F" and "promote X
 to full" can't both commit (checks run before the transaction today; customers
 are guarded by a kind filter). Then **(d2)** service screens with multi-select
 and a Continue button, using `PortalFullService.includes` for the "Includes ..."
-line (shortened past a few items) and the "Already part of your <full service>"
-warning with a "Remove <name>" link (Jack, 26 Sep).
+line (shortened past a few items); ticking a full service hints "Included in
+your <full service>" on the services it includes and locks them (Jack, 26 Sep,
+replacing piece 8's warn-and-remove). d2 is being brainstormed.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

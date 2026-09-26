@@ -4788,6 +4788,18 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     if (found.length !== request.serviceIds.length) return badRequest(res, 'That service is not available to book');
     const byId = new Map(found.map((s) => [s.id, s]));
     chosen = request.serviceIds.map((id) => byId.get(id));
+    // A full service already covers the individual services it includes
+    // (piece 8), so booking one alongside it would charge twice for the same
+    // work. The booking screen locks them; this holds however a booking
+    // arrives (d2 decision, 26 Sep).
+    const overlap = await db.prepare(
+      `SELECT f.name AS full_name, p.name AS part_name FROM workshop_service_includes i
+       JOIN workshop_services f ON f.id = i.service_id
+       JOIN workshop_services p ON p.id = i.included_service_id
+       WHERE i.service_id = ANY(?) AND i.included_service_id = ANY(?)
+       ORDER BY f.name, i.position LIMIT 1`
+    ).get(request.serviceIds, request.serviceIds);
+    if (overlap) return badRequest(res, `${overlap.full_name} already includes ${overlap.part_name}`);
   }
   const minutes = request.notSure ? 60 : chosen.reduce((sum, s) => sum + s.minutes, 0);
   if (minutes > 720) return badRequest(res, "That's too much work for one visit - please book the jobs separately");

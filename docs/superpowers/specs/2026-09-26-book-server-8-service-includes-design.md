@@ -26,7 +26,12 @@ of the full service, and the full service's card should say what it covers.
    ticked full service includes, with a "Remove <name>" link. A booking of
    both still goes through. Chosen over warn only (easy double charge) and
    locking included services (ticking one silently changes another; no way
-   for a shop to allow both). **The booking route gains no new rule.**
+   for a shop to allow both). **Changed by d2 (Jack, 26 Sep):** the list
+   screen hints and locks instead (an included service shows "Included in
+   your <full service>" and can't be ticked while the full service is), and
+   the booking route refuses the pair: "<full service> already includes
+   <service>" (first such pair by full service name). The warning and
+   "Remove" link are dropped.
 3. **The full service's card lists what it includes**, e.g. "Includes brake
    service, gear service", shortened past a few items ("… and 6 more") -
    d2's job. Chosen over the warning alone.
@@ -54,8 +59,9 @@ of the full service, and the full service's card should say what it covers.
   first" (first such full service by name).
 - An individual service sent with a non-empty `includes` is refused: "Only a
   full service can include other services".
-- Booking is unchanged: a full service plus something it includes books as
-  two services, each at its own price (decision 2).
+- A booking holding a full service and a service it includes is refused
+  with "<full service> already includes <service>", before anything is
+  saved (decision 2 as changed by d2).
 
 ## Storage (migration 031)
 
@@ -112,8 +118,9 @@ of the full service, and the full service's card should say what it covers.
 - `tests/portal-service-list.test.js` (added cases): `full[].includes` lists
   names in order; a removed service is hidden; a not-bookable-online one is
   shown; individual services have no `includes`.
-- A booking of a full service plus a service it includes returns 201 with
-  both in `services` (`tests/portal-booking-multi.test.js`).
+- A booking of a full service plus a service it includes is refused in
+  either order and saves nothing; a full service plus an unrelated service
+  still books (`tests/portal-booking-multi.test.js`).
 
 ## Not in this piece
 
