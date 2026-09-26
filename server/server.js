@@ -75,6 +75,7 @@ import {
   listStorefrontProducts,
 } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
+import { STANDARD_BOOKING_TERMS } from './standard-terms.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
 import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
@@ -2672,15 +2673,26 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     // fails is a number spent for nothing, which is tolerable, but a reference
     // allocated outside and reused is not.
     const reference = await allocateReference();
+    // The terms in force right now, for a booking that took consent
+    // (termsAcceptedAt is only ever set by the portal booking route - a
+    // staff-made job takes no terms consent and stores none). Read inside
+    // this transaction so a later change to the shop's terms never rewrites
+    // what an already-committed booking agreed to (piece 11).
+    let termsText = null;
+    if (termsAcceptedAt) {
+      const settingsRow = await db.prepare('SELECT booking_terms FROM workshop_settings LIMIT 1').get();
+      termsText = settingsRow?.booking_terms || STANDARD_BOOKING_TERMS;
+    }
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, link_token_hash, customer_description, customer_bike_note, question_answers, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
         termsAcceptedAt ?? null,
+        termsText,
         linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         nowIso()
@@ -3607,6 +3619,9 @@ function serializeWorkshopSettings(row) {
     // INTEGER 0/1 in the column, boolean over the wire - the client renders
     // it directly, same shape serializeWorkshopService uses for `active`.
     showPricesOnline: row.show_prices_online === 1,
+    // null: this shop has no terms of its own, so the standard Wheelhouse
+    // terms (server/standard-terms.js) apply (piece 11).
+    bookingTerms: row.booking_terms ?? null,
     updatedAt: row.updated_at,
   };
 }
@@ -3723,18 +3738,34 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   const showPricesOnline = body.showPricesOnline === undefined
     ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
 
+  // A shop's own terms, or null to use the standard ones (piece 11). A
+  // string is trimmed; null or an empty/blank string reverts to standard;
+  // omitted keeps whatever is stored.
+  let bookingTerms = existing.booking_terms;
+  if (body.bookingTerms !== undefined) {
+    if (body.bookingTerms === null) {
+      bookingTerms = null;
+    } else if (typeof body.bookingTerms === 'string') {
+      const trimmed = body.bookingTerms.trim();
+      if (trimmed.length > 20000) return badRequest(res, 'Booking terms can be up to 20,000 characters');
+      bookingTerms = trimmed.length === 0 ? null : trimmed;
+    } else {
+      return badRequest(res, 'Booking terms must be text');
+    }
+  }
+
   await db.prepare(
     `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, weekday_hours = ?,
        full_day_threshold_minutes = ?, booking_mode = ?, next_booking_mode = ?, next_booking_mode_from = ?,
        dropoff_window_start = ?,
        dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
        min_notice_minutes = ?, time_zone = ?,
-       show_prices_online = ?, updated_at = ? WHERE id = ?`
+       show_prices_online = ?, booking_terms = ?, updated_at = ? WHERE id = ?`
   ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
         nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
         dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
         minNoticeMinutes, timeZone,
-        showPricesOnline, nowIso(), existing.id);
+        showPricesOnline, bookingTerms, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
 });
@@ -4631,6 +4662,21 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, s
       }))
       .filter((c) => c.services.length > 0),
     uncategorised: individual.filter((s) => s.category_id === null).map(toPublic),
+  });
+});
+
+// The terms a customer is agreeing to when they book: this shop's own when
+// it has set one, else the standard Wheelhouse terms. Public, no sign-in,
+// read through the shop's row-level security like every portal route, so it
+// can only ever read this shop's own setting.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-11-terms-design.md
+route('GET', '/api/portal/:shopSlug/terms', async (req, res) => {
+  const settings = await db.prepare('SELECT booking_terms FROM workshop_settings LIMIT 1').get();
+  const standard = !settings?.booking_terms;
+  sendJson(res, 200, {
+    title: 'Booking terms',
+    text: standard ? STANDARD_BOOKING_TERMS : settings.booking_terms,
+    standard,
   });
 });
 
