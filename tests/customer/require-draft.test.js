@@ -16,7 +16,7 @@ afterEach(async () => {
 const GUARD = new URL('../../.test-build/screens/book/require-draft.js', import.meta.url).href;
 const DRAFT = new URL('../../.test-build/screens/book/draft.js', import.meta.url).href;
 
-async function renderAt(stored) {
+async function renderAt(stored, to) {
   uninstall = installDom('http://localhost/book/north/date');
   if (stored) window.sessionStorage.setItem('wh-book-draft:north', JSON.stringify(stored));
   const { render } = await import('@testing-library/react');
@@ -25,7 +25,8 @@ async function renderAt(stored) {
   const { RequireDraft, hasService } = await importFresh(GUARD);
   const { DraftProvider } = await import(DRAFT);
   const router = createMemoryRouter([
-    { path: '/book/:shopSlug/date', Component: () => h(RequireDraft, { has: hasService }, h('p', null, 'Date screen')) },
+    { path: '/book/:shopSlug/date', Component: () => h(RequireDraft, { has: hasService, to }, h('p', null, 'Date screen')) },
+    { path: '/book/:shopSlug/problem', Component: () => h('p', null, 'Problem screen') },
     { path: '/book/:shopSlug', Component: () => h('p', null, 'First screen') },
   ], { initialEntries: ['/book/north/date'] });
   const ui = render(h(DraftProvider, { shopSlug: 'north' }, h(RouterProvider, { router })));
@@ -96,4 +97,31 @@ test('hasProblem treats a stale choice (no longer one of the shop\'s choices) as
     hasProblem({ serviceIds: [11], answers: [{ serviceId: 11, questionId: 'b1', choice: 'Worn pads' }] }, PROBLEM_SERVICES),
     false,
   );
+});
+
+// d4: RequireDraft's redirect target (the date screen sends the customer back
+// to problem), and hasDate (d4 adds it; d5 applies it).
+// Spec: docs/superpowers/specs/2026-09-26-book-d4-date-screen-design.md
+test('with a redirect target, a screen opened without its answers goes there instead', async () => {
+  const { ui, router } = await renderAt(null, 'problem');
+  assert.ok(await ui.findByText('Problem screen'));
+  assert.equal(ui.queryByText('First screen'), null);
+  assert.equal(router.state.historyAction, 'REPLACE');
+});
+
+test('with a redirect target and the answers present, the screen shows', async () => {
+  const { ui } = await renderAt({ serviceIds: [7] }, 'problem');
+  assert.ok(await ui.findByText('Date screen'));
+});
+
+test('hasDate needs a day and a real mechanic, and a start time only when one was chosen', async () => {
+  const { hasDate } = await import(GUARD);
+  assert.equal(hasDate({ date: '2026-10-05', mechanicId: 1, startTime: '09:30' }), true, 'timed');
+  assert.equal(hasDate({ date: '2026-10-06', mechanicId: 2 }), true, 'drop-off: no start time');
+  assert.equal(hasDate({}), false);
+  assert.equal(hasDate({ date: '2026-10-05' }), false, 'no mechanic ("Any mechanic" is resolved before it is saved)');
+  assert.equal(hasDate({ mechanicId: 1, startTime: '09:30' }), false, 'no day');
+  assert.equal(hasDate({ date: '5 October', mechanicId: 1 }), false);
+  assert.equal(hasDate({ date: '2026-10-05', mechanicId: '1' }), false);
+  assert.equal(hasDate({ date: '2026-10-05', mechanicId: 1, startTime: '9.30' }), false);
 });
