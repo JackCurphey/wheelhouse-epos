@@ -131,11 +131,18 @@ export function choiceStillFree(availability: AvailabilityResponse, draft: Booki
   return draft.mechanicId === undefined || bookableOn(day, draft.mechanicId);
 }
 
-const DAY_LABEL = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+// Fixed English names, not a locale formatter: our own copy has no comma, and
+// ICU data on some Node/ICU builds would add one after the weekday.
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 /** "Monday 5 October". Worked in UTC, like the calendar, so no time zone can shift the day. */
 export function dayLabel(date: string): string {
-  return DAY_LABEL.format(new Date(`${date}T00:00:00Z`));
+  const d = new Date(`${date}T00:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
 /** The pinned summary; empty until a free day is picked. */

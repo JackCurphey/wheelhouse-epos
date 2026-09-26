@@ -150,6 +150,11 @@ test('the summary: the day, then the time and mechanic (timed) or the drop-off w
   assert.equal(r.dayLabel('2026-11-02'), 'Monday 2 November');
 });
 
+test('dayLabel is our own copy: no comma, built from fixed names not a locale formatter', () => {
+  assert.equal(r.dayLabel('2026-11-02'), 'Monday 2 November');
+  assert.ok(!r.dayLabel('2026-11-02').includes(','), 'must contain no comma');
+});
+
 test('the Continue message: a day first, then a time on a timed day', () => {
   const m = (draft) => r.continueMessage(AV, draft);
   assert.equal(m({}), 'Choose a day');
