@@ -52,9 +52,14 @@ export function PhotoPicker({ value, onChange, max = 5, maxBytes = 10 * 1024 * 1
                 type="button"
                 aria-label={`Remove ${f.name}`}
                 onClick={() => onChange(value.filter((_, j) => j !== i))}
-                className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-[var(--wh-ink)] text-sm text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                className="absolute -right-0 -top-0 size-11 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
               >
-                ×
+                <span
+                  aria-hidden
+                  className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-[var(--wh-ink)] text-sm text-white"
+                >
+                  ×
+                </span>
               </button>
             </li>
           ))}

@@ -46,7 +46,9 @@ test('a JPEG is added and shown with a remove button and the count', async () =>
   const { ui, fireEvent, input, changes } = await renderPicker();
   fireEvent.change(input, { target: { files: [photo('wheel.jpg')] } });
   assert.deepEqual(changes, [['wheel.jpg']]);
-  assert.ok(ui.getByRole('button', { name: 'Remove wheel.jpg' }));
+  const btn = ui.getByRole('button', { name: 'Remove wheel.jpg' });
+  assert.ok(btn);
+  assert.match(btn.className, /\bsize-11\b/);
   assert.ok(ui.getByText(/1 of 5 added/));
 });
 
