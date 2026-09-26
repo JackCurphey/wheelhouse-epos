@@ -26,7 +26,10 @@ on a storefront subdomain the app reads the shop from the address
 (`/book/<slug>`), not the host, so `/book/<other-shop>` on one shop's subdomain
 shows the other shop; decide which wins. No request-level test covers the
 `/book` 500 page when the app is not built (only `appEntryTags` is tested).
-**Next:** piece (d), the six screens; it also needs `/availability` to return a day's opening hours for the diary. Jack
+**Next:** piece (d), the six screens; the diary's open/close can likely come
+from `GET /api/portal/:shopSlug/mechanics` (`openingTime`/`closingTime`, the
+widest hours; `server/server.js` ~:4441-4453), with a shorter day already
+returned by `/availability` as busy time - piece (d) to confirm. Jack
 changed J1 on 25 Sep: the new app takes all of `/book` now (nobody uses the old
 page); `public-portal/` files are deleted in a later clean-up.
 **Piece 6 open items** (facts only):

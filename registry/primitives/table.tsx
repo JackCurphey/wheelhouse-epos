@@ -37,7 +37,7 @@ export function TableFooter({ className, ...props }: React.ComponentProps<'tfoot
 }
 
 export function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
-  return <tr className={cn('hover:bg-wh-hover-subtle', className)} {...props} />;
+  return <tr className={cn('hover:bg-[var(--wh-hover-subtle)]', className)} {...props} />;
 }
 
 type CellProps = {

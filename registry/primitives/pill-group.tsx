@@ -40,7 +40,7 @@ export function PillGroup(props: PillGroupProps) {
           <label
             key={o.value}
             className={cn(
-              'inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-[var(--wh-border)] bg-white px-3.5 text-sm text-[var(--wh-ink)]',
+              'relative inline-flex min-h-11 min-w-11 cursor-pointer items-center rounded-lg border border-[var(--wh-border)] bg-white px-3.5 text-sm text-[var(--wh-ink)]',
               'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--accent)]',
               isOn(o.value) && 'border-2 border-[var(--accent-dark)] bg-[color-mix(in_srgb,var(--accent-dark)_7%,white)]',
               o.disabled && 'cursor-not-allowed opacity-50',

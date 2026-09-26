@@ -96,3 +96,28 @@ test('the month buttons ask for the previous and next month', async () => {
   assert.deepEqual(months, ['2026-09', '2026-11']);
   assert.ok(ui.getByText('October 2026'));
 });
+
+test('a refused month-leaving arrow key does not later steal focus from the Next-month button', async () => {
+  const { render, fireEvent, h, mod } = await setup();
+  const { useState } = await import('react');
+  function Host() {
+    const [month, setMonth] = useState('2026-10');
+    return h(mod.MonthCalendar, {
+      month,
+      available: new Set(['2026-10-01']),
+      value: '2026-10-01',
+      onChange: () => {},
+      // Refuses any month before October - the parent's own call, not the component's.
+      onMonthChange: (m) => { if (m >= '2026-10') setMonth(m); },
+    });
+  }
+  const ui = render(h(Host));
+  const day1 = ui.container.querySelector('[data-date="2026-10-01"]');
+  // ArrowUp goes back 7 days, into September - refused by the host above, so
+  // the calendar keeps showing October and day1 keeps focus.
+  fireEvent.keyDown(day1, { key: 'ArrowUp' });
+  const nextButton = ui.getByRole('button', { name: 'Next month' });
+  nextButton.focus(); // as it would be after a real click, or after tabbing to it
+  fireEvent.click(nextButton);
+  assert.ok(document.activeElement === nextButton, `focus should stay on the Next-month button, not move to a day cell (was ${document.activeElement?.tagName}[data-date="${document.activeElement?.getAttribute?.('data-date')}"])`);
+});

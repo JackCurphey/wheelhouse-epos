@@ -34,15 +34,15 @@ Wiring them to real data is piece (d).
    "Unavailable" blocks with no details. One day at a time, not the old
    week view: a week is under 40px per column on a phone. Drop-off shops
    have no times: month calendar plus a mechanic choice.
+6. **Large text box and photo picker as shown.** Photos only (JPEG, PNG,
+   WebP); the atlas's video option is dropped because the server refuses
+   video.
 7. **Drop-off customers choose their mechanic with single-choice pills**
    after picking the day (the server requires a mechanic in both modes).
    Mechanics who cannot take the job that day (`bookable: false` from
    `/availability`) are greyed and cannot be picked. Chosen over choice
    cards (a detail line with nothing real to show yet) and a read-only diary
    (suggests a time choice drop-off does not have).
-6. **Large text box and photo picker as shown.** Photos only (JPEG, PNG,
-   WebP); the atlas's video option is dropped because the server refuses
-   video.
 
 Colour: "shop colour" is the existing `--accent` / `--accent-dark` tokens
 (`src/styles/theme.css:30-31`; `--accent-dark` is the atlas's `#164f42`).
@@ -110,8 +110,10 @@ registry item reading names that `theme.css` lacks gets the same fix.
 
 - Using the controls on screens, loading availability, sending photos
   (piece (d)).
-- The server returning a day's opening hours, which `day-diary` needs as
-  `open`/`close`: `/availability` does not return them today. Piece (d).
+- Wiring `day-diary`'s `open`/`close` to real data: these can likely come
+  from `GET /api/portal/:shopSlug/mechanics` (`openingTime`/`closingTime`,
+  the widest hours; `server/server.js` ~:4441-4453), with a shorter day
+  already returned by `/availability` as busy time. Piece (d) to confirm.
 - A dropdown; dark mode; per-shop colour at runtime in the React app.
 
 ## Done when

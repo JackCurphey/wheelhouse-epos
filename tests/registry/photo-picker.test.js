@@ -68,3 +68,33 @@ test('remove drops only that photo', async () => {
   fireEvent.click(ui.getByRole('button', { name: 'Remove a.jpg' }));
   assert.deepEqual(changes, [['b.jpg']]);
 });
+
+test('removing a photo clears a stale refused-files message', async () => {
+  const four = ['a', 'b', 'c', 'd'].map((n) => photo(`${n}.jpg`));
+  const { ui, fireEvent, input } = await renderPicker(four);
+  fireEvent.change(input, { target: { files: [photo('e.jpg'), photo('f.jpg')] } }); // 'e' fits, 'f' is refused (max 5)
+  assert.ok(ui.getByRole('alert'));
+  fireEvent.click(ui.getByRole('button', { name: 'Remove a.jpg' }));
+  assert.ok(ui.queryByRole('alert') === null, 'stale refused-files alert should be cleared after a remove');
+});
+
+test('under StrictMode, a chosen photo keeps a live thumbnail across the mount/unmount/remount React does to check effects', async () => {
+  const { render, h, mod } = await setup();
+  const { StrictMode } = await import('react');
+  const created = [];
+  const revoked = [];
+  const realCreate = URL.createObjectURL.bind(URL);
+  const realRevoke = URL.revokeObjectURL.bind(URL);
+  URL.createObjectURL = (f) => { const u = realCreate(f); created.push(u); return u; };
+  URL.revokeObjectURL = (u) => { revoked.push(u); realRevoke(u); };
+  try {
+    const ui = render(h(StrictMode, null, h(mod.PhotoPicker, { value: [photo('wheel.jpg')], onChange: () => {} })));
+    const img = ui.container.querySelector('img');
+    assert.ok(img, 'expected a thumbnail <img>');
+    assert.ok(created.includes(img.src), 'thumbnail src should be a URL this component created');
+    assert.ok(!revoked.includes(img.src), 'thumbnail src must not already be revoked');
+  } finally {
+    URL.createObjectURL = realCreate;
+    URL.revokeObjectURL = realRevoke;
+  }
+});

@@ -22,11 +22,29 @@ export type PhotoPickerProps = {
   className?: string;
 };
 
+/** One thumbnail. Creates and revokes its own object URL so React StrictMode's
+ * mount->unmount->remount (both apps run it) can't leave a revoked URL on
+ * screen: a URL made in a parent's useMemo survives that remount, but the
+ * effect that revoked it on the phantom unmount already ran. */
+function Thumb({ file }: { file: File }) {
+  const [src, setSrc] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const u = URL.createObjectURL(file);
+    // Creating the object URL is the external side effect itself (it can't
+    // happen during render - that would mint a new URL, and leak the old
+    // one, on every render); setSrc mirrors that URL into state so it renders
+    // exactly once, paired with the matching revoke on cleanup.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSrc(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  if (!src) return null;
+  return <img src={src} alt={file.name} className="size-full rounded-md object-cover" />;
+}
+
 export function PhotoPicker({ value, onChange, max = 5, maxBytes = 10 * 1024 * 1024, label = 'Add photos', className }: PhotoPickerProps) {
   const inputId = React.useId();
   const [refused, setRefused] = React.useState<string[]>([]);
-  const urls = React.useMemo(() => value.map((f) => URL.createObjectURL(f)), [value]);
-  React.useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls]);
 
   function add(list: FileList | File[] | null) {
     const kept = [...value];
@@ -41,17 +59,22 @@ export function PhotoPicker({ value, onChange, max = 5, maxBytes = 10 * 1024 * 1
     if (kept.length !== value.length) onChange(kept);
   }
 
+  function remove(i: number) {
+    setRefused([]);
+    onChange(value.filter((_, j) => j !== i));
+  }
+
   return (
     <div className={cn('flex flex-col gap-2.5', className)}>
       {value.length > 0 && (
         <ul className="m-0 flex list-none flex-wrap gap-2.5 p-0">
           {value.map((f, i) => (
             <li key={`${f.name}-${i}`} className="relative size-[58px]">
-              <img src={urls[i]} alt={f.name} className="size-full rounded-md object-cover" />
+              <Thumb file={f} />
               <button
                 type="button"
                 aria-label={`Remove ${f.name}`}
-                onClick={() => onChange(value.filter((_, j) => j !== i))}
+                onClick={() => remove(i)}
                 className="absolute -right-0 -top-0 size-11 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
               >
                 <span

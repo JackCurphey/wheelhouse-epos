@@ -62,6 +62,10 @@ export function MonthCalendar({ month, onMonthChange, available, value = null, o
   const current = days.includes(focusDate) ? focusDate : firstFocus(days, available, value);
   const moved = React.useRef(false);
   const gridRef = React.useRef<HTMLDivElement>(null);
+  // A day left this month by arrow key, waiting to find out whether the
+  // parent accepts the month change. If it doesn't (refused), `month` never
+  // changes and this stays pending harmlessly instead of firing later.
+  const pendingCrossMonth = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!moved.current) return;
@@ -69,14 +73,31 @@ export function MonthCalendar({ month, onMonthChange, available, value = null, o
     gridRef.current?.querySelector<HTMLButtonElement>(`[data-date="${current}"]`)?.focus();
   }, [current]);
 
+  // Only reacts to a month the parent actually applied - never to one that
+  // was requested and refused, so a stale pending target from a refused
+  // ArrowUp/Down/Left/Right can't later steal focus on an unrelated month
+  // change (e.g. the Previous/Next-month buttons).
+  React.useEffect(() => {
+    const target = pendingCrossMonth.current;
+    pendingCrossMonth.current = null;
+    if (target && target.slice(0, 7) === month) {
+      setFocusDate(target);
+      moved.current = true;
+    }
+  }, [month]);
+
   function onKeyDown(e: React.KeyboardEvent, date: string) {
     const step = STEP[e.key];
     if (step === undefined) return;
     e.preventDefault();
     const next = addDays(date, step);
+    if (next.slice(0, 7) !== month) {
+      pendingCrossMonth.current = next;
+      onMonthChange(next.slice(0, 7));
+      return;
+    }
     moved.current = true;
     setFocusDate(next);
-    if (next.slice(0, 7) !== month) onMonthChange(next.slice(0, 7));
   }
 
   const title = TITLE.format(utc(`${month}-01`));

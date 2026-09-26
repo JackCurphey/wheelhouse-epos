@@ -24,6 +24,8 @@ test('a labelled text box reports what is typed', async () => {
   const seen = [];
   const ui = render(h('label', null, 'Describe the problem',
     h(mod.Textarea, { onChange: (e) => seen.push(e.target.value) })));
-  fireEvent.change(ui.getByRole('textbox', { name: 'Describe the problem' }), { target: { value: 'Squeaky brakes' } });
+  const field = ui.getByRole('textbox', { name: 'Describe the problem' });
+  fireEvent.change(field, { target: { value: 'Squeaky brakes' } });
   assert.deepEqual(seen, ['Squeaky brakes']);
+  assert.equal(field.tagName, 'TEXTAREA');
 });
