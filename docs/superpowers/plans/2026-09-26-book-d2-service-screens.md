@@ -1165,7 +1165,7 @@ Expected: all PASS, including the updated smoke test from Task 4.
 Run: `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run registry:validate`, `node scripts/ci/check-registry-drift.mjs`, `node scripts/ci/assert-screen-trace.mjs` and `node scripts/ci/assert-rls-coverage.mjs`.
 Expected: all exit 0. Report the test counts.
 
-- [ ] **Step 5: STATUS.** In `.agents/STATUS.md`, replace "d2 is being brainstormed." with a short d2 entry covering:
+- [ ] **Step 5: STATUS.** In `.agents/STATUS.md`, replace the "**d2 next: build it**" sentences (through "No task started.") with a short d2 entry covering:
   - the branch and its PR
   - the spec and plan paths
   - what's built (the `service` and `service-list` screens, `serviceIds[]` in the draft, `Answer.serviceId`, and the frame's loading/unknown/failed/focus behaviour plus `actionNote`)

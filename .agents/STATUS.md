@@ -88,7 +88,7 @@ each `Answer` a `serviceId`, update `hasService` in `require-draft.tsx`, read
 `services`/`totalPrice` on `pending`; the link's answers and "Please answer:
 ..." errors don't name which service a question belongs to, and service names
 on links are live (a rename changes past links) - decide in d2/d5. Then
-**server piece 8** (what a full service includes; branch
+**server piece 8** (what a full service includes;
 merged: **#77** (26 Sep at `4049fa9`, CI green on its final commit `e1dd051`); spec
 `docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md`, plan
 `docs/superpowers/plans/2026-09-26-book-server-8-service-includes.md`). Server
@@ -104,7 +104,12 @@ are guarded by a kind filter). Then **(d2)** service screens with multi-select
 and a Continue button, using `PortalFullService.includes` for the "Includes ..."
 line (shortened past a few items); ticking a full service hints "Included in
 your <full service>" on the services it includes and locks them (Jack, 26 Sep,
-replacing piece 8's warn-and-remove). d2 is being brainstormed.
+replacing piece 8's warn-and-remove). **d2 next: build it** - spec
+`docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md` and plan
+`docs/superpowers/plans/2026-09-26-book-d2-service-screens.md` approved by Jack
+26 Sep; branch `feat/book-d2-service-screens` (spec, plan, STATUS commits only,
+not pushed); Jack chose subagent-driven development (fresh helper per task,
+task reviews, final review on the most capable model). No task started.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per
