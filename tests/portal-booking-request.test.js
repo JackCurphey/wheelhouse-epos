@@ -12,6 +12,7 @@ import { jsonRequest } from './helpers/http.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { futureDate } from './helpers/workshopFixtures.js';
 import { seedJobTypes, BOOKING_CONTACT } from './helpers/bookable.js';
+import { STANDARD_BOOKING_TERMS } from '../server/standard-terms.js';
 
 let server;
 let owner;
@@ -227,6 +228,46 @@ test('terms consent is stored as a timestamp on the job', async () => {
 
 const jobCount = () => runWithShop(owner.shop.id, async () =>
   Number((await prepare('SELECT COUNT(*) AS n FROM workshop_jobs').get()).n));
+
+// Piece 11: the terms in force at booking time are copied onto the job.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-11-terms-design.md
+const termsTextOf = (jobId) => runWithShop(owner.shop.id, async () =>
+  (await prepare('SELECT terms_text FROM workshop_jobs WHERE id = ?').get(jobId)).terms_text);
+const putTerms = (bookingTerms) => staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', {
+  method: 'PUT', body: { bookingTerms },
+});
+
+test('a booking for a shop with no terms of its own stores the standard terms', async () => {
+  const res = await book({});
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(await termsTextOf(res.body.id), STANDARD_BOOKING_TERMS);
+});
+
+test('a booking for a shop with its own terms stores those', async () => {
+  const put = await putTerms('Owner shop\'s own terms.');
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  try {
+    const res = await book({});
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(await termsTextOf(res.body.id), "Owner shop's own terms.");
+  } finally {
+    await putTerms(null);
+  }
+});
+
+test('changing the terms afterwards leaves the stored copy on an earlier booking unchanged', async () => {
+  const first = await book({});
+  assert.equal(first.status, 201, JSON.stringify(first.body));
+  const put = await putTerms('Terms changed after this booking.');
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  try {
+    assert.equal(await termsTextOf(first.body.id), STANDARD_BOOKING_TERMS);
+    const second = await book({});
+    assert.equal(await termsTextOf(second.body.id), 'Terms changed after this booking.');
+  } finally {
+    await putTerms(null);
+  }
+});
 
 test('a booking without accepted terms is refused and creates no job', async () => {
   const before = await jobCount();
