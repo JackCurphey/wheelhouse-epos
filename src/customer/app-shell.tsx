@@ -1,8 +1,9 @@
 import type { ComponentType } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createBrowserRouter, useRouteError } from 'react-router';
+import { createBrowserRouter, Outlet, useParams, useRouteError } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { ApiError } from '@/lib/api/client.ts';
+import { DraftProvider } from '@/screens/book/draft.tsx';
 import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
 
 /**
@@ -11,8 +12,24 @@ import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
  * staff session, and its own addresses under /book.
  *
  * Deliberately unstyled; the screens and their design come in later pieces.
+ * Book screens nest under a /book/:shopSlug layout that provides the booking
+ * in progress (d1).
  * Spec: docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md
  */
+
+const BOOK_BASE = '/book/:shopSlug';
+
+// Every book screen shares one booking in progress for its shop, so the
+// screens sit under one layout route that provides it. Keyed by shop, so
+// moving to another shop's address starts that shop's own draft.
+function BookLayout() {
+  const { shopSlug = '' } = useParams();
+  return (
+    <DraftProvider key={shopSlug} shopSlug={shopSlug}>
+      <Outlet />
+    </DraftProvider>
+  );
+}
 
 // Screens by atlas id. An id with no entry renders the placeholder, so every
 // address in CUSTOMER_ROUTES works from day one - including a private link.
@@ -45,10 +62,16 @@ const router = createBrowserRouter([
   {
     ErrorBoundary: RouteErrorBoundary,
     children: [
-      ...(Object.entries(CUSTOMER_ROUTES) as [CustomerScreenId, string][]).map(([id, path]) => ({
-        path,
-        Component: SCREENS[id] ?? notBuilt(id),
-      })),
+      {
+        path: BOOK_BASE,
+        Component: BookLayout,
+        children: (Object.entries(CUSTOMER_ROUTES) as [CustomerScreenId, string][]).map(([id, path]) => {
+          if (!path.startsWith(BOOK_BASE)) throw new Error(`${id} is not under ${BOOK_BASE}`);
+          const rest = path.slice(BOOK_BASE.length).replace(/^\//, '');
+          const Component = SCREENS[id] ?? notBuilt(id);
+          return rest ? { path: rest, Component } : { index: true, Component };
+        }),
+      },
       { path: '/book/*', Component: NoSuchScreen },
     ],
   },
