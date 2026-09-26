@@ -23,8 +23,36 @@ registry controls plus the registry colour-name fix; spec
 `docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md`). **Piece
 (d) is five parts** (Jack, 26 Sep): (d1) groundwork, (d2) service screens,
 (d3) problem, (d4) date, (d5) details + sending + pending + journey test.
-**Now:** (d1) on branch `feat/book-d-screens`; spec
-`docs/superpowers/specs/2026-09-26-book-d1-groundwork-design.md`. **Open for piece (d) from (c):** `day-diary` scales so every
+**(d1) built** on branch `feat/book-d-screens` (plan
+`docs/superpowers/plans/2026-09-26-book-d1-groundwork.md`; spec
+`docs/superpowers/specs/2026-09-26-book-d1-groundwork-design.md`). A screen
+plugs in as `src/screens/book/<id>.tsx`, wrapped in `BookFrame` (shop name,
+step/progress, title, pinned action) and, where it needs earlier answers, in
+`RequireDraft` with a `has` check (redirects to `/book/<shopSlug>` when
+missing); it reads and writes the booking in progress via `useDraft()`
+(`src/screens/book/draft.tsx`), and is registered by atlas id in `SCREENS` in
+`src/customer/app-shell.tsx`. Installed controls
+(`src/components/ui/<name>.tsx`): edit the registry item under
+`registry/primitives/` or `registry/patterns/`, run `npm run registry:build`,
+then `npx shadcn add ./public/r/<name>.json --yes --overwrite` - never
+hand-edit an installed copy, the drift check (`tests/customer/installed-controls.test.js`)
+fails a copy that no longer matches its source byte for byte; the first
+installed control that imports a sibling registry item will need that check's
+comparison to normalise `@/registry/(primitives|patterns)/` to
+`@/components/ui/` (shadcn rewrites those imports on install), none of the
+current ten need it. `key={shopSlug}` on `DraftProvider` in the `/book/:shopSlug`
+layout route is load-bearing - remove it and a shop change carries the
+previous shop's draft over instead of starting that shop's own
+(`tests/customer/book-layout.test.js`). **Deferred for d2 (and later):** the
+frame shows a blank header while `/services` loads or fails - decide the
+unknown-shop page; no `env(safe-area-inset-bottom)` (fine unless `book.html`
+gains `viewport-fit=cover`); a Playwright check at 320px that the pinned
+button doesn't cover the last field, and where it sits with the on-screen
+keyboard open; long action labels (`Button` is `whitespace-nowrap`); moving
+focus to the screen's `h1` on a screen change; Enter-to-submit on `details`
+(the action sits outside any `form`); `/book` doesn't pick up the shop's own
+accent colour (`book.html` doesn't load `public/app.js`) - a design question
+for Jack. **Open for piece (d) from (c):** `day-diary` scales so every
 start time is 44px, so a service shorter than 30 minutes (start time under 30
 minutes before a booking) stretches the whole diary - decide with real service
 lengths; `month-calendar` hard-codes an `h2` (fit the screen's heading order);
@@ -34,12 +62,12 @@ on a storefront subdomain the app reads the shop from the address
 (`/book/<slug>`), not the host, so `/book/<other-shop>` on one shop's subdomain
 shows the other shop; decide which wins. No request-level test covers the
 `/book` 500 page when the app is not built (only `appEntryTags` is tested).
-**Next:** piece (d), the six screens; the diary's open/close can likely come
-from `GET /api/portal/:shopSlug/mechanics` (`openingTime`/`closingTime`, the
-widest hours; `server/server.js` ~:4441-4453), with a shorter day already
-returned by `/availability` as busy time - piece (d) to confirm. Jack
-changed J1 on 25 Sep: the new app takes all of `/book` now (nobody uses the old
-page); `public-portal/` files are deleted in a later clean-up.
+The diary's open/close can likely come from `GET /api/portal/:shopSlug/mechanics`
+(`openingTime`/`closingTime`, the widest hours; `server/server.js`
+~:4441-4453), with a shorter day already returned by `/availability` as busy
+time - piece (d) to confirm. Jack changed J1 on 25 Sep: the new app takes all
+of `/book` now (nobody uses the old page); `public-portal/` files are deleted
+in a later clean-up. **Next:** (d2) service and service-list.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

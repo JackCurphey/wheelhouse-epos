@@ -659,7 +659,7 @@ and replace the router's children with:
     ],
 ```
 
-Add a line to the header comment: `Book screens nest under a /book/:shopSlug layout that provides the booking in progress (d1).` Every `CUSTOMER_ROUTES` path starts with `/book/:shopSlug` (tests/screens/customer-routes.test.js); if one ever didn't, `rest` would be wrong — add `if (!path.startsWith(BOOK_BASE)) throw new Error(\`\${id} is not under \${BOOK_BASE}\`);` at the top of the map callback.
+Add a line to the header comment: `Book screens nest under a /book/:shopSlug layout that provides the booking in progress (d1).` `tests/screens/customer-routes.test.js` checks every `CUSTOMER_ROUTES` path starts with `/book/` (not `/book/:shopSlug`); the rest of the requirement — that each path sits under this layout's `/book/:shopSlug` base — is covered by the runtime throw in app-shell, not that test. If a path ever didn't start with `/book/:shopSlug`, `rest` would be wrong — add `if (!path.startsWith(BOOK_BASE)) throw new Error(\`\${id} is not under \${BOOK_BASE}\`);` at the top of the map callback.
 
 - [ ] **Step 4: Run and see them pass**
 

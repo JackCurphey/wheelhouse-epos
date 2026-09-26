@@ -60,8 +60,9 @@ customer-visible changes yet (the six screens stay placeholders).
   service (`serviceId` or `notSure`), service minutes, answers, bike (new make,
   model, colour), description, photos (`File[]`, memory only), date, mechanic,
   start time, name, phone, email, update channel, terms, marketing permission.
-  Everything but photos is saved to `sessionStorage` under
-  `wh-book-draft:<shopSlug>` on every change and read back on load. If storage
+  Everything but photos is written to `sessionStorage` under
+  `wh-book-draft:<shopSlug>` only after the app changes the draft (never on
+  mount) and read back on load. If storage
   throws (private modes) the draft still works in memory. `clear()` removes the
   stored copy.
 - **Frame** (`src/screens/book/frame.tsx`): `BookFrame({ step?, title,
@@ -77,7 +78,9 @@ customer-visible changes yet (the six screens stay placeholders).
   redirects to `/book/<shopSlug>`.
 - **Where screens live.** `src/screens/book/<id>.tsx`, as plan 4a and the
   phase-4 contract (item 2) say, registered in the `SCREENS` map in
-  `src/customer/app-shell.tsx`. The draft provider wraps the customer router.
+  `src/customer/app-shell.tsx`. The draft provider is supplied by a
+  `/book/:shopSlug` layout route inside the router, keyed by the shop, so
+  moving to another shop's address starts that shop's own draft.
 
 ## Out of scope
 
