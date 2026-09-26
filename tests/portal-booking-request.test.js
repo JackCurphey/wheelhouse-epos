@@ -104,8 +104,9 @@ test('the old jobType input no longer books', async () => {
 });
 
 // service_id/booked_price moved from workshop_jobs into workshop_job_services
-// (migration 030, server piece 7) - one row per booked service; this task
-// still books exactly one, so position 0 is the whole story.
+// (migration 030, server piece 7) - one row per booked service. Bookings can
+// now hold several (tests/portal-booking-multi.test.js); every booking in
+// this file still chooses exactly one, so reading position 0 is enough here.
 const priced = (jobId) => runWithShop(owner.shop.id, async () => (await prepare(
   'SELECT service_id, booked_price::text AS booked_price FROM workshop_job_services WHERE workshop_job_id = ? ORDER BY position LIMIT 1'
 ).get(jobId)) ?? { service_id: null, booked_price: null });
@@ -137,10 +138,11 @@ test('not sure stores no service and no price', async () => {
 test('with prices hidden, the booking response carries no price', async () => {
   const res = await book({ serviceIds: [await pricedService('987.65')] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  assert.ok('bookedPrice' in res.body, 'bookedPrice field present');
-  assert.equal(res.body.bookedPrice, null, 'bookedPrice is null');
-  assert.ok(!Object.keys(res.body).filter((k) => k !== 'bookedPrice').some((k) => /price/i.test(k)), JSON.stringify(res.body));
-  assert.ok(!Object.values(res.body).some((v) => v === 987.65 || v === '987.65'), JSON.stringify(res.body));
+  assert.equal(res.body.totalPrice, null, 'totalPrice is null');
+  assert.ok(res.body.services.every((s) => s.price === null), JSON.stringify(res.body));
+  assert.ok(!Object.keys(res.body).filter((k) => k !== 'totalPrice').some((k) => /price/i.test(k)), JSON.stringify(res.body));
+  const text = JSON.stringify(res.body);
+  assert.ok(!text.includes('987.65'), text);
 });
 
 const customerRow = (id) => runWithShop(owner.shop.id, () => prepare(

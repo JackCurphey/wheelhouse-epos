@@ -44,19 +44,26 @@ const setShowPrices = async (on) => {
   assert.equal(res.body.showPricesOnline, on, JSON.stringify(res.body));
 };
 
-// Signed in as customer, so the guest limit is never reached.
-const book = async (body = {}) => {
-  const res = await portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
+const GUEST = { guestName: 'Gina Guestname', guestPhone: '07700 900123', email: 'gina@example.com' };
+
+// Signed in as customer by default, so the guest limit is never reached;
+// { guest: true } books as a guest instead, for tests that check a refusal
+// leaves no guest customer row behind.
+const book = async (body = {}, { guest = false } = {}) => {
+  const res = await portalRequest(server.baseUrl, guest ? null : customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
     method: 'POST',
     body: {
       mechanicId: sam, jobDate: nextDate(), startTime: '09:00', description: 'Squeaky brakes',
-      newBike: { make: 'Dawes', model: 'Galaxy' }, ...BOOKING_CONTACT, ...body,
+      newBike: { make: 'Dawes', model: 'Galaxy' }, ...BOOKING_CONTACT, ...(guest ? GUEST : {}), ...body,
     },
   });
   return res;
 };
 const codeOf = (privateLink) => privateLink.split('/').pop();
 const read = (code) => jsonRequest(server.baseUrl, null, `/api/portal/${owner.shop.slug}/booking-links/${code}`);
+const counts = () => runWithShop(owner.shop.id, () => prepare(
+  'SELECT (SELECT count(*)::int FROM workshop_jobs) AS jobs, (SELECT count(*)::int FROM customers) AS customers'
+).get());
 
 const svc = (name, price, minutes, questions = []) => runWithShop(owner.shop.id, async () =>
   (await prepare(
@@ -87,9 +94,11 @@ test('two services: both saved in order with their prices, time summed, names in
 test('more than 12 hours of work is refused and nothing is saved', async () => {
   const long = await svc('Rebuild', '300.00', 400);
   const longer = await svc('Respray', '300.00', 400);
-  const res = await book({ serviceIds: [long, longer] });
+  const before = await counts();
+  const res = await book({ serviceIds: [long, longer] }, { guest: true });
   assert.equal(res.status, 400);
   assert.equal(res.body.error, "That's too much work for one visit - please book the jobs separately");
+  assert.deepEqual(await counts(), before);
 });
 
 test('a service that is not bookable anywhere in the list refuses the booking', async () => {
@@ -122,4 +131,44 @@ test('an answer for a service that was not chosen is refused', async () => {
   const res = await book({ serviceIds: [a], answers: [{ serviceId: a + 99999, questionId: 'q_cccccccccccc', text: 'x' }] });
   assert.equal(res.status, 400);
   assert.equal(res.body.error, "Those answers don't match the services chosen");
+});
+
+test('an answer with no serviceId is refused', async () => {
+  const a = await svc('Solo', '10.00', 30);
+  const res = await book({ serviceIds: [a], answers: [{ questionId: 'q_cccccccccccc', text: 'x' }] });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, "Those answers don't match the services chosen");
+});
+
+test('the reply and the link list each service with its price, and the total', async () => {
+  await setShowPrices(true);
+  const bleed = await svc('Brake bleed', '35.00', 45);
+  const truing = await svc('Wheel true', '25.50', 30);
+  const booked = await book({ serviceIds: [bleed, truing] });
+  const expected = { services: [{ name: 'Brake bleed', price: 35 }, { name: 'Wheel true', price: 25.5 }], totalPrice: 60.5 };
+  assert.deepEqual({ services: booked.body.services, totalPrice: booked.body.totalPrice }, expected);
+  const link = await read(codeOf(booked.body.privateLink));
+  assert.deepEqual({ services: link.body.services, totalPrice: link.body.totalPrice }, expected);
+  assert.equal('bookedPrice' in booked.body, false);
+  assert.equal('serviceName' in link.body, false);
+});
+
+test('with prices hidden, names show and every price is null', async () => {
+  await setShowPrices(false);
+  const a = await svc('Hidden A', '10.00', 30);
+  const booked = await book({ serviceIds: [a] });
+  assert.deepEqual(booked.body.services, [{ name: 'Hidden A', price: null }]);
+  assert.equal(booked.body.totalPrice, null);
+});
+
+// workshop_services.price is NOT NULL (migration 014), so an unpriced service
+// cannot exist in this schema - the "any chosen service unpriced -> no total"
+// rule is unreachable through this route. bookedServices still implements it
+// (count(booked_price) = count(*)); see task-3-report.md.
+
+test('not sure has no services and no total', async () => {
+  await setShowPrices(true);
+  const booked = await book({ notSure: true });
+  assert.deepEqual(booked.body.services, []);
+  assert.equal(booked.body.totalPrice, null);
 });

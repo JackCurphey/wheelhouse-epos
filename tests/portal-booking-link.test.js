@@ -75,13 +75,13 @@ test('a booking returns a private link, and the link reads the booking back', as
     shopName: owner.shop.name,
     jobDate: booked.jobDate,
     startTime: '10:00',
-    serviceName: 'Test service',
     description: 'Squeaky brakes',
     bike: { make: 'Dawes', model: 'Galaxy' },
     stage: 'awaiting_confirmation',
     answers: [],
     photoCount: 0,
-    bookedPrice: null,
+    services: [{ name: 'Test service', price: null }],
+    totalPrice: null,
   });
 });
 
@@ -95,13 +95,15 @@ test('the database holds the hash, never the code', async () => {
   assert.equal(row.leaks, false);
 });
 
-test('the read-back carries no name, phone, email or notes, and price only as bookedPrice', async () => {
+test('the read-back carries no name, phone, email or notes, and price only inside services/totalPrice', async () => {
   const booked = await book({}, { guest: true });
   await setJob(booked.id, "notes = 'STAFF-ONLY-REMARK'");
   const res = await read(codeOf(booked.privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
+  // The filter checks top-level keys only - 'services' holds a 'name' per
+  // entry, but that's inside the array, not a top-level key, so it's fine.
   const leakyKeys = Object.keys(res.body).filter(
-    (k) => /price|name|phone|email|notes/i.test(k) && !['shopName', 'serviceName', 'bookedPrice'].includes(k)
+    (k) => /price|name|phone|email|notes/i.test(k) && !['shopName', 'services', 'totalPrice'].includes(k)
   );
   assert.deepEqual(leakyKeys, [], `unexpected keys: ${JSON.stringify(res.body)}`);
   const text = JSON.stringify(res.body);
@@ -119,9 +121,9 @@ test('a staff edit of the notes does not change the description', async () => {
   assert.equal((await read(codeOf(booked.privateLink))).body.description, 'Squeaky brakes');
 });
 
-test('a not-sure booking has no service name', async () => {
+test('a not-sure booking has no services', async () => {
   const booked = await book({ serviceIds: undefined, notSure: true });
-  assert.equal((await read(codeOf(booked.privateLink))).body.serviceName, null);
+  assert.deepEqual((await read(codeOf(booked.privateLink))).body.services, []);
 });
 
 test('the stage follows the job', async () => {

@@ -4603,13 +4603,27 @@ route('GET', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   sendJson(res, 200, rows.map((r) => serializePortalBooking(r)));
 });
 
-// The booked price as a customer may see it after booking: only when the shop
-// shows prices online, the same rule /services follows. Passed through as
-// stored, never totalled. Runs inside the request's shop context.
-// Spec: docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md
-async function customerBookedPrice(bookedPrice) {
+// The booked services as a customer may see them: names always; prices and the
+// total only when the shop shows prices online (the /services rule). The total
+// is summed in SQL, and left out when any service had no price - a total that
+// ignored one job would mislead. Runs inside the request's shop context.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
+async function bookedServices(jobId) {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
-  return settings?.show_prices_online === 1 ? (bookedPrice ?? null) : null;
+  const showPrices = settings?.show_prices_online === 1;
+  const rows = await db.prepare(
+    `SELECT s.name, js.booked_price FROM workshop_job_services js
+     JOIN workshop_services s ON s.id = js.service_id
+     WHERE js.workshop_job_id = ? ORDER BY js.position`
+  ).all(jobId);
+  const total = await db.prepare(
+    `SELECT CASE WHEN count(*) > 0 AND count(booked_price) = count(*) THEN sum(booked_price) END AS total
+     FROM workshop_job_services WHERE workshop_job_id = ?`
+  ).get(jobId);
+  return {
+    services: rows.map((r) => ({ name: r.name, price: showPrices ? r.booked_price ?? null : null })),
+    totalPrice: showPrices ? total?.total ?? null : null,
+  };
 }
 
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
@@ -4836,12 +4850,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       )
       .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-    // Transitional (Task 3 replaces): the 201 reply's bookedPrice is the job's
-    // position-0 booked service, until the reply moves to a full service list.
-    const positionZeroPrice = (await db
-      .prepare('SELECT booked_price FROM workshop_job_services WHERE workshop_job_id = ? ORDER BY position LIMIT 1')
-      .get(jobId))?.booked_price ?? null;
-    const bookedPrice = await customerBookedPrice(positionZeroPrice);
+    const booked = await bookedServices(jobId);
     // The last write, so nothing after it can fail and leave files behind for a
     // booking that rolled back. saveBookingPhotos removes its own files if a
     // write or insert fails, and the error rolls the whole booking back.
@@ -4860,7 +4869,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       status: 201,
       body: {
         ...serializePortalBooking(row),
-        bookedPrice,
+        ...booked,
         privateLink: linkPath(params.shopSlug, linkCode),
       },
     };
@@ -4871,23 +4880,17 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 // The private booking link, read back without sign-in. The dispatcher has
 // already bound the shop from :shopSlug, so row-level security keeps another
 // shop's code from finding anything. Deliberately narrow: nothing that
-// identifies the customer, no staff notes. The booked price only when the
-// shop shows prices online (customerBookedPrice).
-// Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
+// identifies the customer, no staff notes. The booked services and total only
+// when the shop shows prices online (bookedServices).
+// Spec: docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
 route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
   if (!bookingLinkLimiter.check(clientIp(req))) {
     return sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
   }
-  // Transitional (Task 3 replaces): service_name/booked_price read the job's
-  // position-0 booked service row, until the reply moves to a full service list.
   const row = /^[0-9a-f]{64}$/.test(params.code)
     ? await db.prepare(
-      `SELECT w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
+      `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
               w.booking_state, w.custody_state, w.work_state,
-              (SELECT js.booked_price FROM workshop_job_services js
-               WHERE js.workshop_job_id = w.id ORDER BY js.position LIMIT 1) AS booked_price,
-              (SELECT s.name FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
-               WHERE js.workshop_job_id = w.id ORDER BY js.position LIMIT 1) AS service_name,
               b.make AS bike_make, b.model AS bike_model
               , (SELECT count(*)::int FROM workshop_job_attachments a
                  WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
@@ -4905,14 +4908,13 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     shopName: shop.name,
     jobDate: row.job_date,
     startTime: row.start_time || '',
-    serviceName: row.service_name ?? null,
     description: row.customer_description ?? null,
     // As asked at booking, from the frozen copy - never the service's current wording.
     answers: (row.question_answers ?? []).map(({ wording, answer }) => ({ wording, answer })),
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
     photoCount: row.photo_count,
-    bookedPrice: await customerBookedPrice(row.booked_price),
+    ...(await bookedServices(row.id)),
   });
 });
 

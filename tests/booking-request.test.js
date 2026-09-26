@@ -14,6 +14,18 @@ test('a list of services is kept in order', () => {
   assert.equal(r.value.notSure, false);
 });
 
+test('a full request parses to exactly these fields, no more, no less', () => {
+  const r = parseBookingRequest({ serviceIds: [7], email: ' a@example.com ', updateChannel: 'email', termsAccepted: true }, '');
+  assert.deepEqual(r.value, {
+    serviceIds: [7],
+    notSure: false,
+    email: 'a@example.com',
+    updateChannel: 'email',
+    termsAccepted: true,
+    marketingPermission: false,
+  });
+});
+
 test('not sure has no services', () => {
   const r = parseBookingRequest({ notSure: true, email: 'a@example.com', updateChannel: 'email', termsAccepted: true }, '');
   assert.deepEqual(r.value.serviceIds, []);
@@ -30,6 +42,9 @@ test('service list refusals', () => {
   assert.equal(err({ serviceIds: 7 }), 'That service is not available to book');
   assert.equal(err({ serviceIds: [7, 'x'] }), 'That service is not available to book');
   assert.equal(err({ serviceIds: [0] }), 'That service is not available to book');
+  assert.equal(err({ serviceIds: ['7'] }), 'That service is not available to book');
+  assert.equal(err({ serviceIds: [1.5] }), 'That service is not available to book');
+  assert.equal(err({ serviceIds: [-1] }), 'That service is not available to book');
   assert.equal(err({ serviceIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }), 'Please choose up to 10 services');
   assert.equal(err({ serviceIds: [4, 4] }), 'Each service can be chosen only once');
 });
