@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `bae6547` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81 merged); d3 #82 merged at `8e8db72`; server piece 10 #83 merged; d4 merged: #84 at `d7638eb` (CI green on `b57f87e`); two d4 follow-ups (anyMechanic remembered on drop-off, message wording) built on `fix/book-d4-followups`, off `main` at `d7638eb`. Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `24bccac` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81, d3 #82, piece 10 #83, d4 #84 and its follow-ups #85 merged); server piece 11 (terms) on `feat/book-server-11-terms`; d5 spec on `feat/book-d5-details-send-pending`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -115,6 +115,20 @@ items: the blank header while `/services` loads or fails now shows a proper
 loading/error state, focus moves to the screen's `h1` on a screen change, and
 a Playwright check (`tests/browser/book-service-list.spec.ts`) proves the
 pinned Continue never covers the last service at 320px.
+**Next: server piece 11, then d5, then piece 12 and d6** (Jack, 26 Sep).
+Piece 11 (booking terms): spec
+`docs/superpowers/specs/2026-09-26-book-server-11-terms-design.md`, approved
+with migration 034 and the standard terms text (Claude's plain-English
+draft, approved by Jack; not legal advice). Standard Wheelhouse terms, a
+shop's own replacement (`bookingTerms` in staff settings, no staff screen
+yet), `GET /api/portal/:shopSlug/terms`, and a copy of the terms in force
+saved on each online booking (`workshop_jobs.terms_text`). d5 (details,
+sending, pending, a real end-to-end journey test): spec
+`docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md`
+approved; one update channel (Text message default), no marketing box, a
+time gone at sending returns to `date`. Piece 12 (change and cancel via the
+private link) and d6 (their screens) follow; until then pending says to
+contact the shop.
 **(d4) merged: #84 at `d7638eb`** (26 Sep, CI green on its final commit
 `b57f87e`; spec `docs/superpowers/specs/2026-09-26-book-d4-date-screen-design.md`,
 plan `docs/superpowers/plans/2026-09-26-book-d4-date-screen.md`, which carries the
