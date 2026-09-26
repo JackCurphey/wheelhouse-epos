@@ -15,6 +15,9 @@ let uninstall;
 // client.clear() runs that cleanup synchronously, so nothing is left
 // pending once the DOM comes down.
 let client;
+// window.scrollTo calls made during the most recent renderFrame(), reset on
+// every call since each installs a fresh jsdom window.
+let scrollCalls;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -34,6 +37,8 @@ async function renderFrame(
   reply = () => new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } }),
 ) {
   uninstall = installDom(`http://localhost${path}`);
+  scrollCalls = [];
+  window.scrollTo = (...args) => scrollCalls.push(args);
   globalThis.fetch = async () => reply();
   const { render } = await import('@testing-library/react');
   const { createElement: h } = await import('react');
@@ -163,4 +168,14 @@ test('the action note sits in the pinned area above the button', async () => {
   assert.ok(pinned, 'no pinned area');
   assert.ok(pinned.contains(ui.getByText('Two services')));
   assert.ok(pinned.contains(ui.getByRole('button', { name: 'Continue' })));
+});
+
+// A screen change mounts a fresh BookFrame, which otherwise keeps the
+// window's previous scroll offset - the new heading can land off-screen even
+// though it is focused (focus alone doesn't scroll, since it's focused with
+// preventScroll). The frame scrolls the window to the top itself.
+test('scrolls the window to the top once the screen is ready', async () => {
+  const ui = await renderFrame({ step: 1, title: 'T' });
+  await ui.findByText('North Street Cycles');
+  assert.deepEqual(scrollCalls, [[0, 0]]);
 });

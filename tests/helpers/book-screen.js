@@ -12,7 +12,15 @@ export async function renderBookScreen({ file, exportName, at, url, services, dr
   const uninstall = installDom(`http://localhost${url}`);
   if (draft) window.sessionStorage.setItem('wh-book-draft:north', JSON.stringify(draft));
   const scrolled = [];
-  window.HTMLElement.prototype.scrollIntoView = function scrollIntoView() { scrolled.push(this); };
+  // Both the frame's scroll-to-top and a screen's own ?start scrollIntoView
+  // land here in call order, so a test can prove the frame's runs first (and
+  // the screen's own scroll still wins the final position).
+  const scrollCalls = [];
+  window.scrollTo = (...args) => scrollCalls.push({ type: 'top', args });
+  window.HTMLElement.prototype.scrollIntoView = function scrollIntoView() {
+    scrollCalls.push({ type: 'start', el: this });
+    scrolled.push(this);
+  };
   globalThis.fetch = async () =>
     new Response(JSON.stringify(services), { status: 200, headers: { 'content-type': 'application/json' } });
 
@@ -37,5 +45,5 @@ export async function renderBookScreen({ file, exportName, at, url, services, dr
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = render(h(QueryClientProvider, { client }, h(RouterProvider, { router })));
   const readDraft = () => JSON.parse(window.sessionStorage.getItem('wh-book-draft:north') ?? '{}');
-  return { ui, client, uninstall, scrolled, readDraft };
+  return { ui, client, uninstall, scrolled, scrollCalls, readDraft };
 }

@@ -61,6 +61,16 @@ test('?start scrolls to its section; no start, or an unknown start, does not scr
   assert.equal(s.scrolled.length, 0);
 });
 
+// The frame scrolls the window to the top on every ready screen (I1); the
+// list screen's own ?start scroll must still win the final position, so it
+// has to run after the frame's.
+test('the frame scrolls to the top before the ?start scroll runs', async () => {
+  const { waitFor } = await import('@testing-library/react');
+  const s = await open({ search: '?start=full' });
+  await waitFor(() => assert.equal(s.scrolled.length, 1));
+  assert.deepEqual(s.scrollCalls.map((c) => c.type), ['top', 'start']);
+});
+
 test('prices read "From", with the parts note, and the includes line on the full service', async () => {
   const { ui } = await open();
   assert.ok(ui.getByText('Prices are for labour. Parts are quoted separately.'));
@@ -99,6 +109,18 @@ test('ticking a full service takes off what it includes, and says so', async () 
   assert.equal(ui.queryByText(/so we've taken it off/), null, 'the notice outlived the next tap');
 });
 
+// The card's own detail line is visual only, so a screen-reader user ticking
+// through the list never hears it; the notice also has to reach the polite
+// live region that already announces the running summary.
+test('a taken-off notice is announced in the live region, not just the card detail', async () => {
+  const { ui } = await open();
+  await click(card(ui, 'Brake service'));
+  await click(card(ui, 'General service'));
+  const live = document.querySelector('[aria-live="polite"]');
+  assert.ok(live, 'no polite live region');
+  assert.ok(live.textContent.includes("Brake service is part of your General service, so we've taken it off"));
+});
+
 test('unticking the full service unlocks without re-ticking', async () => {
   const { ui } = await open({ draft: { serviceIds: [1] } });
   await click(card(ui, 'General service'));
@@ -113,6 +135,19 @@ test('Continue with nothing ticked says so and stays', async () => {
   assert.equal(ui.queryByText(/^At /), null);
 });
 
+// role="alert" is only announced when its content changes (or the node is
+// new); pressing Continue twice with the same unresolved problem must not
+// leave a screen reader silent the second time.
+test('pressing Continue twice with the same problem re-announces a fresh alert', async () => {
+  const { ui } = await open();
+  await click(ui.getByRole('button', { name: 'Continue' }));
+  const first = ui.getByRole('alert');
+  await click(ui.getByRole('button', { name: 'Continue' }));
+  const second = ui.getByRole('alert');
+  assert.ok(first !== second, 'the alert node was not replaced on the second press');
+  assert.ok(second.textContent.includes('Choose at least one service'));
+});
+
 test('Continue refuses more than 10 services and more than 12 hours', async () => {
   const many = Array.from({ length: 11 }, (_, i) => svc(100 + i, `Job ${i}`, 10, 10));
   let { ui } = await open({ services: { ...DATA, full: [], categories: [], uncategorised: many }, draft: { serviceIds: many.map((s) => s.id) } });
@@ -123,6 +158,18 @@ test('Continue refuses more than 10 services and more than 12 hours', async () =
   ({ ui } = await open({ services: { ...DATA, full: [], categories: [], uncategorised: long }, draft: { serviceIds: [200, 201] } }));
   await click(ui.getByRole('button', { name: 'Continue' }));
   assert.ok(ui.getByRole('alert').textContent.includes("That's too much work for one visit - please book the jobs separately"));
+});
+
+// The shop's includes can change server-side while the tab is open, so a
+// draft that started before that change can hold both a full service and one
+// of the individual ids it now includes, both ticked. The UI itself can't
+// produce this locally (tapping the full service takes the individual one
+// off), so the draft is seeded directly with both ticked (M3).
+test('Continue drops a ticked id that is also locked by a ticked full service', async () => {
+  const { ui, readDraft } = await open({ draft: { serviceIds: [11, 1] } });
+  await click(ui.getByRole('button', { name: 'Continue' }));
+  assert.ok(await ui.findByText('At /book/north/problem'));
+  assert.deepEqual(readDraft().serviceIds, [1]);
 });
 
 test('a good Continue saves the services in list order, drops orphaned answers and moves on', async () => {

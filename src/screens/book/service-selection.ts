@@ -91,6 +91,17 @@ export function totalMinutes(data: ServicesResponse, ticked: number[]): number {
   return chosenServices(data, ticked).reduce((sum, s) => sum + (s.minutes ?? 0), 0);
 }
 
+/**
+ * The ticked services to actually save when Continue is pressed. The shop's
+ * includes can change while the tab is open, leaving a row both ticked and
+ * locked by a ticked full service; saving that pair is what the server
+ * refuses (piece 8, as changed by d2), so a now-locked id is dropped here,
+ * in list order.
+ */
+export function savedServices(data: ServicesResponse, ticked: number[]): PortalService[] {
+  return chosenServices(data, ticked).filter((s) => !lockedBy(data, ticked, s.id));
+}
+
 /** Why Continue can't go on yet, checked in this order; null when it can. */
 export function continueError(data: ServicesResponse, ticked: number[]): string | null {
   const chosen = chosenServices(data, ticked);

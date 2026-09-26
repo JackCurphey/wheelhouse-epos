@@ -93,6 +93,16 @@ test('total minutes sum the ticked services', () => {
   assert.equal(r.totalMinutes(DATA, [1, 13]), 120);
 });
 
+// The shop's includes can change while the tab is open, leaving a row both
+// ticked and locked by a ticked full service; saving that pair is what the
+// server refuses (piece 8). savedServices drops the now-locked id before
+// Continue saves, keeping list order.
+test('savedServices drops a ticked id that a ticked full service now locks', () => {
+  assert.deepEqual(r.savedServices(DATA, [11, 1]).map((s) => s.id), [1]);
+  assert.deepEqual(r.savedServices(DATA, [1, 13]).map((s) => s.id), [1, 13]);
+  assert.deepEqual(r.savedServices(DATA, []).map((s) => s.id), []);
+});
+
 test('Continue checks nothing ticked, then more than 10, then more than 12 hours', () => {
   assert.equal(r.continueError(DATA, []), 'Choose at least one service');
   assert.equal(r.continueError(DATA, [13]), null);

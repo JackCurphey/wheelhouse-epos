@@ -6,7 +6,7 @@ import { BookFrame } from './frame.tsx';
 import { useDraft } from './draft.tsx';
 import { useServices, type PortalService, type PortalFullService } from './services-query.ts';
 import {
-  chosenServices, continueError, formatFrom, includesLine, lockedBy, notSurePatch, summary, toggle, type Notice,
+  continueError, formatFrom, includesLine, lockedBy, notSurePatch, savedServices, summary, toggle, type Notice,
 } from './service-selection.ts';
 
 /**
@@ -28,6 +28,11 @@ export function ServiceListScreen() {
   const ticked = draft.serviceIds ?? [];
   const [notices, setNotices] = React.useState<Notice[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  // Bumped on every Continue press that still fails, so a repeated press with
+  // the same problem remounts the alert as a fresh node - role="alert" is
+  // only re-announced when its content changes or it's new, and unchanged
+  // text otherwise goes unheard the second time (M2).
+  const [attempt, setAttempt] = React.useState(0);
   const fullHeading = React.useRef<HTMLHeadingElement>(null);
   const individualHeading = React.useRef<HTMLHeadingElement>(null);
   const start = params.get('start');
@@ -59,9 +64,10 @@ export function ServiceListScreen() {
     const problem = continueError(data, ticked);
     if (problem) {
       setError(problem);
+      setAttempt((a) => a + 1);
       return;
     }
-    const ids = chosenServices(data, ticked).map((s) => s.id);
+    const ids = savedServices(data, ticked).map((s) => s.id);
     update({ serviceIds: ids, answers: (draft.answers ?? []).filter((a) => ids.includes(a.serviceId)) });
     navigate(`/book/${shopSlug}/problem`);
   };
@@ -79,8 +85,10 @@ export function ServiceListScreen() {
       action={{ label: 'Continue', onClick: onContinue }}
       actionNote={
         <>
-          <p className="m-0" aria-live="polite">{line}</p>
-          {error && <p role="alert" className="m-0 mt-1 text-[var(--wh-danger)]">{error}</p>}
+          <p className="m-0" aria-live="polite">
+            {[line, ...notices.map((n) => n.text)].filter(Boolean).join(' ')}
+          </p>
+          {error && <p key={attempt} role="alert" className="m-0 mt-1 text-[var(--wh-danger)]">{error}</p>}
         </>
       }
     >

@@ -38,11 +38,17 @@ export function BookFrame({ step, title, back, action, actionNote, children }: B
   const notFound = services.error instanceof ApiError && services.error.code === 'not_found';
 
   // Each screen mounts its own frame, so this runs on every screen change:
-  // keyboard and screen-reader users land on the new heading (d2). No
-  // scroll, so a screen that scrolls itself (the service list's ?start) keeps
-  // its position.
+  // keyboard and screen-reader users land on the new heading (d2), and the
+  // window is scrolled to the top so the heading isn't left off-screen at
+  // the previous screen's scroll position (focus alone doesn't scroll it
+  // into view, since it's focused with preventScroll). React commits child
+  // effects before parent effects, so a screen that scrolls itself after
+  // mount (the service list's ?start) runs its own scroll after this one and
+  // wins.
   React.useEffect(() => {
-    heading.current?.focus({ preventScroll: true });
+    if (!heading.current) return;
+    heading.current.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
   }, [services.status, title]);
 
   // A field brought into view by Tab (or scrollIntoView) can land behind the
@@ -71,7 +77,7 @@ export function BookFrame({ step, title, back, action, actionNote, children }: B
         {services.isPending && <p role="status">Loading…</p>}
         {services.isError && (
           <>
-            <h1 ref={heading} tabIndex={-1} className="m-0 mb-3 text-xl font-semibold">
+            <h1 ref={heading} tabIndex={-1} className="m-0 mb-3 text-xl font-semibold focus:outline-none">
               {notFound ? "We can't find this shop" : "We couldn't load this shop's services"}
             </h1>
             {!notFound && (
