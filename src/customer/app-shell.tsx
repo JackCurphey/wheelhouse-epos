@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router/dom';
 import { ApiError } from '@/lib/api/client.ts';
 import { DraftProvider } from '@/screens/book/draft.tsx';
 import { ServiceScreen } from '@/screens/book/service.tsx';
+import { ServiceListScreen } from '@/screens/book/service-list.tsx';
 import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
 
 /**
@@ -34,7 +35,10 @@ export function BookLayout() {
 
 // Screens by atlas id. An id with no entry renders the placeholder, so every
 // address in CUSTOMER_ROUTES works from day one - including a private link.
-const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = { service: ServiceScreen };
+const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = {
+  service: ServiceScreen,
+  'service-list': ServiceListScreen,
+};
 
 function notBuilt(id: CustomerScreenId): ComponentType {
   function NotBuilt() {
