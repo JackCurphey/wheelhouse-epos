@@ -106,7 +106,7 @@ test('full, categorised and uncategorised services are grouped and ordered', asy
     assert.deepEqual(res.body.categories.map((c) => c.name), ['Wheels', 'Brakes']);
     assert.deepEqual(res.body.categories[1].services.map((s) => s.name), ['Pad swap', 'Bleed']);
     assert.deepEqual(res.body.uncategorised.map((s) => s.name), ['Tubeless setup']);
-    assert.deepEqual(Object.keys(res.body.full[0]).sort(), ['id', 'minutes', 'name', 'price', 'questions']);
+    assert.deepEqual(Object.keys(res.body.full[0]).sort(), ['id', 'includes', 'minutes', 'name', 'price', 'questions']);
   } finally {
     await deleteTestShop(shop.shop.id);
   }
@@ -141,4 +141,29 @@ test('the list carries the shop\'s own name, for the booking screens\' header', 
   assert.equal(a.body.shopName, shopA.shop.name);
   assert.equal(b.body.shopName, shopB.shop.name);
   assert.notEqual(shopA.shop.name, shopB.shop.name, 'test shops share a name, so this proves nothing');
+});
+
+test('a full service lists what it includes, in order, including ones not bookable online on their own', async () => {
+  const brake = await service(shopA, { name: 'Inc brake' });
+  const headset = await service(shopA, { name: 'Inc headset', bookableOnline: false });
+  const gone = await service(shopA, { name: 'Inc retired' });
+  const full = await service(shopA, { name: 'Inc general', kind: 'full', includes: [headset.id, gone.id, brake.id] });
+  assert.deepEqual(full.includes, [headset.id, gone.id, brake.id], JSON.stringify(full));
+  await as(shopA, `/api/workshop-services/${gone.id}`, { method: 'DELETE' });
+
+  const res = await publicList(shopA);
+  const listed = res.body.full.find((s) => s.id === full.id);
+  assert.deepEqual(listed.includes, [
+    { id: headset.id, name: 'Inc headset' },
+    { id: brake.id, name: 'Inc brake' },
+  ]);
+});
+
+test('every full service carries includes; individual services do not', async () => {
+  await service(shopA, { name: 'Bare full', kind: 'full' });
+  const res = await publicList(shopA);
+  assert.ok(res.body.full.every((s) => Array.isArray(s.includes)), 'a full service has no includes list');
+  const individual = [...res.body.uncategorised, ...res.body.categories.flatMap((c) => c.services)];
+  assert.ok(individual.length > 0);
+  assert.ok(individual.every((s) => !('includes' in s)), 'an individual service carries includes');
 });

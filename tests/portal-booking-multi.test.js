@@ -172,3 +172,16 @@ test('not sure has no services and no total', async () => {
   assert.deepEqual(booked.body.services, []);
   assert.equal(booked.body.totalPrice, null);
 });
+
+test('a full service and a service it includes can still be booked together', async () => {
+  const part = await svc('Included brake', '25.00', 30);
+  const full = await runWithShop(owner.shop.id, async () => (await prepare(
+    "INSERT INTO workshop_services (name, price, minutes, kind, bookable_online, active, updated_at) VALUES ('Full with brake', '80.00', 90, 'full', 1, 1, now())"
+  ).run()).lastInsertRowid);
+  await runWithShop(owner.shop.id, () => prepare(
+    'INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, 0)'
+  ).run(full, part));
+  const res = await book({ serviceIds: [full, part] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual((await rows(res.body.id)).map((r) => r.service_id), [full, part]);
+});

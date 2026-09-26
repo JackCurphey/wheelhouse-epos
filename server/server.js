@@ -4562,6 +4562,7 @@ route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
 // through as stored - nothing is totalled here.
 // shopName: the booking screens' header (d1 spec).
 // screens: service, service-list
+// Piece 8: docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md
 route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
@@ -4574,10 +4575,19 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, s
   ).all();
   const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price : null, minutes: s.minutes, questions: s.questions });
   const individual = services.filter((s) => s.kind === 'individual');
+  // What each full service includes, for its card and for d2's "already part
+  // of your <full service>" warning: services still in use, bookable online
+  // or not (piece 8 decision 4), in the shop's order.
+  const links = await db.prepare(
+    `SELECT i.service_id, s.id, s.name FROM workshop_service_includes i
+     JOIN workshop_services s ON s.id = i.included_service_id
+     WHERE s.active = 1 ORDER BY i.service_id, i.position`
+  ).all();
+  const includesOf = (id) => links.filter((l) => l.service_id === id).map((l) => ({ id: l.id, name: l.name }));
   sendJson(res, 200, {
     shopName: shop.name,
     showPrices,
-    full: services.filter((s) => s.kind === 'full').map(toPublic),
+    full: services.filter((s) => s.kind === 'full').map((s) => ({ ...toPublic(s), includes: includesOf(s.id) })),
     categories: categories
       .map((c) => ({
         id: c.id,
