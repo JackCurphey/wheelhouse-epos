@@ -53,9 +53,9 @@ test('it reads the private link and shows where the booking is up to as its head
   const { ui, requests } = await open();
   assert.ok(await heading(ui, 'Awaiting shop confirmation'));
   assert.ok(requests.some((r) => r.url === `/api/portal/north/booking-links/${CODE}`), JSON.stringify(requests));
-  assert.equal(ui.queryByText(/^Step /), null);
-  assert.equal(ui.queryByRole('link', { name: /Back/ }), null);
-  assert.equal(document.querySelector('[data-book-pinned]'), null);
+  assert.ok(ui.queryByText(/^Step /) === null);
+  assert.ok(ui.queryByRole('link', { name: /Back/ }) === null);
+  assert.ok(document.querySelector('[data-book-pinned]') === null);
 });
 
 for (const [stage, words] of [
@@ -89,14 +89,14 @@ test('the summary: reference, services with prices, the total, day and time, bik
     'Reference', 'WH-1042', 'Brake service', '£20', 'Gear service', '£25', 'From £45', 'Monday 5 October, 09:30',
     'Blue Trek road bike', 'Squeals when braking', "What's wrong with the brakes?", 'Squeaking - Front only',
   ]) assert.ok(ui.getByText(text), text);
-  assert.equal(ui.queryByText('Tubeless?'), null, 'an unanswered question is left out');
+  assert.ok(ui.queryByText('Tubeless?') === null, 'an unanswered question is left out');
 });
 
 test('with prices hidden only the names show; a drop-off booking shows the day alone', async () => {
   const { ui } = await open({ ...LINK, startTime: '', services: [{ name: 'Brake service', price: null }], totalPrice: null });
   await heading(ui, 'Awaiting shop confirmation');
   assert.ok(ui.getByText('Brake service'));
-  assert.equal(ui.queryByText(/£/), null);
+  assert.ok(ui.queryByText(/£/) === null);
   assert.ok(ui.getByText('Monday 5 October'));
 });
 
@@ -115,6 +115,14 @@ test('Copy link copies this page\'s address and says "Copied" briefly', async ()
   await waitFor(() => assert.ok(ui.getByRole('button', { name: 'Copy link' })), { timeout: 3000 });
 });
 
+test('Copy link with no clipboard does not throw, and the button stays "Copy link"', async () => {
+  const { ui } = await open();
+  await heading(ui, 'Awaiting shop confirmation');
+  Object.defineProperty(window.navigator, 'clipboard', { value: undefined, configurable: true });
+  await click(ui.getByRole('button', { name: 'Copy link' }));
+  assert.ok(ui.getByRole('button', { name: 'Copy link' }));
+});
+
 test('it says to contact the shop to change or cancel', async () => {
   const { ui } = await open();
   await heading(ui, 'Awaiting shop confirmation');
@@ -124,13 +132,13 @@ test('it says to contact the shop to change or cancel', async () => {
 test('a link that finds nothing says so', async () => {
   const { ui } = await open(() => ({ status: 404, body: { error: "We can't find that booking" } }));
   assert.ok(await heading(ui, "We can't find that booking"));
-  assert.equal(ui.queryByRole('button', { name: 'Try again' }), null);
+  assert.ok(ui.queryByRole('button', { name: 'Try again' }) === null);
 });
 
 test('an expired link says so', async () => {
   const { ui } = await open(() => ({ status: 410, body: { error: 'This link has expired' } }));
   assert.ok(await heading(ui, 'This link has expired'));
-  assert.equal(ui.queryByRole('button', { name: 'Try again' }), null);
+  assert.ok(ui.queryByRole('button', { name: 'Try again' }) === null);
 });
 
 test('any other failure offers Try again, which asks again', async () => {
