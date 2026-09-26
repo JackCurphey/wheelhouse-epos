@@ -8,6 +8,7 @@ import { ServiceScreen } from '@/screens/book/service.tsx';
 import { ServiceListScreen } from '@/screens/book/service-list.tsx';
 import { ProblemScreen } from '@/screens/book/problem.tsx';
 import { DateScreen } from '@/screens/book/date.tsx';
+import { DetailsScreen } from '@/screens/book/details.tsx';
 import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
 
 /**
@@ -42,6 +43,7 @@ const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = {
   'service-list': ServiceListScreen,
   problem: ProblemScreen,
   date: DateScreen,
+  details: DetailsScreen,
 };
 
 function notBuilt(id: CustomerScreenId): ComponentType {
