@@ -15,7 +15,10 @@
 // lost connection. `photos` are held in the draft's memory (they are never
 // stored); `readPhotos()` reads them back, so a test can prove a send that
 // succeeds clears the held photos too, not only the saved draft. `state` is
-// the first address's navigation state.
+// the first address's navigation state. The returned `router` is the memory
+// router itself, so a test can inspect `router.state.location.state` -
+// e.g. to prove a screen consumed and cleared a refusal (d5) rather than
+// leaving it to repeat on a refresh or Back/Forward to the same entry.
 // scrollIntoView (missing in jsdom) is recorded in `scrolled`; <dialog>'s
 // showModal and close (missing in jsdom) are stubbed.
 import { installDom, importFresh } from './dom.js';
@@ -112,5 +115,5 @@ export async function renderBookScreen({
   const ui = render(h(QueryClientProvider, { client }, h(RouterProvider, { router })));
   const readDraft = () => JSON.parse(window.sessionStorage.getItem('wh-book-draft:north') ?? '{}');
   const readPhotos = () => photosBox.current;
-  return { ui, client, uninstall, scrolled, scrollCalls, requests, readDraft, readPhotos };
+  return { ui, client, router, uninstall, scrolled, scrollCalls, requests, readDraft, readPhotos };
 }

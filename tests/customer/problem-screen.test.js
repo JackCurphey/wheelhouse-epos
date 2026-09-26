@@ -294,3 +294,15 @@ test('opened normally, it shows no such message', async () => {
   const { ui } = await open({ serviceIds: [11] });
   assert.ok(ui.queryByText(CHANGED) === null);
 });
+
+test('the refusal message is cleared from history once read, so a refresh does not repeat it', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/problem.js', exportName: 'ProblemScreen', at: 'problem', url: '/book/north/problem',
+    services: DATA, draft: { serviceIds: [11] }, state: { questionsChanged: CHANGED },
+  });
+  const { ui, router } = current;
+  await ui.findByRole('heading', { level: 1, name: 'Tell us about your bike' });
+  assert.ok(ui.getByText(CHANGED), 'the message still shows, from component state');
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.ok(router.state.location.state === null, 'the refusal was not cleared from history'));
+});

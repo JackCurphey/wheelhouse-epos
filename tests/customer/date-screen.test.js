@@ -458,3 +458,16 @@ test('opened normally, it says nothing about a refused booking', async () => {
   await ready(ui);
   assert.ok(ui.queryByText(SORRY) === null);
 });
+
+test('the refusal is cleared from history once read, so a refresh does not repeat it', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/date.js', exportName: 'DateScreen', at: 'date', url: '/book/north/date',
+    services: SERVICES, mechanics: MECHANICS, availability: AVAILABILITY, draft: { serviceIds: [11, 12] },
+    state: { timeTaken: true },
+  });
+  const { ui, router } = current;
+  await ready(ui);
+  assert.ok(ui.getByText(SORRY), 'the message still shows, from component state');
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.ok(router.state.location.state === null, 'the refusal was not cleared from history'));
+});

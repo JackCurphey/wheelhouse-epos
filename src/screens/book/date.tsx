@@ -114,9 +114,16 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
   const [checkedAvailability, setCheckedAvailability] = React.useState<AvailabilityResponse | null>(null);
   const [taken, setTaken] = React.useState(false);
   // A booking refused at sending because this time went (d5) comes back here
-  // with the time cleared; say so until the next pick.
+  // with the time cleared; say so until the next pick. Read into component
+  // state once, then cleared from history below, so a refresh or Back/
+  // Forward landing back on this same entry doesn't repeat it.
   const location = useLocation();
   const [refused, setRefused] = React.useState(() => (location.state as SendRefusalState | null)?.timeTaken === true);
+  React.useEffect(() => {
+    if ((location.state as SendRefusalState | null)?.timeTaken === true) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+  }, [location, navigate]);
   // An "Any mechanic" drop-off choice whose stored mechanic stops being
   // bookable is silently switched to another bookable mechanic - never shown
   // as taken - unless no mechanic is bookable at all, which choiceStillFree

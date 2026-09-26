@@ -40,8 +40,16 @@ function ProblemForm() {
   const { shopSlug = '' } = useParams();
   const navigate = useNavigate();
   // A booking refused at sending because the shop changed its questions (d5)
-  // comes back here with the server's message.
-  const questionsChanged = (useLocation().state as SendRefusalState | null)?.questionsChanged;
+  // comes back here with the server's message, read into component state
+  // once, then cleared from history below, so a refresh or Back/Forward
+  // landing back on this same entry doesn't repeat it.
+  const location = useLocation();
+  const [questionsChanged] = React.useState(() => (location.state as SendRefusalState | null)?.questionsChanged);
+  React.useEffect(() => {
+    if ((location.state as SendRefusalState | null)?.questionsChanged !== undefined) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+  }, [location, navigate]);
   const { data } = useServices(shopSlug);
   const { draft, update, photos, setPhotos } = useDraft();
   // Messages show only after a Continue press, then follow the draft, so each
