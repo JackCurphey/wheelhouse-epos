@@ -52,9 +52,13 @@ it is how early a customer is asked to arrive.
   lock, beside the capacity checks:
   - a `jobDate` before the shop's today: refused, "That date has passed -
     please choose another day."
-  - a timed start, or a drop-off date's window end, not after the earliest
-    bookable moment: refused, "That's too soon for the shop - please choose a
-    later time or day."
+  - a timed start before the earliest bookable moment, or a drop-off date
+    whose window end is not after it: refused, "That's too soon for the shop -
+    please choose a later time or day." A timed start exactly at the earliest
+    bookable moment is offered and accepted (amended 26 Sep: the boundary is
+    inclusive, so what availability offers the booking route accepts). A
+    drop-off day stays as availability states it: bookable only while the
+    earliest bookable moment is before the window end.
   Both use the route's existing refusal style and status for business-rule
   refusals.
 

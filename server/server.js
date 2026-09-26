@@ -3712,7 +3712,9 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
 
   let minNoticeMinutes = existing.min_notice_minutes;
   if (body.minNoticeMinutes !== undefined) {
-    minNoticeMinutes = body.minNoticeMinutes;
+    // A number sent as text is accepted, as the fields above; null is refused
+    // rather than read as 0 (no notice at all).
+    minNoticeMinutes = body.minNoticeMinutes === null ? NaN : Number(body.minNoticeMinutes);
     if (!Number.isInteger(minNoticeMinutes) || minNoticeMinutes < 0 || minNoticeMinutes > 10080) {
       return badRequest(res, 'Minimum notice must be between 0 minutes and 7 days');
     }

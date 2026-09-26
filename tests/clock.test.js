@@ -88,3 +88,18 @@ test('a drop-off day is in time only while the earliest moment is before its win
   assert.equal(dropoffIsInTime({ date: '2026-09-02', minutes: 0 }, '2026-09-01', '23:00'), false, 'notice spilled past the day');
   assert.equal(dropoffIsInTime(earliest, '2026-09-02', '10:00'), true);
 });
+
+test('in production the test pin is ignored and the real time is used', () => {
+  const pin = process.env.WHEELHOUSE_TEST_CLOCK;
+  const env = process.env.NODE_ENV;
+  try {
+    process.env.WHEELHOUSE_TEST_CLOCK = '2026-09-01T06:00:00Z';
+    process.env.NODE_ENV = 'production';
+    assert.ok(Math.abs(currentMoment().getTime() - Date.now()) < 5000, 'a pinned clock took effect in production');
+  } finally {
+    if (pin === undefined) delete process.env.WHEELHOUSE_TEST_CLOCK;
+    else process.env.WHEELHOUSE_TEST_CLOCK = pin;
+    if (env === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = env;
+  }
+});

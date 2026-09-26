@@ -8,10 +8,12 @@
 import { toMinutes } from './capacity.js';
 
 // Tests pin the clock through this variable (tests/helpers/liveServer.js sets
-// it for every live server); nothing in production sets it.
+// it for every live server). A production server never honours it, so a stray
+// variable can never freeze a live shop's clock.
 const PIN_VAR = 'WHEELHOUSE_TEST_CLOCK';
 
 export function currentMoment() {
+  if (process.env.NODE_ENV === 'production') return new Date();
   const pinned = process.env[PIN_VAR];
   if (!pinned) return new Date();
   const moment = new Date(pinned);

@@ -150,6 +150,9 @@ test('minimum notice and time zone are saved, and kept when a PUT leaves them ou
     assert.equal(saved.status, 200, JSON.stringify(saved.body));
     assert.equal(saved.body.minNoticeMinutes, 10080);
     assert.equal(saved.body.timeZone, 'America/New_York');
+    const text = await putSettings(cookie, { minNoticeMinutes: '120' });
+    assert.equal(text.status, 200, JSON.stringify(text.body));
+    assert.equal(text.body.minNoticeMinutes, 120, 'a number sent as text, as the neighbouring fields accept');
     const zero = await putSettings(cookie, { minNoticeMinutes: 0 });
     assert.equal(zero.body.minNoticeMinutes, 0);
     assert.equal(zero.body.timeZone, 'America/New_York', 'an omitted time zone was changed');
@@ -164,7 +167,7 @@ test('minimum notice and time zone are saved, and kept when a PUT leaves them ou
 test('minimum notice outside 0 minutes to 7 days, or not whole, is refused', async () => {
   const { cookie, shop } = await staffSignup(server.baseUrl);
   try {
-    for (const minNoticeMinutes of [-1, 10081, 1.5, 'two hours', null]) {
+    for (const minNoticeMinutes of [-1, 10081, 1.5, 'abc', null]) {
       const res = await putSettings(cookie, { minNoticeMinutes });
       assert.equal(res.status, 400, `${JSON.stringify(minNoticeMinutes)} was accepted`);
       assert.equal(res.body.error, 'Minimum notice must be between 0 minutes and 7 days');
