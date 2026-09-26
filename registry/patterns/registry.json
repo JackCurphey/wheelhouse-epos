@@ -59,6 +59,12 @@
       "description": "One Monday-first month for picking a booking day. Days not in `available` are greyed, struck through and aria-disabled. Arrow keys move between days and across months; dates are YYYY-MM-DD strings handled in UTC.",
       "dependencies": [], "registryDependencies": [],
       "files": [{ "path": "month-calendar.tsx", "type": "registry:ui" }]
+    },
+    {
+      "name": "day-diary", "type": "registry:ui", "title": "Day Diary", "author": "Wheelhouse EPOS",
+      "description": "One day's diary for picking a start time: a column per mechanic, hours down the side, booked time as grey 'Unavailable' blocks with no detail, and one button per start time the server allows. Scaled so start times are at least 44px apart.",
+      "dependencies": [], "registryDependencies": [],
+      "files": [{ "path": "day-diary.tsx", "type": "registry:ui" }]
     }
   ]
 }
