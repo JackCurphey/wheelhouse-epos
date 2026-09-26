@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `14b824b` (piece (a) #72 and piece (b) #73 merged). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `47d57d1` (pieces (a) #72, (b) #73, (c) #74 merged). Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -18,11 +18,13 @@ six screens. **Piece (a) merged: #72** (25 Sep, CI green on its final
 commit; spec `docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`).
 **Piece (b) merged: #73** (26 Sep, CI green on its final commit). Every
 `/book` address serves the React customer app (`src/customer/`, placeholders
-for the six screens). **Piece (c) built** on branch `feat/book-c-form-controls` (seven registry
-controls plus the registry colour-name fix; spec
-`docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md`, Jack's
-design calls of 26 Sep are in it; local checks green, `npm test` 798/798,
-Playwright 3/3). **Open for piece (d) from (c):** `day-diary` scales so every
+for the six screens). **Piece (c) merged: #74** (26 Sep, CI green on its final commit; seven
+registry controls plus the registry colour-name fix; spec
+`docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md`). **Piece
+(d) is five parts** (Jack, 26 Sep): (d1) groundwork, (d2) service screens,
+(d3) problem, (d4) date, (d5) details + sending + pending + journey test.
+**Now:** (d1) on branch `feat/book-d-screens`; spec
+`docs/superpowers/specs/2026-09-26-book-d1-groundwork-design.md`. **Open for piece (d) from (c):** `day-diary` scales so every
 start time is 44px, so a service shorter than 30 minutes (start time under 30
 minutes before a booking) stretches the whole diary - decide with real service
 lengths; `month-calendar` hard-codes an `h2` (fit the screen's heading order);
