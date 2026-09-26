@@ -3,7 +3,8 @@
 // /services answered from `services`. Every other book address renders
 // "At <path><search>", so a test can see where a screen navigated to.
 // Shop slug is always "north". scrollIntoView (missing in jsdom) is recorded
-// in `scrolled`.
+// in `scrolled`. Every fetch is answered at once and recorded in `requests`
+// ({url, method}), so a test can prove a screen sent nothing (d3).
 import { installDom, importFresh } from './dom.js';
 
 const BUILD = new URL('../../.test-build/', import.meta.url);
@@ -21,8 +22,11 @@ export async function renderBookScreen({ file, exportName, at, url, services, dr
     scrollCalls.push({ type: 'start', el: this });
     scrolled.push(this);
   };
-  globalThis.fetch = async () =>
-    new Response(JSON.stringify(services), { status: 200, headers: { 'content-type': 'application/json' } });
+  const requests = [];
+  globalThis.fetch = async (input, init) => {
+    requests.push({ url: String(input), method: init?.method ?? 'GET' });
+    return new Response(JSON.stringify(services), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
 
   const { render } = await import('@testing-library/react');
   const { createElement: h } = await import('react');
@@ -40,10 +44,10 @@ export async function renderBookScreen({ file, exportName, at, url, services, dr
     return h('p', null, `At ${l.pathname}${l.search}`);
   }
   const child = (path) => (path === '' ? { index: true } : { path });
-  const routes = ['', 'services', 'problem'].map((p) => ({ ...child(p), Component: p === at ? Screen : Where }));
+  const routes = ['', 'services', 'problem', 'date'].map((p) => ({ ...child(p), Component: p === at ? Screen : Where }));
   const router = createMemoryRouter([{ path: '/book/:shopSlug', Component: Layout, children: routes }], { initialEntries: [url] });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const ui = render(h(QueryClientProvider, { client }, h(RouterProvider, { router })));
   const readDraft = () => JSON.parse(window.sessionStorage.getItem('wh-book-draft:north') ?? '{}');
-  return { ui, client, uninstall, scrolled, scrollCalls, readDraft };
+  return { ui, client, uninstall, scrolled, scrollCalls, requests, readDraft };
 }
