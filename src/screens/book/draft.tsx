@@ -8,6 +8,7 @@ import * as React from 'react';
  * and must be re-added after a reload. If the browser refuses storage, the
  * draft still works for the life of the page.
  * Spec: docs/superpowers/specs/2026-09-26-book-d1-groundwork-design.md
+ * d3 (bikeNote, hadPhotos): docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md
  */
 
 // Each answer names its service (server piece 7).
@@ -20,8 +21,13 @@ export type BookingDraft = {
   serviceIds?: number[];
   notSure?: boolean;
   answers?: Answer[];
-  bike?: { make: string; model: string; colour: string };
+  // The bike in the customer's own words, sent as a note on the booking, not
+  // a bike record: staff create the real bike at check-in (d3; server piece 9).
+  bikeNote?: string;
   description?: string;
+  // Photos were added in this tab. They live in memory only, so after a
+  // refresh the problem screen says they were cleared (d3).
+  hadPhotos?: boolean;
   date?: string;
   mechanicId?: number;
   startTime?: string;

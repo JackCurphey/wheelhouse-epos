@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `4049fa9` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged); d2 on `feat/book-d2-service-screens`. Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `e3c02b4` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81 merged); d3 on `feat/book-d3-problem-screen` (PR #82, open). Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -45,8 +45,7 @@ layout route is load-bearing - remove it and a shop change carries the
 previous shop's draft over instead of starting that shop's own
 (`tests/customer/book-layout.test.js`). **Deferred for d2 (and later):** no
 `env(safe-area-inset-bottom)` (fine unless `book.html` gains
-`viewport-fit=cover`); where the pinned button sits with the on-screen
-keyboard open (moves to d3); long action labels (`Button` is
+`viewport-fit=cover`); long action labels (`Button` is
 `whitespace-nowrap`); Enter-to-submit on `details` (the action sits outside
 any `form`); `/book` doesn't pick up the shop's own accent colour
 (`book.html` doesn't load `public/app.js`). **Jack, 26 Sep
@@ -115,10 +114,42 @@ its `actionNote` slot above the pinned button. Closes three carried-over
 items: the blank header while `/services` loads or fails now shows a proper
 loading/error state, focus moves to the screen's `h1` on a screen change, and
 a Playwright check (`tests/browser/book-service-list.spec.ts`) proves the
-pinned Continue never covers the last service at 320px. For d3:
-`service-selection.ts` already has `chosenServices`/`totalMinutes`, and
-answers carry `serviceId`. The on-screen keyboard check (where the pinned
-button sits with it open) moves to d3. Notes: `queryClient` is exported from
+pinned Continue never covers the last service at 320px.
+**(d3) built on `feat/book-d3-problem-screen`, PR #82 (open, not merged)** (26 Sep; spec
+`docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md`, plan
+`docs/superpowers/plans/2026-09-26-book-d3-problem-screen.md`, which carries
+the decision log and the spec walk; server piece 9, PR #81, merged 26 Sep at
+`e3c02b4`, CI green on its final commit `5492ae8`, and already merged into
+this branch). Built: the `problem` screen (a bike box, each ticked service's
+questions as pills plus "Or tell us in your own words", a description
+required only for "Not sure", and up to 5 photos with a "cleared" message
+after a refresh); `bikeNote` and `hadPhotos` on the draft (`bike` removed);
+the rules in `src/screens/book/problem-rules.ts`; and `hasProblem(draft,
+services)` in `require-draft.tsx`, tested but not applied. **For d4:** wrap
+`date` in `RequireDraft` with `(d) => hasProblem(d, data)` only once
+`/services` has loaded (`hasProblem` needs the services data; calling it
+before data exists would throw with services ticked), and add a redirect
+target to `problem` (the spec sends the customer back to `problem`, but
+`RequireDraft` redirects to the first screen by default). Draft answers are
+`{serviceId, questionId, choice?, text?, notSure?}`, matching piece 9. **For
+d5:** send `bikeNote` and each answer's `text`; photos are
+`useDraft().photos` (memory only) and must go as bare base64 (piece 6 note
+below); before sending, re-clean answers with `cleanAnswers` against fresh
+`/services` data (the shop can edit questions between problem and send); and
+check `photosCleared` (`hadPhotos` true but no photos held after a later
+refresh) and send the customer back to add photos or confirm without them.
+The on-screen keyboard check is `tests/browser/book-problem.spec.ts`:
+an imitation (viewport cut to 320x300), not a real keyboard. Jack approved
+the look of the "photos were cleared" note (`--wh-warn-bg` / `--wh-warn-ink`).
+Known follow-ups: a pill question's "Please answer" message is not linked
+for screen readers (needs a `PillGroup` change). Final-review fix wave (26
+Sep): `problem-rules.ts` gained `cleanAnswers` (drops a stale choice, a
+`notSure` the shop has since disallowed, an answer to a deleted question, or
+one left over from an unticked service before the draft's answers are saved
+on Continue - a draft could otherwise pass `hasProblem` and still be refused
+by server piece 9's `checkAnswers`); `answered()`/`missingAnswers` now also
+require `q.allowNotSure` for `notSure` to count; and a required text
+question's `Textarea` now carries `aria-required="true"`. Notes: `queryClient` is exported from
 `src/customer/app-shell.tsx` only so tests can clear it; `notSurePatch` is
 shared by both screens; the locked-row background uses `--wh-hover` (Jack to
 confirm the look). **#79 merged** (26 Sep at `29bffda`): `ChoiceCard` puts a space between
@@ -128,16 +159,6 @@ correctly - the run-together name came from the missing stylesheet). Fixed in
 d2 (e76c5a2): `/book` and `/workshop` were served with no stylesheet since
 piece (b) (82da9ac) - Vite puts shared CSS on the common chunk once there are
 two entries, and `appEntryTags` only read the entry's own `css`.
-**d3 next (problem screen):** spec
-`docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md` approved
-by Jack 26 Sep (on branch `feat/book-d3-problem-screen`, not pushed). It needs
-**server piece 9** first: branch `feat/book-server-9-bike-note`, spec
-`docs/superpowers/specs/2026-09-26-book-server-9-bike-note-design.md`
-(approved 26 Sep, incl. migration 032). Piece 9: booking takes `bikeNote`
-(<=200, a note, no bike record); description required only for "Not sure";
-choice answers may carry typed `text`; the job's Notes carry the bike note,
-each answer and the description (staff saw no answers anywhere before); the
-link read-back returns `bikeNote` and answer `text`.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

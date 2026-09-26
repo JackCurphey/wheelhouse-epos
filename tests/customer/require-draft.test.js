@@ -55,3 +55,45 @@ test('not sure counts as a chosen service', async () => {
   const { ui } = await renderAt({ notSure: true });
   assert.ok(await ui.findByText('Date screen'));
 });
+
+// hasProblem: the date screen's guard (d3 adds it; d4 applies it).
+// Spec: docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md
+const PROBLEM_SERVICES = {
+  shopName: 'North Street Cycles', showPrices: false, full: [], categories: [],
+  uncategorised: [
+    { id: 11, name: 'Brake service', price: null, minutes: 30, questions: [
+      { id: 'b1', wording: "What's wrong with the brakes?", kind: 'choice', required: true, choices: ['Squeaking', 'Not stopping well'], allowNotSure: true },
+      { id: 'b2', wording: 'Anything else about the brakes?', kind: 'text', required: false },
+    ] },
+    { id: 12, name: 'Gear service', price: null, minutes: 30, questions: [] },
+  ],
+};
+
+test('hasProblem needs a service first', async () => {
+  const { hasProblem } = await import(GUARD);
+  assert.equal(hasProblem({}, PROBLEM_SERVICES), false);
+  assert.equal(hasProblem({ serviceIds: [] }, PROBLEM_SERVICES), false);
+});
+
+test('hasProblem needs every required question answered, by a pill or by words', async () => {
+  const { hasProblem } = await import(GUARD);
+  assert.equal(hasProblem({ serviceIds: [11] }, PROBLEM_SERVICES), false);
+  assert.equal(hasProblem({ serviceIds: [11], answers: [{ serviceId: 11, questionId: 'b1', choice: 'Squeaking' }] }, PROBLEM_SERVICES), true);
+  assert.equal(hasProblem({ serviceIds: [11], answers: [{ serviceId: 11, questionId: 'b1', text: 'Grinding' }] }, PROBLEM_SERVICES), true);
+  assert.equal(hasProblem({ serviceIds: [12] }, PROBLEM_SERVICES), true, 'a service with no questions needs nothing more');
+});
+
+test('hasProblem needs a description for Not sure', async () => {
+  const { hasProblem } = await import(GUARD);
+  assert.equal(hasProblem({ notSure: true }, PROBLEM_SERVICES), false);
+  assert.equal(hasProblem({ notSure: true, description: '  ' }, PROBLEM_SERVICES), false);
+  assert.equal(hasProblem({ notSure: true, description: 'Clicks when pedalling' }, PROBLEM_SERVICES), true);
+});
+
+test('hasProblem treats a stale choice (no longer one of the shop\'s choices) as unanswered', async () => {
+  const { hasProblem } = await import(GUARD);
+  assert.equal(
+    hasProblem({ serviceIds: [11], answers: [{ serviceId: 11, questionId: 'b1', choice: 'Worn pads' }] }, PROBLEM_SERVICES),
+    false,
+  );
+});
