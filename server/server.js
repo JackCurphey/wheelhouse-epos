@@ -5122,9 +5122,32 @@ export async function appEntryTags(entryKey, manifestPath = VITE_MANIFEST) {
   const manifest = JSON.parse(raw);
   const entry = manifest[entryKey];
   if (!entry) throw new Error(`vite manifest has no ${entryKey} entry - run npm run build`);
-  const css = (entry.css || [])
-    .map((href) => `<link rel="stylesheet" href="/dist/${href}" />`)
-    .join('\n  ');
+  // Vite hoists shared CSS onto a shared chunk once there is more than one
+  // entry point, so the entry's own `css` list can be empty while a chunk it
+  // `imports` carries the stylesheet - so every chunk reachable via `imports`
+  // has to be walked (depth-first, dependencies' css before the entry's own,
+  // matching Vite's own HTML output), not just the entry itself. `imports`
+  // are keys back into this same manifest (Vite's documented shape); a key
+  // that isn't present, or a cycle, is skipped rather than throwing, since a
+  // manifest is generated output and this is a display concern, not a build
+  // integrity check.
+  const cssHrefs = [];
+  const seenHrefs = new Set();
+  const visitedKeys = new Set();
+  const visit = (key) => {
+    if (visitedKeys.has(key)) return;
+    visitedKeys.add(key);
+    const chunk = manifest[key];
+    if (!chunk) return;
+    for (const importKey of chunk.imports || []) visit(importKey);
+    for (const href of chunk.css || []) {
+      if (seenHrefs.has(href)) continue;
+      seenHrefs.add(href);
+      cssHrefs.push(href);
+    }
+  };
+  visit(entryKey);
+  const css = cssHrefs.map((href) => `<link rel="stylesheet" href="/dist/${href}" />`).join('\n  ');
   return `${css}\n  <script type="module" src="/dist/${entry.file}"></script>`;
 }
 
