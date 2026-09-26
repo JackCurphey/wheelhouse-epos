@@ -63,7 +63,10 @@ function DateFetcher({ services, draft, shopSlug, back }: FetcherProps) {
   const mechanics = useMechanics(shopSlug);
   const availability = useAvailability(shopSlug, { start: range.start, end: range.end, minutes: jobMinutes(services, draft) });
 
-  if (mechanics.isError || availability.isError) {
+  // A background refetch failing (React Query keeps the last good data and
+  // sets isError) must not tear down an already-shown picker: only show the
+  // failure state when there is no data to fall back on.
+  if ((mechanics.isError && !mechanics.data) || (availability.isError && !availability.data)) {
     const retry = () => {
       if (mechanics.isError) void mechanics.refetch();
       if (availability.isError) void availability.refetch();

@@ -325,6 +325,27 @@ test('mechanics fails to load: it says so and Try again asks again', async () =>
   assert.equal(calls, 2);
 });
 
+test('a background refetch that fails keeps the calendar and diary shown, not the failure message', async () => {
+  let calls = 0;
+  const availability = () => (++calls === 1
+    ? { status: 200, body: AVAILABILITY }
+    : { status: 500, body: { error: 'Something went wrong' } });
+  const { ui, client } = await open({ availability });
+  await ready(ui);
+  await click(day(ui, MON_5));
+  assert.ok(ui.getByRole('group', { name: 'Alex' }));
+  const { act } = await rtl();
+  await act(() => client.invalidateQueries({ queryKey: ['portal', 'north', 'availability'] }));
+  // React Query notifies observers on a real setTimeout(0), a tick after its
+  // own refetch promise settles - flush that macrotask before asserting, or
+  // the render this test is checking has not happened yet.
+  await act(() => new Promise((resolve) => { setTimeout(resolve, 0); }));
+  assert.equal(calls, 2);
+  assert.ok(ui.getByRole('group', { name: 'October 2026' }), 'the calendar is still shown');
+  assert.ok(ui.getByRole('group', { name: 'Alex' }), 'the diary is still shown after the failed refetch');
+  assert.equal(ui.queryByText("We couldn't load the free days"), null);
+});
+
 const TAKEN = 'That time has just been taken - please choose another';
 
 test('a saved time no longer free is cleared, with a message above the calendar until the next pick', async () => {
