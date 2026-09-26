@@ -89,7 +89,7 @@ each `Answer` a `serviceId`, update `hasService` in `require-draft.tsx`, read
 ..." errors don't name which service a question belongs to, and service names
 on links are live (a rename changes past links) - decide in d2/d5. Then
 **server piece 8** (what a full service includes; branch
-`feat/book-server-8-service-includes`, **PR #77** (merge only when Jack says, after CI passes on the final commit); spec
+merged: **#77** (26 Sep at `4049fa9`, CI green on its final commit `e1dd051`); spec
 `docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md`, plan
 `docs/superpowers/plans/2026-09-26-book-server-8-service-includes.md`). Server
 only: migration 031 `workshop_service_includes`; staff `includes: number[]` on

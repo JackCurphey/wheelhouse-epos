@@ -19,7 +19,7 @@
 
 ## Global Constraints
 
-- Branch `feat/book-d2-service-screens`. It starts from `feat/book-server-8-service-includes` (PR #77, needed for `PortalFullService.includes`). Never commit to `main`.
+- Branch `feat/book-d2-service-screens`, on `main` after #77 (piece 8) merged at `4049fa9`. Never commit to `main`.
 - Customer component tests run against the build. After changing anything in `src/`, run `npm run pretest` before `node --test tests/customer/<file>.test.js`. `npm test` does both.
 - Postgres (compose, port 5433) must be running for `npm test` and Playwright.
 - Create no files in the repo other than those this plan names. No scratch or debug files in the repo; use `/tmp`.
@@ -1166,7 +1166,7 @@ Run: `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run 
 Expected: all exit 0. Report the test counts.
 
 - [ ] **Step 5: STATUS.** In `.agents/STATUS.md`, replace "d2 is being brainstormed." with a short d2 entry covering:
-  - the branch, and that the PR opens after #77 merges
+  - the branch and its PR
   - the spec and plan paths
   - what's built (the `service` and `service-list` screens, `serviceIds[]` in the draft, `Answer.serviceId`, and the frame's loading/unknown/failed/focus behaviour plus `actionNote`)
   - the carried-over items it closed: blank header, focus, and the 320px pinned check
