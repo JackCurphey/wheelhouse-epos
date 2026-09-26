@@ -62,7 +62,7 @@ export function Dialog({
       }}
       className={cn(
         'm-auto max-h-[90vh] w-full overflow-y-auto rounded-xl p-0',
-        'bg-[var(--modal-bg)] text-[var(--ink)]',
+        'bg-[var(--modal-bg)] text-[var(--wh-ink)]',
         'shadow-[0_10px_40px_rgba(0,0,0,0.25)]',
         'backdrop:bg-[rgba(20,24,21,0.45)]',
         wide ? 'max-w-[640px]' : 'max-w-[480px]',
@@ -95,7 +95,7 @@ export function DialogTitle({ className, ...props }: React.ComponentProps<'h2'>)
 
 /** Screen-reader description; pair with aria-describedby on <Dialog>. */
 export function DialogDescription({ className, ...props }: React.ComponentProps<'p'>) {
-  return <p className={cn('mt-1 text-[13.5px] text-[var(--muted)]', className)} {...props} />;
+  return <p className={cn('mt-1 text-[13.5px] text-[var(--wh-muted)]', className)} {...props} />;
 }
 
 /** `.modal-body`. */
@@ -124,8 +124,8 @@ export function DialogClose({ className, onClick, ...props }: React.ComponentPro
       aria-label="Close"
       onClick={onClick}
       className={cn(
-        'rounded-md border-0 bg-transparent p-1 leading-none text-[var(--muted)]',
-        'hover:text-[var(--ink)]',
+        'rounded-md border-0 bg-transparent p-1 leading-none text-[var(--wh-muted)]',
+        'hover:text-[var(--wh-ink)]',
         'focus-visible:outline-2 focus-visible:outline-[var(--accent)]',
         className,
       )}

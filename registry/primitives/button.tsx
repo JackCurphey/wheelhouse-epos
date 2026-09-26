@@ -25,11 +25,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-[var(--border)] bg-white text-[var(--ink)] hover:bg-wh-hover',
-        primary: 'border-[var(--brand)] bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)]',
+        default: 'border-[var(--border)] bg-white text-[var(--wh-ink)] hover:bg-wh-hover',
+        primary: 'border-[var(--wh-brand)] bg-[var(--wh-brand)] text-white hover:bg-[var(--wh-brand-dark)]',
         accent: 'border-[var(--accent)] bg-[var(--accent)] text-white hover:bg-[var(--accent-dark)]',
-        danger: 'border-[var(--danger)] bg-[var(--danger)] text-white hover:bg-wh-danger-hover',
-        ghost: 'border-transparent bg-transparent text-[var(--ink)] hover:bg-wh-hover',
+        danger: 'border-[var(--wh-danger)] bg-[var(--wh-danger)] text-white hover:bg-wh-danger-hover',
+        ghost: 'border-transparent bg-transparent text-[var(--wh-ink)] hover:bg-wh-hover',
       },
       size: {
         default: 'px-4 py-[9px] text-sm',

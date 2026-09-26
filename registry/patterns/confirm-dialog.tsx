@@ -70,7 +70,7 @@ export function ConfirmDialog({
       </DialogHeader>
       {description ? (
         <DialogBody>
-          <p id={descriptionId} className="m-0 text-sm text-[var(--ink)]">
+          <p id={descriptionId} className="m-0 text-sm text-[var(--wh-ink)]">
             {description}
           </p>
         </DialogBody>

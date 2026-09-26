@@ -19,10 +19,10 @@ export function Input({ className, type = 'text', ...props }: React.ComponentPro
       type={type}
       className={cn(
         'w-full rounded-[7px] border border-[var(--border)] bg-white px-2.5 py-[9px]',
-        'text-sm text-[var(--ink)] placeholder:text-[var(--muted)]',
+        'text-sm text-[var(--wh-ink)] placeholder:text-[var(--wh-muted)]',
         'focus:outline-2 focus:outline-offset-[-1px] focus:outline-[var(--accent)]',
         'disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-invalid:border-[var(--danger)]',
+        'aria-invalid:border-[var(--wh-danger)]',
         // Number fields are edited by typing, not by nudging spinners - the
         // vanilla app hides them globally and React inputs must match.
         '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',

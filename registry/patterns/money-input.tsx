@@ -91,7 +91,7 @@ export function MoneyInput({
     <div className="relative">
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-[var(--muted)]"
+        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-[var(--wh-muted)]"
       >
         {symbol}
       </span>

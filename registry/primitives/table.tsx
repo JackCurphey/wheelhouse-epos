@@ -17,7 +17,7 @@ export function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div className="w-full overflow-x-auto">
       <table
-        className={cn('w-full border-collapse text-[13.5px] text-[var(--ink)]', className)}
+        className={cn('w-full border-collapse text-[13.5px] text-[var(--wh-ink)]', className)}
         {...props}
       />
     </div>
@@ -51,7 +51,7 @@ export function TableHead({ className, numeric, ...props }: React.ComponentProps
       scope="col"
       className={cn(
         'whitespace-nowrap border-b-2 border-[var(--border)] px-2.5 py-[9px]',
-        'text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--muted)]',
+        'text-left text-xs font-semibold uppercase tracking-[0.04em] text-[var(--wh-muted)]',
         numeric && 'text-right',
         className,
       )}
