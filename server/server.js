@@ -4041,12 +4041,18 @@ const MAX_INCLUDES = 50;
 
 // A full service's included services, saved as one whole ordered list.
 // `kind` is the service's kind after this save; `stored` the saved ids (null
-// on POST). Omitted keeps the stored list, as questions and placement do, so
-// a caller that predates the field cannot wipe it - except that an
-// individual service never includes anything. Each id is looked up through
-// the shop-scoped db: the foreign key alone bypasses row-level security and
-// would accept another shop's service.
-async function readIncludes(body, kind, stored) {
+// on POST). `selfId`/`selfName` identify the service being saved (null on
+// POST, since it has no id yet) so it can be refused as its own include -
+// migration 031's CHECK would otherwise reject that as a database error
+// (500) rather than a clean 400, and on PUT the lookup below runs before the
+// UPDATE that changes this service's own kind, so a currently-individual
+// service promoting itself would otherwise look like a valid individual
+// service to include. Omitted keeps the stored list, as questions and
+// placement do, so a caller that predates the field cannot wipe it - except
+// that an individual service never includes anything. Each id is looked up
+// through the shop-scoped db: the foreign key alone bypasses row-level
+// security and would accept another shop's service.
+async function readIncludes(body, kind, stored, selfId, selfName) {
   if (body.includes === undefined) return kind === 'full' ? (stored ?? []) : [];
   const ids = body.includes;
   if (!Array.isArray(ids)) throw new ValidationError('That service does not exist');
@@ -4056,6 +4062,7 @@ async function readIncludes(body, kind, stored) {
   }
   if (ids.length > MAX_INCLUDES) throw new ValidationError(`A full service can include at most ${MAX_INCLUDES} services`);
   if (new Set(ids).size !== ids.length) throw new ValidationError("A service can't be included twice");
+  if (selfId !== null && ids.includes(selfId)) throw new ValidationError(`${selfName} is not an individual service`);
   for (const id of ids) {
     const found = Number.isInteger(id) && id >= 1 && id <= MAX_SERIAL
       ? await db.prepare('SELECT name, kind FROM workshop_services WHERE id = ?').get(id)
@@ -4107,7 +4114,7 @@ route('POST', '/api/workshop-services', async (req, res) => {
     fields = readServiceBody(body);
     placement = await readServicePlacement(body, null);
     questions = readQuestionsOrKeep(body, []);
-    includes = await readIncludes(body, placement.kind, null);
+    includes = await readIncludes(body, placement.kind, null, null, null);
   } catch (err) {
     if (err instanceof ValidationError) return badRequest(res, err.message);
     throw err;
@@ -4144,7 +4151,7 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
     placement = await readServicePlacement(body, existing);
     questions = readQuestionsOrKeep(body, existing.questions ?? []);
     const stored = (await loadIncludes()).get(id) ?? [];
-    includes = await readIncludes(body, placement.kind, stored);
+    includes = await readIncludes(body, placement.kind, stored, id, fields.name);
     if (existing.kind === 'individual' && placement.kind === 'full') {
       const holder = await db.prepare(
         `SELECT f.name FROM workshop_service_includes i JOIN workshop_services f ON f.id = i.service_id

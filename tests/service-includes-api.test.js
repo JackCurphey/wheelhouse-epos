@@ -131,6 +131,16 @@ test('an individual service that is included cannot become full until taken out'
   assert.equal(res.body.error, 'Brake check is part of Zeta service - take it out of that first');
 });
 
+test('a service cannot include itself when promoted to full', async () => {
+  const part = await made({ name: 'Self part' });
+  const res = await put(part.id, { name: 'Self part', price: 10, kind: 'full', includes: [part.id] });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'Self part is not an individual service');
+  const row = await listed(part.id);
+  assert.equal(row.kind, 'individual');
+  assert.deepEqual(row.includes, []);
+});
+
 test('a removed service stays in the staff list', async () => {
   const part = await made({ name: 'Retired part' });
   const full = await made({ name: 'Retired full', kind: 'full', includes: [part.id] });
