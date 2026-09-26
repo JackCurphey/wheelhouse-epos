@@ -30,3 +30,16 @@ export async function photoBase64(file: Blob): Promise<string> {
   for (let i = 0; i < bytes.length; i += CHUNK) binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
   return btoa(binary);
 }
+
+/**
+ * Every held photo, converted one at a time rather than with Promise.all: a
+ * phone with several full-size photos held at once already strains its
+ * memory, and holding every decoded arrayBuffer and base64 string at the same
+ * time (what Promise.all would do) adds a second peak on top of it. The
+ * output order matches the input order either way.
+ */
+export async function photosBase64(files: Blob[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const file of files) out.push(await photoBase64(file));
+  return out;
+}

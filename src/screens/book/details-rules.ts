@@ -74,6 +74,13 @@ const STALE_CHOICE = [
   'Please choose a mechanic',
 ];
 const QUESTIONS_CHANGED = 'The questions for this service have changed';
+// The server's own required-question refusal (server/service-questions.js
+// ~122): a required question left unanswered, e.g. after the shop renamed a
+// choice and cleanAnswers (problem-rules.ts) dropped the old one. It means the
+// same thing to the customer as QUESTIONS_CHANGED - the questions have moved
+// on since problem - so it is routed the same way, with the server's own
+// message shown on the problem screen.
+const REQUIRED_QUESTION = 'Please answer: ';
 
 export const channelOf = (draft: BookingDraft): UpdateChannel => draft.updateChannel ?? DEFAULT_CHANNEL;
 
@@ -174,8 +181,15 @@ export function refusalRoute(error: unknown): RefusalRoute {
   if (!(error instanceof ApiError)) return { to: 'stay', message: SEND_FAILED };
   if (error.status === 429) return { to: 'stay', message: TOO_MANY_REQUESTS };
   if (error.code === 'capacity') return { to: 'date' };
+  // A reply that never carried the server's own words - a proxy or gateway's
+  // page (a 502/413 HTML page, say), or any 5xx, which the server's own
+  // refusals never are - is shown as a lost connection, not "request failed
+  // with 502" or whatever the gateway's page said.
+  if (error.status >= 500 || !error.hasServerMessage) return { to: 'stay', message: SEND_FAILED };
   const starts = (list: string[]) => list.some((prefix) => error.message.startsWith(prefix));
   if (error.status === 400 && starts([...TIME_GONE, ...STALE_CHOICE])) return { to: 'date' };
-  if (error.status === 400 && error.message.startsWith(QUESTIONS_CHANGED)) return { to: 'problem', message: error.message };
+  if (error.status === 400 && (error.message.startsWith(QUESTIONS_CHANGED) || error.message.startsWith(REQUIRED_QUESTION))) {
+    return { to: 'problem', message: error.message };
+  }
   return { to: 'stay', message: error.message };
 }

@@ -339,7 +339,16 @@ test("changed questions go back to problem with the server's message", async () 
   assert.ok(await ui.findByText(`At /book/north/problem ${JSON.stringify({ questionsChanged: CHANGED })}`));
 });
 
-test("if the services refetch fails, it stays on details with the server's message", async () => {
+test('a required question left unanswered also goes back to problem, with the server\'s own wording', async () => {
+  const required = "Please answer: What's wrong with the brakes?";
+  const { ui } = await open({ draft: READY, booking: refuse(400, required) });
+  await press(ui);
+  assert.ok(await ui.findByText(`At /book/north/problem ${JSON.stringify({ questionsChanged: required })}`));
+});
+
+const SEND_FAILED = "We couldn't send your booking - please check your connection and try again";
+
+test('if the services refetch fails with a 5xx, it stays on details with the generic lost-connection message, not the server\'s raw wording', async () => {
   // Flipped only once the screen (and everything else reading /services) has
   // settled - as in "answers are cleaned..." above - so this fails the
   // refetch just before sending, not the screen's own load.
@@ -352,9 +361,18 @@ test("if the services refetch fails, it stays on details with the server's messa
   failing = true;
   await press(ui);
   const alert = await within(pinned()).findByRole('alert');
-  assert.equal(alert.textContent, 'Something went wrong');
+  assert.equal(alert.textContent, SEND_FAILED);
   assert.equal(ui.getByRole('button', { name: 'Request booking' }).disabled, false);
   assert.equal(posts(requests).length, 0, 'the booking is never sent');
+});
+
+test('a proxy page with no JSON body (a 502) is also shown as a lost connection', async () => {
+  const { within } = await rtl();
+  const { ui, requests } = await open({ draft: READY, booking: () => ({ status: 502, body: undefined }) });
+  await press(ui);
+  const alert = await within(pinned()).findByRole('alert');
+  assert.equal(alert.textContent, SEND_FAILED);
+  assert.equal(posts(requests).length, 1, 'the send was attempted');
 });
 
 const staysWith = async (booking, message) => {
@@ -383,6 +401,6 @@ test('no response: asks the customer to check their connection', async () => {
     "We couldn't send your booking - please check your connection and try again");
 });
 
-test("any other refusal: the server's message on the details screen", async () => {
-  await staysWith(refuse(400, "Please answer: What's wrong with the brakes?"), "Please answer: What's wrong with the brakes?");
+test("any other JSON refusal: the server's own message is kept, shown as is, on the details screen", async () => {
+  await staysWith(refuse(400, 'version is required - send the version you last read'), 'version is required - send the version you last read');
 });

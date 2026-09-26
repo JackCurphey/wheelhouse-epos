@@ -16,7 +16,7 @@ import { useAvailability, useMechanics } from './date-query.ts';
 import { jobMinutes } from './date-rules.ts';
 import { photosCleared } from './problem-rules.ts';
 import { useTerms } from './terms-query.ts';
-import { photoBase64, sendBooking } from './send.ts';
+import { photosBase64, sendBooking } from './send.ts';
 import {
   CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
   refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
@@ -91,7 +91,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       // then replaces the cached one.
       const fresh = await apiGet<ServicesResponse>(servicesPath(shopSlug));
       queryClient.setQueryData(servicesQueryKey(shopSlug), fresh);
-      const photoData = await Promise.all(photos.map(photoBase64));
+      const photoData = await photosBase64(photos);
       const reply = await sendBooking(shopSlug, bookingBody(fresh, draft, photoData));
       clear();
       onExit({ to: reply.privateLink, replace: true });

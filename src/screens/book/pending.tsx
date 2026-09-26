@@ -89,6 +89,9 @@ function BookingView({ link }: { link: BookingLink }) {
       </div>
       <p className="m-0 mb-2">Keep this link to check your booking</p>
       <Button className="mb-4" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy link'}</Button>
+      {/* The button's own text already changes for a sighted customer; a screen
+          reader user focused elsewhere needs the change announced. */}
+      <span role="status" aria-live="polite" className="sr-only">{copied ? 'Copied' : ''}</span>
       <p className="m-0">{contactLine(link.shopName)}</p>
     </BookFrame>
   );

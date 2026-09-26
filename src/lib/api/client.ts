@@ -33,6 +33,14 @@ export class ApiError extends Error {
   status: number;
   code: ApiErrorCode;
   body: unknown;
+  /**
+   * True when the reply parsed as JSON with an `error` field, so `message` is
+   * the server's own words rather than the client's fallback wording. A proxy
+   * or gateway failure (a 502/413 HTML page, or any reply the server never
+   * wrote) leaves this false, and callers that would otherwise show `message`
+   * to the customer should show their own generic wording instead.
+   */
+  hasServerMessage: boolean;
 
   constructor(status: number, body: unknown) {
     const parsed = isErrorBody(body) ? body : null;
@@ -40,6 +48,7 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    this.hasServerMessage = parsed !== null;
     this.code = classify(status, parsed?.code);
   }
 }

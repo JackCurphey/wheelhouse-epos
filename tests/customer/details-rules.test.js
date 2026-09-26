@@ -154,12 +154,27 @@ test('a refusal is sorted: taken or too soon to date, changed questions to probl
   ]) assert.deepEqual(refused(400, { error }), { to: 'date' }, error);
   const changed = 'The questions for this service have changed — please check them and try again';
   assert.deepEqual(refused(400, { error: changed }), { to: 'problem', message: changed });
+  // A required question left unanswered (a shop renamed a choice and
+  // cleanAnswers dropped the old one) means the same thing as QUESTIONS_CHANGED
+  // to the customer, so it goes to problem too, with the server's own wording.
+  assert.deepEqual(refused(400, { error: 'Please answer: Tubeless?' }), { to: 'problem', message: 'Please answer: Tubeless?' });
   assert.deepEqual(refused(429, { error: 'anything' }), { to: 'stay', message: 'Too many booking requests from this network - please try again later.' });
-  assert.deepEqual(refused(400, { error: 'Please answer: Tubeless?' }), { to: 'stay', message: 'Please answer: Tubeless?' });
-  assert.deepEqual(refused(500, null), { to: 'stay', message: 'request failed with 500' });
   assert.deepEqual(r.refusalRoute(new TypeError('Failed to fetch')), {
     to: 'stay', message: "We couldn't send your booking - please check your connection and try again",
   });
+});
+
+test('a reply that never carried the server\'s own words - a 5xx, or any status with no JSON body - is a lost connection, not its raw wording', () => {
+  const SEND_FAILED = "We couldn't send your booking - please check your connection and try again";
+  // A real JSON 4xx refusal is shown as the server wrote it (covered above).
+  // A 5xx is never one of the server's own controlled refusals (those are all
+  // 4xx/409/429), so even a JSON 500 body is shown as a lost connection.
+  assert.deepEqual(refused(500, { error: 'Something went wrong' }), { to: 'stay', message: SEND_FAILED });
+  assert.deepEqual(refused(500, null), { to: 'stay', message: SEND_FAILED });
+  // A proxy or gateway's own page - a 502 or 413 with no JSON body - never
+  // carried the server's words either.
+  assert.deepEqual(refused(502, null), { to: 'stay', message: SEND_FAILED });
+  assert.deepEqual(refused(413, null), { to: 'stay', message: SEND_FAILED });
 });
 
 test('a choice made stale since the date screen also goes back to date (decision 4; Jack approves)', () => {
@@ -176,6 +191,29 @@ test('a photo is read as bare base64: no data: prefix, no line breaks, a large f
   const encoded = await s.photoBase64(new File([bytes], 'brake.png', { type: 'image/png' }));
   assert.equal(encoded, Buffer.from(bytes).toString('base64'));
   assert.doesNotMatch(encoded, /^data:|\n/);
+});
+
+test('several photos are read one at a time, not all at once - only one arrayBuffer read is in flight', async () => {
+  // A File's real arrayBuffer() is used (not stubbed) so this proves the
+  // production code path, not a mock of it. Peak concurrency is measured by
+  // wrapping arrayBuffer to count how many reads are open at once.
+  let inFlight = 0;
+  let peak = 0;
+  const files = ['a', 'bb', 'ccc'].map((body) => {
+    const file = new File([body], 'p.png', { type: 'image/png' });
+    const real = file.arrayBuffer.bind(file);
+    file.arrayBuffer = async () => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      const result = await real();
+      inFlight -= 1;
+      return result;
+    };
+    return file;
+  });
+  const out = await s.photosBase64(files);
+  assert.equal(peak, 1, 'a second photo must not start converting before the first finishes');
+  assert.deepEqual(out, await Promise.all(files.map((f) => s.photoBase64(f))));
 });
 
 test("the booking goes to the shop's bookings address", () => {

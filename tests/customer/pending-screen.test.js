@@ -115,6 +115,19 @@ test('Copy link copies this page\'s address and says "Copied" briefly', async ()
   await waitFor(() => assert.ok(ui.getByRole('button', { name: 'Copy link' })), { timeout: 3000 });
 });
 
+test('Copy link also announces "Copied" to a screen reader, via a live region, not only the button text', async () => {
+  const { ui } = await open();
+  await heading(ui, 'Awaiting shop confirmation');
+  Object.defineProperty(window.navigator, 'clipboard', {
+    value: { writeText: async () => {} }, configurable: true,
+  });
+  const status = ui.getByRole('status');
+  assert.equal(status.textContent, '', 'silent until copied');
+  await click(ui.getByRole('button', { name: 'Copy link' }));
+  await ui.findByRole('button', { name: 'Copied' });
+  assert.equal(status.textContent, 'Copied');
+});
+
 test('Copy link with no clipboard does not throw, and the button stays "Copy link"', async () => {
   const { ui } = await open();
   await heading(ui, 'Awaiting shop confirmation');
