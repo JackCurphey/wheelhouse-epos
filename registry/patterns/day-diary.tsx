@@ -31,32 +31,51 @@ export function toMinutes(time: string): number {
 }
 
 /**
- * How long a button for a start time actually renders: from that time to
- * whichever comes first — the next start time in the same column, the next
- * busy block's start, or closing time. pxPerMinute and the render use this
- * same helper so the scale that promises 44px and the height that is drawn
- * can never disagree.
+ * The start times of one column that actually get a button: within
+ * [openMinutes, closeMinutes), sorted. pxPerMinute and the render both call
+ * this, so a start time the diary hides never drives the scale and is never
+ * used as another start time's neighbouring boundary either.
  */
-export function startSpan(time: number, column: DiaryColumn, closeMinutes: number): number {
+export function inRangeStarts(column: DiaryColumn, openMinutes: number, closeMinutes: number): number[] {
+  return column.startTimes
+    .map(toMinutes)
+    .filter((t) => t >= openMinutes && t < closeMinutes)
+    .sort((a, b) => a - b);
+}
+
+/**
+ * How long a button for a start time actually renders: from that time to
+ * whichever comes first — the next in-range start time in the same column,
+ * the next busy block's start, or closing time. pxPerMinute and the render
+ * use this same helper (over the same `inRangeTimes`) so the scale that
+ * promises 44px and the height that is drawn can never disagree.
+ */
+export function startSpan(
+  time: number,
+  inRangeTimes: number[],
+  busy: { start: string; end: string }[],
+  closeMinutes: number,
+): number {
   const boundaries = [closeMinutes];
-  for (const s of column.startTimes) {
-    const t = toMinutes(s);
+  for (const t of inRangeTimes) {
     if (t > time) boundaries.push(t);
   }
-  for (const b of column.busy) {
+  for (const b of busy) {
     const t = toMinutes(b.start);
     if (t > time) boundaries.push(t);
   }
   return Math.min(...boundaries) - time;
 }
 
-/** Pixels per minute so every start time's actual rendered span is at least 44px (30 minutes if nothing is shorter). */
-export function pxPerMinute(columns: DiaryColumn[], close: string): number {
+/** Pixels per minute so every rendered start time's actual span is at least 44px (30 minutes if nothing is shorter). */
+export function pxPerMinute(columns: DiaryColumn[], open: string, close: string): number {
+  const openMinutes = toMinutes(open);
   const closeMinutes = toMinutes(close);
   let minSpan = 30;
   for (const c of columns) {
-    for (const s of c.startTimes) {
-      const span = startSpan(toMinutes(s), c, closeMinutes);
+    const times = inRangeStarts(c, openMinutes, closeMinutes);
+    for (const t of times) {
+      const span = startSpan(t, times, c.busy, closeMinutes);
       if (span > 0 && span < minSpan) minSpan = span;
     }
   }
@@ -66,7 +85,7 @@ export function pxPerMinute(columns: DiaryColumn[], close: string): number {
 export function DayDiary({ open, close, columns, value = null, onChange, className }: DayDiaryProps) {
   const start = toMinutes(open);
   const end = toMinutes(close);
-  const ppm = pxPerMinute(columns, close);
+  const ppm = pxPerMinute(columns, open, close);
   const height = (end - start) * ppm;
   const y = (t: number) => (Math.min(Math.max(t, start), end) - start) * ppm;
 
@@ -90,10 +109,7 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
         ))}
       </div>
       {columns.map((c) => {
-        const times = c.startTimes
-          .map(toMinutes)
-          .filter((t) => t >= start && t < end)
-          .sort((a, b) => a - b);
+        const times = inRangeStarts(c, start, end);
         return (
           <div key={c.id} role="group" aria-label={c.name} className="relative rounded-md bg-[var(--wh-hover-subtle)]" style={{ height }}>
             {c.busy.map((b, i) => {
@@ -113,7 +129,7 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
             })}
             {times.map((t) => {
               const label = c.startTimes.find((s) => toMinutes(s) === t) as string;
-              const span = Math.max(1, startSpan(t, c, end));
+              const span = Math.max(1, startSpan(t, times, c.busy, end));
               const picked = value?.columnId === c.id && value.time === label;
               return (
                 <button

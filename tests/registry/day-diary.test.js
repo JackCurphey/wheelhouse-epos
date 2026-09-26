@@ -64,9 +64,9 @@ test('the picked time is marked', async () => {
 
 test('start times 30 minutes apart get at least 44px each', async () => {
   const { mod } = await renderDiary();
-  assert.ok(mod.pxPerMinute(COLUMNS, '12:00') * 30 >= 44);
+  assert.ok(mod.pxPerMinute(COLUMNS, '09:00', '12:00') * 30 >= 44);
   const fifteen = [{ id: '1', name: 'Sam', busy: [], startTimes: ['09:00', '09:15'] }];
-  assert.ok(mod.pxPerMinute(fifteen, '10:00') * 15 >= 44);
+  assert.ok(mod.pxPerMinute(fifteen, '09:00', '10:00') * 15 >= 44);
 });
 
 test('a button cut short by a following busy block still renders at least 44px', async () => {
@@ -74,10 +74,18 @@ test('a button cut short by a following busy block still renders at least 44px',
   const cut = [
     { id: '1', name: 'X', busy: [{ start: '10:20', end: '10:30' }], startTimes: ['10:00', '11:00'] },
   ];
-  assert.ok(mod.pxPerMinute(cut, '12:00') * 20 >= 44);
+  assert.ok(mod.pxPerMinute(cut, '09:00', '12:00') * 20 >= 44);
   const ui = render(h(mod.DayDiary, { open: '09:00', close: '12:00', columns: cut, value: null, onChange: () => {} }));
   const button = ui.getByRole('button', { name: 'X, 10:00' });
   assert.ok(parseFloat(button.style.height) >= 44);
+});
+
+test('an out-of-range start time does not drive the scale', async () => {
+  const { mod } = await setup();
+  const cols = [{ id: '1', name: 'X', busy: [], startTimes: ['08:59', '09:00', '10:00'] }];
+  const ppm = mod.pxPerMinute(cols, '09:00', '12:00');
+  assert.ok(ppm * 30 >= 44);
+  assert.ok(ppm <= 44 / 30 + 1e-9);
 });
 
 test('a start time before opening has no button', async () => {
