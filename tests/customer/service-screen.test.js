@@ -59,7 +59,7 @@ test('opening a list clears Not sure but keeps ticked services', async () => {
 
 test('a kind the shop does not offer hides its card', async () => {
   let { ui } = await open({ ...BOTH, full: [] });
-  assert.equal(ui.queryByRole('button', { name: /^Full services/ }), null);
+  assert.ok(ui.queryByRole('button', { name: /^Full services/ }) === null);
   assert.ok(ui.getByRole('button', { name: /^Individual services/ }));
   ui.unmount();
   current.client.clear(); current.uninstall();

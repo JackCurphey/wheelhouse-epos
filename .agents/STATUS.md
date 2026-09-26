@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `24bccac` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81, d3 #82, piece 10 #83, d4 #84 and its follow-ups #85 merged); server piece 11 (terms) on `feat/book-server-11-terms`; d5 spec on `feat/book-d5-details-send-pending`. Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `6ba19b5` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81, d3 #82, piece 10 #83, d4 #84 and its follow-ups #85, server piece 11 (terms) #86 merged); d5 built on `feat/book-d5-details-send-pending`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -115,20 +115,48 @@ items: the blank header while `/services` loads or fails now shows a proper
 loading/error state, focus moves to the screen's `h1` on a screen change, and
 a Playwright check (`tests/browser/book-service-list.spec.ts`) proves the
 pinned Continue never covers the last service at 320px.
-**Next: server piece 11, then d5, then piece 12 and d6** (Jack, 26 Sep).
-Piece 11 (booking terms): spec
-`docs/superpowers/specs/2026-09-26-book-server-11-terms-design.md`, approved
-with migration 034 and the standard terms text (Claude's plain-English
-draft, approved by Jack; not legal advice). Standard Wheelhouse terms, a
-shop's own replacement (`bookingTerms` in staff settings, no staff screen
-yet), `GET /api/portal/:shopSlug/terms`, and a copy of the terms in force
-saved on each online booking (`workshop_jobs.terms_text`). d5 (details,
-sending, pending, a real end-to-end journey test): spec
-`docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md`
-approved; one update channel (Text message default), no marketing box, a
-time gone at sending returns to `date`. Piece 12 (change and cancel via the
-private link) and d6 (their screens) follow; until then pending says to
-contact the shop.
+**(d5) built on `feat/book-d5-details-send-pending`** (26 Sep; spec
+`docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md`,
+plan `docs/superpowers/plans/2026-09-26-book-d5-details-send-pending.md`,
+which carries the decision log and the spec walk; server piece 11 (booking
+terms), PR #86, merged into this branch). Built: the `details` screen
+(summary; name, mobile, one update channel - Text message by default,
+WhatsApp, Email - an email required only for Email; the booking terms in a
+dialog, fetched from piece 11's `/terms` when opened; the four messages
+under their fields with a pinned note and focus on the first; "photos were
+cleared" asked in a dialog); sending (`/services` read again and answers
+cleaned with `cleanAnswers`; photos as bare base64; "Sending…"; success
+clears the draft and replaces details with the private link; a time gone
+clears the date choice and returns to `date` with "Sorry, that time was
+booked while you were filling in your details - please choose another"; a
+changed questions refusal returns to `problem` with the server's message;
+429, no response and anything else stay on details); the `pending` screen
+(status as its heading, reference, services and prices, "From £T", day and
+time, bike note, description, answers, Copy link, "Need to change or
+cancel? Contact <shop>"; 404, 410, Try again). Rules in `details-rules.ts` /
+`pending-rules.ts`; the registry `dialog` installed unchanged. **Jack's
+approvals (26 Sep):** the booking terms text; Text message as the default
+update channel; no marketing-permission checkbox; the four extra refusals
+("That mechanic is unavailable at that time", "This shop takes drop-offs on
+that day" / "A start time is required", "Please choose a mechanic") also
+routed to `date` alongside the spec's three, plus three more after the final review ("The shop is closed that day", "That mechanic does not work that day", "That job doesn't fit in the shop's opening hours"; Jack, 26 Sep); a 400 "Please answer: …" goes to `problem` like changed questions; a non-JSON or 5xx failure shows the no-connection message; and the copy not in the spec -
+"Please check the answers marked above" (reused from d3 on a failed Request
+booking), "We couldn't load the booking terms", "We couldn't load this
+booking", "Reference" (the pending summary's only label), and "Loading…" as
+pending's heading while it loads. **Piece 11 (booking terms) merged: #86**
+(26 Sep at `6ba19b5`; migration 034; standard Wheelhouse terms with a shop's
+own replacement, `GET /api/portal/:shopSlug/terms`, a copy of the terms in
+force saved on each online booking). **For piece 12 / d6:** `pending` has
+no "View request" / "Change or cancel request" buttons yet - it says
+"Contact <shop>"; piece 12 (change and cancel via the private link) and d6
+(their screens) will replace `contactLine` in `pending-rules.ts` with those
+buttons. **Known follow-ups:** pressing Back while a booking is "Sending…"
+leaves the customer without their private link - not built, no screen
+covers it; "booking terms" is a small tap target inside the tick-box label -
+Jack to judge from `/tmp/d5-terms-320.png`; the terms dialog's backdrop-tap
+focus return is unchecked; a journey test whose `beforeAll` fails partway
+through seeding can leave a throwaway test shop stored (its `afterAll`
+never runs) - clean up manually if `book-journey.spec.ts` ever fails there.
 **(d4) merged: #84 at `d7638eb`** (26 Sep, CI green on its final commit
 `b57f87e`; spec `docs/superpowers/specs/2026-09-26-book-d4-date-screen-design.md`,
 plan `docs/superpowers/plans/2026-09-26-book-d4-date-screen.md`, which carries the

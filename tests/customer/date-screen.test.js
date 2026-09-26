@@ -153,7 +153,7 @@ test('only this month and next can be shown', async () => {
   assert.equal(day(ui, dayName('2026-11-02')).getAttribute('aria-disabled'), null);
   await click(ui.getByRole('button', { name: 'Next month' }));
   assert.ok(ui.getByRole('group', { name: 'November 2026' }));
-  assert.equal(ui.queryByRole('group', { name: 'December 2026' }), null);
+  assert.ok(ui.queryByRole('group', { name: 'December 2026' }) === null);
 });
 
 test('a timed day: every mechanic on, one diary column each, busy time greyed', async () => {
@@ -183,8 +183,8 @@ test('the mechanic pills hide columns, but the last one on stays on', async () =
   await click(day(ui, MON_5));
   await click(ui.getByRole('checkbox', { name: 'Alex' }));
   await click(ui.getByRole('checkbox', { name: 'Jo' }));
-  assert.equal(ui.queryByRole('group', { name: 'Alex' }), null);
-  assert.equal(ui.queryByRole('group', { name: 'Jo' }), null);
+  assert.ok(ui.queryByRole('group', { name: 'Alex' }) === null);
+  assert.ok(ui.queryByRole('group', { name: 'Jo' }) === null);
   await click(ui.getByRole('checkbox', { name: 'Sam' }));
   assert.equal(ui.getByRole('checkbox', { name: 'Sam' }).checked, true);
   assert.ok(ui.getByRole('group', { name: 'Sam' }));
@@ -284,7 +284,7 @@ test('Continue with no day says "Choose a day" under the summary and stays', asy
   assert.equal(alert.textContent, 'Choose a day');
   assert.ok(document.querySelector('[data-book-pinned]').contains(alert));
   assert.ok(pinnedSummary().compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING, 'the message is not under the summary');
-  assert.equal(ui.queryByText(/^At /), null);
+  assert.ok(ui.queryByText(/^At /) === null);
 });
 
 test('Continue on a timed day with no time says "Choose a time"; the message goes once a time is picked', async () => {
@@ -293,9 +293,9 @@ test('Continue on a timed day with no time says "Choose a time"; the message goe
   await click(day(ui, MON_5));
   await click(ui.getByRole('button', { name: 'Continue' }));
   assert.equal(ui.getByRole('alert').textContent, 'Choose a time');
-  assert.equal(ui.queryByText(/^At /), null);
+  assert.ok(ui.queryByText(/^At /) === null);
   await click(ui.getByRole('button', { name: 'Sam, 10:00' }));
-  assert.equal(ui.queryByRole('alert'), null);
+  assert.ok(ui.queryByRole('alert') === null);
 });
 
 test('pressing Continue twice with the same problem re-announces a fresh alert', async () => {
@@ -389,7 +389,7 @@ test('a background refetch that fails keeps the calendar and diary shown, not th
   assert.equal(calls, 2);
   assert.ok(ui.getByRole('group', { name: 'October 2026' }), 'the calendar is still shown');
   assert.ok(ui.getByRole('group', { name: 'Alex' }), 'the diary is still shown after the failed refetch');
-  assert.equal(ui.queryByText("We couldn't load the free days"), null);
+  assert.ok(ui.queryByText("We couldn't load the free days") === null);
 });
 
 const TAKEN = 'Your chosen time is no longer available - please choose another';
@@ -407,7 +407,7 @@ test('a saved time no longer free is cleared, with a message above the calendar 
   });
   assert.equal(pinnedSummary().textContent, '');
   await click(day(ui, TUE_6));
-  assert.equal(ui.queryByText(TAKEN), null);
+  assert.ok(ui.queryByText(TAKEN) === null);
 });
 
 test('a picked time taken while the screen is open is cleared when availability is fetched again', async () => {
@@ -416,7 +416,7 @@ test('a picked time taken while the screen is open is cleared when availability 
   await ready(ui);
   await click(day(ui, MON_5));
   await click(ui.getByRole('button', { name: 'Alex, 09:30' }));
-  assert.equal(ui.queryByText(TAKEN), null);
+  assert.ok(ui.queryByText(TAKEN) === null);
   answer = { ...AVAILABILITY, days: [timed('2026-10-05', { 1: ['09:00', '14:00'], 3: ['10:00'] }), ...AVAILABILITY.days.slice(1)] };
   const { act, waitFor } = await rtl();
   await act(() => client.invalidateQueries({ queryKey: ['portal', 'north', 'availability'] }));
@@ -428,6 +428,46 @@ test('no free day in the two months: a message in place of the calendar, and no 
   const noDays = { busy: [], fullDays: [], days: [timed('2026-10-05', {}), timed('2026-10-06', {})] };
   const { ui } = await open({ availability: noDays });
   assert.ok(await ui.findByText('There are no free days in the next two months - please contact the shop'));
-  assert.equal(ui.queryByRole('group', { name: 'October 2026' }), null);
-  assert.equal(ui.queryByRole('button', { name: 'Continue' }), null);
+  assert.ok(ui.queryByRole('group', { name: 'October 2026' }) === null);
+  assert.ok(ui.queryByRole('button', { name: 'Continue' }) === null);
+});
+
+// d5: a booking refused because its time went while the customer filled in
+// their details comes back here with the time cleared.
+// Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
+const SORRY = 'Sorry, that time was booked while you were filling in your details - please choose another';
+
+test('after a refused booking it says the time was booked, above the calendar, until the next pick', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/date.js', exportName: 'DateScreen', at: 'date', url: '/book/north/date',
+    services: SERVICES, mechanics: MECHANICS, availability: AVAILABILITY, draft: { serviceIds: [11, 12] },
+    state: { timeTaken: true },
+  });
+  const { ui } = current;
+  await ready(ui);
+  const message = ui.getByText(SORRY);
+  assert.equal(message.getAttribute('role'), 'alert');
+  assert.ok(message.compareDocumentPosition(ui.getByRole('group', { name: 'October 2026' })) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'the message is not above the calendar');
+  await click(day(ui, TUE_6));
+  assert.ok(ui.queryByText(SORRY) === null);
+});
+
+test('opened normally, it says nothing about a refused booking', async () => {
+  const { ui } = await open();
+  await ready(ui);
+  assert.ok(ui.queryByText(SORRY) === null);
+});
+
+test('the refusal is cleared from history once read, so a refresh does not repeat it', async () => {
+  current = await renderBookScreen({
+    file: 'screens/book/date.js', exportName: 'DateScreen', at: 'date', url: '/book/north/date',
+    services: SERVICES, mechanics: MECHANICS, availability: AVAILABILITY, draft: { serviceIds: [11, 12] },
+    state: { timeTaken: true },
+  });
+  const { ui, router } = current;
+  await ready(ui);
+  assert.ok(ui.getByText(SORRY), 'the message still shows, from component state');
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.ok(router.state.location.state === null, 'the refusal was not cleared from history'));
 });

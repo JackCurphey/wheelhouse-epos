@@ -36,7 +36,7 @@ async function renderAt(stored, to) {
 test('a screen that needs a service, opened with none, goes back to the first screen', async () => {
   const { ui, router } = await renderAt(null);
   assert.ok(await ui.findByText('First screen'));
-  assert.equal(ui.queryByText('Date screen'), null);
+  assert.ok(ui.queryByText('Date screen') === null);
   // The redirect replaces history: Back from the first screen must not land
   // the visitor on the guarded screen they were just bounced from.
   assert.equal(router.state.historyAction, 'REPLACE');
@@ -105,7 +105,7 @@ test('hasProblem treats a stale choice (no longer one of the shop\'s choices) as
 test('with a redirect target, a screen opened without its answers goes there instead', async () => {
   const { ui, router } = await renderAt(null, 'problem');
   assert.ok(await ui.findByText('Problem screen'));
-  assert.equal(ui.queryByText('First screen'), null);
+  assert.ok(ui.queryByText('First screen') === null);
   assert.equal(router.state.historyAction, 'REPLACE');
 });
 

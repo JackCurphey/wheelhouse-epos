@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router';
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { DayDiary } from '@/components/ui/day-diary';
 import { MonthCalendar } from '@/components/ui/month-calendar';
@@ -15,6 +15,7 @@ import {
   ANY_MECHANIC, availableDays, bookingRange, choiceStillFree, continueMessage, diaryColumns, dropoffOptions, initialMonth,
   jobMinutes, localToday, pickedDay, reresolveMechanic, resolveMechanic, summaryText, type BookingRange,
 } from './date-rules.ts';
+import { TIME_TAKEN_MESSAGE, type SendRefusalState } from './details-rules.ts';
 
 /**
  * The date screen (atlas `date`, step 3): a month calendar for this month and
@@ -112,6 +113,17 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
   // The effect then clears the stored choice, one render later.
   const [checkedAvailability, setCheckedAvailability] = React.useState<AvailabilityResponse | null>(null);
   const [taken, setTaken] = React.useState(false);
+  // A booking refused at sending because this time went (d5) comes back here
+  // with the time cleared; say so until the next pick. Read into component
+  // state once, then cleared from history below, so a refresh or Back/
+  // Forward landing back on this same entry doesn't repeat it.
+  const location = useLocation();
+  const [refused, setRefused] = React.useState(() => (location.state as SendRefusalState | null)?.timeTaken === true);
+  React.useEffect(() => {
+    if ((location.state as SendRefusalState | null)?.timeTaken === true) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+  }, [location, navigate]);
   // An "Any mechanic" drop-off choice whose stored mechanic stops being
   // bookable is silently switched to another bookable mechanic - never shown
   // as taken - unless no mechanic is bookable at all, which choiceStillFree
@@ -132,16 +144,19 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
   const noDays = available.size === 0;
 
   const pickDay = (date: string) => {
+    setRefused(false);
     setTaken(false);
     setChecked(false);
     setShown(null);
     if (date !== draft.date) update({ date, mechanicId: undefined, startTime: undefined, anyMechanic: undefined });
   };
   const pickTime = (date: string, mechanicId: number, startTime: string) => {
+    setRefused(false);
     setTaken(false);
     update({ date, mechanicId, startTime, anyMechanic: undefined });
   };
   const pickMechanic = (value: string) => {
+    setRefused(false);
     setTaken(false);
     update(value === ANY_MECHANIC
       ? { mechanicId: undefined, anyMechanic: true, startTime: undefined }
@@ -179,6 +194,11 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
         )
       }
     >
+      {refused && (
+        <p role="alert" className="m-0 mb-3 rounded-md bg-[var(--wh-warn-bg)] p-2.5 text-sm text-[var(--wh-warn-ink)]">
+          {TIME_TAKEN_MESSAGE}
+        </p>
+      )}
       {taken && (
         <p role="alert" className="m-0 mb-3 rounded-md bg-[var(--wh-warn-bg)] p-2.5 text-sm text-[var(--wh-warn-ink)]">
           Your chosen time is no longer available - please choose another
