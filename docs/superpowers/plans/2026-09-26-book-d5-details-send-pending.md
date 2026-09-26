@@ -2657,4 +2657,58 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 
 ## Spec walk
 
-(Filled in by Task 9, Step 6.)
+Walked line by line against `docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md` on 26 Sep, after all commits on this branch (`bbbde21`).
+
+**Changes** (atlas): met - one update channel, no marketing box, no separate `full` screen, no view/change/cancel buttons yet (`details.tsx`, `pending.tsx`).
+
+**Decisions 1-6:**
+1. Terms: met - standard Wheelhouse terms, a shop's replacement, a copy saved per booking, all server piece 11 (#86, merged); fetched and shown from `/api/portal/:shopSlug/terms` in the details dialog (`details.tsx`; `tests/customer/details-screen.test.js` "booking terms" tests).
+2. Updates - one of Text message (default), WhatsApp, Email: met (`CHANNEL_OPTIONS`, `DEFAULT_CHANNEL` in `details-rules.ts`; `details-rules.test.js` "the messages, word for word" and the channel tests).
+3. No marketing permission box: met - `marketingPermission` stays in the draft type, unused (decision log 3); no such field on the screen.
+4. A time gone at sending returns to `date` with the time cleared and a message: met (`refusalRoute` `to: 'date'`; `TIME_TAKEN_MESSAGE`; `details-screen.test.js` refusal-route tests).
+5. Change/cancel later, pending says to contact the shop: met (`contactLine` in `pending-rules.ts`).
+6. Whole-journey test end to end against the real server: met (`tests/browser/book-journey.spec.ts`).
+
+**Details screen:** every bullet met.
+- `BookFrame` step 4, back to `date`, heading "How can we reach you?", action "Request booking": met (`details.tsx`; `details-screen.test.js` "step 4, the heading, and Back goes to the date screen").
+- Guard `hasDate`, redirect to `date` once `/services` has loaded: met (`RequireDraft` with `hasDate`, `to="date"`; `details-screen.test.js` guard test).
+- Summary (services, day/time, "From £T", bike note): met (`summaryLines` in `details-rules.ts`; `details-rules.test.js`).
+- Fields (name, mobile, channel pills, email with conditional label, terms tick box opening a dialog): met (`details.tsx`; `details-screen.test.js` field tests; decision 6 for the button-in-label terms link).
+- The four field messages, shown under their fields plus a pinned summary, focus on the first problem: met, verbatim (`FIELD_MESSAGES` in `details-rules.ts`; `details-rules.test.js` "the messages, word for word"; pinned summary uses `CHECK_ANSWERS`, decision 3).
+- Photos-cleared dialog with "Add photos" / "Send without photos": met (decision 4; `details-screen.test.js` photos-cleared tests).
+
+**Sending:** every bullet met.
+- `/services` refetched and answers cleaned with `cleanAnswers` before sending: met (`bookingBody` takes a fresh `services` argument; decision 9).
+- "Sending…", disabled while sending: met (`details.tsx`; `details-screen.test.js` sending-state test).
+- Body shape (`serviceIds`/`notSure`, `answers`, `bikeNote`, `description`, bare-base64 `photos`, `jobDate`/`mechanicId`/`startTime`, guest fields, `updateChannel`, `termsAccepted`): met (`bookingBody` in `details-rules.ts`), with decision 1's variance already recorded (`jobDate`/`mechanicId` always sent, not only on a timed day - the server requires both regardless).
+- Success clears the draft (incl. photos) and goes to `privateLink`: met (`details-screen.test.js` success test; end to end in `book-journey.spec.ts`).
+- Capacity/"too soon"/"date passed" refusals clear date+mechanic+time and go to `date` with the sorry message: met (`refusalRoute`, `TIME_GONE` list, `TIME_TAKEN_MESSAGE`).
+- "Questions changed" refusal goes to `problem` with the server's message verbatim (em dash included): met (`refusalRoute` `QUESTIONS_CHANGED`; decision 13).
+- 429 message: met, verbatim (`TOO_MANY_REQUESTS`).
+- No-response message: met, verbatim (`SEND_FAILED`).
+- Any other refusal shows the server's message and stays: met (`refusalRoute` default `to: 'stay'`).
+- **Changed:** four extra refusal messages ("That mechanic is unavailable...", "This shop takes drop-offs...", "A start time is required", "Please choose a mechanic") also route to `date`, beyond the spec's three-message list. Reason: decision 8 - each is a stale date-screen choice; staying on details would strand the customer. Jack approved on the PR.
+
+**Pending screen:** every bullet met.
+- Reads `GET /api/portal/:shopSlug/booking-links/:code`: met (`pending-query.ts`).
+- Status line per stage (all nine words): met, verbatim (`STAGE_TEXT` in `pending-rules.ts`; `pending-rules.test.js` "every stage has its words").
+- Summary (reference, services with prices, "From £T", day/time, bike note, description, answers): met (`serviceLines`, `totalLine`, `whenLine`, `answerLines` in `pending-rules.ts`; `pending-screen.test.js`).
+- "Keep this link to check your booking" + Copy link (copies full address, "Copied" briefly): met, verbatim (`pending.tsx`; decision 19; `COPIED_MS`).
+- Contact line: met, verbatim (`contactLine`).
+- 404 / 410 / other-failure with Try again: met, verbatim (`NOT_FOUND`, `EXPIRED`, `LOAD_FAILED`; `pending-screen.test.js` 404/410 tests).
+- No back link, no action: met (`pending.tsx` passes no back/action to `BookFrame`).
+
+**Rules:** met - pure functions in `details-rules.ts` and `pending-rules.ts`; screens only call these (confirmed by reading both screen files: no field logic or word-choice happens inline in `details.tsx`/`pending.tsx`).
+
+**Tests:** met in full.
+- Rules tests for both files: `details-rules.test.js`, `pending-rules.test.js`.
+- `details-screen.test.js`: guard, summary, fields/default channel, each message, email label, terms dialog, photos-cleared question, sending state, success, each refusal route, 429, network failure - all present and passing.
+- `pending-screen.test.js`: each status, summary, copy link, 404/410 - all present and passing.
+- `book-details.spec.ts` (320x568, mocked): last field and terms box above the pinned area, scrolled to bottom, before and after a message shows - met (screenshot Step 4 reconfirmed it live).
+- `book-journey.spec.ts` (real server, real database): throwaway shop, full journey to pending with a photo, private link reopened cold, database row checked (answers, bike note, photo on disk, terms copy), shop removed - met (decisions 21-23).
+
+**Not in this piece:** all four items confirmed absent/deferred as intended - no change/cancel online (piece 12/d6), no customer sign-in or saved bikes, no marketing permission field, the body-size memory risk untouched (STATUS's existing piece 6 open item, still Jack's decision before hosting).
+
+**Dropped:** nothing from the spec was dropped.
+
+**Overall:** every spec requirement is met; the only deltas from the literal spec text are the four extra stale-choice refusals to `date` (decision 8, Jack-approved) and the copy not specified in words (decisions 3, 5, 15, 16), all called out above and in STATUS.
