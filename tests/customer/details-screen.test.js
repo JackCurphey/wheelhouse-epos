@@ -95,6 +95,8 @@ test('the fields start empty with Text message chosen, and typing saves to the d
   assert.equal(name.value, '');
   assert.equal(phone.value, '');
   assert.equal(phone.getAttribute('type'), 'tel');
+  assert.equal(name.getAttribute('autocomplete'), 'name');
+  assert.equal(phone.getAttribute('autocomplete'), 'tel');
   const { within } = await rtl();
   const radios = within(ui.getByRole('group', { name: 'How should we send updates?' })).getAllByRole('radio');
   assert.deepEqual(radios.map((r) => [r.closest('label').textContent, r.checked]), [['Text message', true], ['WhatsApp', false], ['Email', false]]);
@@ -112,7 +114,10 @@ test('the email is optional until Email is chosen', async () => {
   assert.equal(ui.getByRole('textbox', { name: 'Email (optional)' }).getAttribute('aria-required'), null);
   await click(ui.getByRole('radio', { name: 'Email' }));
   assert.equal(readDraft().updateChannel, 'email');
-  assert.equal(ui.getByRole('textbox', { name: 'Email' }).getAttribute('aria-required'), 'true');
+  const email = ui.getByRole('textbox', { name: 'Email' });
+  assert.equal(email.getAttribute('aria-required'), 'true');
+  assert.equal(email.getAttribute('type'), 'email');
+  assert.equal(email.getAttribute('autocomplete'), 'email');
   assert.equal(ui.queryByRole('textbox', { name: 'Email (optional)' }), null);
 });
 
@@ -157,8 +162,11 @@ test('each message goes as soon as its field is fixed, and the pinned note with 
   assert.equal(ui.queryByText('Please enter your name'), null);
   await type(ui.getByRole('textbox', { name: 'Mobile number' }), '07700 900123');
   await click(ui.getByRole('checkbox', { name: 'I agree to the booking terms' }));
-  assert.equal(ui.queryByText('Please accept the booking terms'), null);
-  assert.equal(ui.queryByText(CHECK), null);
+  // Compared as a boolean, not the node itself (common.md): a DOM node's
+  // circular fiber references make assert's failure-message formatting for
+  // "not null" prohibitively slow if this ever regresses.
+  assert.equal(ui.queryByText('Please accept the booking terms') === null, true);
+  assert.equal(ui.queryByText(CHECK) === null, true);
 });
 
 test('"booking terms" opens the terms in a dialog on the same screen, without ticking the box', async () => {
