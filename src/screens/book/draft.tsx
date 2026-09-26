@@ -44,7 +44,13 @@ export const draftKey = (shopSlug: string) => `wh-book-draft:${shopSlug}`;
 function readStored(shopSlug: string): BookingDraft {
   try {
     const raw = window.sessionStorage.getItem(draftKey(shopSlug));
-    return raw ? (JSON.parse(raw) as BookingDraft) : {};
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw) as BookingDraft;
+    } catch {
+      console.warn(`wh-book-draft: stored draft for "${shopSlug}" is not valid JSON; starting fresh in memory`);
+      return {};
+    }
   } catch {
     return {};
   }
@@ -64,8 +70,10 @@ const DraftContext = React.createContext<DraftApi | null>(null);
 export function DraftProvider({ shopSlug, children }: { shopSlug: string; children: React.ReactNode }) {
   const [draft, setDraft] = React.useState<BookingDraft>(() => readStored(shopSlug));
   const [photos, setPhotos] = React.useState<File[]>([]);
+  const changed = React.useRef(false);
 
   React.useEffect(() => {
+    if (!changed.current) return;
     writeStored(shopSlug, draft);
   }, [shopSlug, draft]);
 
@@ -73,9 +81,13 @@ export function DraftProvider({ shopSlug, children }: { shopSlug: string; childr
     () => ({
       draft,
       photos,
-      update: (patch) => setDraft((prev) => ({ ...prev, ...patch })),
+      update: (patch) => {
+        changed.current = true;
+        setDraft((prev) => ({ ...prev, ...patch }));
+      },
       setPhotos,
       clear: () => {
+        changed.current = true;
         setDraft({});
         setPhotos([]);
       },

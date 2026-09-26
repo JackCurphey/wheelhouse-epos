@@ -65,6 +65,36 @@ test('a storage that throws still lets the draft work in memory', async () => {
   assert.deepEqual(m.api.draft, { serviceId: 3 });
 });
 
+test('a getItem that throws once on mount does not wipe a stored draft', async () => {
+  let getItemCalls = 0;
+  const store = new Map([['wh-book-draft:north', JSON.stringify({ serviceId: 9 })]]);
+  const flaky = {
+    getItem(key) {
+      getItemCalls += 1;
+      if (getItemCalls === 1) throw new Error('denied once');
+      return store.has(key) ? store.get(key) : null;
+    },
+    setItem(key, value) { store.set(key, value); },
+    removeItem(key) { store.delete(key); },
+  };
+  await mount('north', { storage: flaky });
+  assert.equal(store.get('wh-book-draft:north'), JSON.stringify({ serviceId: 9 }));
+});
+
+test('a corrupt stored value is left untouched until an update is made', async () => {
+  uninstall ??= installDom('http://localhost/book/north');
+  window.sessionStorage.setItem('wh-book-draft:north', '{not json');
+  const { render, act } = await import('@testing-library/react');
+  const { createElement: h } = await import('react');
+  const mod = await importFresh(DRAFT);
+  let api;
+  function Probe() { api = mod.useDraft(); return null; }
+  render(h(mod.DraftProvider, { shopSlug: 'north' }, h(Probe)));
+  assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), '{not json');
+  await act(() => api.update({ serviceId: 5 }));
+  assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), JSON.stringify({ serviceId: 5 }));
+});
+
 test('useDraft outside a provider says so', async () => {
   uninstall ??= installDom('http://localhost/book/north');
   const { render } = await import('@testing-library/react');
