@@ -7,6 +7,7 @@ import { DraftProvider } from '@/screens/book/draft.tsx';
 import { ServiceScreen } from '@/screens/book/service.tsx';
 import { ServiceListScreen } from '@/screens/book/service-list.tsx';
 import { ProblemScreen } from '@/screens/book/problem.tsx';
+import { DateScreen } from '@/screens/book/date.tsx';
 import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
 
 /**
@@ -40,6 +41,7 @@ const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = {
   service: ServiceScreen,
   'service-list': ServiceListScreen,
   problem: ProblemScreen,
+  date: DateScreen,
 };
 
 function notBuilt(id: CustomerScreenId): ComponentType {
