@@ -5,7 +5,8 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
-import { startLiveServer } from './helpers/liveServer.js';
+import { startLiveServer, TEST_CLOCK_PIN } from './helpers/liveServer.js';
+import { shopToday } from '../server/clock.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { jsonRequest } from './helpers/http.js';
@@ -154,8 +155,9 @@ test('a malformed code gets the same 404, never a 500', async () => {
   assert.deepEqual(short.body, upper.body);
 });
 
+// Counted back from the shop's today on the server's pinned clock (UK time).
 const daysAgo = (n) => {
-  const d = new Date();
+  const d = new Date(`${shopToday('Europe/London', new Date(TEST_CLOCK_PIN))}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() - n);
   return d.toISOString().slice(0, 10);
 };

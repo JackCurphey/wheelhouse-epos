@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, seedMechanic, setOpeningDays } from './helpers/staff.js';
+import { staffSignup, staffRequest, seedMechanic, setOpeningDays } from './helpers/staff.js';
 import { portalSignup, portalRequest } from './helpers/portal.js';
 import { jsonRequest } from './helpers/http.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -339,4 +339,73 @@ test('a guest booking for a service that is not available leaves no customer row
   assert.equal(res.status, 400, JSON.stringify(res.body));
   assert.match(res.body.error, /not available/);
   assert.equal(await count(), before, 'a customer row was created');
+});
+
+// Piece 10: nothing sooner than the shop's minimum notice, on the shop's clock.
+// Every live server's clock is pinned at 07:00 UK time on Tuesday 1 September
+// 2026 (tests/helpers/liveServer.js). Each test books on its own shop, so its
+// notice setting touches no other test (one shop, not one per test: customer
+// signups are rate-limited per network). Each test books its own mechanic, so
+// no two share a day's capacity; each sets the notice it needs first.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md
+const PINNED_TODAY = '2026-09-01';
+const TOO_SOON = "That's too soon for the shop - please choose a later time or day.";
+let noticeShop;
+after(async () => {
+  if (noticeShop) await deleteTestShop(noticeShop.staff.shop.id);
+});
+async function shopWith(settingsBody, mechanicName) {
+  if (!noticeShop) {
+    const staff = await staffSignup(server.baseUrl);
+    noticeShop = {
+      staff,
+      services: await seedJobTypes(staff.shop.id),
+      customer: await portalSignup(server.baseUrl, staff.shop.slug, {}),
+    };
+  }
+  const { staff, services, customer: who } = noticeShop;
+  const mechanicId = await seedMechanic(staff.shop.id, { name: mechanicName });
+  const put = await staffRequest(server.baseUrl, staff.cookie, '/api/workshop-settings', {
+    method: 'PUT', body: { bookingMode: 'timed', ...settingsBody },
+  });
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  return (body) => portalRequest(server.baseUrl, who.cookie, `/api/portal/${staff.shop.slug}/bookings`, {
+    method: 'POST',
+    body: {
+      mechanicId, jobDate: PINNED_TODAY, description: 'Test booking',
+      newBike: { make: 'Test', model: 'Bike' }, serviceIds: [services.quick], ...BOOKING_CONTACT, ...body,
+    },
+  });
+}
+
+test('a date before the shop\'s today is refused', async () => {
+  const bookHere = await shopWith({ minNoticeMinutes: 0 }, 'Ada');
+  const res = await bookHere({ jobDate: '2026-08-31', startTime: '10:00' });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.deepEqual(res.body, { error: 'That date has passed - please choose another day.' });
+});
+
+test('a start time sooner than now plus the notice is refused; just after it books', async () => {
+  const bookHere = await shopWith({ minNoticeMinutes: 170 }, 'Bea'); // 07:00 + 2h50 = 09:50
+  const early = await bookHere({ startTime: '09:30' });
+  assert.equal(early.status, 400, JSON.stringify(early.body));
+  assert.deepEqual(early.body, { error: TOO_SOON });
+  const later = await bookHere({ startTime: '10:00' });
+  assert.equal(later.status, 201, JSON.stringify(later.body));
+});
+
+test('a start at exactly the earliest bookable moment books, as availability offers it', async () => {
+  const bookHere = await shopWith({ minNoticeMinutes: 180 }, 'Cy'); // earliest 10:00
+  const res = await bookHere({ startTime: '10:00' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+});
+
+test('a drop-off today is refused once now plus the notice reaches the window\'s end', async () => {
+  // Window 09:00-10:00. Three hours' notice makes the earliest moment 10:00.
+  const late = await shopWith({ bookingMode: 'dropoff', minNoticeMinutes: 180 }, 'Dot');
+  const refused = await late({});
+  assert.equal(refused.status, 400, JSON.stringify(refused.body));
+  assert.deepEqual(refused.body, { error: TOO_SOON });
+  const inTime = await shopWith({ bookingMode: 'dropoff', minNoticeMinutes: 120 }, 'Eve'); // earliest 09:00
+  assert.equal((await inTime({})).status, 201);
 });

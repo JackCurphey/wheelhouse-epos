@@ -142,3 +142,57 @@ test('a non-numeric mechanicId is refused, not silently emptied', async () => {
   const res = await availability({ start: MONDAY, end: MONDAY, mechanicId: 'not-a-number' });
   assert.equal(res.status, 400, JSON.stringify(res.body));
 });
+
+// Piece 10: minimum notice, on the shop's clock. Every live server's clock is
+// pinned at 07:00 UK time (06:00 UTC) on Tuesday 1 September 2026
+// (tests/helpers/liveServer.js). The shop is open 09:00-18:00 every day.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md
+const PINNED_TODAY = '2026-09-01';
+const notice = (minNoticeMinutes, extra = {}) => as('/api/workshop-settings', { method: 'PUT', body: { minNoticeMinutes, ...extra } });
+
+test('a date before the shop\'s today offers nothing, timed or drop-off', async () => {
+  await freshShop();
+  const timed = await availability({ start: '2026-08-31', end: '2026-08-31', minutes: '60' });
+  assert.equal(timed.status, 200, JSON.stringify(timed.body));
+  assert.deepEqual(mechOn(timed.body, '2026-08-31', sam).startTimes, []);
+  await as('/api/workshop-settings', { method: 'PUT', body: { bookingMode: 'dropoff' } });
+  const dropoff = await availability({ start: '2026-08-31', end: '2026-08-31', minutes: '60' });
+  assert.equal(mechOn(dropoff.body, '2026-08-31', sam).bookable, false);
+});
+
+test('today\'s start times before now plus the notice are removed, later ones kept', async () => {
+  await freshShop();
+  await notice(180); // 07:00 + 3h = 10:00
+  const { body } = await availability({ start: PINNED_TODAY, end: '2026-09-02', minutes: '60' });
+  const today = mechOn(body, PINNED_TODAY, sam).startTimes;
+  assert.ok(!today.includes('09:00') && !today.includes('09:30'), JSON.stringify(today));
+  assert.equal(today[0], '10:00');
+  assert.equal(mechOn(body, '2026-09-02', sam).startTimes[0], '09:00', 'tomorrow lost its early times');
+});
+
+test('in summer the notice runs from UK time, not UTC', async () => {
+  await freshShop();
+  await notice(150); // 07:00 BST + 2h30 = 09:30 (UTC would say 08:30, keeping 09:00)
+  const { body } = await availability({ start: PINNED_TODAY, end: PINNED_TODAY, minutes: '60' });
+  assert.equal(mechOn(body, PINNED_TODAY, sam).startTimes[0], '09:30');
+});
+
+test('notice longer than the rest of the day spills into the next day', async () => {
+  await freshShop();
+  await notice(27 * 60); // 07:00 + 27h = 10:00 on 2 September
+  const { body } = await availability({ start: PINNED_TODAY, end: '2026-09-03', minutes: '60' });
+  assert.deepEqual(mechOn(body, PINNED_TODAY, sam).startTimes, []);
+  assert.equal(mechOn(body, '2026-09-02', sam).startTimes[0], '10:00');
+  assert.equal(mechOn(body, '2026-09-03', sam).startTimes[0], '09:00');
+});
+
+test('drop-off today is offered until now plus the notice reaches the window\'s end', async () => {
+  await freshShop();
+  await as('/api/workshop-settings', { method: 'PUT', body: { bookingMode: 'dropoff' } }); // window 09:00-10:00
+  const open = await availability({ start: PINNED_TODAY, end: PINNED_TODAY, minutes: '60' });
+  assert.equal(mechOn(open.body, PINNED_TODAY, sam).bookable, true, 'earliest 09:00 is before the 10:00 close');
+  await notice(180); // earliest 10:00 - the window has closed
+  const closed = await availability({ start: PINNED_TODAY, end: '2026-09-02', minutes: '60' });
+  assert.equal(mechOn(closed.body, PINNED_TODAY, sam).bookable, false);
+  assert.equal(mechOn(closed.body, '2026-09-02', sam).bookable, true);
+});

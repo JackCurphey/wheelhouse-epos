@@ -79,6 +79,9 @@ import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
 import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
+import {
+  currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
+} from './clock.js';
 import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 import {
   getShopifyConnectionByShopId,
@@ -1613,7 +1616,7 @@ route('GET', '/api/sales', async (req, res, params, query) => {
   let sql = SALE_SELECT + ' WHERE 1=1';
   const args = [];
   let dateStr = null;
-  if (dateFilter === 'today') dateStr = new Date().toISOString().slice(0, 10);
+  if (dateFilter === 'today') dateStr = await currentShopToday();
   else if (dateFilter) dateStr = dateFilter;
   if (dateStr) {
     sql += " AND s.created_at >= ?::date AND s.created_at < ?::date + interval '1 day'";
@@ -3558,9 +3561,11 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
 
 // ---------- Workshop settings ----------
 
-// The server's date convention: UTC, as job_date comparisons elsewhere.
-function utcToday() {
-  return new Date().toISOString().slice(0, 10);
+// The shop's today, on its own clock and time zone (server/clock.js). Reads
+// the settings row through the request's shop context (row-level security).
+async function currentShopToday() {
+  const row = await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get();
+  return shopToday(row.time_zone);
 }
 
 // A workshop_settings row in the capacity calculator's shape (server/capacity.js).
@@ -3576,6 +3581,8 @@ function toCapacitySettings(row) {
     nextBookingModeFrom: row.next_booking_mode_from ?? null,
     dropoffWindowStart: row.dropoff_window_start,
     dropoffWindowEnd: row.dropoff_window_end,
+    minNoticeMinutes: row.min_notice_minutes,
+    timeZone: row.time_zone,
   };
 }
 
@@ -3590,11 +3597,13 @@ function serializeWorkshopSettings(row) {
     fullDayThresholdMinutes: row.full_day_threshold_minutes,
     // Today's mode: a scheduled change whose date has arrived counts as made,
     // even before a save writes it into booking_mode.
-    ...settleModeChange(toCapacitySettings(row), utcToday()),
+    ...settleModeChange(toCapacitySettings(row), shopToday(row.time_zone)),
     dropoffWindowStart: row.dropoff_window_start,
     dropoffWindowEnd: row.dropoff_window_end,
     timedLeadMinutes: row.timed_lead_minutes,
     unspecifiedJobMinutes: row.unspecified_job_minutes,
+    minNoticeMinutes: row.min_notice_minutes,
+    timeZone: row.time_zone,
     // INTEGER 0/1 in the column, boolean over the wire - the client renders
     // it directly, same shape serializeWorkshopService uses for `active`.
     showPricesOnline: row.show_prices_online === 1,
@@ -3647,9 +3656,14 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
     }
   }
 
+  // The shop's time zone first: it decides which date is today below.
+  const timeZone = body.timeZone !== undefined ? body.timeZone : existing.time_zone;
+  if (!isKnownTimeZone(timeZone)) return badRequest(res, "That time zone isn't recognised");
+
   // A scheduled change whose date has arrived is written into booking_mode
   // now, so the next schedule never overwrites a change that already happened.
-  const settled = settleModeChange(toCapacitySettings(existing), utcToday());
+  const today = shopToday(timeZone);
+  const settled = settleModeChange(toCapacitySettings(existing), today);
   const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : settled.bookingMode;
   if (bookingMode !== 'timed' && bookingMode !== 'dropoff') {
     return badRequest(res, "Booking mode must be either 'timed' or 'dropoff'");
@@ -3658,7 +3672,7 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
   if (body.nextBookingMode !== undefined || body.nextBookingModeFrom !== undefined) {
     nextMode = validateModeChange(
       { nextBookingMode: body.nextBookingMode ?? null, nextBookingModeFrom: body.nextBookingModeFrom ?? null },
-      { today: utcToday(), bookingMode },
+      { today, bookingMode },
     );
     if (nextMode.error) return badRequest(res, nextMode.error);
   }
@@ -3696,6 +3710,14 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
     }
   }
 
+  let minNoticeMinutes = existing.min_notice_minutes;
+  if (body.minNoticeMinutes !== undefined) {
+    minNoticeMinutes = body.minNoticeMinutes;
+    if (!Number.isInteger(minNoticeMinutes) || minNoticeMinutes < 0 || minNoticeMinutes > 10080) {
+      return badRequest(res, 'Minimum notice must be between 0 minutes and 7 days');
+    }
+  }
+
   const showPricesOnline = body.showPricesOnline === undefined
     ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
 
@@ -3704,10 +3726,12 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
        full_day_threshold_minutes = ?, booking_mode = ?, next_booking_mode = ?, next_booking_mode_from = ?,
        dropoff_window_start = ?,
        dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
+       min_notice_minutes = ?, time_zone = ?,
        show_prices_online = ?, updated_at = ? WHERE id = ?`
   ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
         nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
         dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
+        minNoticeMinutes, timeZone,
         showPricesOnline, nowIso(), existing.id);
   const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
   sendJson(res, 200, serializeWorkshopSettings(row));
@@ -3748,7 +3772,7 @@ function toCapacityJob(row) {
 
 // Live bookings a block overlaps, from today on - a block's past is history.
 async function clashesFor(block) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await currentShopToday();
   const from = block.kind === 'dates' && block.startDate > today ? block.startDate : today;
   let sql = `SELECT id, reference, title, mechanic_id, job_date, start_time, end_time, planned_minutes
     FROM workshop_jobs WHERE job_date >= ? AND booking_state IN (${LIVE_STATES_SQL})`;
@@ -4438,7 +4462,7 @@ route('POST', '/api/print-agents/jobs/:printJobId/complete', async (req, res, pa
 // ---------- Dashboard ----------
 
 route('GET', '/api/dashboard', async (req, res) => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await currentShopToday();
   const todayAgg = await db
     .prepare(
       `SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
@@ -4668,14 +4692,24 @@ route('GET', '/api/portal/:shopSlug/availability', async (req, res, params, quer
   }
   const body = { busy: busy.filter(keep), fullDays: fullDays.filter(keep) };
   if (minutes !== null) {
+    // Nothing sooner than the shop's minimum notice, on the shop's clock (piece
+    // 10). A date before today is always before the earliest moment, so it
+    // offers nothing.
+    const earliest = earliestBookable(settings);
     body.days = days.map((day) => ({
       date: day.date,
       mode: day.mode,
       ...(day.mode === 'dropoff'
         ? { dropoffWindow: { start: settings.dropoffWindowStart, end: settings.dropoffWindowEnd } } : {}),
       mechanics: day.mechanics.filter(keep).map((m) => (day.mode === 'timed'
-        ? { mechanicId: m.mechanicId, startTimes: startTimesFor(m, minutes) }
-        : { mechanicId: m.mechanicId, bookable: fitsDropoff(m, minutes) })),
+        ? {
+          mechanicId: m.mechanicId,
+          startTimes: startTimesFor(m, minutes).filter((t) => startIsInTime(earliest, day.date, t)),
+        }
+        : {
+          mechanicId: m.mechanicId,
+          bookable: fitsDropoff(m, minutes) && dropoffIsInTime(earliest, day.date, settings.dropoffWindowEnd),
+        })),
     }));
   }
   sendJson(res, 200, body);
@@ -4900,6 +4934,13 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     // The mode for this date decides what the customer chose: a day (drop-off)
     // or a time (timed). Read inside the lock, from the calculator.
     const capacity = await loadCapacity(jobDate, jobDate);
+    // Nothing in the past, and nothing sooner than the shop's minimum notice,
+    // on the shop's own clock (piece 10) - the same rule availability applies.
+    const moment = currentMoment();
+    if (jobDate < shopToday(capacity.settings.timeZone, moment)) {
+      return refusal('That date has passed - please choose another day.');
+    }
+    const earliest = earliestBookable(capacity.settings, moment);
     const mode = capacity.days[0].mode;
     const startTime = (body.startTime || '').trim();
     let times;
@@ -4911,6 +4952,10 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       if (!times.startTime) return refusal('A start time is required');
       if (times.error) return refusal(times.error);
     }
+    const inTime = mode === 'dropoff'
+      ? dropoffIsInTime(earliest, jobDate, capacity.settings.dropoffWindowEnd)
+      : startIsInTime(earliest, jobDate, times.startTime);
+    if (!inTime) return refusal("That's too soon for the shop - please choose a later time or day.");
 
     const slot = await checkJobSlot({
       jobDate,
@@ -5063,7 +5108,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     ).get(hashLinkCode(params.code))
     : null;
   if (!row) return sendJson(res, 404, { error: "We can't find that booking" });
-  if (isLinkExpired(row.job_date, new Date().toISOString().slice(0, 10))) {
+  if (isLinkExpired(row.job_date, await currentShopToday())) {
     return sendJson(res, 410, { error: 'This link has expired' });
   }
   sendJson(res, 200, {
