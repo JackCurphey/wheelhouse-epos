@@ -110,6 +110,18 @@ test('a stored value that is not a plain object is left untouched until an updat
   assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), JSON.stringify({ serviceIds: [5] }));
 });
 
+test('the d3 fields are saved and read back: bike note, photos flag, a choice with words', async () => {
+  const first = await mount('north');
+  const draft = {
+    serviceIds: [11], bikeNote: 'Green Brompton', hadPhotos: true, description: 'Clicks',
+    answers: [{ serviceId: 11, questionId: 'b1', choice: 'Squeaking', text: 'Only when wet' }],
+  };
+  await first.act(() => first.api.update(draft));
+  first.ui.unmount();
+  const second = await mount('north');
+  assert.deepEqual(second.api.draft, draft);
+});
+
 test('useDraft outside a provider says so', async () => {
   uninstall ??= installDom('http://localhost/book/north');
   const { render } = await import('@testing-library/react');
