@@ -23,6 +23,8 @@ afterEach(async () => {
 
 async function renderAt(path) {
   uninstall = installDom(`http://localhost${path}`);
+  // jsdom has no scrollTo; BookFrame scrolls to the top on each screen.
+  window.scrollTo = () => {};
   const { render } = await import('@testing-library/react');
   const { createElement } = await import('react');
   const { CustomerAppShell, queryClient } = await importFresh(SHELL);
