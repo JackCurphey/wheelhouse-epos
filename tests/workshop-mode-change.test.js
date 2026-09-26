@@ -4,7 +4,8 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { runWithShop, prepare } from '../server/db.js';
-import { startLiveServer } from './helpers/liveServer.js';
+import { startLiveServer, TEST_CLOCK_PIN } from './helpers/liveServer.js';
+import { shopToday } from '../server/clock.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { futureDate } from './helpers/workshopFixtures.js';
@@ -27,8 +28,9 @@ async function freshShop() {
 }
 
 const settings = (body) => staffRequest(server.baseUrl, owner.cookie, '/api/workshop-settings', body ? { method: 'PUT', body } : undefined);
-const today = () => new Date().toISOString().slice(0, 10);
-const yesterday = () => new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+// The shop's today on the server's pinned clock (UK time), and the day before.
+const today = () => shopToday('Europe/London', new Date(TEST_CLOCK_PIN));
+const yesterday = () => shopToday('Europe/London', new Date(new Date(TEST_CLOCK_PIN).getTime() - 86_400_000));
 
 test('a shop schedules drop-off mode from a future date, and can cancel it', async () => {
   await freshShop();
@@ -87,4 +89,20 @@ test('setting bookingMode directly to the already-scheduled mode clears the sche
     'SELECT next_booking_mode, next_booking_mode_from FROM workshop_settings LIMIT 1'
   ).get());
   assert.deepEqual({ ...row }, { next_booking_mode: null, next_booking_mode_from: null });
+});
+
+// Piece 10: "today" for a scheduled change is the shop's today, in its own
+// time zone. At the pinned moment (06:00 UTC, 1 Sep) it is 07:00 on 1 Sep in
+// the UK but 23:00 on 31 Aug in Los Angeles.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md
+test("the mode change's today is the shop's today, in the shop's time zone", async () => {
+  await freshShop();
+  assert.equal(today(), '2026-09-01');
+  const uk = await settings({ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-09-01' });
+  assert.equal(uk.status, 400, 'a UK shop scheduled a change for its own today');
+  await settings({ timeZone: 'America/Los_Angeles' });
+  const la = await settings({ nextBookingMode: 'dropoff', nextBookingModeFrom: '2026-09-01' });
+  assert.equal(la.status, 200, JSON.stringify(la.body));
+  assert.equal(la.body.bookingMode, 'timed', 'in Los Angeles 1 Sep is tomorrow, so the change has not arrived');
+  assert.equal(la.body.nextBookingModeFrom, '2026-09-01');
 });

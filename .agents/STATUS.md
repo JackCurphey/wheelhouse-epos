@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `e3c02b4` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81 merged); d3 on `feat/book-d3-problem-screen` (PR #82, open). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `e3c02b4` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81 merged); d3 #82 merged at `8e8db72`; d4 spec on `feat/book-d4-date-screen` (not pushed); server piece 10 on `feat/book-server-10-notice-timezone`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -115,7 +115,22 @@ items: the blank header while `/services` loads or fails now shows a proper
 loading/error state, focus moves to the screen's `h1` on a screen change, and
 a Playwright check (`tests/browser/book-service-list.spec.ts`) proves the
 pinned Continue never covers the last service at 320px.
-**(d3) built on `feat/book-d3-problem-screen`, PR #82 (open, not merged)** (26 Sep; spec
+**d4 next (date screen):** spec
+`docs/superpowers/specs/2026-09-26-book-d4-date-screen-design.md` approved by
+Jack 26 Sep (branch `feat/book-d4-date-screen`, spec commit only). Needs
+**server piece 10** first: branch `feat/book-server-10-notice-timezone`, spec
+`docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md`
+(approved 26 Sep, incl. migration 033). Piece 10: per-shop `min_notice_minutes`
+(default 120) and `time_zone` (default `Europe/London`), no staff screen yet;
+one pinnable clock (`server/clock.js`; the test pin `WHEELHOUSE_TEST_CLOCK` is
+ignored in production; tests pin 1 Sep 2026, so never add a fixed test date
+before it); availability drops past and too-soon times and drop-off days
+whose window has closed; booking refuses a past date and a too-soon time;
+"today" is the shop's everywhere. **Open (follow-up piece):** dashboard and
+sales "today" query a UTC-midnight window in the database, so sales between
+00:00 and 01:00 UK time in summer count on the previous day (as before this
+piece); those routes have no tests.
+**(d3) merged: #82** (26 Sep at `8e8db72`, CI green on its final commit `6d45c88`) (26 Sep; spec
 `docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md`, plan
 `docs/superpowers/plans/2026-09-26-book-d3-problem-screen.md`, which carries
 the decision log and the spec walk; server piece 9, PR #81, merged 26 Sep at
