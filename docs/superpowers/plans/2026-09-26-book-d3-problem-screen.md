@@ -1338,7 +1338,31 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 10. **The atlas mock-up isn't edited.** The spec's "Changes" list records where it departs from the mock-up; d2 treated its list the same way.
 11. **`hasProblem` doesn't change `RequireDraft`'s redirect target.** The spec sends a customer failing it "back to `problem`". That's d4's to build, since d4 applies the guard. STATUS records it for d4.
 12. **The keyboard check focuses the description** (the last box above the photos) on a screen with two questions, so the box starts below the shrunken viewport. Task 5 Step 3 has the fallback if the mutation doesn't bite.
+13. **A choice answer counts as answered only if its `choice` is still one of the question's current `choices`.** A shop may reword or remove a choice after the customer tapped it; treating a stale value as answered would let a required question through with an answer the shop no longer offers. Words or `notSure` still count on their own. Added to `answered()` in `problem-rules.ts`, tested by `missingAnswers`/`hasProblem`'s "stale choice" cases.
 
 ## Spec walk
 
-Filled in by Task 6 Step 4.
+Walked against `docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md`.
+
+**Decisions 1-7** (Jack, 26 Sep):
+1. One free-text bike box — **met**. `problem.tsx`'s single `Input` bound to `draft.bikeNote`, no saved-bike picking. Proven by `problem-screen.test.js`'s bike-box cases.
+2. The bike words are a note, not a bike record — **met**. `bikeNote` is a plain string on the draft; no bike-record creation exists in this piece (that's server piece 9's contract, out of scope here).
+3. The bike box is optional — **met**. No required attribute, no Continue check on it; `draft.test.js` and `problem-screen.test.js` both leave it empty without failing Continue.
+4. Choice questions are pills plus "Or tell us in your own words" — **met**. `PillGroup` plus a `Textarea`; `pillChange`/`pillValue`/`setAnswer` in `problem-rules.ts` treat a tap, words, or both as an answer, tested by `problem-rules.test.js`'s `setAnswer` cases and `problem-screen.test.js`'s "a tap, words, or both are saved" case.
+5. Question wording is the shop's — **met**. `questionLabel` returns `q.wording` verbatim, appending " (optional)" only when not required, tested by `problem-rules.test.js`. The demo-data note ("test and demo data use that style") is **not applicable**: no demo data with questions exists in this repo to update, so there was nothing to change; only test fixtures carry question wording, and they already follow the one-question-per-service style.
+6. Photos only, optional, up to 5, memory only — **met**. `PhotoPicker` wired to `useDraft().photos` (never written to the draft itself); `hadPhotos` flag and `photosCleared` cover the refresh message, tested by `problem-screen.test.js`'s photo cases and `problem-rules.test.js`'s `photosCleared` cases.
+7. Description required only for "Not sure" — **met**. `descriptionError` in `problem-rules.ts`, tested directly and via `problem-screen.test.js`'s "Not sure with no description" case.
+
+**The screen** (`problem`, `/book/:shopSlug/problem`) — **met**: step 2, back link (`services` when ticked, first screen for "Not sure"), heading "Tell us about your bike", "Continue" action; bike box, question groups in list order with per-service headings, choice/text question layout, description label switching on `notSure`, photo picker with the drop-off line, in the spec's order. Proven by `problem-screen.test.js`'s layout tests ("a heading per ticked service...", "Not sure: no questions...", "services ticked but no questions..."). Continue's checks (missing-answer messages, description message, pinned summary, focus movement, navigation to `date` on success) are **met**, proven by the "Continue with required questions unanswered", "Not sure with no description", "a good Continue goes to the date screen" and "pressing Continue twice" cases. "A service with no questions shows no heading" is **met** (the `questionGroups` filter), proven by the same heading-per-service test.
+
+**Draft changes** — **met**. `BookingDraft.bikeNote?: string` replaces `bike`; `hadPhotos?: boolean` added; `Answer` is `{serviceId, questionId, choice?, text?, notSure?}`, proven by `draft.test.js`'s shape/round-trip tests (decision 9: red was `npm run typecheck`, not a failing assertion, since the change is type-only). `hasProblem(draft, services)` is **met and tested but not applied** as the spec says — it exists in `require-draft.tsx`, exported, tested by `require-draft.test.js`'s four `hasProblem` cases, and is not yet wrapped around any screen (that's d4's task, per decision 11 and the amended STATUS note on ordering `RequireDraft` after `/services` loads).
+
+**Rules** (`src/screens/book/problem-rules.ts`) — **met**. All five pure functions listed in the spec exist with matching names and behaviour (`questionGroups`, `setAnswer`, `missingAnswers`, `descriptionError`, `photosCleared`), each covered by its own `problem-rules.test.js` cases, and `problem.tsx` calls only these plus small local helpers (`findAnswer`, `pillOptions`, `pillValue`, `pillChange`, `questionLabel`) that wrap them for display — the screen holds no independent logic of its own.
+
+**Tests** — **met**. All five files named in the spec exist and run: `problem-rules.test.js`, `problem-screen.test.js`, `require-draft.test.js` (the `hasProblem` cases), `draft.test.js` (the new shape), `tests/browser/book-problem.spec.ts` (the on-screen-keyboard imitation, moved here from d2 per decision log entry in d2's own plan). `npm test` reports 980 passed, 0 failed; `npm run test:browser` reports 5 passed, 0 failed, including `book-problem.spec.ts`.
+
+**Changed:** the choice-answer rule gained the "stale choice" clause (decision 13 above) — not in the original spec text, added during the build because the spec's `answered()` semantics were silent on a shop editing choices after the customer answers.
+
+**Dropped:** none.
+
+**Known follow-ups, not required by the spec but noted for later:** a pill question's "Please answer" message is not linked to the `PillGroup` for screen readers (would need a `PillGroup` prop to accept `aria-describedby`/an error id); required text questions' `Textarea` carries `aria-invalid` but not `aria-required`.
