@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils';
  * grey "Unavailable" block with no other detail. Open time is made of one
  * button per start time the server allows, so every tap lands on a real
  * time and a keyboard or screen reader can reach each one. The scale is set
- * so the closest two start times are still 44px apart.
+ * so every start time's button, however short a following busy block or
+ * closing time makes it, is still at least 44px tall.
  * Spec: docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md
  */
 
@@ -29,23 +30,43 @@ export function toMinutes(time: string): number {
   return h * 60 + m;
 }
 
-/** Pixels per minute so the smallest gap between start times is 44px (30 minutes if none are closer). */
-export function pxPerMinute(columns: DiaryColumn[]): number {
-  let gap = 30;
+/**
+ * How long a button for a start time actually renders: from that time to
+ * whichever comes first — the next start time in the same column, the next
+ * busy block's start, or closing time. pxPerMinute and the render use this
+ * same helper so the scale that promises 44px and the height that is drawn
+ * can never disagree.
+ */
+export function startSpan(time: number, column: DiaryColumn, closeMinutes: number): number {
+  const boundaries = [closeMinutes];
+  for (const s of column.startTimes) {
+    const t = toMinutes(s);
+    if (t > time) boundaries.push(t);
+  }
+  for (const b of column.busy) {
+    const t = toMinutes(b.start);
+    if (t > time) boundaries.push(t);
+  }
+  return Math.min(...boundaries) - time;
+}
+
+/** Pixels per minute so every start time's actual rendered span is at least 44px (30 minutes if nothing is shorter). */
+export function pxPerMinute(columns: DiaryColumn[], close: string): number {
+  const closeMinutes = toMinutes(close);
+  let minSpan = 30;
   for (const c of columns) {
-    const ts = c.startTimes.map(toMinutes).sort((a, b) => a - b);
-    for (let i = 1; i < ts.length; i++) {
-      const g = ts[i] - ts[i - 1];
-      if (g > 0 && g < gap) gap = g;
+    for (const s of c.startTimes) {
+      const span = startSpan(toMinutes(s), c, closeMinutes);
+      if (span > 0 && span < minSpan) minSpan = span;
     }
   }
-  return MIN_TARGET_PX / gap;
+  return MIN_TARGET_PX / minSpan;
 }
 
 export function DayDiary({ open, close, columns, value = null, onChange, className }: DayDiaryProps) {
   const start = toMinutes(open);
   const end = toMinutes(close);
-  const ppm = pxPerMinute(columns);
+  const ppm = pxPerMinute(columns, close);
   const height = (end - start) * ppm;
   const y = (t: number) => (Math.min(Math.max(t, start), end) - start) * ppm;
 
@@ -69,7 +90,10 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
         ))}
       </div>
       {columns.map((c) => {
-        const times = c.startTimes.map(toMinutes).sort((a, b) => a - b);
+        const times = c.startTimes
+          .map(toMinutes)
+          .filter((t) => t >= start && t < end)
+          .sort((a, b) => a - b);
         return (
           <div key={c.id} role="group" aria-label={c.name} className="relative rounded-md bg-[var(--wh-hover-subtle)]" style={{ height }}>
             {c.busy.map((b, i) => {
@@ -87,11 +111,9 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
                 </div>
               );
             })}
-            {times.map((t, i) => {
+            {times.map((t) => {
               const label = c.startTimes.find((s) => toMinutes(s) === t) as string;
-              const nextStart = times[i + 1] ?? end;
-              const nextBusy = Math.min(end, ...c.busy.map((b) => toMinutes(b.start)).filter((b) => b > t));
-              const span = Math.max(1, Math.min(nextStart, nextBusy) - t);
+              const span = Math.max(1, startSpan(t, c, end));
               const picked = value?.columnId === c.id && value.time === label;
               return (
                 <button
