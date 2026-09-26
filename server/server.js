@@ -4746,7 +4746,7 @@ async function bookedServices(jobId) {
 // words on their own. A free-text question's line is just its answer.
 function answerNoteLine({ wording, kind, answer, text }) {
   if (kind === 'text') return answer ? `${wording} ${answer}` : null;
-  const choiceOrNotSure = answer === null ? null : (answer && typeof answer === 'object' && answer.notSure ? "I'm not sure" : answer);
+  const choiceOrNotSure = answer && typeof answer === 'object' && answer.notSure ? "I'm not sure" : answer;
   const words = text || null;
   const value = choiceOrNotSure && words ? `${choiceOrNotSure} - ${words}` : choiceOrNotSure || words;
   return value ? `${wording} ${value}` : null;

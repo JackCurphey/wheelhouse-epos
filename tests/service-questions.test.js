@@ -154,7 +154,9 @@ test('not sure where it is switched off is refused as changed', () =>
   refused([good[0], { questionId: 'q_000000000003', notSure: true }], /have changed/));
 test('not sure on a text question is refused as changed', () =>
   refused([{ questionId: 'q_000000000001', notSure: true }, good[1]], /have changed/));
-test('a non-string choice or words on a choice question is refused as changed', () =>
+test('a non-string choice on a choice question is refused as changed', () =>
+  refused([good[0], { questionId: 'q_000000000003', choice: 42 }], /have changed/));
+test('a non-string words value on a choice question is refused as changed', () =>
   refused([good[0], { questionId: 'q_000000000003', text: 42 }], /have changed/));
 test('a text answer over 1,000 characters is refused', () =>
   refused([{ questionId: 'q_000000000001', text: 'x'.repeat(1001) }, good[1]], /1,000 characters/));

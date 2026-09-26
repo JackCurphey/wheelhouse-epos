@@ -72,7 +72,9 @@ function checkedWords(raw) {
 // question is gone, a choice was reworded, not sure was switched off) means
 // the customer answered an older version, so the booking is refused as changed.
 // A choice question's answer may carry typed words with or without a choice
-// (piece 9); notSure and choice stay mutually exclusive.
+// (piece 9); a `choice` sent alongside `notSure: true` is accepted but
+// ignored - the stored answer is { notSure: true } either way, and only
+// notSure's own gating (a choice-kind question with allowNotSure) applies.
 // Returns the frozen copy: every question in order, wording as asked, the
 // answer or null, and - for choice questions only - the typed words or null.
 export function checkAnswers(questions, answers) {
