@@ -79,9 +79,10 @@ test('the summary: services in list order, or Not sure; the price when shown; th
   assert.equal(r.priceText({ ...SERVICES, showPrices: false }, { serviceIds: [11, 12] }), null);
   assert.equal(r.priceText(SERVICES, { serviceIds: [11, 13] }), null, 'a service with no price');
   assert.equal(r.priceText(SERVICES, { notSure: true, serviceIds: [] }), null);
+  assert.equal(r.priceText(SERVICES, { serviceIds: [11] }), null, 'one service: no total to add (Jack, 26 Sep)');
   assert.deepEqual(
     r.summaryLines(SERVICES, { serviceIds: [11], bikeNote: ' Blue Trek ' }, 'Monday 5 October, 09:30 with Alex'),
-    ['Brake service', 'Monday 5 October, 09:30 with Alex', 'From £20', 'Blue Trek'],
+    ['Brake service', 'Monday 5 October, 09:30 with Alex', 'Blue Trek'],
   );
   assert.deepEqual(r.summaryLines(SERVICES, { notSure: true, serviceIds: [], bikeNote: '  ' }, 'Tuesday 6 October'), ['Not sure', 'Tuesday 6 October']);
 });

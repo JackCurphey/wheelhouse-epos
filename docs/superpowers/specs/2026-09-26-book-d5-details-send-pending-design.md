@@ -39,7 +39,9 @@ drives the whole journey against the real server.
   `/services` has loaded, as on `date`).
 - **Summary** at the top: the chosen services' names joined by ", " (or "Not
   sure"); the day and time as on `date`'s summary; "From £T" when the shop
-  shows prices; the bike note when given.
+  shows prices and two or more services are chosen (Jack, 26 Sep: the summary
+  doesn't list per-service prices, so with one service there's nothing for a
+  total to add); the bike note when given.
 - **Fields**, written to the draft as they change:
   - "Your name": required.
   - "Mobile number": required.

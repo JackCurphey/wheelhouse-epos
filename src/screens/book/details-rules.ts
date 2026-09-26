@@ -116,11 +116,16 @@ export function serviceNames(services: ServicesResponse, draft: BookingDraft): s
   return chosenServices(services, draft.serviceIds ?? []).map((s) => s.name).join(', ');
 }
 
-/** "From £T" when the shop shows prices and every chosen service has one; summed in pence. */
+/**
+ * "From £T", when the shop shows prices, every chosen service has one, and
+ * there are two or more services (Jack, 26 Sep: the summary doesn't list
+ * per-service prices, so with one service there's nothing for a total to
+ * add). Summed in pence.
+ */
 export function priceText(services: ServicesResponse, draft: BookingDraft): string | null {
   if (draft.notSure || !services.showPrices) return null;
   const chosen = chosenServices(services, draft.serviceIds ?? []);
-  if (chosen.length === 0 || chosen.some((s) => s.price === null)) return null;
+  if (chosen.length < 2 || chosen.some((s) => s.price === null)) return null;
   const pence = chosen.reduce((sum, s) => sum + Math.round((s.price as number) * 100), 0);
   return formatFrom(pence / 100);
 }
