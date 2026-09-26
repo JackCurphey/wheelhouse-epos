@@ -28,9 +28,13 @@ const FRAME = new URL('../../.test-build/screens/book/frame.js', import.meta.url
 
 const SERVICES = { shopName: 'North Street Cycles', showPrices: false, full: [], categories: [], uncategorised: [] };
 
-async function renderFrame(props, path = '/book/north/problem') {
+async function renderFrame(
+  props,
+  path = '/book/north/problem',
+  reply = () => new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } }),
+) {
   uninstall = installDom(`http://localhost${path}`);
-  globalThis.fetch = async () => new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } });
+  globalThis.fetch = async () => reply();
   const { render } = await import('@testing-library/react');
   const { createElement: h } = await import('react');
   const { createMemoryRouter, RouterProvider } = await import('react-router');
@@ -63,7 +67,7 @@ test('without a step there is no step count', async () => {
 test('the back link goes where it is told', async () => {
   const { fireEvent } = await import('@testing-library/react');
   const ui = await renderFrame({ step: 2, title: 'T', back: '/book/north' });
-  fireEvent.click(ui.getByRole('link', { name: /Back/ }));
+  fireEvent.click(await ui.findByRole('link', { name: /Back/ }));
   assert.ok(await ui.findByText('First screen'));
 });
 
@@ -102,4 +106,46 @@ test('without a pinned action, scroll-padding-bottom is left alone', async () =>
   const ui = await renderFrame({ step: 2, title: 'T' });
   await ui.findByText('North Street Cycles');
   assert.equal(document.documentElement.style.scrollPaddingBottom, '');
+});
+
+test('while the shop loads, only "Loading…" shows - no title, body or action', async () => {
+  const ui = await renderFrame({ step: 1, title: 'T', action: { label: 'Continue', onClick: () => {} } }, undefined, () => new Promise(() => {}));
+  assert.ok(await ui.findByText('Loading…'));
+  assert.equal(ui.queryByText('Screen body'), null);
+  assert.equal(ui.queryByRole('button', { name: 'Continue' }), null);
+});
+
+test('an unknown shop says so, with no shop name', async () => {
+  const ui = await renderFrame({ step: 1, title: 'T' }, undefined,
+    () => new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } }));
+  assert.ok(await ui.findByRole('heading', { level: 1, name: "We can't find this shop" }));
+  assert.equal(ui.queryByText('Screen body'), null);
+});
+
+test('a failed load offers Try again, which recovers', async () => {
+  const { fireEvent } = await import('@testing-library/react');
+  let fail = true;
+  const ui = await renderFrame({ step: 1, title: 'Tell us about your bike' }, undefined, () => (fail
+    ? new Response(JSON.stringify({ error: 'boom' }), { status: 500, headers: { 'content-type': 'application/json' } })
+    : new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } })));
+  assert.ok(await ui.findByRole('heading', { level: 1, name: "We couldn't load this shop's services" }));
+  fail = false;
+  fireEvent.click(ui.getByRole('button', { name: 'Try again' }));
+  assert.ok(await ui.findByRole('heading', { level: 1, name: 'Tell us about your bike' }));
+});
+
+test('focus lands on the title once the screen is ready', async () => {
+  const ui = await renderFrame({ step: 1, title: 'Tell us about your bike' });
+  const h1 = await ui.findByRole('heading', { level: 1, name: 'Tell us about your bike' });
+  const { waitFor } = await import('@testing-library/react');
+  await waitFor(() => assert.ok(document.activeElement === h1, 'focus is not on the h1'));
+});
+
+test('the action note sits in the pinned area above the button', async () => {
+  const ui = await renderFrame({ step: 1, title: 'T', actionNote: 'Two services', action: { label: 'Continue', onClick: () => {} } });
+  await ui.findByText('North Street Cycles');
+  const pinned = document.querySelector('[data-book-pinned]');
+  assert.ok(pinned, 'no pinned area');
+  assert.ok(pinned.contains(ui.getByText('Two services')));
+  assert.ok(pinned.contains(ui.getByRole('button', { name: 'Continue' })));
 });
