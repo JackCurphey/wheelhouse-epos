@@ -51,8 +51,10 @@ button doesn't cover the last field, and where it sits with the on-screen
 keyboard open; long action labels (`Button` is `whitespace-nowrap`); moving
 focus to the screen's `h1` on a screen change; Enter-to-submit on `details`
 (the action sits outside any `form`); `/book` doesn't pick up the shop's own
-accent colour (`book.html` doesn't load `public/app.js`) - a design question
-for Jack. **Open for piece (d) from (c):** `day-diary` scales so every
+accent colour (`book.html` doesn't load `public/app.js`). **Jack, 26 Sep
+(direction, not yet scheduled):** each shop will eventually choose one colour
+scheme that applies everywhere (staff and customer apps); not built now.
+Until then `/book` uses the default Wheelhouse colours. **Open for piece (d) from (c):** `day-diary` scales so every
 start time is 44px, so a service shorter than 30 minutes (start time under 30
 minutes before a booking) stretches the whole diary - decide with real service
 lengths; `month-calendar` hard-codes an `h2` (fit the screen's heading order);
