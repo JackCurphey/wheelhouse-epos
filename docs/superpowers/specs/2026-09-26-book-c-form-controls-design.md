@@ -34,6 +34,12 @@ Wiring them to real data is piece (d).
    "Unavailable" blocks with no details. One day at a time, not the old
    week view: a week is under 40px per column on a phone. Drop-off shops
    have no times: month calendar plus a mechanic choice.
+7. **Drop-off customers choose their mechanic with single-choice pills**
+   after picking the day (the server requires a mechanic in both modes).
+   Mechanics who cannot take the job that day (`bookable: false` from
+   `/availability`) are greyed and cannot be picked. Chosen over choice
+   cards (a detail line with nothing real to show yet) and a read-only diary
+   (suggests a time choice drop-off does not have).
 6. **Large text box and photo picker as shown.** Photos only (JPEG, PNG,
    WebP); the atlas's video option is dropped because the server refuses
    video.
@@ -52,7 +58,7 @@ touch targets at least 44px tall.
 | Item | Kind | Props (outline) | Behaviour |
 |---|---|---|---|
 | `choice-card` | primitive | `title`, `detail?`, `price?` (preformatted text), `selected?`, native button props | A `<button>` card; `aria-pressed` when `selected` is given. Never formats or totals money. |
-| `pill-group` | primitive | `legend`, `options: {value, label}[]`, `value: string \| string[]`, `multiple?`, `onChange` | A `<fieldset>` of visually-pill native radios (single) or checkboxes (`multiple`). Arrow keys follow native radio behaviour. |
+| `pill-group` | primitive | `legend`, `options: {value, label, disabled?}[]`, `value: string \| string[]`, `multiple?`, `onChange` | A `<fieldset>` of visually-pill native radios (single) or checkboxes (`multiple`). Arrow keys follow native radio behaviour. A `disabled` option is greyed, cannot be picked, and is skipped by the arrow keys (native disabled radio). |
 | `checkbox` | primitive | `label`, native checkbox props | Native `<input type="checkbox">` with `accent-color: var(--accent-dark)`, label beside it, 18px box, row at least 44px tall. |
 | `textarea` | primitive | native textarea props | Same look as `input`, min 80px tall, resizes vertically. |
 | `photo-picker` | pattern | `value: File[]`, `onChange(files)`, `max` (5), `maxBytes` (10 MB) | "Add photos" opens the phone's chooser (`accept="image/jpeg,image/png,image/webp"`, `multiple`). Thumbnails with a remove button each; "n of 5 added". A file of the wrong type, over `maxBytes`, or beyond `max` is refused with a message naming it and the rule; accepted files are kept. Turning files into base64 for the server is piece (d). |
@@ -60,7 +66,10 @@ touch targets at least 44px tall.
 | `day-diary` | pattern | `open`, `close` (`HH:MM`), `columns: {id, name, busy: {start, end}[], startTimes: string[]}[]`, `value?: {columnId, time}`, `onChange` | One column per mechanic, hours labelled down the side. Busy spans are grey "Unavailable" blocks with no other text. Open time is made of one button per allowed start time (labelled with the time, e.g. "Sam, 10:30"), so any tap lands on a time the server allows and a keyboard or screen reader can reach each one. The picked time is filled in the shop colour. |
 
 The mechanic pills above the diary are a `pill-group` with `multiple`;
-keeping at least one selected is screen logic (piece (d)).
+keeping at least one selected is screen logic (piece (d)). The drop-off
+mechanic choice is a single `pill-group` whose unavailable mechanics are
+`disabled`; which ones are unavailable comes from `/availability` in
+piece (d).
 
 ## The colour fix
 
@@ -82,7 +91,7 @@ registry item reading names that `theme.css` lacks gets the same fix.
   key press reports. At minimum:
   - `choice-card`: `aria-pressed` follows `selected`; a click calls the handler.
   - `pill-group`: single mode reports one value; `multiple` reports the set;
-    it is a labelled group.
+    it is a labelled group; a `disabled` option cannot be picked.
   - `checkbox` / `textarea`: label is linked; change is reported.
   - `photo-picker`: accepts a JPEG; refuses a PDF, an 11 MB file, and a
     sixth photo, each with a message; remove drops that file.
