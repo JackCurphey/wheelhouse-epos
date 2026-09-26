@@ -44,7 +44,7 @@ test('sections in order: full, each category, then Other; empty ones hidden', as
   assert.deepEqual(ui.getAllByRole('heading', { level: 2 }).map((h) => h.textContent), ['Brakes', 'Wheels']);
 });
 
-test('?start scrolls to its section; no start does not scroll', async () => {
+test('?start scrolls to its section; no start, or an unknown start, does not scroll', async () => {
   let s = await open({ search: '?start=individual' });
   const { waitFor } = await import('@testing-library/react');
   await waitFor(() => assert.equal(s.scrolled.length, 1));
@@ -55,6 +55,9 @@ test('?start scrolls to its section; no start does not scroll', async () => {
   assert.ok(s.scrolled[0] === s.ui.getByRole('heading', { level: 2, name: 'Full services' }));
   s.ui.unmount(); current.client.clear(); current.uninstall();
   s = await open();
+  assert.equal(s.scrolled.length, 0);
+  s.ui.unmount(); current.client.clear(); current.uninstall();
+  s = await open({ search: '?start=bogus' });
   assert.equal(s.scrolled.length, 0);
 });
 
@@ -136,10 +139,11 @@ test('a good Continue saves the services in list order, drops orphaned answers a
 
 test('ticks survive a reload of the tab', async () => {
   // A real round trip, not a hand-written stored draft: tick a service
-  // through the UI, unmount, capture what the draft provider actually wrote
-  // to sessionStorage, then re-render the screen with that captured value as
-  // its starting draft (each renderBookScreen installs a brand new jsdom
-  // window, so the second render's sessionStorage starts empty otherwise).
+  // through the UI, capture what the draft provider actually wrote to
+  // sessionStorage, unmount, then re-render the screen with that captured
+  // value as its starting draft (each renderBookScreen installs a brand new
+  // jsdom window, so the second render's sessionStorage starts empty
+  // otherwise).
   const first = await open();
   await click(card(first.ui, 'Wheel true'));
   assert.equal(card(first.ui, 'Wheel true').getAttribute('aria-pressed'), 'true');
