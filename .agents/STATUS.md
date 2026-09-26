@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `0456294` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server piece 7 #76 merged); piece 8 on `feat/book-server-8-service-includes`. Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `4049fa9` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged); d2 on `feat/book-d2-service-screens`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
