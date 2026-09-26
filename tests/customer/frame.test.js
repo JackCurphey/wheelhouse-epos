@@ -109,10 +109,25 @@ test('without a pinned action, scroll-padding-bottom is left alone', async () =>
 });
 
 test('while the shop loads, only "Loading…" shows - no title, body or action', async () => {
-  const ui = await renderFrame({ step: 1, title: 'T', action: { label: 'Continue', onClick: () => {} } }, undefined, () => new Promise(() => {}));
+  // The fetch is held open (never resolved) so the frame's pending state can
+  // be inspected. Left unsettled, the query stays "fetching" past the end of
+  // the test: unmounting drops React Query's observer but not the in-flight
+  // retryer, which keeps a real gcTime timer (5 minutes) alive and stalls
+  // the whole test file's exit. Resolving it here, and unmounting before the
+  // test returns, lets afterEach's client.clear() tear the query down with
+  // nothing left pending.
+  let resolveFetch;
+  const ui = await renderFrame(
+    { step: 1, title: 'T', action: { label: 'Continue', onClick: () => {} } },
+    undefined,
+    () => new Promise((resolve) => { resolveFetch = resolve; }),
+  );
   assert.ok(await ui.findByText('Loading…'));
   assert.equal(ui.queryByText('Screen body'), null);
   assert.equal(ui.queryByRole('button', { name: 'Continue' }), null);
+  resolveFetch(new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await ui.findByText('North Street Cycles');
+  ui.unmount();
 });
 
 test('an unknown shop says so, with no shop name', async () => {
