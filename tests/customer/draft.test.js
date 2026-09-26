@@ -95,6 +95,21 @@ test('a corrupt stored value is left untouched until an update is made', async (
   assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), JSON.stringify({ serviceId: 5 }));
 });
 
+test('a stored value that is not a plain object is left untouched until an update is made', async () => {
+  uninstall ??= installDom('http://localhost/book/north');
+  window.sessionStorage.setItem('wh-book-draft:north', 'null');
+  const { render, act } = await import('@testing-library/react');
+  const { createElement: h } = await import('react');
+  const mod = await importFresh(DRAFT);
+  let api;
+  function Probe() { api = mod.useDraft(); return null; }
+  render(h(mod.DraftProvider, { shopSlug: 'north' }, h(Probe)));
+  assert.deepEqual(api.draft, {});
+  assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), 'null');
+  await act(() => api.update({ serviceId: 5 }));
+  assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), JSON.stringify({ serviceId: 5 }));
+});
+
 test('useDraft outside a provider says so', async () => {
   uninstall ??= installDom('http://localhost/book/north');
   const { render } = await import('@testing-library/react');

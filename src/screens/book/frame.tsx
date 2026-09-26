@@ -25,6 +25,21 @@ export function BookFrame({ step, title, back, action, children }: BookFrameProp
   const { shopSlug = '' } = useParams();
   const services = useServices(shopSlug);
 
+  // A field brought into view by Tab (or scrollIntoView) can land behind the
+  // pinned action bar (WCAG 2.4.11 Focus Not Obscured). scroll-padding-bottom
+  // keeps the browser's own scroll-into-view landing above it; restored on
+  // unmount or when the action goes away so a screen with no pinned bar isn't
+  // left with padding that no longer applies to it.
+  React.useEffect(() => {
+    if (!action) return undefined;
+    const root = document.documentElement;
+    const previous = root.style.scrollPaddingBottom;
+    root.style.scrollPaddingBottom = '7rem';
+    return () => {
+      root.style.scrollPaddingBottom = previous;
+    };
+  }, [action]);
+
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-white px-4 text-[var(--wh-ink)]">
       <header className="flex min-h-11 items-center border-b border-[var(--wh-border)] py-2 font-semibold">
@@ -33,7 +48,7 @@ export function BookFrame({ step, title, back, action, children }: BookFrameProp
       <main className={cn('flex-1 py-3', action && 'pb-28')}>
         {back && (
           <Link to={back} className="mb-1 inline-flex min-h-11 items-center text-sm text-[var(--accent-dark)]">
-            ← Back
+            <span aria-hidden="true">←</span> Back
           </Link>
         )}
         {step && (

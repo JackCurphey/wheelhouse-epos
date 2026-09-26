@@ -46,7 +46,12 @@ function readStored(shopSlug: string): BookingDraft {
     const raw = window.sessionStorage.getItem(draftKey(shopSlug));
     if (!raw) return {};
     try {
-      return JSON.parse(raw) as BookingDraft;
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        console.warn(`wh-book-draft: stored draft for "${shopSlug}" is not an object; starting fresh in memory`);
+        return {};
+      }
+      return parsed as BookingDraft;
     } catch {
       console.warn(`wh-book-draft: stored draft for "${shopSlug}" is not valid JSON; starting fresh in memory`);
       return {};

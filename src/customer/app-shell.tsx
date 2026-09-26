@@ -22,7 +22,7 @@ const BOOK_BASE = '/book/:shopSlug';
 // Every book screen shares one booking in progress for its shop, so the
 // screens sit under one layout route that provides it. Keyed by shop, so
 // moving to another shop's address starts that shop's own draft.
-function BookLayout() {
+export function BookLayout() {
   const { shopSlug = '' } = useParams();
   return (
     <DraftProvider key={shopSlug} shopSlug={shopSlug}>

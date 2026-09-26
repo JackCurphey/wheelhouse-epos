@@ -86,3 +86,20 @@ test('the action button calls its handler, and can be disabled', async () => {
   await off.findByText('North Street Cycles');
   assert.equal(off.getByRole('button', { name: 'Choose a day' }).disabled, true);
 });
+
+// A field focused via Tab mid-page can end up hidden behind the pinned
+// action bar (WCAG 2.4.11 Focus Not Obscured). scroll-padding-bottom on the
+// document keeps a scroll-into-view landing above the bar.
+test('with a pinned action, scroll-padding-bottom is set on the document and restored after unmount', async () => {
+  const ui = await renderFrame({ step: 2, title: 'T', action: { label: 'Choose a day', onClick: () => {} } });
+  await ui.findByText('North Street Cycles');
+  assert.notEqual(document.documentElement.style.scrollPaddingBottom, '');
+  ui.unmount();
+  assert.equal(document.documentElement.style.scrollPaddingBottom, '');
+});
+
+test('without a pinned action, scroll-padding-bottom is left alone', async () => {
+  const ui = await renderFrame({ step: 2, title: 'T' });
+  await ui.findByText('North Street Cycles');
+  assert.equal(document.documentElement.style.scrollPaddingBottom, '');
+});

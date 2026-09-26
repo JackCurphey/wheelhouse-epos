@@ -28,21 +28,25 @@ async function renderAt(stored) {
     { path: '/book/:shopSlug/date', Component: () => h(RequireDraft, { has: hasService }, h('p', null, 'Date screen')) },
     { path: '/book/:shopSlug', Component: () => h('p', null, 'First screen') },
   ], { initialEntries: ['/book/north/date'] });
-  return render(h(DraftProvider, { shopSlug: 'north' }, h(RouterProvider, { router })));
+  const ui = render(h(DraftProvider, { shopSlug: 'north' }, h(RouterProvider, { router })));
+  return { ui, router };
 }
 
 test('a screen that needs a service, opened with none, goes back to the first screen', async () => {
-  const ui = await renderAt(null);
+  const { ui, router } = await renderAt(null);
   assert.ok(await ui.findByText('First screen'));
   assert.equal(ui.queryByText('Date screen'), null);
+  // The redirect replaces history: Back from the first screen must not land
+  // the visitor on the guarded screen they were just bounced from.
+  assert.equal(router.state.historyAction, 'REPLACE');
 });
 
 test('with a service chosen, the screen shows', async () => {
-  const ui = await renderAt({ serviceId: 7 });
+  const { ui } = await renderAt({ serviceId: 7 });
   assert.ok(await ui.findByText('Date screen'));
 });
 
 test('not sure counts as a chosen service', async () => {
-  const ui = await renderAt({ notSure: true });
+  const { ui } = await renderAt({ notSure: true });
   assert.ok(await ui.findByText('Date screen'));
 });
