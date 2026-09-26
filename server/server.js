@@ -4460,8 +4460,9 @@ route('GET', '/api/portal/:shopSlug/mechanics', async (req, res) => {
 // ticked bookable online, and prices only when the shop shows prices online
 // (docs/decisions/2026-09-04-booking-mode-and-downtime.md §7). Prices pass
 // through as stored - nothing is totalled here.
+// shopName: the booking screens' header (d1 spec).
 // screens: service, service-list
-route('GET', '/api/portal/:shopSlug/services', async (req, res) => {
+route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, shop) => {
   const settings = await db.prepare('SELECT show_prices_online FROM workshop_settings LIMIT 1').get();
   const showPrices = settings?.show_prices_online === 1;
   const services = await db.prepare(
@@ -4474,6 +4475,7 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res) => {
   const toPublic = (s) => ({ id: s.id, name: s.name, price: showPrices ? s.price : null, minutes: s.minutes, questions: s.questions });
   const individual = services.filter((s) => s.kind === 'individual');
   sendJson(res, 200, {
+    shopName: shop.name,
     showPrices,
     full: services.filter((s) => s.kind === 'full').map(toPublic),
     categories: categories
