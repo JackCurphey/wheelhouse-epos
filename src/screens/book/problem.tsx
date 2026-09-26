@@ -10,8 +10,8 @@ import { useDraft, type Answer } from './draft.tsx';
 import { RequireDraft, hasService } from './require-draft.tsx';
 import { useServices, type PortalQuestion } from './services-query.ts';
 import {
-  ANSWER_TEXT_MAX, BIKE_NOTE_MAX, MAX_PHOTOS, MAX_PHOTO_BYTES, descriptionError, findAnswer, missingAnswers, photosCleared,
-  pillChange, pillOptions, pillValue, questionGroups, questionLabel, setAnswer, type AnswerChange,
+  ANSWER_TEXT_MAX, BIKE_NOTE_MAX, MAX_PHOTOS, MAX_PHOTO_BYTES, cleanAnswers, descriptionError, findAnswer, missingAnswers,
+  photosCleared, pillChange, pillOptions, pillValue, questionGroups, questionLabel, setAnswer, type AnswerChange,
 } from './problem-rules.ts';
 
 /**
@@ -77,8 +77,11 @@ function ProblemForm() {
       return;
     }
     // Continuing ends the "photos were cleared" message (spec): the flag now
-    // matches the photos actually held.
-    update({ hadPhotos: photos.length > 0 ? true : undefined });
+    // matches the photos actually held. It also cleans the stored answers
+    // (I1): a stale choice, a notSure the shop has since disallowed, or an
+    // answer left over from a service that got unticked would otherwise
+    // reach the server unchanged and be refused.
+    update({ hadPhotos: photos.length > 0 ? true : undefined, answers: cleanAnswers(data, draft) });
     navigate(`/book/${shopSlug}/date`);
   };
 
@@ -177,6 +180,7 @@ function QuestionField({ id, question, answer, error, onChange }: QuestionFieldP
           id={`${id}-box`}
           maxLength={ANSWER_TEXT_MAX}
           value={answer?.text ?? ''}
+          aria-required={question.required ? true : undefined}
           aria-invalid={invalid}
           aria-describedby={describedBy}
           onChange={(e) => onChange({ text: e.target.value })}

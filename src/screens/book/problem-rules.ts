@@ -91,7 +91,8 @@ function answered(q: PortalQuestion, a: Answer | undefined): boolean {
   const words = (a?.text ?? '').trim() !== '';
   if (q.kind === 'text') return words;
   const choiceStillCurrent = a?.choice !== undefined && q.choices.includes(a.choice);
-  return words || choiceStillCurrent || a?.notSure === true;
+  const notSureStillAllowed = a?.notSure === true && q.allowNotSure;
+  return words || choiceStillCurrent || notSureStillAllowed;
 }
 
 /** The required questions with no answer, in screen order, with the server's message. */
@@ -101,6 +102,35 @@ export function missingAnswers(data: ServicesResponse, draft: BookingDraft): Mis
       .filter((q) => q.required && !answered(q, findAnswer(draft.answers, service.id, q.id)))
       .map((q) => ({ serviceId: service.id, questionId: q.id, message: `Please answer: ${q.wording}` })),
   );
+}
+
+/**
+ * The answers to actually save (I1): only for a question currently shown
+ * (questionGroups already drops a deleted question and an untracked service),
+ * with a `choice` no longer among the question's choices dropped, `notSure`
+ * dropped once the shop has switched `allowNotSure` off, and `choice`/`notSure`
+ * dropped from a text question. Words are kept as typed. An answer left with
+ * no choice, no notSure and no non-blank words is dropped. The server applies
+ * the same rules (piece 9, checkAnswers); this keeps a stale draft from being
+ * refused by it.
+ */
+export function cleanAnswers(data: ServicesResponse, draft: BookingDraft): Answer[] {
+  const result: Answer[] = [];
+  for (const { service, questions } of questionGroups(data, draft)) {
+    for (const q of questions) {
+      const a = findAnswer(draft.answers, service.id, q.id);
+      if (!a) continue;
+      const next: Answer = { serviceId: service.id, questionId: q.id };
+      if (q.kind === 'choice') {
+        if (a.choice !== undefined && q.choices.includes(a.choice)) next.choice = a.choice;
+        if (a.notSure === true && q.allowNotSure) next.notSure = true;
+      }
+      if ((a.text ?? '').trim() !== '') next.text = a.text;
+      const empty = next.choice === undefined && next.notSure === undefined && next.text === undefined;
+      if (!empty) result.push(next);
+    }
+  }
+  return result;
 }
 
 export function descriptionError(draft: BookingDraft): string | null {

@@ -76,6 +76,14 @@ test('the bike box, a text question, and the optional description', async () => 
   assert.equal(description.hasAttribute('maxlength'), false, 'the description has no length limit');
 });
 
+test('a required text question is aria-required; the words box of a required choice question is not', async () => {
+  const { ui } = await open();
+  const which = ui.getByRole('textbox', { name: 'Which wheel needs truing?' });
+  assert.equal(which.getAttribute('aria-required'), 'true');
+  const brakeWords = ui.getByRole('textbox', { name: BRAKE_WORDS });
+  assert.equal(brakeWords.hasAttribute('aria-required'), false);
+});
+
 test('services ticked but no questions: the bike box and the optional description only', async () => {
   const { ui } = await open({ serviceIds: [12] });
   assert.equal(ui.queryAllByRole('heading', { level: 2 }).length, 0);
@@ -195,6 +203,20 @@ test('a good Continue goes to the date screen and sends nothing', async () => {
   assert.ok(await ui.findByText('At /book/north/date'));
   assert.ok(requests.length > 0);
   assert.ok(requests.every((r) => r.method === 'GET' && r.url.endsWith('/api/portal/north/services')), JSON.stringify(requests));
+});
+
+test('Continue cleans stale answers before saving (I1): a stale choice and an answer for an unticked service', async () => {
+  const seeded = {
+    serviceIds: [11],
+    answers: [
+      { serviceId: 11, questionId: 'b1', choice: 'Bent rim', text: 'Grinding' }, // stale choice - kept as words only
+      { serviceId: 13, questionId: 'w1', text: 'Front' }, // service 13 not ticked - dropped
+    ],
+  };
+  const { ui, readDraft } = await open(seeded);
+  await click(ui.getByRole('button', { name: 'Continue' }));
+  assert.ok(await ui.findByText('At /book/north/date'));
+  assert.deepEqual(readDraft().answers, [{ serviceId: 11, questionId: 'b1', text: 'Grinding' }]);
 });
 
 test('Not sure with a description continues to the date screen', async () => {

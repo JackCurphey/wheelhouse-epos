@@ -148,6 +148,50 @@ test('photos were cleared when the draft had some and none are held', () => {
   assert.equal(r.photosCleared({}, 0), false);
 });
 
+// answered()/missingAnswers must also require q.allowNotSure for notSure to
+// count - a shop can switch it off after the customer tapped it (I1b).
+test('notSure does not answer a question once the shop switches allowNotSure off', () => {
+  const noNotSure = choiceQ('n1', 'Front or back?', ['Front', 'Back'], { allowNotSure: false });
+  const data = { ...DATA, uncategorised: [...DATA.uncategorised, svc(14, 'Extra', [noNotSure])] };
+  assert.deepEqual(r.missingAnswers(data, { serviceIds: [14], answers: [{ serviceId: 14, questionId: 'n1', notSure: true }] }), [
+    { serviceId: 14, questionId: 'n1', message: 'Please answer: Front or back?' },
+  ]);
+});
+
+// cleanAnswers (I1): keeps only answers for questions currently shown, drops a
+// stale choice, drops notSure when the shop has switched it off, drops
+// choice/notSure on a text question, and drops an answer left with nothing.
+test('cleanAnswers keeps a valid answer untouched', () => {
+  assert.deepEqual(r.cleanAnswers(DATA, { serviceIds: [11], answers: [A({ choice: 'Squeaking', text: 'Only when wet' })] }),
+    [A({ choice: 'Squeaking', text: 'Only when wet' })]);
+});
+
+test('cleanAnswers drops a stale choice but keeps the words with it (I1a)', () => {
+  assert.deepEqual(r.cleanAnswers(DATA, { serviceIds: [11], answers: [A({ choice: 'Bent rim', text: 'Grinding' })] }),
+    [A({ text: 'Grinding' })]);
+});
+
+test('cleanAnswers drops notSure once the shop turns allowNotSure off (I1b)', () => {
+  assert.deepEqual(r.cleanAnswers(DATA, { serviceIds: [13], answers: [{ serviceId: 13, questionId: 'w2', notSure: true }] }), []);
+  assert.deepEqual(
+    r.cleanAnswers(DATA, { serviceIds: [13], answers: [{ serviceId: 13, questionId: 'w2', notSure: true, text: 'Not sure either way' }] }),
+    [{ serviceId: 13, questionId: 'w2', text: 'Not sure either way' }],
+  );
+});
+
+test('cleanAnswers drops an answer to a question the shop deleted (I1c)', () => {
+  assert.deepEqual(r.cleanAnswers(DATA, { serviceIds: [11], answers: [{ serviceId: 11, questionId: 'gone', choice: 'x' }] }), []);
+});
+
+test('cleanAnswers drops answers for a service no longer ticked (I1d)', () => {
+  assert.deepEqual(r.cleanAnswers(DATA, { serviceIds: [13], answers: [A({ choice: 'Squeaking' })] }), []);
+});
+
+test('cleanAnswers drops a choice or notSure carried onto a text question', () => {
+  assert.deepEqual(r.cleanAnswers(DATA, { serviceIds: [13], answers: [{ serviceId: 13, questionId: 'w1', choice: 'x', notSure: true, text: 'Front' }] }),
+    [{ serviceId: 13, questionId: 'w1', text: 'Front' }]);
+});
+
 test('the limits match the server', () => {
   assert.equal(r.BIKE_NOTE_MAX, 200);
   assert.equal(r.ANSWER_TEXT_MAX, 1000);

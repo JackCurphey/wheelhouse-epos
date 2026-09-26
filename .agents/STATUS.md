@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `4049fa9` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged); d2 on `feat/book-d2-service-screens`; d3 on `feat/book-d3-problem-screen`. Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `e3c02b4` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81 merged); d3 on `feat/book-d3-problem-screen`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -134,12 +134,22 @@ target to `problem` (the spec sends the customer back to `problem`, but
 `{serviceId, questionId, choice?, text?, notSure?}`, matching piece 9. **For
 d5:** send `bikeNote` and each answer's `text`; photos are
 `useDraft().photos` (memory only) and must go as bare base64 (piece 6 note
-below). The on-screen keyboard check is `tests/browser/book-problem.spec.ts`:
+below); before sending, re-clean answers with `cleanAnswers` against fresh
+`/services` data (the shop can edit questions between problem and send); and
+check `photosCleared` (`hadPhotos` true but no photos held after a later
+refresh) and send the customer back to add photos or confirm without them.
+The on-screen keyboard check is `tests/browser/book-problem.spec.ts`:
 an imitation (viewport cut to 320x300), not a real keyboard. Jack approved
 the look of the "photos were cleared" note (`--wh-warn-bg` / `--wh-warn-ink`).
 Known follow-ups: a pill question's "Please answer" message is not linked
-for screen readers (needs a `PillGroup` change); required text questions
-lack `aria-required`. Notes: `queryClient` is exported from
+for screen readers (needs a `PillGroup` change). Final-review fix wave (26
+Sep): `problem-rules.ts` gained `cleanAnswers` (drops a stale choice, a
+`notSure` the shop has since disallowed, an answer to a deleted question, or
+one left over from an unticked service before the draft's answers are saved
+on Continue - a draft could otherwise pass `hasProblem` and still be refused
+by server piece 9's `checkAnswers`); `answered()`/`missingAnswers` now also
+require `q.allowNotSure` for `notSure` to count; and a required text
+question's `Textarea` now carries `aria-required="true"`. Notes: `queryClient` is exported from
 `src/customer/app-shell.tsx` only so tests can clear it; `notSurePatch` is
 shared by both screens; the locked-row background uses `--wh-hover` (Jack to
 confirm the look). **#79 merged** (26 Sep at `29bffda`): `ChoiceCard` puts a space between
