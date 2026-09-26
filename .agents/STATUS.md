@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `ee55844` (pieces (a) #72, (b) #73, (c) #74, (d1) #75 merged). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `0456294` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server piece 7 #76 merged); piece 8 on `feat/book-server-8-service-includes`. Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -72,7 +72,7 @@ of `/book` now (nobody uses the old page); `public-portal/` files are deleted
 in a later clean-up. **d2 paused (Jack, 26 Sep):** a booking must hold
 several services, and a full service will list the individual services it
 includes (so d2 can say "already part of your general service"). Order:
-**piece 7: PR #76** (26 Sep; Jack approved merging on green CI - check `gh pr view 76` for whether it merged; branch `feat/book-server-7-multi-service`, plan
+**piece 7 merged: #76** (26 Sep at `0456294`, CI green on its final commit; plan
 `docs/superpowers/plans/2026-09-26-book-server-7-multiple-services.md`); the
 contract: POST takes `serviceIds` (1-10) or `notSure` alone; answers are
 `{serviceId, questionId, ...}`; the 201 and `/booking-links` reply return
@@ -88,7 +88,9 @@ each `Answer` a `serviceId`, update `hasService` in `require-draft.tsx`, read
 `services`/`totalPrice` on `pending`; the link's answers and "Please answer:
 ..." errors don't name which service a question belongs to, and service names
 on links are live (a rename changes past links) - decide in d2/d5. Then
-**server piece 8** (what a full service includes, with staff settings), then
+**server piece 8** (what a full service includes; server only - no staff
+screen edits services yet, those are a later piece; spec
+`docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md`), then
 **(d2)** service screens with multi-select and a Continue button.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
