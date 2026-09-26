@@ -57,7 +57,7 @@ const book = (body, { guest = false } = {}) => portalRequest(server.baseUrl, gue
   method: 'POST',
   body: {
     mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'Brakes rub',
-    newBike: { make: 'Dawes', model: 'Galaxy' }, serviceId: svc.id,
+    newBike: { make: 'Dawes', model: 'Galaxy' }, serviceIds: [svc.id],
     ...BOOKING_CONTACT, ...(guest ? GUEST : {}), ...body,
   },
 });
@@ -136,7 +136,7 @@ test('a booking with no photos works as before and has no attachments', async ()
 });
 
 test('a not-sure booking can carry photos', async () => {
-  const res = await book({ notSure: true, serviceId: undefined, photos: [photoOf('notsure')] });
+  const res = await book({ notSure: true, serviceIds: undefined, photos: [photoOf('notsure')] });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.equal((await storedPhotos(res.body.id)).length, 1);
 });

@@ -40,7 +40,7 @@ after(async () => {
 
 const book = (body) => portalRequest(server.baseUrl, customer.cookie, `/api/portal/${owner.shop.slug}/bookings`, {
   method: 'POST',
-  body: { mechanicId: sam, serviceId: types.repair, description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT, ...body },
+  body: { mechanicId: sam, serviceIds: [types.repair], description: 'Test booking', newBike: { make: 'Test', model: 'Bike' }, ...BOOKING_CONTACT, ...body },
 });
 const job = (id) => runWithShop(owner.shop.id, () => prepare('SELECT start_time, end_time, planned_minutes FROM workshop_jobs WHERE id = ?').get(id));
 const hold = (id) => runWithShop(owner.shop.id, () => prepare(

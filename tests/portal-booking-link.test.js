@@ -53,7 +53,7 @@ const book = async (body = {}, { guest = false } = {}) => {
     method: 'POST',
     body: {
       mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'Squeaky brakes',
-      newBike: { make: 'Dawes', model: 'Galaxy' }, serviceId: types.service,
+      newBike: { make: 'Dawes', model: 'Galaxy' }, serviceIds: [types.service],
       ...BOOKING_CONTACT, ...(guest ? GUEST : {}), ...body,
     },
   });
@@ -120,7 +120,7 @@ test('a staff edit of the notes does not change the description', async () => {
 });
 
 test('a not-sure booking has no service name', async () => {
-  const booked = await book({ serviceId: undefined, notSure: true });
+  const booked = await book({ serviceIds: undefined, notSure: true });
   assert.equal((await read(codeOf(booked.privateLink))).body.serviceName, null);
 });
 
@@ -206,7 +206,7 @@ test('the link shows the questions as asked and the answers', async () => {
       questions: [{ wording: 'E-bike?', kind: 'choice', choices: ['Yes', 'No'] }, { wording: 'Notes?', kind: 'text' }],
     },
   })).body;
-  const booked = await book({ serviceId: svc.id, answers: [{ questionId: svc.questions[0].id, notSure: true }] });
+  const booked = await book({ serviceIds: [svc.id], answers: [{ serviceId: svc.id, questionId: svc.questions[0].id, notSure: true }] });
   const res = await read(codeOf(booked.privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual(res.body.answers, [

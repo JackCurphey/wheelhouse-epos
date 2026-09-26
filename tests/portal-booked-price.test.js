@@ -55,7 +55,7 @@ const book = async (body = {}) => {
     method: 'POST',
     body: {
       mechanicId: sam, jobDate: nextDate(), startTime: '10:00', description: 'Squeaky brakes',
-      newBike: { make: 'Dawes', model: 'Galaxy' }, serviceId, ...BOOKING_CONTACT, ...body,
+      newBike: { make: 'Dawes', model: 'Galaxy' }, serviceIds: [serviceId], ...BOOKING_CONTACT, ...body,
     },
   });
   assert.equal(res.status, 201, JSON.stringify(res.body));
@@ -79,7 +79,7 @@ test('prices hidden: the booking reply carries no price', async () => {
 
 test('not sure: the booking reply carries no price even when prices are shown', async () => {
   await setShowPrices(true);
-  const booked = await book({ serviceId: undefined, notSure: true });
+  const booked = await book({ serviceIds: undefined, notSure: true });
   assert.ok('bookedPrice' in booked, 'field present, empty');
   assert.equal(booked.bookedPrice, null);
 });
@@ -101,7 +101,7 @@ test('prices hidden: the private link carries no price', async () => {
 
 test('not sure: the private link carries no price even when prices are shown', async () => {
   await setShowPrices(true);
-  const res = await read(codeOf((await book({ serviceId: undefined, notSure: true })).privateLink));
+  const res = await read(codeOf((await book({ serviceIds: undefined, notSure: true })).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.ok('bookedPrice' in res.body, 'field present, empty');
   assert.equal(res.body.bookedPrice, null);

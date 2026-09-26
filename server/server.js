@@ -4649,27 +4649,43 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const description = (body.description || '').trim();
   if (!description) return badRequest(res, 'Please describe what you need done');
 
-  // What the customer chose: a service this shop ticked bookable online, or the
-  // "not sure" hour. Read through the shop's row-level security, so another
-  // shop's service id finds nothing.
-  let chosen;
+  // What the customer chose: one or more services this shop ticked bookable
+  // online, in the order chosen, or the "not sure" hour. Read through the
+  // shop's row-level security, so another shop's service id finds nothing.
+  let chosen; // [{ id, name, minutes, questions }] in the order chosen
   if (request.notSure) {
-    chosen = { name: 'Not sure', minutes: 60 };
+    chosen = [];
   } else {
-    chosen = await db
-      .prepare('SELECT id, name, minutes, questions FROM workshop_services WHERE id = ? AND active = 1 AND bookable_online = 1')
-      .get(request.serviceId);
-    if (!chosen) return badRequest(res, 'That service is not available to book');
+    const found = await db
+      .prepare('SELECT id, name, minutes, questions FROM workshop_services WHERE id = ANY(?) AND active = 1 AND bookable_online = 1')
+      .all(request.serviceIds);
+    if (found.length !== request.serviceIds.length) return badRequest(res, 'That service is not available to book');
+    const byId = new Map(found.map((s) => [s.id, s]));
+    chosen = request.serviceIds.map((id) => byId.get(id));
   }
+  const minutes = request.notSure ? 60 : chosen.reduce((sum, s) => sum + s.minutes, 0);
+  if (minutes > 720) return badRequest(res, "That's too much work for one visit - please book the jobs separately");
+  const serviceNames = request.notSure ? 'Not sure' : chosen.map((s) => s.name).join(' + ');
 
-  // The customer's answers, checked against the service's questions as they are
+  // Each chosen service's answers, checked against its questions as they are
   // now, before the guest customer row - the first write. A frozen copy goes on
-  // the job so later edits to the questions never change this booking.
+  // the job so later edits to the questions never change this booking. Not
+  // sure has no services, so no answers to check.
   let questionAnswers = null;
   if (!request.notSure) {
-    const checked = checkAnswers(chosen.questions ?? [], body.answers);
-    if (checked.error) return badRequest(res, checked.error);
-    questionAnswers = checked.value;
+    const list = body.answers === undefined || body.answers === null ? [] : body.answers;
+    if (!Array.isArray(list)) return badRequest(res, 'Answers must be a list');
+    const chosenIds = new Set(chosen.map((s) => s.id));
+    if (list.some((a) => !chosenIds.has(a?.serviceId))) {
+      return badRequest(res, "Those answers don't match the services chosen");
+    }
+    questionAnswers = [];
+    for (const s of chosen) {
+      const mine = list.filter((a) => a.serviceId === s.id).map(({ serviceId: _drop, ...rest }) => rest);
+      const checked = checkAnswers(s.questions ?? [], mine);
+      if (checked.error) return badRequest(res, checked.error);
+      questionAnswers.push(...checked.value.map((x) => ({ serviceId: s.id, ...x })));
+    }
   }
 
   // Photos are checked here with the other request checks: before the guest
@@ -4719,7 +4735,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       if (startTime) return refusal('This shop takes drop-offs on that day - choose the day, not a time.');
       times = { startTime: '', endTime: '' };
     } else {
-      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, chosen.minutes) : '');
+      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
       if (!times.startTime) return refusal('A start time is required');
       if (times.error) return refusal(times.error);
     }
@@ -4742,7 +4758,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     if (!mech || !mech.working || (times.startTime && !fitsFreeTime(mech, times.startTime, times.endTime))) {
       return refusal('That mechanic is unavailable at that time - please choose another time or day.');
     }
-    if (mech.freeMinutes < chosen.minutes) {
+    if (mech.freeMinutes < minutes) {
       return capacityRefusal('That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
     }
 
@@ -4782,7 +4798,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     let jobId;
     try {
       jobId = await createWorkshopJob({
-        title: `Online booking: ${chosen.name} - ${description}`.slice(0, 200),
+        title: `Online booking: ${serviceNames} - ${description}`.slice(0, 200),
         customerId,
         bikeId,
         mechanicId: mechResolved.mechanicId,
@@ -4794,9 +4810,9 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         custodyState: 'expected',
         notes: description,
         skipAutoOrder: false,
-        plannedMinutes: chosen.minutes,
+        plannedMinutes: minutes,
         termsAcceptedAt: nowIso(),
-        serviceIds: chosen.id ? [chosen.id] : [],
+        serviceIds: request.serviceIds,
         linkTokenHash: hashLinkCode(linkCode),
         customerDescription: description,
         questionAnswers,

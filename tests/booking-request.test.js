@@ -1,39 +1,37 @@
 // The booking request's new fields, checked without a server.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-3-booking-request-design.md
+// Spec (several services): docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseBookingRequest } from '../server/booking-request.js';
 
-const ok = { serviceId: 7, email: 'a@example.com', updateChannel: 'email', termsAccepted: true };
+const ok = { serviceIds: [7], email: 'a@example.com', updateChannel: 'email', termsAccepted: true };
 const parse = (over = {}, phone = '') => parseBookingRequest({ ...ok, ...over }, phone);
 
-test('a service id, an email and consent parse', () => {
-  assert.deepEqual(parse(), {
-    value: {
-      serviceId: 7, notSure: false, email: 'a@example.com',
-      updateChannel: 'email', termsAccepted: true, marketingPermission: false,
-    },
-  });
+test('a list of services is kept in order', () => {
+  const r = parseBookingRequest({ serviceIds: [7, 3], email: 'a@example.com', updateChannel: 'email', termsAccepted: true }, '');
+  assert.deepEqual(r.value.serviceIds, [7, 3]);
+  assert.equal(r.value.notSure, false);
 });
 
-test('not sure parses with no service id', () => {
+test('not sure has no services', () => {
   const r = parseBookingRequest({ notSure: true, email: 'a@example.com', updateChannel: 'email', termsAccepted: true }, '');
+  assert.deepEqual(r.value.serviceIds, []);
   assert.equal(r.value.notSure, true);
-  assert.equal(r.value.serviceId, null);
 });
 
-test('both a service and not sure is refused', () => {
-  assert.match(parse({ notSure: true }).error, /one/i);
-});
-
-test('neither a service nor not sure is refused', () => {
-  assert.match(parseBookingRequest({ email: 'a@example.com', updateChannel: 'email', termsAccepted: true }, '').error, /service/i);
-});
-
-test('a service id that is not a whole number is refused', () => {
-  for (const bad of ['7', 1.5, 0, -1, null]) {
-    assert.ok(parse({ serviceId: bad }).error, `accepted serviceId ${JSON.stringify(bad)}`);
-  }
+test('service list refusals', () => {
+  const base = { email: 'a@example.com', updateChannel: 'email', termsAccepted: true };
+  const err = (extra) => parseBookingRequest({ ...base, ...extra }, '').error;
+  assert.equal(err({}), 'Please choose a service, or "not sure"');
+  assert.equal(err({ serviceId: 7 }), 'Please choose a service, or "not sure"');
+  assert.equal(err({ serviceIds: [7], notSure: true }), 'Choose services, or "not sure" - not both');
+  assert.equal(err({ serviceIds: [] }), 'That service is not available to book');
+  assert.equal(err({ serviceIds: 7 }), 'That service is not available to book');
+  assert.equal(err({ serviceIds: [7, 'x'] }), 'That service is not available to book');
+  assert.equal(err({ serviceIds: [0] }), 'That service is not available to book');
+  assert.equal(err({ serviceIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }), 'Please choose up to 10 services');
+  assert.equal(err({ serviceIds: [4, 4] }), 'Each service can be chosen only once');
 });
 
 test('an unknown update channel is refused', () => {
