@@ -88,10 +88,21 @@ each `Answer` a `serviceId`, update `hasService` in `require-draft.tsx`, read
 `services`/`totalPrice` on `pending`; the link's answers and "Please answer:
 ..." errors don't name which service a question belongs to, and service names
 on links are live (a rename changes past links) - decide in d2/d5. Then
-**server piece 8** (what a full service includes; server only - no staff
-screen edits services yet, those are a later piece; spec
-`docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md`), then
-**(d2)** service screens with multi-select and a Continue button.
+**server piece 8** (what a full service includes; branch
+`feat/book-server-8-service-includes`, PR not yet opened; spec
+`docs/superpowers/specs/2026-09-26-book-server-8-service-includes-design.md`, plan
+`docs/superpowers/plans/2026-09-26-book-server-8-service-includes.md`). Server
+only: migration 031 `workshop_service_includes`; staff `includes: number[]` on
+`/api/workshop-services` (omitted on PUT keeps; individual services `[]`);
+customer `/services` gives each `full[]` item `includes: [{id, name}]` (active
+individual services, bookable online or not, shop's order); booking unchanged
+(both can be booked). No staff screen sets it yet - screens 65/66 are a later
+piece, which must first lock rows so a simultaneous "add X to F" and "promote X
+to full" can't both commit (checks run before the transaction today; customers
+are guarded by a kind filter). Then **(d2)** service screens with multi-select
+and a Continue button, using `PortalFullService.includes` for the "Includes ..."
+line (shortened past a few items) and the "Already part of your <full service>"
+warning with a "Remove <name>" link (Jack, 26 Sep).
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per
