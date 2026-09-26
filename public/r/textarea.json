@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "textarea",
+  "title": "Textarea",
+  "author": "Wheelhouse EPOS",
+  "description": "Multi-line text box with the input's look, at least 80px tall, resizable vertically.",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "primitives/textarea.tsx",
+      "content": "import * as React from 'react';\n\nimport { cn } from '@/lib/utils';\n\n/**\n * Wheelhouse multi-line text box: the input's look, at least 80px tall, and\n * the customer can drag it taller.\n * Spec: docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md\n */\nexport function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {\n  return (\n    <textarea\n      className={cn(\n        'min-h-20 w-full resize-y rounded-[7px] border border-[var(--border)] bg-white px-2.5 py-[9px]',\n        'text-sm text-[var(--wh-ink)] placeholder:text-[var(--wh-muted)]',\n        'focus:outline-2 focus:outline-offset-[-1px] focus:outline-[var(--accent)]',\n        'disabled:cursor-not-allowed disabled:opacity-50',\n        'aria-invalid:border-[var(--wh-danger)]',\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n",
+      "type": "registry:ui"
+    }
+  ],
+  "type": "registry:ui"
+}

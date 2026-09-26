@@ -83,6 +83,66 @@
       "type": "registry:ui"
     },
     {
+      "name": "checkbox",
+      "title": "Checkbox",
+      "author": "Wheelhouse EPOS",
+      "description": "The phone's own tick box coloured with the shop colour (--accent-dark), label beside it, whole row at least 44px tall.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/checkbox.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "textarea",
+      "title": "Textarea",
+      "author": "Wheelhouse EPOS",
+      "description": "Multi-line text box with the input's look, at least 80px tall, resizable vertically.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/textarea.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "choice-card",
+      "title": "Choice Card",
+      "author": "Wheelhouse EPOS",
+      "description": "Big tappable option card with title, detail and a preformatted price. Selected is a 2px shop-colour border with a pale shop-colour fill; aria-pressed only when it is one of a set to pick from.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/choice-card.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
+      "name": "pill-group",
+      "title": "Pill Group",
+      "author": "Wheelhouse EPOS",
+      "description": "Short options as pills over native radios (one choice) or checkboxes (multiple), in a labelled fieldset. Disabled options are greyed and cannot be picked.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "primitives/pill-group.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
+    },
+    {
       "name": "money-input",
       "title": "Money Input",
       "author": "Wheelhouse EPOS",
