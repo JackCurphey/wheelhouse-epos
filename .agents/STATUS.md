@@ -103,7 +103,7 @@ and a Continue button, using `PortalFullService.includes` for the "Includes ..."
 line (shortened past a few items); ticking a full service hints "Included in
 your <full service>" on the services it includes and locks them (Jack, 26 Sep,
 replacing piece 8's warn-and-remove). **(d2) built on branch
-`feat/book-d2-service-screens` (PR: to be opened; spec
+`feat/book-d2-service-screens` (PR #78 (open, not merged); spec
 `docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md`, plan
 `docs/superpowers/plans/2026-09-26-book-d2-service-screens.md`; subagent-driven
 development, fresh helper per task, task reviews, final review on the most
