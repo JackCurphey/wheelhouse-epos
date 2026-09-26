@@ -285,9 +285,9 @@ export function firePendingShopifyPushes(shopId, pushes) {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
-const PORTAL_DIR = path.join(__dirname, '..', 'public-portal');
 const STOREFRONT_DIR = path.join(__dirname, '..', 'public-storefront');
 const WORKSHOP_HTML = path.join(PUBLIC_DIR, 'workshop.html');
+const BOOK_HTML = path.join(PUBLIC_DIR, 'book.html');
 const VITE_MANIFEST = path.join(PUBLIC_DIR, 'dist', '.vite', 'manifest.json');
 const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
 // Attachment bytes live here as flat files named by a random per-file token
@@ -4939,7 +4939,7 @@ async function serveStatic(req, res, pathname, baseDir) {
   stream.pipe(res);
 }
 
-// The React workshop app's entry tags. Vite content-hashes its output, so the
+// Either React app's entry tags. Vite content-hashes its output, so the
 // entry filename is not knowable at author time - it is read from the manifest
 // Vite writes into the bundle. Read per request rather than cached: the file is
 // small, no shop is live on this page yet, and a cache would serve a deleted
@@ -4948,23 +4948,40 @@ async function serveStatic(req, res, pathname, baseDir) {
 // public/dist is untracked, so a fresh checkout has no manifest until a build.
 // The request answers 500 either way; this error is what the server log shows,
 // so a missing file says what to run rather than a bare ENOENT.
-export async function workshopEntryTags(manifestPath = VITE_MANIFEST) {
+export async function appEntryTags(entryKey, manifestPath = VITE_MANIFEST) {
   let raw;
   try {
     raw = await readFile(manifestPath, 'utf8');
   } catch (err) {
     if (err.code === 'ENOENT') {
-      throw new Error(`no staff app build at ${manifestPath} - run npm run build`, { cause: err });
+      throw new Error(`no app build at ${manifestPath} - run npm run build`, { cause: err });
     }
     throw err;
   }
   const manifest = JSON.parse(raw);
-  const entry = manifest['src/staff/main.tsx'];
-  if (!entry) throw new Error('vite manifest has no src/staff/main.tsx entry - run npm run build');
+  const entry = manifest[entryKey];
+  if (!entry) throw new Error(`vite manifest has no ${entryKey} entry - run npm run build`);
   const css = (entry.css || [])
     .map((href) => `<link rel="stylesheet" href="/dist/${href}" />`)
     .join('\n  ');
   return `${css}\n  <script type="module" src="/dist/${entry.file}"></script>`;
+}
+
+// One of the React apps' pages: its HTML with the entry's tags put in. Every
+// address the app's router owns gets this same page, so a link opened cold
+// reaches its screen. No build means a 500 that says so, not a blank page.
+// The response body is a fixed string - the real error (which can include an
+// absolute manifest path) goes to the server log only, never to the visitor.
+async function serveAppPage(res, htmlPath, entryKey, label) {
+  try {
+    const [html, tags] = await Promise.all([readFile(htmlPath, 'utf8'), appEntryTags(entryKey)]);
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(html.replace('<!--WH_ENTRY-->', tags));
+  } catch (err) {
+    console.error(err);
+    res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(`${label} bundle not built - see the server log`);
+  }
 }
 
 async function handleStorefrontRequest(req, res, pathname, shop) {
@@ -4977,18 +4994,18 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
   // On a subdomain-hosted storefront (<slug>.wheelhouseepos.com),
   // parseStorefrontSlugCandidate matches every path on that host, not just
   // storefront-specific ones - so requests for uploaded images and the
-  // booking portal have to be forwarded to their real handlers here instead
-  // of falling through to the storefront's own static bundle below (whose
-  // serveStatic fallback would otherwise return the storefront's index.html
-  // for these paths instead of the actual image or portal page). The caller
-  // (the request dispatcher) already wraps this whole call in a try/catch,
-  // so errors from these forwarded calls propagate up to that handler.
+  // customer booking app have to be forwarded to their real handlers here
+  // instead of falling through to the storefront's own static bundle below
+  // (whose serveStatic fallback would otherwise return the storefront's
+  // index.html for these paths instead of the actual image or booking app
+  // page). The caller (the request dispatcher) already wraps this whole
+  // call in a try/catch, so errors from these forwarded calls propagate up
+  // to that handler.
   if (pathname.startsWith('/api/uploaded-images/')) {
     return serveUploadedImage(req, res, pathname.slice('/api/uploaded-images/'.length));
   }
   if (pathname === '/book' || pathname.startsWith('/book/')) {
-    const relative = pathname.slice('/book'.length) || '/';
-    return serveStatic(req, res, relative, PORTAL_DIR);
+    return serveAppPage(res, BOOK_HTML, 'src/customer/main.tsx', 'book');
   }
   const storePrefix = `/store/${shop.slug}`;
   // The storefront's HTML references its CSS/JS with relative hrefs, which
@@ -5255,31 +5272,16 @@ const server = createServer(async (req, res) => {
   // /workshop/<anything> directly must get this page, not the old app's
   // index.html that the static fallback below would hand it.
   if (pathname === '/workshop' || pathname.startsWith('/workshop/')) {
-    try {
-      const [html, tags] = await Promise.all([readFile(WORKSHOP_HTML, 'utf8'), workshopEntryTags()]);
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-      res.end(html.replace('<!--WH_ENTRY-->', tags));
-    } catch (err) {
-      // A missing manifest means the bundle was never built. Say that, rather
-      // than serving a blank page that looks like a broken app. Plain text, so
-      // the message needs no HTML escaping.
-      console.error(err);
-      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
-      res.end(`workshop bundle not built: ${err.message}`);
-    }
+    await serveAppPage(res, WORKSHOP_HTML, 'src/staff/main.tsx', 'workshop');
     return;
   }
 
-  // Customer-portal frontend lives under /book - its own small static
-  // bundle (public-portal/), entirely separate from the staff app's.
+  // The React customer app (src/customer/). Every path under /book gets the
+  // same page because its router owns those addresses, including the private
+  // link /book/<slug>/booking/<code>. The old public-portal/ page is no longer
+  // served (J1, changed 25 Sep).
   if (pathname === '/book' || pathname.startsWith('/book/')) {
-    const relative = pathname.slice('/book'.length) || '/';
-    try {
-      await serveStatic(req, res, relative, PORTAL_DIR);
-    } catch (err) {
-      console.error(err);
-      sendJson(res, 500, { error: 'Internal server error' });
-    }
+    await serveAppPage(res, BOOK_HTML, 'src/customer/main.tsx', 'book');
     return;
   }
 

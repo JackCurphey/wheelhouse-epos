@@ -16,7 +16,11 @@ Consequences:
   (`src/staff/routes.ts`) stays `/workshop`-only, as
   `tests/screens/routes.test.js` enforces.
 - Replacing a live page: the old booking page keeps serving until the new
-  journey is green end to end.
+  journey is green end to end. **Changed 25 Sep (Jack):** nobody uses the old
+  page, so the new customer app takes all of `/book` straight away (piece (b),
+  `docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md`). The
+  old page stops being served; its `public-portal/` files are deleted in a
+  later clean-up.
 - The parent plan puts the five customer edge screens (reschedule, cancel,
   expired, preferences, service-status) in the staff `ROUTES` under
   `/workshop`. Moving them is a follow-on this decision implies; it is not
