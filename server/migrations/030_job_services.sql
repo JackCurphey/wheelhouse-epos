@@ -34,14 +34,31 @@ CREATE POLICY workshop_job_services_shop_isolation ON workshop_job_services
 -- shops itself carries no RLS (it's the tenant table, not tenant-scoped
 -- data), so it's what drives the loop; app.current_shop_id is set to each
 -- shop in turn before that shop's workshop_jobs rows are ever read.
+-- Guard: if the backfill ever copies fewer rows than the shop actually has
+-- (a policy, a typo in the WHERE clause, a future edit to this file), the
+-- DROP COLUMN below would go ahead anyway and take the uncopied data with
+-- it, with no way to get it back. Comparing the source count against
+-- GET DIAGNOSTICS ... ROW_COUNT right after each shop's INSERT catches that
+-- before the DROP ever runs, and RAISE EXCEPTION inside the DO block rolls
+-- back everything this migration did (the CREATE TABLE included), since the
+-- whole file runs in one transaction (see run-migrations.js).
 DO $$
-DECLARE r RECORD;
+DECLARE
+  r RECORD;
+  expected INTEGER;
+  copied INTEGER;
 BEGIN
   FOR r IN SELECT id FROM shops LOOP
     PERFORM set_config('app.current_shop_id', r.id::text, true);
+    SELECT count(*) INTO expected FROM workshop_jobs
+      WHERE service_id IS NOT NULL AND shop_id = r.id;
     INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position)
       SELECT id, service_id, booked_price, 0 FROM workshop_jobs
       WHERE service_id IS NOT NULL AND shop_id = r.id;
+    GET DIAGNOSTICS copied = ROW_COUNT;
+    IF copied <> expected THEN
+      RAISE EXCEPTION 'workshop_job_services backfill for shop % copied % of % rows', r.id, copied, expected;
+    END IF;
   END LOOP;
 END $$;
 

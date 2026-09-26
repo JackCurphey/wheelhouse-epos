@@ -3,9 +3,11 @@
 **Date:** 2026-09-26. **Follows:** d1 (#75). **Changes:** pieces 3
 (`2026-09-25-book-server-3-booking-request-design.md`, "exactly one of
 `serviceId` or `notSure`"), 3b (`...-3b-booked-price-design.md`, one
-`service_id` / `booked_price` per job), 5 (`...-5-service-questions-design.md`,
-one flat answer list) and book-a (`2026-09-25-book-a-booked-price-design.md`,
-one `bookedPrice`).
+`service_id` / `booked_price` per job), 4
+(`2026-09-25-book-server-4-guest-link-design.md`, the link returns
+`serviceName`), 5 (`...-5-service-questions-design.md`, one flat answer list),
+book-a (`2026-09-25-book-a-booked-price-design.md`, one `bookedPrice`) and d1
+(`2026-09-26-book-d1-groundwork-design.md`, the draft's single `serviceId`).
 
 ## Why
 

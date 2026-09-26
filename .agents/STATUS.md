@@ -72,11 +72,24 @@ of `/book` now (nobody uses the old page); `public-portal/` files are deleted
 in a later clean-up. **d2 paused (Jack, 26 Sep):** a booking must hold
 several services, and a full service will list the individual services it
 includes (so d2 can say "already part of your general service"). Order:
-**server piece 7** (several services per booking; now, on branch
-`feat/book-server-7-multi-service`, spec
-`docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md`),
-then **server piece 8** (what a full service includes, with staff settings),
-then **(d2)** service screens with multi-select and a Continue button.
+piece 7 built on branch `feat/book-server-7-multi-service` (plan
+`docs/superpowers/plans/2026-09-26-book-server-7-multiple-services.md`); the
+contract: POST takes `serviceIds` (1-10) or `notSure` alone; answers are
+`{serviceId, questionId, ...}`; the 201 and `/booking-links` reply return
+`services` (`[{name, price}]`) and `totalPrice`, `bookedPrice`/`serviceName`
+gone; `workshop_job_services` is the only source; migration 030 drops
+`workshop_jobs.service_id`/`booked_price`, with a count guard that rolls the
+whole migration back if the backfill ever copies fewer rows than a shop has.
+**Deploy note:** back up any real shop database before deploying - 030 drops
+columns and old code can't run against the migrated schema (no code-only
+rollback). **For d2:** change `BookingDraft` to `serviceIds[]` (drop
+`serviceId`/`serviceName`, keep a summed `serviceMinutes` or derive it), give
+each `Answer` a `serviceId`, update `hasService` in `require-draft.tsx`, read
+`services`/`totalPrice` on `pending`; the link's answers and "Please answer:
+..." errors don't name which service a question belongs to, and service names
+on links are live (a rename changes past links) - decide in d2/d5. Then
+**server piece 8** (what a full service includes, with staff settings), then
+**(d2)** service screens with multi-select and a Continue button.
 **Piece 6 open items** (facts only):
 - Memory risk before public exposure: the booking route reads a body up to
   73,400,320 bytes (5 x 10 MB x 1.4) BEFORE the guest limiter. Peak memory per

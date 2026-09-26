@@ -1,5 +1,8 @@
 # Book server work, piece 3: the booking request
 
+**Changed by piece 7** (`2026-09-26-book-server-7-multiple-services-design.md`):
+`serviceIds` (a list) replaces `serviceId`.
+
 **Date:** 2026-09-25. **Approved in session by Jack** (design, 25 Sep).
 **Serves:** book screens `details` (05) and `pending` (06), and the service
 choice carried from `service` (01) and `service-list` (02).

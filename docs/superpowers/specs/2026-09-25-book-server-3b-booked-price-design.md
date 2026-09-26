@@ -1,5 +1,9 @@
 # Book server piece 3b: the booked price
 
+**Changed by piece 7** (`2026-09-26-book-server-7-multiple-services-design.md`):
+prices live in `workshop_job_services`, one row per booked service, not a
+single `booked_price` on the job.
+
 **Date:** 2026-09-25. **Follows:** piece 3 (#67), whose spec line "price comes
 from the service row" was not met because the job had nowhere to keep it.
 
