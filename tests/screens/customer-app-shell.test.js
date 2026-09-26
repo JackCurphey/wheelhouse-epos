@@ -47,8 +47,17 @@ test('the first book screen renders the service screen at /book/<shop>', async (
 });
 
 test('a private link opened cold reaches the pending screen', async () => {
+  const LINK = {
+    reference: 'WH-1042', shopName: 'Demo Cycles', jobDate: '2026-10-05', startTime: '09:30', description: null,
+    bikeNote: null, answers: [], bike: null, stage: 'awaiting_confirmation', photoCount: 0, services: [], totalPrice: null,
+  };
+  globalThis.fetch = async (input) => {
+    const body = new URL(String(input), 'http://localhost').pathname.includes('/booking-links/') ? LINK : SERVICES;
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
   const screen = await renderAt(`/book/demo/booking/${'a'.repeat(64)}`);
-  assert.ok(await screen.findByText('Not built yet: pending'));
+  assert.ok(await screen.findByRole('heading', { level: 1, name: 'Awaiting shop confirmation' }));
+  screen.unmount();
 });
 
 test('an unknown /book address says there is no screen there', async () => {

@@ -9,6 +9,7 @@ import { ServiceListScreen } from '@/screens/book/service-list.tsx';
 import { ProblemScreen } from '@/screens/book/problem.tsx';
 import { DateScreen } from '@/screens/book/date.tsx';
 import { DetailsScreen } from '@/screens/book/details.tsx';
+import { PendingScreen } from '@/screens/book/pending.tsx';
 import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
 
 /**
@@ -44,6 +45,7 @@ const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = {
   problem: ProblemScreen,
   date: DateScreen,
   details: DetailsScreen,
+  pending: PendingScreen,
 };
 
 function notBuilt(id: CustomerScreenId): ComponentType {
