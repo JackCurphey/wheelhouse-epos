@@ -42,8 +42,13 @@ test('a screen that needs a service, opened with none, goes back to the first sc
 });
 
 test('with a service chosen, the screen shows', async () => {
-  const { ui } = await renderAt({ serviceId: 7 });
+  const { ui } = await renderAt({ serviceIds: [7] });
   assert.ok(await ui.findByText('Date screen'));
+});
+
+test('an empty service list counts as no service chosen', async () => {
+  const { ui } = await renderAt({ serviceIds: [] });
+  assert.ok(await ui.findByText('First screen'));
 });
 
 test('not sure counts as a chosen service', async () => {
