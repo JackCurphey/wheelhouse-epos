@@ -4150,7 +4150,9 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
     fields = readServiceBody(body);
     placement = await readServicePlacement(body, existing);
     questions = readQuestionsOrKeep(body, existing.questions ?? []);
-    const stored = (await loadIncludes()).get(id) ?? [];
+    const stored = (await db.prepare(
+      'SELECT included_service_id FROM workshop_service_includes WHERE service_id = ? ORDER BY position'
+    ).all(id)).map((r) => r.included_service_id);
     includes = await readIncludes(body, placement.kind, stored, id, fields.name);
     if (existing.kind === 'individual' && placement.kind === 'full') {
       const holder = await db.prepare(
@@ -4172,7 +4174,14 @@ route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
       'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
     ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
       placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
-    await replaceIncludes(id, includes);
+    // Only touch the stored list when the caller actually sent one, or when
+    // the demotion to individual must clear it - a save that leaves
+    // `includes` out (as `questions` and placement work) must not delete and
+    // reinsert rows that did not change.
+    const demotedToIndividual = existing.kind === 'full' && placement.kind === 'individual';
+    if (body.includes !== undefined || demotedToIndividual) {
+      await replaceIncludes(id, includes);
+    }
     await db.exec('COMMIT');
   } catch (err) {
     await db.exec('ROLLBACK');
@@ -4581,7 +4590,7 @@ route('GET', '/api/portal/:shopSlug/services', async (req, res, params, query, s
   const links = await db.prepare(
     `SELECT i.service_id, s.id, s.name FROM workshop_service_includes i
      JOIN workshop_services s ON s.id = i.included_service_id
-     WHERE s.active = 1 ORDER BY i.service_id, i.position`
+     WHERE s.active = 1 AND s.kind = 'individual' ORDER BY i.service_id, i.position`
   ).all();
   const includesOf = (id) => links.filter((l) => l.service_id === id).map((l) => ({ id: l.id, name: l.name }));
   sendJson(res, 200, {

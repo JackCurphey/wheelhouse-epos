@@ -4,6 +4,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
+import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -119,7 +120,7 @@ test('changing a full service to individual clears its list', async () => {
 
 test('an individual service that is included cannot become full until taken out', async () => {
   const part = await made({ name: 'Brake check' });
-  await made({ name: 'Zeta service', kind: 'full', includes: [part.id] });
+  const zeta = await made({ name: 'Zeta service', kind: 'full', includes: [part.id] });
   const alpha = await made({ name: 'Alpha service', kind: 'full', includes: [part.id] });
   let res = await put(part.id, { name: 'Brake check', price: 10, kind: 'full' });
   assert.equal(res.status, 400);
@@ -129,6 +130,10 @@ test('an individual service that is included cannot become full until taken out'
   res = await put(part.id, { name: 'Brake check', price: 10, kind: 'full' });
   assert.equal(res.status, 400);
   assert.equal(res.body.error, 'Brake check is part of Zeta service - take it out of that first');
+  await put(zeta.id, { name: 'Zeta service', price: 10, includes: [] });
+  res = await put(part.id, { name: 'Brake check', price: 10, kind: 'full' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.kind, 'full');
 });
 
 test('a service cannot include itself when promoted to full', async () => {
@@ -139,6 +144,38 @@ test('a service cannot include itself when promoted to full', async () => {
   const row = await listed(part.id);
   assert.equal(row.kind, 'individual');
   assert.deepEqual(row.includes, []);
+});
+
+test('a save that leaves includes out does not rewrite the stored link rows', async () => {
+  const a = await made({ name: 'Norewrite A' });
+  const full = await made({ name: 'Norewrite full', kind: 'full', includes: [a.id] });
+  const before = await runWithShop(owner.shop.id, () => prepare(
+    'SELECT id FROM workshop_service_includes WHERE service_id = ?'
+  ).get(full.id));
+  const res = await put(full.id, { name: 'Norewrite full renamed', price: 10 });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const after = await runWithShop(owner.shop.id, () => prepare(
+    'SELECT id FROM workshop_service_includes WHERE service_id = ?'
+  ).get(full.id));
+  assert.equal(after.id, before.id, 'the link row was deleted and reinserted although includes was left out');
+});
+
+test('a PUT on an individual service refuses a non-empty includes list', async () => {
+  const part = await made({ name: 'Solo put part' });
+  const other = await made({ name: 'Solo put other' });
+  const res = await put(part.id, { name: 'Solo put part', price: 10, includes: [other.id] });
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error, 'Only a full service can include other services');
+  assert.deepEqual((await listed(part.id)).includes, []);
+});
+
+test('an individual service accepts an explicit empty includes list, on create and on save', async () => {
+  const created = await made({ name: 'Empty includes created', includes: [] });
+  assert.equal(created.kind, 'individual');
+  assert.deepEqual(created.includes, []);
+  const res = await put(created.id, { name: 'Empty includes created', price: 10, includes: [] });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.includes, []);
 });
 
 test('a removed service stays in the staff list', async () => {

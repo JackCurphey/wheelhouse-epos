@@ -4,6 +4,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
+import { runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { jsonRequest } from './helpers/http.js';
@@ -157,6 +158,25 @@ test('a full service lists what it includes, in order, including ones not bookab
     { id: headset.id, name: 'Inc headset' },
     { id: brake.id, name: 'Inc brake' },
   ]);
+});
+
+test('a link to a full service is never shown to customers, even if one exists', async () => {
+  const otherFull = await service(shopA, { name: 'Race-created other full', kind: 'full' });
+  const individualIncluded = await service(shopA, { name: 'Race-created individual' });
+  const full = await service(shopA, { name: 'Race-created holder', kind: 'full' });
+  // A link to a full service should never exist through the API (readIncludes
+  // refuses it); insert one directly to prove the customer-facing query
+  // itself filters by kind, not just the staff-side validation.
+  await runWithShop(shopA.shop.id, () => prepare(
+    `INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, 0)`
+  ).run(full.id, otherFull.id));
+  await runWithShop(shopA.shop.id, () => prepare(
+    `INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, 1)`
+  ).run(full.id, individualIncluded.id));
+
+  const res = await publicList(shopA);
+  const listed = res.body.full.find((s) => s.id === full.id);
+  assert.deepEqual(listed.includes, [{ id: individualIncluded.id, name: 'Race-created individual' }]);
 });
 
 test('every full service carries includes; individual services do not', async () => {
