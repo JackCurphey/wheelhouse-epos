@@ -76,6 +76,7 @@ test('a booking returns a private link, and the link reads the booking back', as
     jobDate: booked.jobDate,
     startTime: '10:00',
     description: 'Squeaky brakes',
+    bikeNote: null,
     bike: { make: 'Dawes', model: 'Galaxy' },
     stage: 'awaiting_confirmation',
     answers: [],
@@ -215,4 +216,31 @@ test('the link shows the questions as asked and the answers', async () => {
     { wording: 'E-bike?', answer: { notSure: true } },
     { wording: 'Notes?', answer: null },
   ]);
+});
+
+test('the link read-back returns the bike note and each answer\'s typed words', async () => {
+  const svc = (await staffRequest(server.baseUrl, owner.cookie, '/api/workshop-services', {
+    method: 'POST',
+    body: {
+      name: 'Asks2', price: 10, minutes: 60, bookableOnline: true,
+      questions: [{ wording: 'E-bike?', kind: 'choice', choices: ['Yes', 'No'] }],
+    },
+  })).body;
+  const booked = await book({
+    bikeNote: 'Red hybrid, disc brakes',
+    serviceIds: [svc.id],
+    answers: [{ serviceId: svc.id, questionId: svc.questions[0].id, text: 'Think so, not certain' }],
+  });
+  const res = await read(codeOf(booked.privateLink));
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.bikeNote, 'Red hybrid, disc brakes');
+  assert.deepEqual(res.body.answers, [
+    { wording: 'E-bike?', answer: null, text: 'Think so, not certain' },
+  ]);
+});
+
+test('the link read-back has a null bike note when none was given', async () => {
+  const booked = await book();
+  const res = await read(codeOf(booked.privateLink));
+  assert.equal(res.body.bikeNote, null);
 });

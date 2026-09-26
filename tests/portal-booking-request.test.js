@@ -53,7 +53,9 @@ const book = (body, who = customer) => portalRequest(server.baseUrl, who.cookie,
   },
 });
 const job = (id) => runWithShop(owner.shop.id, () => prepare(
-  'SELECT title, planned_minutes, start_time, end_time, terms_accepted_at, reference FROM workshop_jobs WHERE id = ?'
+  `SELECT title, planned_minutes, start_time, end_time, terms_accepted_at, reference,
+          notes, customer_description, customer_bike_note, bike_id
+   FROM workshop_jobs WHERE id = ?`
 ).get(id));
 
 test('a service of this shop books, taking its length and name', async () => {
@@ -71,6 +73,64 @@ test('not sure books one hour under a generic title', async () => {
   const j = await job(res.body.id);
   assert.equal(j.planned_minutes, 60);
   assert.match(j.title, /^Online booking: Not sure - Test booking$/);
+});
+
+test('a bike note is stored, trimmed, and creates no bike', async () => {
+  const res = await book({ bikeNote: '  Red hybrid, disc brakes  ', newBike: undefined, bikeId: undefined });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const j = await job(res.body.id);
+  assert.equal(j.customer_bike_note, 'Red hybrid, disc brakes');
+  assert.equal(j.bike_id, null);
+});
+
+test('a blank bike note stores null', async () => {
+  const res = await book({ bikeNote: '   ' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal((await job(res.body.id)).customer_bike_note, null);
+});
+
+test('an absent bike note stores null', async () => {
+  const res = await book({});
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal((await job(res.body.id)).customer_bike_note, null);
+});
+
+test('a non-string bike note is refused', async () => {
+  const before = await jobCount();
+  const res = await book({ bikeNote: 12345 });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal(res.body.error, 'Your bike description must be text');
+  assert.equal(await jobCount(), before);
+});
+
+test('a bike note over 200 characters is refused', async () => {
+  const before = await jobCount();
+  const res = await book({ bikeNote: 'x'.repeat(201) });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.equal(res.body.error, 'Your bike description can be up to 200 characters');
+  assert.equal(await jobCount(), before);
+});
+
+test('a service booking with no description succeeds, with the short title', async () => {
+  const res = await book({ description: '' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const j = await job(res.body.id);
+  assert.equal(j.title, 'Online booking: Test repair');
+  assert.equal(j.customer_description, null);
+});
+
+test('a not sure booking with no description is refused', async () => {
+  const before = await jobCount();
+  const res = await book({ serviceIds: undefined, notSure: true, description: '' });
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+  assert.match(res.body.error, /describe what you need done/);
+  assert.equal(await jobCount(), before);
+});
+
+test('the notes are empty when there is no bike note, no answered questions and no description', async () => {
+  const res = await book({ description: '', bikeNote: '' });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal((await job(res.body.id)).notes, '');
 });
 
 test('a service from another shop is refused', async () => {
