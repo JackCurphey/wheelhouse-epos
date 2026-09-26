@@ -102,8 +102,7 @@ are guarded by a kind filter). Then **(d2)** service screens with multi-select
 and a Continue button, using `PortalFullService.includes` for the "Includes ..."
 line (shortened past a few items); ticking a full service hints "Included in
 your <full service>" on the services it includes and locks them (Jack, 26 Sep,
-replacing piece 8's warn-and-remove). **(d2) built on branch
-`feat/book-d2-service-screens` (PR #78 (open, not merged); spec
+replacing piece 8's warn-and-remove). **(d2) merged: #78** (26 Sep at `ecde7da`, CI green on its final commit `2ad5ab7`; spec
 `docs/superpowers/specs/2026-09-26-book-d2-service-screens-design.md`, plan
 `docs/superpowers/plans/2026-09-26-book-d2-service-screens.md`; subagent-driven
 development, fresh helper per task, task reviews, final review on the most
@@ -122,9 +121,10 @@ answers carry `serviceId`. The on-screen keyboard check (where the pinned
 button sits with it open) moves to d3. Notes: `queryClient` is exported from
 `src/customer/app-shell.tsx` only so tests can clear it; `notSurePatch` is
 shared by both screens; the locked-row background uses `--wh-hover` (Jack to
-confirm the look). `ChoiceCard`'s accessible name runs title, detail and price
-together with no space (e.g. "Service 1From £20") - a registry fix, not yet
-made; the browser check locates cards by visible title text instead. Fixed in
+confirm the look). **#79 merged** (26 Sep at `29bffda`): `ChoiceCard` puts a space between
+title, detail and price, so its accessible name reads "Service 1 From £20"
+even with no stylesheet (with styles loaded, Chromium already read it
+correctly - the run-together name came from the missing stylesheet). Fixed in
 d2 (e76c5a2): `/book` and `/workshop` were served with no stylesheet since
 piece (b) (82da9ac) - Vite puts shared CSS on the common chunk once there are
 two entries, and `appEntryTags` only read the entry's own `css`.
