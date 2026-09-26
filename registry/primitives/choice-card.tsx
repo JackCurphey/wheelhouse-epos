@@ -31,11 +31,14 @@ export function ChoiceCard({ title, detail, price, selected, className, type = '
       )}
       {...props}
     >
+      {/* The {' '} spaces keep the button's accessible name as separate words
+          ("Service 1 From £20") even when the stylesheet has not loaded. In a
+          flex layout they take no room, so nothing moves on screen. */}
       <span className="flex flex-col gap-0.5">
         <span className="font-semibold">{title}</span>
-        {detail && <span className="text-[13px] text-[var(--wh-muted)]">{detail}</span>}
+        {detail && <>{' '}<span className="text-[13px] text-[var(--wh-muted)]">{detail}</span></>}
       </span>
-      {price && <span className="whitespace-nowrap font-semibold">{price}</span>}
+      {price && <>{' '}<span className="whitespace-nowrap font-semibold">{price}</span></>}
     </button>
   );
 }
