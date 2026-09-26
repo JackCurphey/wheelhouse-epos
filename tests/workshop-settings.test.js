@@ -127,3 +127,65 @@ test('settings not named in a PUT are left alone', async () => {
     await deleteTestShop(shop.id);
   }
 });
+
+// Piece 10: minimum notice and the shop's time zone.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md
+const putSettings = (cookie, body) => staffRequest(server.baseUrl, cookie, '/api/workshop-settings', { method: 'PUT', body });
+
+test('a new shop has two hours of minimum notice, on UK time', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    const { body } = await staffRequest(server.baseUrl, cookie, '/api/workshop-settings');
+    assert.equal(body.minNoticeMinutes, 120);
+    assert.equal(body.timeZone, 'Europe/London');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('minimum notice and time zone are saved, and kept when a PUT leaves them out', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    const saved = await putSettings(cookie, { minNoticeMinutes: 10080, timeZone: 'America/New_York' });
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    assert.equal(saved.body.minNoticeMinutes, 10080);
+    assert.equal(saved.body.timeZone, 'America/New_York');
+    const text = await putSettings(cookie, { minNoticeMinutes: '120' });
+    assert.equal(text.status, 200, JSON.stringify(text.body));
+    assert.equal(text.body.minNoticeMinutes, 120, 'a number sent as text, as the neighbouring fields accept');
+    const zero = await putSettings(cookie, { minNoticeMinutes: 0 });
+    assert.equal(zero.body.minNoticeMinutes, 0);
+    assert.equal(zero.body.timeZone, 'America/New_York', 'an omitted time zone was changed');
+    const other = await putSettings(cookie, { showPricesOnline: true });
+    assert.equal(other.body.minNoticeMinutes, 0, 'an omitted minimum notice was changed');
+    assert.equal(other.body.timeZone, 'America/New_York');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('minimum notice outside 0 minutes to 7 days, or not whole, is refused', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    for (const minNoticeMinutes of [-1, 10081, 1.5, 'abc', null]) {
+      const res = await putSettings(cookie, { minNoticeMinutes });
+      assert.equal(res.status, 400, `${JSON.stringify(minNoticeMinutes)} was accepted`);
+      assert.equal(res.body.error, 'Minimum notice must be between 0 minutes and 7 days');
+    }
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+test('a time zone the server does not recognise is refused', async () => {
+  const { cookie, shop } = await staffSignup(server.baseUrl);
+  try {
+    for (const timeZone of ['Mars/Olympus_Mons', '', 42, null]) {
+      const res = await putSettings(cookie, { timeZone });
+      assert.equal(res.status, 400, `${JSON.stringify(timeZone)} was accepted`);
+      assert.equal(res.body.error, "That time zone isn't recognised");
+    }
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});

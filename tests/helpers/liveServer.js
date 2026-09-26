@@ -48,6 +48,13 @@ async function waitForServer(child, baseUrl, timeoutMs) {
   throw new Error(`server did not start in ${timeoutMs}ms: ${lastErr}`);
 }
 
+// Every live server runs on a pinned clock (server/clock.js), so tests with
+// fixed September 2026 dates are never "in the past": 07:00 UK time on
+// Tuesday 1 September 2026, before every fixed date the tests use. A test
+// that needs another moment passes its own WHEELHOUSE_TEST_CLOCK in `env`.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md
+export const TEST_CLOCK_PIN = '2026-09-01T06:00:00Z';
+
 // Returns { baseUrl, stop }. Call stop() in an after() hook - a leaked child
 // keeps its port and its database connections.
 export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
@@ -55,7 +62,7 @@ export async function startLiveServer({ timeoutMs = 30000, env = {} } = {}) {
   const baseUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js')], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(port), ...env },
+    env: { ...process.env, PORT: String(port), WHEELHOUSE_TEST_CLOCK: TEST_CLOCK_PIN, ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.stderr.on('data', (d) => process.stderr.write(`[server] ${d}`));
