@@ -77,9 +77,61 @@ test('good answers store a frozen copy in question order', async () => {
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.deepEqual(await stored(res.body.id), [
     { serviceId: svc.id, id: idOf(svc, 'What is wrong?'), wording: 'What is wrong?', kind: 'text', answer: 'Rubs at the back' },
-    { serviceId: svc.id, id: idOf(svc, 'E-bike?'), wording: 'E-bike?', kind: 'choice', answer: null },
-    { serviceId: svc.id, id: idOf(svc, 'Tubeless?'), wording: 'Tubeless?', kind: 'choice', answer: 'No' },
+    { serviceId: svc.id, id: idOf(svc, 'E-bike?'), wording: 'E-bike?', kind: 'choice', answer: null, text: null },
+    { serviceId: svc.id, id: idOf(svc, 'Tubeless?'), wording: 'Tubeless?', kind: 'choice', answer: 'No', text: null },
   ]);
+});
+
+test('a choice answer may carry words with no choice', async () => {
+  const res = await book({ answers: [
+    goodAnswers()[0], goodAnswers()[1],
+    { serviceId: svc.id, questionId: idOf(svc, 'E-bike?'), text: 'Not sure, will check' },
+  ] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual((await stored(res.body.id))[1], {
+    serviceId: svc.id, id: idOf(svc, 'E-bike?'), wording: 'E-bike?', kind: 'choice', answer: null, text: 'Not sure, will check',
+  });
+});
+
+test('a choice answer may carry a choice and words together', async () => {
+  const res = await book({ answers: [
+    goodAnswers()[0],
+    { serviceId: svc.id, questionId: idOf(svc, 'Tubeless?'), choice: 'No', text: 'Fitted last month' },
+  ] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual((await stored(res.body.id))[2], {
+    serviceId: svc.id, id: idOf(svc, 'Tubeless?'), wording: 'Tubeless?', kind: 'choice', answer: 'No', text: 'Fitted last month',
+  });
+});
+
+test('a required choice question is answered by words alone', async () => {
+  const res = await book({ answers: [
+    goodAnswers()[0],
+    { serviceId: svc.id, questionId: idOf(svc, 'Tubeless?'), text: 'Not sure, ask at drop-off' },
+  ] });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.deepEqual((await stored(res.body.id))[2], {
+    serviceId: svc.id, id: idOf(svc, 'Tubeless?'), wording: 'Tubeless?', kind: 'choice', answer: null, text: 'Not sure, ask at drop-off',
+  });
+});
+
+test('choice words over 1,000 characters are refused', () =>
+  refusedAsGuest({ answers: [goodAnswers()[0], { serviceId: svc.id, questionId: idOf(svc, 'Tubeless?'), choice: 'No', text: 'x'.repeat(1001) }] }, /1,000 characters/));
+
+test('the notes join the bike note, the answers and the description', async () => {
+  const res = await book({
+    bikeNote: 'Red hybrid',
+    answers: goodAnswers(),
+  });
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  const notes = (await runWithShop(owner.shop.id, () =>
+    prepare('SELECT notes FROM workshop_jobs WHERE id = ?').get(res.body.id))).notes;
+  assert.equal(notes, [
+    "Bike (customer's words): Red hybrid",
+    'What is wrong? Rubs at the back',
+    'Tubeless? No',
+    "Customer's description: Brakes rub",
+  ].join('\n'));
 });
 
 test('not sure is stored as { notSure: true }', async () => {
@@ -95,8 +147,8 @@ test('rewording and then deleting the questions leaves the booking unchanged', a
   const before = await stored(res.body.id);
   assert.deepEqual(before, [
     { serviceId: own.id, id: idOf(own, 'What is wrong?'), wording: 'What is wrong?', kind: 'text', answer: 'Rubs at the back' },
-    { serviceId: own.id, id: idOf(own, 'E-bike?'), wording: 'E-bike?', kind: 'choice', answer: null },
-    { serviceId: own.id, id: idOf(own, 'Tubeless?'), wording: 'Tubeless?', kind: 'choice', answer: 'No' },
+    { serviceId: own.id, id: idOf(own, 'E-bike?'), wording: 'E-bike?', kind: 'choice', answer: null, text: null },
+    { serviceId: own.id, id: idOf(own, 'Tubeless?'), wording: 'Tubeless?', kind: 'choice', answer: 'No', text: null },
   ]);
   const reworded = own.questions.map((q) => ({ ...q, wording: `${q.wording} (new)` }));
   const put = (questions) => staff(`/api/workshop-services/${own.id}`, {

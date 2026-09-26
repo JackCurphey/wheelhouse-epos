@@ -2662,7 +2662,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, questionAnswers }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2671,14 +2671,14 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, link_token_hash, customer_description, question_answers, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, link_token_hash, customer_description, customer_bike_note, question_answers, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
         termsAcceptedAt ?? null,
-        linkTokenHash ?? null, customerDescription ?? null,
+        linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         nowIso()
       );
@@ -4738,6 +4738,31 @@ async function bookedServices(jobId) {
   };
 }
 
+// Staff see an online booking only through the job's Notes (piece 9): the
+// bike note, each answered question, and the description, in that order,
+// leaving out any part that is empty. A choice question's line names the
+// choice (or "I'm not sure") and, when the customer also typed words,
+// appends them after " - "; a question answered by words alone shows the
+// words on their own. A free-text question's line is just its answer.
+function answerNoteLine({ wording, kind, answer, text }) {
+  if (kind === 'text') return answer ? `${wording} ${answer}` : null;
+  const choiceOrNotSure = answer === null ? null : (answer && typeof answer === 'object' && answer.notSure ? "I'm not sure" : answer);
+  const words = text || null;
+  const value = choiceOrNotSure && words ? `${choiceOrNotSure} - ${words}` : choiceOrNotSure || words;
+  return value ? `${wording} ${value}` : null;
+}
+
+function bookingNotes({ bikeNote, questionAnswers, description }) {
+  const lines = [];
+  if (bikeNote) lines.push(`Bike (customer's words): ${bikeNote}`);
+  for (const entry of questionAnswers ?? []) {
+    const line = answerNoteLine(entry);
+    if (line) lines.push(line);
+  }
+  if (description) lines.push(`Customer's description: ${description}`);
+  return lines.join('\n');
+}
+
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
   const signedIn = ctx && ctx.shop.slug === params.shopSlug;
@@ -4773,7 +4798,16 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const jobDate = (body.jobDate || '').trim();
   if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
   const description = (body.description || '').trim();
-  if (!description) return badRequest(res, 'Please describe what you need done');
+  if (request.notSure && !description) return badRequest(res, 'Please describe what you need done');
+
+  // The bike in the customer's own words (piece 9) - a note on the booking,
+  // not a customer_bikes row; staff create the real bike at check-in.
+  // Optional: absent, null or blank after trimming stores null.
+  if (body.bikeNote !== undefined && body.bikeNote !== null && typeof body.bikeNote !== 'string') {
+    return badRequest(res, 'Your bike description must be text');
+  }
+  const bikeNote = typeof body.bikeNote === 'string' ? body.bikeNote.trim() : '';
+  if (bikeNote.length > 200) return badRequest(res, 'Your bike description can be up to 200 characters');
 
   // What the customer chose: one or more services this shop ticked bookable
   // online, in the order chosen, or the "not sure" hour. Read through the
@@ -4935,8 +4969,12 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     const linkCode = newLinkCode();
     let jobId;
     try {
+      const bikeNoteValue = bikeNote || null;
+      const title = (description
+        ? `Online booking: ${serviceNames} - ${description}`
+        : `Online booking: ${serviceNames}`).slice(0, 200);
       jobId = await createWorkshopJob({
-        title: `Online booking: ${serviceNames} - ${description}`.slice(0, 200),
+        title,
         customerId,
         bikeId,
         mechanicId: mechResolved.mechanicId,
@@ -4946,13 +4984,14 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         bookingState: 'pending',
         workState: 'not_started',
         custodyState: 'expected',
-        notes: description,
+        notes: bookingNotes({ bikeNote: bikeNoteValue, questionAnswers, description }),
         skipAutoOrder: false,
         plannedMinutes: minutes,
         termsAcceptedAt: nowIso(),
         serviceIds: request.serviceIds,
         linkTokenHash: hashLinkCode(linkCode),
-        customerDescription: description,
+        customerDescription: description || null,
+        customerBikeNote: bikeNoteValue,
         questionAnswers,
       });
     } catch (err) {
@@ -5013,7 +5052,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
   }
   const row = /^[0-9a-f]{64}$/.test(params.code)
     ? await db.prepare(
-      `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
+      `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.customer_bike_note, w.question_answers,
               w.booking_state, w.custody_state, w.work_state,
               b.make AS bike_make, b.model AS bike_model
               , (SELECT count(*)::int FROM workshop_job_attachments a
@@ -5033,8 +5072,9 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     jobDate: row.job_date,
     startTime: row.start_time || '',
     description: row.customer_description ?? null,
+    bikeNote: row.customer_bike_note ?? null,
     // As asked at booking, from the frozen copy - never the service's current wording.
-    answers: (row.question_answers ?? []).map(({ wording, answer }) => ({ wording, answer })),
+    answers: (row.question_answers ?? []).map(({ wording, answer, text }) => ({ wording, answer, ...(text ? { text } : {}) })),
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
     photoCount: row.photo_count,
