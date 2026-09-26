@@ -157,6 +157,15 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       />
       <TextField id={ids.email} label={emailLabel(channel)} type="email" autoComplete="email" required={channel === 'email'}
         value={draft.email} error={errorFor('email')} onChange={(email) => update({ email })} />
+      {/* A separate row above the tick box, so a near-miss tap on the box
+          can't open the terms, and vice versa (Jack, 26 Sep). */}
+      <button
+        type="button"
+        className="mb-3 flex min-h-11 w-full items-center rounded-lg border border-[var(--wh-border)] bg-white px-3.5 text-left text-sm font-semibold text-[var(--accent-dark)]"
+        onClick={() => setTermsOpen(true)}
+      >
+        Read the booking terms
+      </button>
       <Field>
         <Checkbox
           id={ids.terms}
@@ -164,15 +173,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
           aria-invalid={termsError ? true : undefined}
           aria-describedby={termsError ? `${ids.terms}-error` : undefined}
           onChange={(e) => update({ termsAccepted: e.target.checked || undefined })}
-          label={
-            <>
-              I agree to the{' '}
-              {/* A button inside the label opens the terms without ticking the box. */}
-              <button type="button" className="text-[var(--accent-dark)] underline" onClick={() => setTermsOpen(true)}>
-                booking terms
-              </button>
-            </>
-          }
+          label="I agree to the booking terms"
         />
         {termsError && <FieldError id={`${ids.terms}-error`}>{termsError}</FieldError>}
       </Field>

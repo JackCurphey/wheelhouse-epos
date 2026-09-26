@@ -48,9 +48,12 @@ drives the whole journey against the real server.
     `email`).
   - "Email": required when Email is chosen; otherwise its label ends
     " (optional)".
-  - A tick box "I agree to the booking terms", where "booking terms" opens
-    the terms from piece 11 (the shop's, or the standard Wheelhouse text) in
-    a dialog on the same screen.
+  - A separate full-width "Read the booking terms" button, above the tick
+    box, that opens the terms from piece 11 (the shop's, or the standard
+    Wheelhouse text) in a dialog on the same screen; and a plain-text tick
+    box "I agree to the booking terms" with no button inside its label
+    (Jack, 26 Sep: a button inside the label made a near-miss tap on the
+    terms link also tick the box).
 - **Request booking** checks, showing each message under its field and a
   summary in the pinned area, with focus on the first problem:
   - "Please enter your name"
@@ -96,8 +99,10 @@ drives the whole journey against the real server.
 - Status line from `stage`: "Awaiting shop confirmation", "Confirmed", "In
   the workshop", "Ready to collect", "Collected", "Change requested",
   "Declined", "Cancelled", "Request expired".
-- Summary: reference, services (with prices when shown, and "From £T"),
-  day and time, bike note, description, answers.
+- Summary: reference, services (with prices when shown, and "From £T" only
+  when there are two or more services - Jack, 26 Sep: with one service its
+  own price line already shows the total), day and time, bike note,
+  description, answers.
 - "Keep this link to check your booking" and a "Copy link" button (copies
   the page's full address; says "Copied" briefly).
 - "Need to change or cancel? Contact <shop name>" (until d6).

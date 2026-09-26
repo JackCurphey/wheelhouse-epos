@@ -42,12 +42,17 @@ test('the day and time: a timed booking has its time, a drop-off booking the day
   assert.equal(r.whenLine({ ...LINK, startTime: '' }), 'Monday 5 October');
 });
 
-test('services with their booked prices when shown, and the total as "From £T"', () => {
+test('services with their booked prices when shown, and the total as "From £T" with two or more services', () => {
   assert.deepEqual(r.serviceLines(LINK), [{ name: 'Brake service', price: '£20' }, { name: 'Gear service', price: '£25.50' }]);
   assert.equal(r.totalLine(LINK), 'From £45.50');
   const hidden = { ...LINK, services: [{ name: 'Brake service', price: null }], totalPrice: null };
   assert.deepEqual(r.serviceLines(hidden), [{ name: 'Brake service', price: null }]);
   assert.equal(r.totalLine(hidden), null);
+});
+
+test('with only one service there is no "From £" total line, even when its price is shown', () => {
+  const one = { ...LINK, services: [{ name: 'Brake service', price: 20 }], totalPrice: 20 };
+  assert.equal(r.totalLine(one), null);
 });
 
 test('answers read like the staff notes: the choice or "I\'m not sure", then any words; unanswered left out', () => {

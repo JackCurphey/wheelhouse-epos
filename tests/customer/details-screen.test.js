@@ -169,10 +169,19 @@ test('each message goes as soon as its field is fixed, and the pinned note with 
   assert.equal(ui.queryByText(CHECK) === null, true);
 });
 
-test('"booking terms" opens the terms in a dialog on the same screen, without ticking the box', async () => {
+test('"Read the booking terms" is a separate button above the tick box, whose label has no button inside it', async () => {
+  const { ui } = await open();
+  const checkbox = ui.getByRole('checkbox', { name: 'I agree to the booking terms' });
+  const { within } = await rtl();
+  const label = checkbox.closest('label');
+  assert.ok(label);
+  assert.equal(within(label).queryAllByRole('button').length, 0, 'the tick box label contains no button');
+});
+
+test('"Read the booking terms" opens the terms in a dialog on the same screen, without ticking the box', async () => {
   const { ui, requests } = await open();
   assert.equal(requests.some((r) => r.url.endsWith('/terms')), false, 'the terms are fetched before they are opened');
-  await click(ui.getByRole('button', { name: 'booking terms' }));
+  await click(ui.getByRole('button', { name: 'Read the booking terms' }));
   const dialog = await ui.findByRole('dialog', { name: 'Booking terms' });
   const { within } = await rtl();
   assert.ok(await within(dialog).findByText('1. Your booking is a request.'));
@@ -189,7 +198,7 @@ test('if the terms fail to load, the dialog says so and Try again asks again', a
     ? { status: 500, body: { error: 'Something went wrong' } }
     : { status: 200, body: { title: 'Booking terms', text: '1. Your booking is a request.', standard: true } });
   const { ui } = await open({ terms });
-  await click(ui.getByRole('button', { name: 'booking terms' }));
+  await click(ui.getByRole('button', { name: 'Read the booking terms' }));
   assert.ok(await ui.findByText("We couldn't load the booking terms"));
   await click(ui.getByRole('button', { name: 'Try again' }));
   assert.ok(await ui.findByText('1. Your booking is a request.'));
