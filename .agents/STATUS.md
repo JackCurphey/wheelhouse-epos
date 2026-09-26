@@ -137,12 +137,13 @@ earliest bookable moment. **For d5:** wrap `details` in `RequireDraft` with
 `hasDate` and `to="date"`; send `date`, `mechanicId` and, on a timed day only,
 `startTime` (a drop-off day stores none; `mechanicId` is always a real
 mechanic); build the "that day was just taken" refusal screen (`full`) for a
-capacity or "too soon" refusal when sending. **Jack to judge** from
-`/tmp/d4-date-timed-320.png`: whether available days stand out on the page,
-and the diary's height with real service lengths; and approve the line "We
-couldn't load the free days" (not in the spec) and the "just been taken"
-note's look (d3's `--wh-warn-bg` / `--wh-warn-ink`). Carried from piece 10:
-dashboard and sales "today" still query a UTC-midnight window (follow-up
+capacity or "too soon" refusal when sending. The line "We couldn't load the
+free days" (not in the spec) and the "just been taken" note's look (d3's
+`--wh-warn-bg` / `--wh-warn-ink`) are both approved by Jack (26 Sep). **Jack
+to judge** from `/tmp/d4-date-timed-320.png`: whether available days stand
+out on the page, and the diary's height with real service lengths. Carried
+from piece 10: dashboard and sales "today" still query a UTC-midnight window
+(follow-up
 piece).
 **(d3) merged: #82** (26 Sep at `8e8db72`, CI green on its final commit `6d45c88`) (26 Sep; spec
 `docs/superpowers/specs/2026-09-26-book-d3-problem-screen-design.md`, plan
