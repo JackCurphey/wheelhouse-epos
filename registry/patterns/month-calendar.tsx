@@ -99,7 +99,7 @@ export function MonthCalendar({ month, onMonthChange, available, value = null, o
         ))}
         {days.map((d) => {
           const open = available.has(d);
-          const picked = d === value;
+          const picked = open && d === value;
           return (
             <button
               key={d}
@@ -111,7 +111,7 @@ export function MonthCalendar({ month, onMonthChange, available, value = null, o
               aria-pressed={picked}
               tabIndex={d === current ? 0 : -1}
               onKeyDown={(e) => onKeyDown(e, d)}
-              onClick={() => { if (open) onChange(d); }}
+              onClick={() => { setFocusDate(d); if (open) onChange(d); }}
               className={cn(
                 'min-h-11 rounded-md border-0 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)]',
                 open ? 'bg-[var(--wh-hover)] text-[var(--wh-ink)]' : 'cursor-not-allowed bg-white text-[var(--wh-muted)] line-through',

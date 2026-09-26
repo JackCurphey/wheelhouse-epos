@@ -76,6 +76,19 @@ test('arrow keys move between days, and past the month end ask for the next mont
   assert.deepEqual(months, ['2026-11']);
 });
 
+test('a value that is not available renders as plain unavailable, not picked', async () => {
+  const { day } = await renderCal({ value: '2026-10-07' });
+  assert.equal(day('2026-10-07').getAttribute('aria-pressed'), 'false');
+  assert.equal(day('2026-10-07').getAttribute('aria-disabled'), 'true');
+});
+
+test('clicking a day moves the roving tabindex to it', async () => {
+  const { fireEvent, day } = await renderCal({ value: '2026-10-08' });
+  fireEvent.click(day('2026-10-09'));
+  assert.equal(day('2026-10-09').tabIndex, 0);
+  assert.equal(day('2026-10-08').tabIndex, -1);
+});
+
 test('the month buttons ask for the previous and next month', async () => {
   const { ui, fireEvent, months } = await renderCal();
   fireEvent.click(ui.getByRole('button', { name: 'Previous month' }));
