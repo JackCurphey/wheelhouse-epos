@@ -209,6 +209,21 @@
         }
       ],
       "type": "registry:ui"
+    },
+    {
+      "name": "month-calendar",
+      "title": "Month Calendar",
+      "author": "Wheelhouse EPOS",
+      "description": "One Monday-first month for picking a booking day. Days not in `available` are greyed, struck through and aria-disabled. Arrow keys move between days and across months; dates are YYYY-MM-DD strings handled in UTC.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "patterns/month-calendar.tsx",
+          "type": "registry:ui"
+        }
+      ],
+      "type": "registry:ui"
     }
   ]
 }
