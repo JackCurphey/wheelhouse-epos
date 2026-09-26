@@ -72,7 +72,7 @@ of `/book` now (nobody uses the old page); `public-portal/` files are deleted
 in a later clean-up. **d2 paused (Jack, 26 Sep):** a booking must hold
 several services, and a full service will list the individual services it
 includes (so d2 can say "already part of your general service"). Order:
-piece 7 built on branch `feat/book-server-7-multi-service` (plan
+**piece 7: PR #76** (26 Sep; Jack approved merging on green CI - check `gh pr view 76` for whether it merged; branch `feat/book-server-7-multi-service`, plan
 `docs/superpowers/plans/2026-09-26-book-server-7-multiple-services.md`); the
 contract: POST takes `serviceIds` (1-10) or `notSure` alone; answers are
 `{serviceId, questionId, ...}`; the 201 and `/booking-links` reply return
