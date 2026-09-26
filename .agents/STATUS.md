@@ -1,7 +1,7 @@
 # STATUS — Wheelhouse EPOS
 
 **Updated:** 2026-09-26
-**Branch:** `main` at `69d024e` (piece (a) merged as #72). Server prerequisite pieces 1-6 for the book
+**Branch:** `main` at `14b824b` (piece (a) #72 and piece (b) #73 merged). Server prerequisite pieces 1-6 for the book
 journey are all merged: #64-#70, then **piece 6 (customer photos, migration
 029) as #71** (25 Sep; PR CI green). Specs and plans for each are under
 `docs/superpowers/`; piece 6's are
@@ -16,16 +16,17 @@ PR: (a) booked price in the booking reply and link read-back, (b) customer
 shell at `/book`, (c) missing form controls (each approved by Jack), (d) the
 six screens. **Piece (a) merged: #72** (25 Sep, CI green on its final
 commit; spec `docs/superpowers/specs/2026-09-25-book-a-booked-price-design.md`).
-**Piece (b) built: PR #73** (branch `feat/book-b-customer-shell`; spec
-`docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md`; local
-typecheck/lint clean, `npm test` 736/736, Playwright 3/3 before push). Merging
-is Jack's call. Every `/book` address now serves the React customer app
-(`src/customer/`, placeholders for the six screens). **Open for pieces (c)/(d):**
+**Piece (b) merged: #73** (26 Sep, CI green on its final commit). Every
+`/book` address serves the React customer app (`src/customer/`, placeholders
+for the six screens). **Now:** piece (c), the form controls, on branch
+`feat/book-c-form-controls`; spec
+`docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md` (Jack's
+design calls of 26 Sep are in it). **Open for pieces (c)/(d):**
 on a storefront subdomain the app reads the shop from the address
 (`/book/<slug>`), not the host, so `/book/<other-shop>` on one shop's subdomain
 shows the other shop; decide which wins. No request-level test covers the
 `/book` 500 page when the app is not built (only `appEntryTags` is tested).
-**Next:** piece (c), the missing form controls (each approved by Jack). Jack
+**Next:** piece (d), the six screens; it also needs `/availability` to return a day's opening hours for the diary. Jack
 changed J1 on 25 Sep: the new app takes all of `/book` now (nobody uses the old
 page); `public-portal/` files are deleted in a later clean-up.
 **Piece 6 open items** (facts only):
