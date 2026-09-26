@@ -103,9 +103,12 @@ test('the old jobType input no longer books', async () => {
   assert.equal(res.status, 400, JSON.stringify(res.body));
 });
 
-const priced = (jobId) => runWithShop(owner.shop.id, () => prepare(
-  'SELECT service_id, booked_price::text AS booked_price FROM workshop_jobs WHERE id = ?'
-).get(jobId));
+// service_id/booked_price moved from workshop_jobs into workshop_job_services
+// (migration 030, server piece 7) - one row per booked service; this task
+// still books exactly one, so position 0 is the whole story.
+const priced = (jobId) => runWithShop(owner.shop.id, async () => (await prepare(
+  'SELECT service_id, booked_price::text AS booked_price FROM workshop_job_services WHERE workshop_job_id = ? ORDER BY position LIMIT 1'
+).get(jobId)) ?? { service_id: null, booked_price: null });
 const pricedService = (price) => runWithShop(owner.shop.id, async () => (await prepare(
   "INSERT INTO workshop_services (name, price, minutes, bookable_online, active, updated_at) VALUES ('Priced', ?, 30, 1, 1, now())"
 ).run(price)).lastInsertRowid);

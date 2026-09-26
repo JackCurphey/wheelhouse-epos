@@ -2662,7 +2662,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceId, linkTokenHash, customerDescription, questionAnswers }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, questionAnswers }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2671,20 +2671,27 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     const reference = await allocateReference();
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, service_id, booked_price, link_token_hash, customer_description, question_answers, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?, ?, CAST(? AS jsonb), ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, link_token_hash, customer_description, question_answers, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
         plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
         termsAcceptedAt ?? null,
-        // The price is copied in SQL so it never passes through a JavaScript number.
-        serviceId ?? null, serviceId ?? null,
         linkTokenHash ?? null, customerDescription ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
+
+    // One row per booked service, in the order chosen, each price copied in SQL
+    // so it never passes through a JavaScript number (piece 7).
+    for (const [position, serviceId] of (serviceIds ?? []).entries()) {
+      await db.prepare(
+        `INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position)
+         VALUES (?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?)`
+      ).run(info.lastInsertRowid, serviceId, serviceId, position);
+    }
 
     // Take the capacity hold in the same transaction as the job. checkJobSlot
     // above is a SELECT, so two requests can both pass it and both insert; the
@@ -4789,7 +4796,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         skipAutoOrder: false,
         plannedMinutes: chosen.minutes,
         termsAcceptedAt: nowIso(),
-        serviceId: chosen.id ?? null,
+        serviceIds: chosen.id ? [chosen.id] : [],
         linkTokenHash: hashLinkCode(linkCode),
         customerDescription: description,
         questionAnswers,
@@ -4813,7 +4820,12 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       )
       .run(request.updateChannel, request.marketingPermission, request.email, String(body.guestPhone || '').trim(), nowIso(), customerId);
     const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-    const bookedPrice = await customerBookedPrice(row.booked_price);
+    // Transitional (Task 3 replaces): the 201 reply's bookedPrice is the job's
+    // position-0 booked service, until the reply moves to a full service list.
+    const positionZeroPrice = (await db
+      .prepare('SELECT booked_price FROM workshop_job_services WHERE workshop_job_id = ? ORDER BY position LIMIT 1')
+      .get(jobId))?.booked_price ?? null;
+    const bookedPrice = await customerBookedPrice(positionZeroPrice);
     // The last write, so nothing after it can fail and leave files behind for a
     // booking that rolled back. saveBookingPhotos removes its own files if a
     // write or insert fails, and the error rolls the whole booking back.
@@ -4850,15 +4862,20 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
   if (!bookingLinkLimiter.check(clientIp(req))) {
     return sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
   }
+  // Transitional (Task 3 replaces): service_name/booked_price read the job's
+  // position-0 booked service row, until the reply moves to a full service list.
   const row = /^[0-9a-f]{64}$/.test(params.code)
     ? await db.prepare(
       `SELECT w.reference, w.job_date, w.start_time, w.customer_description, w.question_answers,
-              w.booking_state, w.custody_state, w.work_state, w.booked_price,
-              s.name AS service_name, b.make AS bike_make, b.model AS bike_model
+              w.booking_state, w.custody_state, w.work_state,
+              (SELECT js.booked_price FROM workshop_job_services js
+               WHERE js.workshop_job_id = w.id ORDER BY js.position LIMIT 1) AS booked_price,
+              (SELECT s.name FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
+               WHERE js.workshop_job_id = w.id ORDER BY js.position LIMIT 1) AS service_name,
+              b.make AS bike_make, b.model AS bike_model
               , (SELECT count(*)::int FROM workshop_job_attachments a
                  WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
        FROM workshop_jobs w
-       LEFT JOIN workshop_services s ON s.id = w.service_id
        LEFT JOIN customer_bikes b ON b.id = w.bike_id
        WHERE w.link_token_hash = ?`
     ).get(hashLinkCode(params.code))
