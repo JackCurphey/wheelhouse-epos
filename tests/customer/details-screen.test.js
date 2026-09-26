@@ -84,7 +84,7 @@ test("Not sure on a drop-off day: \"Not sure\", that day's drop-off window, and 
   const { ui, requests } = await open({ draft: DROPOFF });
   assert.ok(await ui.findByText('Tuesday 6 October, drop off 08:30–10:00'));
   assert.ok(ui.getByText('Not sure'));
-  assert.equal(ui.queryByText(/^From £/), null);
+  assert.ok(ui.queryByText(/^From £/) === null);
   assert.ok(requests.some((r) => r.url === '/api/portal/north/availability?start=2026-10-06&end=2026-10-06&minutes=60'), JSON.stringify(requests));
 });
 
@@ -118,7 +118,7 @@ test('the email is optional until Email is chosen', async () => {
   assert.equal(email.getAttribute('aria-required'), 'true');
   assert.equal(email.getAttribute('type'), 'email');
   assert.equal(email.getAttribute('autocomplete'), 'email');
-  assert.equal(ui.queryByRole('textbox', { name: 'Email (optional)' }), null);
+  assert.ok(ui.queryByRole('textbox', { name: 'Email (optional)' }) === null);
 });
 
 test('Request booking with nothing filled in: each message under its field, a note in the pinned area, focus on the name, nothing sent', async () => {
@@ -134,7 +134,7 @@ test('Request booking with nothing filled in: each message under its field, a no
   assert.equal(within(pinned()).getByRole('alert').textContent, CHECK);
   assert.ok(document.activeElement === name, 'focus is not on the name');
   assert.equal(posts(requests).length, 0);
-  assert.equal(ui.queryByText(/^At /), null);
+  assert.ok(ui.queryByText(/^At /) === null);
 });
 
 test('the first problem gets the focus', async () => {
@@ -159,7 +159,7 @@ test('each message goes as soon as its field is fixed, and the pinned note with 
   const { ui } = await open();
   await press(ui);
   await type(ui.getByRole('textbox', { name: 'Your name' }), 'Gina Guest');
-  assert.equal(ui.queryByText('Please enter your name'), null);
+  assert.ok(ui.queryByText('Please enter your name') === null);
   await type(ui.getByRole('textbox', { name: 'Mobile number' }), '07700 900123');
   await click(ui.getByRole('checkbox', { name: 'I agree to the booking terms' }));
   // Compared as a boolean, not the node itself (common.md): a DOM node's
@@ -179,7 +179,7 @@ test('"booking terms" opens the terms in a dialog on the same screen, without ti
   assert.equal(ui.getByRole('checkbox', { name: 'I agree to the booking terms' }).checked, false);
   assert.ok(requests.some((r) => r.url === '/api/portal/north/terms'), JSON.stringify(requests));
   await click(within(dialog).getByRole('button', { name: 'Close' }));
-  assert.equal(ui.queryByRole('dialog'), null);
+  assert.ok(ui.queryByRole('dialog') === null);
   assert.ok(ui.getByRole('heading', { level: 1, name: 'How can we reach you?' }));
 });
 
@@ -369,7 +369,7 @@ const staysWith = async (booking, message) => {
   const alert = await within(pinned()).findByRole('alert');
   assert.equal(alert.textContent, message);
   assert.equal(ui.getByRole('button', { name: 'Request booking' }).disabled, false);
-  assert.equal(ui.queryByText(/^At /), null);
+  assert.ok(ui.queryByText(/^At /) === null);
   assert.equal(readDraft().startTime, '09:30', 'the choice is kept');
 };
 

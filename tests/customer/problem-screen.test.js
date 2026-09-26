@@ -95,9 +95,9 @@ test('services ticked but no questions: the bike box and the optional descriptio
 test('Not sure: no questions, a required description, and Back goes to the first screen', async () => {
   const { ui } = await open({ notSure: true, serviceIds: [], answers: [] });
   assert.equal(ui.queryAllByRole('heading', { level: 2 }).length, 0);
-  assert.equal(ui.queryByRole('radio'), null);
+  assert.ok(ui.queryByRole('radio') === null);
   assert.ok(ui.getByRole('textbox', { name: "What's wrong with it?" }));
-  assert.equal(ui.queryByText('Anything else we should know? (optional)'), null);
+  assert.ok(ui.queryByText('Anything else we should know? (optional)') === null);
   await click(ui.getByRole('link', { name: /Back/ }));
   assert.ok(await ui.findByText('At /book/north'));
 });
@@ -164,14 +164,14 @@ test('Continue with required questions unanswered: a message under each, the pin
   assert.equal(alert.textContent, 'Please check the answers marked above');
   assert.ok(document.querySelector('[data-book-pinned]').contains(alert));
   assert.ok(document.activeElement === ui.getByRole('radio', { name: 'Squeaking' }), 'focus is not on the first question');
-  assert.equal(ui.queryByText(/^At /), null);
+  assert.ok(ui.queryByText(/^At /) === null);
 });
 
 test('a message goes as soon as its question is answered', async () => {
   const { ui } = await open();
   await click(ui.getByRole('button', { name: 'Continue' }));
   await type(ui.getByRole('textbox', { name: BRAKE_WORDS }), 'Grinding');
-  assert.equal(ui.queryByText("Please answer: What's wrong with the brakes?"), null);
+  assert.ok(ui.queryByText("Please answer: What's wrong with the brakes?") === null);
   assert.ok(ui.getByText('Please answer: Which wheel needs truing?'));
   assert.ok(ui.getByRole('alert'));
 });
@@ -192,7 +192,7 @@ test('Not sure with no description: a message under it, and focus on it', async 
   assert.equal(box.getAttribute('aria-describedby'), message.id);
   assert.ok(ui.getByRole('alert').textContent === 'Please check the answers marked above');
   assert.ok(document.activeElement === box, 'focus is not on the description');
-  assert.equal(ui.queryByText(/^At /), null);
+  assert.ok(ui.queryByText(/^At /) === null);
 });
 
 test('a good Continue goes to the date screen and sends nothing', async () => {
@@ -235,7 +235,7 @@ test('photos: the picker, its label and the drop-off line', async () => {
   assert.ok(ui.getByText('Add photos (optional)'));
   assert.ok(ui.getByText('You can also show us at drop-off.'));
   assert.equal(ui.container.querySelector('input[type="file"]').getAttribute('accept'), 'image/jpeg,image/png,image/webp');
-  assert.equal(ui.queryByText('Your photos were cleared - please add them again'), null);
+  assert.ok(ui.queryByText('Your photos were cleared - please add them again') === null);
 });
 
 test('adding photos records it in the draft, never the photos themselves', async () => {
@@ -261,7 +261,7 @@ test('after a remount, photos added before are reported cleared, above the picke
   const message = ui.getByText('Your photos were cleared - please add them again');
   assert.ok(message.compareDocumentPosition(ui.getByText('Add photos (optional)')) & Node.DOCUMENT_POSITION_FOLLOWING, 'the message is not above the picker');
   await addPhotos(ui, [photo('wheel.jpg')]);
-  assert.equal(ui.queryByText('Your photos were cleared - please add them again'), null);
+  assert.ok(ui.queryByText('Your photos were cleared - please add them again') === null);
 });
 
 test('continuing without re-adding photos drops the cleared message', async () => {

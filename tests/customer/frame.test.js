@@ -65,8 +65,8 @@ test('shows the shop name, step, title and body', async () => {
 test('without a step there is no step count', async () => {
   const ui = await renderFrame({ title: 'Your request is with us' });
   await ui.findByText('North Street Cycles');
-  assert.equal(ui.queryByText(/Step \d of 4/), null);
-  assert.equal(ui.queryByRole('progressbar'), null);
+  assert.ok(ui.queryByText(/Step \d of 4/) === null);
+  assert.ok(ui.queryByRole('progressbar') === null);
 });
 
 test('the back link goes where it is told', async () => {
@@ -128,8 +128,8 @@ test('while the shop loads, only "Loading…" shows - no title, body or action',
     () => new Promise((resolve) => { resolveFetch = resolve; }),
   );
   assert.ok(await ui.findByText('Loading…'));
-  assert.equal(ui.queryByText('Screen body'), null);
-  assert.equal(ui.queryByRole('button', { name: 'Continue' }), null);
+  assert.ok(ui.queryByText('Screen body') === null);
+  assert.ok(ui.queryByRole('button', { name: 'Continue' }) === null);
   resolveFetch(new Response(JSON.stringify(SERVICES), { status: 200, headers: { 'content-type': 'application/json' } }));
   await ui.findByText('North Street Cycles');
   ui.unmount();
@@ -139,7 +139,7 @@ test('an unknown shop says so, with no shop name', async () => {
   const ui = await renderFrame({ step: 1, title: 'T' }, undefined,
     () => new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } }));
   assert.ok(await ui.findByRole('heading', { level: 1, name: "We can't find this shop" }));
-  assert.equal(ui.queryByText('Screen body'), null);
+  assert.ok(ui.queryByText('Screen body') === null);
 });
 
 test('a failed load offers Try again, which recovers', async () => {

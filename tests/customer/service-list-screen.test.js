@@ -132,7 +132,7 @@ test('Continue with nothing ticked says so and stays', async () => {
   const { ui } = await open();
   await click(ui.getByRole('button', { name: 'Continue' }));
   assert.ok(ui.getByRole('alert').textContent.includes('Choose at least one service'));
-  assert.equal(ui.queryByText(/^At /), null);
+  assert.ok(ui.queryByText(/^At /) === null);
 });
 
 // role="alert" is only announced when its content changes (or the node is
@@ -212,8 +212,8 @@ test('with prices hidden: no "From", no parts note, and a count-only summary', a
     full: DATA.full.map(hide), categories: DATA.categories.map((c) => ({ ...c, services: c.services.map(hide) })), uncategorised: DATA.uncategorised.map(hide),
   };
   const { ui } = await open({ services, draft: { serviceIds: [13, 12] } });
-  assert.equal(ui.queryByText(/From £/), null);
-  assert.equal(ui.queryByText('Prices are for labour. Parts are quoted separately.'), null);
+  assert.ok(ui.queryByText(/From £/) === null);
+  assert.ok(ui.queryByText('Prices are for labour. Parts are quoted separately.') === null);
   assert.ok(ui.getByText('2 services'));
 });
 
