@@ -132,14 +132,16 @@ test('a link to a service that does not exist is refused', async () => {
   });
 });
 
+// Each expected refusal gets its own runWithShop: in 'transaction' scope mode
+// a failed statement aborts the scope, and a second statement in it would
+// fail for that reason instead of the one under test.
 test('the same link twice, and a service including itself, are refused', async () => {
-  await runWithShop(owner.shop.id, async () => {
-    const full = await svc('Twice full', 'full');
-    const part = await svc('Twice part', 'individual');
-    await link(full, part, 0);
-    await assert.rejects(link(full, part, 1), /unique|duplicate/i);
-    await assert.rejects(link(full, full, 2), /check constraint/i);
-  });
+  const shop = (fn) => runWithShop(owner.shop.id, fn);
+  const full = await shop(() => svc('Twice full', 'full'));
+  const part = await shop(() => svc('Twice part', 'individual'));
+  await shop(() => link(full, part, 0));
+  await assert.rejects(shop(() => link(full, part, 1)), /unique|duplicate/i);
+  await assert.rejects(shop(() => link(full, full, 2)), /check constraint/i);
 });
 
 test('links go when the service they belong to is deleted', async () => {
