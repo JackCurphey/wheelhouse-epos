@@ -12,8 +12,8 @@ import {
   useAvailability, useMechanics, type AvailabilityResponse, type DropoffDay, type MechanicsResponse, type TimedDay,
 } from './date-query.ts';
 import {
-  ANY_MECHANIC, availableDays, bookingRange, continueMessage, diaryColumns, dropoffOptions, initialMonth, jobMinutes,
-  localToday, pickedDay, resolveMechanic, summaryText, type BookingRange,
+  ANY_MECHANIC, availableDays, bookingRange, choiceStillFree, continueMessage, diaryColumns, dropoffOptions, initialMonth,
+  jobMinutes, localToday, pickedDay, resolveMechanic, summaryText, type BookingRange,
 } from './date-rules.ts';
 
 /**
@@ -102,17 +102,40 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
   // announced again (as on the service list).
   const [attempt, setAttempt] = React.useState(0);
 
+  // A saved choice no longer offered (after a refresh, or availability
+  // fetched again) is cleared, with a message until the next pick. Each new
+  // availability answer is checked once, while rendering (React's "adjust
+  // state when a prop changes"; lint forbids setting state inside an effect).
+  // The effect then clears the stored choice, one render later.
+  const [checkedAvailability, setCheckedAvailability] = React.useState<AvailabilityResponse | null>(null);
+  const [taken, setTaken] = React.useState(false);
+  const stale = !choiceStillFree(availability, draft);
+  if (checkedAvailability !== availability) {
+    setCheckedAvailability(availability);
+    if (stale) setTaken(true);
+  }
+  React.useEffect(() => {
+    if (stale) update({ date: undefined, mechanicId: undefined, startTime: undefined });
+  }, [stale, update]);
+
   const day = pickedDay(availability, draft.date);
   const message = checked ? continueMessage(availability, draft) : null;
+  const noDays = available.size === 0;
 
   const pickDay = (date: string) => {
+    setTaken(false);
     setChecked(false);
     setShown(null);
     if (date !== draft.date) update({ date, mechanicId: undefined, startTime: undefined });
   };
-  const pickTime = (date: string, mechanicId: number, startTime: string) => update({ date, mechanicId, startTime });
-  const pickMechanic = (value: string) =>
+  const pickTime = (date: string, mechanicId: number, startTime: string) => {
+    setTaken(false);
+    update({ date, mechanicId, startTime });
+  };
+  const pickMechanic = (value: string) => {
+    setTaken(false);
     update({ mechanicId: value === ANY_MECHANIC ? undefined : Number(value), startTime: undefined });
+  };
 
   const onContinue = () => {
     if (continueMessage(availability, draft) !== null) {
@@ -133,36 +156,49 @@ function DatePicker({ range, mechanics, availability, back }: PickerProps) {
       step={3}
       title={TITLE}
       back={back}
-      action={{ label: 'Continue', onClick: onContinue }}
+      action={noDays ? undefined : { label: 'Continue', onClick: onContinue }}
       actionNote={
-        <>
-          <p className="m-0 min-h-5" aria-live="polite">{summaryText(availability, draft, mechanics.mechanics)}</p>
-          {message && <p key={attempt} role="alert" className="m-0 mt-1 text-[var(--wh-danger)]">{message}</p>}
-        </>
+        noDays ? undefined : (
+          <>
+            <p className="m-0 min-h-5" aria-live="polite">{summaryText(availability, draft, mechanics.mechanics)}</p>
+            {message && <p key={attempt} role="alert" className="m-0 mt-1 text-[var(--wh-danger)]">{message}</p>}
+          </>
+        )
       }
     >
-      <MonthCalendar
-        month={month}
-        onMonthChange={(m) => {
-          if (range.months.includes(m)) setMonth(m);
-        }}
-        available={available}
-        value={day ? day.date : null}
-        onChange={pickDay}
-        className="mb-4"
-      />
-      {day?.mode === 'timed' && (
-        <TimedDayPicker
-          day={day}
-          availability={availability}
-          mechanics={mechanics}
-          shown={shown ?? mechanics.mechanics.map((m) => m.id)}
-          onShow={setShown}
-          draft={draft}
-          onPick={(mechanicId, startTime) => pickTime(day.date, mechanicId, startTime)}
-        />
+      {taken && (
+        <p role="alert" className="m-0 mb-3 rounded-md bg-[var(--wh-warn-bg)] p-2.5 text-sm text-[var(--wh-warn-ink)]">
+          That time has just been taken - please choose another
+        </p>
       )}
-      {day?.mode === 'dropoff' && <DropoffDayPicker day={day} mechanics={mechanics} draft={draft} onPick={pickMechanic} />}
+      {noDays ? (
+        <p className="m-0">There are no free days in the next two months - please contact the shop</p>
+      ) : (
+        <>
+          <MonthCalendar
+            month={month}
+            onMonthChange={(m) => {
+              if (range.months.includes(m)) setMonth(m);
+            }}
+            available={available}
+            value={day ? day.date : null}
+            onChange={pickDay}
+            className="mb-4"
+          />
+          {day?.mode === 'timed' && (
+            <TimedDayPicker
+              day={day}
+              availability={availability}
+              mechanics={mechanics}
+              shown={shown ?? mechanics.mechanics.map((m) => m.id)}
+              onShow={setShown}
+              draft={draft}
+              onPick={(mechanicId, startTime) => pickTime(day.date, mechanicId, startTime)}
+            />
+          )}
+          {day?.mode === 'dropoff' && <DropoffDayPicker day={day} mechanics={mechanics} draft={draft} onPick={pickMechanic} />}
+        </>
+      )}
     </BookFrame>
   );
 }

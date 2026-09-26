@@ -70,10 +70,10 @@ const dayName = (date) => DAY_NAME.format(new Date(`${date}T00:00:00Z`));
 const MON_5 = dayName('2026-10-05');
 const TUE_6 = dayName('2026-10-06');
 
-const open = async ({ draft = { serviceIds: [11, 12] }, availability = AVAILABILITY } = {}) => {
+const open = async ({ draft = { serviceIds: [11, 12] }, mechanics = MECHANICS, availability = AVAILABILITY } = {}) => {
   current = await renderBookScreen({
     file: 'screens/book/date.js', exportName: 'DateScreen', at: 'date', url: '/book/north/date',
-    services: SERVICES, mechanics: MECHANICS, availability, draft,
+    services: SERVICES, mechanics, availability, draft,
   });
   await current.ui.findByRole('heading', { level: 1, name: 'When can you drop in?' });
   return current;
@@ -310,5 +310,57 @@ test('every ticked service has left /services: minutes is 0, so it redirects to 
     services: SERVICES, mechanics: MECHANICS, availability: AVAILABILITY, draft: { serviceIds: [999] },
   });
   assert.ok(await current.ui.findByText('At /book/north/services'));
-  assert.ok(current.requests.every((r) => !r.url.includes('/availability')), JSON.stringify(current.requests));
+  assert.ok(current.requests.every((r) => r.url.endsWith('/services')), JSON.stringify(current.requests));
+});
+
+test('mechanics fails to load: it says so and Try again asks again', async () => {
+  let calls = 0;
+  const mechanics = () => (++calls === 1
+    ? { status: 500, body: { error: 'Something went wrong' } }
+    : { status: 200, body: MECHANICS });
+  const { ui } = await open({ mechanics });
+  assert.ok(await ui.findByText("We couldn't load the free days"));
+  await click(ui.getByRole('button', { name: 'Try again' }));
+  await ready(ui);
+  assert.equal(calls, 2);
+});
+
+const TAKEN = 'That time has just been taken - please choose another';
+
+test('a saved time no longer free is cleared, with a message above the calendar until the next pick', async () => {
+  const { ui, readDraft } = await open({ draft: { serviceIds: [11, 12], date: '2026-10-05', mechanicId: 1, startTime: '11:00' } });
+  await ready(ui);
+  const message = await ui.findByText(TAKEN);
+  assert.ok(message.compareDocumentPosition(ui.getByRole('group', { name: 'October 2026' })) & Node.DOCUMENT_POSITION_FOLLOWING,
+    'the message is not above the calendar');
+  const { waitFor } = await rtl();
+  await waitFor(() => {
+    const saved = readDraft();
+    assert.deepEqual([saved.date, saved.mechanicId, saved.startTime], [undefined, undefined, undefined]);
+  });
+  assert.equal(pinnedSummary().textContent, '');
+  await click(day(ui, TUE_6));
+  assert.equal(ui.queryByText(TAKEN), null);
+});
+
+test('a picked time taken while the screen is open is cleared when availability is fetched again', async () => {
+  let answer = AVAILABILITY;
+  const { ui, client, readDraft } = await open({ availability: () => ({ status: 200, body: answer }) });
+  await ready(ui);
+  await click(day(ui, MON_5));
+  await click(ui.getByRole('button', { name: 'Alex, 09:30' }));
+  assert.equal(ui.queryByText(TAKEN), null);
+  answer = { ...AVAILABILITY, days: [timed('2026-10-05', { 1: ['09:00', '14:00'], 3: ['10:00'] }), ...AVAILABILITY.days.slice(1)] };
+  const { act, waitFor } = await rtl();
+  await act(() => client.invalidateQueries({ queryKey: ['portal', 'north', 'availability'] }));
+  assert.ok(await ui.findByText(TAKEN));
+  await waitFor(() => assert.equal(readDraft().startTime, undefined));
+});
+
+test('no free day in the two months: a message in place of the calendar, and no Continue', async () => {
+  const noDays = { busy: [], fullDays: [], days: [timed('2026-10-05', {}), timed('2026-10-06', {})] };
+  const { ui } = await open({ availability: noDays });
+  assert.ok(await ui.findByText('There are no free days in the next two months - please contact the shop'));
+  assert.equal(ui.queryByRole('group', { name: 'October 2026' }), null);
+  assert.equal(ui.queryByRole('button', { name: 'Continue' }), null);
 });
