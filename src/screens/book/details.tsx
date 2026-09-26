@@ -1,21 +1,25 @@
 import * as React from 'react';
-import { useParams } from 'react-router';
+import { Navigate, useParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogBody, DialogClose, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, Label } from '@/components/ui/label';
 import { PillGroup } from '@/components/ui/pill-group';
 import { BookFrame } from './frame.tsx';
 import { useDraft, type BookingDraft } from './draft.tsx';
 import { RequireDraft, hasDate } from './require-draft.tsx';
-import { useServices, type ServicesResponse } from './services-query.ts';
+import { servicesPath, useServices, type ServicesResponse } from './services-query.ts';
 import { useAvailability, useMechanics } from './date-query.ts';
 import { jobMinutes } from './date-rules.ts';
+import { photosCleared } from './problem-rules.ts';
 import { useTerms } from './terms-query.ts';
+import { photoBase64, sendBooking } from './send.ts';
 import {
-  CHANNEL_OPTIONS, CHECK_ANSWERS, channelOf, dropoffWindowOn, emailLabel, fieldErrors, summaryLines, whenText,
-  type ContactField, type UpdateChannel,
+  CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
+  refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
 } from './details-rules.ts';
 
 /**
@@ -23,37 +27,51 @@ import {
  * customer's name, mobile number, how to send updates (one channel, Text
  * message by default), an email (required only for Email updates), and the
  * booking terms, which open in a dialog on the same screen. Everything is
- * written to the draft as it changes. Request booking checks the fields.
+ * written to the draft as it changes. Request booking checks the fields,
+ * asks about photos a refresh cleared, and sends the booking; the outcome
+ * decides where the customer goes next.
  * Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
  */
 const TITLE = 'How can we reach you?';
 
+type Exit = { to: string; state?: SendRefusalState; replace?: boolean };
+
 export function DetailsScreen() {
   const { shopSlug = '' } = useParams();
   const { data } = useServices(shopSlug);
+  const [exit, setExit] = React.useState<Exit | null>(null);
   const back = `/book/${shopSlug}/date`;
+  // Where sending leaves the customer is decided here, above the guard:
+  // sending clears the draft (or its date), and the guard would otherwise
+  // redirect to date first.
+  if (exit) return <Navigate to={exit.to} state={exit.state} replace={exit.replace} />;
   // As on date: the guard waits for /services, and until then only the
   // frame shows (its own loading and failed states).
   if (!data) return <BookFrame step={4} title={TITLE} back={back}>{null}</BookFrame>;
   return (
     <RequireDraft has={hasDate} to="date">
-      <DetailsForm services={data} back={back} />
+      <DetailsForm services={data} back={back} onExit={setExit} />
     </RequireDraft>
   );
 }
 
-type FormProps = { services: ServicesResponse; back: string };
+type FormProps = { services: ServicesResponse; back: string; onExit: (exit: Exit) => void };
 
-function DetailsForm({ services, back }: FormProps) {
-  const { draft, update } = useDraft();
+function DetailsForm({ services, back, onExit }: FormProps) {
+  const { shopSlug = '' } = useParams();
+  const queryClient = useQueryClient();
+  const { draft, update, photos, clear } = useDraft();
   const base = React.useId();
   // Messages show only after a press, then follow the draft, so each goes as
   // soon as it is fixed.
   const [checked, setChecked] = React.useState(false);
-  // Bumped on each failed press so the pinned alert is a new node and is
-  // announced again (as on the earlier screens).
+  // Bumped on each failed press or send so the pinned alert is a new node and
+  // is announced again (as on the earlier screens).
   const [attempt, setAttempt] = React.useState(0);
   const [termsOpen, setTermsOpen] = React.useState(false);
+  const [askPhotos, setAskPhotos] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [sendError, setSendError] = React.useState<string | null>(null);
   const ids: Record<ContactField, string> = {
     name: `${base}-name`, phone: `${base}-phone`, email: `${base}-email`, terms: `${base}-terms`,
   };
@@ -61,14 +79,58 @@ function DetailsForm({ services, back }: FormProps) {
   const problems = checked ? fieldErrors(draft) : [];
   const errorFor = (field: ContactField) => problems.find((p) => p.field === field)?.message ?? null;
   const termsError = errorFor('terms');
+  const note = problems.length > 0 ? CHECK_ANSWERS : sendError;
+
+  const send = async () => {
+    setSending(true);
+    setSendError(null);
+    try {
+      // The shop can edit its questions between problem and now, so the
+      // answers are cleaned against a fresh copy. Read outside React Query
+      // so a failed read can't put the frame into its failed state; the copy
+      // then replaces the cached one.
+      const fresh = await apiGet<ServicesResponse>(servicesPath(shopSlug));
+      queryClient.setQueryData(['portal', shopSlug, 'services'], fresh);
+      const photoData = await Promise.all(photos.map(photoBase64));
+      const reply = await sendBooking(shopSlug, bookingBody(fresh, draft, photoData));
+      clear();
+      onExit({ to: reply.privateLink, replace: true });
+    } catch (err) {
+      const route = refusalRoute(err);
+      if (route.to === 'date') {
+        update({ date: undefined, mechanicId: undefined, startTime: undefined, anyMechanic: undefined });
+        onExit({ to: `/book/${shopSlug}/date`, state: { timeTaken: true } });
+      } else if (route.to === 'problem') {
+        onExit({ to: `/book/${shopSlug}/problem`, state: { questionsChanged: route.message } });
+      } else {
+        setSending(false);
+        setSendError(route.message);
+        setAttempt((a) => a + 1);
+      }
+    }
+  };
 
   const onRequest = () => {
     const now = fieldErrors(draft);
     if (now.length > 0) {
       setChecked(true);
+      setSendError(null);
       setAttempt((a) => a + 1);
       document.getElementById(ids[now[0].field])?.focus();
+      return;
     }
+    if (photosCleared(draft, photos.length)) {
+      setAskPhotos(true);
+      return;
+    }
+    void send();
+  };
+
+  const sendWithoutPhotos = () => {
+    setAskPhotos(false);
+    // Answered: don't ask again if this send fails and is tried again.
+    update({ hadPhotos: undefined });
+    void send();
   };
 
   return (
@@ -76,11 +138,9 @@ function DetailsForm({ services, back }: FormProps) {
       step={4}
       title={TITLE}
       back={back}
-      action={{ label: 'Request booking', onClick: onRequest }}
+      action={{ label: sending ? 'Sending…' : 'Request booking', onClick: onRequest, disabled: sending }}
       actionNote={
-        problems.length > 0 ? (
-          <p key={attempt} role="alert" className="m-0 text-[var(--wh-danger)]">{CHECK_ANSWERS}</p>
-        ) : undefined
+        note ? <p key={attempt} role="alert" className="m-0 text-[var(--wh-danger)]">{note}</p> : undefined
       }
     >
       <Summary services={services} draft={draft} />
@@ -117,7 +177,40 @@ function DetailsForm({ services, back }: FormProps) {
         {termsError && <FieldError id={`${ids.terms}-error`}>{termsError}</FieldError>}
       </Field>
       <TermsDialog open={termsOpen} onOpenChange={setTermsOpen} />
+      <PhotosQuestion
+        open={askPhotos}
+        onOpenChange={setAskPhotos}
+        onAdd={() => onExit({ to: `/book/${shopSlug}/problem` })}
+        onSendWithout={sendWithoutPhotos}
+      />
     </BookFrame>
+  );
+}
+
+type PhotosQuestionProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdd: () => void;
+  onSendWithout: () => void;
+};
+
+/** Photos live in memory only, so a refresh after adding them loses them (d3). */
+function PhotosQuestion({ open, onOpenChange, onAdd, onSendWithout }: PhotosQuestionProps) {
+  const questionId = React.useId();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} aria-labelledby={questionId}>
+      {open && (
+        <>
+          <DialogBody>
+            <p id={questionId} className="m-0">{PHOTOS_QUESTION}</p>
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={onAdd}>Add photos</Button>
+            <Button variant="accent" onClick={onSendWithout}>Send without photos</Button>
+          </DialogFooter>
+        </>
+      )}
+    </Dialog>
   );
 }
 

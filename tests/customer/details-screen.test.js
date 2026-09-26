@@ -195,3 +195,160 @@ test('if the terms fail to load, the dialog says so and Try again asks again', a
   assert.ok(await ui.findByText('1. Your booking is a request.'));
   assert.equal(calls, 2);
 });
+
+// Sending (Task 4).
+const READY = { ...TIMED, ...CONTACT, termsAccepted: true };
+const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+const pngFile = () => new File([PNG], 'brake.png', { type: 'image/png' });
+const refuse = (status, error, extra = {}) => () => ({ status, body: { error, ...extra } });
+const DATE_STATE = 'At /book/north/date {"timeTaken":true}';
+const CHANGED = 'The questions for this service have changed — please check them and try again';
+
+test('a good request reads the services again, then sends the booking', async () => {
+  const { ui, requests } = await open({ draft: READY });
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  const i = requests.findIndex((r) => r.method === 'POST');
+  assert.equal(`${requests[i - 1].method} ${requests[i - 1].url}`, 'GET /api/portal/north/services');
+  assert.equal(requests[i].url, '/api/portal/north/bookings');
+  assert.deepEqual(requests[i].body, {
+    serviceIds: [11, 12], answers: [{ serviceId: 11, questionId: 'b1', choice: 'Squeaking' }],
+    bikeNote: 'Blue Trek road bike', photos: [],
+    jobDate: '2026-10-05', mechanicId: 1, startTime: '09:30',
+    guestName: 'Gina Guest', guestPhone: '07700 900123', updateChannel: 'sms', termsAccepted: true,
+  });
+});
+
+test('answers are cleaned against the services read just before sending', async () => {
+  let fresh = false;
+  const reworded = {
+    ...SERVICES,
+    uncategorised: [
+      { ...SERVICES.uncategorised[0], questions: [choiceQ('b1', "What's wrong with the brakes?", ['Squeal', 'Not stopping well'])] },
+      SERVICES.uncategorised[1],
+    ],
+  };
+  const services = () => ({ status: 200, body: fresh ? reworded : SERVICES });
+  const { ui, requests } = await open({ draft: READY, services });
+  fresh = true;
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.deepEqual(posts(requests)[0].body.answers, []);
+});
+
+test('Not sure on a drop-off day sends notSure, the description, no answers or start time, and the email', async () => {
+  const draft = { ...DROPOFF, ...CONTACT, termsAccepted: true, updateChannel: 'email', email: 'gina@example.com' };
+  const { ui, requests } = await open({ draft });
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.deepEqual(posts(requests)[0].body, {
+    notSure: true, description: 'Clicks when pedalling', photos: [], jobDate: '2026-10-06', mechanicId: 2,
+    guestName: 'Gina Guest', guestPhone: '07700 900123', email: 'gina@example.com', updateChannel: 'email', termsAccepted: true,
+  });
+});
+
+test('photos held in memory are sent as bare base64', async () => {
+  const { ui, requests } = await open({ draft: { ...READY, hadPhotos: true }, photos: [pngFile()] });
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.deepEqual(posts(requests)[0].body.photos, [{ dataBase64: Buffer.from(PNG).toString('base64') }]);
+});
+
+test('while sending, the button reads "Sending…" and cannot be pressed again', async () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const booking = async () => {
+    await gate;
+    return { status: 201, body: { id: 1, reference: 'WH-1001', privateLink: PRIVATE_LINK, services: [], totalPrice: null } };
+  };
+  const { ui, requests } = await open({ draft: READY, booking });
+  await press(ui);
+  const sending = await ui.findByRole('button', { name: 'Sending…' });
+  assert.equal(sending.disabled, true);
+  await click(sending);
+  release();
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.equal(posts(requests).length, 1);
+});
+
+test('success clears the draft and opens the private link', async () => {
+  const { ui } = await open({ draft: { ...READY, hadPhotos: true }, photos: [pngFile()] });
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), null);
+});
+
+test('photos cleared by a refresh: the question, and "Add photos" goes back to problem without sending', async () => {
+  const { ui, requests } = await open({ draft: { ...READY, hadPhotos: true } });
+  await press(ui);
+  const dialog = await ui.findByRole('dialog', { name: 'Your photos were cleared - add them again, or send without them?' });
+  const { within } = await rtl();
+  await click(within(dialog).getByRole('button', { name: 'Add photos' }));
+  assert.ok(await ui.findByText('At /book/north/problem'));
+  assert.equal(posts(requests).length, 0);
+});
+
+test('"Send without photos" sends with none', async () => {
+  const { ui, requests } = await open({ draft: { ...READY, hadPhotos: true } });
+  await press(ui);
+  const dialog = await ui.findByRole('dialog', { name: 'Your photos were cleared - add them again, or send without them?' });
+  const { within } = await rtl();
+  await click(within(dialog).getByRole('button', { name: 'Send without photos' }));
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.deepEqual(posts(requests)[0].body.photos, []);
+});
+
+test('a capacity refusal clears the day, mechanic and time, keeps everything else, and goes to date', async () => {
+  const booking = refuse(409, 'That mechanic does not have enough free time that day - please choose another day, or a shorter job.', { code: 'capacity' });
+  const { ui, readDraft } = await open({ draft: { ...DROPOFF, ...CONTACT, termsAccepted: true }, booking });
+  await press(ui);
+  assert.ok(await ui.findByText(DATE_STATE));
+  const saved = readDraft();
+  assert.deepEqual([saved.date, saved.mechanicId, saved.startTime, saved.anyMechanic], [undefined, undefined, undefined, undefined]);
+  assert.deepEqual([saved.name, saved.phone, saved.description, saved.termsAccepted], ['Gina Guest', '07700 900123', 'Clicks when pedalling', true]);
+});
+
+for (const error of [
+  'That time is no longer available - please choose another.',
+  "That's too soon for the shop - please choose a later time or day.",
+  'That date has passed - please choose another day.',
+  'That mechanic is unavailable at that time - please choose another time or day.',
+]) {
+  test(`"${error}" goes back to date`, async () => {
+    const { ui, readDraft } = await open({ draft: READY, booking: refuse(400, error) });
+    await press(ui);
+    assert.ok(await ui.findByText(DATE_STATE));
+    assert.equal(readDraft().startTime, undefined);
+  });
+}
+
+test("changed questions go back to problem with the server's message", async () => {
+  const { ui } = await open({ draft: READY, booking: refuse(400, CHANGED) });
+  await press(ui);
+  assert.ok(await ui.findByText(`At /book/north/problem ${JSON.stringify({ questionsChanged: CHANGED })}`));
+});
+
+const staysWith = async (booking, message) => {
+  const { ui, readDraft } = await open({ draft: READY, booking });
+  await press(ui);
+  const { within } = await rtl();
+  const alert = await within(pinned()).findByRole('alert');
+  assert.equal(alert.textContent, message);
+  assert.equal(ui.getByRole('button', { name: 'Request booking' }).disabled, false);
+  assert.equal(ui.queryByText(/^At /), null);
+  assert.equal(readDraft().startTime, '09:30', 'the choice is kept');
+};
+
+test('too many requests: the message on the details screen', async () => {
+  await staysWith(refuse(429, 'Too many booking requests from this network - please try again later.'),
+    'Too many booking requests from this network - please try again later.');
+});
+
+test('no response: asks the customer to check their connection', async () => {
+  await staysWith(() => { throw new TypeError('Failed to fetch'); },
+    "We couldn't send your booking - please check your connection and try again");
+});
+
+test("any other refusal: the server's message on the details screen", async () => {
+  await staysWith(refuse(400, "Please answer: What's wrong with the brakes?"), "Please answer: What's wrong with the brakes?");
+});
