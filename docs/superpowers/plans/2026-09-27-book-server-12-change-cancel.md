@@ -2655,4 +2655,59 @@ Report status; do not declare the piece done - Jack decides that, and whether to
 
 ## Spec walk
 
-(Filled in by Task 9, Step 5.)
+### Customer actions
+
+- **All three routes take the link code as the read route does** (hashed lookup, shared rate limiter, 404 unknown, 410 expired), run inside `withBookingLock` for every date involved, return the updated link view. **Met.** `withJobBookingLock` (server.js) wraps all three; 404/410 tested per route: `tests/portal-booking-cancel.test.js:171,177`, `tests/portal-booking-change.test.js:155,162`, `tests/portal-booking-change-request.test.js:191,196`; shared limiter proven by `tests/booking-link-actions-rate-limit.test.js:26`.
+- **Cancel: allowed when custody `expected` and state pending/scheduled/reschedule_requested; state becomes cancelled; every hold released; `cancelled_by='customer'`/`cancelled_at` recorded.** Met. `tests/portal-booking-cancel.test.js:107` (unconfirmed), `:120` (confirmed), `:129` (with a change request - both holds released, request forgotten).
+- **Cancel refused once in-shop/collected: "Your bike is already with the shop - please contact them to cancel" (409).** Met. `tests/portal-booking-cancel.test.js:145`.
+- **Cancel refused in any other state: "This booking can't be cancelled online" (409).** Met. `tests/portal-booking-cancel.test.js:154` (a declined booking).
+- **Change: allowed in the same states; otherwise the cancel refusals with "changed" for "cancelled".** Met. In-shop: `tests/portal-booking-change-request.test.js:141`; other states: `:149` (a cancelled booking).
+- **Change: the new time passes every check a new booking's time passes, own job excluded from its own conflicts, refusals reuse the booking route's messages/statuses.** Met - `checkCustomerTime` is the extracted, shared function (see Data section below), not a parallel copy; self-exclusion proven by `tests/portal-booking-change.test.js:76` (moving within its own time) and `:137` (own minutes not counted against its new time same day); full check set proven by `tests/portal-booking-change.test.js:82,93,102,112,124`.
+- **Change, pending: job's date/mechanic/time change at once, stays pending, hold moves with it.** Met. `tests/portal-booking-change.test.js:54` (moves at once, stays awaiting confirmation), `:68` (to another mechanic).
+- **Change, scheduled: requested day/mechanic/times stored, a hold placed on the requested slot, state becomes reschedule_requested, old slot stays held.** Met. `tests/portal-booking-change-request.test.js:57` (holds both times), `:67` (booking stays where it is until staff answer).
+- **Change, reschedule_requested: new request replaces the stored one, previous requested hold released, new one placed.** Met. `tests/portal-booking-change-request.test.js:77` (replaces and lets the first time go), `:88` (a new request may overlap the one it replaces).
+- **Withdraw: only in reschedule_requested; clears stored request, releases hold, returns to scheduled. Otherwise "There's no change request to withdraw" (409).** Met. `tests/portal-booking-change-request.test.js:157` (returns to the booking as it was), `:184` (refused when nothing was asked).
+- **Link view gains `requested`, `canChange`, `canCancel`, `changeDeclined`.** Met. `tests/portal-booking-cancel.test.js:49` (unconfirmed offers both), `:59` (in-shop offers neither), `:75` (a change shows on the link), `:87` (a request no longer live is not shown), `:95` (changeDeclined after a decline).
+- **Decision D5 (spec decision 2 approved by Jack): a confirmed booking asking for the time it already has makes no request; an open request is withdrawn - no refusal.** Changed from the plan's open question to Jack's ruling (progress.md, 27 Sep, item 2) that it's silent rather than a refusal. Met as ruled. `tests/portal-booking-change-request.test.js:97` (asking for the time already booked withdraws the request), `:107` (a confirmed booking asked for the time it already has makes no request).
+
+### Staff actions
+
+- **Accept/Decline of new online bookings: existing routes, unchanged.** Met - untouched; guarded against a change request by D8: `tests/workshop-change-requests.test.js:167` ("the old accept and decline refuse a customer's change request").
+- **Accept a change request (`accept-change`, `{version}`): reschedule_requested only; under the lock for both dates; moves job to requested day/mechanic/time; requested hold becomes the job's hold, old one released; clears request; returns to scheduled; 409 capacity "The requested time is no longer free" if the slot became unavailable.** Met. `tests/workshop-change-requests.test.js:74` (moves and leaves one hold), `:85` (requested hold becomes the booking hold), `:95` (no-longer-free refused, changes nothing), `:119` (nothing to accept with no request).
+- **Decline a change request (`decline-change`, `{version}`): releases the requested hold, clears the request, sets `change_declined_at`, returns to scheduled at the original time.** Met. `tests/workshop-change-requests.test.js:128` (keeps original time, tells the customer via `changeDeclined`), `:141` (lets the requested time go), `:158` (nothing to decline with no request).
+- **"Seen" (`cancellation-seen`, `{version}`): sets `cancellation_seen_at` on a customer-cancelled job.** Met. `tests/workshop-waiting.test.js:95` (listed until seen), `:139` ("Seen is only for a customer's cancellation" - refuses a staff-cancelled/never-cancelled job).
+- **Waiting list (`GET /api/workshop-waiting`): `{count, items}`, oldest first; `new_booking`/`change_request`/`customer_cancelled` kinds with the stated fields.** Met. `tests/workshop-waiting.test.js:54` (new booking fields), `:74` (a staff-made pending job is not listed - D10), `:82` (change request with from/to), `:95` (customer cancellation listed until seen), `:109` (staff cancellation never listed), `:115` (oldest arrival first, whatever its kind - D11 tie-break by arrivedAt), `:146` (another shop's items never appear).
+- **Staff job view gains `requested`, `cancelledBy`, `cancelledAt`, `cancellationSeenAt`, `changeDeclinedAt`.** Met. `tests/workshop-change-requests.test.js:63` (the staff job view shows the request).
+- **All staff routes use the existing optimistic `version` check.** Met. `tests/workshop-change-requests.test.js:105` (accept, stale version), `:113` (accept needs a version), `:151` (decline, stale version); `tests/workshop-waiting.test.js:131` (Seen needs the version staff last read).
+- **Staff cancellations record `cancelled_by='staff'`, never appear in the waiting list.** Met. `tests/workshop-change-requests.test.js:179` ("a staff cancellation is recorded as the shop's"); `tests/workshop-waiting.test.js:109` (never listed).
+
+### Data (migration 035, additive only)
+
+- **`workshop_jobs` gains the eight named columns.** Met. `tests/migration-035.test.js:46` (all optional), `:66` (`cancelled_by` is customer or staff, nothing else - CHECK constraint).
+- **A requested slot held in `workshop_capacity_holds`, marked so the table's existing live-slot unique index also protects it.** Met via the `purpose` column (plan decision D1, superseded by Jack's decision 4 in progress.md adding the one-live-requested-hold-per-job partial unique index): `tests/migration-035.test.js:75` (a hold is for a booking unless it says otherwise), `:85` (a requested hold cannot share a live slot with a booking hold - the 024 index unchanged), `:90` (one job can hold its own slot and a requested slot at once), `:100` (a job cannot hold two live requested holds at once - the new index, Jack's decision 4).
+- **State machine gains `change_time` on `pending` (to `pending`).** Changed/extended per plan decision D3: also `change_time` as a self-loop on `reschedule_requested`, and a new `withdraw` event (reschedule_requested to scheduled) - `reschedule_requested` needed both to represent "replace a request" and "withdraw a request" without reusing the shop's own `decline`. Met as extended. `tests/workshop-states.test.js:95` (asking to move a confirmed booking keeps the original until the shop agrees), `:103` (an unconfirmed booking can move and stays unconfirmed), `:108` (a change request can be replaced and stays a request), `:112` (the customer can withdraw, back to the booking they had), `:116` (a confirmed booking cannot change time without asking).
+- **Capacity counts a requested hold like any other live hold.** Met per plan decision D2 (the calculator counts jobs, not holds; a `reschedule_requested` job's requested slot is read as a live booking by both `loadCapacity` and `checkJobSlot`). `tests/booking-requested-hold.test.js:56` (a requested time keeps another customer out of it), `:70` (the calendar does not offer a requested time), `:89` (a job that stops being a request lets its requested time go and keeps its own), `:119` (a request that stands keeps the hold it has).
+
+### Tests
+
+- **Cancel in each allowed state, holds released, `cancelled_by`; refused after drop-off and in other states.** Met - see Customer actions/Cancel above.
+- **Change: pending moves at once; scheduled creates a request holding both slots; a second request replaces the first; every new-booking time check applies; the booking's own slot doesn't conflict with itself.** Met - see Customer actions/Change above.
+- **Withdraw; refused with no request.** Met - see Customer actions/Withdraw above.
+- **A requested hold blocks other customers from that slot.** Met. `tests/booking-requested-hold.test.js:56`.
+- **Staff accept-change (moves, one hold left) and decline-change (original time, `changeDeclined` on the link); version conflicts refused.** Met - see Staff actions above.
+- **The waiting list's items, fields and order; "Seen" removes a cancellation; staff cancellations never listed.** Met - see Staff actions/Waiting list above.
+- **Two actions at once on the same slot: only one succeeds (the lock).** Met, per the pre-flight ruling (scan 5) that the race tests hold the day's advisory lock from the test's own connection: `tests/portal-booking-change-request.test.js:206,221`, `tests/portal-booking-change.test.js:171,185`, `tests/workshop-change-requests.test.js:189`, `tests/portal-booking-cancel.test.js:189`.
+- **The link view's new fields; unknown and expired codes refused on every new route.** Met - see Customer actions/link view above and the 404/410 tests cited under "All three routes" above.
+
+### Not in this piece (spec's own scope note - carried forward, not built here)
+
+- The staff diary screens (next piece) and the customer's screens (d6). Not built, as scoped.
+- Messages to customers (email/SMS) about accept/decline. Not built, as scoped.
+- Refunds, deposits, cancellation fees. Not built, as scoped.
+
+### Changes beyond the spec text (all from the plan's own decision log or Jack's rulings, not silent drift)
+
+- D1 superseded by Jack's decision (4): a partial unique index enforcing at most one live requested hold per job was added to migration 035, beyond what the spec's Data section named - `tests/migration-035.test.js:100`.
+- D3: `change_time` self-loop on `reschedule_requested` and a new `withdraw` event, beyond the spec's single `change_time` on `pending` - needed for "replace a request" and "withdraw a request" to be distinct, legal moves.
+- D6-D9: refusal codes (`in_shop`/`illegal`/`capacity`) and four staff-wording sentences the spec didn't give verbatim - all confirmed by Jack with the spec approval, 27 Sep.
+- Pre-flight scan rulings 2-4 (legacy diary keeps a request on an ordinary save; a drag onto exactly the requested slot accepts the change; every path that ends a request clears every requested field) extend "Not in this piece" only in the sense that the legacy diary was already load-bearing and had to be made safe against a stored request - not new customer- or staff-facing functionality, no spec line changed.
