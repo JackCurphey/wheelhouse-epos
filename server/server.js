@@ -80,6 +80,7 @@ import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
 import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
+import { isValidPin, hashPin } from './till/pin.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
@@ -3968,6 +3969,16 @@ route('POST', '/api/tills/:id/deactivate', async (req, res, params) => {
   const { changes } = await db.prepare('UPDATE tills SET active = false WHERE id = ?').run(Number(params.id));
   if (!changes) return notFound(res, 'Till not found');
   sendJson(res, 200, { id: Number(params.id), active: false });
+});
+
+route('PUT', '/api/employees/:id/pin', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can set a PIN' });
+  const { pin } = await readJsonBody(req);
+  if (!isValidPin(pin)) return badRequest(res, 'A PIN is 4 to 6 digits');
+  const { changes } = await db.prepare('UPDATE employees SET pin_hash = ?, updated_at = now() WHERE id = ?').run(hashPin(pin), Number(params.id));
+  if (!changes) return notFound(res, 'Team member not found');
+  res.writeHead(204).end();
 });
 
 // ---------- Workshop settings ----------

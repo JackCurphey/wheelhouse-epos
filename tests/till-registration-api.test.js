@@ -77,3 +77,16 @@ test('a till cannot be registered to another shop\'s site', async () => {
     await deleteTestShop(other.shop.id);
   }
 });
+
+test('the owner sets a staff PIN; it is stored hashed and never returned', async () => {
+  const { verifyPin } = await import('../server/till/pin.js');
+  const empId = await runWithShop(owner.shop.id, async () =>
+    (await prepare("INSERT INTO employees (name, is_cashier) VALUES ('Alex', 1)").run()).lastInsertRowid);
+  assert.equal((await as(owner, `/api/employees/${empId}/pin`, { method: 'PUT', body: { pin: '12' } })).status, 400);
+  assert.equal((await as(staff, `/api/employees/${empId}/pin`, { method: 'PUT', body: { pin: '4821' } })).status, 403);
+  const res = await as(owner, `/api/employees/${empId}/pin`, { method: 'PUT', body: { pin: '4821' } });
+  assert.equal(res.status, 204);
+  const row = await runWithShop(owner.shop.id, () => prepare('SELECT pin_hash FROM employees WHERE id = ?').get(empId));
+  assert.equal(verifyPin('4821', row.pin_hash), true);
+  assert.equal((await as(owner, '/api/employees/999999/pin', { method: 'PUT', body: { pin: '4821' } })).status, 404);
+});

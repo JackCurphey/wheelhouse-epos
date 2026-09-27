@@ -11,7 +11,8 @@ export async function jsonRequest(baseUrl, cookie, path, options = {}) {
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
-  return { status: res.status, body: await res.json() };
+  const text = await res.text();
+  return { status: res.status, body: text ? JSON.parse(text) : null };
 }
 
 // Pulls one named cookie out of a response's Set-Cookie headers, formatted
