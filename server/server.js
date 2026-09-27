@@ -4637,6 +4637,12 @@ route('PUT', '/api/label-settings', async (req, res) => {
 // Which preset a shop has chosen (see public/app.js's THEME_PRESETS for what
 // each key actually renders as - only the key is stored server-side). Same
 // singleton-per-shop, lazy-create-on-GET pattern as label_settings above.
+//
+// Since 27 Sep 2026 the staff app always uses Fjell and no longer reads or
+// writes this (docs/decisions/2026-09-27-fjell-theme.md). Kept, with its
+// table, for the customer surfaces until the Release 2 website theme system
+// decides what replaces it; the public website reads its own
+// storefront_settings.theme_preset.
 
 const SHOP_THEME_PRESETS = ['forest', 'ocean', 'sunset', 'slate', 'plum'];
 

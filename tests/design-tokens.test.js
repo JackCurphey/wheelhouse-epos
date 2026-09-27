@@ -34,9 +34,11 @@ test('app.js contains no raw hex colours outside THEME_PRESETS', () => {
 });
 
 test('every THEME_PRESETS colour clears AA against white text', () => {
-  // applyShopTheme() overrides --accent and --accent-dark per shop, so the
-  // contrast guarantee in design-contrast.test.js only covers the default
-  // preset. This is the regression guard for the other four.
+  // A shop's preset still recolours its public website (storefront.js
+  // applyTheme() overrides --accent and --accent-dark there), so the
+  // contrast guarantee in design-contrast.test.js, which covers only Fjell,
+  // says nothing about them. This is the regression guard for all five.
+  // (Since 27 Sep 2026 the staff app always uses Fjell.)
   //
   // All 10 values (5 presets x topbar + accent) pass as of 2026-08-31 -
   // lowest is sunset's accent #a8501e at 5.48. This test exists so a future

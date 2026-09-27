@@ -15,7 +15,6 @@ const EXTRA_TENDER_TYPES = ['Cyclescheme', 'Klarna']; // extra tender types offe
 let extraTenders = []; // active extra tenders for the current sale: { name, amount }
 let receiptSale = null; // sale object shown in the post-checkout receipt modal
 let activeOrderId = null; // set while the current cart is fulfilling a specific order
-let shopThemePreset = 'forest'; // this shop's chosen colour scheme key - see THEME_PRESETS
 
 let tillSearch = '';
 let tillCategory = '';
@@ -4154,38 +4153,7 @@ async function renderEditWorkshop() {
   });
 }
 
-function renderThemeSwatchGrid() {
-  const grid = document.getElementById('theme-swatch-grid');
-  if (!grid) return;
-  grid.innerHTML = Object.entries(THEME_PRESETS)
-    .map(
-      ([key, preset]) => `
-      <button type="button" class="theme-swatch ${shopThemePreset === key ? 'active' : ''}" data-preset="${key}">
-        <span class="theme-swatch-preview" style="background:${preset.modalBg};">
-          <span class="theme-swatch-bar" style="background:${preset.topbar};"></span>
-          <span class="theme-swatch-accent-dot" style="background:${preset.accent};"></span>
-        </span>
-        <span class="theme-swatch-name">${esc(preset.name)}</span>
-      </button>
-    `
-    )
-    .join('');
-  grid.querySelectorAll('button[data-preset]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const preset = btn.dataset.preset;
-      try {
-        await api('/api/shop-theme', { method: 'PUT', body: { preset } });
-        applyShopTheme(preset);
-        showToast(`Switched to ${THEME_PRESETS[preset].name}`);
-        renderThemeSwatchGrid();
-      } catch (err) {
-        showToast(err.message);
-      }
-    });
-  });
-}
-
-// ================= SHOP OFFICE (colours, storefront, employee logins) =================
+// ================= SHOP OFFICE (storefront, Shopify, team) =================
 
 async function renderShopOffice() {
   const isOwner = currentUser && currentUser.isOwner;
@@ -4193,13 +4161,6 @@ async function renderShopOffice() {
   main.innerHTML = `
     <h1>Office</h1>
     <div class="panel" style="margin-top:14px;">
-      <div class="panel-header"><h2>Colour scheme</h2></div>
-      <div class="panel-body">
-        <p class="muted" style="margin:0 0 14px;">Sets the top bar colour and every popup's background across the whole app. Click a scheme to switch straight away.</p>
-        <div class="theme-swatch-grid" id="theme-swatch-grid"></div>
-      </div>
-    </div>
-    <div class="panel" style="margin-top:16px;">
       <div class="panel-header"><h2>Storefront</h2></div>
       <div class="panel-body" id="storefront-settings-section"></div>
     </div>
@@ -4224,7 +4185,6 @@ async function renderShopOffice() {
       </div>
     </div>
   `;
-  renderThemeSwatchGrid();
   await renderStorefrontSettingsSection(document.getElementById('storefront-settings-section'));
   await renderShopifyConnectionSection(document.getElementById('shopify-connection-section'));
 
@@ -6870,7 +6830,6 @@ function renderAuthScreen() {
           })
         : await api('/api/auth/login', { method: 'POST', body: { email, password } });
       currentUser = user;
-      await loadAndApplyShopTheme();
       renderShell();
       renderRoute();
     } catch (err) {
@@ -6880,14 +6839,13 @@ function renderAuthScreen() {
   });
 }
 
-// ---------------- Colour scheme ----------------
-// Shop-configurable via Edit Shop > Office. Only the preset key is stored
-// server-side (GET/PUT /api/shop-theme) - these are the only two places
-// that actually know what each key looks like.
-
-// accent is the lighter of each pair (active pills, focus outlines, hover
-// borders, subnav/auth tabs - anywhere var(--accent) is used); topbar is
-// the darker tone used only for the top bar itself (var(--accent-dark)).
+// ---------------- Website colour schemes ----------------
+// The staff app always uses Fjell, the Wheelhouse design system (Jack,
+// 27 Sep 2026; docs/decisions/2026-09-27-fjell-theme.md) - shops no longer
+// recolour it. These presets are offered only for the shop's public website:
+// the Storefront panel's Theme menu (Edit Shop > Office) saves the key, and
+// public-storefront/storefront.js holds the matching colours. Kept in step
+// by hand until the Release 2 website theme system replaces both.
 const THEME_PRESETS = {
   forest: { name: 'Forest Green', topbar: '#164f42', accent: '#1f6f5c', modalBg: '#DDF7DF' },
   ocean: { name: 'Ocean Blue', topbar: '#1a3f66', accent: '#2f5f96', modalBg: '#DCEBFA' },
@@ -6895,23 +6853,6 @@ const THEME_PRESETS = {
   slate: { name: 'Slate', topbar: '#2c333a', accent: '#4a5560', modalBg: '#E6E9EC' },
   plum: { name: 'Plum', topbar: '#4a2258', accent: '#7a4a94', modalBg: '#F0E4F7' },
 };
-
-function applyShopTheme(presetKey) {
-  const preset = THEME_PRESETS[presetKey] || THEME_PRESETS.forest;
-  shopThemePreset = THEME_PRESETS[presetKey] ? presetKey : 'forest';
-  document.documentElement.style.setProperty('--accent-dark', preset.topbar);
-  document.documentElement.style.setProperty('--accent', preset.accent);
-  document.documentElement.style.setProperty('--modal-bg', preset.modalBg);
-}
-
-async function loadAndApplyShopTheme() {
-  try {
-    const theme = await api('/api/shop-theme');
-    applyShopTheme(theme.preset);
-  } catch (_) {
-    applyShopTheme('forest');
-  }
-}
 
 // ---------------- Init ----------------
 
@@ -6922,7 +6863,6 @@ async function boot() {
     currentUser = null;
   }
   if (currentUser) {
-    await loadAndApplyShopTheme();
     renderShell();
     renderRoute();
   } else {
