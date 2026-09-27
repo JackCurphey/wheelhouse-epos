@@ -26,11 +26,20 @@ export async function staffSignup(baseUrl, overrides = {}) {
     password: overrides.password || 'password123',
   });
   const token = await createSession(created.login.id);
-  return { cookie: `${SESSION_COOKIE}=${token}`, shop: created.shop, email: created.login.email };
+  return { cookie: `${SESSION_COOKIE}=${token}`, shop: created.shop, email: created.login.email, loginId: created.login.id };
 }
 
 export function staffRequest(baseUrl, cookie, path, options) {
   return jsonRequest(baseUrl, cookie, path, options);
+}
+
+// A second, independent session cookie for a login staffSignup already
+// created. Logging this one out (destroySession deletes by token, not by
+// login) leaves the original cookie - and any other test still using it -
+// signed in.
+export async function staffFreshCookie(loginId) {
+  const token = await createSession(loginId);
+  return `${SESSION_COOKIE}=${token}`;
 }
 
 // A mechanic to hang jobs on. createShop() seeds settings but no staff.

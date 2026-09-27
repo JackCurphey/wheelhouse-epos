@@ -1,6 +1,6 @@
 // Loads .env before server/db.js builds its pool (CI sets DATABASE_URL itself).
 import '../../server/load-env.js';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pool, runWithShop, prepare } from '../../server/db.js';
@@ -56,8 +56,10 @@ test.beforeAll(async () => {
   expect(settings.status, JSON.stringify(settings.body)).toBe(200);
 });
 
-// The server stop and the pool close sit in `finally`, so a failed clean-up
-// or removal check can never leave the spawned server running.
+// The server stop sits in `finally`, so a failed clean-up or removal check
+// can never leave the spawned server running. The db pool itself is left
+// open here: it's ended once, for every file in tests/browser, by the
+// worker-scoped auto fixture in fixtures.ts.
 test.afterAll(async () => {
   try {
     if (shop) {
@@ -67,11 +69,7 @@ test.afterAll(async () => {
       expect(rows[0].n, 'the throwaway shop is removed').toBe(0);
     }
   } finally {
-    try {
-      if (server) await server.stop();
-    } finally {
-      await pool.end();
-    }
+    if (server) await server.stop();
   }
 });
 
