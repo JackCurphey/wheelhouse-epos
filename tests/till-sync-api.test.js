@@ -251,3 +251,52 @@ test('a customer item with no name fails alone', async () => {
   const res = await sync([badCustomer, goodSale]);
   assert.deepEqual(res.body.results.map((r) => r.status), ['failed', 'recorded']);
 });
+
+test('sales arriving out of order are all recorded with their own receipt numbers', async () => {
+  const tube = await seedProduct(owner.shop.id, { stock: 10 });
+  const s1 = sale(tube); const s2 = sale(tube); const s3 = sale(tube);
+  await sync([s3, s1]);
+  await sync([s2]);
+  const rows = await inShop(() => prepare(
+    'SELECT receipt_number FROM till_sales WHERE client_id IN (?, ?, ?) ORDER BY receipt_number'
+  ).all(s1.clientId, s2.clientId, s3.clientId));
+  assert.deepEqual(rows.map((r) => r.receipt_number), [s1.receiptNumber, s2.receiptNumber, s3.receiptNumber]);
+  assert.equal((await inShop(() => prepare('SELECT stock_qty FROM products WHERE id = ?').get(tube))).stock_qty, 7);
+});
+
+// The till sent a batch, the server recorded it, and the reply was lost. The
+// till re-sends the whole batch plus a new sale: nothing doubles, nothing is lost.
+test('a batch re-sent after a lost reply neither doubles nor loses a sale', async () => {
+  const tube = await seedProduct(owner.shop.id, { stock: 10 });
+  const a = sale(tube); const b = sale(tube); const c = sale(tube);
+  await sync([a, b]);
+  const res = await sync([a, b, c]);
+  assert.deepEqual(res.body.results.map((r) => r.status), ['duplicate', 'duplicate', 'recorded']);
+  assert.equal((await inShop(() => prepare('SELECT stock_qty FROM products WHERE id = ?').get(tube))).stock_qty, 7);
+});
+
+test('two tills can use the same running number without clashing', async () => {
+  const b2 = await registerTill(server.baseUrl, owner, { number: 2 });
+  const tube = await seedProduct(owner.shop.id, { stock: 10 });
+  const onB1 = { ...sale(tube), receiptNumber: 9001 };
+  const onB2 = { ...sale(tube), receiptNumber: 9001 };
+  await sync([onB1]);
+  const res = await sync([onB2], 0, b2.token);
+  assert.deepEqual(res.body.results[0].attention, []);
+  const moves = await inShop(() => prepare(
+    "SELECT note FROM stock_movements WHERE product_id = ? ORDER BY id"
+  ).all(tube));
+  assert.deepEqual(moves.map((m) => m.note), ['Till sale B1-9001', 'Till sale B2-9001']);
+});
+
+test('the same till reusing a receipt number is recorded and flagged', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  await sync([{ ...sale(tube), receiptNumber: 8001 }]);
+  const res = await sync([{ ...sale(tube), receiptNumber: 8001 }]);
+  assert.deepEqual(res.body.results[0].attention, ['receipt_number_reused']);
+});
+
+test('the snapshot tells a replaced till where its numbers got to', async () => {
+  const res = await tillRequest(server.baseUrl, owner.shop.slug, b1.token, '/snapshot');
+  assert.equal(res.body.lastReceiptNumber, 9001);
+});
