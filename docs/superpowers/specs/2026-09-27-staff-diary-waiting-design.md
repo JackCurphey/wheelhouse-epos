@@ -78,8 +78,9 @@ its attachments, then shows:
 - the customer, and day, date, time and mechanic;
 - each service with the customer's answers ("Not sure" for a not-sure
   answer);
-- photos as thumbnails, from the customer's attachments (`fromCustomer`),
-  each opening the full image;
+- photos as thumbnails, from the customer's attachments (`fromCustomer`);
+  clicking one enlarges it inside the pop-up (the file route downloads rather
+  than shows, so a link would not open it);
 - "Customer's notes": the description and the bike note, when present;
 - an "Open full job" button that opens the normal edit form.
 
@@ -143,7 +144,10 @@ edit form's Save all send the job's `version`. A refused stale save shows
 3. **Dropping onto the requested start accepts the change.** A save on the
    requested date, start time and mechanic (any end time) accepts the
    request, and the job's own requested hold doesn't count as a clash.
-4. No database changes. No new dependencies. `GET /api/workshop-waiting`,
+4. **Each waiting item adds `services: [{id, name}]`** beside
+   `serviceNames`, so the pop-up can put each answer under its service
+   (answers carry only a service id). Added while planning.
+5. No database changes. No new dependencies. `GET /api/workshop-waiting`,
    the action routes and the attachment routes are used unchanged; thumbnails
    load from the existing attachment file route, which the staff session
    already authorises.
