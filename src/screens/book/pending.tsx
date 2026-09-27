@@ -9,8 +9,8 @@ import {
 } from './pending-rules.ts';
 
 /**
- * The pending screen (atlas `pending`): where the booking is up to, as its
- * heading, and a summary of what was booked. The private link the server
+ * The pending screen (screen design `pending`): where the booking is up to, as its
+ * heading, and a summary of what was booked. The booking link the server
  * issues opens it cold, so it reads everything from the link, never the
  * draft. No step, no back link, no action; changing or cancelling online
  * comes with d6, so until then it says to contact the shop.

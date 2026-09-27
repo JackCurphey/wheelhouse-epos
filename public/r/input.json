@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "input",
   "title": "Input",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Single-line text field matching .field input in the existing app: white ground so it stays legible on the shop-coloured modal background, accent focus ring, and number spinners suppressed the way the vanilla app suppresses them.",
   "dependencies": [],
   "registryDependencies": [],

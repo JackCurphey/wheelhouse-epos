@@ -1,4 +1,4 @@
-// The private link says what the customer may do (piece 12): change or cancel
+// The booking link says what the customer may do (piece 12): change or cancel
 // while the bike has not reached the shop and the booking is live, the change
 // they asked for, and whether staff declined their last one. Then cancelling
 // through the link (Task 4).

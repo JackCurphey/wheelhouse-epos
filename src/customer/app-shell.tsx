@@ -37,8 +37,8 @@ export function BookLayout() {
   );
 }
 
-// Screens by atlas id. An id with no entry renders the placeholder, so every
-// address in CUSTOMER_ROUTES works from day one - including a private link.
+// Screens by screen design id. An id with no entry renders the placeholder, so every
+// address in CUSTOMER_ROUTES works from day one - including a booking link.
 const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = {
   service: ServiceScreen,
   'service-list': ServiceListScreen,

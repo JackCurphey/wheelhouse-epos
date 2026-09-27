@@ -3,9 +3,9 @@
  * The single source of truth for design tokens for the staff EPOS (/) and the
  * booking portal (/book). Both link this file first.
  *
- * The public storefront (shop subdomains) is deliberately NOT included, and
+ * The public website (shop subdomains) is deliberately NOT included, and
  * the no-raw-hex gates in tests/design-tokens.test.js deliberately do not
- * cover storefront.css. Decided 2 September 2026: storefront styling becomes
+ * cover storefront.css. Decided 2 September 2026: website styling becomes
  * per-shop and editable by the shop, so it cannot share one fixed palette.
  * If that changes, add the link in public-storefront/index.html and extend
  * the gates to match - not one without the other.

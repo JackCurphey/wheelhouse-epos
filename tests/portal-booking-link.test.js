@@ -66,7 +66,7 @@ const read = (code, slug = owner.shop.slug) =>
   jsonRequest(server.baseUrl, null, `/api/portal/${slug}/booking-links/${code}`);
 const setJob = (id, sql, ...args) => runWithShop(owner.shop.id, () => prepare(`UPDATE workshop_jobs SET ${sql} WHERE id = ?`).run(...args, id));
 
-test('a booking returns a private link, and the link reads the booking back', async () => {
+test('a booking returns a booking link, and the link reads the booking back', async () => {
   const booked = await book({}, { guest: true });
   assert.match(booked.privateLink, new RegExp(`^/book/${owner.shop.slug}/booking/[0-9a-f]{64}$`));
   const res = await read(codeOf(booked.privateLink));

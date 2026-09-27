@@ -51,7 +51,7 @@ test('resolveStorefrontShop resolves an enabled shop by subdomain', async () => 
   }
 });
 
-test('resolveStorefrontShop returns null for a disabled storefront', async () => {
+test('resolveStorefrontShop returns null for a disabled website', async () => {
   const shop = await createTestShop();
   try {
     await runWithShop(shop.id, () => getOrCreateStorefrontSettings());
@@ -103,7 +103,7 @@ test('resolveStorefrontShop lets a shop\'s own owner preview it while disabled',
   }
 });
 
-test('resolveStorefrontShop does not let a different shop\'s owner preview a disabled storefront', async () => {
+test('resolveStorefrontShop does not let a different shop\'s owner preview a disabled website', async () => {
   const shop = await createTestShop();
   const otherShop = await createTestShop();
   try {
@@ -116,7 +116,7 @@ test('resolveStorefrontShop does not let a different shop\'s owner preview a dis
   }
 });
 
-test('resolveStorefrontShop still returns null for a disabled storefront with no session at all', async () => {
+test('resolveStorefrontShop still returns null for a disabled website with no session at all', async () => {
   const shop = await createTestShop();
   try {
     await runWithShop(shop.id, () => getOrCreateStorefrontSettings());
@@ -127,7 +127,7 @@ test('resolveStorefrontShop still returns null for a disabled storefront with no
   }
 });
 
-test('getStorefrontInfo reports whether the storefront is actually enabled', async () => {
+test('getStorefrontInfo reports whether the website is actually enabled', async () => {
   const shop = await createTestShop();
   try {
     await runWithShop(shop.id, async () => {

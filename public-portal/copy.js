@@ -1,4 +1,4 @@
-// Wheelhouse EPOS - the words customers read in the booking portal.
+// Wheelhouse - the words customers read in the booking portal.
 //
 // Kept in its own file, out of the render functions in portal.js, for two
 // reasons: the wording is a shop-facing decision that changes more often

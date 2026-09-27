@@ -17,7 +17,7 @@ export const meta = {
 // ---------------------------------------------------------------------------
 
 const SHARED = `
-You are working in the Wheelhouse EPOS repo at /Users/jackcurphey/wheelhouse-epos.
+You are working in the Wheelhouse repo at /Users/jackcurphey/wheelhouse-epos.
 
 WHAT THIS SYSTEM IS
 A multi-tenant bike-shop EPOS heading for a hosted SaaS at hundreds of shops.
@@ -187,7 +187,7 @@ Read the repo and describe what is actually there:
   on this branch - check before describing it.
 - Backups: say plainly what the current story is. Do not invent one.
 
-Keep the accurate later sections (storefronts, STOREFRONT_BASE_DOMAIN, Shopify
+Keep the accurate later sections (websites, STOREFRONT_BASE_DOMAIN, Shopify
 env vars, the gateway) - verify each against the code before keeping it, and
 fix anything that has drifted. Update "what's deliberately left out" to match
 reality.

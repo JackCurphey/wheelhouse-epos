@@ -106,7 +106,7 @@ test('deactivateTeamMember deactivates the linked login too', async () => {
     await runWithShop(shop.id, async () => {
       const member = await createTeamMember({
         shopId: shop.id,
-        name: 'Cashier Casey',
+        name: 'Staff Casey',
         isMechanic: false,
         isCashier: true,
         email: `casey-${shop.id}@example.com`,
@@ -450,7 +450,7 @@ test('reactivateTeamMember does not touch a login in another shop', async () => 
     await runWithShop(shopB.id, async () => {
       const member = await createTeamMember({
         shopId: shopB.id,
-        name: 'Shop B Cashier',
+        name: 'Shop B Staff',
         isMechanic: false,
         isCashier: true,
         email: `shopb-cash-${shopB.id}@example.com`,

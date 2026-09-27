@@ -1,4 +1,4 @@
-// The private link's pure parts: code, hash, path, expiry, stage.
+// The booking link's pure parts: code, hash, path, expiry, stage.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';

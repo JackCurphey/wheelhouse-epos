@@ -7,7 +7,7 @@
       "name": "money-input",
       "type": "registry:ui",
       "title": "Money Input",
-      "author": "Wheelhouse EPOS",
+      "author": "Wheelhouse",
       "description": "Currency field whose value is an integer number of pence and never a float. Parsing works on the digit strings and formatting divides only an exact multiple of 100, so no amount can drift a penny through rounding. Exports parsePence and formatPence for callers that need the same arithmetic outside a form.",
       "dependencies": [],
       "registryDependencies": ["@wheelhouse/input"],
@@ -22,7 +22,7 @@
       "name": "data-table",
       "type": "registry:ui",
       "title": "Data Table",
-      "author": "Wheelhouse EPOS",
+      "author": "Wheelhouse",
       "description": "Shop-scoped table with the loading, failed and genuinely-empty states written into the component rather than left to each caller. Shop scoping is enforced by PostgreSQL row-level security on the server; this makes that scope legible in the empty and error copy.",
       "dependencies": [],
       "registryDependencies": ["@wheelhouse/table", "@wheelhouse/button"],
@@ -37,7 +37,7 @@
       "name": "confirm-dialog",
       "type": "registry:ui",
       "title": "Confirm Dialog",
-      "author": "Wheelhouse EPOS",
+      "author": "Wheelhouse",
       "description": "Replacement for the native window.confirm() the app currently calls before destructive actions. Includes a promise-based useConfirmDialog hook so call sites read the way confirm() did, and destructive confirmations ignore backdrop clicks so a stray tap on a busy counter cannot answer for staff.",
       "dependencies": [],
       "registryDependencies": ["@wheelhouse/dialog", "@wheelhouse/button"],
@@ -49,19 +49,19 @@
       ]
     },
     {
-      "name": "photo-picker", "type": "registry:ui", "title": "Photo Picker", "author": "Wheelhouse EPOS",
+      "name": "photo-picker", "type": "registry:ui", "title": "Photo Picker", "author": "Wheelhouse",
       "description": "Opens the phone's chooser for JPEG, PNG or WebP photos, up to 5 of up to 10 MB each by default. Refuses anything else with a message naming the file; shows thumbnails with a remove button each. Converting to base64 for the server is left to the screen.",
       "dependencies": [], "registryDependencies": [],
       "files": [{ "path": "photo-picker.tsx", "type": "registry:ui" }]
     },
     {
-      "name": "month-calendar", "type": "registry:ui", "title": "Month Calendar", "author": "Wheelhouse EPOS",
+      "name": "month-calendar", "type": "registry:ui", "title": "Month Calendar", "author": "Wheelhouse",
       "description": "One Monday-first month for picking a booking day. Days not in `available` are greyed, struck through and aria-disabled. Arrow keys move between days and across months; dates are YYYY-MM-DD strings handled in UTC.",
       "dependencies": [], "registryDependencies": [],
       "files": [{ "path": "month-calendar.tsx", "type": "registry:ui" }]
     },
     {
-      "name": "day-diary", "type": "registry:ui", "title": "Day Diary", "author": "Wheelhouse EPOS",
+      "name": "day-diary", "type": "registry:ui", "title": "Day Diary", "author": "Wheelhouse",
       "description": "One day's diary for picking a start time: a column per mechanic, hours down the side, booked time as grey 'Unavailable' blocks with no detail, and one button per start time the server allows. Scaled so start times are at least 44px apart.",
       "dependencies": [], "registryDependencies": [],
       "files": [{ "path": "day-diary.tsx", "type": "registry:ui" }]

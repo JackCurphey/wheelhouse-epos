@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "label",
   "title": "Label",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Field label plus the Field stack and FieldError message that always travel with it, matching .field, .field label and .field-error. Plain elements paired by htmlFor, so it works inside the native dialog element the Wheelhouse dialog uses.",
   "dependencies": [],
   "registryDependencies": [],

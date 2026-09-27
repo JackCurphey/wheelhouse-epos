@@ -87,7 +87,7 @@ function render(info, products) {
   const slug = slugFromPath();
   const bookHref = slug ? `/book/${slug}` : '/book';
   document.getElementById('app').innerHTML = `
-    ${!info.enabled ? `<div class="preview-banner">Preview only — customers can't see this until you enable your storefront in settings.</div>` : ''}
+    ${!info.enabled ? `<div class="preview-banner">Preview only — customers can't see this until you enable your website in settings.</div>` : ''}
     <header class="storefront-header">
       ${info.logoUrl ? `<img src="${esc(info.logoUrl)}" alt="${esc(info.shopName)} logo" />` : ''}
       <div>
@@ -142,7 +142,7 @@ async function boot() {
     applyTheme(info.themePreset);
     render(info, products);
   } catch (err) {
-    document.getElementById('app').innerHTML = `<div class="empty-state">This storefront isn't available right now.</div>`;
+    document.getElementById('app').innerHTML = `<div class="empty-state">This website isn't available right now.</div>`;
   }
 }
 

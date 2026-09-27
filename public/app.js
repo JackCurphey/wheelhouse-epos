@@ -1,4 +1,4 @@
-// Wheelhouse EPOS - vanilla JS front end. No build step, no framework.
+// Wheelhouse - vanilla JS front end. No build step, no framework.
 'use strict';
 
 // ---------------- State ----------------
@@ -24,7 +24,7 @@ let tillCustomerId = null;
 let inventorySearch = '';
 let inventoryCategory = '';
 let inventoryShowInactive = false;
-let inventorySelectedIds = new Set(); // Stockroom bulk-select, for printing several stickers at once
+let inventorySelectedIds = new Set(); // Stock bulk-select, for printing several stickers at once
 let labelSettings = { widthMm: 50, heightMm: 25 }; // shop's saved sticker label size - defaults here, real value loaded lazily
 let labelSettingsLoaded = false;
 
@@ -63,7 +63,7 @@ let workshopMechanicFilterInitialized = false; // true once the default below (e
 let pendingFeedJobs = []; // every pending (customer-submitted, unapproved) job shop-wide, regardless of the diary's current date range - powers the sidebar feed
 
 let mechanics = []; // employees with isMechanic=true, active only - used by the Workshop diary
-let activeCashiers = []; // employees with isCashier=true, active only - used by Front Desk
+let activeCashiers = []; // employees with isCashier=true, active only - used by the Till
 let activeCashierId = null;
 let team = []; // merged roster + login list - used by Office > Edit Shop > Office
 let teamShowInactive = false;
@@ -126,7 +126,7 @@ async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
-// Shared by every image-upload control (storefront logo/hero, product photo):
+// Shared by every image-upload control (website logo/hero, product photo):
 // reads the chosen file, posts it as base64 to the given endpoint, and
 // reflects progress/result in statusEl. Reuses fileToBase64 above rather than
 // a second file-reading helper.
@@ -204,7 +204,7 @@ async function loadProductsAll() {
 }
 
 // Only fetched once per session (like workshopMechanicFilterInitialized's
-// guard) - by the time a user opens the sticker print modal from Stockroom,
+// guard) - by the time a user opens the sticker print modal from Stock,
 // the real saved label size is already in hand rather than the placeholder
 // default above.
 async function loadLabelSettings() {
@@ -260,7 +260,7 @@ async function loadPendingFeed() {
 async function loadMechanics() {
   mechanics = await api('/api/employees?role=mechanic');
   // Default to every mechanic shown split side by side (matches the
-  // customer portal's own default) rather than the merged single-column
+  // booking link page's own default) rather than the merged single-column
   // "All" view - only on first load, so it doesn't override a filter
   // already chosen this session (including deliberately picking "All" back).
   if (!workshopMechanicFilterInitialized && mechanics.length) {
@@ -294,14 +294,14 @@ async function loadSaleDocuments(kind) {
 // ---------------- Navigation ----------------
 
 const TABS = [
-  { id: 'till', label: 'Front Desk' },
+  { id: 'till', label: 'Till' },
   { id: 'office', label: 'Office' },
   { id: 'workshop', label: 'Workshop' },
 ];
 
 const OFFICE_TABS = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'inventory', label: 'Stockroom' },
+  { id: 'inventory', label: 'Stock' },
   { id: 'suppliers', label: 'Suppliers' },
   { id: 'purchase-orders', label: 'Purchase Orders' },
   { id: 'sales', label: 'Sales History' },
@@ -310,7 +310,7 @@ const OFFICE_TABS = [
     id: 'edit-shop',
     label: 'Edit Shop',
     children: () => [
-      { id: 'front-desk', label: 'Front Desk' },
+      { id: 'front-desk', label: 'Till' },
       { id: 'office', label: 'Office' },
       { id: 'workshop', label: 'Workshop' },
     ],
@@ -336,7 +336,7 @@ function renderShell() {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="topbar">
-      <div class="brand"><span class="logo">🚲</span> Wheelhouse EPOS</div>
+      <div class="brand"><span class="logo">🚲</span> Wheelhouse</div>
       <div class="nav" id="nav"></div>
       <div class="shop-info">${currentUser ? esc(currentUser.shopName) + ' — ' + esc(currentUser.name) : ''}</div>
       <div class="clock" id="clock"></div>
@@ -411,7 +411,7 @@ async function renderTill() {
         <button class="btn" id="view-orders-btn">Orders</button>
       </div>
       <div class="cashier-select-row">
-        <span class="cashier-select-label">Cashier:</span>
+        <span class="cashier-select-label">Staff:</span>
         <div class="category-pills" id="cashier-pills"></div>
       </div>
       <div class="category-pills" id="till-pills"></div>
@@ -474,7 +474,7 @@ function renderCashierPills() {
   const wrap = document.getElementById('cashier-pills');
   if (!wrap) return;
   if (!activeCashiers.length) {
-    wrap.innerHTML = '<span class="muted" style="font-size:12.5px;">No cashiers added — set them up under Edit Shop &gt; Workshop.</span>';
+    wrap.innerHTML = '<span class="muted" style="font-size:12.5px;">No staff added — set them up under Edit Shop &gt; Workshop.</span>';
     return;
   }
   wrap.innerHTML = activeCashiers
@@ -906,7 +906,7 @@ async function saveLoadedOrder() {
 }
 
 // Placeholder tender/payment screen - reachable via the "Tender" button on
-// Front Desk. Will get built out further; for now it just relocates the
+// the Till. Will get built out further; for now it just relocates the
 // payment-method/cash-tendered/complete-sale step off the main cart page.
 async function renderTender() {
   if (!cart.length) {
@@ -971,7 +971,7 @@ async function renderTender() {
         </div>
         <table class="totals-table" id="cart-totals"></table>
         <button class="btn btn-primary btn-block" id="complete-sale-btn" disabled>Complete sale</button>
-        ${!activeCashierId ? `<p class="muted" style="margin:6px 0 0; font-size:12px; text-align:center;">Select a cashier on Front Desk to complete this sale.</p>` : ''}
+        ${!activeCashierId ? `<p class="muted" style="margin:6px 0 0; font-size:12px; text-align:center;">Select a staff member on the Till to complete this sale.</p>` : ''}
       </div>
     </div>
   `;
@@ -1316,7 +1316,7 @@ function updateTotals() {
 async function completeSale() {
   if (!cart.length) return;
   if (!activeCashierId) {
-    showToast('Select a cashier before completing the sale');
+    showToast('Select a staff member before completing the sale');
     return;
   }
   const { cashAmount: cashApplied, cardAmount: cardApplied } = resolvePaymentAmounts(cartTotal());
@@ -1355,7 +1355,7 @@ async function completeSale() {
 async function completeOrderFulfillment() {
   if (!cart.length || !activeOrderId) return;
   if (!activeCashierId) {
-    showToast('Select a cashier before completing the sale');
+    showToast('Select a staff member before completing the sale');
     return;
   }
   const { cashAmount: cashApplied, cardAmount: cardApplied } = resolvePaymentAmounts(cartTotal());
@@ -2209,7 +2209,7 @@ function openJobContextMenu(e, job) {
   menu.innerHTML = `
     ${isPending ? `<button type="button" class="context-menu-item" data-action="approve">Approve</button>` : ''}
     <button type="button" class="context-menu-item" data-action="receipt" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Print receipt for this job</button>
-    <button type="button" class="context-menu-item" data-action="frontdesk" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Open order in Front Desk</button>
+    <button type="button" class="context-menu-item" data-action="frontdesk" ${hasOrder ? '' : 'disabled title="No order linked to this job"'}>Open order in Till</button>
   `;
   document.body.appendChild(menu);
 
@@ -2567,7 +2567,7 @@ async function renderInventory() {
   main.innerHTML = `
     <div class="panel">
       <div class="panel-header">
-        <h2>Stockroom</h2>
+        <h2>Stock</h2>
         <button class="btn btn-primary" id="add-product-btn">+ Add product</button>
       </div>
       <div class="panel-body">
@@ -2740,7 +2740,7 @@ function renderInventoryTable() {
   tbody.querySelectorAll('button[data-deactivate]').forEach((b) =>
     b.addEventListener('click', async () => {
       const p = products.find((x) => x.id === Number(b.dataset.deactivate));
-      if (!confirm(`Deactivate "${p.name}"? It will be hidden from the front desk but sales history is kept.`)) return;
+      if (!confirm(`Deactivate "${p.name}"? It will be hidden from the till but sales history is kept.`)) return;
       try {
         await api(`/api/products/${p.id}`, { method: 'DELETE' });
         showToast('Product deactivated');
@@ -3388,7 +3388,7 @@ function renderPoReceiveModal(holder, po) {
   });
 }
 
-// Refreshes whichever Stockroom view is currently on screen (list or detail)
+// Refreshes whichever Stock view is currently on screen (list or detail)
 // after an edit/stock change, since both share the product-form/stock-adjust modals.
 async function refreshInventoryView(productId) {
   await loadProductsAll();
@@ -3410,7 +3410,7 @@ async function renderProductDetail(id) {
   const main = document.getElementById('office-content');
   if (!product) {
     main.innerHTML = `
-      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stockroom</button>
+      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stock</button>
       <div class="empty-state" style="margin-top:14px;">Product not found.</div>
     `;
     document.getElementById('back-to-stockroom').addEventListener('click', () => {
@@ -3426,7 +3426,7 @@ async function renderProductDetail(id) {
 
   main.innerHTML = `
     <div id="product-detail-page">
-      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stockroom</button>
+      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stock</button>
       <div class="panel" style="margin-top:14px;">
         <div class="panel-header">
           <h2>${esc(product.name)} ${!product.active ? '<span class="badge low">Inactive</span>' : ''}</h2>
@@ -3463,7 +3463,7 @@ async function renderProductDetail(id) {
   const deactivateBtn = document.getElementById('pd-deactivate-btn');
   if (deactivateBtn) {
     deactivateBtn.addEventListener('click', async () => {
-      if (!confirm(`Deactivate "${product.name}"? It will be hidden from the front desk but sales history is kept.`)) return;
+      if (!confirm(`Deactivate "${product.name}"? It will be hidden from the till but sales history is kept.`)) return;
       try {
         await api(`/api/products/${product.id}`, { method: 'DELETE' });
         showToast('Product deactivated');
@@ -3508,14 +3508,14 @@ async function renderSalesHistory() {
             ${customers.map((c) => `<option value="${c.id}" ${salesCustomerFilter === String(c.id) ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
           </select>
           <select id="sales-cashier-filter">
-            <option value="">All cashiers</option>
+            <option value="">All staff</option>
             ${activeCashiers.map((c) => `<option value="${c.id}" ${salesCashierFilter === String(c.id) ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
           </select>
         </div>
         <div style="overflow-x:auto;">
           <table class="data-table">
             <thead>
-              <tr><th>#</th><th>Date &amp; time</th><th>Customer</th><th>Cashier</th><th>Items</th><th>Payment</th><th class="num">Total</th><th></th></tr>
+              <tr><th>#</th><th>Date &amp; time</th><th>Customer</th><th>Staff</th><th>Items</th><th>Payment</th><th class="num">Total</th><th></th></tr>
             </thead>
             <tbody id="sales-table-body"></tbody>
           </table>
@@ -3940,13 +3940,13 @@ function paymentBadgeClass(method) {
   return 'other';
 }
 
-// ================= EDIT FRONT DESK =================
+// ================= EDIT TILL =================
 
 async function renderEditFrontDesk() {
   await loadCustomerGroups();
   const main = document.getElementById('office-content');
   main.innerHTML = `
-    <h1>Edit Front Desk</h1>
+    <h1>Edit Till</h1>
     <div class="panel" style="margin-top:14px;">
       <div class="panel-header">
         <h2>Customer groups</h2>
@@ -4029,7 +4029,7 @@ function renderGroupFormModal(holder, group) {
             <div class="field">
               <label for="group-discount">Discount %</label>
               <input id="group-discount" type="number" min="0" max="100" step="0.1" value="${group?.discountPercent || 0}" />
-              <p class="muted" style="margin:4px 0 0;">Applied automatically to the sale subtotal on Front Desk whenever the selected customer has this group. 0 = no automatic discount.</p>
+              <p class="muted" style="margin:4px 0 0;">Applied automatically to the sale subtotal on the Till whenever the selected customer has this group. 0 = no automatic discount.</p>
             </div>
           </div>
           <div class="modal-footer">
@@ -4185,7 +4185,7 @@ function renderThemeSwatchGrid() {
   });
 }
 
-// ================= SHOP OFFICE (colours, storefront, employee logins) =================
+// ================= SHOP OFFICE (colours, website, employee logins) =================
 
 async function renderShopOffice() {
   const isOwner = currentUser && currentUser.isOwner;
@@ -4200,7 +4200,7 @@ async function renderShopOffice() {
       </div>
     </div>
     <div class="panel" style="margin-top:16px;">
-      <div class="panel-header"><h2>Storefront</h2></div>
+      <div class="panel-header"><h2>Website</h2></div>
       <div class="panel-body" id="storefront-settings-section"></div>
     </div>
     <div class="panel" style="margin-top:16px;">
@@ -4213,7 +4213,7 @@ async function renderShopOffice() {
         ${isOwner ? '<button class="btn btn-primary" id="add-team-btn">+ Add person</button>' : ''}
       </div>
       <div class="panel-body">
-        <p class="muted" style="margin:0 0 12px;">Everyone who works here - their roles (a mechanic gets a diary, a cashier can be selected on Front Desk) and whether they can sign in. Every login can do everything for now - individual permissions are coming later.</p>
+        <p class="muted" style="margin:0 0 12px;">Everyone who works here - their roles (a mechanic gets a diary, a staff member can be selected on the Till) and whether they can sign in. Every login can do everything for now - individual permissions are coming later.</p>
         <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;margin-bottom:12px;">
           <input type="checkbox" id="team-show-inactive" ${teamShowInactive ? 'checked' : ''} /> Show removed
         </label>
@@ -4247,13 +4247,13 @@ async function renderStorefrontSettingsSection(container) {
     .map((key) => `<option value="${esc(key)}" ${settings.themePreset === key ? 'selected' : ''}>${esc(THEME_PRESETS[key].name)}</option>`)
     .join('');
   container.innerHTML = `
-    <p class="muted" style="margin:0 0 14px;">Controls the public storefront customers see when they visit your shop's store link.</p>
+    <p class="muted" style="margin:0 0 14px;">Controls the public website customers see when they visit your shop's website link.</p>
     <div class="field">
-      <label><input type="checkbox" id="storefront-enabled" ${settings.enabled ? 'checked' : ''}> Enable public storefront</label>
+      <label><input type="checkbox" id="storefront-enabled" ${settings.enabled ? 'checked' : ''}> Enable public website</label>
     </div>
     <div class="field">
-      <button type="button" class="btn btn-sm" id="storefront-preview">Preview storefront</button>
-      <span class="muted">${settings.enabled ? 'Opens your live storefront in a new tab.' : "Opens a preview only you can see — customers can't view it until you enable it above."}</span>
+      <button type="button" class="btn btn-sm" id="storefront-preview">Preview website</button>
+      <span class="muted">${settings.enabled ? 'Opens your live website in a new tab.' : "Opens a preview only you can see — customers can't view it until you enable it above."}</span>
     </div>
     <div class="field">
       <label for="storefront-tagline">Tagline</label>
@@ -4279,7 +4279,7 @@ async function renderStorefrontSettingsSection(container) {
       <button type="button" class="btn btn-sm" id="storefront-hero-upload">Upload hero image</button>
       <span id="storefront-hero-status" class="muted">${settings.heroImageUrl ? 'Current hero image set' : 'No hero image yet'}</span>
     </div>
-    <button class="btn btn-primary" id="storefront-save">Save storefront settings</button>
+    <button class="btn btn-primary" id="storefront-save">Save website settings</button>
     <span id="storefront-save-status" class="muted"></span>
   `;
   document.getElementById('storefront-preview').addEventListener('click', () => {
@@ -4298,7 +4298,7 @@ async function renderStorefrontSettingsSection(container) {
         },
       });
       status.textContent = 'Saved';
-      showToast('Storefront settings saved');
+      showToast('Website settings saved');
     } catch (err) {
       status.textContent = `Error: ${err.message}`;
     }
@@ -4366,7 +4366,7 @@ async function renderShopifyConnectionSection(container) {
   // than looking identical to "never connected"), and not connected at all.
   if (connection.status === 'connected') {
     container.innerHTML = `
-      <p class="muted" style="margin:0 0 14px;">Sync products and inventory with a connected Shopify store.</p>
+      <p class="muted" style="margin:0 0 14px;">Sync products and stock with a connected Shopify store.</p>
       <p><span class="badge ok">Connected</span> to <strong>${esc(connection.shopDomain)}</strong></p>
     `;
     return;
@@ -4374,7 +4374,7 @@ async function renderShopifyConnectionSection(container) {
 
   if (connection.status === 'sync_error') {
     container.innerHTML = `
-      <p class="muted" style="margin:0 0 14px;">Sync products and inventory with a connected Shopify store.</p>
+      <p class="muted" style="margin:0 0 14px;">Sync products and stock with a connected Shopify store.</p>
       <p><span class="badge low">Sync error</span> — check your connection to <strong>${esc(connection.shopDomain)}</strong>. The credentials are still valid; the next successful sync will clear this automatically, or you can reconnect now.</p>
       <button class="btn btn-sm" id="shopify-reconnect-toggle">Reconnect</button>
       <div id="shopify-reconnect-form" style="display:none; margin-top:14px;"></div>
@@ -4396,7 +4396,7 @@ async function renderShopifyConnectionSection(container) {
 
   // not_connected
   container.innerHTML = `
-    <p class="muted" style="margin:0 0 14px;">Connect a Shopify store to sync products and inventory. You'll need a custom app's Admin API access token and Storefront API token from your Shopify admin.</p>
+    <p class="muted" style="margin:0 0 14px;">Connect a Shopify store to sync products and stock. You'll need a custom app's Admin API access token and Storefront API token from your Shopify admin.</p>
     ${connectFormHtml()}
   `;
   wireConnectForm(container);
@@ -4422,7 +4422,7 @@ function renderTeamTable() {
   tbody.innerHTML = visible
     .map((m) => {
       const inactiveTag = !m.active ? ' <span class="badge low">Inactive</span>' : '';
-      const roles = [m.isMechanic ? '<span class="badge role-mechanic">Mechanic</span>' : '', m.isCashier ? '<span class="badge role-cashier">Cashier</span>' : '']
+      const roles = [m.isMechanic ? '<span class="badge role-mechanic">Mechanic</span>' : '', m.isCashier ? '<span class="badge role-cashier">Staff</span>' : '']
         .filter(Boolean)
         .join(' ');
       const access = m.isOwner
@@ -4583,7 +4583,7 @@ async function renderDashboard() {
                 )
                 .join('')}
             </div>`
-            : `<div class="empty-state">No print agents currently online. Install and sign in to one on a shop PC to see it here - see the Print Stickers modal in Stockroom.</div>`
+            : `<div class="empty-state">No print agents currently online. Install and sign in to one on a shop PC to see it here - see the Print Stickers modal in Stock.</div>`
         }
       </div>
     </div>
@@ -4932,7 +4932,7 @@ function renderProductFormModal(holder, product) {
               isEdit
                 ? `
             <div class="field">
-              <label><input type="checkbox" id="product-show-online" ${product.showOnline ? 'checked' : ''}> Show on storefront</label>
+              <label><input type="checkbox" id="product-show-online" ${product.showOnline ? 'checked' : ''}> Show on website</label>
             </div>
             <div class="field">
               <label for="product-description">Online description</label>
@@ -5235,7 +5235,7 @@ function renderCustomerFormModal(holder, customer) {
                       )
                       .join('')}
                   </div>`
-                : `<p class="muted" style="margin:0;">No groups set up yet - add some under Edit Shop &gt; Front Desk.</p>`}
+                : `<p class="muted" style="margin:0;">No groups set up yet - add some under Edit Shop &gt; Till.</p>`}
             </div>
           </div>
           <div class="modal-footer">
@@ -5515,7 +5515,7 @@ function renderBikeServiceModal(holder, bike, jobs) {
   wireModalDismiss();
 }
 
-// Shared by the four Team modals below: a Mechanic/Cashier checkbox pair
+// Shared by the four Team modals below: a Mechanic/Staff checkbox pair
 // plus a working-days picker that only matters (and only shows) once
 // Mechanic is ticked, since only mechanics have a diary.
 function rolesAndWorkingDaysFieldsHtml({ isMechanic, isCashier, workingDays }) {
@@ -5529,7 +5529,7 @@ function rolesAndWorkingDaysFieldsHtml({ isMechanic, isCashier, workingDays }) {
         </label>
         <label class="weekday-check">
           <input type="checkbox" id="team-is-cashier" ${isCashier ? 'checked' : ''} />
-          Cashier
+          Staff
         </label>
       </div>
     </div>
@@ -6568,7 +6568,7 @@ function renderDocumentModal(holder, doc) {
                 <input id="doc-cash-tendered" type="number" min="0" step="0.01" placeholder="${doc.total.toFixed(2)}" />
               </div>
             </div>
-            ${!activeCashierId ? `<p class="muted" style="margin:8px 0 0; font-size:12px;">Select a cashier on Front Desk before converting to a sale.</p>` : ''}
+            ${!activeCashierId ? `<p class="muted" style="margin:8px 0 0; font-size:12px;">Select a staff member on the Till before converting to a sale.</p>` : ''}
           `
               : ''
           }
@@ -6611,7 +6611,7 @@ function renderDocumentModal(holder, doc) {
   if (convertBtn) {
     convertBtn.addEventListener('click', async () => {
       if (!activeCashierId) {
-        showToast('Select a cashier before completing the sale');
+        showToast('Select a staff member before completing the sale');
         return;
       }
       const method = document.getElementById('doc-payment-method').value;
@@ -6749,7 +6749,7 @@ function renderReceiptModal(holder, sale, title) {
               <div class="shop-name">Wheelhouse Cycles</div>
               <div class="muted">Sale #${sale.id} · ${esc(fmtDateTime(sale.createdAt))}</div>
               ${sale.customerName ? `<div class="muted">Customer: ${esc(sale.customerName)}</div>` : ''}
-              ${sale.cashierName ? `<div class="muted">Cashier: ${esc(sale.cashierName)}</div>` : ''}
+              ${sale.cashierName ? `<div class="muted">Staff: ${esc(sale.cashierName)}</div>` : ''}
             </div>
             <hr />
             ${itemsHtml}
@@ -6810,7 +6810,7 @@ function renderAuthScreen() {
   app.innerHTML = `
     <div class="auth-screen">
       <div class="auth-card">
-        <div class="auth-brand"><span class="logo">🚲</span> Wheelhouse EPOS</div>
+        <div class="auth-brand"><span class="logo">🚲</span> Wheelhouse</div>
         <div class="auth-tabs">
           <button class="auth-tab ${!isSignup ? 'active' : ''}" data-auth-tab="login">Log in</button>
           <button class="auth-tab ${isSignup ? 'active' : ''}" data-auth-tab="signup">Create shop account</button>

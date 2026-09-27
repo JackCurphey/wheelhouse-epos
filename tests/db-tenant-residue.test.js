@@ -157,7 +157,7 @@ test('runWithShop refuses to re-enter for a different shop', async () => {
         () => runWithShop(shopB.id, async () => 'should not run'),
         /re-enter|re-entered|nested/i
       );
-      // Re-entering for the SAME shop is what storefront resolution does and
+      // Re-entering for the SAME shop is what website resolution does and
       // must keep working.
       assert.equal(await runWithShop(shopA.id, async () => 'ok'), 'ok');
     });

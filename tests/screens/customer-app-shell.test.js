@@ -46,7 +46,7 @@ test('the first book screen renders the service screen at /book/<shop>', async (
   screen.unmount();
 });
 
-test('a private link opened cold reaches the pending screen', async () => {
+test('a booking link opened cold reaches the pending screen', async () => {
   const LINK = {
     reference: 'WH-1042', shopName: 'Demo Cycles', jobDate: '2026-10-05', startTime: '09:30', description: null,
     bikeNote: null, answers: [], bike: null, stage: 'awaiting_confirmation', photoCount: 0, services: [], totalPrice: null,
@@ -65,7 +65,7 @@ test('an unknown /book address says there is no screen there', async () => {
   assert.ok(await screen.findByText('There is no screen at this address.'));
 });
 
-test('bare /book, which storefronts link to, says there is no screen there', async () => {
+test('bare /book, which websites link to, says there is no screen there', async () => {
   const screen = await renderAt('/book');
   assert.ok(await screen.findByText('There is no screen at this address.'));
 });
