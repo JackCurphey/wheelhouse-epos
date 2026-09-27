@@ -1,6 +1,6 @@
 // Loads .env before server/db.js builds its pool (CI sets DATABASE_URL itself).
 import '../../server/load-env.js';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pool, runWithShop, prepare } from '../../server/db.js';
@@ -58,13 +58,8 @@ test.beforeAll(async () => {
 
 // The server stop sits in `finally`, so a failed clean-up or removal check
 // can never leave the spawned server running. The db pool itself is left
-// open here (not `pool.end()`ed): playwright.config.ts runs every file in
-// tests/browser in one shared worker process (workers: 1, fullyParallel:
-// false), so this module's `pool` is the same singleton every other browser
-// spec file imports. Ending it here would break any later file in the same
-// run that still needs it (diary-waiting.spec.ts does) - proven by running
-// this file followed by such a file, which fails with "Cannot use a pool
-// after calling end on the pool" the moment the later file signs a shop in.
+// open here: it's ended once, for every file in tests/browser, by the
+// worker-scoped auto fixture in fixtures.ts.
 test.afterAll(async () => {
   try {
     if (shop) {

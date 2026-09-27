@@ -122,6 +122,7 @@ async function api(path, { method = 'GET', body } = {}) {
     // login screen instead of letting every in-flight view render an opaque
     // "Request failed (401)" error.
     currentUser = null;
+    stopWaitingTimer();
     renderAuthScreen();
   }
   if (!res.ok) {
@@ -265,11 +266,17 @@ async function loadWaitingFeed() {
 }
 
 // The column checks every minute while the Workshop tab shows; it redraws
-// only itself, never the grid. A failed check keeps the last list.
+// only itself, never the grid. A failed check keeps the last list. Logout
+// and a 401 both leave the hash at #workshop, so the tick also checks that
+// there's still a signed-in user and a workshop feed on screen - otherwise
+// it would keep polling (and, on a 401, wiping the freshly-rendered login
+// screen) after the session that started it has ended.
 function startWaitingTimer() {
   if (waitingTimer) return;
   waitingTimer = setInterval(async () => {
-    if (topTab() !== 'workshop') return stopWaitingTimer();
+    if (topTab() !== 'workshop' || !currentUser || !document.getElementById('workshop-feed')) {
+      return stopWaitingTimer();
+    }
     try {
       await loadWaitingFeed();
       renderWaitingFeed();
@@ -376,6 +383,7 @@ function renderShell() {
   document.getElementById('logout-btn').addEventListener('click', async () => {
     try { await api('/api/auth/logout', { method: 'POST' }); } catch (_) { /* ignore */ }
     currentUser = null;
+    stopWaitingTimer();
     renderAuthScreen();
   });
 }
@@ -2301,9 +2309,19 @@ function openJobContextMenu(e, job) {
   document.addEventListener('keydown', closeJobContextMenuOnEscape);
 }
 
-// A refused diary save says why in plain words (DiaryReview.refusalText);
-// a stale one means someone else changed the job, so the caller redraws.
+// A refused diary save says why in plain words (DiaryReview.refusalText).
+// What happens next is up to the caller: the job-form submit and the
+// complete/reopen toggle close the modal and redraw only on a stale save;
+// drag and resize always redraw regardless of the error, since the block
+// was already moved on screen and has to be put back either way.
+//
+// Capacity is the one code where the review pop-up's fixed wording
+// ("The requested time is no longer free.") doesn't fit every caller: drag
+// and resize reuse this same function, and the server's own message for a
+// capacity refusal already reads correctly there, so it wins over the fixed
+// text.
 function saveRefusalText(err) {
+  if (err.code === 'capacity') return err.message;
   return DiaryReview.refusalText(err);
 }
 
@@ -6637,6 +6655,10 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
         if (document.getElementById('week-diaries')) await renderWorkshop();
       } catch (err) {
         showToast(saveRefusalText(err));
+        if (err.code === 'stale') {
+          closeModal();
+          if (document.getElementById('week-diaries')) await renderWorkshop();
+        }
       }
     });
   }

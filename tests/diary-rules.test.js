@@ -154,6 +154,7 @@ test('each refusal becomes a plain sentence', () => {
   assert.equal(DiaryReview.refusalText({ status: 409, code: 'capacity', message: 'x' }), 'The requested time is no longer free.');
   assert.equal(DiaryReview.refusalText({ status: 409, code: 'illegal', message: "There's no change request to accept" }), "There's no change request to accept");
   assert.equal(DiaryReview.refusalText({ status: 404, message: 'Job not found' }), 'This job no longer exists.');
-  assert.equal(DiaryReview.refusalText({ message: 'Failed to fetch' }), "Couldn't reach the server — try again.");
+  assert.equal(DiaryReview.refusalText({ name: 'TypeError', message: 'Failed to fetch' }), "Couldn't reach the server — try again.");
   assert.equal(DiaryReview.refusalText({ status: 400, message: 'A valid date is required' }), 'A valid date is required');
+  assert.equal(DiaryReview.refusalText({ name: 'Error', message: 'boom' }), 'boom');
 });

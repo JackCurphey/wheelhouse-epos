@@ -1,9 +1,9 @@
 // Loads .env before server/db.js builds its pool (CI sets DATABASE_URL itself).
 import '../../server/load-env.js';
-import { test, expect, type BrowserContext, type Page } from '@playwright/test';
-import { pool } from '../../server/db.js';
+import { test, expect } from './fixtures.js';
+import type { BrowserContext, Page } from '@playwright/test';
 import { startLiveServer, TEST_CLOCK_PIN } from '../helpers/liveServer.js';
-import { staffSignup, staffRequest, seedMechanic } from '../helpers/staff.js';
+import { staffSignup, staffRequest, seedMechanic, staffFreshCookie } from '../helpers/staff.js';
 import { portalSignup } from '../helpers/portal.js';
 import { deleteTestShop } from '../helpers/testShop.js';
 import { bookOnline, dayMaker, linkActions } from '../helpers/linkActions.js';
@@ -46,7 +46,7 @@ test.afterAll(async () => {
   try {
     if (owner) { await purgeAttachmentFiles(owner.shop.id); await deleteTestShop(owner.shop.id); }
   } finally {
-    try { if (server) await server.stop(); } finally { await pool.end(); }
+    if (server) await server.stop();
   }
 });
 
@@ -64,8 +64,8 @@ async function book(overrides: object = {}) {
   return { ...result, jobDate: result.jobDate ?? jobDate };
 }
 
-async function signIn(context: BrowserContext) {
-  const [name, value] = owner.cookie.split('=');
+async function signIn(context: BrowserContext, cookie = owner.cookie) {
+  const [name, value] = cookie.split('=');
   await context.addCookies([{ name, value, url: server!.baseUrl }]);
 }
 
@@ -99,22 +99,44 @@ async function goToWeekOf(page: Page, block: ReturnType<Page['locator']>) {
 
 test('a diary drag on a copy someone else has changed is refused and the diary reloads', async ({ page, context }) => {
   const booked = await book();
+  const accepted = await staff(`/api/workshop-jobs/${booked.id}/accept`, { method: 'POST', body: { version: 1 } });
+  expect(accepted.status).toBe(200);
+  await signIn(context);
+  await openDiary(page);
+  const block = page.locator(`.wk-job-block[data-job="${booked.id}"]`);
+  await goToWeekOf(page, block);
+  const origBox = (await block.boundingBox())!;
+  // Someone else saves the job after the diary loaded it.
+  const changedElsewhere = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { notes: 'Changed elsewhere' } });
+  expect(changedElsewhere.status).toBe(200);
+  // Drag the block down one hour.
+  await page.mouse.move(origBox.x + origBox.width / 2, origBox.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(origBox.x + origBox.width / 2, origBox.y + 10 + 48, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator('#toast')).toContainText('This job changed while you were looking at it.');
+  const after = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
+  expect(after.startTime).toBe('10:00');
+  // The diary reloads: the block is drawn back at its original 10:00 position.
+  await expect(block).toBeVisible();
+  const redrawnBox = (await block.boundingBox())!;
+  expect(Math.round(redrawnBox.y)).toBe(Math.round(origBox.y));
+});
+
+test('toggling complete on a job changed elsewhere is refused and the form closes', async ({ page, context }) => {
+  const booked = await book();
   await staff(`/api/workshop-jobs/${booked.id}/accept`, { method: 'POST', body: { version: 1 } });
   await signIn(context);
   await openDiary(page);
   const block = page.locator(`.wk-job-block[data-job="${booked.id}"]`);
   await goToWeekOf(page, block);
-  // Someone else saves the job after the diary loaded it.
+  await block.click();
+  await expect(page.locator('#workshop-job-form')).toBeVisible();
+  // Someone else saves the job after the form opened.
   await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { notes: 'Changed elsewhere' } });
-  // Drag the block down one hour.
-  const box = (await block.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + 10);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2, box.y + 10 + 48, { steps: 5 });
-  await page.mouse.up();
+  await page.locator('#wj-complete-toggle').click();
   await expect(page.locator('#toast')).toContainText('This job changed while you were looking at it.');
-  const after = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
-  expect(after.startTime).toBe('10:00');
+  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
 });
 
 test('a new online booking is listed with its details, and clicking it jumps to the job', async ({ page, context }) => {
@@ -152,6 +174,25 @@ test('the column picks up a new booking within a minute without a click', async 
   await expect(page.locator(`.waiting-card[data-job="${booked.id}"]`)).toHaveCount(0);
   await page.clock.fastForward(61_000);
   await expect(page.locator(`.waiting-card[data-job="${booked.id}"]`)).toBeVisible();
+});
+
+test('the minute timer stops at logout so it never wipes the login screen', async ({ page, context }) => {
+  // A session of its own: /api/auth/logout destroys only this token, so the
+  // shared owner.cookie every other test in this file signs in with stays
+  // valid.
+  await signIn(context, await staffFreshCookie(owner.loginId));
+  await page.clock.install({ time: new Date(TEST_CLOCK_PIN) });
+  await page.goto(`${server!.baseUrl}/#workshop`);
+  await expect(page.locator('#workshop-feed')).toBeVisible();
+  const waitingCalls: string[] = [];
+  page.on('request', (req) => { if (req.url().endsWith('/api/workshop-waiting')) waitingCalls.push(req.url()); });
+  await page.locator('#logout-btn').click();
+  await expect(page.locator('#auth-email')).toBeVisible();
+  waitingCalls.length = 0;
+  await page.locator('#auth-email').fill('still-typing@example.com');
+  await page.clock.fastForward(61_000);
+  expect(waitingCalls).toEqual([]);
+  await expect(page.locator('#auth-email')).toHaveValue('still-typing@example.com');
 });
 
 test('a change request shows amber on the job and a dashed outline at the requested time', async ({ page, context }) => {

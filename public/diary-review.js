@@ -47,12 +47,16 @@
   }
 
   // err comes from app.js api(): status and code are set for a server answer;
-  // a request that never reached the server has neither.
+  // a request that never reached the server has neither, and is a TypeError -
+  // what fetch itself throws on a network failure. Anything else with no
+  // status is a coding error (a bad call, a bug in the handler), not a
+  // network problem, so it keeps its own message rather than being hidden
+  // behind the network sentence.
   function refusalText(err) {
     if (err.code === 'stale') return 'This job changed while you were looking at it.';
     if (err.code === 'capacity') return 'The requested time is no longer free.';
     if (err.status === 404) return 'This job no longer exists.';
-    if (err.status === undefined) return "Couldn't reach the server — try again.";
+    if (err.status === undefined && err.name === 'TypeError') return "Couldn't reach the server — try again.";
     return err.message;
   }
 
