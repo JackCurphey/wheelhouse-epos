@@ -122,7 +122,12 @@ async function api(path, { method = 'GET', body } = {}) {
     currentUser = null;
     renderAuthScreen();
   }
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed (${res.status})`);
+    err.status = res.status;
+    err.code = data.code;
+    throw err;
+  }
   return data;
 }
 
@@ -1956,12 +1961,12 @@ function wireJobBlockMove(blockEl, job) {
       if (changed) {
         const newStart = minutesToTime(pendingStartMin);
         const newEnd = minutesToTime(pendingStartMin + durationMin);
-        const body = { jobDate: pendingDate, startTime: newStart, endTime: newEnd };
+        const body = { jobDate: pendingDate, startTime: newStart, endTime: newEnd, version: job.version };
         if (pendingMechanicId !== origMechanicId) body.mechanicId = pendingMechanicId;
         try {
           await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body });
         } catch (err) {
-          showToast(err.message);
+          showToast(saveRefusalText(err));
         }
       }
       await renderWorkshop();
@@ -2017,9 +2022,9 @@ function wireJobBlockResize(blockEl, job) {
         blockEl.classList.remove('dragging');
         if (pendingStart === job.startTime && pendingEnd === job.endTime) return;
         try {
-          await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { startTime: pendingStart, endTime: pendingEnd } });
+          await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { startTime: pendingStart, endTime: pendingEnd, version: job.version } });
         } catch (err) {
-          showToast(err.message);
+          showToast(saveRefusalText(err));
         }
         await renderWorkshop();
       }
@@ -2245,13 +2250,20 @@ function openJobContextMenu(e, job) {
   document.addEventListener('keydown', closeJobContextMenuOnEscape);
 }
 
+// A refused diary save says why in plain words (DiaryReview.refusalText);
+// a stale one means someone else changed the job, so the caller redraws.
+function saveRefusalText(err) {
+  return DiaryReview.refusalText(err);
+}
+
 async function approveJob(job) {
   try {
-    await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { status: 'scheduled' } });
+    await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { status: 'scheduled', version: job.version } });
     showToast('Job approved');
     if (document.getElementById('week-diaries')) await renderWorkshop();
   } catch (err) {
-    showToast(err.message);
+    showToast(saveRefusalText(err));
+    if (err.code === 'stale') await renderWorkshop();
   }
 }
 
@@ -6408,11 +6420,12 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
         let body;
         if (!jobIsComplete) {
           preCompleteStatus = document.getElementById('wj-status').value || 'scheduled';
-          body = { status: 'complete' };
+          body = { status: 'complete', version: job.version };
         } else {
-          body = { status: preCompleteStatus };
+          body = { status: preCompleteStatus, version: job.version };
         }
         const saved = await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body });
+        job.version = saved.version;
         jobIsComplete = saved.status === 'complete';
         if (!jobIsComplete) {
           document.getElementById('wj-status').value = saved.status;
@@ -6421,7 +6434,7 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
         showToast(jobIsComplete ? 'Job marked complete' : 'Job reopened');
         if (document.getElementById('week-diaries')) await renderWorkshop();
       } catch (err) {
-        showToast(err.message);
+        showToast(saveRefusalText(err));
       }
     });
   }
@@ -6440,6 +6453,7 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
       notes: document.getElementById('wj-notes').value.trim(),
     };
     if (!isEdit && skipAutoOrder) body.skipAutoOrder = true;
+    if (isEdit) body.version = job.version;
     try {
       let saved;
       if (isEdit) {
@@ -6456,7 +6470,11 @@ function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTi
         await renderWorkshop();
       }
     } catch (err) {
-      showToast(err.message);
+      showToast(saveRefusalText(err));
+      if (err.code === 'stale') {
+        closeModal();
+        if (document.getElementById('week-diaries')) await renderWorkshop();
+      }
     }
   });
 
