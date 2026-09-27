@@ -10,7 +10,7 @@
 
 **Spec:** [`docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`](../specs/2026-09-20-release-1-screen-build-design.md) — Phase 1.
 
-**Preceding phase:** [Phase 0](2026-09-20-phase-0-atlas-revision.md), merged as PR #54. The revised atlas is the behaviour these machines must support.
+**Preceding phase:** [Phase 0](2026-09-20-phase-0-screen-designs-revision.md), merged as PR #54. The revised screen designs are the behaviour these machines must support.
 
 ## Global Constraints
 

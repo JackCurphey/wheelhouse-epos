@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "money-input",
   "title": "Money Input",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Currency field whose value is an integer number of pence and never a float. Parsing works on the digit strings and formatting divides only an exact multiple of 100, so no amount can drift a penny through rounding. Exports parsePence and formatPence for callers that need the same arithmetic outside a form.",
   "dependencies": [],
   "registryDependencies": [

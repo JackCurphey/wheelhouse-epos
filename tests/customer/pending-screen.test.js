@@ -1,4 +1,4 @@
-// The pending screen: the private link read back - the status, the summary,
+// The pending screen: the booking link read back - the status, the summary,
 // Copy link, the contact line, and 404 / 410 / other failures.
 // Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
 import test, { afterEach } from 'node:test';
@@ -49,7 +49,7 @@ const click = async (el) => {
 };
 const heading = (ui, name) => ui.findByRole('heading', { level: 1, name });
 
-test('it reads the private link and shows where the booking is up to as its heading; no step, back link or action', async () => {
+test('it reads the booking link and shows where the booking is up to as its heading; no step, back link or action', async () => {
   const { ui, requests } = await open();
   assert.ok(await heading(ui, 'Awaiting shop confirmation'));
   assert.ok(requests.some((r) => r.url === `/api/portal/north/booking-links/${CODE}`), JSON.stringify(requests));

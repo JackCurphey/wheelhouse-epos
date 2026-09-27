@@ -23,7 +23,7 @@ import {
 } from './details-rules.ts';
 
 /**
- * The details screen (atlas `details`, step 4): a summary of the booking, the
+ * The details screen (screen design `details`, step 4): a summary of the booking, the
  * customer's name, mobile number, how to send updates (one channel, Text
  * message by default), an email (required only for Email updates), and the
  * booking terms, which open in a dialog on the same screen. Everything is

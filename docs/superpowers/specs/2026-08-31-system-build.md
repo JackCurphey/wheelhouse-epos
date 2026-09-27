@@ -34,7 +34,7 @@ Postgres multi-tenancy via row-level security, 25 tables FORCEd, cross-shop read
 return nothing and writes are rejected — verified live **[V]**. Till, inventory,
 sales history, dashboard, workshop diary with per-mechanic columns, customer
 booking portal, purchase orders including split deliveries, Shopify integration,
-a storefront, and an Electron print agent for receipts and labels. CI runs on
+a website, and an Electron print agent for receipts and labels. CI runs on
 every push; 89/89 green on the most recent run **[V]**.
 
 **Scaffolded but unused.** Vite 8 + React 19 + TypeScript + Tailwind 4.3.3 with a
@@ -166,7 +166,7 @@ See §7. These are deliverables with owners, not principles.
 
 **Frontend: new surfaces in React, no big-bang rewrite.** The React scaffold
 exists and nothing uses it. The workshop rebuild, the inspection workflow, the
-website and the customer portal are built on it; the till and inventory stay in
+website and the customer booking pages are built on it; the till and inventory stay in
 vanilla JS until they earn a rewrite on their own merits. A rewrite of working,
 revenue-carrying screens is not on the path to G2.
 
@@ -235,7 +235,7 @@ Mapped to the gates in the business plan. Nothing here reorders them.
 
 ### Not before G3
 
-Storefront and Duda, custom domains and DNS, distributor feeds, a Shopify App
+Website and Duda, custom domains and DNS, distributor feeds, a Shopify App
 Store listing, offline mode, multi-site, product variants, and the rider-owned
 bike record. All frozen in business plan §8 Track D. The bike record is the
 leading candidate for the G3 unlock.

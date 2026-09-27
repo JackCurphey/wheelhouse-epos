@@ -1,5 +1,5 @@
 // The pending screen's rules: status words, and the summary lines built from
-// the private link's reply.
+// the booking link's reply.
 // Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';

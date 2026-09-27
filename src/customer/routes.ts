@@ -1,6 +1,6 @@
 /**
- * Atlas screen id -> URL for the customer app, served at every /book address
- * (server/server.js). pending is also the private link the server issues
+ * Screen design id -> URL for the customer app, served at every /book address
+ * (server/server.js). pending is also the booking link the server issues
  * (server/booking-link.js linkPath), so a customer opening it cold lands here.
  *
  * Each journey plan adds its customer screens here and nowhere else. Keys must

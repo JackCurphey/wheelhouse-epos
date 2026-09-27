@@ -12,7 +12,7 @@
 
 **Goal:** Give Wheelhouse's four front-ends one shared, accessible, contrast-safe design layer, and close the 19 Phase 1 and Phase 2 findings from the 2026-08-31 design audit.
 
-**Architecture:** A new `public/tokens.css` becomes the single source of truth for colour, spacing, type and focus tokens; `styles.css`, `portal.css` and `storefront.css` all link it and are rewritten to consume it rather than redeclare values. No existing selector is renamed, so the staff app's markup is untouched by the token work. Behavioural fixes (modal chrome, toast variants, `confirm()` replacement, storefront cart state, booking URL state) are made in the existing vanilla-JS render functions, following the repo's no-build-step, no-framework pattern. Verification is a new class of `node --test` suites that parse the stylesheets and the render source as text, compute contrast ratios, and assert structural invariants — so every fix has a check that runs in the existing `npm test` gate.
+**Architecture:** A new `public/tokens.css` becomes the single source of truth for colour, spacing, type and focus tokens; `styles.css`, `portal.css` and `storefront.css` all link it and are rewritten to consume it rather than redeclare values. No existing selector is renamed, so the staff app's markup is untouched by the token work. Behavioural fixes (modal chrome, toast variants, `confirm()` replacement, website cart state, booking URL state) are made in the existing vanilla-JS render functions, following the repo's no-build-step, no-framework pattern. Verification is a new class of `node --test` suites that parse the stylesheets and the render source as text, compute contrast ratios, and assert structural invariants — so every fix has a check that runs in the existing `npm test` gate.
 
 **Tech Stack:** Node.js (>=22.5), no new runtime or dev dependencies (the repo's only dependency stays `pg`), Node's built-in `node:test` / `node:assert`, vanilla CSS custom properties, vanilla DOM.
 
@@ -367,7 +367,7 @@ git commit -m "test: add failing WCAG AA contrast gate for design tokens"
  *
  * The single source of truth for design tokens across all Wheelhouse
  * front-ends: the staff EPOS (/), the booking portal (/book) and the public
- * storefront (shop subdomains). Every one of them links this file first.
+ * website (shop subdomains). Every one of them links this file first.
  *
  * Colour values here are contrast-checked by tests/design-contrast.test.js
  * against WCAG 2.1 AA (4.5:1 for body text). Do not change a colour without
@@ -492,7 +492,7 @@ hit `serveStatic`'s index.html fallback (`:3344-3346`) — the file is not where
 you think it is. **Do not read a 200 alone as success here**: that fallback
 returns 200 for a missing file, so the status code proves nothing on its own.
 
-The portal and storefront hosts need an explicit route — added in Task 15.
+The portal and website hosts need an explicit route — added in Task 15.
 
 - [ ] **Step 7: Commit**
 
@@ -1777,9 +1777,9 @@ if (!await confirmDialog({
 })) return;
 ```
 
-- [ ] **Step 5: Replace the storefront `alert()`**
+- [ ] **Step 5: Replace the website `alert()`**
 
-`storefront.js:130` — the storefront has no modal system. Render an inline error
+`storefront.js:130` — the website has no modal system. Render an inline error
 next to the button instead (this pairs with Task 16):
 
 ```javascript
@@ -1805,12 +1805,12 @@ Closes C11."
 
 ---
 
-## Task 14: Give the Front Desk a primary action
+## Task 14: Give the Till a primary action
 
 Closes C9.
 
 **Files:**
-- Modify: `public/app.js:410-411` (Front Desk actions)
+- Modify: `public/app.js:410-411` (Till actions)
 - Modify: `public/app.js:5309, 5510, 5794, 6782` (dismissive buttons)
 - Create: `tests/button-hierarchy.test.js`
 
@@ -1839,7 +1839,7 @@ test('btn-primary never labels a dismissive action', () => {
   assert.deepEqual(offenders, [], 'primary styling on dismissive buttons inverts its meaning');
 });
 
-test('the Front Desk renders exactly one primary action', () => {
+test('the Till renders exactly one primary action', () => {
   const fn = src.slice(src.indexOf('async function renderTill'), src.indexOf('function renderTillPills'));
   const primaries = [...fn.matchAll(/btn-primary/g)];
   assert.equal(primaries.length, 1, `renderTill has ${primaries.length} primary actions, expected 1`);
@@ -1875,19 +1875,19 @@ Closes C9."
 
 # WP-005 — Customer surfaces
 
-## Task 15: Rebuild the storefront on the shared tokens
+## Task 15: Rebuild the website on the shared tokens
 
 Closes R5.
 
 **Files:**
 - Modify: `public-storefront/index.html` (link `/tokens.css`)
 - Rewrite: `public-storefront/storefront.css`
-- Modify: `server/server.js` — serve `/tokens.css` on the storefront host
+- Modify: `server/server.js` — serve `/tokens.css` on the website host
 - Create: `tests/storefront-design.test.js`
 
 **Interfaces:**
 - Consumes: `public/tokens.css`.
-- Produces: a storefront that shares the app's palette, radii, type scale and
+- Produces: a website that shares the app's palette, radii, type scale and
   focus ring, keeping only genuinely storefront-specific components.
 
 - [ ] **Step 1: Write the failing test**
@@ -1902,29 +1902,29 @@ const css = readFile('public-storefront/storefront.css');
 const html = readFile('public-storefront/index.html');
 const shared = parseRootTokens(readFile('public/tokens.css'));
 
-test('the storefront links the shared token sheet', () => {
+test('the website links the shared token sheet', () => {
   assert.match(html, /href="\/tokens\.css"/, 'storefront must load the shared tokens');
 });
 
-test('the storefront declares no colour tokens of its own', () => {
+test('the website declares no colour tokens of its own', () => {
   const own = parseRootTokens(css);
   const colourish = [...own.keys()].filter((k) => !/space|text|radius|leading/.test(k));
   assert.deepEqual(colourish, [], 'storefront must not redeclare colour tokens');
 });
 
-test('the storefront contains no raw hex colours', () => {
+test('the website contains no raw hex colours', () => {
   assert.deepEqual(findHexLiterals(css).map((h) => `${h.hex}:${h.line}`), []);
 });
 
-test('the storefront uses the shared radius tokens', () => {
+test('the website uses the shared radius tokens', () => {
   assert.doesNotMatch(css, /border-radius:\s*\d+px/, 'radii must come from tokens');
 });
 
-test('the storefront defines a focus state', () => {
+test('the website defines a focus state', () => {
   assert.match(css + readFile('public/styles.css'), /:focus-visible/);
 });
 
-test('every token the storefront references is defined in tokens.css', () => {
+test('every token the website references is defined in tokens.css', () => {
   const used = new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]));
   const missing = [...used].filter((t) => !shared.has(t));
   assert.deepEqual(missing, []);
@@ -1937,15 +1937,15 @@ Run: `node --test tests/storefront-design.test.js`
 Expected: FAIL on all six — no token link, 3 own tokens, ~10 raw hex, `4px` and
 `8px` literal radii, no focus rule.
 
-- [ ] **Step 3: Serve `/tokens.css` from the storefront host**
+- [ ] **Step 3: Serve `/tokens.css` from the website host**
 
 `serveStatic(req, res, pathname, baseDir)` (`server/server.js:3339`) resolves
-against `baseDir`, which is `STOREFRONT_DIR` for a storefront request and
+against `baseDir`, which is `STOREFRONT_DIR` for a website request and
 `PORTAL_DIR` for `/book`. Neither directory contains `tokens.css`.
 
 **This will not fail loudly.** `serveStatic` falls back to `baseDir/index.html`
 for any missing file (`:3344-3346`), so an unrouted `/tokens.css` would return
-the storefront's HTML with a 200, the browser would reject it as a stylesheet,
+the website's HTML with a 200, the browser would reject it as a stylesheet,
 and the page would render entirely unstyled with no server-side error. Add the
 branch before both static handlers:
 
@@ -2242,7 +2242,7 @@ for (const [html, js] of PAGES) {
   });
 }
 
-test('the storefront title is no longer the literal string "Shop"', () => {
+test('the website title is no longer the literal string "Shop"', () => {
   assert.doesNotMatch(readFile('public-storefront/index.html'), /<title>Shop<\/title>/);
 });
 ```
@@ -2250,7 +2250,7 @@ test('the storefront title is no longer the literal string "Shop"', () => {
 - [ ] **Step 2: Run it and watch it fail**
 
 Run: `node --test tests/public-page-meta.test.js`
-Expected: FAIL on 9 of 9 for the storefront, most for the portal.
+Expected: FAIL on 9 of 9 for the website, most for the portal.
 
 - [ ] **Step 3: Add the static meta to both entry points**
 
@@ -2264,14 +2264,14 @@ Expected: FAIL on 9 of 9 for the storefront, most for the portal.
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚲</text></svg>" />
 ```
 
-The storefront gets the equivalent with its own copy. These are the fallback
+The website gets the equivalent with its own copy. These are the fallback
 values shown before JS runs and to any crawler that does not execute scripts.
 
 - [ ] **Step 4: Set the real values once the shop resolves**
 
 ```javascript
 // The shop's real name is fetched on load but was never used for the page
-// title - every shop's storefront tab read "Shop", and shared links had no
+// title - every shop's website tab read "Shop", and shared links had no
 // preview card at all.
 function setPageMeta({ title, description, image }) {
   document.title = title;
@@ -2405,7 +2405,7 @@ gates this plan installs:
 | `tests/toast-variants.test.js` | success ≠ error |
 | `tests/no-native-dialogs.test.js` | no `confirm()` / `alert()` |
 | `tests/button-hierarchy.test.js` | primary means commit |
-| `tests/storefront-design.test.js` | storefront on shared tokens |
+| `tests/storefront-design.test.js` | website on shared tokens |
 | `tests/storefront-cart-ui.test.js` | honest cart state |
 | `tests/portal-url-state.test.js` | booking survives refresh |
 | `tests/public-page-meta.test.js` | real titles and OG tags |
@@ -2418,7 +2418,7 @@ recorded in the phase log before this plan is called done:
 2. The phone booking picker actually appears at 375px and the slot selection
    flows through (Task 11, Step 6).
 3. Nothing in the staff app visually broke from the token extraction — walk the
-   Front Desk, Workshop week and month grids, and three modals.
+   Till, Workshop week and month grids, and three modals.
 
 Static tests prove the code exists. They do not prove it renders. Say which you
 did.

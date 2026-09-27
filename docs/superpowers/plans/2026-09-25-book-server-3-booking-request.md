@@ -701,7 +701,7 @@ Expected: every command exits 0. Report the test count. If `check-screen-trace` 
 
 - [ ] **Step 2: Update STATUS**
 
-Under Immediate next actions item 1, replace "Next: piece 3" with piece 3 built on `feat/book-server-3-booking-request` (state the test count from Step 1), name the plan and spec, point at this plan's decision log, and set the next piece to 4 (guest private link). Keep the file under 8,000 bytes (`wc -c`); if over, move text to `ARCHIVE.md`, never delete. Record decisions 1 and 3 there as open questions for Jack.
+Under Immediate next actions item 1, replace "Next: piece 3" with piece 3 built on `feat/book-server-3-booking-request` (state the test count from Step 1), name the plan and spec, point at this plan's decision log, and set the next piece to 4 (guest booking link). Keep the file under 8,000 bytes (`wc -c`); if over, move text to `ARCHIVE.md`, never delete. Record decisions 1 and 3 there as open questions for Jack.
 
 - [ ] **Step 3: Walk the build against the spec**
 

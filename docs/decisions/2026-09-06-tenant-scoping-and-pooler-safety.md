@@ -69,7 +69,7 @@ the flag is off and rewriting live sale routes was out of scope — not because 
 were missed.
 
 Also required first, from the original design: `pushInventoryLevel`, `sendSms`,
-`readJsonBody` and the storefront static/stream branch must move outside the
+`readJsonBody` and the website static/stream branch must move outside the
 `runWithShop` scope, and the response write must happen after the commit rather than
 before it. Until then, enabling transaction mode means telling a customer a sale
 succeeded before it is committed.

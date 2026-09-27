@@ -193,14 +193,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: Append failing tests to `tests/portal-booked-price.test.js`**
 
 ```js
-test('prices shown: the private link carries the booked price', async () => {
+test('prices shown: the booking link carries the booked price', async () => {
   await setShowPrices(true);
   const res = await read(codeOf((await book()).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.bookedPrice, 65.5);
 });
 
-test('prices hidden: the private link carries no price', async () => {
+test('prices hidden: the booking link carries no price', async () => {
   await setShowPrices(false);
   const res = await read(codeOf((await book()).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -208,7 +208,7 @@ test('prices hidden: the private link carries no price', async () => {
   assert.equal(res.body.bookedPrice, null);
 });
 
-test('not sure: the private link carries no price even when prices are shown', async () => {
+test('not sure: the booking link carries no price even when prices are shown', async () => {
   await setShowPrices(true);
   const res = await read(codeOf((await book({ serviceId: undefined, notSure: true })).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -226,7 +226,7 @@ test('the setting is read when the link is opened, not when it was booked', asyn
 
 - [ ] **Step 2: Update `tests/portal-booking-link.test.js`**
 
-In the exact-shape test (`a booking returns a private link...`), add `bookedPrice: null,` after `photoCount: 0,` (this shop never turns prices on, so `null` is correct).
+In the exact-shape test (`a booking returns a booking link...`), add `bookedPrice: null,` after `photoCount: 0,` (this shop never turns prices on, so `null` is correct).
 
 Rename the test `the read-back carries no name, phone, email, price or notes` to `the read-back carries no name, phone, email or notes, and price only as bookedPrice`, and change the filter to:
 
@@ -265,7 +265,7 @@ Expected: all pass.
 
 - [ ] **Step 6: Break step (record the output)**
 
-Remove `w.booked_price,` from the SELECT; confirm with `grep -c "w.work_state, w.booked_price" server/server.js` printing `0`. Run `tests/portal-booked-price.test.js`. Expected: `prices shown: the private link...` fails with `null !== 65.5`. Restore and re-run: all pass.
+Remove `w.booked_price,` from the SELECT; confirm with `grep -c "w.work_state, w.booked_price" server/server.js` printing `0`. Run `tests/portal-booked-price.test.js`. Expected: `prices shown: the booking link...` fails with `null !== 65.5`. Restore and re-run: all pass.
 
 - [ ] **Step 7: Full suite**
 

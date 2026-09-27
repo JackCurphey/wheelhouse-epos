@@ -12,7 +12,7 @@ both sub-decisions (§7.6).
 booking portal.
 
 **Affects:** `workshop_jobs` (a migration — see §5.1), `mechanicFreeMinutes()`
-and the `/availability` route, the customer portal, and — for the first time in
+and the `/availability` route, the customer booking pages, and — for the first time in
 this line of work — the **staff** diary in `public/app.js`. It supersedes §2.2
 and §5.2 of `2026-09-04-job-type-before-diary.md`, which are corrected there.
 
@@ -208,7 +208,7 @@ What is missing is the mode switch, the duration, and the capacity arithmetic.
    made, so a job carries its real duration. See §6.3 for the cost of this.
 4. Capacity from summed durations rather than from start/end times, in both
    `mechanicFreeMinutes()` and `/availability`.
-5. A day-picker in the customer portal for drop-off mode.
+5. A day-picker in the customer booking pages for drop-off mode.
 6. Drop-off window and lead-time settings (§2, item 3).
 7. The staff diary choosing list or grid by mode.
 

@@ -116,7 +116,7 @@ Verified against the code on 31 August 2026, not taken from the plan.
 
 - **There is no test coverage at all** for jobs, orders, `sale_documents`,
   `sale_document_items`, `createSale`, or any pricing logic. All 89 existing
-  tests cover auth/team, Shopify sync, storefront, gateway headers and static
+  tests cover auth/team, Shopify sync, website, gateway headers and static
   caching. This work writes the first tests in the area.
 - **`tests/helpers/testShop.js` cannot clean up an order.** `deleteTestShop`
   deletes `sale_documents` but never `sale_document_items`, so the first

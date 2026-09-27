@@ -20,9 +20,9 @@
 
 > **For agentic workers:** This plan is historical. It has already been executed — see the banner above. Do not implement it.
 
-**Goal:** Let a shop connect their own Shopify store so storefront products can be bought online — EPOS pushes products and stock to Shopify, a customer builds a cart natively on the storefront and pays on Shopify's hosted checkout, and Shopify order/refund webhooks flow back to keep EPOS stock and sales history accurate.
+**Goal:** Let a shop connect their own Shopify store so website products can be bought online — EPOS pushes products and stock to Shopify, a customer builds a cart natively on the website and pays on Shopify's hosted checkout, and Shopify order/refund webhooks flow back to keep EPOS stock and sales history accurate.
 
-**Architecture:** All Shopify-domain logic (encryption, HMAC verification, Admin/Storefront API calls, connection CRUD, order/refund line-item matching, idempotency bookkeeping) lives in a new `server/shopify.js` module with plain exported functions, importing nothing from `server.js` — this keeps it independently unit-testable (via a stubbed global `fetch`) and avoids a circular import, since the final step of processing a webhook needs `server.js`'s existing `createSale()`. `server/server.js` gains: new routes, a dispatcher branch for `/webhooks/shopify/...`, hooks into the existing product-CRUD and till-sale code to trigger sync, and two new functions (`processShopifyOrderWebhook`/`processShopifyRefundWebhook`) that glue `shopify.js`'s tested primitives to the existing `createSale()`. The storefront frontend (`public-storefront/`, from the prior plan) gains a native cart built on Shopify's Storefront API, redirecting to Shopify's hosted checkout only for the final payment step.
+**Architecture:** All Shopify-domain logic (encryption, HMAC verification, Admin/Storefront API calls, connection CRUD, order/refund line-item matching, idempotency bookkeeping) lives in a new `server/shopify.js` module with plain exported functions, importing nothing from `server.js` — this keeps it independently unit-testable (via a stubbed global `fetch`) and avoids a circular import, since the final step of processing a webhook needs `server.js`'s existing `createSale()`. `server/server.js` gains: new routes, a dispatcher branch for `/webhooks/shopify/...`, hooks into the existing product-CRUD and till-sale code to trigger sync, and two new functions (`processShopifyOrderWebhook`/`processShopifyRefundWebhook`) that glue `shopify.js`'s tested primitives to the existing `createSale()`. The website frontend (`public-storefront/`, from the prior plan) gains a native cart built on Shopify's Storefront API, redirecting to Shopify's hosted checkout only for the final payment step.
 
 **Tech Stack:** No new dependencies. Node's built-in global `fetch` for all Shopify API calls; `node:crypto` (`createCipheriv`/`createDecipheriv`/`createHmac`/`timingSafeEqual`) for encryption and webhook verification, matching the style already used in `server/auth.js`.
 
@@ -32,9 +32,9 @@
 
 ## Global Constraints
 
-- Same placeholder/RLS/migration-numbering/no-new-dependency conventions as the storefront framework plan (see its Global Constraints) — new migrations continue from `012_`.
+- Same placeholder/RLS/migration-numbering/no-new-dependency conventions as the website framework plan (see its Global Constraints) — new migrations continue from `012_`.
 - Two new environment variables are required in production (add to `.env`, not committed): `SHOPIFY_TOKEN_ENCRYPTION_KEY` (a long random string — used to derive the AES key that encrypts stored Shopify tokens) and `APP_PUBLIC_URL` (the app's own public base URL, e.g. `https://app.wheelhouseepos.com` — used to build the webhook callback URLs registered with Shopify). Document both in `README.md`'s requirements section as part of this plan.
-- Never log or return a decrypted Shopify access token, storefront token, or webhook secret in any API response — `serializeShopifyConnection` must only ever expose `shopDomain`, `status`, `connectedAt`.
+- Never log or return a decrypted Shopify access token, Storefront API token, or webhook secret in any API response — `serializeShopifyConnection` must only ever expose `shopDomain`, `status`, `connectedAt`.
 - Tests that call Shopify's API stub `globalThis.fetch` directly (save the original, replace it with a function returning a fake `Response`-like object, restore it in `test.after`) rather than adding an HTTP-mocking dependency — each `node --test` file runs in its own process, so this doesn't leak between test files.
 
 ---
@@ -432,7 +432,7 @@ git commit -m "feat: add Shopify Admin API client and connection data layer"
 - Consumes: `getShopifyConnection`, `saveShopifyConnection`, `serializeShopifyConnection`, `registerShopifyWebhooks` from `server/shopify.js`.
 - Produces: `GET /api/shopify/connection` (authenticated); `POST /api/shopify/connection` (authenticated) — body `{ shopDomain, accessToken, storefrontApiToken }`.
 
-No automated test — thin HTTP glue over already-tested Task 3 functions, same as Task 4 of the storefront framework plan. Verified manually.
+No automated test — thin HTTP glue over already-tested Task 3 functions, same as Task 4 of the website framework plan. Verified manually.
 
 - [ ] **Step 1: Add the import**
 
@@ -1297,7 +1297,7 @@ async function processShopifyRefundWebhook(shopId, refund) {
 
 - [ ] **Step 4: Add the dispatcher branch**
 
-In the `createServer(async (req, res) => { ... })` callback, add this branch right after the existing storefront-resolution branch (Task 8 of the storefront framework plan) and before the `/api/portal/` branch:
+In the `createServer(async (req, res) => { ... })` callback, add this branch right after the existing storefront-resolution branch (Task 8 of the website framework plan) and before the `/api/portal/` branch:
 
 ```js
   if (pathname.startsWith('/webhooks/shopify/')) {
@@ -1315,7 +1315,7 @@ In the `createServer(async (req, res) => { ... })` callback, add this branch rig
 
     // shopify_connections has FORCE ROW LEVEL SECURITY, so it can only be
     // read correctly from inside a runWithShop context for the exact shop
-    // being queried (the storefront framework plan's final review found
+    // being queried (the website framework plan's final review found
     // this same bug class in resolveStorefrontShop - a bare pool/prepare
     // call against an RLS-protected table outside runWithShop either
     // throws on a connection that's never set app.current_shop_id, or
@@ -1373,7 +1373,7 @@ git commit -m "feat: add Shopify order/refund webhook endpoint"
 
 ---
 
-## Task 9: Storefront cart and checkout
+## Task 9: Website cart and checkout
 
 **Files:**
 - Modify: `server/storefront.js` (extend `getStorefrontInfo` and `serializeStorefrontProduct` from the prior plan)
@@ -1582,9 +1582,9 @@ git commit -m "feat: add Shopify cart and checkout to the storefront"
 
 No automated test — UI work, consistent with the rest of `public/app.js`. Verified manually.
 
-- [ ] **Step 1: Add a "Shopify" section to the storefront settings screen**
+- [ ] **Step 1: Add a "Shopify" section to the website settings screen**
 
-Add alongside the `renderStorefrontSettingsSection` function from the storefront framework plan:
+Add alongside the `renderStorefrontSettingsSection` function from the website framework plan:
 
 ```js
 async function renderShopifyConnectionSection(container) {
@@ -1657,13 +1657,13 @@ Prerequisites: a free Shopify Partners development store, with a custom app crea
 
 1. Connect the shop to the Shopify dev store via the new settings UI (Task 10). Confirm the two webhooks appear under the dev store's webhook settings.
 2. Mark a product `show_online`, confirm it appears in the Shopify admin's product list with the same name/price/description.
-3. Visit the storefront (`/store/<slug>`), confirm the product shows an "Add to cart" button (not "Coming soon").
+3. Visit the website (`/store/<slug>`), confirm the product shows an "Add to cart" button (not "Coming soon").
 4. Add it to cart, click the cart badge, confirm it lands on Shopify's checkout page.
 5. Complete the order using Shopify's Bogus Gateway test payment (enabled by default on dev stores).
 6. Confirm: EPOS's product stock decreased by the purchased quantity, a new row appears in EPOS sales history with payment method "Shopify" for the correct amount, and the Shopify admin's inventory for that product also reflects the decrease.
 7. Refund the order from the Shopify admin. Confirm EPOS stock is restored by the refunded quantity.
 8. Sell the same product via the EPOS till (a normal in-person sale) and confirm the Shopify admin's inventory count decreases accordingly (the two-way sync from Task 6).
-9. Toggle the product's `show_online` off in EPOS, confirm it's unpublished from the Shopify storefront (no longer purchasable there) without being deleted (its order history in Shopify should remain intact).
+9. Toggle the product's `show_online` off in EPOS, confirm it's unpublished from the Shopify website (no longer purchasable there) without being deleted (its order history in Shopify should remain intact).
 
 - [ ] **Step 3: Note any gaps found for follow-up**
 

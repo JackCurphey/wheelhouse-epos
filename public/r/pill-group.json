@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "pill-group",
   "title": "Pill Group",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Short options as pills over native radios (one choice) or checkboxes (multiple), in a labelled fieldset. Disabled options are greyed and cannot be picked.",
   "dependencies": [],
   "registryDependencies": [],

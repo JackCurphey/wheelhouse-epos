@@ -46,7 +46,7 @@ Fixture: a shop in `Europe/London`, open 09:00–18:00 on the test working day. 
 |---|---|---|---|
 | AC-23 | Saved service price/minutes change after a booking | Existing agreed job price/minutes retain their snapshots. Explicit replanning is distinct from catalogue editing | F10 |
 | AC-24 | Mechanic stretches a slot, records actual time or performs a free warranty repair | Price does not silently multiply by time. Planned effort, allocation, actual time and fixed charge have defined independent meanings | F10 |
-| AC-25 | Mechanic adds labour and a part, but is forbidden to operate the till | Workshop work editing succeeds; payment/refund endpoints remain denied. A route group must not accidentally require cashier powers | F19 |
+| AC-25 | Mechanic adds labour and a part, but is forbidden to operate the till | Workshop work editing succeeds; payment/refund endpoints remain denied. A route group must not accidentally require Staff (till) powers | F19 |
 | AC-26 | A customer approves two of four estimate lines; another employee edits the estimate meanwhile | Approval is bound to an exact immutable version and amount. Stale approval does not authorize new work. Stable line identity survives edits | F10, F15 |
 | AC-27 | A job is repaired but unpaid; another is prepaid but unfinished | Work, financial balance and custody can represent both. Neither payment nor a webhook asserts the repair happened | F14 |
 | AC-28 | A job is completed twice, or reopened and completed again | Decide completion/version history. One applicable summary/invoice intention per event; no repeated charge or obsolete invoice link | F14, F17 |

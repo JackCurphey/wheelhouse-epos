@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "dialog",
   "title": "Dialog",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Modal built on the native dialog element, so focus trapping, background inerting and Escape come from the browser. Visual parity with .modal, including the shop-configurable --modal-bg panel colour.",
   "dependencies": [
     "lucide-react"

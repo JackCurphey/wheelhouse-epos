@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "textarea",
   "title": "Textarea",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Multi-line text box with the input's look, at least 80px tall, resizable vertically.",
   "dependencies": [],
   "registryDependencies": [],

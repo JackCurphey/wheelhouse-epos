@@ -11,13 +11,13 @@ on the job but deliberately returned it nowhere. **Parent:** plan 4a
 ## Intent
 
 After booking, the customer can see the price they booked at: on the
-`pending` screen (from the booking POST's reply) and on the private link page
+`pending` screen (from the booking POST's reply) and on the booking link page
 (from the link read-back). The shop's "show prices online" setting governs it,
 exactly as it governs the service list.
 
 ## Decisions (Jack, 25 Sep)
 
-1. **B1:** `pending` shows the booked price (atlas screen 06 changes to match
+1. **B1:** `pending` shows the booked price (screen design 06 changes to match
    in piece (d)).
 2. **Follow the shop's setting:** with `show_prices_online` off, no price is
    returned after booking either. Chosen over "always show" (would reveal

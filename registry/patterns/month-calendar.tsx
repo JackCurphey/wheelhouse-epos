@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * One month for picking a booking day (Jack, 26 Sep: the atlas month grid).
+ * One month for picking a booking day (Jack, 26 Sep: the screen-design month grid).
  * Weeks start Monday. A date not in `available` is greyed, struck through,
  * aria-disabled and does nothing - no "Full"/"Closed" label, because the
  * server never says why a day is unavailable. Arrow keys move between days

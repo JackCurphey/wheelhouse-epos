@@ -1,4 +1,4 @@
-// Migration 027: the private link's hash and the customer's own description.
+// Migration 027: the booking link's hash and the customer's own description.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';

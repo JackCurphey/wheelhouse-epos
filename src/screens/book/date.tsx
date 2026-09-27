@@ -18,7 +18,7 @@ import {
 import { TIME_TAKEN_MESSAGE, type SendRefusalState } from './details-rules.ts';
 
 /**
- * The date screen (atlas `date`, step 3): a month calendar for this month and
+ * The date screen (screen design `date`, step 3): a month calendar for this month and
  * next; on a timed day, mechanic pills and the one-day diary (every mechanic
  * shown, one column each; tapping a free time picks that mechanic and time);
  * on a drop-off day, the drop-off window and a mechanic choice starting on

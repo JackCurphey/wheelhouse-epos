@@ -15,7 +15,7 @@ quote is approved as a whole.
 Surfaced on 23 September while reviewing the new quote read endpoints
 (PR #58). A reviewer could not tell from the code whether this was deliberate
 ("nothing is final until the customer submits") or an oversight ("each line is
-decided once"). Nothing in the atlas or the earlier decisions answered it.
+decided once"). Nothing in the screen designs or the earlier decisions answered it.
 
 ## The decision
 

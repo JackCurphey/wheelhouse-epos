@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "confirm-dialog",
   "title": "Confirm Dialog",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Replacement for the native window.confirm() the app currently calls before destructive actions. Includes a promise-based useConfirmDialog hook so call sites read the way confirm() did, and destructive confirmations ignore backdrop clicks so a stray tap on a busy counter cannot answer for staff.",
   "dependencies": [],
   "registryDependencies": [

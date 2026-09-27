@@ -1,4 +1,4 @@
-// Database layer for the bike shop EPOS - PostgreSQL via `pg`, shared across
+// Database layer for Wheelhouse - PostgreSQL via `pg`, shared across
 // every shop. Shop isolation is enforced by Postgres Row-Level Security, not
 // by application code: every shop-scoped table has a `shop_id` column with a
 // policy that filters on `current_setting('app.current_shop_id')`, which is
@@ -325,7 +325,7 @@ async function endScope(state, verb) {
 //     the tenant is scoped to the request's transaction and cannot outlive
 //     it under any pooler. NOT safe to switch on yet: Shopify pushes with
 //     retry (server/server.js:1618, :963), Twilio sends (:1330), the
-//     storefront static/upload streaming branch (:3769, :3735) and
+//     website static/upload streaming branch (:3769, :3735) and
 //     readJsonBody all run inside this scope today, and every route writes
 //     its HTTP response with sendJson BEFORE the outer COMMIT would land.
 //     Enabling it would hold row locks across third-party HTTP with backoff

@@ -1,4 +1,4 @@
-// Asserts Jack's 17 September review notes have been applied to the atlas.
+// Asserts Jack's 17 September review notes have been applied to the screen designs.
 // Source of the notes: docs/reviews/2026-09-17-release-1-screen-review-jack.md
 // Run after: python3 package.py && node check-static.mjs
 import { JSDOM, VirtualConsole } from 'jsdom';
@@ -21,8 +21,8 @@ const byId = id => {
 // expression, for example), so it never appears literally in the source.
 // renderedOf gives the screen's actual HTML, the way check-static.mjs does.
 const vc = new VirtualConsole();
-const atlas = new JSDOM(await readFile(path('Wheelhouse-Release-1-Journey-Atlas.html'), 'utf8'), {
-  runScripts: 'dangerously', url: 'https://atlas.example/', virtualConsole: vc,
+const designs = new JSDOM(await readFile(path('Wheelhouse-Release-1-Screen-Designs.html'), 'utf8'), {
+  runScripts: 'dangerously', url: 'https://screen-designs.example/', virtualConsole: vc,
   beforeParse(w) {
     w.HTMLDialogElement.prototype.showModal = function () { this.open = true };
     w.HTMLDialogElement.prototype.close = function () { this.open = false };
@@ -30,7 +30,7 @@ const atlas = new JSDOM(await readFile(path('Wheelhouse-Release-1-Journey-Atlas.
     w.HTMLElement.prototype.scrollIntoView = function () {};
   },
 });
-const renderedOf = id => atlas.window.doc(atlas.window.eval('screens').find(s => s.id === id));
+const renderedOf = id => designs.window.doc(designs.window.eval('screens').find(s => s.id === id));
 
 // The add(...) call for one screen: from add('<id>' up to the next add(' at line start.
 const sourceOf = id => {
@@ -180,5 +180,5 @@ const sourceOf = id => {
     'the job page does not show that the checklist comes from a service template');
 }
 
-atlas.window.close();
+designs.window.close();
 console.log('check-notes: all applied-note assertions passed');

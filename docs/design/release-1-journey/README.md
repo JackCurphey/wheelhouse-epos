@@ -1,10 +1,10 @@
-# Wheelhouse Release 1 journey atlas
+# Wheelhouse Release 1 screen designs
 
 Proposed visual build target for Mark and Jack’s store review, 10 September 2026. This applies the narrowed Release 1 scope; it is not final store sign-off or evidence of completed implementation.
 
 Review and return screen-specific feedback in [GitHub issue #50](https://github.com/JackCurphey/wheelhouse-epos/issues/50).
 
-Open **[Wheelhouse-Release-1-Journey-Atlas.html](Wheelhouse-Release-1-Journey-Atlas.html)** in a browser. It is a single offline file: no server, installation, account, fonts CDN or network service required. Use **Start walkthrough**, or click any screen. **All screens**, chapter filters, search, zoom and **Fit width** make the whole board navigable. In the screen viewer, Next follows the intended handoff; buttons open related states. Escape closes the viewer. Every screen has a stable reference for review and links to its P00–P10 work packages.
+Open **[Wheelhouse-Release-1-Screen-Designs.html](Wheelhouse-Release-1-Screen-Designs.html)** in a browser. It is a single offline file: no server, installation, account, fonts CDN or network service required. Use **Start walkthrough**, or click any screen. **All screens**, chapter filters, search, zoom and **Fit width** make the whole board navigable. In the screen viewer, Next follows the intended handoff; buttons open related states. Escape closes the viewer. Every screen has a stable reference for review and links to its P00–P10 work packages.
 
 For store review, open a screen and use **Jack’s feedback** in the right-hand panel. Choose **Change requested**, **Question**, **Approved as shown** or **General note**, then save. Reviewed cards are marked on the board. **Review feedback** collects every saved comment and exports a single Markdown review ready to paste into the linked GitHub issue. Feedback is stored only in that browser’s local storage; export it before clearing browser data or moving to another device.
 
@@ -23,7 +23,7 @@ The static copies are rendered from the screen markup using WeasyPrint and print
 ## Review route
 
 1. Customer: service / unknown problem → bike details and optional media → drop-off or appointment → contact and channel preferences → request.
-2. Service desk: review → reserve capacity → confirm → physically receive bike → print tag → scan into an authenticated staff job.
+2. Staff: review → reserve capacity → confirm → physically receive bike → print tag → scan into an authenticated staff job.
 3. Mechanic and customer: inspection → itemised quote → secure line decisions → exact agreement preserved.
 4. Workshop: allocate or claim → approved work → final check → Lightspeed work-order handoff → ready notification → physical collection → locked history.
 5. Alternatives: full dates, rejected / expired requests, reschedule / cancellation, stale quotes, spending ceiling, capacity / claim conflicts, parts delays, delivery uncertainty, printer uncertainty, access denial and reopening.
@@ -42,7 +42,7 @@ approved as shown and 13 carried notes. What changed:
   went from 10 screens to none.
 - **The bike tag carries a Code 128 job number instead of a QR**, and the shop
   chooses whether the tag's largest line is the job number, the customer name or
-  the bike. The bar pattern in this atlas is a **non-scanning specimen** and
+  the bike. The bar pattern in these screen designs is a **non-scanning specimen** and
   says so; a generated, scanner-verified rendering follows the P00b proof.
 - **Booking mode has a third option, exact appointments only**, where a walk-in
   joins the untimed shared queue rather than holding a slot.
@@ -82,7 +82,7 @@ Approval, extra-effort allocation, physical custody, work completion and collect
 
 `pdf-verification.json` records the PDF checks **of the superseded 84-screen render**: 84 vector cards on the single-page journey board; a cover plus 84 screen pages in the review book; 91 bookmarks; and extracted headings and design notes for every screen. Representative pages from every screen family were also inspected at full resolution.
 
-Sources: `screens.js` (primary journey), `branches.js` (alternatives/settings), `screen.css` (product UI), `atlas.js`, `atlas.css`, `template.html`, `tag-qr.svg`. The screen index is machine-readable in `screen-index.json`.
+Sources: `screens.js` (primary journey), `branches.js` (alternatives/settings), `screen.css` (product UI), `designs.js`, `designs.css`, `template.html`, `tag-qr.svg`. The screen index is machine-readable in `screen-index.json`.
 
 Repackage and validate:
 

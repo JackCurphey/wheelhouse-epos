@@ -24,7 +24,7 @@ The walkthrough runs from a customer's service request through shop scheduling, 
 | Participants | A single person can play multiple roles and switch between customer and shop views in the same scenario. Participants can interact directly, including changing shop settings. |
 | Devices | Fully responsive. Customer requests and mechanic inspections work on phones; scheduling works on a larger screen and remains usable on smaller screens. |
 | Customer entry | No account required. A customer can describe a problem in their own words and attach photos or video without knowing which service to choose. |
-| Return access | A customer progress link provides access to status, inspection videos, messages, and approvals. It represents secure guest access, not a requirement to create an account. |
+| Return access | A customer booking link provides access to status, inspection videos, messages, and approvals. It represents secure guest access, not a requirement to create an account. |
 | Acceptance | Model automatic acceptance and shop review before confirmation. Allow testing a shop-wide mode and service-specific rules rather than selecting a single permanent policy. |
 | Booking | Shops can choose exact appointments or day-based drop-offs. A drop-off date is not a promised mechanic start time. |
 | Work allocation | Model both assignment to individual mechanics and a shared queue from which staff take work. |

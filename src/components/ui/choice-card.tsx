@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 /**
  * A big tappable option card: title, optional detail line, optional price.
  * Selected = 2px shop-colour border and a pale shop-colour fill (Jack, 26 Sep:
- * the atlas card style). Pass `selected` only when the card is one of a set
+ * the screen-design card style). Pass `selected` only when the card is one of a set
  * the customer picks between; a card that just navigates leaves it out and
  * gets no aria-pressed. `price` is shown as given - never formatted here.
  * Spec: docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md

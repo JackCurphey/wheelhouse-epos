@@ -1,7 +1,7 @@
 {
   "name": "bike-shop-epos",
   "version": "1.0.0",
-  "description": "Local EPOS system for a bike shop - till, inventory, sales history and dashboard. Backed by PostgreSQL - one dependency (pg), see README for local setup.",
+  "description": "Wheelhouse: local EPOS system for a bike shop - till, stock, sales history and dashboard. Backed by PostgreSQL - one dependency (pg), see README for local setup.",
   "type": "module",
   "main": "server/server.js",
   "scripts": {

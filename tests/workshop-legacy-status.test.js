@@ -2,7 +2,7 @@
 // checked in both directions. readLegacyStatus() says what a legacy value
 // MEANT; the generated column says what the new states LOOK like to a reader
 // still on the old column. If those two disagree, the old staff diary and the
-// customer portal are being told something the state machines do not say.
+// online booking pages are being told something the state machines do not say.
 import '../server/load-env.js';
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';

@@ -2,7 +2,7 @@
 //
 // The case this whole design exists for is the stale link: the shop revises a
 // price while the customer has the old approval link open, and the old link
-// must not be able to approve the new amount. It has its own atlas screen (51).
+// must not be able to approve the new amount. It has its own screen design (51).
 //
 // Needs the compose Postgres up (npm run docker:up) or it hangs with no output.
 import test, { before, after } from 'node:test';

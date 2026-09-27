@@ -1,4 +1,4 @@
-# Wheelhouse EPOS — master implementation plan
+# Wheelhouse — master implementation plan
 
 > **Release 1 amendment — 10 September 2026:** Jack’s review narrows this release to workshop operations, quote approvals, messaging, one proven Lightspeed adapter and scannable bike tags. [Scope decision](../../decisions/2026-09-10-release-1-scope-reduction.md) and [current implementation plan](2026-09-10-release-1-workshop-plan.md) supersede incompatible scope, sequencing and release gates below, including invoices/payments/refunds, customer import, reports, groups and recovery. Unaffected architectural constraints remain.
 
@@ -102,7 +102,7 @@ Prior reasoning, still valid for its detail:
 Postgres multi-tenancy with 25 tables RLS-enabled and FORCEd, cross-shop reads
 returning nothing and writes rejected; till, inventory, sales history, dashboard,
 workshop diary with per-mechanic columns, customer booking portal, purchase
-orders with split deliveries, Shopify integration, storefront, Electron print
+orders with split deliveries, Shopify integration, website, Electron print
 agent. CI on every push, 89/89 green.
 
 **Scaffolded, unused [V]:** Vite 8 + React 19 + TypeScript + Tailwind 4.3.3 with
@@ -304,7 +304,7 @@ tests.
 
 ## 6. Frozen until after G3
 
-Storefront and Duda, custom domains and DNS, distributor feeds, Shopify App
+Website and Duda, custom domains and DNS, distributor feeds, Shopify App
 Store listing, offline mode, multi-site, product variants, the rider-owned
 shareable bike record, marketing automation and cold outreach, a second
 vertical, non-UK markets. The rider record is the leading G3 unlock candidate.

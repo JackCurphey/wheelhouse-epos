@@ -10,11 +10,11 @@
 
 **Spec:** [`docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`](../specs/2026-09-20-release-1-screen-build-design.md) — Phase 2.
 
-**Preceding phases:** [Phase 0](2026-09-20-phase-0-atlas-revision.md) (PR #54), [Phase 1](2026-09-20-phase-1-state-machines.md) (PR #55). The machines in `server/workshop/state-machines.js` are this phase's input.
+**Preceding phases:** [Phase 0](2026-09-20-phase-0-screen-designs-revision.md) (PR #54), [Phase 1](2026-09-20-phase-1-state-machines.md) (PR #55). The machines in `server/workshop/state-machines.js` are this phase's input.
 
 ## Global Constraints
 
-- **Purely additive. Nothing existing changes behaviour.** `workshop_jobs.status` keeps its five values, its default and every reader — `server/server.js`, `public/app.js` and the customer portal all keep working untouched (Jack's decision, 20 Sep). Phase 3 moves the API across; a later migration drops the column once nothing reads it. **Do not** alter, constrain or backfill `status` in this phase.
+- **Purely additive. Nothing existing changes behaviour.** `workshop_jobs.status` keeps its five values, its default and every reader — `server/server.js`, `public/app.js` and the customer booking pages all keep working untouched (Jack's decision, 20 Sep). Phase 3 moves the API across; a later migration drops the column once nothing reads it. **Do not** alter, constrain or backfill `status` in this phase.
 - **Every new shop-scoped table needs RLS.** `ENABLE ROW LEVEL SECURITY` **and** `FORCE ROW LEVEL SECURITY`, plus a policy on `shop_id = current_setting('app.current_shop_id')::int` for both `USING` and `WITH CHECK`. `scripts/ci/assert-rls-coverage.mjs` runs in CI and fails otherwise. ENABLE without FORCE is not enough: the app connects as the table owner, which bypasses its own policies.
 - **Follow the `001_init_schema.sql` table shape**: `shop_id INTEGER NOT NULL DEFAULT current_setting('app.current_shop_id')::int REFERENCES shops(id)`, `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`.
 - **Migrations are forward-only and each runs in its own transaction.** Where two changes would leave a nonsensical half-state between them, put them in one file — `015_booking_mode.sql` says exactly this and is the model to copy.
@@ -319,7 +319,7 @@ Create `server/migrations/016_workshop_job_states.sql`. Take the three CHECK lin
 -- server/workshop/state-machines.js (the source of truth for these values).
 --
 -- ADDITIVE ONLY. workshop_jobs.status keeps its five values, its default and
--- every reader: server.js, public/app.js and the customer portal are all still
+-- every reader: server.js, public/app.js and the customer booking pages are all still
 -- on it and must keep working. Phase 3 moves the API across; a later migration
 -- drops the column once nothing reads it. Nothing here touches it.
 --
@@ -342,7 +342,7 @@ ALTER TABLE workshop_jobs
   ADD COLUMN work_state TEXT NOT NULL DEFAULT 'not_started'
     CHECK (work_state IN ('not_started', 'in_progress', 'waiting_parts', 'on_hold', 'complete'));
 
--- The immutable job reference a tag is printed with (WH-1042 in the atlas).
+-- The immutable job reference a tag is printed with (WH-1042 in the screen designs).
 -- Nullable because every existing row predates it and this migration writes no
 -- data; Phase 3 allocates one when it creates a job.
 ALTER TABLE workshop_jobs ADD COLUMN reference TEXT;

@@ -12,7 +12,7 @@ import { ROUTES, type ScreenId } from './routes.ts';
  * decisions no plan step has settled yet, so nothing here guesses at them.
  */
 
-// Screens by atlas id. Each journey plan registers its screens here as they
+// Screens by screen design id. Each journey plan registers its screens here as they
 // are built; an id with no entry renders the placeholder, so every URL in
 // ROUTES is routable from day one - including the five edge screens entered
 // from outside the app.

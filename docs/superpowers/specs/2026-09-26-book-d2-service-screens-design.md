@@ -9,7 +9,7 @@
 - d1's spec (`2026-09-26-book-d1-groundwork-design.md`): the draft's single
   `serviceId` becomes `serviceIds[]`, and the frame gains loading and error
   states.
-- the atlas mock-ups for `service` and `service-list`, which predate the
+- the screen designs for `service` and `service-list`, which predate the
   24 Sep three-option decision.
 
 ## Why
@@ -23,7 +23,7 @@ The customer says what they want done: one or more of the shop's services
 1. **One shared list.** The first screen keeps the three fixed options
    (24 Sep). "Full services" and "Individual services" both open the same
    list, starting at the section picked. "Not sure" goes to `problem`.
-   Chosen over separate lists (mixing means going back, and the atlas has no
+   Chosen over separate lists (mixing means going back, and the screen designs have no
    second list screen) and over dropping the first screen (reverses 24 Sep).
 2. **Hint and lock.** Ticking a full service marks each service it includes
    "Included in your <full service>" and greys it out, so it can't be ticked.

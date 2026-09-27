@@ -23,7 +23,7 @@ This answers a question the Release 1 workshop plan left conditional: "support
 QR scanning using a phone camera or agreed 2D reader. Where the shop uses a 1D
 scanner, print an additional Code 128 job number; do not assume it can read
 QR." The first shop has a 1D scanner, so **the tag must carry Code 128**. That
-is already what atlas note 11 changed the tag to, so nothing needs replanning —
+is already what screen-design note 11 changed the tag to, so nothing needs replanning —
 the choice is now backed by evidence instead of assumption.
 
 ## The input contract
@@ -80,7 +80,7 @@ factory reset barcode.
 ## What is still not proven
 
 - **No tag from our own printer has been scanned.** The printer, label stock
-  and Windows driver host are all still open. The atlas barcode therefore
+  and Windows driver host are all still open. The screen-design barcode therefore
   **stays a declared non-scanning specimen**, and "a real printed tag scans to
   the right job" remains unproven — it is P08's acceptance criterion and is not
   met by this evidence.

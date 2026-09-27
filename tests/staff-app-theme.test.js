@@ -78,7 +78,7 @@ test('Edit Shop > Office has no colour scheme panel, but the website keeps its s
   const doc = dom.window.document;
   await waitFor(() => doc.getElementById('storefront-theme-preset'), 'the storefront settings to render');
   const headings = [...doc.querySelectorAll('#office-content h2')].map((h) => h.textContent.trim());
-  assert.ok(headings.includes('Storefront'), `Office page headings: ${headings.join(', ')}`);
+  assert.ok(headings.includes('Website'), `Office page headings: ${headings.join(', ')}`);
   assert.equal(headings.includes('Colour scheme'), false, 'the Colour scheme panel is still on the Office page');
   assert.equal(doc.getElementById('theme-swatch-grid'), null);
   const presets = [...doc.querySelectorAll('#storefront-theme-preset option')].map((o) => o.value);

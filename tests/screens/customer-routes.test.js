@@ -1,4 +1,4 @@
-// The customer route table: atlas screen id -> URL under /book.
+// The customer route table: screen design id -> URL under /book.
 // Spec: docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,8 +10,8 @@ const index = JSON.parse(
 );
 const BOOK_IDS = index.filter((s) => s.group === 'book').map((s) => s.id);
 
-test('the table has exactly the six book screens from the atlas', () => {
-  assert.equal(BOOK_IDS.length, 6, `atlas book group changed: ${BOOK_IDS}`);
+test('the table has exactly the six book screens from the screen designs', () => {
+  assert.equal(BOOK_IDS.length, 6, `screen-design book group changed: ${BOOK_IDS}`);
   assert.deepEqual(Object.keys(CUSTOMER_ROUTES).sort(), [...BOOK_IDS].sort());
 });
 
@@ -26,7 +26,7 @@ test('no two screens share a URL', () => {
   assert.equal(new Set(paths).size, paths.length);
 });
 
-test('pending is the private link the server issues', () => {
+test('pending is the booking link the server issues', () => {
   // server/booking-link.js linkPath: /book/<slug>/booking/<code>
   assert.equal(CUSTOMER_ROUTES.pending, '/book/:shopSlug/booking/:code');
 });

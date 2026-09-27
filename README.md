@@ -1,6 +1,6 @@
-# Wheelhouse EPOS
+# Wheelhouse
 
-A point-of-sale system for a bike shop: till/checkout, inventory management,
+A point-of-sale system for a bike shop: till/checkout, stock management,
 sales history and a dashboard. Each shop creates its own account and signs in
 to its own private data. That separation is enforced by the database itself,
 not by application code: every shop-scoped table has a `shop_id` column and a
@@ -94,15 +94,15 @@ row-level security policies are the thing most worth testing.
 - **Till** — search or tap products to add them to the sale, adjust quantities,
   apply a discount, take Cash or Card payment (with change calculated for cash),
   and complete the sale. Stock is deducted automatically.
-- **Inventory** — add, edit and deactivate products; each has a SKU, category,
+- **Stockroom** — add, edit and deactivate products; each has a SKU, category,
   price, cost, supplier and low-stock threshold. Receive stock or make manual
   adjustments from the "Stock" button on each row.
 - **Sales History** — every completed sale with a reprintable on-screen receipt.
 - **Dashboard** — today's takings and transaction count, low-stock alerts, and
   today's top sellers.
 
-Each shop account starts with an empty inventory - add your own products from
-the Inventory screen.
+Each shop account starts with no stock - add your own products from
+the Stockroom tab.
 
 ## The frontend build
 
@@ -161,9 +161,9 @@ it. Two features need genuine public reachability and therefore do not work
 in a purely local install:
 
 - **Shopify webhooks.** `APP_PUBLIC_URL` must be an internet-reachable URL
-  for Shopify to deliver order and refund webhooks. Product and inventory
+  for Shopify to deliver order and refund webhooks. Product and stock
   pushes still work; incoming webhooks do not.
-- **Public storefronts on a subdomain.** `/store/<slug>` works locally;
+- **Public websites on a subdomain.** `/store/<slug>` works locally;
   `<slug>.wheelhouseepos.com` needs public DNS and TLS.
 
 How the app gets exposed publicly again is an open decision, not an
@@ -171,9 +171,9 @@ oversight. Whatever terminates TLS would sit in front of the gateway and
 would need to set `x-forwarded-proto` itself, with the gateway taught to
 trust it the same way the app trusts the gateway today.
 
-### Public storefronts and `STOREFRONT_BASE_DOMAIN`
+### Public websites and `STOREFRONT_BASE_DOMAIN`
 
-Each shop can turn on a public storefront, reachable either at `/store/<slug>`
+Each shop can turn on a public website, reachable either at `/store/<slug>`
 on the app's own host, or on its own subdomain, `<slug>.wheelhouseepos.com`.
 The base domain used for the subdomain form defaults to `wheelhouseepos.com`
 and can be overridden with the `STOREFRONT_BASE_DOMAIN` environment variable:
@@ -184,19 +184,19 @@ $env:STOREFRONT_BASE_DOMAIN="example.com"; npm start        (Windows PowerShell)
 ```
 
 Any request whose `Host` header is a subdomain of this base domain is treated
-as a storefront slug lookup (e.g. `acme.wheelhouseepos.com` looks up the shop
+as a website slug lookup (e.g. `acme.wheelhouseepos.com` looks up the shop
 slugged `acme`), except for a small set of reserved subdomains (`www`, `app`,
 `api`, `admin`, `staff`). Because of this, **the staff app itself (or any
 other internal service) must never be deployed on a bare subdomain of this
 same base domain unless that subdomain is added to the reserved list** in
 `server/storefront.js` - otherwise requests to it would be misread as a
-storefront lookup and served a storefront "not found" page instead of the
+website lookup and served a website "not found" page instead of the
 real app.
 
 ### Shopify integration: `SHOPIFY_TOKEN_ENCRYPTION_KEY` and `APP_PUBLIC_URL`
 
 A shop can connect a Shopify store (Office > Shopify) to sync products and
-inventory and accept online orders. Two environment variables are required
+stock and accept online orders. Two environment variables are required
 for this to work correctly in production:
 
 - **`SHOPIFY_TOKEN_ENCRYPTION_KEY`** - a secret used to derive the key that

@@ -39,7 +39,7 @@ test('ordinary headers pass through untouched', () => {
   assert.equal(out['content-type'], 'application/json');
 });
 
-test('the Host header survives, since storefront subdomains resolve from it', () => {
+test('the Host header survives, since website subdomains resolve from it', () => {
   const out = buildProxyHeaders({ host: 'shop.example.com' }, '198.51.100.9');
   assert.equal(out.host, 'shop.example.com');
 });

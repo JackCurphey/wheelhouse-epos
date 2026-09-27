@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "data-table",
   "title": "Data Table",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Shop-scoped table with the loading, failed and genuinely-empty states written into the component rather than left to each caller. Shop scoping is enforced by PostgreSQL row-level security on the server; this makes that scope legible in the empty and error copy.",
   "dependencies": [],
   "registryDependencies": [

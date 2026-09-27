@@ -1,4 +1,4 @@
-// An unconfirmed booking moves at once through its private link (piece 12,
+// An unconfirmed booking moves at once through its booking link (piece 12,
 // decision 4): it stays awaiting confirmation, its hold moves with it, and
 // the new time passes every check a new booking's time passes - with the
 // booking's own time never counted against itself.
