@@ -3896,6 +3896,7 @@ route('POST', '/api/team/logins/:loginId/reactivate', async (req, res, params) =
 // deactivate above). Workshop jobs and sales/orders already tied to them are
 // unassigned rather than deleted or blocked by the foreign key, consistent
 // with how removing a customer/bike/product never destroys sale/job history.
+// Till sales are unassigned the same way; staff check-ins are deleted.
 route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
@@ -3903,6 +3904,10 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
   await db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
   await db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
   await db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
+  // Till sales stay as history, unassigned; check-ins only record that this
+  // person was in, so they go with the person.
+  await db.prepare('UPDATE till_sales SET employee_id = NULL WHERE employee_id = ?').run(id);
+  await db.prepare('DELETE FROM staff_checkins WHERE employee_id = ?').run(id);
   await db.prepare('DELETE FROM employees WHERE id = ?').run(id);
   sendJson(res, 200, { ok: true });
 });
