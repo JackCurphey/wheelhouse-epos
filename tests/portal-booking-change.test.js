@@ -209,6 +209,15 @@ test('a change and a new booking for overlapping times at once: exactly one gets
   assert.equal(loser.body.code, 'capacity');
 });
 
+test('a bike already in the shop cannot be moved through the link', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, "booking_state = 'scheduled', custody_state = 'in_shop'");
+  const res = await link.change(booked.code, { jobDate: nextDay(), mechanicId: sam, startTime: '10:00' });
+  assert.deepEqual([res.status, res.body], [409, {
+    error: 'Your bike is already with the shop - please contact them to change it', code: 'in_shop',
+  }]);
+});
+
 // Last: moves a date far ahead to drop-off, so nothing else in this file meets it.
 test('a drop-off day takes the day, not a time', async () => {
   const far = new Date(`${nextDay()}T00:00:00Z`);
