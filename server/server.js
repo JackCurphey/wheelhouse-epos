@@ -3379,6 +3379,75 @@ route('POST', '/api/workshop-jobs/:id/accept-change', async (req, res, params) =
 route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params) =>
   answerChangeRequest(req, res, Number(params.id), 'decline'));
 
+// Staff saw a customer's cancellation (piece 12, decision 5): it leaves
+// "Waiting for you". Keeps the first time it was seen; still needs the version.
+// screens: cancelled, diary
+route('POST', '/api/workshop-jobs/:id/cancellation-seen', async (req, res, params) => {
+  const id = Number(params.id);
+  const body = await readJsonBody(req);
+  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+  const job = await db.prepare('SELECT id, cancelled_by FROM workshop_jobs WHERE id = ?').get(id);
+  if (!job) return notFound(res, 'Job not found');
+  if (job.cancelled_by !== 'customer') {
+    return sendJson(res, 409, { error: "Only a customer's cancellation can be marked as seen", code: 'illegal' });
+  }
+  const { changes } = await db.prepare(
+    `UPDATE workshop_jobs SET cancellation_seen_at = COALESCE(cancellation_seen_at, now()), version = version + 1, updated_at = now()
+     WHERE id = ? AND version = ?`
+  ).run(id, body.version);
+  if (changes === 0) return sendJson(res, staleRefusal.status, staleRefusal.body);
+  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+  sendJson(res, 200, serializeWorkshopJob(row));
+});
+
+// One item of "Waiting for you" (decision log D12).
+function waitingItem(row) {
+  const kind = row.booking_state === 'pending' ? 'new_booking'
+    : row.booking_state === 'reschedule_requested' ? 'change_request' : 'customer_cancelled';
+  const slot = (jobDate, startTime, endTime, mechanicId, mechanicName) => ({
+    jobDate, startTime: startTime || '', endTime: endTime || '', mechanicId, mechanicName: mechanicName ?? null,
+  });
+  const current = slot(row.job_date, row.start_time, row.end_time, row.mechanic_id, row.mechanic_name);
+  return {
+    kind,
+    jobId: row.id,
+    reference: row.reference,
+    ...current,
+    customerName: row.customer_name ?? null,
+    serviceNames: row.service_names,
+    arrivedAt: { new_booking: row.created_at, change_request: row.requested_at, customer_cancelled: row.cancelled_at }[kind],
+    ...(kind === 'change_request'
+      ? {
+        from: current,
+        to: slot(row.requested_job_date, row.requested_start_time, row.requested_end_time, row.requested_mechanic_id, row.requested_mechanic_name),
+      }
+      : {}),
+  };
+}
+
+// "Waiting for you" (piece 12, decision 3): new online bookings (only the
+// portal sets terms_accepted_at), customers' change requests and customers'
+// cancellations not yet seen - oldest first by when each arrived.
+// screens: requests, diary
+route('GET', '/api/workshop-waiting', async (req, res) => {
+  const rows = await db.prepare(
+    `SELECT w.*, c.name AS customer_name, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
+            (SELECT coalesce(json_agg(s.name ORDER BY js.position), '[]'::json)
+               FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
+              WHERE js.workshop_job_id = w.id) AS service_names
+     FROM workshop_jobs w
+     LEFT JOIN customers c ON c.id = w.customer_id
+     LEFT JOIN employees m ON m.id = w.mechanic_id
+     LEFT JOIN employees rm ON rm.id = w.requested_mechanic_id
+     WHERE (w.booking_state = 'pending' AND w.terms_accepted_at IS NOT NULL)
+        OR (w.booking_state = 'reschedule_requested' AND w.requested_job_date IS NOT NULL)
+        OR (w.booking_state = 'cancelled' AND w.cancelled_by = 'customer' AND w.cancellation_seen_at IS NULL)`
+  ).all();
+  const items = rows.map(waitingItem)
+    .sort((a, b) => (new Date(a.arrivedAt) - new Date(b.arrivedAt)) || (a.jobId - b.jobId));
+  sendJson(res, 200, { count: items.length, items });
+});
+
 // screens: intake, scan
 jobActionRoute('book-in', custody, 'book_in');
 // screens: collection, closed

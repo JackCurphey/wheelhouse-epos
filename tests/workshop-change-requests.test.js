@@ -219,6 +219,11 @@ test("the old diary's ordinary save keeps the customer's request and its hold", 
     { job_date: job.jobDate, start_time: '10:00', mechanic_id: sam, purpose: 'booking' },
     { job_date: job.to, start_time: '14:00', mechanic_id: sam, purpose: 'requested' },
   ]);
+  // scan-2: an ordinary legacy save must not drop the request from "Waiting for you".
+  const waiting = await staff('/api/workshop-waiting');
+  assert.equal(waiting.status, 200, JSON.stringify(waiting.body));
+  const item = waiting.body.items.find((i) => i.jobId === job.id);
+  assert.equal(item?.kind, 'change_request', JSON.stringify(waiting.body));
 });
 
 test('dropping a job onto exactly its requested time in the old diary accepts the change', async () => {
