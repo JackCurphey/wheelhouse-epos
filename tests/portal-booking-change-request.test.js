@@ -104,6 +104,16 @@ test('asking for the time already booked withdraws the request', async () => {
   assert.deepEqual(await liveHolds(shopId(), booked.id), [own(booked)]);
 });
 
+test('asking a confirmed booking for the time it already has makes no request', async () => {
+  const booked = await confirmed();
+  const res = await link.change(booked.code, { jobDate: booked.jobDate, mechanicId: sam, startTime: '10:00' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.stage, 'confirmed');
+  assert.equal(res.body.requested, null);
+  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'scheduled');
+  assert.deepEqual(await liveHolds(shopId(), booked.id), [own(booked)]);
+});
+
 test('a request passes the same time checks as a booking', async () => {
   const booked = await confirmed();
   const d = new Date(`${PINNED_TODAY}T00:00:00Z`);
@@ -152,7 +162,13 @@ test('withdrawing a request returns to the booking as it was', async () => {
   assert.equal(res.body.stage, 'confirmed');
   assert.equal(res.body.requested, null);
   const row = await jobRow(shopId(), booked.id);
-  assert.deepEqual({ b: row.booking_state, r: row.requested_job_date }, { b: 'scheduled', r: null });
+  assert.deepEqual(
+    {
+      b: row.booking_state, d: row.requested_job_date, s: row.requested_start_time,
+      e: row.requested_end_time, m: row.requested_mechanic_id, at: row.requested_at,
+    },
+    { b: 'scheduled', d: null, s: null, e: null, m: null, at: null },
+  );
   assert.deepEqual(await liveHolds(shopId(), booked.id), [own(booked)]);
 });
 
