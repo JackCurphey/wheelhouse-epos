@@ -420,6 +420,8 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+  // Self-hosted Fjell fonts (public/fonts/).
+  '.woff2': 'font/woff2',
 };
 
 function sendJson(res, status, data) {

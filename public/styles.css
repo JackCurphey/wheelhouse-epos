@@ -15,7 +15,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: var(--leading-body);
 }
@@ -84,16 +84,18 @@ input[type="number"]::-webkit-inner-spin-button {
   border: none;
   color: var(--on-accent);
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: var(--text-base);
   font-weight: 600;
 }
 
-.nav button:hover { background: rgba(255,255,255,0.12); }
+/* Fjell: hover lifts to the primary; the current tab wears the highlight,
+   always with dark text. */
+.nav button:hover { background: var(--accent); }
 
 .nav button.active {
-  background: var(--panel);
-  color: var(--accent-dark);
+  background: var(--highlight);
+  color: var(--on-highlight);
 }
 
 .clock { font-size: var(--text-sm); color: var(--on-accent-muted); }
@@ -144,7 +146,7 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
   background: var(--panel);
   color: var(--ink);
   padding: 9px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: var(--text-base);
   font-weight: 600;
 }
@@ -172,8 +174,8 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 .field label { font-size: var(--text-sm); font-weight: 600; color: var(--muted); }
 .field input, .field select, .field textarea {
   padding: 9px 10px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
   font-size: var(--text-base);
   background: var(--panel);
   color: var(--ink);
@@ -255,8 +257,8 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 
 .search-input {
   padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
   font-size: var(--text-base);
   min-width: 220px;
 }
@@ -388,10 +390,10 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 
 .sdi-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sdi-name { font-weight: 600; font-size: var(--text-base); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sdi-sku { font-size: var(--text-xs); color: var(--muted); }
+.sdi-sku { font-size: var(--text-xs); color: var(--muted); font-family: var(--font-mono); font-weight: 500; }
 
 .sdi-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
-.sdi-price { font-weight: 700; color: var(--brand-dark); font-size: var(--text-base); }
+.sdi-price { font-family: var(--font-mono); font-weight: 500; color: var(--brand-dark); font-size: var(--text-base); }
 .sdi-stock { font-size: var(--text-xs); color: var(--muted); }
 .sdi-stock.low { color: var(--danger); font-weight: 600; }
 
@@ -464,7 +466,7 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 .payment-amount-input {
   width: 100%;
   padding: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
   border-radius: 7px;
   font-size: var(--text-base);
   background: var(--panel);
@@ -561,8 +563,10 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 .price-input {
   width: 64px;
   padding: 3px 5px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
   border-radius: 5px;
+  font-family: var(--font-mono);
+  font-weight: 500;
   font-size: var(--text-sm);
   color: var(--ink);
   background: var(--panel);
@@ -590,7 +594,7 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 }
 .qty-control span { min-width: 20px; text-align: center; font-weight: 600; }
 
-.line-total { font-weight: 700; font-size: var(--text-sm); min-width: 60px; text-align: right; }
+.line-total { font-family: var(--font-mono); font-weight: 500; font-size: var(--text-sm); min-width: 60px; text-align: right; }
 
 .remove-btn {
   border: none;
@@ -603,7 +607,7 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 
 .totals-table { width: 100%; font-size: var(--text-base); border-collapse: collapse; margin-top: 10px; }
 .totals-table td { padding: 4px 0; }
-.totals-table td:last-child { text-align: right; font-weight: 600; }
+.totals-table td:last-child { text-align: right; font-family: var(--font-mono); font-weight: 500; }
 .totals-table tr.grand td { font-size: var(--text-xl); font-weight: 800; padding-top: 10px; border-top: 1px solid var(--border); }
 
 .empty-cart { color: var(--muted); text-align: center; padding: 30px 0; font-size: var(--text-base); }
@@ -1213,18 +1217,18 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 
 .modal-backdrop {
   position: fixed; inset: 0;
-  background: rgba(20, 24, 21, 0.45);
+  background: rgba(28, 30, 25, 0.45);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
   z-index: 50;
 }
 
 .modal {
-  /* Shop-configurable (Edit Shop > Colours) - fields inside stay white
-     (.field input/select/textarea), so they read as distinct boxes
+  /* The Fjell panel (--modal-bg). Fields inside keep their --input-border
+     edge (.field input/select/textarea), so they read as distinct boxes
      instead of blending into the modal. */
   background: var(--modal-bg);
-  border-radius: 12px;
+  border-radius: var(--radius);
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
