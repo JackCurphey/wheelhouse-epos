@@ -20,7 +20,7 @@ import { vatFromGrossPence, receiptLabel } from './money.js';
 import { flag } from './attention.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const KINDS = new Set(['sale']);
+const KINDS = new Set(['sale', 'customer', 'checkin']);
 const KNOWN_PAYMENT_METHODS = new Set(['cash', 'card']);
 const INT4_MIN = -2147483648;
 const INT4_MAX = 2147483647;
@@ -88,8 +88,13 @@ async function recordSale(till, item) {
 
   const employee = Number.isInteger(item.employeeId)
     ? await prepare('SELECT id FROM employees WHERE id = ?').get(item.employeeId) : null;
-  const customer = Number.isInteger(item.customerId)
-    ? await prepare('SELECT id FROM customers WHERE id = ?').get(item.customerId) : null;
+  let customer = null;
+  if (Number.isInteger(item.customerId)) {
+    customer = await prepare('SELECT id FROM customers WHERE id = ?').get(item.customerId);
+  } else if (typeof item.customerClientId === 'string' && UUID.test(item.customerClientId)) {
+    customer = await prepare('SELECT id FROM customers WHERE client_id = ?').get(item.customerClientId);
+  }
+  const askedForCustomer = item.customerId != null || item.customerClientId != null;
 
   const reused = await prepare('SELECT 1 FROM till_sales WHERE till_id = ? AND receipt_number = ?').get(till.id, item.receiptNumber);
 
@@ -101,7 +106,7 @@ async function recordSale(till, item) {
 
   if (reused) await raise('receipt_number_reused', { detail: `${label} was already used on this till`, tillSaleId: saleId });
   if (item.employeeId != null && !employee) await raise('unknown_employee', { detail: `${label}: staff member ${item.employeeId} not found`, tillSaleId: saleId });
-  if (item.customerId != null && !customer) await raise('unknown_customer', { detail: `${label}: customer ${item.customerId} not found`, tillSaleId: saleId });
+  if (askedForCustomer && !customer) await raise('unknown_customer', { detail: `${label}: customer not found`, tillSaleId: saleId });
 
   for (const l of lines) {
     const product = Number.isInteger(l.productId)
@@ -142,10 +147,63 @@ async function recordSale(till, item) {
   return { status: 'recorded', attention };
 }
 
+// Per-item validity for a customer added offline: just enough to attempt
+// recording. Matched against KINDS/batchProblem the same way saleProblem is -
+// a bad customer item fails alone, never the batch.
+export function customerProblem(item) {
+  if (typeof item.name !== 'string' || !item.name.trim()) return 'A customer needs a name';
+  if (item.name.includes('\u0000')) return 'A customer name cannot contain a NUL character';
+  if (typeof item.email === 'string' && item.email.includes('\u0000')) return 'A customer email cannot contain a NUL character';
+  if (typeof item.phone === 'string' && item.phone.includes('\u0000')) return 'A customer phone cannot contain a NUL character';
+  return null;
+}
+
+export function checkinProblem(item) {
+  if (!Number.isInteger(item.employeeId) || !inInt4(item.employeeId)) return 'A check-in needs employeeId';
+  const clockMs = Date.parse(item.checkedInAt);
+  if (Number.isNaN(clockMs)) return 'A check-in needs checkedInAt';
+  if (new Date(clockMs).getUTCFullYear() > 9999) return 'checkedInAt is out of range';
+  return null;
+}
+
+const digits = (s) => (typeof s === 'string' ? s.replace(/\D/g, '') : '');
+
+async function recordCustomer(item) {
+  const held = await prepare('SELECT id FROM customers WHERE client_id = ?').get(item.clientId);
+  if (held) return { status: 'duplicate', attention: [] };
+  const email = typeof item.email === 'string' && item.email.trim() ? item.email.trim() : null;
+  const phone = typeof item.phone === 'string' && item.phone.trim() ? item.phone.trim() : null;
+  const { lastInsertRowid: id } = await prepare(
+    'INSERT INTO customers (name, email, phone, client_id) VALUES (?, ?, ?, ?)'
+  ).run(item.name.trim(), email, phone, item.clientId);
+  const phoneDigits = digits(phone);
+  const match = await prepare(
+    `SELECT id FROM customers WHERE active = 1 AND id <> ? AND (
+       (? <> '' AND lower(email) = lower(?)) OR
+       (? <> '' AND regexp_replace(COALESCE(phone, ''), '\\D', '', 'g') = ?)
+     ) LIMIT 1`
+  ).get(id, email || '', email || '', phoneDigits, phoneDigits);
+  if (!match) return { status: 'recorded', attention: [] };
+  await flag('possible_duplicate_customer', { detail: `"${item.name.trim()}" may be the same person as customer ${match.id}`, customerId: id });
+  return { status: 'recorded', attention: ['possible_duplicate_customer'] };
+}
+
+async function recordCheckin(till, item) {
+  const held = await prepare('SELECT id FROM staff_checkins WHERE client_id = ?').get(item.clientId);
+  if (held) return { status: 'duplicate', attention: [] };
+  const employee = await prepare('SELECT id FROM employees WHERE id = ?').get(item.employeeId);
+  if (!employee) return { status: 'recorded', attention: ['unknown_employee'] };
+  await prepare('INSERT INTO staff_checkins (employee_id, till_id, client_id, checked_in_at) VALUES (?, ?, ?, ?)')
+    .run(employee.id, till.id, item.clientId, new Date(item.checkedInAt).toISOString());
+  return { status: 'recorded', attention: [] };
+}
+
 export async function processSyncItems(till, items) {
   const results = [];
   for (const item of items) {
-    const problem = saleProblem(item);
+    const problem = item.kind === 'customer' ? customerProblem(item)
+      : item.kind === 'checkin' ? checkinProblem(item)
+      : saleProblem(item);
     if (problem) {
       results.push({ clientId: item.clientId, status: 'failed', reason: problem, attention: [] });
       continue;
@@ -153,7 +211,9 @@ export async function processSyncItems(till, items) {
 
     await dbExec('BEGIN');
     try {
-      const outcome = await recordSale(till, item);
+      const outcome = item.kind === 'customer' ? await recordCustomer(item)
+        : item.kind === 'checkin' ? await recordCheckin(till, item)
+        : await recordSale(till, item);
       await dbExec('COMMIT');
       results.push({ clientId: item.clientId, ...outcome });
     } catch (err) {

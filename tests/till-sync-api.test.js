@@ -207,3 +207,47 @@ test('an unknown staff member or customer is recorded and flagged', async () => 
   const res = await sync([sale(tube, { employeeId: 2147483000, customerId: 2147483000 })]);
   assert.deepEqual(res.body.results[0].attention.sort(), ['unknown_customer', 'unknown_employee']);
 });
+
+test('a customer added offline is created once, and a sale can point at it', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  const cust = { kind: 'customer', clientId: randomUUID(), name: 'Sam Spokes', email: 'sam@example.test', phone: '07700 900123' };
+  const item = { ...sale(tube), customerClientId: cust.clientId };
+  const res = await sync([cust, item]);
+  assert.deepEqual(res.body.results.map((r) => r.status), ['recorded', 'recorded']);
+  assert.equal((await sync([cust])).body.results[0].status, 'duplicate');
+  const c = await inShop(() => prepare('SELECT id FROM customers WHERE client_id = ?').get(cust.clientId));
+  const s = await inShop(() => prepare('SELECT customer_id FROM till_sales WHERE client_id = ?').get(item.clientId));
+  assert.equal(s.customer_id, c.id);
+});
+
+test('a customer who may already exist is flagged, not merged', async () => {
+  await inShop(() => prepare("INSERT INTO customers (name, email, phone) VALUES ('Sam S', 'SAM2@example.test', '07700 900999')").run());
+  const byEmail = { kind: 'customer', clientId: randomUUID(), name: 'Sam', email: 'sam2@example.test' };
+  const byPhone = { kind: 'customer', clientId: randomUUID(), name: 'Samuel', phone: '07700900999' };
+  const res = await sync([byEmail, byPhone]);
+  assert.deepEqual(res.body.results.map((r) => r.attention), [['possible_duplicate_customer'], ['possible_duplicate_customer']]);
+  const n = await inShop(() => prepare("SELECT COUNT(*)::int AS n FROM customers WHERE name LIKE 'Sam%'").get());
+  assert.equal(n.n, 4); // Sam Spokes, Sam S, Sam, Samuel — nothing merged
+});
+
+test('a sale pointing at a customer the server never received is recorded without one', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  const res = await sync([{ ...sale(tube), customerClientId: randomUUID() }]);
+  assert.deepEqual(res.body.results[0].attention, ['unknown_customer']);
+});
+
+test('a check-in is recorded once', async () => {
+  const item = { kind: 'checkin', clientId: randomUUID(), employeeId: alex, checkedInAt: '2026-09-01T08:55:00.000Z' };
+  assert.equal((await sync([item])).body.results[0].status, 'recorded');
+  assert.equal((await sync([item])).body.results[0].status, 'duplicate');
+  const rows = await inShop(() => prepare('SELECT till_id FROM staff_checkins WHERE client_id = ?').all(item.clientId));
+  assert.deepEqual(rows.map((r) => r.till_id), [b1.till.id]);
+});
+
+test('a customer item with no name fails alone', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  const badCustomer = { kind: 'customer', clientId: randomUUID(), name: '' };
+  const goodSale = sale(tube);
+  const res = await sync([badCustomer, goodSale]);
+  assert.deepEqual(res.body.results.map((r) => r.status), ['failed', 'recorded']);
+});
