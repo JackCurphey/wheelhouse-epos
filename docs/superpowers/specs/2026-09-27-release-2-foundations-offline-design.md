@@ -80,6 +80,10 @@ same whether the shop's internet or Wheelhouse's servers are down.
   scrambled (hashed) copy of the PINs.
 - For each sale, staff tap their name. Only people checked in that day are shown.
 - Check-ins reset overnight.
+- A short PIN checked on the till is a presence check, not strong security:
+  anyone with the till computer could in principle work out a PIN from its
+  stored copy. That fits its purpose here; it is not a sign-in for anything
+  beyond the till.
 - Not a timesheet. Permission checks for refunds and discounts (asking for a PIN
   on those actions only) are decided in piece 3.
 
