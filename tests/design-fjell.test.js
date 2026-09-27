@@ -22,7 +22,7 @@ const FJELL = {
   '--muted': '#56594f',
   '--surface-muted': '#e8e7e1',
   '--border': '#dcdbd3',
-  '--input-border': '#8e9185',
+  '--input-border': '#83867a', // darkened by Jack, 27 Sep: 3:1 on page, panel and grey panel
   '--brand': '#3f4d33',
   '--brand-dark': '#2a3024',
   '--accent': '#3f4d33',
@@ -118,6 +118,8 @@ const THEME_PAIRS = [
   ['sidebar text on sidebar', '--wh-on-accent', '--accent-dark', AA],
   ['dark text on highlight', '--wh-on-highlight', '--wh-highlight', AA],
   ['input border on panel', '--wh-input-border', '--wh-panel', UI],
+  ['input border on the page', '--wh-input-border', '--wh-bg', UI],
+  ['input border on a grey panel', '--wh-input-border', '--wh-surface-muted', UI],
 ];
 
 for (const [mode, map] of [['light', theme], ['dark', dark]]) {

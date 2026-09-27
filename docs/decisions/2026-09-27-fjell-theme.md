@@ -42,7 +42,7 @@ same values for the React apps under `--wh-*` names.
 | Muted surface | `#e8e7e1` | `--surface-muted`, `--hover-bg` | `--wh-surface-muted` / `--muted`, `--secondary`; `--wh-hover` |
 | Muted text | `#56594f` | `--muted` | `--wh-muted` / `--muted-foreground` |
 | Border (decorative) | `#dcdbd3` | `--border` | `--wh-border` / `--border` |
-| Input border | `#8e9185` | `--input-border` (new) | `--wh-input-border` / `--input` |
+| Input border | `#83867a` | `--input-border` (new) | `--wh-input-border` / `--input` |
 | Primary (actions) | `#3f4d33`, white text | `--brand`, `--accent` | `--wh-brand`, `--accent` / `--primary` |
 | Primary-dark, top bar / sidebar | `#2a3024` | `--brand-dark`, `--accent-dark` | `--wh-brand-dark`, `--accent-dark` / `--sidebar` |
 | Text on primary | `#ffffff` | `--on-brand` | `--wh-on-brand` / `--primary-foreground` |
@@ -65,10 +65,12 @@ backgrounds, the spacing and type scales and the focus ring.
   action button is olive. `--brand-dark` and `--accent-dark` are both the
   primary-dark.
 - **Input border.** `--input` in theme.css used to be the decorative border
-  (1.3:1, too faint to show where a field is). It is now `#8e9185`, which
-  measures 3.10:1 on the panel colour (WCAG asks 3:1). On the page
-  background it is 2.87:1, so a field placed straight on the page, not on a
-  panel, is slightly under.
+  (1.3:1, too faint to show where a field is). It was first set to
+  `#8e9185` (3.10:1 on panels but 2.87:1 on the page and 2.59:1 on grey
+  panels). Jack compared the two side by side on 27 Sep and approved the
+  darker `#83867a`: 3.31:1 on the page, 3.58:1 on panels and 3.00:1 on grey
+  panels, so every field clears WCAG's 3:1 wherever it sits. Dark mode's
+  border moved from `#6f7366` to `#767a6d` for the same reason.
 - **Top bar.** The top bar is primary-dark. The current tab wears the
   highlight with dark text; hovering a tab shows the primary.
 - **Pop-ups** used to be tinted with the shop's colour. They are now the
@@ -81,7 +83,7 @@ backgrounds, the spacing and type scales and the focus ring.
 - **Dark mode** (React only, not switched on anywhere yet) has a derived
   Fjell dark palette: background `#161813`, panel `#1f221b`, ink `#f3f2ee`,
   muted text `#a3a698`, muted surface `#2a2e24`, border `#33372d`, input
-  border `#6f7366`. Primary, highlight and status colours are as in light.
+  border `#767a6d`. Primary, highlight and status colours are as in light.
 - **Numbers in DM Mono** so far: the till's search results (SKU, price),
   cart line totals, price inputs and the totals column; in React, the price
   on a `ChoiceCard` and `MoneyInput`. Receipts and stickers keep their print

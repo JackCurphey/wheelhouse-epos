@@ -53,7 +53,7 @@
   --wh-muted: #56594f;          /* muted TEXT */
   --wh-surface-muted: #e8e7e1;  /* muted SURFACE */
   --wh-border: #dcdbd3;         /* decorative lines */
-  --wh-input-border: #8e9185;   /* form field edges: 3.10 on --wh-panel */
+  --wh-input-border: #83867a;   /* form field edges: 3:1+ on page (3.31), panel (3.58) and grey panel (3.00) */
 
   /* ---- Brand ----
      Was a separate orange for the 'primary' button. Fjell has one action
@@ -150,7 +150,7 @@
   --wh-muted: #a3a698;
   --wh-surface-muted: #2a2e24;
   --wh-border: #33372d;
-  --wh-input-border: #6f7366;
+  --wh-input-border: #767a6d;
   --wh-hover: #2a2e24;
   --wh-hover-subtle: #1b1e17;
   --modal-bg: #1f221b;
