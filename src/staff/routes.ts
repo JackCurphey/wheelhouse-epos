@@ -1,5 +1,5 @@
 /**
- * Atlas screen id -> URL. One table, because five edge screens are entered
+ * Screen design id -> URL. One table, because five edge screens are entered
  * from outside the app entirely - an emailed link or a stale bookmark - and a
  * router that only knows in-flow navigation cannot serve them.
  * screen-index.json records no inbound branch for reschedule (44), cancel

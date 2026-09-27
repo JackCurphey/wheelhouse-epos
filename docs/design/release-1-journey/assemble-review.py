@@ -19,7 +19,7 @@ H=300+sum(115+math.ceil(len([s for s in screens if s['group']==g])/8)*415+35 for
 im=Image.new('RGB',(W,H),'#f6f5ef');d=ImageDraw.Draw(im)
 d.text((40,30),'WHEELHOUSE  /  RELEASE 1  /  10 SEPTEMBER 2026',font=font(20,True),fill='#b8460f')
 d.text((40,80),'Every handoff. Every screen. One workshop.',font=font(68,True),fill='#1c231f')
-d.text((42,180),'84 proposed screens · customer, service desk, mechanic and manager · open the HTML atlas for navigation and screen notes',font=font(25),fill='#536056')
+d.text((42,180),'84 proposed screens · customer, staff, mechanic and manager · open the HTML screen designs for navigation and screen notes',font=font(25),fill='#536056')
 d.text((42,224),'Static layout reference rendered from the HTML with print-specific CSS. Browser rendering remains to be verified.',font=font(20),fill='#536056')
 y=300
 for gid,number,title in groups:
@@ -51,7 +51,7 @@ orange=(.72,.275,.059); green=(.086,.31,.259); rule=(.78,.82,.76)
 pg.draw_rect(pg.rect,color=None,fill=paper)
 pg.insert_text((29,29),'WHEELHOUSE  /  RELEASE 1  /  10 SEPTEMBER 2026',fontsize=14,fontname='wheelhouse-bold',color=orange)
 pg.insert_text((29,77),'Every handoff. Every screen. One workshop.',fontsize=47,fontname='wheelhouse-bold',color=ink)
-pg.insert_text((30,130),'84 proposed screens · customer, service desk, mechanic and manager',fontsize=17,fontname='wheelhouse-regular',color=muted)
+pg.insert_text((30,130),'84 proposed screens · customer, staff, mechanic and manager',fontsize=17,fontname='wheelhouse-regular',color=muted)
 pg.insert_text((30,158),'Zoom into any card for a crisp vector screen. Use the screen review PDF for notes and bookmarks.',fontsize=13,fontname='wheelhouse-regular',color=muted)
 y=216
 for gid,number,title in groups:
@@ -94,7 +94,7 @@ cover.insert_text((70,241),'Every handoff. Every screen. One proposed build targ
 cover.draw_line((70,292),(1130,292),color=rule,width=1)
 cover.insert_text((70,355),'84',fontsize=54,fontname='wheelhouse-bold',color=green)
 cover.insert_text((170,337),'HIGH-FIDELITY SCREENS',fontsize=12,fontname='wheelhouse-bold',color=orange)
-cover.insert_textbox(fitz.Rect(170,356,620,425),'Customer, service desk, mechanic and manager journeys—from the first booking request to physical collection.',fontsize=15,fontname='wheelhouse-regular',lineheight=1.35,color=ink)
+cover.insert_textbox(fitz.Rect(170,356,620,425),'Customer, staff, mechanic and manager journeys—from the first booking request to physical collection.',fontsize=15,fontname='wheelhouse-regular',lineheight=1.35,color=ink)
 cover.insert_text((70,500),'RELEASE 1 BOUNDARY',fontsize=12,fontname='wheelhouse-bold',color=orange)
 cover.insert_textbox(fitz.Rect(70,525,555,685),'Booking, workshop jobs, itemised quotes and approval, email, SMS and WhatsApp, one Lightspeed connection, printed job cards and scannable bike tags.',fontsize=15,fontname='wheelhouse-regular',lineheight=1.4,color=ink)
 cover.insert_text((625,500),'FOR STORE REVIEW',fontsize=12,fontname='wheelhouse-bold',color=orange)
@@ -129,7 +129,7 @@ for gid,num,title in groups:
   next_label='NEXT  →  '+screen_title.get(s['next'],s['next'])
   next_width=bold_pdf_font.text_length(next_label,fontsize=10.5)
   page.insert_text((1162-next_width,982),next_label,fontsize=10.5,fontname='wheelhouse-bold',color=green)
-  page.insert_text((38,1013),'Viewport specimen · Scrollable content and interactions continue in the HTML atlas · Fictional scenario',fontsize=8.5,fontname='wheelhouse-regular',color=muted)
+  page.insert_text((38,1013),'Viewport specimen · Scrollable content and interactions continue in the HTML screen designs · Fictional scenario',fontsize=8.5,fontname='wheelhouse-regular',color=muted)
   toc.append([2,s['number']+' / '+s['title'],len(book)])
 book.set_toc(toc);book.set_metadata({'title':'Wheelhouse Release 1 - UX Screen Review','author':'Wheelhouse','subject':'Proposed user journey and high-fidelity screen specification'})
 book.save(p/'Wheelhouse-Release-1-Screen-Review.pdf',garbage=4,deflate=True)

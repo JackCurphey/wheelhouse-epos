@@ -26,7 +26,7 @@ ALTER TABLE workshop_jobs
   ADD COLUMN work_state TEXT NOT NULL DEFAULT 'not_started'
     CHECK (work_state IN ('not_started', 'in_progress', 'waiting_parts', 'on_hold', 'complete'));
 
--- The immutable job reference a tag is printed with (WH-1042 in the atlas).
+-- The immutable job reference a tag is printed with (WH-1042 in the screen designs).
 -- Nullable because every existing row predates it and this migration writes no
 -- data; Phase 3 allocates one when it creates a job.
 ALTER TABLE workshop_jobs ADD COLUMN reference TEXT;

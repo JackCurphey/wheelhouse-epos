@@ -1,4 +1,4 @@
-// The route table: atlas screen id -> URL.
+// The route table: screen design id -> URL.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -7,7 +7,7 @@ import { ROUTES } from '../../src/staff/routes.ts';
 const index = JSON.parse(
   await readFile(new URL('../../docs/design/release-1-journey/screen-index.json', import.meta.url), 'utf8'),
 );
-const ATLAS_IDS = new Set(index.map((s) => s.id));
+const SCREEN_DESIGN_IDS = new Set(index.map((s) => s.id));
 
 test('the five standalone edge screens have their own URLs', () => {
   // Entered from an emailed link or a stale bookmark, never by navigation -
@@ -17,9 +17,9 @@ test('the five standalone edge screens have their own URLs', () => {
   }
 });
 
-test('every route is keyed by a screen id that exists in the atlas', () => {
+test('every route is keyed by a screen id that exists in the screen designs', () => {
   for (const id of Object.keys(ROUTES)) {
-    assert.ok(ATLAS_IDS.has(id), `${id} is not a screen in screen-index.json`);
+    assert.ok(SCREEN_DESIGN_IDS.has(id), `${id} is not a screen in screen-index.json`);
   }
 });
 

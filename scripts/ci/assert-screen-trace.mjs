@@ -1,4 +1,4 @@
-// Fails if a workshop route does not name the atlas screen it serves.
+// Fails if a workshop route does not name the screen design it serves.
 //
 // Why this exists: the Release 1 screen-build design sets one rule for the API
 // layer - "every endpoint traces to a named screen in screen-index.json; an
@@ -9,7 +9,7 @@
 // rather than being noticed in review or not at all.
 //
 // It is deliberately NOT applied to every route in server.js. The till,
-// inventory, supplier and storefront routes predate the atlas and serve no
+// stock, supplier and website routes predate the screen designs and serve no
 // screen in it; demanding a screen id from them would fail the build for
 // routes the rule was never about. COVERED below is the list of path shapes
 // this phase owns, and it grows as Phase 4 and Phase 5 land.
@@ -94,7 +94,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const source = readFileSync(path.join(ROOT, 'server/server.js'), 'utf8');
   const { ok, problems } = checkSource(source, screenIdsFromIndex());
   if (!ok) {
-    console.error('Screen trace FAILED. Every workshop route must name the atlas screen it serves:\n');
+    console.error('Screen trace FAILED. Every workshop route must name the screen design it serves:\n');
     for (const p of problems) console.error(`  - ${p}`);
     console.error('\nAdd a `// screens: <id>` comment above the route, using an id from');
     console.error('docs/design/release-1-journey/screen-index.json. If no screen consumes it,');
