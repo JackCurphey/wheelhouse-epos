@@ -3901,6 +3901,75 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
   sendJson(res, 200, { ok: true });
 });
 
+// ---------- Sites and tills (Release 2 offline core) ----------
+// A till is registered once by the owner and gets a token shown once; only
+// its hash is stored (the same scheme as the booking link). The token never
+// expires, so it cannot lapse in the middle of an outage; switching the till
+// off is how it is withdrawn.
+// Spec: docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md §5, §8
+
+function serializeSite(row) {
+  return { id: row.id, name: row.name, code: row.code };
+}
+
+function serializeTill(row) {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    siteId: row.site_id,
+    active: row.active,
+    lastSeenAt: row.last_seen_at ? new Date(row.last_seen_at).toISOString() : null,
+    pendingCount: row.last_pending_count,
+  };
+}
+
+route('GET', '/api/sites', async (req, res) => {
+  sendJson(res, 200, (await db.prepare('SELECT * FROM sites ORDER BY code').all()).map(serializeSite));
+});
+
+route('POST', '/api/sites', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can add a site' });
+  const { name, code } = await readJsonBody(req);
+  if (typeof name !== 'string' || !name.trim()) return badRequest(res, 'A site needs a name');
+  if (typeof code !== 'string' || !/^[A-Z]{1,3}$/.test(code)) return badRequest(res, 'A site code is one to three capital letters');
+  if (await db.prepare('SELECT 1 FROM sites WHERE code = ?').get(code)) return sendJson(res, 409, { error: 'That site code is taken' });
+  const { lastInsertRowid } = await db.prepare('INSERT INTO sites (name, code) VALUES (?, ?)').run(name.trim(), code);
+  sendJson(res, 201, serializeSite(await db.prepare('SELECT * FROM sites WHERE id = ?').get(lastInsertRowid)));
+});
+
+route('GET', '/api/tills', async (req, res) => {
+  sendJson(res, 200, (await db.prepare('SELECT * FROM tills ORDER BY code').all()).map(serializeTill));
+});
+
+route('POST', '/api/tills', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can register a till' });
+  const { siteId, number, name } = await readJsonBody(req);
+  // RLS hides other shops' sites, so a foreign siteId reads as missing.
+  const site = Number.isInteger(siteId) ? await db.prepare('SELECT * FROM sites WHERE id = ?').get(siteId) : null;
+  if (!site) return badRequest(res, 'Choose one of your sites');
+  if (!Number.isInteger(number) || number < 1 || number > 99) return badRequest(res, 'A till number is 1 to 99');
+  if (typeof name !== 'string' || !name.trim()) return badRequest(res, 'A till needs a name');
+  const code = `${site.code}${number}`;
+  if (await db.prepare('SELECT 1 FROM tills WHERE code = ?').get(code)) return sendJson(res, 409, { error: `Till ${code} already exists` });
+  const token = newLinkCode();
+  const { lastInsertRowid } = await db.prepare(
+    'INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?)'
+  ).run(site.id, code, name.trim(), hashLinkCode(token));
+  const till = await db.prepare('SELECT * FROM tills WHERE id = ?').get(lastInsertRowid);
+  sendJson(res, 201, { till: serializeTill(till), token });
+});
+
+route('POST', '/api/tills/:id/deactivate', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can switch a till off' });
+  const { changes } = await db.prepare('UPDATE tills SET active = false WHERE id = ?').run(Number(params.id));
+  if (!changes) return notFound(res, 'Till not found');
+  sendJson(res, 200, { id: Number(params.id), active: false });
+});
+
 // ---------- Workshop settings ----------
 
 // The shop's today, on its own clock and time zone (server/clock.js). Reads
