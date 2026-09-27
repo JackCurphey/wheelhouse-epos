@@ -81,6 +81,7 @@ import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { isValidPin, hashPin } from './till/pin.js';
+import { buildSnapshot } from './till/snapshot.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
@@ -413,6 +414,7 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+const tillAuthLimiter = makeRateLimiter(20, 60 * 1000);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -3981,6 +3983,13 @@ route('PUT', '/api/employees/:id/pin', async (req, res, params) => {
   res.writeHead(204).end();
 });
 
+// A till authenticates with its bearer token (see the /api/till/ dispatcher
+// branch below), never a staff session - `till` is the tills row the
+// dispatcher already resolved and verified.
+route('GET', '/api/till/:shopSlug/snapshot', async (req, res, params, query, till) => {
+  sendJson(res, 200, await buildSnapshot(till));
+});
+
 // ---------- Workshop settings ----------
 
 // The shop's today, on its own clock and time zone (server/clock.js). Reads
@@ -6044,6 +6053,47 @@ const server = createServer(async (req, res) => {
       sendJson(res, 500, { error: 'Internal server error' });
     }
     return;
+  }
+
+  // Tills authenticate with a bearer token, not a cookie: a till is a
+  // registered device that must keep working across an outage, so its
+  // credential never expires (switching the till off withdraws it). The shop
+  // comes from :shopSlug, as for portal routes; the token is then looked up
+  // inside that shop's RLS scope, so another shop's token reads as unknown.
+  if (pathname.startsWith('/api/till/')) {
+    for (const r of routes) {
+      if (r.method !== req.method) continue;
+      const match = r.regex.exec(pathname);
+      if (!match) continue;
+      const params = {};
+      r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+      if (!idParamsWellFormed(params)) return notFound(res);
+
+      const ip = clientIp(req);
+      const refuse = () => sendJson(res, 401, { error: 'Till not recognised' });
+      // Every attempt counts; a recognised till resets its address's count,
+      // so only repeated failures from one address reach the limit.
+      if (!tillAuthLimiter.check(ip)) return sendJson(res, 429, { error: 'Too many attempts - try again in a minute' });
+      const header = req.headers.authorization || '';
+      const token = /^Bearer ([0-9a-f]{64})$/.exec(header)?.[1];
+      if (!token) return refuse();
+      const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE slug = $1', [params.shopSlug]);
+      if (!shop) return refuse();
+
+      try {
+        await runWithShop(shop.id, async () => {
+          const till = await db.prepare('SELECT * FROM tills WHERE token_hash = ? AND active = true').get(hashLinkCode(token));
+          if (!till) return refuse();
+          tillAuthLimiter.reset(ip);
+          await r.handler(req, res, params, url.searchParams, till);
+        });
+      } catch (err) {
+        console.error(err);
+        sendJson(res, 500, { error: err.message || 'Internal server error' });
+      }
+      return;
+    }
+    return notFound(res, 'Unknown till route');
   }
 
   if (pathname.startsWith('/api/portal/')) {
