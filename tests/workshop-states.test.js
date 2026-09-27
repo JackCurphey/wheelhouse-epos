@@ -100,6 +100,24 @@ test('asking to move a confirmed booking keeps the original until the shop agree
   assert.equal(bookingRequest.next('reschedule_requested', 'decline'), 'scheduled');
 });
 
+test('an unconfirmed booking can move to another time and stays unconfirmed', () => {
+  // Piece 12, decision 4: no request, no staff answer - it moves at once.
+  assert.equal(bookingRequest.next('pending', 'change_time'), 'pending');
+});
+
+test('a change request can be replaced and stays a request', () => {
+  assert.equal(bookingRequest.next('reschedule_requested', 'change_time'), 'reschedule_requested');
+});
+
+test('the customer can withdraw a change request, back to the booking they had', () => {
+  assert.equal(bookingRequest.next('reschedule_requested', 'withdraw'), 'scheduled');
+});
+
+test('a confirmed booking cannot change time without asking', () => {
+  // Decision 2: a confirmed booking's change is a request staff answer.
+  assert.equal(bookingRequest.can('scheduled', 'change_time'), false);
+});
+
 test('a scheduled booking can still be cancelled by either side', () => {
   assert.equal(bookingRequest.next('scheduled', 'cancel'), 'cancelled');
 });
