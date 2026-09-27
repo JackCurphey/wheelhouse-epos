@@ -32,3 +32,14 @@ test('WebCrypto reproduces the stored hash', async () => {
   );
   assert.equal(Buffer.from(bits).toString('hex'), hashHex);
 });
+
+test('a malformed stored hash is refused, not thrown', () => {
+  // non-numeric iterations
+  assert.equal(verifyPin('4821', 'pbkdf2-sha256$abc$' + '0'.repeat(32) + '$' + '0'.repeat(64)), false);
+  // zero iterations
+  assert.equal(verifyPin('4821', 'pbkdf2-sha256$0$' + '0'.repeat(32) + '$' + '0'.repeat(64)), false);
+  // salt that is not 32 hex chars (too short)
+  assert.equal(verifyPin('4821', 'pbkdf2-sha256$100000$' + '0'.repeat(16) + '$' + '0'.repeat(64)), false);
+  // hash that is not 64 hex chars (too short)
+  assert.equal(verifyPin('4821', 'pbkdf2-sha256$100000$' + '0'.repeat(32) + '$' + '0'.repeat(32)), false);
+});

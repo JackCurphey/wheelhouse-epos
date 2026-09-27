@@ -23,6 +23,10 @@ export function verifyPin(pin, stored) {
   const parts = typeof stored === 'string' ? stored.split('$') : [];
   if (parts.length !== 4 || parts[0] !== PREFIX) return false;
   const [, iterations, saltHex, hashHex] = parts;
+  // Validate format before calling pbkdf2Sync
+  if (!/^[1-9][0-9]*$/.test(iterations)) return false;
+  if (!/^[0-9a-f]{32}$/.test(saltHex)) return false;
+  if (!/^[0-9a-f]{64}$/.test(hashHex)) return false;
   const expected = Buffer.from(hashHex, 'hex');
   const actual = pbkdf2Sync(pin, Buffer.from(saltHex, 'hex'), Number(iterations), expected.length, 'sha256');
   return actual.length === expected.length && timingSafeEqual(actual, expected);
