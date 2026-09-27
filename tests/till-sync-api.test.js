@@ -90,6 +90,81 @@ test('a malformed batch is refused whole', async () => {
   assert.equal(await inShop(() => prepare('SELECT 1 FROM till_sales WHERE client_id = ?').get(good.clientId)), undefined);
 });
 
+test('a bad receiptNumber with a valid clientId is not a 400 - it fails alone', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  const bad = sale(tube, { receiptNumber: -1 });
+  const res = await sync([bad]);
+  assert.equal(res.status, 200);
+  assert.equal(res.body.results[0].status, 'failed');
+  assert.ok(res.body.results[0].reason);
+});
+
+test('a bad item fails alone and the rest of the batch is recorded', async () => {
+  const tube = await seedProduct(owner.shop.id, { stock: 100 });
+  const goodA = sale(tube);
+  const badItem = sale(tube, { qty: 2147483648 });
+  const goodB = sale(tube);
+  const res = await sync([goodA, badItem, goodB]);
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.results.map((r) => r.status), ['recorded', 'failed', 'recorded']);
+  assert.ok(res.body.results[1].reason, 'the failed item should carry a reason');
+  const [rowA, rowBad, rowB] = await Promise.all([goodA, badItem, goodB].map((it) =>
+    inShop(() => prepare('SELECT 1 FROM till_sales WHERE client_id = ?').get(it.clientId))));
+  assert.ok(rowA);
+  assert.equal(rowBad, undefined);
+  assert.ok(rowB);
+});
+
+// saleProblem's own bounds checking (receiptNumber/qty/unitPricePence/
+// amountPence within int4, per-line and sale-total overflow, tillClockAt
+// year, a NUL in description) catches every bad value reachable through the
+// sync API before a transaction is even opened - so there is no longer a
+// value this test can send that reaches the database and gets rejected
+// there. This test pins the fallback itself: a sale whose two lines are each
+// within int4 but whose *sum* overflows it is still caught pre-database (by
+// the sale-total check in saleProblem), so it is reported 'failed' without a
+// transaction ever starting - and the surrounding items are unaffected. The
+// catch-and-continue path in processSyncItems (a value saleProblem does NOT
+// pre-check, that only the database rejects) was separately exercised as a
+// break-on-purpose: see task-7-8-report.md.
+test('a sale whose lines overflow the database only when summed fails alone, not the batch', async () => {
+  const tube = await seedProduct(owner.shop.id, { stock: 100 });
+  const goodA = sale(tube);
+  const overflow = sale(tube, {
+    lines: [
+      { productId: tube, description: 'Inner tube', qty: 1, unitPricePence: 2000000000, vatRateBp: 2000 },
+      { productId: tube, description: 'Inner tube', qty: 1, unitPricePence: 2000000000, vatRateBp: 2000 },
+    ],
+    payments: [{ method: 'cash', amountPence: 2000000000 }],
+  });
+  const goodB = sale(tube);
+  const res = await sync([goodA, overflow, goodB]);
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.results.map((r) => r.status), ['recorded', 'failed', 'recorded']);
+  assert.ok(res.body.results[1].reason);
+  assert.equal(await inShop(() => prepare('SELECT 1 FROM till_sales WHERE client_id = ?').get(overflow.clientId)), undefined);
+});
+
+test('a multi-line sale records VAT at each line\'s own rate', async () => {
+  const tube = await seedProduct(owner.shop.id, { stock: 10 });
+  const zeroRated = await seedProduct(owner.shop.id, { stock: 10 });
+  const item = sale(tube, {
+    lines: [
+      { productId: tube, description: 'Inner tube', qty: 1, unitPricePence: 1200, vatRateBp: 2000 },
+      { productId: zeroRated, description: 'Repair manual', qty: 1, unitPricePence: 500, vatRateBp: 0 },
+    ],
+    payments: [{ method: 'cash', amountPence: 1700 }],
+  });
+  const res = await sync([item]);
+  assert.equal(res.body.results[0].status, 'recorded');
+  const row = await inShop(() => prepare('SELECT * FROM till_sales WHERE client_id = ?').get(item.clientId));
+  const lines = await inShop(() => prepare('SELECT * FROM till_sale_lines WHERE till_sale_id = ? ORDER BY id').all(row.id));
+  assert.equal(lines[0].vat_pence, 200);
+  assert.equal(lines[1].vat_pence, 0);
+  assert.equal(row.vat_pence, 200);
+  assert.equal(row.total_pence, 1700);
+});
+
 test('stock is allowed below zero and flagged once per product', async () => {
   const tube = await seedProduct(owner.shop.id, { stock: 1 });
   const first = await sync([sale(tube, { qty: 2 })]);
