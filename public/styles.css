@@ -991,6 +991,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 
 .job-mark-label {
   display: block;
+  flex-shrink: 0;
   font-size: var(--text-2xs);
   font-weight: 600;
   color: inherit;
