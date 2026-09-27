@@ -188,10 +188,48 @@ test('stock is updated in product id order whatever order the lines came in', as
   assert.deepEqual(lines.map((l) => l.description), ['High', 'Low'], 'lines keep the till\'s order');
 });
 
+// Waits until the server's sale is blocked on this test's lock: another
+// backend waiting on a lock, running the till's stock UPDATE, with `ourPid`
+// among the backends blocking it - and has been waiting (by Postgres's own
+// pg_locks.waitstart) for at least half of deadlock_timeout. Only then does
+// the test take its second lock.
+//
+// Why the head start: Postgres runs each backend's deadlock check once,
+// deadlock_timeout after that backend began waiting, and the backend whose
+// check finds the cycle is the one cancelled. Merely waiting first is not
+// enough - with the server a few ms ahead, the test was the victim in 4 of
+// 15 runs. Half the timeout leaves the server's check a wide margin to fire
+// while the cycle exists and well before the test's own check.
+//
+// Asked through the plain pool (not the test's transaction). Both sides
+// connect as the same role, so the server backend's wait details are visible.
+async function waitUntilServerBlockedBy(ourPid, timeoutMs = 10000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM pg_stat_activity a
+        WHERE a.pid <> $1 AND a.wait_event_type = 'Lock'
+          AND a.query LIKE 'UPDATE products SET stock_qty = stock_qty - %'
+          AND $1 = ANY(pg_blocking_pids(a.pid))
+          AND EXISTS (
+            SELECT 1 FROM pg_locks l
+             WHERE l.pid = a.pid AND NOT l.granted
+               AND clock_timestamp() - l.waitstart >= current_setting('deadlock_timeout')::interval / 2
+          )`,
+      [ourPid]
+    );
+    if (rows.length) return;
+    if (Date.now() > deadline) {
+      throw new Error(`the server's sale never blocked on this test's lock within ${timeoutMs} ms`);
+    }
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 // A real deadlock: this test holds the lock on `high`, the server's sale
 // locks `low` then waits on `high`, then this test asks for `low`. Postgres
 // breaks the cycle by cancelling the server's transaction (it waited first,
-// so its deadlock check fires first). That is a passing condition, not a bad
+// by half the deadlock timeout, so its check fires first - see above). That is a passing condition, not a bad
 // sale: the request answers 503 and the till re-sends.
 test('a deadlock answers 503 so the till re-sends, and nothing is lost or doubled', async () => {
   const low = await seedProduct(owner.shop.id, { stock: 10 });
@@ -208,9 +246,10 @@ test('a deadlock answers 503 so the till re-sends, and nothing is lost or double
   await inShop(async () => {
     await dbExec('BEGIN');
     try {
+      const { pid: ourPid } = await prepare('SELECT pg_backend_pid() AS pid').get();
       await prepare('UPDATE products SET stock_qty = stock_qty WHERE id = ?').run(high);
       pending = sync([first, locked]);
-      await new Promise((r) => setTimeout(r, 400));
+      await waitUntilServerBlockedBy(ourPid);
       await prepare('UPDATE products SET stock_qty = stock_qty WHERE id = ?').run(low);
     } finally {
       await dbExec('ROLLBACK');
