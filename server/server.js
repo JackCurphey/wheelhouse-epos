@@ -80,6 +80,11 @@ import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
 import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
+import { isValidPin, hashPin } from './till/pin.js';
+import { buildSnapshot } from './till/snapshot.js';
+import { batchProblem, processSyncItems, TransientSyncError } from './till/sync.js';
+import { makeFailureLimiter } from './till/failure-limiter.js';
+import { listOpen as listOpenAttention, resolve as resolveAttention } from './till/attention.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
@@ -412,6 +417,7 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
+const tillAuthFailures = makeFailureLimiter(20, 60 * 1000);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -3908,15 +3914,147 @@ route('POST', '/api/team/logins/:loginId/reactivate', async (req, res, params) =
 // deactivate above). Workshop jobs and sales/orders already tied to them are
 // unassigned rather than deleted or blocked by the foreign key, consistent
 // with how removing a customer/bike/product never destroys sale/job history.
+// Till sales are unassigned the same way; staff check-ins are deleted.
 route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Employee not found');
-  await db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
-  await db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-  await db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-  await db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+  // All or nothing: if the final delete fails (e.g. a workshop hold or a
+  // requested booking still names this mechanic), nothing above it may stick.
+  await db.exec('BEGIN');
+  try {
+    await db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
+    await db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
+    await db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
+    // Till sales stay as history, unassigned; check-ins only record that this
+    // person was in, so they go with the person.
+    await db.prepare('UPDATE till_sales SET employee_id = NULL WHERE employee_id = ?').run(id);
+    await db.prepare('DELETE FROM staff_checkins WHERE employee_id = ?').run(id);
+    await db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+    await db.exec('COMMIT');
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
   sendJson(res, 200, { ok: true });
+});
+
+// ---------- Sites and tills (Release 2 offline core) ----------
+// A till is registered once by the owner and gets a token shown once; only
+// its hash is stored (the same scheme as the booking link). The token never
+// expires, so it cannot lapse in the middle of an outage; switching the till
+// off is how it is withdrawn.
+// Spec: docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md §5, §8
+
+function serializeSite(row) {
+  return { id: row.id, name: row.name, code: row.code };
+}
+
+function serializeTill(row) {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    siteId: row.site_id,
+    active: row.active,
+    lastSeenAt: row.last_seen_at ? new Date(row.last_seen_at).toISOString() : null,
+    pendingCount: row.last_pending_count,
+  };
+}
+
+route('GET', '/api/sites', async (req, res) => {
+  sendJson(res, 200, (await db.prepare('SELECT * FROM sites ORDER BY code').all()).map(serializeSite));
+});
+
+route('POST', '/api/sites', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can add a site' });
+  const { name, code } = await readJsonBody(req);
+  if (typeof name !== 'string' || !name.trim()) return badRequest(res, 'A site needs a name');
+  if (typeof code !== 'string' || !/^[A-Z]{1,3}$/.test(code)) return badRequest(res, 'A site code is one to three capital letters');
+  if (await db.prepare('SELECT 1 FROM sites WHERE code = ?').get(code)) return sendJson(res, 409, { error: 'That site code is taken' });
+  const { lastInsertRowid } = await db.prepare('INSERT INTO sites (name, code) VALUES (?, ?)').run(name.trim(), code);
+  sendJson(res, 201, serializeSite(await db.prepare('SELECT * FROM sites WHERE id = ?').get(lastInsertRowid)));
+});
+
+route('GET', '/api/tills', async (req, res) => {
+  sendJson(res, 200, (await db.prepare('SELECT * FROM tills ORDER BY code').all()).map(serializeTill));
+});
+
+route('POST', '/api/tills', async (req, res) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can register a till' });
+  const { siteId, number, name } = await readJsonBody(req);
+  // RLS hides other shops' sites, so a foreign siteId reads as missing.
+  const site = Number.isInteger(siteId) ? await db.prepare('SELECT * FROM sites WHERE id = ?').get(siteId) : null;
+  if (!site) return badRequest(res, 'Choose one of your sites');
+  if (!Number.isInteger(number) || number < 1 || number > 99) return badRequest(res, 'A till number is 1 to 99');
+  if (typeof name !== 'string' || !name.trim()) return badRequest(res, 'A till needs a name');
+  const code = `${site.code}${number}`;
+  if (await db.prepare('SELECT 1 FROM tills WHERE code = ?').get(code)) return sendJson(res, 409, { error: `Till ${code} already exists` });
+  const token = newLinkCode();
+  const { lastInsertRowid } = await db.prepare(
+    'INSERT INTO tills (site_id, code, name, token_hash) VALUES (?, ?, ?, ?)'
+  ).run(site.id, code, name.trim(), hashLinkCode(token));
+  const till = await db.prepare('SELECT * FROM tills WHERE id = ?').get(lastInsertRowid);
+  sendJson(res, 201, { till: serializeTill(till), token });
+});
+
+route('POST', '/api/tills/:id/deactivate', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can switch a till off' });
+  const { changes } = await db.prepare('UPDATE tills SET active = false WHERE id = ?').run(Number(params.id));
+  if (!changes) return notFound(res, 'Till not found');
+  sendJson(res, 200, { id: Number(params.id), active: false });
+});
+
+route('PUT', '/api/employees/:id/pin', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can set a PIN' });
+  const { pin } = await readJsonBody(req);
+  if (!isValidPin(pin)) return badRequest(res, 'A PIN is 4 to 6 digits');
+  const { changes } = await db.prepare('UPDATE employees SET pin_hash = ?, updated_at = now() WHERE id = ?').run(hashPin(pin), Number(params.id));
+  if (!changes) return notFound(res, 'Team member not found');
+  res.writeHead(204).end();
+});
+
+// A till authenticates with its bearer token (see the /api/till/ dispatcher
+// branch below), never a staff session - `till` is the tills row the
+// dispatcher already resolved and verified.
+route('GET', '/api/till/:shopSlug/snapshot', async (req, res, params, query, till) => {
+  sendJson(res, 200, await buildSnapshot(till));
+});
+
+route('POST', '/api/till/:shopSlug/sync', async (req, res, params, query, till) => {
+  const body = await readJsonBody(req);
+  const problem = batchProblem(body);
+  if (problem) return badRequest(res, problem);
+  const pending = Number.isInteger(body.pendingCount) && body.pendingCount >= 0 ? body.pendingCount : 0;
+  await db.prepare('UPDATE tills SET last_seen_at = now(), last_pending_count = ? WHERE id = ?').run(pending, till.id);
+  let results;
+  try {
+    results = await processSyncItems(till, body.items);
+  } catch (err) {
+    if (!(err instanceof TransientSyncError)) throw err;
+    console.warn(`till sync: ${till.code} asked to retry after ${err.cause?.code}: ${err.cause?.message}`);
+    return sendJson(res, 503, { error: 'Busy - try again' });
+  }
+  sendJson(res, 200, { results });
+});
+
+route('GET', '/api/till-attention', async (req, res) => {
+  const rows = await listOpenAttention();
+  sendJson(res, 200, rows.map((r) => ({
+    id: r.id, kind: r.kind, detail: r.detail,
+    tillSaleId: r.till_sale_id, productId: r.product_id, customerId: r.customer_id,
+    createdAt: new Date(r.created_at).toISOString(),
+  })));
+});
+
+route('POST', '/api/till-attention/:id/resolve', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!(await resolveAttention(Number(params.id), ctx.login.id))) return notFound(res, 'Nothing open with that id');
+  sendJson(res, 200, { id: Number(params.id), resolved: true });
 });
 
 // ---------- Workshop settings ----------
@@ -5982,6 +6120,60 @@ const server = createServer(async (req, res) => {
       sendJson(res, 500, { error: 'Internal server error' });
     }
     return;
+  }
+
+  // Tills authenticate with a bearer token, not a cookie: a till is a
+  // registered device that must keep working across an outage, so its
+  // credential never expires (switching the till off withdraws it). The shop
+  // comes from :shopSlug, as for portal routes; the token is then looked up
+  // inside that shop's RLS scope, so another shop's token reads as unknown.
+  if (pathname.startsWith('/api/till/')) {
+    for (const r of routes) {
+      if (r.method !== req.method) continue;
+      const match = r.regex.exec(pathname);
+      if (!match) continue;
+      const params = {};
+      r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
+      if (!idParamsWellFormed(params)) return notFound(res);
+
+      // The token is checked FIRST. A till presenting a valid, active token
+      // is always served - even while its address + shop key is blocked - so
+      // a guesser (or a dead neighbouring till with a stale token) sharing
+      // its address can never lock a working till out. The limiter
+      // (server/till/failure-limiter.js, keyed on address + shop slug) is
+      // consulted only when the lookup fails: missing or malformed token,
+      // unknown shop, or no active till with that token. Then a blocked key
+      // gets 429 (and the failure is not counted again), otherwise the
+      // failure is counted and the answer is 401. A good token clears the
+      // count only when the key is not already blocked, so a till's own
+      // traffic cannot lift a block that guessers earned.
+      const key = `${clientIp(req)}|${params.shopSlug}`;
+      const refuse = () => {
+        if (tillAuthFailures.isBlocked(key)) return sendJson(res, 429, { error: 'Too many attempts - try again in a minute' });
+        tillAuthFailures.recordFailure(key);
+        sendJson(res, 401, { error: 'Till not recognised' });
+      };
+      const header = req.headers.authorization || '';
+      const token = /^Bearer ([0-9a-f]{64})$/.exec(header)?.[1];
+      if (!token) return refuse();
+
+      try {
+        const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE slug = $1', [params.shopSlug]);
+        if (!shop) return refuse();
+
+        await runWithShop(shop.id, async () => {
+          const till = await db.prepare('SELECT * FROM tills WHERE token_hash = ? AND active = true').get(hashLinkCode(token));
+          if (!till) return refuse();
+          if (!tillAuthFailures.isBlocked(key)) tillAuthFailures.clear(key);
+          await r.handler(req, res, params, url.searchParams, till);
+        });
+      } catch (err) {
+        console.error(err);
+        if (!res.headersSent) sendJson(res, 500, { error: err.message || 'Internal server error' });
+      }
+      return;
+    }
+    return notFound(res, 'Unknown till route');
   }
 
   if (pathname.startsWith('/api/portal/')) {

@@ -5,7 +5,7 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-09-27. **Branch:** `feat/staff-diary-waiting` (not pushed), built on
+**Updated:** 2026-09-27. **Branch:** `feat/staff-diary-waiting` (PR #91, CI green; merging after #90), built on
 `docs/status-handover` (the handover commit `2b47759`) on top of `main` at `705ef0f`.
 
 ## Where things stand
@@ -26,8 +26,31 @@ plan, decision log and spec walk in
 (Accept / Decline / Seen), grid markings, and version-checked diary saves. The
 rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
 `diary-review.js`, and the first browser tests for the legacy diary are in
-`tests/browser/diary-waiting.spec.ts`. Local checks all pass; CI has not run
-(no pull request yet).
+`tests/browser/diary-waiting.spec.ts`. Local checks and CI pass (PR #91).
+
+## Release 2 and the design system (27 Sep, main session)
+
+- **Release 2 specs:** `docs/superpowers/specs/2026-09-27-release-2-design.md`
+  (replace Citrus Lime end to end; Jack's own shop first) and
+  `docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md`
+  (offline till core). **Plan 1, the offline server core, merged as #90.**
+  Plan 2 (till core in the browser) is next for that track. Open: the
+  business-plan gate conflict (programme spec §5), Jack and Mark.
+- **Names:** one glossary, `docs/decisions/2026-09-27-names.md` — Wheelhouse;
+  "screen designs" (no more "atlas"); roles Owner, Manager, Staff, Mechanic;
+  website; the staff app organised by **rooms**: Front desk, Workshop,
+  Stockroom, Office ("Till" = the selling screen/device). PR #92.
+- **Design system: Fjell** (stone `#f3f2ee`, olive `#3f4d33`, lime highlight
+  `#c5cf3e`, Work Sans + DM Mono, self-hosted), staff app always Fjell. PR #93,
+  stacked on #92; decision `docs/decisions/2026-09-27-fjell-theme.md`.
+  Reference: https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH
+- **User journeys canvas** (every screen by journey, status-coded, workflow
+  chart): https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j . Workshop day is
+  redrawn in Fjell (desktop + phone) awaiting Jack's approval; it is the first
+  journey to build, starting with the staff app shell (room sidebar), the
+  workshop overview and booking requests.
+- **Merge order agreed by Jack:** #90 (merged) → #91 (this diary piece) →
+  #92 → #93.
 
 ## Next, in order (Jack, 26–27 Sep)
 
@@ -40,7 +63,9 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
    cancel/change/withdraw-change routes.
 3. **Later, recorded but not scheduled:** the shop colour-scheme piece (each
    shop picks one colour scheme for staff and booking apps, including
-   "Pop-ups: our colours / plain white" — Jack, 26 Sep); customer sign-in in
+   "Pop-ups: our colours / plain white" — Jack, 26 Sep) — **superseded 27 Sep:**
+   the staff app is always Fjell; shops choose colours for their customer
+   website only (see Release 2 and design below); customer sign-in in
    the booking app plus picking/adding saved bikes; staff settings screens
    for booking terms, minimum notice and time zone (the server exists, no
    screen yet); a staff question-setup screen that suggests one overall
