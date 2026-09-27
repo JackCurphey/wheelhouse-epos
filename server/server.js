@@ -2600,6 +2600,45 @@ const refusal = (error) => ({ status: 400, body: { error } });
 // The 024 hold index firing: another live hold already sits on the slot.
 const SLOT_GONE = 'That time is no longer available - please choose another.';
 
+// A customer's requested time (piece 12) is held beside the job's own hold,
+// marked purpose 'requested', while the job waits on the request: one live
+// requested hold, on the requested slot. A request replaced by another lets
+// the old slot go; a job that stops being a request lets it go. syncJobHold
+// runs this first, so a requested slot is given up before the job's own hold
+// may move onto it.
+async function syncRequestedHold(jobId) {
+  const job = await db.prepare(
+    `SELECT booking_state, requested_job_date, requested_mechanic_id, requested_start_time, requested_end_time, planned_minutes
+     FROM workshop_jobs WHERE id = ?`
+  ).get(jobId);
+  const wanted = job && job.booking_state === 'reschedule_requested' && job.requested_job_date
+    ? {
+      jobDate: job.requested_job_date,
+      // As for the job's own hold: an unassigned slot is counted, never slotted.
+      startTime: job.requested_mechanic_id ? (job.requested_start_time || '') : '',
+      mechanicId: job.requested_mechanic_id,
+      minutes: job.requested_start_time
+        ? Math.max(0, timeToMinutes(job.requested_end_time) - timeToMinutes(job.requested_start_time))
+        : (job.planned_minutes || 0),
+    }
+    : null;
+  const held = await db.prepare(
+    `SELECT id, job_date, start_time, mechanic_id FROM workshop_capacity_holds
+     WHERE workshop_job_id = ? AND purpose = 'requested' AND state IN ('held', 'confirmed') ORDER BY id`
+  ).all(jobId);
+  const keep = wanted && held.find((h) =>
+    h.job_date === wanted.jobDate && h.start_time === wanted.startTime && h.mechanic_id === wanted.mechanicId);
+  for (const h of held) {
+    if (h !== keep) await db.prepare("UPDATE workshop_capacity_holds SET state = 'released' WHERE id = ?").run(h.id);
+  }
+  if (wanted && !keep) {
+    await db.prepare(
+      `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state, purpose)
+       VALUES (?, ?, ?, ?, ?, 'held', 'requested')`
+    ).run(jobId, wanted.jobDate, wanted.startTime, wanted.mechanicId, wanted.minutes);
+  }
+}
+
 // Shared by the staff "create job" route below and the customer portal's
 // booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
 // linked order in one transaction. Trusts every field completely; callers
@@ -2621,8 +2660,10 @@ const SLOT_GONE = 'That time is no longer available - please choose another.';
 // shared queue counts it, never a slot on the grid. A timed job's length
 // still comes from its times regardless of assignment. A job that stops being
 // live has its hold released. Called inside createWorkshopJob's transaction;
-// the booking lock (Task 5) wraps the other writes.
+// the booking lock (Task 5) wraps the other writes. Only the job's own hold
+// (purpose 'booking') - a requested slot's is syncRequestedHold's.
 async function syncJobHold(jobId) {
+  await syncRequestedHold(jobId);
   const job = await db.prepare(
     'SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes, booking_state FROM workshop_jobs WHERE id = ?'
   ).get(jobId);
@@ -2641,7 +2682,7 @@ async function syncJobHold(jobId) {
   const holdStartTime = job.mechanic_id ? startTime : '';
   const hold = await db.prepare(
     `SELECT id FROM workshop_capacity_holds
-     WHERE workshop_job_id = ? AND state IN ('held', 'confirmed') ORDER BY id LIMIT 1`
+     WHERE workshop_job_id = ? AND purpose = 'booking' AND state IN ('held', 'confirmed') ORDER BY id LIMIT 1`
   ).get(jobId);
   if (hold) {
     await db.prepare(
@@ -2779,15 +2820,23 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   }
 
   if (!mechanicId) return null;
+  // A customer's requested time (piece 12) is held like a booking until staff
+  // answer, so it is an overlap too - except for the job that asked for it.
   const overlap = await db
     .prepare(
       `SELECT id FROM workshop_jobs
        WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''
        AND start_time < ? AND end_time > ? AND (?::int IS NULL OR id != ?::int)
        AND booking_state IN (${LIVE_STATES_SQL})
+       UNION ALL
+       SELECT id FROM workshop_jobs
+       WHERE requested_mechanic_id = ? AND requested_job_date = ? AND requested_start_time <> ''
+       AND requested_start_time < ? AND requested_end_time > ? AND (?::int IS NULL OR id != ?::int)
+       AND booking_state = 'reschedule_requested'
        LIMIT 1`
     )
-    .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
+    .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId,
+      mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
   if (overlap) {
     return { error: 'That mechanic is already booked over part of that window - please choose another time.', taken: true };
   }
@@ -4695,6 +4744,14 @@ async function loadCapacity(start, end) {
     `SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes FROM workshop_jobs
      WHERE job_date >= ? AND job_date <= ? AND booking_state IN (${LIVE_STATES_SQL})`
   ).all(start, end)).map(toCapacityJob);
+  // A customer's requested time (piece 12) takes capacity like a booking while
+  // staff decide, so nobody else is offered it.
+  jobs.push(...(await db.prepare(
+    `SELECT id, requested_mechanic_id AS mechanic_id, requested_job_date AS job_date,
+            requested_start_time AS start_time, requested_end_time AS end_time, planned_minutes
+     FROM workshop_jobs
+     WHERE booking_state = 'reschedule_requested' AND requested_job_date >= ? AND requested_job_date <= ?`
+  ).all(start, end)).map(toCapacityJob));
   const days = computeCapacity({ settings, mechanics, blocks, jobs, dates: datesBetween(start, end) });
   return { settings, blocks, jobs, days };
 }
