@@ -209,6 +209,11 @@ test('a change request shows amber on the job and a dashed outline at the reques
   const block = page.locator(`.wk-job-block[data-job="${booked.id}"]`);
   await expect(block).toHaveClass(/mark-move-requested/);
   await expect(block).toContainText('Move requested');
+  const label = block.locator('.job-mark-label');
+  await expect(label).toHaveText('Move requested');
+  const [blockBox, labelBox] = [(await block.boundingBox())!, (await label.boundingBox())!];
+  expect(labelBox.y).toBeGreaterThanOrEqual(blockBox.y);
+  expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(blockBox.y + blockBox.height);
   const outline = page.locator(`.wk-request-outline[data-job="${booked.id}"]`);
   await expect(outline).toBeVisible();
   const [b, o] = [(await block.boundingBox())!, (await outline.boundingBox())!];
@@ -227,6 +232,11 @@ test("a customer's cancellation shows greyed until seen, and a declined booking 
   const block = page.locator(`.wk-job-block[data-job="${cancelled.id}"]`);
   await expect(block).toHaveClass(/mark-cancelled-unseen/);
   await expect(block).toContainText('Cancelled by customer');
+  const label = block.locator('.job-mark-label');
+  await expect(label).toHaveText('Cancelled by customer');
+  const [blockBox, labelBox] = [(await block.boundingBox())!, (await label.boundingBox())!];
+  expect(labelBox.y).toBeGreaterThanOrEqual(blockBox.y);
+  expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(blockBox.y + blockBox.height);
   await expect(block.locator('.wk-resize-handle')).toHaveCount(0);
   await expect(page.locator(`[data-job="${declined.id}"]`)).toHaveCount(0);
 });

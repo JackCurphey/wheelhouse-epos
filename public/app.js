@@ -1848,13 +1848,17 @@ function statusLabel(j) {
 }
 
 function renderJobCard(j) {
+  const mark = DiaryMarks.markOf(j);
+  const markLabelHtml = MARK_LABELS[mark] ? `<span class="job-mark-label">${esc(MARK_LABELS[mark])}</span>` : '';
+  const statusBadgeHtml = MARK_LABELS[mark] ? '' : `<span class="job-status-badge">${esc(statusLabel(j))}</span>`;
   return `
     <button class="job-card status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}">
+      ${markLabelHtml}
       ${j.startTime ? `<span class="job-time">${esc(j.startTime)}</span>` : ''}
       ${jobTitleLineHtml(j)}
       ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
       ${j.mechanicName ? `<span class="job-mechanic">${esc(j.mechanicName)}</span>` : ''}
-      <span class="job-status-badge">${esc(statusLabel(j))}</span>
+      ${statusBadgeHtml}
     </button>
   `;
 }
@@ -1895,15 +1899,19 @@ function renderTimedDayColumn(dateStr, isToday, mechanicId, dayOff) {
       const height = Math.max(34, bottom - top);
       const cancelledUnseen = DiaryMarks.markOf(j) === 'cancelled-unseen';
       const resizeHandle = (edge) => (cancelledUnseen ? '' : `<div class="wk-resize-handle" data-edge="${edge}"></div>`);
+      const mark = DiaryMarks.markOf(j);
+      const markLabelHtml = MARK_LABELS[mark] ? `<span class="job-mark-label">${esc(MARK_LABELS[mark])}</span>` : '';
+      const statusBadgeHtml = MARK_LABELS[mark] ? '' : `<span class="job-status-badge">${esc(statusLabel(j))}</span>`;
       return `
         <div class="wk-job-block status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}" style="top:${top}px; height:${height}px;">
           ${resizeHandle('top')}
           <div class="wk-job-block-body">
+            ${markLabelHtml}
             ${jobTitleLineHtml(j)}
             <span class="job-time">${esc(j.startTime)}–${esc(j.endTime || minutesToTime(startMin + 60))}</span>
             ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
             ${j.mechanicName ? `<span class="job-mechanic">${esc(j.mechanicName)}</span>` : ''}
-            <span class="job-status-badge">${esc(statusLabel(j))}</span>
+            ${statusBadgeHtml}
           </div>
           ${resizeHandle('bottom')}
         </div>

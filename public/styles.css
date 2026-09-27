@@ -989,6 +989,16 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 .status-on_hold .job-status-badge { background: var(--status-on_hold-border); }
 .status-complete .job-status-badge { background: var(--status-complete-border); }
 
+.job-mark-label {
+  display: block;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .wk-hour-labels {
   position: relative;
   background: var(--panel);
