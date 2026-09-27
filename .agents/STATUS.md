@@ -31,9 +31,9 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
 
 ## Next, in order (Jack, 26–27 Sep)
 
-1. **Finish the staff diary piece:** Jack decides the cut-off labels on one-hour
-   blocks, then push, open a pull request, and wait for CI to pass. Merge only
-   when Jack says.
+1. **Finish the staff diary piece:** push, open a pull request, and wait for CI
+   to pass. Merge only when Jack says. (Marked jobs now show their label on
+   the first line: Jack's choice, 27 Sep.)
 2. **d6** — the customer's change and cancel screens from the pending
    screen. Replace `pending-rules.ts`'s `contactLine`; use the link view's
    `canChange`/`canCancel`/`requested`/`changeDeclined` and the
