@@ -79,7 +79,7 @@ export function PhotoPicker({ value, onChange, max = 5, maxBytes = 10 * 1024 * 1
               >
                 <span
                   aria-hidden
-                  className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-[var(--wh-ink)] text-sm text-white"
+                  className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-[var(--wh-ink)] text-sm text-[var(--wh-panel)]"
                 >
                   ×
                 </span>

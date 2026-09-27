@@ -18,7 +18,7 @@ export function Input({ className, type = 'text', ...props }: React.ComponentPro
     <input
       type={type}
       className={cn(
-        'w-full rounded-[7px] border border-[var(--border)] bg-white px-2.5 py-[9px]',
+        'w-full rounded-[7px] border border-[var(--input)] bg-[var(--wh-panel)] px-2.5 py-[9px]',
         'text-sm text-[var(--wh-ink)] placeholder:text-[var(--wh-muted)]',
         'focus:outline-2 focus:outline-offset-[-1px] focus:outline-[var(--accent)]',
         'disabled:cursor-not-allowed disabled:opacity-50',

@@ -135,8 +135,8 @@ export function MonthCalendar({ month, onMonthChange, available, value = null, o
               onClick={() => { setFocusDate(d); if (open) onChange(d); }}
               className={cn(
                 'min-h-11 rounded-md border-0 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)]',
-                open ? 'bg-[var(--wh-hover)] text-[var(--wh-ink)]' : 'cursor-not-allowed bg-white text-[var(--wh-muted)] line-through',
-                picked && 'bg-[var(--accent-dark)] font-semibold text-white',
+                open ? 'bg-[var(--wh-hover)] text-[var(--wh-ink)]' : 'cursor-not-allowed bg-[var(--wh-panel)] text-[var(--wh-muted)] line-through',
+                picked && 'bg-[var(--accent-dark)] font-semibold text-[var(--wh-on-brand)]',
               )}
             >
               {Number(d.slice(8))}
