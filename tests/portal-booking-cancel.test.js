@@ -8,12 +8,15 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
 import { pool } from '../server/db.js';
-import { startLiveServer } from './helpers/liveServer.js';
-import { staffSignup, seedMechanic } from './helpers/staff.js';
+import { startLiveServer, TEST_CLOCK_PIN } from './helpers/liveServer.js';
+import { shopToday } from '../server/clock.js';
+import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup } from './helpers/portal.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedJobTypes } from './helpers/bookable.js';
-import { linkActions, bookOnline, setJob, dayMaker } from './helpers/linkActions.js';
+import {
+  linkActions, bookOnline, liveHolds, jobRow, setJob, seedRequest, dayMaker, holdBookingLock, stillWaiting,
+} from './helpers/linkActions.js';
 
 let server;
 let owner;
@@ -93,4 +96,105 @@ test('the link says when staff declined the last change', async () => {
   const booked = await book();
   await setJob(shopId(), booked.id, "booking_state = 'scheduled', change_declined_at = now()");
   assert.equal((await link.read(booked.code)).body.changeDeclined, true);
+});
+
+// ---- Cancelling (Task 4) ----
+
+const accept = (id) => staffRequest(server.baseUrl, owner.cookie, `/api/workshop-jobs/${id}/accept`, { method: 'POST', body: { version: 1 } });
+const holdsOf = (id) => liveHolds(shopId(), id);
+const IN_SHOP = { error: 'Your bike is already with the shop - please contact them to cancel', code: 'in_shop' };
+
+test('cancelling an unconfirmed booking frees its time and records the customer', async () => {
+  const booked = await book();
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.stage, 'cancelled');
+  assert.equal(res.body.canCancel, false);
+  const row = await jobRow(shopId(), booked.id);
+  assert.equal(row.booking_state, 'cancelled');
+  assert.equal(row.cancelled_by, 'customer');
+  assert.ok(row.cancelled_at, 'cancelled_at is set');
+  assert.deepEqual(await holdsOf(booked.id), []);
+});
+
+test('cancelling a confirmed booking works the same', async () => {
+  const booked = await book();
+  assert.equal((await accept(booked.id)).status, 200);
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.stage, 'cancelled');
+  assert.deepEqual(await holdsOf(booked.id), []);
+});
+
+test('cancelling a booking with a change request lets both times go and forgets the request', async () => {
+  const booked = await book();
+  assert.equal((await accept(booked.id)).status, 200);
+  await seedRequest(shopId(), booked.id, { jobDate: nextDay(), mechanicId: sam });
+  assert.deepEqual((await holdsOf(booked.id)).map((h) => h.purpose), ['booking', 'requested'], 'both times are held first');
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.requested, null);
+  const row = await jobRow(shopId(), booked.id);
+  assert.deepEqual(
+    [row.requested_job_date, row.requested_mechanic_id, row.requested_start_time, row.requested_end_time, row.requested_at],
+    [null, null, null, null, null],
+  );
+  assert.deepEqual(await holdsOf(booked.id), []);
+});
+
+test('a bike already with the shop cannot be cancelled online', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, "booking_state = 'scheduled', custody_state = 'in_shop'");
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.deepEqual(res.body, IN_SHOP);
+  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'scheduled');
+});
+
+test('a declined booking cannot be cancelled online', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, "booking_state = 'declined'");
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.deepEqual(res.body, { error: "This booking can't be cancelled online", code: 'illegal' });
+});
+
+test('cancelling forgets a declined change', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, 'change_declined_at = now()');
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.changeDeclined, false);
+  assert.equal((await jobRow(shopId(), booked.id)).change_declined_at, null);
+});
+
+test('cancel refuses a made-up code', async () => {
+  const res = await link.cancel('0'.repeat(64));
+  assert.equal(res.status, 404);
+  assert.deepEqual(res.body, { error: "We can't find that booking" });
+});
+
+test('cancel refuses an expired link', async () => {
+  const booked = await book();
+  const today = shopToday('Europe/London', new Date(TEST_CLOCK_PIN));
+  const d = new Date(`${today}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 31);
+  await setJob(shopId(), booked.id, 'job_date = ?', d.toISOString().slice(0, 10));
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 410);
+  assert.deepEqual(res.body, { error: 'This link has expired' });
+  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'pending');
+});
+
+test('a cancel waits while another booking write holds its day', async () => {
+  const booked = await book();
+  const release = await holdBookingLock(shopId(), booked.jobDate);
+  let pending;
+  try {
+    pending = link.cancel(booked.code);
+    assert.equal(await stillWaiting(pending), true, 'the cancel did not wait for the lock');
+  } finally {
+    await release();
+  }
+  assert.equal((await pending).status, 200);
 });

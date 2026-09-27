@@ -2614,6 +2614,65 @@ async function withBookingLock(dates, fn) {
   }
 }
 
+// The booking lock for every day a job touches (piece 12): its own day, the
+// day it asked to move to, and `extraDates` (where it is moving now). The days
+// are read before the lock, so the job is read again under it - FOR UPDATE, so
+// nothing else writes it until this commits - and if it moved in between, the
+// lock is taken again for its new days. fn(job) returns a { status, body }
+// refusal or undefined; this returns that, or { gone: true } when the job no
+// longer exists.
+const JOB_MOVED = Symbol('job moved');
+async function withJobBookingLock(jobId, extraDates, fn) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const before = await db.prepare('SELECT job_date, requested_job_date FROM workshop_jobs WHERE id = ?').get(jobId);
+    if (!before) return { gone: true };
+    const dates = [before.job_date, before.requested_job_date, ...extraDates].filter(Boolean);
+    const out = await withBookingLock(dates, async () => {
+      const job = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(jobId);
+      if (!job) return { gone: true };
+      if (job.job_date !== before.job_date || job.requested_job_date !== before.requested_job_date) return JOB_MOVED;
+      return fn(job);
+    });
+    if (out !== JOB_MOVED) return out;
+  }
+  throw new Error(`workshop job ${jobId} kept moving while its booking days were being locked`);
+}
+
+// A booking-state change on a job read FOR UPDATE under the lock: nothing can
+// have moved it since, so a refusal here is a bug, not a race - it throws, and
+// the whole write rolls back.
+async function applyLocked(job, event) {
+  const moved = await applyEvent({ jobId: job.id, machine: bookingRequest, event, expectedVersion: job.version });
+  if (!moved.ok) throw new Error(`job ${job.id}: ${event} refused under the booking lock: ${moved.message}`);
+  return moved.job;
+}
+
+// Clears a stored change request (piece 12).
+const CLEAR_REQUEST = `requested_job_date = NULL, requested_mechanic_id = NULL, requested_start_time = NULL,
+  requested_end_time = NULL, requested_at = NULL`;
+
+// Why the customer may not change or cancel through the link, or null. The
+// code is what a screen branches on; the words are the spec's.
+const CUSTOMER_REFUSALS = {
+  cancel: {
+    inShop: 'Your bike is already with the shop - please contact them to cancel',
+    other: "This booking can't be cancelled online",
+  },
+  change: {
+    inShop: 'Your bike is already with the shop - please contact them to change it',
+    other: "This booking can't be changed online",
+  },
+};
+function customerActionRefusal(job, action) {
+  if (job.custody_state !== 'expected') {
+    return { status: 409, body: { error: CUSTOMER_REFUSALS[action].inShop, code: 'in_shop' } };
+  }
+  if (!CUSTOMER_ACTIONABLE.has(job.booking_state)) {
+    return { status: 409, body: { error: CUSTOMER_REFUSALS[action].other, code: 'illegal' } };
+  }
+  return null;
+}
+
 // A refusal because other bookings have used the time. The code is what a
 // screen branches on; the words are what the old booking page shows.
 const capacityRefusal = (error) => ({ status: 409, body: { error, code: 'capacity' } });
@@ -5279,6 +5338,29 @@ async function bookingLinkView(jobId, shop) {
 route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
   const found = await resolveBookingLink(req, res, params.code);
   if (!found) return;
+  sendJson(res, 200, await bookingLinkView(found.id, shop));
+});
+
+// The customer cancels through their private link (piece 12, decision 1):
+// allowed until the bike reaches the shop, immediate, and every hold of the
+// job - its own and a requested one - goes at once.
+// screens: cancel, cancelled
+route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, res, params, query, shop) => {
+  const found = await resolveBookingLink(req, res, params.code);
+  if (!found) return;
+  const out = await withJobBookingLock(found.id, [], async (job) => {
+    const refused = customerActionRefusal(job, 'cancel');
+    if (refused) return refused;
+    await applyLocked(job, 'cancel');
+    await db.prepare(
+      `UPDATE workshop_jobs SET cancelled_by = 'customer', cancelled_at = now(), change_declined_at = NULL, ${CLEAR_REQUEST}
+       WHERE id = ?`
+    ).run(job.id);
+    await syncJobHold(job.id);
+    return undefined;
+  });
+  if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
+  if (out) return sendJson(res, out.status, out.body);
   sendJson(res, 200, await bookingLinkView(found.id, shop));
 });
 
