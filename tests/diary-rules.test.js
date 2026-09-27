@@ -108,3 +108,52 @@ test('a change request outline belongs only on its day, for a shown mechanic', (
   const untimed = { ...changeItem, to: { ...changeItem.to, startTime: '' } };
   assert.deepEqual(DiaryMarks.outlinesOn([untimed], '2026-10-09', all), []);
 });
+
+const { DiaryReview } = loadRules();
+
+test('pop-up headings name the kind and reference', () => {
+  assert.equal(DiaryReview.headingFor(newItem), 'New online booking · WH-1042');
+  assert.equal(DiaryReview.headingFor(changeItem), 'Change request · WH-1038');
+  assert.equal(DiaryReview.headingFor({ ...cancelledItem, reference: null }), 'Cancelled by customer');
+});
+
+test('each kind of answer reads plainly', () => {
+  assert.equal(DiaryReview.answerText({ kind: 'text', answer: 'Gears slipping' }), 'Gears slipping');
+  assert.equal(DiaryReview.answerText({ kind: 'text', answer: null }), 'No answer');
+  assert.equal(DiaryReview.answerText({ kind: 'choice', answer: 'Yes', text: null }), 'Yes');
+  assert.equal(DiaryReview.answerText({ kind: 'choice', answer: 'No', text: 'rear only' }), 'No — rear only');
+  assert.equal(DiaryReview.answerText({ kind: 'choice', answer: { notSure: true }, text: null }), 'Not sure');
+  assert.equal(DiaryReview.answerText({ kind: 'choice', answer: null, text: 'see photo' }), 'see photo');
+});
+
+test('answers group under their service, in service order', () => {
+  const answers = [
+    { serviceId: 4, id: 'b', wording: 'Which brakes?', kind: 'choice', answer: { notSure: true }, text: null },
+    { serviceId: 3, id: 'a', wording: "What's wrong?", kind: 'text', answer: 'Gears slipping' },
+    { serviceId: 99, id: 'c', wording: 'Old question', kind: 'text', answer: 'x' },
+  ];
+  const groups = DiaryReview.groupAnswers(answers, newItem.services);
+  assert.deepEqual(groups.map((g) => [g.name, g.answers.map((a) => a.id)]), [
+    ['Full service', ['a']], ['Brake bleed', ['b']], ['Other answers', ['c']],
+  ]);
+  assert.deepEqual([...DiaryReview.groupAnswers(null, newItem.services)], []);
+});
+
+test('the change line names both times', () => {
+  assert.equal(DiaryReview.changeLine(changeItem),
+    'Customer asked to move from Wed 7 Oct, 10:00–11:00 · Dave to Fri 9 Oct, 14:00–15:00 · Dave');
+});
+
+test('the decline confirmation names the customer and day', () => {
+  assert.equal(DiaryReview.declineConfirmText(newItem), "Decline Sam Example's booking for Tue 6 Oct? This can't be undone.");
+  assert.equal(DiaryReview.declineConfirmText({ ...newItem, customerName: null }), "Decline this booking for Tue 6 Oct? This can't be undone.");
+});
+
+test('each refusal becomes a plain sentence', () => {
+  assert.equal(DiaryReview.refusalText({ status: 409, code: 'stale', message: 'x' }), 'This job changed while you were looking at it.');
+  assert.equal(DiaryReview.refusalText({ status: 409, code: 'capacity', message: 'x' }), 'The requested time is no longer free.');
+  assert.equal(DiaryReview.refusalText({ status: 409, code: 'illegal', message: "There's no change request to accept" }), "There's no change request to accept");
+  assert.equal(DiaryReview.refusalText({ status: 404, message: 'Job not found' }), 'This job no longer exists.');
+  assert.equal(DiaryReview.refusalText({ message: 'Failed to fetch' }), "Couldn't reach the server — try again.");
+  assert.equal(DiaryReview.refusalText({ status: 400, message: 'A valid date is required' }), 'A valid date is required');
+});
