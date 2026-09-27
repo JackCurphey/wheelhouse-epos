@@ -50,7 +50,7 @@ export async function updateStorefrontSettings(patch) {
 export const STOREFRONT_BASE_DOMAIN = process.env.STOREFRONT_BASE_DOMAIN || 'wheelhouseepos.com';
 
 // Subdomains of STOREFRONT_BASE_DOMAIN that must never be treated as a
-// storefront slug lookup, even if no shop happens to be slugged that way.
+// website slug lookup, even if no shop happens to be slugged that way.
 // This is a safety net for common internal/infrastructure subdomains, not a
 // configurable allowlist - see README.md for the deployment implications of
 // putting the staff app (or any other internal service) on a bare subdomain
@@ -58,11 +58,11 @@ export const STOREFRONT_BASE_DOMAIN = process.env.STOREFRONT_BASE_DOMAIN || 'whe
 const RESERVED_SUBDOMAINS = new Set(['www', 'app', 'api', 'admin', 'staff']);
 
 // Cheap, DB-free check for "does this request look like it's addressed to a
-// storefront at all" - used by the dispatcher to decide between "not a
-// storefront request, keep routing normally" and "was a storefront request,
+// website at all" - used by the dispatcher to decide between "not a
+// website request, keep routing normally" and "was a website request,
 // but didn't resolve to one - show a generic not-found page" (never fall
 // through to the staff app for the latter, and never distinguish "unknown
-// slug" from "disabled storefront" in the response).
+// slug" from "disabled website" in the response).
 export function parseStorefrontSlugCandidate(req, url) {
   const hostHeader = String(req.headers.host || '').split(':')[0].toLowerCase();
   const suffix = `.${STOREFRONT_BASE_DOMAIN}`;
@@ -79,7 +79,7 @@ export function parseStorefrontSlugCandidate(req, url) {
 
 // sessionShopId, when provided, is the shop id of the currently
 // authenticated staff session (if any) - it lets a shop's own owner preview
-// their storefront before enabling it for real customers, without changing
+// their website before enabling it for real customers, without changing
 // what an anonymous visitor can ever see or distinguish (disabled vs.
 // nonexistent still collapse to the same null for everyone else).
 export async function resolveStorefrontShop(req, url, sessionShopId) {

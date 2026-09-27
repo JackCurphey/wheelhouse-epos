@@ -3953,7 +3953,7 @@ async function renderEditFrontDesk() {
         <button class="btn btn-primary" id="add-group-btn">+ Add group</button>
       </div>
       <div class="panel-body">
-        <p class="muted" style="margin:0 0 12px;">Tag customers with a group (e.g. a discount scheme or membership) from the customer edit page. A group with a discount is applied automatically to the sale subtotal whenever a customer with that group is selected on Front Desk.</p>
+        <p class="muted" style="margin:0 0 12px;">Tag customers with a group (e.g. a discount scheme or membership) from the customer edit page. A group with a discount is applied automatically to the sale subtotal whenever a customer with that group is selected on the Till.</p>
         <table class="data-table">
           <thead><tr><th>Name</th><th>Discount</th><th></th></tr></thead>
           <tbody id="group-table-body"></tbody>
