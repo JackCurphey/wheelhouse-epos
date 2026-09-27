@@ -1,6 +1,6 @@
 # Wheelhouse Print Agent
 
-Gives the Stock sticker-printing feature real printer access, from *any*
+Gives the Stockroom sticker-printing feature real printer access, from *any*
 shop PC's browser to *any* other shop PC's printer - not just printers
 attached to whichever machine you happen to be printing from. A browser
 page can't enumerate or write to a system's printers (a deliberate,

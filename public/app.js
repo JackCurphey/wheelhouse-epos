@@ -24,7 +24,7 @@ let tillCustomerId = null;
 let inventorySearch = '';
 let inventoryCategory = '';
 let inventoryShowInactive = false;
-let inventorySelectedIds = new Set(); // Stock bulk-select, for printing several stickers at once
+let inventorySelectedIds = new Set(); // Stockroom bulk-select, for printing several stickers at once
 let labelSettings = { widthMm: 50, heightMm: 25 }; // shop's saved sticker label size - defaults here, real value loaded lazily
 let labelSettingsLoaded = false;
 
@@ -204,7 +204,7 @@ async function loadProductsAll() {
 }
 
 // Only fetched once per session (like workshopMechanicFilterInitialized's
-// guard) - by the time a user opens the sticker print modal from Stock,
+// guard) - by the time a user opens the sticker print modal from Stockroom,
 // the real saved label size is already in hand rather than the placeholder
 // default above.
 async function loadLabelSettings() {
@@ -294,14 +294,14 @@ async function loadSaleDocuments(kind) {
 // ---------------- Navigation ----------------
 
 const TABS = [
-  { id: 'till', label: 'Till' },
+  { id: 'till', label: 'Front desk' },
   { id: 'office', label: 'Office' },
   { id: 'workshop', label: 'Workshop' },
 ];
 
 const OFFICE_TABS = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'inventory', label: 'Stock' },
+  { id: 'inventory', label: 'Stockroom' },
   { id: 'suppliers', label: 'Suppliers' },
   { id: 'purchase-orders', label: 'Purchase Orders' },
   { id: 'sales', label: 'Sales History' },
@@ -310,7 +310,7 @@ const OFFICE_TABS = [
     id: 'edit-shop',
     label: 'Edit Shop',
     children: () => [
-      { id: 'front-desk', label: 'Till' },
+      { id: 'front-desk', label: 'Front desk' },
       { id: 'office', label: 'Office' },
       { id: 'workshop', label: 'Workshop' },
     ],
@@ -2567,7 +2567,7 @@ async function renderInventory() {
   main.innerHTML = `
     <div class="panel">
       <div class="panel-header">
-        <h2>Stock</h2>
+        <h2>Stockroom</h2>
         <button class="btn btn-primary" id="add-product-btn">+ Add product</button>
       </div>
       <div class="panel-body">
@@ -3388,7 +3388,7 @@ function renderPoReceiveModal(holder, po) {
   });
 }
 
-// Refreshes whichever Stock view is currently on screen (list or detail)
+// Refreshes whichever Stockroom view is currently on screen (list or detail)
 // after an edit/stock change, since both share the product-form/stock-adjust modals.
 async function refreshInventoryView(productId) {
   await loadProductsAll();
@@ -3410,7 +3410,7 @@ async function renderProductDetail(id) {
   const main = document.getElementById('office-content');
   if (!product) {
     main.innerHTML = `
-      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stock</button>
+      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stockroom</button>
       <div class="empty-state" style="margin-top:14px;">Product not found.</div>
     `;
     document.getElementById('back-to-stockroom').addEventListener('click', () => {
@@ -3426,7 +3426,7 @@ async function renderProductDetail(id) {
 
   main.innerHTML = `
     <div id="product-detail-page">
-      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stock</button>
+      <button class="btn btn-sm" id="back-to-stockroom">‹ Back to Stockroom</button>
       <div class="panel" style="margin-top:14px;">
         <div class="panel-header">
           <h2>${esc(product.name)} ${!product.active ? '<span class="badge low">Inactive</span>' : ''}</h2>
@@ -3940,13 +3940,13 @@ function paymentBadgeClass(method) {
   return 'other';
 }
 
-// ================= EDIT TILL =================
+// ================= EDIT FRONT DESK =================
 
 async function renderEditFrontDesk() {
   await loadCustomerGroups();
   const main = document.getElementById('office-content');
   main.innerHTML = `
-    <h1>Edit Till</h1>
+    <h1>Edit Front desk</h1>
     <div class="panel" style="margin-top:14px;">
       <div class="panel-header">
         <h2>Customer groups</h2>
@@ -4583,7 +4583,7 @@ async function renderDashboard() {
                 )
                 .join('')}
             </div>`
-            : `<div class="empty-state">No print agents currently online. Install and sign in to one on a shop PC to see it here - see the Print Stickers modal in Stock.</div>`
+            : `<div class="empty-state">No print agents currently online. Install and sign in to one on a shop PC to see it here - see the Print Stickers modal in Stockroom.</div>`
         }
       </div>
     </div>
@@ -5235,7 +5235,7 @@ function renderCustomerFormModal(holder, customer) {
                       )
                       .join('')}
                   </div>`
-                : `<p class="muted" style="margin:0;">No groups set up yet - add some under Edit Shop &gt; Till.</p>`}
+                : `<p class="muted" style="margin:0;">No groups set up yet - add some under Edit Shop &gt; Front desk.</p>`}
             </div>
           </div>
           <div class="modal-footer">

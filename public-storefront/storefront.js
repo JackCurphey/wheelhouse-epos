@@ -139,6 +139,9 @@ function render(info, products) {
 async function boot() {
   try {
     const [info, products] = await Promise.all([api('/api/storefront/info'), api('/api/storefront/products')]);
+    // The browser tab shows the shop's own name; index.html's "Website"
+    // stays when there is no name to show.
+    document.title = info.shopName ? String(info.shopName) : 'Website';
     applyTheme(info.themePreset);
     render(info, products);
   } catch (err) {

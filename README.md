@@ -94,7 +94,7 @@ row-level security policies are the thing most worth testing.
 - **Till** — search or tap products to add them to the sale, adjust quantities,
   apply a discount, take Cash or Card payment (with change calculated for cash),
   and complete the sale. Stock is deducted automatically.
-- **Stock** — add, edit and deactivate products; each has a SKU, category,
+- **Stockroom** — add, edit and deactivate products; each has a SKU, category,
   price, cost, supplier and low-stock threshold. Receive stock or make manual
   adjustments from the "Stock" button on each row.
 - **Sales History** — every completed sale with a reprintable on-screen receipt.
@@ -102,7 +102,7 @@ row-level security policies are the thing most worth testing.
   today's top sellers.
 
 Each shop account starts with no stock - add your own products from
-the Stock screen.
+the Stockroom tab.
 
 ## The frontend build
 
