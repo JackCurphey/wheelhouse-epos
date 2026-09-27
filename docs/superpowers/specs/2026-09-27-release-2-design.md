@@ -1,7 +1,7 @@
 # Release 2 — the whole shop, replacing Citrus Lime
 
 **Date:** 27 September 2026
-**Status:** design agreed in brainstorm with Jack; awaiting his review of this written spec
+**Status:** approved by Jack, 27 Sep 2026 (business plan gates in §5 still open with Mark)
 **Kind:** programme spec — the map of Release 2. Each piece below gets its own
 brainstorm, spec and plan when its turn comes, the way the booking pieces did.
 
