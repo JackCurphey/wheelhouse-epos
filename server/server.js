@@ -2393,10 +2393,15 @@ function requestedOf(row) {
 }
 
 // A customer may change or cancel through the link while the bike has not
-// reached the shop and the booking is live (piece 12).
+// reached the shop and the booking is live (piece 12) - and only while no work
+// has started on it and its day has not passed in the shop's time zone (Jack,
+// 27 Sep). `today` is the shop's today (currentShopToday).
 const CUSTOMER_ACTIONABLE = new Set(['pending', 'scheduled', 'reschedule_requested']);
-function customerCanAct(row) {
-  return row.custody_state === 'expected' && CUSTOMER_ACTIONABLE.has(row.booking_state);
+function customerTooLate(row, today) {
+  return row.custody_state !== 'expected' || row.work_state !== 'not_started' || row.job_date < today;
+}
+function customerCanAct(row, today) {
+  return !customerTooLate(row, today) && CUSTOMER_ACTIONABLE.has(row.booking_state);
 }
 
 function serializeWorkshopJob(row) {
@@ -2659,7 +2664,8 @@ const CLEAR_REQUEST = `requested_job_date = NULL, requested_mechanic_id = NULL, 
   requested_end_time = NULL, requested_at = NULL`;
 
 // Why the customer may not change or cancel through the link, or null. The
-// code is what a screen branches on; the words are the spec's.
+// code is what a screen branches on; the words are the spec's. Work started
+// or a day gone by gets the in-shop words too (Jack, 27 Sep).
 const CUSTOMER_REFUSALS = {
   cancel: {
     inShop: 'Your bike is already with the shop - please contact them to cancel',
@@ -2670,8 +2676,8 @@ const CUSTOMER_REFUSALS = {
     other: "This booking can't be changed online",
   },
 };
-function customerActionRefusal(job, action) {
-  if (job.custody_state !== 'expected') {
+function customerActionRefusal(job, action, today) {
+  if (customerTooLate(job, today)) {
     return { status: 409, body: { error: CUSTOMER_REFUSALS[action].inShop, code: 'in_shop' } };
   }
   if (!CUSTOMER_ACTIONABLE.has(job.booking_state)) {
@@ -3200,9 +3206,12 @@ function jobActionRoute(action, machine, event) {
       // customer's request made after it is theirs to keep.
       await db.prepare(`UPDATE workshop_jobs SET ${CLEAR_REQUEST} WHERE id = ? AND version = ?`).run(id, result.job.version);
     }
-    // A staff cancellation never shows in "Waiting for you" (piece 12).
+    // A staff cancellation never shows in "Waiting for you" (piece 12), and
+    // the link no longer speaks of a declined change.
     if (machine === bookingRequest && event === 'cancel') {
-      await db.prepare("UPDATE workshop_jobs SET cancelled_by = 'staff', cancelled_at = now() WHERE id = ?").run(id);
+      await db.prepare(
+        "UPDATE workshop_jobs SET cancelled_by = 'staff', cancelled_at = now(), change_declined_at = NULL WHERE id = ?"
+      ).run(id);
     }
     // A hold that outlives its booking is capacity the diary is still promising
     // away, released in the same request rather than on a timer - but a
@@ -5518,6 +5527,7 @@ async function bookingLinkView(jobId, shop) {
      WHERE w.id = ?`
   ).get(jobId);
   const requested = requestedOf(row);
+  const today = await currentShopToday();
   return {
     reference: row.reference,
     shopName: shop.name,
@@ -5531,8 +5541,8 @@ async function bookingLinkView(jobId, shop) {
     stage: bookingStage(row),
     photoCount: row.photo_count,
     requested: requested && { jobDate: requested.jobDate, startTime: requested.startTime, mechanicId: requested.mechanicId },
-    canChange: customerCanAct(row),
-    canCancel: customerCanAct(row),
+    canChange: customerCanAct(row, today),
+    canCancel: customerCanAct(row, today),
     changeDeclined: row.change_declined_at !== null,
     ...(await bookedServices(row.id)),
   };
@@ -5547,14 +5557,18 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
 });
 
 // The customer cancels through their private link (piece 12, decision 1):
-// allowed until the bike reaches the shop, immediate, and every hold of the
-// job - its own and a requested one - goes at once.
+// allowed until the bike reaches the shop, work starts or its day passes;
+// immediate, and every hold of the job - its own and a requested one - goes
+// at once.
 // screens: cancel, cancelled
 route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, res, params, query, shop) => {
   const found = await resolveBookingLink(req, res, params.code);
   if (!found) return;
   const out = await withJobBookingLock(found.id, [], async (job) => {
-    const refused = customerActionRefusal(job, 'cancel');
+    // A double tap: the customer's own cancel already went through, so the
+    // answer is the cancelled booking, unchanged (final review).
+    if (job.booking_state === 'cancelled' && job.cancelled_by === 'customer') return undefined;
+    const refused = customerActionRefusal(job, 'cancel', await currentShopToday());
     if (refused) return refused;
     await applyLocked(job, 'cancel');
     await db.prepare(
@@ -5578,7 +5592,7 @@ route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, re
 // A confirmed booking asking for the time it already has makes no request,
 // and withdraws any it had (decision log D5).
 async function changeBookingTime(job, { jobDate, mechanicId, startTime }) {
-  const refused = customerActionRefusal(job, 'change');
+  const refused = customerActionRefusal(job, 'change', await currentShopToday());
   if (refused) return refused;
   const sameAsBooked = jobDate === job.job_date && mechanicId === job.mechanic_id
     && (startTime || '').trim() === (job.start_time || '');

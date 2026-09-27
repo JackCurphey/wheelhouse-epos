@@ -218,6 +218,46 @@ test('a bike already in the shop cannot be moved through the link', async () => 
   }]);
 });
 
+// Once work has started, or once the booking's day has passed, the customer
+// is told to contact the shop - the same words as a bike already there (Jack, 27 Sep).
+const IN_SHOP_CHANGE = { error: 'Your bike is already with the shop - please contact them to change it', code: 'in_shop' };
+const daysFromToday = (n) => {
+  const d = new Date(`${PINNED_TODAY}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+for (const status of ['waiting_parts', 'complete']) {
+  test(`once work has started (${status}) the booking cannot be moved through the link`, async () => {
+    const booked = await book();
+    const saved = await staff(`/api/workshop-jobs/${booked.id}`, { method: 'PUT', body: { status } });
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    assert.equal((await jobRow(shopId(), booked.id)).custody_state, 'expected', 'the bike has not been marked in the shop');
+    const res = await link.change(booked.code, { jobDate: nextDay(), mechanicId: sam, startTime: '10:00' });
+    assert.deepEqual([res.status, res.body], [409, IN_SHOP_CHANGE]);
+    const row = await jobRow(shopId(), booked.id);
+    assert.deepEqual([row.job_date, row.booking_state, row.requested_job_date], [booked.jobDate, 'scheduled', null]);
+  });
+}
+
+test('once the booking day has passed it cannot be moved through the link', async () => {
+  const booked = await book();
+  const yesterday = daysFromToday(-1);
+  await setJob(shopId(), booked.id, 'job_date = ?', yesterday);
+  const res = await link.change(booked.code, { jobDate: nextDay(), mechanicId: sam, startTime: '10:00' });
+  assert.deepEqual([res.status, res.body], [409, IN_SHOP_CHANGE]);
+  assert.equal((await jobRow(shopId(), booked.id)).job_date, yesterday);
+});
+
+test('on the booking day itself the customer may still move it', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, 'job_date = ?', PINNED_TODAY);
+  const to = nextDay();
+  const res = await link.change(booked.code, { jobDate: to, mechanicId: sam, startTime: '14:00' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal((await jobRow(shopId(), booked.id)).job_date, to);
+});
+
 // Last: moves a date far ahead to drop-off, so nothing else in this file meets it.
 test('a drop-off day takes the day, not a time', async () => {
   const far = new Date(`${nextDay()}T00:00:00Z`);

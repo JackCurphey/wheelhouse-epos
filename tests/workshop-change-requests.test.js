@@ -186,6 +186,17 @@ test("a staff cancellation is recorded as the shop's", async () => {
   assert.ok(res.body.cancelledAt, 'cancelledAt is set');
 });
 
+test('a staff cancellation forgets a declined change', async () => {
+  const booked = await bookOnline(server.baseUrl, customer.cookie, owner.shop.slug, {
+    mechanicId: sam, jobDate: nextDay(), startTime: '10:00', serviceIds: [types.repair],
+  });
+  await setJob(shopId(), booked.id, 'change_declined_at = now()');
+  const res = await act(booked.id, 'cancel', { version: 1 });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.changeDeclinedAt, null);
+  assert.equal((await jobRow(shopId(), booked.id)).change_declined_at, null);
+});
+
 test('accepting a change waits while another booking write holds the requested day', async () => {
   const job = await requested();
   const version = (await read(job.id)).version;

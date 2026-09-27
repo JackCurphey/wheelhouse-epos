@@ -198,3 +198,80 @@ test('a cancel waits while another booking write holds its day', async () => {
   }
   assert.equal((await pending).status, 200);
 });
+
+// ---- When the link stops offering a change or cancel (Jack, 27 Sep) ----
+// Once work has started, or once the booking's day has passed, the customer
+// is told to contact the shop - the same words as a bike already there.
+
+const PINNED_TODAY = shopToday('Europe/London', new Date(TEST_CLOCK_PIN));
+const daysFromToday = (n) => {
+  const d = new Date(`${PINNED_TODAY}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const legacySave = (id, status) =>
+  staffRequest(server.baseUrl, owner.cookie, `/api/workshop-jobs/${id}`, { method: 'PUT', body: { status } });
+
+for (const status of ['waiting_parts', 'complete']) {
+  test(`once work has started (${status}) the link offers neither and refuses to cancel`, async () => {
+    const booked = await book();
+    const saved = await legacySave(booked.id, status);
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    const before = await jobRow(shopId(), booked.id);
+    assert.equal(before.custody_state, 'expected', 'the bike has not been marked in the shop');
+    assert.equal(before.work_state, status);
+    const view = await link.read(booked.code);
+    assert.equal(view.body.canChange, false);
+    assert.equal(view.body.canCancel, false);
+    const res = await link.cancel(booked.code);
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.deepEqual(res.body, IN_SHOP);
+    assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'scheduled');
+  });
+}
+
+test('once the booking day has passed the link offers neither and refuses to cancel', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, 'job_date = ?', daysFromToday(-1));
+  const view = await link.read(booked.code);
+  assert.equal(view.status, 200, JSON.stringify(view.body));
+  assert.equal(view.body.canChange, false);
+  assert.equal(view.body.canCancel, false);
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.deepEqual(res.body, IN_SHOP);
+  assert.equal((await jobRow(shopId(), booked.id)).booking_state, 'pending');
+});
+
+test('on the booking day itself the customer may still cancel', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, 'job_date = ?', PINNED_TODAY);
+  const view = await link.read(booked.code);
+  assert.equal(view.body.canChange, true);
+  assert.equal(view.body.canCancel, true);
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.stage, 'cancelled');
+});
+
+// ---- A double-tapped cancel (final review) ----
+
+test('cancelling again after the customer cancelled shows the cancelled booking and changes nothing', async () => {
+  const booked = await book();
+  assert.equal((await link.cancel(booked.code)).status, 200);
+  const first = await jobRow(shopId(), booked.id);
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(res.body.stage, 'cancelled');
+  const again = await jobRow(shopId(), booked.id);
+  assert.equal(again.version, first.version);
+  assert.deepEqual(again.cancelled_at, first.cancelled_at);
+});
+
+test('a booking the shop cancelled still cannot be cancelled online', async () => {
+  const booked = await book();
+  await setJob(shopId(), booked.id, "booking_state = 'cancelled', cancelled_by = 'staff', cancelled_at = now()");
+  const res = await link.cancel(booked.code);
+  assert.equal(res.status, 409, JSON.stringify(res.body));
+  assert.deepEqual(res.body, { error: "This booking can't be cancelled online", code: 'illegal' });
+});
