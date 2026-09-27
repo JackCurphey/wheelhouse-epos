@@ -2,7 +2,7 @@
 
 Plan: `docs/superpowers/plans/2026-09-27-release-2-offline-1-server-core.md`
 Spec: `docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md`
-Branch: `feat/release-2-design` (not merged, not pushed)
+Branch: `feat/release-2-design` (pull request open, not merged)
 
 ## Step 1: full check
 
