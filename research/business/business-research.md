@@ -1,4 +1,4 @@
-# Wheelhouse EPOS — Business Research
+# Wheelhouse — Business Research
 
 **Compiled:** 31 August 2026
 **Status:** Research reference. Paused mid-thread — see §12 for open questions and the next actions.

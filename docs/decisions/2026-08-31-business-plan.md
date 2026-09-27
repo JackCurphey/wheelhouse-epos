@@ -489,7 +489,7 @@ Recorded so they do not quietly creep back:
 
 - **BYO Shopify custom-app tokens.** Since 1 Jan 2026 that flow runs through
   Shopify's Dev Dashboard or CLI. This buyer will never complete it. Either we
-  perform it as a setup service or the storefront leaves the near-term plan.
+  perform it as a setup service or the website leaves the near-term plan.
 - **Self-hosting.** No Docker, no `npm start`, no port numbers. Hosted by us, one
   URL, one login. The current README describes a thing this buyer cannot do.
 - **Custom domains and DNS.** Frozen.
@@ -556,7 +556,7 @@ managed Postgres with PITR and one *rehearsed* restore — a human owns that one
 Not optional. The first time a shop's day is lost, the business ends.
 
 **Track D — Frozen.**
-Storefront and Duda, DNS, distributor feeds, Shopify App Store listing, offline
+Website and Duda, DNS, distributor feeds, Shopify App Store listing, offline
 mode, multi-site, product variants. All defensible, all unbounded. Frozen behind
 G3. Track A may reorder this list; nothing else may unfreeze it.
 

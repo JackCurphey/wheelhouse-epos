@@ -29,7 +29,7 @@ Pieces 1-4 merged (#64-#69). Piece 6 (customer uploads) is out of scope.
 4. **"I'm not sure" is a switch on each list question** (not free text), on by
    default. The shop never types it; the customer sees it as an extra, last
    choice. Choosing it counts as an answer for a required question.
-5. **The private link (piece 4) shows the questions and the customer's
+5. **The booking link (piece 4) shows the questions and the customer's
    answers.**
 6. **Questions are one ordered list stored on the service**, not separate
    tables. Staff save the whole list at once.
@@ -112,13 +112,13 @@ Pieces 1-4 merged (#64-#69). Piece 6 (customer uploads) is out of scope.
 - Refusals, each leaving no job and no stray customer: missing required
   answer, choice not on the list, `notSure` where switched off, text too long,
   unknown question id, answers on a "not sure" booking.
-- Staff job view and private link show the answers.
+- Staff job view and booking link show the answers.
 
 ## Out of scope
 
 - All screens: the question editor, questions on the booking page, answers on
   staff screens. Each is brought to Jack separately.
-- Conditional questions (shown depending on an earlier answer); the atlas
+- Conditional questions (shown depending on an earlier answer); the screen designs
   notes the brake example should be conditional "in production" with no rule.
 - Photo answers (piece 6), inspection checklists, reporting on answers.
 

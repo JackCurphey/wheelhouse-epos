@@ -1,4 +1,4 @@
-# STATUS — Wheelhouse EPOS
+# STATUS — Wheelhouse
 
 **Updated:** 2026-09-27
 **Branch:** `main` at `278fb1b` (pieces (a) #72, (b) #73, (c) #74, (d1) #75, server pieces 7 #76 and 8 #77 merged; d2 #78, #79, #80, piece 9 #81, d3 #82, piece 10 #83, d4 #84 and its follow-ups #85, server piece 11 (terms) #86 merged; **d5 merged: #87**, CI green on `fc49f9b`; two look tweaks merged: **#88**). The two look tweaks (Jack, 26 Sep): (1) `details` gets a separate full-width "Read the booking terms" button above the tick box (whose label is now plain text, no button inside it); (2) `pending`'s `totalLine` ("From £T") shows only with two or more services - one service shows only its own price line. **Piece 12 (customer change and cancel) built on `feat/book-server-12-change-cancel`**, off `main` at `278fb1b`, with the final review's fixes in (27 Sep; not pushed, no PR - Jack's call) - see the paragraph after the d5/piece-12 note below. Server prerequisite pieces 1-6 for the book
@@ -30,7 +30,7 @@ plugs in as `src/screens/book/<id>.tsx`, wrapped in `BookFrame` (shop name,
 step/progress, title, pinned action) and, where it needs earlier answers, in
 `RequireDraft` with a `has` check (redirects to `/book/<shopSlug>` when
 missing); it reads and writes the booking in progress via `useDraft()`
-(`src/screens/book/draft.tsx`), and is registered by atlas id in `SCREENS` in
+(`src/screens/book/draft.tsx`), and is registered by screen design id in `SCREENS` in
 `src/customer/app-shell.tsx`. Installed controls
 (`src/components/ui/<name>.tsx`): edit the registry item under
 `registry/primitives/` or `registry/patterns/`, run `npm run registry:build`,
@@ -60,7 +60,7 @@ minutes before a booking) stretches the whole diary - decide with real service
 lengths; `month-calendar` hard-codes an `h2` (fit the screen's heading order);
 Jack to decide whether available days need more contrast on a grey page.
 **Open for piece (d):**
-on a storefront subdomain the app reads the shop from the address
+on a website subdomain the app reads the shop from the address
 (`/book/<slug>`), not the host, so `/book/<other-shop>` on one shop's subdomain
 shows the other shop; decide which wins. No request-level test covers the
 `/book` 500 page when the app is not built (only `appEntryTags` is tested).
@@ -129,7 +129,7 @@ dialog, fetched from piece 11's `/terms` when opened; the four messages
 under their fields with a pinned note and focus on the first; "photos were
 cleared" asked in a dialog); sending (`/services` read again and answers
 cleaned with `cleanAnswers`; photos as bare base64; "Sending…"; success
-clears the draft and replaces details with the private link; a time gone
+clears the draft and replaces details with the booking link; a time gone
 clears the date choice and returns to `date` with "Sorry, that time was
 booked while you were filling in your details - please choose another"; a
 changed questions refusal returns to `problem` with the server's message;
@@ -151,14 +151,14 @@ pending's heading while it loads. **Piece 11 (booking terms) merged: #86**
 own replacement, `GET /api/portal/:shopSlug/terms`, a copy of the terms in
 force saved on each online booking). **For piece 12 / d6:** `pending` has
 no "View request" / "Change or cancel request" buttons yet - it says
-"Contact <shop>"; piece 12 (change and cancel via the private link) and d6
+"Contact <shop>"; piece 12 (change and cancel via the booking link) and d6
 (their screens) will replace `contactLine` in `pending-rules.ts` with those
 buttons.
 
 **Server piece 12 (customer change and cancel) built on `feat/book-server-12-change-cancel`** (27 Sep; spec `docs/superpowers/specs/2026-09-27-book-server-12-change-cancel-design.md`, plan `docs/superpowers/plans/2026-09-27-book-server-12-change-cancel.md`, which carries the decision log and the spec walk; the branch also carries `1418dd2`, the details summary's "From £" only with two or more services, since refined by decision (b) below). Built: migration 035 (the stored change request, `cancelled_by`/`cancelled_at`, `cancellation_seen_at`, `change_declined_at`, and `workshop_capacity_holds.purpose` 'booking' | 'requested' - a partial unique index guards at most one live requested hold per job); customer `POST /api/portal/:shopSlug/booking-links/:code/cancel|change|withdraw-change` (shared link limiter, 404/410 as the read route, the booking lock for every day involved); an unconfirmed booking moves at once, a confirmed one's change is held as a request rather than applied; the customer may change or cancel only while the bike is expected, no work has started and the booking's day hasn't passed in the shop's time zone; a double-tapped cancel answers with the cancelled booking; the link view adds `requested`, `canChange`, `canCancel`, `changeDeclined`; staff `POST /api/workshop-jobs/:id/accept-change|decline-change|cancellation-seen` (version-checked), `GET /api/workshop-waiting` (`{count, items}`, oldest first); the old `accept`/`decline` refuse a customer's change request instead of silently acting on it; staff cancel records `cancelled_by = 'staff'` and clears a declined change. **Jack's decisions, in the spec (26-27 Sep):** (1) cancel is immediate while the bike hasn't been dropped off; (2) a change to a confirmed booking is a request staff accept or decline, keeping the old slot meanwhile; (3) staff answer requests in the existing diary, from a left-hand "Waiting for you" column (built in the staff diary piece); (4) an unconfirmed booking moves at once when the new time is free and stays awaiting confirmation; (5) customer cancellations appear in "Waiting for you" as "Cancelled by customer" until "Seen"; (6) a requested new time is held until staff decide. **Jack's decisions, with the plan approval (27 Sep):** the in-shop change wording "Your bike is already with the shop - please contact them to change it"; a confirmed booking "changed" to the time it already has makes no request, and withdraws any open one; the four staff messages - "There's no change request to accept", "There's no change request to decline", "This booking has a change request from the customer - accept or decline the change instead", "Only a customer's cancellation can be marked as seen"; the one-live-requested-hold-per-job partial unique index in migration 035. **Jack's decisions, on the final review (27 Sep):** (a) the customer's change and cancel stop once work has started or once the booking's day has passed, with the same in-shop wording and code; (b) the details summary with one priced service reads "<service>, from £X" with no separate total line, and two or more services keep the names line and "From £T". **Controller rulings (pre-flight), for Jack to confirm:** the legacy diary's ordinary save keeps a customer's request (a note-only edit doesn't drop it); dropping a job onto exactly its requested slot in the legacy diary accepts the change; every way a request ends (withdraw, replace, accept-change, decline-change, cancel, a legacy status change that ends it) clears the requested fields, so a later `request_reschedule` can't resurrect a stale one; the "exactly one wins" race tests hold the day's booking lock from the test's own database connection so both requests wait on it. **Next:** the staff diary piece (Jack's design, 26-27 Sep: a "Waiting for you" column on the left, jump-and-highlight into the job, Accept/Decline inside the job), then **d6** (the customer's own change and cancel screens, replacing `pending`'s "Contact <shop>" line with the buttons noted above). **Open:** the controller rulings above, for Jack to confirm; whether/when to open the PR is Jack's call. Parked minors: a legacy-diary save onto the requested start with a different length is refused by the job's own request (for the staff diary piece); a legacy-diary save can undo a customer's move of an unconfirmed booking (the existing last-save-wins; staff diary piece); resending an identical change request moves it to the back of the waiting list.
 
 **Known follow-ups:** pressing Back while a booking is "Sending…"
-leaves the customer without their private link - not built, no screen
+leaves the customer without their booking link - not built, no screen
 covers it; the terms dialog's backdrop-tap
 focus return is unchecked; a journey test whose `beforeAll` fails partway
 through seeding can leave a throwaway test shop stored (its `afterAll`
@@ -276,7 +276,7 @@ two entries, and `appEntryTags` only read the entry's own `css`.
 ## Where this stands
 
 **Release 1 scope is narrowed and settled** (#51); live scope file
-`docs/decisions/2026-09-10-release-1-scope-reduction.md`. **The atlas is 82
+`docs/decisions/2026-09-10-release-1-scope-reduction.md`. **The screen designs are 82
 screens**, 13 notes applied, asserted by `check-notes.mjs` (#54). The tag
 barcode is a declared **non-scanning specimen**; PDFs and board PNG **stale**.
 
@@ -296,7 +296,7 @@ OFF.** Detail: `ARCHIVE.md`.
 - **The app is on `localhost:8080`, not 4000; Postgres on 5433, not 5432.**
 - **Never delete the `cf-*` header names in `server/gateway.js`** — the strip
   list; removing it reopens a login brute-force bypass.
-- **Never hand-edit the atlas HTML**; `package.py` regenerates it.
+- **Never hand-edit the screen-design HTML**; `package.py` regenerates it.
 - **`public/dist` is untracked** (23 Sep; three stale files were committed
   in `fa32b60`). A fresh checkout must `npm run build` before `/workshop`
   serves or `tests/workshop-page.test.js` passes.
@@ -325,7 +325,7 @@ This file → **Plan register** below and the plans it names →
    **Next:** read CI on #70; Jack decides whether to merge. Follow-up: a
    null byte in answer or description text gives a 500 after the guest
    customer row is written — needs one shared text clean-up step.
-   **Piece 4 merged (#69):** private link `/book/<shop>/booking/<code>`,
+   **Piece 4 merged (#69):** booking link `/book/<shop>/booking/<code>`,
    read-only until 30 days after the booked date, hash-only storage, staff
    replace route (no button), 30 lookups/15 min/IP, `customer_description`
    apart from `notes`. **For the page and staff button, later:** no-store and
@@ -339,14 +339,14 @@ This file → **Plan register** below and the plans it names →
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
    the tag carries Code 128 as note 11 has it. No tag from our printer has been
-   scanned — the atlas barcode stays a non-scanning specimen.
+   scanned — the screen-design barcode stays a non-scanning specimen.
 4. **Jack: the message providers**, and what inbound replies do.
 5. **Mark: the screen review** (#50), open since 17 Sep.
 6. **Split the Release 1 plan into issues** — row IDs, state changes, expected
    failure, test command, proof per package.
 
 **Carried open:** four, incl. three tenant-isolation gaps confirmed ABSENT on
-`main` 9 Sep. Three closed 20 Sep (Jack): atlas checks **run in CI**;
+`main` 9 Sep. Three closed 20 Sep (Jack): screen-design checks **run in CI**;
 `prototype/` and review-pack scripts stay **out** of CI; money stays a JS
 float, **totalled in SQL, never JavaScript** — binds Phase 4. **Hubtiger
 trial lapsed ~15 Sep**; re-entry needs Jack's login.
@@ -369,7 +369,7 @@ Detail, incl. #58's carried items: `ARCHIVE.md`.
 ## Phase 4 foundation (Tasks 1-6)
 
 `/workshop/*` serves the React app (`src/staff/`). `ROUTES` (`routes.ts`)
-maps atlas id → URL; `SCREENS` (`app-shell.tsx`) registers built screens.
+maps screen design id → URL; `SCREENS` (`app-shell.tsx`) registers built screens.
 Server calls go through `src/lib/api/client.ts` (`jobAction` needs
 `version`); identity only via `useSession`. `src/lib/adapters/intent.ts`
 records print/message intent, stores nothing, never claims delivery. **Not
@@ -409,7 +409,7 @@ must `import '../server/load-env.js'` first.
 
 ## Open items needing Mark
 
-Eight. The screen review (#50) is urgent, re-point at the 82-screen atlas;
+Eight. The screen review (#50) is urgent, re-point at the 82 screen designs;
 the other seven in `ARCHIVE.md`.
 
 ## Keeping this file honest

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the 82 atlas screens as a real React staff app on the existing server and schema, in journey order, and cut the workshop half of `public/app.js` over to it at the end.
+**Goal:** Build the 82 screen designs as a real React staff app on the existing server and schema, in journey order, and cut the workshop half of `public/app.js` over to it at the end.
 
 **Architecture:** A new React app under `src/staff/`, mounted on a new page the
 existing plain-Node server serves at `/workshop`, talking to the Phase 3 API.
@@ -11,7 +11,7 @@ echoes the job's `version`; a 409 means someone else moved it and the screen
 refetches and says so). React Query owns cache invalidation so that behaviour is
 the default rather than something 82 screens each remember. Print and messaging
 sit behind a stub adapter that records intent and never claims delivery. The
-old vanilla app keeps till, inventory, suppliers and storefront; only its
+old vanilla app keeps till, inventory, suppliers and website; only its
 workshop screens are retired.
 
 **Tech Stack:** React 19, Vite 8, Tailwind 4 (CSS-first, tokens in
@@ -50,7 +50,7 @@ Playwright, `node:test`.
   `scripts/ci/assert-screen-trace.mjs` is extended whenever a new route shape
   lands. The check is endpoint → screen only; it cannot tell you a screen has
   no endpoint.
-- **Never hand-edit the atlas HTML or `screen-index.json`** — `package.py`
+- **Never hand-edit the screen-design HTML or `screen-index.json`** — `package.py`
   regenerates them.
 - **`npm test` hangs silently without the compose Postgres up** (`npm run
   docker:up`). The app is on `localhost:8080`, Postgres on `5433`.
@@ -67,7 +67,7 @@ Playwright, `node:test`.
 | B | The mechanic auth screens build on the **existing team-login**, reading identity only via `GET /api/auth/me` | Jack, 20 Sep | The mechanic entry path works now; the WorkOS migration stays a provider swap behind one call |
 | C | The **quote read endpoints ship as a Phase 3 patch** on their own branch, merged before Task 1 | Jack, 20 Sep | Phase 4 contains no server work except the cutover. See `2026-09-20-phase-3-quote-reads.md` |
 | D | `react-router`, `@tanstack/react-query`, `@testing-library/react` and Playwright are **approved dependencies** | Jack, 20 Sep | Explicit approval given; no further dependency is added without asking again |
-| E | The **workshop half of `public/app.js` is cut over in the final task** of this phase, closing the legacy `status` hole | Jack, 20 Sep | Two unguarded write paths into job records stop existing. Till, inventory, suppliers and storefront stay in the old app |
+| E | The **workshop half of `public/app.js` is cut over in the final task** of this phase, closing the legacy `status` hole | Jack, 20 Sep | Two unguarded write paths into job records stop existing. Till, inventory, suppliers and website stay in the old app |
 
 ## Scope: why this is a plan of plans
 
@@ -142,7 +142,7 @@ proving nothing.
 | `src/lib/api/types.ts` | Shared response types. One definition per API shape |
 | `src/lib/auth/use-session.ts` | `useSession()` over `GET /api/auth/me` — the only identity source |
 | `src/lib/adapters/intent.ts` | Stub adapter: records print and message intent, claims nothing |
-| `src/screens/<group>/<id>.tsx` | One file per atlas screen, named by its `screen-index.json` id |
+| `src/screens/<group>/<id>.tsx` | One file per screen design, named by its `screen-index.json` id |
 | `tests/screens/*.test.js` | Component tests |
 | `tests/browser/*.spec.ts` | Six Playwright journey tests |
 | `playwright.config.ts` | Playwright config, root |
@@ -235,7 +235,7 @@ Create `public/workshop.html`:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wheelhouse Workshop</title>
+  <title>Wheelhouse</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔧</text></svg>" />
 </head>
 <body>
@@ -560,8 +560,8 @@ git commit -m "feat: API client owning the version echo and 409 handling"
 **Interfaces:**
 - Produces:
   - `useSession(): { status: 'loading' | 'signed-in' | 'signed-out'; user?: { id: number; name: string; email: string }; shop?: { id: number; name: string; slug: string } }`
-  - `ROUTES` in `routes.tsx`, an `as const` object keyed by atlas screen id with URL-path values, plus `type ScreenId = keyof typeof ROUTES` exported from the same file — the single mapping
-    from an atlas screen id to its URL path. Every journey plan adds its
+  - `ROUTES` in `routes.tsx`, an `as const` object keyed by screen design id with URL-path values, plus `type ScreenId = keyof typeof ROUTES` exported from the same file — the single mapping
+    from a screen design id to its URL path. Every journey plan adds its
     screens here and nowhere else.
   - `<AppShell>` providing the query client, router and an error boundary.
 
@@ -683,7 +683,7 @@ the start:
 
 ```tsx
 /**
- * Atlas screen id -> URL. One table, because five edge screens are entered
+ * Screen design id -> URL. One table, because five edge screens are entered
  * from outside the app entirely - an emailed link or a stale bookmark - and a
  * router that only knows in-flow navigation cannot serve them.
  * screen-index.json records no inbound branch for reschedule (44), cancel
@@ -965,9 +965,9 @@ git commit -m "feat: intent adapter recording print and message intent, claiming
 > **Executed 23 Sep.** Step 1, on `feat/phase-4-intent-adapter`, every exit
 > code 0: `npm test` 437/437; typecheck; lint (0 problems); build (142
 > modules); RLS 32 tables with `shop_id`, 30 protected, 2 exempt; screen trace
-> OK; registry validate and drift OK (9 files); atlas packaged 145,113
+> OK; registry validate and drift OK (9 files); screen designs packaged 145,113
 > characters, `check-static` no errors, `check-notes` all pass; browser 2/2.
-> The atlas regeneration changed no files. Step 2: STATUS already read `:1496`
+> The screen-design regeneration changed no files. Step 2: STATUS already read `:1496`
 > (the `:1493` pointer was fixed earlier); the three functions and the
 > `:1878`-`:2285` range were confirmed in `public/app.js` and added.
 
@@ -1050,7 +1050,7 @@ Two screens carry known caveats the plans that own them must restate:
 - `scan` (13, intake) — the software boundary is keystrokes; scanners are
   keyboard-wedge devices. Its done-condition is "the tag resolver works when
   given a code", not "a scanner scanned it". The physical proof belongs to
-  P00b, and the atlas barcode stays a declared non-scanning specimen until a
+  P00b, and the screen-design barcode stays a declared non-scanning specimen until a
   real printed tag is read.
 - `login` / `denied` (59, 60, edges) — build on the existing team-login per
   decision B, reading identity only through `useSession()`. P08's acceptance
@@ -1071,7 +1071,7 @@ Two screens carry known caveats the plans that own them must restate:
 - Test: `tests/legacy-status-closed.test.js` (create)
 
 **What is removed and what stays.** Decision D keeps till, inventory,
-suppliers, purchase orders and storefront in the old app. Only the workshop
+suppliers, purchase orders and website in the old app. Only the workshop
 screens go. From `public/app.js`: the WORKSHOP section (`:1470`–`:2335`), the
 month view (`:2337`–`:2455`), the workshop job form modal (`:5812`–`:6478`) and
 the day-jobs modal (`:5760`). The TILL, INVENTORY, PURCHASE ORDERS, CUSTOMERS
@@ -1193,7 +1193,7 @@ every test updated or deleted with its reason, and the pass counts.
 - **The 82 screens themselves.** Six sibling journey plans, written to the
   Task 7 contract, each immediately before it is executed.
 - **Retiring `public/app.js` entirely.** Decision D: till, inventory,
-  suppliers, purchase orders and storefront stay there.
+  suppliers, purchase orders and website stay there.
 - **Real printing or real messaging.** Phase 5, gated on P00b and P00c. Task 5
   is a stub that records intent and claims nothing.
 - **Lightspeed.** P07, Phase 5, gated on P00a — no account and no confirmed
@@ -1202,7 +1202,7 @@ every test updated or deleted with its reason, and the pass counts.
 - **The `prototype/` app and the review-pack Python scripts.** Decided 20 Sep:
   they stay out of CI.
 - **Mark's screen review (#50).** Outstanding since 17 Sep, still pointed at
-  the superseded 84-screen atlas. Decision B in the design accepts the rework
+  the superseded 84 screen designs. Decision B in the design accepts the rework
   risk; if he objects structurally, the affected journey plan is rewritten
   rather than this one.
 - **Deposits.** Out of Release 1, not blocked on Mark (Jack, 23 Sep:

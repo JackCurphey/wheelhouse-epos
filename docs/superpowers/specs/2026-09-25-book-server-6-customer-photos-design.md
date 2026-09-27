@@ -19,9 +19,9 @@ are merged (#64-#70).
 1. **Photos only.** No video in this piece. Video can come later, once hosting
    and storage are decided.
 2. **Photos are sent only while booking,** in the booking request. They can't
-   be added afterwards from the private link.
+   be added afterwards from the booking link.
 3. **Up to 5 photos per booking, each up to 10 MB.**
-4. **Only staff see the photos.** The private link shows only how many were
+4. **Only staff see the photos.** The booking link shows only how many were
    sent (for example "2 photos received").
 5. **Stored as staff attachments marked "from the customer"**, reusing the
    existing attachments table, files on disk, list, download and clean-up.
@@ -97,7 +97,7 @@ are merged (#64-#70).
   - `GET .../attachments/:id` downloads them;
   - job delete removes the files.
 
-### Private link read-back (piece 4)
+### Booking link read-back (piece 4)
 
 - It gains `photoCount`: the number of `from_customer` attachments on the job.
 - It shows no photos, names or ids.
@@ -127,14 +127,14 @@ are merged (#64-#70).
   - an over-cap request body (400, not 500).
 - **Staff:** the attachments list shows `fromCustomer: true`, and the download
   returns the bytes.
-- **Private link:** `photoCount` is 2 for a booking with 2 photos and 0 for
+- **Booking link:** `photoCount` is 2 for a booking with 2 photos and 0 for
   one with none. Keep the link test file under 30 lookups.
 
 ## Out of scope
 
 - **Video** (decision 1).
-- **Adding photos after booking,** from the private link or elsewhere.
-- **Showing photos on the private link.**
+- **Adding photos after booking,** from the booking link or elsewhere.
+- **Showing photos on the booking link.**
 - **Removing the hidden location details (EXIF) inside photos.** Only staff
   see the photos, and the booking page's planned shrink step usually drops
   those details.

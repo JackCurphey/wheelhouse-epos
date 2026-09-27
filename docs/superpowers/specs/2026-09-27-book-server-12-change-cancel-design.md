@@ -1,10 +1,10 @@
-# Book server piece 12: customers change or cancel through the private link
+# Book server piece 12: customers change or cancel through the booking link
 
 **Date:** 2026-09-27. **Follows:** d5 (#87) and the look tweaks (#88).
 **Then:** a staff diary piece (the "Waiting for you" column, jump and
 highlight, Accept/Decline in the job), then d6 (the customer's change and
 cancel screens). **Approved by Jack, 26-27 Sep**, including migration 035.
-**Changes:** the atlas notes for `reschedule`, `change-pending`, `cancel`,
+**Changes:** the screen-design notes for `reschedule`, `change-pending`, `cancel`,
 `cancelled` are followed except that an unconfirmed booking moves at once
 (decision 4).
 
@@ -32,7 +32,7 @@ them a customer had cancelled.
    customer" until a staff member clicks "Seen".
 6. **A requested new time is held** until staff decide.
 
-## Customer actions (through the private link)
+## Customer actions (through the booking link)
 
 All three routes take the link code as the booking-link read route does
 (hashed lookup, the same rate limiter, 404 for an unknown code, 410 for an

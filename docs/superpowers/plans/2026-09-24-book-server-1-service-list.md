@@ -4,7 +4,7 @@
 
 **Goal:** Shops can sort their services into one level of categories and mark each one full or individual, and the customer booking page can fetch a shop's bookable services, grouped that way, from one public address.
 
-**Architecture:** One migration adds a categories table and three columns on `workshop_services`. Staff routes in `server/server.js` gain category create/read/update/delete, and the existing service routes accept the new fields. A new anonymous portal route reads the list inside the shop's row-level security context. Every route names its atlas screens, and the screen-trace check is widened to enforce that.
+**Architecture:** One migration adds a categories table and three columns on `workshop_services`. Staff routes in `server/server.js` gain category create/read/update/delete, and the existing service routes accept the new fields. A new anonymous portal route reads the list inside the shop's row-level security context. Every route names its screen designs, and the screen-trace check is widened to enforce that.
 
 **Tech Stack:** Node 22 ESM, the plain `http` server in `server/server.js`, PostgreSQL 16 through `pg` (the only runtime dependency), `node:test`.
 

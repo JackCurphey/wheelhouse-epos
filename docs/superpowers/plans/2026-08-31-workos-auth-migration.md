@@ -2875,6 +2875,6 @@ Not in this plan. Each is additive; none is blocked by it.
 
 Found while mapping the auth system (spec §15). Not caused by this work and deliberately out of scope — raise them separately.
 
-- **The storefront owner-preview feature does not work.** `server/storefront.js:85` takes a third `sessionShopId` argument; the only production caller, `server/server.js:3441`, passes two. So `sessionShopId` is always `undefined` and the check can never pass. Only the tests pass the third argument, so the suite is green while the shipped behaviour from commits `8ee6553` and `9f88409` is broken.
+- **The website owner-preview feature does not work.** `server/storefront.js:85` takes a third `sessionShopId` argument; the only production caller, `server/server.js:3441`, passes two. So `sessionShopId` is always `undefined` and the check can never pass. Only the tests pass the third argument, so the suite is green while the shipped behaviour from commits `8ee6553` and `9f88409` is broken.
 - **No CSRF protection** beyond `SameSite=Lax`. AuthKit does not change this.
 - **`attachRoles` and `deactivateTeamMember` update `employees` filtered on `id` alone**, without `shop_id` — safe only because `employees` is RLS-protected and those run inside `runWithShop`, unlike `logins`, which is not. That asymmetry is what caused `5cdd4fd`, and it is still there.

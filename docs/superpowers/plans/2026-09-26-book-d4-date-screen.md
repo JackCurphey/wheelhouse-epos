@@ -60,7 +60,7 @@
 - `RequireDraft`'s existing callers (`service-list`, `problem`) keep their behaviour: with no `to`, it still redirects to `/book/:shopSlug`. The existing `tests/customer/require-draft.test.js` cases prove it.
 - `hasProblem(draft, services)` needs `/services` data, so the date screen applies it only after `/services` has loaded; before that only the frame shows.
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- No dependency, CI or server changes. Don't edit the atlas mock-up (`docs/design/release-1-journey/screens.js`); the spec's "Changes" list records where d4 departs from it.
+- No dependency, CI or server changes. Don't edit the screen design (`docs/design/release-1-journey/screens.js`); the spec's "Changes" list records where d4 departs from it.
 
 ## Files
 
@@ -1138,7 +1138,7 @@ import {
 } from './date-rules.ts';
 
 /**
- * The date screen (atlas `date`, step 3): a month calendar for this month and
+ * The date screen (screen design `date`, step 3): a month calendar for this month and
  * next; on a timed day, mechanic pills and the one-day diary (every mechanic
  * shown, one column each; tapping a free time picks that mechanic and time);
  * on a drop-off day, the drop-off window and a mechanic choice starting on
@@ -1765,7 +1765,7 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 ## Spec walk
 
 **Changes**
-- Atlas mock-up (`docs/design/release-1-journey/screens.js`, `date` entry): **dropped**. The plan's own constraints (line 63) chose not to hand-edit the mock-up and to record the departure in the spec's "Changes" list instead; `date.tsx`'s header comment carries the same summary. The mock-up still shows the old "Drop-off day / Exact appointment" toggle and the "No suitable day?" link.
+- Screen design (`docs/design/release-1-journey/screens.js`, `date` entry): **dropped**. The plan's own constraints (line 63) chose not to hand-edit the mock-up and to record the departure in the spec's "Changes" list instead; `date.tsx`'s header comment carries the same summary. The mock-up still shows the old "Drop-off day / Exact appointment" toggle and the "No suitable day?" link.
 - `RequireDraft` gains a redirect target: **met** — `to` prop, `require-draft.test.js` "with a redirect target, a screen opened without its answers goes there instead" and "...and the answers present, the screen shows".
 
 **Decisions 1-5**

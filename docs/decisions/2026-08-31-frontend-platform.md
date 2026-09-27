@@ -28,7 +28,7 @@ target floor), 10 (breakpoint system), 12 (toasts → Sonner), 13 (`confirm()`
 replacement → `AlertDialog`), 19 (retire inline styles).
 
 **Survives (8):** 2 (contrast gate, retargeted at `@theme`), 6 (live regions),
-11 (phone booking picker), 14 (Front Desk primary action), 15 (storefront
+11 (phone booking picker), 14 (Till primary action), 15 (website
 rebuild on shared tokens), 16 (buy button state machine), 17 (booking selection
 in URL), 18 (public page metadata).
 

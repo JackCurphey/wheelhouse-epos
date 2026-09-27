@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the last three parts of the customer booking journey at `/book`: the `details` screen (`/book/:shopSlug/details`: contact details, update channel, booking terms), sending the booking request to the real server, and the `pending` screen (`/book/:shopSlug/booking/:code`, which the private link reopens). Then prove the whole journey end to end in a real browser against the real server and a throwaway shop in the test database.
+**Goal:** Build the last three parts of the customer booking journey at `/book`: the `details` screen (`/book/:shopSlug/details`: contact details, update channel, booking terms), sending the booking request to the real server, and the `pending` screen (`/book/:shopSlug/booking/:code`, which the booking link reopens). Then prove the whole journey end to end in a real browser against the real server and a throwaway shop in the test database.
 
 **Architecture:**
 - The rules are pure functions: `src/screens/book/details-rules.ts` (field messages, the summary, the request body from the draft and fresh `/services`, and sorting a refusal into `date` / `problem` / stay) and `src/screens/book/pending-rules.ts` (status words, summary lines). The screens only call these.
@@ -58,14 +58,14 @@
   - Pending status words: "Awaiting shop confirmation", "Confirmed", "In the workshop", "Ready to collect", "Collected", "Change requested", "Declined", "Cancelled", "Request expired"
   - "Keep this link to check your booking"; "Copy link"; "Copied"; "Need to change or cancel? Contact <shop name>"
   - "We can't find that booking" (404); "This link has expired" (410); "Try again"
-  - **Not in the spec** (Jack approves on the PR; see the decision log): "Please check the answers marked above" in the pinned area on details (d3's approved wording, reused); "We couldn't load the booking terms" above "Try again" in the terms dialog; "We couldn't load this booking" as the pending heading on a failure other than 404/410; "Reference" (the atlas mock-up's label) on pending; "Loading…" as pending's heading while the link loads (BookFrame's existing word).
+  - **Not in the spec** (Jack approves on the PR; see the decision log): "Please check the answers marked above" in the pinned area on details (d3's approved wording, reused); "We couldn't load the booking terms" above "Try again" in the terms dialog; "We couldn't load this booking" as the pending heading on a failure other than 404/410; "Reference" (the screen design's label) on pending; "Loading…" as pending's heading while the link loads (BookFrame's existing word).
 - Data:
   - The body sends `jobDate` and `mechanicId` always (the server refuses a booking without either; `hasDate` guarantees both), `startTime` only when the draft has one (a timed day). `anyMechanic` is never sent.
   - Photos go as `[{ dataBase64 }]`: bare base64, no `data:` prefix, no line breaks (`server/booking-photos.js` checks `^[A-Za-z0-9+/]+={0,2}$`).
   - Before sending, `/services` is read again (outside React Query, so a failed read can't put BookFrame into its failed state) and answers are cleaned with `cleanAnswers` against that copy.
 - Navigation: success goes to the reply's `privateLink` (replacing the details entry in history); a time gone goes to `/book/:shopSlug/date` with state `{ timeTaken: true }`; changed questions go to `/book/:shopSlug/problem` with state `{ questionsChanged: <server's message> }`; the guard sends a customer who fails `hasDate` to `/book/:shopSlug/date`.
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- No dependency, CI, config or server changes. If `npx shadcn add` changes `package.json` or `package-lock.json`, restore both with `git checkout --` and report it (lucide-react, the dialog's one dependency, is already installed). Don't edit the atlas mock-up (`docs/design/release-1-journey/screens.js`); the spec's "Changes" list records where d5 departs from it.
+- No dependency, CI, config or server changes. If `npx shadcn add` changes `package.json` or `package-lock.json`, restore both with `git checkout --` and report it (lucide-react, the dialog's one dependency, is already installed). Don't edit the screen design (`docs/design/release-1-journey/screens.js`); the spec's "Changes" list records where d5 departs from it.
 
 ## Files
 
@@ -544,7 +544,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: The private link's data and the pending rules
+### Task 2: The booking link's data and the pending rules
 
 **Files:**
 - Create: `src/screens/book/pending-query.ts`
@@ -564,7 +564,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ```js
 // The pending screen's rules: status words, and the summary lines built from
-// the private link's reply.
+// the booking link's reply.
 // Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -716,7 +716,7 @@ import { formatFrom, formatMoney } from './service-selection.ts';
 
 /**
  * The pending screen's rules: the words for each stage, and the summary lines
- * built from the private link's reply. The screen only calls these.
+ * built from the booking link's reply. The screen only calls these.
  * Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
  */
 export const STAGE_TEXT: Record<BookingStage, string> = {
@@ -1187,7 +1187,7 @@ import {
 } from './details-rules.ts';
 
 /**
- * The details screen (atlas `details`, step 4): a summary of the booking, the
+ * The details screen (screen design `details`, step 4): a summary of the booking, the
  * customer's name, mobile number, how to send updates (one channel, Text
  * message by default), an email (required only for Email updates), and the
  * booking terms, which open in a dialog on the same screen. Everything is
@@ -1505,7 +1505,7 @@ test('while sending, the button reads "Sending…" and cannot be pressed again',
   assert.equal(posts(requests).length, 1);
 });
 
-test('success clears the draft and opens the private link', async () => {
+test('success clears the draft and opens the booking link', async () => {
   const { ui } = await open({ draft: { ...READY, hadPhotos: true }, photos: [pngFile()] });
   await press(ui);
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
@@ -1816,7 +1816,7 @@ Expected: all PASS, the file exits in seconds, typecheck and lint clean (no `rea
   1. In `send`, change `bookingBody(fresh, draft, photoData)` to `bookingBody(services, draft, photoData)`. "answers are cleaned against the services read just before sending" must FAIL (the stale "Squeaking" answer is sent).
   2. In the `action` prop, delete `, disabled: sending`. 'while sending, the button reads "Sending…" ...' must FAIL (`disabled` false, and two POSTs).
   3. In the `route.to === 'date'` branch, delete the `update({ date: undefined, ... });` line. "a capacity refusal clears the day, ..." must FAIL on the cleared fields.
-  4. In `send`, delete `clear();`. "success clears the draft and opens the private link" must FAIL (the stored draft is not `null`).
+  4. In `send`, delete `clear();`. "success clears the draft and opens the booking link" must FAIL (the stored draft is not `null`).
 
   Re-run Step 4 to PASS.
 
@@ -1988,7 +1988,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 1: Write the failing test** `tests/customer/pending-screen.test.js`
 
 ```js
-// The pending screen: the private link read back - the status, the summary,
+// The pending screen: the booking link read back - the status, the summary,
 // Copy link, the contact line, and 404 / 410 / other failures.
 // Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
 import test, { afterEach } from 'node:test';
@@ -2028,7 +2028,7 @@ const rtl = () => import('@testing-library/react');
 const click = async (el) => (await rtl()).fireEvent.click(el);
 const heading = (ui, name) => ui.findByRole('heading', { level: 1, name });
 
-test('it reads the private link and shows where the booking is up to as its heading; no step, back link or action', async () => {
+test('it reads the booking link and shows where the booking is up to as its heading; no step, back link or action', async () => {
   const { ui, requests } = await open();
   assert.ok(await heading(ui, 'Awaiting shop confirmation'));
   assert.ok(requests.some((r) => r.url === `/api/portal/north/booking-links/${CODE}`), JSON.stringify(requests));
@@ -2114,10 +2114,10 @@ test('any other failure offers Try again, which asks again', async () => {
 });
 ```
 
-- [ ] **Step 2: Update the shell test.** In `tests/screens/customer-app-shell.test.js`, replace the whole test `'a private link opened cold reaches the pending screen'` with:
+- [ ] **Step 2: Update the shell test.** In `tests/screens/customer-app-shell.test.js`, replace the whole test `'a booking link opened cold reaches the pending screen'` with:
 
 ```js
-test('a private link opened cold reaches the pending screen', async () => {
+test('a booking link opened cold reaches the pending screen', async () => {
   const LINK = {
     reference: 'WH-1042', shopName: 'Demo Cycles', jobDate: '2026-10-05', startTime: '09:30', description: null,
     bikeNote: null, answers: [], bike: null, stage: 'awaiting_confirmation', photoCount: 0, services: [], totalPrice: null,
@@ -2151,8 +2151,8 @@ import {
 } from './pending-rules.ts';
 
 /**
- * The pending screen (atlas `pending`): where the booking is up to, as its
- * heading, and a summary of what was booked. The private link the server
+ * The pending screen (screen design `pending`): where the booking is up to, as its
+ * heading, and a summary of what was booked. The booking link the server
  * issues opens it cold, so it reads everything from the link, never the
  * draft. No step, no back link, no action; changing or cancelling online
  * comes with d6, so until then it says to contact the shop.
@@ -2380,7 +2380,7 @@ import { purgeAttachmentFiles, UPLOADS_DIR } from '../helpers/workshopFixtures.j
 // runs on the pinned test clock (07:00 UK time, Tuesday 1 September 2026),
 // and the browser's clock is pinned to the same moment in Europe/London, so
 // both agree that Wednesday 2 September is bookable. A browser books from
-// /book/<shop> to the pending screen, with a photo; the private link is then
+// /book/<shop> to the pending screen, with a photo; the booking link is then
 // opened cold in a fresh browser context; the booking row is checked in the
 // database (answers, bike note, a stored photo, the terms copy); the shop is
 // removed afterwards.
@@ -2432,7 +2432,7 @@ test.afterAll(async () => {
   await pool.end();
 });
 
-test('a customer books from the first screen to pending, the private link reopens it, and the booking is stored', async ({ page, browser }) => {
+test('a customer books from the first screen to pending, the booking link reopens it, and the booking is stored', async ({ page, browser }) => {
   const slug = shop!.slug;
   await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
   await page.goto(`${server!.baseUrl}/book/${slug}`);
@@ -2468,7 +2468,7 @@ test('a customer books from the first screen to pending, the private link reopen
   const privateLink = page.url();
   expect(await page.evaluate((key) => window.sessionStorage.getItem(key), `wh-book-draft:${slug}`), 'the draft is cleared').toBeNull();
 
-  // the private link, opened cold
+  // the booking link, opened cold
   const cold = await browser.newContext({ timezoneId: 'Europe/London', viewport: PHONE });
   const coldPage = await cold.newPage();
   await coldPage.goto(privateLink);
@@ -2577,7 +2577,7 @@ node scripts/ci/check-registry-drift.mjs
 python3 docs/design/release-1-journey/package.py
 node docs/design/release-1-journey/check-static.mjs
 node docs/design/release-1-journey/check-notes.mjs
-git diff --exit-code -- docs/design/release-1-journey/Wheelhouse-Release-1-Journey-Atlas.html docs/design/release-1-journey/screen-index.json docs/design/release-1-journey/verification.json
+git diff --exit-code -- docs/design/release-1-journey/Wheelhouse-Release-1-Screen-Designs.html docs/design/release-1-journey/screen-index.json docs/design/release-1-journey/verification.json
 node scripts/ci/assert-screen-trace.mjs
 npm run migrate
 node scripts/ci/assert-rls-coverage.mjs
@@ -2610,7 +2610,7 @@ Expected: every command exits 0, and the last `npm run migrate` prints no `Appli
   1. In the `**Branch:**` line, after "off `main` at `d7638eb`." add: " The follow-ups merged as #85 (`24bccac`). d5 built on `feat/book-d5-details-send-pending`."
   2. Directly after the paragraph that starts `**(d4) merged: #84 at \`d7638eb\`**` (it ends "follow-up piece)."), insert this new paragraph (use "merged into this branch" or "NOT yet merged - the journey test is red at its terms step until it is" for piece 11, per Step 1):
 
-     > **(d5) built on `feat/book-d5-details-send-pending`** (26 Sep; spec `docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md`, plan `docs/superpowers/plans/2026-09-26-book-d5-details-send-pending.md`, which carries the decision log and the spec walk; server piece 11, PR #86, <merged into this branch | NOT yet merged>). Built: the `details` screen (summary; name, mobile, one update channel - Text message by default, WhatsApp, Email - an email required only for Email; the booking terms in a dialog, fetched from piece 11's `/terms` when opened; the four messages under their fields with a pinned note and focus on the first; "photos were cleared" asked in a dialog); sending (`/services` read again and answers cleaned with `cleanAnswers`; photos as bare base64; "Sending…"; success clears the draft and replaces details with the private link; a time gone clears the date choice and returns to `date` with "Sorry, that time was booked while you were filling in your details - please choose another"; changed questions return to `problem` with the server's message; 429, no response and anything else stay on details); the `pending` screen (status as its heading, reference, services and prices, "From £T", day and time, bike note, description, answers, Copy link, "Need to change or cancel? Contact <shop>"; 404, 410, Try again). Rules in `details-rules.ts` / `pending-rules.ts`; the registry `dialog` installed unchanged. **End-to-end test:** `tests/browser/book-journey.spec.ts` starts its own live server (`startLiveServer`, pinned clock), seeds a throwaway shop through the server-test helpers, pins the browser to the same moment in Europe/London, books from `/book/<shop>` to `pending` with a photo, reopens the private link in a fresh context, checks the row (answers, bike note, photo on disk, `terms_text`), and deletes the shop; no config or CI change - it runs in the existing "Journey tests" step. **For piece 12 / d6:** `pending` has no "View request" / "Change or cancel request" buttons yet; d6 replaces `contactLine` in `pending-rules.ts`. `refusalRoute` (`details-rules.ts`) sorts 400 refusals by the start of the server's message (only the capacity 409 has a code): rewording any of "That time is no longer available", "That's too soon for the shop", "That date has passed", "The questions for this service have changed" (or the four stale-choice messages) silently changes where a customer is sent - piece 12, or a later server piece, should give them codes. The link has no drop-off window or mode, so a drop-off booking's pending shows the day alone. `marketingPermission` stays in the draft type, unused (decision 3). Enter-to-submit on details is still not done. **Jack to approve:** the copy not in the spec ("Please check the answers marked above" reused on details; "We couldn't load the booking terms"; "We couldn't load this booking"; "Reference"; "Loading…" as pending's heading while loading); the four stale-choice refusals also going to `date`; the looks, from `/tmp/d5-details-320.png`, `/tmp/d5-pending-320.png`, `/tmp/d5-terms-320.png` (the summary boxes, the dialog's `--modal-bg` panel on `/book`, pending's layout and per-service prices).
+     > **(d5) built on `feat/book-d5-details-send-pending`** (26 Sep; spec `docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md`, plan `docs/superpowers/plans/2026-09-26-book-d5-details-send-pending.md`, which carries the decision log and the spec walk; server piece 11, PR #86, <merged into this branch | NOT yet merged>). Built: the `details` screen (summary; name, mobile, one update channel - Text message by default, WhatsApp, Email - an email required only for Email; the booking terms in a dialog, fetched from piece 11's `/terms` when opened; the four messages under their fields with a pinned note and focus on the first; "photos were cleared" asked in a dialog); sending (`/services` read again and answers cleaned with `cleanAnswers`; photos as bare base64; "Sending…"; success clears the draft and replaces details with the booking link; a time gone clears the date choice and returns to `date` with "Sorry, that time was booked while you were filling in your details - please choose another"; changed questions return to `problem` with the server's message; 429, no response and anything else stay on details); the `pending` screen (status as its heading, reference, services and prices, "From £T", day and time, bike note, description, answers, Copy link, "Need to change or cancel? Contact <shop>"; 404, 410, Try again). Rules in `details-rules.ts` / `pending-rules.ts`; the registry `dialog` installed unchanged. **End-to-end test:** `tests/browser/book-journey.spec.ts` starts its own live server (`startLiveServer`, pinned clock), seeds a throwaway shop through the server-test helpers, pins the browser to the same moment in Europe/London, books from `/book/<shop>` to `pending` with a photo, reopens the booking link in a fresh context, checks the row (answers, bike note, photo on disk, `terms_text`), and deletes the shop; no config or CI change - it runs in the existing "Journey tests" step. **For piece 12 / d6:** `pending` has no "View request" / "Change or cancel request" buttons yet; d6 replaces `contactLine` in `pending-rules.ts`. `refusalRoute` (`details-rules.ts`) sorts 400 refusals by the start of the server's message (only the capacity 409 has a code): rewording any of "That time is no longer available", "That's too soon for the shop", "That date has passed", "The questions for this service have changed" (or the four stale-choice messages) silently changes where a customer is sent - piece 12, or a later server piece, should give them codes. The link has no drop-off window or mode, so a drop-off booking's pending shows the day alone. `marketingPermission` stays in the draft type, unused (decision 3). Enter-to-submit on details is still not done. **Jack to approve:** the copy not in the spec ("Please check the answers marked above" reused on details; "We couldn't load the booking terms"; "We couldn't load this booking"; "Reference"; "Loading…" as pending's heading while loading); the four stale-choice refusals also going to `date`; the looks, from `/tmp/d5-details-320.png`, `/tmp/d5-pending-320.png`, `/tmp/d5-terms-320.png` (the summary boxes, the dialog's `--modal-bg` panel on `/book`, pending's layout and per-service prices).
 
 - [ ] **Step 6: Walk the build against the spec.** Go through the spec line by line: "Changes", Decisions 1-6, "Details screen" (every bullet and message), "Sending" (every bullet and refusal), "Pending screen" (every bullet), "Rules", "Tests", "Not in this piece". Under "Spec walk" at the end of this plan, record each requirement as **met** (name the test that proves it), **dropped**, or **changed**, with the reason. Add any decision taken during the build to the "Decision log", with what caused it. Put the same walk in the task report.
 
@@ -2643,8 +2643,8 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 12. **The refused-booking messages travel in the router's navigation state** (`{ timeTaken: true }`, `{ questionsChanged }`), not in the draft: they belong to one visit. On `date` the message shows above the calendar until the next pick (a day, a time or a drop-off mechanic), as the spec says; on `problem` it shows above the bike box while the customer is on the screen. Both use d3/d4's approved warn look.
 13. **The server's "questions changed" message is shown as sent**, em dash included ("The questions for this service have changed — please check them and try again"); the spec says "showing the server's message".
 14. **No separate `full` screen.** d4's STATUS note said to build one; the d5 spec's "Changes" drops it (a refused time goes back to `date`). The spec wins.
-15. **Pending's heading is the status words.** The spec gives pending no title and `BookFrame` needs one; the atlas's "Your request is with us." would be wrong once the booking is confirmed or collected. While the link loads the heading is "Loading…" (BookFrame's existing word); the 404 and 410 headings are the spec's own words; any other failure shows "We couldn't load this booking" with "Try again" (not in the spec; Jack approves). The frame focuses the new heading when it changes.
-16. **Pending's summary labels only the reference** ("Reference", the atlas's label). The other lines read on their own; each answer shows the question's wording above the answer. Answers are worded like the staff notes (`answerNoteLine`): the choice or "I'm not sure", then " - " and any typed words; unanswered questions are left out.
+15. **Pending's heading is the status words.** The spec gives pending no title and `BookFrame` needs one; the screen designs' "Your request is with us." would be wrong once the booking is confirmed or collected. While the link loads the heading is "Loading…" (BookFrame's existing word); the 404 and 410 headings are the spec's own words; any other failure shows "We couldn't load this booking" with "Try again" (not in the spec; Jack approves). The frame focuses the new heading when it changes.
+16. **Pending's summary labels only the reference** ("Reference", the screen designs' label). The other lines read on their own; each answer shows the question's wording above the answer. Answers are worded like the staff notes (`answerNoteLine`): the choice or "I'm not sure", then " - " and any typed words; unanswered questions are left out.
 17. **Each service on pending shows its booked price as "£20"; the total shows as "From £T".** The spec says "with prices when shown, and 'From £T'". The per-service figures are the prices booked; the total carries "From" because the terms say online prices are starting prices. Jack judges from the screenshot.
 18. **A drop-off booking's pending shows the day alone.** The link carries no mode and no drop-off window.
 19. **Copy link copies `window.location.href`** (the page's full address, as the spec says) and shows "Copied" for 2 seconds. With no clipboard, or permission refused, the button stays "Copy link" - the address bar still has the link.
@@ -2659,7 +2659,7 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 
 Walked line by line against `docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md` on 26 Sep, after all commits on this branch (`bbbde21`).
 
-**Changes** (atlas): met - one update channel, no marketing box, no separate `full` screen, no view/change/cancel buttons yet (`details.tsx`, `pending.tsx`).
+**Changes** (screen designs): met - one update channel, no marketing box, no separate `full` screen, no view/change/cancel buttons yet (`details.tsx`, `pending.tsx`).
 
 **Decisions 1-6:**
 1. Terms: met - standard Wheelhouse terms, a shop's replacement, a copy saved per booking, all server piece 11 (#86, merged); fetched and shown from `/api/portal/:shopSlug/terms` in the details dialog (`details.tsx`; `tests/customer/details-screen.test.js` "booking terms" tests).
@@ -2705,7 +2705,7 @@ Walked line by line against `docs/superpowers/specs/2026-09-26-book-d5-details-s
 - `details-screen.test.js`: guard, summary, fields/default channel, each message, email label, terms dialog, photos-cleared question, sending state, success, each refusal route, 429, network failure - all present and passing.
 - `pending-screen.test.js`: each status, summary, copy link, 404/410 - all present and passing.
 - `book-details.spec.ts` (320x568, mocked): last field and terms box above the pinned area, scrolled to bottom, before and after a message shows - met (screenshot Step 4 reconfirmed it live).
-- `book-journey.spec.ts` (real server, real database): throwaway shop, full journey to pending with a photo, private link reopened cold, database row checked (answers, bike note, photo on disk, terms copy), shop removed - met (decisions 21-23).
+- `book-journey.spec.ts` (real server, real database): throwaway shop, full journey to pending with a photo, booking link reopened cold, database row checked (answers, bike note, photo on disk, terms copy), shop removed - met (decisions 21-23).
 
 **Not in this piece:** all four items confirmed absent/deferred as intended - no change/cancel online (piece 12/d6), no customer sign-in or saved bikes, no marketing permission field, the body-size memory risk untouched (STATUS's existing piece 6 open item, still Jack's decision before hosting).
 

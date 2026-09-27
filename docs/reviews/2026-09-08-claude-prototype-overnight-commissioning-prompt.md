@@ -12,7 +12,7 @@ An interactive, fully responsive, standalone bike-workshop prototype that Jack c
 
 Include:
 - Guest service requests, including an unknown problem described in plain language, photos, and video. No mandatory customer account.
-- Customer progress links, inspection videos, work approvals, and conversations attached to the request.
+- Customer booking links, inspection videos, work approvals, and conversations attached to the request.
 - Configurable automatic acceptance and shop review, including rules by service type.
 - Both exact appointments and day-based drop-offs, selectable by the shop.
 - Both individual mechanic assignments and a shared work queue.
@@ -45,7 +45,7 @@ Work autonomously through this loop within the current Claude Code session:
 2. Pick the highest-value unresolved acceptance gap or demonstrated defect. Reproduce it, implement the smallest coherent correction, and verify it.
 3. Run npm run prototype:test after coherent changes. Add meaningful regression tests for discovered defects. Do not remove assertions, skip tests, or hide failures to obtain a passing result.
 4. Add and run npm --prefix prototype run test:browser using real browser automation such as Playwright. The test command must manage its own server on an available test port and fail when checks fail. Do not depend on the existing demo server at port 4173 or kill unrelated processes.
-5. Exercise the complete customer-to-collection workflow, both booking and acceptance modes, shared-queue pickup, rescheduling conflicts, mixed item approvals, cumulative spending limits, stale proposals, conversations, notification preferences, parts arrival, and scenario saving/reset. Check that old progress links do not open a new run’s jobs.
+5. Exercise the complete customer-to-collection workflow, both booking and acceptance modes, shared-queue pickup, rescheduling conflicts, mixed item approvals, cumulative spending limits, stale proposals, conversations, notification preferences, parts arrival, and scenario saving/reset. Check that old booking links do not open a new run’s jobs.
 6. Test layouts at 320px, 390px, 768px, and 1440px. Inspect screenshots, horizontal overflow, clipped controls, keyboard navigation, focus, labels, console errors, and actual sample-video playback. Save evidence. Distinguish mobile emulation from a physical-phone camera test.
 7. Update prototype/OVERNIGHT.md after each coherent step with changes, commands/results, evidence paths, blockers, and the next concrete action. After context compaction, reread this file and the governing spec and continue without repeating completed work.
 8. Repeat until the agreed prototype is ready, the session’s limits are reached, or no useful work remains because of a genuine blocker.

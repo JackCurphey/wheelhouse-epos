@@ -280,9 +280,9 @@ job-done email).
 
 | ID | Feature | What it means | Today | Depends on | Priority |
 |---|---|---|---|---|---|
-| ECOM-01 | Storefront | Built; frozen until after G3 | Have | — | |
+| ECOM-01 | Website | Built; frozen until after G3 | Have | — | |
 | ECOM-02 | Shopify sync | Built; onboarding docs are stale since Jan 2026 | Partial | — | |
-| ECOM-03 | Custom domain for a storefront | Frozen | None | — | |
+| ECOM-03 | Custom domain for a website | Frozen | None | — | |
 | ECOM-04 | Click and collect | Order online, collect in store | None | — | |
 
 ## Hardware

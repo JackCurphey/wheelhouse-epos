@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-31
 **Commit audited:** `943fbc5` (master)
-**Surfaces:** `public/` (staff EPOS), `public-portal/` (booking portal), `public-storefront/` (shop storefront), `public-demo/` (demo page)
+**Surfaces:** `public/` (staff EPOS), `public-portal/` (booking portal), `public-storefront/` (shop website), `public-demo/` (demo page)
 **Volume reviewed:** 10,565 lines of HTML/CSS/JS
 **Remediation plan:** [`docs/superpowers/plans/2026-08-31-design-remediation.md`](../superpowers/plans/2026-08-31-design-remediation.md)
 
@@ -31,14 +31,14 @@ recorded here so they are not re-raised:
   `<label>` tags in `app.js` carry `for=`, and the portal is 12 for 12. Only 18
   bare labels remain (see P5).
 - *"Images are missing alt text."* False. `app.js` renders zero `<img>` tags at
-  all; the storefront's three all have alt text.
+  all; the website's three all have alt text.
 
 ---
 
 ## 1. The core problem: four surfaces, four design systems
 
 The single largest issue is not any individual defect — it is that the product
-has no shared design layer. A customer crossing from the storefront to the
+has no shared design layer. A customer crossing from the website to the
 booking portal changes font stack, button shape and corner radius with no cue
 they are still on the same shop's site.
 
@@ -46,7 +46,7 @@ they are still on the same shop's site.
 |---|---|---|---|---|---|---|---|
 | Staff EPOS | `/` | `styles.css` (1,540 ln) | ~25 | Apple / Segoe / Roboto chain | 8px | 3 | none |
 | Booking portal | `/book` | `styles.css` + `portal.css` (114 ln) | ~25 | inherited | 8px | 0 own | none |
-| Storefront | shop subdomain | `storefront.css` (76 ln) **only** | 3 | `system-ui` | 4px | 0 | none |
+| Website | shop subdomain | `storefront.css` (76 ln) **only** | 3 | `system-ui` | 4px | 0 | none |
 | Demo page | `/sdbdemo` | inline, self-contained (938 ln) | ~18 | Bricolage Grotesque + Work Sans + IBM Plex Mono | 999px | responsive | **full** |
 
 `public-demo/sdbdemo.html` is a fully-realised design for the *same booking use
@@ -65,7 +65,7 @@ what a user can do, not just how it looks.
 
 ### C1 — No ARIA anywhere, on any surface
 
-**Surfaces:** EPOS, Portal, Storefront
+**Surfaces:** EPOS, Portal, Website
 
 Zero `aria-*` attributes and zero `role=` attributes across all three production
 front-ends (the two `role=` hits in `app.js` are URL query params
@@ -177,7 +177,7 @@ controls in the customer flow are the smallest in the system.
 
 ### C7 — Buy button lies about its state and allows silent double-adds
 
-**Surfaces:** Storefront
+**Surfaces:** Website
 
 On success the label is set to `Added` and never reverts, but
 `finally { btn.disabled = false }` re-enables it. A second click adds another
@@ -202,7 +202,7 @@ non-deterministic and invisible in advance.
 - `public-portal/portal.js:529` — conditional auth step
 - `public-portal/portal.js:678-684` — cancel discards silently
 
-### C9 — The Front Desk, the most-used screen, has no primary action
+### C9 — The Till, the most-used screen, has no primary action
 
 **Surfaces:** EPOS
 
@@ -212,7 +212,7 @@ applied to dismissive actions — `Close` and `Done` — in at least four modals
 the one colour that means "commit" is missing where it is needed and present
 where it inverts the meaning.
 
-- `public/app.js:410-411` — Front Desk actions, both plain `.btn`
+- `public/app.js:410-411` — Till actions, both plain `.btn`
 - `public/app.js:5309, 5510, 5794` — `Close` as `.btn-primary`
 - `public/app.js:6782` — `Done` as `.btn-primary`
 
@@ -312,7 +312,7 @@ instead of a utility class.
 - `public/app.js:3045, 3273, 3767, 3950, 4096, 4195, 4202, 4206, 4210, 4563` — `margin-top` literals
 - `public/app.js:807, 1066, 1072, 2960, 2976, 3276, 3433, 3751` — hand-typed flex rows
 
-### R5 — The storefront re-implements the design system badly, in 76 lines
+### R5 — The website re-implements the design system badly, in 76 lines
 
 Three custom properties against the app's ~25, and it never loads `styles.css`
 at all. Roughly ten hardcoded hex values fill the gap. It invents a second
@@ -340,13 +340,13 @@ invisible.
 
 ### R7 — Public pages ship placeholder metadata
 
-The storefront's title is the literal string `Shop` — never updated, even though
+The website's title is the literal string `Shop` — never updated, even though
 the JS fetches the real shop name and uses it for the `<h1>`. `document.title`
 is never assigned anywhere in any of the three front-ends. No meta description,
-no favicon link, no Open Graph tags: a storefront link shared to WhatsApp or
+no favicon link, no Open Graph tags: a website link shared to WhatsApp or
 Slack renders with no preview card and a default browser icon. The portal has a
 favicon, but it is the same generic bike emoji for every shop regardless of
-branding. Storefront heading order also skips a level — `h1` then `h3` on every
+branding. Website heading order also skips a level — `h1` then `h3` on every
 product card, no `h2` on the page.
 
 - `public-storefront/index.html:6` — `<title>Shop</title>`
@@ -464,7 +464,7 @@ them rather than rewrite through them.
 | Motion `--ease`, `--dur-fast/base` | Does not exist | P1 (deferred) |
 | Semantic feedback `--toast-ok` / `--toast-err` | Single `--ink` pill for both | C10 |
 | Dark palette | Exists only in `sdbdemo.html` | P3 (deferred) |
-| Shared stylesheet for the storefront | Loads none | R5, section 1 |
+| Shared stylesheet for the website | Loads none | R5, section 1 |
 
 ## 7. Out of scope for a visual pass — flagged
 

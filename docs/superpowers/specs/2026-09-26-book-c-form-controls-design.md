@@ -22,7 +22,7 @@ Wiring them to real data is piece (d).
    (reverses the no-Radix choice; custom dropdowns are worse on phones).
 2. **Seven controls, no dropdown.** Every list on the book screens is short;
    a dropdown is added if a long one appears.
-3. **Card style, as in the atlas mock-ups.** Selected = 2px border in the
+3. **Card style, as in the screen designs.** Selected = 2px border in the
    shop colour plus a pale fill; short single choices are pills side by side;
    tick boxes are the phone's own, coloured with the shop colour.
 4. **Month grid for choosing a day.** Unbookable days greyed, struck through
@@ -35,7 +35,7 @@ Wiring them to real data is piece (d).
    week view: a week is under 40px per column on a phone. Drop-off shops
    have no times: month calendar plus a mechanic choice.
 6. **Large text box and photo picker as shown.** Photos only (JPEG, PNG,
-   WebP); the atlas's video option is dropped because the server refuses
+   WebP); the screen designs' video option is dropped because the server refuses
    video.
 7. **Drop-off customers choose their mechanic with single-choice pills**
    after picking the day (the server requires a mechanic in both modes).
@@ -45,7 +45,7 @@ Wiring them to real data is piece (d).
    (suggests a time choice drop-off does not have).
 
 Colour: "shop colour" is the existing `--accent` / `--accent-dark` tokens
-(`src/styles/theme.css:30-31`; `--accent-dark` is the atlas's `#164f42`).
+(`src/styles/theme.css:30-31`; `--accent-dark` is the screen designs' `#164f42`).
 No new colour tokens.
 
 ## The controls

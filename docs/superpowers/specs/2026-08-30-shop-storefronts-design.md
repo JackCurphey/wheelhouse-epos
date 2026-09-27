@@ -1,8 +1,8 @@
-# Per-Shop Digital Storefronts — Design
+# Per-Shop Digital Websites — Design
 
 ## Purpose
 
-Give each bike shop using Wheelhouse EPOS a public-facing website — reachable at
+Give each bike shop using Wheelhouse a public-facing website — reachable at
 `<shop-slug>.wheelhouseepos.com` — showing their branding, a curated product
 catalog customers can actually buy from (via each shop's own Shopify store),
 and a link into the existing workshop-booking portal. Shop-owned custom
@@ -30,14 +30,14 @@ Two additions to the existing Postgres schema, following the established
 | column | type | notes |
 |---|---|---|
 | `shop_id` | fk → `shops.id` | primary key |
-| `enabled` | boolean | default `false` — storefront is opt-in |
+| `enabled` | boolean | default `false` — website is opt-in |
 | `tagline` | text | nullable |
 | `description` | text | nullable |
 | `logo_url` | text | nullable |
 | `hero_image_url` | text | nullable |
 | `theme_preset` | text | one of the existing 5 presets (forest/ocean/sunset/slate/plum) used by `shop_theme` |
 
-Created lazily (upsert) the first time an owner opens storefront settings, or
+Created lazily (upsert) the first time an owner opens website settings, or
 via a migration default row per existing shop with `enabled = false`.
 
 RLS policy: same pattern as other shop-scoped tables — scoped to
@@ -46,7 +46,7 @@ RLS policy: same pattern as other shop-scoped tables — scoped to
 ### `products.show_online` (new column)
 
 `boolean`, default `false`. Per-product opt-in for public visibility, editable
-from the existing inventory UI. Nothing appears on a storefront until an owner
+from the existing inventory UI. Nothing appears on a website until an owner
 explicitly flips this for a product.
 
 ### `products` — Shopify mapping columns (new)
@@ -54,7 +54,7 @@ explicitly flips this for a product.
 `shopify_product_id`, `shopify_variant_id`, `shopify_inventory_item_id`
 (all nullable text/bigint as appropriate). Populated once EPOS successfully
 syncs a `show_online` product to the shop's connected Shopify store; null
-means "not yet synced" (storefront shows "Coming soon", no Buy button).
+means "not yet synced" (website shows "Coming soon", no Buy button).
 
 ### `shopify_connections` (new table, 1:1 with `shops`)
 
@@ -69,7 +69,7 @@ means "not yet synced" (storefront shows "Coming soon", no Buy button).
 | `connected_at` | timestamp | nullable |
 
 RLS-scoped like other shop tables. A shop with no row here, or `status !=
-connected`, simply shows no Buy buttons on its storefront — everything else
+connected`, simply shows no Buy buttons on its website — everything else
 (catalog display, booking link) works independently of Shopify.
 
 ## Routing & tenant resolution
@@ -83,12 +83,12 @@ connected`, simply shows no Buy buttons on its storefront — everything else
 - **Tenant-resolution middleware** (new, in the main app): on each incoming
   request, extract the subdomain, look up the shop by `slug`:
   - Unknown slug, or known slug with `storefront_settings.enabled = false` →
-    a generic "storefront not found" page. Never leak whether a slug exists
+    a generic "website not found" page. Never leak whether a slug exists
     vs. is just disabled.
   - Known + enabled → resolve `shop_id`, enter `runWithShop()` (the existing
-    `AsyncLocalStorage` context used for RLS), continue to the storefront
+    `AsyncLocalStorage` context used for RLS), continue to the website
     routes.
-- **Path-based fallback**: also serve the storefront at `/store/:slug` for
+- **Path-based fallback**: also serve the website at `/store/:slug` for
   local development, where wildcard subdomains aren't practical.
 
 This reuses the existing tenant-resolution mechanism (`runWithShop`/RLS)
@@ -117,7 +117,7 @@ order-completion data arrives via the separate webhook endpoint below.
 Each shop connects independently: the owner creates a **custom app** in
 their own Shopify admin, generates an Admin API access token and a
 Storefront API token, and pastes both (plus their `.myshopify.com` domain)
-into EPOS storefront settings. EPOS stores them in `shopify_connections` and
+into EPOS website settings. EPOS stores them in `shopify_connections` and
 registers the `orders/paid` and `refunds/create` webhooks against that store
 via the Admin API, pointing at this app's webhook endpoint.
 
@@ -153,7 +153,7 @@ Shopify product, preserving any existing order history references to it.
 
 ### Checkout
 
-Product browsing and cart are built natively into the storefront frontend
+Product browsing and cart are built natively into the website frontend
 using Shopify's **Storefront API** (GraphQL) — add-to-cart, quantities, and
 a cart view all styled with the shop's own theme, no Shopify branding
 visible during browsing. Only the final "Pay now" action redirects to the
@@ -170,7 +170,7 @@ Product cards only show a "Buy" affordance once `shopify_variant_id` is
 populated; a `show_online` product without a confirmed sync shows
 "Coming soon" instead.
 
-## Storefront frontend (`public-storefront/`, new)
+## Website frontend (`public-storefront/`, new)
 
 A static HTML/CSS/JS bundle, structured the same way as the existing
 `public-portal/` (booking portal): plain HTML + CSS + vanilla JS, no build
@@ -191,7 +191,7 @@ step. Fetches from the two endpoints above and renders:
 
 Extend the existing shop admin/settings screen (no new admin app) with:
 
-- Storefront enabled/disabled toggle.
+- Website enabled/disabled toggle.
 - Tagline, description text fields.
 - Theme preset picker (reuses the existing preset selector UI/values from
   `shop_theme`).
@@ -205,7 +205,7 @@ Extend the existing shop admin/settings screen (no new admin app) with:
 
 - Middleware treats "slug not found" and "slug found but disabled" identically
   from the visitor's perspective (generic not-found page) to avoid leaking
-  which shops exist but haven't enabled a storefront.
+  which shops exist but haven't enabled a website.
 - Public API endpoints 404 if the resolved shop has no `storefront_settings`
   row or `enabled = false`, even if reached directly.
 - Image upload fields (logo/hero) need basic size/type validation, consistent

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Every online booking gets a private link that shows the booking read-only, without sign-in, until 30 days after the booked date; staff can replace a job's link.
+**Goal:** Every online booking gets a booking link that shows the booking read-only, without sign-in, until 30 days after the booked date; staff can replace a job's link.
 
 **Architecture:** A random 64-hex code is issued at booking; only its SHA-256 hash is stored on `workshop_jobs`. A new public portal route looks the hash up under the shop's row-level security and returns a narrow view. Pure logic (code, hash, path, expiry, stage) lives in `server/booking-link.js`; routes stay in `server/server.js`, matching its existing pattern.
 
@@ -51,7 +51,7 @@
 - [ ] **Step 1: Write the failing test**
 
 ```js
-// Migration 027: the private link's hash and the customer's own description.
+// Migration 027: the booking link's hash and the customer's own description.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -151,7 +151,7 @@ git commit -m "feat: migration 027 adds the booking link hash and the customer's
 - [ ] **Step 1: Write the failing test**
 
 ```js
-// The private link's pure parts: code, hash, path, expiry, stage.
+// The booking link's pure parts: code, hash, path, expiry, stage.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -360,7 +360,7 @@ const read = (code, slug = owner.shop.slug) =>
   jsonRequest(server.baseUrl, null, `/api/portal/${slug}/booking-links/${code}`);
 const setJob = (id, sql, ...args) => runWithShop(owner.shop.id, () => prepare(`UPDATE workshop_jobs SET ${sql} WHERE id = ?`).run(...args, id));
 
-test('a booking returns a private link, and the link reads the booking back', async () => {
+test('a booking returns a booking link, and the link reads the booking back', async () => {
   const booked = await book();
   assert.match(booked.privateLink, new RegExp(`^/book/${owner.shop.slug}/booking/[0-9a-f]{64}$`));
   const res = await read(codeOf(booked.privateLink));
@@ -606,7 +606,7 @@ Move the new `import` line to the top of the file with the others.
 Create `tests/booking-link-rate-limit.test.js`:
 
 ```js
-// The private link's attempt limit: 30 lookups per 15 minutes per IP.
+// The booking link's attempt limit: 30 lookups per 15 minutes per IP.
 // Its own file, so its own server and its own limiter.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 import test, { before, after } from 'node:test';
@@ -649,7 +649,7 @@ Expected: the four staff tests fail (the route does not exist, so 404 where 201/
 After the `GET /api/workshop-jobs/:id` route:
 
 ```js
-// A new private link for a job: the old one stops working at once, because a
+// A new booking link for a job: the old one stops working at once, because a
 // job holds one hash. Returned once; staff text it or read it out.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 // Staff handlers get (req, res, params, query, afterRelease, shopId); the slug
@@ -703,7 +703,7 @@ git commit -m "feat: staff can replace a booking's private link; lookups are rat
 ## Decisions made while building
 
 5. (Task 3) The plan's test helper booked as a guest every time; the existing guest limit (5 per hour per IP) refused the sixth. Tests book as a signed-in customer by default; two tests book as a guest. The production limit is unchanged.
-6. (Task 4) `scripts/ci/assert-screen-trace.mjs` requires a `// screens:` comment on `/api/workshop-jobs/:id/<action>` routes. The staff route names `expired`, the atlas screen that promises a fresh link. The staff screen id is added when the button is designed.
+6. (Task 4) `scripts/ci/assert-screen-trace.mjs` requires a `// screens:` comment on `/api/workshop-jobs/:id/<action>` routes. The staff route names `expired`, the screen design that promises a fresh link. The staff screen id is added when the button is designed.
 7. (Final review) `isLinkExpired` treats an impossible date (staff routes accept `2026-13-01`) as expired, so the read route answers 410 instead of 500.
 8. (Final review) The no-leak tests check the body's keys rather than searching for price digits. The same change fixed a flaky test from #68 that matched `12.5` inside a timestamp.
 9. (Final review, deferred) `Cache-Control: no-store` on link responses, `Referrer-Policy` on the future page, no tight polling from the page, and an audit entry when staff replace a link: all belong with the page and button design.

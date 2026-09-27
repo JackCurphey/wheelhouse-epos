@@ -291,7 +291,7 @@ _Approved without an additional note._
 
 Implementation package: P02
 
-## 37 / Return to the private progress link (`progress`)
+## 37 / Return to the booking link (`progress`)
 
 **Decision:** Approved as shown
 
@@ -411,7 +411,7 @@ _Approved without an additional note._
 
 Implementation package: P05 · P06
 
-## 52 / Expired request / private link (`expired`)
+## 52 / Expired request / booking link (`expired`)
 
 **Decision:** Approved as shown
 

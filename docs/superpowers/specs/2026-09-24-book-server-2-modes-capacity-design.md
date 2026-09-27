@@ -37,7 +37,7 @@ Decided by Jack in this session (24 Sep):
 4. **Blocks are in piece 2**, three kinds: per-mechanic weekly repeats (lunch),
    per-mechanic date ranges (leave), shop-wide closed dates. A booking already
    on a date that later gets blocked **stays**, and is reported to staff.
-5. **Opening hours per weekday** are in piece 2 (atlas screen 67 shows
+5. **Opening hours per weekday** are in piece 2 (screen design 67 shows
    Saturday 09:00-17:00).
 6. **Approach: one capacity calculator, computed on every read** - no stored
    tallies. Piece 2 splits into 2a and 2b.

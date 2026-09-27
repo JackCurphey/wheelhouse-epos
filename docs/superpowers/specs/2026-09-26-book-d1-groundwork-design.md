@@ -15,7 +15,7 @@ Each part gets its own spec, plan and pull request:
 2. **(d2)** `service` and `service-list`.
 3. **(d3)** `problem`: bike, description, service questions, photos.
 4. **(d4)** `date`: calendar, diary, mechanics, drop-off mode.
-5. **(d5)** `details`, sending the booking, `pending` (the private link page),
+5. **(d5)** `details`, sending the booking, `pending` (the booking link page),
    and the Playwright journey test against the real database.
 
 Chosen over three parts (a large middle PR mixing two screens' design calls)

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A customer can send up to 5 photos with a booking request; staff see them as attachments marked "from the customer"; the private link shows only a count.
+**Goal:** A customer can send up to 5 photos with a booking request; staff see them as attachments marked "from the customer"; the booking link shows only a count.
 
 **Architecture:** One migration adds `from_customer` to the existing attachments table. A pure module checks the photos (count, size, real file type from the first bytes). A small store module writes the files and rows and cleans up its own files on failure. The booking route reads a larger body (answering 400, not dropping the connection, when it is too big), checks photos before any write, and saves them as the last write inside the booking lock so an error rolls the whole booking back.
 
@@ -15,7 +15,7 @@
 - Photos only (JPEG, PNG, WebP); no video. Up to 5 photos, each up to 10 MB (10 × 1024 × 1024 bytes decoded).
 - Type comes from the file's first bytes; the customer's file name and claimed type are never stored or trusted. Stored name is `Customer photo N.<ext>`, N from 1.
 - A refused booking leaves no job, no customer row, no file.
-- Only staff see photos; the private link gets `photoCount` only (no names, ids, photos).
+- Only staff see photos; the booking link gets `photoCount` only (no names, ids, photos).
 - Plain-English customer-facing messages, exactly as listed in the spec.
 - Tests first; watch each fail for the right reason. Branch `feat/book-server-6-customer-uploads`; never commit to main.
 - `tests/portal-booking-link.test.js` stays under 30 lookups (14 today) — **do not add tests to it**; new tests go in `tests/portal-booking-photos.test.js`.
@@ -589,21 +589,21 @@ Import `saveBookingPhotos` from `./booking-photo-store.js`. Inside the lock, aft
 
 ---
 
-### Task 6: `photoCount` on the private link; status and spec bookkeeping
+### Task 6: `photoCount` on the booking link; status and spec bookkeeping
 
 **Files:**
-- Modify: `server/server.js` (private link route, ~line 4711)
+- Modify: `server/server.js` (booking link route, ~line 4711)
 - Modify: `docs/superpowers/specs/2026-09-25-book-server-6-customer-photos-design.md` (header line; note the "last write" placement)
 - Modify: `.agents/STATUS.md`
 - Test: `tests/portal-booking-photos.test.js`
 
 **Interfaces:**
-- Produces: private link response gains `photoCount: number` (photos with `from_customer = true`); nothing else about them.
+- Produces: booking link response gains `photoCount: number` (photos with `from_customer = true`); nothing else about them.
 
 - [ ] **Step 1: Write the failing test** (append):
 
 ```js
-test('the private link says how many photos were sent, and nothing else about them', async () => {
+test('the booking link says how many photos were sent, and nothing else about them', async () => {
   const two = await book({ photos: [photoOf('link1'), photoOf('link2')] });
   const none = await book({});
   const read = (res) => portalRequest(server.baseUrl, null, res.body.privateLink.replace(/^.*?(\/api\/portal)/, '$1'));

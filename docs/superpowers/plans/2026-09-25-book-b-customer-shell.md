@@ -4,7 +4,7 @@
 
 **Goal:** A second React app (the customer app) is built by Vite and served at every `/book` address, with placeholder routes for the six book screens.
 
-**Architecture:** `src/customer/` mirrors `src/staff/` (route table, unstyled shell, entry). Vite gains a `book` input. The server's entry-tag builder takes the manifest key, and one helper serves either app's HTML page; `/book` (main host and storefront subdomains) uses it instead of the old `public-portal/` static files.
+**Architecture:** `src/customer/` mirrors `src/staff/` (route table, unstyled shell, entry). Vite gains a `book` input. The server's entry-tag builder takes the manifest key, and one helper serves either app's HTML page; `/book` (main host and website subdomains) uses it instead of the old `public-portal/` static files.
 
 **Tech Stack:** React 19, react-router 8 (`createBrowserRouter`), @tanstack/react-query 5, Vite (rolldown), plain Node `http` server, `node:test` + jsdom + Testing Library, Playwright.
 
@@ -38,7 +38,7 @@
 - [ ] **Step 1: Write the route-table test** — `tests/screens/customer-routes.test.js`
 
 ```js
-// The customer route table: atlas screen id -> URL under /book.
+// The customer route table: screen design id -> URL under /book.
 // Spec: docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -50,8 +50,8 @@ const index = JSON.parse(
 );
 const BOOK_IDS = index.filter((s) => s.group === 'book').map((s) => s.id);
 
-test('the table has exactly the six book screens from the atlas', () => {
-  assert.equal(BOOK_IDS.length, 6, `atlas book group changed: ${BOOK_IDS}`);
+test('the table has exactly the six book screens from the screen designs', () => {
+  assert.equal(BOOK_IDS.length, 6, `screen-design book group changed: ${BOOK_IDS}`);
   assert.deepEqual(Object.keys(CUSTOMER_ROUTES).sort(), [...BOOK_IDS].sort());
 });
 
@@ -66,7 +66,7 @@ test('no two screens share a URL', () => {
   assert.equal(new Set(paths).size, paths.length);
 });
 
-test('pending is the private link the server issues', () => {
+test('pending is the booking link the server issues', () => {
   // server/booking-link.js linkPath: /book/<slug>/booking/<code>
   assert.equal(CUSTOMER_ROUTES.pending, '/book/:shopSlug/booking/:code');
 });
@@ -103,7 +103,7 @@ test('the first book screen renders its placeholder at /book/<shop>', async () =
   assert.ok(await screen.findByText('Not built yet: service'));
 });
 
-test('a private link opened cold reaches the pending screen', async () => {
+test('a booking link opened cold reaches the pending screen', async () => {
   const screen = await renderAt(`/book/demo/booking/${'a'.repeat(64)}`);
   assert.ok(await screen.findByText('Not built yet: pending'));
 });
@@ -123,8 +123,8 @@ Expected: the routes test fails to import `src/customer/routes.ts` (module not f
 
 ```ts
 /**
- * Atlas screen id -> URL for the customer app, served at every /book address
- * (server/server.js). pending is also the private link the server issues
+ * Screen design id -> URL for the customer app, served at every /book address
+ * (server/server.js). pending is also the booking link the server issues
  * (server/booking-link.js linkPath), so a customer opening it cold lands here.
  *
  * Each journey plan adds its customer screens here and nowhere else. Keys must
@@ -165,8 +165,8 @@ import { CUSTOMER_ROUTES, type CustomerScreenId } from './routes.ts';
  * Spec: docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md
  */
 
-// Screens by atlas id. An id with no entry renders the placeholder, so every
-// address in CUSTOMER_ROUTES works from day one - including a private link.
+// Screens by screen design id. An id with no entry renders the placeholder, so every
+// address in CUSTOMER_ROUTES works from day one - including a booking link.
 const SCREENS: Partial<Record<CustomerScreenId, ComponentType>> = {};
 
 function notBuilt(id: CustomerScreenId): ComponentType {
@@ -279,7 +279,7 @@ Expected: `true true`.
 
 - [ ] **Step 9: Break steps (record output)**
 
-1. In `src/customer/routes.ts` change `pending` to `'/book/:shopSlug/link/:code'`; confirm with `grep -n "link/:code" src/customer/routes.ts`. Run `npm run pretest && node --test tests/screens/customer-routes.test.js tests/screens/customer-app-shell.test.js`. Expected: `pending is the private link...` fails, and the cold-private-link shell test fails (shows the no-screen text). Restore.
+1. In `src/customer/routes.ts` change `pending` to `'/book/:shopSlug/link/:code'`; confirm with `grep -n "link/:code" src/customer/routes.ts`. Run `npm run pretest && node --test tests/screens/customer-routes.test.js tests/screens/customer-app-shell.test.js`. Expected: `pending is the booking link...` fails, and the cold-private-link shell test fails (shows the no-screen text). Restore.
 2. In `src/customer/app-shell.tsx` delete the `{ path: '/book/*', Component: NoSuchScreen },` line; confirm with `grep -c "NoSuchScreen }" src/customer/app-shell.tsx` printing `0`. Run the shell test. Expected: `an unknown /book address...` fails. Restore; re-run both files: all pass.
 
 - [ ] **Step 10: Typecheck and lint**
@@ -302,7 +302,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `public/book.html`, `tests/book-page.test.js`
-- Modify: `server/server.js` (constants ~:287-291; `workshopEntryTags` ~:4951-4968; storefront `/book` forward ~:4989-4992; `/workshop` block ~:5253-5270; `/book` block ~:5272-5283)
+- Modify: `server/server.js` (constants ~:287-291; `workshopEntryTags` ~:4951-4968; website `/book` forward ~:4989-4992; `/workshop` block ~:5253-5270; `/book` block ~:5272-5283)
 - Modify: `tests/workshop-entry-tags.test.js`, `tests/browser/smoke.spec.ts`
 - Delete: `tests/portal-copy-served.test.js`
 
@@ -342,7 +342,7 @@ test('a build without the customer entry names the missing entry', async () => {
 
 ```js
 // The customer app is served at every /book address, on the main host and on
-// a shop's storefront subdomain. Needs a built bundle (npm run build).
+// a shop's website subdomain. Needs a built bundle (npm run build).
 // Spec: docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -383,7 +383,7 @@ test('/book/<shop> serves the customer app', async () => {
   await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}`);
 });
 
-test('a private link opened cold gets the customer app', async () => {
+test('a booking link opened cold gets the customer app', async () => {
   await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}/booking/${'a'.repeat(64)}`);
 });
 
@@ -394,11 +394,11 @@ test('the customer app script it names is really there', async () => {
   await res.arrayBuffer();
 });
 
-test('on a storefront, /book serves the customer app too', async () => {
+test('on a website, /book serves the customer app too', async () => {
   await runWithShop(owner.shop.id, () => prepare(
     'INSERT INTO storefront_settings (enabled) VALUES (true) ON CONFLICT (shop_id) DO UPDATE SET enabled = true'
   ).run());
-  // ?storefrontSlug= routes the request through the storefront handler, the
+  // ?storefrontSlug= routes the request through the website handler, the
   // same path a <slug>.<base domain> host takes (server/storefront.js).
   await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}?storefrontSlug=${owner.shop.slug}`);
 });
@@ -407,7 +407,7 @@ test('on a storefront, /book serves the customer app too', async () => {
 - [ ] **Step 3: Run and watch them fail for the right reason**
 
 Run: `npm run build && node --test tests/book-page.test.js tests/workshop-entry-tags.test.js`
-Expected: the entry-tags tests fail on the missing `appEntryTags` export (SyntaxError on import); the book-page tests fail with `no customer mount point` (the old portal page is served). A failure in the storefront test's INSERT means the SQL is wrong — check `server/migrations/010_storefront.sql` and fix the test first.
+Expected: the entry-tags tests fail on the missing `appEntryTags` export (SyntaxError on import); the book-page tests fail with `no customer mount point` (the old portal page is served). A failure in the website test's INSERT means the SQL is wrong — check `server/migrations/010_storefront.sql` and fix the test first.
 
 - [ ] **Step 4: Create `public/book.html`**
 
@@ -474,7 +474,7 @@ async function serveAppPage(res, htmlPath, entryKey, label) {
 }
 ```
 
-5c. Storefront handler: replace
+5c. Website handler: replace
 
 ```js
   if (pathname === '/book' || pathname.startsWith('/book/')) {
@@ -530,8 +530,8 @@ Expected: all pass.
 
 - [ ] **Step 8: Break steps (record output)**
 
-1. In the main `/book` block change `'src/customer/main.tsx'` to `'src/staff/main.tsx'`; confirm with `grep -n "BOOK_HTML, 'src/staff/main.tsx'" server/server.js` (one line). Run `node --test tests/book-page.test.js`. Expected: the three main-host tests fail on `no customer entry script`; the storefront test still passes. Restore.
-2. In the storefront handler change `BOOK_HTML` to `WORKSHOP_HTML`; confirm with `grep -n "serveAppPage(res, WORKSHOP_HTML, 'src/customer" server/server.js`. Run the file. Expected: only the storefront test fails, on `no customer mount point`. Restore; re-run: all pass.
+1. In the main `/book` block change `'src/customer/main.tsx'` to `'src/staff/main.tsx'`; confirm with `grep -n "BOOK_HTML, 'src/staff/main.tsx'" server/server.js` (one line). Run `node --test tests/book-page.test.js`. Expected: the three main-host tests fail on `no customer entry script`; the website test still passes. Restore.
+2. In the website handler change `BOOK_HTML` to `WORKSHOP_HTML`; confirm with `grep -n "serveAppPage(res, WORKSHOP_HTML, 'src/customer" server/server.js`. Run the file. Expected: only the website test fails, on `no customer mount point`. Restore; re-run: all pass.
 
 - [ ] **Step 9: Browser smoke test** — append to `tests/browser/smoke.spec.ts`
 

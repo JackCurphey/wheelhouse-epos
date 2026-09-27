@@ -1,4 +1,4 @@
-# Storefront Framework Implementation Plan
+# Website Framework Implementation Plan
 
 > # ⚠️ ALREADY IMPLEMENTED — DO NOT EXECUTE THIS PLAN
 >
@@ -13,13 +13,13 @@
 > Delivered by: `8624f92`, `b2e2191`, `7503614`, `aec77cd`, `926164e`, `8ee6553`, `9f88409`
 >
 > The only item from this plan that is genuinely outstanding is tracked
-> separately in issue #5 (wildcard DNS and TLS for storefront subdomains).
+> separately in issue #5 (wildcard DNS and TLS for website subdomains).
 > Everything else is done. Kept for historical context only.
 
 
 > **For agentic workers:** This plan is historical. It has already been executed — see the banner above. Do not implement it.
 
-**Goal:** Give each bike shop a public storefront at `<slug>.wheelhouseepos.com` (or `/store/:slug` locally) showing branding, a curated product catalog, and a link to the existing workshop-booking portal — with the data model and settings screen shop owners will use later to connect Shopify checkout (built in a separate, follow-on plan).
+**Goal:** Give each bike shop a public website at `<slug>.wheelhouseepos.com` (or `/store/:slug` locally) showing branding, a curated product catalog, and a link to the existing workshop-booking portal — with the data model and settings screen shop owners will use later to connect Shopify checkout (built in a separate, follow-on plan).
 
 **Architecture:** New business logic (tenant resolution, settings CRUD, catalog read model) lives in a new `server/storefront.js` module with plain exported async functions — testable directly via Node's built-in test runner without needing an HTTP harness. `server/server.js` stays thin: it wires these functions into the existing hand-rolled route table and into a new branch at the top of the request dispatcher for host/path-based tenant resolution. The public frontend is a new static bundle (`public-storefront/`) mirroring the existing `public-portal/` (booking portal) pattern: vanilla JS, no build step, no framework.
 
@@ -38,7 +38,7 @@
 
 ---
 
-## Task 1: Migration — storefront settings table and product columns
+## Task 1: Migration — website settings table and product columns
 
 **Files:**
 - Create: `server/migrations/010_storefront.sql`
@@ -51,9 +51,9 @@
 ```sql
 -- server/migrations/010_storefront.sql
 
--- Per-shop public storefront configuration (branding, opt-in visibility),
+-- Per-shop public website configuration (branding, opt-in visibility),
 -- shown at <slug>.wheelhouseepos.com. One row per shop, created lazily the
--- first time an owner opens storefront settings - same singleton-per-shop
+-- first time an owner opens website settings - same singleton-per-shop
 -- pattern as shop_theme (009_shop_theme.sql).
 CREATE TABLE storefront_settings (
   id SERIAL PRIMARY KEY,
@@ -72,8 +72,8 @@ CREATE POLICY storefront_settings_shop_isolation ON storefront_settings
   USING (shop_id = current_setting('app.current_shop_id')::int)
   WITH CHECK (shop_id = current_setting('app.current_shop_id')::int);
 
--- Per-product opt-in for public storefront visibility, plus the fields a
--- storefront listing needs that the till/inventory UI never required.
+-- Per-product opt-in for public website visibility, plus the fields a
+-- website listing needs that the till/inventory UI never required.
 ALTER TABLE products ADD COLUMN show_online BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE products ADD COLUMN description TEXT;
 ALTER TABLE products ADD COLUMN photo_url TEXT;
@@ -202,7 +202,7 @@ git commit -m "test: add node:test infrastructure and shop test helper"
 
 ---
 
-## Task 3: Storefront settings — data layer
+## Task 3: Website settings — data layer
 
 **Files:**
 - Create: `server/storefront.js`
@@ -355,7 +355,7 @@ git commit -m "feat: add storefront settings data layer"
 
 ---
 
-## Task 4: Storefront settings — API route
+## Task 4: Website settings — API route
 
 **Files:**
 - Modify: `server/server.js` (add near the existing `/api/shop-theme` routes)
@@ -479,7 +479,7 @@ test('resolveStorefrontShop resolves an enabled shop by subdomain', async () => 
   }
 });
 
-test('resolveStorefrontShop returns null for a disabled storefront', async () => {
+test('resolveStorefrontShop returns null for a disabled website', async () => {
   const shop = await createTestShop();
   try {
     await runWithShop(shop.id, () => getOrCreateStorefrontSettings());
@@ -585,11 +585,11 @@ import { pool } from './db.js';
 export const STOREFRONT_BASE_DOMAIN = process.env.STOREFRONT_BASE_DOMAIN || 'wheelhouseepos.com';
 
 // Cheap, DB-free check for "does this request look like it's addressed to a
-// storefront at all" - used by the dispatcher to decide between "not a
-// storefront request, keep routing normally" and "was a storefront request,
+// website at all" - used by the dispatcher to decide between "not a
+// website request, keep routing normally" and "was a website request,
 // but didn't resolve to one - show a generic not-found page" (never fall
 // through to the staff app for the latter, and never distinguish "unknown
-// slug" from "disabled storefront" in the response).
+// slug" from "disabled website" in the response).
 export function parseStorefrontSlugCandidate(req, url) {
   const hostHeader = String(req.headers.host || '').split(':')[0].toLowerCase();
   const suffix = `.${STOREFRONT_BASE_DOMAIN}`;
@@ -667,7 +667,7 @@ git commit -m "feat: add tenant resolution and public catalog data layer"
 
 ---
 
-## Task 6: Product storefront fields (show online, description, photo)
+## Task 6: Product website fields (show online, description, photo)
 
 **Files:**
 - Modify: `server/server.js` (`serializeProduct`, `POST /api/products`, `PUT /api/products/:id`)
@@ -910,7 +910,7 @@ git commit -m "feat: add product photo and shop logo/hero image upload"
 
 ---
 
-## Task 8: Storefront frontend bundle and request routing
+## Task 8: Website frontend bundle and request routing
 
 **Files:**
 - Create: `public-storefront/index.html`
@@ -920,7 +920,7 @@ git commit -m "feat: add product photo and shop logo/hero image upload"
 
 **Interfaces:**
 - Consumes: `resolveStorefrontShop`, `getStorefrontInfo`, `listStorefrontProducts` from `server/storefront.js` (Task 5); `serveStatic(req, res, pathname, baseDir)` and `runWithShop` (both already defined in `server/server.js`).
-- Produces: a working storefront reachable at `<slug>.wheelhouseepos.com/` and `/store/:slug`.
+- Produces: a working website reachable at `<slug>.wheelhouseepos.com/` and `/store/:slug`.
 
 No new automated test — this wires already-tested logic (Task 5) into the HTTP layer and adds a static frontend, verified end-to-end manually in Step 5 (matching the design spec's own testing section, whose final check for this piece is explicitly a manual in-browser pass).
 
@@ -932,7 +932,7 @@ Near the existing `PUBLIC_DIR`/`PORTAL_DIR` constant definitions in `server/serv
 const STOREFRONT_DIR = path.join(__dirname, '..', 'public-storefront');
 ```
 
-And extend the existing storefront import to include the new functions:
+And extend the existing website import to include the new functions:
 
 ```js
 import {
@@ -966,7 +966,7 @@ At the very top of the `createServer(async (req, res) => { ... })` callback, imm
   }
 ```
 
-This checks `parseStorefrontSlugCandidate` (host suffix, `/store/` path, or `?storefrontSlug=`) before ever touching the database — a normal request to the staff app matches none of those and falls through to the existing routing untouched. A request that *does* look like a storefront request but doesn't resolve to an enabled shop (unknown slug, or a real slug with the storefront disabled) gets the same generic not-found response either way, rather than silently falling through to the staff app or leaking which case it was.
+This checks `parseStorefrontSlugCandidate` (host suffix, `/store/` path, or `?storefrontSlug=`) before ever touching the database — a normal request to the staff app matches none of those and falls through to the existing routing untouched. A request that *does* look like a website request but doesn't resolve to an enabled shop (unknown slug, or a real slug with the website disabled) gets the same generic not-found response either way, rather than silently falling through to the staff app or leaking which case it was.
 
 - [ ] **Step 3: Add `handleStorefrontRequest`**
 
@@ -1130,7 +1130,7 @@ async function boot() {
     applyTheme(info.themePreset);
     render(info, products);
   } catch (err) {
-    document.getElementById('app').innerHTML = `<div class="empty-state">This storefront isn't available right now.</div>`;
+    document.getElementById('app').innerHTML = `<div class="empty-state">This website isn't available right now.</div>`;
   }
 }
 
@@ -1143,7 +1143,7 @@ boot();
 npm start
 ```
 
-Seed a shop, enable its storefront, and add a `show_online` product (via the API calls from Tasks 4 and 6), then visit `http://localhost:4000/store/<that-shop-slug>` in a browser.
+Seed a shop, enable its website, and add a `show_online` product (via the API calls from Tasks 4 and 6), then visit `http://localhost:4000/store/<that-shop-slug>` in a browser.
 
 Expected: header shows the shop name, hero section renders (blank if no description/hero image set), the product grid shows the `show_online` product, theme colors match the shop's `theme_preset`, and "Book a workshop slot" links to `/book/<slug>`.
 
@@ -1194,7 +1194,7 @@ async function uploadImage(endpoint, fileInput, statusEl) {
 }
 ```
 
-- [ ] **Step 2: Add a "Storefront" settings section**
+- [ ] **Step 2: Add a "Website" settings section**
 
 Search `public/app.js` for the existing shop-theme preset-picker rendering code (around the `THEME_PRESETS` usage described in the design research, roughly line 4332) — the settings/admin screen that renders it. Add a new self-contained section alongside it:
 
@@ -1205,8 +1205,8 @@ async function renderStorefrontSettingsSection(container) {
     .map((key) => `<option value="${esc(key)}" ${settings.themePreset === key ? 'selected' : ''}>${esc(THEME_PRESETS[key].name)}</option>`)
     .join('');
   container.innerHTML = `
-    <h3>Storefront</h3>
-    <label><input type="checkbox" id="storefront-enabled" ${settings.enabled ? 'checked' : ''}> Enable public storefront</label>
+    <h3>Website</h3>
+    <label><input type="checkbox" id="storefront-enabled" ${settings.enabled ? 'checked' : ''}> Enable public website</label>
     <label>Tagline <input type="text" id="storefront-tagline" value="${esc(settings.tagline)}" maxlength="200"></label>
     <label>Description <textarea id="storefront-description" maxlength="2000">${esc(settings.description)}</textarea></label>
     <label>Theme <select id="storefront-theme-preset">${presetOptions}</select></label>
@@ -1216,7 +1216,7 @@ async function renderStorefrontSettingsSection(container) {
     <label>Hero image <input type="file" id="storefront-hero-file" accept="image/jpeg,image/png,image/webp"></label>
     <button id="storefront-hero-upload">Upload hero image</button>
     <span id="storefront-hero-status">${settings.heroImageUrl ? 'Current hero image set' : 'No hero image yet'}</span>
-    <button id="storefront-save">Save storefront settings</button>
+    <button id="storefront-save">Save website settings</button>
     <span id="storefront-save-status"></span>
   `;
   document.getElementById('storefront-save').addEventListener('click', async () => {
@@ -1252,7 +1252,7 @@ Call `renderStorefrontSettingsSection(someContainerElement)` from wherever the e
 Find the inventory product edit form's template/render function (renders fields like SKU, category, price, cost, supplier) and add:
 
 ```js
-    <label><input type="checkbox" id="product-show-online" ${product.showOnline ? 'checked' : ''}> Show on storefront</label>
+    <label><input type="checkbox" id="product-show-online" ${product.showOnline ? 'checked' : ''}> Show on website</label>
     <label>Online description <textarea id="product-description" maxlength="2000">${esc(product.description)}</textarea></label>
     <label>Photo <input type="file" id="product-photo-file" accept="image/jpeg,image/png,image/webp"></label>
     <button type="button" id="product-photo-upload">Upload photo</button>
@@ -1280,9 +1280,9 @@ And in the form's save handler (wherever it builds the body for `PUT /api/produc
 npm start
 ```
 
-Log in as a shop, open the settings screen, toggle "Enable public storefront" on, pick a non-default theme, upload a logo and hero image, save, then open an existing product, check "Show on storefront", upload a product photo, save, and reload `/store/<slug>` to confirm every change is reflected (theme colors, logo, hero image, product photo).
+Log in as a shop, open the settings screen, toggle "Enable public website" on, pick a non-default theme, upload a logo and hero image, save, then open an existing product, check "Show on website", upload a product photo, save, and reload `/store/<slug>` to confirm every change is reflected (theme colors, logo, hero image, product photo).
 
-Expected: all of the above work with no console errors; the storefront reflects every change after reload.
+Expected: all of the above work with no console errors; the website reflects every change after reload.
 
 - [ ] **Step 5: Commit**
 
@@ -1308,11 +1308,11 @@ Expected: all tests pass.
 - [ ] **Step 2: Full manual walkthrough**
 
 1. Start the app (`npm start`) and log in as an existing shop (or create one).
-2. Open storefront settings, enable the storefront, set a tagline and description, pick a theme preset other than the default.
-3. Mark two products as "Show on storefront" with descriptions; leave a third unmarked.
+2. Open website settings, enable the website, set a tagline and description, pick a theme preset other than the default.
+3. Mark two products as "Show on website" with descriptions; leave a third unmarked.
 4. Upload a photo to one of the visible products.
 5. Visit `/store/<slug>` — confirm: shop name/tagline/description show, theme colors match the chosen preset, exactly the two marked products appear (with the photo on the one that has it), the unmarked product does not appear, and "Book a workshop slot" links to the existing `/book/<slug>` portal and works.
-6. Disable the storefront in settings, reload `/store/<slug>` — confirm it now returns the generic "Storefront not found" response (not the staff app's login page).
+6. Disable the website in settings, reload `/store/<slug>` — confirm it now returns the generic "Website not found" response (not the staff app's login page).
 7. Visit `/store/some-slug-that-does-not-exist` — confirm it returns the same generic not-found response as step 6 (an outside visitor should not be able to tell "disabled" from "never existed" apart).
 
 - [ ] **Step 3: Note any gaps found for follow-up**

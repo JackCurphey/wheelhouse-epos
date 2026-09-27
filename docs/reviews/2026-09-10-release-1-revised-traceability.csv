@@ -120,7 +120,7 @@ row_id,bucket,original_priority,feature,source_status,area,comparison_citation,p
 23,Release 1,R1-119,Customer cancel and reschedule,IN-SPEC (not built),Booking widget / customer front door,WS §4 W1 item 9; MP WS-5,W10,,,Release 1,P05,,
 17,Release 1,R1-120,Free-text problem description in the customer's own words,BUILT-in-prototype,Booking widget / customer front door,"PD ""Customer entry""; OV P-02",W10,,,Release 1,P05,,
 18,Release 1,R1-121,Customer photo/video attachment at request time,BUILT-in-prototype,Booking widget / customer front door,"PD ""Customer entry""; OV P-02, both camera and file-library inputs",W10,D11,,Release 1,P05,,
-19,Release 1,R1-122,Customer return-access link (progress link),BUILT-in-prototype,Booking widget / customer front door,"PD ""Return access""; OV P-12 (token rotation on reset)",W10,,,Release 1,P05,,
+19,Release 1,R1-122,Customer return-access link (booking link),BUILT-in-prototype,Booking widget / customer front door,"PD ""Return access""; OV P-12 (token rotation on reset)",W10,,,Release 1,P05,,
 16,Release 1,R1-123,Custom service questions asked on the widget,NOT-MENTIONED,Booking widget / customer front door,—,W10,,,Release 1,P05,,
 7,Release 1,R1-124,Additional-info and payment-info free text on the widget,NOT-MENTIONED,Booking widget / customer front door,—,W10,,,Release 1,P05,,
 14,Release 1,R1-125,Widget theme colours and 22 fonts,NOT-MENTIONED,Booking widget / customer front door,—,W10,D10,,Release 1,P05,,

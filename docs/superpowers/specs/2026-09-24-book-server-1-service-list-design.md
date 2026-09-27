@@ -6,7 +6,7 @@ screens `services` (65) and `service-edit` (66).
 **Part of:** the server prerequisite work for journey plan 4a
 (`docs/superpowers/plans/2026-09-20-phase-4a-book.md`, item 3 gap table),
 split into six pieces: 1 service list (this), 2 booking modes and capacity,
-3 the booking request, 4 guest private link, 5 service questions, 6 customer
+3 the booking request, 4 guest booking link, 5 service questions, 6 customer
 uploads. Each gets its own spec and plan.
 
 ## Decisions this rests on
@@ -122,4 +122,4 @@ against its named break, and the migration applies on an empty database.
 
 The React screens themselves (plan 4a); the staff settings UI; "Not sure"
 duration (piece 3); service questions (piece 5); service descriptions or
-images (not in the atlas).
+images (not in the screen designs).

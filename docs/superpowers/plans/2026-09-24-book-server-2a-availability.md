@@ -1951,7 +1951,7 @@ node docs/design/release-1-journey/check-notes.mjs > /tmp/g12.log 2>&1; echo "no
 npm run test:browser > /tmp/g13.log 2>&1; echo "browser $?"
 git status -s
 ```
-Expected: every exit 0; tests `pass` equals `tests`, `fail 0`, up from 471. `git status -s` shows nothing unexpected. If `package.py` regenerated the atlas HTML, there should be no diff, because nothing here touches the atlas.
+Expected: every exit 0; tests `pass` equals `tests`, `fail 0`, up from 471. `git status -s` shows nothing unexpected. If `package.py` regenerated the screen-design HTML, there should be no diff, because nothing here touches the screen designs.
 
 - [ ] **Step 2: Walk the build against the spec**
 
