@@ -84,6 +84,7 @@ import { isValidPin, hashPin } from './till/pin.js';
 import { buildSnapshot } from './till/snapshot.js';
 import { batchProblem, processSyncItems } from './till/sync.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
+import { listOpen as listOpenAttention, resolve as resolveAttention } from './till/attention.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
@@ -3999,6 +4000,21 @@ route('POST', '/api/till/:shopSlug/sync', async (req, res, params, query, till) 
   const pending = Number.isInteger(body.pendingCount) && body.pendingCount >= 0 ? body.pendingCount : 0;
   await db.prepare('UPDATE tills SET last_seen_at = now(), last_pending_count = ? WHERE id = ?').run(pending, till.id);
   sendJson(res, 200, { results: await processSyncItems(till, body.items) });
+});
+
+route('GET', '/api/till-attention', async (req, res) => {
+  const rows = await listOpenAttention();
+  sendJson(res, 200, rows.map((r) => ({
+    id: r.id, kind: r.kind, detail: r.detail,
+    tillSaleId: r.till_sale_id, productId: r.product_id, customerId: r.customer_id,
+    createdAt: new Date(r.created_at).toISOString(),
+  })));
+});
+
+route('POST', '/api/till-attention/:id/resolve', async (req, res, params) => {
+  const ctx = await currentSession(req);
+  if (!(await resolveAttention(Number(params.id), ctx.login.id))) return notFound(res, 'Nothing open with that id');
+  sendJson(res, 200, { id: Number(params.id), resolved: true });
 });
 
 // ---------- Workshop settings ----------
