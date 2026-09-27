@@ -1288,6 +1288,25 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   flex-direction: column;
 }
 
+/* Review pop-up (staff diary): what the customer sent, and Accept / Decline / Seen. */
+.modal.review-modal {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+}
+.review-body { padding: 16px 20px 0; overflow-y: auto; min-height: 0; flex: 1; }
+.review-body p { margin: 0 0 8px; }
+.review-service { font-size: var(--text-sm); font-weight: 600; margin: 14px 0 6px; }
+.review-answer .muted { display: block; }
+.review-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.review-photo { width: 96px; height: 72px; object-fit: cover; border-radius: 8px; cursor: zoom-in; }
+.review-photo.enlarged { width: 100%; height: auto; cursor: zoom-out; }
+.review-change { font-weight: 600; }
+.review-message { color: var(--danger); margin: 8px 20px 0; }
+.review-message:empty { display: none; }
+.review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); margin-top: 14px; }
+.review-confirm { flex-basis: 100%; margin: 0; }
+
 /* ---------- Sticker printing ---------- */
 
 .sticker-row-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; }

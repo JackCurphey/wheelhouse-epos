@@ -18,6 +18,8 @@ let sam: number;
 let svc: { id: number; questions: { id: string; wording: string }[] };
 let customer: { cookie: string };
 const nextDay = dayMaker();
+// A real 1x1 PNG: the booking route accepts a photo by its bytes.
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
 
 test.describe.configure({ timeout: 90_000 });
 test.use({ timezoneId: 'Europe/London', viewport: { width: 1400, height: 900 } });
@@ -186,4 +188,108 @@ test("a customer's cancellation shows greyed until seen, and a declined booking 
   await expect(block).toContainText('Cancelled by customer');
   await expect(block.locator('.wk-resize-handle')).toHaveCount(0);
   await expect(page.locator(`[data-job="${declined.id}"]`)).toHaveCount(0);
+});
+
+async function openFromColumn(page: Page, id: number) {
+  await page.locator(`.waiting-card[data-job="${id}"]`).click();
+  await page.locator(`.wk-job-block[data-job="${id}"]`).click();
+  await expect(page.locator('.review-modal')).toBeVisible();
+}
+
+test('the pop-up shows the answers, the photo and the notes, and Accept confirms the booking', async ({ page, context }) => {
+  const booked = await book({ photos: [{ dataBase64: PNG.toString('base64'), contentType: 'image/png', filename: 'bike.png' }] });
+  await signIn(context);
+  await openDiary(page);
+  await openFromColumn(page, booked.id);
+  const modal = page.locator('.review-modal');
+  await expect(modal).toContainText(`New online booking · ${booked.reference}`);
+  await expect(modal).toContainText('Brake check');
+  await expect(modal).toContainText("What's wrong?");
+  await expect(modal).toContainText('Gears slipping');
+  await expect(modal).toContainText("Customer's notes");
+  await expect(modal).toContainText('Squeaky brakes');
+  await expect(modal.locator('img.review-photo')).toHaveCount(1);
+  await expect.poll(() => modal.locator('img.review-photo').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await modal.getByRole('button', { name: 'Accept', exact: true }).click();
+  await expect(page.locator('.review-modal')).toHaveCount(0);
+  await expect(page.locator(`.waiting-card[data-job="${booked.id}"]`)).toHaveCount(0);
+  expect((await staff(`/api/workshop-jobs/${booked.id}`)).body.bookingState).toBe('scheduled');
+});
+
+test('Decline asks first; keeping the booking changes nothing, confirming declines it', async ({ page, context }) => {
+  const booked = await book();
+  await signIn(context);
+  await openDiary(page);
+  await openFromColumn(page, booked.id);
+  const modal = page.locator('.review-modal');
+  await modal.getByRole('button', { name: 'Decline', exact: true }).click();
+  await expect(modal).toContainText("This can't be undone.");
+  await modal.getByRole('button', { name: 'Keep booking' }).click();
+  await expect(modal.getByRole('button', { name: 'Decline', exact: true })).toBeVisible();
+  expect((await staff(`/api/workshop-jobs/${booked.id}`)).body.bookingState).toBe('pending');
+  await modal.getByRole('button', { name: 'Decline', exact: true }).click();
+  await modal.getByRole('button', { name: 'Decline booking' }).click();
+  await expect(page.locator('.review-modal')).toHaveCount(0);
+  expect((await staff(`/api/workshop-jobs/${booked.id}`)).body.bookingState).toBe('declined');
+  await expect(page.locator(`[data-job="${booked.id}"]`)).toHaveCount(0);
+});
+
+test('a change request can be accepted from the pop-up or its outline, and declined', async ({ page, context }) => {
+  const link = linkActions(server!.baseUrl, owner.shop.slug);
+  const make = async () => {
+    const b = await book();
+    await staff(`/api/workshop-jobs/${b.id}/accept`, { method: 'POST', body: { version: 1 } });
+    expect((await link.change(b.code, { jobDate: b.jobDate, mechanicId: sam, startTime: '14:00' })).status).toBe(200);
+    return b;
+  };
+  const moved = await make();
+  const kept = await make();
+  await signIn(context);
+  await openDiary(page);
+  await page.locator(`.waiting-card[data-job="${moved.id}"]`).click();
+  await page.locator(`.wk-request-outline[data-job="${moved.id}"]`).click();
+  const modal = page.locator('.review-modal');
+  await expect(modal).toContainText('Customer asked to move from');
+  await modal.getByRole('button', { name: 'Accept', exact: true }).click();
+  await expect(modal).toHaveCount(0);
+  expect((await staff(`/api/workshop-jobs/${moved.id}`)).body.startTime).toBe('14:00');
+  await openFromColumn(page, kept.id);
+  await page.locator('.review-modal').getByRole('button', { name: 'Decline', exact: true }).click();
+  await expect(page.locator('.review-modal')).toHaveCount(0); // no confirmation for a change
+  const keptNow = (await staff(`/api/workshop-jobs/${kept.id}`)).body;
+  expect([keptNow.startTime, keptNow.requested]).toEqual(['10:00', null]);
+});
+
+test("Seen takes a customer's cancellation off the list and the diary", async ({ page, context }) => {
+  const booked = await book();
+  expect((await linkActions(server!.baseUrl, owner.shop.slug).cancel(booked.code)).status).toBe(200);
+  await signIn(context);
+  await openDiary(page);
+  await openFromColumn(page, booked.id);
+  await page.locator('.review-modal').getByRole('button', { name: 'Seen' }).click();
+  await expect(page.locator('.review-modal')).toHaveCount(0);
+  await expect(page.locator(`[data-job="${booked.id}"]`)).toHaveCount(0);
+});
+
+test('answering something someone else already answered says so plainly', async ({ page, context }) => {
+  const booked = await book();
+  await signIn(context);
+  await openDiary(page);
+  await openFromColumn(page, booked.id);
+  await staff(`/api/workshop-jobs/${booked.id}/accept`, { method: 'POST', body: { version: 1 } });
+  await page.locator('.review-modal').getByRole('button', { name: 'Accept', exact: true }).click();
+  await expect(page.locator('.review-message')).toHaveText('This job changed while you were looking at it.');
+});
+
+test('with everything answered the column reads "Nothing waiting"', async ({ page, context }) => {
+  const { items } = (await staff('/api/workshop-waiting')).body;
+  for (const item of items) {
+    const job = (await staff(`/api/workshop-jobs/${item.jobId}`)).body;
+    const action = { new_booking: 'decline', change_request: 'decline-change', customer_cancelled: 'cancellation-seen' }[item.kind as string];
+    await staff(`/api/workshop-jobs/${item.jobId}/${action}`, { method: 'POST', body: { version: job.version } });
+  }
+  await signIn(context);
+  await openDiary(page);
+  await expect(page.locator('.workshop-feed-title')).toHaveText('Waiting for you (0)');
+  await expect(page.locator('#workshop-feed')).toContainText('Nothing waiting');
 });

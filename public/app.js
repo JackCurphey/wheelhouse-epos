@@ -2002,7 +2002,7 @@ function wireJobBlockMove(blockEl, job) {
       if (targetCol) targetCol.classList.remove('drop-target');
 
       if (!dragging) {
-        openModal({ type: 'workshop-job-form', job });
+        openJob(job);
         return;
       }
 
@@ -2277,7 +2277,8 @@ function openJobContextMenu(e, job) {
   if (isPending) {
     menu.querySelector('[data-action="approve"]').addEventListener('click', () => {
       closeJobContextMenu();
-      approveJob(job);
+      if (waitingIds.has(job.id)) openReview(job.id);
+      else approveJob(job);
     });
   }
   if (hasOrder) {
@@ -2306,7 +2307,16 @@ function saveRefusalText(err) {
   return DiaryReview.refusalText(err);
 }
 
-function openReview(jobId) {} // Task 8 replaces this with the review pop-up
+// A job a customer is waiting on staff for opens the review pop-up; any other
+// job opens the edit form as before (staff diary piece).
+function openJob(job) {
+  if (waitingIds.has(job.id)) openReview(job.id);
+  else openModal({ type: 'workshop-job-form', job });
+}
+
+function openReview(jobId) {
+  openModal({ type: 'review-job', jobId });
+}
 
 async function approveJob(job) {
   try {
@@ -2354,7 +2364,7 @@ function wireGridInteractions() {
     b.addEventListener('click', (e) => {
       e.stopPropagation();
       const job = workshopJobs.find((x) => x.id === Number(b.dataset.job));
-      openModal({ type: 'workshop-job-form', job });
+      openJob(job);
     });
   });
   wrap.querySelectorAll('.wk-cell').forEach((cellEl) => {
@@ -2493,7 +2503,7 @@ function wireMonthInteractions() {
     b.addEventListener('click', (e) => {
       e.stopPropagation();
       const job = workshopJobs.find((x) => x.id === Number(b.dataset.job));
-      openModal({ type: 'workshop-job-form', job });
+      openJob(job);
     });
   });
   wireJobContextMenuOn(wrap, '.month-job-chip');
@@ -4696,6 +4706,7 @@ function renderModal() {
   if (modal.type === 'receipt') return renderReceiptModal(holder, modal.sale, modal.title);
   if (modal.type === 'customer-form') return renderCustomerFormModal(holder, modal.customer);
   if (modal.type === 'customer-sales') return renderCustomerSalesModal(holder, modal.customer, modal.sales);
+  if (modal.type === 'review-job') return renderReviewJobModal(holder, modal.jobId);
   if (modal.type === 'workshop-job-form') return renderWorkshopJobFormModal(holder, modal.job, modal.defaultDate, modal.prefill, modal.defaultTime, modal.defaultMechanicId, modal.skipAutoOrder);
   if (modal.type === 'document-view') return renderDocumentModal(holder, modal.doc);
   if (modal.type === 'bike-form') return renderBikeFormModal(holder, modal.bike, modal.customerId);
@@ -5874,11 +5885,122 @@ function renderDayJobsModal(holder, dateStr, jobs) {
     b.addEventListener('click', () => {
       const job = workshopJobs.find((x) => x.id === Number(b.dataset.job));
       closeModal();
-      openModal({ type: 'workshop-job-form', job });
+      openJob(job);
     });
   });
   wireJobContextMenuOn(holder, '.day-job-row');
   wireJobTooltipOn(holder, '.day-job-row');
+}
+
+// ================= WORKSHOP: REVIEW POP-UP =================
+// What a customer sent, and the one answer staff owe them: Accept / Decline
+// for a new booking or a change request, Seen for a cancellation.
+// Spec: docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md
+async function renderReviewJobModal(holder, jobId, message = '') {
+  holder.innerHTML = `<div class="modal-backdrop" id="modal-backdrop"><div class="modal review-modal"><div class="empty-state">Loading…</div></div></div>`;
+  let job;
+  let photos;
+  try {
+    [job, photos] = await Promise.all([
+      api(`/api/workshop-jobs/${jobId}`),
+      api(`/api/workshop-jobs/${jobId}/attachments`),
+      loadWaitingFeed(),
+    ]);
+  } catch (err) {
+    if (!modal || modal.type !== 'review-job' || modal.jobId !== jobId) return;
+    return renderReviewShell(holder, { heading: 'Job', body: '', actions: '', message: DiaryReview.refusalText(err) });
+  }
+  if (!modal || modal.type !== 'review-job' || modal.jobId !== jobId) return; // closed while loading
+  renderWaitingFeed();
+  const item = waitingFeed.items.find((i) => i.jobId === jobId);
+  if (!item) {
+    return renderReviewShell(holder, {
+      heading: 'Job', body: '<p>This is no longer waiting for an answer.</p>',
+      actions: '<button class="btn" data-review="open">Open full job</button>', message, job,
+    });
+  }
+  const answers = DiaryReview.groupAnswers(job.questionAnswers, item.services || []).map((g) => `
+    <h3 class="review-service">${esc(g.name)}</h3>
+    ${g.answers.map((a) => `<p class="review-answer"><span class="muted">${esc(a.wording)}</span> ${esc(DiaryReview.answerText(a))}</p>`).join('')}
+  `).join('');
+  const customerPhotos = (photos || []).filter((p) => p.fromCustomer && /^image\//.test(p.contentType));
+  const photosHtml = customerPhotos.length ? `
+    <h3 class="review-service">Photos</h3>
+    <div class="review-photos">${customerPhotos.map((p) => `
+      <img class="review-photo" src="/api/workshop-jobs/${jobId}/attachments/${p.id}" alt="${esc(p.originalName || 'Customer photo')}">`).join('')}
+    </div>` : '';
+  const notes = [job.customerBikeNote, job.customerDescription].filter(Boolean);
+  const notesHtml = notes.length ? `<h3 class="review-service">Customer's notes</h3>${notes.map((n) => `<p>${esc(n)}</p>`).join('')}` : '';
+  const whenHtml = item.kind === 'change_request'
+    ? `<p class="review-change">${esc(DiaryReview.changeLine(item))}</p>`
+    : `<p class="muted">${esc(item.customerName || 'Customer')} · ${esc(DiaryWaiting.slotText(item))}</p>`;
+  const actions = item.kind === 'customer_cancelled'
+    ? '<button class="btn" data-review="open">Open full job</button><button class="btn btn-primary" data-review="seen">Seen</button>'
+    : '<button class="btn" data-review="open">Open full job</button><button class="btn" data-review="decline">Decline</button><button class="btn btn-primary" data-review="accept">Accept</button>';
+  renderReviewShell(holder, {
+    heading: DiaryReview.headingFor(item),
+    body: `${item.kind === 'change_request' ? `<p class="muted">${esc(item.customerName || 'Customer')}</p>` : ''}${whenHtml}${answers}${photosHtml}${notesHtml}`,
+    actions, message, job, item,
+  });
+}
+
+function renderReviewShell(holder, { heading, body, actions, message, job, item }) {
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal review-modal" role="dialog" aria-label="${esc(heading)}">
+        <div class="modal-header"><h2>${esc(heading)}</h2><button class="modal-close" id="modal-close" aria-label="Close">✕</button></div>
+        <div class="review-body">${body}</div>
+        <p class="review-message" role="status">${esc(message || '')}</p>
+        <div class="review-actions">${actions}</div>
+      </div>
+    </div>`;
+  wireModalDismiss();
+  holder.querySelectorAll('.review-photo').forEach((img) => img.addEventListener('click', () => img.classList.toggle('enlarged')));
+  const on = (name, fn) => { const b = holder.querySelector(`[data-review="${name}"]`); if (b) b.addEventListener('click', fn); };
+  on('open', () => openModal({ type: 'workshop-job-form', job }));
+  on('seen', () => answerReview(holder, job, 'cancellation-seen'));
+  on('accept', () => answerReview(holder, job, item.kind === 'change_request' ? 'accept-change' : 'accept'));
+  on('decline', () => {
+    if (item.kind === 'change_request') return answerReview(holder, job, 'decline-change');
+    holder.querySelector('.review-actions').innerHTML = `
+      <p class="review-confirm">${esc(DiaryReview.declineConfirmText(item))}</p>
+      <button class="btn" data-review="keep">Keep booking</button>
+      <button class="btn btn-danger" data-review="confirm-decline">Decline booking</button>`;
+    on('keep', () => renderReviewJobModal(holder, job.id));
+    on('confirm-decline', () => answerReview(holder, job, 'decline'));
+  });
+}
+
+async function answerReview(holder, job, action) {
+  holder.querySelectorAll('.review-actions button').forEach((b) => { b.disabled = true; });
+  try {
+    await api(`/api/workshop-jobs/${job.id}/${action}`, { method: 'POST', body: { version: job.version } });
+  } catch (err) {
+    let message = DiaryReview.refusalText(err);
+    // The server checks whether a move is allowed before it checks the version,
+    // so a job someone else already answered comes back 'illegal', not 'stale'.
+    // A changed version means it moved on under us: say so, as for 'stale'.
+    // An unchanged version means the move really isn't allowed: keep the
+    // server's own words. If the re-read fails, keep the first refusal.
+    let stale = err.code === 'stale';
+    if (err.code === 'illegal') {
+      try {
+        const now = await api(`/api/workshop-jobs/${job.id}`);
+        if (now.version !== job.version) {
+          stale = true;
+          message = DiaryReview.refusalText({ code: 'stale' });
+        }
+      } catch (_) { /* keep the original refusal */ }
+    }
+    if (stale) return renderReviewJobModal(holder, job.id, message);
+    if (err.status === 404) { await loadWaitingFeed().catch(() => {}); renderWaitingFeed(); }
+    const line = holder.querySelector('.review-message');
+    if (line) line.textContent = message;
+    holder.querySelectorAll('.review-actions button').forEach((b) => { b.disabled = false; });
+    return;
+  }
+  closeModal();
+  if (document.getElementById('week-diaries')) await renderWorkshop();
 }
 
 function renderWorkshopJobFormModal(holder, job, defaultDate, prefill, defaultTime, prefillMechanicId, skipAutoOrder) {
