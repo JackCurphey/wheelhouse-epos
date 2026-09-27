@@ -5378,12 +5378,22 @@ route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, re
 });
 
 // A change of day, mechanic or time through the link (piece 12). The new time
-// passes checkCustomerTime with the booking's own job left out. An unconfirmed
-// booking moves at once and stays unconfirmed (decision 4); its hold moves
-// with it. (Task 6: a confirmed booking's change becomes a request.)
+// passes checkCustomerTime with the booking's own job left out.
+// - pending: moves at once and stays pending (decision 4); its hold moves.
+// - scheduled: becomes a request (decision 2) - the booking keeps its time
+//   and hold, the requested time is stored and held too (decision 6).
+// - reschedule_requested: the new request replaces the stored one.
+// A confirmed booking asking for the time it already has makes no request,
+// and withdraws any it had (decision log D5).
 async function changeBookingTime(job, { jobDate, mechanicId, startTime }) {
   const refused = customerActionRefusal(job, 'change');
   if (refused) return refused;
+  const sameAsBooked = jobDate === job.job_date && mechanicId === job.mechanic_id
+    && (startTime || '').trim() === (job.start_time || '');
+  if (job.booking_state !== 'pending' && sameAsBooked) {
+    if (job.booking_state === 'reschedule_requested') await withdrawRequest(job);
+    return undefined;
+  }
   // Every online booking stores its services' total as planned_minutes; a
   // staff job with a link falls back to its times, then to the not-sure hour.
   const minutes = job.planned_minutes
@@ -5391,13 +5401,31 @@ async function changeBookingTime(job, { jobDate, mechanicId, startTime }) {
   const checked = await checkCustomerTime({ jobDate, mechanicId, startTime, minutes, ignoreJobId: job.id });
   if (checked.refusal) return checked.refusal;
   const { times } = checked;
-  await applyLocked(job, 'change_time');
-  await db.prepare(
-    `UPDATE workshop_jobs SET job_date = ?, mechanic_id = ?, start_time = ?, end_time = ?, change_declined_at = NULL, updated_at = now()
-     WHERE id = ?`
-  ).run(jobDate, mechanicId, times.startTime, times.endTime, job.id);
+  if (job.booking_state === 'pending') {
+    await applyLocked(job, 'change_time');
+    await db.prepare(
+      `UPDATE workshop_jobs SET job_date = ?, mechanic_id = ?, start_time = ?, end_time = ?, change_declined_at = NULL, updated_at = now()
+       WHERE id = ?`
+    ).run(jobDate, mechanicId, times.startTime, times.endTime, job.id);
+  } else {
+    await applyLocked(job, job.booking_state === 'scheduled' ? 'request_reschedule' : 'change_time');
+    await db.prepare(
+      `UPDATE workshop_jobs SET requested_job_date = ?, requested_mechanic_id = ?, requested_start_time = ?,
+         requested_end_time = ?, requested_at = now(), change_declined_at = NULL, updated_at = now()
+       WHERE id = ?`
+    ).run(jobDate, mechanicId, times.startTime, times.endTime, job.id);
+  }
+  // Places, moves or keeps the holds to match (syncRequestedHold runs first).
   await syncJobHold(job.id);
   return undefined;
+}
+
+// The customer takes their change request back: the booking returns to
+// scheduled at the time it kept all along, and the requested time is let go.
+async function withdrawRequest(job) {
+  await applyLocked(job, 'withdraw');
+  await db.prepare(`UPDATE workshop_jobs SET ${CLEAR_REQUEST}, change_declined_at = NULL, updated_at = now() WHERE id = ?`).run(job.id);
+  await syncJobHold(job.id);
 }
 
 // screens: reschedule, change-pending
@@ -5419,6 +5447,23 @@ route('POST', '/api/portal/:shopSlug/booking-links/:code/change', async (req, re
     if (err.code !== '23505') throw err;
     out = capacityRefusal(SLOT_GONE);
   }
+  if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
+  if (out) return sendJson(res, out.status, out.body);
+  sendJson(res, 200, await bookingLinkView(found.id, shop));
+});
+
+// The customer withdraws their change request (piece 12).
+// screens: change-pending
+route('POST', '/api/portal/:shopSlug/booking-links/:code/withdraw-change', async (req, res, params, query, shop) => {
+  const found = await resolveBookingLink(req, res, params.code);
+  if (!found) return;
+  const out = await withJobBookingLock(found.id, [], async (job) => {
+    if (job.booking_state !== 'reschedule_requested') {
+      return { status: 409, body: { error: "There's no change request to withdraw", code: 'illegal' } };
+    }
+    await withdrawRequest(job);
+    return undefined;
+  });
   if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
   if (out) return sendJson(res, out.status, out.body);
   sendJson(res, 200, await bookingLinkView(found.id, shop));
