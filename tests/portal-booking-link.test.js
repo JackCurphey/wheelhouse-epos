@@ -84,6 +84,10 @@ test('a booking returns a private link, and the link reads the booking back', as
     photoCount: 0,
     services: [{ name: 'Test service', price: null }],
     totalPrice: null,
+    requested: null,
+    canChange: true,
+    canCancel: true,
+    changeDeclined: false,
   });
 });
 

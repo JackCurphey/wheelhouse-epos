@@ -2378,6 +2378,27 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
 
 // ---------- Workshop jobs ----------
 
+// A customer's stored change request (piece 12). It counts only while the job
+// is waiting on it: a route that moves the job out of reschedule_requested
+// without clearing the columns (the old diary's status PUT, staff cancel)
+// leaves them behind, and then they mean nothing.
+function requestedOf(row) {
+  if (row.booking_state !== 'reschedule_requested' || !row.requested_job_date) return null;
+  return {
+    jobDate: row.requested_job_date,
+    startTime: row.requested_start_time || '',
+    endTime: row.requested_end_time || '',
+    mechanicId: row.requested_mechanic_id,
+  };
+}
+
+// A customer may change or cancel through the link while the bike has not
+// reached the shop and the booking is live (piece 12).
+const CUSTOMER_ACTIONABLE = new Set(['pending', 'scheduled', 'reschedule_requested']);
+function customerCanAct(row) {
+  return row.custody_state === 'expected' && CUSTOMER_ACTIONABLE.has(row.booking_state);
+}
+
 function serializeWorkshopJob(row) {
   return {
     id: row.id,
@@ -5191,33 +5212,49 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   sendJson(res, out.status, out.body);
 });
 
-// The private booking link, read back without sign-in. The dispatcher has
-// already bound the shop from :shopSlug, so row-level security keeps another
-// shop's code from finding anything. Deliberately narrow: nothing that
-// identifies the customer, no staff notes. The booked services and total only
-// when the shop shows prices online (bookedServices).
-// Spec: docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
-route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
+// The private link's code, checked the same way on every link route: the
+// attempt limiter, a well-formed code, a job with that hash in this shop (the
+// dispatcher bound the shop from :shopSlug, so row-level security hides every
+// other shop's), and not expired. Answers the refusal itself and returns
+// null, or returns { id }.
+async function resolveBookingLink(req, res, code) {
   if (!bookingLinkLimiter.check(clientIp(req))) {
-    return sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    sendJson(res, 429, { error: 'Too many attempts - please wait a few minutes and try again.' });
+    return null;
   }
-  const row = /^[0-9a-f]{64}$/.test(params.code)
-    ? await db.prepare(
-      `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.customer_bike_note, w.question_answers,
-              w.booking_state, w.custody_state, w.work_state,
-              b.make AS bike_make, b.model AS bike_model
-              , (SELECT count(*)::int FROM workshop_job_attachments a
-                 WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
-       FROM workshop_jobs w
-       LEFT JOIN customer_bikes b ON b.id = w.bike_id
-       WHERE w.link_token_hash = ?`
-    ).get(hashLinkCode(params.code))
+  const row = /^[0-9a-f]{64}$/.test(code)
+    ? await db.prepare('SELECT id, job_date FROM workshop_jobs WHERE link_token_hash = ?').get(hashLinkCode(code))
     : null;
-  if (!row) return sendJson(res, 404, { error: "We can't find that booking" });
-  if (isLinkExpired(row.job_date, await currentShopToday())) {
-    return sendJson(res, 410, { error: 'This link has expired' });
+  if (!row) {
+    sendJson(res, 404, { error: "We can't find that booking" });
+    return null;
   }
-  sendJson(res, 200, {
+  if (isLinkExpired(row.job_date, await currentShopToday())) {
+    sendJson(res, 410, { error: 'This link has expired' });
+    return null;
+  }
+  return { id: row.id };
+}
+
+// What the link shows. Deliberately narrow: nothing that identifies the
+// customer, no staff notes. The booked services and total only when the shop
+// shows prices online (bookedServices). Piece 12 adds what the customer may do
+// and the change they asked for.
+// Spec: docs/superpowers/specs/2026-09-26-book-server-7-multiple-services-design.md
+async function bookingLinkView(jobId, shop) {
+  const row = await db.prepare(
+    `SELECT w.id, w.reference, w.job_date, w.start_time, w.customer_description, w.customer_bike_note, w.question_answers,
+            w.booking_state, w.custody_state, w.work_state,
+            w.requested_job_date, w.requested_mechanic_id, w.requested_start_time, w.requested_end_time, w.change_declined_at,
+            b.make AS bike_make, b.model AS bike_model,
+            (SELECT count(*)::int FROM workshop_job_attachments a
+             WHERE a.workshop_job_id = w.id AND a.from_customer) AS photo_count
+     FROM workshop_jobs w
+     LEFT JOIN customer_bikes b ON b.id = w.bike_id
+     WHERE w.id = ?`
+  ).get(jobId);
+  const requested = requestedOf(row);
+  return {
     reference: row.reference,
     shopName: shop.name,
     jobDate: row.job_date,
@@ -5229,8 +5266,20 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
     bike: row.bike_make !== null || row.bike_model !== null ? { make: row.bike_make, model: row.bike_model } : null,
     stage: bookingStage(row),
     photoCount: row.photo_count,
+    requested: requested && { jobDate: requested.jobDate, startTime: requested.startTime, mechanicId: requested.mechanicId },
+    canChange: customerCanAct(row),
+    canCancel: customerCanAct(row),
+    changeDeclined: row.change_declined_at !== null,
     ...(await bookedServices(row.id)),
-  });
+  };
+}
+
+// The private booking link, read back without sign-in.
+// screens: pending, change-pending, cancelled
+route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, params, query, shop) => {
+  const found = await resolveBookingLink(req, res, params.code);
+  if (!found) return;
+  sendJson(res, 200, await bookingLinkView(found.id, shop));
 });
 
 // ---------- Static file serving ----------
