@@ -9,11 +9,14 @@
 // the queue and is never retried forever. An item whose fields are out of
 // range (saleProblem) fails without touching the database; an item the
 // database itself rejects (a constraint it does not pre-check) is rolled
-// back and reported failed, and the till moves on to the next item. Only a
-// racing duplicate insert (a unique-violation on the same client_id) is
-// reported as 'duplicate' rather than 'failed'. Whatever is accepted is
-// recorded and flagged, never discarded; the price charged at the till
-// stands.
+// back and reported failed, and the till moves on to the next item (the till
+// keeps a failed item; plan 2/3 surface it). Only a racing duplicate insert
+// (a unique-violation on that table's own client_id key) is reported as
+// 'duplicate' rather than 'failed'. A passing database condition (deadlock,
+// serialization failure, cancelled statement, lost connection) is neither:
+// the item is rolled back and the whole request answers 503 so the till
+// re-sends (anything already committed comes back as 'duplicate'). Whatever
+// is accepted is recorded and flagged; the price charged at the till stands.
 // Spec: docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md §3, §5, §8
 import { prepare, dbExec } from '../db.js';
 import { vatFromGrossPence, receiptLabel } from './money.js';
@@ -25,6 +28,40 @@ const KNOWN_PAYMENT_METHODS = new Set(['cash', 'card']);
 const INT4_MIN = -2147483648;
 const INT4_MAX = 2147483647;
 const inInt4 = (n) => Number.isInteger(n) && n >= INT4_MIN && n <= INT4_MAX;
+const isObject = (v) => v !== null && typeof v === 'object';
+
+// Postgres errors that describe a passing condition, not a bad item: a
+// deadlock (40P01), a serialization failure (40001), a cancelled statement
+// (57014) and any connection problem (class 08). Retrying later can succeed.
+export function isTransient(err) {
+  const code = err?.code;
+  if (typeof code !== 'string') return false;
+  return code === '40P01' || code === '40001' || code === '57014' || code.startsWith('08');
+}
+
+// Thrown out of processSyncItems when an item hit a transient error; the
+// sync route answers 503 so the till re-sends the batch.
+export class TransientSyncError extends Error {
+  constructor(cause) {
+    super('Busy - try again');
+    this.name = 'TransientSyncError';
+    this.cause = cause;
+  }
+}
+
+// The unique key on client_id for the table each kind writes. Only a
+// unique-violation on exactly that key means "already held"; any other
+// unique rule an item breaks is a real failure.
+// Names from migration 036 (pg_constraint / pg_indexes).
+const CLIENT_ID_KEYS = {
+  sale: 'till_sales_shop_id_client_id_key',
+  checkin: 'staff_checkins_shop_id_client_id_key',
+  customer: 'idx_customers_client_id',
+};
+
+export function isOwnDuplicate(kind, err) {
+  return err?.code === '23505' && typeof err.constraint === 'string' && err.constraint === CLIENT_ID_KEYS[kind];
+}
 
 // Shape checks only: a batch that fails these can't even be identified or
 // routed, so it is refused whole (400). Everything else - however wrong its
@@ -53,6 +90,8 @@ export function saleProblem(item) {
   if (new Date(clockMs).getUTCFullYear() > 9999) return 'tillClockAt is out of range';
   if (!Array.isArray(item.lines) || item.lines.length === 0) return 'A sale needs lines';
   if (!Array.isArray(item.payments)) return 'A sale needs payments';
+  if (!item.lines.every(isObject)) return 'Every line must be an object';
+  if (!item.payments.every(isObject)) return 'Every payment must be an object';
   let total = 0;
   for (const l of item.lines) {
     if (!Number.isInteger(l.qty) || l.qty < 1 || !inInt4(l.qty)) return 'A line needs a whole qty of at least 1';
@@ -86,10 +125,12 @@ async function recordSale(till, item) {
   const total = lines.reduce((s, l) => s + l.lineTotal, 0);
   const vat = lines.reduce((s, l) => s + l.vat, 0);
 
-  const employee = Number.isInteger(item.employeeId)
+  // An id outside int4 cannot exist in an INTEGER column: it is "not found",
+  // never a database error.
+  const employee = inInt4(item.employeeId)
     ? await prepare('SELECT id FROM employees WHERE id = ?').get(item.employeeId) : null;
   let customer = null;
-  if (Number.isInteger(item.customerId)) {
+  if (inInt4(item.customerId)) {
     customer = await prepare('SELECT id FROM customers WHERE id = ?').get(item.customerId);
   } else if (typeof item.customerClientId === 'string' && UUID.test(item.customerClientId)) {
     customer = await prepare('SELECT id FROM customers WHERE client_id = ?').get(item.customerClientId);
@@ -108,8 +149,12 @@ async function recordSale(till, item) {
   if (item.employeeId != null && !employee) await raise('unknown_employee', { detail: `${label}: staff member ${item.employeeId} not found`, tillSaleId: saleId });
   if (askedForCustomer && !customer) await raise('unknown_customer', { detail: `${label}: customer not found`, tillSaleId: saleId });
 
+  // Lines are stored in the till's order, but stock is changed in ascending
+  // product id order: two sales touching the same products then always take
+  // the row locks in the same order, so they queue rather than deadlock.
+  const stocked = [];
   for (const l of lines) {
-    const product = Number.isInteger(l.productId)
+    const product = inInt4(l.productId)
       ? await prepare('SELECT id FROM products WHERE id = ?').get(l.productId) : null;
     await prepare(
       `INSERT INTO till_sale_lines (till_sale_id, product_id, description, qty, unit_price_pence, line_total_pence, vat_rate_bp, vat_pence)
@@ -119,19 +164,24 @@ async function recordSale(till, item) {
       await raise('unknown_product', { detail: `${label}: "${l.description}" is not a product we hold`, tillSaleId: saleId });
       continue;
     }
+    stocked.push({ line: l, productId: product.id });
+  }
+  stocked.sort((a, b) => a.productId - b.productId);
+
+  for (const { line: l, productId } of stocked) {
     // Relative update, so two tills' sales both count however they interleave.
     // No row back means the product was deleted between the lookup above and
     // here - treat that exactly like a product we no longer hold.
     const updated = await prepare(
       'UPDATE products SET stock_qty = stock_qty - ?, updated_at = now() WHERE id = ? RETURNING stock_qty'
-    ).get(l.qty, product.id);
+    ).get(l.qty, productId);
     if (!updated) {
       await raise('unknown_product', { detail: `${label}: "${l.description}" is not a product we hold`, tillSaleId: saleId });
       continue;
     }
     await prepare("INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'till_sale', ?)")
-      .run(product.id, -l.qty, `Till sale ${label}`);
-    if (updated.stock_qty < 0) await raise('stock_below_zero', { detail: `"${l.description}" is at ${updated.stock_qty} after ${label}`, productId: product.id });
+      .run(productId, -l.qty, `Till sale ${label}`);
+    if (updated.stock_qty < 0) await raise('stock_below_zero', { detail: `"${l.description}" is at ${updated.stock_qty} after ${label}`, productId });
   }
 
   let paid = 0;
@@ -198,12 +248,24 @@ async function recordCheckin(till, item) {
   return { status: 'recorded', attention: [] };
 }
 
+const PROBLEM = { sale: saleProblem, customer: customerProblem, checkin: checkinProblem };
+
+// Each item is its own BEGIN/COMMIT. In DB_TENANT_SCOPE=session (what ships)
+// that is a real transaction per item. In DB_TENANT_SCOPE=transaction the
+// request already runs inside runWithShop's outer transaction, so this BEGIN
+// becomes a savepoint and the reply is sent before the outer COMMIT - a
+// 'recorded' answer would then precede durability. This must be revisited
+// before transaction mode is enabled.
 export async function processSyncItems(till, items) {
   const results = [];
   for (const item of items) {
-    const problem = item.kind === 'customer' ? customerProblem(item)
-      : item.kind === 'checkin' ? checkinProblem(item)
-      : saleProblem(item);
+    let problem;
+    try {
+      problem = PROBLEM[item.kind](item);
+    } catch (err) {
+      // A check that itself throws is a bad item, not a bad batch.
+      problem = `Could not be checked: ${err.message}`;
+    }
     if (problem) {
       results.push({ clientId: item.clientId, status: 'failed', reason: problem, attention: [] });
       continue;
@@ -218,9 +280,14 @@ export async function processSyncItems(till, items) {
       results.push({ clientId: item.clientId, ...outcome });
     } catch (err) {
       await dbExec('ROLLBACK');
-      if (err.code === '23505') {
+      if (isTransient(err)) {
+        // Not this item's fault: stop here and let the till re-send the batch.
+        // Items already committed above come back as 'duplicate' next time.
+        throw new TransientSyncError(err);
+      }
+      if (isOwnDuplicate(item.kind, err)) {
         // A racing duplicate: another request for the same client_id landed
-        // first. Not a failure - the sale is (or is about to be) recorded.
+        // first. Not a failure - the item is (or is about to be) recorded.
         results.push({ clientId: item.clientId, status: 'duplicate', attention: [] });
       } else {
         console.error(`till sync: item ${item.clientId} could not be recorded:`, err);

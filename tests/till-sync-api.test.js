@@ -6,7 +6,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import '../server/load-env.js';
-import { pool, runWithShop, prepare } from '../server/db.js';
+import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest } from './helpers/staff.js';
 import { deleteTestShop } from './helpers/testShop.js';
@@ -145,6 +145,86 @@ test('a sale whose lines overflow the database only when summed fails alone, not
   assert.equal(await inShop(() => prepare('SELECT 1 FROM till_sales WHERE client_id = ?').get(overflow.clientId)), undefined);
 });
 
+test('a null line or payment entry fails that sale alone, never the whole batch', async () => {
+  const tube = await seedProduct(owner.shop.id, { stock: 100 });
+  const goodA = sale(tube);
+  const nullLine = sale(tube, { lines: [null] });
+  const goodB = sale(tube);
+  const nullPayment = sale(tube, { payments: [null] });
+  const res = await sync([goodA, nullLine, goodB, nullPayment]);
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.results.map((r) => r.status), ['recorded', 'failed', 'recorded', 'failed']);
+  assert.equal(res.body.results[1].reason, 'Every line must be an object');
+  assert.equal(res.body.results[3].reason, 'Every payment must be an object');
+});
+
+test('staff, customer or product ids beyond the database range are treated as not found', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  const res = await sync([sale(tube, { employeeId: 2147483648 })]);
+  assert.equal(res.body.results[0].status, 'recorded');
+  assert.ok(res.body.results[0].attention.includes('unknown_employee'));
+  const both = await sync([sale(2147483648, { customerId: -2147483649 })]);
+  assert.equal(both.body.results[0].status, 'recorded');
+  assert.deepEqual(both.body.results[0].attention.sort(), ['unknown_customer', 'unknown_product']);
+});
+
+test('stock is updated in product id order whatever order the lines came in', async () => {
+  const low = await seedProduct(owner.shop.id, { stock: 10 });
+  const high = await seedProduct(owner.shop.id, { stock: 10 });
+  assert.ok(low < high);
+  const item = sale(high, {
+    lines: [
+      { productId: high, description: 'High', qty: 1, unitPricePence: 100, vatRateBp: 2000 },
+      { productId: low, description: 'Low', qty: 1, unitPricePence: 100, vatRateBp: 2000 },
+    ],
+    payments: [{ method: 'cash', amountPence: 200 }],
+  });
+  await sync([item]);
+  const label = `Till sale B1-${String(item.receiptNumber).padStart(4, '0')}`;
+  const moves = await inShop(() => prepare('SELECT product_id FROM stock_movements WHERE note = ? ORDER BY id').all(label));
+  assert.deepEqual(moves.map((m) => m.product_id), [low, high]);
+  const row = await inShop(() => prepare('SELECT id FROM till_sales WHERE client_id = ?').get(item.clientId));
+  const lines = await inShop(() => prepare('SELECT description FROM till_sale_lines WHERE till_sale_id = ? ORDER BY id').all(row.id));
+  assert.deepEqual(lines.map((l) => l.description), ['High', 'Low'], 'lines keep the till\'s order');
+});
+
+// A real deadlock: this test holds the lock on `high`, the server's sale
+// locks `low` then waits on `high`, then this test asks for `low`. Postgres
+// breaks the cycle by cancelling the server's transaction (it waited first,
+// so its deadlock check fires first). That is a passing condition, not a bad
+// sale: the request answers 503 and the till re-sends.
+test('a deadlock answers 503 so the till re-sends, and nothing is lost or doubled', async () => {
+  const low = await seedProduct(owner.shop.id, { stock: 10 });
+  const high = await seedProduct(owner.shop.id, { stock: 10 });
+  const first = sale(low);
+  const locked = sale(low, {
+    lines: [
+      { productId: low, description: 'Low', qty: 1, unitPricePence: 100, vatRateBp: 2000 },
+      { productId: high, description: 'High', qty: 1, unitPricePence: 100, vatRateBp: 2000 },
+    ],
+    payments: [{ method: 'cash', amountPence: 200 }],
+  });
+  let pending;
+  await inShop(async () => {
+    await dbExec('BEGIN');
+    try {
+      await prepare('UPDATE products SET stock_qty = stock_qty WHERE id = ?').run(high);
+      pending = sync([first, locked]);
+      await new Promise((r) => setTimeout(r, 400));
+      await prepare('UPDATE products SET stock_qty = stock_qty WHERE id = ?').run(low);
+    } finally {
+      await dbExec('ROLLBACK');
+    }
+  });
+  const res = await pending;
+  assert.equal(res.status, 503);
+  assert.deepEqual(res.body, { error: 'Busy - try again' });
+  const again = await sync([first, locked]);
+  assert.deepEqual(again.body.results.map((r) => r.status), ['duplicate', 'recorded']);
+  assert.equal((await inShop(() => prepare('SELECT stock_qty FROM products WHERE id = ?').get(low))).stock_qty, 8);
+  assert.equal((await inShop(() => prepare('SELECT stock_qty FROM products WHERE id = ?').get(high))).stock_qty, 9);
+});
+
 test('a multi-line sale records VAT at each line\'s own rate', async () => {
   const tube = await seedProduct(owner.shop.id, { stock: 10 });
   const zeroRated = await seedProduct(owner.shop.id, { stock: 10 });
@@ -169,7 +249,8 @@ test('stock is allowed below zero and flagged once per product', async () => {
   const tube = await seedProduct(owner.shop.id, { stock: 1 });
   const first = await sync([sale(tube, { qty: 2 })]);
   assert.deepEqual(first.body.results[0].attention, ['stock_below_zero']);
-  await sync([sale(tube)]);
+  const second = await sync([sale(tube)]);
+  assert.deepEqual(second.body.results[0].attention, []);
   const open = await inShop(() => prepare(
     "SELECT COUNT(*)::int AS n FROM till_attention WHERE kind = 'stock_below_zero' AND product_id = ? AND resolved_at IS NULL"
   ).get(tube));

@@ -82,7 +82,7 @@ import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { isValidPin, hashPin } from './till/pin.js';
 import { buildSnapshot } from './till/snapshot.js';
-import { batchProblem, processSyncItems } from './till/sync.js';
+import { batchProblem, processSyncItems, TransientSyncError } from './till/sync.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
 import { listOpen as listOpenAttention, resolve as resolveAttention } from './till/attention.js';
 import {
@@ -3999,7 +3999,15 @@ route('POST', '/api/till/:shopSlug/sync', async (req, res, params, query, till) 
   if (problem) return badRequest(res, problem);
   const pending = Number.isInteger(body.pendingCount) && body.pendingCount >= 0 ? body.pendingCount : 0;
   await db.prepare('UPDATE tills SET last_seen_at = now(), last_pending_count = ? WHERE id = ?').run(pending, till.id);
-  sendJson(res, 200, { results: await processSyncItems(till, body.items) });
+  let results;
+  try {
+    results = await processSyncItems(till, body.items);
+  } catch (err) {
+    if (!(err instanceof TransientSyncError)) throw err;
+    console.warn(`till sync: ${till.code} asked to retry after ${err.cause?.code}: ${err.cause?.message}`);
+    return sendJson(res, 503, { error: 'Busy - try again' });
+  }
+  sendJson(res, 200, { results });
 });
 
 route('GET', '/api/till-attention', async (req, res) => {
