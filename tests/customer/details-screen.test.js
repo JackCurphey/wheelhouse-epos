@@ -80,6 +80,13 @@ test('the summary: services, day, time and mechanic, the price, and the bike not
   assert.ok(ui.getByText('Blue Trek road bike'));
 });
 
+test('one priced service: its price beside its name, and no total line (Jack, 27 Sep)', async () => {
+  const { ui } = await open({ draft: { ...TIMED, serviceIds: [11] } });
+  assert.ok(await ui.findByText('Monday 5 October, 09:30 with Alex'));
+  assert.ok(ui.getByText('Brake service, from £20'));
+  assert.ok(ui.queryByText(/^From £/) === null);
+});
+
 test("Not sure on a drop-off day: \"Not sure\", that day's drop-off window, and no price", async () => {
   const { ui, requests } = await open({ draft: DROPOFF });
   assert.ok(await ui.findByText('Tuesday 6 October, drop off 08:30–10:00'));

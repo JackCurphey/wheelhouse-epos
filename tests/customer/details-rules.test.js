@@ -79,11 +79,29 @@ test('the summary: services in list order, or Not sure; the price when shown; th
   assert.equal(r.priceText({ ...SERVICES, showPrices: false }, { serviceIds: [11, 12] }), null);
   assert.equal(r.priceText(SERVICES, { serviceIds: [11, 13] }), null, 'a service with no price');
   assert.equal(r.priceText(SERVICES, { notSure: true, serviceIds: [] }), null);
+  assert.equal(r.priceText(SERVICES, { serviceIds: [11] }), null, 'one service: no total to add (Jack, 26 Sep)');
   assert.deepEqual(
     r.summaryLines(SERVICES, { serviceIds: [11], bikeNote: ' Blue Trek ' }, 'Monday 5 October, 09:30 with Alex'),
-    ['Brake service', 'Monday 5 October, 09:30 with Alex', 'From £20', 'Blue Trek'],
+    ['Brake service, from £20', 'Monday 5 October, 09:30 with Alex', 'Blue Trek'],
   );
   assert.deepEqual(r.summaryLines(SERVICES, { notSure: true, serviceIds: [], bikeNote: '  ' }, 'Tuesday 6 October'), ['Not sure', 'Tuesday 6 October']);
+});
+
+// Jack, 27 Sep: one service shows its own price beside its name; two or more
+// keep the names and the total.
+const WHEN = 'Monday 5 October, 09:30 with Alex';
+test('one priced service reads "<name>, from £X" with no total line', () => {
+  assert.deepEqual(r.summaryLines(SERVICES, { serviceIds: [11] }, WHEN), ['Brake service, from £20', WHEN]);
+  assert.deepEqual(r.summaryLines(SERVICES, { serviceIds: [12] }, WHEN), ['Gear service, from £25.50', WHEN]);
+});
+
+test('two or more services keep the names line and the "From £T" total', () => {
+  assert.deepEqual(r.summaryLines(SERVICES, { serviceIds: [12, 11] }, WHEN), ['Brake service, Gear service', WHEN, 'From £45.50']);
+});
+
+test('prices hidden, or a service with no price: the name alone', () => {
+  assert.deepEqual(r.summaryLines({ ...SERVICES, showPrices: false }, { serviceIds: [11] }, WHEN), ['Brake service', WHEN]);
+  assert.deepEqual(r.summaryLines(SERVICES, { serviceIds: [13] }, WHEN), ['Wheel true', WHEN]);
 });
 
 test('the day and time read as on the date screen', () => {

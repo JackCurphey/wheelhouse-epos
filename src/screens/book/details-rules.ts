@@ -116,11 +116,28 @@ export function serviceNames(services: ServicesResponse, draft: BookingDraft): s
   return chosenServices(services, draft.serviceIds ?? []).map((s) => s.name).join(', ');
 }
 
-/** "From £T" when the shop shows prices and every chosen service has one; summed in pence. */
+/**
+ * The summary's services line. With exactly one priced service and prices
+ * shown, its price sits beside its name - "Brake service, from £20" (Jack,
+ * 27 Sep); otherwise the names alone (serviceNames).
+ */
+export function serviceLine(services: ServicesResponse, draft: BookingDraft): string {
+  const names = serviceNames(services, draft);
+  if (draft.notSure || !services.showPrices) return names;
+  const chosen = chosenServices(services, draft.serviceIds ?? []);
+  if (chosen.length !== 1 || chosen[0].price === null) return names;
+  return `${names}, ${formatFrom(chosen[0].price).replace(/^From/, 'from')}`;
+}
+
+/**
+ * "From £T", when the shop shows prices, every chosen service has one, and
+ * there are two or more services (with one, serviceLine shows its price beside
+ * its name - Jack, 26 and 27 Sep). Summed in pence.
+ */
 export function priceText(services: ServicesResponse, draft: BookingDraft): string | null {
   if (draft.notSure || !services.showPrices) return null;
   const chosen = chosenServices(services, draft.serviceIds ?? []);
-  if (chosen.length === 0 || chosen.some((s) => s.price === null)) return null;
+  if (chosen.length < 2 || chosen.some((s) => s.price === null)) return null;
   const pence = chosen.reduce((sum, s) => sum + Math.round((s.price as number) * 100), 0);
   return formatFrom(pence / 100);
 }
@@ -151,7 +168,7 @@ export function whenText(draft: BookingDraft, mechanics: PortalMechanic[] = [], 
 /** The summary at the top of the details screen: services, day and time, price when shown, bike note when given. */
 export function summaryLines(services: ServicesResponse, draft: BookingDraft, when: string): string[] {
   const bikeNote = draft.bikeNote?.trim() || null;
-  return [serviceNames(services, draft), when, priceText(services, draft), bikeNote].filter((l): l is string => !!l);
+  return [serviceLine(services, draft), when, priceText(services, draft), bikeNote].filter((l): l is string => !!l);
 }
 
 /**

@@ -38,8 +38,12 @@ drives the whole journey against the real server.
 - **Guard:** requires `hasDate`; otherwise redirects to `date` (after
   `/services` has loaded, as on `date`).
 - **Summary** at the top: the chosen services' names joined by ", " (or "Not
-  sure"); the day and time as on `date`'s summary; "From £T" when the shop
-  shows prices; the bike note when given.
+  sure"); the day and time as on `date`'s summary; the bike note when given.
+  Prices, when the shop shows them: with exactly one service, its price sits
+  beside its name - "Brake service, from £20" - and there is no separate total
+  line (Jack, 27 Sep); with two or more services, the names line stays as it
+  is and "From £T" follows when every chosen service has a price (Jack,
+  26 Sep). Prices hidden: the names alone.
 - **Fields**, written to the draft as they change:
   - "Your name": required.
   - "Mobile number": required.

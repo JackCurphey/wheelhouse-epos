@@ -22,11 +22,14 @@ Starts at `pending`. Rests at `declined`, `expired`, `cancelled`.
 | `pending` | `decline` | `declined` |
 | `pending` | `expire` | `expired` |
 | `pending` | `cancel` | `cancelled` |
+| `pending` | `change_time` | `pending` |
 | `scheduled` | `request_reschedule` | `reschedule_requested` |
 | `scheduled` | `cancel` | `cancelled` |
 | `reschedule_requested` | `accept` | `scheduled` |
 | `reschedule_requested` | `decline` | `scheduled` |
 | `reschedule_requested` | `cancel` | `cancelled` |
+| `reschedule_requested` | `change_time` | `reschedule_requested` |
+| `reschedule_requested` | `withdraw` | `scheduled` |
 
 ## custody
 
