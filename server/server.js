@@ -2432,6 +2432,10 @@ function serializeWorkshopJob(row) {
     // The customer's answers to the service's questions, frozen at booking
     // (migration 028). Null for staff jobs, "not sure" and older bookings.
     questionAnswers: row.question_answers ?? null,
+    // The customer's own words from the booking (piece 3), apart from the
+    // notes they were also copied into - the review pop-up shows them alone.
+    customerDescription: row.customer_description ?? null,
+    customerBikeNote: row.customer_bike_note ?? null,
     // Piece 12: the customer's change request while it waits, and who
     // cancelled (a customer's shows in "Waiting for you" until seen).
     requested: requestedOf(row),
@@ -3424,6 +3428,7 @@ function waitingItem(row) {
     ...current,
     customerName: row.customer_name ?? null,
     serviceNames: row.service_names,
+    services: row.services,
     arrivedAt: { new_booking: row.created_at, change_request: row.requested_at, customer_cancelled: row.cancelled_at }[kind],
     ...(kind === 'change_request'
       ? {
@@ -3443,7 +3448,10 @@ route('GET', '/api/workshop-waiting', async (req, res) => {
     `SELECT w.*, c.name AS customer_name, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
             (SELECT coalesce(json_agg(s.name ORDER BY js.position), '[]'::json)
                FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
-              WHERE js.workshop_job_id = w.id) AS service_names
+              WHERE js.workshop_job_id = w.id) AS service_names,
+            (SELECT coalesce(json_agg(json_build_object('id', s.id, 'name', s.name) ORDER BY js.position), '[]'::json)
+               FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
+              WHERE js.workshop_job_id = w.id) AS services
      FROM workshop_jobs w
      LEFT JOIN customers c ON c.id = w.customer_id
      LEFT JOIN employees m ON m.id = w.mechanic_id
