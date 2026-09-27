@@ -2310,6 +2310,7 @@ function saveRefusalText(err) {
 // A job a customer is waiting on staff for opens the review pop-up; any other
 // job opens the edit form as before (staff diary piece).
 function openJob(job) {
+  if (!job) return;
   if (waitingIds.has(job.id)) openReview(job.id);
   else openModal({ type: 'workshop-job-form', job });
 }
@@ -5896,8 +5897,20 @@ function renderDayJobsModal(holder, dateStr, jobs) {
 // What a customer sent, and the one answer staff owe them: Accept / Decline
 // for a new booking or a change request, Seen for a cancellation.
 // Spec: docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md
+// The pop-up that is open now is this job's review; anything else (closed,
+// or another screen opened) means a late result must not draw or close.
+function reviewIsOpen(jobId) {
+  return !!modal && modal.type === 'review-job' && modal.jobId === jobId;
+}
+
 async function renderReviewJobModal(holder, jobId, message = '') {
-  holder.innerHTML = `<div class="modal-backdrop" id="modal-backdrop"><div class="modal review-modal"><div class="empty-state">Loading…</div></div></div>`;
+  if (!reviewIsOpen(jobId)) return;
+  holder.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop"><div class="modal review-modal">
+      <div class="modal-header"><h2>Job</h2><button class="modal-close" id="modal-close" aria-label="Close">✕</button></div>
+      <div class="empty-state">Loading…</div>
+    </div></div>`;
+  wireModalDismiss();
   let job;
   let photos;
   try {
@@ -5907,10 +5920,10 @@ async function renderReviewJobModal(holder, jobId, message = '') {
       loadWaitingFeed(),
     ]);
   } catch (err) {
-    if (!modal || modal.type !== 'review-job' || modal.jobId !== jobId) return;
+    if (!reviewIsOpen(jobId)) return;
     return renderReviewShell(holder, { heading: 'Job', body: '', actions: '', message: DiaryReview.refusalText(err) });
   }
-  if (!modal || modal.type !== 'review-job' || modal.jobId !== jobId) return; // closed while loading
+  if (!reviewIsOpen(jobId)) return; // closed while loading
   renderWaitingFeed();
   const item = waitingFeed.items.find((i) => i.jobId === jobId);
   if (!item) {
@@ -5976,6 +5989,8 @@ async function answerReview(holder, job, action) {
   try {
     await api(`/api/workshop-jobs/${job.id}/${action}`, { method: 'POST', body: { version: job.version } });
   } catch (err) {
+    // Closed (or replaced) while the answer was on its way: only refresh.
+    if (!reviewIsOpen(job.id)) return refreshDiaryAfterReview();
     let message = DiaryReview.refusalText(err);
     // The server checks whether a move is allowed before it checks the version,
     // so a job someone else already answered comes back 'illegal', not 'stale'.
@@ -5991,6 +6006,7 @@ async function answerReview(holder, job, action) {
           message = DiaryReview.refusalText({ code: 'stale' });
         }
       } catch (_) { /* keep the original refusal */ }
+      if (!reviewIsOpen(job.id)) return refreshDiaryAfterReview();
     }
     if (stale) return renderReviewJobModal(holder, job.id, message);
     if (err.status === 404) { await loadWaitingFeed().catch(() => {}); renderWaitingFeed(); }
@@ -5999,7 +6015,11 @@ async function answerReview(holder, job, action) {
     holder.querySelectorAll('.review-actions button').forEach((b) => { b.disabled = false; });
     return;
   }
-  closeModal();
+  if (reviewIsOpen(job.id)) closeModal();
+  await refreshDiaryAfterReview();
+}
+
+async function refreshDiaryAfterReview() {
   if (document.getElementById('week-diaries')) await renderWorkshop();
 }
 

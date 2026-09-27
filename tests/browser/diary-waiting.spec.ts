@@ -281,6 +281,34 @@ test('answering something someone else already answered says so plainly', async 
   await expect(page.locator('.review-message')).toHaveText('This job changed while you were looking at it.');
 });
 
+test('closing the pop-up while an answer is on its way leaves the diary usable when the answer comes back', async ({ page, context }) => {
+  const booked = await book();
+  await signIn(context);
+  await openDiary(page);
+  await openFromColumn(page, booked.id);
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(`**/api/workshop-jobs/${booked.id}/accept`, async (route) => {
+    await held;
+    await route.fulfill({
+      status: 409, contentType: 'application/json',
+      body: JSON.stringify({ error: 'This job changed while you were looking at it. Reload and try again.', code: 'stale' }),
+    });
+  });
+  await page.locator('.review-modal').getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.locator('.review-modal #modal-close').click();
+  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+  // Whatever the late answer does next, it fetches the waiting list; wait for that.
+  const settled = page.waitForResponse((r) => r.url().endsWith('/api/workshop-waiting'));
+  release();
+  await settled;
+  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+  await page.locator(`.wk-job-block[data-job="${booked.id}"]`).click();
+  await expect(page.locator('.review-modal')).toContainText('New online booking');
+  await page.locator('.review-modal #modal-close').click();
+  await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+});
+
 test('with everything answered the column reads "Nothing waiting"', async ({ page, context }) => {
   const { items } = (await staff('/api/workshop-waiting')).body;
   for (const item of items) {
