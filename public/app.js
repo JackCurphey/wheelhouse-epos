@@ -60,7 +60,9 @@ let workshopJobs = [];
 let workshopPlacing = false; // true while "Create job" is armed, waiting for a diary click
 let workshopMechanicFilter = 'all'; // 'all' | 'unassigned' | mechanic id | array of mechanic ids
 let workshopMechanicFilterInitialized = false; // true once the default below (every mechanic, split view) has been applied - so it only happens once, not every re-render, and a later manual choice (incl. picking "All" back) sticks
-let pendingFeedJobs = []; // every pending (customer-submitted, unapproved) job shop-wide, regardless of the diary's current date range - powers the sidebar feed
+let waitingFeed = { count: 0, items: [] }; // GET /api/workshop-waiting - shop-wide, oldest first; powers "Waiting for you"
+let waitingIds = new Set(); // job ids in waitingFeed - a job in here opens the review pop-up
+let waitingTimer = null; // the column's minute check while #workshop is showing
 
 let mechanics = []; // employees with isMechanic=true, active only - used by the Workshop diary
 let activeCashiers = []; // employees with isCashier=true, active only - used by Front Desk
@@ -255,11 +257,29 @@ async function loadWorkshopJobs(start, end) {
   workshopJobs = await api(`/api/workshop-jobs?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
 }
 
-// Every pending job shop-wide, not just whatever week/month is currently on
-// screen - the sidebar feed needs to surface a request regardless of which
-// date the diary happens to be showing.
-async function loadPendingFeed() {
-  pendingFeedJobs = await api('/api/workshop-jobs?status=pending');
+// What customers are waiting on staff for (piece 12): new online bookings,
+// change requests and unseen cancellations, whichever week they're in.
+async function loadWaitingFeed() {
+  waitingFeed = await api('/api/workshop-waiting');
+  waitingIds = new Set(waitingFeed.items.map((i) => i.jobId));
+}
+
+// The column checks every minute while the Workshop tab shows; it redraws
+// only itself, never the grid. A failed check keeps the last list.
+function startWaitingTimer() {
+  if (waitingTimer) return;
+  waitingTimer = setInterval(async () => {
+    if (topTab() !== 'workshop') return stopWaitingTimer();
+    try {
+      await loadWaitingFeed();
+      renderWaitingFeed();
+    } catch (_) { /* keep the last list; try again next minute */ }
+  }, 60_000);
+}
+
+function stopWaitingTimer() {
+  if (waitingTimer) clearInterval(waitingTimer);
+  waitingTimer = null;
 }
 
 async function loadMechanics() {
@@ -324,6 +344,7 @@ const OFFICE_TABS = [
 
 window.addEventListener('hashchange', () => {
   route = (location.hash || '#till').replace('#', '');
+  if (topTab() !== 'workshop') stopWaitingTimer();
   renderRoute();
 });
 
@@ -1479,7 +1500,7 @@ async function renderWorkshop() {
   await loadWorkshopSettings();
   await loadActiveCustomers();
   await loadMechanics();
-  await loadPendingFeed();
+  await loadWaitingFeed();
 
   let navHtml;
   let hintText;
@@ -1537,7 +1558,8 @@ async function renderWorkshop() {
     </div>
   `;
 
-  renderPendingFeed();
+  renderWaitingFeed();
+  startWaitingTimer();
 
   document.getElementById('view-week-btn').addEventListener('click', () => {
     if (workshopView === 'week') return;
@@ -1629,49 +1651,46 @@ function visibleWorkshopJobs() {
   return base.filter((j) => j.mechanicId === workshopMechanicFilter);
 }
 
-// Sidebar list of every pending (customer-submitted, unapproved) job,
-// newest request first - lets staff spot a new booking without having to
-// notice a purple block somewhere in the grid.
-function renderPendingFeed() {
+// "Waiting for you": one card per thing a customer is waiting on staff for,
+// oldest first (the server's order). Clicking a card jumps to the job.
+function renderWaitingFeed() {
   const wrap = document.getElementById('workshop-feed');
   if (!wrap) return;
-  const jobs = [...pendingFeedJobs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const now = new Date();
+  const cards = waitingFeed.items.map((item) => {
+    const c = DiaryWaiting.cardFor(item, now);
+    return `
+      <button class="waiting-card tone-${c.tone}" data-job="${item.jobId}">
+        <span class="waiting-tag">${esc(c.label)}</span>
+        <span class="waiting-who">${esc(c.customer)}${c.reference ? ` · ${esc(c.reference)}` : ''}</span>
+        ${c.services ? `<span class="waiting-line">${esc(c.services)}</span>` : ''}
+        <span class="waiting-line muted">${esc(c.when)}</span>
+        <span class="waiting-line muted">${esc(c.arrived)}</span>
+      </button>`;
+  }).join('');
   wrap.innerHTML = `
-    <h2 class="workshop-feed-title">Pending requests${jobs.length ? ` (${jobs.length})` : ''}</h2>
-    ${
-      jobs.length
-        ? jobs
-            .map(
-              (j) => `
-      <button class="pending-feed-item" data-job="${j.id}">
-        <span class="pfi-main">${esc(j.bikeLabel || j.title)}</span>
-        <span class="pfi-detail">${esc(fmtDayShort(j.jobDate))} ${esc(j.startTime || '')}${j.mechanicName ? ` · ${esc(j.mechanicName)}` : ''}</span>
-        ${j.customerName ? `<span class="pfi-detail">${esc(j.customerName)}</span>` : ''}
-      </button>
-    `
-            )
-            .join('')
-        : `<div class="empty-state">No pending requests.</div>`
-    }
+    <h2 class="workshop-feed-title">Waiting for you (${waitingFeed.count})</h2>
+    ${cards || '<div class="empty-state">Nothing waiting</div>'}
   `;
-  wrap.querySelectorAll('.pending-feed-item').forEach((btn) => {
+  wrap.querySelectorAll('.waiting-card').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const job = pendingFeedJobs.find((x) => x.id === Number(btn.dataset.job));
-      if (job) jumpToPendingJob(job);
+      const item = waitingFeed.items.find((i) => i.jobId === Number(btn.dataset.job));
+      if (item) jumpToJob({ id: item.jobId, jobDate: item.jobDate });
     });
   });
 }
 
-// Navigates the diary to wherever a pending job lives - switches to week
-// view, jumps to its week, and makes sure every mechanic is visible (in
-// case the current filter would otherwise hide it) - then scrolls to and
-// briefly highlights the actual block so it's obvious which one it is.
-async function jumpToPendingJob(job) {
+// Navigates the diary to wherever a job lives - switches to week view,
+// jumps to its week, and makes sure every mechanic is visible (in case the
+// current filter would otherwise hide it) - then scrolls to and briefly
+// highlights the actual block so it's obvious which one it is. Serves the
+// "Waiting for you" column.
+async function jumpToJob(job) {
   workshopView = 'week';
   workshopWeekStart = toDateStr(startOfWeek(new Date(job.jobDate + 'T00:00:00')));
   workshopMechanicFilter = mechanics.map((m) => m.id);
   await renderWorkshop();
-  const target = document.querySelector(`.wk-job-block[data-job="${job.id}"]`);
+  const target = document.querySelector(`.wk-job-block[data-job="${job.id}"], .job-card[data-job="${job.id}"]`);
   if (!target) return;
   target.scrollIntoView({ block: 'center', behavior: 'smooth' });
   target.classList.add('flash-highlight');

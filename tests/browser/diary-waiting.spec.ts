@@ -114,3 +114,40 @@ test('a diary drag on a copy someone else has changed is refused and the diary r
   const after = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
   expect(after.startTime).toBe('10:00');
 });
+
+test('a new online booking is listed with its details, and clicking it jumps to the job', async ({ page, context }) => {
+  const booked = await book();
+  await signIn(context);
+  await openDiary(page);
+  const card = page.locator(`.waiting-card[data-job="${booked.id}"]`);
+  await expect(page.locator('.workshop-feed-title')).toHaveText(/^Waiting for you \(\d+\)$/);
+  await expect(card).toContainText('New booking');
+  await expect(card).toContainText('Brake check');
+  await expect(card).toContainText('Sam');
+  await expect(card).toContainText(/Arrived (just now|\d+ minutes? ago)/);
+  await card.click();
+  const block = page.locator(`.wk-job-block[data-job="${booked.id}"]`);
+  await expect(block).toBeInViewport();
+  await expect(block).toHaveClass(/flash-highlight/);
+});
+
+test('a staff-made pending job is not listed', async ({ page, context }) => {
+  const made = (await staff('/api/workshop-jobs', {
+    method: 'POST', body: { title: 'Staff pending', jobDate: nextDay(), startTime: '12:00', endTime: '13:00', mechanicId: sam, status: 'pending' },
+  })).body;
+  await signIn(context);
+  await openDiary(page);
+  await expect(page.locator('.workshop-feed-title')).toBeVisible();
+  await expect(page.locator(`.waiting-card[data-job="${made.id}"]`)).toHaveCount(0);
+});
+
+test('the column picks up a new booking within a minute without a click', async ({ page, context }) => {
+  await signIn(context);
+  await page.clock.install({ time: new Date(TEST_CLOCK_PIN) });
+  await page.goto(`${server!.baseUrl}/#workshop`);
+  await expect(page.locator('#workshop-feed')).toBeVisible();
+  const booked = await book();
+  await expect(page.locator(`.waiting-card[data-job="${booked.id}"]`)).toHaveCount(0);
+  await page.clock.fastForward(61_000);
+  await expect(page.locator(`.waiting-card[data-job="${booked.id}"]`)).toBeVisible();
+});

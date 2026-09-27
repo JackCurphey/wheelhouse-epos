@@ -767,23 +767,36 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
   color: var(--muted);
 }
 
-.pending-feed-item {
+.waiting-card {
   display: flex;
   flex-direction: column;
   gap: 2px;
   width: 100%;
   text-align: left;
-  background: var(--status-pending-bg);
-  border: 1px solid var(--status-pending-border);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 9px 11px;
   margin-bottom: 8px;
   cursor: pointer;
   font-family: inherit;
 }
-.pending-feed-item:hover { filter: brightness(0.97); }
-.pending-feed-item .pfi-main { font-weight: 700; font-size: var(--text-sm); color: var(--status-pending-ink); }
-.pending-feed-item .pfi-detail { font-size: var(--text-sm); color: var(--muted); }
+.waiting-card:hover { filter: brightness(0.97); }
+.waiting-tag {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-bottom: 2px;
+}
+.tone-new .waiting-tag { background: var(--status-pending-bg); color: var(--status-pending-ink); }
+.tone-change .waiting-tag { background: var(--warn-bg); color: var(--warn-ink); }
+.tone-cancelled .waiting-tag { background: var(--surface-sunken); color: var(--muted); }
+.waiting-who { font-weight: 600; font-size: var(--text-sm); }
+.waiting-line { font-size: var(--text-sm); }
+.waiting-line.muted { color: var(--muted); }
 
 @keyframes workshop-flash-highlight {
   0%, 100% { box-shadow: 0 0 0 3px var(--status-pending-border); }
