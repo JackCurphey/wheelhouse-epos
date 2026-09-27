@@ -62,7 +62,7 @@
   - Continue goes to `/book/:shopSlug/date`, which is still a placeholder.
   - Back goes to `/book/:shopSlug/services` when services are ticked, and to `/book/:shopSlug` for "Not sure".
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- No dependency, CI or server changes. Don't edit the atlas mock-up (`docs/design/release-1-journey/screens.js`). The spec's "Changes" list records where it departs from the mock-up; d2 treated its list the same way.
+- No dependency, CI or server changes. Don't edit the screen design (`docs/design/release-1-journey/screens.js`). The spec's "Changes" list records where it departs from the mock-up; d2 treated its list the same way.
 
 ## Files
 
@@ -845,7 +845,7 @@ import {
 } from './problem-rules.ts';
 
 /**
- * The problem screen (atlas `problem`, step 2): the bike in the customer's own
+ * The problem screen (screen design `problem`, step 2): the bike in the customer's own
  * words, each ticked service's questions (quick-answer pills plus "Or tell us
  * in your own words"), a description (required only for "Not sure"), and
  * photos. Everything but photos is written to the draft as it changes, so it
@@ -1335,7 +1335,7 @@ Decisions taken while writing this plan, where the spec left room. Each has the 
 7. **Pill values are prefixed** (`choice:<text>`, `not-sure`), so a shop choice worded "I'm not sure" can't collide with the built-in pill.
 8. **Words are stored as typed.** Only an empty box removes them, while whitespace-only words count as no answer. The server trims (piece 9). Trimming while typing would eat the space before the next word.
 9. **The draft shape test can't fail before the change**, because the change is to types only. Its red is `npm run typecheck` (Task 1 Step 5), and a mutation proves the round-trip test bites (Task 1 Step 8).
-10. **The atlas mock-up isn't edited.** The spec's "Changes" list records where it departs from the mock-up; d2 treated its list the same way.
+10. **The screen design isn't edited.** The spec's "Changes" list records where it departs from the mock-up; d2 treated its list the same way.
 11. **`hasProblem` doesn't change `RequireDraft`'s redirect target.** The spec sends a customer failing it "back to `problem`". That's d4's to build, since d4 applies the guard. STATUS records it for d4.
 12. **The keyboard check focuses the description** (the last box above the photos) on a screen with two questions, so the box starts below the shrunken viewport. Task 5 Step 3 has the fallback if the mutation doesn't bite.
 13. **A choice answer counts as answered only if its `choice` is still one of the question's current `choices`.** A shop may reword or remove a choice after the customer tapped it; treating a stale value as answered would let a required question through with an answer the shop no longer offers. Words or `notSure` still count on their own. Added to `answered()` in `problem-rules.ts`, tested by `missingAnswers`/`hasProblem`'s "stale choice" cases.

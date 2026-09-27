@@ -293,7 +293,7 @@ test('while sending, the button reads "Sending…" and cannot be pressed again',
   assert.equal(posts(requests).length, 1);
 });
 
-test('success clears the draft and opens the private link', async () => {
+test('success clears the draft and opens the booking link', async () => {
   const { ui, readPhotos } = await open({ draft: { ...READY, hadPhotos: true }, photos: [pngFile()] });
   await press(ui);
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));

@@ -1,4 +1,4 @@
-# Release 1 — building the 84 atlas screens as real product
+# Release 1 — building the 84 screen designs as real product
 
 Date: 20 September 2026. **Design agreed with Jack in session; not yet an
 implementation plan and not evidence that anything is built.** The
@@ -8,22 +8,22 @@ test commands land.
 Authority above this document: [scope
 reduction](../../decisions/2026-09-10-release-1-scope-reduction.md) and the
 [Release 1 workshop plan](../plans/2026-09-10-release-1-workshop-plan.md). This
-design says *how* the atlas becomes software; it does not re-open *what* is in
+design says *how* the screen designs become software; it does not re-open *what* is in
 Release 1.
 
 ## Intent
 
 Turn the [84-screen journey
-atlas](../../design/release-1-journey/README.md) — today a set of static HTML
+screen designs](../../design/release-1-journey/README.md) — today a set of static HTML
 specimens with fixed fixtures — into a working staff and customer application
 backed by the existing Postgres schema and server.
 
 ## Starting facts, verified 20 September 2026
 
-- The atlas in the repo is byte-identical to both copies in `~/Downloads`
+- The screen designs in the repo are byte-identical to both copies in `~/Downloads`
   (SHA-256 `c3cd12bf5c427dfb2bf9bb910c441e6a2ac587dc2bf43868a5e7d0799e2ddf37`,
   148,286 bytes). The repo copy is the latest download; there is nothing newer
-  to fetch, and the atlas is not published as a claude.ai artifact.
+  to fetch, and the screen designs are not published as a claude.ai artifact.
 - Jack's full review export is now committed at
   [`docs/reviews/2026-09-17-release-1-screen-review-jack.md`](../../reviews/2026-09-17-release-1-screen-review-jack.md):
   84 of 84 screens reviewed, 71 approved as shown, 13 carrying notes. It
@@ -37,17 +37,17 @@ backed by the existing Postgres schema and server.
   only when a `#wh-root` element exists. The live staff UI is the 6,933-line
   vanilla `public/app.js`.
 - Composition of the 84 screens **as reviewed**, from `screen-index.json`. Phase 0 has since revised this to 82 — see the plan's outcome section: by journey group,
-  book 5, intake 11, quote 8, work 17, edges 24, setup 19. By role, service desk
+  book 5, intake 11, quote 8, work 17, edges 24, setup 19. By role, staff
   desktop 33, customer phone 24, manager desktop 17, mechanic phone 10.
 
 ## Decisions taken in this session
 
 | # | Decision | Decided by | Consequence |
 |---|---|---|---|
-| A | Revise the atlas against the 13 notes **before** planning the build | Jack | Phase 0 exists; no rejected screen gets built |
+| A | Revise the screen designs against the 13 notes **before** planning the build | Jack | Phase 0 exists; no rejected screen gets built |
 | B | Do not wait for Mark's issue #50 review; absorb it when it arrives | Jack | Some rework risk accepted if he objects structurally |
 | C | Build a **new staff app** and cut over at the end, rather than strangling `public/app.js` screen by screen | Jack | No partial delivery; progress is reported as tests and schema coverage until the screen layer starts |
-| D | The new app covers **only the 84 screens**; till, inventory, suppliers, purchase orders and storefront stay in the existing app | Jack | "Cutover" means the workshop half only; two apps behind one login |
+| D | The new app covers **only the 84 screens**; till, inventory, suppliers, purchase orders and website stay in the existing app | Jack | "Cutover" means the workshop half only; two apps behind one login |
 | E | Extend the **existing server and schema**, not a new service or new database | Jack | One database, one job record, no sync problem, existing tenancy and auth work retained |
 | F | Sequence the build **by layer**, not by vertical slice | Jack | Justified below |
 
@@ -58,14 +58,14 @@ no users (see starting facts), so that benefit is worth nothing and its
 coordination cost is pure loss.
 
 The usual failure of layer-first — designing tables and endpoints for screens
-nobody has specified — is largely retired in this project. The atlas specifies
+nobody has specified — is largely retired in this project. The screen designs specify
 84 screens with their states, transitions and next-destinations in
 machine-readable form, and every one has been reviewed. That is not the normal
 starting position for a layer-first build.
 
 Two limits on this, which shape the phases below:
 
-1. **Screens are pictures, not contracts.** The atlas shows what a state looks
+1. **Screens are pictures, not contracts.** The screen designs show what a state looks
    like, not how it is entered or what happens when two people race for it. The
    concurrency rules in the workshop plan's acceptance criteria — one winner for
    the last capacity slot, a stale link that cannot approve a changed price, a
@@ -81,9 +81,9 @@ Two limits on this, which shape the phases below:
 
 ## Phases
 
-### Phase 0 — revise the atlas against the 13 notes
+### Phase 0 — revise the screen designs against the 13 notes
 
-Apply Jack's notes so the atlas is the build target rather than a document the
+Apply Jack's notes so the screen designs are the build target rather than a document the
 build contradicts. The substantive changes:
 
 | Screens | Note | Effect |
@@ -155,7 +155,7 @@ code is not testing anything.
 
 ## Done-conditions
 
-- Phase 0: the atlas HTML regenerates and `check-static.mjs` passes, with the 13
+- Phase 0: the screen-design HTML regenerates and `check-static.mjs` passes, with the 13
   notes visibly applied and the screen count updated from 84 to whatever the
   mechanic-page collapse produces.
 - Phases 1–3: `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`

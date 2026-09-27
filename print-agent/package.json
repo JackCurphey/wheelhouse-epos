@@ -1,7 +1,7 @@
 {
   "name": "wheelhouse-print-agent",
   "version": "1.0.0",
-  "description": "Downloadable background app that gives the Wheelhouse EPOS sticker-printing feature real printer access - runs on any shop PC, never inside Docker.",
+  "description": "Downloadable background app that gives the Wheelhouse sticker-printing feature real printer access - runs on any shop PC, never inside Docker.",
   "private": true,
   "main": "main.js",
   "scripts": {

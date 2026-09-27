@@ -394,7 +394,7 @@ import { cn } from '@/lib/utils';
 /**
  * A big tappable option card: title, optional detail line, optional price.
  * Selected = 2px shop-colour border and a pale shop-colour fill (Jack, 26 Sep:
- * the atlas card style). Pass `selected` only when the card is one of a set
+ * the screen-design card style). Pass `selected` only when the card is one of a set
  * the customer picks between; a card that just navigates leaves it out and
  * gets no aria-pressed. `price` is shown as given - never formatted here.
  * Spec: docs/superpowers/specs/2026-09-26-book-c-form-controls-design.md
@@ -503,25 +503,25 @@ export function PillGroup(props: PillGroupProps) {
 
 ```json
 {
-  "name": "checkbox", "type": "registry:ui", "title": "Checkbox", "author": "Wheelhouse EPOS",
+  "name": "checkbox", "type": "registry:ui", "title": "Checkbox", "author": "Wheelhouse",
   "description": "The phone's own tick box coloured with the shop colour (--accent-dark), label beside it, whole row at least 44px tall.",
   "dependencies": [], "registryDependencies": [],
   "files": [{ "path": "checkbox.tsx", "type": "registry:ui" }]
 },
 {
-  "name": "textarea", "type": "registry:ui", "title": "Textarea", "author": "Wheelhouse EPOS",
+  "name": "textarea", "type": "registry:ui", "title": "Textarea", "author": "Wheelhouse",
   "description": "Multi-line text box with the input's look, at least 80px tall, resizable vertically.",
   "dependencies": [], "registryDependencies": [],
   "files": [{ "path": "textarea.tsx", "type": "registry:ui" }]
 },
 {
-  "name": "choice-card", "type": "registry:ui", "title": "Choice Card", "author": "Wheelhouse EPOS",
+  "name": "choice-card", "type": "registry:ui", "title": "Choice Card", "author": "Wheelhouse",
   "description": "Big tappable option card with title, detail and a preformatted price. Selected is a 2px shop-colour border with a pale shop-colour fill; aria-pressed only when it is one of a set to pick from.",
   "dependencies": [], "registryDependencies": [],
   "files": [{ "path": "choice-card.tsx", "type": "registry:ui" }]
 },
 {
-  "name": "pill-group", "type": "registry:ui", "title": "Pill Group", "author": "Wheelhouse EPOS",
+  "name": "pill-group", "type": "registry:ui", "title": "Pill Group", "author": "Wheelhouse",
   "description": "Short options as pills over native radios (one choice) or checkboxes (multiple), in a labelled fieldset. Disabled options are greyed and cannot be picked.",
   "dependencies": [], "registryDependencies": [],
   "files": [{ "path": "pill-group.tsx", "type": "registry:ui" }]
@@ -727,7 +727,7 @@ If jsdom lacks `URL.createObjectURL` in the test, add at the top of the test fil
 
 ```json
 {
-  "name": "photo-picker", "type": "registry:ui", "title": "Photo Picker", "author": "Wheelhouse EPOS",
+  "name": "photo-picker", "type": "registry:ui", "title": "Photo Picker", "author": "Wheelhouse",
   "description": "Opens the phone's chooser for JPEG, PNG or WebP photos, up to 5 of up to 10 MB each by default. Refuses anything else with a message naming the file; shows thumbnails with a remove button each. Converting to base64 for the server is left to the screen.",
   "dependencies": [], "registryDependencies": [],
   "files": [{ "path": "photo-picker.tsx", "type": "registry:ui" }]
@@ -845,7 +845,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * One month for picking a booking day (Jack, 26 Sep: the atlas month grid).
+ * One month for picking a booking day (Jack, 26 Sep: the screen-design month grid).
  * Weeks start Monday. A date not in `available` is greyed, struck through,
  * aria-disabled and does nothing - no "Full"/"Closed" label, because the
  * server never says why a day is unavailable. Arrow keys move between days
@@ -974,7 +974,7 @@ export function MonthCalendar({ month, onMonthChange, available, value = null, o
 
 ```json
 {
-  "name": "month-calendar", "type": "registry:ui", "title": "Month Calendar", "author": "Wheelhouse EPOS",
+  "name": "month-calendar", "type": "registry:ui", "title": "Month Calendar", "author": "Wheelhouse",
   "description": "One Monday-first month for picking a booking day. Days not in `available` are greyed, struck through and aria-disabled. Arrow keys move between days and across months; dates are YYYY-MM-DD strings handled in UTC.",
   "dependencies": [], "registryDependencies": [],
   "files": [{ "path": "month-calendar.tsx", "type": "registry:ui" }]
@@ -1199,7 +1199,7 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
 
 ```json
 {
-  "name": "day-diary", "type": "registry:ui", "title": "Day Diary", "author": "Wheelhouse EPOS",
+  "name": "day-diary", "type": "registry:ui", "title": "Day Diary", "author": "Wheelhouse",
   "description": "One day's diary for picking a start time: a column per mechanic, hours down the side, booked time as grey 'Unavailable' blocks with no detail, and one button per start time the server allows. Scaled so start times are at least 44px apart.",
   "dependencies": [], "registryDependencies": [],
   "files": [{ "path": "day-diary.tsx", "type": "registry:ui" }]

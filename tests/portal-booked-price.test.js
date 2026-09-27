@@ -87,7 +87,7 @@ test('not sure: the booking reply carries no services and no total even when pri
   assert.equal(booked.totalPrice, null);
 });
 
-test('prices shown: the private link carries the service and its price', async () => {
+test('prices shown: the booking link carries the service and its price', async () => {
   await setShowPrices(true);
   const res = await read(codeOf((await book()).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -95,7 +95,7 @@ test('prices shown: the private link carries the service and its price', async (
   assert.equal(res.body.totalPrice, 65.5);
 });
 
-test('prices hidden: the private link carries the service with no price', async () => {
+test('prices hidden: the booking link carries the service with no price', async () => {
   await setShowPrices(false);
   const res = await read(codeOf((await book()).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));
@@ -104,7 +104,7 @@ test('prices hidden: the private link carries the service with no price', async 
   assert.equal(res.body.totalPrice, null);
 });
 
-test('not sure: the private link carries no services and no total even when prices are shown', async () => {
+test('not sure: the booking link carries no services and no total even when prices are shown', async () => {
   await setShowPrices(true);
   const res = await read(codeOf((await book({ serviceIds: undefined, notSure: true })).privateLink));
   assert.equal(res.status, 200, JSON.stringify(res.body));

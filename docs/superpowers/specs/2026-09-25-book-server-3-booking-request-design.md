@@ -9,7 +9,7 @@ choice carried from `service` (01) and `service-list` (02).
 **Part of:** the server prerequisite work for journey plan 4a
 (`docs/superpowers/plans/2026-09-20-phase-4a-book.md`, item 3 gap table);
 piece 3 of six. Pieces 1 and 2 (2a, 2b) are merged (#64-#66). Piece 4 guest
-private link, 5 service questions, 6 customer uploads are out of scope.
+booking link, 5 service questions, 6 customer uploads are out of scope.
 
 ## Decisions this rests on (Jack, 25 Sep)
 

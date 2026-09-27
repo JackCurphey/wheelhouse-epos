@@ -93,8 +93,8 @@ screens show a service's `price` as given.
 - Nothing serves the private-link page: the link is `/book/<slug>/booking/<code>`
   but `/book` still serves `public-portal/`. Front-end scope (J1's second Vite
   entry), not a server gap.
-- The atlas `date` note says a shop can offer both modes; J3 forbids it and the
-  server supports one mode per date. The atlas wording is stale.
+- The screen design `date` note says a shop can offer both modes; J3 forbids it and the
+  server supports one mode per date. The screen-design wording is stale.
 - The server records `update_channel` but sends nothing; screens must not
   promise a message goes out.
 - A "not sure" booking takes a 60-minute slot.
@@ -114,7 +114,7 @@ screens show a service's `price` as given.
   questions.) The scope file
   (`docs/decisions/2026-09-10-release-1-scope-reduction.md`) does not settle
   them. Service categories are already decided in:
-  `2026-09-20-phase-0-atlas-revision.md:24` says "grouped by shop-defined
+  `2026-09-20-phase-0-screen-designs-revision.md:24` says "grouped by shop-defined
   category on the second page".
 - **J3 - DECIDED (corrected 24 Sep): two modes, exact appointments or
   drop-off days, both Release 1; no "both" option.** The settings route
@@ -124,7 +124,7 @@ screens show a service's `price` as given.
 - **J4 - DECIDED 23 Sep: out, not blocked; the two stale lines are
   corrected.** Deposits (note 04). The sources disagree. Out: the scope reduction
   (Later, :19), `docs/design/release-1-journey/README.md:54`, and the Phase 0
-  atlas revision plan (:24, under "decisions already made - do not re-open").
+  screen-design revision plan (:24, under "decisions already made - do not re-open").
   Open: the parent plan (:1207) and the spec's note table (:97), "blocked on
   Mark". Probably those two lines are stale. Confirm, and they get corrected.
 

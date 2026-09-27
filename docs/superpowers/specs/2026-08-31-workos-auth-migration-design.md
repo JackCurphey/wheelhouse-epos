@@ -64,7 +64,7 @@ model, SSO/Organizations/Admin Portal, the Electron print agent's credentials,
 and the test strategy for all of it.
 
 **Not in scope:** the business logic behind the 98 API routes, Postgres RLS,
-`server/db.js`, the storefront's public routes, or the Shopify webhook path.
+`server/db.js`, the website's public routes, or the Shopify webhook path.
 None of these change.
 
 ---
@@ -288,11 +288,11 @@ are open to any active login of the shop.
 
 Separately, `employees.is_mechanic` and `employees.is_cashier` exist but are
 **scheduling flags, not permissions** — they decide who gets a workshop diary
-column and who appears in the Front Desk cashier dropdown. Nothing checks them
+column and who appears in the Till staff dropdown. Nothing checks them
 for access.
 
 The migration is the moment to promote them. A shop already tells us who is a
-mechanic and who is a cashier; the RBAC model should mean it.
+mechanic and who is Staff; the RBAC model should mean it.
 
 ### 6.2 Proposed roles
 
@@ -383,7 +383,7 @@ cosmetic.
 
 ---
 
-## 7. The customer portal, and the trust boundary
+## 7. The customer booking pages, and the trust boundary
 
 This is the part of the design that deserves the most scrutiny.
 
@@ -500,7 +500,7 @@ document.
 
 - **`server/gateway.js`** — a dumb proxy that passes cookies through and does
   no auth. Untouched.
-- **Storefront routes** — fully public, resolved by hostname/slug before any
+- **Website routes** — fully public, resolved by hostname/slug before any
   session logic. Untouched.
 - **Shopify webhooks** — authenticated by HMAC over the raw body against a
   per-shop secret, not by session. Untouched.
@@ -738,11 +738,11 @@ not be settled from published documentation — **verify, do not guess**.
 Not caused by this work and not fixed by it, but they surfaced while mapping
 the auth system and someone should know.
 
-- **The storefront owner-preview feature does not work.**
+- **The website owner-preview feature does not work.**
   `server/storefront.js:85` takes a third `sessionShopId` parameter, but the
   only production caller — `server/server.js:3441` — passes two arguments. So
   `sessionShopId` is always `undefined`, `shop.id !== sessionShopId` is always
-  true, and an owner can never preview a disabled storefront. Only the tests
+  true, and an owner can never preview a disabled website. Only the tests
   pass the third argument, so the suite is green while the shipped behaviour
   (commits `8ee6553`, `9f88409`) is broken. This is a live example of a test
   passing while the feature does not work.

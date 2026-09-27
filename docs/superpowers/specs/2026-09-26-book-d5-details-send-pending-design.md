@@ -4,7 +4,7 @@
 piece 11** (booking terms: standard Wheelhouse terms, a shop's own
 replacement, a copy saved with each booking), which must merge first.
 **Changes:**
-- the atlas mock-ups for `details`, `pending` and `full`: one update channel
+- the screen designs for `details`, `pending` and `full`: one update channel
   instead of three tick boxes; no marketing box; no separate `full` screen
   (a refused time goes back to `date`); no "View request" / "Change or cancel
   request" buttons until d6.
@@ -13,7 +13,7 @@ replacement, a copy saved with each booking), which must merge first.
 
 The last steps of the customer booking journey at `/book`: the customer
 gives their contact details, sends the booking request, and sees it waiting
-for the shop. The private link reopens the same pending screen later. A test
+for the shop. The booking link reopens the same pending screen later. A test
 drives the whole journey against the real server.
 
 ## Decisions (Jack, 26 Sep)
@@ -135,7 +135,7 @@ lines). The screens only call these.
 - `tests/browser/book-journey.spec.ts` (real server and test database): a
   throwaway shop with a service with a question, a mechanic and opening
   hours; a browser books from `/book/<shop>` to the pending screen, including
-  a photo; then opens the private link cold and sees "Awaiting shop
+  a photo; then opens the booking link cold and sees "Awaiting shop
   confirmation"; the booking exists in the database with the answers, bike
   note, photo and a terms copy. The shop is removed afterwards.
 

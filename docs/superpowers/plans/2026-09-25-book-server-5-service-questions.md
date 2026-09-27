@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Staff can give each workshop service a list of questions; the customer service list carries them; an online booking stores a frozen copy of the answers, shown on the staff job view and the private link.
+**Goal:** Staff can give each workshop service a list of questions; the customer service list carries them; an online booking stores a frozen copy of the answers, shown on the staff job view and the booking link.
 
 **Architecture:** One pure module, `server/service-questions.js`, does both checks: the staff list (`readServiceQuestions`) and the customer's answers (`checkAnswers`). The routes in `server/server.js` call it and store JSONB: `workshop_services.questions` (the live list) and `workshop_jobs.question_answers` (the frozen copy), added by migration 028.
 
@@ -915,7 +915,7 @@ git commit -m "feat: a booking checks its answers and stores a frozen copy"
 
 ---
 
-### Task 7: The staff job view and the private link show the answers
+### Task 7: The staff job view and the booking link show the answers
 
 **Files:**
 - Modify: `server/server.js`: `serializeWorkshopJob` (~2366) and the private-link read-back (~4749)
@@ -941,7 +941,7 @@ test('the staff job view shows the answers', async () => {
 });
 ```
 
-In `tests/portal-booking-link.test.js`, add `answers: [],` to the expected object in the first test ('a booking returns a private link...'). Its booking uses `types.service`, which has no questions. Then append:
+In `tests/portal-booking-link.test.js`, add `answers: [],` to the expected object in the first test ('a booking returns a booking link...'). Its booking uses `types.service`, which has no questions. Then append:
 
 ```js
 test('the link shows the questions as asked and the answers', async () => {
@@ -1071,7 +1071,7 @@ Deferred minors (not fixed in this piece):
 
 **Decision 4 — "I'm not sure" switch on choice questions, on by default.** Met. Task 2 defaults `allowNotSure` to `true` on choice questions only; Task 3 accepts `{ notSure: true }` as satisfying a required question when the switch is on.
 
-**Decision 5 — the private link shows the questions and the customer's answers.** Met, Task 7: the private-link read-back gains `answers`.
+**Decision 5 — the booking link shows the questions and the customer's answers.** Met, Task 7: the private-link read-back gains `answers`.
 
 **Decision 6 — one ordered list stored on the service; staff save the whole list at once.** Met. Task 1 adds `workshop_services.questions JSONB`; Task 4's staff `PUT`/`POST` take and return the whole ordered list.
 
@@ -1093,7 +1093,7 @@ Deferred minors (not fixed in this piece):
 
 **Where answers appear.** Met, Task 7. `serializeWorkshopJob` gains `questionAnswers`; the private-link read-back gains `answers` as `{ wording, answer }` in order — confirmed directly: it shows `answers: []` when there are none, rather than omitting the field or returning `null`.
 
-**Tests.** Met. Each task wrote its tests first (migration, staff validation and id assignment, `checkAnswers`/`readServiceQuestions` unit tests, customer-list inclusion, booking success/refusal/round-trip, staff job view and private link). `npm test` is 691/691 passing at the end of Task 8, including all of this piece's files.
+**Tests.** Met. Each task wrote its tests first (migration, staff validation and id assignment, `checkAnswers`/`readServiceQuestions` unit tests, customer-list inclusion, booking success/refusal/round-trip, staff job view and booking link). `npm test` is 691/691 passing at the end of Task 8, including all of this piece's files.
 
 **Out of scope.** Respected. No screen code (question editor, booking-page questions, staff answer display) was built; conditional questions and photo answers were not attempted; no reporting on answers was added.
 

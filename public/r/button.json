@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "button",
   "title": "Button",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "The Wheelhouse button, matching the .btn family in the existing app. The accent variant reads the tenant-varying --accent / --accent-dark custom properties rather than a compiled colour class, so a shop's chosen scheme still applies at runtime.",
   "dependencies": [
     "class-variance-authority"

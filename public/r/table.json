@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "table",
   "title": "Table",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "Table markup matching table.data-table: uppercase muted headers over a 2px rule, 13.5px body, numeric columns right-aligned. Wraps itself in a horizontal scroll container because EPOS tables are wide and must not push a counter screen sideways.",
   "dependencies": [],
   "registryDependencies": [],

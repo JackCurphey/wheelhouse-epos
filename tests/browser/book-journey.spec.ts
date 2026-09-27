@@ -18,7 +18,7 @@ import { purgeAttachmentFiles, UPLOADS_DIR } from '../helpers/workshopFixtures.j
 // runs on the pinned test clock (07:00 UK time, Tuesday 1 September 2026),
 // and the browser's clock is pinned to the same moment in Europe/London, so
 // both agree that Wednesday 2 September is bookable. A browser books from
-// /book/<shop> to the pending screen, with a photo; the private link is then
+// /book/<shop> to the pending screen, with a photo; the booking link is then
 // opened cold in a fresh browser context; the booking row is checked in the
 // database (answers, bike note, a stored photo, the terms copy); the shop is
 // removed afterwards.
@@ -73,7 +73,7 @@ test.afterAll(async () => {
   }
 });
 
-test('a customer books from the first screen to pending, the private link reopens it, and the booking is stored', async ({ page, browser }) => {
+test('a customer books from the first screen to pending, the booking link reopens it, and the booking is stored', async ({ page, browser }) => {
   const slug = shop!.slug;
   await page.clock.setFixedTime(new Date(TEST_CLOCK_PIN));
   await page.goto(`${server!.baseUrl}/book/${slug}`);
@@ -109,7 +109,7 @@ test('a customer books from the first screen to pending, the private link reopen
   const privateLink = page.url();
   expect(await page.evaluate((key) => window.sessionStorage.getItem(key), `wh-book-draft:${slug}`), 'the draft is cleared').toBeNull();
 
-  // the private link, opened cold
+  // the booking link, opened cold
   const cold = await browser.newContext({ timezoneId: 'Europe/London', viewport: PHONE });
   const coldPage = await cold.newPage();
   await coldPage.goto(privateLink);

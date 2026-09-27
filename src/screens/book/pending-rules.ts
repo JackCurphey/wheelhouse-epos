@@ -4,7 +4,7 @@ import { formatFrom, formatMoney } from './service-selection.ts';
 
 /**
  * The pending screen's rules: the words for each stage, and the summary lines
- * built from the private link's reply. The screen only calls these.
+ * built from the booking link's reply. The screen only calls these.
  * Spec: docs/superpowers/specs/2026-09-26-book-d5-details-send-pending-design.md
  */
 export const STAGE_TEXT: Record<BookingStage, string> = {

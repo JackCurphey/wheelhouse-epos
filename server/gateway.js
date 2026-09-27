@@ -25,7 +25,7 @@ const OFFLINE_HTML = `<!doctype html>
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Wheelhouse EPOS - Offline</title>
+<title>Wheelhouse - Offline</title>
 <meta http-equiv="refresh" content="15" />
 <style>
   :root { color-scheme: light; }
@@ -49,7 +49,7 @@ const OFFLINE_HTML = `<!doctype html>
 <body>
   <div class="card">
     <div class="logo">🚲</div>
-    <h1>Wheelhouse EPOS is offline</h1>
+    <h1>Wheelhouse is offline</h1>
     <p>The till system isn't running on the shop PC right now.</p>
     <p>This page will refresh automatically once it's back.</p>
     <div class="retry">Checking again every 15 seconds…</div>

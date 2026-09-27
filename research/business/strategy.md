@@ -1,4 +1,4 @@
-# Wheelhouse EPOS — Strategic Report (v2)
+# Wheelhouse — Strategic Report (v2)
 
 **Date:** 31 August 2026 · supersedes v1 of the same date
 **Confidence tags:** **[V]** verified against a primary source · **[R]** third-party reported · **[U]** unverified · **[NF]** searched, not found (not proof of absence)

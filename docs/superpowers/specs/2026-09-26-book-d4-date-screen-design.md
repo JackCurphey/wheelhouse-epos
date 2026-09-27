@@ -3,7 +3,7 @@
 **Date:** 2026-09-26. **Follows:** d3 (#82) and **server piece 10** (no
 past or too-soon times; own spec and PR), which must merge first.
 **Changes:**
-- the atlas mock-up for `date` (`docs/design/release-1-journey/screens.js`):
+- the screen design for `date` (`docs/design/release-1-journey/screens.js`):
   no "Drop-off day / Exact appointment" toggle (the shop's mode is per day,
   from `/availability`); timed days use the mechanic diary from piece (c);
   the "No suitable day?" link is dropped here (its `full` screen is the

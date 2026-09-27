@@ -16,7 +16,7 @@ import {
 import type { SendRefusalState } from './details-rules.ts';
 
 /**
- * The problem screen (atlas `problem`, step 2): the bike in the customer's own
+ * The problem screen (screen design `problem`, step 2): the bike in the customer's own
  * words, each ticked service's questions (quick-answer pills plus "Or tell us
  * in your own words"), a description (required only for "Not sure"), and
  * photos. Everything but photos is written to the draft as it changes, so it

@@ -91,12 +91,12 @@ before(async () => {
   cookie = `${SESSION_COOKIE}=${token}`;
 
   // createSale (and so the convert route) refuses to proceed without a
-  // resolvable cashier, so the order-conversion test needs a real one.
+  // resolvable Staff member (is_cashier), so the order-conversion test needs a real one.
   const client = await pool.connect();
   try {
     await client.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shop.id)]);
     const { rows: [cashier] } = await client.query(
-      `INSERT INTO employees (shop_id, name, is_cashier, active) VALUES ($1, 'Test Cashier', 1, 1) RETURNING id`,
+      `INSERT INTO employees (shop_id, name, is_cashier, active) VALUES ($1, 'Test Staff', 1, 1) RETURNING id`,
       [shop.id]
     );
     cashierId = cashier.id;

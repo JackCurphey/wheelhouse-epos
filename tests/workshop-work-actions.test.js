@@ -28,11 +28,11 @@ after(async () => {
 async function newShop() {
   const { cookie, shop } = await staffSignup(server.baseUrl);
   const mechanicId = await seedMechanic(shop.id);
-  // A cashier is a different flag from a mechanic (resolveCashierId checks
-  // is_cashier), and the convert route refuses an unknown one.
+  // A Staff member (the is_cashier flag) is a different flag from a mechanic
+  // (resolveCashierId checks is_cashier), and the convert route refuses an unknown one.
   const cashierId = await runWithShop(shop.id, async () => {
     const { lastInsertRowid } = await prepare(
-      "INSERT INTO employees (name, is_cashier, active) VALUES ('Test Cashier', 1, 1)"
+      "INSERT INTO employees (name, is_cashier, active) VALUES ('Test Staff', 1, 1)"
     ).run();
     return lastInsertRowid;
   });

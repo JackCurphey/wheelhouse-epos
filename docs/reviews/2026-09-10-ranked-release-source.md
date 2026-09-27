@@ -179,7 +179,7 @@ Bucketing is Jack's. **The order within Release 1 is Claude's proposal, not Jack
 | R1-119 | 23 | Customer cancel and reschedule | IN-SPEC (not built) | Booking widget / customer front door |
 | R1-120 | 17 | Free-text problem description in the customer's own words | BUILT-in-prototype | Booking widget / customer front door |
 | R1-121 | 18 | Customer photo/video attachment at request time | BUILT-in-prototype | Booking widget / customer front door |
-| R1-122 | 19 | Customer return-access link (progress link) | BUILT-in-prototype | Booking widget / customer front door |
+| R1-122 | 19 | Customer return-access link (booking link) | BUILT-in-prototype | Booking widget / customer front door |
 | R1-123 | 16 | Custom service questions asked on the widget | NOT-MENTIONED | Booking widget / customer front door |
 | R1-124 | 7 | Additional-info and payment-info free text on the widget | NOT-MENTIONED | Booking widget / customer front door |
 | R1-125 | 14 | Widget theme colours and 22 fonts | NOT-MENTIONED | Booking widget / customer front door |

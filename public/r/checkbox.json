@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "checkbox",
   "title": "Checkbox",
-  "author": "Wheelhouse EPOS",
+  "author": "Wheelhouse",
   "description": "The phone's own tick box coloured with the shop colour (--accent-dark), label beside it, whole row at least 44px tall.",
   "dependencies": [],
   "registryDependencies": [],

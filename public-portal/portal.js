@@ -1,4 +1,4 @@
-// Wheelhouse EPOS - customer booking portal. Vanilla JS, no framework, no
+// Wheelhouse - customer booking portal. Vanilla JS, no framework, no
 // build step - same philosophy as the staff app (public/app.js), but a
 // wholly separate small bundle: different audience, different auth.
 //

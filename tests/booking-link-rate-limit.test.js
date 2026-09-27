@@ -1,4 +1,4 @@
-// The private link's attempt limit: 30 lookups per 15 minutes per IP.
+// The booking link's attempt limit: 30 lookups per 15 minutes per IP.
 // Its own file, so its own server and its own limiter.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 import test, { before, after } from 'node:test';

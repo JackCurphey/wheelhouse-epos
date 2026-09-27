@@ -109,7 +109,7 @@ before(async () => {
   try {
     await client.query("SELECT set_config('app.current_shop_id', $1, false)", [String(shop.id)]);
     const { rows: [cashier] } = await client.query(
-      `INSERT INTO employees (shop_id, name, is_cashier, active) VALUES ($1, 'Test Cashier', 1, 1) RETURNING id`,
+      `INSERT INTO employees (shop_id, name, is_cashier, active) VALUES ($1, 'Test Staff', 1, 1) RETURNING id`,
       [shop.id]
     );
     cashierId = cashier.id;

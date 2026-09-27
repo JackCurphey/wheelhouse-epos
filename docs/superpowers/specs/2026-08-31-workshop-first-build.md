@@ -29,7 +29,7 @@ a closed Sunday. The rules already exist server-side for the portal route
 (`server/server.js:3238-3261`); they were never lifted into the staff routes.
 
 **There is not one test touching workshop behaviour.** Fourteen test files cover
-auth, gateway, proxy trust, Shopify and storefront. Nothing covers jobs, the
+auth, gateway, proxy trust, Shopify and website. Nothing covers jobs, the
 diary, availability, portal booking or attachments **[V, code]**. We are about
 to lead with the untested part of the product.
 

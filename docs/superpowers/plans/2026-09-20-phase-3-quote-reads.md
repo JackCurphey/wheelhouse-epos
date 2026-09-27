@@ -30,7 +30,7 @@ for the conventions this patch continues.
   sits immediately above the route with no blank line between, and every id
   must exist in `docs/design/release-1-journey/screen-index.json`. Enforced by
   `scripts/ci/assert-screen-trace.mjs`.
-- **Never hand-edit the atlas HTML or `screen-index.json`** — `package.py`
+- **Never hand-edit the screen-design HTML or `screen-index.json`** — `package.py`
   regenerates them. This patch only reads them.
 - **`npm test` hangs silently without the compose Postgres up.** Run
   `npm run docker:up` first.

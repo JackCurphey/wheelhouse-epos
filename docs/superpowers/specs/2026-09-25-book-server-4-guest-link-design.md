@@ -6,7 +6,7 @@ a single `serviceName`.
 
 **Date:** 2026-09-25. **Approved in session by Jack** (design, 25 Sep, in
 three parts).
-**Serves:** the "Keep your private progress link" promise on book screen
+**Serves:** the "Keep your booking link" promise on book screen
 `pending` (06), "View my booking" on `confirmed`, and the `expired` branch.
 **Part of:** the server prerequisite work for journey plan 4a
 (`docs/superpowers/plans/2026-09-20-phase-4a-book.md`, item 3 gap table: "a way

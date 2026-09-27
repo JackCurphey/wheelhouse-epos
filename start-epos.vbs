@@ -23,7 +23,7 @@ Next
 ' stack is actually confirmed up. Runs in a visible window so startup
 ' problems (Docker Desktop not running, build errors, etc.) are visible
 ' rather than silently swallowed.
-cmdLine = "cmd /c title Wheelhouse EPOS (Docker) && """ & dockerExe & """ compose up -d --wait || pause"
+cmdLine = "cmd /c title Wheelhouse (Docker) && """ & dockerExe & """ compose up -d --wait || pause"
 
 WshShell.Run cmdLine, 1, True
 

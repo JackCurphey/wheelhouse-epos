@@ -32,7 +32,7 @@ The shop picks one of **two** modes: **exact appointments only** or
 **drop-off days only**. There is no "both, customer chooses" option.
 
 *Correction:* on 23 Sep this record said three modes (timed, drop-off,
-appointment only). Jack clarified on 24 Sep: two. The atlas `booking-settings`
+appointment only). Jack clarified on 24 Sep: two. The screen design `booking-settings`
 screen offers a third, "Both - customer chooses"; that option is not to be
 built. "Appointment only" in the Phase 0 plan (:24, :236) is the exact-
 appointments mode. Under it customers get no drop-off day, and staff put a
@@ -47,7 +47,7 @@ belong in the server prerequisite work for 4a.
 ## J4 - deposits are not blocked on Mark
 
 Deposits are out of Release 1, as the scope reduction (Later) and the Phase 0
-atlas revision already said. The two lines that still said "blocked on Mark's
+screen-design revision already said. The two lines that still said "blocked on Mark's
 Tallboys reference" (the Phase 4 screens plan, and the screen-build design's
 note table) are corrected to point here.
 

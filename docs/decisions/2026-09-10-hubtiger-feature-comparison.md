@@ -56,7 +56,7 @@ backlog, not a launch requirement. This document is that backlog, made concrete.
 | 16 | Custom service questions asked on the widget | NOT-MENTIONED | — | |
 | 17 | Free-text problem description in the customer's own words | BUILT-in-prototype | PD "Customer entry"; OV P-02 | |
 | 18 | Customer photo/video attachment at request time | BUILT-in-prototype | PD "Customer entry"; OV P-02, both camera and file-library inputs | |
-| 19 | Customer return-access link (progress link) | BUILT-in-prototype | PD "Return access"; OV P-12 (token rotation on reset) | |
+| 19 | Customer return-access link (booking link) | BUILT-in-prototype | PD "Return access"; OV P-12 (token rotation on reset) | |
 | 20 | Instant confirmation vs shop review before confirmation | BUILT-in-prototype | PD "Acceptance"; OV P-03 | |
 | 21 | Service-specific acceptance rules | BUILT-in-prototype | OV P-03, "per-service rules: routine auto, unknown reviewed" | |
 | 22 | Pending-request expiry / review deadline | IN-SPEC (not built) | AC-12, AC-14; AC §6 BOOK-06–08 | |

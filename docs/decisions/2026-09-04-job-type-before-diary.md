@@ -110,7 +110,7 @@ way round.
 Putting a required question **in front of** the diary costs something real. The
 diary as the landing view proves, at a glance and with no effort from the
 visitor, that the shop has slots this week. Someone arriving cold from a shop's
-storefront would instead land on a form. That is a conversion cost, and it is
+website would instead land on a form. That is a conversion cost, and it is
 not obviously smaller than the problems in §2.
 
 ## 4. Shape

@@ -33,7 +33,7 @@ test('a route whose comment is separated from it by a blank line is rejected', (
 });
 
 test('routes outside the covered set are not required to name a screen', () => {
-  // The till, inventory and storefront routes predate the atlas. Demanding a
+  // The till, stock and website routes predate the screen designs. Demanding a
   // screen id from them would fail the build for routes the rule is not about.
   const result = checkSource("route('GET', '/api/products', handler);", screenIds);
   assert.equal(result.ok, true, result.problems.join('\n'));

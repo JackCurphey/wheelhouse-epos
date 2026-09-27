@@ -172,7 +172,7 @@ test('staff see the photos as from-customer attachments and can download them', 
   assert.deepEqual(Buffer.from(await file.arrayBuffer()), Buffer.concat([JPEG_HEAD, Buffer.from(marker), Buffer.alloc(64)]));
 });
 
-test('the private link says how many photos were sent, and nothing else about them', async () => {
+test('the booking link says how many photos were sent, and nothing else about them', async () => {
   const two = await book({ photos: [photoOf('link1'), photoOf('link2')] });
   const none = await book({});
   const att = await staff(`/api/workshop-jobs/${two.body.id}/attachments`, {

@@ -10,7 +10,7 @@ import {
 } from './service-selection.ts';
 
 /**
- * The service list (atlas `service-list`): full services, each category, then
+ * The service list (screen design `service-list`): full services, each category, then
  * "Other", ticked with a Continue button (Jack, 26 Sep). A ticked full service
  * greys out and locks what it includes (hint and lock). Prices read "From £X"
  * under a parts note when the shop shows prices. ?start=full|individual

@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-26. **Follows:** d2 (#78), #79, and **server piece 9**
 (below), which must merge first. **Changes:**
-- the atlas mock-up for `problem` (`docs/design/release-1-journey/screens.js`):
+- the screen design for `problem` (`docs/design/release-1-journey/screens.js`):
   one bike box instead of make/model plus colour, choice questions as pills
   with a free-text box instead of a `<select>`, photos only (no video), the
   description after the questions, and "Continue" instead of "Choose a day".

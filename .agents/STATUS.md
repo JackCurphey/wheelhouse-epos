@@ -11,10 +11,10 @@
 ## Where things stand
 
 The customer booking journey at `/book` is built end to end (d1–d5: service →
-service list → problem → date → details → pending/private link; PRs #75,
+service list → problem → date → details → pending/booking link; PRs #75,
 #78–#80, #82, #84, #85, #87, #88) on top of server pieces 1–12 (piece 7 #76,
 8 #77, 9 #81, 10 #83, 11 #86, 12 #89). Piece 12 (27 Sep) is the server side of
-customer change/cancel via the private link, plus staff accept/decline-change
+customer change/cancel via the booking link, plus staff accept/decline-change
 and `GET /api/workshop-waiting` with "Seen". Its spec is
 `docs/superpowers/specs/2026-09-27-book-server-12-change-cancel-design.md`.
 
@@ -93,7 +93,7 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
     customer-side, still open).
 - The piece 6 memory risk (large booking bodies) must be decided before the
   booking route is publicly reachable (hosting not chosen).
-- A shop's storefront subdomain can show another shop's `/book/<slug>`.
+- A shop's website subdomain can show another shop's `/book/<slug>`.
 - Dashboard and sales "today" still use a UTC-midnight window in the
   database.
 - Pressing Back while "Sending…" can leave a customer without their private
@@ -102,7 +102,7 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
   retries.
 - `timed_lead_minutes` isn't used in any customer confirmation yet.
 - Other workstreams and Mark's open items (Lightspeed readiness, the design
-  atlas, WorkOS/design remediation, the items needing Mark, the decision and
+  screen designs, WorkOS/design remediation, the items needing Mark, the decision and
   plan registers) were not touched by the booking work; their last-known
   state is in `ARCHIVE.md` under "Moved from STATUS on 2026-09-27".
 

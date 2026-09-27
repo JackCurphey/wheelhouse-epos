@@ -1,4 +1,4 @@
-# ARCHIVE — Wheelhouse EPOS
+# ARCHIVE — Wheelhouse
 
 Superseded resume-file content, kept verbatim. Nothing is deleted from the
 project's history; when `.agents/STATUS.md` outgrows its 8,000-byte cap,
@@ -45,7 +45,7 @@ plugs in as `src/screens/book/<id>.tsx`, wrapped in `BookFrame` (shop name,
 step/progress, title, pinned action) and, where it needs earlier answers, in
 `RequireDraft` with a `has` check (redirects to `/book/<shopSlug>` when
 missing); it reads and writes the booking in progress via `useDraft()`
-(`src/screens/book/draft.tsx`), and is registered by atlas id in `SCREENS` in
+(`src/screens/book/draft.tsx`), and is registered by screen id in `SCREENS` in
 `src/customer/app-shell.tsx`. Installed controls
 (`src/components/ui/<name>.tsx`): edit the registry item under
 `registry/primitives/` or `registry/patterns/`, run `npm run registry:build`,
@@ -286,7 +286,7 @@ two entries, and `appEntryTags` only read the entry's own `css`.
 ## Where this stands
 
 **Release 1 scope is narrowed and settled** (#51); live scope file
-`docs/decisions/2026-09-10-release-1-scope-reduction.md`. **The atlas is 82
+`docs/decisions/2026-09-10-release-1-scope-reduction.md`. **The screen designs are 82
 screens**, 13 notes applied, asserted by `check-notes.mjs` (#54). The tag
 barcode is a declared **non-scanning specimen**; PDFs and board PNG **stale**.
 
@@ -306,7 +306,7 @@ OFF.** Detail: `ARCHIVE.md`.
 - **The app is on `localhost:8080`, not 4000; Postgres on 5433, not 5432.**
 - **Never delete the `cf-*` header names in `server/gateway.js`** — the strip
   list; removing it reopens a login brute-force bypass.
-- **Never hand-edit the atlas HTML**; `package.py` regenerates it.
+- **Never hand-edit the screen designs HTML**; `package.py` regenerates it.
 - **`public/dist` is untracked** (23 Sep; three stale files were committed
   in `fa32b60`). A fresh checkout must `npm run build` before `/workshop`
   serves or `tests/workshop-page.test.js` passes.
@@ -349,14 +349,14 @@ This file → **Plan register** below and the plans it names →
 3. **Jack: printer, tag dimensions, driver host.** The **scanner half of P00b
    is closed** (`2026-09-23-p00b-scanner-evidence`): 1D, **cannot read QR**, so
    the tag carries Code 128 as note 11 has it. No tag from our printer has been
-   scanned — the atlas barcode stays a non-scanning specimen.
+   scanned — the screen designs' barcode stays a non-scanning specimen.
 4. **Jack: the message providers**, and what inbound replies do.
 5. **Mark: the screen review** (#50), open since 17 Sep.
 6. **Split the Release 1 plan into issues** — row IDs, state changes, expected
    failure, test command, proof per package.
 
 **Carried open:** four, incl. three tenant-isolation gaps confirmed ABSENT on
-`main` 9 Sep. Three closed 20 Sep (Jack): atlas checks **run in CI**;
+`main` 9 Sep. Three closed 20 Sep (Jack): screen-design checks **run in CI**;
 `prototype/` and review-pack scripts stay **out** of CI; money stays a JS
 float, **totalled in SQL, never JavaScript** — binds Phase 4. **Hubtiger
 trial lapsed ~15 Sep**; re-entry needs Jack's login.
@@ -379,7 +379,7 @@ Detail, incl. #58's carried items: `ARCHIVE.md`.
 ## Phase 4 foundation (Tasks 1-6)
 
 `/workshop/*` serves the React app (`src/staff/`). `ROUTES` (`routes.ts`)
-maps atlas id → URL; `SCREENS` (`app-shell.tsx`) registers built screens.
+maps screen id → URL; `SCREENS` (`app-shell.tsx`) registers built screens.
 Server calls go through `src/lib/api/client.ts` (`jobAction` needs
 `version`); identity only via `useSession`. `src/lib/adapters/intent.ts`
 records print/message intent, stores nothing, never claims delivery. **Not
@@ -419,7 +419,7 @@ must `import '../server/load-env.js'` first.
 
 ## Open items needing Mark
 
-Eight. The screen review (#50) is urgent, re-point at the 82-screen atlas;
+Eight. The screen review (#50) is urgent, re-point at the 82 screen designs;
 the other seven in `ARCHIVE.md`.
 
 ## Keeping this file honest
@@ -444,7 +444,7 @@ obsolete and destructive: `8514727` predates the commit that added the
 2,880-line WorkOS plan, which is on `main` via PR #29.
 
 ````markdown
-# STATUS — Wheelhouse EPOS
+# STATUS — Wheelhouse
 
 **State:** phase one merged-ready; architecture stage one **set up, not started**
 **Branch:** `feat/shadcn-foundation` (PR #9, CI green)
@@ -527,7 +527,7 @@ Moved out of `STATUS.md` on 6 September 2026 when the file passed its
 
 **Since (30 Aug - 2 Sep):**
 
-- **Storefronts and checkout** — per-shop public storefronts (#1), Shopify
+- **Websites and checkout** — per-shop public websites (#1), Shopify
   checkout (#2), owner preview button (#3). Plans archived (#6).
 - **Platform and infra** — Cloudflare Tunnel assumption dropped (#8), CI push
   trigger on main (#10), architecture stage-one workflow set up (#11), README
@@ -884,7 +884,7 @@ added. Both were historical record rather than live state.
 
 ## Done (as at 19 Sep 2026)
 
-43 PRs merged, #1–#51; #51 carried the scope reduction, the plan and the atlas.
+43 PRs merged, #1–#51; #51 carried the scope reduction, the plan and the screen designs.
 #48 and #52 were closed unmerged, both accounted for in `.agents/ARCHIVE.md`,
 where ageing content moves rather than being deleted.
 
@@ -985,9 +985,9 @@ its Release 1 sequencing conflicts with the 10 Sep reduction. Current: the
 Release 1 workshop plan. Approved and unbuilt: the 2,880-line WorkOS migration,
 design remediation. Executed plans and per-plan detail: `.agents/ARCHIVE.md`.
 
-## Atlas revision detail, moved from STATUS.md 20 Sep 2026
+## Screen-design revision detail, moved from STATUS.md 20 Sep 2026
 
-**The journey atlas has been revised against Jack's review: 84 screens → 82.**
+**The screen designs have been revised against Jack's review: 84 screens → 82.**
 His export is committed at `docs/reviews/2026-09-17-release-1-screen-review-jack.md`
 (71 approved, 13 noted) rather than living only in a browser. Phase 0 applied all
 13 notes on 20 Sep: mechanic phone flow (10 screens) → one tablet `job-page`;
@@ -1026,9 +1026,9 @@ Phase 2 inherits one open question: **`readLegacyStatus('complete')` returns
 `custody: null`**, because the old column never recorded whether a finished
 bike went home. A test pins that open so no migration guesses it.
 
-## Atlas paragraph, second version moved from STATUS.md 20 Sep 2026
+## Screen-design paragraph, second version moved from STATUS.md 20 Sep 2026
 
-**The journey atlas is revised: 84 screens → 82.** All 13 of Jack's notes
+**The screen designs are revised: 84 screens → 82.** All 13 of Jack's notes
 applied 20 Sep, each asserted by `check-notes.mjs`. PR #54, Mark told on #50.
 Detail in `ARCHIVE.md`. Two carried: the tag barcode is a declared
 **non-scanning specimen** until Jack's scanner (Mon 21 Sep), and the PDFs and
@@ -1044,7 +1044,7 @@ board PNG are **stale** — WeasyPrint/PyMuPDF/Pillow are not installed here.
 - **Never delete the `cf-*` header names in `server/gateway.js`.** That is the
   strip list, not Cloudflare residue; removing it reintroduces a login
   brute-force bypass (14/14 spoofed IPs passed before PR #8, 11 blocked after).
-- **Never hand-edit the atlas HTML.** It is generated by `package.py` from
+- **Never hand-edit the screen-design HTML.** It is generated by `package.py` from
   `screens.js` / `branches.js`; a hand edit is overwritten on the next run.
 - **`npm run build` dirties tracked files** under `public/dist` with no app
   source change. Revert that churn; do not commit it.
@@ -1088,13 +1088,13 @@ customer slot grid in `public-portal/portal.js`.
 
 ## Phase plan section, longer version moved from STATUS.md 20 Sep 2026
 
-## Phase plan for building the atlas
+## Phase plan for building the screen designs
 
 Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`,
 which records who decided what. Agreed with Jack 20 Sep: a **new staff app** for
 these screens only, cut over at the end, on the **existing server and schema**,
 sequenced **by layer** because nothing is deployed. The old app keeps till,
-inventory, suppliers and storefront. Phases: 0 atlas, 1 state machines and 2
+inventory, suppliers and website. Phases: 0 screen designs, 1 state machines and 2
 schema (all built) → 3 API (each endpoint traced to a named screen) → 4 screens
 → 5 integration. P00 proofs run alongside, all Jack's. Plans written: phase-0,
 phase-1 and phase-2, all dated 2026-09-20 under `docs/superpowers/plans/`.
@@ -1109,11 +1109,11 @@ phase-1 and phase-2, all dated 2026-09-20 under `docs/superpowers/plans/`.
 1. **Jack: the first shop's Lightspeed series, and an authorised test account.**
    Nothing in P00-LS moves without it; P07 stays conditional meanwhile.
 2. **Jack: the hardware answers** — printer model, tag dimensions, the Windows
-   driver host, 1D or 2D scanner. Scanner arrives Mon 21 Sep; the atlas barcode
+   driver host, 1D or 2D scanner. Scanner arrives Mon 21 Sep; the screen-design barcode
    stays a declared specimen until it is proven.
 3. **Jack: the message providers**, and what inbound replies do.
 4. **Mark: the screen review**, issue #50, outstanding since 17 Sep — now
-   against a superseded version. He needs telling that the atlas changed.
+   against a superseded version. He needs telling that the screen designs changed.
 5. **Split the plan into issues** — row IDs, allowed state changes, expected
    failure, test command and proof artefact per package.
 
@@ -1124,9 +1124,9 @@ tenant-isolation gaps confirmed ABSENT on `main` 9 Sep. Full text and evidence:
 **The Hubtiger trial lapsed about 15 Sep**; two tests never ran. Re-entry
 needs Jack's login.
 
-## Atlas paragraph, third version moved from STATUS.md 20 Sep 2026
+## Screen-design paragraph, third version moved from STATUS.md 20 Sep 2026
 
-**The journey atlas is revised: 84 screens → 82**, all 13 notes applied and
+**The screen designs are revised: 84 screens → 82**, all 13 notes applied and
 asserted by `check-notes.mjs`. PR #54; Mark told on #50. Carried: the tag
 barcode is a declared **non-scanning specimen** until Jack's scanner, and the
 PDFs and board PNG are **stale**. Detail in `ARCHIVE.md`.
@@ -1142,20 +1142,20 @@ A's quotes; breaking the capacity index predicate let two concurrent bookings
 both win; all 20 migrations apply cleanly into an empty database. Detail in PRs
 #55 and #56.
 
-**CI did not run the atlas checks** (recorded at the Phase 2 close).
+**CI did not run the screen-design checks** (recorded at the Phase 2 close).
 `package.py`, `check-static.mjs` and `check-notes.mjs` appeared nowhere in
-`.github/workflows/test.yml`, so #54's green CI said nothing about the atlas
+`.github/workflows/test.yml`, so #54's green CI said nothing about the screen designs
 being valid - those ran locally only. Phase 3 closed the narrow half of this by
 adding `scripts/ci/assert-screen-trace.mjs` to CI, which gates the
-endpoint-to-screen trace. Whether the three atlas scripts themselves should run
+endpoint-to-screen trace. Whether the three screen-design scripts themselves should run
 in CI was Jack's decision, and he took it on 20 Sep: all three now run, in the
 same PR. They could not run as they stood - all three imported jsdom by a
 relative path into `prototype/node_modules`, which root CI never installs, so
-they would have failed every run on a missing module rather than on a real atlas
+they would have failed every run on a missing module rather than on a real screen-design
 fault. jsdom is now a root dev dependency (30.0.1, exact) and nothing reaches
-into `prototype/node_modules`. CI also fails if the committed atlas does not
+into `prototype/node_modules`. CI also fails if the committed screen designs do not
 match what its source generates, which is the only automated check on the
-"never hand-edit the atlas HTML" trap. **`prototype/` and the Python runner
+"never hand-edit the screen-design HTML" trap. **`prototype/` and the Python runner
 remain open**, deliberately separate.
 
 
@@ -1219,7 +1219,7 @@ the real app, to protect something Phase 4's real screens are meant to replace.
 `assemble-review.py`, `render-review.py` and `check-pdfs.py` build the review
 pack, whose PDFs are already recorded as stale; PDF generation in CI needs fonts
 and rendering tooling and is a common source of slow, flaky builds. `package.py`
-is the exception and does run in CI - it builds the atlas, which Phase 4 is
+is the exception and does run in CI - it builds the screen designs, which Phase 4 is
 built against. Revisit only if the prototype becomes load-bearing or the PDFs
 start being sent to people again.
 
@@ -1247,24 +1247,24 @@ and an optimistic `version` check. Job references (`WH-1000`) are per shop;
 capacity holds are taken in the job's transaction; quotes supersede rather
 than mutate, per-line.
 
-### Phase plan for building the atlas (full text)
+### Phase plan for building the screen designs (full text)
 
 Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`,
 which records who decided what. A **new staff app** for these screens only, cut
 over at the end, on the **existing server and schema**, sequenced **by layer**
 because nothing is deployed. The old app keeps till, inventory, suppliers and
-storefront. Phases 0-2 built; 3 API → 4 screens → 5 integration remain. P00
+website. Phases 0-2 built; 3 API → 4 screens → 5 integration remain. P00
 proofs run alongside, all Jack's. Plans for phases 0-3 are under
 `docs/superpowers/plans/`, all dated 2026-09-20.
 
-### Release 1 scope and atlas revision (unchanged, settled)
+### Release 1 scope and screen-design revision (unchanged, settled)
 
 **Release 1 has a narrowed scope and a plan.** PR #51.
 `docs/decisions/2026-09-10-release-1-scope-reduction.md` is the live scope;
 invoicing, payments, refunds, import, reports, group capacity and recovery are
 Later. The workshop plan is packages P00–P09, not yet split into issues.
 
-**The journey atlas is revised: 84 screens → 82**, all 13 notes applied and
+**The screen designs are revised: 84 screens → 82**, all 13 notes applied and
 asserted by `check-notes.mjs` (#54). Carried: the tag barcode is a declared
 **non-scanning specimen**, and the PDFs and board PNG are **stale**.
 
@@ -1366,7 +1366,7 @@ references are safe, and the scanner's own keyboard language can be set to UK
 from its manual, which is the cheaper fix than working around it in code. Caps
 Lock inverts letters, so tag resolution must be case-insensitive. The printer
 half of P00b is untouched: no tag from our own printer has been scanned, so
-the atlas barcode stays a declared non-scanning specimen.
+the screen-design barcode stays a declared non-scanning specimen.
 
 ## Moved from STATUS 2026-09-23 (#59 merged)
 
@@ -1382,16 +1382,16 @@ real head `18e8341`, checked against the run's own SHA: the PR pane reported
 the session's branch as the PR head, so do not trust that field. The docker
 `app` image is from 31 Aug — verify the working tree, not it.
 
-The "Phase plan for building the atlas" section, moved for the byte cap
+The "Phase plan for building the screen designs" section, moved for the byte cap
 (the fuller text is under "Moved from STATUS 2026-09-23 (byte cap)"). Verbatim:
 
 ````markdown
-## Phase plan for building the atlas
+## Phase plan for building the screen designs
 
 Design: `docs/superpowers/specs/2026-09-20-release-1-screen-build-design.md`.
 A **new staff app** for these screens only, cut over at the end, on the
 **existing server and schema**, sequenced **by layer** because nothing is
-deployed. The old app keeps till, inventory, suppliers, storefront. 0-3 built;
+deployed. The old app keeps till, inventory, suppliers, website. 0-3 built;
 4 → 5 remain. P00 proofs run alongside. Full text and the five Phase 4
 decisions (A-E): `ARCHIVE.md`.
 ````
@@ -1457,7 +1457,7 @@ Phase 0/2 plans' constraints; the five Phase 4 ones (A-E) in its plan.
 ## Verified 23 Sep on `feat/phase-4-intent-adapter` (Task 6)
 
 Every gate exit 0: 437/437 tests; typecheck; lint; build; RLS 30 protected, 2
-exempt; screen trace; registry, 9 files, no drift; atlas packaged, no errors,
+exempt; screen trace; registry, 9 files, no drift; screen designs packaged, no errors,
 notes pass; browser 2/2. Superseded 24 Sep by 466/466 on
 `feat/book-server-1-services` (adds the book server piece 1 tests: migration
 022, category routes, service placement, public service list, screen trace).

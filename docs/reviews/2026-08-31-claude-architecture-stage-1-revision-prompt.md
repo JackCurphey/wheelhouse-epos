@@ -5,7 +5,7 @@ repository root.
 
 ---
 
-You wrote the Wheelhouse EPOS architecture stage-one plan and workflow. An
+You wrote the Wheelhouse architecture stage-one plan and workflow. An
 independent review found load-bearing engineering errors and omissions. Update
 your work from the evidence; do not defend the previous plan and do not merely
 append caveats.

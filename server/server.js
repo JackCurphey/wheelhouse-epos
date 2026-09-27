@@ -1,4 +1,4 @@
-// Bike Shop EPOS - local server, PostgreSQL-backed.
+// Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
 import { createServer } from 'node:http';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -102,7 +102,7 @@ import {
 // A product is only fit to be live on Shopify when it's BOTH marked to show
 // online AND active - `show_online` alone isn't enough, since a deactivated
 // product (DELETE /api/products/:id's soft-delete, or PUT with active:false)
-// has already disappeared from the EPOS storefront's own listing (which
+// has already disappeared from the Wheelhouse website's own listing (which
 // filters by active = 1) and shouldn't stay purchasable on Shopify in the
 // meantime. `previousProductRow` and `updatedProductRow` just need
 // `show_online`/`active` fields - callers pass the row as loaded before and
@@ -230,7 +230,7 @@ function registerPendingShopifyPushSlot() {
 // Today that is true of exactly ONE branch: the generic non-auth `/api/*`
 // loop below (the one that wraps its route call in
 // runRequestWithPushSlotCleanup). It is NOT true of the /api/auth/* branch
-// inside that same loop, the /api/portal/* branch, the storefront branch, or
+// inside that same loop, the /api/portal/* branch, the website branch, or
 // the Shopify webhook branch - a deferred push registered from any of those
 // would not be settled by a request-tail throw and would orphan the slot.
 // No branch does that today (processShopifyOrderWebhook, the only webhook
@@ -385,7 +385,7 @@ function serializeSession({ login, shop }) {
   };
 }
 
-// ---------- Customer portal auth helpers ----------
+// ---------- Online booking pages: customer auth helpers ----------
 // Parallel to the staff ones above but on their own cookie name, so a
 // customer session and a staff session can coexist in the same browser
 // without either one clobbering the other.
@@ -747,8 +747,8 @@ route('DELETE', '/api/products/:id', async (req, res, params) => {
   // This soft-delete never goes through PUT /api/products/:id, so it needs
   // its own call - without it, a deactivated product that still has
   // show_online: true would stay live and purchasable on Shopify
-  // indefinitely even though it has already disappeared from the EPOS
-  // storefront's own listing.
+  // indefinitely even though it has already disappeared from the Wheelhouse
+  // website's own listing.
   await syncProductWithShopifyIfNeeded(existing, row);
   sendJson(res, 200, { ok: true });
 });
@@ -1991,8 +1991,8 @@ route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease,
   }
 
   const cashierResolved = await resolveCashierId(body.cashierId);
-  if (!cashierResolved.ok) return badRequest(res, 'Cashier not found or inactive');
-  if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
+  if (!cashierResolved.ok) return badRequest(res, 'Staff member not found or inactive');
+  if (cashierResolved.cashierId === null) return badRequest(res, 'Select a staff member before completing the sale');
 
   let saleId;
   const shopifyPushes = [];
@@ -2101,7 +2101,7 @@ route('POST', '/api/sale-documents', async (req, res) => {
   }
 
   const cashierResolved = await resolveCashierId(body.cashierId);
-  if (!cashierResolved.ok) return badRequest(res, 'Cashier not found or inactive');
+  if (!cashierResolved.ok) return badRequest(res, 'Staff member not found or inactive');
 
   // Snapshot product name/sku/price only - no stock check, since a quote or
   // order can reference items that are currently out of stock.
@@ -2304,8 +2304,8 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
       : null;
 
   const cashierResolved = await resolveCashierId(body.cashierId);
-  if (!cashierResolved.ok) return badRequest(res, 'Cashier not found or inactive');
-  if (cashierResolved.cashierId === null) return badRequest(res, 'Select a cashier before completing the sale');
+  if (!cashierResolved.ok) return badRequest(res, 'Staff member not found or inactive');
+  if (cashierResolved.cashierId === null) return badRequest(res, 'Select a staff member before completing the sale');
 
   const items = await db.prepare('SELECT * FROM sale_document_items WHERE document_id = ?').all(id);
   // A stored labour line has product_id NULL. Dropping line_type here (as a
@@ -2425,7 +2425,7 @@ function serializeWorkshopJob(row) {
     endTime: row.end_time,
     status: row.status,
     // The states the screens actually drive from. `status` above is the derived
-    // legacy field, kept only for public/app.js and the customer portal until
+    // legacy field, kept only for public/app.js and the online booking pages until
     // Phase 4 replaces them.
     reference: row.reference,
     bookingState: row.booking_state,
@@ -2595,7 +2595,7 @@ route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
   sendJson(res, 200, serializeWorkshopJob(row));
 });
 
-// A new private link for a job: the old one stops working at once, because a
+// A new booking link for a job: the old one stops working at once, because a
 // job holds one hash. Returned once; staff text it or read it out.
 // Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
 // Staff handlers get (req, res, params, query, afterRelease, shopId); the slug
@@ -2742,7 +2742,7 @@ async function syncRequestedHold(jobId) {
   }
 }
 
-// Shared by the staff "create job" route below and the customer portal's
+// Shared by the staff "create job" route below and the online booking pages'
 // booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
 // linked order in one transaction. Trusts every field completely; callers
 // are responsible for validating/resolving them first (the portal route
@@ -3177,7 +3177,7 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
 // The URL names what happened, so the access log, the screen trace and any
 // future per-action permission all read the path instead of the body.
 //
-// Every one of these carries a `screens:` comment naming the atlas screens it
+// Every one of these carries a `screens:` comment naming the screen designs it
 // serves. scripts/ci/assert-screen-trace.mjs fails the build if a workshop
 // route has no such comment or names an id that is not in screen-index.json -
 // the design's "an endpoint no screen consumes is not built" rule, made into a
@@ -3631,7 +3631,7 @@ route('DELETE', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, pa
 // ---------- Image uploads (product photos, shop logo, shop hero image) ----------
 // Same base64-in-a-JSON-body convention as workshop job attachments above,
 // and the same opaque-storage_key-on-disk approach - but the uploader can be
-// any of three different call sites (a product photo, the storefront logo,
+// any of three different call sites (a product photo, the website logo,
 // or its hero image), so the actual read/validate/store logic lives in one
 // shared helper and each route just says what changed after the upload.
 
@@ -3737,9 +3737,9 @@ async function serveUploadedImage(req, res, key) {
 }
 
 // ---------- Employees ----------
-// A single roster shared by the Workshop (mechanics) and Front Desk
-// (cashiers): every mechanic is an employee, but not every employee is a
-// mechanic (or a cashier) - isMechanic/isCashier are independent flags on
+// A single roster shared by the Workshop (mechanics) and the Till
+// (Staff): every mechanic is an employee, but not every employee is a
+// mechanic (or Staff) - isMechanic/isCashier are independent flags on
 // the same person.
 
 function parseWorkingDays(raw) {
@@ -3811,7 +3811,7 @@ route('PUT', '/api/employees/:id', async (req, res, params) => {
 // Every route here needs to know if the caller is the owner, so each
 // re-resolves the session itself via currentSession(req), same as the other
 // routes that need more than just "signed in" (see the comment above the
-// storefront routes).
+// website routes).
 
 route('GET', '/api/team', async (req, res) => {
   const ctx = await currentSession(req);
@@ -4822,7 +4822,7 @@ route('PUT', '/api/shop-theme', async (req, res) => {
   sendJson(res, 200, serializeShopTheme(await db.prepare('SELECT * FROM shop_theme LIMIT 1').get()));
 });
 
-// ---------- Storefront settings ----------
+// ---------- Website settings ----------
 // Public-storefront on/off switch plus its branding fields (tagline,
 // description, logo/hero images, theme preset) - same singleton-per-shop,
 // lazy-create-on-GET pattern as shop_theme above. Persistence and validation
@@ -5017,7 +5017,7 @@ route('GET', '/api/dashboard', async (req, res) => {
   });
 });
 
-// ---------- Customer portal ----------
+// ---------- Online booking pages ----------
 // A second, public-facing surface (see public-portal/) for customers to
 // book their own workshop slots. Its auth is entirely separate from staff
 // auth (see server/customer-auth.js) - signup/login/logout manage their own
@@ -5641,7 +5641,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   sendJson(res, out.status, out.body);
 });
 
-// The private link's code, checked the same way on every link route: the
+// The booking link's code, checked the same way on every link route: the
 // attempt limiter, a well-formed code, a job with that hash in this shop (the
 // dispatcher bound the shop from :shopSlug, so row-level security hides every
 // other shop's), and not expired. Answers the refusal itself and returns
@@ -5712,7 +5712,7 @@ route('GET', '/api/portal/:shopSlug/booking-links/:code', async (req, res, param
   sendJson(res, 200, await bookingLinkView(found.id, shop));
 });
 
-// The customer cancels through their private link (piece 12, decision 1):
+// The customer cancels through their booking link (piece 12, decision 1):
 // allowed until the bike reaches the shop, work starts or its day passes;
 // immediate, and every hold of the job - its own and a requested one - goes
 // at once.
@@ -5964,12 +5964,12 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
   if (pathname === '/api/storefront/products' && req.method === 'GET') {
     return sendJson(res, 200, await listStorefrontProducts());
   }
-  // On a subdomain-hosted storefront (<slug>.wheelhouseepos.com),
+  // On a subdomain-hosted website (<slug>.wheelhouseepos.com),
   // parseStorefrontSlugCandidate matches every path on that host, not just
   // storefront-specific ones - so requests for uploaded images and the
   // customer booking app have to be forwarded to their real handlers here
-  // instead of falling through to the storefront's own static bundle below
-  // (whose serveStatic fallback would otherwise return the storefront's
+  // instead of falling through to the website's own static bundle below
+  // (whose serveStatic fallback would otherwise return the website's
   // index.html for these paths instead of the actual image or booking app
   // page). The caller (the request dispatcher) already wraps this whole
   // call in a try/catch, so errors from these forwarded calls propagate up
@@ -5981,7 +5981,7 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
     return serveAppPage(res, BOOK_HTML, 'src/customer/main.tsx', 'book');
   }
   const storePrefix = `/store/${shop.slug}`;
-  // The storefront's HTML references its CSS/JS with relative hrefs, which
+  // The website's HTML references its CSS/JS with relative hrefs, which
   // the browser resolves against the current URL's directory. Without a
   // trailing slash here, "/store/<slug>" has no directory segment of its
   // own, so the browser drops the slug entirely (e.g. requests
@@ -6055,7 +6055,7 @@ const server = createServer(async (req, res) => {
     // The whole branch - including the connection lookup and signature
     // verification, not just order/refund processing at the bottom - is
     // wrapped in one try/catch, matching every other branch in this
-    // dispatcher (see the storefront and /api/uploaded-images/ branches
+    // dispatcher (see the website and /api/uploaded-images/ branches
     // above). Without this, an unhandled rejection from e.g. a DB blip on
     // getShopifyConnectionByShopId, or a GCM auth failure from decryptSecret,
     // would propagate out of this async dispatcher callback uncaught -
@@ -6073,7 +6073,7 @@ const server = createServer(async (req, res) => {
 
       // shopify_connections has FORCE ROW LEVEL SECURITY, so it can only be
       // read correctly from inside a runWithShop context for the exact shop
-      // being queried (the storefront framework plan's final review found
+      // being queried (the website framework plan's final review found
       // this same bug class in resolveStorefrontShop - a bare pool/prepare
       // call against an RLS-protected table outside runWithShop either
       // throws on a connection that's never set app.current_shop_id, or
@@ -6440,7 +6440,7 @@ export function gracefulShutdown(signal, {
 // ---------- Crash guard ----------
 
 // Several comments elsewhere in this file (the Shopify webhook branch, the
-// storefront branch, etc.) individually wrap their own async work in
+// website branch, etc.) individually wrap their own async work in
 // try/catch specifically because, until now, nothing caught a rejection that
 // slipped past all of them - Node's default behaviour for an unhandled
 // rejection or an uncaught synchronous throw is to crash the whole process
@@ -6509,7 +6509,7 @@ if (isMainModule) {
     .then(() => {
       server.listen(PORT, () => {
         serverListening = true;
-        console.log(`\n  Bike Shop EPOS running at http://localhost:${PORT}\n`);
+        console.log(`\n  Wheelhouse running at http://localhost:${PORT}\n`);
       });
     })
     .catch((err) => {

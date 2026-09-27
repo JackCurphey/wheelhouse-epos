@@ -1,8 +1,8 @@
-# Book server piece 12: customers change or cancel through the private link - Implementation Plan
+# Book server piece 12: customers change or cancel through the booking link - Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A customer can cancel, move (unconfirmed) or ask to move (confirmed) their booking through its private link; staff accept or decline a change request, mark a customer cancellation as seen, and read one "Waiting for you" list.
+**Goal:** A customer can cancel, move (unconfirmed) or ask to move (confirmed) their booking through its booking link; staff accept or decline a change request, mark a customer cancellation as seen, and read one "Waiting for you" list.
 
 **Architecture:** Migration 035 adds the stored request, who cancelled and when, and a `purpose` column on `workshop_capacity_holds` ('booking' | 'requested'), so a requested slot is held by its own row under the unchanged 024 live-slot index. `server/server.js` gains: `syncRequestedHold` (run first inside `syncJobHold`), requested slots counted by `loadCapacity` and `checkJobSlot`, a shared `resolveBookingLink` / `bookingLinkView` for every link route, `withJobBookingLock` (the booking lock for every day a job touches, re-reading the job `FOR UPDATE`), `checkCustomerTime` (the booking route's time checks, extracted so a change runs the very same code), three customer routes, three staff routes and the waiting list. The state machine gains `change_time` (pending and reschedule_requested, both to themselves) and `withdraw` (reschedule_requested to scheduled).
 
@@ -15,14 +15,14 @@
 - Branch `feat/book-server-12-change-cancel` (checked out). Never commit to `main`, never switch branches, never push or open a PR (Jack decides).
 - Stage files by name. Never `git add -A` / `git add .` - `.claude/launch.json` is untracked and must stay out.
 - Postgres must be up (`npm run docker:up`, port 5433) or every server test hangs silently. Run one file with `node --test tests/<file>.test.js`; one test with `node --test --test-name-pattern "<name>" tests/<file>.test.js`.
-- **No `src/` (client) changes. No CI, dependency, lockfile or atlas changes.**
+- **No `src/` (client) changes. No CI, dependency, lockfile or screen-design changes.**
 - Create no files other than those this plan names. No scratch or debug files in the repo (use the session scratchpad or `/tmp`).
 - **Test-first, every test.** Each new test is run and seen failing for the right reason before the code that passes it. Tests marked *guard* are the exception: they pass before the step's code because they pin behaviour that already holds, and their mutation is the only proof they bite.
 - **Mutation proof, per test, by name.** Every task ends with a mutation table naming **every** new test in the task. Do every row, not a sample: make the mutation, confirm it in `git diff` (or, for a live-database mutation, in the printed query result), run the named test, confirm it FAILS for the stated reason, restore, confirm `git diff` no longer shows it, and re-run the task's test file to PASS. A mutation that does not show in `git diff` did not land - redo it. Report each row's actual failure message.
 - Never add a fixed test date before the pinned clock (1 Sep 2026). A date in the past is computed from the pin (`shopToday('Europe/London', new Date(TEST_CLOCK_PIN))`), never written as a literal.
 - The booking-link limiter allows **30 link requests per server per 15 minutes**, and every new route shares it with the read route. Each test file starts its own server; keep each file's link calls (read, cancel, change, withdraw) **under 30**. Each task states its file's count.
 - Portal signups are limited to 5 per server per hour: one `portalSignup` per test file.
-- Every new route carries a `// screens: <atlas ids>` comment on the line directly above `route(` (`scripts/ci/assert-screen-trace.mjs`; ids from `docs/design/release-1-journey/screen-index.json`).
+- Every new route carries a `// screens: <screen design ids>` comment on the line directly above `route(` (`scripts/ci/assert-screen-trace.mjs`; ids from `docs/design/release-1-journey/screen-index.json`).
 - Each new test file opens with a comment naming the spec, as neighbouring files do.
 - Commit messages end with the line `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Wording, verbatim.** New, from the spec:
@@ -209,7 +209,7 @@ Expected: FAIL - "requested_job_date missing"; the check tests fail on the `UPDA
 - [ ] **Step 3: Write the migration** `server/migrations/035_booking_change_cancel.sql`
 
 ```sql
--- Customers change or cancel through the private link (piece 12). A change to
+-- Customers change or cancel through the booking link (piece 12). A change to
 -- a confirmed booking is a request staff answer: the day, mechanic and times
 -- asked for are stored beside the booking's own until then, and the requested
 -- slot is held in workshop_capacity_holds with purpose 'requested'. The 024
@@ -695,7 +695,7 @@ Link calls in `tests/portal-booking-cancel.test.js` after this task: 6.
 - [ ] **Step 2: Write the failing view tests** `tests/portal-booking-cancel.test.js`
 
 ```js
-// The private link says what the customer may do (piece 12): change or cancel
+// The booking link says what the customer may do (piece 12): change or cancel
 // while the bike has not reached the shop and the booking is live, the change
 // they asked for, and whether staff declined their last one. Then cancelling
 // through the link (Task 4).
@@ -796,7 +796,7 @@ test('the link says when staff declined the last change', async () => {
 - [ ] **Step 3: Run and watch them fail**
 
 Run: `node --test tests/portal-booking-cancel.test.js tests/portal-booking-link.test.js`
-Expected: every new test FAILS (`undefined !== true` / `undefined !== null`), and "a booking returns a private link, and the link reads the booking back" FAILS on the four missing keys.
+Expected: every new test FAILS (`undefined !== true` / `undefined !== null`), and "a booking returns a booking link, and the link reads the booking back" FAILS on the four missing keys.
 
 - [ ] **Step 4: Implement.** In `server/server.js`:
 
@@ -828,7 +828,7 @@ function customerCanAct(row) {
 (b) Replace the whole booking-link GET route (:5136-5174, its comment included) with:
 
 ```js
-// The private link's code, checked the same way on every link route: the
+// The booking link's code, checked the same way on every link route: the
 // attempt limiter, a well-formed code, a job with that hash in this shop (the
 // dispatcher bound the shop from :shopSlug, so row-level security hides every
 // other shop's), and not expired. Answers the refusal itself and returns
@@ -914,7 +914,7 @@ Expected: all PASS; lint clean.
 | a change the customer asked for shows on the link | in `bookingLinkView`, `requested: null,` | `null` vs the expected object |
 | a request left on a booking that is no longer waiting on it is not shown | in `requestedOf`, delete `row.booking_state !== 'reschedule_requested' \|\|` | an object, not `null` |
 | the link says when staff declined the last change | `changeDeclined: false,` | `false !== true` |
-| (existing) a booking returns a private link, and the link reads the booking back | delete `canCancel: customerCanAct(row),` | the deepEqual names `canCancel` |
+| (existing) a booking returns a booking link, and the link reads the booking back | delete `canCancel: customerCanAct(row),` | the deepEqual names `canCancel` |
 
 - [ ] **Step 7: Commit**
 
@@ -1166,7 +1166,7 @@ function customerActionRefusal(job, action) {
 Then directly after the booking-link GET route:
 
 ```js
-// The customer cancels through their private link (piece 12, decision 1):
+// The customer cancels through their booking link (piece 12, decision 1):
 // allowed until the bike reaches the shop, immediate, and every hold of the
 // job - its own and a requested one - goes at once.
 // screens: cancel, cancelled
@@ -1240,7 +1240,7 @@ Link calls in `tests/portal-booking-change.test.js`: 18.
 - [ ] **Step 1: Write the failing tests** `tests/portal-booking-change.test.js`
 
 ```js
-// An unconfirmed booking moves at once through its private link (piece 12,
+// An unconfirmed booking moves at once through its booking link (piece 12,
 // decision 4): it stays awaiting confirmation, its hold moves with it, and
 // the new time passes every check a new booking's time passes - with the
 // booking's own time never counted against itself.
@@ -2617,7 +2617,7 @@ node scripts/ci/check-registry-drift.mjs
 python3 docs/design/release-1-journey/package.py
 node docs/design/release-1-journey/check-static.mjs
 node docs/design/release-1-journey/check-notes.mjs
-git diff --exit-code -- docs/design/release-1-journey/Wheelhouse-Release-1-Journey-Atlas.html docs/design/release-1-journey/screen-index.json docs/design/release-1-journey/verification.json
+git diff --exit-code -- docs/design/release-1-journey/Wheelhouse-Release-1-Screen-Designs.html docs/design/release-1-journey/screen-index.json docs/design/release-1-journey/verification.json
 node scripts/ci/assert-screen-trace.mjs
 npm run migrate
 node scripts/ci/assert-rls-coverage.mjs

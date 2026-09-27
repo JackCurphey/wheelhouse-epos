@@ -166,7 +166,7 @@ Depends on: W02/W03/W04; D02. Message delivery of the link is a later slice afte
 - [ ] Provide secure revocable customer links and approve/decline API; edit/re-propose creates a new revision with explicit handling of prior approvals. Define ceiling currency, cumulative spend, tax and exclusions.
 - [ ] Integrate quote template/link send (after W07), service updates and reviewed application of approved work to charges per D02.
 
-Files: job/line routes, new quote storage, customer portal and job screen. Exit: declined lines excluded; approved amount cannot drift; stale/replayed link cannot authorise revised work; parallel edits conflict; below/above-limit fixtures prove ceiling semantics. A manual approval record is a fallback, not completion of R1 online approval.
+Files: job/line routes, new quote storage, customer booking pages and job screen. Exit: declined lines excluded; approved amount cannot drift; stale/replayed link cannot authorise revised work; parallel edits conflict; below/above-limit fixtures prove ceiling semantics. A manual approval record is a fallback, not completion of R1 online approval.
 
 ### W09 — Checklists and service questions (M; Workshop)
 

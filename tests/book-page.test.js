@@ -1,5 +1,5 @@
 // The customer app is served at every /book address, on the main host and on
-// a shop's storefront subdomain. Needs a built bundle (npm run build).
+// a shop's website subdomain. Needs a built bundle (npm run build).
 // Spec: docs/superpowers/specs/2026-09-25-book-b-customer-shell-design.md
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -40,7 +40,7 @@ test('/book/<shop> serves the customer app', async () => {
   await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}`);
 });
 
-test('a private link opened cold gets the customer app', async () => {
+test('a booking link opened cold gets the customer app', async () => {
   await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}/booking/${'a'.repeat(64)}`);
 });
 
@@ -51,11 +51,11 @@ test('the customer app script it names is really there', async () => {
   await res.arrayBuffer();
 });
 
-test('on a storefront, /book serves the customer app too', async () => {
+test('on a website, /book serves the customer app too', async () => {
   await runWithShop(owner.shop.id, () => prepare(
     'INSERT INTO storefront_settings (enabled) VALUES (true) ON CONFLICT (shop_id) DO UPDATE SET enabled = true'
   ).run());
-  // ?storefrontSlug= routes the request through the storefront handler, the
+  // ?storefrontSlug= routes the request through the website handler, the
   // same path a <slug>.<base domain> host takes (server/storefront.js).
   await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}?storefrontSlug=${owner.shop.slug}`);
 });

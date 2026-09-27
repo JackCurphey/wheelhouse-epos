@@ -18,7 +18,7 @@ themselves are placeholders; pieces (c) and (d) fill them in.
    page, so J1's "old page keeps serving until the journey is green" is
    dropped. Chosen over claiming only built addresses (a server-side address
    list kept in step with the app) and a temporary `/book-new` address
-   (private links broken until a switch-over).
+   (booking links broken until a switch-over).
 2. **Stop serving the old page; delete its files later.** `public-portal/`
    and the things that still point at it (Dockerfile copy, lint config,
    `tests/portal-copy.test.js`, `tests/design-tokens.test.js` portal checks,
@@ -27,7 +27,7 @@ themselves are placeholders; pieces (c) and (d) fill them in.
    old page is served, goes now.
 3. **Addresses:**
 
-   | Screen (atlas id, number) | Address |
+   | Screen (screen design id, number) | Address |
    |---|---|
    | `service` (01) | `/book/:shopSlug` |
    | `service-list` (02) | `/book/:shopSlug/services` |
@@ -36,7 +36,7 @@ themselves are placeholders; pieces (c) and (d) fill them in.
    | `details` (05) | `/book/:shopSlug/details` |
    | `pending` (06) | `/book/:shopSlug/booking/:code` |
 
-   `pending` and the private link are one page: the address is the one the
+   `pending` and the booking link are one page: the address is the one the
    server already issues (`server/booking-link.js` `linkPath`). After
    booking, piece (d) sends the customer to it.
 
@@ -66,7 +66,7 @@ Follow the staff app's shape; share nothing that is staff-specific.
     key (`src/staff/main.tsx` or `src/customer/main.tsx`); its error messages
     name the entry that is missing.
   - `/book` and `/book/*` serve `book.html` with the customer entry's tags
-    (`no-store`, same as `/workshop`), on the main host and on storefront
+    (`no-store`, same as `/workshop`), on the main host and on website
     subdomains. The old `serveStatic(..., PORTAL_DIR)` calls for `/book` go.
   - No build: 500 with a "not built" message, as `/workshop` does.
 - **Unchanged:** every `/api/portal/*` route; the staff app and its routes;
@@ -93,7 +93,7 @@ Follow the staff app's shape; share nothing that is staff-specific.
   `/book/demo/nope/nope` shows "There is no screen at this address."
 - Server test (new file): `/book/<slug>` and a deep link
   `/book/<slug>/booking/<code>` return the book page with the customer
-  entry's script tag and `no-store`; the same on a storefront subdomain host;
+  entry's script tag and `no-store`; the same on a website subdomain host;
   a missing manifest entry gives 500 naming the customer entry. Existing
   `tests/workshop-entry-tags.test.js` and `tests/workshop-page.test.js` keep
   passing (updated only for the builder's new argument).

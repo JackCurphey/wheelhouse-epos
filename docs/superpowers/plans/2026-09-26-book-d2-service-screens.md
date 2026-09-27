@@ -706,7 +706,7 @@ import { useDraft } from './draft.tsx';
 import { useServices } from './services-query.ts';
 
 /**
- * The first book screen (atlas `service`): three fixed options (Jack, 24 Sep),
+ * The first book screen (screen design `service`): three fixed options (Jack, 24 Sep),
  * each going straight on when tapped (26 Sep). Full and Individual open the
  * one shared list at their section; Not sure skips to describing the problem.
  * A kind the shop has no services of is hidden.
@@ -976,7 +976,7 @@ import {
 } from './service-selection.ts';
 
 /**
- * The service list (atlas `service-list`): full services, each category, then
+ * The service list (screen design `service-list`): full services, each category, then
  * "Other", ticked with a Continue button (Jack, 26 Sep). A ticked full service
  * greys out and locks what it includes (hint and lock). Prices read "From £X"
  * under a parts note when the shop shows prices. ?start=full|individual
