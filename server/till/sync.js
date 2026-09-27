@@ -192,7 +192,7 @@ async function recordCheckin(till, item) {
   const held = await prepare('SELECT id FROM staff_checkins WHERE client_id = ?').get(item.clientId);
   if (held) return { status: 'duplicate', attention: [] };
   const employee = await prepare('SELECT id FROM employees WHERE id = ?').get(item.employeeId);
-  if (!employee) return { status: 'recorded', attention: ['unknown_employee'] };
+  if (!employee) return { status: 'failed', reason: `Staff member ${item.employeeId} not found`, attention: [] };
   await prepare('INSERT INTO staff_checkins (employee_id, till_id, client_id, checked_in_at) VALUES (?, ?, ?, ?)')
     .run(employee.id, till.id, item.clientId, new Date(item.checkedInAt).toISOString());
   return { status: 'recorded', attention: [] };

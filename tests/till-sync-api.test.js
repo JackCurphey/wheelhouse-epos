@@ -226,8 +226,14 @@ test('a customer who may already exist is flagged, not merged', async () => {
   const byPhone = { kind: 'customer', clientId: randomUUID(), name: 'Samuel', phone: '07700900999' };
   const res = await sync([byEmail, byPhone]);
   assert.deepEqual(res.body.results.map((r) => r.attention), [['possible_duplicate_customer'], ['possible_duplicate_customer']]);
-  const n = await inShop(() => prepare("SELECT COUNT(*)::int AS n FROM customers WHERE name LIKE 'Sam%'").get());
-  assert.equal(n.n, 4); // Sam Spokes, Sam S, Sam, Samuel — nothing merged
+  const [byEmailRow, byPhoneRow, existing] = await Promise.all([
+    inShop(() => prepare('SELECT id FROM customers WHERE client_id = ?').get(byEmail.clientId)),
+    inShop(() => prepare('SELECT id FROM customers WHERE client_id = ?').get(byPhone.clientId)),
+    inShop(() => prepare("SELECT id FROM customers WHERE name = 'Sam S' AND email = 'SAM2@example.test'").get()),
+  ]);
+  assert.ok(byEmailRow, 'the by-email customer should have been created, not merged');
+  assert.ok(byPhoneRow, 'the by-phone customer should have been created, not merged');
+  assert.ok(existing, 'the pre-existing customer should be untouched');
 });
 
 test('a sale pointing at a customer the server never received is recorded without one', async () => {
@@ -242,6 +248,14 @@ test('a check-in is recorded once', async () => {
   assert.equal((await sync([item])).body.results[0].status, 'duplicate');
   const rows = await inShop(() => prepare('SELECT till_id FROM staff_checkins WHERE client_id = ?').all(item.clientId));
   assert.deepEqual(rows.map((r) => r.till_id), [b1.till.id]);
+});
+
+test('a check-in for an unknown staff member fails and is not stored', async () => {
+  const item = { kind: 'checkin', clientId: randomUUID(), employeeId: 2147483000, checkedInAt: '2026-09-01T08:55:00.000Z' };
+  const res = await sync([item]);
+  assert.equal(res.body.results[0].status, 'failed');
+  const row = await inShop(() => prepare('SELECT 1 FROM staff_checkins WHERE client_id = ?').get(item.clientId));
+  assert.equal(row, undefined);
 });
 
 test('a customer item with no name fails alone', async () => {
@@ -297,6 +311,8 @@ test('the same till reusing a receipt number is recorded and flagged', async () 
 });
 
 test('the snapshot tells a replaced till where its numbers got to', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  await sync([{ ...sale(tube), receiptNumber: 9500 }]);
   const res = await tillRequest(server.baseUrl, owner.shop.slug, b1.token, '/snapshot');
-  assert.equal(res.body.lastReceiptNumber, 9001);
+  assert.equal(res.body.lastReceiptNumber, 9500);
 });
