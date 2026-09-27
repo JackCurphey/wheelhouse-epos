@@ -82,6 +82,7 @@ import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { isValidPin, hashPin } from './till/pin.js';
 import { buildSnapshot } from './till/snapshot.js';
+import { batchProblem, processSyncItems } from './till/sync.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
@@ -3989,6 +3990,15 @@ route('PUT', '/api/employees/:id/pin', async (req, res, params) => {
 // dispatcher already resolved and verified.
 route('GET', '/api/till/:shopSlug/snapshot', async (req, res, params, query, till) => {
   sendJson(res, 200, await buildSnapshot(till));
+});
+
+route('POST', '/api/till/:shopSlug/sync', async (req, res, params, query, till) => {
+  const body = await readJsonBody(req);
+  const problem = batchProblem(body);
+  if (problem) return badRequest(res, problem);
+  const pending = Number.isInteger(body.pendingCount) && body.pendingCount >= 0 ? body.pendingCount : 0;
+  await db.prepare('UPDATE tills SET last_seen_at = now(), last_pending_count = ? WHERE id = ?').run(pending, till.id);
+  sendJson(res, 200, { results: await processSyncItems(till, body.items) });
 });
 
 // ---------- Workshop settings ----------
