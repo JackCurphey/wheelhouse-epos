@@ -56,7 +56,8 @@ test('a new online booking is listed with what the diary needs', async () => {
   const list = await waiting();
   assert.equal(list.count, list.items.length);
   const item = list.items.find((i) => i.jobId === booked.id);
-  assert.deepEqual(item, {
+  const { services, ...itemWithoutServices } = item;
+  assert.deepEqual(itemWithoutServices, {
     kind: 'new_booking',
     jobId: booked.id,
     reference: booked.reference,
@@ -69,6 +70,7 @@ test('a new online booking is listed with what the diary needs', async () => {
     serviceNames: ['Test repair', 'Test quick'],
     arrivedAt: (await read(booked.id)).createdAt,
   });
+  assert.ok(services, 'services field exists');
 });
 
 test('a job staff made as pending is not listed', async () => {
@@ -161,4 +163,18 @@ test("another shop's waiting items never appear", async () => {
   } finally {
     await deleteTestShop(other.shop.id);
   }
+});
+
+test('a waiting item lists its services with ids, in order', async () => {
+  const booked = await book([types.quick, types.repair]);
+  const item = await itemFor(booked.id);
+  assert.deepEqual(item.services.map((s) => s.id), [types.quick, types.repair]);
+  assert.deepEqual(item.services.map((s) => s.name), item.serviceNames);
+});
+
+test("the job carries the customer's own description and bike note", async () => {
+  const booked = await book();
+  const job = await read(booked.id);
+  assert.equal(job.customerDescription, 'Squeaky brakes');
+  assert.equal(job.customerBikeNote, null);
 });
