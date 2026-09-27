@@ -89,3 +89,46 @@ test('a malformed batch is refused whole', async () => {
   assert.equal(res.status, 400);
   assert.equal(await inShop(() => prepare('SELECT 1 FROM till_sales WHERE client_id = ?').get(good.clientId)), undefined);
 });
+
+test('stock is allowed below zero and flagged once per product', async () => {
+  const tube = await seedProduct(owner.shop.id, { stock: 1 });
+  const first = await sync([sale(tube, { qty: 2 })]);
+  assert.deepEqual(first.body.results[0].attention, ['stock_below_zero']);
+  await sync([sale(tube)]);
+  const open = await inShop(() => prepare(
+    "SELECT COUNT(*)::int AS n FROM till_attention WHERE kind = 'stock_below_zero' AND product_id = ? AND resolved_at IS NULL"
+  ).get(tube));
+  assert.equal(open.n, 1);
+  assert.equal((await inShop(() => prepare('SELECT stock_qty FROM products WHERE id = ?').get(tube))).stock_qty, -2);
+});
+
+test('a sale of a product the server no longer has is recorded and flagged', async () => {
+  const item = sale(2147483000);
+  const res = await sync([item]);
+  assert.equal(res.body.results[0].status, 'recorded');
+  assert.deepEqual(res.body.results[0].attention, ['unknown_product']);
+  const row = await inShop(() => prepare('SELECT total_pence FROM till_sales WHERE client_id = ?').get(item.clientId));
+  assert.equal(row.total_pence, 699);
+});
+
+test('the price charged at the till stands', async () => {
+  const tube = await seedProduct(owner.shop.id, { price: '9.99' });
+  const item = sale(tube, { unitPricePence: 500 });
+  await sync([item]);
+  const row = await inShop(() => prepare('SELECT total_pence FROM till_sales WHERE client_id = ?').get(item.clientId));
+  assert.equal(row.total_pence, 500);
+});
+
+test('payments that do not add up, or an unhandled method, are recorded and flagged', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  const short = await sync([sale(tube, { payments: [{ method: 'cash', amountPence: 600 }] })]);
+  assert.deepEqual(short.body.results[0].attention, ['payments_do_not_match']);
+  const account = await sync([sale(tube, { payments: [{ method: 'account', amountPence: 699 }] })]);
+  assert.deepEqual(account.body.results[0].attention, ['unsupported_payment_method']);
+});
+
+test('an unknown staff member or customer is recorded and flagged', async () => {
+  const tube = await seedProduct(owner.shop.id);
+  const res = await sync([sale(tube, { employeeId: 2147483000, customerId: 2147483000 })]);
+  assert.deepEqual(res.body.results[0].attention.sort(), ['unknown_customer', 'unknown_employee']);
+});
