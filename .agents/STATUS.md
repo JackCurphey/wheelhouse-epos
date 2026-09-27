@@ -5,8 +5,11 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-09-27. **Branch:** `feat/staff-diary-waiting` (PR #91, CI green; merging after #90), built on
-`docs/status-handover` (the handover commit `2b47759`) on top of `main` at `705ef0f`.
+**Updated:** 2026-09-27 (end of the main session). **Merged to `main`:** #90
+(offline server core) and #91 (staff diary). **Open, to merge next, in this
+order:** #92 `chore/consistent-names` (base `main`), then #93
+`feat/fjell-design-system` (stacked on #92; carries this STATUS). Both had CI
+running at handover; both pass every check locally (#93: 1428/1428 tests).
 
 ## Where things stand
 
@@ -18,8 +21,7 @@ customer change/cancel via the booking link, plus staff accept/decline-change
 and `GET /api/workshop-waiting` with "Seen". Its spec is
 `docs/superpowers/specs/2026-09-27-book-server-12-change-cancel-design.md`.
 
-**The staff diary piece is built on `feat/staff-diary-waiting` (27 Sep), not
-merged.** Spec `docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md`;
+**The staff diary piece is merged (#91, 27 Sep).** Spec `docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md`;
 plan, decision log and spec walk in
 `docs/superpowers/plans/2026-09-27-staff-diary-waiting.md`. In the legacy diary
 (`public/app.js`) there is now a "Waiting for you" column, a review pop-up
@@ -48,31 +50,56 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
   chart): https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j . Workshop day is
   redrawn in Fjell (desktop + phone) awaiting Jack's approval; it is the first
   journey to build, starting with the staff app shell (room sidebar), the
-  workshop overview and booking requests.
-- **Merge order agreed by Jack:** #90 (merged) → #91 (this diary piece) →
-  #92 → #93.
+  workshop overview and booking requests. The canvas generator (and the theme
+  options and design-system source) is in `docs/design/user-journeys/` — read
+  its README before changing the canvas.
+- **Merge order agreed by Jack:** #90 (merged) → #91 (merged) → #92 → #93.
 
-## Next, in order (Jack, 26–27 Sep)
+## Next, in order (Jack, 27 Sep)
 
-1. **Finish the staff diary piece:** push, open a pull request, and wait for CI
-   to pass. Merge only when Jack says. (Marked jobs now show their label on
-   the first line: Jack's choice, 27 Sep.)
-2. **d6** — the customer's change and cancel screens from the pending
-   screen. Replace `pending-rules.ts`'s `contactLine`; use the link view's
-   `canChange`/`canCancel`/`requested`/`changeDeclined` and the
-   cancel/change/withdraw-change routes.
-3. **Later, recorded but not scheduled:** the shop colour-scheme piece (each
-   shop picks one colour scheme for staff and booking apps, including
-   "Pop-ups: our colours / plain white" — Jack, 26 Sep) — **superseded 27 Sep:**
-   the staff app is always Fjell; shops choose colours for their customer
-   website only (see Release 2 and design below); customer sign-in in
-   the booking app plus picking/adding saved bikes; staff settings screens
-   for booking terms, minimum notice and time zone (the server exists, no
-   screen yet); a staff question-setup screen that suggests one overall
-   question per service; a staff action to turn a booking's bike note into a
-   bike record.
+1. **Merge #92, then #93** — Jack approved this order. Merge each only after
+   CI passed on its final commit. #93's base is `chore/consistent-names`; after
+   #92 merges, retarget #93 to `main` if GitHub hasn't. A STATUS.md clash is
+   likely if `main` moves; keep the newest facts from both sides.
+2. **Get Jack's review of the Workshop day designs** on the canvas (journey
+   12, teal "for review" labels). Points he has not yet answered: collection
+   and "finished" take payment at the Wheelhouse till (Lightspeed handoff kept
+   only in journey 21); a new "Messages" page under Front desk; the
+   mechanic's job page has no tabs (folds to tap-to-open rows on a phone); the
+   bike tag shows a barcode placeholder; the sidebar's date/open-until line
+   is gone. Also add #91's "Waiting for you" diary column to the canvas as a
+   built screen (currently the orange `ws-waiting` placeholder in journey 12).
+3. **Then build Workshop day, piece by piece**, in the new React staff app
+   under `/workshop` (`src/staff/`, routes are placeholders today): first
+   piece = the staff app shell (room sidebar, phone menu) + the workshop
+   overview (`desk`) + booking requests (`requests`/`review`/`reject`). Spec →
+   plan → subagent-driven development, test-first, shadcn components on the
+   Fjell tokens. The server routes already exist (they carry `// screens:`
+   comments).
+4. **After Workshop day**, work through the other journeys the same way
+   (design on the canvas → Jack approves → spec → plan → build).
+5. **d6** — the customer's change and cancel screens from the pending
+   screen (unchanged from before): replace `pending-rules.ts`'s `contactLine`;
+   use the link view's `canChange`/`canCancel`/`requested`/`changeDeclined`
+   and the cancel/change/withdraw-change routes.
+6. **Release 2 track:** plan 2 (the till's side of offline) when Jack
+   chooses; the Citrus Lime export check needs Jack at work.
+7. **Later, recorded but not scheduled:** customer sign-in in the booking app
+   plus picking/adding saved bikes; staff settings screens for booking terms,
+   minimum notice and time zone (server exists, no screen); a staff
+   question-setup screen that suggests one overall question per service; a
+   staff action to turn a booking's bike note into a bike record. (The old
+   "shops pick the staff app's colours" piece is superseded: the staff app is
+   always Fjell.)
 
 ## Open for Jack
+
+- From the Fjell PR (#93): whether `/book` should follow each shop's colours
+  (today it shows Fjell); DM Mono not yet on job numbers/booking prices;
+  fonts re-download each full page load until offline caching.
+- Release 2: the business-plan gate conflict (programme spec §5) is between
+  Jack and Mark; Cycle to Work needs Jack's explanation; there is no official
+  Wheelhouse logo file (designs show a LOGO slot — never invent one).
 
 - Confirm piece 12's four controller rulings: an ordinary legacy-diary save
   keeps a customer's change request; dragging a job onto exactly its
@@ -107,6 +134,22 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
   state is in `ARCHIVE.md` under "Moved from STATUS on 2026-09-27".
 
 ## Working notes for the next agent
+
+- **Handover state (27 Sep):** this STATUS and `docs/design/user-journeys/`
+  are committed on `feat/fjell-design-system` but **not pushed** — push that
+  branch before merging #93 (it restarts #93's CI). Read it from the root
+  with `git show feat/fjell-design-system:.agents/STATUS.md`.
+- **Checkouts:** the root checkout was left on the merged
+  `feat/release-2-design` branch (switch it to `main` and pull after the
+  merges). Worktrees: `.claude/worktrees/agent-a9e726fa452520fef`
+  (`chore/consistent-names`), `.claude/worktrees/agent-a6bc98197515e54f3`
+  (`feat/fjell-design-system`), `.claude/worktrees/staff-diary`
+  (`feat/staff-diary-waiting`, merged) — remove them once their PRs merge.
+- **Artifacts (claude.ai, private to Jack):** user journeys canvas
+  https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j ; Wheelhouse design
+  system https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH ; theme options
+  https://claude.ai/artifact/LrQtgcrCRc8kQEnSpXhdFN . Always read the live
+  canvas index before publishing (Jack edits it live); ≤255 files per call.
 
 - Jack wants plain English, numbered options with concrete trade-offs,
   mock-ups for anything visual, one question at a time. Merge only when Jack

@@ -1,0 +1,576 @@
+[
+ {
+  "id": "service",
+  "title": "Choose a service",
+  "role": "Customer · phone",
+  "group": "book",
+  "mobile": true
+ },
+ {
+  "id": "service-list",
+  "title": "Choose an individual service",
+  "role": "Customer · phone",
+  "group": "book",
+  "mobile": true
+ },
+ {
+  "id": "problem",
+  "title": "Describe the bike & problem",
+  "role": "Customer · phone",
+  "group": "book",
+  "mobile": true
+ },
+ {
+  "id": "date",
+  "title": "Choose drop-off or appointment",
+  "role": "Customer · phone",
+  "group": "book",
+  "mobile": true
+ },
+ {
+  "id": "details",
+  "title": "Contact & update preferences",
+  "role": "Customer · phone",
+  "group": "book",
+  "mobile": true
+ },
+ {
+  "id": "pending",
+  "title": "Request received",
+  "role": "Customer · phone",
+  "group": "book",
+  "mobile": true
+ },
+ {
+  "id": "requests",
+  "title": "Review incoming requests",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "review",
+  "title": "Confirm the request",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "confirmed",
+  "title": "Booking confirmed",
+  "role": "Customer · phone",
+  "group": "intake",
+  "mobile": true
+ },
+ {
+  "id": "desk",
+  "title": "The workshop at a glance",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "intake",
+  "title": "Book the bike into the shop",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "print",
+  "title": "Print & attach the bike tag",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "scan",
+  "title": "Scan → authenticated job",
+  "role": "Mechanic · tablet",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "job-page",
+  "title": "The mechanic’s job page",
+  "role": "Mechanic · tablet",
+  "group": "quote",
+  "mobile": false
+ },
+ {
+  "id": "quote-editor",
+  "title": "Build the itemised quote",
+  "role": "Service desk · desktop",
+  "group": "quote",
+  "mobile": false
+ },
+ {
+  "id": "quote-send",
+  "title": "Send the approval request",
+  "role": "Service desk · desktop",
+  "group": "quote",
+  "mobile": false
+ },
+ {
+  "id": "approval",
+  "title": "Approve each line",
+  "role": "Customer · phone",
+  "group": "quote",
+  "mobile": true
+ },
+ {
+  "id": "approval-done",
+  "title": "Know what was agreed",
+  "role": "Customer · phone",
+  "group": "quote",
+  "mobile": true
+ },
+ {
+  "id": "approved",
+  "title": "Shop sees the exact agreement",
+  "role": "Service desk · desktop",
+  "group": "quote",
+  "mobile": false
+ },
+ {
+  "id": "diary",
+  "title": "Allocate work in the diary",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "queue",
+  "title": "Take work from the shared queue",
+  "role": "Mechanic · tablet",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "waiting",
+  "title": "Handle a parts delay",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "inbox",
+  "title": "One job conversation",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "customer-message",
+  "title": "Customer follows up",
+  "role": "Customer · phone",
+  "group": "work",
+  "mobile": true
+ },
+ {
+  "id": "pos",
+  "title": "Handoff agreed work to Lightspeed",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "pos-done",
+  "title": "See the linked work order",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "ready",
+  "title": "Customer is invited to collect",
+  "role": "Customer · phone",
+  "group": "work",
+  "mobile": true
+ },
+ {
+  "id": "collection",
+  "title": "Record physical collection",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "closed",
+  "title": "Collected, with a durable history",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "diagnosis",
+  "title": "“I don’t know what’s wrong”",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "diagnosis-review",
+  "title": "Triage an unknown problem",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "appointment",
+  "title": "Book an exact appointment",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "full",
+  "title": "Explain unavailable dates",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "reschedule",
+  "title": "Change or cancel a booking",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "change-pending",
+  "title": "Date change is pending",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "cancel",
+  "title": "Confirm a cancellation",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "cancelled",
+  "title": "Cancellation acknowledged",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "reject",
+  "title": "Decline with an explanation",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "rejected",
+  "title": "Customer sees a declined request",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "expired",
+  "title": "Expired request / private link",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "stale",
+  "title": "A quote changed before approval",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "ceiling",
+  "title": "Agree a spending ceiling",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "progress",
+  "title": "Return to the private progress link",
+  "role": "Customer · phone",
+  "group": "work",
+  "mobile": true
+ },
+ {
+  "id": "capacity-conflict",
+  "title": "A diary move cannot be saved",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "claim-conflict",
+  "title": "Another mechanic claimed it",
+  "role": "Mechanic · tablet",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "pos-unknown",
+  "title": "Uncertain Lightspeed handoff",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "print-error",
+  "title": "Printer offline / output unknown",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "reprint",
+  "title": "Deliberately reprint a tag",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "message-error",
+  "title": "A message needs attention",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "login",
+  "title": "Sign in after scanning",
+  "role": "Mechanic · tablet",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "denied",
+  "title": "Wrong shop or revoked access",
+  "role": "Mechanic · tablet",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "reopen",
+  "title": "Reopen without rewriting history",
+  "role": "Service desk · desktop",
+  "group": "edges",
+  "mobile": false
+ },
+ {
+  "id": "catalogue-search",
+  "title": "Find parts, SKUs & labour",
+  "role": "Service desk · desktop",
+  "group": "quote",
+  "mobile": false
+ },
+ {
+  "id": "new-job",
+  "title": "Create a walk-in job",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "job",
+  "title": "The complete job workspace",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "history",
+  "title": "Audit changes to the job",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "job-card",
+  "title": "Full paper job card",
+  "role": "Service desk · desktop",
+  "group": "intake",
+  "mobile": false
+ },
+ {
+  "id": "week",
+  "title": "Week view of workshop capacity",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "month",
+  "title": "Month view and closed days",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "settings",
+  "title": "Shop identity & booking appearance",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "services",
+  "title": "Service catalogue & questions",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "service-edit",
+  "title": "Configure a service",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "hours",
+  "title": "Hours, leave & available effort",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "booking-settings",
+  "title": "Set booking & diary behaviour",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "message-settings",
+  "title": "Connect email, SMS & WhatsApp",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "channel-edit",
+  "title": "Configure a messaging channel",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "channel-proof",
+  "title": "Verify delivery before enabling",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "template",
+  "title": "Edit a customer message template",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "connect",
+  "title": "Connect the one chosen Lightspeed",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "connect-proof",
+  "title": "Verify connector capabilities",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "printer-settings",
+  "title": "Register printers & scan a fixture",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "staff-settings",
+  "title": "Manage staff access",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "staff-edit",
+  "title": "Change or deactivate access",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "staff-deactivate",
+  "title": "Confirm staff deactivation",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "customers",
+  "title": "Customer & bike records",
+  "role": "Service desk · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "customer-record",
+  "title": "Edit a customer and bike",
+  "role": "Service desk · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "duplicates",
+  "title": "Review a possible duplicate",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "preferences",
+  "title": "Change customer update channels",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ },
+ {
+  "id": "setup-saved",
+  "title": "A clear save confirmation",
+  "role": "Manager · desktop",
+  "group": "setup",
+  "mobile": false
+ },
+ {
+  "id": "finished",
+  "title": "Work finished; prepare the handover",
+  "role": "Service desk · desktop",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "mechanic-message",
+  "title": "Mechanic’s job conversation",
+  "role": "Mechanic · tablet",
+  "group": "work",
+  "mobile": false
+ },
+ {
+  "id": "service-status",
+  "title": "Booking service temporarily unavailable",
+  "role": "Customer · phone",
+  "group": "edges",
+  "mobile": true
+ }
+]

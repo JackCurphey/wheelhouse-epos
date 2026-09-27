@@ -1,0 +1,11 @@
+<!-- @dsCard group="Navigation" height=380 -->
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><title>Sidebar</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap"><style>html,body{margin:0}body{background:var(--background);font-family:var(--font-sans)}
+nav{width:240px;box-sizing:border-box;padding:14px 10px;background:var(--sidebar);color:var(--sidebar-foreground);display:flex;flex-direction:column;gap:10px}
+.room{padding:4px 10px 2px;font:700 11px/16px var(--font-sans);letter-spacing:1px;text-transform:uppercase;opacity:.7}
+a{display:flex;align-items:center;min-height:34px;padding:0 10px;border-radius:var(--radius-md);color:var(--sidebar-foreground);text-decoration:none;font:500 14px var(--font-sans)}
+a[aria-current=page]{background:var(--sidebar-active);box-shadow:inset 3px 0 0 var(--highlight);font-weight:700}
+</style></head><body><nav aria-label="Main">
+<div><div class="room">Front desk</div><a href="#">Till</a><a href="#">Online orders</a><a href="#">Customers</a></div>
+<div><div class="room">Workshop</div><a href="#" aria-current="page">Jobs</a><a href="#">Diary</a><a href="#">Booking requests</a></div>
+<div><div class="room">Stockroom</div><a href="#">Stock</a><a href="#">Deliveries and orders</a></div>
+</nav></body></html>
