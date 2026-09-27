@@ -4811,8 +4811,10 @@ route('GET', '/api/portal/:shopSlug/terms', async (req, res) => {
 
 // Everything the capacity calculator needs for a date range, read inside the
 // request's shop context. Every active mechanic, even when a caller wants one:
-// the walk-in queue is split across everyone working.
-async function loadCapacity(start, end) {
+// the walk-in queue is split across everyone working. `ignoreJobId` leaves one
+// job's own booking and request out - a change is never counted against the
+// booking it changes (piece 12).
+async function loadCapacity(start, end, { ignoreJobId = null } = {}) {
   const settings = toCapacitySettings(await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get());
   const mechanics = (await db.prepare(
     'SELECT id, working_days FROM employees WHERE is_mechanic = 1 AND active = 1 ORDER BY name'
@@ -4822,8 +4824,9 @@ async function loadCapacity(start, end) {
   ).all(end, start)).map(toBlock);
   const jobs = (await db.prepare(
     `SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes FROM workshop_jobs
-     WHERE job_date >= ? AND job_date <= ? AND booking_state IN (${LIVE_STATES_SQL})`
-  ).all(start, end)).map(toCapacityJob);
+     WHERE job_date >= ? AND job_date <= ? AND booking_state IN (${LIVE_STATES_SQL})
+       AND (?::int IS NULL OR id <> ?::int)`
+  ).all(start, end, ignoreJobId, ignoreJobId)).map(toCapacityJob);
   // A customer's requested time (piece 12) takes capacity like a booking while
   // staff decide, so nobody else is offered it. Tagged `requested` so a job is
   // only ever listed once, and only for its own slot, among a block's clashes.
@@ -4831,8 +4834,9 @@ async function loadCapacity(start, end) {
     `SELECT id, requested_mechanic_id AS mechanic_id, requested_job_date AS job_date,
             requested_start_time AS start_time, requested_end_time AS end_time, planned_minutes
      FROM workshop_jobs
-     WHERE booking_state = 'reschedule_requested' AND requested_job_date >= ? AND requested_job_date <= ?`
-  ).all(start, end)).map((r) => ({ ...toCapacityJob(r), requested: true })));
+     WHERE booking_state = 'reschedule_requested' AND requested_job_date >= ? AND requested_job_date <= ?
+       AND (?::int IS NULL OR id <> ?::int)`
+  ).all(start, end, ignoreJobId, ignoreJobId)).map((r) => ({ ...toCapacityJob(r), requested: true })));
   const days = computeCapacity({ settings, mechanics, blocks, jobs, dates: datesBetween(start, end) });
   return { settings, blocks, jobs, days };
 }
@@ -4983,6 +4987,61 @@ function bookingNotes({ bikeNote, questionAnswers, description }) {
   return lines.join('\n');
 }
 
+// Every check a customer's chosen time passes, in the booking route's order,
+// run inside the booking lock. Shared by a new booking and a change (piece
+// 12), so a change passes exactly what a booking passes. `ignoreJobId` leaves
+// the job's own booking and request out, so a change never collides with the
+// booking it changes. Returns { times } or { refusal }, the { status, body } a
+// route sends.
+async function checkCustomerTime({ jobDate, mechanicId, startTime: rawStart, minutes, ignoreJobId = null }) {
+  // The mode for this date decides what the customer chose: a day (drop-off)
+  // or a time (timed). Read inside the lock, from the calculator.
+  const capacity = await loadCapacity(jobDate, jobDate, { ignoreJobId });
+  // Nothing in the past, and nothing sooner than the shop's minimum notice,
+  // on the shop's own clock (piece 10) - the same rule availability applies.
+  const moment = currentMoment();
+  if (jobDate < shopToday(capacity.settings.timeZone, moment)) {
+    return { refusal: refusal('That date has passed - please choose another day.') };
+  }
+  const earliest = earliestBookable(capacity.settings, moment);
+  const mode = capacity.days[0].mode;
+  const startTime = (rawStart || '').trim();
+  let times;
+  if (mode === 'dropoff') {
+    if (startTime) return { refusal: refusal('This shop takes drop-offs on that day - choose the day, not a time.') };
+    times = { startTime: '', endTime: '' };
+  } else {
+    times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
+    if (!times.startTime) return { refusal: refusal('A start time is required') };
+    if (times.error) return { refusal: refusal(times.error) };
+  }
+  const inTime = mode === 'dropoff'
+    ? dropoffIsInTime(earliest, jobDate, capacity.settings.dropoffWindowEnd)
+    : startIsInTime(earliest, jobDate, times.startTime);
+  if (!inTime) return { refusal: refusal("That's too soon for the shop - please choose a later time or day.") };
+
+  // Closed days, the day's own opening hours and mechanic overlap first - the
+  // same rules the staff routes enforce, from the same place, so their
+  // specific messages win.
+  const slot = await checkJobSlot({ jobDate, startTime: times.startTime, endTime: times.endTime, mechanicId, ignoreJobId });
+  if (slot) return { refusal: slot.taken ? capacityRefusal(slot.error) : refusal(slot.error) };
+
+  // Blocks and the shop's hours are shop rules (400); minutes other bookings
+  // have used are capacity (409). The reserve check subtracts the job being
+  // booked (freeMinutes has the reserve taken off already). Staff routes
+  // deliberately do NOT apply this - a shop may choose to work through its
+  // own lunch; a customer may not choose it for them. A block's reason is
+  // never given.
+  const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechanicId);
+  if (!mech || !mech.working || (times.startTime && !fitsFreeTime(mech, times.startTime, times.endTime))) {
+    return { refusal: refusal('That mechanic is unavailable at that time - please choose another time or day.') };
+  }
+  if (mech.freeMinutes < minutes) {
+    return { refusal: capacityRefusal('That mechanic does not have enough free time that day - please choose another day, or a shorter job.') };
+  }
+  return { times };
+}
+
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
   const signedIn = ctx && ctx.shop.slug === params.shopSlug;
@@ -5113,57 +5172,11 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
   if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
 
-  // Inside the lock: closed days, the day's own opening hours and mechanic
-  // overlap first - the same rules the staff routes enforce, from the same
-  // place, so their specific messages win.
+  // Inside the lock: the time checks (checkCustomerTime), then the writes.
   const out = await withBookingLock([jobDate], async () => {
-    // The mode for this date decides what the customer chose: a day (drop-off)
-    // or a time (timed). Read inside the lock, from the calculator.
-    const capacity = await loadCapacity(jobDate, jobDate);
-    // Nothing in the past, and nothing sooner than the shop's minimum notice,
-    // on the shop's own clock (piece 10) - the same rule availability applies.
-    const moment = currentMoment();
-    if (jobDate < shopToday(capacity.settings.timeZone, moment)) {
-      return refusal('That date has passed - please choose another day.');
-    }
-    const earliest = earliestBookable(capacity.settings, moment);
-    const mode = capacity.days[0].mode;
-    const startTime = (body.startTime || '').trim();
-    let times;
-    if (mode === 'dropoff') {
-      if (startTime) return refusal('This shop takes drop-offs on that day - choose the day, not a time.');
-      times = { startTime: '', endTime: '' };
-    } else {
-      times = resolveJobTimes(startTime, startTime ? addMinutesToTime(startTime, minutes) : '');
-      if (!times.startTime) return refusal('A start time is required');
-      if (times.error) return refusal(times.error);
-    }
-    const inTime = mode === 'dropoff'
-      ? dropoffIsInTime(earliest, jobDate, capacity.settings.dropoffWindowEnd)
-      : startIsInTime(earliest, jobDate, times.startTime);
-    if (!inTime) return refusal("That's too soon for the shop - please choose a later time or day.");
-
-    const slot = await checkJobSlot({
-      jobDate,
-      startTime: times.startTime,
-      endTime: times.endTime,
-      mechanicId: mechResolved.mechanicId,
-    });
-    if (slot) return slot.taken ? capacityRefusal(slot.error) : refusal(slot.error);
-
-    // Blocks and the shop's hours are shop rules (400); minutes other bookings
-    // have used are capacity (409). The reserve check subtracts the job being
-    // booked (freeMinutes has the reserve taken off already). Staff routes
-    // deliberately do NOT apply this - a shop may choose to work through its
-    // own lunch; a customer may not choose it for them. A block's reason is
-    // never given.
-    const mech = capacity.days[0].mechanics.find((m) => m.mechanicId === mechResolved.mechanicId);
-    if (!mech || !mech.working || (times.startTime && !fitsFreeTime(mech, times.startTime, times.endTime))) {
-      return refusal('That mechanic is unavailable at that time - please choose another time or day.');
-    }
-    if (mech.freeMinutes < minutes) {
-      return capacityRefusal('That mechanic does not have enough free time that day - please choose another day, or a shorter job.');
-    }
+    const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
+    if (checked.refusal) return checked.refusal;
+    const { times } = checked;
 
     // Either an existing bike of theirs, or a new one registered inline -
     // never a bike belonging to another customer (checked below).
@@ -5359,6 +5372,53 @@ route('POST', '/api/portal/:shopSlug/booking-links/:code/cancel', async (req, re
     await syncJobHold(job.id);
     return undefined;
   });
+  if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
+  if (out) return sendJson(res, out.status, out.body);
+  sendJson(res, 200, await bookingLinkView(found.id, shop));
+});
+
+// A change of day, mechanic or time through the link (piece 12). The new time
+// passes checkCustomerTime with the booking's own job left out. An unconfirmed
+// booking moves at once and stays unconfirmed (decision 4); its hold moves
+// with it. (Task 6: a confirmed booking's change becomes a request.)
+async function changeBookingTime(job, { jobDate, mechanicId, startTime }) {
+  const refused = customerActionRefusal(job, 'change');
+  if (refused) return refused;
+  // Every online booking stores its services' total as planned_minutes; a
+  // staff job with a link falls back to its times, then to the not-sure hour.
+  const minutes = job.planned_minutes
+    || (job.start_time ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(job.start_time)) : 60);
+  const checked = await checkCustomerTime({ jobDate, mechanicId, startTime, minutes, ignoreJobId: job.id });
+  if (checked.refusal) return checked.refusal;
+  const { times } = checked;
+  await applyLocked(job, 'change_time');
+  await db.prepare(
+    `UPDATE workshop_jobs SET job_date = ?, mechanic_id = ?, start_time = ?, end_time = ?, change_declined_at = NULL, updated_at = now()
+     WHERE id = ?`
+  ).run(jobDate, mechanicId, times.startTime, times.endTime, job.id);
+  await syncJobHold(job.id);
+  return undefined;
+}
+
+// screens: reschedule, change-pending
+route('POST', '/api/portal/:shopSlug/booking-links/:code/change', async (req, res, params, query, shop) => {
+  const found = await resolveBookingLink(req, res, params.code);
+  if (!found) return;
+  const body = await readJsonBody(req);
+  const jobDate = String(body.jobDate ?? '').trim();
+  if (!isRealDate(jobDate)) return badRequest(res, 'A valid date is required');
+  const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
+  if (!mechResolved.ok || !mechResolved.mechanicId) return badRequest(res, 'Please choose a mechanic');
+  let out;
+  try {
+    out = await withJobBookingLock(found.id, [jobDate], (job) =>
+      changeBookingTime(job, { jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime }));
+  } catch (err) {
+    // The 024 index, behind the lock: another live hold took the exact slot.
+    // Thrown out of the lock, so every write of this change rolled back.
+    if (err.code !== '23505') throw err;
+    out = capacityRefusal(SLOT_GONE);
+  }
   if (out?.gone) return sendJson(res, 404, { error: "We can't find that booking" });
   if (out) return sendJson(res, out.status, out.body);
   sendJson(res, 200, await bookingLinkView(found.id, shop));
