@@ -82,6 +82,7 @@ import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { isValidPin, hashPin } from './till/pin.js';
 import { buildSnapshot } from './till/snapshot.js';
+import { makeFailureLimiter } from './till/failure-limiter.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
@@ -414,7 +415,7 @@ const portalGuestBookingLimiter = makeRateLimiter(5, 60 * 60 * 1000);
 // Private booking links need no sign-in. The code is unguessable; this is the
 // second line, so nobody can churn through codes.
 const bookingLinkLimiter = makeRateLimiter(30, 15 * 60 * 1000);
-const tillAuthLimiter = makeRateLimiter(20, 60 * 1000);
+const tillAuthFailures = makeFailureLimiter(20, 60 * 1000);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -6069,27 +6070,31 @@ const server = createServer(async (req, res) => {
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
       if (!idParamsWellFormed(params)) return notFound(res);
 
-      const ip = clientIp(req);
-      const refuse = () => sendJson(res, 401, { error: 'Till not recognised' });
-      // Every attempt counts; a recognised till resets its address's count,
-      // so only repeated failures from one address reach the limit.
-      if (!tillAuthLimiter.check(ip)) return sendJson(res, 429, { error: 'Too many attempts - try again in a minute' });
+      // Keyed on address + shop, and only ever advanced by a FAILED lookup
+      // (see server/till/failure-limiter.js): a burst of legitimate syncs
+      // from one address - or a dead neighbouring till retrying - never
+      // moves this count, so it cannot lock out a till that is presenting a
+      // good token. Only repeated wrong guesses count.
+      const key = `${clientIp(req)}|${params.shopSlug}`;
+      const refuse = () => { tillAuthFailures.recordFailure(key); sendJson(res, 401, { error: 'Till not recognised' }); };
+      if (tillAuthFailures.isBlocked(key)) return sendJson(res, 429, { error: 'Too many attempts - try again in a minute' });
       const header = req.headers.authorization || '';
       const token = /^Bearer ([0-9a-f]{64})$/.exec(header)?.[1];
       if (!token) return refuse();
-      const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE slug = $1', [params.shopSlug]);
-      if (!shop) return refuse();
 
       try {
+        const { rows: [shop] } = await pool.query('SELECT * FROM shops WHERE slug = $1', [params.shopSlug]);
+        if (!shop) return refuse();
+
         await runWithShop(shop.id, async () => {
           const till = await db.prepare('SELECT * FROM tills WHERE token_hash = ? AND active = true').get(hashLinkCode(token));
           if (!till) return refuse();
-          tillAuthLimiter.reset(ip);
+          tillAuthFailures.clear(key);
           await r.handler(req, res, params, url.searchParams, till);
         });
       } catch (err) {
         console.error(err);
-        sendJson(res, 500, { error: err.message || 'Internal server error' });
+        if (!res.headersSent) sendJson(res, 500, { error: err.message || 'Internal server error' });
       }
       return;
     }

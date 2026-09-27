@@ -69,3 +69,22 @@ test('a switched-off till is refused', async () => {
   await staffRequest(server.baseUrl, owner.cookie, `/api/tills/${b2.till.id}/deactivate`, { method: 'POST' });
   assert.equal((await snap(b2.token)).status, 401);
 });
+
+test('many valid requests at once are never refused', async () => {
+  const results = await Promise.all(Array.from({ length: 25 }, () => snap(b1.token)));
+  assert.deepEqual(results.map((r) => r.status), Array(25).fill(200));
+});
+
+// Must run last: it deliberately blocks owner.shop.slug for this test
+// process's IP for the failure window, which would otherwise poison every
+// test above and below it that uses `snap()` with a good token.
+test('repeated bad tokens are refused with 429, and do not block another shop', async () => {
+  const bad = '1'.repeat(64);
+  let last;
+  for (let i = 0; i < 20; i++) last = await snap(bad);
+  assert.equal(last.status, 401);
+  const blocked = await snap(bad);
+  assert.equal(blocked.status, 429);
+  const otherShop = await tillRequest(server.baseUrl, other.shop.slug, otherTill.token, '/snapshot');
+  assert.equal(otherShop.status, 200);
+});
