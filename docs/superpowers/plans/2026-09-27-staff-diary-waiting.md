@@ -1540,6 +1540,25 @@ Record each decision taken during the build and what caused it, and each new tes
 - 2026-09-27 (planning): photos enlarge inside the pop-up on click instead of opening a new tab — the file route sends `Content-Disposition: attachment`, so a link would download rather than show.
 - 2026-09-27 (planning): `api()` errors gain `.status` and `.code`; the diary had no other way to tell a stale refusal from any other.
 
+- 2026-09-27 (build, Task 5): the three `<script>` tags moved from Task 6 into Task 5, because Task 5's app.js already calls DiaryReview.
+- 2026-09-27 (build, Task 5): `book-journey.spec.ts` stopped ending the shared database pool. All browser specs run in one Playwright worker and share the pool, so the first file to end it broke every later file. The final fix wave replaced this with `tests/browser/fixtures.ts`: a worker-scoped fixture that ends the pool once, whatever the file order.
+- 2026-09-27 (build, Task 8): a second answer to an item someone else already answered comes back `illegal`, not `stale`, because the server checks legality before version. Ruling: on `illegal` the pop-up re-reads the job. If the version has changed, it treats the refusal as stale ("This job changed while you were looking at it."). If not, it shows the server's own message. The server is unchanged.
+- 2026-09-27 (build, Task 8 fix round): a pop-up closed while its answer is in flight never redraws, and never closes another screen, when the late reply arrives. The Loading shell can be closed.
+- 2026-09-27 (final review fix wave): the minute timer stops at logout, on a 401, and whenever the column is gone. A stale refusal on the complete/reopen toggle now closes the form and redraws, as the form's Save already did. A capacity refusal on a drag shows the server's own words. Only a network TypeError reads "Couldn't reach the server". `tests/helpers/staff.js` gained `loginId` and `staffFreshCookie`, so the logout test doesn't end the session the rest of its file shares.
+- Parked (rulings in the ledger, carried to STATUS): the right-click Approve race (milliseconds); "View job" from a sale document and the edit form's Delete both bypass the pop-up for a waiting job; after a stale or 404 answer only the column refreshes; the drag test waits 1.5s per week and reads its redraw position once; minor test gaps.
+- Checks at the end (local, 27 Sep): `npm test` 1312/1312, `npx playwright test` 23/23, `npm run lint` clean, `npm run typecheck` clean. CI has not run yet (no pull request).
+
 ## Spec walk
 
-(Filled in at Task 9.)
+Against `docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md`:
+
+- **Column:** met. "Waiting for you (n)", detailed cards oldest first, "Nothing waiting", a minute refresh of the column only that stops when staff leave Workshop (and, added, at logout or session expiry), and jump-and-flash on click.
+- **Review pop-up:** met. Kind heading with reference; customer, time and mechanic; answers grouped by service; photos; "Customer's notes"; "Open full job"; Accept / Decline / Seen; the decline confirmation only for a new booking; the change line. **Changed:** a photo enlarges inside the pop-up rather than opening, because the file route downloads (the spec was updated while planning). **Changed:** an `illegal` refusal on a job that changed meanwhile reads as "changed" (the Task 8 ruling).
+- **Refusals table:** met. The 404 and no-connection rows are covered by unit tests only.
+- **Right-click Approve on a waiting booking opens the pop-up:** met. There is no browser test.
+- **Grid:** met: amber move-requested with a dashed outline at the requested time, greyed crossed-through customer cancellation until Seen, and cancelled, declined and expired jobs not drawn. **Partly met:** on a one-hour block the words "Move requested" and "Cancelled by customer" are cut off below the title, so only the colour and strike-through show (screenshot, 27 Sep). Raised with Jack.
+- **Month view markings:** built; there is no browser test.
+- **Diary saves send the version:** met for drag, resize, right-click Approve, the complete toggle and form Save; a stale refusal redraws.
+- **Server changes 1–4:** met. No migrations, no new dependencies.
+- **Testing section:** met, and every new test was shown failing by a targeted break (recorded per task in the build reports). The capacity wording on a drag has no test.
+- **Done means:** local checks pass and screenshots were shown to Jack. **Not yet:** CI on the pull request's final commit.

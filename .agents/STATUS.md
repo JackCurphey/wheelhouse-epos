@@ -5,8 +5,8 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-09-27. **Branch:** `main` at `705ef0f` — everything below is
-merged; the next piece starts from a new branch off main.
+**Updated:** 2026-09-27. **Branch:** `feat/staff-diary-waiting` (not pushed), built on
+`docs/status-handover` (the handover commit `2b47759`) on top of `main` at `705ef0f`.
 
 ## Where things stand
 
@@ -18,18 +18,22 @@ customer change/cancel via the private link, plus staff accept/decline-change
 and `GET /api/workshop-waiting` with "Seen". Its spec is
 `docs/superpowers/specs/2026-09-27-book-server-12-change-cancel-design.md`.
 
+**The staff diary piece is built on `feat/staff-diary-waiting` (27 Sep), not
+merged.** Spec `docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md`;
+plan, decision log and spec walk in
+`docs/superpowers/plans/2026-09-27-staff-diary-waiting.md`. In the legacy diary
+(`public/app.js`) there is now a "Waiting for you" column, a review pop-up
+(Accept / Decline / Seen), grid markings, and version-checked diary saves. The
+rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
+`diary-review.js`, and the first browser tests for the legacy diary are in
+`tests/browser/diary-waiting.spec.ts`. Local checks all pass; CI has not run
+(no pull request yet).
+
 ## Next, in order (Jack, 26–27 Sep)
 
-1. **The staff diary piece.** Jack's design: in the existing staff diary, add
-   a left-hand "Waiting for you" column listing new online bookings, change
-   requests and customer cancellations (from `GET /api/workshop-waiting`,
-   with a count). Clicking an item jumps the diary to that job's week/day and
-   highlights it. Opening the job shows its notes/answers/photos with
-   Accept/Decline — new bookings use the existing accept/decline routes;
-   change requests use accept-change/decline-change and show "Customer asked
-   to move from … to …"; customer cancellations get "Seen". The staff diary
-   is still the legacy `public/app.js`. Start with brainstorming (one
-   question at a time, mock-ups), then spec → plan → subagent-driven build.
+1. **Finish the staff diary piece:** Jack decides the cut-off labels on one-hour
+   blocks, then push, open a pull request, and wait for CI to pass. Merge only
+   when Jack says.
 2. **d6** — the customer's change and cancel screens from the pending
    screen. Replace `pending-rules.ts`'s `contactLine`; use the link view's
    `canChange`/`canCancel`/`requested`/`changeDeclined` and the
@@ -49,11 +53,19 @@ and `GET /api/workshop-waiting` with "Seen". Its spec is
   keeps a customer's change request; dragging a job onto exactly its
   requested slot accepts it; every way a request ends clears it; the
   lock-held race tests are sound.
-- Parked for the staff diary piece: a resized job dragged onto its requested
-  start is refused by its own request; a legacy-diary save can undo a
-  customer's move of an unconfirmed booking; resending an identical request
-  moves it to the back of the waiting list; a customer can still withdraw a
-  request after work starts.
+- Parked from the staff diary piece (27 Sep; rulings in its plan's decision
+  log):
+  - "View job" from a sale document, and the edit form's Delete, both bypass
+    the review pop-up for a waiting job; Delete sends no version.
+  - Right-click Approve can take the old save path in a millisecond window
+    before the waiting list catches up.
+  - After a stale or 404 answer in the pop-up only the column refreshes, not
+    the grid.
+  - The drag test reads its redraw position once (a rare false failure is
+    possible) and waits 1.5s per week.
+  - Resending an identical change request moves it to the back of the list,
+    and a customer can withdraw a request after work starts (both
+    customer-side, still open).
 - The piece 6 memory risk (large booking bodies) must be decided before the
   booking route is publicly reachable (hosting not chosen).
 - A shop's storefront subdomain can show another shop's `/book/<slug>`.
