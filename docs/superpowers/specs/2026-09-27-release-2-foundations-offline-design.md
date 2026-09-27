@@ -1,7 +1,7 @@
 # Release 2, Foundations — the offline core
 
 **Date:** 27 September 2026
-**Status:** design agreed in brainstorm with Jack; awaiting his review of this written spec
+**Status:** approved by Jack, 27 Sep 2026. Build plan 1 of 3: `docs/superpowers/plans/2026-09-27-release-2-offline-1-server-core.md`
 **Parent:** `docs/superpowers/specs/2026-09-27-release-2-design.md` (piece 1,
 Foundations; rule 4 "online first, never down")
 **Scope:** the offline core the till and customer screens sit on. Not the till
