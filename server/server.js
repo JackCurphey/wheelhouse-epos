@@ -6109,14 +6109,23 @@ const server = createServer(async (req, res) => {
       r.paramNames.forEach((name, i) => (params[name] = match[i + 1]));
       if (!idParamsWellFormed(params)) return notFound(res);
 
-      // Keyed on address + shop, and only ever advanced by a FAILED lookup
-      // (see server/till/failure-limiter.js): a burst of legitimate syncs
-      // from one address - or a dead neighbouring till retrying - never
-      // moves this count, so it cannot lock out a till that is presenting a
-      // good token. Only repeated wrong guesses count.
+      // The token is checked FIRST. A till presenting a valid, active token
+      // is always served - even while its address + shop key is blocked - so
+      // a guesser (or a dead neighbouring till with a stale token) sharing
+      // its address can never lock a working till out. The limiter
+      // (server/till/failure-limiter.js, keyed on address + shop slug) is
+      // consulted only when the lookup fails: missing or malformed token,
+      // unknown shop, or no active till with that token. Then a blocked key
+      // gets 429 (and the failure is not counted again), otherwise the
+      // failure is counted and the answer is 401. A good token clears the
+      // count only when the key is not already blocked, so a till's own
+      // traffic cannot lift a block that guessers earned.
       const key = `${clientIp(req)}|${params.shopSlug}`;
-      const refuse = () => { tillAuthFailures.recordFailure(key); sendJson(res, 401, { error: 'Till not recognised' }); };
-      if (tillAuthFailures.isBlocked(key)) return sendJson(res, 429, { error: 'Too many attempts - try again in a minute' });
+      const refuse = () => {
+        if (tillAuthFailures.isBlocked(key)) return sendJson(res, 429, { error: 'Too many attempts - try again in a minute' });
+        tillAuthFailures.recordFailure(key);
+        sendJson(res, 401, { error: 'Till not recognised' });
+      };
       const header = req.headers.authorization || '';
       const token = /^Bearer ([0-9a-f]{64})$/.exec(header)?.[1];
       if (!token) return refuse();
@@ -6128,7 +6137,7 @@ const server = createServer(async (req, res) => {
         await runWithShop(shop.id, async () => {
           const till = await db.prepare('SELECT * FROM tills WHERE token_hash = ? AND active = true').get(hashLinkCode(token));
           if (!till) return refuse();
-          tillAuthFailures.clear(key);
+          if (!tillAuthFailures.isBlocked(key)) tillAuthFailures.clear(key);
           await r.handler(req, res, params, url.searchParams, till);
         });
       } catch (err) {

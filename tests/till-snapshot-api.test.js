@@ -75,16 +75,24 @@ test('many valid requests at once are never refused', async () => {
   assert.deepEqual(results.map((r) => r.status), Array(25).fill(200));
 });
 
+test('an unknown shop with a well-formed token is refused as unrecognised', async () => {
+  assert.equal((await snap(b1.token, 'no-such-shop-anywhere')).status, 401);
+});
+
 // Must run last: it deliberately blocks owner.shop.slug for this test
 // process's IP for the failure window, which would otherwise poison every
 // test above and below it that uses `snap()` with a good token.
-test('repeated bad tokens are refused with 429, and do not block another shop', async () => {
+test('repeated bad tokens are refused with 429, never lock out a good till, and do not block another shop', async () => {
   const bad = '1'.repeat(64);
   let last;
   for (let i = 0; i < 20; i++) last = await snap(bad);
   assert.equal(last.status, 401);
   const blocked = await snap(bad);
   assert.equal(blocked.status, 429);
+  // A till presenting its good token is served even while its address and
+  // shop are blocked - and serving it does not lift the block on guessers.
+  assert.equal((await snap(b1.token)).status, 200);
+  assert.equal((await snap(bad)).status, 429);
   const otherShop = await tillRequest(server.baseUrl, other.shop.slug, otherTill.token, '/snapshot');
   assert.equal(otherShop.status, 200);
 });
