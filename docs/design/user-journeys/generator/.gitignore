@@ -1,4 +1,6 @@
 out/
+out-diary/
+out-job-options/
 checks/
 shots/*.png
 shots-fjell/
