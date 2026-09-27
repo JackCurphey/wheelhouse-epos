@@ -1,0 +1,265 @@
+[
+ {
+  "id": "requests",
+  "title": "Review incoming requests",
+  "role": "Service desk · desktop",
+  "note": "Staff can distinguish requests from confirmed capacity and review the customer’s own words. Operational counts stay in scope; this is not a report.",
+  "next": "review",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nBooking requests\n3 requests need a decision. Confirm the work before the customer travels.\nNeeds review · 3\nConfirmed today · 6\nCustomer / bike\tRequested work\tRequested day\tEffort\t\nMaya Patel\nTrek Domane AL 3 · green\n\tStandard service\nRear brake squeal\tThu 17 Sep\t60 min\tReview\nOliver Chen\nBrompton C Line · black\n\tNot sure / diagnosis\tFri 18 Sep\tTo assess\tReview diagnosis\nSam Reed\nSpecialized Sirrus · grey\n\tBrake service\tFri 18 Sep\t45 min\tNeeds review\nRequests awaiting a decision are shown separately from confirmed work. Reservation expiry is visible on each request."
+ },
+ {
+  "id": "review",
+  "title": "Confirm the request",
+  "role": "Service desk · desktop",
+  "note": "Accept reserves capacity once. Reject includes a human explanation. A failed acceptance must leave the request unchanged.",
+  "next": "confirmed",
+  "branches": [
+   [
+    "Cannot accept",
+    "reject"
+   ]
+  ],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nReview booking request\nWH-1042 · received today at 08:42\nMaya Patel\nNeeds review\nTrek Domane AL 3 · green · black mudguards\nWhat the customer told us\n“My rear brake squeals and feels weak. The gears could use a tune-up too.”\nStandard service · £65.00\n60 minutes planned. Parts and additional work require agreement.\nCustomer communication\nConfirmation by email and SMS. The private progress link shows the same booking.\nReserve the work\nDrop-off day\nAllocation\nShared workshop queue\nAlex Morgan\nJo Taylor\n2 hours available after this booking.\nRequest reservation expires today at 12:00. Confirming keeps the allocation.\nConfirm booking\nOffer another date\nDecline with a message"
+ },
+ {
+  "id": "desk",
+  "title": "The workshop at a glance",
+  "role": "Service desk · desktop",
+  "note": "Queues and custody are independent of work state. Counters are operational, not a reporting dashboard. A walk-in uses the same job model.",
+  "next": "intake",
+  "branches": [
+   [
+    "Walk-in",
+    "new-job"
+   ],
+   [
+    "Diary",
+    "diary"
+   ]
+  ],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nToday’s workshop\nThursday 17 September · one shop, one view of the work\n＋ New job\nEXPECTED TODAY\n8 bikes\n3 still to arrive\nIN THE WORKSHOP\n12\n4 ready to collect\nPLANNED EFFORT\n6h / 8h\nShared and assigned, counted once\nArrivals · 3\nShared queue · 4\nNeeds attention · 2\nReady · 4\nJob / customer\tBike\tWork\tCustody\t\nWH-1042 · Maya Patel\tTrek Domane AL 3\tStandard service\tExpected\tBook in\nWH-1045 · Jamie Brooks\tGiant Escape 2\tGear adjustment\tExpected\t10:30 appointment\nWH-1047 · Aisha Khan\tCannondale Quick\tSafety check\tExpected\tDrop-off"
+ },
+ {
+  "id": "intake",
+  "title": "Book the bike into the shop",
+  "role": "Service desk · desktop",
+  "note": "Explicit custody event. Default auto-print can be set by the shop. Recording arrival must succeed even if the printer is offline, with a visible print task.",
+  "next": "print",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nExpected\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nConfirm what arrived\nBike identification\nAccessories received\nCondition / handover note\nBook-in checklist\nBike is physically in the shop\nIdentity and accessories checked\nPrint bike tag on Front desk Zebra\nA tag prints when you confirm book-in. Pending requests do not print tags.\nConfirm book-in & print tag"
+ },
+ {
+  "id": "print",
+  "title": "Print & attach the bike tag",
+  "role": "Service desk · desktop",
+  "note": "The tag carries a Code 128 job number for the shop’s own scanner. The bar pattern shown here is a non-scanning specimen: it is a placeholder, not a real encoding, and a generated scanner-verified barcode follows the printer and scanner proof (P00b). The readable job number stays as the fallback, and the layout keeps room for a QR if a shop later wants phone-camera scanning. Final label size, driver and customer-detail policy need physical shop validation. “Acknowledged” is a designed state, not evidence of a real print.",
+  "next": "scan",
+  "branches": [
+   [
+    "Paper job card",
+    "job-card"
+   ],
+   [
+    "Offline / unknown print",
+    "print-error"
+   ]
+  ],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nIn workshop\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nNORTH STREET CYCLES\nWH-1042\nTREK DOMANE AL 3\nGreen · black mudguards\nWH-1042\nScan the barcode to open the staff job\nIN: 17 SEP 2026\nJOB CARD · KEEP WITH BIKE\nBike tag sent\nAcknowledged\nFront desk Zebra · 1 copy\n09:12 · printed by Jack Lewis\nAttach the tag where it can be scanned without removing it from the bike.\nScan / look up the job\nNeed another copy?\nCheck the printer output before reprinting.\nReview print status\nFull job card"
+ },
+ {
+  "id": "scan",
+  "title": "Scan → authenticated job",
+  "role": "Mechanic · tablet",
+  "note": "Staff-only QR route. A signed-out scan returns to this job after login. A different shop gets no customer or job disclosure. The local artefact does not access a camera.",
+  "next": "job-page",
+  "branches": [
+   [
+    "Signed out",
+    "login"
+   ],
+   [
+    "Wrong shop",
+    "denied"
+   ]
+  ],
+  "text": "◉ Wheelhouse · North Street CyclesAlex Morgan\nFIND A BIKE\nScan it. Find the job.\nUse your phone camera on the tag’s QR code, or scan the job number into search.\nJob number / scanner input\nOpen job\nWH-1042\nIn workshop\nTrek Domane AL 3\nGreen · black mudguards\nYou’re signed in to North Street Cycles. Scanning opens the job; it doesn’t change its status.\nSee signed-out scan"
+ },
+ {
+  "id": "job-page",
+  "title": "The mechanic’s job page",
+  "role": "Mechanic · tablet",
+  "note": "One page per job on a tablet or desktop: the agreement on the left, the work on the right, nothing hidden behind a tab. In portrait it becomes a single scrolling column. Replaces the former mechanic phone flow (open job, inspect, do the work, final check). The checklist comes from the service template. Marking ready is independent of custody and of payment: it does not mean collected, and it does not mean paid.",
+  "next": "finished",
+  "branches": [
+   [
+    "Parts delay",
+    "waiting"
+   ],
+   [
+    "Job conversation",
+    "mechanic-message"
+   ]
+  ],
+  "text": "◉ Wheelhouse · North Street CyclesAlex Morgan\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nIn workshop\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nWhat the customer agreed\nWork\tQty\tAmount\tDecision\nStandard service\nLabour · 60 min\n\t1\t£65.00\tApproved\nShimano brake pads\nPart · B05S-RX\n\t1\t£28.00\tApproved\nFit & adjust brakes\nLabour · 30 min\n\t1\t£18.00\tApproved\nReplace gear cable\nOptional · cable still serviceable\n\t1\t£12.00\tDeclined\nAgreed total\n£111.00\nGear cable declined. Anything beyond these lines needs a new approval.\nCustomer’s concern\n“My rear brake squeals and feels weak. The gears could use a tune-up too.”\nJob conversation\nStandard service checklist\nFrom this service’s template, so the customer can be shown everything that was checked without the mechanic writing it out.\nFrame & fork\nWheels & tyres\nGears indexed\nBrakes bled & adjusted\nFinding for the customer\nParts used\nScan or type a part\nScanning adds the part to this job. It never changes the agreed price on its own.\nFinish & mark ready\nApproved work completed\nBrakes & gears tested\nAccessories accounted for\nCollection note for Maya\nThe bike stays in the shop until collection is recorded.\nMark ready for collection"
+ },
+ {
+  "id": "quote-editor",
+  "title": "Build the itemised quote",
+  "role": "Service desk · desktop",
+  "note": "£65 + £28 + £18 + £12 = £123 proposed. Parts and fitting are explained as one repair dependency; declining necessary fitting must not authorise an unsafe partial repair.",
+  "next": "quote-send",
+  "branches": [
+   [
+    "Search catalogue",
+    "catalogue-search"
+   ]
+  ],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nAwaiting approval\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nWork\tQty\tAmount\t\nStandard service\nLabour · 60 min\n\t1\t£65.00\tAgreed\nShimano brake pads\nPart · B05S-RX\n\t1\t£28.00\tNew\nFit & adjust brakes\nLabour · 30 min\n\t1\t£18.00\tNew\nReplace gear cable\nOptional · cable still serviceable\n\t1\t£12.00\tOptional\n＋ Add service, SKU or scanned part\nQuote revision 2\n£65 service already agreed.\nAdditional work needs a decision.\nAll proposed work\n£123.00\nIncludes £20.50 VAT. Final amount depends on selected lines.\nMessage to Maya\nPreview & send for approval\nParts prices are snapshots. A catalogue update won’t change agreed work."
+ },
+ {
+  "id": "quote-send",
+  "title": "Send the approval request",
+  "role": "Service desk · desktop",
+  "note": "Send honours selected channels at send time; no blind retries after uncertain delivery. This artefact routes to the customer preview and sends nothing.",
+  "next": "approval",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nAwaiting approval\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nAsk Maya to approve the extra work\nEmail selected\nSMS selected\nWhatsApp off\nMessage\nIncluded with this request\nInspection finding · quote revision 2 · individual line decisions\nSend approval request\nPrivate approval link\nThe customer can review on any device. The link only approves the quote they are shown.\nNo messaging provider connected?\nCopying the secure link remains available so work can be agreed independently of delivery setup.\nPreview customer link"
+ },
+ {
+  "id": "approved",
+  "title": "Shop sees the exact agreement",
+  "role": "Service desk · desktop",
+  "note": "Fixed canonical £111 scenario. Any additional effort must reserve capacity, independently of monetary consent. Approval does not mean the work is already scheduled.",
+  "next": "diary",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nApproved\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nMaya responded at 11:18. Quote 2: £111.00 approved; optional gear cable declined.\nWork\tQty\tAmount\tDecision\nStandard service\nLabour · 60 min\n\t1\t£65.00\tApproved\nShimano brake pads\nPart · B05S-RX\n\t1\t£28.00\tApproved\nFit & adjust brakes\nLabour · 30 min\n\t1\t£18.00\tApproved\nReplace gear cable\nOptional · cable still serviceable\n\t1\t£12.00\tDeclined\nReady to allocate\nApproved effort: 90 minutes.\nRecheck capacity for the extra 30 minutes before committing the work.\nAllocate approved work\nReview POS handoff\nChanging an approved line creates a new proposal. Original decisions stay in the history."
+ },
+ {
+  "id": "diary",
+  "title": "Allocate work in the diary",
+  "role": "Service desk · desktop",
+  "note": "Proposed allocation shown for review. Move saves atomically and retains the old allocation on conflict. Shared-to-mechanic transfer must not double-count. Day, week and month views share one capacity model.",
+  "next": "queue",
+  "branches": [
+   [
+    "Capacity conflict",
+    "capacity-conflict"
+   ],
+   [
+    "Week",
+    "week"
+   ],
+   [
+    "Month",
+    "month"
+   ]
+  ],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nWorkshop diary\nThursday 17 September · 30-minute grid\nDay\nWeek\nMonth\n8h available\n6h allocated\n1h shared\n09:00\n10:00\n11:00\n12:00\n13:00\nAlex Morgan\n4h available\nWH-1038 · Safety check\n09:00–10:00 · 60 min\nWH-1042 · Maya Patel\nTrek Domane · 90 min\n11:30–13:00 · approved £111\nJo Taylor\n4h available\nWH-1040 · Gear service\n09:00–10:30 · 90 min\nLunch / unavailable\n12:00–12:30\nShared queue\nUnassigned effort\nWH-1046 · Standard service\n60 min · drop-off\nDrop-off allocations consume effort without promising a start time.\nSave allocation"
+ },
+ {
+  "id": "queue",
+  "title": "Take work from the shared queue",
+  "role": "Mechanic · tablet",
+  "note": "Alternative to desk allocation: shared-queue claim is atomic. If another mechanic takes it first, show the owner and leave capacity unchanged.",
+  "next": "job-page",
+  "branches": [
+   [
+    "Someone took it first",
+    "claim-conflict"
+   ]
+  ],
+  "text": "◉ Wheelhouse · North Street CyclesAlex Morgan\nReady to work.\nThursday 17 September\nShared · 4\nMy work · 2\nWH-1042\nApproved\nTrek Domane AL 3\nStandard service + rear brakes\n90 min · target Fri 18 Sep, 16:00\nAgreed work\n£111.00\nTake this job & start work\nWH-1046\nScheduled\nSpecialized Allez\nStandard service · 60 min"
+ },
+ {
+  "id": "waiting",
+  "title": "Handle a parts delay",
+  "role": "Service desk · desktop",
+  "note": "Exception scenario: revised date and remaining effort are independent. This branch does not silently overwrite the canonical on-time walkthrough.",
+  "next": "customer-message",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nWaiting for parts\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nWaiting for parts\nPart / reason\nRevised target ready\nCustomer update\nTarget dates are estimates. This update does not mark the bike ready.\nSave delay & send update\nWork still required\n30 minutes for pads and adjustment.\nKeep unfinished effort visible when replanning. Custody stays “In shop”.\nReplan remaining effort"
+ },
+ {
+  "id": "inbox",
+  "title": "One job conversation",
+  "role": "Service desk · desktop",
+  "note": "Illustrative sent/received states. Production inbound matching, consent and provider capability must be proven; sending in this artefact is navigation only.",
+  "next": "customer-message",
+  "branches": [
+   [
+    "Delivery problem",
+    "message-error"
+   ]
+  ],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nMessages\nConversations attached to the job, across email, SMS and WhatsApp.\nNeeds a reply · 2\nMaya Patel\nWH-1042 · Trek Domane\nThanks. Can I collect after work?\nOliver Chen\nWH-1048 · Brompton\nIt clicks under load.\nMaya Patel / WH-1042\nSMS\nHi Maya, your bike is ready to collect. We’re open until 18:00.\nSMS · delivered 15:42\nThanks. Can I collect after work?\nSMS · received 15:46\nReply via\nSMS · customer selected\nEmail · customer selected\nWhatsApp · not selected\nMessage\nReplies remain attached to this job.\nSend reply"
+ },
+ {
+  "id": "collection",
+  "title": "Record physical collection",
+  "role": "Service desk · desktop",
+  "note": "Custody leaves “In shop” only after explicit confirmation. Staff use the existing till process independently. No payment gate or settlement status is invented.",
+  "next": "closed",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nReady for collection\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nHand the bike back\nMaya Patel · Trek Domane AL 3\nBike handed to the customer or authorised collector\nLock key and rear light returned\nCollected by\nHandover note\nRecord collection\nTill handoff\nLightspeed work order #5821\nAgreed quote: £111.00\nUse Lightspeed for invoicing, taking payment or any refund.\nCollection records who took the bike and when. It does not record payment."
+ },
+ {
+  "id": "closed",
+  "title": "Collected, with a durable history",
+  "role": "Service desk · desktop",
+  "note": "Locked collected record. Reopening needs permission and a reason; it must not erase the original collection or imply the bike is physically back.",
+  "next": "desk",
+  "branches": [
+   [
+    "Reopen",
+    "reopen"
+   ]
+  ],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nCollected\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nCollected by Maya Patel today at 17:24. Recorded by Jack Lewis.\nJob history\nBike collected\n17:24 · Jack Lewis · accessories returned\nReady for collection\n15:42 · Alex Morgan · customer notified\nWork order #5821 linked\n11:22 · approved quote 2\nQuote approved: £111.00\n11:18 · Maya Patel · gear cable declined\nBike received & tag printed\n09:12 · Jack Lewis\nJob locked\nThe completed record and approval history remain available.\nNeed to correct or continue the job?\nReopen with a reason"
+ },
+ {
+  "id": "reject",
+  "title": "Decline with an explanation",
+  "role": "Service desk · desktop",
+  "note": "Staff-written explanation is required in the proposed UX. Confirm the shop’s rejection wording during review.",
+  "next": "rejected",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nDecline booking request\nWH-1042 · Maya Patel\nExplain what the customer can do next\nMessage to Maya\nDeclining releases the request’s reservation. The customer is told not to travel for this request.\nKeep request\nDecline & notify customer"
+ },
+ {
+  "id": "new-job",
+  "title": "Create a walk-in job",
+  "role": "Service desk · desktop",
+  "note": "Staff-only customer search. Walk-in with bike present shares the explicit custody/checklist event and capacity checks.",
+  "next": "intake",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nNew workshop job\nUse the same workflow for a customer at the counter.\nCustomer & bike\nFind customer by name, phone or email\nMaya Patel\n07700 900 142 · maya@example.test\nTrek Domane AL 3 · green\nWork requested\nBike is here now\nPlan the work\nPlanned effort\nDrop-off day\nQueue / technician\nShared workshop queue\nAlex Morgan\nCreate job & book in\nNew customers and bikes can be added at the counter. No sale or invoice is created by this action."
+ },
+ {
+  "id": "job",
+  "title": "The complete job workspace",
+  "role": "Service desk · desktop",
+  "note": "Job is independent of a sale. Product, customer, bike and service writer controls belong here; separate work status and custody are visible.",
+  "next": "job-page",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nIn workshop\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nCustomer & bike\nMaya Patel · 07700 900 142\nTrek Domane AL 3 · green · black mudguards\nCustomer’s concern\nRear brake squeals and feels weak. Gears need a tune-up.\nBike in shop\nLock key received\nRear light received\nNext action\nInspect the brake and agree any additional work before starting it.\nOpen inspection\nPlanned work\nStandard service · 60 minutes\n£65.00 agreed\nEdit quote\nBike tag\nWH-1042 · attached at intake\nPrint / scan"
+ },
+ {
+  "id": "history",
+  "title": "Audit changes to the job",
+  "role": "Service desk · desktop",
+  "note": "Actor, time and prior decisions remain attributable. This is job activity, not a reporting suite.",
+  "next": "job",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nIn workshop\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nActivity & decisions\nInspection recorded\nAlex Morgan · 10:42 · rear pads worn, cable optional\nBike received\nJack Lewis · 09:12 · lock key + rear light\nBooking confirmed\nJack Lewis · 09:01 · shared queue, 60 minutes\nBooking requested\nMaya Patel · 08:42 · standard service, requested Thursday"
+ },
+ {
+  "id": "finished",
+  "title": "Work finished; prepare the handover",
+  "role": "Service desk · desktop",
+  "note": "Work-finished is an explicit state before readiness. The walkthrough visits the POS handoff next; the shop may link it earlier. Collection and payment remain separate.",
+  "next": "pos",
+  "branches": [],
+  "text": "◉wheelhouse\n⌕   Search jobs, customers or scan a tag\nNorth Street Cycles\nJL\n▦　Workshop\n▤　Diary\n↗　Requests\n☷　Messages\n◎　Customers\n⚙　Settings\nTHURSDAY 17 SEPTEMBER\nShop open · until 18:00\nJob workspace\nWorkshop / WH-1042\nWH-1042 / MAYA PATEL\nTrek Domane AL 3\nWork finished\nBooking\nThu 17 Sep · drop-off\nTarget ready\nFri 18 Sep · 16:00\nAllocated effort\n90 min · shared queue\nOverview\nQuote\nChecklist\nMessages\nHistory\nAlex finished the work and final checks at 15:30. The bike is still in the shop.\nFinal checks complete\nService, pads and fitting completed. Brakes tested, gears tuned, accessories accounted for.\nCustomer handover note\nRear pads replaced and brakes adjusted. Gears tuned. The existing gear cable is still serviceable.\nMark ready & notify customer\nLightspeed handoff\nAgreed work: £111.00\nIf not already linked, hand the approved work to the till. A connector outage doesn’t discard the workshop record.\nReview work-order handoff"
+ }
+]

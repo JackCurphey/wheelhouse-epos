@@ -63,8 +63,8 @@ export function Dialog({
       className={cn(
         'm-auto max-h-[90vh] w-full overflow-y-auto rounded-xl p-0',
         'bg-[var(--modal-bg)] text-[var(--wh-ink)]',
-        'shadow-[0_10px_40px_rgba(0,0,0,0.25)]',
-        'backdrop:bg-[rgba(20,24,21,0.45)]',
+        'shadow-modal',
+        'backdrop:bg-[var(--wh-backdrop)]',
         wide ? 'max-w-[640px]' : 'max-w-[480px]',
         className,
       )}

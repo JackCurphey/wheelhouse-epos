@@ -23,10 +23,10 @@ export function ChoiceCard({ title, detail, price, selected, className, type = '
       type={type}
       aria-pressed={selected}
       className={cn(
-        'flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-[var(--wh-border)] bg-white px-3.5 py-4 text-left text-[var(--wh-ink)]',
+        'flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 py-4 text-left text-[var(--wh-ink)]',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]',
         'disabled:cursor-not-allowed disabled:opacity-50',
-        selected && 'border-2 border-[var(--accent-dark)] bg-[color-mix(in_srgb,var(--accent-dark)_7%,white)]',
+        selected && 'border-2 border-[var(--accent-dark)] bg-[color-mix(in_srgb,var(--accent-dark)_7%,var(--wh-panel))]',
         className,
       )}
       {...props}
@@ -38,7 +38,7 @@ export function ChoiceCard({ title, detail, price, selected, className, type = '
         <span className="font-semibold">{title}</span>
         {detail && <>{' '}<span className="text-[13px] text-[var(--wh-muted)]">{detail}</span></>}
       </span>
-      {price && <>{' '}<span className="whitespace-nowrap font-semibold">{price}</span></>}
+      {price && <>{' '}<span className="whitespace-nowrap font-mono font-medium">{price}</span></>}
     </button>
   );
 }

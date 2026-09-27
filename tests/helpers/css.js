@@ -19,8 +19,17 @@ function stripComments(css) {
 }
 
 export function parseRootTokens(css) {
+  return parseBlockTokens(css, ':root');
+}
+
+// The custom properties declared in the first block whose selector is exactly
+// `selector` (e.g. '.dark' in src/styles/theme.css). Same line-based rules as
+// parseRootTokens: one declaration per line, trailing `;` required.
+export function parseBlockTokens(css, selector) {
   const clean = stripComments(css);
-  const start = clean.indexOf(':root');
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const found = new RegExp(`(^|[\\s}])${escaped}\\s*\\{`).exec(clean);
+  const start = found ? found.index : -1;
   if (start === -1) return new Map();
   const open = clean.indexOf('{', start);
   const close = clean.indexOf('}', open);

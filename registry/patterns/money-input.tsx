@@ -113,7 +113,7 @@ export function MoneyInput({
           setDraft(null);
           onBlur?.(event);
         }}
-        className={cn('pl-6 text-right tabular-nums', className)}
+        className={cn('pl-6 text-right font-mono tabular-nums', className)}
       />
     </div>
   );

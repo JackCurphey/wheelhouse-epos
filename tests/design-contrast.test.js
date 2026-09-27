@@ -27,6 +27,10 @@ const PAIRS = [
   ['--ink on --bg',                          '--ink',    '--bg'],
   ['--ink on --panel',                       '--ink',    '--panel'],
   ['--warn-ink on --warn-bg',                '--warn-ink', '--warn-bg'],
+  // Fjell (27 Sep 2026): the top bar's labels and the highlight marker.
+  ['--on-accent on --accent-dark (nav label)', '--on-accent', '--accent-dark'],
+  ['--on-accent-muted on --accent-dark (clock)', '--on-accent-muted', '--accent-dark'],
+  ['--on-highlight on --highlight (active nav)', '--on-highlight', '--highlight'],
 ];
 
 for (const [label, fg, bg] of PAIRS) {
@@ -37,6 +41,14 @@ for (const [label, fg, bg] of PAIRS) {
     assert.ok(ratio >= AA, `${label} is ${ratio}, needs >= ${AA}`);
   });
 }
+
+// WCAG 1.4.11: the border that shows where a text field is must reach 3:1
+// against the field's own fill (--panel). The decorative --border does not,
+// which is why inputs have their own token.
+test('contrast: --input-border on --panel clears 3:1 (form field edges)', () => {
+  const ratio = contrast(tok('--input-border'), tok('--panel'));
+  assert.ok(ratio >= 3, `--input-border on --panel is ${ratio}, needs >= 3`);
+});
 
 // The six job-status badges each pair their own ink against their own bg.
 const STATUSES = ['pending', 'scheduled', 'waiting_parts', 'on_hold', 'complete', 'complete-paid'];

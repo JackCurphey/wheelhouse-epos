@@ -140,8 +140,8 @@ export function DayDiary({ open, close, columns, value = null, onChange, classNa
                   onClick={() => onChange({ columnId: c.id, time: label })}
                   className={cn(
                     'absolute inset-x-[3px] flex items-start justify-start rounded-[5px] px-1.5 pt-0.5 text-[11px] text-[var(--wh-muted)]',
-                    'hover:bg-[color-mix(in_srgb,var(--accent-dark)_7%,white)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]',
-                    picked && 'bg-[var(--accent-dark)] font-semibold text-white hover:bg-[var(--accent-dark)]',
+                    'hover:bg-[color-mix(in_srgb,var(--accent-dark)_7%,var(--wh-panel))] focus-visible:outline-2 focus-visible:outline-[var(--accent)]',
+                    picked && 'bg-[var(--accent-dark)] font-semibold text-[var(--wh-on-brand)] hover:bg-[var(--accent-dark)]',
                   )}
                   style={{ top: y(t), height: span * ppm }}
                 >

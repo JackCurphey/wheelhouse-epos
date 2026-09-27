@@ -1,0 +1,3019 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "at": "2026-09-27T10:58:24Z",
+  "v": 1
+ },
+ "title": "Wheelhouse user journeys",
+ "launch": {
+  "view": "canvas"
+ },
+ "attachments": {},
+ "pages": [],
+ "boards": {
+  "ja-map.dc.html": {
+   "x": 0,
+   "y": 2894,
+   "w": 1760,
+   "h": 1236,
+   "title": "For review · How Wheelhouse fits together",
+   "is_interactive": true
+  },
+  "ja-shell-staff-desktop.dc.html": {
+   "x": 2000,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Staff app (desktop)",
+   "is_interactive": true
+  },
+  "ja-shell-staff-phone.dc.html": {
+   "x": 3320,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Staff app (phone)",
+   "is_interactive": true
+  },
+  "ja-shell-staff-menu-desktop.dc.html": {
+   "x": 3790,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Staff app: menu open / mechanic view (desktop)",
+   "is_interactive": true
+  },
+  "ja-shell-staff-menu-phone.dc.html": {
+   "x": 5110,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Staff app: menu open / mechanic view (phone)",
+   "is_interactive": true
+  },
+  "ja-shell-till-desktop.dc.html": {
+   "x": 5580,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Till mode (desktop)",
+   "is_interactive": true
+  },
+  "ja-shell-till-phone.dc.html": {
+   "x": 6900,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Till mode (phone)",
+   "is_interactive": true
+  },
+  "ja-shell-site-desktop.dc.html": {
+   "x": 7370,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Customer website (desktop)",
+   "is_interactive": true
+  },
+  "ja-shell-site-phone.dc.html": {
+   "x": 8690,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Customer website (phone)",
+   "is_interactive": true
+  },
+  "ja-shell-site-menu-desktop.dc.html": {
+   "x": 9160,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Customer website: menu open (desktop)",
+   "is_interactive": true
+  },
+  "ja-shell-site-menu-phone.dc.html": {
+   "x": 10480,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Customer website: menu open (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-signin-desktop.dc.html": {
+   "x": 0,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Sign in (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-signin-phone.dc.html": {
+   "x": 1320,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Sign in (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-forgot-desktop.dc.html": {
+   "x": 1790,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Reset your password (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-forgot-phone.dc.html": {
+   "x": 3110,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Reset your password (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-sent-desktop.dc.html": {
+   "x": 3580,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Check your email (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-sent-phone.dc.html": {
+   "x": 4900,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Check your email (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-newpass-desktop.dc.html": {
+   "x": 5370,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Choose a new password (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-newpass-phone.dc.html": {
+   "x": 6690,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Choose a new password (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-invite-desktop.dc.html": {
+   "x": 7160,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Accept an invitation (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-invite-phone.dc.html": {
+   "x": 8480,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Accept an invitation (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-site-desktop.dc.html": {
+   "x": 8950,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Choose where you’re working (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-site-phone.dc.html": {
+   "x": 10270,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Choose where you’re working (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-signedout-desktop.dc.html": {
+   "x": 10740,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Signed out (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-signedout-phone.dc.html": {
+   "x": 12060,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Signed out (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-expired-desktop.dc.html": {
+   "x": 12530,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Session expired (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-expired-phone.dc.html": {
+   "x": 13850,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Session expired (phone)",
+   "is_interactive": true
+  },
+  "jb-auth-noaccess-desktop.dc.html": {
+   "x": 14320,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Not part of your role (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-noaccess-phone.dc.html": {
+   "x": 15640,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Not part of your role (phone)",
+   "is_interactive": true
+  },
+  "jb-till-setup-desktop.dc.html": {
+   "x": 16270,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Set up this till (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-setup-phone.dc.html": {
+   "x": 17590,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Set up this till (phone)",
+   "is_interactive": true
+  },
+  "jb-till-checkin-desktop.dc.html": {
+   "x": 18060,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Who’s working today? (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-checkin-phone.dc.html": {
+   "x": 19380,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Who’s working today? (phone)",
+   "is_interactive": true
+  },
+  "jb-till-pin-desktop.dc.html": {
+   "x": 19850,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Enter your PIN (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-pin-phone.dc.html": {
+   "x": 21170,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Enter your PIN (phone)",
+   "is_interactive": true
+  },
+  "jb-cust-signin-desktop.dc.html": {
+   "x": 21800,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Sign in to your account (desktop)",
+   "is_interactive": true
+  },
+  "jb-cust-signin-phone.dc.html": {
+   "x": 23120,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Sign in to your account (phone)",
+   "is_interactive": true
+  },
+  "jb-cust-code-desktop.dc.html": {
+   "x": 23590,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "For review · Enter your code (desktop)",
+   "is_interactive": true
+  },
+  "jb-cust-code-phone.dc.html": {
+   "x": 24910,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "For review · Enter your code (phone)",
+   "is_interactive": true
+  },
+  "jb-pending.dc.html": {
+   "x": 25380,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Request received",
+   "is_interactive": true
+  },
+  "jb-expired.dc.html": {
+   "x": 25850,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Expired request / private link",
+   "is_interactive": true
+  },
+  "j01-web-home.dc.html": {
+   "x": 0,
+   "y": 7030,
+   "w": 390,
+   "h": 900,
+   "title": "Old app · Website home page",
+   "is_interactive": true
+  },
+  "j01-web-category.dc.html": {
+   "x": 470,
+   "y": 7030,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Category and product list",
+   "is_interactive": true
+  },
+  "j01-web-product.dc.html": {
+   "x": 940,
+   "y": 7030,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Product page",
+   "is_interactive": true
+  },
+  "j01-web-search.dc.html": {
+   "x": 1410,
+   "y": 7030,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Search results",
+   "is_interactive": true
+  },
+  "j01-web-shops.dc.html": {
+   "x": 1880,
+   "y": 7030,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Our shops",
+   "is_interactive": true
+  },
+  "j01-web-missing.dc.html": {
+   "x": 2510,
+   "y": 7030,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Page not found / website switched off",
+   "is_interactive": true
+  },
+  "j01-web-cookies.dc.html": {
+   "x": 2980,
+   "y": 7030,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Cookie choices",
+   "is_interactive": true
+  },
+  "j02-buy-basket.dc.html": {
+   "x": 0,
+   "y": 8930,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Basket",
+   "is_interactive": true
+  },
+  "j02-buy-collect.dc.html": {
+   "x": 470,
+   "y": 8930,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Checkout: collect or deliver",
+   "is_interactive": true
+  },
+  "j02-buy-pay.dc.html": {
+   "x": 940,
+   "y": 8930,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Checkout: payment",
+   "is_interactive": true
+  },
+  "j02-buy-confirmed.dc.html": {
+   "x": 1410,
+   "y": 8930,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Order confirmed",
+   "is_interactive": true
+  },
+  "j02-buy-ready.dc.html": {
+   "x": 2040,
+   "y": 8930,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Ready to collect (message)",
+   "is_interactive": true
+  },
+  "j02-buy-status.dc.html": {
+   "x": 2510,
+   "y": 8930,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Order status",
+   "is_interactive": true
+  },
+  "j03-service.dc.html": {
+   "x": 0,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Built · Choose a service",
+   "is_interactive": true
+  },
+  "j03-service-list.dc.html": {
+   "x": 470,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Built · Choose an individual service",
+   "is_interactive": true
+  },
+  "j03-diagnosis.dc.html": {
+   "x": 940,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · “I don’t know what’s wrong”",
+   "is_interactive": true
+  },
+  "j03-problem.dc.html": {
+   "x": 1410,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Built · Describe the bike & problem",
+   "is_interactive": true
+  },
+  "j03-date.dc.html": {
+   "x": 1880,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Built · Choose drop-off or appointment",
+   "is_interactive": true
+  },
+  "j03-appointment.dc.html": {
+   "x": 2350,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Book an exact appointment",
+   "is_interactive": true
+  },
+  "j03-full.dc.html": {
+   "x": 2820,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Explain unavailable dates",
+   "is_interactive": true
+  },
+  "j03-details.dc.html": {
+   "x": 3290,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Built · Contact & update preferences",
+   "is_interactive": true
+  },
+  "j03-pending.dc.html": {
+   "x": 3760,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Built · Request received",
+   "is_interactive": true
+  },
+  "j03-confirmed.dc.html": {
+   "x": 4230,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Booking confirmed",
+   "is_interactive": true
+  },
+  "j03-reschedule.dc.html": {
+   "x": 4860,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Change or cancel a booking",
+   "is_interactive": true
+  },
+  "j03-change-pending.dc.html": {
+   "x": 5330,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Date change is pending",
+   "is_interactive": true
+  },
+  "j03-cancel.dc.html": {
+   "x": 5800,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Confirm a cancellation",
+   "is_interactive": true
+  },
+  "j03-cancelled.dc.html": {
+   "x": 6270,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Cancellation acknowledged",
+   "is_interactive": true
+  },
+  "j03-rejected.dc.html": {
+   "x": 6740,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Customer sees a declined request",
+   "is_interactive": true
+  },
+  "j03-expired.dc.html": {
+   "x": 7210,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Expired request / private link",
+   "is_interactive": true
+  },
+  "j03-service-status.dc.html": {
+   "x": 7680,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Booking service temporarily unavailable",
+   "is_interactive": true
+  },
+  "j03-book-sending.dc.html": {
+   "x": 8150,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Leaving while the request is sending",
+   "is_interactive": true
+  },
+  "j03-book-deposit.dc.html": {
+   "x": 8620,
+   "y": 10830,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Pay a deposit when booking",
+   "is_interactive": true
+  },
+  "j04-progress.dc.html": {
+   "x": 0,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Return to the private progress link",
+   "is_interactive": true
+  },
+  "j04-quote-findings.dc.html": {
+   "x": 470,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Inspection findings with photos",
+   "is_interactive": true
+  },
+  "j04-approval.dc.html": {
+   "x": 940,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Approve each line",
+   "is_interactive": true
+  },
+  "j04-approval-done.dc.html": {
+   "x": 1410,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Know what was agreed",
+   "is_interactive": true
+  },
+  "j04-stale.dc.html": {
+   "x": 1880,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · A quote changed before approval",
+   "is_interactive": true
+  },
+  "j04-ceiling.dc.html": {
+   "x": 2350,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Agree a spending ceiling",
+   "is_interactive": true
+  },
+  "j04-customer-message.dc.html": {
+   "x": 2820,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Customer follows up",
+   "is_interactive": true
+  },
+  "j04-preferences.dc.html": {
+   "x": 3290,
+   "y": 12730,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Change customer update channels",
+   "is_interactive": true
+  },
+  "j05-ready.dc.html": {
+   "x": 0,
+   "y": 14630,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Customer is invited to collect",
+   "is_interactive": true
+  },
+  "j05-done-summary.dc.html": {
+   "x": 470,
+   "y": 14630,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Job done: summary and invoice",
+   "is_interactive": true
+  },
+  "j05-done-pay.dc.html": {
+   "x": 940,
+   "y": 14630,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Pay online for workshop work",
+   "is_interactive": true
+  },
+  "j05-done-receipt.dc.html": {
+   "x": 1410,
+   "y": 14630,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Receipt or invoice by email",
+   "is_interactive": true
+  },
+  "j06-c2w-customer.dc.html": {
+   "x": 0,
+   "y": 16530,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Cycle to Work: customer side",
+   "is_interactive": true
+  },
+  "j06-c2w-staff.dc.html": {
+   "x": 470,
+   "y": 16530,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Cycle to Work: staff side",
+   "is_interactive": true
+  },
+  "j07-acct-history.dc.html": {
+   "x": 0,
+   "y": 18430,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Service history and book again",
+   "is_interactive": true
+  },
+  "j07-acct-balance.dc.html": {
+   "x": 470,
+   "y": 18430,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Loyalty points and account balance",
+   "is_interactive": true
+  },
+  "j07-acct-reminder.dc.html": {
+   "x": 1100,
+   "y": 18430,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Service reminder and landing page",
+   "is_interactive": true
+  },
+  "j07-acct-review.dc.html": {
+   "x": 1570,
+   "y": 18430,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Review request after collection",
+   "is_interactive": true
+  },
+  "j07-acct-unsubscribe.dc.html": {
+   "x": 2040,
+   "y": 18430,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Stop marketing messages",
+   "is_interactive": true
+  },
+  "j07-acct-privacy.dc.html": {
+   "x": 2510,
+   "y": 18430,
+   "w": 390,
+   "h": 900,
+   "title": "Not designed · Privacy notice and data requests",
+   "is_interactive": true
+  },
+  "j08-setup-checklist.dc.html": {
+   "x": 0,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · First-run checklist",
+   "is_interactive": true
+  },
+  "j08-settings.dc.html": {
+   "x": 1180,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Shop identity & booking appearance",
+   "is_interactive": true
+  },
+  "j08-setup-sites.dc.html": {
+   "x": 2360,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Sites",
+   "is_interactive": true
+  },
+  "j08-setup-register-till.dc.html": {
+   "x": 3540,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Register a till",
+   "is_interactive": true
+  },
+  "j08-staff-settings.dc.html": {
+   "x": 4880,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Manage staff access",
+   "is_interactive": true
+  },
+  "j08-staff-edit.dc.html": {
+   "x": 6060,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Change or deactivate access",
+   "is_interactive": true
+  },
+  "j08-staff-deactivate.dc.html": {
+   "x": 7240,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Confirm staff deactivation",
+   "is_interactive": true
+  },
+  "j08-setup-pin.dc.html": {
+   "x": 8420,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Set a staff PIN",
+   "is_interactive": true
+  },
+  "j08-setup-roles.dc.html": {
+   "x": 9600,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Roles and permissions",
+   "is_interactive": true
+  },
+  "j08-setup-vat.dc.html": {
+   "x": 10940,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · VAT rates",
+   "is_interactive": true
+  },
+  "j08-setup-till.dc.html": {
+   "x": 12120,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Till and receipt settings",
+   "is_interactive": true
+  },
+  "j08-printer-settings.dc.html": {
+   "x": 13300,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Register printers & scan a fixture",
+   "is_interactive": true
+  },
+  "j08-setup-receipt-printer.dc.html": {
+   "x": 14480,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Receipt printer and cash drawer",
+   "is_interactive": true
+  },
+  "j08-services.dc.html": {
+   "x": 15820,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Service catalogue & questions",
+   "is_interactive": true
+  },
+  "j08-service-edit.dc.html": {
+   "x": 17000,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Configure a service",
+   "is_interactive": true
+  },
+  "j08-hours.dc.html": {
+   "x": 18180,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Hours, leave & available effort",
+   "is_interactive": true
+  },
+  "j08-booking-settings.dc.html": {
+   "x": 19360,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Set booking & diary behaviour",
+   "is_interactive": true
+  },
+  "j08-message-settings.dc.html": {
+   "x": 20540,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Connect email, SMS & WhatsApp",
+   "is_interactive": true
+  },
+  "j08-channel-edit.dc.html": {
+   "x": 21720,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Configure a messaging channel",
+   "is_interactive": true
+  },
+  "j08-channel-proof.dc.html": {
+   "x": 22900,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Verify delivery before enabling",
+   "is_interactive": true
+  },
+  "j08-template.dc.html": {
+   "x": 24080,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Edit a customer message template",
+   "is_interactive": true
+  },
+  "j08-setup-saved.dc.html": {
+   "x": 25260,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · A clear save confirmation",
+   "is_interactive": true
+  },
+  "j08-setup-export.dc.html": {
+   "x": 26600,
+   "y": 20330,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Export everything",
+   "is_interactive": true
+  },
+  "j09-move-upload.dc.html": {
+   "x": 0,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Upload Citrus Lime exports",
+   "is_interactive": true
+  },
+  "j09-move-map.dc.html": {
+   "x": 1180,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Match the columns",
+   "is_interactive": true
+  },
+  "j09-move-run.dc.html": {
+   "x": 2360,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Import progress and result",
+   "is_interactive": true
+  },
+  "j09-move-fix.dc.html": {
+   "x": 3540,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Rows to fix",
+   "is_interactive": true
+  },
+  "j09-move-schedule.dc.html": {
+   "x": 4720,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Keep in step (re-import)",
+   "is_interactive": true
+  },
+  "j09-move-compare.dc.html": {
+   "x": 6060,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Compare with Citrus Lime",
+   "is_interactive": true
+  },
+  "j09-move-practice.dc.html": {
+   "x": 7240,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Practice mode",
+   "is_interactive": true
+  },
+  "j09-move-switch.dc.html": {
+   "x": 8420,
+   "y": 22146,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Switch-over checklist",
+   "is_interactive": true
+  },
+  "j10-open-start.dc.html": {
+   "x": 0,
+   "y": 23962,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Till start-up",
+   "is_interactive": true
+  },
+  "j10-open-checkin.dc.html": {
+   "x": 1180,
+   "y": 23962,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Staff check-in with PIN",
+   "is_interactive": true
+  },
+  "j10-open-float.dc.html": {
+   "x": 2360,
+   "y": 23962,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Opening float",
+   "is_interactive": true
+  },
+  "j10-open-tills.dc.html": {
+   "x": 3540,
+   "y": 23962,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Tills overview",
+   "is_interactive": true
+  },
+  "j10-desk.dc.html": {
+   "x": 4720,
+   "y": 23962,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · The workshop at a glance",
+   "is_interactive": true
+  },
+  "j11-till-sale.dc.html": {
+   "x": 0,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Sale screen",
+   "is_interactive": true
+  },
+  "j11-till-variant.dc.html": {
+   "x": 1180,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Choose size and colour",
+   "is_interactive": true
+  },
+  "j11-till-serial.dc.html": {
+   "x": 2360,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Record a serial number",
+   "is_interactive": true
+  },
+  "j11-till-customer.dc.html": {
+   "x": 3540,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Find or add a customer",
+   "is_interactive": true
+  },
+  "j11-till-discount.dc.html": {
+   "x": 4720,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Discount with a reason",
+   "is_interactive": true
+  },
+  "j11-till-pay.dc.html": {
+   "x": 6060,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Take payment",
+   "is_interactive": true
+  },
+  "j11-till-card.dc.html": {
+   "x": 7240,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Card machine in progress",
+   "is_interactive": true
+  },
+  "j11-till-account.dc.html": {
+   "x": 8420,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Account sale and loyalty",
+   "is_interactive": true
+  },
+  "j11-till-giftcard.dc.html": {
+   "x": 9600,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Gift card and store credit",
+   "is_interactive": true
+  },
+  "j11-till-deposit.dc.html": {
+   "x": 10780,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Deposit or part payment",
+   "is_interactive": true
+  },
+  "j11-till-receipt.dc.html": {
+   "x": 11960,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Receipt",
+   "is_interactive": true
+  },
+  "j11-till-park.dc.html": {
+   "x": 13300,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Park and resume a sale",
+   "is_interactive": true
+  },
+  "j11-till-void.dc.html": {
+   "x": 14480,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Void a sale",
+   "is_interactive": true
+  },
+  "j11-till-find.dc.html": {
+   "x": 15660,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Find a past sale",
+   "is_interactive": true
+  },
+  "j11-till-refund.dc.html": {
+   "x": 16840,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Refund, return or exchange",
+   "is_interactive": true
+  },
+  "j11-till-job.dc.html": {
+   "x": 18020,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Pay for a workshop job",
+   "is_interactive": true
+  },
+  "j11-till-collect.dc.html": {
+   "x": 19200,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Hand over a click and collect order",
+   "is_interactive": true
+  },
+  "j11-till-offline.dc.html": {
+   "x": 20540,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Offline banner",
+   "is_interactive": true
+  },
+  "j11-till-needs-net.dc.html": {
+   "x": 21720,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Needs the internet",
+   "is_interactive": true
+  },
+  "j11-till-no-signout.dc.html": {
+   "x": 22900,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Can’t sign out yet",
+   "is_interactive": true
+  },
+  "j11-till-failed.dc.html": {
+   "x": 24080,
+   "y": 25778,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Sales that didn’t send",
+   "is_interactive": true
+  },
+  "j12-requests.dc.html": {
+   "x": 0,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Review incoming requests",
+   "is_interactive": true
+  },
+  "j12-review.dc.html": {
+   "x": 1180,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Confirm the request",
+   "is_interactive": true
+  },
+  "j12-reject.dc.html": {
+   "x": 2360,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Decline with an explanation",
+   "is_interactive": true
+  },
+  "j12-diagnosis-review.dc.html": {
+   "x": 3540,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Triage an unknown problem",
+   "is_interactive": true
+  },
+  "j12-ws-waiting.dc.html": {
+   "x": 4720,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Waiting for you (diary column)",
+   "is_interactive": true
+  },
+  "j12-desk.dc.html": {
+   "x": 6060,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · The workshop at a glance",
+   "is_interactive": true
+  },
+  "j12-new-job.dc.html": {
+   "x": 7240,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Create a walk-in job",
+   "is_interactive": true
+  },
+  "j12-intake.dc.html": {
+   "x": 8420,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Book the bike into the shop",
+   "is_interactive": true
+  },
+  "j12-print.dc.html": {
+   "x": 9600,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Print & attach the bike tag",
+   "is_interactive": true
+  },
+  "j12-reprint.dc.html": {
+   "x": 10780,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Deliberately reprint a tag",
+   "is_interactive": true
+  },
+  "j12-print-error.dc.html": {
+   "x": 11960,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Printer offline / output unknown",
+   "is_interactive": true
+  },
+  "j12-scan.dc.html": {
+   "x": 13140,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Scan → authenticated job",
+   "is_interactive": true
+  },
+  "j12-login.dc.html": {
+   "x": 14320,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Sign in after scanning",
+   "is_interactive": true
+  },
+  "j12-denied.dc.html": {
+   "x": 15500,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Wrong shop or revoked access",
+   "is_interactive": true
+  },
+  "j12-job.dc.html": {
+   "x": 16680,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · The complete job workspace",
+   "is_interactive": true
+  },
+  "j12-history.dc.html": {
+   "x": 17860,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Audit changes to the job",
+   "is_interactive": true
+  },
+  "j12-job-card.dc.html": {
+   "x": 19040,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Full paper job card",
+   "is_interactive": true
+  },
+  "j12-job-page.dc.html": {
+   "x": 20380,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · The mechanic’s job page",
+   "is_interactive": true
+  },
+  "j12-quote-editor.dc.html": {
+   "x": 21560,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Build the itemised quote",
+   "is_interactive": true
+  },
+  "j12-catalogue-search.dc.html": {
+   "x": 22740,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Find parts, SKUs & labour",
+   "is_interactive": true
+  },
+  "j12-quote-send.dc.html": {
+   "x": 23920,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Send the approval request",
+   "is_interactive": true
+  },
+  "j12-approved.dc.html": {
+   "x": 25100,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Shop sees the exact agreement",
+   "is_interactive": true
+  },
+  "j12-diary.dc.html": {
+   "x": 26440,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Allocate work in the diary",
+   "is_interactive": true
+  },
+  "j12-week.dc.html": {
+   "x": 27620,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Week view of workshop capacity",
+   "is_interactive": true
+  },
+  "j12-month.dc.html": {
+   "x": 28800,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Month view and closed days",
+   "is_interactive": true
+  },
+  "j12-capacity-conflict.dc.html": {
+   "x": 29980,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · A diary move cannot be saved",
+   "is_interactive": true
+  },
+  "j12-queue.dc.html": {
+   "x": 31160,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Take work from the shared queue",
+   "is_interactive": true
+  },
+  "j12-claim-conflict.dc.html": {
+   "x": 32340,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Another mechanic claimed it",
+   "is_interactive": true
+  },
+  "j12-waiting.dc.html": {
+   "x": 33520,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Handle a parts delay",
+   "is_interactive": true
+  },
+  "j12-inbox.dc.html": {
+   "x": 34700,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · One job conversation",
+   "is_interactive": true
+  },
+  "j12-mechanic-message.dc.html": {
+   "x": 35880,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Mechanic’s job conversation",
+   "is_interactive": true
+  },
+  "j12-message-error.dc.html": {
+   "x": 37060,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · A message needs attention",
+   "is_interactive": true
+  },
+  "j12-finished.dc.html": {
+   "x": 38240,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Work finished; prepare the handover",
+   "is_interactive": true
+  },
+  "j12-ws-order-parts.dc.html": {
+   "x": 39420,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Order parts for a job",
+   "is_interactive": true
+  },
+  "j12-ws-reserve.dc.html": {
+   "x": 40600,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Reserve parts for a job",
+   "is_interactive": true
+  },
+  "j12-ws-time.dc.html": {
+   "x": 41780,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Time on the job",
+   "is_interactive": true
+  },
+  "j12-ws-wall.dc.html": {
+   "x": 42960,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Workshop wall display",
+   "is_interactive": true
+  },
+  "j12-collection.dc.html": {
+   "x": 44300,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Record physical collection",
+   "is_interactive": true
+  },
+  "j12-closed.dc.html": {
+   "x": 45480,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Collected, with a durable history",
+   "is_interactive": true
+  },
+  "j12-reopen.dc.html": {
+   "x": 46660,
+   "y": 27594,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Reopen without rewriting history",
+   "is_interactive": true
+  },
+  "j13-po-suppliers.dc.html": {
+   "x": 0,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Suppliers",
+   "is_interactive": true
+  },
+  "j13-po-feed.dc.html": {
+   "x": 1180,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Supplier catalogue",
+   "is_interactive": true
+  },
+  "j13-po-list.dc.html": {
+   "x": 2520,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Purchase orders",
+   "is_interactive": true
+  },
+  "j13-po-edit.dc.html": {
+   "x": 3700,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Draft a purchase order",
+   "is_interactive": true
+  },
+  "j13-po-send.dc.html": {
+   "x": 4880,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Send the order",
+   "is_interactive": true
+  },
+  "j13-po-suggest.dc.html": {
+   "x": 6060,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Reorder suggestions",
+   "is_interactive": true
+  },
+  "j13-po-receive.dc.html": {
+   "x": 7400,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Receive a delivery",
+   "is_interactive": true
+  },
+  "j13-po-invoice.dc.html": {
+   "x": 8580,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Check the supplier invoice",
+   "is_interactive": true
+  },
+  "j13-po-labels.dc.html": {
+   "x": 9760,
+   "y": 29410,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Print labels",
+   "is_interactive": true
+  },
+  "j14-stock-list.dc.html": {
+   "x": 0,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Stock list",
+   "is_interactive": true
+  },
+  "j14-stock-product.dc.html": {
+   "x": 1180,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Product page",
+   "is_interactive": true
+  },
+  "j14-stock-variants.dc.html": {
+   "x": 2360,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Sizes and colours",
+   "is_interactive": true
+  },
+  "j14-stock-serials.dc.html": {
+   "x": 3540,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Serial numbers",
+   "is_interactive": true
+  },
+  "j14-stock-pricing.dc.html": {
+   "x": 4720,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Price rules",
+   "is_interactive": true
+  },
+  "j14-stock-sites.dc.html": {
+   "x": 6060,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Stock by site",
+   "is_interactive": true
+  },
+  "j14-stock-transfer.dc.html": {
+   "x": 7240,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Transfer between sites",
+   "is_interactive": true
+  },
+  "j14-take-start.dc.html": {
+   "x": 8580,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Start a stock take",
+   "is_interactive": true
+  },
+  "j14-take-count.dc.html": {
+   "x": 9760,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Count",
+   "is_interactive": true
+  },
+  "j14-take-diff.dc.html": {
+   "x": 10940,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Differences",
+   "is_interactive": true
+  },
+  "j14-take-post.dc.html": {
+   "x": 12120,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Apply the count",
+   "is_interactive": true
+  },
+  "j14-stock-adjust.dc.html": {
+   "x": 13460,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Adjust stock",
+   "is_interactive": true
+  },
+  "j14-stock-check.dc.html": {
+   "x": 14640,
+   "y": 31226,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Check these (below zero)",
+   "is_interactive": true
+  },
+  "j15-customers.dc.html": {
+   "x": 0,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Customer & bike records",
+   "is_interactive": true
+  },
+  "j15-customer-record.dc.html": {
+   "x": 1180,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Edit a customer and bike",
+   "is_interactive": true
+  },
+  "j15-duplicates.dc.html": {
+   "x": 2360,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Review a possible duplicate",
+   "is_interactive": true
+  },
+  "j15-cust-history.dc.html": {
+   "x": 3540,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · One history per customer",
+   "is_interactive": true
+  },
+  "j15-cust-groups.dc.html": {
+   "x": 4720,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Customer groups",
+   "is_interactive": true
+  },
+  "j15-cust-loyalty.dc.html": {
+   "x": 6060,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Loyalty points",
+   "is_interactive": true
+  },
+  "j15-cust-account.dc.html": {
+   "x": 7240,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Credit account",
+   "is_interactive": true
+  },
+  "j15-cust-consent.dc.html": {
+   "x": 8420,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Marketing permission",
+   "is_interactive": true
+  },
+  "j15-cust-privacy.dc.html": {
+   "x": 9600,
+   "y": 33042,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Privacy requests",
+   "is_interactive": true
+  },
+  "j16-eod-synced.dc.html": {
+   "x": 0,
+   "y": 34858,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · All tills sent their sales",
+   "is_interactive": true
+  },
+  "j16-eod-attention.dc.html": {
+   "x": 1180,
+   "y": 34858,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Needs attention",
+   "is_interactive": true
+  },
+  "j16-eod-count.dc.html": {
+   "x": 2360,
+   "y": 34858,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Cash count",
+   "is_interactive": true
+  },
+  "j16-eod-banking.dc.html": {
+   "x": 3540,
+   "y": 34858,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Paid-outs and banking",
+   "is_interactive": true
+  },
+  "j16-eod-card.dc.html": {
+   "x": 4720,
+   "y": 34858,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Card totals check",
+   "is_interactive": true
+  },
+  "j16-eod-z.dc.html": {
+   "x": 5900,
+   "y": 34858,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · End-of-day report",
+   "is_interactive": true
+  },
+  "j17-rep-today.dc.html": {
+   "x": 0,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Today",
+   "is_interactive": true
+  },
+  "j17-rep-sales.dc.html": {
+   "x": 1180,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Sales report",
+   "is_interactive": true
+  },
+  "j17-rep-margin.dc.html": {
+   "x": 2360,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Margin and stock value",
+   "is_interactive": true
+  },
+  "j17-rep-vat.dc.html": {
+   "x": 3540,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · VAT summary",
+   "is_interactive": true
+  },
+  "j17-rep-workshop.dc.html": {
+   "x": 4720,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Workshop report",
+   "is_interactive": true
+  },
+  "j17-rep-customers.dc.html": {
+   "x": 5900,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Returning customers",
+   "is_interactive": true
+  },
+  "j17-acc-connect.dc.html": {
+   "x": 7240,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Connect Xero or QuickBooks",
+   "is_interactive": true
+  },
+  "j17-acc-map.dc.html": {
+   "x": 8420,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Match accounts",
+   "is_interactive": true
+  },
+  "j17-acc-log.dc.html": {
+   "x": 9600,
+   "y": 36674,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Sent to accounts",
+   "is_interactive": true
+  },
+  "j18-site-settings.dc.html": {
+   "x": 0,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Website settings",
+   "is_interactive": true
+  },
+  "j18-site-theme.dc.html": {
+   "x": 1180,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Theme editor",
+   "is_interactive": true
+  },
+  "j18-site-pages.dc.html": {
+   "x": 2360,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Pages",
+   "is_interactive": true
+  },
+  "j18-site-publish.dc.html": {
+   "x": 3540,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Preview and publish",
+   "is_interactive": true
+  },
+  "j18-site-domain.dc.html": {
+   "x": 4720,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Own web address",
+   "is_interactive": true
+  },
+  "j18-site-shopify.dc.html": {
+   "x": 5900,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Shopify connection (to retire)",
+   "is_interactive": true
+  },
+  "j18-site-payments.dc.html": {
+   "x": 7240,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Online payments setup",
+   "is_interactive": true
+  },
+  "j18-site-orders.dc.html": {
+   "x": 8420,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Online orders",
+   "is_interactive": true
+  },
+  "j18-site-collect.dc.html": {
+   "x": 9600,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Click and collect queue",
+   "is_interactive": true
+  },
+  "j18-site-refund.dc.html": {
+   "x": 10780,
+   "y": 38490,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Refund an online order",
+   "is_interactive": true
+  },
+  "j19-multi-switch.dc.html": {
+   "x": 0,
+   "y": 40306,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Site switcher",
+   "is_interactive": true
+  },
+  "j19-multi-reports.dc.html": {
+   "x": 1180,
+   "y": 40306,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Reports and cash-up by site",
+   "is_interactive": true
+  },
+  "j19-multi-tills.dc.html": {
+   "x": 2360,
+   "y": 40306,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Tills across sites",
+   "is_interactive": true
+  },
+  "j20-ops-audit.dc.html": {
+   "x": 0,
+   "y": 42122,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Activity log",
+   "is_interactive": true
+  },
+  "j20-ops-devices.dc.html": {
+   "x": 1180,
+   "y": 42122,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Signed-in devices",
+   "is_interactive": true
+  },
+  "j20-ops-feedback.dc.html": {
+   "x": 2360,
+   "y": 42122,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Send feedback",
+   "is_interactive": true
+  },
+  "j21-connect.dc.html": {
+   "x": 0,
+   "y": 43938,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Connect the one chosen Lightspeed",
+   "is_interactive": true
+  },
+  "j21-connect-proof.dc.html": {
+   "x": 1180,
+   "y": 43938,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Verify connector capabilities",
+   "is_interactive": true
+  },
+  "j21-pos.dc.html": {
+   "x": 2360,
+   "y": 43938,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Handoff agreed work to Lightspeed",
+   "is_interactive": true
+  },
+  "j21-pos-done.dc.html": {
+   "x": 3540,
+   "y": 43938,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · See the linked work order",
+   "is_interactive": true
+  },
+  "j21-pos-unknown.dc.html": {
+   "x": 4720,
+   "y": 43938,
+   "w": 1100,
+   "h": 816,
+   "title": "Designed · Uncertain Lightspeed handoff",
+   "is_interactive": true
+  },
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1600,
+   "h": 1894,
+   "title": "Overview",
+   "is_interactive": true
+  },
+  "Workflow.dc.html": {
+   "x": 1840,
+   "y": 0,
+   "w": 3440,
+   "h": 1700,
+   "title": "Workflow: how the journeys connect"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Workflow.dc.html",
+  "ja-map.dc.html",
+  "ja-shell-staff-desktop.dc.html",
+  "ja-shell-staff-phone.dc.html",
+  "ja-shell-staff-menu-desktop.dc.html",
+  "ja-shell-staff-menu-phone.dc.html",
+  "ja-shell-till-desktop.dc.html",
+  "ja-shell-till-phone.dc.html",
+  "ja-shell-site-desktop.dc.html",
+  "ja-shell-site-phone.dc.html",
+  "ja-shell-site-menu-desktop.dc.html",
+  "ja-shell-site-menu-phone.dc.html",
+  "jb-auth-signin-desktop.dc.html",
+  "jb-auth-signin-phone.dc.html",
+  "jb-auth-forgot-desktop.dc.html",
+  "jb-auth-forgot-phone.dc.html",
+  "jb-auth-sent-desktop.dc.html",
+  "jb-auth-sent-phone.dc.html",
+  "jb-auth-newpass-desktop.dc.html",
+  "jb-auth-newpass-phone.dc.html",
+  "jb-auth-invite-desktop.dc.html",
+  "jb-auth-invite-phone.dc.html",
+  "jb-auth-site-desktop.dc.html",
+  "jb-auth-site-phone.dc.html",
+  "jb-auth-signedout-desktop.dc.html",
+  "jb-auth-signedout-phone.dc.html",
+  "jb-auth-expired-desktop.dc.html",
+  "jb-auth-expired-phone.dc.html",
+  "jb-auth-noaccess-desktop.dc.html",
+  "jb-auth-noaccess-phone.dc.html",
+  "jb-till-setup-desktop.dc.html",
+  "jb-till-setup-phone.dc.html",
+  "jb-till-checkin-desktop.dc.html",
+  "jb-till-checkin-phone.dc.html",
+  "jb-till-pin-desktop.dc.html",
+  "jb-till-pin-phone.dc.html",
+  "jb-cust-signin-desktop.dc.html",
+  "jb-cust-signin-phone.dc.html",
+  "jb-cust-code-desktop.dc.html",
+  "jb-cust-code-phone.dc.html",
+  "jb-pending.dc.html",
+  "jb-expired.dc.html",
+  "j01-web-home.dc.html",
+  "j01-web-category.dc.html",
+  "j01-web-product.dc.html",
+  "j01-web-search.dc.html",
+  "j01-web-shops.dc.html",
+  "j01-web-missing.dc.html",
+  "j01-web-cookies.dc.html",
+  "j02-buy-basket.dc.html",
+  "j02-buy-collect.dc.html",
+  "j02-buy-pay.dc.html",
+  "j02-buy-confirmed.dc.html",
+  "j02-buy-ready.dc.html",
+  "j02-buy-status.dc.html",
+  "j03-service.dc.html",
+  "j03-service-list.dc.html",
+  "j03-diagnosis.dc.html",
+  "j03-problem.dc.html",
+  "j03-date.dc.html",
+  "j03-appointment.dc.html",
+  "j03-full.dc.html",
+  "j03-details.dc.html",
+  "j03-pending.dc.html",
+  "j03-confirmed.dc.html",
+  "j03-reschedule.dc.html",
+  "j03-change-pending.dc.html",
+  "j03-cancel.dc.html",
+  "j03-cancelled.dc.html",
+  "j03-rejected.dc.html",
+  "j03-expired.dc.html",
+  "j03-service-status.dc.html",
+  "j03-book-sending.dc.html",
+  "j03-book-deposit.dc.html",
+  "j04-progress.dc.html",
+  "j04-quote-findings.dc.html",
+  "j04-approval.dc.html",
+  "j04-approval-done.dc.html",
+  "j04-stale.dc.html",
+  "j04-ceiling.dc.html",
+  "j04-customer-message.dc.html",
+  "j04-preferences.dc.html",
+  "j05-ready.dc.html",
+  "j05-done-summary.dc.html",
+  "j05-done-pay.dc.html",
+  "j05-done-receipt.dc.html",
+  "j06-c2w-customer.dc.html",
+  "j06-c2w-staff.dc.html",
+  "j07-acct-history.dc.html",
+  "j07-acct-balance.dc.html",
+  "j07-acct-reminder.dc.html",
+  "j07-acct-review.dc.html",
+  "j07-acct-unsubscribe.dc.html",
+  "j07-acct-privacy.dc.html",
+  "j08-setup-checklist.dc.html",
+  "j08-settings.dc.html",
+  "j08-setup-sites.dc.html",
+  "j08-setup-register-till.dc.html",
+  "j08-staff-settings.dc.html",
+  "j08-staff-edit.dc.html",
+  "j08-staff-deactivate.dc.html",
+  "j08-setup-pin.dc.html",
+  "j08-setup-roles.dc.html",
+  "j08-setup-vat.dc.html",
+  "j08-setup-till.dc.html",
+  "j08-printer-settings.dc.html",
+  "j08-setup-receipt-printer.dc.html",
+  "j08-services.dc.html",
+  "j08-service-edit.dc.html",
+  "j08-hours.dc.html",
+  "j08-booking-settings.dc.html",
+  "j08-message-settings.dc.html",
+  "j08-channel-edit.dc.html",
+  "j08-channel-proof.dc.html",
+  "j08-template.dc.html",
+  "j08-setup-saved.dc.html",
+  "j08-setup-export.dc.html",
+  "j09-move-upload.dc.html",
+  "j09-move-map.dc.html",
+  "j09-move-run.dc.html",
+  "j09-move-fix.dc.html",
+  "j09-move-schedule.dc.html",
+  "j09-move-compare.dc.html",
+  "j09-move-practice.dc.html",
+  "j09-move-switch.dc.html",
+  "j10-open-start.dc.html",
+  "j10-open-checkin.dc.html",
+  "j10-open-float.dc.html",
+  "j10-open-tills.dc.html",
+  "j10-desk.dc.html",
+  "j11-till-sale.dc.html",
+  "j11-till-variant.dc.html",
+  "j11-till-serial.dc.html",
+  "j11-till-customer.dc.html",
+  "j11-till-discount.dc.html",
+  "j11-till-pay.dc.html",
+  "j11-till-card.dc.html",
+  "j11-till-account.dc.html",
+  "j11-till-giftcard.dc.html",
+  "j11-till-deposit.dc.html",
+  "j11-till-receipt.dc.html",
+  "j11-till-park.dc.html",
+  "j11-till-void.dc.html",
+  "j11-till-find.dc.html",
+  "j11-till-refund.dc.html",
+  "j11-till-job.dc.html",
+  "j11-till-collect.dc.html",
+  "j11-till-offline.dc.html",
+  "j11-till-needs-net.dc.html",
+  "j11-till-no-signout.dc.html",
+  "j11-till-failed.dc.html",
+  "j12-requests.dc.html",
+  "j12-review.dc.html",
+  "j12-reject.dc.html",
+  "j12-diagnosis-review.dc.html",
+  "j12-ws-waiting.dc.html",
+  "j12-desk.dc.html",
+  "j12-new-job.dc.html",
+  "j12-intake.dc.html",
+  "j12-print.dc.html",
+  "j12-reprint.dc.html",
+  "j12-print-error.dc.html",
+  "j12-scan.dc.html",
+  "j12-login.dc.html",
+  "j12-denied.dc.html",
+  "j12-job.dc.html",
+  "j12-history.dc.html",
+  "j12-job-card.dc.html",
+  "j12-job-page.dc.html",
+  "j12-quote-editor.dc.html",
+  "j12-catalogue-search.dc.html",
+  "j12-quote-send.dc.html",
+  "j12-approved.dc.html",
+  "j12-diary.dc.html",
+  "j12-week.dc.html",
+  "j12-month.dc.html",
+  "j12-capacity-conflict.dc.html",
+  "j12-queue.dc.html",
+  "j12-claim-conflict.dc.html",
+  "j12-waiting.dc.html",
+  "j12-inbox.dc.html",
+  "j12-mechanic-message.dc.html",
+  "j12-message-error.dc.html",
+  "j12-finished.dc.html",
+  "j12-ws-order-parts.dc.html",
+  "j12-ws-reserve.dc.html",
+  "j12-ws-time.dc.html",
+  "j12-ws-wall.dc.html",
+  "j12-collection.dc.html",
+  "j12-closed.dc.html",
+  "j12-reopen.dc.html",
+  "j13-po-suppliers.dc.html",
+  "j13-po-feed.dc.html",
+  "j13-po-list.dc.html",
+  "j13-po-edit.dc.html",
+  "j13-po-send.dc.html",
+  "j13-po-suggest.dc.html",
+  "j13-po-receive.dc.html",
+  "j13-po-invoice.dc.html",
+  "j13-po-labels.dc.html",
+  "j14-stock-list.dc.html",
+  "j14-stock-product.dc.html",
+  "j14-stock-variants.dc.html",
+  "j14-stock-serials.dc.html",
+  "j14-stock-pricing.dc.html",
+  "j14-stock-sites.dc.html",
+  "j14-stock-transfer.dc.html",
+  "j14-take-start.dc.html",
+  "j14-take-count.dc.html",
+  "j14-take-diff.dc.html",
+  "j14-take-post.dc.html",
+  "j14-stock-adjust.dc.html",
+  "j14-stock-check.dc.html",
+  "j15-customers.dc.html",
+  "j15-customer-record.dc.html",
+  "j15-duplicates.dc.html",
+  "j15-cust-history.dc.html",
+  "j15-cust-groups.dc.html",
+  "j15-cust-loyalty.dc.html",
+  "j15-cust-account.dc.html",
+  "j15-cust-consent.dc.html",
+  "j15-cust-privacy.dc.html",
+  "j16-eod-synced.dc.html",
+  "j16-eod-attention.dc.html",
+  "j16-eod-count.dc.html",
+  "j16-eod-banking.dc.html",
+  "j16-eod-card.dc.html",
+  "j16-eod-z.dc.html",
+  "j17-rep-today.dc.html",
+  "j17-rep-sales.dc.html",
+  "j17-rep-margin.dc.html",
+  "j17-rep-vat.dc.html",
+  "j17-rep-workshop.dc.html",
+  "j17-rep-customers.dc.html",
+  "j17-acc-connect.dc.html",
+  "j17-acc-map.dc.html",
+  "j17-acc-log.dc.html",
+  "j18-site-settings.dc.html",
+  "j18-site-theme.dc.html",
+  "j18-site-pages.dc.html",
+  "j18-site-publish.dc.html",
+  "j18-site-domain.dc.html",
+  "j18-site-shopify.dc.html",
+  "j18-site-payments.dc.html",
+  "j18-site-orders.dc.html",
+  "j18-site-collect.dc.html",
+  "j18-site-refund.dc.html",
+  "j19-multi-switch.dc.html",
+  "j19-multi-reports.dc.html",
+  "j19-multi-tills.dc.html",
+  "j20-ops-audit.dc.html",
+  "j20-ops-devices.dc.html",
+  "j20-ops-feedback.dc.html",
+  "j21-connect.dc.html",
+  "j21-connect-proof.dc.html",
+  "j21-pos.dc.html",
+  "j21-pos-done.dc.html",
+  "j21-pos-unknown.dc.html"
+ ],
+ "notes": {
+  "ja_s0": {
+   "x": 0,
+   "y": 2654,
+   "text": "How it fits together",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "ja_s1": {
+   "x": 2000,
+   "y": 2654,
+   "text": "Navigation shells",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "ja_title": {
+   "x": 0,
+   "y": 2334,
+   "text": "A · App map and navigation — Everyone",
+   "kind": "title1",
+   "maxW": 10870
+  },
+  "jb_s3": {
+   "x": 0,
+   "y": 4890,
+   "text": "Staff",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "jb_s4": {
+   "x": 16270,
+   "y": 4890,
+   "text": "Till",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "jb_s5": {
+   "x": 21800,
+   "y": 4890,
+   "text": "Customers",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "jb_title": {
+   "x": 0,
+   "y": 4570,
+   "text": "B · Signing in and access — Staff and customers",
+   "kind": "title1",
+   "maxW": 26240
+  },
+  "j01_s7": {
+   "x": 0,
+   "y": 6790,
+   "text": "Browse",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j01_s8": {
+   "x": 2510,
+   "y": 6790,
+   "text": "When things go wrong",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j01_title": {
+   "x": 0,
+   "y": 6470,
+   "text": "01 · Find the shop and browse the website — Customer",
+   "kind": "title1",
+   "maxW": 3370
+  },
+  "j02_s10": {
+   "x": 0,
+   "y": 8690,
+   "text": "Checkout",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j02_s11": {
+   "x": 2040,
+   "y": 8690,
+   "text": "After ordering",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j02_title": {
+   "x": 0,
+   "y": 8370,
+   "text": "02 · Buy online, or click and collect — Customer",
+   "kind": "title1",
+   "maxW": 2900
+  },
+  "j03_s13": {
+   "x": 0,
+   "y": 10590,
+   "text": "Booking",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j03_s14": {
+   "x": 4860,
+   "y": 10590,
+   "text": "Change, cancel and problems",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j03_title": {
+   "x": 0,
+   "y": 10270,
+   "text": "03 · Book a repair — Customer",
+   "kind": "title1",
+   "maxW": 9010
+  },
+  "j04_s16": {
+   "x": 0,
+   "y": 12490,
+   "text": "While the bike is in",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j04_title": {
+   "x": 0,
+   "y": 12170,
+   "text": "04 · Drop off and approve the quote — Customer",
+   "kind": "title1",
+   "maxW": 3680
+  },
+  "j05_s18": {
+   "x": 0,
+   "y": 14390,
+   "text": "Collection",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j05_title": {
+   "x": 0,
+   "y": 14070,
+   "text": "05 · Collect the bike and pay — Customer",
+   "kind": "title1",
+   "maxW": 1800
+  },
+  "j06_s20": {
+   "x": 0,
+   "y": 16290,
+   "text": "Waiting for Jack’s explanation",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_title": {
+   "x": 0,
+   "y": 15970,
+   "text": "06 · Cycle to Work — Customer and staff",
+   "kind": "title1",
+   "maxW": 1600
+  },
+  "j07_s22": {
+   "x": 0,
+   "y": 18190,
+   "text": "Account",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j07_s23": {
+   "x": 1100,
+   "y": 18190,
+   "text": "Messages and privacy",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j07_title": {
+   "x": 0,
+   "y": 17870,
+   "text": "07 · Account, history and reminders — Customer",
+   "kind": "title1",
+   "maxW": 2900
+  },
+  "j08_s25": {
+   "x": 0,
+   "y": 20090,
+   "text": "Getting started",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s26": {
+   "x": 4880,
+   "y": 20090,
+   "text": "People",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s27": {
+   "x": 10940,
+   "y": 20090,
+   "text": "Selling and printing",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s28": {
+   "x": 15820,
+   "y": 20090,
+   "text": "Workshop and messages",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s29": {
+   "x": 26600,
+   "y": 20090,
+   "text": "Data",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_title": {
+   "x": 0,
+   "y": 19770,
+   "text": "08 · Owner setup and onboarding — Owner and Manager",
+   "kind": "title1",
+   "maxW": 27700
+  },
+  "j09_s31": {
+   "x": 0,
+   "y": 21906,
+   "text": "Bring the data across",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j09_s32": {
+   "x": 6060,
+   "y": 21906,
+   "text": "Run alongside, then switch",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j09_title": {
+   "x": 0,
+   "y": 21586,
+   "text": "09 · Moving from Citrus Lime — Owner",
+   "kind": "title1",
+   "maxW": 9520
+  },
+  "j10_s34": {
+   "x": 0,
+   "y": 23722,
+   "text": "Morning",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j10_title": {
+   "x": 0,
+   "y": 23402,
+   "text": "10 · Opening the shop and checking in — Staff and Manager",
+   "kind": "title1",
+   "maxW": 5820
+  },
+  "j11_s36": {
+   "x": 0,
+   "y": 25538,
+   "text": "A sale",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j11_s37": {
+   "x": 6060,
+   "y": 25538,
+   "text": "Taking payment",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j11_s38": {
+   "x": 13300,
+   "y": 25538,
+   "text": "Other till jobs",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j11_s39": {
+   "x": 20540,
+   "y": 25538,
+   "text": "When the internet drops",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j11_title": {
+   "x": 0,
+   "y": 25218,
+   "text": "11 · Selling at the till — Staff",
+   "kind": "title1",
+   "maxW": 25180
+  },
+  "j12_s41": {
+   "x": 0,
+   "y": 27354,
+   "text": "Requests",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j12_s42": {
+   "x": 6060,
+   "y": 27354,
+   "text": "Book the bike in",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j12_s43": {
+   "x": 20380,
+   "y": 27354,
+   "text": "Quote",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j12_s44": {
+   "x": 26440,
+   "y": 27354,
+   "text": "Do the work",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j12_s45": {
+   "x": 44300,
+   "y": 27354,
+   "text": "Hand back",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j12_title": {
+   "x": 0,
+   "y": 27034,
+   "text": "12 · Workshop day — Staff and Mechanic",
+   "kind": "title1",
+   "maxW": 47760
+  },
+  "j13_s47": {
+   "x": 0,
+   "y": 29170,
+   "text": "Suppliers",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s48": {
+   "x": 2520,
+   "y": 29170,
+   "text": "Orders",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s49": {
+   "x": 7400,
+   "y": 29170,
+   "text": "Delivery",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_title": {
+   "x": 0,
+   "y": 28850,
+   "text": "13 · Receiving stock and purchase orders — Staff and Manager",
+   "kind": "title1",
+   "maxW": 10860
+  },
+  "j14_s51": {
+   "x": 0,
+   "y": 30986,
+   "text": "Products",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s52": {
+   "x": 6060,
+   "y": 30986,
+   "text": "Across sites",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s53": {
+   "x": 8580,
+   "y": 30986,
+   "text": "Stock take",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s54": {
+   "x": 13460,
+   "y": 30986,
+   "text": "Corrections",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_title": {
+   "x": 0,
+   "y": 30666,
+   "text": "14 · Stock take and stock control — Staff and Manager",
+   "kind": "title1",
+   "maxW": 15740
+  },
+  "j15_s56": {
+   "x": 0,
+   "y": 32802,
+   "text": "Customers",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s57": {
+   "x": 6060,
+   "y": 32802,
+   "text": "Loyalty and accounts",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_title": {
+   "x": 0,
+   "y": 32482,
+   "text": "15 · Customer service — Staff and Manager",
+   "kind": "title1",
+   "maxW": 10700
+  },
+  "j16_s59": {
+   "x": 0,
+   "y": 34618,
+   "text": "Closing",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j16_title": {
+   "x": 0,
+   "y": 34298,
+   "text": "16 · End-of-day cash-up — Staff and Manager",
+   "kind": "title1",
+   "maxW": 7000
+  },
+  "j17_s61": {
+   "x": 0,
+   "y": 36434,
+   "text": "Reports",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s62": {
+   "x": 7240,
+   "y": 36434,
+   "text": "Accounts software",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_title": {
+   "x": 0,
+   "y": 36114,
+   "text": "17 · Reports and accounts — Manager and Owner",
+   "kind": "title1",
+   "maxW": 10700
+  },
+  "j18_s64": {
+   "x": 0,
+   "y": 38250,
+   "text": "Design the website",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s65": {
+   "x": 7240,
+   "y": 38250,
+   "text": "Online orders",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_title": {
+   "x": 0,
+   "y": 37930,
+   "text": "18 · Website management — Manager",
+   "kind": "title1",
+   "maxW": 11880
+  },
+  "j19_s67": {
+   "x": 0,
+   "y": 40066,
+   "text": "Across sites",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_title": {
+   "x": 0,
+   "y": 39746,
+   "text": "19 · Multiple sites — Owner and Manager",
+   "kind": "title1",
+   "maxW": 3460
+  },
+  "j20_s69": {
+   "x": 0,
+   "y": 41882,
+   "text": "Oversight",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_title": {
+   "x": 0,
+   "y": 41562,
+   "text": "20 · Management oversight — Owner",
+   "kind": "title1",
+   "maxW": 3460
+  },
+  "j21_s71": {
+   "x": 0,
+   "y": 43698,
+   "text": "Connection and handoff",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_title": {
+   "x": 0,
+   "y": 43378,
+   "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
+   "kind": "title1",
+   "maxW": 5820
+  }
+ },
+ "designSystems": [
+  {
+   "title": "Wheelhouse",
+   "namespace": "wheelhouse",
+   "artifact": "https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH",
+   "version": null,
+   "copiedAt": "2026-09-27T12:13:59Z"
+  }
+ ]
+}

@@ -69,7 +69,7 @@ export function BookFrame({ step, title, back, action, actionNote, children }: B
   }, [action, ready, actionNote]);
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-white px-4 text-[var(--wh-ink)]">
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-[var(--wh-panel)] px-4 text-[var(--wh-ink)]">
       <header className="flex min-h-11 items-center border-b border-[var(--wh-border)] py-2 font-semibold">
         {services.data?.shopName ?? ''}
       </header>
@@ -115,7 +115,7 @@ export function BookFrame({ step, title, back, action, actionNote, children }: B
         )}
       </main>
       {ready && action && (
-        <div data-book-pinned className="fixed inset-x-0 bottom-0 border-t border-[var(--wh-border)] bg-white px-4 py-3">
+        <div data-book-pinned className="fixed inset-x-0 bottom-0 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-4 py-3">
           <div className="mx-auto max-w-md">
             {actionNote && <div className="mb-2 text-center text-sm">{actionNote}</div>}
             <Button variant="accent" block className="min-h-12" onClick={action.onClick} disabled={action.disabled}>

@@ -1,0 +1,52 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Wheelhouse</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;600&display=swap">
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--background); color:var(--foreground); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .deep { fill:var(--sidebar); }
+  .olive { fill:var(--primary); }
+  .lime { fill:var(--highlight); }
+  .stone { fill:var(--muted); }
+  .blk { rx:var(--radius-lg); }
+  .contour { fill:none; stroke:var(--highlight); stroke-width:2; }
+  .contour.soft { stroke:var(--background); }
+  .words { position:absolute; left:var(--space-8); right:var(--space-8); bottom:var(--space-8); max-width:440px; }
+  .name { margin:0; font-size:72px; line-height:.92; font-weight:600; letter-spacing:-.02em; color:var(--foreground); }
+  .tag { margin:var(--space-2) 0 0 2px; font-size:14px; line-height:20px; color:var(--muted-foreground); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      sidebar 144x288 slab bleeding top and bottom (the deep frame) · primary 176x208 bleeding off the top (the action colour, largest hue) · muted 160x128 (stone relief) · highlight 96x48 (the rare marker, smallest)
+  arrangement one tall slab with satellites, staggered like shelves in a stockroom; gaps are space-4 (16px)
+  pattern     "a literal motif": Fjell means mountain, so four contour arcs cross the olive and stone blocks like a trail map — in highlight and background, radii stepping by space-6
+  scales      gap space-4; block corners radius-lg (10px); contour radii 72/96/120/144 (space-6 steps)
+-->
+<rect class="deep" x="0" y="-12" width="144" height="312"/>
+<rect class="olive blk" x="160" y="-10" width="176" height="208"/>
+<rect class="stone blk" x="352" y="112" width="160" height="128"/>
+<rect class="lime blk" x="160" y="214" width="96" height="48"/>
+<path class="contour" d="M 176 198 A 72 72 0 0 1 320 198"/>
+<path class="contour" d="M 152 198 A 96 96 0 0 1 344 198"/>
+<path class="contour soft" d="M 368 240 A 120 120 0 0 1 480 132"/>
+<path class="contour soft" d="M 392 240 A 144 144 0 0 1 480 152"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Wheelhouse</h1>
+<p class="tag">Software for independent bike shops, drawn in Fjell.</p>
+</div>
+</div>
+</body>
+</html>

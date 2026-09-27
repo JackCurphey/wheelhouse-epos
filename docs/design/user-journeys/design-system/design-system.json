@@ -1,0 +1,25 @@
+{
+ "v": 3,
+ "layout": "files",
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-09-27T12:13:36Z"
+ },
+ "title": "Wheelhouse",
+ "namespace": "Wheelhouse",
+ "libraries": [],
+ "sections": {},
+ "groups": [],
+ "assetGroups": {},
+ "blobs": {},
+ "docs": {
+  "readme": "project/README.md",
+  "sections": []
+ },
+ "lastChange": {
+  "by": "Jack Curphey",
+  "at": "2026-09-27T13:30:00Z",
+  "via": "Claude Code",
+  "note": "Darker input border (#83867a) so every field clears 3:1"
+ }
+}

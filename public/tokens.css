@@ -14,36 +14,66 @@
  * against WCAG 2.1 AA (4.5:1 for body text). Do not change a colour without
  * running `npm test` - the gate will catch a regression, but only if you run it.
  *
- * --brand #b8460f was approved by Jack on 2 September 2026 as the working
- * value. It is expected to change again later; any replacement still has to
- * clear 4.5:1 with white text or the contrast gate fails.
+ * THE PALETTE IS FJELL - the Wheelhouse design system, chosen by Jack on
+ * 27 September 2026. Record: docs/decisions/2026-09-27-fjell-theme.md.
+ * src/styles/theme.css carries the same values for the React apps under the
+ * --wh-* names; tests/design-fjell.test.js fails if the two files disagree,
+ * so change both together. The staff app always uses Fjell - shops no longer
+ * recolour it. A shop's colour scheme (THEME_PRESETS) now reaches only the
+ * public website (public-storefront), which does not link this file.
  *
- * Also approved by Jack, 2 September 2026: the --status-complete-paid
- * treatment (a finished job recedes via the palest background rather than
- * pale ink, because the old ink measured 3.21 at the 9.5px this badge
- * renders at), the 4px spacing scale, and the global focus ring. The type
- * scale was approved separately on 31 August 2026.
+ * Still approved from earlier: the --status-* colours (unchanged by Fjell;
+ * the --status-complete-paid treatment - a finished job recedes via the
+ * palest background rather than pale ink - is from 2 September 2026), the
+ * 4px spacing scale, the global focus ring (2 September) and the type scale
+ * (31 August).
  */
-:root {
-  /* ---------- Surfaces and text ---------- */
-  --bg: #f4f5f3;
-  --panel: #ffffff;
-  --ink: #1c231f;
-  /* Darkened from #6b7570, which measured 4.36 on --bg (WCAG AA fail).
-     #5f6a64 measures 5.14 on --bg and 5.63 on --panel. */
-  --muted: #5f6a64;
-  --border: #e0e2dd;
 
-  /* ---------- Brand and action ---------- */
-  /* Darkened from #d9581e, which measured 3.91 with white text (AA fail).
-     #b8460f measures 5.36. The old --brand-dark value was #b8460f, so the
-     hover step moves down to #93380b (7.47). */
-  --brand: #b8460f;
-  --brand-dark: #93380b;
-  --accent: #1f6f5c;
-  --accent-dark: #164f42;
-  --danger: #c0392b;
-  --danger-hover: #a5301f;
+/* ---------- Fonts (self-hosted - see the decision record) ----------
+   Served from public/fonts/ so the till keeps its fonts with no internet and
+   no page load ever asks Google for anything. Latin subset only, from the
+   Google Fonts API; both are SIL Open Font License (OFL.txt beside each).
+   Work Sans is one variable file that covers every weight we use. */
+@font-face {
+  font-family: "Work Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/work-sans/work-sans-latin-wght.woff2") format("woff2");
+}
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/dm-mono/dm-mono-latin-500.woff2") format("woff2");
+}
+
+:root {
+  /* ---------- Surfaces and text (Fjell) ---------- */
+  --bg: #f3f2ee;
+  --panel: #fbfbf9;
+  --ink: #1c1e19;
+  --muted: #56594f;         /* muted TEXT: 6.38 on --bg, 6.90 on --panel */
+  --surface-muted: #e8e7e1; /* muted SURFACE (Fjell) */
+  --border: #dcdbd3;        /* decorative lines and panel edges */
+  /* The edge of a form field. --border measures 1.3:1, too faint to show
+     where a field is (WCAG 1.4.11 wants 3:1); this is 3.10 on --panel. */
+  --input-border: #83867a;
+
+  /* ---------- Action ----------
+     Fjell has one action colour. --brand (.btn-primary) and --accent
+     (.btn-accent, focus rings, active pills) are the same primary, and both
+     darks are the primary-dark used for hover and the top bar. */
+  --brand: #3f4d33;
+  --brand-dark: #2a3024;
+  --accent: #3f4d33;
+  --accent-dark: #2a3024;
+  /* Active marker (e.g. the current top-bar tab), always with dark text. */
+  --highlight: #c5cf3e;
+  --on-highlight: #1c1e19;
+  --danger: #a8321f;
+  --danger-hover: #8a2819;
   --danger-bg: #fdecea;
   --warn-bg: #fff7e0;
   --warn-ink: #8a6100;
@@ -80,24 +110,30 @@
   --badge-other-bg: #f1e8fb;
   --badge-other-ink: #6a3ea1;
 
-  /* ---------- On-fill text and surface variants (Task 4) ---------- */
-  --on-brand: #ffffff;         /* white text on a brand/accent/danger fill */
-  --on-accent: #dfeee9;        /* idle nav label on the topbar */
-  --on-accent-muted: #cfe6dd;  /* .clock, .shop-info on the topbar */
-  --hover-bg: #f2f3f1;         /* .btn:hover, .btn-ghost:hover, .auth-tab:hover */
-  --hover-subtle: #fafaf8;     /* .search-dropdown-item:hover, data-table tr:hover */
-  --surface-today: #fbfdfc;    /* .wk-cell.today, .wk-day-col.today, .month-cell.today */
-  --surface-muted: #fafaf9;    /* .month-cell.other-month */
-  --surface-disabled: #eeeeec; /* .price-input:disabled */
-  --surface-sunken: #ececea;   /* .wk-day-header.day-off */
-  --hatch-a: #f4f4f2;          /* day-off diagonal stripe, lighter band */
-  --hatch-b: #ebebe9;          /* day-off diagonal stripe, darker band */
+  /* ---------- On-fill text and surface variants ----------
+     Fjell names only the main surfaces; these in-between shades are derived
+     from them (warm greys between --panel, --bg and --surface-muted). */
+  --on-brand: #ffffff;         /* white text on a primary/danger fill */
+  --on-accent: #f3f2ee;        /* nav label on the top bar (Fjell sidebar text) */
+  --on-accent-muted: #c9cbbf;  /* .clock, .shop-info on the top bar */
+  --hover-bg: #e8e7e1;         /* .btn:hover, .btn-ghost:hover, .auth-tab:hover */
+  --hover-subtle: #f3f2ee;     /* .search-dropdown-item:hover, data-table tr:hover */
+  --surface-today: #f7f8ea;    /* .wk-cell.today etc: --panel with a hint of --highlight */
+  --surface-disabled: #e8e7e1; /* .price-input:disabled */
+  --surface-sunken: #e8e7e1;   /* .wk-day-header.day-off */
+  --hatch-a: #efeee9;          /* day-off diagonal stripe, lighter band */
+  --hatch-b: #e8e7e1;          /* day-off diagonal stripe, darker band */
   --hatch-full: #f2e3b8;       /* day-full diagonal stripe (amber) */
 
-  /* Overridden at runtime by applyShopTheme() (public/app.js) per the shop's
-     chosen colour scheme - this default matches the 'forest' preset so there's
-     no flash of a different colour before that JS runs. */
-  --modal-bg: #DDF7DF;
+  /* Pop-up background. Shops used to tint this through their colour scheme;
+     the staff app is always Fjell now, so pop-ups are the Fjell panel and
+     their fields are told apart by --input-border. */
+  --modal-bg: #fbfbf9;
+
+  /* ---------- Type families ---------- */
+  --font-sans: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Numbers people read or match: prices, SKUs, receipt and job numbers. */
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   /* ---------- Shape ---------- */
   --radius: 10px;

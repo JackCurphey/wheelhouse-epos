@@ -1,0 +1,12 @@
+<!-- @dsCard group="Forms" height=200 -->
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><title>Field</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap"><style>html,body{margin:0}body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);padding:16px}
+.f{display:flex;flex-direction:column;gap:6px;max-width:360px;margin-bottom:var(--space-3)}
+label{font:600 14px/20px var(--font-sans)}
+input{min-height:44px;box-sizing:border-box;padding:0 12px;border-radius:var(--radius-md);border:1px solid var(--input);background:var(--card);color:var(--foreground);font:400 15px var(--font-sans)}
+input:focus{outline:2px solid var(--primary);outline-offset:1px}
+.h{font:400 13px/18px var(--font-sans);color:var(--muted-foreground)}
+.e input{border-color:var(--destructive)}.e .h{color:var(--destructive)}
+</style></head><body>
+<div class="f"><label for="em">Work email</label><input id="em" type="email" value="alex@northstreetcycles.example"><span class="h">We'll send a reset link here.</span></div>
+<div class="f e"><label for="pin">PIN</label><input id="pin" type="password" value="12"><span class="h">A PIN is 4 to 6 digits.</span></div>
+</body></html>

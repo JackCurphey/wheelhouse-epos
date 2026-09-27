@@ -161,7 +161,7 @@ function DetailsForm({ services, back, onExit }: FormProps) {
           can't open the terms, and vice versa (Jack, 26 Sep). */}
       <button
         type="button"
-        className="mb-3 flex min-h-11 w-full items-center rounded-lg border border-[var(--wh-border)] bg-white px-3.5 text-left text-sm font-semibold text-[var(--accent-dark)]"
+        className="mb-3 flex min-h-11 w-full items-center rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 text-left text-sm font-semibold text-[var(--accent-dark)]"
         onClick={() => setTermsOpen(true)}
       >
         Read the booking terms

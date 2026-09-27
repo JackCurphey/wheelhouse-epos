@@ -9,10 +9,10 @@ import { cn } from '@/lib/utils';
  * Mirrors the existing `.btn` family in public/styles.css one-for-one so the
  * React screens sit next to the vanilla screens without a visible seam.
  *
- * Colour rule: `accent` is the only tenant-varying variant, and it reads
- * --accent / --accent-dark, which public/app.js rewrites at runtime per shop.
- * It must stay a CSS custom property - Tailwind compiles at build time and
- * cannot emit a class for a shop that does not exist yet.
+ * Colour rule: every colour is a token from src/styles/theme.css (Fjell).
+ * `primary` and `accent` are the same Fjell primary - Fjell has one action
+ * colour. They stay CSS custom properties rather than baked-in values, so a
+ * future per-shop theme for customer pages can still set them at runtime.
  */
 const buttonVariants = cva(
   [
@@ -25,10 +25,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-[var(--border)] bg-white text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]',
-        primary: 'border-[var(--wh-brand)] bg-[var(--wh-brand)] text-white hover:bg-[var(--wh-brand-dark)]',
-        accent: 'border-[var(--accent)] bg-[var(--accent)] text-white hover:bg-[var(--accent-dark)]',
-        danger: 'border-[var(--wh-danger)] bg-[var(--wh-danger)] text-white hover:bg-[var(--wh-danger-hover)]',
+        default: 'border-[var(--border)] bg-[var(--wh-panel)] text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]',
+        primary: 'border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)] hover:bg-[var(--wh-brand-dark)]',
+        accent: 'border-[var(--accent)] bg-[var(--accent)] text-[var(--wh-on-brand)] hover:bg-[var(--accent-dark)]',
+        danger: 'border-[var(--wh-danger)] bg-[var(--wh-danger)] text-[var(--wh-on-brand)] hover:bg-[var(--wh-danger-hover)]',
         ghost: 'border-transparent bg-transparent text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]',
       },
       size: {

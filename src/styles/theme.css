@@ -1,66 +1,81 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Wheelhouse design tokens for the React/Tailwind bundle.
+   Wheelhouse design tokens for the React/Tailwind bundle (/workshop, /book).
 
-   Every value below is lifted from public/styles.css `:root` so the React
-   surfaces render identically to the vanilla-JS app. This file does NOT
-   replace public/styles.css - the two coexist while screens are ported one at
-   a time.
+   THE PALETTE IS FJELL - the Wheelhouse design system, chosen by Jack on
+   27 September 2026. Record: docs/decisions/2026-09-27-fjell-theme.md.
 
-   ===========================================================================
-   THE RULE THAT MATTERS MOST: --accent, --accent-dark and --modal-bg are
-   RUNTIME variables. public/app.js applyShopTheme() (~line 6900) calls
-   document.documentElement.style.setProperty() for those three, per shop,
-   from THEME_PRESETS (forest / ocean / sunset / slate / plum). Tailwind
-   compiles at build time and can never know a shop's colours, so these three
-   are declared as ordinary CSS custom properties in the `:root` block below,
-   and every Tailwind token that depends on them is mapped through
-   `@theme inline` so the generated utility emits `var(--accent)` at the point
-   of use rather than baking a literal. Move any of these three into a plain
-   `@theme` block as a hex literal and per-shop theming silently dies for
-   every shop.
+   public/tokens.css is the source of truth (it styles the vanilla staff app);
+   this file carries the same values under --wh-* names. Nothing links the two
+   files, so tests/design-fjell.test.js compares them and fails on any
+   difference it has not been told about. Change a value in both, then run
+   `npm test`.
+
+   Shops no longer recolour the staff app. Their colour scheme (THEME_PRESETS)
+   reaches only the public website (public-storefront), which has its own
+   stylesheet. --accent, --accent-dark and --modal-bg are still mapped through
+   `@theme inline` below, so a utility emits var(--accent) at the point of use
+   and anything that sets the variable at runtime (a future per-shop theme for
+   customer pages) still wins without a rebuild.
    ------------------------------------------------------------------------ */
+
+/* Self-hosted fonts, the same files public/tokens.css uses (public/fonts/,
+   served by the app, never fetched from Google). SIL Open Font License. */
+@font-face {
+  font-family: "Work Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/work-sans/work-sans-latin-wght.woff2") format("woff2");
+}
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/dm-mono/dm-mono-latin-500.woff2") format("woff2");
+}
 
 /* shadcn/Tailwind 4 class-based dark mode. */
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ---- Runtime-overridden (see the note above). Defaults = 'forest'. ---- */
-  --accent: #1f6f5c;
-  --accent-dark: #164f42;
-  --modal-bg: #DDF7DF;
+  /* ---- Action (Fjell has one action colour) ---- */
+  --accent: #3f4d33;
+  --accent-dark: #2a3024;
+  --modal-bg: #fbfbf9;
 
-  /* ---- Wheelhouse surfaces / text (from public/styles.css) ---- */
-  --wh-bg: #f4f5f3;
-  --wh-panel: #ffffff;
-  --wh-ink: #1c231f;
-  --wh-muted: #5f6a64;   /* D-001: was #6b7570, 4.36 on --bg (fails AA). Now 5.14/5.63. */
-  --wh-border: #e0e2dd;
+  /* ---- Surfaces / text ---- */
+  --wh-bg: #f3f2ee;
+  --wh-panel: #fbfbf9;
+  --wh-ink: #1c1e19;
+  --wh-muted: #56594f;          /* muted TEXT */
+  --wh-surface-muted: #e8e7e1;  /* muted SURFACE */
+  --wh-border: #dcdbd3;         /* decorative lines */
+  --wh-input-border: #83867a;   /* form field edges: 3:1+ on page (3.31), panel (3.58) and grey panel (3.00) */
 
   /* ---- Brand ----
-     DECISION D-001: --brand is #b8460f here, NOT the #d9581e still in
-     public/styles.css. #d9581e contrasts 3.91:1 against white and fails
-     WCAG AA; #b8460f measures 5.36:1. public/styles.css already uses
-     #b8460f as --brand-dark, so brand and brand-dark now hold the same
-     value - no darker tone is invented here. */
-  --wh-brand: #b8460f;
-  --wh-brand-dark: #93380b; /* D-001: 7.47 with white. Was #b8460f, which is now --wh-brand. */
+     Was a separate orange for the 'primary' button. Fjell has one action
+     colour, so brand and accent are the same primary and primary-dark. */
+  --wh-brand: #3f4d33;
+  --wh-brand-dark: #2a3024;
+  --wh-on-brand: #ffffff;       /* text on primary and danger fills */
+  --wh-on-accent: #f3f2ee;      /* text on the dark primary (top bar, sidebar) */
+  --wh-highlight: #c5cf3e;      /* active marker */
+  --wh-on-highlight: #1c1e19;   /* always dark text on the highlight */
 
   /* ---- Feedback ---- */
-  /* Hover surfaces. Exact values lifted from public/styles.css so the React
-     build and the vanilla app hover identically - see .btn:hover (179),
-     .btn-danger:hover (189) and table.data-table tr:hover td (676). */
-  --wh-hover: #f2f3f1;
-  --wh-hover-subtle: #fafaf8;
-  --wh-danger-hover: #a5301f;
-  --wh-danger: #c0392b;
+  --wh-hover: #e8e7e1;
+  --wh-hover-subtle: #f3f2ee;
+  --wh-danger-hover: #8a2819;
+  --wh-danger: #a8321f;
   --wh-danger-bg: #fdecea;
   --wh-warn-bg: #fff7e0;
   --wh-warn-ink: #8a6100;
   --wh-ok-bg: #e8f5ec;
 
-  /* ---- Job status chips (bg / border / ink triples) ---- */
+  /* ---- Job status chips (bg / border / ink triples) - unchanged by Fjell ---- */
   --wh-status-pending-bg: #f1e8fb;
   --wh-status-pending-border: #6a3ea1;
   --wh-status-pending-ink: #6a3ea1;
@@ -83,58 +98,67 @@
      that this state is meant to recede. Needs sign-off - do not change silently. */
   --wh-status-complete-paid-ink: #6b9484;
 
-  /* ---- shadcn contract, mapped onto the Wheelhouse palette ----
-     Light mode is deliberately identical to today's app. Names shadcn
-     expects but Wheelhouse has no direct equivalent for are marked NEW. */
+  /* ---- Overlays ---- */
+  --wh-backdrop: rgba(28, 30, 25, 0.45);            /* behind a pop-up: Fjell ink */
+  --wh-shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.25);
+
+  /* ---- Type families (same stacks as public/tokens.css) ---- */
+  --wh-font-sans: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --wh-font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ---- shadcn contract, mapped onto Fjell ---- */
   --background: var(--wh-bg);
   --foreground: var(--wh-ink);
   --card: var(--wh-panel);
   --card-foreground: var(--wh-ink);
   --popover: var(--wh-panel);
   --popover-foreground: var(--wh-ink);
-  --primary: var(--accent);              /* runtime, per shop */
-  --primary-foreground: var(--wh-panel);
-  --secondary: var(--wh-bg);             /* NEW: no Wheelhouse 'secondary' */
+  --primary: var(--accent);
+  --primary-foreground: var(--wh-on-brand);
+  --secondary: var(--wh-surface-muted);
   --secondary-foreground: var(--wh-ink);
-  --muted: var(--wh-bg);                 /* NEW: surface for muted text */
+  --muted: var(--wh-surface-muted);      /* a SURFACE - use --wh-muted for text */
   --muted-foreground: var(--wh-muted);
-  --accent-foreground: var(--wh-panel);  /* text on the accent fill */
+  --accent-foreground: var(--wh-on-brand);
   --destructive: var(--wh-danger);
-  --destructive-foreground: var(--wh-panel);
+  --destructive-foreground: var(--wh-on-brand);
   --border: var(--wh-border);
-  --input: var(--wh-border);
-  --ring: var(--accent);                 /* runtime: focus rings follow shop */
-  --sidebar: var(--accent-dark);         /* runtime: matches the top bar */
-  --sidebar-foreground: var(--wh-panel);
-  --sidebar-primary: var(--accent);
-  --sidebar-primary-foreground: var(--wh-panel);
+  --input: var(--wh-input-border);
+  --ring: var(--accent);
+  --sidebar: var(--accent-dark);
+  --sidebar-foreground: var(--wh-on-accent);
+  --sidebar-primary: var(--accent);      /* the active item */
+  --sidebar-primary-foreground: var(--wh-on-brand);
   --sidebar-accent: var(--accent);
-  --sidebar-accent-foreground: var(--wh-panel);
-  --sidebar-border: var(--wh-border);
-  --sidebar-ring: var(--accent);
+  --sidebar-accent-foreground: var(--wh-on-accent);
+  --sidebar-border: var(--accent);
+  --sidebar-ring: var(--wh-highlight);
 
-  /* Geometry, straight from public/styles.css. */
-  --radius: 10px;
+  /* Fjell radius: 6px for controls; rounded-xl (radius + 4px) is the 10px
+     card radius. */
+  --radius: 6px;
   --wh-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
-/* Dark mode. The staff app has no dark palette today, so these are NEW.
-   They reuse existing Wheelhouse values with their roles swapped (ink becomes
-   the surface, bg becomes the text) rather than introducing a second hue
-   family; only --wh-muted and --wh-border needed genuinely new values.
-   The three runtime variables are intentionally NOT redefined here - the
-   shop's chosen scheme applies in both modes. */
+/* Dark mode: a Fjell dark palette, derived (not part of the 27 Sep decision -
+   nothing switches it on yet). Primary, highlight and status colours stay as
+   in light mode; contrast is checked by tests/design-fjell.test.js. */
 .dark {
-  --wh-bg: #131715;
-  --wh-panel: #1c231f;
-  --wh-ink: #f4f5f3;
-  --wh-muted: #9aa5a0;
-  --wh-border: #2c3531;
+  --wh-bg: #161813;
+  --wh-panel: #1f221b;
+  --wh-ink: #f3f2ee;
+  --wh-muted: #a3a698;
+  --wh-surface-muted: #2a2e24;
+  --wh-border: #33372d;
+  --wh-input-border: #767a6d;
+  --wh-hover: #2a2e24;
+  --wh-hover-subtle: #1b1e17;
+  --modal-bg: #1f221b;
 }
 
-/* `inline` is what keeps runtime theming alive: the utility class emits
-   var(--primary) / var(--accent) etc. at the use site, so a later
-   style.setProperty() on <html> - or the .dark block above - still wins. */
+/* `inline` keeps the variables live: the utility class emits var(--primary)
+   / var(--accent) etc. at the use site, so the .dark block above - or a
+   runtime style.setProperty() on <html> - still wins. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -171,14 +195,21 @@
   --color-wh-panel: var(--wh-panel);
   --color-wh-ink: var(--wh-ink);
   --color-wh-muted: var(--wh-muted);
+  --color-wh-surface-muted: var(--wh-surface-muted);
   --color-wh-border: var(--wh-border);
+  --color-wh-input-border: var(--wh-input-border);
   --color-wh-brand: var(--wh-brand);
   --color-wh-brand-dark: var(--wh-brand-dark);
+  --color-wh-on-brand: var(--wh-on-brand);
+  --color-wh-on-accent: var(--wh-on-accent);
+  --color-wh-highlight: var(--wh-highlight);
+  --color-wh-on-highlight: var(--wh-on-highlight);
   --color-wh-danger: var(--wh-danger);
   --color-wh-danger-bg: var(--wh-danger-bg);
   --color-wh-warn-bg: var(--wh-warn-bg);
   --color-wh-warn-ink: var(--wh-warn-ink);
   --color-wh-ok-bg: var(--wh-ok-bg);
+  --color-wh-backdrop: var(--wh-backdrop);
 
   --color-status-pending-bg: var(--wh-status-pending-bg);
   --color-status-pending-border: var(--wh-status-pending-border);
@@ -199,15 +230,15 @@
   --color-status-complete-paid-border: var(--wh-status-complete-paid-border);
   --color-status-complete-paid-ink: var(--wh-status-complete-paid-ink);
 
-  /* shadcn's radius scale, all derived from the single 10px --radius. */
+  /* shadcn's radius scale, all derived from the single 6px --radius. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
   --shadow-wheelhouse: var(--wh-shadow);
+  --shadow-modal: var(--wh-shadow-modal);
 
-  /* Matches the html/body stack in public/styles.css. */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+  --font-sans: var(--wh-font-sans);
+  --font-mono: var(--wh-font-mono);
 }
