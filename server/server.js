@@ -3015,6 +3015,9 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Job not found');
   const body = await readJsonBody(req);
+  // The old diary now sends the version it last read (staff diary piece).
+  // Optional, so a caller that doesn't send one keeps the old behaviour.
+  if (body.version !== undefined && !Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
 
   const title = body.title !== undefined ? String(body.title).trim() : existing.title;
   if (!title) return badRequest(res, 'Job title is required');
@@ -3047,11 +3050,13 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   // (public/app.js approveJob() and the complete/reopen toggle), and will until
   // Phase 4 replaces it. This translates that into the state columns.
   //
-  // Deliberately NOT routed through applyEvent: the old app sends no version,
-  // so it cannot take part in the optimistic-concurrency contract, and some of
-  // its moves are not single machine events. This is the unguarded legacy path,
-  // and it is the reason the action endpoints exist beside it rather than
-  // instead of it. It dies with public/app.js.
+  // Deliberately NOT routed through applyEvent: some of its moves are not
+  // single machine events, and this is the unguarded legacy path - the reason
+  // the action endpoints exist beside it rather than instead of it. It dies
+  // with public/app.js. The old diary now sends the version it last read
+  // (staff diary piece), checked above when present, and every save through
+  // this route bumps it - so it does take part in the optimistic-concurrency
+  // contract even though it isn't routed through applyEvent.
   //
   // custody_state is left alone. The old status never expressed custody (Phase
   // 1: readLegacyStatus('complete') returns custody: null), so deriving one
@@ -3092,6 +3097,15 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   let out;
   try {
     out = await withBookingLock([existing.job_date, jobDate, existing.requested_job_date].filter(Boolean), async () => {
+      // A customer's change request (piece 12), read again under the lock.
+      // The old diary knows nothing of requests and sends 'scheduled' for one,
+      // so an ordinary save keeps it; dropping the job onto exactly the
+      // requested time answers it - the change is accepted; a status that
+      // takes the job anywhere else ends it. Request columns left on a job
+      // that is no longer a request are cleared on any save.
+      const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
+      if (body.version !== undefined && current && current.version !== body.version) return staleRefusal;
+
       const slotError = await checkJobSlot({
         jobDate,
         startTime: times.startTime,
@@ -3101,19 +3115,14 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
       });
       if (slotError) return refusal(slotError.error);
 
-      // A customer's change request (piece 12), read again under the lock.
-      // The old diary knows nothing of requests and sends 'scheduled' for one,
-      // so an ordinary save keeps it; dropping the job onto exactly the
-      // requested time answers it - the change is accepted; a status that
-      // takes the job anywhere else ends it. Request columns left on a job
-      // that is no longer a request are cleared on any save.
-      const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
       const request = current ? requestedOf(current) : null;
       let bookingState = legacyStates?.booking ?? null;
       let clearRequest = Boolean(current?.requested_job_date) && !request;
       if (request) {
+        // Same day, start and mechanic answers the request whatever the
+        // length (staff diary piece): the drop is the staff member's answer.
         const onRequested = jobDate === request.jobDate && times.startTime === request.startTime
-          && times.endTime === request.endTime && mechResolved.mechanicId === request.mechanicId;
+          && mechResolved.mechanicId === request.mechanicId;
         if (onRequested && (bookingState === null || bookingState === 'scheduled')) {
           bookingState = 'scheduled';
           clearRequest = true;
@@ -3126,6 +3135,7 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
 
       await db.prepare(
         `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
+           version = version + 1,
            booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
          WHERE id = ?`
       ).run(

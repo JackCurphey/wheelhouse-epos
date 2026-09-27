@@ -300,3 +300,15 @@ test("a staff reschedule request never holds a time the customer didn't ask for"
   assert.equal(res.body.requested, null);
   assert.deepEqual(await liveHolds(shopId(), booked.id), [{ job_date: booked.jobDate, start_time: '10:00', mechanic_id: sam, purpose: 'booking' }]);
 });
+
+test('dropping a job onto its requested start with a different length accepts the change', async () => {
+  const job = await requested();
+  const res = await legacySave(job.id, { jobDate: job.to, startTime: '14:00', endTime: '15:30' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(
+    { d: res.body.jobDate, s: res.body.startTime, e: res.body.endTime, b: res.body.bookingState, r: res.body.requested },
+    { d: job.to, s: '14:00', e: '15:30', b: 'scheduled', r: null }
+  );
+  assert.deepEqual(await requestColumns(job.id), [null, null, null, null, null]);
+  assert.deepEqual(await liveHolds(shopId(), job.id), [{ job_date: job.to, start_time: '14:00', mechanic_id: sam, purpose: 'booking' }]);
+});
