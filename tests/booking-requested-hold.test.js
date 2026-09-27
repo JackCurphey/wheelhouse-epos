@@ -6,7 +6,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
-import { pool } from '../server/db.js';
+import { pool, runWithShop, prepare } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { portalSignup } from './helpers/portal.js';
@@ -14,7 +14,7 @@ import { jsonRequest } from './helpers/http.js';
 import { deleteTestShop } from './helpers/testShop.js';
 import { seedWorkshopJob } from './helpers/workshopFixtures.js';
 import { seedJobTypes } from './helpers/bookable.js';
-import { tryBooking, liveHolds, seedRequest, dayMaker } from './helpers/linkActions.js';
+import { tryBooking, liveHolds, seedRequest, setJob, dayMaker } from './helpers/linkActions.js';
 
 let server;
 let owner;
@@ -40,11 +40,12 @@ after(async () => {
 const staff = (path, options) => staffRequest(server.baseUrl, owner.cookie, path, options);
 
 // A confirmed job at 10:00-11:00 on one day whose customer asked for 14:00-15:00
-// on another, with Sam both times. Seeded rows hold no booking hold of their
-// own (seedWorkshopJob inserts directly); the requested one is held.
-async function requestingJob() {
+// on another (or, with sameDay, later the same day), with Sam both times.
+// Seeded rows hold no booking hold of their own (seedWorkshopJob inserts
+// directly); the requested one is held.
+async function requestingJob({ sameDay = false } = {}) {
   const own = nextDay();
-  const wanted = nextDay();
+  const wanted = sameDay ? own : nextDay();
   const { jobId } = await seedWorkshopJob({
     shopId: owner.shop.id, customerId: null, mechanicId: sam, jobDate: own, startTime: '10:00', endTime: '11:00', legacyStatus: 'scheduled',
   });
@@ -87,9 +88,12 @@ test("a job's own request never blocks the job", async () => {
 
 test('a job that stops being a request lets its requested time go and keeps its own', async () => {
   const { jobId, own } = await requestingJob();
-  // The old diary's legacy status PUT is the one way back to scheduled that
-  // this piece leaves alone (decision log D13).
-  const res = await staff(`/api/workshop-jobs/${jobId}`, { method: 'PUT', body: { status: 'scheduled' } });
+  // The request ends as the later tasks' routes end one (state back, request
+  // cleared); an ordinary save then syncs the holds. Not the legacy status PUT:
+  // an ordinary legacy save keeps a customer's request (Task 7).
+  await setJob(owner.shop.id, jobId, `booking_state = 'scheduled', requested_job_date = NULL, requested_mechanic_id = NULL,
+    requested_start_time = NULL, requested_end_time = NULL`);
+  const res = await staff(`/api/workshop-jobs/${jobId}`, { method: 'PUT', body: { notes: 'Rang to confirm' } });
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.deepEqual(await liveHolds(owner.shop.id, jobId), [
     { job_date: own, start_time: '10:00', mechanic_id: sam, purpose: 'booking' },
@@ -105,4 +109,33 @@ test("a job's own hold is never mistaken for its requested one", async () => {
     { job_date: wanted, start_time: '14:00', mechanic_id: sam, purpose: 'requested' },
     { job_date: own, start_time: '10:00', mechanic_id: sam, purpose: 'booking' },
   ]);
+});
+
+const requestedHoldIds = (jobId) => runWithShop(owner.shop.id, () => prepare(
+  `SELECT id FROM workshop_capacity_holds
+   WHERE workshop_job_id = ? AND purpose = 'requested' AND state IN ('held', 'confirmed') ORDER BY id`
+).all(jobId)).then((rows) => rows.map((r) => r.id));
+
+test('a request that stands keeps the hold it has', async () => {
+  const { jobId } = await requestingJob();
+  const before = await requestedHoldIds(jobId);
+  assert.equal(before.length, 1);
+  const res = await staff(`/api/workshop-jobs/${jobId}`, { method: 'PUT', body: { notes: 'Rang to confirm' } });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(await requestedHoldIds(jobId), before);
+});
+
+test("a block clashes with a job's own slot, never its requested one, and lists the job once", async () => {
+  const { jobId, own } = await requestingJob({ sameDay: true });
+  const block = async (startTime, endTime) => (await staff('/api/workshop-unavailability', {
+    method: 'POST',
+    body: { kind: 'dates', mechanicId: sam, startDate: own, endDate: own, startTime, endTime, reason: 'Stock take' },
+  })).body.block;
+  // Over the requested 14:00-15:00 only.
+  await block('14:00', '14:30');
+  // Over both the job's own 10:00-11:00 and its requested 14:00-15:00.
+  const both = await block('10:00', '15:00');
+  const res = await staff(`/api/workshop-capacity?start=${own}&end=${own}`);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.deepEqual(res.body.days[0].clashes, [{ jobId, blockId: both.id }]);
 });

@@ -3958,7 +3958,7 @@ route('GET', '/api/workshop-capacity', async (req, res, params, query) => {
   const range = ([s, e]) => ({ start: toHHMM(s), end: toHHMM(e) });
   sendJson(res, 200, {
     days: days.map((day) => {
-      const dayJobs = jobs.filter((j) => j.jobDate === day.date);
+      const dayJobs = jobs.filter((j) => j.jobDate === day.date && !j.requested);
       const clashes = blocks.flatMap((b) => blockClashes(b, dayJobs).map((j) => ({ jobId: j.id, blockId: b.id })));
       return {
         date: day.date,
@@ -4745,13 +4745,14 @@ async function loadCapacity(start, end) {
      WHERE job_date >= ? AND job_date <= ? AND booking_state IN (${LIVE_STATES_SQL})`
   ).all(start, end)).map(toCapacityJob);
   // A customer's requested time (piece 12) takes capacity like a booking while
-  // staff decide, so nobody else is offered it.
+  // staff decide, so nobody else is offered it. Tagged `requested` so a job is
+  // only ever listed once, and only for its own slot, among a block's clashes.
   jobs.push(...(await db.prepare(
     `SELECT id, requested_mechanic_id AS mechanic_id, requested_job_date AS job_date,
             requested_start_time AS start_time, requested_end_time AS end_time, planned_minutes
      FROM workshop_jobs
      WHERE booking_state = 'reschedule_requested' AND requested_job_date >= ? AND requested_job_date <= ?`
-  ).all(start, end)).map(toCapacityJob));
+  ).all(start, end)).map((r) => ({ ...toCapacityJob(r), requested: true })));
   const days = computeCapacity({ settings, mechanics, blocks, jobs, dates: datesBetween(start, end) });
   return { settings, blocks, jobs, days };
 }
