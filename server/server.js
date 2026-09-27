@@ -3901,14 +3901,23 @@ route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
   const id = Number(params.id);
   const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Employee not found');
-  await db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
-  await db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-  await db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-  // Till sales stay as history, unassigned; check-ins only record that this
-  // person was in, so they go with the person.
-  await db.prepare('UPDATE till_sales SET employee_id = NULL WHERE employee_id = ?').run(id);
-  await db.prepare('DELETE FROM staff_checkins WHERE employee_id = ?').run(id);
-  await db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+  // All or nothing: if the final delete fails (e.g. a workshop hold or a
+  // requested booking still names this mechanic), nothing above it may stick.
+  await db.exec('BEGIN');
+  try {
+    await db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
+    await db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
+    await db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
+    // Till sales stay as history, unassigned; check-ins only record that this
+    // person was in, so they go with the person.
+    await db.prepare('UPDATE till_sales SET employee_id = NULL WHERE employee_id = ?').run(id);
+    await db.prepare('DELETE FROM staff_checkins WHERE employee_id = ?').run(id);
+    await db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+    await db.exec('COMMIT');
+  } catch (err) {
+    await db.exec('ROLLBACK');
+    throw err;
+  }
   sendJson(res, 200, { ok: true });
 });
 

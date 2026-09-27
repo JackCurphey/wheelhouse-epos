@@ -50,3 +50,32 @@ test('a team member with till sales and check-ins can be permanently deleted', a
   assert.equal(await inShop(() => prepare('SELECT 1 FROM staff_checkins WHERE client_id = ?').get(checkin.clientId)), undefined);
   assert.equal(await inShop(() => prepare('SELECT 1 FROM employees WHERE id = ?').get(sam)), undefined);
 });
+
+// All or nothing: a mechanic still named on a workshop capacity hold cannot be
+// deleted (that foreign key is not unassigned by this route - a separate,
+// pre-existing question), and the failed delete must leave the till sale's
+// employee and the check-in exactly as they were.
+test('a permanent delete that fails leaves the check-ins and till sales untouched', async () => {
+  const kim = await inShop(async () =>
+    (await prepare("INSERT INTO employees (name, is_cashier) VALUES ('Kim', 1)").run()).lastInsertRowid);
+  const tube = await seedProduct(owner.shop.id);
+  const saleItem = {
+    kind: 'sale', clientId: randomUUID(), receiptNumber: 2, tillClockAt: '2026-09-01T09:30:00.000Z',
+    employeeId: kim, lines: [{ productId: tube, description: 'Inner tube', qty: 1, unitPricePence: 699, vatRateBp: 2000 }],
+    payments: [{ method: 'cash', amountPence: 699 }],
+  };
+  const checkin = { kind: 'checkin', clientId: randomUUID(), employeeId: kim, checkedInAt: '2026-09-01T08:55:00.000Z' };
+  const synced = await tillRequest(server.baseUrl, owner.shop.slug, b1.token, '/sync', { method: 'POST', body: { items: [saleItem, checkin] } });
+  assert.deepEqual(synced.body.results.map((r) => r.status), ['recorded', 'recorded']);
+  await inShop(() => prepare(
+    "INSERT INTO workshop_capacity_holds (job_date, start_time, mechanic_id, minutes, state) VALUES ('2026-10-01', '10:00', ?, 60, 'confirmed')"
+  ).run(kim));
+
+  const res = await staffRequest(server.baseUrl, owner.cookie, `/api/employees/${kim}/permanent`, { method: 'DELETE' });
+  assert.notEqual(res.status, 200, 'the delete cannot succeed while a hold names this mechanic');
+
+  assert.ok(await inShop(() => prepare('SELECT 1 FROM employees WHERE id = ?').get(kim)), 'the employee is still there');
+  assert.ok(await inShop(() => prepare('SELECT 1 FROM staff_checkins WHERE client_id = ?').get(checkin.clientId)), 'the check-in is still there');
+  const kept = await inShop(() => prepare('SELECT employee_id FROM till_sales WHERE client_id = ?').get(saleItem.clientId));
+  assert.equal(kept.employee_id, kim, 'the till sale still names the employee');
+});

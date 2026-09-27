@@ -129,3 +129,4 @@ Re-run after the final review's fixes (`npm test` only): `tests 1354`,
   they can be looked at (plan 2's job).
 - **A check-in for an unknown staff member returns `'failed'`**, not
   `'recorded'`, so it is never silently swallowed.
+- **Permanent staff delete is now all-or-nothing.** A mechanic referenced by workshop holds or requested bookings still cannot be permanently deleted (pre-existing), but nothing is lost when it fails: check-ins and till sale assignments are rolled back with it.
