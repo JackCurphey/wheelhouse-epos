@@ -194,3 +194,8 @@ ring up sales, reconnect, and confirm every sale arrived exactly once.
 - Receipt number format detail: piece 3.
 - Moving existing tables and the legacy till across: implementation plan.
 - Hosting (PL-1) — needed before real money is taken.
+- §7 default 3 (credit accounts, loyalty) moved to piece 4 — no account or
+  loyalty data exists yet; plan 1 records an `'account'` payment and flags it
+  `unsupported_payment_method` rather than accepting or discarding it.
+- The till credential does not renew itself (as §5 originally said); it never
+  expires. Switching a till off centrally withdraws it instead.
