@@ -199,3 +199,13 @@ ring up sales, reconnect, and confirm every sale arrived exactly once.
   `unsupported_payment_method` rather than accepting or discarding it.
 - The till credential does not renew itself (as §5 originally said); it never
   expires. Switching a till off centrally withdraws it instead.
+- Sync results are per item: an item the server cannot store comes back
+  `'failed'` with a reason and is not stored on the server. The till must keep
+  and show those (plans 2 and 3); until then §8's "never discarded" holds only
+  for items the server can store.
+- A passing database condition (deadlock, serialization failure, cancelled
+  statement, lost connection) answers `503`; the till re-sends the batch and
+  anything already recorded comes back `'duplicate'`.
+- A replaced till computer cannot take over its old code: a switched-off till
+  keeps it and a new registration gets `409`. Plan 3 needs a reissue-token or
+  reactivate route. Registration is owner-only for now (§5 says manager).

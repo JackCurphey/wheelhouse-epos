@@ -34,6 +34,9 @@ nothing (migrations up to date both before and after the suite ran).
 
 No failures.
 
+Re-run after the final review's fixes (`npm test` only): `tests 1354`,
+`pass 1354`, `fail 0` (ten new tests).
+
 ## Step 2: spec walk
 
 ### Met in plan 1
@@ -47,9 +50,9 @@ No failures.
   check-ins tables, till provenance columns on sales, no stock refusal).
 - §7 default 1: new customers can be added offline, possible duplicates
   flagged for merge by hand.
-- §8: manager view data (till list, last sync, sales waiting), a sale the
-  server cannot accept is never discarded, the price charged at the till
-  stands.
+- §8: manager view data (till list, last sync, sales waiting), the price
+  charged at the till stands. (Never discarding a sale is partly met - see
+  Changed / partly met.)
 - §9 tests 1, 2, 3, 6, 7 (server side): a repeated sale id is recorded once;
   sales arriving out of order end up correct; an offline sale reduces stock
   on sync and flags below-zero stock; receipt numbers never clash between
@@ -87,15 +90,38 @@ No failures.
   `'account'` payment is recorded now and flagged `unsupported_payment_method`
   so it is never silently accepted or discarded.
 
-### Changed
+### Changed / partly met
 
+- **§8 "a sale the server cannot accept is never discarded" is partly met.**
+  What holds: anything the server can store is recorded and flagged on the
+  attention list (unknown staff, customer or product; payments that do not
+  add up; unhandled payment method; reused receipt number; stock below
+  zero). An item the server cannot store at all (fields out of range, a null
+  line or payment, a database rule it breaks) comes back `status: 'failed'`
+  with a reason and is not stored on the server: until plans 2 and 3 keep
+  and show those items, they exist only on the till. A passing database
+  condition (deadlock, serialization failure, cancelled statement, lost
+  connection) is not a failure: the request answers `503` and the till
+  re-sends; anything already committed comes back `'duplicate'`.
+- **A replaced till computer cannot take over its old code.** A switched-off
+  till keeps its code (for example `B1`), and registering a new till with the
+  same site and number gets `409`. Plan 3 needs a reissue-token or
+  reactivate route. The snapshot "replaced till" test only covers the same
+  till row carrying on from its last receipt number, not a new computer.
+- **Registering a till is owner-only**; the spec says a manager can do it.
 - **Till credential never expires**, rather than renewing itself while
   online (spec §5). Switching a till off centrally withdraws it. Flagged to
   Jack as a plan decision.
 - **Till auth rate limiting counts failures only**, keyed on address + shop
-  slug (not every request). The spec's implied per-request limiter would
-  have let a post-outage sync burst, or a dead neighbouring till, lock out a
-  working till.
+  slug (not every request), and the token is checked before the limiter. A
+  till presenting a valid, active token is always served, even while its
+  address + shop key is blocked, so neither a post-outage sync burst nor a
+  guesser or dead neighbouring till with a bad token sharing its address can
+  lock it out. The limiter is consulted only when the lookup fails (missing
+  or malformed token, unknown shop, no active till with that token): blocked
+  gives `429`, otherwise the failure counts and the answer is `401`. A good
+  token clears the count only when the key is not already blocked, so a
+  working till cannot lift a block that guessers earned.
 - **Sync results are per item, not per batch.** An item the server cannot
   store returns `status: 'failed'` with a reason, and the rest of the batch
   continues; a whole-batch `400` is reserved for a malformed request shape
