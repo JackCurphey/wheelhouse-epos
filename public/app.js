@@ -1643,12 +1643,17 @@ function refreshWorkshopGrid() {
   }
 }
 
+function mechanicShown(mechanicId) {
+  if (workshopMechanicFilter === 'all') return true;
+  if (workshopMechanicFilter === 'unassigned') return !mechanicId;
+  if (Array.isArray(workshopMechanicFilter)) return workshopMechanicFilter.includes(mechanicId);
+  return mechanicId === workshopMechanicFilter;
+}
+
+// Cancelled, declined and expired bookings aren't drawn - except a
+// customer's cancellation nobody has seen yet (staff diary piece).
 function visibleWorkshopJobs() {
-  const base = workshopJobs;
-  if (workshopMechanicFilter === 'all') return base;
-  if (workshopMechanicFilter === 'unassigned') return base.filter((j) => !j.mechanicId);
-  if (Array.isArray(workshopMechanicFilter)) return base.filter((j) => workshopMechanicFilter.includes(j.mechanicId));
-  return base.filter((j) => j.mechanicId === workshopMechanicFilter);
+  return workshopJobs.filter((j) => DiaryMarks.markOf(j) !== 'hidden' && mechanicShown(j.mechanicId));
 }
 
 // "Waiting for you": one card per thing a customer is waiting on staff for,
@@ -1822,14 +1827,26 @@ function jobPaidClass(j) {
   return j.status === 'complete' && j.orderStatus === 'converted' ? ' paid' : '';
 }
 
+// A mark from DiaryMarks (move-requested, cancelled-unseen) overrides the
+// job's own status for the grid's colour and label - the customer is
+// waiting on staff, which matters more here than what work state it's in.
+const MARK_LABELS = { 'move-requested': 'Move requested', 'cancelled-unseen': 'Cancelled by customer' };
+function markClass(j) {
+  const mark = DiaryMarks.markOf(j);
+  return mark === 'normal' ? '' : ` mark-${mark}`;
+}
+function statusLabel(j) {
+  return MARK_LABELS[DiaryMarks.markOf(j)] || JOB_STATUS_LABELS[j.status] || JOB_STATUS_LABELS.scheduled;
+}
+
 function renderJobCard(j) {
   return `
-    <button class="job-card status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}">
+    <button class="job-card status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}">
       ${j.startTime ? `<span class="job-time">${esc(j.startTime)}</span>` : ''}
       ${jobTitleLineHtml(j)}
       ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
       ${j.mechanicName ? `<span class="job-mechanic">${esc(j.mechanicName)}</span>` : ''}
-      <span class="job-status-badge">${esc(JOB_STATUS_LABELS[j.status] || JOB_STATUS_LABELS.scheduled)}</span>
+      <span class="job-status-badge">${esc(statusLabel(j))}</span>
     </button>
   `;
 }
@@ -1868,24 +1885,38 @@ function renderTimedDayColumn(dateStr, isToday, mechanicId, dayOff) {
       // overflow:hidden before a single line could fit alongside the two
       // 6px resize handles + body padding.
       const height = Math.max(34, bottom - top);
+      const cancelledUnseen = DiaryMarks.markOf(j) === 'cancelled-unseen';
+      const resizeHandle = (edge) => (cancelledUnseen ? '' : `<div class="wk-resize-handle" data-edge="${edge}"></div>`);
       return `
-        <div class="wk-job-block status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}" style="top:${top}px; height:${height}px;">
-          <div class="wk-resize-handle" data-edge="top"></div>
+        <div class="wk-job-block status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}" style="top:${top}px; height:${height}px;">
+          ${resizeHandle('top')}
           <div class="wk-job-block-body">
             ${jobTitleLineHtml(j)}
             <span class="job-time">${esc(j.startTime)}–${esc(j.endTime || minutesToTime(startMin + 60))}</span>
             ${j.customerName ? `<span class="job-customer">${esc(j.customerName)}</span>` : ''}
             ${j.mechanicName ? `<span class="job-mechanic">${esc(j.mechanicName)}</span>` : ''}
-            <span class="job-status-badge">${esc(JOB_STATUS_LABELS[j.status] || JOB_STATUS_LABELS.scheduled)}</span>
+            <span class="job-status-badge">${esc(statusLabel(j))}</span>
           </div>
-          <div class="wk-resize-handle" data-edge="bottom"></div>
+          ${resizeHandle('bottom')}
         </div>
       `;
     })
     .join('');
+  const mechanicOk = (id) => (mechanicId !== undefined ? id === mechanicId : mechanicShown(id));
+  const outlinesHtml = DiaryMarks.outlinesOn(waitingFeed.items, dateStr, mechanicOk).map((item) => {
+    const startMin = timeToMinutes(item.to.startTime);
+    const endMin = timeToMinutes(item.to.endTime || minutesToTime(startMin + 60));
+    const top = minutesToGridPx(Math.max(startMin, WORKSHOP_GRID_MIN));
+    const bottom = minutesToGridPx(Math.min(endMin, WORKSHOP_GRID_MAX));
+    const height = Math.max(34, bottom - top);
+    return `
+      <div class="wk-request-outline" data-job="${item.jobId}" style="top:${top}px; height:${height}px;">
+        <span>Requested</span><span>${esc(item.customerName || 'Customer')}</span>
+      </div>`;
+  }).join('');
   return `
     <div class="wk-day-col ${isToday ? 'today' : ''} ${dayOff ? 'day-off' : ''}" data-date="${dateStr}"${mechanicId !== undefined ? ` data-mechanic="${mechanicId}"` : ''} style="height:${WORKSHOP_GRID_HEIGHT}px;">
-      ${blocksHtml}
+      ${blocksHtml}${outlinesHtml}
     </div>
   `;
 }
@@ -2275,6 +2306,8 @@ function saveRefusalText(err) {
   return DiaryReview.refusalText(err);
 }
 
+function openReview(jobId) {} // Task 8 replaces this with the review pop-up
+
 async function approveJob(job) {
   try {
     await api(`/api/workshop-jobs/${job.id}`, { method: 'PUT', body: { status: 'scheduled', version: job.version } });
@@ -2341,9 +2374,17 @@ function wireGridInteractions() {
   wrap.querySelectorAll('.wk-job-block').forEach((blockEl) => {
     const job = workshopJobs.find((x) => x.id === Number(blockEl.dataset.job));
     if (!job) return;
+    if (DiaryMarks.markOf(job) === 'cancelled-unseen') {
+      blockEl.addEventListener('click', () => openReview(job.id));
+      return;
+    }
     wireJobBlockMove(blockEl, job);
     wireJobBlockResize(blockEl, job);
   });
+  wrap.querySelectorAll('.wk-request-outline').forEach((el) => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openReview(Number(el.dataset.job));
+  }));
   wireJobContextMenuOn(wrap, '.job-card, .wk-job-block');
   wireJobTooltipOn(wrap, '.job-card, .wk-job-block');
 
@@ -2372,7 +2413,7 @@ const MONTH_CHIP_LIMIT = 3;
 function renderMonthJobChip(j) {
   const mainText = j.bikeLabel || j.title;
   return `
-    <button class="month-job-chip status-${j.status || 'scheduled'}${jobPaidClass(j)}" data-job="${j.id}">
+    <button class="month-job-chip status-${j.status || 'scheduled'}${jobPaidClass(j)}${markClass(j)}" data-job="${j.id}">
       ${j.startTime ? `<span class="mjc-time">${esc(j.startTime)}</span>` : ''}<span class="mjc-title"><span class="mjc-main">${esc(mainText)}</span>${j.bikeLabel ? ` <span class="mjc-sub">${esc(j.title)}</span>` : ''}</span>
     </button>
   `;

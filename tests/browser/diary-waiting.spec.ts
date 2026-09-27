@@ -6,7 +6,7 @@ import { startLiveServer, TEST_CLOCK_PIN } from '../helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from '../helpers/staff.js';
 import { portalSignup } from '../helpers/portal.js';
 import { deleteTestShop } from '../helpers/testShop.js';
-import { bookOnline, dayMaker } from '../helpers/linkActions.js';
+import { bookOnline, dayMaker, linkActions } from '../helpers/linkActions.js';
 import { purgeAttachmentFiles } from '../helpers/workshopFixtures.js';
 
 // The legacy staff diary (public/app.js, #workshop): "Waiting for you", the
@@ -150,4 +150,40 @@ test('the column picks up a new booking within a minute without a click', async 
   await expect(page.locator(`.waiting-card[data-job="${booked.id}"]`)).toHaveCount(0);
   await page.clock.fastForward(61_000);
   await expect(page.locator(`.waiting-card[data-job="${booked.id}"]`)).toBeVisible();
+});
+
+test('a change request shows amber on the job and a dashed outline at the requested time', async ({ page, context }) => {
+  const booked = await book();
+  await staff(`/api/workshop-jobs/${booked.id}/accept`, { method: 'POST', body: { version: 1 } });
+  // Same week as the booking: the next weekday in dayMaker's sequence may be in
+  // another week, so ask for 14:00 on the booking's own day.
+  const link = linkActions(server!.baseUrl, owner.shop.slug);
+  const res = await link.change(booked.code, { jobDate: booked.jobDate, mechanicId: sam, startTime: '14:00' });
+  expect(res.status).toBe(200);
+  await signIn(context);
+  await openDiary(page);
+  await page.locator(`.waiting-card[data-job="${booked.id}"]`).click();
+  const block = page.locator(`.wk-job-block[data-job="${booked.id}"]`);
+  await expect(block).toHaveClass(/mark-move-requested/);
+  await expect(block).toContainText('Move requested');
+  const outline = page.locator(`.wk-request-outline[data-job="${booked.id}"]`);
+  await expect(outline).toBeVisible();
+  const [b, o] = [(await block.boundingBox())!, (await outline.boundingBox())!];
+  expect(Math.round(o.y - b.y)).toBe(4 * 48); // 10:00 → 14:00 at 48px an hour
+});
+
+test("a customer's cancellation shows greyed until seen, and a declined booking is not drawn", async ({ page, context }) => {
+  const cancelled = await book();
+  const declined = await book();
+  const link = linkActions(server!.baseUrl, owner.shop.slug);
+  expect((await link.cancel(cancelled.code)).status).toBe(200);
+  await staff(`/api/workshop-jobs/${declined.id}/decline`, { method: 'POST', body: { version: 1 } });
+  await signIn(context);
+  await openDiary(page);
+  await page.locator(`.waiting-card[data-job="${cancelled.id}"]`).click();
+  const block = page.locator(`.wk-job-block[data-job="${cancelled.id}"]`);
+  await expect(block).toHaveClass(/mark-cancelled-unseen/);
+  await expect(block).toContainText('Cancelled by customer');
+  await expect(block.locator('.wk-resize-handle')).toHaveCount(0);
+  await expect(page.locator(`[data-job="${declined.id}"]`)).toHaveCount(0);
 });
