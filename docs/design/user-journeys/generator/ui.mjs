@@ -54,13 +54,14 @@ export const FONT = THEME === 'sand' ? `'Public Sans', ui-sans-serif, system-ui,
 // body face"). Everything already routed through FONT stays Public Sans;
 // callers that draw headings (h1() in stage1.mjs, h2() in diary.mjs/
 // job-page.mjs) switch to FONT_DISPLAY explicitly.
-export const FONT_DISPLAY = THEME === 'sand' ? `'Source Serif 4', Georgia, serif` : FONT;
+// Jack, 28 Sep: sans-serif throughout — headings use the body face too.
+export const FONT_DISPLAY = FONT;
 // DM Mono, same as Fjell, for job numbers/prices in both themes — it already
 // sits well against a warm paper background and keeping one mono face avoids
 // a second font-loading round trip on every board.
 export const MONO = `'DM Mono', ui-monospace, monospace`;
 export const FONT_LINK = THEME === 'sand'
-  ? 'https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap'
+  ? 'https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap'
   : 'https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap';
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -102,7 +103,7 @@ export function button(text, { variant = 'accent', block = false, size = 'defaul
     primary: `border: 1px solid ${C.brand}; background: ${C.brand}; color: #ffffff`,
     default: `border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}`,
     ghost: `border: 1px solid transparent; background: transparent; color: ${C.ink}`,
-    danger: `border: 1px solid ${C.danger}; background: ${C.danger}; color: #ffffff`,
+    danger: THEME === 'sand' ? `border: 1px solid ${C.danger}; background: transparent; color: ${C.danger}` : `border: 1px solid ${C.danger}; background: ${C.danger}; color: #ffffff`,
   }[variant];
   const pad = size === 'sm' ? 'padding: 5px 10px; font-size: 13px; border-radius: 6px' : 'padding: 11px 16px; font-size: 15px; border-radius: 6px; min-height: 44px';
   const style = `display: ${block ? 'flex' : 'inline-flex'}; ${block ? 'width: 100%;' : ''} box-sizing: border-box; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-family: inherit; text-decoration: none; ${pad}; ${v}`;

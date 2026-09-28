@@ -249,6 +249,14 @@ answers, in the order given.
     that simply isn't finished in its day without having been planned that
     way (it has to carry over). Options discussed: split into parts per day
     (recommended), one bar across the days, or both. To revisit later.
+53. **Sans-serif throughout** (Jack, 28 Sep): the Soft sand look uses
+    Public Sans for headings as well as body (the serif headings of Look 4
+    are dropped). **Destructive buttons such as Unschedule are outlined**
+    rather than filled.
+54. **New job shows the mechanic, doesn't ask for it** (applying item 32 to
+    the form): the chosen time and mechanic appear together at the top of
+    the form ("Tue 15 Sep · 10:00 · Alex Morgan") with the reason; changing
+    the mechanic is done by dragging in the Day view.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

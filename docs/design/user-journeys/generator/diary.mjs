@@ -12,7 +12,7 @@ import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
 // in job-options.mjs. Shared with that file via job-page.mjs so neither file
 // depends on the other's internals (see that module's header comment).
 import {
-  jobPopupContent, jobLeftCol as jpJobLeftCol, fullChecklistDialog,
+  jobPopupContent, jobLeftCol as jpJobLeftCol, fullChecklistDialog, togglePill,
   CHECKLIST_10, CUSTOMER_NOTE, STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES,
   panel as jpPanel, row as jpRow, h2 as jpH2, mono as jpMono,
 } from './job-page.mjs';
@@ -346,7 +346,6 @@ const BLOCK_PREF = { first: 'bike', second: 'jobTitle' };
 const STORAGE = { 'WH-1042': 'Hook 3', 'WH-1040': 'Hook 1' };
 const STORAGE_SLOTS = ['Hook 1', 'Hook 2', 'Hook 3', 'Hook 4', 'Hook 5', 'Hook 6', 'Workshop floor', 'Front window'];
 const storageOptions = (def) => [def, ...STORAGE_SLOTS.filter((s) => s !== def)];
-const READY_BY_QUICK = ['Today', 'Tomorrow', '+3 days', '+1 week', '+2 weeks', 'Before the weekend'];
 const STARTING_STATUS = ['Booked', 'Bike is here', 'Waiting for parts'];
 const rotate = (arr, idx) => arr.slice(idx).concat(arr.slice(0, idx));
 
@@ -988,12 +987,14 @@ const custResult = `<div style="padding: 6px 12px; border-radius: 8px; border: 2
 // the most free time that day; from a mechanic's own column (the day view),
 // that mechanic is pre-filled instead. Either way it's a real select the
 // member of staff can change before saving.
-// New bike build / PDI tick (item 26): near the top, unticked, always with
-// its "customer becomes optional" hint underneath — the hint states the
-// effect rather than only appearing once ticked, since a member of staff
-// reads it before deciding whether to tick it.
+// New bike build / PDI pill (item 26; decision 50 — a clickable toggle pill,
+// not a tick box): near the top, off, always with its "customer becomes
+// optional" hint next to it — the hint states the effect rather than only
+// appearing once on, since a member of staff reads it before deciding
+// whether to turn it on. "New bike build" only ever appears here, on the New
+// job form — once the job exists it isn't shown on the job page (decision 50).
 function newBuildCheck(size) {
-  return `<div style="display: flex; flex-direction: column; gap: 4px">${check('New bike build or pre-delivery check', false, 'nj-newbuild-' + size)}<div style="padding-left: 28px">${note('Customer becomes optional.', 12)}</div></div>`;
+  return `<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">${togglePill('New bike build or pre-delivery check', false, 'nj-newbuild-' + size)}${note('Customer becomes optional.', 12)}</div>`;
 }
 // Staff notes (item 26): internal only, each with who and when — an "Add
 // note" button rather than a live list (this is a still drawing), so
@@ -1012,13 +1013,9 @@ ${button('Add note', { variant: 'default', size: 'sm' })}
 ${note('Internal only — not shown to the customer.', 12)}
 </div>`;
 }
-// Ready by (item 26): a date field plus Citrus Lime's quick buttons.
-function readyByBlock(size, dateValue, quickIdx) {
-  return `<div style="display: flex; flex-direction: column; gap: 8px">
-${field('Ready by', { type: 'date', value: dateValue, id: 'nj-readyby-' + size })}
-${segmented(READY_BY_QUICK, quickIdx, 'Ready by, quick pick')}
-</div>`;
-}
+// Decision 51 (28 Sep 2026): no separate "Ready by" field or quick buttons on
+// New job — the diary day/time chosen for the job (the `when` banner above
+// it) is its ready-by day; readyByBlock is gone.
 // Decision 18: in the Everyone week view Wheelhouse assigns the mechanic with
 // the most free time that day; from a mechanic's own column (the day view),
 // that mechanic is pre-filled instead. Either way it's a real select the
@@ -1027,11 +1024,9 @@ function newJobBody(size, opts = {}) {
   const {
     when = 'Tue 15 Sep · 10:00',
     mechanic = 'Alex Morgan',
-    mechHint = 'Chosen automatically: most free time on Tuesday. You can change it.',
+    mechHint = 'Mechanic chosen automatically: most free time on Tuesday. To change it, drag the job to another mechanic in the Day view.',
     showCustomer = true,
     freeMinutes = null,
-    readyByDate = '2026-09-16',
-    readyByIdx = 1,
     startingStatusIdx = 0,
     bikeHereChecked = false,
     storageDefault = 'Hook 3',
@@ -1061,8 +1056,7 @@ ${field('Bike', { placeholder: 'Bike make and model', id: 'nj-bike-' + size })}`
     const workBlock = `${field('Work / service', { value: 'Standard service; inspect rear brake', id: 'nj-work-' + size })}
 ${area('What the customer told us', receiptNote, 'nj-told-' + size, 2)}
 ${field('Estimated time', { value: '60 minutes', id: 'nj-time-' + size })}`;
-    return `${banner(when, 'info')}
-${select('Mechanic', ordered, 'nj-mech-' + size)}
+    return `${banner(`${when} · ${mechanic}`, 'info')}
 ${note(mechHint)}
 ${customerBlock}
 ${workBlock}
@@ -1091,14 +1085,11 @@ ${area('Note for the customer', receiptNote, 'nj-receipt-' + size, 3)}
 ${note('Printed on their receipt.', 12)}
 </div>`;
   const rightCol = `<div style="display: flex; flex-direction: column; gap: 12px">
-${banner(when, 'info')}
-${select('Mechanic', ordered, 'nj-mech-' + size)}
+${banner(`${when} · ${mechanic}`, 'info')}
 ${note(mechHint)}
 ${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}
-${readyByBlock(size, readyByDate, readyByIdx)}
 ${select('Starting status', rotate(STARTING_STATUS, startingStatusIdx), 'nj-status-' + size)}
-${check('The bike is here now', bikeHereChecked, 'nj-herenow-' + size)}
-${note('Books it in straight away, ready to print the bike tag.', 12)}
+<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">${togglePill('The bike is here now', bikeHereChecked, 'nj-herenow-' + size)}${note('Books it in straight away, ready to print the bike tag.', 12)}</div>
 ${select('Where the bike is kept', storageOptions(storageDefault), 'nj-storage-' + size)}
 ${note('Storage slots are on for this shop. Turn them off in Settings.', 12)}
 ${staffNotesBlock(size, staffNotes)}
@@ -1128,9 +1119,9 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
   return dialogOverlay(base, w, h, `${dialogHeader('New job', `${closeId}-${size}.dc.html`, '', id)}${body}${dialogFooter(footer)}`, { pad, full: true, labelledby: id });
 }
 // Tue 15 Sep · 10:00 · Alex Morgan has 30 minutes free before Alex's next job
-// (10:30, WH-1081) — item 23's warning example. Ready by: Tomorrow, matching
-// the diary time's own "tomorrow" (Wed 16 Sep), not the global today.
-const NEW_JOB_OPTS = { freeMinutes: 30, readyByDate: '2026-09-16', readyByIdx: 1, storageDefault: 'Hook 3', receiptNote: 'Rear brake squeals and feels weak.' };
+// (10:30, WH-1081) — item 23's warning example. Ready by (decision 51) is the
+// diary day chosen above — Tue 15 Sep — not a separate field.
+const NEW_JOB_OPTS = { freeMinutes: 30, storageDefault: 'Hook 3', receiptNote: 'Rear brake squeals and feels weak.' };
 screens['new-job'] = {
   desktop: newJobDialog('desktop', DW, DH, 6, { baseFn: (s) => diaryFrozenContent(s), bodyOpts: NEW_JOB_OPTS }),
   tablet: newJobDialog('tablet', TW, TH, 28, { baseFn: (s) => diaryFrozenContent(s) }),
@@ -1144,8 +1135,8 @@ screens['new-job'] = {
 // bike is already here, so "The bike is here now" is ticked and the starting
 // status is "Bike is here"; a staff note is already on the job.
 const NEW_JOB_DAY_OPTS = {
-  when: 'Thu 17 Sep · 16:00', mechanic: 'Jo Taylor', mechHint: 'From the column you clicked.', showCustomer: false, freeMinutes: 120,
-  readyByDate: '2026-09-17', readyByIdx: 0, startingStatusIdx: 1, bikeHereChecked: true, storageDefault: 'Hook 5',
+  when: 'Thu 17 Sep · 16:00', mechanic: 'Jo Taylor', mechHint: 'Mechanic from the column you clicked.', showCustomer: false, freeMinutes: 120,
+  startingStatusIdx: 1, bikeHereChecked: true, storageDefault: 'Hook 5',
   receiptNote: 'Please check the bottom bracket — the customer says there is play.',
   staffNotes: [{ who: 'Jo Taylor', when: '16:02', text: 'Customer will collect after work.' }],
 };
@@ -1376,7 +1367,7 @@ function tagStripCompact() {
   return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 13)}${badge('Acknowledged', 'green')}</div><span style="font-size: 11px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 11px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div>`, 12, 'align-items: center')}`, '', 6, 0);
 }
 function waitingStripCompact() {
-  return jpPanel(`${jpRow(`${badge('Waiting for parts', 'amber')}<span style="font-size: 13px; font-weight: 600">Replacement rear brake pads delayed</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Revised ready ${jpMono('Sat 19 Sep · 16:00')}</span>`, 10)}<span style="font-size: 11px; color: ${C.muted}; line-height: 1.3">The brake pads are arriving later than expected. We’re aiming for Saturday at 16:00 and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`, 6, 3);
+  return jpPanel(`${jpRow(`${badge('Waiting for parts', 'amber')}<span style="font-size: 13px; font-weight: 600">Replacement rear brake pads delayed</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span>`, 10)}<span style="font-size: 11px; color: ${C.muted}; line-height: 1.3">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`, 6, 3);
 }
 function finishedStripCompact() {
   return jpPanel(`${jpRow(`<span style="font-size: 13px">Alex finished the work and final checks at ${jpMono('15:30')}. The bike is still in the shop.</span><span style="flex-grow: 1"></span><span style="font-size: 13px; font-weight: 700">Agreed work ${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span>`, 10)}`, '', 6, 0);
@@ -1385,12 +1376,19 @@ function collectionStripCompact() {
   return jpPanel(`${jpRow(`<span style="font-size: 12px; color: ${C.ink}">Bike handed to the customer or authorised collector · Lock key and rear light returned</span>`, 8)}${jpRow(`${badge('Paid', 'green')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 11px; color: ${C.muted}">Taken at the Wheelhouse till today at ${jpMono('16:52')}.</span>`, 8)}`, '', 6, 3);
 }
 
+// Decision 51 (28 Sep 2026): ready-by is the diary day, not a separate field
+// — WH-1042 sits Thu 17 Sep 11:30–13:00 in the diary, so "Ready by Thu 17
+// Sep" everywhere by default. The one exception is waiting-for-parts, which
+// passes its own readyBy (the day the job is moved to in the diary, per the
+// "Revised ready" date below) so the header badge and the compact left
+// column agree with the stage-specific delay text.
+const JOB_READY_BY = 'Thu 17 Sep';
 function buildJobPageDesktop({
   mechanic = false, jobNum = 'WH-1042', status, tone, closeHref,
   stageTop = '', customerTexts, staffTexts, checkedCount, notedCount,
-  checklistHref = null, leftStatus, bikeHere, newBuild = false,
+  checklistHref = null, leftStatus, bikeHere,
   lines, totalLabel, totalValue, footerNote = '', quoteAction = false,
-  totalBadge = '', footer, limit,
+  totalBadge = '', footer, limit, readyBy = JOB_READY_BY,
 }) {
   const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
   const base = shellDesktop('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('desktop') : diaryFrozenContent('desktop'), opts);
@@ -1399,8 +1397,8 @@ function buildJobPageDesktop({
     titleId: 'job-page-title', jobTitle: 'Standard service', status, tone, closeHref,
     customer, mechanicName: 'Alex Morgan', custHref: 'customer-desktop.dc.html',
     jobNum, created: 'Created Thu 17 Sep · by Jo Taylor', limit,
-    readyByBadge: badge('Ready by Fri 18 Sep', 'grey'), totalBadge,
-    left: jpJobLeftCol({ status: leftStatus, diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: 'Fri 18 Sep', bikeHere, newBuild, idPrefix: 'jp' }),
+    readyByBadge: badge(`Ready by ${readyBy}`, 'grey'), totalBadge,
+    left: jpJobLeftCol({ status: leftStatus, diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy, bikeHere, idPrefix: 'jp' }),
     customerTexts, staffTexts, checkedCount, totalCount: CHECKLIST_10.length, notedCount, checklistHref,
     lines, totalLabel, totalValue, footerNote, quoteAction,
     footer, stageTop,
@@ -1437,7 +1435,7 @@ screens['job-overview'] = buildJobPage({
   desktop: {
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_NONE,
     checkedCount: 0, notedCount: 0,
-    leftStatus: 'Expected', bikeHere: false, newBuild: false,
+    leftStatus: 'Expected', bikeHere: false,
     lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
     footer: button('Book in', { variant: 'primary', block: true, href: 'job-book-in-desktop.dc.html' }),
   },
@@ -1465,7 +1463,7 @@ screens['job-book-in'] = buildJobPage({
     stageTop: tagStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
     checkedCount: 0, notedCount: 0,
-    leftStatus: 'In workshop', bikeHere: true, newBuild: false,
+    leftStatus: 'In workshop', bikeHere: true,
     lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
     footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
   },
@@ -1480,7 +1478,7 @@ screens['job-quote'] = buildJobPage({
   desktop: {
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
     checkedCount: 0, notedCount: 0,
-    leftStatus: 'Awaiting approval', bikeHere: true, newBuild: false,
+    leftStatus: 'Awaiting approval', bikeHere: true,
     lines: LINES_QUOTE, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: true,
     // Item 43 (decision 43): a customer who set no spending limit always
     // gets a quote — this board is the consistent example of when a quote
@@ -1502,7 +1500,7 @@ screens['job-mechanic'] = buildJobPage({
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
     checklistHref: 'job-checklist-desktop.dc.html',
-    leftStatus: 'In workshop', bikeHere: true, newBuild: false,
+    leftStatus: 'In workshop', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-desktop.dc.html' }),
@@ -1511,7 +1509,12 @@ screens['job-mechanic'] = buildJobPage({
 
 // 13. job-waiting-parts — "Job · waiting for parts"; a delay/parts section on
 // top (tablet/phone: waitingTop; desktop: waitingStripCompact, same texts).
-const waitingTop = (size) => panel(`${h2('Waiting for parts', 15)}${field('Part / reason', { value: 'Replacement rear brake pads delayed', id: 'wp-reason-' + size })}${field('Revised target ready', { type: 'datetime-local', value: '2026-09-19T16:00', id: 'wp-revised-' + size })}${area('Customer update', 'The brake pads are arriving later than expected. We’re aiming for Saturday at 16:00 and will confirm as soon as your bike is ready.', 'wp-update-' + size, 3)}${note('Target dates are estimates. This update does not mark the bike ready.', 12)}`, `border-color: ${ST.waiting[1]}`, 14, 8);
+// Decision 51: a revised date here is the day the job is moved to in the
+// diary, said plainly — WAITING_READY_BY (Sat 19 Sep) is that moved-to day,
+// so the field's label says "in the diary" and the job page's own ready-by
+// badge/field (readyBy below) match it rather than the ordinary Thu 17 Sep.
+const WAITING_READY_BY = 'Sat 19 Sep';
+const waitingTop = (size) => panel(`${h2('Waiting for parts', 15)}${field('Part / reason', { value: 'Replacement rear brake pads delayed', id: 'wp-reason-' + size })}${field('Moved to, in the diary', { type: 'datetime-local', value: '2026-09-19T16:00', id: 'wp-revised-' + size })}${area('Customer update', 'The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.', 'wp-update-' + size, 3)}${note('This moves the job’s ready-by date. It does not mark the bike ready.', 12)}`, `border-color: ${ST.waiting[1]}`, 14, 8);
 screens['job-waiting-parts'] = buildJobPage({
   status: 'Waiting for parts', tone: 'amber', stageLabel: 'Waiting for parts', top: waitingTop, historyUpTo: 5,
   footer: () => button('Save delay & send update', { block: true }),
@@ -1519,7 +1522,7 @@ screens['job-waiting-parts'] = buildJobPage({
     stageTop: waitingStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
-    leftStatus: 'Waiting for parts', bikeHere: true, newBuild: false,
+    leftStatus: 'Waiting for parts', bikeHere: true, readyBy: WAITING_READY_BY,
     lines: LINES_WAITING, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: `${button('Mark ready for collection', { variant: 'default', block: true })}${note('Target dates are estimates. This update does not mark the bike ready.', 12)}`,
@@ -1536,7 +1539,7 @@ screens['job-finished'] = buildJobPage({
     stageTop: finishedStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
-    leftStatus: 'Work finished', bikeHere: true, newBuild: false,
+    leftStatus: 'Work finished', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, iconName: 'till', href: 'job-collection-desktop.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
@@ -1553,7 +1556,7 @@ screens['job-collection'] = buildJobPage({
     stageTop: collectionStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
-    leftStatus: 'Ready for collection', bikeHere: true, newBuild: false,
+    leftStatus: 'Ready for collection', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: button('Record collection', { variant: 'primary', block: true }),
@@ -1571,8 +1574,8 @@ screens['job-checklist'] = {
       titleId: 'job-page-title', jobTitle: 'Standard service', status: 'In workshop', tone: 'blue', closeHref: 'diary-mechanic-desktop.dc.html',
       customer: { ...JOB_CUSTOMER, storageSlot: STORAGE['WH-1042'] }, mechanicName: 'Alex Morgan', custHref: 'customer-desktop.dc.html',
       jobNum: 'WH-1042', created: 'Created Thu 17 Sep · by Jo Taylor',
-      readyByBadge: badge('Ready by Fri 18 Sep', 'grey'), totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
-      left: jpJobLeftCol({ status: 'In workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: 'Fri 18 Sep', bikeHere: true, newBuild: false, idPrefix: 'jpc' }),
+      readyByBadge: badge(`Ready by ${JOB_READY_BY}`, 'grey'), totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+      left: jpJobLeftCol({ status: 'In workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: JOB_READY_BY, bikeHere: true, idPrefix: 'jpc' }),
       customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: CHECKLIST_CHECKED, totalCount: CHECKLIST_10.length, notedCount: CHECKLIST_NOTED, checklistHref: null,
       lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT, quoteAction: false,
       footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-desktop.dc.html' }),

@@ -32,6 +32,12 @@ export const checkRow = (label, checked, id, sub = '', bordered = false, minH = 
 </label>
 ${sub ? `<div style="padding-left: 30px">${sub}</div>` : ''}
 </div>`;
+// Clickable toggle pill (decision 50, 28 Sep 2026): a real button with
+// aria-pressed, not a tick box — filled in the primary ink with light text
+// and a small check icon when on; outlined with muted text when off. Used
+// for "Bike is here" on the job page and, for consistency, both "The bike is
+// here now" and "New bike build or pre-delivery check" on the New job form.
+export const togglePill = (label, on, id, extra = '') => `<button type="button" id="${id}" aria-pressed="${on ? 'true' : 'false'}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; ${extra}">${on ? icon('check', 15, C.panel) : ''}${esc(label)}</button>`;
 
 export const selectFieldS = (label, value, id) => `<div style="display: flex; flex-direction: column; gap: 3px"><label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><select id="${id}" style="width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"><option>${esc(value)}</option></select></div>`;
 export const staticFieldS = (label, value, id) => `<div style="display: flex; flex-direction: column; gap: 1px"><label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><div id="${id}" style="min-height: 20px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.bg}; display: flex; align-items: center; font-size: 13px; color: ${C.ink}">${esc(value)}</div></div>`;
@@ -66,10 +72,14 @@ export const SPEND_LIMIT = 'Customer OK up to £200';
 export function jobMetaRow(jobNum, created, readyByBadge, totalBadge, limit = SPEND_LIMIT) {
   return row(`${mono(jobNum, 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">${esc(created)}</span><span style="flex-grow: 1"></span>${limit ? badge(limit, 'blue') : ''}${readyByBadge}${totalBadge}`, 10);
 }
-export function jobLeftCol({ status, diaryTime, readyBy, bikeHere, newBuild, idPrefix }) {
+// Decision 50 (28 Sep 2026): "Bike is here" is a clickable toggle pill, not a
+// tick box; "New bike build" is dropped from the job page entirely — it only
+// appears on the New job form, before the job exists (the `newBuild` param is
+// gone — nothing calls this with it any more).
+export function jobLeftCol({ status, diaryTime, readyBy, bikeHere, idPrefix }) {
   return `${selectFieldS('Status', status, `${idPrefix}-status`)}
 ${grid('1fr 1fr', `${staticFieldS('Diary time', diaryTime, `${idPrefix}-time`)}${staticFieldS('Ready by', readyBy, `${idPrefix}-ready`)}`, 12)}
-<div style="display: flex; gap: 24px; flex-wrap: wrap">${checkRow('Bike is here', bikeHere, `${idPrefix}-here`)}${checkRow('New bike build', newBuild, `${idPrefix}-newbuild`)}</div>`;
+${togglePill('Bike is here', bikeHere, `${idPrefix}-here`)}`;
 }
 
 // ---------- notes box (decisions 35/36/38/39) ----------
