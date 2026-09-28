@@ -12,6 +12,7 @@
 import { C, MONO, esc, icon, button, badge, card, logoSlot } from './ui.mjs';
 import { DW, DH, stack } from './stage1.mjs';
 import { shellDesktop } from './diary.mjs';
+import { jobPopupContent, jobLeftCol, fullChecklistDialog, CHECKLIST_10, CUSTOMER_NOTE, STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES } from './job-page.mjs';
 
 // ---------- small helpers (copied from diary.mjs's private helpers; kept
 // minimal — this file only needs a subset) ----------
@@ -819,90 +820,34 @@ function jobFinalStagesBoard() {
 }
 
 // ================= job-final-2: notes turned into one big text box =================
-// Decisions 35/36 (28 Sep): the job page has three parts — information,
-// notes, work and parts — and the notes are "one big text box holding
-// everything, with the checklist incorporated into it" rather than a
-// composer-plus-feed. Jack's own description of the box: one text area
-// where everything typed so far can be edited, with a "Detailed notes"
-// section that opens from inside it to hold the checklist. Built from
-// optionJobFinal()'s code (job-final itself is left untouched) — same
-// title bar, customer strip, job details strip, full work-and-parts table
-// and footer; only the notes column changes, and the old folded
-// "Checklist" row is removed (superseded — the checklist now lives inside
-// Detailed notes, decision 35).
-//
-// Order inside the box is oldest-first (a document you add to at the
-// bottom), the opposite of job-final's newest-first feed: the customer's
-// booking note reads first, then staff paragraphs in the order they were
-// written, then room to keep typing — matching "you can edit everything
-// that's been typed previously... then space to keep typing" (Jack).
-const NOTES_CHRONO = [...NOTES6].reverse();
-// One paragraph of the notes box. The customer's words get a small
-// "Customer · from her booking, <date>" label plus a light tint band and
-// left rule, so they read as quoted material inside an otherwise plain
-// document, not as an anonymous line. Staff paragraphs get a small muted
-// "<name> · <day> <time> — " stamp inline before the text, the way a real
-// note-taking app auto-stamps what you write (decision 36's "who and
-// when").
-function bigNoteParagraph(n) {
-  return `<p style="margin: 0; font-size: 14px; line-height: 1.45; color: ${C.ink}">${esc(n.text)}</p>`;
-}
-// Decision 38: a customer section at the top of the box, closed off by an
-// underline. It holds the customer's words from their booking and is still
-// editable, so staff can add what the customer explains in the shop. Below
-// the line the job's notes are plain text — no name/time stamps.
-function bigNoteBody() {
-  const customer = NOTES_CHRONO.filter((n) => n.role === 'customer');
-  const staff = NOTES_CHRONO.filter((n) => n.role !== 'customer');
-  const placeholder = (t) => `<div style="display: flex; align-items: center; gap: 6px; min-height: 14px"><span style="width: 2px; height: 14px; background: ${C.ink}; opacity: 0.45"></span><span style="font-size: 13px; color: ${C.muted}">${t}</span></div>`;
-  const customerSection = `<div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; border-bottom: 2px solid ${C.input}">
-<span style="font-size: 12px; font-weight: 700; color: ${C.accentDark}">From the customer</span>
-${customer.map(bigNoteParagraph).join('')}
-</div>`;
-  return `${customerSection}${staff.map(bigNoteParagraph).join('')}`;
-}
-// "Full service checklist" button + summary (decision 39: Jack renamed
-// "Detailed notes" once the notes box itself was settled, so this only
-// appears for services that carry a checklist — a general service or one
-// of the bigger services, not e.g. a hub service). A clear control at the
-// box's bottom edge that opens the checklist as its own full-screen pop-up
-// (decision 39 — no longer expands in place). Sized as a full-width ≥44px
-// row so it reads as one clear control, not a small link.
-function detailedNotesButton(checkedCount, totalCount, notedCount) {
-  const chev = `<span style="display: inline-flex; flex-shrink: 0; transform: rotate(-90deg); color: ${C.muted}">${icon('chevron', 16)}</span>`;
-  return `<button type="button" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left">
-<span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700">${chev}Full service checklist</span>
-<span style="font-size: 12px; color: ${C.muted}">${esc(`${checkedCount} of ${totalCount} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span>
-</button>`;
-}
-// Notes column — same card shape as job-final's finalNotesColumn (heading
-// keeps its visual weight, left accent border, tint background) but the
-// composer+feed is replaced with the single bordered text box, the
-// Detailed notes button and a quiet hint about auto-stamping.
-function bigNotesColumn(checkedCount, totalCount, notedCount) {
-  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-left: 4px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 3px 14px; display: flex; flex-direction: column; gap: 3px; overflow: hidden">
-${h2('Notes', 15)}
-<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; padding: 7px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden">${bigNoteBody()}</div>
-${detailedNotesButton(checkedCount, totalCount, notedCount)}
-</div>`;
-}
-// Job pop-up content shared by job-final-2 (as itself) and
-// job-final-2-detailed (as the dimmed layer the checklist pop-up sits over
-// — decision 39: the checklist is its own pop-up now, so the job pop-up
-// behind it is exactly the job-final-2 pop-up, unchanged).
+// Decision 40 (28 Sep): job-final-2's shared rendering lives in job-page.mjs
+// now (both this file and diary.mjs import it) — see that module's header
+// comment. This board calls it with the exact same fixed example data as
+// before the move, so its own rendered HTML is unchanged.
+const NOTES_CUSTOMER_TEXTS = [CUSTOMER_NOTE];
+const NOTES_STAFF_TEXTS = [STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES];
+// job-page.mjs's generic table reads l.approval (not this file's l.decision)
+// and an explicit l.note (not a work-name lookup) — mapped here so the
+// shared renderer's output matches this board's original table exactly.
+const LINE_DETAILS_2 = LINE_DETAILS.map((l) => ({ ...l, approval: l.decision, note: l.work === 'Shimano brake pads' ? 'Rear pads worn — replacing' : '' }));
+const CHECKED_COUNT_2 = CHECKLIST_10.filter((c) => c.checked).length;
+const NOTED_COUNT_2 = CHECKLIST_10.filter((c) => c.note).length;
+// job-final-2's customer strip shows a shorter bike description and the
+// storage slot inline (not JOB_CUSTOMER's fuller bike text used elsewhere in
+// this file) — matches the board's rendering before this move.
+const JOB_CUSTOMER_STRIP = { ...JOB_CUSTOMER, bike: 'Trek Domane AL 3 · green', storageSlot: 'Hook 3' };
 function jobFinal2DialogContent() {
-  const checkedCount2 = CHECKLIST.filter((c) => c.checked).length;
-  const notedCount2 = CHECKLIST.filter((c) => c.note).length;
-  const jobMetaRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 10);
-  const leftCol = `${selectFieldS('Status', 'In workshop', 'jf2-status')}
-${grid('1fr 1fr', `${staticFieldS('Diary time', 'Thu 17 Sep · 11:30–13:00', 'jf2-time')}${staticFieldS('Ready by', 'Fri 18 Sep', 'jf2-ready')}`, 12)}
-<div style="display: flex; gap: 24px; flex-wrap: wrap">${checkRow('Bike is here', true, 'jf2-here')}${checkRow('New bike build', false, 'jf2-newbuild')}</div>`;
-  const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${leftCol}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn(checkedCount2, CHECKLIST.length, notedCount2)}</div>`, 24);
-  const jobSection = panel(`${jobMetaRow}${jobBody}`, '', 5, 3);
-  const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(), grow: false });
-  const body = dialogBody(`${jobSection}${workSection}`, 4, 3);
-  const footer = dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
-  return `${finalTitleBar('job-final-2-title')}${finalCustStrip()}${body}${footer}`;
+  return jobPopupContent({
+    titleId: 'job-final-2-title', jobTitle: 'Standard service', status: 'In workshop', tone: 'blue', closeHref: '#',
+    customer: JOB_CUSTOMER_STRIP, mechanicName: 'Alex Morgan', custHref: '#',
+    jobNum: 'WH-1042', created: 'Created Thu 17 Sep · by Jo Taylor',
+    readyByBadge: badge('Ready by Fri 18 Sep', 'grey'), totalBadge: badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green'),
+    left: jobLeftCol({ status: 'In workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: 'Fri 18 Sep', bikeHere: true, newBuild: false, idPrefix: 'jf2' }),
+    customerTexts: NOTES_CUSTOMER_TEXTS, staffTexts: NOTES_STAFF_TEXTS,
+    checkedCount: CHECKED_COUNT_2, totalCount: CHECKLIST_10.length, notedCount: NOTED_COUNT_2,
+    lines: LINE_DETAILS_2, totalLabel: 'Approved total', totalValue: APPROVED_TOTAL, footerNote: DECLINED_NOTE, quoteAction: false,
+    footer: `${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`,
+  });
 }
 function optionJobFinal2() {
   return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
@@ -916,72 +861,10 @@ ${jobFinal2DialogContent()}
 }
 
 // ================= job-final-2-detailed: Full service checklist pop-up =================
-// Decision 39 (Jack, 28 Sep, replacing item 36's in-page expansion): "the
-// detailed notes to be another pop-up, so that if a mechanic is writing the
-// detailed notes for the job, it can essentially take up the whole page
-// (because that's the only thing that they'll be working on at that
-// moment)." So this board is now two pop-ups stacked: the ordinary
-// job-final-2 pop-up sits underneath exactly as drawn on that board
-// (jobFinal2DialogContent(), unchanged), and the checklist opens as its
-// own near-fullscreen pop-up over it — only a CHECKLIST_DIALOG_PAD-px
-// dimmed edge of the job pop-up shows behind, per decision 39/decision
-// 16's "slim dimmed edge" pattern applied one layer deeper.
-//
-// Renamed per decision 39: "Detailed notes" becomes "Full service
-// checklist" (it only appears for services that carry a checklist — a
-// general service or one of the bigger ones, not e.g. a hub service; see
-// the note added to job-final-stages).
-//
-// With a whole screen to itself instead of sharing the notes card's
-// budget, every item can show its own always-visible 2-line note field
-// (Jack's brief) rather than the space-saving "note only where one
-// exists"/"+ Add note" pattern the in-page version needed — two columns of
-// five is comfortably inside 1240×760 (the pop-up's box after its own
-// padding) at that field size.
+// Decision 39 (28 Sep): the checklist is its own near-fullscreen pop-up over
+// the (dimmed) job-final-2 pop-up, unchanged — see job-page.mjs's
+// fullChecklistDialog for the shared rendering.
 const CHECKLIST_DIALOG_PAD = 20; // 16–24px dimmed edge of the job pop-up behind (decision 39).
-function fullChecklistItem(it, id) {
-  const tick = `<input id="${id}" type="checkbox"${it.checked ? ' checked' : ''} style="width: 22px; height: 22px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0">`;
-  // Empty fields carry no placeholder text (Jack dislikes prompts in text
-  // boxes) — the textarea is simply empty.
-  const field = `<div style="box-sizing: border-box; padding-left: 32px"><textarea id="${id}-note" rows="2" aria-label="${esc(it.t)} note" style="box-sizing: border-box; width: 100%; resize: none; padding: 8px 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; color: ${C.ink}; line-height: 1.35">${esc(it.note)}</textarea></div>`;
-  // Only a ticked item with no note of its own gets the muted "Customer
-  // sees" caption; the two unticked items and the one noted item don't.
-  const caption = it.checked && !it.note ? `<div style="padding-left: 32px; margin-top: -3px"><span style="font-size: 12px; color: ${C.muted}">Customer sees: All working well</span></div>` : '';
-  return `<div style="display: flex; flex-direction: column; gap: 4px">
-<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}">${esc(it.t)}</span></label>
-${field}${caption}
-</div>`;
-}
-// Header: title + subtitle (decision 39's brief), "Done" (primary, returns
-// to the job pop-up) and a close ×. "Done" only appears here, not repeated
-// in a footer — with the whole screen given to the checklist there's no
-// second, far-away place a mechanic would look for it, and one clear
-// control beats two doing the same thing.
-function fullChecklistHeader() {
-  return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 14px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
-<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-<h2 id="job-final-2-detailed-title" style="margin: 0; font-size: 20px; font-weight: 700">Full service checklist</h2>
-<span style="font-size: 13px; color: ${C.muted}">Standard service · WH-1042 · Trek Domane AL 3</span>
-</div>
-<div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0">
-${button('Done', { variant: 'primary' })}
-<a href="#" aria-label="Close, back to the job" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
-</div>
-</header>`;
-}
-function fullChecklistDialog() {
-  const checkedCount = CHECKLIST.filter((c) => c.checked).length;
-  const notedCount = CHECKLIST.filter((c) => c.note).length;
-  const summary = `<div style="flex-shrink: 0; padding: 6px 24px 0"><span style="font-size: 13px; color: ${C.muted}">${esc(`${checkedCount} of ${CHECKLIST.length} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span></div>`;
-  const left = CHECKLIST.slice(0, 5);
-  const right = CHECKLIST.slice(5, 10);
-  const colHtml = (items, offset) => `<div style="display: flex; flex-direction: column; gap: 16px; min-height: 0">${items.map((it, i) => fullChecklistItem(it, `jf2fd-${offset + i}`)).join('')}</div>`;
-  const cols = grid('1fr 1fr', `${colHtml(left, 0)}${colHtml(right, 5)}`, 40, 'flex-grow: 1; min-height: 0; overflow: hidden;');
-  const body = `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 24px 22px; display: flex; flex-direction: column">${cols}</div>`;
-  return `<div role="dialog" aria-modal="true" aria-labelledby="job-final-2-detailed-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 28px 72px rgba(28,30,25,0.45); display: flex; flex-direction: column; overflow: hidden">
-${fullChecklistHeader()}${summary}${body}
-</div>`;
-}
 function optionJobFinal2Detailed() {
   return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
 ${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
@@ -991,7 +874,7 @@ ${jobFinal2DialogContent()}
 </div>
 </div>
 <div style="position: absolute; inset: 0; background: rgba(28,30,25,0.55); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${CHECKLIST_DIALOG_PAD}px">
-${fullChecklistDialog()}
+${fullChecklistDialog({ titleId: 'job-final-2-detailed-title', subtitle: 'Standard service · WH-1042 · Trek Domane AL 3', checklist: CHECKLIST_10, closeHref: '#', idPrefix: 'jf2fd' })}
 </div>
 </div>`;
 }

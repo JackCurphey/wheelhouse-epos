@@ -8,6 +8,14 @@
 // 1280x800, 1180x820 and 390x844.
 import { C, MONO, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
+// The settled job page (decision 40, 28 Sep 2026 round) — board job-final-2
+// in job-options.mjs. Shared with that file via job-page.mjs so neither file
+// depends on the other's internals (see that module's header comment).
+import {
+  jobPopupContent, jobLeftCol as jpJobLeftCol, fullChecklistDialog,
+  CHECKLIST_10, CUSTOMER_NOTE, STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES,
+  panel as jpPanel, row as jpRow, h2 as jpH2, mono as jpMono,
+} from './job-page.mjs';
 
 export const TW = 1180, TH = 820;
 const SHOP = 'North Street Cycles';
@@ -1278,33 +1286,113 @@ ${panel(`${h2('History', 14)}${HISTORY_ALL.slice(0, historyUpTo).map(([t, d]) =>
 }
 // Builds the desktop/tablet/phone triple for one job stage. All seven stages
 // share this one builder — only the config below differs (brief item 5).
-function buildJobPage({ jobNum = 'WH-1042', status, tone, stageLabel, top = () => '', emphasizeChecklist = false, historyUpTo = 4, editQuote = false, footer, mechanic = false }) {
+// ---------- Desktop: the settled job page (decision 40) — job-page.mjs's
+// job-final-2 rendering, driven by this stage's data. Tablet/phone keep the
+// pre-existing (not-yet-settled — decision 25) layout below unchanged.
+const DECLINED_NOTE_TEXT = 'Gear cable declined. Anything beyond these lines needs a new approval.';
+const WORK_LINE_SERVICE = { work: 'Standard service', sub: 'Labour · 60 min', code: '', qty: '1', price: 65.0 };
+const WORK_LINE_PADS = { work: 'Shimano brake pads', sub: 'Part · B05S-RX', code: 'B05S-RX', qty: '1', price: 28.0, note: 'Rear pads worn — replacing' };
+const WORK_LINE_BRAKES = { work: 'Fit & adjust brakes', sub: 'Labour · 30 min', code: '', qty: '1', price: 18.0 };
+const WORK_LINE_CABLE = { work: 'Replace gear cable', sub: 'Optional · cable still serviceable', code: '', qty: '1', price: 12.0 };
+const WORK_TOTAL_APPROVED = 111.0; // service + pads + brakes (cable declined)
+const WORK_TOTAL_QUOTE = 123.0; // all four lines, pending
+const LINES_EXPECTED = [{ ...WORK_LINE_SERVICE, approval: 'Booked' }];
+const LINES_QUOTE = [WORK_LINE_SERVICE, WORK_LINE_PADS, WORK_LINE_BRAKES, WORK_LINE_CABLE].map((l) => ({ ...l, approval: 'Awaiting approval' }));
+const LINES_APPROVED = [
+  { ...WORK_LINE_SERVICE, approval: 'Approved' },
+  { ...WORK_LINE_PADS, approval: 'Approved' },
+  { ...WORK_LINE_BRAKES, approval: 'Approved' },
+  { ...WORK_LINE_CABLE, approval: 'Declined' },
+];
+const LINES_WAITING = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads' ? { ...l, approval: 'On order' } : l));
+// Checklist counts (decision 40's rollout): 0 of 10 before work starts, 8 of
+// 10 once in the workshop — CHECKLIST_10's own fixed data (8 checked, 1
+// noted), kept the same at every later stage per the brief ("if the data
+// doesn't say, keep 8 of 10 and don't invent").
+const CHECKLIST_CHECKED = CHECKLIST_10.filter((c) => c.checked).length; // 8
+const CHECKLIST_NOTED = CHECKLIST_10.filter((c) => c.note).length; // 1
+const NOTES_CUSTOMER = [CUSTOMER_NOTE];
+const NOTES_STAFF_NONE = [];
+const NOTES_STAFF_BOOKED = [STAFF_NOTE_BOOKED_IN];
+const NOTES_STAFF_FULL = [STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES];
+
+// Compact stage-only top sections (task item 1's "any stage-only section from
+// the stages table") — same texts as the tablet/phone top()s below
+// (bookInTop/waitingTop/finishedTop/collectionTop), repacked to fit the
+// notes-box layout's tighter vertical budget.
+function tagStripCompact() {
+  return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 13)}${badge('Acknowledged', 'green')}</div><span style="font-size: 11px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 11px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div>`, 12, 'align-items: center')}`, '', 6, 0);
+}
+function waitingStripCompact() {
+  return jpPanel(`${jpRow(`${badge('Waiting for parts', 'amber')}<span style="font-size: 13px; font-weight: 600">Replacement rear brake pads delayed</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Revised ready ${jpMono('Sat 19 Sep · 16:00')}</span>`, 10)}<span style="font-size: 11px; color: ${C.muted}; line-height: 1.3">The brake pads are arriving later than expected. We’re aiming for Saturday at 16:00 and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`, 6, 3);
+}
+function finishedStripCompact() {
+  return jpPanel(`${jpRow(`<span style="font-size: 13px">Alex finished the work and final checks at ${jpMono('15:30')}. The bike is still in the shop.</span><span style="flex-grow: 1"></span><span style="font-size: 13px; font-weight: 700">Agreed work ${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span>`, 10)}`, '', 6, 0);
+}
+function collectionStripCompact() {
+  return jpPanel(`${jpRow(`<span style="font-size: 12px; color: ${C.ink}">Bike handed to the customer or authorised collector · Lock key and rear light returned</span>`, 8)}${jpRow(`${badge('Paid', 'green')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 11px; color: ${C.muted}">Taken at the Wheelhouse till today at ${jpMono('16:52')}.</span>`, 8)}`, '', 6, 3);
+}
+
+function buildJobPageDesktop({
+  mechanic = false, jobNum = 'WH-1042', status, tone, closeHref,
+  stageTop = '', customerTexts, staffTexts, checkedCount, notedCount,
+  checklistHref = null, leftStatus, bikeHere, newBuild = false,
+  lines, totalLabel, totalValue, footerNote = '', quoteAction = false,
+  totalBadge = '', footer,
+}) {
+  const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
+  const base = shellDesktop('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('desktop') : diaryFrozenContent('desktop'), opts);
+  const customer = { ...JOB_CUSTOMER, storageSlot: STORAGE[jobNum] };
+  const content = jobPopupContent({
+    titleId: 'job-page-title', jobTitle: 'Standard service', status, tone, closeHref,
+    customer, mechanicName: 'Alex Morgan', custHref: 'customer-desktop.dc.html',
+    jobNum, created: 'Created Thu 17 Sep · by Jo Taylor',
+    readyByBadge: badge('Ready by Fri 18 Sep', 'grey'), totalBadge,
+    left: jpJobLeftCol({ status: leftStatus, diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: 'Fri 18 Sep', bikeHere, newBuild, idPrefix: 'jp' }),
+    customerTexts, staffTexts, checkedCount, totalCount: CHECKLIST_10.length, notedCount, checklistHref,
+    lines, totalLabel, totalValue, footerNote, quoteAction,
+    footer, stageTop,
+  });
+  return dialogOverlay(base, DW, DH, content, { pad: 32, full: true, labelledby: 'job-page-title' });
+}
+
+// Builds the desktop/tablet/phone triple for one job stage. Desktop uses the
+// settled job-page.mjs layout (desktop config below); tablet/phone share this
+// one builder — only the config differs (brief item 5), as before this round.
+function buildJobPage({ jobNum = 'WH-1042', status, tone, stageLabel, top = () => '', emphasizeChecklist = false, historyUpTo = 4, editQuote = false, footer, mechanic = false, desktop = {} }) {
   const id = 'job-page-title';
   const closeHref = (size) => jobCloseHref(size, mechanic);
   const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
   function build(size, w, h, pad) {
-    const base = size === 'desktop'
-      ? shellDesktop('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('desktop') : diaryFrozenContent('desktop'), opts)
-      : shellTablet('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('tablet') : diaryFrozenContent('tablet'), opts);
-    const chrome = jobPageHeader(jobNum, status, tone, stageLabel, closeHref(size), id, JOB_CUSTOMER, size === 'desktop' ? STORAGE[jobNum] : null);
-    const body = dialogBody(jobColumns(jobLeftColumn(size, { editQuote }), jobRightColumn(size, { top: top(size), emphasizeChecklist, historyUpTo }), size === "tablet" ? 400 : 440), 24, 0);
+    const base = shellTablet('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('tablet') : diaryFrozenContent('tablet'), opts);
+    const chrome = jobPageHeader(jobNum, status, tone, stageLabel, closeHref(size), id, JOB_CUSTOMER, null);
+    const body = dialogBody(jobColumns(jobLeftColumn(size, { editQuote }), jobRightColumn(size, { top: top(size), emphasizeChecklist, historyUpTo }), 400), 24, 0);
     return dialogOverlay(base, w, h, `${chrome}${body}${footer ? dialogFooter(footer(size)) : ''}`, { pad, full: true, labelledby: id });
   }
   return {
-    desktop: build('desktop', DW, DH, 32),
+    desktop: buildJobPageDesktop({ ...desktop, jobNum, status, tone, mechanic, closeHref: closeHref('desktop') }),
     tablet: build('tablet', TW, TH, 28),
     phone: dialogPhone(JOB_CUSTOMER_LABEL, closeHref('phone'), jobPhoneBody('phone', { jobNum, status, tone, stageLabel, top: top('phone'), historyUpTo, editQuote }), footer ? footer('phone') : '', stageLabel),
   };
 }
 
-// 9. job-overview — "Job · expected"
+// 9. job-overview — "Job · expected". Notes: only the customer's booking
+// section (decision 40's rollout — nothing's happened yet). Checklist: 0 of
+// 10. Work: the booked service line only, not yet started.
 screens['job-overview'] = buildJobPage({
   status: 'Expected', tone: 'blue', stageLabel: 'Expected', historyUpTo: 1,
   footer: (size) => button('Book in', { block: true, href: `job-book-in-${size}.dc.html` }),
+  desktop: {
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_NONE,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: 'Expected', bikeHere: false, newBuild: false,
+    lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
+    footer: button('Book in', { variant: 'primary', block: true, href: 'job-book-in-desktop.dc.html' }),
+  },
 });
 
 // 10. job-book-in — "Job · booked in, tag printed"; tag preview with a Code
-// 128 barcode + print status, near the top of the right column.
+// 128 barcode + print status, near the top of the right column (tablet/phone).
 function tagPreview() {
   return `<figure aria-label="Bike tag preview" style="margin: 0; box-sizing: border-box; padding: 14px; border-radius: 8px; border: 1px solid ${C.ink}; background: #ffffff; display: flex; flex-direction: column; gap: 5px">
 <div style="font-size: 10px; font-weight: 700; letter-spacing: 1px">NORTH STREET CYCLES</div>
@@ -1321,26 +1409,64 @@ const bookInTop = () => `${row(`${tagPreview()}${panel(`${row(`${h2('Bike tag se
 screens['job-book-in'] = buildJobPage({
   status: 'In workshop', tone: 'blue', stageLabel: 'Booked in, tag printed', top: bookInTop, historyUpTo: 2,
   footer: (size) => button('Full job', { variant: 'default', block: true, href: `job-overview-${size}.dc.html` }),
+  desktop: {
+    stageTop: tagStripCompact(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: 'In workshop', bikeHere: true, newBuild: false,
+    lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
+    footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
+  },
 });
 
-// 11. job-quote — "Job · quote"; the quote (left column) is in edit mode.
+// 11. job-quote — "Job · quote"; the quote (left column) is in edit mode on
+// tablet/phone. Desktop: the four lines pending approval, "Send quote" both
+// in the table toolbar and the footer.
 screens['job-quote'] = buildJobPage({
   status: 'Awaiting approval', tone: 'purple', stageLabel: 'Quote — awaiting approval', editQuote: true, historyUpTo: 3,
   footer: () => button('Send quote', { block: true }),
+  desktop: {
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: 'Awaiting approval', bikeHere: true, newBuild: false,
+    lines: LINES_QUOTE, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: true,
+    totalBadge: badge(`Proposed £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'purple'),
+    footer: button('Send quote', { variant: 'primary', block: true }),
+  },
 });
 
-// 12. job-mechanic — "Job · in the workshop (mechanic)"; the checklist is
-// emphasised (it's where the mechanic works); close → diary-mechanic.
+// 12. job-mechanic — "Job · in the workshop (mechanic)"; the worked example
+// (decision 40's base board, job-final-2 itself) — close → diary-mechanic;
+// the "Full service checklist" bar links to job-checklist (task item 2).
 screens['job-mechanic'] = buildJobPage({
   status: 'In workshop', tone: 'blue', stageLabel: 'In the workshop', emphasizeChecklist: true, historyUpTo: 5, mechanic: true,
   footer: (size) => button('Mark ready for collection', { block: true, href: `job-finished-${size}.dc.html` }),
+  desktop: {
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    checklistHref: 'job-checklist-desktop.dc.html',
+    leftStatus: 'In workshop', bikeHere: true, newBuild: false,
+    lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-desktop.dc.html' }),
+  },
 });
 
-// 13. job-waiting-parts — "Job · waiting for parts"; a delay/parts section on top.
+// 13. job-waiting-parts — "Job · waiting for parts"; a delay/parts section on
+// top (tablet/phone: waitingTop; desktop: waitingStripCompact, same texts).
 const waitingTop = (size) => panel(`${h2('Waiting for parts', 15)}${field('Part / reason', { value: 'Replacement rear brake pads delayed', id: 'wp-reason-' + size })}${field('Revised target ready', { type: 'datetime-local', value: '2026-09-19T16:00', id: 'wp-revised-' + size })}${area('Customer update', 'The brake pads are arriving later than expected. We’re aiming for Saturday at 16:00 and will confirm as soon as your bike is ready.', 'wp-update-' + size, 3)}${note('Target dates are estimates. This update does not mark the bike ready.', 12)}`, `border-color: ${ST.waiting[1]}`, 14, 8);
 screens['job-waiting-parts'] = buildJobPage({
   status: 'Waiting for parts', tone: 'amber', stageLabel: 'Waiting for parts', top: waitingTop, historyUpTo: 5,
   footer: () => button('Save delay & send update', { block: true }),
+  desktop: {
+    stageTop: waitingStripCompact(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: 'Waiting for parts', bikeHere: true, newBuild: false,
+    lines: LINES_WAITING, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: `${button('Mark ready for collection', { variant: 'default', block: true })}${note('Target dates are estimates. This update does not mark the bike ready.', 12)}`,
+  },
 });
 
 // 14. job-finished — "Job · finished"; one "Take payment" step (Wheelhouse till).
@@ -1349,6 +1475,15 @@ ${panel(`${h2('Payment', 15)}<div style="display: flex; justify-content: space-b
 screens['job-finished'] = buildJobPage({
   status: 'Work finished', tone: 'grey', stageLabel: 'Work finished', top: finishedTop, historyUpTo: 6,
   footer: (size) => `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, iconName: 'till', href: 'job-collection-' + size + '.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
+  desktop: {
+    stageTop: finishedStripCompact(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: 'Work finished', bikeHere: true, newBuild: false,
+    lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, iconName: 'till', href: 'job-collection-desktop.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
+  },
 });
 
 // 15. job-collection — "Job · collection"; hand-back checklist, paid state.
@@ -1357,7 +1492,50 @@ ${panel(`${row(`${h2('Payment', 15)}${badge('Paid', 'green')}`, 10, 'justify-con
 screens['job-collection'] = buildJobPage({
   status: 'Ready for collection', tone: 'green', stageLabel: 'Ready for collection', top: collectionTop, historyUpTo: 8,
   footer: () => button('Record collection', { block: true }),
+  desktop: {
+    stageTop: collectionStripCompact(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: 'Ready for collection', bikeHere: true, newBuild: false,
+    lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: button('Record collection', { variant: 'primary', block: true }),
+  },
 });
+
+// 16. job-checklist — "Job · full service checklist" (task item 2): the Full
+// service checklist full-screen pop-up (as job-final-2-detailed), stacked
+// over the (dimmed) job-mechanic pop-up — the in-the-workshop stage, where a
+// mechanic actually fills it in. Its Done/close both return to job-mechanic.
+screens['job-checklist'] = {
+  desktop: (() => {
+    const base = shellDesktop('diary', 'Workshop diary', diaryFrozenContentMechanic('desktop'), { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' });
+    const jobLayer = jobPopupContent({
+      titleId: 'job-page-title', jobTitle: 'Standard service', status: 'In workshop', tone: 'blue', closeHref: 'diary-mechanic-desktop.dc.html',
+      customer: { ...JOB_CUSTOMER, storageSlot: STORAGE['WH-1042'] }, mechanicName: 'Alex Morgan', custHref: 'customer-desktop.dc.html',
+      jobNum: 'WH-1042', created: 'Created Thu 17 Sep · by Jo Taylor',
+      readyByBadge: badge('Ready by Fri 18 Sep', 'grey'), totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+      left: jpJobLeftCol({ status: 'In workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: 'Fri 18 Sep', bikeHere: true, newBuild: false, idPrefix: 'jpc' }),
+      customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: CHECKLIST_CHECKED, totalCount: CHECKLIST_10.length, notedCount: CHECKLIST_NOTED, checklistHref: null,
+      lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT, quoteAction: false,
+      footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-desktop.dc.html' }),
+    });
+    return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
+${base}
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 32px">
+<div role="dialog" aria-modal="true" aria-hidden="true" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${jobLayer}
+</div>
+</div>
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.55); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 20px">
+${fullChecklistDialog({ titleId: 'job-checklist-title', subtitle: 'Standard service · WH-1042 · Trek Domane AL 3', checklist: CHECKLIST_10, doneHref: 'job-mechanic-desktop.dc.html', closeHref: 'job-mechanic-desktop.dc.html', idPrefix: 'jc' })}
+</div>
+</div>`;
+  })(),
+  tablet: desktopOnlyPlaceholder('tablet', 'job-mechanic-tablet.dc.html', '‹ Back to the job'),
+  phone: desktopOnlyPlaceholder('phone', 'job-mechanic-phone.dc.html', '‹ Back to the job'),
+};
+
 
 // ---------- Row 5: Overview page (stage2 `desk`, under Workshop › Overview) ----------
 const STATS_DESK = [['Expected today', '8 bikes', '3 still to arrive'], ['In the workshop', '12', '4 ready to collect'], ['Planned effort', '6h / 8h', 'Shared and assigned, counted once']];
@@ -1414,7 +1592,7 @@ screens.customer = {
 // Keep the agreed screen order (brief's Row 1–5 order), with this round's new
 // boards (diary-day, diary-settings, change-selected, new-job-day,
 // new-job-pick, customer) slotted in beside the screens they extend.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -1423,7 +1601,7 @@ export const ROWS = [
   { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-day'] },
-  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection'] },
+  { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
   { label: 'Customer account', screens: ['customer'] },
   { label: 'Overview page', screens: ['overview'] },
 ];

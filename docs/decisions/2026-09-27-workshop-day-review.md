@@ -191,6 +191,18 @@ answers, in the order given.
     it in is doing only that). It appears only for jobs whose service has a
     checklist (a general service or the bigger services) — not, for
     example, a hub service.
+40. **The job page is settled** (Jack, 28 Sep): the "notes box" page with
+    the Full service checklist pop-up is the job page at every stage of
+    "The job" row, following the stages table.
+41. **Booking: the customer sets a spending limit** (Jack, 28 Sep; for the
+    customer booking pages at /book, a separate piece from Workshop day):
+    when booking, a customer can say how much they're happy for the work to
+    come to — e.g. "up to £200" — and anything beyond that means the shop
+    calls them with a quote first. Most customers want to name a price once
+    rather than go back and forth over each addition.
+42. **The spending limit shows on the job page** (Jack, 28 Sep): a small tag
+    in the job details, e.g. "Customer OK up to £200", so a mechanic sees at
+    a glance whether extra work can go ahead or needs a call first.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

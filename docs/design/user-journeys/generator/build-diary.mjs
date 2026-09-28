@@ -67,6 +67,7 @@ const TITLE_OVERRIDE = {
   'job-waiting-parts': 'Job · waiting for parts',
   'job-finished': 'Job · finished',
   'job-collection': 'Job · collection',
+  'job-checklist': 'Job · full service checklist',
 };
 const TITLE = (id) => TITLE_OVERRIDE[id] || id.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 

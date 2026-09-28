@@ -84,7 +84,9 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
    and the cancel/change/withdraw-change routes.
 6. **Release 2 track:** plan 2 (the till's side of offline) when Jack
    chooses; the Citrus Lime export check needs Jack at work.
-7. **Later, recorded but not scheduled:** WorkOS sign-in for shop and customer
+7. **Later, recorded but not scheduled:** a customer spending limit on the
+   booking pages ("happy up to £200; call me above that" — decision 41 in
+   docs/decisions/2026-09-27-workshop-day-review.md); WorkOS sign-in for shop and customer
    accounts (Jack, 27 Sep: wants it; the approved spec and 17-task plan from
    31 Aug already cover both — `docs/superpowers/specs/2026-08-31-workos-auth-migration-design.md`);
    customer sign-in in the booking app
