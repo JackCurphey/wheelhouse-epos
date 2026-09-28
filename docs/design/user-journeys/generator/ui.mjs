@@ -1,11 +1,67 @@
-// Shared markup in the style of the app's shadcn components (registry/primitives),
-// drawn with the Fjell theme tokens.
+// Shared markup in the style of the app's shadcn components (registry/primitives).
+// Two themes live here: Fjell (the original, still the default everywhere)
+// and Sand (decision 48, 28 Sep 2026 — "Soft sand, dark rail" / look-4 in
+// looks.mjs, now Wheelhouse's standard look). Theme choice is read straight
+// off process.argv/process.env at module-evaluation time (see THEME below)
+// so it works regardless of ESM import order — process.argv is populated by
+// Node before any module code runs, unlike a setTheme() call from another
+// module, which would depend on which file imports ui.mjs first.
+//
+// Callers pick the theme with `--theme sand` on the command line (or
+// WH_THEME=sand in the environment); no flag/env var means Fjell, so every
+// existing build (build.mjs, build-job-options.mjs) is completely unaffected.
+const argIdx = process.argv.indexOf('--theme');
+export const THEME = (argIdx !== -1 ? process.argv[argIdx + 1] : process.env.WH_THEME) === 'sand' ? 'sand' : 'fjell';
+
 // Fjell theme tokens (chosen by Jack, 27 Sep 2026). Names follow the shadcn variables:
 // accent = primary action, accentDark = sidebar, brand = highlight.
-export const C = { accent: '#3f4d33', accentDark: '#2a3024', ink: '#1c1e19', muted: '#56594f', border: '#dcdbd3', bg: '#f3f2ee', panel: '#fbfbf9', brand: '#3f4d33', lime: '#c5cf3e', input: '#83867a', hover: '#e8e7e1', danger: '#a8321f', dangerBg: '#f8e7e3', warnBg: '#fff7e0', warnInk: '#8a6100', okBg: '#e8f5ec', mutedBg: '#e8e7e1', sidebarActive: '#3f4d33' };
-export const FONT = `'Work Sans', ui-sans-serif, system-ui, sans-serif`;
+// Unchanged from before the theme switch was added — kept byte-for-byte so
+// every default (non --theme) build stays identical.
+const FJELL = {
+  accent: '#3f4d33', accentDark: '#2a3024', ink: '#1c1e19', muted: '#56594f', border: '#dcdbd3', bg: '#f3f2ee', panel: '#fbfbf9', brand: '#3f4d33',
+  highlight: '#c5cf3e', highlightRgb: '197,207,62', input: '#83867a', hover: '#e8e7e1',
+  danger: '#a8321f', dangerInk: '#a5301f', dangerBg: '#f8e7e3',
+  warnBg: '#fff7e0', warnInk: '#8a6100', okBg: '#e8f5ec', successInk: '#2a3024',
+  blueBg: '#eaf1fb', blueInk: '#2c5289', purpleBg: '#f1e8fb', purpleInk: '#6a3ea1',
+  mutedBg: '#e8e7e1', sidebarActive: '#3f4d33', sidebarInk: '#f3f2ee',
+  cardShadow: '0 1px 2px rgba(28,30,25,0.06), 0 6px 18px rgba(28,30,25,0.06)',
+};
+// Sand theme tokens (decision 48, 28 Sep 2026 — look-4 "Soft sand, dark
+// rail" in looks.mjs). Every value below is look-4's own palette/status
+// object, or (for the generic badge tones blue/purple/hover/dangerInk/
+// successInk that Fjell has but look-4's four-look board never drew) the
+// nearest equivalent tuned to look-4's ink/paper so nothing reads as
+// leftover olive/lime.
+// muted/mutedBg are darkened/lightened slightly from a first pass at
+// look-4's own muted (#79725E) so the "Cancelled" status badge and other
+// grey-tone badges/text clear 4.5:1 against their pill background as well
+// as against the page and card backgrounds (see the fit-check contrast
+// report — this was the lowest-contrast pair before the adjustment, at
+// 3.92:1).
+const SAND = {
+  accent: '#2A2822', accentDark: '#262420', ink: '#2A2822', muted: '#6E6752', border: '#E6DFCB', bg: '#F4EEE1', panel: '#FFFDF7', brand: '#2A2822',
+  highlight: '#D9A441', highlightRgb: '217,164,65', input: '#6E6752', hover: '#EFE8D6',
+  danger: '#9C3B2C', dangerInk: '#7A2C20', dangerBg: '#F6E3DE',
+  warnBg: '#F7EAC2', warnInk: '#7A5A10', okBg: '#E1EEDD', successInk: '#295C39',
+  blueBg: '#E4EAF3', blueInk: '#294872', purpleBg: '#ECE3F2', purpleInk: '#5C3E87',
+  mutedBg: '#F0EADC', sidebarActive: '#39352E', sidebarInk: '#F4EEE1',
+  cardShadow: 'none',
+};
+export const C = THEME === 'sand' ? SAND : FJELL;
+export const FONT = THEME === 'sand' ? `'Public Sans', ui-sans-serif, system-ui, sans-serif` : `'Work Sans', ui-sans-serif, system-ui, sans-serif`;
+// Headings (page titles, dialog titles, section headings) use a serif face
+// under Sand (decision 48/47: "a characterful heading face over a plain
+// body face"). Everything already routed through FONT stays Public Sans;
+// callers that draw headings (h1() in stage1.mjs, h2() in diary.mjs/
+// job-page.mjs) switch to FONT_DISPLAY explicitly.
+export const FONT_DISPLAY = THEME === 'sand' ? `'Source Serif 4', Georgia, serif` : FONT;
+// DM Mono, same as Fjell, for job numbers/prices in both themes — it already
+// sits well against a warm paper background and keeping one mono face avoids
+// a second font-loading round trip on every board.
 export const MONO = `'DM Mono', ui-monospace, monospace`;
-export const FONT_LINK = 'https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap';
+export const FONT_LINK = THEME === 'sand'
+  ? 'https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap'
+  : 'https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap';
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // Lucide-style stroke icons (24-unit grid), drawn inline.
@@ -65,10 +121,13 @@ ${error ? `<div style="font-size: 13px; color: ${C.danger}; line-height: 1.4">${
 </div>`;
 }
 
-export const card = (inner, extra = '') => `<div style="box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 1px 2px rgba(28,30,25,0.06), 0 6px 18px rgba(28,30,25,0.06); ${extra}">${inner}</div>`;
+// Card shadows off, hairline border only, under Sand (decision 48: "hairline
+// rules and space rather than boxes and shadows") — C.cardShadow is 'none'
+// there and the original two-layer drop shadow under Fjell.
+export const card = (inner, extra = '') => `<div style="box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: ${C.cardShadow}; ${extra}">${inner}</div>`;
 
 export const badge = (text, tone = 'grey') => {
-  const t = { grey: [C.mutedBg, C.muted], green: [C.okBg, C.accentDark], amber: [C.warnBg, C.warnInk], red: [C.dangerBg, '#a5301f'], blue: ['#eaf1fb', '#2c5289'], purple: ['#f1e8fb', '#6a3ea1'] }[tone];
+  const t = { grey: [C.mutedBg, C.muted], green: [C.okBg, C.successInk], amber: [C.warnBg, C.warnInk], red: [C.dangerBg, C.dangerInk], blue: [C.blueBg, C.blueInk], purple: [C.purpleBg, C.purpleInk] }[tone];
   return `<span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: ${t[0]}; color: ${t[1]}; font-size: 12px; font-weight: 600; white-space: nowrap">${esc(text)}</span>`;
 };
 

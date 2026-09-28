@@ -6,7 +6,7 @@
 // data from stage2.mjs that this needs (per the brief: copy, don't refactor
 // stage2). Every screen returns { desktop, tablet, phone } inner markup at
 // 1280x800, 1180x820 and 390x844.
-import { C, MONO, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
+import { C, MONO, FONT_DISPLAY, THEME, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
 // The settled job page (decision 40, 28 Sep 2026 round) — board job-final-2
 // in job-options.mjs. Shared with that file via job-page.mjs so neither file
@@ -22,7 +22,8 @@ const SHOP = 'North Street Cycles';
 
 // ---------- Small helpers copied from stage2.mjs (private there; not exported) ----------
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
-const h2 = (t, size = 16) => `<h2 style="margin: 0; font-size: ${size}px; line-height: 1.3; font-weight: 700">${esc(t)}</h2>`;
+const DISPLAY_FONT_STYLE = THEME === 'sand' ? `font-family: ${FONT_DISPLAY}; ` : '';
+const h2 = (t, size = 16) => `<h2 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: ${size}px; line-height: 1.3; font-weight: 700">${esc(t)}</h2>`;
 const txt = (t, size = 14, extra = '') => `<p style="margin: 0; font-size: ${size}px; line-height: 1.45; color: ${C.ink}; ${extra}">${t}</p>`;
 const note = (t, size = 13) => p(t, size);
 const eyebrow = (t) => `<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${t}</div>`;
@@ -47,7 +48,16 @@ const phoneBody = (top, bottom = '', gap = 12) => `<div style="height: 100%; dis
 const segmented = (items, activeIdx, label) => `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; gap: 6px; flex-wrap: wrap">${items.map((t, i) => `<button type="button" aria-pressed="${i === activeIdx}" style="min-height: 36px; padding: 0 12px; border-radius: 6px; font-family: inherit; font-size: 13px; font-weight: 600; border: 1px solid ${i === activeIdx ? C.accent : C.input}; background: ${i === activeIdx ? C.accent : C.panel}; color: ${i === activeIdx ? '#ffffff' : C.ink}">${esc(t)}</button>`).join('')}</div>`;
 
 // ---------- Wheelhouse status colours (brief exception to "ui.mjs tokens only") ----------
-const ST = {
+// Sand values are look-4's own `status` object (looks.mjs, decision 48) —
+// the same five status colours Jack reviewed on the job-page look boards.
+const ST = THEME === 'sand' ? {
+  pending: ['#ECE3F2', '#5C3E87', 'Pending'],
+  scheduled: ['#E4EAF3', '#294872', 'Scheduled'],
+  waiting: ['#F5E3D0', '#8B4715', 'Waiting for parts'],
+  hold: ['#F7EAC2', '#7A5A10', 'Change requested'],
+  ready: ['#E1EEDD', '#295C39', 'Ready'],
+  cancelled: [C.mutedBg, C.muted, 'Cancelled'],
+} : {
   pending: ['#f1e8fb', '#6a3ea1', 'Pending'],
   scheduled: ['#eaf1fb', '#2c5289', 'Scheduled'],
   waiting: ['#fff0e3', '#a8420f', 'Waiting for parts'],
@@ -68,13 +78,13 @@ const roomsFor = (role) => ROOMS_DIARY.map(([room, items]) => [room, items.filte
 
 function sideItem([key, label, ic], active) {
   const on = key === active;
-  return `<a href="${key}-desktop.dc.html" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: ${on ? 700 : 500}; color: #f3f2ee; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.lime}` : 'none'}">${icon(ic, 18)}<span>${esc(label)}</span></a>`;
+  return `<a href="${key}-desktop.dc.html" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: ${on ? 700 : 500}; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}">${icon(ic, 18)}<span>${esc(label)}</span></a>`;
 }
 const navList = (role, active) => roomsFor(role).map(([room, items]) => `<div style="display: flex; flex-direction: column; gap: 2px"><div style="padding: 2px 12px 2px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(243,242,238,0.7)">${room}</div>${items.map((n) => sideItem(n, active)).join('')}</div>`).join('');
 
 function railItem([key, label, ic], active) {
   const on = key === active;
-  return `<a href="${key}-tablet.dc.html" aria-current="${on ? 'page' : 'false'}" aria-label="${esc(label)}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 44px; flex-shrink: 0; padding: 4px 2px; border-radius: 8px; text-decoration: none; color: #f3f2ee; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.lime}` : 'none'}">${icon(ic, 19)}<span style="font-size: 10px; font-weight: 600; line-height: 1.1; text-align: center">${esc(label)}</span></a>`;
+  return `<a href="${key}-tablet.dc.html" aria-current="${on ? 'page' : 'false'}" aria-label="${esc(label)}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 44px; flex-shrink: 0; padding: 4px 2px; border-radius: 8px; text-decoration: none; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}">${icon(ic, 19)}<span style="font-size: 10px; font-weight: 600; line-height: 1.1; text-align: center">${esc(label)}</span></a>`;
 }
 // A role that sees every room (e.g. a Manager) has more items than a short
 // tablet rail can show at 50px each — 44px is the accessibility floor, so
@@ -103,7 +113,7 @@ ${siteSwitcher()}
 </nav>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
-<h1 style="margin: 0; font-size: 20px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
+<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 20px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
 ${actions}
 </header>
 <main style="flex-grow: 1; box-sizing: border-box; padding: 18px 28px; overflow: hidden; min-height: 0">${content}</main>
@@ -120,7 +130,7 @@ export function shellTablet(active, title, content, { role = 'S', person = 'Jo T
 </nav>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 22px; display: flex; align-items: center; gap: 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
-<h1 style="margin: 0; font-size: 19px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
+<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 19px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
 ${actions}
 </header>
 <main style="flex-grow: 1; box-sizing: border-box; padding: 16px 22px; overflow: hidden; min-height: 0">${content}</main>
@@ -131,7 +141,7 @@ ${actions}
 export function shellPhone(title, content, { menuOpen = false, role = 'S', active = 'diary', actions = '' } = {}) {
   const bar = `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 8px; background: ${C.accentDark}; color: #ffffff">
 <button type="button" aria-label="Open menu" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
-<h1 style="margin: 0; font-size: 17px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
+<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 17px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
 ${actions}
 </header>`;
   const sheet = menuOpen ? `<div style="position: absolute; inset: 0; background: rgba(20,24,22,0.45)"></div>
@@ -159,7 +169,7 @@ ${baseShell}
 }
 function dialogHeader(title, closeHref, sub = '', id) {
   return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
-<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><h2 id="${id}" style="margin: 0; font-size: 18px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h2>${sub ? `<span style="font-size: 12px; color: ${C.muted}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${sub}</span>` : ''}</div>
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><h2 id="${id}" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 18px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h2>${sub ? `<span style="font-size: 12px; color: ${C.muted}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${sub}</span>` : ''}</div>
 <a href="${closeHref}" aria-label="Close" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
 </header>`;
 }
@@ -170,7 +180,7 @@ function dialogPhone(title, backHref, bodyInner, footerInner = '', sub = '') {
   return `<div style="width: ${PW}px; height: ${PH}px; display: flex; flex-direction: column; background: ${C.panel}; overflow: hidden">
 <header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid ${C.border}">
 <a href="${backHref}" aria-label="Close, back to the diary" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('back', 22)}</a>
-<div style="display: flex; flex-direction: column; gap: 0; min-width: 0; flex-grow: 1"><h1 style="margin: 0; font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>${sub ? `<span style="font-size: 11px; color: ${C.muted}">${sub}</span>` : ''}</div>
+<div style="display: flex; flex-direction: column; gap: 0; min-width: 0; flex-grow: 1"><h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>${sub ? `<span style="font-size: 11px; color: ${C.muted}">${sub}</span>` : ''}</div>
 </header>
 <main style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; gap: 12px">${bodyInner}</main>
 ${footerInner ? `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid ${C.border}">${footerInner}</div>` : ''}
@@ -209,7 +219,7 @@ function barcode128(value, w = 220, h = 46) {
   while (bits.length < 88) bits.push((bits.length * 7) % 2);
   const n = bits.length, bw = w / n;
   let x = 0, bars = '';
-  for (const b of bits) { if (b) bars += `<rect x="${x.toFixed(2)}" y="0" width="${(bw * 0.62).toFixed(2)}" height="${h}" fill="#1c1e19"/>`; x += bw; }
+  for (const b of bits) { if (b) bars += `<rect x="${x.toFixed(2)}" y="0" width="${(bw * 0.62).toFixed(2)}" height="${h}" fill="${C.ink}"/>`; x += bw; }
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Code 128 barcode for ${esc(value)}" style="display: block">${bars}</svg>`;
 }
 
@@ -377,7 +387,7 @@ function waitingCard(w, size, selected = false) {
 <span style="font-size: 12px; color: ${C.ink}">${esc(w.detail)}</span>`;
   if (selected) {
     const openHref = `${REQ_LINK[w.kind]}-${size}.dc.html`;
-    return `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 2px solid ${C.accent}; box-shadow: 0 0 0 3px rgba(197,207,62,0.45); background: ${C.panel}">
+    return `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 2px solid ${C.accent}; box-shadow: 0 0 0 3px rgba(${C.highlightRgb},0.45); background: ${C.panel}">
 <div style="display: flex; flex-direction: column; gap: 5px">${inner}</div>
 <a href="${openHref}" style="align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 12px; font-weight: 700; text-decoration: none">Open</a>
 </div>`;
@@ -389,7 +399,7 @@ function waitingCard(w, size, selected = false) {
 }
 function waitingColumn(size, selectedIdx = -1, width = 224, hint = false) {
   return `<div style="display: flex; flex-direction: column; gap: 8px; width: ${width}px; flex-shrink: 0">
-<h2 style="margin: 0; font-size: 14px; font-weight: 700">Waiting for you (${WAITING.length})</h2>
+<h2 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 14px; font-weight: 700">Waiting for you (${WAITING.length})</h2>
 ${WAITING.map((w, i) => waitingCard(w, size, i === selectedIdx)).join('')}
 ${hint ? note('Double-click a card to open it.') : ''}
 </div>`;
@@ -433,7 +443,7 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   const href = `${j.link || 'job-overview'}-${size}.dc.html`;
   // A "light" mark (change-selected) shows the job the change request is
   // currently at, without the strong ring reserved for the target time.
-  const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(197,207,62,0.55);` : lightMarked ? `box-shadow: 0 0 0 2px ${C.muted};` : '';
+  const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55);` : lightMarked ? `box-shadow: 0 0 0 2px ${C.muted};` : '';
   // Faded (new-job-pick, item 2 of the 27 Sep round): busy blocks step back
   // visually while picking a time, so the free grid reads as clickable.
   const slot = STORAGE[j.job];
@@ -452,7 +462,7 @@ function pendingBlock(size, slotH, highlighted = false) {
   const [bg, ink] = ST.pending;
   const top = ((j.start - GRID_START) / 30) * slotH + 2;
   const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
-  const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(197,207,62,0.55);` : '';
+  const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55);` : '';
   // Item 2 (27 Sep round 2): bike, then job title, then "Pending" — the same
   // bike/job-title-first order as an ordinary job block.
   return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" title="${esc(j.bike)} · ${esc(j.jobTitle)} · ${esc(j.customer)} · Pending · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${ring}">
@@ -467,7 +477,7 @@ function requestedOutlineBlock(size, slotH, highlighted = false) {
   const j = REQUEST_OUTLINE;
   const top = ((j.start - GRID_START) / 30) * slotH + 2;
   const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
-  const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(197,207,62,0.55);` : '';
+  const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55);` : '';
   // Item 2 (27 Sep round 2): "Brompton C Line · Requested 14:00" — the bike,
   // not the customer's name (kept in the aria-label for context).
   return `<a href="change-selected-${size}.dc.html" aria-label="${esc(j.person)} asked to move to ${esc(j.label)}" title="${esc(j.person)} · ${esc(j.label)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; border-radius: 5px; border: 1.5px dashed ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${ST.hold[1]}; font-size: 10px; font-weight: 700; overflow: hidden; text-align: center; ${ring}">${esc(j.bike)} · ${esc(j.label)}</a>`;
@@ -524,7 +534,7 @@ ${cluster.map((j) => `<span style="font-size: 10px; font-weight: 600; color: ${C
 // new-job-pick, over the free slot the pointer would click; solid (not
 // dashed) so it reads as a hover target rather than an always-on hint.
 function pickHintSlot(size, slotH, top, label, href) {
-  return `<a href="${href}" aria-label="Choose ${esc(label)} for the new job" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${slotH - 4}px; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 5px; border: 1.5px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 11px; font-weight: 700; box-shadow: 0 0 0 4px rgba(197,207,62,0.4)">${esc(label)}</a>`;
+  return `<a href="${href}" aria-label="Choose ${esc(label)} for the new job" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${slotH - 4}px; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 5px; border: 1.5px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 11px; font-weight: 700; box-shadow: 0 0 0 4px rgba(${C.highlightRgb},0.4)">${esc(label)}</a>`;
 }
 // The day-view grid (brief item 18 / decision 18): one column per mechanic,
 // same time rows as the week view. No "Not assigned" column — every job in the
@@ -583,7 +593,7 @@ function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot 
     const pending = mechFilter === 'Everyone' && d === PENDING_DIARY.day ? pendingBlock(size, slotH, highlightJob?.type === 'pending') : '';
     const outline = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestedOutlineBlock(size, slotH, highlightJob?.type === 'outline') : '';
     const connector = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestConnector(size, slotH, highlightJob?.type === 'outline') : '';
-    const tint = pickMode ? `linear-gradient(rgba(197,207,62,0.08), rgba(197,207,62,0.08)), ` : '';
+    const tint = pickMode ? `linear-gradient(rgba(${C.highlightRgb},0.08), rgba(${C.highlightRgb},0.08)), ` : '';
     return `<div style="grid-column: ${i + 2}; grid-row: 3; position: relative; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} ${pickMode ? 'cursor: pointer;' : ''} background: ${tint}repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)">${blocks}${pickHint}${pending}${outline}${connector}</div>`;
   };
   return `<div role="grid" aria-label="Workshop diary, week of Monday 14 September 2026" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: ${cols}; grid-template-rows: auto auto ${gridH}px; border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden; background: ${C.panel}">
@@ -645,7 +655,7 @@ function dayTimelineRow(j, size) {
   const jobRef = j.key === 'pending' ? j.jobTitle : j.job;
   const href = `${j.link || 'job-overview'}-${size}.dc.html`;
   const strike = j.key === 'cancelled' ? 'text-decoration: line-through;' : '';
-  const ring = j._mark === 'accent' ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(197,207,62,0.55);` : j._mark === 'light' ? `box-shadow: 0 0 0 2px ${C.muted};` : '';
+  const ring = j._mark === 'accent' ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55);` : j._mark === 'light' ? `box-shadow: 0 0 0 2px ${C.muted};` : '';
   // Derived from j.start rather than parsed out of j.detail — some jobs'
   // detail text doesn't lead with a time range (e.g. the change request's
   // "Change requested · 10:00 → 14:00"), which broke the time column.
@@ -676,7 +686,7 @@ function requestedOutlineRow(size) {
   const j = REQUEST_OUTLINE;
   return `<a href="change-selected-${size}.dc.html" aria-label="${esc(j.person)} asked to move to ${esc(j.label)}" style="display: flex; gap: 10px; text-decoration: none; color: inherit">
 <div style="width: 52px; flex-shrink: 0; font-family: ${MONO}; font-size: 12px; color: ${C.muted}; padding-top: 10px">14:00</div>
-<div style="flex-grow: 1; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1.5px dashed ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${ST.hold[1]}; font-size: 12px; font-weight: 700; box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(197,207,62,0.55)">${esc(j.person)} · ${esc(j.label)}</div></a>`;
+<div style="flex-grow: 1; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1.5px dashed ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${ST.hold[1]}; font-size: 12px; font-weight: 700; box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55)">${esc(j.person)} · ${esc(j.label)}</div></a>`;
 }
 // Monday's day list with the current 10:00 job lightly marked and the
 // requested 14:00 slot highlighted (decision 19, brief item 4).

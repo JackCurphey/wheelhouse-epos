@@ -223,6 +223,32 @@ answers, in the order given.
     by thin rules and space, a characterful heading face over a plain body
     face, one restrained accent) without copying it: open-licence fonts and
     Wheelhouse's own colours.
+48. **Look 4, "Soft sand, dark rail", is Wheelhouse's standard look**
+    (Jack, 28 Sep), for every page from now on — superseding Fjell
+    (docs/decisions/2026-09-27-fjell-theme.md): soft sand ground `#F4EEE1`,
+    charcoal sidebar `#262420`, a small amber highlight `#D9A441` for active
+    states only, Source Serif 4 for headings over Public Sans for body (see
+    generator/looks.mjs for the full palette). The Workshop day redesign is
+    redrawn in it first so Jack can see the whole section in the new look.
+49. **Clicking the customer's phone number on the job opens the text
+    conversation with that customer** (Jack, 28 Sep) — a future feature,
+    tied to the Messages page (receiving texts isn't built yet).
+50. **"Bike is here" and "New bike build" are clickable pills**, not tick
+    boxes (Jack, 28 Sep): a pill that is filled when on and outlined when
+    off, on the job page — and, for consistency, the same two choices on the
+    New job form. "New bike build" appears only on the New job form; once
+    the job exists it isn't shown on the job page (Jack, 28 Sep).
+51. **No separate "Ready by" on New job** (Jack, 28 Sep): the diary day
+    chosen for the job is its ready-by day. The Ready by field and its quick
+    buttons (Today, Tomorrow, +3 days…) come off the New job form; the job
+    page shows ready-by as the diary day, and it moves when the job is moved
+    in the diary. (Refines item 26.)
+52. **Open: jobs that take more than one day** (raised by Jack, 28 Sep) —
+    how the diary shows a job worked across several days is still to be
+    designed. Two cases to cover: a job planned over several days, and a job
+    that simply isn't finished in its day without having been planned that
+    way (it has to carry over). Options discussed: split into parts per day
+    (recommended), one bar across the days, or both. To revisit later.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

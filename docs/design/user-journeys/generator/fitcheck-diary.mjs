@@ -5,9 +5,10 @@ import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwr
 import { screens } from './diary.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { TW, TH } from './diary.mjs';
-import { FONT_LINK } from './ui.mjs';
+import { FONT_LINK, FONT, THEME } from './ui.mjs';
 
 const DESKTOP_ONLY = process.argv.includes('--desktop');
+console.log(JSON.stringify({ theme: THEME }));
 const SIZES = DESKTOP_ONLY ? { desktop: [DW, DH] } : { desktop: [DW, DH], tablet: [TW, TH], phone: [PW, PH] };
 const b = await chromium.launch();
 const bad = [];
@@ -17,7 +18,7 @@ for (const [id, v] of Object.entries(screens)) {
     if (!v[size]) continue;
     const page = await b.newPage({ viewport: { width: w, height: h } });
     await page.setContent(
-      `<html><head><link rel="stylesheet" href="${FONT_LINK}"><style>body{margin:0;font-family:'Work Sans'}</style></head><body>${v[size]}</body></html>`,
+      `<html><head><link rel="stylesheet" href="${FONT_LINK}"><style>body{margin:0;font-family:${FONT}}</style></head><body>${v[size]}</body></html>`,
       { waitUntil: 'networkidle' }
     );
     const result = await page.evaluate(() => {

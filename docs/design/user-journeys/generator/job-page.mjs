@@ -10,11 +10,17 @@
 // boards + job-checklist, stage-varying data) import from here instead of
 // each other, so neither file needs to depend on the other's internals.
 // This module only depends on ui.mjs — no circular import.
-import { C, MONO, esc, icon, button, badge, card } from './ui.mjs';
+import { C, MONO, FONT_DISPLAY, THEME, esc, icon, button, badge, card } from './ui.mjs';
+
+// Only declared under Sand (empty string under Fjell) so job-options.mjs's
+// build (always default theme, no --theme flag) emits byte-identical HTML —
+// under Fjell, FONT_DISPLAY equals the inherited body font anyway, so
+// declaring it explicitly would be a no-op visually but not byte-for-byte.
+const DISPLAY_FONT_STYLE = THEME === 'sand' ? `font-family: ${FONT_DISPLAY}; ` : '';
 
 // ---------- small layout helpers (as job-options.mjs's copies) ----------
 export const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
-export const h2 = (t, size = 16) => `<h2 style="margin: 0; font-size: ${size}px; line-height: 1.3; font-weight: 700">${esc(t)}</h2>`;
+export const h2 = (t, size = 16) => `<h2 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: ${size}px; line-height: 1.3; font-weight: 700">${esc(t)}</h2>`;
 export const panel = (inner, extra = '', pad = 16, gap = 10) => card(`<div style="padding: ${pad}px; display: flex; flex-direction: column; gap: ${gap}px; box-sizing: border-box; min-height: 0">${inner}</div>`, `box-sizing: border-box; ${extra}`);
 export const row = (inner, gap = 12, extra = '') => `<div style="display: flex; align-items: center; gap: ${gap}px; ${extra}">${inner}</div>`;
 export const grid = (cols, inner, gap = 16, extra = '') => `<div style="display: grid; grid-template-columns: ${cols}; gap: ${gap}px; align-items: start; min-height: 0; ${extra}">${inner}</div>`;
@@ -38,7 +44,7 @@ export const dialogFooter = (inner) => `<div style="flex-shrink: 0; box-sizing: 
 // fixed "Standard service"/"In workshop"/"blue" — same output as before).
 export function finalTitleBar(titleId, jobTitle, status, tone, closeHref = '#') {
   return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 9px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
-<div style="display: flex; align-items: center; gap: 10px; min-width: 0"><h2 id="${titleId}" style="margin: 0; font-size: 18px; font-weight: 700">${esc(jobTitle)}</h2>${badge(status, tone)}</div>
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0"><h2 id="${titleId}" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 18px; font-weight: 700">${esc(jobTitle)}</h2>${badge(status, tone)}</div>
 <a href="${closeHref}" aria-label="Close, back to the diary" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
 </header>`;
 }
@@ -194,7 +200,7 @@ ${field}${caption}
 export function fullChecklistHeader(titleId, subtitle, doneHref, closeHref) {
   return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 14px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
 <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
-<h2 id="${titleId}" style="margin: 0; font-size: 20px; font-weight: 700">Full service checklist</h2>
+<h2 id="${titleId}" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 20px; font-weight: 700">Full service checklist</h2>
 <span style="font-size: 13px; color: ${C.muted}">${subtitle}</span>
 </div>
 <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0">

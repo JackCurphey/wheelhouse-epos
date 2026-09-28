@@ -3,10 +3,13 @@
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { screens, ROWS, TW, TH } from './diary.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
-import { FONT_LINK } from './ui.mjs';
+import { FONT_LINK, FONT, FONT_DISPLAY, C, THEME } from './ui.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
-const root = here + 'out-diary/';
+// Sand builds land in their own out-diary-sand/ directory so out-diary/
+// (the published Fjell set) is left untouched and either can replace the
+// other one for one — same board ids, same canvas.json layout.
+const root = here + (THEME === 'sand' ? 'out-diary-sand/' : 'out-diary/');
 rmSync(root, { recursive: true, force: true });
 mkdirSync(root + 'project', { recursive: true });
 
@@ -15,7 +18,10 @@ mkdirSync(root + 'project', { recursive: true });
 // isn't emitted in this mode.
 const DESKTOP_ONLY = process.argv.includes('--desktop');
 
-const FONT = '&quot;Work Sans&quot;, ui-sans-serif, system-ui, sans-serif';
+// page()'s body font/colours — was a Fjell-only literal; now themed via
+// ui.mjs's FONT/C so a sand build's HTML <body> (and its default text/link
+// colours, before any board's own styles take over) matches the theme too.
+const FONT_HTML = FONT.replace(/'/g, '&quot;');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function page(title, w, h, body) {
@@ -31,8 +37,8 @@ function page(title, w, h, body) {
 <helmet>
 <link rel="stylesheet" href="${FONT_LINK.replace(/&/g, '&amp;')}">
 <style>
-body{margin:0;font-family:${FONT};color:#1c1e19;background:#f3f2ee}
-a{color:#3f4d33}a:hover{color:#1c1e19}
+body{margin:0;font-family:${FONT_HTML};color:${C.ink};background:${C.bg}}
+a{color:${C.accent}}a:hover{color:${C.ink}}
 </style>
 </helmet>
 ${body}
@@ -118,18 +124,18 @@ for (const rowDef of ROWS) {
 // Main.dc.html — title, one short paragraph, list of rows with links to each row's first board.
 const MW = 900, MH = 620;
 const boardsPerScreen = DESKTOP_ONLY ? 1 : 3;
-const rowLine = (r) => `<a href="${r.first}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-top: 1px solid #dcdbd3; text-decoration: none; color: #1c1e19">
+const rowLine = (r) => `<a href="${r.first}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">
 <span style="font-size: 17px; font-weight: 600">${esc(r.label)}</span>
-<span style="font-size: 13px; color: #56594f">${r.count} screen${r.count === 1 ? '' : 's'} · ${r.count * boardsPerScreen} board${r.count * boardsPerScreen === 1 ? '' : 's'} ›</span>
+<span style="font-size: 13px; color: ${C.muted}">${r.count} screen${r.count === 1 ? '' : 's'} · ${r.count * boardsPerScreen} board${r.count * boardsPerScreen === 1 ? '' : 's'} ›</span>
 </a>`;
-const main = `<div style="width: ${MW}px; height: ${MH}px; box-sizing: border-box; padding: 56px; display: flex; flex-direction: column; gap: 24px; background: #f3f2ee">
+const main = `<div style="width: ${MW}px; height: ${MH}px; box-sizing: border-box; padding: 56px; display: flex; flex-direction: column; gap: 24px; background: ${C.bg}">
 <div style="display: flex; flex-direction: column; gap: 10px">
-<div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #3f4d33">WHEELHOUSE</div>
-<h1 style="margin: 0; font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: -0.6px">Workshop day — diary redesign</h1>
-<p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3d4038; max-width: 680px">This is the Workshop day redesign, organised around the diary, for review. Customer names, bikes and job numbers shown are examples.</p>
-${DESKTOP_ONLY ? `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: #56594f; max-width: 680px">Desktop only for now — tablet and phone will be redrawn once the desktop design is agreed.</p>` : ''}
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 1px; color: ${C.accent}">WHEELHOUSE</div>
+<h1 style="margin: 0; font-family: ${FONT_DISPLAY}; font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: -0.6px">Workshop day — diary redesign</h1>
+<p style="margin: 0; font-size: 16px; line-height: 1.55; color: ${C.ink}; max-width: 680px">This is the Workshop day redesign, organised around the diary, for review. Customer names, bikes and job numbers shown are examples.</p>
+${DESKTOP_ONLY ? `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}; max-width: 680px">Desktop only for now — tablet and phone will be redrawn once the desktop design is agreed.</p>` : ''}
 </div>
-<div style="background: #fbfbf9; border: 1px solid #dcdbd3; border-radius: 12px; overflow: hidden">
+<div style="background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 12px; overflow: hidden">
 ${rowSummaries.map(rowLine).join('\n')}
 </div>
 </div>`;
