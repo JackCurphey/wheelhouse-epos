@@ -216,6 +216,13 @@ answers, in the order given.
     block has a full outline in that darker colour around its tinted fill.
 46. **Work and parts lines sort themselves: labour at the top, parts
     below.**
+47. **Look options are drawn on the job page** (Jack, 28 Sep), open over the
+    diary. The aim: light and airy, very modern, simple and minimal while
+    keeping all the information — emulating the general aesthetic of the
+    Anthropic website (warm light ground, generous space, sections separated
+    by thin rules and space, a characterful heading face over a plain body
+    face, one restrained accent) without copying it: open-licence fonts and
+    Wheelhouse's own colours.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
