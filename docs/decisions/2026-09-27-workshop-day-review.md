@@ -155,6 +155,29 @@ answers, in the order given.
     job details, made more prominent; the full work and parts table open
     below; checklist folded. The review's refinements apply, and controls a
     mechanic presses are raised to 44px now rather than in the look pass.
+35. **The job page has three parts** (Jack, 28 Sep, after the final
+    drawing): (1) **information** — the customer's name, number and
+    details, and the job's details (job number, whether the bike is here,
+    and so on); (2) **notes** — one big text box holding everything, with
+    the checklist incorporated into it; (3) **work and parts** — the items
+    and labour charged for the job. Supersedes the notes feed of items 31
+    and 34 and the separate folded checklist. The final drawing
+    ("Job page · FINAL (in the workshop)") stays the base — Jack: "the
+    closest to how I want it" — with the notes turned into one big text box.
+    (Checklist placement: see item 36.)
+36. **Notes box plus a "Detailed notes" section** (Jack, 28 Sep): the notes
+    are one plain text box where everything typed so far can be edited — for
+    basic notes. From within it, staff can open a **Detailed notes** section
+    that holds the service checklist, with a note field for each checklist
+    item, for when they want to write more detail. It opens on the job page
+    (no separate page).
+37. **Right-click a diary block → "View overview"** (Jack, 28 Sep): a
+    small box over the diary with just the job's notes, its line items and
+    the cost — no customer details or mechanic — so a staff member on the
+    phone to a customer can catch up on the job quickly without opening it.
+    Holding the right mouse button opens the overview straight away (a
+    quick right-click shows the menu); the box stays open until closed. Its
+    header adds the customer's name and the bike under the job title.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

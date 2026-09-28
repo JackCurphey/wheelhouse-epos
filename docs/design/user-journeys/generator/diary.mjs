@@ -812,6 +812,37 @@ ${changeSelectedDayList('phone')}`, `${row(`<div style="display: flex; flex-dire
 ${note('Tap again to open.')}`, 10), { active: 'diary', actions: newJobPhoneAction('new-job-phone.dc.html') }),
 };
 
+// 3e. diary-context-menu / job-quick-overview — decision 37 (28 Sep round):
+// right-clicking a diary block offers "Open job" and "View overview", the
+// latter opening a small box with just the job's notes, line items and cost
+// — no customer details or mechanic — so staff on the phone to a customer
+// can catch up on the job quickly without opening it. Desktop only (decision
+// 25). Anchored beside Maya Patel's WH-1042 block (Thu 17 Sep, 11:30),
+// measured from the plain diary board's own rendered layout so the menu
+// sits just clear of the highlighted block rather than guessing a position.
+const CONTEXT_MENU_ANCHOR = { left: 960, top: 354 }; // right edge of WH-1042's block (~952) + 8px gap; same top
+function contextMenu(items) {
+  return `<div role="menu" aria-label="Job actions" style="position: absolute; left: ${CONTEXT_MENU_ANCHOR.left}px; top: ${CONTEXT_MENU_ANCHOR.top}px; width: 208px; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 6px; display: flex; flex-direction: column; gap: 2px; z-index: 5">
+${items.map((it) => `<a role="menuitem" href="${it.href}" style="display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; color: ${C.ink}; ${it.on ? `background: ${C.hover}; outline: 2px solid ${C.accent}; outline-offset: -2px;` : ''}">${esc(it.label)}</a>`).join('')}
+<div style="padding: 8px 12px 4px; border-top: 1px solid ${C.border}; margin-top: 4px; font-size: 12px; line-height: 1.4; color: ${C.muted}">Tip: hold the right mouse button to open the overview straight away.</div>
+</div>`;
+}
+screens['diary-context-menu'] = {
+  desktop: (() => {
+    const base = shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob: { type: 'job', job: 'WH-1042' } }));
+    const menu = contextMenu([
+      { label: 'Open job', href: 'job-overview-desktop.dc.html', on: false },
+      { label: 'View overview', href: 'job-quick-overview-desktop.dc.html', on: true },
+    ]);
+    return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${base}${menu}</div>`;
+  })(),
+  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
+  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+};
+
+// job-quick-overview's own body is built further down this file, once
+// CHECKLIST exists (see "Job overview quick-look box (decision 37)" below).
+
 // ---------- Row 2: Requests, as a pop-up (decision 15) ----------
 const reqCloseHref = (size) => `diary-${size}.dc.html`;
 
@@ -1157,6 +1188,46 @@ function checklistRow(item, idx, size) {
 function checklistPanel(size, { emphasize = false } = {}) {
   return panel(`${h2('Standard service checklist', emphasize ? 16 : 15)}${CHECKLIST.map((it, i) => checklistRow(it, i, size)).join('')}`, emphasize ? `border-color: ${C.accent}` : '', 14, 4);
 }
+
+// ---------- Job overview quick-look box (decision 37, 28 Sep round) — the
+// small box a "View overview" click opens over the (lightly dimmed) diary:
+// just the job's notes, line items and cost, no customer details or
+// mechanic. Reuses the exact texts already in this file — Maya's booking
+// concern (CONCERN), the 09:05 booked-in note (HISTORY_ALL) attributed to
+// Jo Taylor (the default staff person throughout this file) and the brakes
+// checklist note (CHECKLIST) attributed to Alex Morgan, the mechanic who
+// starts work at 11:30 per HISTORY_ALL — nothing invented beyond those two
+// small, already-used timestamps. Chronological order: the customer's own
+// note from her booking, then staff notes as they were written.
+const QUICK_NOTES = [
+  { who: 'Customer', when: '', text: CONCERN.replace(/[“”]/g, '') },
+  { who: 'Jo Taylor', when: '09:05', text: 'Bike booked in, tag printed.' },
+  { who: 'Alex Morgan', when: '12:10', text: CHECKLIST.find((c) => c.t === 'Brakes bled & adjusted').note },
+];
+function quickNoteRow(n) {
+  const tag = n.who === 'Customer'
+    ? `<span style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: ${C.mutedBg}; color: ${C.muted}; font-size: 11px; font-weight: 700">Customer</span>`
+    : `<span style="font-size: 12px; font-weight: 700; color: ${C.muted}">${esc(n.who)}</span><span style="font-size: 12px; color: ${C.muted}">${mono(n.when)}</span>`;
+  return `<div style="display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 6px">${tag}</div>
+<p style="margin: 0; font-size: 14px; line-height: 1.4; color: ${C.ink}">${esc(n.text)}</p>
+</div>`;
+}
+function jobQuickOverviewBody(size) {
+  const approvedTotal = LINES.filter((_, i) => DECISIONS[i][0] === 'Approved').reduce((sum, [, , a]) => sum + Number(a.replace('£', '')), 0);
+  return `${panel(`${h2('Notes', 14)}${stack(QUICK_NOTES.map(quickNoteRow).join(''), 10)}`, '', 14, 8)}
+${panel(`${h2('Line items', 14)}${table([['Work'], ['Amount', 'right']], LINES.map(([w, s, a], i) => [two(w, s), DECISIONS[i][0] === 'Declined' ? mono(a, `text-decoration: line-through; color: ${C.muted}`) : mono(a)]), { size: 13, pad: '7px 8px' })}<div style="display: flex; align-items: center; gap: 6px; padding-top: 4px"><span style="font-size: 11px; color: ${C.muted}">Declined lines are struck through.</span></div>`, '', 14, 8)}
+${row(`<span style="font-size: 15px; font-weight: 700">Cost</span><span style="flex-grow: 1"></span>${mono(`£${approvedTotal.toFixed(2)}`, 'font-size: 18px; font-weight: 700')}`, 10)}
+<div>${link('Open job', `job-overview-${size}.dc.html`)}</div>`;
+}
+screens['job-quick-overview'] = {
+  desktop: (() => {
+    const base = shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob: { type: 'job', job: 'WH-1042' } }));
+    return dialogOverlay(base, DW, DH, `${dialogHeader('Standard service · WH-1042', 'diary-desktop.dc.html', 'Maya Patel · Trek Domane AL 3', 'quick-overview-title')}${dialogBody(jobQuickOverviewBody('desktop'), 18, 14)}`, { pad: 40, maxWidth: 560, labelledby: 'quick-overview-title' });
+  })(),
+  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
+  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+};
 // Messages: latest few + a reply box (brief item 5's right-hand section).
 function messagesPanel(size) {
   return panel(`${h2('Messages', 15)}${stack(`${note(`<strong>You</strong> · today ${mono('09:14')} — “Your bike is booked in and we’ve started the safety check.”`)}${note(`<strong>Maya Patel</strong> · today ${mono('09:20')} — “Thanks, how long roughly?”`)}`, 8)}${area('Reply to Maya', '', 'msg-reply-' + size, 2)}${button('Send', { size: 'sm' })}`, '', 14, 8);
@@ -1343,13 +1414,13 @@ screens.customer = {
 // Keep the agreed screen order (brief's Row 1–5 order), with this round's new
 // boards (diary-day, diary-settings, change-selected, new-job-day,
 // new-job-pick, customer) slotted in beside the screens they extend.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
 
 export const ROWS = [
-  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected'] },
+  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection'] },

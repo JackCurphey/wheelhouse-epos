@@ -817,6 +817,185 @@ function jobFinalStagesBoard() {
 </div>`;
 }
 
+// ================= job-final-2: notes turned into one big text box =================
+// Decisions 35/36 (28 Sep): the job page has three parts — information,
+// notes, work and parts — and the notes are "one big text box holding
+// everything, with the checklist incorporated into it" rather than a
+// composer-plus-feed. Jack's own description of the box: one text area
+// where everything typed so far can be edited, with a "Detailed notes"
+// section that opens from inside it to hold the checklist. Built from
+// optionJobFinal()'s code (job-final itself is left untouched) — same
+// title bar, customer strip, job details strip, full work-and-parts table
+// and footer; only the notes column changes, and the old folded
+// "Checklist" row is removed (superseded — the checklist now lives inside
+// Detailed notes, decision 35).
+//
+// Order inside the box is oldest-first (a document you add to at the
+// bottom), the opposite of job-final's newest-first feed: the customer's
+// booking note reads first, then staff paragraphs in the order they were
+// written, then room to keep typing — matching "you can edit everything
+// that's been typed previously... then space to keep typing" (Jack).
+const NOTES_CHRONO = [...NOTES6].reverse();
+// One paragraph of the notes box. The customer's words get a small
+// "Customer · from her booking, <date>" label plus a light tint band and
+// left rule, so they read as quoted material inside an otherwise plain
+// document, not as an anonymous line. Staff paragraphs get a small muted
+// "<name> · <day> <time> — " stamp inline before the text, the way a real
+// note-taking app auto-stamps what you write (decision 36's "who and
+// when").
+function bigNoteParagraph(n) {
+  if (n.role === 'customer') {
+    return `<div style="box-sizing: border-box; padding: 6px 10px; border-radius: 6px; background: ${C.okBg}; border-left: 3px solid ${C.accent}; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; font-weight: 700; color: ${C.accentDark}">Customer · from her booking, ${esc(n.when)}</span>
+<p style="margin: 0; font-size: 14px; line-height: 1.4; color: ${C.ink}">${esc(n.text)}</p>
+</div>`;
+  }
+  return `<p style="margin: 0; font-size: 14px; line-height: 1.4; color: ${C.ink}"><span style="font-size: 12px; font-weight: 600; color: ${C.muted}">${esc(n.author)} · ${esc(n.when.replace(' · ', ' '))}</span><span style="color: ${C.muted}"> — </span>${esc(n.text)}</p>`;
+}
+// The bordered "one big text box" itself: paragraphs in document order,
+// then a quiet cursor line showing there's room to keep typing. Reads as
+// one plain editable text area — a single bordered box like a document,
+// not a composer-plus-feed.
+function bigNoteBody() {
+  const cursorLine = `<div style="display: flex; align-items: center; gap: 6px; min-height: 14px"><span style="width: 2px; height: 14px; background: ${C.ink}; opacity: 0.45"></span><span style="font-size: 13px; color: ${C.muted}">Keep typing…</span></div>`;
+  return `${NOTES_CHRONO.map(bigNoteParagraph).join('')}${cursorLine}`;
+}
+// "Detailed notes" button + summary — a clear control at the box's bottom
+// edge that opens the checklist section from inside the notes box
+// (decision 36). Sized as a full-width ≥44px row so it reads as one clear
+// control, not a small link.
+function detailedNotesButton(checkedCount, totalCount, notedCount) {
+  const chev = `<span style="display: inline-flex; flex-shrink: 0; transform: rotate(-90deg); color: ${C.muted}">${icon('chevron', 16)}</span>`;
+  return `<button type="button" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700">${chev}Detailed notes</span>
+<span style="font-size: 12px; color: ${C.muted}">${esc(`Standard service checklist · ${checkedCount} of ${totalCount} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span>
+</button>`;
+}
+// Notes column — same card shape as job-final's finalNotesColumn (heading
+// keeps its visual weight, left accent border, tint background) but the
+// composer+feed is replaced with the single bordered text box, the
+// Detailed notes button and a quiet hint about auto-stamping.
+function bigNotesColumn(checkedCount, totalCount, notedCount) {
+  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-left: 4px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 3px 14px; display: flex; flex-direction: column; gap: 3px; overflow: hidden">
+${h2('Notes', 15)}
+<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; padding: 7px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden">${bigNoteBody()}</div>
+${detailedNotesButton(checkedCount, totalCount, notedCount)}
+<p style="margin: 0; font-size: 12px; color: ${C.muted}">Your name and the time are added when you write.</p>
+</div>`;
+}
+function optionJobFinal2() {
+  const checkedCount2 = CHECKLIST.filter((c) => c.checked).length;
+  const notedCount2 = CHECKLIST.filter((c) => c.note).length;
+  const jobMetaRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 10);
+  const leftCol = `${selectFieldS('Status', 'In workshop', 'jf2-status')}
+${grid('1fr 1fr', `${staticFieldS('Diary time', 'Thu 17 Sep · 11:30–13:00', 'jf2-time')}${staticFieldS('Ready by', 'Fri 18 Sep', 'jf2-ready')}`, 12)}
+<div style="display: flex; gap: 24px; flex-wrap: wrap">${checkRow('Bike is here', true, 'jf2-here')}${checkRow('New bike build', false, 'jf2-newbuild')}</div>`;
+  const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${leftCol}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn(checkedCount2, CHECKLIST.length, notedCount2)}</div>`, 24);
+  const jobSection = panel(`${jobMetaRow}${jobBody}`, '', 5, 3);
+  const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(), grow: false });
+  const body = dialogBody(`${jobSection}${workSection}`, 4, 3);
+  const footer = dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
+${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${DIALOG_PAD}px">
+<div role="dialog" aria-modal="true" aria-labelledby="job-final-2-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${finalTitleBar('job-final-2-title')}${finalCustStrip()}${body}${footer}
+</div>
+</div>
+</div>`;
+}
+
+// ================= job-final-2-detailed: Detailed notes open =================
+// Same job page as job-final-2, with Detailed notes opened, on the job
+// page (decision 36: "It opens on the job page (no separate page)"). The
+// notes box expands in place to show the checklist — the pattern chosen
+// over a sliding sheet — because it needed no extra chrome (no overlay, no
+// second close affordance) and decision 33's floor ("work and parts stay
+// visible") is easy to clear outright: the left details column, the full
+// title bar/customer strip, the *entire* work-and-parts table (not just
+// its header) and the footer all stay exactly where they were on
+// job-final-2 — only the notes card's own content swaps from the text box
+// to the checklist. A sliding sheet was the other option on the table, but
+// it would need to cover the same area to fit two columns of ten items
+// with note fields, so it bought nothing beyond an extra "open" transition
+// to reason about.
+//
+// Ten rows fit three columns without scrolling; a note field is only drawn
+// where a note exists (the brakes item, decision 21/33's worked example) —
+// everywhere else is a muted "Customer sees: All working well" for a plain
+// tick, or "+ Add note" for the two unticked items, both sat on the same
+// 44px row as the tick rather than a wrapped line underneath — so nine
+// empty note fields never compete for the tight budget the one real note
+// needs. Three columns, not two: the budget here is the same one
+// bigNotesColumn used on job-final-2 (the notes card can only be as tall
+// as the notes box it replaces, since the title bar, customer strip, full
+// work-and-parts table and footer around it are all unchanged), and two
+// columns of five put the brakes item's wrapped note text in a column too
+// narrow to read comfortably; three columns of three or four keeps every
+// column shallow enough to fit, and gives the one real note a wrapped
+// two-line field rather than a single-line truncation (a truncated note a
+// mechanic can't read isn't a usable "note field").
+function detailedChecklistItem(it, id) {
+  const tick = `<input id="${id}" type="checkbox"${it.checked ? ' checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0">`;
+  if (it.note) {
+    return `<div style="display: flex; flex-direction: column; gap: 2px">
+<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}">${esc(it.t)}</span></label>
+<div style="box-sizing: border-box; padding-left: 30px"><textarea id="${id}-note" rows="3" style="box-sizing: border-box; width: 100%; resize: none; padding: 3px 8px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 12px; color: ${C.ink}; line-height: 1.25">${esc(it.note)}</textarea></div>
+</div>`;
+  }
+  if (it.checked) {
+    // Narrower 3-up columns don't leave room for the full caption on the
+    // same line as a longer item label ("Cables & housing", "Bolts
+    // torqued"), so it sits on its own (short) line under the tick instead
+    // of forcing a wrap mid-row.
+    return `<div style="display: flex; flex-direction: column">
+<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}">${esc(it.t)}</span></label>
+<div style="padding-left: 30px; margin-top: -6px"><span style="font-size: 12px; color: ${C.muted}">Customer sees: All working well</span></div>
+</div>`;
+  }
+  // "+ Add note" is a real control here (it opens a note field), so it
+  // gets its own ≥44px hit area — a plain-text button sized to match the
+  // row height it sits in, not the small text link the other (unopened)
+  // study boards use for the same affordance.
+  const addNoteBtn = `<button type="button" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: none; background: transparent; color: ${C.accentDark}; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer">+ Add note</button>`;
+  return `<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}; flex-shrink: 0">${esc(it.t)}</span><span style="flex-grow: 1"></span>${addNoteBtn}</label>`;
+}
+function detailedNotesColumn() {
+  // Uneven groups (not a plain 4/3/3 slice of the list in order) so the
+  // one item with a real note — the tallest row on the board — lands in a
+  // column with fewer, shorter neighbours, keeping every column's total
+  // height inside the same budget the notes box used on job-final-2.
+  const cols = [[3, 0, 1], [2, 4, 5], [6, 7, 8, 9]];
+  const colHtml = (indexes) => `<div style="display: flex; flex-direction: column">${indexes.map((idx) => detailedChecklistItem(CHECKLIST[idx], `jf2d-${idx}`)).join('')}</div>`;
+  const header = `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap">${h2('Detailed notes', 15)}<span style="font-size: 12px; color: ${C.muted}">Standard service checklist</span></div>
+<div style="display: flex; gap: 8px; flex-shrink: 0">${button('Back to notes', { variant: 'default' })}${button('Done', { variant: 'accent' })}</div>
+</div>`;
+  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-left: 4px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 2px 14px; display: flex; flex-direction: column; gap: 2px; overflow: hidden">
+${header}
+<div style="flex-grow: 1; min-height: 0; overflow: hidden">${grid('repeat(3, 1fr)', cols.map(colHtml).join(''), 20)}</div>
+</div>`;
+}
+function optionJobFinal2Detailed() {
+  const jobMetaRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 10);
+  const leftCol = `${selectFieldS('Status', 'In workshop', 'jf2d-status')}
+${grid('1fr 1fr', `${staticFieldS('Diary time', 'Thu 17 Sep · 11:30–13:00', 'jf2d-time')}${staticFieldS('Ready by', 'Fri 18 Sep', 'jf2d-ready')}`, 12)}
+<div style="display: flex; gap: 24px; flex-wrap: wrap">${checkRow('Bike is here', true, 'jf2d-here')}${checkRow('New bike build', false, 'jf2d-newbuild')}</div>`;
+  const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${leftCol}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${detailedNotesColumn()}</div>`, 24);
+  const jobSection = panel(`${jobMetaRow}${jobBody}`, '', 5, 3);
+  const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(), grow: false });
+  const body = dialogBody(`${jobSection}${workSection}`, 4, 3);
+  const footer = dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
+${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${DIALOG_PAD}px">
+<div role="dialog" aria-modal="true" aria-labelledby="job-final-2-detailed-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${finalTitleBar('job-final-2-detailed-title')}${finalCustStrip()}${body}${footer}
+</div>
+</div>
+</div>`;
+}
+
 // ================= Comparison sheet =================
 const OPTIONS_SUMMARY = [
   {
@@ -888,4 +1067,6 @@ export const boards = [
   { id: 'job-study-e', title: 'Study E · Six, fixed', html: optionStudyE() },
   { id: 'job-final', title: 'Job page · final (in the workshop)', html: optionJobFinal() },
   { id: 'job-final-stages', title: 'Job page · final, how it adapts by stage', html: jobFinalStagesBoard() },
+  { id: 'job-final-2', title: 'Job page · notes box', html: optionJobFinal2() },
+  { id: 'job-final-2-detailed', title: 'Job page · detailed notes open', html: optionJobFinal2Detailed() },
 ];

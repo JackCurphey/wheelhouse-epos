@@ -55,6 +55,8 @@ const SIZES = DESKTOP_ONLY ? [['desktop', DW, DH]] : [['desktop', DW, DH], ['tab
 const TITLE_OVERRIDE = {
   'waiting-open': 'Pending request selected',
   'change-selected': 'Change request selected',
+  'diary-context-menu': 'Diary · right-click a job',
+  'job-quick-overview': 'Diary · job overview (quick look)',
   'diary-day': 'Day view',
   'diary-settings': 'Diary settings',
   'new-job-day': 'New job (from the day view)',
