@@ -23,7 +23,7 @@ const STATUS = {
   gap: { label: 'Not designed', long: 'NOT DESIGNED YET', bar: '#b8460f', tint: '#fbeee6', ink: '#93380b' },
 };
 const STRIP = 56;
-const FONT = '&quot;Work Sans&quot;, ui-sans-serif, system-ui, sans-serif';
+const FONT = "'Work Sans', ui-sans-serif, system-ui, sans-serif";
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function roleOf(designRole) {
@@ -50,7 +50,8 @@ function page(title, w, h, body) {
 <helmet>
 <link rel="stylesheet" href="${FONT_LINK.replace(/&/g, '&amp;')}">
 <style>
-body{margin:0;font-family:${FONT};color:#1c1e19;background:#f3f2ee}
+body,button,input,select,textarea{font-family:${FONT}}
+body{margin:0;color:#1c1e19;background:#f3f2ee}
 a{color:#3f4d33}a:hover{color:#1c1e19}
 </style>
 </helmet>

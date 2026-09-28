@@ -21,7 +21,7 @@ const DESKTOP_ONLY = process.argv.includes('--desktop');
 // page()'s body font/colours — was a Fjell-only literal; now themed via
 // ui.mjs's FONT/C so a sand build's HTML <body> (and its default text/link
 // colours, before any board's own styles take over) matches the theme too.
-const FONT_HTML = FONT.replace(/'/g, '&quot;');
+const FONT_HTML = FONT; // plain quotes: entities inside <style> are not decoded, which silently dropped the font
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 function page(title, w, h, body) {
@@ -37,7 +37,8 @@ function page(title, w, h, body) {
 <helmet>
 <link rel="stylesheet" href="${FONT_LINK.replace(/&/g, '&amp;')}">
 <style>
-body{margin:0;font-family:${FONT_HTML};color:${C.ink};background:${C.bg}}
+body,button,input,select,textarea{font-family:${FONT_HTML}}
+body{margin:0;color:${C.ink};background:${C.bg}}
 a{color:${C.accent}}a:hover{color:${C.ink}}
 </style>
 </helmet>
