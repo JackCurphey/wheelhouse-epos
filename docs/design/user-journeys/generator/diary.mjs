@@ -482,24 +482,27 @@ function requestedOutlineBlock(size, slotH, highlighted = false) {
 // "Mon 10:00 → 14:00".
 let requestConnectorSeq = 0;
 function requestConnector(size, slotH, highlighted = false) {
+  // Jack, 28 Sep: the arrow shows only when the Change requested card is
+  // clicked, and runs from the middle of the original job to the middle of
+  // the requested time, drawn over any jobs in between (with a light halo so
+  // it stays readable on top of them).
+  if (!highlighted) return '';
   const from = JOBS.find((j) => j.job === 'WH-1052');
   const fromTop = ((from.start - GRID_START) / 30) * slotH + 2;
   const fromH = Math.max((from.dur / 30) * slotH - 4, slotH - 6);
-  const fromY = fromTop + fromH;
-  const toY = ((REQUEST_OUTLINE.start - GRID_START) / 30) * slotH + 2;
-  const gap = toY - fromY;
-  if (gap <= 4) return '';
+  const fromMid = fromTop + fromH / 2;
+  const toTop = ((REQUEST_OUTLINE.start - GRID_START) / 30) * slotH + 2;
+  const toH = Math.max((REQUEST_OUTLINE.dur / 30) * slotH - 4, slotH - 6);
+  const toMid = toTop + toH / 2;
+  const h = toMid - fromMid;
+  if (h <= 8) return '';
   const stroke = ST.hold[1];
-  const sw = highlighted ? 2.5 : 1.5;
   const markerId = `req-arrow-${size}-${requestConnectorSeq++}`;
-  const midY1 = Math.min(gap * 0.35, 16).toFixed(1);
-  const midY2 = Math.max(gap - Math.min(gap * 0.35, 16), gap * 0.5).toFixed(1);
-  const endY = (gap - 6).toFixed(1);
-  // The bow sits at x≈2 — clear of the grid divider at x=0 and still inside
-  // the 3px gutter every block leaves before its own left edge.
-  return `<svg aria-hidden="true" focusable="false" style="position: absolute; left: 0; top: ${fromY}px; width: 10px; height: ${gap}px; overflow: visible; pointer-events: none">
-<defs><marker id="${markerId}" markerWidth="6" markerHeight="6" refX="3" refY="5" orient="auto"><path d="M0,0 L6,0 L3,6 Z" fill="${stroke}"/></marker></defs>
-<path d="M 3 0 C 2 ${midY1}, 2 ${midY2}, 3 ${endY}" stroke="${stroke}" stroke-width="${sw}" fill="none" marker-end="url(#${markerId})" opacity="${highlighted ? '1' : '0.85'}"/>
+  return `<svg aria-hidden="true" focusable="false" style="position: absolute; left: 0; right: 0; top: ${fromMid}px; width: 100%; height: ${h}px; overflow: visible; pointer-events: none; z-index: 5">
+<defs><marker id="${markerId}" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,0 L4,8 Z" fill="${stroke}"/></marker></defs>
+<circle cx="50%" cy="0" r="4" fill="${stroke}"/>
+<line x1="50%" y1="0" x2="50%" y2="${(h - 2).toFixed(1)}" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.85"/>
+<line x1="50%" y1="0" x2="50%" y2="${(h - 2).toFixed(1)}" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" marker-end="url(#${markerId})"/>
 </svg>`;
 }
 function combinedBlock(cluster, size, slotH, faded = false) {

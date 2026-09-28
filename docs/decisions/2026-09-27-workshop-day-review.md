@@ -208,7 +208,9 @@ answers, in the order given.
     sending a quote; a quote is sent only when the total would go over the
     limit, or when the customer set no limit.
 44. **A change request draws a line from the job to the time the customer
-    wants** in the diary, so the move reads at a glance.
+    wants** in the diary, so the move reads at a glance — only once the
+    Change requested card is clicked, from the middle of the original job
+    to the middle of the requested slot (Jack, 28 Sep).
 45. **Diary blocks lose the darker bar on their left edge**; instead each
     block has a full outline in that darker colour around its tinted fill.
 46. **Work and parts lines sort themselves: labour at the top, parts
