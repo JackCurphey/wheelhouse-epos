@@ -183,7 +183,8 @@ answers, in the order given.
     at the top of the box, closed off by an underline; staff can keep adding
     to that section when the customer explains more in the shop. Below the
     line, the job's notes are plain text — no name or time stamps on what
-    staff write (supersedes the stamps in item 36's drawing).
+    staff write (supersedes the stamps in item 36's drawing). No prompts or
+    placeholder text anywhere in the box — just one large text box.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

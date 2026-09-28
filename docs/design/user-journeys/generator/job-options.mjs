@@ -857,9 +857,8 @@ function bigNoteBody() {
   const customerSection = `<div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; border-bottom: 2px solid ${C.input}">
 <span style="font-size: 12px; font-weight: 700; color: ${C.accentDark}">From the customer</span>
 ${customer.map(bigNoteParagraph).join('')}
-<span style="font-size: 13px; color: ${C.muted}">Add anything else they tell you in the shop…</span>
 </div>`;
-  return `${customerSection}${staff.map(bigNoteParagraph).join('')}${placeholder('Keep typing…')}`;
+  return `${customerSection}${staff.map(bigNoteParagraph).join('')}`;
 }
 // "Detailed notes" button + summary — a clear control at the box's bottom
 // edge that opens the checklist section from inside the notes box
