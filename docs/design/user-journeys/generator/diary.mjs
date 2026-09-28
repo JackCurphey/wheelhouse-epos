@@ -490,10 +490,10 @@ function requestConnector(size, slotH, highlighted = false) {
   const from = JOBS.find((j) => j.job === 'WH-1052');
   const fromTop = ((from.start - GRID_START) / 30) * slotH + 2;
   const fromH = Math.max((from.dur / 30) * slotH - 4, slotH - 6);
-  const fromMid = fromTop + fromH / 2;
+  const fromMid = fromTop + fromH; // middle of the original job's bottom edge (Jack: don't cover the box's contents)
   const toTop = ((REQUEST_OUTLINE.start - GRID_START) / 30) * slotH + 2;
   const toH = Math.max((REQUEST_OUTLINE.dur / 30) * slotH - 4, slotH - 6);
-  const toMid = toTop + toH / 2;
+  const toMid = toTop; // middle of the requested slot's top edge
   const h = toMid - fromMid;
   if (h <= 8) return '';
   const stroke = ST.hold[1];
