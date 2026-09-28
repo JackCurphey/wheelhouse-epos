@@ -814,6 +814,7 @@ function jobFinalStagesBoard() {
 <p style="margin: 0; font-size: 13px; color: ${C.muted}; max-width: 1050px">Plain-English version of study §7.4. The layout is always the same page (job-final); only these bits change as a job moves through the workshop. "In the workshop" is the worked example on the job-final board.</p>
 </div>
 <div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 12px; padding: 4px 12px">${table}</div>
+<p style="margin: 0; flex-shrink: 0; font-size: 12px; color: ${C.muted}">The Full service checklist pop-up (decision 39) only appears for services that have a checklist — not, for example, a hub service.</p>
 </div>`;
 }
 
@@ -860,15 +861,18 @@ ${customer.map(bigNoteParagraph).join('')}
 </div>`;
   return `${customerSection}${staff.map(bigNoteParagraph).join('')}`;
 }
-// "Detailed notes" button + summary — a clear control at the box's bottom
-// edge that opens the checklist section from inside the notes box
-// (decision 36). Sized as a full-width ≥44px row so it reads as one clear
-// control, not a small link.
+// "Full service checklist" button + summary (decision 39: Jack renamed
+// "Detailed notes" once the notes box itself was settled, so this only
+// appears for services that carry a checklist — a general service or one
+// of the bigger services, not e.g. a hub service). A clear control at the
+// box's bottom edge that opens the checklist as its own full-screen pop-up
+// (decision 39 — no longer expands in place). Sized as a full-width ≥44px
+// row so it reads as one clear control, not a small link.
 function detailedNotesButton(checkedCount, totalCount, notedCount) {
   const chev = `<span style="display: inline-flex; flex-shrink: 0; transform: rotate(-90deg); color: ${C.muted}">${icon('chevron', 16)}</span>`;
   return `<button type="button" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left">
-<span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700">${chev}Detailed notes</span>
-<span style="font-size: 12px; color: ${C.muted}">${esc(`Standard service checklist · ${checkedCount} of ${totalCount} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span>
+<span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700">${chev}Full service checklist</span>
+<span style="font-size: 12px; color: ${C.muted}">${esc(`${checkedCount} of ${totalCount} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span>
 </button>`;
 }
 // Notes column — same card shape as job-final's finalNotesColumn (heading
@@ -882,7 +886,11 @@ ${h2('Notes', 15)}
 ${detailedNotesButton(checkedCount, totalCount, notedCount)}
 </div>`;
 }
-function optionJobFinal2() {
+// Job pop-up content shared by job-final-2 (as itself) and
+// job-final-2-detailed (as the dimmed layer the checklist pop-up sits over
+// — decision 39: the checklist is its own pop-up now, so the job pop-up
+// behind it is exactly the job-final-2 pop-up, unchanged).
+function jobFinal2DialogContent() {
   const checkedCount2 = CHECKLIST.filter((c) => c.checked).length;
   const notedCount2 = CHECKLIST.filter((c) => c.note).length;
   const jobMetaRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 10);
@@ -894,103 +902,96 @@ ${grid('1fr 1fr', `${staticFieldS('Diary time', 'Thu 17 Sep · 11:30–13:00', '
   const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(), grow: false });
   const body = dialogBody(`${jobSection}${workSection}`, 4, 3);
   const footer = dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
+  return `${finalTitleBar('job-final-2-title')}${finalCustStrip()}${body}${footer}`;
+}
+function optionJobFinal2() {
   return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
 ${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
 <div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${DIALOG_PAD}px">
 <div role="dialog" aria-modal="true" aria-labelledby="job-final-2-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
-${finalTitleBar('job-final-2-title')}${finalCustStrip()}${body}${footer}
+${jobFinal2DialogContent()}
 </div>
 </div>
 </div>`;
 }
 
-// ================= job-final-2-detailed: Detailed notes open =================
-// Same job page as job-final-2, with Detailed notes opened, on the job
-// page (decision 36: "It opens on the job page (no separate page)"). The
-// notes box expands in place to show the checklist — the pattern chosen
-// over a sliding sheet — because it needed no extra chrome (no overlay, no
-// second close affordance) and decision 33's floor ("work and parts stay
-// visible") is easy to clear outright: the left details column, the full
-// title bar/customer strip, the *entire* work-and-parts table (not just
-// its header) and the footer all stay exactly where they were on
-// job-final-2 — only the notes card's own content swaps from the text box
-// to the checklist. A sliding sheet was the other option on the table, but
-// it would need to cover the same area to fit two columns of ten items
-// with note fields, so it bought nothing beyond an extra "open" transition
-// to reason about.
+// ================= job-final-2-detailed: Full service checklist pop-up =================
+// Decision 39 (Jack, 28 Sep, replacing item 36's in-page expansion): "the
+// detailed notes to be another pop-up, so that if a mechanic is writing the
+// detailed notes for the job, it can essentially take up the whole page
+// (because that's the only thing that they'll be working on at that
+// moment)." So this board is now two pop-ups stacked: the ordinary
+// job-final-2 pop-up sits underneath exactly as drawn on that board
+// (jobFinal2DialogContent(), unchanged), and the checklist opens as its
+// own near-fullscreen pop-up over it — only a CHECKLIST_DIALOG_PAD-px
+// dimmed edge of the job pop-up shows behind, per decision 39/decision
+// 16's "slim dimmed edge" pattern applied one layer deeper.
 //
-// Ten rows fit three columns without scrolling; a note field is only drawn
-// where a note exists (the brakes item, decision 21/33's worked example) —
-// everywhere else is a muted "Customer sees: All working well" for a plain
-// tick, or "+ Add note" for the two unticked items, both sat on the same
-// 44px row as the tick rather than a wrapped line underneath — so nine
-// empty note fields never compete for the tight budget the one real note
-// needs. Three columns, not two: the budget here is the same one
-// bigNotesColumn used on job-final-2 (the notes card can only be as tall
-// as the notes box it replaces, since the title bar, customer strip, full
-// work-and-parts table and footer around it are all unchanged), and two
-// columns of five put the brakes item's wrapped note text in a column too
-// narrow to read comfortably; three columns of three or four keeps every
-// column shallow enough to fit, and gives the one real note a wrapped
-// two-line field rather than a single-line truncation (a truncated note a
-// mechanic can't read isn't a usable "note field").
-function detailedChecklistItem(it, id) {
-  const tick = `<input id="${id}" type="checkbox"${it.checked ? ' checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0">`;
-  if (it.note) {
-    return `<div style="display: flex; flex-direction: column; gap: 2px">
+// Renamed per decision 39: "Detailed notes" becomes "Full service
+// checklist" (it only appears for services that carry a checklist — a
+// general service or one of the bigger ones, not e.g. a hub service; see
+// the note added to job-final-stages).
+//
+// With a whole screen to itself instead of sharing the notes card's
+// budget, every item can show its own always-visible 2-line note field
+// (Jack's brief) rather than the space-saving "note only where one
+// exists"/"+ Add note" pattern the in-page version needed — two columns of
+// five is comfortably inside 1240×760 (the pop-up's box after its own
+// padding) at that field size.
+const CHECKLIST_DIALOG_PAD = 20; // 16–24px dimmed edge of the job pop-up behind (decision 39).
+function fullChecklistItem(it, id) {
+  const tick = `<input id="${id}" type="checkbox"${it.checked ? ' checked' : ''} style="width: 22px; height: 22px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0">`;
+  // Empty fields carry no placeholder text (Jack dislikes prompts in text
+  // boxes) — the textarea is simply empty.
+  const field = `<div style="box-sizing: border-box; padding-left: 32px"><textarea id="${id}-note" rows="2" aria-label="${esc(it.t)} note" style="box-sizing: border-box; width: 100%; resize: none; padding: 8px 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; color: ${C.ink}; line-height: 1.35">${esc(it.note)}</textarea></div>`;
+  // Only a ticked item with no note of its own gets the muted "Customer
+  // sees" caption; the two unticked items and the one noted item don't.
+  const caption = it.checked && !it.note ? `<div style="padding-left: 32px; margin-top: -3px"><span style="font-size: 12px; color: ${C.muted}">Customer sees: All working well</span></div>` : '';
+  return `<div style="display: flex; flex-direction: column; gap: 4px">
 <label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}">${esc(it.t)}</span></label>
-<div style="box-sizing: border-box; padding-left: 30px"><textarea id="${id}-note" rows="3" style="box-sizing: border-box; width: 100%; resize: none; padding: 3px 8px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 12px; color: ${C.ink}; line-height: 1.25">${esc(it.note)}</textarea></div>
+${field}${caption}
 </div>`;
-  }
-  if (it.checked) {
-    // Narrower 3-up columns don't leave room for the full caption on the
-    // same line as a longer item label ("Cables & housing", "Bolts
-    // torqued"), so it sits on its own (short) line under the tick instead
-    // of forcing a wrap mid-row.
-    return `<div style="display: flex; flex-direction: column">
-<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}">${esc(it.t)}</span></label>
-<div style="padding-left: 30px; margin-top: -6px"><span style="font-size: 12px; color: ${C.muted}">Customer sees: All working well</span></div>
-</div>`;
-  }
-  // "+ Add note" is a real control here (it opens a note field), so it
-  // gets its own ≥44px hit area — a plain-text button sized to match the
-  // row height it sits in, not the small text link the other (unopened)
-  // study boards use for the same affordance.
-  const addNoteBtn = `<button type="button" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: none; background: transparent; color: ${C.accentDark}; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer">+ Add note</button>`;
-  return `<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}; flex-shrink: 0">${esc(it.t)}</span><span style="flex-grow: 1"></span>${addNoteBtn}</label>`;
 }
-function detailedNotesColumn() {
-  // Uneven groups (not a plain 4/3/3 slice of the list in order) so the
-  // one item with a real note — the tallest row on the board — lands in a
-  // column with fewer, shorter neighbours, keeping every column's total
-  // height inside the same budget the notes box used on job-final-2.
-  const cols = [[3, 0, 1], [2, 4, 5], [6, 7, 8, 9]];
-  const colHtml = (indexes) => `<div style="display: flex; flex-direction: column">${indexes.map((idx) => detailedChecklistItem(CHECKLIST[idx], `jf2d-${idx}`)).join('')}</div>`;
-  const header = `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
-<div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap">${h2('Detailed notes', 15)}<span style="font-size: 12px; color: ${C.muted}">Standard service checklist</span></div>
-<div style="display: flex; gap: 8px; flex-shrink: 0">${button('Back to notes', { variant: 'default' })}${button('Done', { variant: 'accent' })}</div>
-</div>`;
-  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-left: 4px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 2px 14px; display: flex; flex-direction: column; gap: 2px; overflow: hidden">
-${header}
-<div style="flex-grow: 1; min-height: 0; overflow: hidden">${grid('repeat(3, 1fr)', cols.map(colHtml).join(''), 20)}</div>
+// Header: title + subtitle (decision 39's brief), "Done" (primary, returns
+// to the job pop-up) and a close ×. "Done" only appears here, not repeated
+// in a footer — with the whole screen given to the checklist there's no
+// second, far-away place a mechanic would look for it, and one clear
+// control beats two doing the same thing.
+function fullChecklistHeader() {
+  return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 14px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<h2 id="job-final-2-detailed-title" style="margin: 0; font-size: 20px; font-weight: 700">Full service checklist</h2>
+<span style="font-size: 13px; color: ${C.muted}">Standard service · WH-1042 · Trek Domane AL 3</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0">
+${button('Done', { variant: 'primary' })}
+<a href="#" aria-label="Close, back to the job" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
+</div>
+</header>`;
+}
+function fullChecklistDialog() {
+  const checkedCount = CHECKLIST.filter((c) => c.checked).length;
+  const notedCount = CHECKLIST.filter((c) => c.note).length;
+  const summary = `<div style="flex-shrink: 0; padding: 6px 24px 0"><span style="font-size: 13px; color: ${C.muted}">${esc(`${checkedCount} of ${CHECKLIST.length} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span></div>`;
+  const left = CHECKLIST.slice(0, 5);
+  const right = CHECKLIST.slice(5, 10);
+  const colHtml = (items, offset) => `<div style="display: flex; flex-direction: column; gap: 16px; min-height: 0">${items.map((it, i) => fullChecklistItem(it, `jf2fd-${offset + i}`)).join('')}</div>`;
+  const cols = grid('1fr 1fr', `${colHtml(left, 0)}${colHtml(right, 5)}`, 40, 'flex-grow: 1; min-height: 0; overflow: hidden;');
+  const body = `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 24px 22px; display: flex; flex-direction: column">${cols}</div>`;
+  return `<div role="dialog" aria-modal="true" aria-labelledby="job-final-2-detailed-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 28px 72px rgba(28,30,25,0.45); display: flex; flex-direction: column; overflow: hidden">
+${fullChecklistHeader()}${summary}${body}
 </div>`;
 }
 function optionJobFinal2Detailed() {
-  const jobMetaRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 10);
-  const leftCol = `${selectFieldS('Status', 'In workshop', 'jf2d-status')}
-${grid('1fr 1fr', `${staticFieldS('Diary time', 'Thu 17 Sep · 11:30–13:00', 'jf2d-time')}${staticFieldS('Ready by', 'Fri 18 Sep', 'jf2d-ready')}`, 12)}
-<div style="display: flex; gap: 24px; flex-wrap: wrap">${checkRow('Bike is here', true, 'jf2d-here')}${checkRow('New bike build', false, 'jf2d-newbuild')}</div>`;
-  const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${leftCol}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${detailedNotesColumn()}</div>`, 24);
-  const jobSection = panel(`${jobMetaRow}${jobBody}`, '', 5, 3);
-  const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(), grow: false });
-  const body = dialogBody(`${jobSection}${workSection}`, 4, 3);
-  const footer = dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
   return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
 ${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
 <div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${DIALOG_PAD}px">
-<div role="dialog" aria-modal="true" aria-labelledby="job-final-2-detailed-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
-${finalTitleBar('job-final-2-detailed-title')}${finalCustStrip()}${body}${footer}
+<div role="dialog" aria-modal="true" aria-hidden="true" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${jobFinal2DialogContent()}
 </div>
+</div>
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.55); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${CHECKLIST_DIALOG_PAD}px">
+${fullChecklistDialog()}
 </div>
 </div>`;
 }
@@ -1067,5 +1068,5 @@ export const boards = [
   { id: 'job-final', title: 'Job page · final (in the workshop)', html: optionJobFinal() },
   { id: 'job-final-stages', title: 'Job page · final, how it adapts by stage', html: jobFinalStagesBoard() },
   { id: 'job-final-2', title: 'Job page · notes box', html: optionJobFinal2() },
-  { id: 'job-final-2-detailed', title: 'Job page · detailed notes open', html: optionJobFinal2Detailed() },
+  { id: 'job-final-2-detailed', title: 'Job page · full service checklist', html: optionJobFinal2Detailed() },
 ];

@@ -185,6 +185,12 @@ answers, in the order given.
     line, the job's notes are plain text — no name or time stamps on what
     staff write (supersedes the stamps in item 36's drawing). No prompts or
     placeholder text anywhere in the box — just one large text box.
+39. **The notes box is settled** (Jack: "exactly how I want it").
+    **"Detailed notes" becomes "Full service checklist"** and opens as its
+    own pop-up that takes the whole screen over the job (a mechanic filling
+    it in is doing only that). It appears only for jobs whose service has a
+    checklist (a general service or the bigger services) — not, for
+    example, a hub service.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
