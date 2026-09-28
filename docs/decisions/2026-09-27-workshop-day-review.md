@@ -144,6 +144,17 @@ answers, in the order given.
     (e.g. "Mechanic: Alex Morgan");
     New job takes the mechanic from where you clicked (or the automatic
     choice in the Everyone view, item 18) without a select.
+33. **The job page is a refined version of Citrus Lime's job page** (Jack,
+    28 Sep, after comparing options 5 and 6): he prefers option 5, and
+    seeing the work and parts list straight away is part of why. Work and
+    parts stay visible without opening anything (compact, at the bottom,
+    scan-in ready), rather than folded to one line as in option 6.
+34. **The job page is study variant A, "Faithful Five"** (Jack, 28 Sep,
+    on the design review in docs/design/user-journeys/job-page-study.md §7):
+    option 5's structure; the notes stay as the right-hand column of the
+    job details, made more prominent; the full work and parts table open
+    below; checklist folded. The review's refinements apply, and controls a
+    mechanic presses are raised to 44px now rather than in the look pass.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

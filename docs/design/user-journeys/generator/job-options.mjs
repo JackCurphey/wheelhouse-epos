@@ -66,6 +66,15 @@ const MESSAGES = [
   { who: 'You', time: '09:14', text: 'Your bike is booked in and we’ve started the safety check.' },
   { who: 'Maya Patel', time: '09:20', text: 'Thanks, how long roughly?' },
 ];
+// Notes feed data — customer's booking note + staff notes, newest first.
+// Module-level (rather than a local inside option6()) so option 6 and the
+// job-study variants (A/B/E) share the same data without option 6's own
+// code changing.
+const NOTES6 = [
+  { author: 'Alex Morgan', role: 'staff', when: 'Thu 17 Sep · 12:10', text: 'The rear pads are worn. We recommend replacing the pads and adjusting the brake.' },
+  { author: 'Jo Taylor', role: 'staff', when: 'Thu 17 Sep · 09:05', text: 'Bike booked in, tag printed.' },
+  { author: 'Maya Patel', role: 'customer', when: 'Wed 16 Sep', sub: 'from her booking', text: 'My rear brake squeals and feels weak. The gears could use a tune-up too.' },
+];
 const HISTORY = [
   ['08:02', 'Booking confirmed by Maya Patel'],
   ['09:05', 'Bike booked in · tag printed'],
@@ -367,11 +376,6 @@ function option6() {
   // booking get a "Customer" badge, a calm green tint and a left marker —
   // three signals, not colour alone — so a colour-blind reader still reads
   // "Customer" straight off the badge text.
-  const NOTES6 = [
-    { author: 'Alex Morgan', role: 'staff', when: 'Thu 17 Sep · 12:10', text: 'The rear pads are worn. We recommend replacing the pads and adjusting the brake.' },
-    { author: 'Jo Taylor', role: 'staff', when: 'Thu 17 Sep · 09:05', text: 'Bike booked in, tag printed.' },
-    { author: 'Maya Patel', role: 'customer', when: 'Wed 16 Sep', sub: 'from her booking', text: 'My rear brake squeals and feels weak. The gears could use a tune-up too.' },
-  ];
   const noteCard6 = (n) => {
     const isCust = n.role === 'customer';
     return `<div style="box-sizing: border-box; padding: 8px 12px; border-radius: 8px; border: 1px solid ${isCust ? C.accent : C.border}; border-left: 3px solid ${isCust ? C.accent : C.border}; background: ${isCust ? C.okBg : C.panel}; display: flex; flex-direction: column; gap: 3px">
@@ -419,6 +423,397 @@ ${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: fl
 ${titleBar6}${custStrip6}${body6}${footer6}
 </div>
 </div>
+</div>`;
+}
+
+// ================= Job page study — Variants A, B, E =================
+// docs/design/user-journeys/job-page-study.md draws Variants A ("Faithful
+// Five"), B ("Compact strip + standalone notes + mini-table") and E ("Six,
+// fixed"); C and D are dropped (they move away from the Citrus Lime
+// structure / hide the parts list — not drawn here). Decision 33 overrides
+// the study where they'd conflict: work and parts stays visible without
+// opening anything, so B/E's mini-table always shows real rows, never a
+// link-only row. Same example job, same title bar/customer strip shape as
+// option 6 (mechanic shown as plain text, no select) — reused/duplicated
+// below rather than importing option 5/6's private locals, since those are
+// declared inside option5()/option6() and this file leaves both functions
+// untouched.
+//
+// Labels here are held to a 12px floor throughout (the brief's constraint
+// for these three boards) — one px above option 5/6's own 11px labels,
+// which predate this brief and are left as they were built.
+function studyTitleBar(titleId) {
+  return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 13px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0"><h2 id="${titleId}" style="margin: 0; font-size: 18px; font-weight: 700">Standard service</h2>${badge('In workshop', 'blue')}</div>
+<a href="#" aria-label="Close, back to the diary" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
+</header>`;
+}
+// Customer strip — verbatim shape from option 6's custStrip6: account link,
+// contact, bike, storage slot, "Mechanic: Alex Morgan" as plain text (no
+// select — decision 32), three icon buttons.
+function studyCustStrip() {
+  const iconBtnS = (name, label) => `<button type="button" aria-label="${esc(label)}" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
+  const custLinkS = `<a href="#" aria-label="View ${esc(JOB_CUSTOMER.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(JOB_CUSTOMER.name)}</a>`;
+  return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 9px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">
+<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}">${custLinkS}<span>${esc(JOB_CUSTOMER.phone)}</span><span>${esc(JOB_CUSTOMER.email)}</span><span>Trek Domane AL 3 · green</span><span style="color: ${C.muted}">Kept on Hook 3</span><span>Mechanic: <strong>Alex Morgan</strong></span></div>
+<div style="display: flex; gap: 8px; flex-shrink: 0">${iconBtnS('inbox', 'Message Maya Patel')}${iconBtnS('mail', 'Email Maya Patel')}${iconBtnS('menu', 'Notes')}</div>
+</div>`;
+}
+const studyFooter = () => dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
+function studyFrame(titleId, bodyHtml) {
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
+${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${DIALOG_PAD}px">
+<div role="dialog" aria-modal="true" aria-labelledby="${titleId}" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${studyTitleBar(titleId)}${studyCustStrip()}${bodyHtml}${studyFooter()}
+</div>
+</div>
+</div>`;
+}
+// Field helpers, 12px labels (the study/option 5's own selectField/
+// staticField are 11px locals inside option5() — duplicated here at the
+// 12px floor rather than reused, so option 5 stays untouched).
+const selectFieldS = (label, value, id) => `<div style="display: flex; flex-direction: column; gap: 3px"><label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><select id="${id}" style="width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"><option>${esc(value)}</option></select></div>`;
+const staticFieldS = (label, value, id) => `<div style="display: flex; flex-direction: column; gap: 1px"><label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><div id="${id}" style="min-height: 20px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.bg}; display: flex; align-items: center; font-size: 13px; color: ${C.ink}">${esc(value)}</div></div>`;
+const compactSelectS = (label, value, id) => `<div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 0">
+<label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.muted}; flex-shrink: 0">${esc(label)}</label>
+<select id="${id}" style="min-height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; color: ${C.ink}"><option>${esc(value)}</option></select>
+</div>`;
+const compactStaticS = (label, value) => `<div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 0">
+<span style="font-size: 12px; font-weight: 600; color: ${C.muted}">${esc(label)}</span>
+<span style="font-size: 13px; color: ${C.ink}">${esc(value)}</span>
+</div>`;
+// Notes composer — one row (input + Add button), as the study's own diagram
+// draws it ("[Write a note…    ] [Add]"), not option 6's stacked
+// textarea-then-button. The Add button keeps a ≥44px touch target.
+const studyComposer = (id) => `<div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0">
+<input id="${id}" type="text" placeholder="Write a note…" style="flex-grow: 1; box-sizing: border-box; min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}">
+${button('Add', { variant: 'accent' })}
+</div>`;
+// One feed entry, newest first — a compact line, not a bordered card (the
+// study's own diagrams draw the feed as plain lines): meta row (author,
+// time) then the note text. The customer's booking note carries a
+// "Customer" badge plus a tinted left rule — two signals beyond the badge
+// text itself, so it doesn't read as anonymous staff chatter.
+function studyNoteLine(n) {
+  const isCust = n.role === 'customer';
+  return `<div style="display: flex; flex-direction: column; gap: 1px; ${isCust ? `border-left: 3px solid ${C.accent}; padding: 3px 8px; background: ${C.okBg}; border-radius: 4px;` : ''}">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+${isCust ? badge('Customer', 'green') : ''}
+<span style="font-size: 13px; font-weight: 700; color: ${C.ink}">${esc(n.author)}</span>
+<span style="font-size: 12px; color: ${C.muted}">${n.sub ? `${esc(n.sub)} · ` : ''}${esc(n.when)}</span>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 1.3; color: ${C.ink}">${esc(n.text)}</p>
+</div>`;
+}
+// Full notes section, its own bordered region, flex-grow so it fills
+// whatever height the fixed-size siblings (strip, checklist, mini-table)
+// leave — the same technique option 6 already uses for its notes section.
+function studyNotesSection(id) {
+  const feed = NOTES6.map(studyNoteLine).join('');
+  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; overflow: hidden">
+${eyebrow('Notes')}
+${studyComposer(id)}
+<div style="display: flex; flex-direction: column; gap: 3px; min-height: 0; overflow: hidden">${feed}</div>
+</div>`;
+}
+const studyChecklistFold = () => {
+  const checkedCount = CHECKLIST.filter((c) => c.checked).length;
+  const notedCount = CHECKLIST.filter((c) => c.note).length;
+  return foldSection('Checklist', { expanded: false, meta: `Standard service checklist · ${checkedCount} of ${CHECKLIST.length} done · ${notedCount} note` });
+};
+// Full work-and-parts table body (toolbar + table), the same columns as
+// option 5's table — duplicated at 12px header labels (option 5's are 11px
+// locals, left untouched) rather than reused.
+const toolbarBtnS = (text, iconName) => `<button type="button" style="display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 12px; font-weight: 600">${icon(iconName, 12)}${esc(text)}</button>`;
+const thS = (t, extra = '') => `<th style="text-align: left; font-size: 12px; font-weight: 700; color: ${C.muted}; padding: 1px 8px; border-bottom: 1px solid ${C.border}; line-height: 1.1; ${extra}">${esc(t)}</th>`;
+const tdS = (inner, extra = '') => `<td style="padding: 1px 8px; font-size: 13px; color: ${C.ink}; border-bottom: 1px solid ${C.border}; vertical-align: middle; line-height: 1.1; ${extra}">${inner}</td>`;
+function fullWorkAndPartsBody() {
+  const toolbar = row(`${toolbarBtnS('Add item', 'plus')}${toolbarBtnS('Scan barcode', 'search')}${toolbarBtnS('Print', 'reports')}`, 8);
+  const rowsHtml = LINE_DETAILS.map((l) => {
+    const declined = l.decision === 'Declined';
+    const strike = declined ? `text-decoration: line-through; color: ${C.muted};` : '';
+    return `<tr>
+${tdS(mono(l.code || '—'))}
+${tdS(`<span style="${strike}"><span style="font-weight: 600">${esc(l.work)}</span><span style="font-size: 12px; color: ${C.muted}"> · ${esc(l.sub)}</span></span>`)}
+${tdS(`<input type="checkbox" ${declined ? '' : 'checked'} aria-label="${esc(l.work)} done" style="width: 18px; height: 18px; accent-color: ${C.accent}">`, 'text-align: center')}
+${tdS(l.work === 'Shimano brake pads' ? esc('Rear pads worn — replacing') : '—', `color: ${C.muted}`)}
+${tdS(mono(l.qty))}
+${tdS('—', `color: ${C.muted}`)}
+${tdS(mono(`£${l.price.toFixed(2)}`, strike))}
+${tdS(mono(`£${l.price.toFixed(2)}`, `font-weight: 600; ${strike}`))}
+${tdS(declined ? badge('Declined', 'red') : badge('Approved', 'green'))}
+</tr>`;
+  }).join('');
+  const totalRow = `<tr><td colspan="7" style="padding: 3px 8px; text-align: right; font-size: 13px; font-weight: 700">Approved total</td><td style="padding: 3px 8px">${mono(`£${APPROVED_TOTAL.toFixed(2)}`, 'font-weight: 700; font-size: 14px')}</td><td></td></tr>`;
+  const table = `<table style="width: 100%; border-collapse: collapse">
+<thead><tr>${thS('Code')}${thS('Work / part')}${thS('Done', 'text-align: center')}${thS('Note')}${thS('Qty')}${thS('In stock')}${thS('Price')}${thS('Total')}${thS('Customer approval')}</tr></thead>
+<tbody>${rowsHtml}${totalRow}</tbody>
+</table>`;
+  return `${toolbar}${table}<p style="margin: 0; font-size: 12px; line-height: 1.2; color: ${C.muted}">${esc(DECLINED_NOTE)}</p>`;
+}
+// Mini work-and-parts table — decision 33 overrides the study here: real
+// rows, always (2 of the 4 lines, both already done/approved), never a
+// link-only row.
+function miniWorkRows() {
+  return LINE_DETAILS.slice(0, 2).map((l) => {
+    const declined = l.decision === 'Declined';
+    return row(`<span style="font-size: 14px; color: ${C.ink}; flex-grow: 1; min-width: 0">${esc(l.work)}</span><span style="font-size: 13px; color: ${declined ? C.danger : C.muted}; width: 64px; flex-shrink: 0">${declined ? 'Declined' : 'Done'}</span>${mono(`£${l.price.toFixed(2)}`, 'font-size: 13px; font-weight: 600; flex-shrink: 0; width: 60px; text-align: right')}`, 14);
+  }).join('');
+}
+function miniWorkPanel() {
+  const header = row(`${ghostBtn('Scan barcode', 'search')}${ghostBtn('Add item', 'plus')}<span style="flex-grow: 1"></span>${meta(`4 lines · £${APPROVED_TOTAL.toFixed(2)} · 1 declined`, 13)}`, 10);
+  return panel(`${h2('Work and parts', 14)}${header}<div style="display: flex; flex-direction: column; gap: 2px">${miniWorkRows()}</div><div style="display: flex; justify-content: flex-end">${link('Show all rows')}</div>`, '', 8, 4);
+}
+
+// ---- Variant A: "Faithful Five" ----
+// Option 5's card structure, minimally refined: no mechanic select (decision
+// 32); the details card's right column becomes the notes box (composer +
+// feed, customer's note last) instead of a tiny staff-notes field. Work and
+// parts stays the full table, open by default, same as option 5 — this
+// variant tests whether notes can grow inside the details card without
+// shrinking the table.
+function optionStudyA() {
+  const jobMetaRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 10);
+  const leftCol = `${selectFieldS('Status', 'In workshop', 'ja-status')}
+${grid('1fr 1fr', `${staticFieldS('Diary time', 'Thu 17 Sep · 11:30–13:00', 'ja-time')}${staticFieldS('Ready by', 'Fri 18 Sep', 'ja-ready')}`, 12)}
+<div style="display: flex; gap: 24px; flex-wrap: wrap">${checkRow('Bike is here', true, 'ja-here')}${checkRow('New bike build', false, 'ja-newbuild')}</div>`;
+  const notesFeed = NOTES6.map(studyNoteLine).join('');
+  const rightCol = `${eyebrow('Notes')}${studyComposer('ja-note')}<div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${notesFeed}</div>`;
+  const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${leftCol}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${rightCol}</div>`, 24);
+  const jobSection = panel(`${jobMetaRow}${jobBody}`, '', 10, 6);
+  const workSection = foldSection('Work and parts', { expanded: true, body: fullWorkAndPartsBody(), grow: false });
+  const body = dialogBody(`${jobSection}${workSection}${studyChecklistFold()}`, 6, 4);
+  return studyFrame('job-study-a-title', body);
+}
+
+// ---- Variant B: "Compact strip + standalone notes + mini-table" ----
+// A genuinely compact single-purpose strip (one row: status/ticks left,
+// diary time pinned right, so nothing wedges between labels); notes as
+// their own full-width section, the biggest region on the page; work and
+// parts as a real mini-table (decision 33) directly under notes, checklist
+// folded last.
+function jobStripB() {
+  const topRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 12);
+  const bottomRow = row(`${compactSelectS('Status', 'In workshop', 'jb-status')}${checkRow('Bike is here', true, 'jb-here')}${checkRow('New bike build', false, 'jb-newbuild')}<span style="flex-grow: 1"></span>${compactStaticS('Diary', 'Thu 17 Sep · 11:30–13:00')}`, 22, 'flex-wrap: wrap');
+  return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 6px 16px; display: flex; flex-direction: column; gap: 3px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}">${topRow}${bottomRow}</div>`;
+}
+function optionStudyB() {
+  const body = dialogBody(`${jobStripB()}${studyNotesSection('jb-note')}${miniWorkPanel()}${studyChecklistFold()}`, 8, 6);
+  return studyFrame('job-study-b-title', body);
+}
+
+// ---- Variant E: "Six, fixed" ----
+// Option 6's original stack shape and section order (details → notes →
+// checklist → work), repaired: a breathing two-row-plus-diary-line strip
+// (not option 6's cramped single row), and a real mini-table for work and
+// parts (decision 33) instead of option 6's link-only fold. Content is
+// close to Variant B; the difference under test is ordering (checklist
+// above work here, work directly under notes in B).
+function jobStripE() {
+  const topRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 12);
+  const midRow = row(`${compactSelectS('Status', 'In workshop', 'je-status')}${checkRow('Bike is here', true, 'je-here')}${checkRow('New bike build', false, 'je-newbuild')}`, 22, 'flex-wrap: wrap');
+  const diaryRow = `<div style="display: flex; justify-content: flex-end"><span style="font-size: 13px; color: ${C.muted}">Diary: Thu 17 Sep · 11:30–13:00</span></div>`;
+  return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 6px 16px; display: flex; flex-direction: column; gap: 2px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}">${topRow}${midRow}${diaryRow}</div>`;
+}
+function optionStudyE() {
+  const body = dialogBody(`${jobStripE()}${studyNotesSection('je-note')}${studyChecklistFold()}${miniWorkPanel()}`, 8, 6);
+  return studyFrame('job-study-e-title', body);
+}
+
+// ================= job-final: "Job page · final (in the workshop)" =================
+// Decision 34: variant A ("Faithful Five"), with every §7.3 refinement from
+// docs/design/user-journeys/job-page-study.md applied and every §7.2 defect
+// fixed. Built from optionStudyA()'s shape — job-study-a itself is left
+// untouched; everything below is new, dedicated to this one board, so fixing
+// job-final never risks changing how the study boards render.
+//
+// §7.3 refinements applied here (numbers match the study doc):
+// 1. "Work and parts" heading has no chevron — plainFinalSection() below has
+//    no disclosure affordance at all, unlike foldSection().
+// 2. Notes column: a real 15px section heading (not an 11px form caption), a
+//    left accent border + tint so it reads as a feature, and it's naturally
+//    the tallest block in the details card once the composer and dividers
+//    are sized properly (no forced height hack needed).
+// 3. Notes feed is newest-first with no exception; the customer's note is
+//    genuinely oldest and sits last, but a date divider ("Thu 17 Sep" /
+//    "Wed 16 Sep") makes that read as a day boundary, not a sort bug.
+// 4. Declined row strikes the Total column only, not Price.
+// 5. Touch targets: Add note, Add item/Scan barcode/Print, the two ticks,
+//    Status select, footer buttons and the customer strip's icon buttons are
+//    all ≥44px tall. (The dense work-and-parts table's own per-line "Done"
+//    checkboxes are the one exception — refinement 8 says keep that table
+//    "exactly as drawn", and neither §7.2's defect list nor §7.3's touch-
+//    target list mentions those cells; they stay small and dense, as a real
+//    Citrus Lime-style table does. Reported separately in the measurement.)
+// 6. The bottom space freed by the old chevron/undersized controls goes on
+//    the bigger notes composer, the taller icon buttons and dividers, rather
+//    than sitting empty — a deliberate choice, not leftover gap.
+// 7. Left column unchanged: Status select, Diary time, Ready by, the two
+//    ticks — no mechanic field.
+// 8. The full 8-column work-and-parts table is kept exactly as drawn.
+const dateDivider = (label) => `<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; line-height: 1.1">
+<span style="font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0">${esc(label)}</span>
+<span style="flex-grow: 1; height: 1px; background: ${C.border}"></span>
+</div>`;
+// Groups NOTES6 (already newest-first) by its date label, so consecutive
+// same-day notes sit under one divider and the customer's older note gets
+// its own "Wed 16 Sep" divider — visible day grouping instead of an
+// apparent sort bug (§7.2/§7.3 point 3).
+function groupNotesByDate(notes) {
+  const groups = [];
+  for (const n of notes) {
+    const dateLabel = n.when.split(' · ')[0];
+    const last = groups[groups.length - 1];
+    if (last && last.date === dateLabel) last.items.push(n);
+    else groups.push({ date: dateLabel, items: [n] });
+  }
+  return groups;
+}
+// Only the date *boundary* needs a divider — today's notes at the top don't
+// need one (there's nothing above them to distinguish from), so the first
+// group renders without one and only the day change before the customer's
+// older booking note gets the "Wed 16 Sep" divider (§7.2/§7.3 point 3).
+function finalNotesFeed() {
+  return groupNotesByDate(NOTES6).map((g, i) => `${i > 0 ? dateDivider(g.date) : ''}${g.items.map(studyNoteLine).join('')}`).join('');
+}
+// Roomy composer — a 2-row textarea, not the single-line input
+// studyComposer uses, sat inline next to the Add note button (which keeps
+// its own ≥44px touch target via button()'s default) so the composer's
+// extra height comes only from the textarea growing to 2 visible lines, not
+// from stacking the button underneath it.
+const finalComposer = (id) => `<div style="display: flex; align-items: stretch; gap: 8px; flex-shrink: 0">
+<textarea id="${id}" rows="2" placeholder="Write a note…" style="flex-grow: 1; box-sizing: border-box; resize: none; min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}; line-height: 1.2"></textarea>
+<div style="display: flex; align-items: flex-end; flex-shrink: 0">${button('Add note', { variant: 'accent' })}</div>
+</div>`;
+// Notes column with real visual weight: 15px heading (matches "Checklist"/
+// "Work and parts" heading size, not a small form caption), a left accent
+// border and a tint background so it reads as a feature of the page.
+function finalNotesColumn(id) {
+  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-left: 4px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 5px 14px; display: flex; flex-direction: column; gap: 3px; overflow: hidden">
+${h2('Notes', 15)}
+${finalComposer(id)}
+<div style="display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: hidden">${finalNotesFeed()}</div>
+</div>`;
+}
+// Section heading with no fold affordance at all (§7.3 point 1) — same
+// visual weight as foldSection()'s header (15px title, meta, tags on the
+// right) but never a chevron, because this table never folds.
+function plainFinalSection(title, { meta = '', tags = '', body = '', grow = false } = {}) {
+  const header = `<div style="box-sizing: border-box; min-height: 24px; padding: 2px 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid ${C.border}">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap">${h2(title, 15)}${meta ? `<span style="font-size: 12px; color: ${C.muted}">${meta}</span>` : ''}</div>
+<div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap">${tags}</div>
+</div>`;
+  const boxStyle = `${grow ? 'flex-grow: 1;' : 'flex-shrink: 0;'} min-height: 0; display: flex; flex-direction: column; overflow: hidden;`;
+  return `<div style="box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}; ${boxStyle}">
+${header}
+<div style="box-sizing: border-box; padding: 4px 14px; ${grow ? 'flex-grow: 1;' : ''} min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px">${body}</div>
+</div>`;
+}
+// Full work-and-parts table, kept exactly as drawn (decision 33/refinement
+// 8) — code, work/part, done, note, qty, in stock, price, total, approval —
+// with two fixes only: the toolbar buttons are ≥44px (ghostBtn, already used
+// elsewhere in this file) instead of the tiny 24px toolbar buttons, and the
+// declined row strikes the Total column only, not Price (§7.2/§7.3 point 4).
+// Body text is 14px throughout (was 13px) to clear the ≥14px floor; the
+// dense per-line "Done" checkboxes are left at their native size — see the
+// comment above this section for why.
+function finalWorkAndPartsBody() {
+  const toolbar = row(`${ghostBtn('Add item', 'plus')}${ghostBtn('Scan barcode', 'search')}${ghostBtn('Print', 'reports')}`, 8);
+  const thF = (t, extra = '') => `<th style="text-align: left; font-size: 12px; font-weight: 700; color: ${C.muted}; padding: 1px 10px; border-bottom: 1px solid ${C.border}; line-height: 1.05; ${extra}">${esc(t)}</th>`;
+  const tdF = (inner, extra = '') => `<td style="padding: 1px 10px; font-size: 14px; color: ${C.ink}; border-bottom: 1px solid ${C.border}; vertical-align: middle; line-height: 1.05; ${extra}">${inner}</td>`;
+  const rowsHtml = LINE_DETAILS.map((l) => {
+    const declined = l.decision === 'Declined';
+    const totalStrike = declined ? `text-decoration: line-through; color: ${C.muted};` : '';
+    return `<tr>
+${tdF(mono(l.code || '—'))}
+${tdF(`<span><span style="font-weight: 600">${esc(l.work)}</span><span style="font-size: 12px; color: ${C.muted}"> · ${esc(l.sub)}</span></span>`)}
+${tdF(`<input type="checkbox" ${declined ? '' : 'checked'} aria-label="${esc(l.work)} done" style="width: 18px; height: 18px; accent-color: ${C.accent}">`, 'text-align: center')}
+${tdF(l.work === 'Shimano brake pads' ? esc('Rear pads worn — replacing') : '—', `color: ${C.muted}; font-size: 12px`)}
+${tdF(mono(l.qty))}
+${tdF('—', `color: ${C.muted}; font-size: 12px`)}
+${tdF(mono(`£${l.price.toFixed(2)}`))}
+${tdF(mono(`£${l.price.toFixed(2)}`, `font-weight: 600; ${totalStrike}`))}
+${tdF(declined ? badge('Declined', 'red') : badge('Approved', 'green'))}
+</tr>`;
+  }).join('');
+  const totalRow = `<tr><td colspan="7" style="padding: 3px 10px; text-align: right; font-size: 14px; font-weight: 700">Approved total</td><td style="padding: 3px 10px">${mono(`£${APPROVED_TOTAL.toFixed(2)}`, 'font-weight: 700; font-size: 15px')}</td><td></td></tr>`;
+  const table = `<table style="width: 100%; border-collapse: collapse">
+<thead><tr>${thF('Code')}${thF('Work / part')}${thF('Done', 'text-align: center')}${thF('Note')}${thF('Qty')}${thF('In stock')}${thF('Price')}${thF('Total')}${thF('Customer approval')}</tr></thead>
+<tbody>${rowsHtml}${totalRow}</tbody>
+</table>`;
+  return `${toolbar}${table}<p style="margin: 0; font-size: 12px; line-height: 1.3; color: ${C.muted}">${esc(DECLINED_NOTE)}</p>`;
+}
+// Title bar and customer strip, dedicated to job-final: identical in
+// substance to studyTitleBar()/studyCustStrip() (option 6's shape, mechanic
+// shown as plain text per decision 32) but the close button and the three
+// customer-strip icon buttons are 44×44, not 40×40 (§7.3 point 5's touch
+// floor applies to every control a mechanic presses, including these).
+function finalTitleBar(titleId) {
+  return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 9px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0"><h2 id="${titleId}" style="margin: 0; font-size: 18px; font-weight: 700">Standard service</h2>${badge('In workshop', 'blue')}</div>
+<a href="#" aria-label="Close, back to the diary" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
+</header>`;
+}
+function finalCustStrip() {
+  const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
+  const custLinkF = `<a href="#" aria-label="View ${esc(JOB_CUSTOMER.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(JOB_CUSTOMER.name)}</a>`;
+  return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 5px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">
+<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}">${custLinkF}<span>${esc(JOB_CUSTOMER.phone)}</span><span>${esc(JOB_CUSTOMER.email)}</span><span>Trek Domane AL 3 · green</span><span style="color: ${C.muted}">Kept on Hook 3</span><span>Mechanic: <strong>Alex Morgan</strong></span></div>
+<div style="display: flex; gap: 8px; flex-shrink: 0">${iconBtnF('inbox', 'Message Maya Patel')}${iconBtnF('mail', 'Email Maya Patel')}${iconBtnF('menu', 'Notes')}</div>
+</div>`;
+}
+function optionJobFinal() {
+  const jobMetaRow = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 10);
+  const leftCol = `${selectFieldS('Status', 'In workshop', 'jf-status')}
+${grid('1fr 1fr', `${staticFieldS('Diary time', 'Thu 17 Sep · 11:30–13:00', 'jf-time')}${staticFieldS('Ready by', 'Fri 18 Sep', 'jf-ready')}`, 12)}
+<div style="display: flex; gap: 24px; flex-wrap: wrap">${checkRow('Bike is here', true, 'jf-here')}${checkRow('New bike build', false, 'jf-newbuild')}</div>`;
+  const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${leftCol}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${finalNotesColumn('jf-note')}</div>`, 24);
+  const jobSection = panel(`${jobMetaRow}${jobBody}`, '', 5, 3);
+  const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(), grow: false });
+  const body = dialogBody(`${jobSection}${workSection}${studyChecklistFold()}`, 4, 3);
+  const footer = dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
+${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${DIALOG_PAD}px">
+<div role="dialog" aria-modal="true" aria-labelledby="job-final-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${finalTitleBar('job-final-title')}${finalCustStrip()}${body}${footer}
+</div>
+</div>
+</div>`;
+}
+
+// ================= job-final-stages: §7.4 as a plain table =================
+// A companion board, not part of the pop-up study — a plain-English read of
+// docs/design/user-journeys/job-page-study.md §7.4 ("How Variant A adapts at
+// the other stages"), for Jack to check against the job-final layout without
+// re-reading the markdown table.
+const STAGE_TABLE = [
+  { stage: 'Expected', strip: 'Ticks ("Bike is here", "New bike build") are the live controls staff are about to use', notes: 'As drawn, usually just the customer’s booking note so far', checklist: 'Folded, "0 of 10 done"', work: 'Empty state: "No items yet — Add item"', footer: '"Book in"' },
+  { stage: 'Booked in', strip: '"Bike is here" gets ticked here', notes: 'As drawn', checklist: 'Unfolds by default until the first tick lands, then folds again', work: 'Table starts populating as work is agreed', footer: '"Send quote" / "Start work"' },
+  { stage: 'Quoting / awaiting approval', strip: 'Unchanged', notes: 'Staff notes about the quote conversation likely appear here', checklist: 'Folded', work: 'Table shows proposed lines with a pending-approval badge instead of "Approved"', footer: '"Send quote", or a static "Awaiting approval" state' },
+  { stage: 'In the workshop', strip: 'As drawn (worked example)', notes: 'As drawn — heaviest use', checklist: 'Folded, live progress count', work: 'Full table open, as drawn', footer: '"Mark ready for collection"' },
+  { stage: 'Waiting for parts', strip: 'Unchanged', notes: 'A note about what’s on order is common here', checklist: 'Folded', work: 'Table shows an "on order" badge on the affected line', footer: '"Mark ready for collection", disabled with a reason' },
+  { stage: 'Finished', strip: 'Unchanged', notes: 'As drawn', checklist: 'Folded, "10 of 10 done"', work: 'Table stays open — everything’s done, worth showing', footer: '"Take payment"' },
+  { stage: 'Collection / payment', strip: 'Unchanged', notes: 'As drawn', checklist: 'Folded', work: 'Table stays open', footer: '"Take payment" / "Complete job"' },
+];
+function jobFinalStagesBoard() {
+  const cols = ['Stage', 'Job details strip', 'Notes', 'Checklist', 'Work and parts', 'Footer'];
+  const thG = (t) => `<th style="text-align: left; font-size: 12px; font-weight: 700; color: ${C.muted}; padding: 6px 10px; border-bottom: 2px solid ${C.border}; text-transform: uppercase; letter-spacing: 0.3px">${esc(t)}</th>`;
+  const tdG = (t, bold = false) => `<td style="text-align: left; font-size: 14px; line-height: 1.4; color: ${C.ink}; padding: 10px; border-bottom: 1px solid ${C.border}; vertical-align: top; ${bold ? 'font-weight: 700' : ''}">${esc(t)}</td>`;
+  const rowsHtml = STAGE_TABLE.map((r) => `<tr>${tdG(r.stage, true)}${tdG(r.strip)}${tdG(r.notes)}${tdG(r.checklist)}${tdG(r.work)}${tdG(r.footer)}</tr>`).join('');
+  const table = `<table style="width: 100%; border-collapse: collapse; table-layout: fixed">
+<colgroup><col style="width: 13%"><col style="width: 17%"><col style="width: 17%"><col style="width: 17%"><col style="width: 19%"><col style="width: 17%"></colgroup>
+<thead><tr>${cols.map(thG).join('')}</tr></thead>
+<tbody>${rowsHtml}</tbody>
+</table>`;
+  return `<div style="width: ${DW}px; height: ${DH}px; box-sizing: border-box; padding: 26px 40px; background: ${C.bg}; display: flex; flex-direction: column; gap: 12px; overflow: hidden">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: 1px; color: ${C.accent}">JOB PAGE — FINAL</div>
+<h1 style="margin: 0; font-size: 22px; font-weight: 700">How the job page changes at each stage</h1>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}; max-width: 1050px">Plain-English version of study §7.4. The layout is always the same page (job-final); only these bits change as a job moves through the workshop. "In the workshop" is the worked example on the job-final board.</p>
+</div>
+<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 12px; padding: 4px 12px">${table}</div>
 </div>`;
 }
 
@@ -488,4 +883,9 @@ export const boards = [
   { id: 'job-option-5', title: 'Job page option 5 · Citrus Lime style', html: option5() },
   { id: 'job-option-6', title: 'Job page option 6 · Citrus Lime style, revised', html: option6() },
   { id: 'job-options-intro', title: 'Job page options · comparison sheet', html: introBoard() },
+  { id: 'job-study-a', title: 'Study A · Faithful Five', html: optionStudyA() },
+  { id: 'job-study-b', title: 'Study B · Compact strip, notes, mini-table', html: optionStudyB() },
+  { id: 'job-study-e', title: 'Study E · Six, fixed', html: optionStudyE() },
+  { id: 'job-final', title: 'Job page · final (in the workshop)', html: optionJobFinal() },
+  { id: 'job-final-stages', title: 'Job page · final, how it adapts by stage', html: jobFinalStagesBoard() },
 ];
