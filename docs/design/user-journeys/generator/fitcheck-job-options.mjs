@@ -18,11 +18,11 @@ for (const board of boards) {
   );
   const result = await page.evaluate(() => {
     const issues = [];
-    const clips = (v) => v === 'hidden' || v === 'auto' || v === 'scroll';
     const all = document.querySelectorAll('body *');
     for (const el of all) {
-      const cs = getComputedStyle(el);
-      if (clips(cs.overflowX) && clips(cs.overflowY)) continue; // intentional clipping — verify it isn't hiding real overflow below
+      // Deliberately does NOT skip elements with overflow:hidden/auto/scroll —
+      // those are exactly the containers that can silently clip content with
+      // no visible scrollbar, which is the case this check exists to catch.
       const dw = el.scrollWidth - el.clientWidth;
       const dh = el.scrollHeight - el.clientHeight;
       if (dw > 2 || dh > 2) {

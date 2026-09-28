@@ -321,37 +321,144 @@ ${titleBar}${custStrip}${body}${footer}
 </div>`;
 }
 
+// ================= Option 6: Citrus Lime style, revised =================
+// Decision 31 (2026-09-27-workshop-day-review.md) revises option 5: one big
+// notes box holds everything written about the job (the customer's own words
+// from booking, marked as theirs, alongside staff notes with who/when);
+// writing notes is the main thing a staff member does, so notes get the
+// largest, most prominent area; job details become a compact always-visible
+// strip (no fold, no card heading); work and parts stay small by default at
+// the bottom with Scan barcode/Add item always reachable. Title bar and
+// customer strip are option 5's, unchanged, so the two boards compare
+// directly (Jack's brief) — copied rather than shared, since option 5's own
+// function is left untouched.
+function option6() {
+  // ---- Title bar & customer strip: verbatim from option 5. ----
+  const titleBar6 = `<header style="flex-shrink: 0; box-sizing: border-box; padding: 13px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0"><h2 id="job-opt6-title" style="margin: 0; font-size: 18px; font-weight: 700">Standard service</h2>${badge('In workshop', 'blue')}</div>
+<a href="#" aria-label="Close, back to the diary" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
+</header>`;
+  const iconBtn6 = (name, label) => `<button type="button" aria-label="${esc(label)}" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
+  const custLink6 = `<a href="#" aria-label="View ${esc(JOB_CUSTOMER.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(JOB_CUSTOMER.name)}</a>`;
+  const custStrip6 = `<div style="flex-shrink: 0; box-sizing: border-box; padding: 9px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">
+<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}">${custLink6}<span>${esc(JOB_CUSTOMER.phone)}</span><span>${esc(JOB_CUSTOMER.email)}</span><span>Trek Domane AL 3 · green</span><span style="color: ${C.muted}">Kept on Hook 3</span><span>Mechanic: <strong>Alex Morgan</strong></span></div>
+<div style="display: flex; gap: 8px; flex-shrink: 0">${iconBtn6('inbox', 'Message Maya Patel')}${iconBtn6('mail', 'Email Maya Patel')}${iconBtn6('menu', 'Notes')}</div>
+</div>`;
+  // ---- Job details: a compact, always-visible strip — no chevron, no card
+  // heading (decision 31: "Job details are a compact strip at the top,
+  // always visible, not a folding section"). Two tight rows: identity + tags
+  // on top, the controls/ticks below. Mechanic/Status stay real selects
+  // (≥44px touch target); diary time/ready-by stay plain text, as in option
+  // 5 — only their layout is flattened out of the card.
+  const compactSelect6 = (label, value, id) => `<div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 0">
+<label for="${id}" style="font-size: 11px; font-weight: 600; color: ${C.muted}; flex-shrink: 0">${esc(label)}</label>
+<select id="${id}" style="min-height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; color: ${C.ink}"><option>${esc(value)}</option></select>
+</div>`;
+  const compactStatic6 = (label, value) => `<div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex-shrink: 0">
+<span style="font-size: 11px; font-weight: 600; color: ${C.muted}">${esc(label)}</span>
+<span style="font-size: 13px; color: ${C.ink}">${esc(value)}</span>
+</div>`;
+  const jobStripTop6 = row(`${mono('WH-1042', 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">Created Thu 17 Sep · by Jo Taylor</span><span style="flex-grow: 1"></span>${badge('Ready by Fri 18 Sep', 'grey')}${badge(`Approved £${APPROVED_TOTAL.toFixed(2)}`, 'green')}`, 12);
+  const jobStripBottom6 = row(`${compactSelect6('Status', 'In workshop', 'j6-status')}${compactStatic6('Diary time', 'Thu 17 Sep · 11:30–13:00')}${compactStatic6('Ready by', 'Fri 18 Sep')}${checkRow('Bike is here', true, 'j6-here', '', false, 44)}${checkRow('New bike build', false, 'j6-newbuild', '', false, 44)}`, 22, 'flex-wrap: wrap');
+  const jobStrip6 = `<div style="flex-shrink: 0; box-sizing: border-box; padding: 8px 22px; display: flex; flex-direction: column; gap: 4px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}">${jobStripTop6}${jobStripBottom6}</div>`;
+  // ---- Notes: the main, largest area (decision 31: "writing notes is the
+  // main thing... so the notes box is large and prominent"). A composer at
+  // the top, then the feed, newest first. The customer's own words from
+  // booking get a "Customer" badge, a calm green tint and a left marker —
+  // three signals, not colour alone — so a colour-blind reader still reads
+  // "Customer" straight off the badge text.
+  const NOTES6 = [
+    { author: 'Alex Morgan', role: 'staff', when: 'Thu 17 Sep · 12:10', text: 'The rear pads are worn. We recommend replacing the pads and adjusting the brake.' },
+    { author: 'Jo Taylor', role: 'staff', when: 'Thu 17 Sep · 09:05', text: 'Bike booked in, tag printed.' },
+    { author: 'Maya Patel', role: 'customer', when: 'Wed 16 Sep', sub: 'from her booking', text: 'My rear brake squeals and feels weak. The gears could use a tune-up too.' },
+  ];
+  const noteCard6 = (n) => {
+    const isCust = n.role === 'customer';
+    return `<div style="box-sizing: border-box; padding: 8px 12px; border-radius: 8px; border: 1px solid ${isCust ? C.accent : C.border}; border-left: 3px solid ${isCust ? C.accent : C.border}; background: ${isCust ? C.okBg : C.panel}; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+<span style="font-size: 13px; font-weight: 700; color: ${C.ink}">${esc(n.author)}</span>
+${isCust ? badge('Customer', 'green') : ''}
+${n.sub ? `<span style="font-size: 12px; color: ${C.muted}">${esc(n.sub)}</span>` : ''}
+<span style="flex-grow: 1"></span>
+<span style="font-size: 12px; color: ${C.muted}">${esc(n.when)}</span>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 1.35; color: ${C.ink}">${esc(n.text)}</p>
+</div>`;
+  };
+  const noteComposer6 = `<div style="display: flex; flex-direction: column; gap: 6px">
+<textarea id="j6-note" rows="2" placeholder="Write a note…" style="box-sizing: border-box; resize: none; min-height: 50px; padding: 8px 12px; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}; line-height: 1.35"></textarea>
+<div style="display: flex; justify-content: flex-end">${button('Add note', { variant: 'accent' })}</div>
+</div>`;
+  const notesFeed6 = `<div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-height: 0; overflow: hidden">${NOTES6.map(noteCard6).join('')}</div>`;
+  const notesSection6 = `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.bg}; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; overflow: hidden">
+${eyebrow('Notes')}
+${noteComposer6}
+${notesFeed6}
+</div>`;
+  // ---- Checklist: a folding section, collapsed (as option 5's), placed
+  // after notes rather than beside them — with notes now the largest thing
+  // on the page, stacking checklist/work-parts underneath, smallest-last,
+  // reads better on a 1280-wide board than a side-by-side rail would.
+  const checkedCount6 = CHECKLIST.filter((c) => c.checked).length;
+  const notedCount6 = CHECKLIST.filter((c) => c.note).length;
+  const checklistFold6 = foldSection('Checklist', { expanded: false, meta: `Standard service checklist · ${checkedCount6} of ${CHECKLIST.length} done · ${notedCount6} note` });
+  // ---- Work and parts: small by default, at the bottom. Scan barcode/Add
+  // item stay ≥44px touch targets and always visible on the collapsed row
+  // itself (usually you just scan an item in); "Show all" plus the fold's
+  // own chevron expand it. The expanded table isn't drawn on this board
+  // (brief).
+  const workSummary6 = `4 lines · £${APPROVED_TOTAL.toFixed(2)} approved · 1 declined`;
+  const workTags6 = `${ghostBtn('Scan barcode', 'search')}${ghostBtn('Add item', 'plus')}${link('Show all')}`;
+  const workFold6 = foldSection('Work and parts', { expanded: false, meta: workSummary6, tags: workTags6 });
+  const body6 = dialogBody(`${jobStrip6}${notesSection6}${checklistFold6}${workFold6}`, 6, 4);
+  const footer6 = dialogFooter(`${button('Unschedule', { variant: 'danger' })}<span style="flex-grow: 1"></span>${button('Mark ready for collection', { variant: 'primary' })}`);
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
+${shellDesktop('diary', 'Workshop diary', `<div style="height: 100%; display: flex; align-items: center; justify-content: center; color: ${C.muted}; font-size: 13px">Workshop diary</div>`)}
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: ${DIALOG_PAD}px">
+<div role="dialog" aria-modal="true" aria-labelledby="job-opt6-title" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${titleBar6}${custStrip6}${body6}${footer6}
+</div>
+</div>
+</div>`;
+}
+
 // ================= Comparison sheet =================
 const OPTIONS_SUMMARY = [
   {
     name: 'Checklist first',
-    best: 'Best for: a mechanic working through the checklist item by item — it is the biggest thing on the screen.',
-    cost: 'Costs: the customer\'s concern and the agreed work are both squeezed into a 320px rail, so their detail is the most reduced of the four.',
-    omits: 'Omits/demotes: messages and history are both header buttons with counts ("Messages (2)", "History") — a click away, not shown.',
+    best: 'Best for: working the checklist item by item — it is the biggest thing on the screen.',
+    cost: 'Costs: the concern and agreed work are squeezed into a 320px rail — most reduced of the six.',
+    omits: 'Omits/demotes: messages and history are header buttons with counts, a click away.',
   },
   {
     name: 'Three columns',
-    best: 'Best for: a balanced, at-a-glance view — asked/agreed, checklist and activity are all visible with equal weight.',
-    cost: 'Costs: three narrower columns mean less room per section than the other options; the checklist column is the tightest fit of the four.',
-    omits: 'Omits/demotes: history is capped at 5 events with a "Full history" link; messages show only the latest with a "See all messages" link.',
+    best: 'Best for: a balanced, at-a-glance view — asked/agreed, checklist and activity with equal weight.',
+    cost: 'Costs: three narrower columns; the checklist column is the tightest fit of the six.',
+    omits: 'Omits/demotes: history capped at 5 events; messages show only the latest, both behind "See all".',
   },
   {
     name: 'Top summary strip',
-    best: 'Best for: a quick read of the whole job before diving in — concern, total and latest message in one glance, then the checklist as the main event.',
-    cost: 'Costs: the concern in the strip is shortened to one line; the full quote is not shown on this page.',
-    omits: 'Omits/demotes: the agreed work table is reduced to "4 lines · £111.00 · 1 declined" — the line-by-line breakdown is not shown; history and full messages are dropped entirely from this board.',
+    best: 'Best for: a quick read of the whole job before diving in, then the checklist as the main event.',
+    cost: 'Costs: the concern is shortened to one line; the full quote isn\'t shown on this page.',
+    omits: 'Omits/demotes: the agreed work table is reduced to a count; history and full messages are dropped.',
   },
   {
     name: 'Asked vs found',
-    best: 'Best for: comparing what was asked against what the mechanic found, side by side — good for handover or a second opinion.',
-    cost: 'Costs: the checklist is split into two 5-item sub-columns to fit the right half, which is a slightly less natural reading order than one list.',
-    omits: 'Omits/demotes: messages and history are both collapsed to a single activity line ("Last message… · Last: … ") with a "Full history" link.',
+    best: 'Best for: comparing what was asked against what the mechanic found, side by side.',
+    cost: 'Costs: the checklist splits into two 5-item sub-columns to fit the right half.',
+    omits: 'Omits/demotes: messages and history collapse to a single activity line with a "Full history" link.',
   },
   {
     name: 'Citrus Lime style',
-    best: 'Best for: comparing directly against Citrus Lime\'s Cloud POS job page, which Jack asked to see before deciding whether to move this way — title bar, tinted customer strip, foldable sections, a parts/labour table.',
-    cost: 'Costs: folding "Job details" and "Work and parts" into bordered sections (chevron headers) adds visual chrome the other four options don\'t have, and the table is the densest, smallest-text area on any board.',
-    omits: 'Omits/demotes: the checklist section is shown collapsed, with only a count in its header ("8 of 10 done · 1 note") — this is the one option where a section is folded away by default rather than always visible, because that\'s how the reference pattern actually behaves.',
+    best: 'Best for: comparing directly against Citrus Lime\'s Cloud POS job page (Jack\'s reference).',
+    cost: 'Costs: folding "Job details" and "Work and parts" into bordered sections adds chrome; the table is the densest text on any board.',
+    omits: 'Omits/demotes: the checklist shows collapsed with only a count — the one option folded away by default.',
+  },
+  {
+    name: 'Citrus Lime style, revised',
+    best: 'Best for: how shops actually work — scan-and-go at the bottom, one big notes box (customer\'s words + staff notes together) where most of the job time is spent (Jack\'s brief, decision 31).',
+    cost: 'Costs: the job details strip packs mechanic/status selects, times and ticks into one dense row to keep notes largest.',
+    omits: 'Omits/demotes: both the checklist and the full work/parts table fold away by default, each to a one-line summary.',
   },
 ];
 function introBoard() {
@@ -364,8 +471,8 @@ ${meta(o.omits, 12)}
   return `<div style="width: ${DW}px; height: ${DH}px; box-sizing: border-box; padding: 26px 56px; background: ${C.bg}; display: flex; flex-direction: column; gap: 12px; overflow: hidden">
 <div style="display: flex; flex-direction: column; gap: 4px">
 <div style="font-size: 12px; font-weight: 700; letter-spacing: 1px; color: ${C.accent}">JOB PAGE — DESIGN EXPLORATION</div>
-<h1 style="margin: 0; font-size: 24px; font-weight: 700">Five ways to lay out the job page</h1>
-<p style="margin: 0; font-size: 13px; color: ${C.muted}; max-width: 950px">Same job on every option (WH-1042, Maya Patel, Trek Domane AL 3, mechanic view). No scrolling on any option; body text stays at 14px or larger (option 5's dense table is the one exception — see its own note). What each one is best for, what it costs, and what it leaves out or moves a click away.</p>
+<h1 style="margin: 0; font-size: 24px; font-weight: 700">Six ways to lay out the job page</h1>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}; max-width: 950px">Same job on every option (WH-1042, Maya Patel, Trek Domane AL 3, mechanic view). No scrolling on any option; body text stays at 14px or larger (option 5's dense table is the one exception). Option 6 is option 5 revised per Jack's brief. What each one is best for, what it costs, and what it leaves out or moves a click away.</p>
 </div>
 <div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 12px; padding: 2px 28px">
 ${OPTIONS_SUMMARY.map(rowFor).join('')}
@@ -379,5 +486,6 @@ export const boards = [
   { id: 'job-option-3', title: 'Job page option 3 · Top summary strip', html: option3() },
   { id: 'job-option-4', title: 'Job page option 4 · Asked vs found', html: option4() },
   { id: 'job-option-5', title: 'Job page option 5 · Citrus Lime style', html: option5() },
+  { id: 'job-option-6', title: 'Job page option 6 · Citrus Lime style, revised', html: option6() },
   { id: 'job-options-intro', title: 'Job page options · comparison sheet', html: introBoard() },
 ];

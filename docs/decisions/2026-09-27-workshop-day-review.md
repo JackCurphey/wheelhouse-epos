@@ -125,6 +125,25 @@ answers, in the order given.
     once** (Jack, 28 Sep). Sections may fold away (as in Citrus Lime's Cloud
     POS job page, his reference for the job page layout); what matters is
     that everything about the job is on the one page, never a separate page.
+31. **The job page follows the Citrus Lime layout (option 5)**, revised:
+    - **One notes box** holds everything written about the job. What the
+      customer told us (from their booking, or typed in when staff create
+      the job) goes into the same notes, marked as the customer's; staff
+      notes show who wrote them and when.
+    - **Writing notes is the main thing** a staff member does on opening a
+      job, so the notes box is large and prominent.
+    - **Job details are a compact strip at the top**, always visible, not
+      a folding section.
+    - **Work and parts sit at the bottom and are small by default** (a
+      summary with Scan barcode / Add item ready, since usually you just
+      scan an item in); expand to see every line.
+32. **No mechanic field on the job.** The mechanic is shown and decided by
+    where the job sits in the diary; to change it, drag the job to the other
+    mechanic's column in the Day view. The job page has no mechanic select; the
+    mechanic's name is shown as plain text in the customer strip at the top
+    (e.g. "Mechanic: Alex Morgan");
+    New job takes the mechanic from where you clicked (or the automatic
+    choice in the Everyone view, item 18) without a select.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
