@@ -203,6 +203,16 @@ answers, in the order given.
 42. **The spending limit shows on the job page** (Jack, 28 Sep): a small tag
     in the job details, e.g. "Customer OK up to £200", so a mechanic sees at
     a glance whether extra work can go ahead or needs a call first.
+43. **Under the customer's spending limit, the quote step is skipped
+    automatically** (Jack, 28 Sep): work within the limit goes ahead without
+    sending a quote; a quote is sent only when the total would go over the
+    limit, or when the customer set no limit.
+44. **A change request draws a line from the job to the time the customer
+    wants** in the diary, so the move reads at a glance.
+45. **Diary blocks lose the darker bar on their left edge**; instead each
+    block has a full outline in that darker colour around its tinted fill.
+46. **Work and parts lines sort themselves: labour at the top, parts
+    below.**
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

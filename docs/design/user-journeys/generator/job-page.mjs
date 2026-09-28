@@ -119,15 +119,28 @@ ${header}
 // toolbar: default Add item/Scan barcode/Print; quoteAction adds "Send
 // quote" for the quoting stage (task: quote stage needs a "Send quote" action
 // here as well as in the footer).
+// Item 46 (decision 46): labour lines first, then parts, keeping each
+// group's original order; a line that's neither a labour nor a part line
+// (its `sub` doesn't start with "Labour" or "Part" — e.g. "Replace gear
+// cable · Optional · cable still serviceable", an optional extra rather
+// than a stocked part or timed labour) sorts after the parts. This is a
+// sort applied at render — `lines` itself is never reordered by hand.
+const classifyLine = (sub = '') => (/^Labour\b/i.test(sub) ? 0 : /^Part\b/i.test(sub) ? 1 : 2);
+const sortLines = (lines) => lines.map((l, i) => [l, i]).sort(([a, ai], [b, bi]) => classifyLine(a.sub) - classifyLine(b.sub) || ai - bi).map(([l]) => l);
 export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', totalValue, footerNote = '', quoteAction = false } = {}) {
   const toolbarBtns = quoteAction
     ? `${ghostBtn('Send quote', 'mail')}${ghostBtn('Add item', 'plus')}${ghostBtn('Print', 'reports')}`
     : `${ghostBtn('Add item', 'plus')}${ghostBtn('Scan barcode', 'search')}${ghostBtn('Print', 'reports')}`;
   const toolbar = row(toolbarBtns, 8);
+  // Item 43 (decision 43): a quote is only sent when the total is over the
+  // customer's limit, or they set none — shown once, near the "Send quote"
+  // toolbar button, on whichever stage passes quoteAction (currently the
+  // quote stage only).
+  const quoteHint = quoteAction ? `<p style="margin: 0; font-size: 12px; line-height: 1.3; color: ${C.muted}">${esc("Quotes are sent when the total is over the customer's limit, or they set none.")}</p>` : '';
   const thF = (t, extra = '') => `<th style="text-align: left; font-size: 12px; font-weight: 700; color: ${C.muted}; padding: 1px 10px; border-bottom: 1px solid ${C.border}; line-height: 1.05; ${extra}">${esc(t)}</th>`;
   const tdF = (inner, extra = '') => `<td style="padding: 1px 10px; font-size: 14px; color: ${C.ink}; border-bottom: 1px solid ${C.border}; vertical-align: middle; line-height: 1.05; ${extra}">${inner}</td>`;
   const approvalTone = (a) => ({ Approved: 'green', Declined: 'red', 'Awaiting approval': 'purple', 'On order': 'amber' })[a] || 'grey';
-  const rowsHtml = lines.map((l) => {
+  const rowsHtml = sortLines(lines).map((l) => {
     const declined = l.approval === 'Declined';
     const totalStrike = declined ? `text-decoration: line-through; color: ${C.muted};` : '';
     return `<tr>
@@ -147,14 +160,14 @@ ${tdF(badge(l.approval, approvalTone(l.approval)))}
 <thead><tr>${thF('Code')}${thF('Work / part')}${thF('Done', 'text-align: center')}${thF('Note')}${thF('Qty')}${thF('In stock')}${thF('Price')}${thF('Total')}${thF('Customer approval')}</tr></thead>
 <tbody>${rowsHtml}${totalRow}</tbody>
 </table>`;
-  return `${toolbar}${table}${footerNote ? `<p style="margin: 0; font-size: 12px; line-height: 1.3; color: ${C.muted}">${esc(footerNote)}</p>` : ''}`;
+  return `${toolbar}${quoteHint}${table}${footerNote ? `<p style="margin: 0; font-size: 12px; line-height: 1.3; color: ${C.muted}">${esc(footerNote)}</p>` : ''}`;
 }
 
 // ---------- the job pop-up's content (title bar + strip + details/notes + work/parts + footer) ----------
 export function jobPopupContent({
   titleId, jobTitle, status, tone, closeHref,
   customer, mechanicName, custHref,
-  jobNum, created, readyByBadge, totalBadge,
+  jobNum, created, readyByBadge, totalBadge, limit, // limit: spending-limit tag override (decision 43's "No spending limit set" on the quote board only) — jobMetaRow's SPEND_LIMIT default otherwise
   left, // jobLeftCol() html
   customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref,
   lines, totalLabel, totalValue, footerNote, quoteAction,
@@ -162,7 +175,7 @@ export function jobPopupContent({
   stageTop = '', // optional stage-only section (bike tag, waiting-for-parts, payment) — inserted above the job details/notes section
 }) {
   const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${left}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn({ customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref })}</div>`, 24);
-  const jobSection = panel(`${jobMetaRow(jobNum, created, readyByBadge, totalBadge)}${jobBody}`, '', 5, 3);
+  const jobSection = panel(`${jobMetaRow(jobNum, created, readyByBadge, totalBadge, ...(limit !== undefined ? [limit] : []))}${jobBody}`, '', 5, 3);
   const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(lines, { totalLabel, totalValue, footerNote, quoteAction }), grow: false });
   const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 4, 3);
   return `${finalTitleBar(titleId, jobTitle, status, tone, closeHref)}${finalCustStrip(customer, mechanicName, custHref)}${body}${footer ? dialogFooter(footer) : ''}`;

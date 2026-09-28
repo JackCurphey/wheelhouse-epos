@@ -231,7 +231,15 @@ const LINES = [
   ['Replace gear cable', 'Optional · cable still serviceable', '£12.00'],
 ];
 const DECISIONS = [['Approved', 'green'], ['Approved', 'green'], ['Approved', 'green'], ['Declined', 'red']];
-const linesTableRows = () => LINES.map(([w, s, a], i) => [two(w, s), '1', mono(a), badge(...DECISIONS[i])]);
+// Item 46 (decision 46): labour lines first, then parts, in their original
+// order within each group; a line that's neither (here, "Replace gear cable
+// · Optional · cable still serviceable" — an optional extra, not a stocked
+// part or a timed labour line) sorts after the parts. Applied at render via
+// LINE_ORDER (an index permutation), not by hand-reordering LINES/DECISIONS,
+// so the two arrays stay index-aligned everywhere else they're used.
+const classifyLineSub = (sub) => (/^Labour\b/i.test(sub) ? 0 : /^Part\b/i.test(sub) ? 1 : 2);
+const LINE_ORDER = LINES.map((_, i) => i).sort((a, b) => classifyLineSub(LINES[a][1]) - classifyLineSub(LINES[b][1]) || a - b);
+const linesTableRows = () => LINE_ORDER.map((i) => { const [w, s, a] = LINES[i]; return [two(w, s), '1', mono(a), badge(...DECISIONS[i])]; });
 
 // Mon 14 – Sun 20 Sep 2026; today is Thu 17 Sep.
 const DAYS = [['Mon', 14], ['Tue', 15], ['Wed', 16], ['Thu', 17], ['Fri', 18], ['Sat', 19], ['Sun', 20]];
@@ -431,7 +439,7 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   const slot = STORAGE[j.job];
   const line2 = tiny ? jobTitle : roomy ? jobTitle : [jobTitle, blockLabel].filter(Boolean).join(' · ');
   const line3 = roomy ? [blockLabel, slot].filter(Boolean).join(' · ') : '';
-  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${bg}; border-left: 3px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${strike}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
 ${line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
@@ -447,7 +455,7 @@ function pendingBlock(size, slotH, highlighted = false) {
   const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(197,207,62,0.55);` : '';
   // Item 2 (27 Sep round 2): bike, then job title, then "Pending" — the same
   // bike/job-title-first order as an ordinary job block.
-  return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" title="${esc(j.bike)} · ${esc(j.jobTitle)} · ${esc(j.customer)} · Pending · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${bg}; border-left: 3px solid ${ink}; overflow: hidden; ${ring}">
+  return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" title="${esc(j.bike)} · ${esc(j.jobTitle)} · ${esc(j.customer)} · Pending · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${ring}">
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.jobTitle)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.85">Pending</span>
@@ -464,6 +472,36 @@ function requestedOutlineBlock(size, slotH, highlighted = false) {
   // not the customer's name (kept in the aria-label for context).
   return `<a href="change-selected-${size}.dc.html" aria-label="${esc(j.person)} asked to move to ${esc(j.label)}" title="${esc(j.person)} · ${esc(j.label)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; border-radius: 5px; border: 1.5px dashed ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${ST.hold[1]}; font-size: 10px; font-weight: 700; overflow: hidden; text-align: center; ${ring}">${esc(j.bike)} · ${esc(j.label)}</a>`;
 }
+// Item 44 (decision 44): a connector line from Oliver Chen's original block
+// (WH-1052, Mon 10:00) down to the dashed "requested 14:00" outline, so the
+// move reads at a glance rather than as two unrelated blocks. Two ordinary
+// jobs (WH-1050, WH-1053) sit in the same column between 11:00 and 13:00, so
+// the line hugs the slim 3px gutter to the left of every block (every block
+// insets left: 3px) the whole way down — it never crosses a block's fill or
+// text. aria-hidden: the surrounding card/pop-up text already says
+// "Mon 10:00 → 14:00".
+let requestConnectorSeq = 0;
+function requestConnector(size, slotH, highlighted = false) {
+  const from = JOBS.find((j) => j.job === 'WH-1052');
+  const fromTop = ((from.start - GRID_START) / 30) * slotH + 2;
+  const fromH = Math.max((from.dur / 30) * slotH - 4, slotH - 6);
+  const fromY = fromTop + fromH;
+  const toY = ((REQUEST_OUTLINE.start - GRID_START) / 30) * slotH + 2;
+  const gap = toY - fromY;
+  if (gap <= 4) return '';
+  const stroke = ST.hold[1];
+  const sw = highlighted ? 2.5 : 1.5;
+  const markerId = `req-arrow-${size}-${requestConnectorSeq++}`;
+  const midY1 = Math.min(gap * 0.35, 16).toFixed(1);
+  const midY2 = Math.max(gap - Math.min(gap * 0.35, 16), gap * 0.5).toFixed(1);
+  const endY = (gap - 6).toFixed(1);
+  // The bow sits at x≈2 — clear of the grid divider at x=0 and still inside
+  // the 3px gutter every block leaves before its own left edge.
+  return `<svg aria-hidden="true" focusable="false" style="position: absolute; left: 0; top: ${fromY}px; width: 10px; height: ${gap}px; overflow: visible; pointer-events: none">
+<defs><marker id="${markerId}" markerWidth="6" markerHeight="6" refX="3" refY="5" orient="auto"><path d="M0,0 L6,0 L3,6 Z" fill="${stroke}"/></marker></defs>
+<path d="M 3 0 C 2 ${midY1}, 2 ${midY2}, 3 ${endY}" stroke="${stroke}" stroke-width="${sw}" fill="none" marker-end="url(#${markerId})" opacity="${highlighted ? '1' : '0.85'}"/>
+</svg>`;
+}
 function combinedBlock(cluster, size, slotH, faded = false) {
   const start = Math.min(...cluster.map((j) => j.start));
   const end = Math.max(...cluster.map((j) => j.start + j.dur));
@@ -473,7 +511,7 @@ function combinedBlock(cluster, size, slotH, faded = false) {
   const names = cluster.map((j) => `${customerBikeOf(j)[1]} · ${j.svc || ''} (${j.job})`).join(', ');
   const t0 = `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`;
   const t1 = `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
-  return `<a href="job-overview-${size}.dc.html" aria-label="${cluster.length} jobs booked ${t0} to ${t1}: ${esc(names)}" title="${esc(names)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${C.mutedBg}; border-left: 3px solid ${C.ink}; overflow: hidden; ${faded ? 'opacity: 0.5;' : ''}">
+  return `<a href="job-overview-${size}.dc.html" aria-label="${cluster.length} jobs booked ${t0} to ${t1}: ${esc(names)}" title="${esc(names)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${C.mutedBg}; border: 1.75px solid ${C.ink}; overflow: hidden; ${faded ? 'opacity: 0.5;' : ''}">
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${cluster.length} jobs · ${t0}</span>
 ${cluster.map((j) => `<span style="font-size: 10px; font-weight: 600; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(customerBikeOf(j)[1])} · ${esc(j.svc || '')}</span>`).join('')}
 </a>`;
@@ -541,8 +579,9 @@ function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot 
     // Decision 12: the pending request sits in its slot, Everyone view only (no mechanic yet).
     const pending = mechFilter === 'Everyone' && d === PENDING_DIARY.day ? pendingBlock(size, slotH, highlightJob?.type === 'pending') : '';
     const outline = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestedOutlineBlock(size, slotH, highlightJob?.type === 'outline') : '';
+    const connector = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestConnector(size, slotH, highlightJob?.type === 'outline') : '';
     const tint = pickMode ? `linear-gradient(rgba(197,207,62,0.08), rgba(197,207,62,0.08)), ` : '';
-    return `<div style="grid-column: ${i + 2}; grid-row: 3; position: relative; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} ${pickMode ? 'cursor: pointer;' : ''} background: ${tint}repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)">${blocks}${pickHint}${pending}${outline}</div>`;
+    return `<div style="grid-column: ${i + 2}; grid-row: 3; position: relative; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} ${pickMode ? 'cursor: pointer;' : ''} background: ${tint}repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)">${blocks}${pickHint}${pending}${outline}${connector}</div>`;
   };
   return `<div role="grid" aria-label="Workshop diary, week of Monday 14 September 2026" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: ${cols}; grid-template-rows: auto auto ${gridH}px; border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden; background: ${C.panel}">
 <div style="grid-column: 1; grid-row: 1; border-bottom: 1px solid ${C.border}; background: ${C.mutedBg}"></div>
@@ -652,7 +691,7 @@ function changeSelectedDayList(size) {
 }
 
 // ---------- Diary badges / note ----------
-const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="width: 12px; height: 12px; border-radius: 3px; background: ${bg}; border-left: 3px solid ${ink}; flex-shrink: 0"></span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
+const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="width: 12px; height: 12px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0"></span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
 // Decision 13: the mechanic's diary is the standard diary filtered to that
 // mechanic, with one Me / Everyone switch in the normal toolbar position.
 // Mechanics can't accept bookings, but they can create a walk-in job (chosen
@@ -743,7 +782,7 @@ function blockPreviewCard(first, second) {
   const sample = { customer: 'Maya Patel', job: 'WH-1042', bike: 'Trek Domane AL 3', jobTitle: 'Standard service' };
   const line1 = sample[first] || sample.bike;
   const line2 = sample[second] || sample.jobTitle;
-  return `<div aria-label="Block preview" style="width: 190px; box-sizing: border-box; padding: 6px 8px; border-radius: 5px; background: ${ST.scheduled[0]}; border-left: 3px solid ${ST.scheduled[1]}">
+  return `<div aria-label="Block preview" style="width: 190px; box-sizing: border-box; padding: 6px 8px; border-radius: 5px; background: ${ST.scheduled[0]}; border: 1.75px solid ${ST.scheduled[1]}">
 <div style="font-size: 12px; font-weight: 700; color: ${C.ink}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(line1)}</div>
 <div style="font-size: 11px; font-weight: 700; color: ${C.ink}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(line2)}</div>
 <div style="font-size: 11px; font-weight: 700; color: ${ST.scheduled[1]}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Scheduled</div>
@@ -1224,7 +1263,7 @@ function quickNoteRow(n) {
 function jobQuickOverviewBody(size) {
   const approvedTotal = LINES.filter((_, i) => DECISIONS[i][0] === 'Approved').reduce((sum, [, , a]) => sum + Number(a.replace('£', '')), 0);
   return `${panel(`${h2('Notes', 14)}${stack(QUICK_NOTES.map(quickNoteRow).join(''), 10)}`, '', 14, 8)}
-${panel(`${h2('Line items', 14)}${table([['Work'], ['Amount', 'right']], LINES.map(([w, s, a], i) => [two(w, s), DECISIONS[i][0] === 'Declined' ? mono(a, `text-decoration: line-through; color: ${C.muted}`) : mono(a)]), { size: 13, pad: '7px 8px' })}<div style="display: flex; align-items: center; gap: 6px; padding-top: 4px"><span style="font-size: 11px; color: ${C.muted}">Declined lines are struck through.</span></div>`, '', 14, 8)}
+${panel(`${h2('Line items', 14)}${table([['Work'], ['Amount', 'right']], LINE_ORDER.map((i) => { const [w, s, a] = LINES[i]; return [two(w, s), DECISIONS[i][0] === 'Declined' ? mono(a, `text-decoration: line-through; color: ${C.muted}`) : mono(a)]; }), { size: 13, pad: '7px 8px' })}<div style="display: flex; align-items: center; gap: 6px; padding-top: 4px"><span style="font-size: 11px; color: ${C.muted}">Declined lines are struck through.</span></div>`, '', 14, 8)}
 ${row(`<span style="font-size: 15px; font-weight: 700">Cost</span><span style="flex-grow: 1"></span>${mono(`£${approvedTotal.toFixed(2)}`, 'font-size: 18px; font-weight: 700')}`, 10)}
 <div>${link('Open job', `job-overview-${size}.dc.html`)}</div>`;
 }
@@ -1338,7 +1377,7 @@ function buildJobPageDesktop({
   stageTop = '', customerTexts, staffTexts, checkedCount, notedCount,
   checklistHref = null, leftStatus, bikeHere, newBuild = false,
   lines, totalLabel, totalValue, footerNote = '', quoteAction = false,
-  totalBadge = '', footer,
+  totalBadge = '', footer, limit,
 }) {
   const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
   const base = shellDesktop('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('desktop') : diaryFrozenContent('desktop'), opts);
@@ -1346,7 +1385,7 @@ function buildJobPageDesktop({
   const content = jobPopupContent({
     titleId: 'job-page-title', jobTitle: 'Standard service', status, tone, closeHref,
     customer, mechanicName: 'Alex Morgan', custHref: 'customer-desktop.dc.html',
-    jobNum, created: 'Created Thu 17 Sep · by Jo Taylor',
+    jobNum, created: 'Created Thu 17 Sep · by Jo Taylor', limit,
     readyByBadge: badge('Ready by Fri 18 Sep', 'grey'), totalBadge,
     left: jpJobLeftCol({ status: leftStatus, diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: 'Fri 18 Sep', bikeHere, newBuild, idPrefix: 'jp' }),
     customerTexts, staffTexts, checkedCount, totalCount: CHECKLIST_10.length, notedCount, checklistHref,
@@ -1430,6 +1469,11 @@ screens['job-quote'] = buildJobPage({
     checkedCount: 0, notedCount: 0,
     leftStatus: 'Awaiting approval', bikeHere: true, newBuild: false,
     lines: LINES_QUOTE, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: true,
+    // Item 43 (decision 43): a customer who set no spending limit always
+    // gets a quote — this board is the consistent example of when a quote
+    // IS sent, so its tag reads "No spending limit set" rather than Maya's
+    // real "OK up to £200" (under which her £123 quote would be skipped).
+    limit: 'No spending limit set',
     totalBadge: badge(`Proposed £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'purple'),
     footer: button('Send quote', { variant: 'primary', block: true }),
   },
