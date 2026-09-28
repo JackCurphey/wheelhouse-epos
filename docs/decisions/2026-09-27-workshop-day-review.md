@@ -121,6 +121,10 @@ answers, in the order given.
     joins customer, bike and job number as a choice in the Settings for
     blocks; each shop can change the default. (Refines item 17's
     customer-first default.)
+30. **"One page" means reachable without leaving the job, not all open at
+    once** (Jack, 28 Sep). Sections may fold away (as in Citrus Lime's Cloud
+    POS job page, his reference for the job page layout); what matters is
+    that everything about the job is on the one page, never a separate page.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
