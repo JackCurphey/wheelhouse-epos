@@ -844,21 +844,22 @@ const NOTES_CHRONO = [...NOTES6].reverse();
 // note-taking app auto-stamps what you write (decision 36's "who and
 // when").
 function bigNoteParagraph(n) {
-  if (n.role === 'customer') {
-    return `<div style="box-sizing: border-box; padding: 6px 10px; border-radius: 6px; background: ${C.okBg}; border-left: 3px solid ${C.accent}; display: flex; flex-direction: column; gap: 2px">
-<span style="font-size: 12px; font-weight: 700; color: ${C.accentDark}">Customer · from her booking, ${esc(n.when)}</span>
-<p style="margin: 0; font-size: 14px; line-height: 1.4; color: ${C.ink}">${esc(n.text)}</p>
-</div>`;
-  }
-  return `<p style="margin: 0; font-size: 14px; line-height: 1.4; color: ${C.ink}"><span style="font-size: 12px; font-weight: 600; color: ${C.muted}">${esc(n.author)} · ${esc(n.when.replace(' · ', ' '))}</span><span style="color: ${C.muted}"> — </span>${esc(n.text)}</p>`;
+  return `<p style="margin: 0; font-size: 14px; line-height: 1.45; color: ${C.ink}">${esc(n.text)}</p>`;
 }
-// The bordered "one big text box" itself: paragraphs in document order,
-// then a quiet cursor line showing there's room to keep typing. Reads as
-// one plain editable text area — a single bordered box like a document,
-// not a composer-plus-feed.
+// Decision 38: a customer section at the top of the box, closed off by an
+// underline. It holds the customer's words from their booking and is still
+// editable, so staff can add what the customer explains in the shop. Below
+// the line the job's notes are plain text — no name/time stamps.
 function bigNoteBody() {
-  const cursorLine = `<div style="display: flex; align-items: center; gap: 6px; min-height: 14px"><span style="width: 2px; height: 14px; background: ${C.ink}; opacity: 0.45"></span><span style="font-size: 13px; color: ${C.muted}">Keep typing…</span></div>`;
-  return `${NOTES_CHRONO.map(bigNoteParagraph).join('')}${cursorLine}`;
+  const customer = NOTES_CHRONO.filter((n) => n.role === 'customer');
+  const staff = NOTES_CHRONO.filter((n) => n.role !== 'customer');
+  const placeholder = (t) => `<div style="display: flex; align-items: center; gap: 6px; min-height: 14px"><span style="width: 2px; height: 14px; background: ${C.ink}; opacity: 0.45"></span><span style="font-size: 13px; color: ${C.muted}">${t}</span></div>`;
+  const customerSection = `<div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; border-bottom: 2px solid ${C.input}">
+<span style="font-size: 12px; font-weight: 700; color: ${C.accentDark}">From the customer</span>
+${customer.map(bigNoteParagraph).join('')}
+<span style="font-size: 13px; color: ${C.muted}">Add anything else they tell you in the shop…</span>
+</div>`;
+  return `${customerSection}${staff.map(bigNoteParagraph).join('')}${placeholder('Keep typing…')}`;
 }
 // "Detailed notes" button + summary — a clear control at the box's bottom
 // edge that opens the checklist section from inside the notes box
@@ -880,7 +881,6 @@ function bigNotesColumn(checkedCount, totalCount, notedCount) {
 ${h2('Notes', 15)}
 <div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; padding: 7px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden">${bigNoteBody()}</div>
 ${detailedNotesButton(checkedCount, totalCount, notedCount)}
-<p style="margin: 0; font-size: 12px; color: ${C.muted}">Your name and the time are added when you write.</p>
 </div>`;
 }
 function optionJobFinal2() {

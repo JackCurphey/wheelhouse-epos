@@ -178,6 +178,12 @@ answers, in the order given.
     Holding the right mouse button opens the overview straight away (a
     quick right-click shows the menu); the box stays open until closed. Its
     header adds the customer's name and the bike under the job title.
+38. **The notes box is a plain canvas with a customer section on top**
+    (Jack, 28 Sep): the customer's notes from their booking sit in a section
+    at the top of the box, closed off by an underline; staff can keep adding
+    to that section when the customer explains more in the shop. Below the
+    line, the job's notes are plain text — no name or time stamps on what
+    staff write (supersedes the stamps in item 36's drawing).
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
