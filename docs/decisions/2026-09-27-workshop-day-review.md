@@ -298,6 +298,39 @@ answers, in the order given.
     the mechanic filter as people chips (initial badge + name, tinted when
     selected, not solid); New job the one solid dark button, alone at the
     right. Grouped left to right: view · dates · people and New job.
+61. **Stacked jobs fan out from the middle** (Jack, 29 Sep): on hover the
+    stack spreads centred on its own day — with two jobs, one to the left
+    and one to the right; with three or more, at most two per row side by
+    side, each further pair on a row underneath (a small grid growing
+    downwards), rather than fanning out to the right.
+62. **Choosing the mechanic on a booking request uses pills**, not a
+    dropdown (Jack, 29 Sep): a small set of pills (the shop's mechanics and
+    the shared queue) on the request pop-up.
+63. **Open (future): taking payment normally also records collection**
+    (Jack, 29 Sep): about 90% of the time payment happens as the bike goes
+    out, so "Take payment" and "Record collection" should be one step by
+    default, with a way to say otherwise for a deposit or pay-now-collect-
+    later. To design later.
+64. **Mechanic sign-off** (Jack, 29 Sep): a mechanic signs a job off —
+    puts their name to it, saying it's fine to go out — so if a job comes
+    back the shop can see who worked on it and who passed it. Not yet
+    designed (no existing feature does this).
+65. **Hover a job for its summary, as an extra** (Jack, 29 Sep): resting on
+    a diary job for about 0.6 s shows the quick-look summary (notes, line
+    items, cost); stacks keep their 0.3 s fan-out, and resting on a fanned
+    job then shows its summary. Right-click (long-press on touch) stays.
+66. **Branching pills instead of dropdowns for short and grouped choices**
+    (Jack, 29 Sep): e.g. the work — Full service / Individual service, then
+    that group's services — plus starting status, mechanic, storage hook.
+    Long lists (customers, bikes, parts) stay as search boxes; services also
+    keep a small search. Shops group their services in service settings.
+67. **No heavy left-edge accents on boxes** (Jack, 29 Sep): anything drawn
+    with a thick darker left edge (e.g. the Notes box on the job page,
+    customer notes, limit tag) gets a thin border all the way round instead.
+68. **Desktop design approved; tablet and phone next** (Jack, 29 Sep:
+    "this all looks good, let's see it in tablet and phone too"). Every
+    desktop decision carries over; hover features become long-press on
+    touch screens.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

@@ -5,11 +5,21 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-09-27 (end of the main session). **Merged to `main`:** #90
-(offline server core) and #91 (staff diary). **Open, to merge next, in this
-order:** #92 `chore/consistent-names` (base `main`), then #93
-`feat/fjell-design-system` (stacked on #92; carries this STATUS). Both had CI
-running at handover; both pass every check locally (#93: 1428/1428 tests).
+**Updated:** 2026-09-29. **Merged to `main`:** #90, #91, #92 (names), #93
+(Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
+pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
+
+**Workshop day redesign (28–29 Sep):** Jack reworked Workshop day around the
+diary. 68 decisions in `docs/decisions/2026-09-27-workshop-day-review.md`
+(read it before any Workshop day work). Separate canvas, now one current page:
+https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U (desktop approved, decision
+68; tablet + phone being drawn). Generator: `docs/design/user-journeys/generator/`
+(`diary.mjs`, `job-page.mjs`, `build-diary.mjs --desktop --theme sand`;
+exploration boards: `job-options.mjs`, `looks.mjs`, `audit-ideas.mjs` via
+`--ideas`). Study and audit: `docs/design/user-journeys/job-page-study.md`,
+`workshop-day-ui-audit.md`. **New standard look: "Soft sand, dark rail",
+sans-serif only** (decisions 48, 53) — supersedes Fjell; the app code is still
+Fjell until switched.
 
 ## Where things stand
 
@@ -55,27 +65,20 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
   its README before changing the canvas.
 - **Merge order agreed by Jack:** #90 (merged) → #91 (merged) → #92 → #93.
 
-## Next, in order (Jack, 27 Sep)
+## Next, in order (Jack, 29 Sep)
 
-1. **Merge #92, then #93** — Jack approved this order. Merge each only after
-   CI passed on its final commit. #93's base is `chore/consistent-names`; after
-   #92 merges, retarget #93 to `main` if GitHub hasn't. A STATUS.md clash is
-   likely if `main` moves; keep the newest facts from both sides.
-2. **Get Jack's review of the Workshop day designs** on the canvas (journey
-   12, teal "for review" labels). Points he has not yet answered: collection
-   and "finished" take payment at the Wheelhouse till (Lightspeed handoff kept
-   only in journey 21); a new "Messages" page under Front desk; the
-   mechanic's job page has no tabs (folds to tap-to-open rows on a phone); the
-   bike tag shows a barcode placeholder; the sidebar's date/open-until line
-   is gone. Also add #91's "Waiting for you" diary column to the canvas as a
-   built screen (currently the orange `ws-waiting` placeholder in journey 12).
-3. **Then build Workshop day, piece by piece**, in the new React staff app
-   under `/workshop` (`src/staff/`, routes are placeholders today): first
-   piece = the staff app shell (room sidebar, phone menu) + the workshop
-   overview (`desk`) + booking requests (`requests`/`review`/`reject`). Spec →
-   plan → subagent-driven development, test-first, shadcn components on the
-   Fjell tokens. The server routes already exist (they carry `// screens:`
-   comments).
+1. **Tablet and phone** of the Workshop day redesign (in progress), then Jack
+   approves the section.
+2. **Copy the section into the big user-journeys canvas** (journey 12), mark
+   it Designed, and publish the big canvas (its font fix is in `build.mjs`).
+3. **Switch the app's tokens from Fjell to Soft sand** (`src/styles/theme.css`
+   + the design-system artifact), sans-serif throughout.
+4. **Then build Workshop day, piece by piece**, in the React staff app
+   (`src/staff/`): spec → plan → subagent-driven development, test-first,
+   starting with the shell (room sidebar, phone menu) and the diary with its
+   Waiting column. Open design items to settle first or on the way: multi-day
+   jobs (52), payment + collection as one step (63), mechanic sign-off (64),
+   customer spending limit on /book (41), accessibility settings (57).
 4. **After Workshop day**, work through the other journeys the same way
    (design on the canvas → Jack approves → spec → plan → build).
 5. **d6** — the customer's change and cancel screens from the pending
