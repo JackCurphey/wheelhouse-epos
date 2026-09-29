@@ -53,3 +53,9 @@ redesign.
 8. **No lock after wrong PINs** (Jack, 29 Sep): being checked in as
    someone else at a till isn't sensitive enough to justify it — at worst a
    sale is recorded under the wrong name. The "Till paused" board is dropped.
+9. **Audit fixes adopted** (Jack, 29 Sep; `docs/design/user-journeys/signin-ui-audit.md`):
+   the till bar's empty state reads "Nobody serving — enter your PIN"
+   (it contradicted the checked-in list); a wrong PIN clears the dots and
+   says "That PIN isn't anyone's — try again" (feedback only, no lock); a
+   wrong or expired customer code says so under the boxes with "Send a new
+   code"; someone with only one site skips "Where are you working today?".

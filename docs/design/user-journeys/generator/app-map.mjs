@@ -27,7 +27,7 @@ ${back ? `<a href="#" style="display: inline-flex; align-items: center; gap: 6px
 <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.8">Bolton · ${SHOP}</span></span>
 <span style="flex-grow: 1"></span>
 ${onlinePill()}
-${serving ? barBtn(`${icon('user', 16)}Serving: ${serving}`, `Serving: ${serving} — switch who’s serving`) : `<span style="font-size: 14px; opacity: 0.85">Nobody checked in yet</span>`}
+${serving ? barBtn(`${icon('user', 16)}Serving: ${serving}`, `Serving: ${serving} — switch who’s serving`) : `<span style="font-size: 14px; opacity: 0.85">Nobody serving — enter your PIN</span>`}
 </header>`;
 }
 
@@ -226,13 +226,14 @@ screens['till-search'].tablet = tillTablet(false, 'maya');
 
 // Phone till: menu button (no rail on a phone), the one search box, the
 // product buttons, and the basket as a bar along the bottom.
-function tillPhone(query = '') {
-  const lines = LINES_APPROVED.filter((l) => l.approval === 'Approved');
-  const bar = `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; background: ${C.accentDark}; color: #ffffff">
+export const tillPhoneBar = (serving = 'Jo Taylor') => `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; background: ${C.accentDark}; color: #ffffff">
 <button type="button" aria-label="Open menu" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
 <span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.85">Bolton · ${icon('wifi', 12)} Online</span></span>
-<button type="button" aria-label="Serving: Jo Taylor — switch who’s serving" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">${icon('user', 16)}Jo</button>
+${serving ? `<button type="button" aria-label="Serving: ${serving} — switch who’s serving" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">${icon('user', 16)}${serving.split(' ')[0]}</button>` : `<span style="font-size: 13px; opacity: 0.85; padding-right: 8px">Nobody serving</span>`}
 </header>`;
+function tillPhone(query = '') {
+  const lines = LINES_APPROVED.filter((l) => l.approval === 'Approved');
+  const bar = tillPhoneBar();
   const basketBar = query
     ? `<div style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}; display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; color: ${C.muted}">Nothing in the basket yet.</span><button type="button" disabled style="display: flex; width: 100%; align-items: center; justify-content: center; min-height: 48px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 15px; font-weight: 600">Take payment</button></div>`
     : `<div style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}; display: flex; flex-direction: column; gap: 8px">
@@ -251,7 +252,7 @@ screens['your-settings'].tablet = `<div style="position: relative; width: ${TW}p
 screens['your-settings'].phone = `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone')}</div>`;
 
 // ---- Customer website ----
-function siteTablet(themeKey) {
+export function siteTablet(themeKey, content = null) {
   const t = SITE_THEMES[themeKey];
   const dark = t.headerInk === '#ffffff';
   const iconBtn = (ic, label) => `<a href="#" aria-label="${label}" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${t.headerInk}">${icon(ic, 20)}</a>`;
@@ -263,11 +264,11 @@ function siteTablet(themeKey) {
 ${iconBtn('search', 'Search the shop')}${iconBtn('user', 'Your account')}${iconBtn('basket', 'Basket, 0 items')}
 ${t.highlight ? `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; background: #ffffff; color: ${t.headerBg}; font-size: 15px; font-weight: 700; text-decoration: none">${t.highlight}</a>` : ''}
 </header>
-<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 28px; display: flex"><div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: ${t.mutedInk}; font-size: 15px; line-height: 1.5">Page content — the shop’s pages, laid out in its theme<br>(designed with Find the shop and browse the website, journey 1)</div></main>
+<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 28px; display: flex">${content ?? `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: ${t.mutedInk}; font-size: 15px; line-height: 1.5">Page content — the shop’s pages, laid out in its theme<br>(designed with Find the shop and browse the website, journey 1)</div>`}</main>
 <footer style="flex-shrink: 0; box-sizing: border-box; padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid ${dark ? '#d5dde6' : C.border}; font-size: 13px; color: ${t.mutedInk}"><span>${SHOP} · Bolton</span><span style="display: flex; gap: 20px"><a href="#" style="color: inherit">Contact us</a><a href="#" style="color: inherit">Delivery and returns</a><a href="#" style="color: inherit">Privacy</a></span></footer>
 </div>`;
 }
-function sitePhone(themeKey, { menuOpen = false } = {}) {
+export function sitePhone(themeKey, { menuOpen = false, content = null } = {}) {
   const t = SITE_THEMES[themeKey];
   const dark = t.headerInk === '#ffffff';
   const iconBtn = (ic, label, extra = '') => `<a href="#" aria-label="${label}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${t.headerInk}; ${extra}">${icon(ic, 20)}</a>`;
@@ -281,7 +282,7 @@ ${['Shop', 'Book a repair', 'Our shops', 'Account'].filter((l) => l !== t.highli
 ${iconBtn('search', 'Search the shop')}${iconBtn('basket', 'Basket, 0 items')}
 <button type="button" aria-label="${menuOpen ? 'Close menu' : 'Open menu'}" aria-expanded="${menuOpen}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${t.headerInk}">${icon(menuOpen ? 'close' : 'menu', 22)}</button>
 </header>
-<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 16px; display: flex"><div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: ${t.mutedInk}; font-size: 14px; line-height: 1.5">Page content<br>(journey 1)</div></main>
+<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 16px; display: flex">${content ?? `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: ${t.mutedInk}; font-size: 14px; line-height: 1.5">Page content<br>(journey 1)</div>`}</main>
 ${menu}
 </div>`;
 }
