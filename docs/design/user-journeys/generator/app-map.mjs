@@ -229,9 +229,9 @@ screens['till-search'].tablet = tillTablet(false, 'maya');
 
 // Phone till: menu button (no rail on a phone), the one search box, the
 // product buttons, and the basket as a bar along the bottom.
-export const tillPhoneBar = (serving = 'Jo Taylor') => `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; background: ${C.accentDark}; color: #ffffff">
+export const tillPhoneBar = (serving = 'Jo Taylor', offline = false) => `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; background: ${C.accentDark}; color: #ffffff">
 <button type="button" aria-label="Open menu" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
-<span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.85">Bolton · ${icon('wifi', 12)} Online</span></span>
+<span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.85">Bolton · ${icon('wifi', 12)} ${offline ? 'Offline' : 'Online'}</span></span>
 ${serving ? `<button type="button" aria-label="Serving: ${serving} — switch who’s serving" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">${icon('user', 16)}${serving.split(' ')[0]}</button>` : `<span style="font-size: 13px; opacity: 0.85; padding-right: 8px">Nobody serving</span>`}
 </header>`;
 function tillPhone(query = '') {

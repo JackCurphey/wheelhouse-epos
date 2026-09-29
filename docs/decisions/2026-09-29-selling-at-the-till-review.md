@@ -103,3 +103,8 @@ full one, with one "Take payment" step that leaves room for the other.
     free search.
 14. **Journey 11 desktop approved with that change** (Jack, 29 Sep: "I
     think this looks really good"); tablet and phone next.
+15. **"Other" at the bottom of Take payment opens a list of less-used ways
+    to pay** (Jack, 29 Sep): finance, Cycle to Work schemes, payment links
+    (once set up), and any others the shop adds — kept off the main
+    pop-up so it stays uncluttered, but always one tap away. Opening it
+    expands the list in place.
