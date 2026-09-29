@@ -53,3 +53,6 @@ rail with labels and the phone top bar with a menu (68).
    role. It holds the Accessibility settings now and other personal things
    later. Settings in the Office room becomes shop-wide settings only
    (Owners and Managers), so the Accessibility tab moves out of it.
+9. **The "Your settings" pop-up is approved as drawn** (Jack, 29 Sep): your
+   name, role and a cog as one button at the foot of the sidebar; the pop-up
+   holds the four Accessibility switches, each applying at once.

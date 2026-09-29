@@ -142,7 +142,40 @@ screens['your-settings'] = {
   desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 28px; box-sizing: border-box">${yourSettingsDialog()}</div></div>`,
 };
 
+// ---------- Customer website (decision 3) ----------
+// The frame takes its colours from a theme object, so a shop's own theme
+// swaps in without touching the layout. Soft sand is the default; Ocean Blue
+// is a real preset from the current app's website Theme menu
+// (public/app.js THEME_PRESETS.ocean: topbar #1a3f66, accent #2f5f96).
+const SITE_THEMES = {
+  sand: { name: 'Soft sand', headerBg: C.panel, headerInk: C.ink, headerBorder: C.border, accent: C.accent, ground: C.bg, mutedInk: C.muted },
+  ocean: { name: 'Ocean Blue', headerBg: '#1a3f66', headerInk: '#ffffff', headerBorder: '#1a3f66', accent: '#2f5f96', ground: '#ffffff', mutedInk: '#4a5560' },
+};
+function siteDesktop(themeKey, active = 'Shop') {
+  const t = SITE_THEMES[themeKey];
+  const dark = t.headerInk === '#ffffff';
+  const navLink = (label) => `<a href="#"${label === active ? ' aria-current="page"' : ''} style="display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: ${label === active ? 700 : 500}; color: ${t.headerInk}; text-decoration: ${label === active ? 'underline' : 'none'}; text-decoration-thickness: 2px; text-underline-offset: 8px">${label}</a>`;
+  const headerBtn = (ic, label, text) => `<a href="#" aria-label="${label}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 6px; font-size: 15px; font-weight: 500; color: ${t.headerInk}; text-decoration: none">${icon(ic, 20)}${text}</a>`;
+  return `${dark ? '<style>.site-search-dark::placeholder{color: rgba(255,255,255,0.85); opacity: 1}</style>' : ''}<div style="width: ${DW}px; height: ${DH}px; display: flex; flex-direction: column; background: ${t.ground}">
+<header style="height: 72px; flex-shrink: 0; box-sizing: border-box; padding: 0 40px; display: flex; align-items: center; gap: 28px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
+<a href="#" style="display: flex; align-items: center; gap: 10px; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 18px; font-weight: 700">${SHOP}</span></a>
+<nav aria-label="Website" style="display: flex; gap: 24px; flex-grow: 1">${['Shop', 'Book a repair', 'Our shops'].map(navLink).join('')}</nav>
+<label style="display: flex; align-items: center; gap: 8px; width: 240px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${dark ? 'rgba(255,255,255,0.4)' : C.input}; background: ${dark ? 'rgba(255,255,255,0.1)' : '#ffffff'}; color: ${dark ? 'rgba(255,255,255,0.85)' : C.muted}">${icon('search', 16)}<input class="${dark ? 'site-search-dark' : ''}" type="search" aria-label="Search the shop" placeholder="Search the shop" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: inherit"></label>
+${headerBtn('user', 'Your account', 'Account')}
+${headerBtn('basket', 'Basket, 0 items', 'Basket')}
+</header>
+<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 20px">
+<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: ${t.mutedInk}; font-size: 15px; line-height: 1.5">Page content — the shop’s pages, laid out in its theme<br>(designed with Find the shop and browse the website, journey 1)</div>
+</main>
+<footer style="flex-shrink: 0; box-sizing: border-box; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid ${dark ? '#d5dde6' : C.border}; font-size: 13px; color: ${t.mutedInk}"><span>${SHOP} · Bolton</span><span style="display: flex; gap: 20px"><a href="#" style="color: inherit">Contact us</a><a href="#" style="color: inherit">Delivery and returns</a><a href="#" style="color: inherit">Privacy</a></span></footer>
+</div>`;
+}
+screens['site'] = { desktop: siteDesktop('sand') };
+screens['site-ocean'] = { desktop: siteDesktop('ocean') };
+
 export const TITLES = {
+  'site': 'Customer website — default theme (Soft sand)',
+  'site-ocean': 'Customer website — a shop’s own theme (example: Ocean Blue)',
   'your-settings': 'Your settings — opened from your name',
   'till-rail': 'Till — sidebar folded to the rail (rest on it to unfold)',
   'till-rail-open': 'Till — rail unfolded',
@@ -151,4 +184,5 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Till mode', screens: ['till-rail', 'till-rail-open'] },
   { label: 'Your settings', screens: ['your-settings'] },
+  { label: 'Customer website', screens: ['site', 'site-ocean'] },
 ];
