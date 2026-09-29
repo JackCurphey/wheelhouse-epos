@@ -1,0 +1,77 @@
+// Journey 11 — Selling at the till, designed in Soft sand on its own canvas.
+// Decisions: docs/decisions/2026-09-29-selling-at-the-till-review.md
+//
+// Built inside journey A's till frame (app-map.mjs: foldedRail, tillBar).
+// Example data is only what the generator already has: North Street Cycles,
+// Bolton, Till B1, Jo Taylor, Maya Patel, and the work lines from job WH-1042
+// (Standard service £65, Shimano brake pads B05S-RX £28, Fit & adjust brakes
+// £18, Replace gear cable £12). Every other product is a bracketed
+// placeholder until Jack supplies real items.
+import { C, MONO, esc, icon, button, card } from './ui.mjs';
+import { DW, DH } from './stage1.mjs';
+import { foldedRail, tillBar } from './app-map.mjs';
+
+const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
+const money = (n) => `£${n.toFixed(2)}`;
+const label = (t) => `<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${t}</div>`;
+
+// The till page: folded rail, till bar, then the left side and the basket.
+function tillPage(left, right) {
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till')}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 20px; display: flex; gap: 20px">${left}${right}</main></div></div>`;
+}
+
+// ---------- Left side (decision 2): search, group pills, quick buttons ----------
+const searchBox = `<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs" placeholder="Search or scan: products, customers, jobs" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>`;
+const groupPill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`;
+const quick = (name, sub, price) => `<button type="button" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 104px; box-sizing: border-box; padding: 14px; border-radius: 12px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; text-align: left; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 700; line-height: 1.25">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${esc(sub)}</span></span>${mono(price, 'font-size: 16px')}</button>`;
+const quickPlaceholder = (t) => `<div style="min-height: 104px; box-sizing: border-box; padding: 14px; border-radius: 12px; border: 2px dashed ${C.border}; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; color: ${C.muted}">${esc(t)}</div>`;
+function leftSide({ group = 'Workshop' } = {}) {
+  const groups = ['Workshop', 'Parts', 'Accessories', '[Group]'];
+  const buttons = [
+    quick('Standard service', 'Labour · 60 min', money(65)),
+    quick('Fit & adjust brakes', 'Labour · 30 min', money(18)),
+    quick('Replace gear cable', 'Labour', money(12)),
+    ...Array.from({ length: 9 }, () => quickPlaceholder('[Quick button · £ price]')),
+  ];
+  return `<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+${searchBox}
+<div role="group" aria-label="Quick button groups" style="display: flex; flex-wrap: wrap; gap: 8px">${groups.map((g) => groupPill(g, g === group)).join('')}</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">${buttons.join('')}</div>
+</div>`;
+}
+
+// ---------- Right side: the basket ----------
+const stepper = (qty, name) => `<div role="group" aria-label="Quantity of ${esc(name)}" style="display: inline-flex; align-items: center; border: 1px solid ${C.border}; border-radius: 8px; overflow: hidden"><button type="button" aria-label="One fewer" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">−</button><span style="min-width: 28px; text-align: center; font-family: ${MONO}; font-size: 15px">${qty}</span><button type="button" aria-label="One more" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">+</button></div>`;
+const line = (l) => `<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid ${C.border}">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(money(l.price * l.qty), 'font-size: 16px')}</div>
+<div style="display: flex; align-items: center; justify-content: space-between">${stepper(l.qty, l.name)}<span style="font-size: 13px; color: ${C.muted}">${l.qty > 1 ? `${money(l.price)} each` : ''}</span></div>
+</div>`;
+function basket(lines, { customer = null } = {}) {
+  const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
+  const vat = total / 6; // UK prices include 20% VAT: VAT is one sixth of the price
+  return card(`<div style="height: 100%; box-sizing: border-box; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 style="margin: 0; font-size: 17px; font-weight: 700">Sale</h2><span style="display: flex; gap: 4px">${button('Park', { variant: 'ghost' })}${button('Clear', { variant: 'ghost' })}</span></div>
+${customer ? `<a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid ${C.border}; border-radius: 8px; text-decoration: none; color: ${C.ink}"><span style="font-size: 14px; font-weight: 600">${esc(customer)}</span></a>` : `<button type="button" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px dashed ${C.input}; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('user', 16)}Add a customer <span style="font-weight: 400; color: ${C.muted}">(optional)</span></button>`}
+<div style="display: flex; flex-direction: column">${lines.map(line).join('')}</div>
+<div style="flex-grow: 1"></div>
+<a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Add a discount</a>
+<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 16px; font-weight: 700">Total</span>${mono(money(total), 'font-size: 26px')}</div>
+<div style="display: flex; justify-content: space-between; font-size: 13px; color: ${C.muted}"><span>Includes VAT</span>${mono(money(vat))}</div>
+</div>
+${button(`Take payment · ${money(total)}`, { block: true })}
+</div>`, 'width: 380px; flex-shrink: 0; height: 100%');
+}
+
+const PADS = { name: 'Shimano brake pads', sub: 'Part · B05S-RX', price: 28, qty: 2 };
+const BRAKES = { name: 'Fit & adjust brakes', sub: 'Labour · 30 min', price: 18, qty: 1 };
+
+export const screens = {};
+screens['till-sale'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES])) };
+
+export const TITLES = {
+  'till-sale': 'Sale — quick buttons by group, basket on the right',
+};
+export const ROWS = [
+  { label: 'A sale', screens: ['till-sale'] },
+];

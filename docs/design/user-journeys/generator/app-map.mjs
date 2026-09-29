@@ -108,7 +108,7 @@ const RAIL_CSS = `<style>
 }
 </style>`;
 
-function foldedRail(active, { forced = false } = {}) {
+export function foldedRail(active, { forced = false } = {}) {
   const groups = staffRooms().map(([, items]) => items);
   return `${forced ? '' : RAIL_CSS}<div class="wh-rail" style="position: relative; width: 84px; flex-shrink: 0; display: flex">
 <nav aria-label="Main, folded" style="width: 84px; box-sizing: border-box; padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; background: ${C.accentDark}; color: #ffffff">
