@@ -138,6 +138,35 @@ screens['till-discount'] = {
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">The reason is kept with the sale and shows in the discounts report.</p>`, `${button('Remove discount', { variant: 'danger' })}${button('Done')}`)),
 };
 
+// ---------- Taking payment ----------
+// Standalone card machine (offline spec: Paymentsense): staff key the amount
+// into it; the till records "card, £X". Card for the exact total is the
+// usual case, so it is one tap after "Take payment" (journey A decision 6).
+const TOTAL = 74;
+const bigMethod = (title, sub, ic, primary = false) => `<button type="button" style="display: flex; align-items: center; gap: 16px; width: 100%; min-height: 84px; box-sizing: border-box; padding: 14px 18px; border-radius: 12px; border: 1px solid ${primary ? C.ink : C.border}; background: ${primary ? C.ink : C.panel}; color: ${primary ? C.panel : C.ink}; font-family: inherit; text-align: left">${icon(ic, 26)}<span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="font-size: 18px; font-weight: 700">${title}</span><span style="font-size: 13px; ${primary ? 'opacity: 0.85' : `color: ${C.muted}`}">${sub}</span></span></button>`;
+const payHead = (title, sub) => [`${title}`, sub];
+screens['till-pay'] = {
+  desktop: overTill(dialog('pay-title', `Take payment · ${money(TOTAL)}`, 'Jo Taylor serving · 3 items', `
+${bigMethod(`Card · ${money(TOTAL)}`, `Key ${money(TOTAL)} into the card machine, then tap here once it says approved`, 'card', true)}
+${bigMethod('Cash', 'Enter what the customer hands you; the till works out the change', 'cash')}
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Split between methods', 'Gift card or credit', 'On account'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)),
+};
+const noteBtn = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 60px; border-radius: 10px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: ${MONO}; font-size: 18px">${t}</button>`;
+screens['till-pay-cash'] = {
+  desktop: overTill(dialog('cash-title', `Cash · ${money(TOTAL)} to pay`, 'Tap what the customer handed you, or type it', `
+<div role="group" aria-label="Amount handed over" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${noteBtn('£74.00')}${noteBtn('£75.00')}${noteBtn('£80.00', true)}${noteBtn('£100.00')}</div>
+${field('Or type the amount', { value: '£80.00' })}
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}"><span style="font-size: 18px; font-weight: 700">Change to give</span>${mono('£6.00', 'font-size: 34px')}</div>`, `${button('Back', { variant: 'ghost' })}${button('Cash taken · open the drawer')}`, 560)),
+};
+const paidRow = (method, amount) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">${icon('check', 16, C.successInk)}${method}</span>${mono(amount, 'font-size: 16px')}</div>`;
+screens['till-pay-split'] = {
+  desktop: overTill(dialog('split-title', `Split payment · ${money(TOTAL)}`, 'Take it in parts — each part is recorded as it goes', `
+<div style="display: flex; flex-direction: column">${paidRow('Cash', '£20.00')}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="font-size: 18px; font-weight: 700">Still to pay</span>${mono('£54.00', 'font-size: 34px')}</div>
+${bigMethod('Card · £54.00', 'Key £54.00 into the card machine, then tap here once it says approved', 'card', true)}
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Cash', 'Gift card or credit', 'Another amount'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)),
+};
+
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
   'till-line': 'Change a line — price, discount with a reason, note, remove',
@@ -145,7 +174,11 @@ export const TITLES = {
   'till-customer': 'Add a customer — search, or add someone new',
   'till-variant': 'Choose size and colour',
   'till-serial': 'Record a frame number',
+  'till-pay': 'Take payment — card is one tap',
+  'till-pay-cash': 'Cash — notes to tap, change worked out',
+  'till-pay-split': 'Split payment — part paid, the rest by card',
 };
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-pay-cash', 'till-pay-split'] },
 ];
