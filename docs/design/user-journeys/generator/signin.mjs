@@ -10,7 +10,7 @@
 import { C, MONO, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH } from './stage1.mjs';
 import { shellDesktop } from './diary.mjs';
-import { tillBar } from './app-map.mjs';
+import { tillBar, siteDesktop } from './app-map.mjs';
 
 const SHOP = 'North Street Cycles';
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
@@ -92,10 +92,26 @@ screens['till-checkin'] = {
 </div>`),
 };
 
-// ---------- Customers ----------
-// Customers are WorkOS users too (spec §7); their sign-in by emailed code is
-// a WorkOS page, covered by the approximation above. The booking-link pages
-// (no sign-in) are the Release 1 designs and stay as they are.
+// ---------- Customers (decision 5) ----------
+// On the shop's own website, in its theme: Wheelhouse's own "email me a
+// code" screens; WorkOS sends and checks the six-digit code (valid 10
+// minutes) behind the scenes. The booking-link pages (no sign-in) are the
+// Release 1 designs and stay as they are.
+const custCard = (inner) => `<div style="display: flex; justify-content: center; padding-top: 32px">${card(`<div style="padding: 32px; display: flex; flex-direction: column; gap: 18px">${inner}</div>`, 'width: 440px')}</div>`;
+screens['cust-signin'] = {
+  desktop: siteDesktop('sand', 'Account', custCard(`${h1('Sign in to your account')}${p('See your bookings, your bikes and past work. We’ll email you a code — no password needed.')}
+${field('Email', { type: 'email', value: 'maya@example.com' })}
+${button('Email me a code', { block: true })}
+<div style="padding-top: 14px; border-top: 1px solid ${C.border}">${p('Just checking a booking? Open the link in your text or email — no sign-in needed.', 14)}</div>`)),
+};
+// Fewer clicks (journey A decision 6): the code checks itself when the 6th
+// digit goes in, and a code pasted from the email fills all six boxes.
+const codeBox = (d, i) => `<input aria-label="Digit ${i + 1} of 6" inputmode="numeric" maxlength="1" value="${d}" style="width: 48px; height: 56px; box-sizing: border-box; text-align: center; border-radius: 8px; border: 1px solid ${d === '' && i === 3 ? C.ink : C.input}; background: #ffffff; font-family: ${MONO}; font-size: 24px; color: ${C.ink}">`;
+screens['cust-code'] = {
+  desktop: siteDesktop('sand', 'Account', custCard(`${h1('Enter your code')}${p('We sent a 6-digit code to <strong style="color: ' + C.ink + '">maya@example.com</strong>. It works for 10 minutes. It signs you in as soon as the last digit goes in.')}
+<div role="group" aria-label="Your 6-digit code" style="display: flex; gap: 8px">${['4', '8', '1', '', '', ''].map(codeBox).join('')}</div>
+<div style="display: flex; justify-content: space-between; gap: 12px"><a href="#" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Send a new code</a><a href="#" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Use a different email</a></div>`)),
+};
 
 export const TITLES = {
   'workos-signin': 'Sign in — WorkOS’s page, approximate look',
@@ -105,10 +121,13 @@ export const TITLES = {
   'auth-noaccess': 'Not part of your role',
   'till-setup': 'Set up this till (manager)',
   'till-checkin': 'Till check-in — PIN only',
+  'cust-signin': 'Customer sign-in on the shop’s website — email me a code',
+  'cust-code': 'Customer sign-in — enter the code (checks itself on the 6th digit)',
 };
 
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
   { label: 'Till', screens: ['till-setup', 'till-checkin'] },
+  { label: 'Customers', screens: ['cust-signin', 'cust-code'] },
 ];

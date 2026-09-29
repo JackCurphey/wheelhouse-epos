@@ -31,3 +31,10 @@ redesign.
    29 Sep): the PIN says who you are — no name grid first. Each person's PIN
    must be unique within the shop. The screen shows who is already checked
    in. (Chosen over name-then-PIN and name-only.)
+5. **Customers sign in on the shop's own website, with Wheelhouse's own
+   "email me a code" screens in the shop's theme** (Jack, 29 Sep), not on
+   WorkOS's page (which is styled once for all of Wheelhouse, so it would
+   not show the shop's look). WorkOS checks the code behind the scenes —
+   confirmed in its docs (29 Sep): Magic Auth codes can be created and
+   verified by API from your own screens; six digits, valid for 10 minutes.
+   Chosen over the WorkOS page and over no customer sign-in for now.

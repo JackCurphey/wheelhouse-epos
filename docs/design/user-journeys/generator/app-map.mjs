@@ -173,7 +173,7 @@ const SITE_THEMES = {
   sand: { highlight: null, name: 'Soft sand', headerBg: C.panel, headerInk: C.ink, headerBorder: C.border, accent: C.accent, ground: C.bg, mutedInk: C.muted },
   ocean: { highlight: 'Book a repair', name: 'Ocean Blue', headerBg: '#1a3f66', headerInk: '#ffffff', headerBorder: '#1a3f66', accent: '#2f5f96', ground: '#ffffff', mutedInk: '#4a5560' },
 };
-function siteDesktop(themeKey, active = 'Shop') {
+export function siteDesktop(themeKey, active = 'Shop', content = null) {
   const t = SITE_THEMES[themeKey];
   const dark = t.headerInk === '#ffffff';
   const navLink = (label) => `<a href="#"${label === active ? ' aria-current="page"' : ''} style="display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: ${label === active ? 700 : 500}; color: ${t.headerInk}; text-decoration: ${label === active ? 'underline' : 'none'}; text-decoration-thickness: 2px; text-underline-offset: 8px">${label}</a>`;
@@ -188,7 +188,7 @@ ${headerBtn('basket', 'Basket, 0 items', 'Basket')}
 ${t.highlight ? `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 8px; background: #ffffff; color: ${t.headerBg}; font-size: 15px; font-weight: 700; text-decoration: none">${t.highlight}</a>` : ''}
 </header>
 <main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 20px">
-<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: ${t.mutedInk}; font-size: 15px; line-height: 1.5">Page content — the shop’s pages, laid out in its theme<br>(designed with Find the shop and browse the website, journey 1)</div>
+${content ?? `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: ${t.mutedInk}; font-size: 15px; line-height: 1.5">Page content — the shop’s pages, laid out in its theme<br>(designed with Find the shop and browse the website, journey 1)</div>`}
 </main>
 <footer style="flex-shrink: 0; box-sizing: border-box; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid ${dark ? '#d5dde6' : C.border}; font-size: 13px; color: ${t.mutedInk}"><span>${SHOP} · Bolton</span><span style="display: flex; gap: 20px"><a href="#" style="color: inherit">Contact us</a><a href="#" style="color: inherit">Delivery and returns</a><a href="#" style="color: inherit">Privacy</a></span></footer>
 </div>`;
