@@ -182,6 +182,17 @@ ${bigMethod('Card · £54.00', 'Sends £54.00 to the card machine', 'card', true
 <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Cash', 'Gift card or credit', 'Another amount'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)),
 };
 
+// Decision 7: "Paid" — Print, Email, Text or No receipt; it closes by
+// itself after a few seconds and the next sale starts. The receipt number
+// format is from till set-up (B1-0001, B1-0002 …); the number is a placeholder.
+const rcptBtn = (ic, t, primary = false) => `<button type="button" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 76px; border-radius: 10px; border: 1px solid ${primary ? C.ink : C.border}; background: ${primary ? C.ink : C.panel}; color: ${primary ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${icon(ic, 22)}${t}</button>`;
+screens['till-receipt'] = {
+  desktop: overTill(dialog('paid-title', 'Paid', `Card · ${money(TOTAL)} · receipt ${mono('B1-[0000]')}`, `
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 0 4px; text-align: center"><span style="display: inline-flex; width: 64px; height: 64px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 32)}</span>${mono(money(TOTAL), 'font-size: 30px')}</div>
+<div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('mail', 'Email')}${rcptBtn('phone', 'Text')}${rcptBtn('close', 'No receipt', true)}</div>
+<p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)),
+};
+
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
   'till-line': 'Change a line — price, discount with a reason, note, remove',
@@ -194,8 +205,9 @@ export const TITLES = {
   'till-card-declined': 'Card declined',
   'till-pay-cash': 'Cash — notes to tap, change worked out',
   'till-pay-split': 'Split payment — part paid, the rest by card',
+  'till-receipt': 'Paid — receipt choices, closes by itself',
 };
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
-  { label: 'Taking payment', screens: ['till-pay', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
 ];

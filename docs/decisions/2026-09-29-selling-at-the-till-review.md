@@ -49,3 +49,8 @@ full one, with one "Take payment" step that leaves room for the other.
    happens when the internet is down (most card machines need their own
    connection to approve). The design keeps a fallback — "Key it in on the
    card machine instead" — for when the machine isn't answering.
+7. **After payment, a small "Paid" pop-up offers Print, Email, Text and No
+   receipt, and closes by itself after a few seconds** (Jack, 29 Sep): the
+   customer's email or phone is filled in when they're on the sale; doing
+   nothing starts the next sale. Chosen over always printing and never
+   printing unless asked.
