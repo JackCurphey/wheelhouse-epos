@@ -2,7 +2,7 @@
 // Run with --theme sand. Same board format and layout rules as
 // build-diary.mjs; does not touch out/ or the user journeys canvas.
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { screens, ROWS, TITLES } from './app-map.mjs';
+import { screens, ROWS, TITLES, MAP_W, MAP_H } from './app-map.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { TW, TH } from './diary.mjs';
 import { FONT_LINK, FONT, C, THEME } from './ui.mjs';
@@ -47,7 +47,7 @@ renderVals() { return {}; }
 `;
 }
 
-const SIZES = [['desktop', DW, DH], ['tablet', TW, TH], ['phone', PW, PH]];
+const SIZES = [['single', MAP_W, MAP_H], ['desktop', DW, DH], ['tablet', TW, TH], ['phone', PW, PH]]; // 'single' = the one large app map board
 const GAP = 80, ROW_GAP = 160, TITLE_H = 223, TITLE_GAP = 40;
 
 const boards = {}, order = [], notes = {}, rowSummaries = [];
@@ -58,7 +58,7 @@ for (const rowDef of ROWS) {
   for (const id of rowDef.screens) {
     for (const [size, w, h] of SIZES) {
       if (!screens[id][size]) continue;
-      const file = `${id}-${size}.dc.html`;
+      const file = size === 'single' ? `${id}.dc.html` : `${id}-${size}.dc.html`;
       const title = TITLES[id] || id;
       writeFileSync(root + 'project/' + file, page(`${title} (${size})`, w, h, screens[id][size]));
       boards[file] = { x, y: boardY, w, h, title: `${title} · ${size}`, is_interactive: true };

@@ -56,3 +56,9 @@ rail with labels and the phone top bar with a menu (68).
 9. **The "Your settings" pop-up is approved as drawn** (Jack, 29 Sep): your
    name, role and a cog as one button at the foot of the sidebar; the pop-up
    holds the four Accessibility switches, each applying at once.
+10. **Each shop chooses which website header link stands out as a button**
+    (Jack, 29 Sep), as part of its website theme — e.g. "Book a repair" for
+    a workshop-led shop. The default theme highlights none. Jack's aim for
+    the website: each shop gets as much customisation as is practical.
+    Designed with the Release 2 theme work, not in journey A; the Ocean Blue
+    board shows one shop's choice as an example.

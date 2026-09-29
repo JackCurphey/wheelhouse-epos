@@ -5,17 +5,15 @@
 // design. Example data is only what the generator already has: North Street
 // Cycles, Bolton, Till B1, Jo Taylor, and Maya Patel's job WH-1042 with its
 // approved lines (£111.00).
-import { C, MONO, esc, icon, button, card, logoSlot } from './ui.mjs';
+import { C, MONO, esc, icon, button, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH } from './stage1.mjs';
-import { shellDesktop, ROOMS_DIARY, LINES_APPROVED, WORK_TOTAL_APPROVED, screens as diaryScreens, a11ySettingRow, symbolsPreview, largerTextPreview } from './diary.mjs';
+import { shellDesktop, headerSearch, ROOMS_DIARY, LINES_APPROVED, WORK_TOTAL_APPROVED, screens as diaryScreens, a11ySettingRow, symbolsPreview, largerTextPreview } from './diary.mjs';
 
 const SHOP = 'North Street Cycles';
 const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
 const money = (n) => `£${n.toFixed(2)}`;
 
-// Decision 2: one search box in the staff header on every page.
-export const headerSearch = (w = 320) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" aria-label="Search jobs, customers, products" placeholder="Search jobs, customers, products" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: ${C.ink}"></label>`;
 
 // ---------- Till pieces ----------
 const onlinePill = (dark = true) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: ${dark ? 'rgba(255,255,255,0.12)' : C.okBg}; color: ${dark ? '#ffffff' : C.successInk}">${icon('wifi', 14)}Online</span>`;
@@ -148,8 +146,8 @@ screens['your-settings'] = {
 // is a real preset from the current app's website Theme menu
 // (public/app.js THEME_PRESETS.ocean: topbar #1a3f66, accent #2f5f96).
 const SITE_THEMES = {
-  sand: { name: 'Soft sand', headerBg: C.panel, headerInk: C.ink, headerBorder: C.border, accent: C.accent, ground: C.bg, mutedInk: C.muted },
-  ocean: { name: 'Ocean Blue', headerBg: '#1a3f66', headerInk: '#ffffff', headerBorder: '#1a3f66', accent: '#2f5f96', ground: '#ffffff', mutedInk: '#4a5560' },
+  sand: { highlight: null, name: 'Soft sand', headerBg: C.panel, headerInk: C.ink, headerBorder: C.border, accent: C.accent, ground: C.bg, mutedInk: C.muted },
+  ocean: { highlight: 'Book a repair', name: 'Ocean Blue', headerBg: '#1a3f66', headerInk: '#ffffff', headerBorder: '#1a3f66', accent: '#2f5f96', ground: '#ffffff', mutedInk: '#4a5560' },
 };
 function siteDesktop(themeKey, active = 'Shop') {
   const t = SITE_THEMES[themeKey];
@@ -159,10 +157,11 @@ function siteDesktop(themeKey, active = 'Shop') {
   return `${dark ? '<style>.site-search-dark::placeholder{color: rgba(255,255,255,0.85); opacity: 1}</style>' : ''}<div style="width: ${DW}px; height: ${DH}px; display: flex; flex-direction: column; background: ${t.ground}">
 <header style="height: 72px; flex-shrink: 0; box-sizing: border-box; padding: 0 40px; display: flex; align-items: center; gap: 28px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
 <a href="#" style="display: flex; align-items: center; gap: 10px; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 18px; font-weight: 700">${SHOP}</span></a>
-<nav aria-label="Website" style="display: flex; gap: 24px; flex-grow: 1">${['Shop', 'Book a repair', 'Our shops'].map(navLink).join('')}</nav>
+<nav aria-label="Website" style="display: flex; gap: 24px; flex-grow: 1">${['Shop', 'Book a repair', 'Our shops'].filter((l) => l !== t.highlight).map(navLink).join('')}</nav>
 <label style="display: flex; align-items: center; gap: 8px; width: 240px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${dark ? 'rgba(255,255,255,0.4)' : C.input}; background: ${dark ? 'rgba(255,255,255,0.1)' : '#ffffff'}; color: ${dark ? 'rgba(255,255,255,0.85)' : C.muted}">${icon('search', 16)}<input class="${dark ? 'site-search-dark' : ''}" type="search" aria-label="Search the shop" placeholder="Search the shop" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: inherit"></label>
 ${headerBtn('user', 'Your account', 'Account')}
 ${headerBtn('basket', 'Basket, 0 items', 'Basket')}
+${t.highlight ? `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 8px; background: #ffffff; color: ${t.headerBg}; font-size: 15px; font-weight: 700; text-decoration: none">${t.highlight}</a>` : ''}
 </header>
 <main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 20px">
 <div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: ${t.mutedInk}; font-size: 15px; line-height: 1.5">Page content — the shop’s pages, laid out in its theme<br>(designed with Find the shop and browse the website, journey 1)</div>
@@ -173,15 +172,58 @@ ${headerBtn('basket', 'Basket, 0 items', 'Basket')}
 screens['site'] = { desktop: siteDesktop('sand') };
 screens['site-ocean'] = { desktop: siteDesktop('ocean') };
 
+// ---------- Staff app (decisions 2, 8) ----------
+// The approved Workshop day pages, now with the header search and the
+// Your settings name button. A mechanic's sidebar shows only the Workshop room.
+screens['staff-app'] = { desktop: diaryScreens.diary.desktop };
+screens['staff-app-mechanic'] = { desktop: diaryScreens['diary-mechanic'].desktop };
+
+// ---------- The app map (one large board) ----------
+export const MAP_W = 1760, MAP_H = 1180;
+const ROLE_NAMES = { O: 'Owner', M: 'Manager', S: 'Staff', K: 'Mechanic' };
+const roleChips = (r) => Object.keys(ROLE_NAMES).map((k) => r.includes(k) ? badge(ROLE_NAMES[k], 'green') : `<span style="display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 12px; color: ${C.muted}; border: 1px dashed ${C.border}">${ROLE_NAMES[k]}</span>`).join(' ');
+const mapBox = (title, sub, inner) => card(`<div style="padding: 24px; display: flex; flex-direction: column; gap: 14px"><div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: ${C.muted}">${esc(sub)}</div><h2 style="margin: 0; font-size: 22px; font-weight: 700">${esc(title)}</h2></div>${inner}</div>`, 'flex: 1; min-width: 0');
+const mapLine = (a, b) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 14px"><span style="font-weight: 600">${a}</span><span style="text-align: right">${b}</span></div>`;
+const mapP = (t) => `<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
+screens['map'] = {
+  single: `<div style="width: ${MAP_W}px; height: ${MAP_H}px; box-sizing: border-box; padding: 48px; display: flex; flex-direction: column; gap: 28px; background: ${C.bg}">
+<div style="display: flex; flex-direction: column; gap: 8px"><h1 style="margin: 0; font-size: 38px; line-height: 1.2; font-weight: 700; letter-spacing: -0.3px">How Wheelhouse fits together</h1>${mapP('Three places people use Wheelhouse, and how they move between them.')}</div>
+<div style="display: flex; gap: 20px; align-items: stretch">
+${mapBox('Customer side', 'THE SHOP’S WEBSITE', `<div style="display: flex; flex-direction: column; gap: 10px">${mapP('Customers never sign in to the staff app. Everything they do lives on the shop’s website, in the shop’s own theme.')}
+${mapLine('Website', 'Home · Shop · Product · Our shops')}
+${mapLine('Buy', 'Basket → Checkout → Order confirmed')}
+${mapLine('Book a repair', 'Service → Bike → Date → Details → Request sent')}
+${mapLine('Booking link', 'Opened from a text or email; no sign-in needed')}
+${mapLine('Account (optional)', 'Sign in with an emailed code → bookings, bikes, history')}</div>`)}
+${mapBox('Staff app', 'ONE APP, ORGANISED BY ROOMS OF THE SHOP', `<div style="display: flex; flex-direction: column; gap: 4px">${mapP('Signed in with email and password. The sidebar groups pages by room and shows only what each role may use. Search sits at the top of every page; your name opens Your settings.')}
+${ROOMS_DIARY.map(([room, items]) => `<div style="padding-top: 8px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: ${C.muted}">${room}</div>` + items.map(([, label, , r]) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid ${C.border}"><span style="font-size: 14px; font-weight: 600">${label}</span><span style="display: flex; gap: 4px">${roleChips(r)}</span></div>`).join('')).join('')}</div>`)}
+${mapBox('Till mode', 'ON A REGISTERED TILL', `<div style="display: flex; flex-direction: column; gap: 10px">${mapP('A till computer is set up once by a manager. It stays signed in, works offline, and staff check in with a PIN. The sidebar is folded to the rail and unfolds when you rest on it.')}
+${mapLine('Start-up', `${mono('Till B1')} · Bolton · online or offline`)}
+${mapLine('Check in', 'Pick your name → enter PIN')}
+${mapLine('Sell', 'Sale → Take payment → Receipt')}
+${mapLine('Rest of the shop', 'Rest on the rail → pick a page')}</div>`)}
+</div>
+${card(`<div style="padding: 24px; display: flex; flex-direction: column; gap: 14px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">After signing in, each role lands here</h2>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+${[['Owner', 'Office › Today', 'Takings, workshop, anything needing attention'], ['Manager', 'Office › Today', 'Same as the owner'], ['Staff', 'Front desk › Till', 'Or whichever page they used last'], ['Mechanic', 'Workshop › Diary', 'Their jobs and the shared queue']].map(([r, where, why]) => `<div style="padding: 16px; border-radius: 10px; border: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">${r.toUpperCase()}</span><span style="font-size: 18px; font-weight: 700">${where}</span><span style="font-size: 14px; color: ${C.muted}">${why}</span></div>`).join('')}
+</div></div>`)}
+</div>`,
+};
+
 export const TITLES = {
+  'map': 'How Wheelhouse fits together',
+  'staff-app': 'Staff app — Staff (search on every page, your name opens Your settings)',
+  'staff-app-mechanic': 'Staff app — Mechanic sees only the Workshop room',
   'site': 'Customer website — default theme (Soft sand)',
-  'site-ocean': 'Customer website — a shop’s own theme (example: Ocean Blue)',
+  'site-ocean': 'Customer website — a shop’s own theme (example: Ocean Blue, Book a repair as its button)',
   'your-settings': 'Your settings — opened from your name',
   'till-rail': 'Till — sidebar folded to the rail (rest on it to unfold)',
   'till-rail-open': 'Till — rail unfolded',
 };
 
 export const ROWS = [
+  { label: 'App map', screens: ['map'] },
+  { label: 'Staff app', screens: ['staff-app', 'staff-app-mechanic'] },
   { label: 'Till mode', screens: ['till-rail', 'till-rail-open'] },
   { label: 'Your settings', screens: ['your-settings'] },
   { label: 'Customer website', screens: ['site', 'site-ocean'] },
