@@ -59,3 +59,7 @@ redesign.
    says "That PIN isn't anyone's — try again" (feedback only, no lock); a
    wrong or expired customer code says so under the boxes with "Send a new
    code"; someone with only one site skips "Where are you working today?".
+10. **Journey B approved** (Jack, 29 Sep: "yeah that all looks good") —
+    desktop, tablet and phone. It is copied into the user journeys canvas,
+    status Designed, in the Soft sand look. The booking-link pages (no
+    sign-in) stay as the Release 1 designs.

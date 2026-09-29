@@ -18,6 +18,8 @@ export const sd = (id, title, role) => ({ id, status: 'designed', title, role, s
 // sa(id, title, role) = an agreed journey A screen (app-map.mjs, Soft sand);
 // build.mjs reads its boards (whatever sizes it has) from out-app-map-sand/.
 export const sa = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'app-map' });
+// sb(id, title, role) = an agreed journey B screen (signin.mjs, Soft sand).
+export const sb = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'signin' });
 
 export const journeys = [
   {
@@ -46,25 +48,23 @@ export const journeys = [
   {
     id: 'jb', num: 'B', name: 'Signing in and access', who: 'Staff and customers',
     rows: [
-      { label: 'Staff', screens: [
-        r('auth-signin', 'Sign in', 'Staff'),
-        r('auth-forgot', 'Reset your password', 'Staff'),
-        r('auth-sent', 'Check your email', 'Staff'),
-        r('auth-newpass', 'Choose a new password', 'Staff'),
-        r('auth-invite', 'Accept an invitation', 'Staff'),
-        r('auth-site', 'Choose where you’re working', 'Staff'),
-        r('auth-signedout', 'Signed out', 'Staff'),
-        r('auth-expired', 'Session expired', 'Staff'),
-        r('auth-noaccess', 'Not part of your role', 'Staff'),
+      { label: 'Staff sign-in (WorkOS)', screens: [sb('workos-signin', 'Sign in (WorkOS’s page, approximate look)', 'Staff')] },
+      { label: 'Staff access', screens: [
+        sb('auth-site', 'Where are you working today?', 'Staff'),
+        sb('auth-signedout', 'Signed out', 'Staff'),
+        sb('auth-expired', 'Signed out after a while', 'Staff'),
+        sb('auth-noaccess', 'Not part of your role', 'Staff'),
       ] },
       { label: 'Till', screens: [
-        r('till-setup', 'Set up this till', 'Manager'),
-        r('till-checkin', 'Who’s working today?', 'Staff'),
-        r('till-pin', 'Enter your PIN', 'Staff'),
+        sb('till-setup', 'Set up this till', 'Manager'),
+        sb('till-checkin', 'Till check-in: PIN only', 'Staff'),
+        sb('till-pin-wrong', 'Till check-in: wrong PIN', 'Staff'),
+        sb('pin-change', 'Your new till PIN', 'Staff'),
       ] },
       { label: 'Customers', screens: [
-        r('cust-signin', 'Sign in to your account', 'Customer'),
-        r('cust-code', 'Enter your code', 'Customer'),
+        sb('cust-signin', 'Sign in to your account', 'Customer'),
+        sb('cust-code', 'Enter your code', 'Customer'),
+        sb('cust-code-expired', 'Code expired', 'Customer'),
         d('pending', { note: 'Booking link: no sign-in needed' }),
         d('expired'),
       ] },

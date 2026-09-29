@@ -17,10 +17,11 @@ const root = here + 'out/';
 // Workshop day; decision 15 of journey A). ui.mjs picks its theme when it
 // loads, and this process is Fjell, so each Soft sand canvas is built in its
 // own process and its boards read back from its project/ folder.
-// Journey 12 = diary.mjs; journey A = app-map.mjs.
+// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs.
 const SAND_SOURCES = {
   diary: { script: 'build-diary.mjs', dir: here + 'out-diary-sand/project/' },
   'app-map': { script: 'build-app-map.mjs', dir: here + 'out-app-map-sand/project/' },
+  signin: { script: 'build-signin.mjs', dir: here + 'out-signin-sand/project/' },
 };
 for (const s of Object.values(SAND_SOURCES)) execFileSync(process.execPath, [s.script, '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
 const SAND_SIZES = ['single', 'desktop', 'tablet', 'phone'];

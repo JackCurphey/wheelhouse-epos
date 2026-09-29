@@ -18,8 +18,15 @@ and interaction rules apply to every journey).
   decisions in `docs/decisions/2026-09-29-app-map-review.md` (6 — as few
   clicks as possible — and 2 — search on every staff page — apply to every
   journey).
-- The overview counts each screen once: 233 screens — 85 designed, 14 for
+- **Journey B (Signing in and access) is approved** (29 Sep) and in the big
+  canvas as Designed; its own canvas: https://claude.ai/artifact/5Ho8DsRVvHXEcJBnGu1GXe ,
+  decisions in `docs/decisions/2026-09-29-signing-in-review.md`.
+- The overview counts each screen once: 231 screens — 97 designed, 0 for
   review, 6 built, 19 old app only, 109 not designed yet.
+- **A new journey's own canvas:** write `<name>.mjs` (screens as
+  `{desktop, tablet, phone}` or `single`, plus `TITLES` and `ROWS`) and a
+  three-line `build-<name>.mjs` calling `buildSandCanvas` from
+  `sand-canvas.mjs`; add `out-<name>-sand/` to the generator's `.gitignore`.
 - Branch `feat/workshop-diary-design` holds all of this, committed, **not
   pushed, no PR**. Ask Jack before pushing / opening a PR.
 - **Which journey is next is Jack's call** — ask him first (one question,

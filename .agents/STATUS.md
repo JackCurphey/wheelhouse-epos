@@ -10,8 +10,19 @@
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
-Workshop day (journey 12) and App map and navigation (journey A) are approved
-and in the big canvas; the next journey is Jack's choice (ask him first).
+Workshop day (journey 12), App map and navigation (journey A) and Signing in
+and access (journey B) are approved and in the big canvas; the next journey is
+Jack's choice (ask him first).
+
+**Journey B, Signing in and access (29 Sep):** approved at desktop, tablet and
+phone; 10 decisions in `docs/decisions/2026-09-29-signing-in-review.md` —
+WorkOS's own hosted pages for staff sign-in (one approximation board), the
+till's PIN-only check-in (works offline, Wheelhouse-picked unique PINs set in
+Your settings, no lock), customer sign-in by emailed code on the shop's own
+website (WorkOS Magic Auth by API, checked in its docs). Own canvas:
+https://claude.ai/artifact/5Ho8DsRVvHXEcJBnGu1GXe . Generator: `signin.mjs` +
+`build-signin.mjs --theme sand` (both journey canvases share
+`sand-canvas.mjs`); audit in `docs/design/user-journeys/signin-ui-audit.md`.
 
 **Journey A, App map and navigation (29 Sep):** approved at desktop, tablet
 and phone; 15 decisions in `docs/decisions/2026-09-29-app-map-review.md`

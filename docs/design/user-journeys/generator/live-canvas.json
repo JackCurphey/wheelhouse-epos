@@ -227,232 +227,296 @@
    "title": "Designed · Customer website: phone menu, shop’s own theme (phone)",
    "is_interactive": true
   },
-  "jb-auth-signin-desktop.dc.html": {
+  "jb-workos-signin-desktop.dc.html": {
    "x": 0,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Sign in (desktop)",
+   "title": "Designed · Sign in (WorkOS’s page, approximate look) (desktop)",
    "is_interactive": true
   },
-  "jb-auth-signin-phone.dc.html": {
+  "jb-workos-signin-tablet.dc.html": {
    "x": 1320,
    "y": 5130,
-   "w": 390,
-   "h": 900,
-   "title": "For review · Sign in (phone)",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Sign in (WorkOS’s page, approximate look) (tablet)",
    "is_interactive": true
   },
-  "jb-auth-forgot-desktop.dc.html": {
-   "x": 1790,
-   "y": 5130,
-   "w": 1280,
-   "h": 856,
-   "title": "For review · Reset your password (desktop)",
-   "is_interactive": true
-  },
-  "jb-auth-forgot-phone.dc.html": {
-   "x": 3110,
+  "jb-workos-signin-phone.dc.html": {
+   "x": 2540,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Reset your password (phone)",
-   "is_interactive": true
-  },
-  "jb-auth-sent-desktop.dc.html": {
-   "x": 3580,
-   "y": 5130,
-   "w": 1280,
-   "h": 856,
-   "title": "For review · Check your email (desktop)",
-   "is_interactive": true
-  },
-  "jb-auth-sent-phone.dc.html": {
-   "x": 4900,
-   "y": 5130,
-   "w": 390,
-   "h": 900,
-   "title": "For review · Check your email (phone)",
-   "is_interactive": true
-  },
-  "jb-auth-newpass-desktop.dc.html": {
-   "x": 5370,
-   "y": 5130,
-   "w": 1280,
-   "h": 856,
-   "title": "For review · Choose a new password (desktop)",
-   "is_interactive": true
-  },
-  "jb-auth-newpass-phone.dc.html": {
-   "x": 6690,
-   "y": 5130,
-   "w": 390,
-   "h": 900,
-   "title": "For review · Choose a new password (phone)",
-   "is_interactive": true
-  },
-  "jb-auth-invite-desktop.dc.html": {
-   "x": 7160,
-   "y": 5130,
-   "w": 1280,
-   "h": 856,
-   "title": "For review · Accept an invitation (desktop)",
-   "is_interactive": true
-  },
-  "jb-auth-invite-phone.dc.html": {
-   "x": 8480,
-   "y": 5130,
-   "w": 390,
-   "h": 900,
-   "title": "For review · Accept an invitation (phone)",
+   "title": "Designed · Sign in (WorkOS’s page, approximate look) (phone)",
    "is_interactive": true
   },
   "jb-auth-site-desktop.dc.html": {
-   "x": 8950,
+   "x": 3170,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Choose where you’re working (desktop)",
+   "title": "Designed · Where are you working today? (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-site-tablet.dc.html": {
+   "x": 4490,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Where are you working today? (tablet)",
    "is_interactive": true
   },
   "jb-auth-site-phone.dc.html": {
-   "x": 10270,
+   "x": 5710,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Choose where you’re working (phone)",
+   "title": "Designed · Where are you working today? (phone)",
    "is_interactive": true
   },
   "jb-auth-signedout-desktop.dc.html": {
-   "x": 10740,
+   "x": 6180,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Signed out (desktop)",
+   "title": "Designed · Signed out (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-signedout-tablet.dc.html": {
+   "x": 7500,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Signed out (tablet)",
    "is_interactive": true
   },
   "jb-auth-signedout-phone.dc.html": {
-   "x": 12060,
+   "x": 8720,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Signed out (phone)",
+   "title": "Designed · Signed out (phone)",
    "is_interactive": true
   },
   "jb-auth-expired-desktop.dc.html": {
-   "x": 12530,
+   "x": 9190,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Session expired (desktop)",
+   "title": "Designed · Signed out after a while (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-expired-tablet.dc.html": {
+   "x": 10510,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Signed out after a while (tablet)",
    "is_interactive": true
   },
   "jb-auth-expired-phone.dc.html": {
-   "x": 13850,
+   "x": 11730,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Session expired (phone)",
+   "title": "Designed · Signed out after a while (phone)",
    "is_interactive": true
   },
   "jb-auth-noaccess-desktop.dc.html": {
-   "x": 14320,
+   "x": 12200,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Not part of your role (desktop)",
+   "title": "Designed · Not part of your role (desktop)",
+   "is_interactive": true
+  },
+  "jb-auth-noaccess-tablet.dc.html": {
+   "x": 13520,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Not part of your role (tablet)",
    "is_interactive": true
   },
   "jb-auth-noaccess-phone.dc.html": {
-   "x": 15640,
+   "x": 14740,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Not part of your role (phone)",
+   "title": "Designed · Not part of your role (phone)",
    "is_interactive": true
   },
   "jb-till-setup-desktop.dc.html": {
-   "x": 16270,
+   "x": 15370,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Set up this till (desktop)",
+   "title": "Designed · Set up this till (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-setup-tablet.dc.html": {
+   "x": 16690,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Set up this till (tablet)",
    "is_interactive": true
   },
   "jb-till-setup-phone.dc.html": {
-   "x": 17590,
+   "x": 17910,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Set up this till (phone)",
+   "title": "Designed · Set up this till (phone)",
    "is_interactive": true
   },
   "jb-till-checkin-desktop.dc.html": {
-   "x": 18060,
+   "x": 18380,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Who’s working today? (desktop)",
+   "title": "Designed · Till check-in: PIN only (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-checkin-tablet.dc.html": {
+   "x": 19700,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Till check-in: PIN only (tablet)",
    "is_interactive": true
   },
   "jb-till-checkin-phone.dc.html": {
-   "x": 19380,
+   "x": 20920,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Who’s working today? (phone)",
+   "title": "Designed · Till check-in: PIN only (phone)",
    "is_interactive": true
   },
-  "jb-till-pin-desktop.dc.html": {
-   "x": 19850,
+  "jb-till-pin-wrong-desktop.dc.html": {
+   "x": 21390,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Enter your PIN (desktop)",
+   "title": "Designed · Till check-in: wrong PIN (desktop)",
    "is_interactive": true
   },
-  "jb-till-pin-phone.dc.html": {
-   "x": 21170,
+  "jb-till-pin-wrong-tablet.dc.html": {
+   "x": 22710,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Till check-in: wrong PIN (tablet)",
+   "is_interactive": true
+  },
+  "jb-till-pin-wrong-phone.dc.html": {
+   "x": 23930,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Enter your PIN (phone)",
+   "title": "Designed · Till check-in: wrong PIN (phone)",
+   "is_interactive": true
+  },
+  "jb-pin-change-desktop.dc.html": {
+   "x": 24400,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your new till PIN (desktop)",
+   "is_interactive": true
+  },
+  "jb-pin-change-tablet.dc.html": {
+   "x": 25720,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Your new till PIN (tablet)",
+   "is_interactive": true
+  },
+  "jb-pin-change-phone.dc.html": {
+   "x": 26940,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Your new till PIN (phone)",
    "is_interactive": true
   },
   "jb-cust-signin-desktop.dc.html": {
-   "x": 21800,
+   "x": 27570,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Sign in to your account (desktop)",
+   "title": "Designed · Sign in to your account (desktop)",
+   "is_interactive": true
+  },
+  "jb-cust-signin-tablet.dc.html": {
+   "x": 28890,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Sign in to your account (tablet)",
    "is_interactive": true
   },
   "jb-cust-signin-phone.dc.html": {
-   "x": 23120,
+   "x": 30110,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Sign in to your account (phone)",
+   "title": "Designed · Sign in to your account (phone)",
    "is_interactive": true
   },
   "jb-cust-code-desktop.dc.html": {
-   "x": 23590,
+   "x": 30580,
    "y": 5130,
    "w": 1280,
    "h": 856,
-   "title": "For review · Enter your code (desktop)",
+   "title": "Designed · Enter your code (desktop)",
+   "is_interactive": true
+  },
+  "jb-cust-code-tablet.dc.html": {
+   "x": 31900,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Enter your code (tablet)",
    "is_interactive": true
   },
   "jb-cust-code-phone.dc.html": {
-   "x": 24910,
+   "x": 33120,
    "y": 5130,
    "w": 390,
    "h": 900,
-   "title": "For review · Enter your code (phone)",
+   "title": "Designed · Enter your code (phone)",
+   "is_interactive": true
+  },
+  "jb-cust-code-expired-desktop.dc.html": {
+   "x": 33590,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Code expired (desktop)",
+   "is_interactive": true
+  },
+  "jb-cust-code-expired-tablet.dc.html": {
+   "x": 34910,
+   "y": 5130,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Code expired (tablet)",
+   "is_interactive": true
+  },
+  "jb-cust-code-expired-phone.dc.html": {
+   "x": 36130,
+   "y": 5130,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Code expired (phone)",
    "is_interactive": true
   },
   "jb-pending.dc.html": {
-   "x": 25380,
+   "x": 36600,
    "y": 5130,
    "w": 390,
    "h": 900,
@@ -460,7 +524,7 @@
    "is_interactive": true
   },
   "jb-expired.dc.html": {
-   "x": 25850,
+   "x": 37070,
    "y": 5130,
    "w": 390,
    "h": 900,
@@ -2617,34 +2681,42 @@
   "ja-site-ocean-tablet.dc.html",
   "ja-site-ocean-phone.dc.html",
   "ja-site-ocean-menu-phone.dc.html",
-  "jb-auth-signin-desktop.dc.html",
-  "jb-auth-signin-phone.dc.html",
-  "jb-auth-forgot-desktop.dc.html",
-  "jb-auth-forgot-phone.dc.html",
-  "jb-auth-sent-desktop.dc.html",
-  "jb-auth-sent-phone.dc.html",
-  "jb-auth-newpass-desktop.dc.html",
-  "jb-auth-newpass-phone.dc.html",
-  "jb-auth-invite-desktop.dc.html",
-  "jb-auth-invite-phone.dc.html",
+  "jb-workos-signin-desktop.dc.html",
+  "jb-workos-signin-tablet.dc.html",
+  "jb-workos-signin-phone.dc.html",
   "jb-auth-site-desktop.dc.html",
+  "jb-auth-site-tablet.dc.html",
   "jb-auth-site-phone.dc.html",
   "jb-auth-signedout-desktop.dc.html",
+  "jb-auth-signedout-tablet.dc.html",
   "jb-auth-signedout-phone.dc.html",
   "jb-auth-expired-desktop.dc.html",
+  "jb-auth-expired-tablet.dc.html",
   "jb-auth-expired-phone.dc.html",
   "jb-auth-noaccess-desktop.dc.html",
+  "jb-auth-noaccess-tablet.dc.html",
   "jb-auth-noaccess-phone.dc.html",
   "jb-till-setup-desktop.dc.html",
+  "jb-till-setup-tablet.dc.html",
   "jb-till-setup-phone.dc.html",
   "jb-till-checkin-desktop.dc.html",
+  "jb-till-checkin-tablet.dc.html",
   "jb-till-checkin-phone.dc.html",
-  "jb-till-pin-desktop.dc.html",
-  "jb-till-pin-phone.dc.html",
+  "jb-till-pin-wrong-desktop.dc.html",
+  "jb-till-pin-wrong-tablet.dc.html",
+  "jb-till-pin-wrong-phone.dc.html",
+  "jb-pin-change-desktop.dc.html",
+  "jb-pin-change-tablet.dc.html",
+  "jb-pin-change-phone.dc.html",
   "jb-cust-signin-desktop.dc.html",
+  "jb-cust-signin-tablet.dc.html",
   "jb-cust-signin-phone.dc.html",
   "jb-cust-code-desktop.dc.html",
+  "jb-cust-code-tablet.dc.html",
   "jb-cust-code-phone.dc.html",
+  "jb-cust-code-expired-desktop.dc.html",
+  "jb-cust-code-expired-tablet.dc.html",
+  "jb-cust-code-expired-phone.dc.html",
   "jb-pending.dc.html",
   "jb-expired.dc.html",
   "j01-web-home.dc.html",
@@ -2972,7 +3044,7 @@
   "jb_s6": {
    "x": 0,
    "y": 4890,
-   "text": "Staff",
+   "text": "Staff sign-in (WorkOS)",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -2980,7 +3052,17 @@
    "maxH": 150
   },
   "jb_s7": {
-   "x": 16270,
+   "x": 3170,
+   "y": 4890,
+   "text": "Staff access",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "jb_s8": {
+   "x": 15370,
    "y": 4890,
    "text": "Till",
    "w": 520,
@@ -2989,8 +3071,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "jb_s8": {
-   "x": 21800,
+  "jb_s9": {
+   "x": 27570,
    "y": 4890,
    "text": "Customers",
    "w": 520,
@@ -3004,9 +3086,9 @@
    "y": 4570,
    "text": "B · Signing in and access — Staff and customers",
    "kind": "title1",
-   "maxW": 26240
+   "maxW": 37460
   },
-  "j01_s10": {
+  "j01_s11": {
    "x": 0,
    "y": 6790,
    "text": "Browse",
@@ -3016,7 +3098,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j01_s11": {
+  "j01_s12": {
    "x": 2510,
    "y": 6790,
    "text": "When things go wrong",
@@ -3033,7 +3115,7 @@
    "kind": "title1",
    "maxW": 3370
   },
-  "j02_s13": {
+  "j02_s14": {
    "x": 0,
    "y": 8690,
    "text": "Checkout",
@@ -3043,7 +3125,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j02_s14": {
+  "j02_s15": {
    "x": 2040,
    "y": 8690,
    "text": "After ordering",
@@ -3060,7 +3142,7 @@
    "kind": "title1",
    "maxW": 2900
   },
-  "j03_s16": {
+  "j03_s17": {
    "x": 0,
    "y": 10590,
    "text": "Booking",
@@ -3070,7 +3152,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j03_s17": {
+  "j03_s18": {
    "x": 4860,
    "y": 10590,
    "text": "Change, cancel and problems",
@@ -3087,7 +3169,7 @@
    "kind": "title1",
    "maxW": 9010
   },
-  "j04_s19": {
+  "j04_s20": {
    "x": 0,
    "y": 12490,
    "text": "While the bike is in",
@@ -3104,7 +3186,7 @@
    "kind": "title1",
    "maxW": 3680
   },
-  "j05_s21": {
+  "j05_s22": {
    "x": 0,
    "y": 14390,
    "text": "Collection",
@@ -3121,7 +3203,7 @@
    "kind": "title1",
    "maxW": 1800
   },
-  "j06_s23": {
+  "j06_s24": {
    "x": 0,
    "y": 16290,
    "text": "Waiting for Jack’s explanation",
@@ -3138,7 +3220,7 @@
    "kind": "title1",
    "maxW": 1600
   },
-  "j07_s25": {
+  "j07_s26": {
    "x": 0,
    "y": 18190,
    "text": "Account",
@@ -3148,7 +3230,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s26": {
+  "j07_s27": {
    "x": 1100,
    "y": 18190,
    "text": "Messages and privacy",
@@ -3165,7 +3247,7 @@
    "kind": "title1",
    "maxW": 2900
   },
-  "j08_s28": {
+  "j08_s29": {
    "x": 0,
    "y": 20090,
    "text": "Getting started",
@@ -3175,7 +3257,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s29": {
+  "j08_s30": {
    "x": 4880,
    "y": 20090,
    "text": "People",
@@ -3185,7 +3267,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s30": {
+  "j08_s31": {
    "x": 10940,
    "y": 20090,
    "text": "Selling and printing",
@@ -3195,7 +3277,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s31": {
+  "j08_s32": {
    "x": 15820,
    "y": 20090,
    "text": "Workshop and messages",
@@ -3205,7 +3287,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s32": {
+  "j08_s33": {
    "x": 26600,
    "y": 20090,
    "text": "Data",
@@ -3222,7 +3304,7 @@
    "kind": "title1",
    "maxW": 27700
   },
-  "j09_s34": {
+  "j09_s35": {
    "x": 0,
    "y": 21906,
    "text": "Bring the data across",
@@ -3232,7 +3314,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j09_s35": {
+  "j09_s36": {
    "x": 6060,
    "y": 21906,
    "text": "Run alongside, then switch",
@@ -3249,7 +3331,7 @@
    "kind": "title1",
    "maxW": 9520
   },
-  "j10_s37": {
+  "j10_s38": {
    "x": 0,
    "y": 23722,
    "text": "Morning",
@@ -3266,7 +3348,7 @@
    "kind": "title1",
    "maxW": 5820
   },
-  "j11_s39": {
+  "j11_s40": {
    "x": 0,
    "y": 25538,
    "text": "A sale",
@@ -3276,7 +3358,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j11_s40": {
+  "j11_s41": {
    "x": 6060,
    "y": 25538,
    "text": "Taking payment",
@@ -3286,7 +3368,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j11_s41": {
+  "j11_s42": {
    "x": 13300,
    "y": 25538,
    "text": "Other till jobs",
@@ -3296,7 +3378,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j11_s42": {
+  "j11_s43": {
    "x": 20540,
    "y": 25538,
    "text": "When the internet drops",
@@ -3313,7 +3395,7 @@
    "kind": "title1",
    "maxW": 25180
   },
-  "j12_s44": {
+  "j12_s45": {
    "x": 0,
    "y": 27354,
    "text": "The diary",
@@ -3323,7 +3405,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s45": {
+  "j12_s46": {
    "x": 36280,
    "y": 27354,
    "text": "Requests, as a pop-up",
@@ -3333,7 +3415,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s46": {
+  "j12_s47": {
    "x": 48480,
    "y": 27354,
    "text": "New job from an empty slot",
@@ -3343,7 +3425,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s47": {
+  "j12_s48": {
    "x": 57670,
    "y": 27354,
    "text": "The job — one page, no tabs",
@@ -3353,7 +3435,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s48": {
+  "j12_s49": {
    "x": 81910,
    "y": 27354,
    "text": "Customer account",
@@ -3363,7 +3445,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s49": {
+  "j12_s50": {
    "x": 85080,
    "y": 27354,
    "text": "Overview page",
@@ -3380,7 +3462,7 @@
    "kind": "title1",
    "maxW": 88010
   },
-  "j13_s51": {
+  "j13_s52": {
    "x": 0,
    "y": 29510,
    "text": "Suppliers",
@@ -3390,7 +3472,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s52": {
+  "j13_s53": {
    "x": 2520,
    "y": 29510,
    "text": "Orders",
@@ -3400,7 +3482,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s53": {
+  "j13_s54": {
    "x": 7400,
    "y": 29510,
    "text": "Delivery",
@@ -3417,7 +3499,7 @@
    "kind": "title1",
    "maxW": 10860
   },
-  "j14_s55": {
+  "j14_s56": {
    "x": 0,
    "y": 31326,
    "text": "Products",
@@ -3427,7 +3509,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s56": {
+  "j14_s57": {
    "x": 6060,
    "y": 31326,
    "text": "Across sites",
@@ -3437,7 +3519,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s57": {
+  "j14_s58": {
    "x": 8580,
    "y": 31326,
    "text": "Stock take",
@@ -3447,7 +3529,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s58": {
+  "j14_s59": {
    "x": 13460,
    "y": 31326,
    "text": "Corrections",
@@ -3464,7 +3546,7 @@
    "kind": "title1",
    "maxW": 15740
   },
-  "j15_s60": {
+  "j15_s61": {
    "x": 0,
    "y": 33142,
    "text": "Customers",
@@ -3474,7 +3556,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j15_s61": {
+  "j15_s62": {
    "x": 6060,
    "y": 33142,
    "text": "Loyalty and accounts",
@@ -3491,7 +3573,7 @@
    "kind": "title1",
    "maxW": 10700
   },
-  "j16_s63": {
+  "j16_s64": {
    "x": 0,
    "y": 34958,
    "text": "Closing",
@@ -3508,7 +3590,7 @@
    "kind": "title1",
    "maxW": 7000
   },
-  "j17_s65": {
+  "j17_s66": {
    "x": 0,
    "y": 36774,
    "text": "Reports",
@@ -3518,7 +3600,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s66": {
+  "j17_s67": {
    "x": 7240,
    "y": 36774,
    "text": "Accounts software",
@@ -3535,7 +3617,7 @@
    "kind": "title1",
    "maxW": 10700
   },
-  "j18_s68": {
+  "j18_s69": {
    "x": 0,
    "y": 38590,
    "text": "Design the website",
@@ -3545,7 +3627,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s69": {
+  "j18_s70": {
    "x": 7240,
    "y": 38590,
    "text": "Online orders",
@@ -3562,7 +3644,7 @@
    "kind": "title1",
    "maxW": 11880
   },
-  "j19_s71": {
+  "j19_s72": {
    "x": 0,
    "y": 40406,
    "text": "Across sites",
@@ -3579,7 +3661,7 @@
    "kind": "title1",
    "maxW": 3460
   },
-  "j20_s73": {
+  "j20_s74": {
    "x": 0,
    "y": 42222,
    "text": "Oversight",
@@ -3596,7 +3678,7 @@
    "kind": "title1",
    "maxW": 3460
   },
-  "j21_s75": {
+  "j21_s76": {
    "x": 0,
    "y": 44038,
    "text": "Connection and handoff",
