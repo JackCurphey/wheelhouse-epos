@@ -69,3 +69,8 @@ full one, with one "Take payment" step that leaves room for the other.
    and a manager PIN for every refund.
    (Also 29 Sep: Jack prefers to work through journeys one at a time in a
    single session, not in parallel sessions.)
+10. **Two assumptions stand** (drawn 29 Sep, not objected to by Jack when
+    he moved on to the audit): voiding a sale needs a reason but no manager
+    PIN (in the spirit of decision 4), and paying for a workshop job also
+    marks the bike collected by default, with a pill to switch it off
+    (Workshop day decision 63 made concrete).
