@@ -23,3 +23,9 @@ full one, with one "Take payment" step that leaves room for the other.
    adds an item to the basket. The shop sets the buttons up (Owner setup,
    journey 8). Search and scan sit above them (A12). Chosen over browsing
    stock categories and search-only with recent items.
+3. **Tapping a basket line opens a small pop-up in the middle** (Jack,
+   29 Sep): the line's price, a discount (amount or percent, with a
+   reason), a note (e.g. a serial number), and Remove. Quantity stays one
+   tap on the line's − and + without opening anything. Follows the
+   pop-ups-in-the-middle rule (Workshop day 15, 16). Chosen over expanding
+   the line in place and a price-only edit.

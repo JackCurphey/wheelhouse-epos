@@ -7,7 +7,7 @@
 // (Standard service £65, Shimano brake pads B05S-RX £28, Fit & adjust brakes
 // £18, Replace gear cable £12). Every other product is a bracketed
 // placeholder until Jack supplies real items.
-import { C, MONO, esc, icon, button, card } from './ui.mjs';
+import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { DW, DH } from './stage1.mjs';
 import { foldedRail, tillBar } from './app-map.mjs';
 
@@ -69,9 +69,30 @@ const BRAKES = { name: 'Fit & adjust brakes', sub: 'Labour · 30 min', price: 18
 export const screens = {};
 screens['till-sale'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES])) };
 
+// Decision 3: tap a basket line → a pop-up in the middle with price,
+// discount (amount or percent, with a reason), a note, and Remove.
+const seg = (items, on, label) => `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; border: 1px solid ${C.input}; border-radius: 8px; overflow: hidden">${items.map((t, i) => `<button type="button" aria-pressed="${i === on}" style="min-width: 52px; min-height: 44px; border: 0; ${i ? `border-left: 1px solid ${C.input};` : ''} background: ${i === on ? C.ink : C.panel}; color: ${i === on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`).join('')}</div>`;
+const reasonPill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
+function lineDialog() {
+  return `<div role="dialog" aria-modal="true" aria-labelledby="line-title" style="width: 520px; box-sizing: border-box; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="line-title" style="margin: 0; font-size: 20px; font-weight: 700">Shimano brake pads</h2><span style="font-size: 13px; color: ${C.muted}">Part · ${mono('B05S-RX')} · 2 in the sale</span></div><a href="till-sale-desktop.dc.html" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
+<div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 18px">
+${field('Price each', { value: '£28.00', hint: 'The usual price is £28.00.' })}
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Discount</span><div style="display: flex; gap: 10px; align-items: center">${seg(['£', '%'], 1, 'Discount as pounds or percent')}<input aria-label="Discount amount" value="10" style="width: 110px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"><span style="font-size: 14px; color: ${C.muted}">= ${mono('£5.60')} off, ${mono('£50.40')} for 2</span></div></div>
+<div role="group" aria-label="Reason for the discount" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
+${field('Note (optional)', { placeholder: 'e.g. a serial number', hint: 'Shows on the receipt.' })}
+</div>
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Remove from sale', { variant: 'danger' })}${button('Done')}</div>
+</div>`;
+}
+screens['till-line'] = {
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${tillPage(leftSide(), basket([PADS, BRAKES]))}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center">${lineDialog()}</div></div>`,
+};
+
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
+  'till-line': 'Change a line — price, discount with a reason, note, remove',
 };
 export const ROWS = [
-  { label: 'A sale', screens: ['till-sale'] },
+  { label: 'A sale', screens: ['till-sale', 'till-line'] },
 ];
