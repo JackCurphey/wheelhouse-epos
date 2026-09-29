@@ -24,3 +24,7 @@ from the machine itself rather than being typed in.
    that can also be typed over** (Jack, 29 Sep): staff can count £50 notes
    down to 1p coins and let the till add up, or just type the total. Typing
    the total directly takes over from the note-and-coin boxes.
+4. **The shop sets a standard float; the till says "Leave £[float] in the
+   drawer, bank £[the rest]"** (Jack, 29 Sep): every day starts with the
+   same float and the till works out the banking. Chosen over deciding each
+   evening and banking everything.
