@@ -21,13 +21,13 @@ const barBtn = (inner, label = '') => `<button type="button"${label ? ` aria-lab
 
 // The till's own charcoal bar. Decision 13: Serving switches who's serving
 // (PIN check-in); no till menu — the rail's name badge opens Your settings.
-function tillBar({ back = false } = {}) {
+export function tillBar({ back = false, serving = 'Jo Taylor' } = {}) {
   return `<header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; gap: 14px; background: ${C.accentDark}; color: #ffffff">
 ${back ? `<a href="#" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px 0 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600">${icon('back', 18)}Back to the shop</a>` : ''}
 <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.8">Bolton · ${SHOP}</span></span>
 <span style="flex-grow: 1"></span>
 ${onlinePill()}
-${barBtn(`${icon('user', 16)}Serving: Jo Taylor`, 'Serving: Jo Taylor — switch who’s serving')}
+${serving ? barBtn(`${icon('user', 16)}Serving: ${serving}`, `Serving: ${serving} — switch who’s serving`) : `<span style="font-size: 14px; opacity: 0.85">Nobody checked in yet</span>`}
 </header>`;
 }
 
