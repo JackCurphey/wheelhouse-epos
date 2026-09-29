@@ -102,7 +102,7 @@ function statusDot(key, size = 13) {
 }
 
 // ---------- Rooms — Workshop is now Diary (main page) + Overview (brief) ----------
-const ROOMS_DIARY = [
+export const ROOMS_DIARY = [
   ['Front desk', [['till', 'Till', 'till', 'OMS'], ['orders', 'Online orders', 'orders', 'OMS'], ['customers', 'Customers', 'customers', 'OMS'], ['messages', 'Messages', 'mail', 'OMS']]],
   ['Workshop', [['diary', 'Diary', 'today', 'OMSK'], ['overview', 'Overview', 'workshop', 'OMSK']]],
   ['Stockroom', [['stock', 'Stock', 'stock', 'OMS'], ['deliveries', 'Deliveries and orders', 'purchasing', 'OM'], ['stocktake', 'Stock take', 'check', 'OMS']]],
@@ -139,10 +139,13 @@ export function shellDesktop(active, title, content, { role = 'S', person = 'Jo 
 ${siteSwitcher()}
 <div style="display: flex; flex-direction: column; gap: 8px">${navList(role, active)}</div>
 <div style="flex-grow: 1"></div>
-<div style="display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-top: 1px solid rgba(255,255,255,0.2)">
-<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700">${esc(person.split(' ').map((x) => x[0]).join(''))}</span>
-<span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 14px; font-weight: 600">${esc(person)}</span><span style="font-size: 12px; opacity: 0.8">${esc(roleName)}</span></span>
-<a href="#" style="font-size: 13px; color: #ffffff">Sign out</a>
+<div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)">
+<a href="your-settings-desktop.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" title="Your settings" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none">
+<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${esc(person.split(' ').map((x) => x[0]).join(''))}</span>
+<span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${esc(person)}</span><span style="font-size: 12px; opacity: 0.8">${esc(roleName)}</span></span>
+<span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span>
+</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-size: 13px; color: #ffffff">Sign out</a>
 </div>
 </nav>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
@@ -1672,13 +1675,13 @@ function a11ySwitch(id, on, label) {
 </span>
 </button>`;
 }
-function a11ySettingRow(id, label, desc, on, preview = '') {
+export function a11ySettingRow(id, label, desc, on, preview = '') {
   return panel(`${row(`<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700; color: ${C.ink}">${esc(label)}</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">${esc(desc)}</span></div>${a11ySwitch(id, on, label)}`, 16, 'justify-content: space-between; align-items: flex-start')}${preview ? `<div style="padding-top: 10px; border-top: 1px solid ${C.border}">${preview}</div>` : ''}`, '', 16, 12);
 }
 // Two narrow diary blocks (jobBlock's own narrow-block markup, sized down)
 // with the shape mark drawn on, so "Show status symbols" previews what it
 // turns on regardless of SHOW_STATUS_SYMBOLS's own (off) default above.
-function symbolsPreview(size = 'desktop') {
+export function symbolsPreview(size = 'desktop') {
   const T = size !== 'desktop';
   const sample = [['scheduled', 'Trek Domane AL 3', 'Standard service'], ['waiting', 'Cannondale Quick', 'Gear adjustment']];
   return `${eyebrow('Preview')}<div style="display: flex; gap: 8px; padding-top: 6px">${sample.map(([key, bike, title]) => {
@@ -1690,7 +1693,7 @@ function symbolsPreview(size = 'desktop') {
 </div>`;
   }).join('')}</div>`;
 }
-function largerTextPreview(dev = 'desktop') {
+export function largerTextPreview(dev = 'desktop') {
   const col = (size, label) => `<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: ${dev === 'desktop' ? 11 : 12}px; color: ${C.muted}">${esc(label)}</span><span style="font-size: ${size}px; font-weight: 600; color: ${C.ink}">Standard service</span></span>`;
   return `${eyebrow('Preview')}<div style="display: flex; align-items: flex-end; gap: 20px; padding-top: 6px">${col(14, 'Normal')}${col(17, 'Larger')}</div>`;
 }
