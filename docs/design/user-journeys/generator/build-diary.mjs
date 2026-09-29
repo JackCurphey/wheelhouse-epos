@@ -13,7 +13,7 @@ import { screens as ideaScreens } from './audit-ideas.mjs';
 
 const screens = THEME === 'sand' ? { ...diaryScreens, ...ideaScreens } : diaryScreens;
 const IDEAS_ROW = { label: 'Audit ideas — before / after', screens: ['idea-s2-before', 'idea-s2-after', 'idea-s3-before', 'idea-s3-after', 'idea-s4-before', 'idea-s4-after', 'idea-s4-open'] };
-const ROWS = THEME === 'sand' ? [...DIARY_ROWS, IDEAS_ROW] : DIARY_ROWS;
+const ROWS = THEME === 'sand' && process.argv.includes('--ideas') ? [...DIARY_ROWS, IDEAS_ROW] : DIARY_ROWS; // audit before/after row only on request (Jack, 29 Sep: one up-to-date page)
 
 const here = new URL('./', import.meta.url).pathname;
 // Sand builds land in their own out-diary-sand/ directory so out-diary/
@@ -79,6 +79,7 @@ const TITLE_OVERRIDE = {
   'settings-accessibility': 'Settings · Accessibility',
   'diary-stack-hover': 'Diary · stacked jobs fanned out on hover',
   'diary-stack-open': 'Diary · choose a job from a stack',
+  'diary-hover-summary': 'Diary · hover a job for its summary',
   'new-job-day': 'New job (from the day view)',
   'job-overview': 'Job · expected',
   'job-book-in': 'Job · booked in, tag printed',

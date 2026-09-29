@@ -114,9 +114,10 @@ export const SPEND_LIMIT = 'Customer OK up to £200';
 // unapproved work, but the plain "blue" badge() sat at the same quiet visual
 // weight as the "Ready by" chip next to it — nothing marked it as the one
 // with a consequence if missed. Its own badge-shaped chip keeps the blue
-// tone but adds a solid coloured left edge and bold text, so it reads
-// heavier than an ordinary info badge without growing in size.
-export const limitBadge = (text) => `<span style="display: inline-flex; align-items: center; padding: 3px 10px 3px 8px; border-radius: 999px; border-left: 3px solid ${C.blueInk}; background: ${C.blueBg}; color: ${C.blueInk}; font-size: 12px; font-weight: 700; white-space: nowrap">${esc(text)}</span>`;
+// tone and bold text, so it reads heavier than an ordinary info badge
+// without growing in size. Decision 67 (29 Sep): a thin full outline, not a
+// heavy coloured left edge.
+export const limitBadge = (text) => `<span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; border: 1px solid ${C.blueInk}; background: ${C.blueBg}; color: ${C.blueInk}; font-size: 12px; font-weight: 700; white-space: nowrap">${esc(text)}</span>`;
 export function jobMetaRow(jobNum, created, readyByBadge, totalBadge, limit = SPEND_LIMIT) {
   return row(`${mono(jobNum, 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">${esc(created)}</span><span style="flex-grow: 1"></span>${limit ? limitBadge(limit) : ''}${readyByBadge}${totalBadge}`, 10);
 }
@@ -157,8 +158,10 @@ export function detailedNotesButton(checkedCount, totalCount, notedCount, href =
 <span style="font-size: 12px; color: ${C.muted}">${esc(`${checkedCount} of ${totalCount} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span>
 </${tag}>`;
 }
+// Decision 67 (29 Sep): a thin full outline in the accent colour, not a
+// heavy coloured left edge.
 export function bigNotesColumn({ customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref = null }) {
-  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-left: 4px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 3px 14px; display: flex; flex-direction: column; gap: 3px; overflow: hidden">
+  return `<div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 3px 14px; display: flex; flex-direction: column; gap: 3px; overflow: hidden">
 ${h2('Notes', 15)}
 <div style="flex-grow: 1; min-height: 0; box-sizing: border-box; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; padding: 7px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden">${bigNoteBody(customerTexts, staffTexts)}</div>
 ${detailedNotesButton(checkedCount, totalCount, notedCount, checklistHref)}

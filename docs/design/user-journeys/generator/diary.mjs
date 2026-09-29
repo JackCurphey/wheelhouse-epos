@@ -38,7 +38,8 @@ const check = (label, checked, id) => `<div style="display: flex; align-items: c
 const area = (label, value, id, rows = 3) => `<div style="display: flex; flex-direction: column; gap: 6px"><label for="${id}" style="font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><textarea id="${id}" rows="${rows}" style="width: 100%; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; padding: 9px 10px; font-size: 14px; line-height: 1.4; font-family: inherit; color: ${C.ink}; resize: none">${esc(value)}</textarea></div>`;
 const select = (label, options, id) => `<div style="display: flex; flex-direction: column; gap: 6px"><label for="${id}" style="font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><select id="${id}" style="width: 100%; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; padding: 0 10px; min-height: 44px; font-size: 14px; font-family: inherit; color: ${C.ink}">${options.map((o, i) => `<option${i === 0 ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
 const btnRow = (inner, extra = '') => `<div style="display: flex; flex-wrap: wrap; gap: 10px; ${extra}">${inner}</div>`;
-const quote = (t) => `<blockquote style="margin: 0; padding-left: 12px; border-left: 3px solid ${C.border}; font-size: 14px; line-height: 1.5; color: ${C.ink}">${esc(t)}</blockquote>`;
+// Decision 67 (29 Sep): a thin full outline, not a heavy coloured left edge.
+const quote = (t) => `<blockquote style="margin: 0; padding: 8px 12px; border: 1px solid ${C.border}; border-radius: 6px; font-size: 14px; line-height: 1.5; color: ${C.ink}">${esc(t)}</blockquote>`;
 const table = (cols, rows, { size = 14, pad = '9px 12px' } = {}) => `<table style="width: 100%; border-collapse: collapse; font-size: ${size}px">
 <thead><tr>${cols.map(([c, a]) => `<th scope="col" style="text-align: ${a || 'left'}; padding: 8px 12px; font-size: 12px; font-weight: 600; color: ${C.muted}; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">${c ? esc(c) : '<span style="position: absolute; width: 1px; height: 1px; overflow: hidden">Action</span>'}</th>`).join('')}</tr></thead>
 <tbody>${rows.map((r) => `<tr>${r.map((cell, i) => `<td style="text-align: ${cols[i][1] || 'left'}; vertical-align: middle; padding: ${pad}; border-bottom: 1px solid ${C.border}">${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
@@ -268,6 +269,15 @@ const JOB_CUSTOMER_LABEL = 'Maya Patel · Trek Domane AL 3';
 // match what's already used across the example week's JOBS below, so the
 // "60 min" the warning quotes is the real duration of the first (default) option.
 const SERVICE_OPTIONS = [['Standard service', 60], ['Safety check', 60], ['Gear adjustment', 60], ['Brake service', 45]];
+// Decision 66: the work is chosen as branching pills — a first-level group
+// (Full service / Individual service), then that group's own services as
+// pills. Grouping used (shops group their own services in service settings,
+// per the decision): Full service holds the one all-in service; Individual
+// service holds every single-item service — all four names are the ones
+// already in SERVICE_OPTIONS above, nothing invented.
+const SERVICE_GROUPS = { 'Full service': ['Standard service'], 'Individual service': ['Safety check', 'Gear adjustment', 'Brake service'] };
+const serviceGroupOf = (name) => Object.keys(SERVICE_GROUPS).find((g) => SERVICE_GROUPS[g].includes(name));
+const serviceDurationOf = (name) => (SERVICE_OPTIONS.find(([n]) => n === name) || [])[1];
 const CONCERN = '“My rear brake squeals and feels weak. The gears could use a tune-up too.”';
 const LINES = [
   ['Standard service', 'Labour · 60 min', '£65.00'],
@@ -284,6 +294,37 @@ const DECISIONS = [['Approved', 'green'], ['Approved', 'green'], ['Approved', 'g
 // so the two arrays stay index-aligned everywhere else they're used.
 const classifyLineSub = (sub) => (/^Labour\b/i.test(sub) ? 0 : /^Part\b/i.test(sub) ? 1 : 2);
 const LINE_ORDER = LINES.map((_, i) => i).sort((a, b) => classifyLineSub(LINES[a][1]) - classifyLineSub(LINES[b][1]) || a - b);
+// Checklist (decision 21): each item is a checkbox with an optional note — a
+// mix of ticked-with-no-note (customer sees "All working well"), one written
+// note (the brakes item, stage2 copy), and an "Add note" link on the rest.
+// Moved up here (was just above checklistRow/checklistPanel, further down
+// this file) so it — and QUICK_NOTES below, which reads from it — are
+// initialized before jobBlock's WH-1042 hover summary (decision 65) can call
+// jobQuickOverviewBody while building the plain diary screens, which happens
+// at this file's top level well before its own original position.
+const CHECKLIST = [
+  { t: 'Frame & fork', checked: true, note: '' },
+  { t: 'Wheels & tyres', checked: true, note: '' },
+  { t: 'Gears indexed', checked: true, note: '' },
+  { t: 'Brakes bled & adjusted', checked: true, note: 'The rear pads are worn. We recommend replacing the pads and adjusting the brake.' },
+  { t: 'Cables & housing', checked: false, note: '' },
+];
+// ---------- Job overview quick-look box (decision 37, 28 Sep round) — the
+// small box a "View overview" click opens over the (lightly dimmed) diary:
+// just the job's notes, line items and cost, no customer details or
+// mechanic. Reuses the exact texts already in this file — Maya's booking
+// concern (CONCERN), the 09:05 booked-in note (HISTORY_ALL) attributed to
+// Jo Taylor (the default staff person throughout this file) and the brakes
+// checklist note (CHECKLIST) attributed to Alex Morgan, the mechanic who
+// starts work at 11:30 per HISTORY_ALL — nothing invented beyond those two
+// small, already-used timestamps. Chronological order: the customer's own
+// note from her booking, then staff notes as they were written. Also the
+// content of WH-1042's hover summary card (decision 65).
+const QUICK_NOTES = [
+  { who: 'Customer', when: '', text: CONCERN.replace(/[“”]/g, '') },
+  { who: 'Jo Taylor', when: '09:05', text: 'Bike booked in, tag printed.' },
+  { who: 'Alex Morgan', when: '12:10', text: CHECKLIST.find((c) => c.t === 'Brakes bled & adjusted').note },
+];
 const linesTableRows = () => LINE_ORDER.map((i) => { const [w, s, a] = LINES[i]; return [two(w, s), '1', mono(a), badge(...DECISIONS[i])]; });
 
 // Mon 14 – Sun 20 Sep 2026; today is Thu 17 Sep.
@@ -385,13 +426,11 @@ const BLOCK_PREF = { first: 'bike', second: 'jobTitle' };
 // ---------- Storage slots (item 27, 27 Sep round) — optional per shop; on for
 // this shop. STORAGE maps a few example jobs to a hook so the diary block and
 // the job page header show it; STORAGE_SLOTS is the shop's own list, edited in
-// diary-settings-desktop. storageOptions(def) reorders the list so a form's
-// select shows the wanted default as its first (selected) option.
+// diary-settings-desktop, and (decision 66) the New job form's "Where the
+// bike is kept" pills.
 export const STORAGE = { 'WH-1042': 'Hook 3', 'WH-1040': 'Hook 1' };
 const STORAGE_SLOTS = ['Hook 1', 'Hook 2', 'Hook 3', 'Hook 4', 'Hook 5', 'Hook 6', 'Workshop floor', 'Front window'];
-const storageOptions = (def) => [def, ...STORAGE_SLOTS.filter((s) => s !== def)];
 const STARTING_STATUS = ['Booked', 'Bike is here', 'Waiting for parts'];
-const rotate = (arr, idx) => arr.slice(idx).concat(arr.slice(0, idx));
 
 // Unscheduled row: bikes with no set time (stage2's "Shared queue" example).
 // A confirmed job with no set time uses the ordinary scheduled colour — purple
@@ -508,6 +547,11 @@ function laneRect(lane, total) {
 // it. With no transition declared at all outside the reduced-motion media
 // query, a reduced-motion user gets the same end state instantly.
 let hoverSeq = 0;
+// diary-hover-summary (decision 65) needs WH-1042's quick-look card rendered
+// already open, without relying on CSS :hover, for one static board — set
+// just before building that one frozen diary and cleared right after, so
+// every other board's WH-1042 block keeps its ordinary hover-only card.
+let FORCE_HOVER_SUMMARY_JOB = null;
 function laneHoverCSS(cls) {
   // No z-index on the resting rule — only :hover gets one. A resting
   // z-index (even 1) would give this deeply-nested block an explicit
@@ -571,12 +615,91 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // hovering it (laneHoverCSS below) expands it to a readable width.
   const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
   const hoverCls = rect ? `wh-lane-${size}-${hoverSeq++}` : '';
-  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${hoverCls ? `class="${hoverCls}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+  // Decision 65: only WH-1042 carries a hover summary — it's the one example
+  // job in this file with notes, line items and cost data (QUICK_NOTES/
+  // LINES); the other example jobs don't have that data, so nothing is
+  // invented for them. Week view only (narrow) — see jobHoverSummaryMarkup.
+  const isSummaryJob = narrow && j.job === 'WH-1042';
+  const summaryCls = isSummaryJob ? `wh-hovsum-${size}-${hoverSeq++}` : '';
+  const classAttr = [hoverCls, summaryCls].filter(Boolean).join(' ');
+  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
 ${showSymbol ? statusDot(j.key) : ''}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; ${strike} ${bikeWrap ? 'white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
 ${line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
-</a>`;
+</a>${isSummaryJob ? jobHoverSummaryMarkup(j, size, summaryCls, FORCE_HOVER_SUMMARY_JOB === j.job, top) : ''}`;
+}
+// Decision 65: resting on WH-1042's block for ~0.6s shows a small quick-look
+// card beside it — purpose-built compact content for a hover preview (not
+// the full job-quick-overview panels/table, which is too tall to fit beside
+// a week-grid block): notes on the left, line items + cost on the right. CSS
+// only, general-sibling-selector driven: the <a> and the card are both
+// absolutely positioned children of the same day-column div, so
+// `.cls:hover ~ .cls-card` reveals the card without any wrapper element. The
+// delay lives on the :hover rule only (so a passing pointer doesn't trigger
+// it) and, matching laneHoverCSS/stackedJobsBlock above, no transition is
+// declared outside the reduced-motion media query — a reduced-motion user
+// gets the open state instantly. `forced` bakes the open state in without
+// relying on :hover, for the diary-hover-summary static board.
+//
+// Positioning: the week grid (role="grid") clips its own content
+// (overflow:hidden), and this card is a descendant of one narrow (~98px)
+// day-column div, which is its absolute-positioning containing block — so a
+// 520px card can never fit by just sitting "left: 100%" of the block the way
+// the old 300px card did (that's exactly what let it run off the grid's
+// right edge and bottom edge). Instead: `right` is expressed as a multiple
+// of the day-column's own width (1 column = 100%) to reach past the
+// remaining columns to the grid's right edge, with a small inset — this
+// works off the same percentage-of-containing-block mechanism the old
+// `left: 100%` relied on, just aimed at the grid's far edge instead of the
+// block's near edge, so it still resolves correctly regardless of column
+// rounding. `top` is the block's own local top (passed in as `blockTop`,
+// already known from jobBlock above) nudged up slightly so the card reads as
+// "beside" the block rather than hanging below it — WH-1042 (Thu, column 4
+// of 7) has 3 columns to spare below its own top before the grid's bottom
+// edge, comfortably more than this card's height.
+function jobHoverSummaryMarkup(j, size, cls, forced, blockTop) {
+  const [customer, bike] = customerBikeOf(j);
+  const approvedTotal = LINES.filter((_, i) => DECISIONS[i][0] === 'Approved').reduce((sum, [, , a]) => sum + Number(a.replace('£', '')), 0);
+  // 7-day week view (DAYS/TODAY above) — columns after this job's day column,
+  // used to reach the grid's right edge from this column's own right edge.
+  const colsAfter = DAYS.length - 1 - j.day;
+  const rightInsetPx = 10;
+  const cardTop = Math.max(4, blockTop - 24);
+  const css = forced ? '' : `<style>
+.${cls}-wrap{opacity: 0; pointer-events: none; overflow: hidden; max-width: 0;}
+.${cls}:hover ~ .${cls}-wrap{opacity: 1; pointer-events: auto; overflow: visible; max-width: none; z-index: 12;}
+@media (prefers-reduced-motion: no-preference) {
+  .${cls}-wrap{transition: opacity 140ms ease;}
+  .${cls}:hover ~ .${cls}-wrap{transition-delay: 600ms;}
+}
+</style>`;
+  const wrapForcedStyle = forced ? 'opacity: 1; pointer-events: auto; overflow: visible; max-width: none; z-index: 12;' : '';
+  const notesCol = `<div style="display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-width: 0">
+<span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: ${C.muted}">Notes</span>
+${QUICK_NOTES.map((n) => `<div style="display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 11px; font-weight: 700; color: ${C.muted}">${n.who === 'Customer' ? 'Customer' : `${esc(n.who)}${n.when ? ` · ${esc(n.when)}` : ''}`}</span>
+<span style="font-size: 13px; line-height: 1.3; color: ${C.ink}">${esc(n.text)}</span>
+</div>`).join('')}
+</div>`;
+  const lineItemsCol = `<div style="display: flex; flex-direction: column; gap: 5px; flex: 0 0 190px">
+<span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: ${C.muted}">Line items</span>
+${LINE_ORDER.map((i) => { const [w, , a] = LINES[i]; const declined = DECISIONS[i][0] === 'Declined'; return `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; line-height: 1.3; ${declined ? `text-decoration: line-through; color: ${C.muted};` : ''}">
+<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0">${w}</span>${mono(a, declined ? `color: ${C.muted}` : '')}
+</div>`; }).join('')}
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 3px; padding-top: 6px; border-top: 1px solid ${C.border}">
+<span style="font-size: 13px; font-weight: 700; color: ${C.ink}">Cost</span>${mono(`£${approvedTotal.toFixed(2)}`, 'font-size: 15px; font-weight: 700')}
+</div>
+</div>`;
+  const card = `<div style="width: 520px; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 14px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 13px; font-weight: 700; color: ${C.ink}">${esc(j.svc || '')} · ${esc(j.job)}</span>
+<span style="font-size: 12px; color: ${C.muted}">${esc(customer)} · ${esc(bike)}</span>
+</div>
+<div style="display: flex; gap: 16px; align-items: flex-start">${notesCol}${lineItemsCol}</div>
+</div>`;
+  const wrap = `<div class="${cls}-wrap" aria-hidden="${!forced}" style="position: absolute; right: calc(${-100 * colsAfter}% + ${rightInsetPx}px); top: ${cardTop}px; ${wrapForcedStyle}">${card}</div>`;
+  return `${css}${wrap}`;
 }
 // The pending request block (decision 12): purple, labelled "Pending", linking
 // to the request pop-up rather than a job overview (there is no job yet).
@@ -723,10 +846,13 @@ function stackedJobsBlock(cluster, size, slotH, faded = false, rect = null, forc
   // inflating the whole grid's scrollHeight (caught by the strict fit check).
   const edge = (offset, op) => `<div aria-hidden="true" style="position: absolute; left: ${offset}px; right: ${-offset}px; top: ${-offset}px; bottom: 0; border-radius: 5px; background: ${C.panel}; border: 1.75px solid ${C.ink}; opacity: ${op}"></div>`;
   const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
-  // Decision 59: hovering the stack ~300ms lifts it and fans its jobs out as
-  // full-size diary blocks, side by side, overlapping neighbouring days (the
-  // day column itself has no overflow:hidden — only the outer grid does —
-  // so the fan can spill into the next day's column without being clipped).
+  // Decision 61: hovering the stack ~300ms lifts it and fans its jobs out as
+  // full-size diary blocks, centred on the stack's own day — two jobs sit one
+  // left, one right of centre; three or more sit at most two per row side by
+  // side, with each further pair on a row underneath (a small grid growing
+  // downwards) rather than fanning out to the right. The day column itself
+  // has no overflow:hidden — only the outer grid does — so the fan can still
+  // spill sideways into a neighbouring day's column without being clipped.
   const seq = hoverSeq++;
   const wrapCls = `wh-stack-${size}-${seq}`;
   const fanCls = `wh-fan-${size}-${seq}`;
@@ -734,12 +860,19 @@ function stackedJobsBlock(cluster, size, slotH, faded = false, rect = null, forc
     const [tbg, tink] = ST[j.key];
     const [, tbike] = customerBikeOf(j);
     const th = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
-    return `<a href="job-overview-${size}.dc.html" aria-label="${esc(tbike)}, ${esc(j.svc || '')}, ${esc(j.job)}" style="position: relative; width: 128px; flex-shrink: 0; height: ${th}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${tbg}; border: 1.75px solid ${tink}; overflow: hidden">
+    return `<a href="job-overview-${size}.dc.html" aria-label="${esc(tbike)}, ${esc(j.svc || '')}, ${esc(j.job)}" style="position: relative; width: 128px; height: ${th}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${tbg}; border: 1.75px solid ${tink}; overflow: hidden">
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(tbike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.svc || '')}</span>
 <span style="font-size: 9px; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.job)}</span>
 </a>`;
   };
+  // Decision 61: a 2-column grid (128px tiles, 6px gap), centred under the
+  // stack's own middle via left:50%/negative margin-left rather than flush
+  // left — that's what puts the first pair one-left/one-right of centre
+  // instead of fanning off to the right, and rows of a longer stack grow
+  // downward from there.
+  const fanCols = Math.min(cluster.length, 2);
+  const fanW = fanCols === 2 ? 128 * 2 + 6 : 128;
   // overflow:hidden + max-width:0 on the collapsed (non-hover, non-
   // forceExpand) state, not just opacity:0 — the fan's tiles are real
   // fixed-width content, and an invisible-but-still-laid-out row would still
@@ -750,7 +883,7 @@ function stackedJobsBlock(cluster, size, slotH, faded = false, rect = null, forc
   const fanStyle = forceExpand
     ? 'opacity: 1; pointer-events: auto; overflow: visible; max-width: none; filter: drop-shadow(0 10px 26px rgba(28,30,25,0.32));'
     : 'opacity: 0; pointer-events: none; overflow: hidden; max-width: 0;';
-  const fan = `<div class="${fanCls}" aria-hidden="${!forceExpand}" style="position: absolute; left: 0; top: 0; display: flex; gap: 6px; ${fanStyle}">${cluster.map(fanTile).join('')}</div>`;
+  const fan = `<div class="${fanCls}" aria-hidden="${!forceExpand}" style="position: absolute; left: 50%; margin-left: ${-(fanW / 2)}px; top: 0; display: grid; grid-template-columns: repeat(${fanCols}, 128px); grid-auto-rows: max-content; gap: 6px; ${fanStyle}">${cluster.map(fanTile).join('')}</div>`;
   // No resting z-index here either, for the same reason as laneHoverCSS —
   // only :hover raises it.
   const hoverCSS = forceExpand ? '' : `<style>
@@ -938,6 +1071,46 @@ function personChip(key, active) {
 function mechChips(selectedKey, keys, label) {
   return `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0">${keys.map((k) => personChip(k, k === selectedKey)).join('')}</div>`;
 }
+// Decision 66: a plain radio pill for a short/grouped choice on a form (work,
+// starting status, storage hook) — same shape as the toolbar's person chips
+// (tinted, never solid, when selected) but with real role="radio" semantics,
+// since these sit in a radiogroup on a form rather than a toggling filter.
+// minH: 44px (a full touch target) by default; the New job form's work/
+// status/storage pills (decision 66 doesn't mandate 44px the way decision
+// 62 does for the mechanic pills) use a slightly shorter 36px so the whole
+// branching form still fits its pop-up without scrolling.
+function radioPill(labelText, active, extra = '', minH = 44) {
+  return `<span role="radio" aria-checked="${active}" tabindex="${active ? '0' : '-1'}" style="display: inline-flex; align-items: center; justify-content: center; min-height: ${minH}px; box-sizing: border-box; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; border: 1px solid ${active ? 'transparent' : C.input}; background: ${active ? C.accentSoft : C.panel}; color: ${active ? C.accentSoftInk : C.ink}; ${extra}">${esc(labelText)}</span>`;
+}
+const formPill = (labelText, active) => radioPill(labelText, active, '', 36);
+// label/options: options is an array of plain strings; pillFn overrides how
+// each option renders (used by the mechanic pills below, which add an
+// avatar-style badge) — radioPill above is the default.
+function pillRadioGroup(labelText, options, selectedIdx, groupId, pillFn = (o, active) => radioPill(o, active)) {
+  return `<div style="display: flex; flex-direction: column; gap: 5px">
+<span id="${groupId}-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(labelText)}</span>
+<div role="radiogroup" aria-labelledby="${groupId}-label" style="display: flex; flex-wrap: wrap; gap: 5px">${options.map((o, i) => pillFn(o, i === selectedIdx)).join('')}</div>
+</div>`;
+}
+// Decision 62: choosing the mechanic on a booking request is pills, not a
+// select — the shop's mechanics plus the shared queue, styled like the
+// toolbar's person chips (initial badge + name, tinted when selected).
+const MECH_PILL_OPTIONS = [['Alex', 'A'], ['Jo', 'J'], ['Shared queue', 'group']];
+function mechanicPill(key, initial, active) {
+  const badgeInk = active ? C.accentSoftInk : C.muted;
+  const badgeBg = active ? '#ffffff' : C.mutedBg;
+  const badge = initial === 'group'
+    ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; flex-shrink: 0">${icon('customers', 13)}</span>`
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; font-size: 11px; font-weight: 700; flex-shrink: 0">${esc(initial)}</span>`;
+  return `<span role="radio" aria-checked="${active}" tabindex="${active ? '0' : '-1'}" style="display: inline-flex; align-items: center; gap: 7px; min-height: 44px; box-sizing: border-box; padding: 5px 14px 5px 5px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid ${active ? 'transparent' : C.input}; background: ${active ? C.accentSoft : C.panel}; color: ${active ? C.accentSoftInk : C.ink}">${badge}${esc(key)}</span>`;
+}
+function mechanicPillGroup(size, selectedKey = 'Shared queue') {
+  const groupId = 'req-new-mech-' + size;
+  return `<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="${groupId}-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span>
+<div role="radiogroup" aria-labelledby="${groupId}-label" style="display: flex; flex-wrap: wrap; gap: 6px">${MECH_PILL_OPTIONS.map(([key, initial]) => mechanicPill(key, initial, key === selectedKey)).join('')}</div>
+</div>`;
+}
 // "New job" is a button in the diary toolbar, not a slot hint (decision 22).
 // newJob is either an href (a plain link button) or the string 'active' (the
 // pressed "Choose a time" state shown on new-job-pick while a slot is being chosen).
@@ -992,7 +1165,7 @@ function dayTimelineRow(j, size) {
   const startTime = `${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`;
   return `<a href="${href}" aria-label="${esc(customer)}, ${esc(jobRef)}, ${esc(label)}, ${esc(j.detail)}" style="display: flex; gap: 10px; text-decoration: none; color: inherit">
 <div style="width: 52px; flex-shrink: 0; font-family: ${MONO}; font-size: 12px; color: ${C.muted}; padding-top: 10px">${esc(startTime)}</div>
-<div style="flex-grow: 1; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; background: ${bg}; border-left: 3px solid ${ink}; ${ring}">
+<div style="flex-grow: 1; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; background: ${bg}; border: 1.75px solid ${ink}; ${ring}">
 <div style="font-size: 13px; font-weight: 700; color: ${C.ink}; ${strike}">${esc(customer)}${bike ? ` · ${esc(bike)}` : ''}</div>
 <div style="font-size: 11px; font-weight: 700; color: ${ink}">${esc(jobRef)} · ${esc(label)} · ${esc(j.detail)}</div>
 </div></a>`;
@@ -1325,7 +1498,7 @@ ${row(`${h2('Sam Reed', 18)}${statusBadge('pending')}`, 10, 'justify-content: sp
 ${txt('Specialized Sirrus · grey', 14, `color: ${C.muted}`)}
 <div style="display: flex; flex-direction: column; gap: 6px">${h2('What the customer told us', 14)}${quote('No message from the customer.')}</div>
 <div style="display: flex; flex-direction: column; gap: 4px">${txt(`<strong>Brake service · Price to be confirmed</strong>`)}${note('45 minutes planned. Requested Friday 18 September.')}</div>
-${select('Mechanic', ['Shared workshop queue', 'Alex Morgan', 'Jo Taylor'], 'req-new-mech-' + size)}`;
+${mechanicPillGroup(size, 'Shared queue')}`;
 }
 const reqNewOpts = {
   id: 'req-new-title', title: 'Sam Reed · Specialized Sirrus', sub: 'Pending request', body: requestNewBody,
@@ -1433,6 +1606,30 @@ ${note('Internal only — not shown to the customer.', 12)}
 // the most free time that day; from a mechanic's own column (the day view),
 // that mechanic is pre-filled instead. Either way it's a real select the
 // member of staff can change before saving.
+// Decision 66: Work as branching pills — first-level group pills (Full
+// service / Individual service), then the chosen group's services as pills
+// below it, each showing its time, plus a small "Search services" link
+// beside the group pills for the shop's full list (services stay searchable
+// too, per the decision — the pills are the short/grouped path, not the only
+// path). service is the currently-chosen service name; its group is derived
+// so both boards stay consistent with whichever one is selected.
+function workPillsBlock(size, service) {
+  const groupNames = Object.keys(SERVICE_GROUPS);
+  const activeGroup = serviceGroupOf(service);
+  const groupId = 'nj-work-group-' + size;
+  const serviceId = 'nj-work-service-' + size;
+  return `<div style="display: flex; flex-direction: column; gap: 5px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<span id="${groupId}-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Work</span>
+${link('Search services')}
+</div>
+<div role="radiogroup" aria-labelledby="${groupId}-label" style="display: flex; flex-wrap: wrap; gap: 5px">${groupNames.map((g) => formPill(g, g === activeGroup)).join('')}</div>
+<div style="display: flex; flex-direction: column; gap: 5px">
+<span id="${serviceId}-label" style="font-size: 12px; font-weight: 600; color: ${C.muted}">${esc(activeGroup)}</span>
+<div role="radiogroup" aria-labelledby="${serviceId}-label" style="display: flex; flex-wrap: wrap; gap: 5px">${SERVICE_GROUPS[activeGroup].map((n) => formPill(`${n} · ${serviceDurationOf(n)} min`, n === service)).join('')}</div>
+</div>
+</div>`;
+}
 function newJobBody(size, opts = {}) {
   const {
     when = 'Tue 15 Sep · 10:00',
@@ -1440,6 +1637,7 @@ function newJobBody(size, opts = {}) {
     mechHint = 'Mechanic chosen automatically: most free time on Tuesday. To change it, drag the job to another mechanic in the Day view.',
     showCustomer = true,
     freeMinutes = null,
+    service = 'Standard service',
     startingStatusIdx = 0,
     bikeHereChecked = false,
     storageDefault = 'Hook 3',
@@ -1448,11 +1646,11 @@ function newJobBody(size, opts = {}) {
   } = opts;
   const mechOptions = ['Alex Morgan', 'Jo Taylor', 'Shared workshop queue'];
   const ordered = [mechanic, ...mechOptions.filter((m) => m !== mechanic)];
-  // Item 23, desktop only: picking the service select sets the job's
-  // estimated time; if the free time at the chosen slot (freeMinutes) is
-  // shorter, a warning shows before saving. Save stays available regardless
-  // (the diary shows the overlap if staff save anyway).
-  const [, svcDur] = SERVICE_OPTIONS[0];
+  // Item 23, desktop only: picking the service pill sets the job's estimated
+  // time; if the free time at the chosen slot (freeMinutes) is shorter, a
+  // warning shows before saving. Save stays available regardless (the diary
+  // shows the overlap if staff save anyway).
+  const svcDur = serviceDurationOf(service);
   const timeLabel = when.split('· ')[1] || when;
   const warn = freeMinutes != null && svcDur > freeMinutes;
   if (size !== 'desktop') {
@@ -1495,25 +1693,27 @@ ${custResult}
   // prove it's there. The 43px only shows up on this board (new-job), not
   // new-job-day, because this is the one with the "won't fit" warning banner
   // (item 23) — that's the extra block the other board doesn't carry.
-  // Tightened rather than cut: column gap 12px→9px, "Note for the customer"
-  // 3 rows→2 (still fits the example text), dialog body padding 20px→14px
-  // (below, in newJobDialog) — together enough to bring it back within the
-  // fixed 800px board with no scrolling needed.
-  const leftCol = `<div style="display: flex; flex-direction: column; gap: 9px">
+  // Tightened rather than cut: column gap 12px→9px→6px (the last step, Part
+  // A.4, 29 Sep round 3, is decision 66's pills wrapping onto more lines
+  // than the selects they replaced), "Note for the customer" 3 rows→2 (still
+  // fits the example text), dialog body padding 20px→14px→8px (below, in
+  // newJobDialog) — together enough to bring it back within the fixed 800px
+  // board with no scrolling needed.
+  const leftCol = `<div style="display: flex; flex-direction: column; gap: 6px">
 ${customerBlock}
 ${bikeBlock}
-${select('Work / service', SERVICE_OPTIONS.map(([n, d]) => `${n} · ${d} min`), 'nj-work-' + size)}
-${field('Job title', { value: SERVICE_OPTIONS[0][0], id: 'nj-title-' + size, hint: 'Filled in from the work chosen. Shown on the diary block.' })}
+${workPillsBlock(size, service)}
+${field('Job title', { value: service, id: 'nj-title-' + size, hint: 'Filled in from the work chosen. Shown on the diary block.' })}
 ${area('Note for the customer', receiptNote, 'nj-receipt-' + size, 2)}
 ${note('Printed on their receipt.', 12)}
 </div>`;
-  const rightCol = `<div style="display: flex; flex-direction: column; gap: 9px">
+  const rightCol = `<div style="display: flex; flex-direction: column; gap: 6px">
 ${banner(`${when} · ${mechanic}`, 'info')}
 ${note(mechHint)}
 ${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}
-${select('Starting status', rotate(STARTING_STATUS, startingStatusIdx), 'nj-status-' + size)}
+${pillRadioGroup('Starting status', STARTING_STATUS, startingStatusIdx, 'nj-status-' + size, (o, active) => formPill(o, active))}
 <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">${togglePill('The bike is here now', bikeHereChecked, 'nj-herenow-' + size)}${note('Books it in straight away, ready to print the bike tag.', 12)}</div>
-${select('Where the bike is kept', storageOptions(storageDefault), 'nj-storage-' + size)}
+${pillRadioGroup('Where the bike is kept', STORAGE_SLOTS, STORAGE_SLOTS.indexOf(storageDefault), 'nj-storage-' + size, (o, active) => formPill(o, active))}
 ${note('Storage slots are on for this shop. Turn them off in Settings.', 12)}
 ${staffNotesBlock(size, staffNotes)}
 </div>`;
@@ -1535,7 +1735,13 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
   // never sits clipped below the fold — dialogBody's overflow:hidden is
   // right for those, not for this longer form; the footer (Cancel/Save job)
   // stays pinned outside the scrolling body either way.
-  const body = `<div style="flex-grow: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 14px 20px; display: flex; flex-direction: column; gap: 14px">${centered}</div>`;
+  // Part A.4 (29 Sep round 3, decision 66 follow-up): the branching pills
+  // (work group + service, starting status, storage) wrap onto more lines
+  // than the selects they replaced, so the strict fit check (inside
+  // overflow:hidden/auto — a static canvas can't prove there's more past a
+  // scrollbar) found both new-job and new-job-day taller than this pop-up
+  // again. Tightened the same way as Part A.3: body padding 14px→10px here.
+  const body = `<div style="flex-grow: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 6px 20px; display: flex; flex-direction: column; gap: 14px">${centered}</div>`;
   const footer = size === 'desktop'
     ? row(`${button('Cancel', { variant: 'ghost', href: `${closeId}-${size}.dc.html` })}<div style="flex-grow: 1"></div>${button('Save job', { variant: 'primary' })}`, 10)
     : button('Save', { block: true });
@@ -1544,7 +1750,8 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
 // Tue 15 Sep · 10:00 · Alex Morgan has 30 minutes free before Alex's next job
 // (10:30, WH-1081) — item 23's warning example. Ready by (decision 51) is the
 // diary day chosen above — Tue 15 Sep — not a separate field.
-const NEW_JOB_OPTS = { freeMinutes: 30, storageDefault: 'Hook 3', receiptNote: 'Rear brake squeals and feels weak.' };
+// Decision 66: drawn with "Full service" → "Standard service · 60 min" selected.
+const NEW_JOB_OPTS = { freeMinutes: 30, service: 'Standard service', storageDefault: 'Hook 3', receiptNote: 'Rear brake squeals and feels weak.' };
 screens['new-job'] = {
   desktop: newJobDialog('desktop', DW, DH, 6, { baseFn: (s) => diaryFrozenContent(s), bodyOpts: NEW_JOB_OPTS }),
   tablet: newJobDialog('tablet', TW, TH, 28, { baseFn: (s) => diaryFrozenContent(s) }),
@@ -1556,10 +1763,12 @@ screens['new-job'] = {
 // last job ends exactly at 16:00, so there are 120 minutes free until the
 // 18:00 grid end — no warning (item 23: "keep, ... no warning"). Item 26: the
 // bike is already here, so "The bike is here now" is ticked and the starting
-// status is "Bike is here"; a staff note is already on the job.
+// status is "Bike is here"; a staff note is already on the job. Decision 66:
+// drawn with "Individual service" open, "Gear adjustment · 60 min" selected
+// — 60 well under the 120 free minutes, so the won't-fit warning stays off.
 const NEW_JOB_DAY_OPTS = {
   when: 'Thu 17 Sep · 16:00', mechanic: 'Jo Taylor', mechHint: 'Mechanic from the column you clicked.', showCustomer: false, freeMinutes: 120,
-  startingStatusIdx: 1, bikeHereChecked: true, storageDefault: 'Hook 5',
+  service: 'Gear adjustment', startingStatusIdx: 1, bikeHereChecked: true, storageDefault: 'Hook 5',
   receiptNote: 'Please check the bottom bracket — the customer says there is play.',
   staffNotes: [{ who: 'Jo Taylor', when: '16:02', text: 'Customer will collect after work.' }],
 };
@@ -1645,16 +1854,6 @@ function jobLeftColumn(size, { editQuote = false } = {}) {
 ${panel(`${h2(editQuote ? 'Quote (edit mode) · revision 2' : 'Agreed work', 15)}${table([['Work'], ['Qty', 'center'], ['Amount', 'right'], ['Approval']], linesTableRows(), { size: 13, pad: '7px 8px' })}<div style="display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid ${C.border}; font-size: 14px; font-weight: 700"><span>${editQuote ? 'All proposed work' : 'Approved total'}</span>${mono(editQuote ? `£${total.toFixed(2)}` : `£${approvedTotal.toFixed(2)}`)}</div>${editQuote ? area('Message to Maya', 'We found worn rear pads. The gear cable is optional; it can wait.', 'quote-msg-' + size, 3) : note('Gear cable declined. Anything beyond these lines needs a new approval.', 12)}`, '', 14, 8)}
 ${scrollCue()}`, 12);
 }
-// Checklist (decision 21): each item is a checkbox with an optional note — a
-// mix of ticked-with-no-note (customer sees "All working well"), one written
-// note (the brakes item, stage2 copy), and an "Add note" link on the rest.
-const CHECKLIST = [
-  { t: 'Frame & fork', checked: true, note: '' },
-  { t: 'Wheels & tyres', checked: true, note: '' },
-  { t: 'Gears indexed', checked: true, note: '' },
-  { t: 'Brakes bled & adjusted', checked: true, note: 'The rear pads are worn. We recommend replacing the pads and adjusting the brake.' },
-  { t: 'Cables & housing', checked: false, note: '' },
-];
 function checklistRow(item, idx, size) {
   const id = `cl-${idx}-${size}`;
   let sub;
@@ -1667,21 +1866,6 @@ function checklistPanel(size, { emphasize = false } = {}) {
   return panel(`${h2('Standard service checklist', emphasize ? 16 : 15)}${CHECKLIST.map((it, i) => checklistRow(it, i, size)).join('')}`, emphasize ? `border-color: ${C.accent}` : '', 14, 4);
 }
 
-// ---------- Job overview quick-look box (decision 37, 28 Sep round) — the
-// small box a "View overview" click opens over the (lightly dimmed) diary:
-// just the job's notes, line items and cost, no customer details or
-// mechanic. Reuses the exact texts already in this file — Maya's booking
-// concern (CONCERN), the 09:05 booked-in note (HISTORY_ALL) attributed to
-// Jo Taylor (the default staff person throughout this file) and the brakes
-// checklist note (CHECKLIST) attributed to Alex Morgan, the mechanic who
-// starts work at 11:30 per HISTORY_ALL — nothing invented beyond those two
-// small, already-used timestamps. Chronological order: the customer's own
-// note from her booking, then staff notes as they were written.
-const QUICK_NOTES = [
-  { who: 'Customer', when: '', text: CONCERN.replace(/[“”]/g, '') },
-  { who: 'Jo Taylor', when: '09:05', text: 'Bike booked in, tag printed.' },
-  { who: 'Alex Morgan', when: '12:10', text: CHECKLIST.find((c) => c.t === 'Brakes bled & adjusted').note },
-];
 function quickNoteRow(n) {
   const tag = n.who === 'Customer'
     ? `<span style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: ${C.mutedBg}; color: ${C.muted}; font-size: 11px; font-weight: 700">Customer</span>`
@@ -2157,22 +2341,27 @@ ${diaryLegend()}`, 12)),
 // board (Thursday/today column, 09:00 — WH-1038/WH-1040, same slot
 // idea-s4-open measured): x 860.7, y 208, w 91.6, h 83 — fixed since this
 // layout is static, not user-resizable.
+// Decision 61: the popover follows the same 2-per-row arrangement as the
+// hover fan — a grid of two columns, further jobs wrapping to rows beneath,
+// rather than one job per row.
 function stackOpenPopover(cluster, anchor) {
-  const popW = 260;
+  const tileW = 122;
+  const cols = Math.min(cluster.length, 2);
+  const popW = cols === 2 ? tileW * 2 + 8 + 16 : tileW + 16; // tiles + inter-tile gap + panel padding
   const left = anchor.x + anchor.w / 2 - popW / 2;
   const top = anchor.y + anchor.h + 8;
   const blockRow = (j) => {
     const [bg, ink] = ST[j.key];
     const [, bike] = customerBikeOf(j);
     const t0 = `${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`;
-    return `<a href="job-overview-desktop.dc.html" aria-label="${esc(bike)}, ${esc(j.svc || '')}, ${esc(j.job)}" style="display: flex; flex-direction: column; gap: 1px; text-decoration: none; color: inherit; box-sizing: border-box; padding: 7px 10px; border-radius: 6px; background: ${bg}; border: 1.75px solid ${ink}">
-<span style="font-size: 12px; font-weight: 700; color: ${C.ink}">${esc(bike)}</span>
-<span style="font-size: 11px; font-weight: 700; color: ${ink}">${esc(j.svc || '')} · ${esc(t0)}</span>
+    return `<a href="job-overview-desktop.dc.html" aria-label="${esc(bike)}, ${esc(j.svc || '')}, ${esc(j.job)}" style="display: flex; flex-direction: column; gap: 1px; text-decoration: none; color: inherit; box-sizing: border-box; padding: 7px 8px; border-radius: 6px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden">
+<span style="font-size: 12px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)}</span>
+<span style="font-size: 11px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.svc || '')} · ${esc(t0)}</span>
 </a>`;
   };
-  return `<div role="dialog" aria-label="Choose which job to open" style="position: absolute; left: ${left}px; top: ${top}px; width: ${popW}px; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.25); padding: 8px; display: flex; flex-direction: column; gap: 4px; z-index: 20">
+  return `<div role="dialog" aria-label="Choose which job to open" style="position: absolute; left: ${left}px; top: ${top}px; width: ${popW}px; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.25); padding: 8px; display: flex; flex-direction: column; gap: 6px; z-index: 20">
 <div style="padding: 4px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: ${C.muted}">${cluster.length} jobs at 09:00</div>
-${cluster.map(blockRow).join('')}
+<div style="display: grid; grid-template-columns: repeat(${cols}, ${tileW}px); grid-auto-rows: max-content; gap: 8px">${cluster.map(blockRow).join('')}</div>
 </div>`;
 }
 screens['diary-stack-open'] = {
@@ -2180,6 +2369,22 @@ screens['diary-stack-open'] = {
 ${buildDiaryDesktopBoard('stacked')}
 ${stackOpenPopover(JOBS.filter((j) => j.day === STACK_EXAMPLE.day && j.start === STACK_EXAMPLE.start), { x: 860.7, y: 208, w: 91.6, h: 83 })}
 </div>`,
+  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
+  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+};
+
+// diary-hover-summary (decision 65, 29 Sep round 2, task item 3): a static
+// record of WH-1042's quick-look card baked open beside it (FORCE_HOVER_
+// SUMMARY_JOB, set only for this one build then cleared), the same way
+// diary-stack-hover bakes its fan open — everything else on the board (the
+// stacked-card control included) keeps its ordinary hover-only behaviour.
+screens['diary-hover-summary'] = {
+  desktop: (() => {
+    FORCE_HOVER_SUMMARY_JOB = 'WH-1042';
+    const board = buildDiaryDesktopBoard();
+    FORCE_HOVER_SUMMARY_JOB = null;
+    return board;
+  })(),
   tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
   phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
 };
@@ -2192,7 +2397,7 @@ ${stackOpenPopover(JOBS.filter((j) => j.day === STACK_EXAMPLE.day && j.start ===
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'settings-accessibility', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'settings-accessibility', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -2205,8 +2410,10 @@ export const ROWS = [
   // diary-stack-hover/diary-stack-open (task items 3/4, 29 Sep round 2) are
   // appended after settings-accessibility for the same reason: appending,
   // not inserting, is what puts them at exactly x 12240/13600, y 263 without
-  // moving any existing board on this row.
-  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'settings-accessibility', 'diary-stack-hover', 'diary-stack-open'] },
+  // moving any existing board on this row. diary-hover-summary (29 Sep round
+  // 3, task item 3) is appended after diary-stack-open for the same reason
+  // again — x 14960, y 263, no existing board moves.
+  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'settings-accessibility', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },
