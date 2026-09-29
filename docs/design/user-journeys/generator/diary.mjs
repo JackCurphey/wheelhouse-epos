@@ -67,6 +67,28 @@ const ST = THEME === 'sand' ? {
 };
 const statusBadge = (key, textOverride) => { const [bg, ink, label] = ST[key]; return `<span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${esc(textOverride || label)}</span>`; };
 
+// Audit H1/S1 (29 Sep): a Week-view block is only ~95px wide — too narrow for
+// "Waiting for parts" or even "Scheduled" once a bike name and job title are
+// already on the block, so the status word used to get appended to a line and
+// truncated mid-word ("Sc...", "Wa..."). Below, a status is shown as a small
+// shape in the block's top-right corner instead, with the full word kept in
+// the block's aria-label/title (unchanged) and in Day view, which has the
+// width to spell it out. Shape (not just colour/lightness) tells the six
+// statuses apart, matching the legend (H2) — a colour-blind mechanic scanning
+// fast still gets a distinct mark, not six identical dots.
+const STATUS_SHAPE = {
+  pending: (ink) => `<circle cx="5" cy="5" r="4" fill="${ink}"/>`,
+  scheduled: (ink) => `<rect x="1.25" y="1.25" width="7.5" height="7.5" rx="1.25" fill="${ink}"/>`,
+  waiting: (ink) => `<path d="M5 0.3L9.7 5L5 9.7L0.3 5Z" fill="${ink}"/>`,
+  hold: (ink) => `<path d="M5 0.6L9.6 9.2H0.4Z" fill="${ink}"/>`,
+  ready: (ink) => `<path d="M1.3 5.1L3.9 7.7L8.7 2.1" stroke="${ink}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+  cancelled: (ink) => `<path d="M1.6 1.6L8.4 8.4M8.4 1.6L1.6 8.4" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`,
+};
+function statusDot(key, size = 13) {
+  const [, ink] = ST[key];
+  return `<svg width="${size}" height="${size}" viewBox="0 0 10 10" aria-hidden="true" style="position: absolute; top: 4px; right: 4px; flex-shrink: 0; filter: drop-shadow(0 0 1px rgba(255,255,255,0.9))">${STATUS_SHAPE[key](ink)}</svg>`;
+}
+
 // ---------- Rooms — Workshop is now Diary (main page) + Overview (brief) ----------
 const ROOMS_DIARY = [
   ['Front desk', [['till', 'Till', 'till', 'OMS'], ['orders', 'Online orders', 'orders', 'OMS'], ['customers', 'Customers', 'customers', 'OMS'], ['messages', 'Messages', 'mail', 'OMS']]],
@@ -421,7 +443,13 @@ function clusterOverlaps(items) {
   }
   return clusters;
 }
-function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false) {
+// `narrow` is true for a Week-view block (7 columns, ~95px each) and false
+// for a Day-view block (2 mechanic columns, ~450px each). H1/S1 (29 Sep
+// audit): Week view never has room to spell out a status word next to a bike
+// name and job title, so a narrow block drops the word for the statusDot
+// corner mark instead; a wide Day-view block keeps the word written out in
+// full, as before, since it has the room.
+function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true) {
   const [bg, ink] = ST[j.key];
   const blockLabel = BLOCK_LABEL[j.key];
   const [customer, bike] = customerBikeOf(j);
@@ -429,12 +457,10 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   const top = ((j.start - GRID_START) / 30) * slotH + 2;
   const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
   // Three block sizes (item 2, 27 Sep round 2): a 90-minute-plus block is
-  // "roomy" enough for bike / job title / status as three separate lines,
-  // plus the storage hook as a fourth when there's one to show. A 30-minute
-  // block is "tiny" — at week-column width there's only room for bike + job
-  // title (the block's colour, plus the legend below the grid, carries the
-  // status instead of a status word that would truncate mid-word). Anything
-  // in between (a 60-minute block) shares the status onto job title's line.
+  // "roomy" enough for bike / job title / status as separate lines, plus the
+  // storage hook as a fourth when there's one to show. A 30-minute block is
+  // "tiny" — at week-column width there's only room for bike + job title.
+  // Anything in between (a 60-minute block) is neither.
   const roomy = h >= slotH * 2;
   const tiny = j.dur <= 30;
   const cancelled = j.key === 'cancelled';
@@ -446,28 +472,42 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // Faded (new-job-pick, item 2 of the 27 Sep round): busy blocks step back
   // visually while picking a time, so the free grid reads as clickable.
   const slot = STORAGE[j.job];
-  const line2 = tiny ? jobTitle : roomy ? jobTitle : [jobTitle, blockLabel].filter(Boolean).join(' · ');
-  const line3 = roomy ? [blockLabel, slot].filter(Boolean).join(' · ') : '';
-  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
-<span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ${strike}">${esc(bike)}</span>
+  // Narrow (Week view): never put the status word into line 2/3 text — the
+  // corner dot carries it instead, freeing the line for job title alone.
+  // Wide (Day view): unchanged — there's room to write the status out.
+  const line2 = narrow ? jobTitle : tiny ? jobTitle : roomy ? jobTitle : [jobTitle, blockLabel].filter(Boolean).join(' · ');
+  const line3 = narrow ? (roomy ? slot || '' : '') : roomy ? [blockLabel, slot].filter(Boolean).join(' · ') : '';
+  // Audit H1: bike names ("Trek Domane AL 3", "Brompton C Line") were
+  // truncating mid-word on their own, even before status text was added to
+  // the block. Where a narrow block is tall enough to spare the room (roomy,
+  // ~90min+), the bike name wraps onto a second line instead of cutting off;
+  // tiny/60-minute blocks stay single-line (no headroom to wrap without
+  // overflowing the fixed row height and breaking the no-scroll board).
+  const bikeWrap = narrow && roomy;
+  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${narrow ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+${narrow ? statusDot(j.key) : ''}
+<span style="font-size: 11px; font-weight: 700; color: ${C.ink}; ${strike} ${bikeWrap ? 'white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
 ${line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
 </a>`;
 }
 // The pending request block (decision 12): purple, labelled "Pending", linking
 // to the request pop-up rather than a job overview (there is no job yet).
+// Only ever drawn in the (narrow) Week view, so it always carries the corner
+// dot too (H1/S1) rather than the "Pending" word taking a whole line.
 function pendingBlock(size, slotH, highlighted = false) {
   const j = PENDING_DIARY;
   const [bg, ink] = ST.pending;
   const top = ((j.start - GRID_START) / 30) * slotH + 2;
   const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
   const ring = highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55);` : '';
-  // Item 2 (27 Sep round 2): bike, then job title, then "Pending" — the same
-  // bike/job-title-first order as an ordinary job block.
-  return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" title="${esc(j.bike)} · ${esc(j.jobTitle)} · ${esc(j.customer)} · Pending · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${ring}">
+  // Item 2 (27 Sep round 2): bike, then job title — the same bike/job-title-
+  // first order as an ordinary job block; "Pending" itself now lives in the
+  // corner dot + aria-label/title rather than a third text line.
+  return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" title="${esc(j.bike)} · ${esc(j.jobTitle)} · ${esc(j.customer)} · Pending · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 16px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${ring}">
+${statusDot('pending')}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.jobTitle)}</span>
-<span style="font-size: 10px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.85">Pending</span>
 </a>`;
 }
 // A dashed outline showing where a change request asked to move to (Oliver
@@ -550,7 +590,7 @@ function dayMechGrid({ dayIdx, size, slotH = 29, highlightJob = null }) {
   const col = (m, i) => {
     const items = JOBS.filter((j) => j.day === dayIdx && j.mech === m);
     const clusters = clusterOverlaps(items);
-    const blocks = clusters.map((c) => (c.length === 1 ? jobBlock(c[0], size, slotH, highlightJob?.type === 'job' && c[0].job === highlightJob.job) : combinedBlock(c, size, slotH))).join('');
+    const blocks = clusters.map((c) => (c.length === 1 ? jobBlock(c[0], size, slotH, highlightJob?.type === 'job' && c[0].job === highlightJob.job, false, false, false) : combinedBlock(c, size, slotH))).join('');
     return `<div style="grid-column: ${i + 2}; grid-row: 2; position: relative; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} background: repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)">${blocks}</div>`;
   };
   return `<div role="grid" aria-label="Workshop diary, Thursday 17 September 2026, by mechanic" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: ${cols}; grid-template-rows: auto ${gridH}px; border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden; background: ${C.panel}">
@@ -703,7 +743,14 @@ function changeSelectedDayList(size) {
 }
 
 // ---------- Diary badges / note ----------
-const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="width: 12px; height: 12px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0"></span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
+// H2 (29 Sep audit): this used to render as six near-invisible outlined
+// squares — the swatch <span> had a `width`/`height`/`background` but no
+// `display`, so as an inline element the browser ignored its box size
+// entirely and only the border painted. Fixed with `display: inline-block`,
+// and the swatch now carries the same status shape used on a narrow diary
+// block (statusDot) so the legend is a literal key to what's on the grid,
+// not just a colour reference.
+const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0">${statusDot(k, 11).replace('top: 4px; right: 4px;', 'top: 1.5px; right: 1.5px;')}</span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
 // Decision 13: the mechanic's diary is the standard diary filtered to that
 // mechanic, with one Me / Everyone switch in the normal toolbar position.
 // Mechanics can't accept bookings, but they can create a walk-in job (chosen
@@ -905,13 +952,15 @@ screens['diary-context-menu'] = {
 // ---------- Row 2: Requests, as a pop-up (decision 15) ----------
 const reqCloseHref = (size) => `diary-${size}.dc.html`;
 
-// 4. request-new — Sam Reed / Specialized Sirrus / Brake service (stage2 REQ example; no price source → placeholder)
+// 4. request-new — Sam Reed / Specialized Sirrus / Brake service (stage2 REQ
+// example; no price source yet, so this reads "Price to be confirmed" —
+// H4 (29 Sep audit): was a literal unrendered "[price]" template tag.
 function requestNewBody(size) {
   return `${eyebrow(`Received today at ${mono('08:15')}`)}
 ${row(`${h2('Sam Reed', 18)}${statusBadge('pending')}`, 10, 'justify-content: space-between')}
 ${txt('Specialized Sirrus · grey', 14, `color: ${C.muted}`)}
 <div style="display: flex; flex-direction: column; gap: 6px">${h2('What the customer told us', 14)}${quote('No message from the customer.')}</div>
-<div style="display: flex; flex-direction: column; gap: 4px">${txt(`<strong>Brake service · ${mono('[price]')}</strong>`)}${note('45 minutes planned. Requested Friday 18 September.')}</div>
+<div style="display: flex; flex-direction: column; gap: 4px">${txt(`<strong>Brake service · Price to be confirmed</strong>`)}${note('45 minutes planned. Requested Friday 18 September.')}</div>
 ${select('Mechanic', ['Shared workshop queue', 'Alex Morgan', 'Jo Taylor'], 'req-new-mech-' + size)}`;
 }
 const reqNewOpts = {
@@ -1372,8 +1421,29 @@ function waitingStripCompact() {
 function finishedStripCompact() {
   return jpPanel(`${jpRow(`<span style="font-size: 13px">Alex finished the work and final checks at ${jpMono('15:30')}. The bike is still in the shop.</span><span style="flex-grow: 1"></span><span style="font-size: 13px; font-weight: 700">Agreed work ${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span>`, 10)}`, '', 6, 0);
 }
+// H5 (29 Sep audit): the old banner read past-tense ("Bike handed to the
+// customer... Taken at the Wheelhouse till today at 16:52") right next to a
+// "Record collection" button and a "Ready for collection" status — unclear
+// whether the bike had already left. Split in two: this strip states only
+// the one thing that's already a settled fact (payment), as a fact, with no
+// clock-time that could read as "the whole handover already happened"; the
+// hand-back items move to collectionHandback(), unticked, next to the
+// "Record collection" button itself — a checklist of what that button is
+// about to confirm, not a record of what already occurred.
 function collectionStripCompact() {
-  return jpPanel(`${jpRow(`<span style="font-size: 12px; color: ${C.ink}">Bike handed to the customer or authorised collector · Lock key and rear light returned</span>`, 8)}${jpRow(`${badge('Paid', 'green')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 11px; color: ${C.muted}">Taken at the Wheelhouse till today at ${jpMono('16:52')}.</span>`, 8)}`, '', 6, 3);
+  return jpPanel(`${jpRow(`${badge('Paid', 'green')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Payment already taken.</span>`, 8)}`, '', 6, 3);
+}
+// Forward-looking hand-back checklist (H5): the same two facts the shop
+// already tracks for this job (decision-approved example data, nothing
+// invented) — shown unticked, inline directly above "Record collection", so
+// it's plainly "check these, then record it" rather than a receipt. One row,
+// not stacked, and a smaller item height than the check() default (24px, not
+// 28px) — this sits in the dialog's fixed-height footer chrome, so it stays
+// as compact as the two items can read while still each being a real
+// checkbox + label a mechanic can tap.
+const handbackItem = (label, id) => `<label for="${id}" style="display: flex; align-items: center; gap: 8px; min-height: 24px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 16px; height: 16px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 13px; color: ${C.ink}">${esc(label)}</span></label>`;
+function collectionHandback(size) {
+  return `<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap">${handbackItem('Bike handed to the customer or authorised collector', 'coll-hb1-' + size)}${handbackItem('Lock key and rear light returned', 'coll-hb2-' + size)}</div>`;
 }
 
 // Decision 51 (28 Sep 2026): ready-by is the diary day, not a separate field
@@ -1529,12 +1599,17 @@ screens['job-waiting-parts'] = buildJobPage({
   },
 });
 
-// 14. job-finished — "Job · finished"; one "Take payment" step (Wheelhouse till).
+// 14. job-finished — "Job · finished"; one "Take payment" step (Wheelhouse
+// till). L1 (29 Sep audit): "Take payment" used to be the only primary
+// button on the job page carrying an icon while its siblings ("Book in",
+// "Start work", "Send quote", "Mark ready for collection", "Record
+// collection") had none — dropped the icon here so the convention is "no
+// icons on primary job-stage buttons" everywhere, not "some do, some don't".
 const finishedTop = (size) => `${banner(`Alex finished the work and final checks at ${mono('15:30')}. The bike is still in the shop.`)}
 ${panel(`${h2('Payment', 15)}<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 14px">Agreed work</span>${mono('£111.00', 'font-size: 18px')}</div>`, '', 14, 6)}`;
 screens['job-finished'] = buildJobPage({
   status: 'Work finished', tone: 'grey', stageLabel: 'Work finished', top: finishedTop, historyUpTo: 6,
-  footer: (size) => `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, iconName: 'till', href: 'job-collection-' + size + '.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
+  footer: (size) => `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
   desktop: {
     stageTop: finishedStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
@@ -1542,7 +1617,7 @@ screens['job-finished'] = buildJobPage({
     leftStatus: 'Work finished', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
-    footer: `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, iconName: 'till', href: 'job-collection-desktop.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
+    footer: `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-desktop.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
   },
 });
 
@@ -1559,7 +1634,7 @@ screens['job-collection'] = buildJobPage({
     leftStatus: 'Ready for collection', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
-    footer: button('Record collection', { variant: 'primary', block: true }),
+    footer: `${collectionHandback('desktop')}${button('Record collection', { variant: 'primary', block: true })}`,
   },
 });
 
@@ -1604,9 +1679,19 @@ const ARRIVALS = [
   ['WH-1045', 'Jamie Brooks', 'Giant Escape 2', 'Gear adjustment', () => `<span style="font-size: 13px">${mono('10:30')} appointment</span>`],
   ['WH-1047', 'Aisha Khan', 'Cannondale Quick', 'Safety check', () => '<span style="font-size: 13px">Drop-off</span>'],
 ];
+// M7 (29 Sep audit): "6h / 8h" takes a moment of mental maths to read as a
+// proportion, sitting beside two cards that are plain counts — a thin fill
+// bar tells the same story with no reading required. Only "Planned effort"
+// has a ratio shape ("Nh / Nh") to parse; the other two stat cards are plain
+// counts and stay as they are.
+const statFill = (pct) => `<div role="img" aria-label="${pct}% of planned effort used today" style="width: 100%; height: 4px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${pct}%; height: 100%; background: ${C.accent}"></div></div>`;
 function overviewContent(size) {
   return stack(`${txt('Thursday 17 September · one shop, one view of the work', 15, `color: ${C.muted}`)}
-${grid('repeat(3, minmax(0, 1fr))', STATS_DESK.map(([k, v, s]) => panel(`${eyebrow(k)}<div style="font-size: 24px; font-weight: 700">${esc(v)}</div>${note(s)}`, '', 16, 4)).join(''))}
+${grid('repeat(3, minmax(0, 1fr))', STATS_DESK.map(([k, v, s]) => {
+    const m = /^(\d+(?:\.\d+)?)h\s*\/\s*(\d+(?:\.\d+)?)h$/.exec(v);
+    const fill = m ? statFill(Math.min(100, Math.round((Number(m[1]) / Number(m[2])) * 100))) : '';
+    return panel(`${eyebrow(k)}<div style="font-size: 24px; font-weight: 700">${esc(v)}</div>${fill}${note(s)}`, '', 16, 4);
+  }).join(''))}
 ${segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs')}
 ${card(table([['Job / customer'], ['Bike'], ['Work'], ['Custody'], ['', 'right']], ARRIVALS.map(([j, n, b, w, a]) => [`${mono(j)} · ${esc(n)}`, esc(b), esc(w), badge('Expected', 'blue'), a()])), 'overflow: hidden')}`, 14);
 }
@@ -1632,7 +1717,14 @@ function customerBody(size) {
   const jobRows = mayaJobs.map((j) => {
     const [dayName, date] = DAYS[j.day];
     const t = `${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`;
-    const work = j.detail.includes('·') ? j.detail.split('·').slice(1).join('·').trim() : j.detail;
+    // L2 (29 Sep audit): this used to parse the Work column out of j.detail's
+    // free-text string (splitting on "·" and taking whatever came after) —
+    // WH-1042's detail happens to read "11:30–13:00 · approved £111" (the
+    // approval amount, not the service), so the parsed "work" text leaked
+    // that amount into the table instead of a service name. Bound directly
+    // to j.svc (every JOBS entry already carries one) so the column can't
+    // pick up unrelated free text again.
+    const work = (j.svc || '').toLowerCase();
     return [mono(j.job), `${dayName} ${date} Sep · ${t}`, esc(work), statusBadge(j.key)];
   });
   return stack(`<div>${link('‹ Back to job', 'job-overview-desktop.dc.html')}</div>

@@ -49,17 +49,26 @@ export const dialogFooter = (inner) => `<div style="flex-shrink: 0; box-sizing: 
 // jobTitle/status/tone parameterised (job-options.mjs calls this with the
 // fixed "Standard service"/"In workshop"/"blue" — same output as before).
 export function finalTitleBar(titleId, jobTitle, status, tone, closeHref = '#') {
-  return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 9px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
+  // Vertical padding trimmed to 4px (from 9px): the 44px close button, not
+  // the padding, sets this header's floor, so the extra padding was pure
+  // slack — reclaimed here (and in finalCustStrip below) to make room for
+  // H3's taller "Done" touch targets without any board needing to scroll.
+  return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 4px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
 <div style="display: flex; align-items: center; gap: 10px; min-width: 0"><h2 id="${titleId}" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 18px; font-weight: 700">${esc(jobTitle)}</h2>${badge(status, tone)}</div>
-<a href="${closeHref}" aria-label="Close, back to the diary" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
+<a href="${closeHref}" aria-label="Close, back to the diary" title="Close" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
 </header>`;
 }
 // customer: { name, phone, email, bike, storageSlot }; mechanicName: plain
 // text (decision 32 — no mechanic select); custHref: the account link.
 export function finalCustStrip(customer, mechanicName, custHref = '#') {
-  const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
+  // M6 (29 Sep audit): these three icon-only buttons had an aria-label for
+  // screen readers but nothing a sighted mouse user hovering would see — the
+  // inbox-tray and envelope icons in particular are similar enough to
+  // hesitate over. Added `title` (a native browser tooltip) alongside the
+  // existing aria-label, same text.
+  const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" title="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
   const custLinkF = `<a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
-  return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 5px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">
+  return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 2px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">
 <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}">${custLinkF}<span>${esc(customer.phone)}</span><span>${esc(customer.email)}</span><span>${esc(customer.bike)}</span>${customer.storageSlot ? `<span style="color: ${C.muted}">Kept on ${esc(customer.storageSlot)}</span>` : ''}<span>Mechanic: <strong>${esc(mechanicName)}</strong></span></div>
 <div style="display: flex; gap: 8px; flex-shrink: 0">${iconBtnF('inbox', `Message ${esc(customer.name)}`)}${iconBtnF('mail', `Email ${esc(customer.name)}`)}${iconBtnF('menu', 'Notes')}</div>
 </div>`;
@@ -69,8 +78,15 @@ export function finalCustStrip(customer, mechanicName, custHref = '#') {
 // Decision 42: the customer's spending limit from their booking (decision 41),
 // shown as a tag so a mechanic sees how far extra work can go before a call.
 export const SPEND_LIMIT = 'Customer OK up to £200';
+// M2 (29 Sep audit): this is the one chip meant to stop a mechanic doing
+// unapproved work, but the plain "blue" badge() sat at the same quiet visual
+// weight as the "Ready by" chip next to it — nothing marked it as the one
+// with a consequence if missed. Its own badge-shaped chip keeps the blue
+// tone but adds a solid coloured left edge and bold text, so it reads
+// heavier than an ordinary info badge without growing in size.
+const limitBadge = (text) => `<span style="display: inline-flex; align-items: center; padding: 3px 10px 3px 8px; border-radius: 999px; border-left: 3px solid ${C.blueInk}; background: ${C.blueBg}; color: ${C.blueInk}; font-size: 12px; font-weight: 700; white-space: nowrap">${esc(text)}</span>`;
 export function jobMetaRow(jobNum, created, readyByBadge, totalBadge, limit = SPEND_LIMIT) {
-  return row(`${mono(jobNum, 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">${esc(created)}</span><span style="flex-grow: 1"></span>${limit ? badge(limit, 'blue') : ''}${readyByBadge}${totalBadge}`, 10);
+  return row(`${mono(jobNum, 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">${esc(created)}</span><span style="flex-grow: 1"></span>${limit ? limitBadge(limit) : ''}${readyByBadge}${totalBadge}`, 10);
 }
 // Decision 50 (28 Sep 2026): "Bike is here" is a clickable toggle pill, not a
 // tick box; "New bike build" is dropped from the job page entirely — it only
@@ -126,7 +142,7 @@ export function plainFinalSection(title, { meta = '', tags = '', body = '', grow
   const boxStyle = `${grow ? 'flex-grow: 1;' : 'flex-shrink: 0;'} min-height: 0; display: flex; flex-direction: column; overflow: hidden;`;
   return `<div style="box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}; ${boxStyle}">
 ${header}
-<div style="box-sizing: border-box; padding: 4px 14px; ${grow ? 'flex-grow: 1;' : ''} min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px">${body}</div>
+<div style="box-sizing: border-box; padding: 2px 14px; ${grow ? 'flex-grow: 1;' : ''} min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px">${body}</div>
 </div>`;
 }
 
@@ -159,10 +175,32 @@ export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', to
   const rowsHtml = sortLines(lines).map((l) => {
     const declined = l.approval === 'Declined';
     const totalStrike = declined ? `text-decoration: line-through; color: ${C.muted};` : '';
+    // H3 (29 Sep audit, decision 34): the Done tick is the control a
+    // mechanic — often gloved, often glancing not looking — presses most on
+    // this table, so its hit area is a label around a smaller (20px) visible
+    // box, the same pattern as "Bike is here". Widened to 44px (the full
+    // accessibility floor) with no trouble; height is 34px, not 44 — a
+    // genuinely full 44px row, times a 4-line table's worth of rows, doesn't
+    // fit this dialog's fixed, no-scroll height at once (confirmed: at 44px
+    // it overflowed job-collection/job-finished/job-waiting-parts by
+    // 25-40px even after trimming this dialog's own chrome padding below to
+    // its floor). 34px still gives roughly 3.5x the tap area of the original
+    // bare 20px checkbox (44x34 vs 20x20) — the audit's own fallback for
+    // exactly this conflict ("rows may grow a little — keep no-scroll on
+    // every job board") reads as choosing no-scroll over the full 44px
+    // when the two collide, so that's the version shipped here. Flagged for
+    // Jack: full 44px is achievable with more layout rework (e.g. splitting
+    // the job header into two rows per S2, freeing space table-side) if he'd
+    // rather have that than 34px.
+    // (Also tried a -12px-margin overlay so the row wouldn't grow at all: it
+    // does give a real 44px click box, but every TD/TR then reports
+    // scrollHeight > clientHeight to the project's own no-scroll fit check —
+    // a real, if harmless, discrepancy the check has no way to wave through,
+    // so it's not usable here.)
     return `<tr>
 ${tdF(mono(l.code || '—'))}
 ${tdF(`<span><span style="font-weight: 600">${esc(l.work)}</span><span style="font-size: 12px; color: ${C.muted}"> · ${esc(l.sub)}</span></span>`)}
-${tdF(`<input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} aria-label="${esc(l.work)} done" style="width: 18px; height: 18px; accent-color: ${C.accent}">`, 'text-align: center')}
+${tdF(`<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 34px; cursor: pointer"><input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`, 'text-align: center; padding-top: 0; padding-bottom: 0')}
 ${tdF(l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(l.qty))}
 ${tdF('—', `color: ${C.muted}; font-size: 12px`)}
@@ -191,9 +229,9 @@ export function jobPopupContent({
   stageTop = '', // optional stage-only section (bike tag, waiting-for-parts, payment) — inserted above the job details/notes section
 }) {
   const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${left}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn({ customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref })}</div>`, 24);
-  const jobSection = panel(`${jobMetaRow(jobNum, created, readyByBadge, totalBadge, ...(limit !== undefined ? [limit] : []))}${jobBody}`, '', 5, 3);
+  const jobSection = panel(`${jobMetaRow(jobNum, created, readyByBadge, totalBadge, ...(limit !== undefined ? [limit] : []))}${jobBody}`, '', 3, 3);
   const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(lines, { totalLabel, totalValue, footerNote, quoteAction }), grow: false });
-  const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 4, 3);
+  const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 4, 1);
   return `${finalTitleBar(titleId, jobTitle, status, tone, closeHref)}${finalCustStrip(customer, mechanicName, custHref)}${body}${footer ? dialogFooter(footer) : ''}`;
 }
 

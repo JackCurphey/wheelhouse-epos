@@ -257,6 +257,12 @@ answers, in the order given.
     the form): the chosen time and mechanic appear together at the top of
     the form ("Tue 15 Sep · 10:00 · Alex Morgan") with the reason; changing
     the mechanic is done by dragging in the Day view.
+55. **UI audit adopted as a finishing pass** (Jack, 29 Sep; audit in
+    docs/design/user-journeys/workshop-day-ui-audit.md): fix the five High
+    findings and the quick wins; short diary blocks show status as a colour
+    dot/icon with the word where there's room (S1, which is also the fix for
+    H1); the work-and-parts "Done" ticks get a full 44px touch area; S2–S4
+    are drawn as before/after boards for Jack to choose.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
