@@ -24,6 +24,10 @@ const FJELL = {
   warnBg: '#fff7e0', warnInk: '#8a6100', okBg: '#e8f5ec', successInk: '#2a3024',
   blueBg: '#eaf1fb', blueInk: '#2c5289', purpleBg: '#f1e8fb', purpleInk: '#6a3ea1',
   mutedBg: '#e8e7e1', sidebarActive: '#3f4d33', sidebarInk: '#f3f2ee',
+  // accentSoft/accentSoftInk: a tint of Fjell's own olive accent, for the
+  // diary toolbar's selected people chips (decision 60) — same role as
+  // Sand's accentSoft above.
+  accentSoft: '#e4e8d2', accentSoftInk: '#3f4d33',
   cardShadow: '0 1px 2px rgba(28,30,25,0.06), 0 6px 18px rgba(28,30,25,0.06)',
 };
 // Sand theme tokens (decision 48, 28 Sep 2026 — look-4 "Soft sand, dark
@@ -45,6 +49,10 @@ const SAND = {
   warnBg: '#F7EAC2', warnInk: '#7A5A10', okBg: '#E1EEDD', successInk: '#295C39',
   blueBg: '#E4EAF3', blueInk: '#294872', purpleBg: '#ECE3F2', purpleInk: '#5C3E87',
   mutedBg: '#F0EADC', sidebarActive: '#39352E', sidebarInk: '#F4EEE1',
+  // accentSoft/accentSoftInk: look-4's own tint (looks.mjs) — used for the
+  // diary toolbar's selected people chips (decision 60), so a selected
+  // filter reads as tinted, never as the same solid ink as a primary button.
+  accentSoft: '#F1E3BE', accentSoftInk: '#7A5A10',
   cardShadow: 'none',
 };
 export const C = THEME === 'sand' ? SAND : FJELL;

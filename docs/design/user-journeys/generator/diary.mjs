@@ -887,13 +887,56 @@ ${days.map((d, i) => dayColumn(d, i)).join('')}
 </div>`;
 }
 // Week/Day are real links between the week grid (diary-<size>) and the day
-// view (diary-day-<size>) — brief item 18.
+// view (diary-day-<size>) — brief item 18. Decision 60: drawn as one joined
+// segmented switch (a tablist) rather than two separate buttons, so it reads
+// as a single control with two positions, distinct in shape from the date
+// arrows and the mechanic chips either side of it in the toolbar.
 function viewSwitch(active, size) {
   const items = [['Week', `diary-${size}.dc.html`], ['Day', `diary-day-${size}.dc.html`]];
-  return `<div role="group" aria-label="Diary view" style="display: inline-flex; gap: 6px; flex-wrap: wrap">${items.map(([t, href]) => {
+  return `<div role="tablist" aria-label="Diary view" style="display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; box-sizing: border-box; min-height: 44px; padding: 3px; border-radius: 10px; background: ${C.mutedBg}">${items.map(([t, href]) => {
     const on = t === active;
-    return `<a href="${href}" aria-current="${on}" style="min-height: 36px; padding: 0 12px; border-radius: 6px; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; border: 1px solid ${on ? C.accent : C.input}; background: ${on ? C.accent : C.panel}; color: ${on ? '#ffffff' : C.ink}">${t}</a>`;
+    return `<a href="${href}" role="tab" aria-selected="${on}" style="min-height: 38px; padding: 0 16px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; background: ${on ? C.panel : 'transparent'}; color: ${C.ink}; ${on ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.14);' : ''}">${t}</a>`;
   }).join('')}</div>`;
+}
+// Decision 60: Previous/Next as small icon-only arrow buttons either side of
+// the date range text, with Today as a small text button beside them —
+// replaces the old three-way "‹ Prev / Today / Next ›" segmented control,
+// which read as the same shape/size as the view switch and mechanic filter.
+// The chevron icon points down; rotating it ±90deg gives left/right arrows
+// without adding new icon paths to ui.mjs.
+const dateArrow = (dir, label) => `<button type="button" aria-label="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.input}; background: transparent; color: ${C.ink}"><span style="display: inline-flex; transform: rotate(${dir === 'prev' ? 90 : -90}deg)">${icon('chevron', 18)}</span></button>`;
+// activeView picks both the date-range text and the aria-labels' unit (week
+// view shows the 7-day range; day view — always TODAY, Thursday 17, per the
+// day grid below — shows the one day). Both labels are drawn once here so
+// every toolbar (diary, diary-day, the diary frozen behind a pop-up, the
+// mechanic diary, pick mode) shows the same text.
+function dateNav(activeView) {
+  const isDay = activeView === 'Day';
+  const label = isDay ? 'Thursday 17 September' : '14–20 September 2026';
+  const unit = isDay ? 'day' : 'week';
+  return `<div style="display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0">${dateArrow('prev', `Previous ${unit}`)}
+<span style="min-width: ${isDay ? 146 : 164}px; text-align: center; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${esc(label)}</span>
+${dateArrow('next', `Next ${unit}`)}
+<button type="button" style="min-height: 36px; padding: 0 10px; margin-left: 2px; border-radius: 6px; font-family: inherit; font-size: 13px; font-weight: 600; border: 1px solid transparent; background: transparent; color: ${C.ink}">Today</button></div>`;
+}
+// Decision 60: the mechanic filter drawn as "people chips" — a small round
+// initial badge (or a group icon for "Everyone") plus the name, lightly
+// tinted (never solid black) when selected and outlined when not — so it
+// reads as a filter, not another button matching the view switch or date
+// arrows. Reused for the mechanic diary's Me/Everyone switch (decision 13).
+const CHIP_TEXT = { Everyone: 'Everyone', Alex: 'Alex', Jo: 'Jo', Me: 'Me' };
+const CHIP_INITIAL = { Everyone: 'group', Alex: 'A', Jo: 'J', Me: 'M' };
+function personChip(key, active) {
+  const initial = CHIP_INITIAL[key] || key[0];
+  const badgeInk = active ? C.accentSoftInk : C.muted;
+  const badgeBg = active ? '#ffffff' : C.mutedBg;
+  const badge = initial === 'group'
+    ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; flex-shrink: 0">${icon('customers', 13)}</span>`
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; font-size: 11px; font-weight: 700; flex-shrink: 0">${esc(initial)}</span>`;
+  return `<button type="button" aria-pressed="${active}" style="display: inline-flex; align-items: center; gap: 7px; min-height: 44px; box-sizing: border-box; padding: 5px 14px 5px 5px; border-radius: 999px; font-family: inherit; font-size: 13px; font-weight: 600; border: 1px solid ${active ? 'transparent' : C.input}; background: ${active ? C.accentSoft : C.panel}; color: ${active ? C.accentSoftInk : C.ink}">${badge}${esc(CHIP_TEXT[key] || key)}</button>`;
+}
+function mechChips(selectedKey, keys, label) {
+  return `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0">${keys.map((k) => personChip(k, k === selectedKey)).join('')}</div>`;
 }
 // "New job" is a button in the diary toolbar, not a slot hint (decision 22).
 // newJob is either an href (a plain link button) or the string 'active' (the
@@ -908,9 +951,15 @@ function newJobButtonActive() {
 // job pop-up): the pick flow exists on desktop only (new-job-pick); tablet
 // and phone go straight to the New job form this round (brief item 25).
 const defaultNewJobHref = (size) => (size === 'desktop' ? 'new-job-pick-desktop.dc.html' : `new-job-${size}.dc.html`);
+// Decision 60: each control gets its own shape, grouped left to right —
+// view (segmented switch) · dates (arrows + label + Today) · people (chips)
+// and New job, alone with a clear gap before it. Two flex-grow spacers put
+// the date group in the middle of the space between the view switch and the
+// people/New job cluster at the right; nowrap (not the old wrap) — the
+// desktop board's width comfortably holds all four groups on one line.
 function diaryToolbar(mechFilter, size, { mechOptions = ['Everyone', 'Alex', 'Jo'], activeView = 'Week', newJob = null } = {}) {
   const nj = newJob === 'active' ? newJobButtonActive() : newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch(activeView, size)}${segmented(['‹ Prev', 'Today', 'Next ›'], 1, 'Change week')}${segmented(mechOptions, mechOptions.indexOf(mechFilter), 'Mechanic')}${nj ? `<div style="flex-grow: 1"></div>${nj}` : ''}`, 10, 'flex-wrap: wrap');
+  return row(`${viewSwitch(activeView, size)}<div style="flex-grow: 1"></div>${dateNav(activeView)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic')}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
 
 // Phone: one day at a time, jobs listed down a time line.
@@ -1003,7 +1052,7 @@ const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending:
 // for a mechanic's own single-column view this round).
 function mechToolbar(meSelected, size, { newJob = null } = {}) {
   const nj = newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch('Week', size)}${segmented(['‹ Prev', 'Today', 'Next ›'], 1, 'Change week')}${segmented(['Me', 'Everyone'], meSelected ? 0 : 1, 'Whose diary')}${nj ? `<div style="flex-grow: 1"></div>${nj}` : ''}`, 10, 'flex-wrap: wrap');
+  return row(`${viewSwitch('Week', size)}<div style="flex-grow: 1"></div>${dateNav('Week')}<div style="flex-grow: 1"></div>${mechChips(meSelected ? 'Me' : 'Everyone', ['Me', 'Everyone'], 'Whose diary')}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
 
 // ---------- Screens ----------
