@@ -92,14 +92,30 @@ screens['till-checkin'] = {
 </div>`),
 };
 
-// Decision 6: change your own PIN from Your settings — type the new PIN, then
-// again to confirm; each step checks itself on the 4th digit.
+// Decisions 6 and 7: change your PIN from Your settings. Wheelhouse picks a
+// new random PIN nobody else has (so choosing can't reveal a colleague's);
+// "Give me a different one" rolls another. The digits shown are an example.
+const pinDigit = (d) => `<span style="display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 72px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: ${MONO}; font-size: 34px; color: ${C.ink}">${d}</span>`;
 screens['pin-change'] = {
   desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center">
-<div role="dialog" aria-modal="true" aria-labelledby="pin-title" style="width: 420px; box-sizing: border-box; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden">
-<div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="pin-title" style="margin: 0; font-size: 20px; font-weight: 700">Change your till PIN</h2><span style="font-size: 13px; color: ${C.muted}">Step 1 of 2 · then type it again to confirm</span></div><a href="your-settings-desktop.dc.html" aria-label="Close, back to Your settings" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
-<div style="padding: 20px 28px 26px; display: flex; flex-direction: column; gap: 16px; text-align: center">${p('Type a new 4-digit PIN. It must be different from everyone else’s at the shop.', 14)}${dots(1)}${pinPad}</div>
+<div role="dialog" aria-modal="true" aria-labelledby="pin-title" style="width: 440px; box-sizing: border-box; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><h2 id="pin-title" style="margin: 0; font-size: 20px; font-weight: 700; flex-grow: 1">Your new till PIN</h2><a href="your-settings-desktop.dc.html" aria-label="Close without changing your PIN" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
+<div style="padding: 24px 28px 28px; display: flex; flex-direction: column; gap: 20px; align-items: center; text-align: center">
+${p('Wheelhouse picked this for you — nobody else at the shop has it. Learn it before you close this.', 14)}
+<div aria-label="New PIN 7 3 0 5" style="display: flex; gap: 10px">${['7', '3', '0', '5'].map(pinDigit).join('')}</div>
+<div style="width: 100%; display: flex; flex-direction: column; gap: 10px">${button('Keep this PIN', { block: true })}${button('Give me a different one', { variant: 'default', block: true })}</div>
+<span style="font-size: 13px; color: ${C.muted}">Your old PIN stops working when you keep this one.</span>
+</div>
 </div></div></div>`,
+};
+
+// Decision 7: five wrong PINs in a row lock the till for a minute.
+screens['till-locked'] = {
+  desktop: tillFrame(`<div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center">
+${roundIcon('lock', C.warnBg, C.warnInk)}${h1('Too many wrong PINs', 28)}
+<div style="width: 400px">${p('This till is paused for a minute to stop PINs being guessed. Forgotten yours? A manager can clear it from the staff list, and Wheelhouse will give you a new one.')}</div>
+<div role="timer" aria-label="Try again in 0 minutes 48 seconds" style="font-family: ${MONO}; font-size: 40px; color: ${C.ink}">0:48</div>
+</div>`),
 };
 
 // ---------- Customers (decision 5) ----------
@@ -131,7 +147,8 @@ export const TITLES = {
   'auth-noaccess': 'Not part of your role',
   'till-setup': 'Set up this till (manager)',
   'till-checkin': 'Till check-in — PIN only',
-  'pin-change': 'Change your till PIN (from Your settings)',
+  'pin-change': 'Your new till PIN — Wheelhouse picks it',
+  'till-locked': 'Till paused after 5 wrong PINs',
   'cust-signin': 'Customer sign-in on the shop’s website — email me a code',
   'cust-code': 'Customer sign-in — enter the code (checks itself on the 6th digit)',
 };
@@ -139,6 +156,6 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin', 'pin-change'] },
+  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-locked', 'pin-change'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code'] },
 ];

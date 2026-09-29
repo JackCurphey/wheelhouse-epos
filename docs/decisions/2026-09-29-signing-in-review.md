@@ -43,3 +43,11 @@ redesign.
    decision 8), so nobody else knows it. A forgotten PIN is cleared by a
    manager from the staff list (journey 8), and the person sets a new one.
    Chosen over manager-set PINs and setting it at first till use.
+7. **Wheelhouse picks each person's till PIN** (Jack, 29 Sep): because PINs
+   must be unique (decision 4), letting people choose would reveal a
+   colleague's PIN whenever a choice clashed. Change PIN shows a new random
+   4-digit PIN nobody else has, with "Give me a different one"; nobody can
+   probe for others' PINs. (Chosen over 6-digit chosen PINs and going back
+   to name-then-PIN.) Proposed alongside and not objected to: **the till
+   locks for a minute after 5 wrong PINs in a row**, so PINs can't be
+   guessed by trying every number.
