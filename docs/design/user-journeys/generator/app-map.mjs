@@ -19,27 +19,46 @@ const money = (n) => `£${n.toFixed(2)}`;
 const onlinePill = (dark = true) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: ${dark ? 'rgba(255,255,255,0.12)' : C.okBg}; color: ${dark ? '#ffffff' : C.successInk}">${icon('wifi', 14)}Online</span>`;
 const barBtn = (inner, label = '') => `<button type="button"${label ? ` aria-label="${esc(label)}"` : ''} style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; min-width: 44px; justify-content: center; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">${inner}</button>`;
 
-// The till's own charcoal bar (full-screen and rail options).
+// The till's own charcoal bar. Decision 13: Serving switches who's serving
+// (PIN check-in); no till menu — the rail's name badge opens Your settings.
 function tillBar({ back = false } = {}) {
   return `<header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 20px; display: flex; align-items: center; gap: 14px; background: ${C.accentDark}; color: #ffffff">
 ${back ? `<a href="#" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px 0 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600">${icon('back', 18)}Back to the shop</a>` : ''}
 <span style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.8">Bolton · ${SHOP}</span></span>
 <span style="flex-grow: 1"></span>
 ${onlinePill()}
-${barBtn(`${icon('user', 16)}Serving: Jo Taylor`)}
-${barBtn(icon('menu', 18), 'Till menu')}
+${barBtn(`${icon('user', 16)}Serving: Jo Taylor`, 'Serving: Jo Taylor — switch who’s serving')}
 </header>`;
 }
 
-// Left: product search and the shop's product buttons (not designed yet — journey 11).
-function productArea() {
-  return `<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan a product" placeholder="Search or scan a product" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+// Left: the till's one search box (decision 12: products, customers and jobs)
+// and the shop's product buttons (not designed yet — journey 11).
+// `query` draws the box mid-search with grouped results over the buttons.
+const resultGroup = (title, inner) => `<div style="display: flex; flex-direction: column; gap: 4px"><div style="padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${title}</div>${inner}</div>`;
+const resultRow = (main, sub, action, first = false) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; text-decoration: none; color: ${C.ink}; background: ${first ? C.hover : 'transparent'}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${main}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="font-size: 13px; font-weight: 600; color: ${C.ink}">${action}</span></a>`;
+function searchResults() {
+  return `<div role="listbox" aria-label="Search results" style="position: absolute; top: 58px; left: 0; right: 0; z-index: 3; box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)">
+${resultGroup('Jobs', resultRow(`${mono('WH-1042')} · Maya Patel`, `Trek Domane AL 3 · Standard service · approved ${mono(money(WORK_TOTAL_APPROVED))}`, 'Add to basket ↵', true))}
+${resultGroup('Customers', resultRow('Maya Patel', 'Customer · Trek Domane AL 3', 'Add to sale'))}
+${resultGroup('Products', `<div style="padding: 6px 12px; font-size: 14px; color: ${C.muted}">No products match “maya”.</div>`)}
+</div>`;
+}
+function productArea({ query = '' } = {}) {
+  return `<div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${query ? C.ink : C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs" placeholder="Search or scan: products, customers, jobs" value="${esc(query)}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+${query ? searchResults() : ''}
 <div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: ${C.muted}; font-size: 14px; line-height: 1.5">Product buttons and search results<br>(designed with Selling at the till, journey 11)</div>
 </div>`;
 }
 
-// Right: the basket, loaded with Maya Patel's approved job.
+// Right: the basket, loaded with Maya Patel's approved job (or empty).
+function basketEmpty(width) {
+  return card(`<div style="height: 100%; box-sizing: border-box; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">Basket</h2>
+<div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 14px; color: ${C.muted}">Nothing in the basket yet.<br>Search, scan or tap a product.</div>
+<button type="button" disabled style="display: flex; width: 100%; align-items: center; justify-content: center; min-height: 44px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 15px; font-weight: 600">Take payment</button>
+</div>`, `width: ${width}px; flex-shrink: 0; height: 100%`);
+}
 function basket(width) {
   const lines = LINES_APPROVED.filter((l) => l.approval === 'Approved');
   return card(`<div style="height: 100%; box-sizing: border-box; padding: 18px; display: flex; flex-direction: column; gap: 12px">
@@ -52,7 +71,7 @@ ${button(`Take payment · ${money(WORK_TOTAL_APPROVED)}`, { block: true })}
 </div>`, `width: ${width}px; flex-shrink: 0; height: 100%`);
 }
 
-const tillBody = (basketW, pad = 20) => `<div style="height: 100%; box-sizing: border-box; padding: ${pad}px; display: flex; gap: 20px">${productArea()}${basket(basketW)}</div>`;
+const tillBody = (basketW, pad = 20, { query = '' } = {}) => `<div style="height: 100%; box-sizing: border-box; padding: ${pad}px; display: flex; gap: 20px">${productArea({ query })}${query ? basketEmpty(basketW) : basket(basketW)}</div>`;
 
 // Folded rail (decisions 4, 5): the tablet rail's look at desktop size. Resting
 // the pointer on it for 300 ms (or focusing into it with the keyboard)
@@ -97,13 +116,13 @@ function foldedRail(active, { forced = false } = {}) {
 <button type="button" aria-label="Unfold the menu" aria-expanded="${forced}" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 12px; font-weight: 600"><span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 16)}</span>Unfold</button>
 ${groups.map((g, i) => `<div style="display: flex; flex-direction: column; gap: 1px; ${i ? 'padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.18)' : ''}">${g.map(([key, label, ic]) => `<a href="#" aria-current="${key === active ? 'page' : 'false'}" style="${railItemStyle(key === active)}">${icon(ic, 19)}<span style="font-size: 12px; font-weight: ${key === active ? 700 : 500}; line-height: 1.12; text-align: center">${esc(label)}</span></a>`).join('')}</div>`).join('')}
 <div style="flex-grow: 1"></div>
-<a href="your-settings-desktop.dc.html" aria-label="Your settings — ${STAFF.person}, ${STAFF.roleName}" title="Your settings" style="display: flex; justify-content: center; align-items: center; min-height: 44px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700">${initials(STAFF.person)}</span></a>
+<a href="your-settings-desktop.dc.html" aria-label="Your settings — ${STAFF.person}, ${STAFF.roleName}" title="Your settings" style="display: flex; justify-content: center; align-items: center; min-height: 44px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; position: relative">${initials(STAFF.person)}<span aria-hidden="true" style="position: absolute; right: -5px; bottom: -4px; width: 18px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: ${C.accentDark}; border: 1px solid rgba(255,255,255,0.45)">${icon('settings', 11)}</span></span></a>
 </nav>
 ${unfoldedPanel(active, forced)}
 </div>`;
 }
 
-const tillRail = (forced) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(400)}</main></div></div>`;
+const tillRail = (forced, query = '') => `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(400, 20, { query })}</main></div></div>`;
 
 // ---------- Screens ----------
 export const screens = {};
@@ -113,6 +132,9 @@ export const screens = {};
 screens['till-rail'] = { desktop: tillRail(false) };
 // The same moment frozen: the rail unfolded over the till.
 screens['till-rail-open'] = { desktop: tillRail(true) };
+// Decision 12: one box finds products, customers and jobs — typing "maya"
+// before anything is in the basket.
+screens['till-search'] = { desktop: tillRail(false, 'maya') };
 
 // Decision 8: "Your settings" pop-up, opened from your name, for every role.
 // Holds the Accessibility settings (Workshop day decision 57 plus decision 7's
@@ -195,7 +217,7 @@ ${mapLine('Buy', 'Basket → Checkout → Order confirmed')}
 ${mapLine('Book a repair', 'Service → Bike → Date → Details → Request sent')}
 ${mapLine('Booking link', 'Opened from a text or email; no sign-in needed')}
 ${mapLine('Account (optional)', 'Sign in with an emailed code → bookings, bikes, history')}</div>`)}
-${mapBox('Staff app', 'ONE APP, ORGANISED BY ROOMS OF THE SHOP', `<div style="display: flex; flex-direction: column; gap: 4px">${mapP('Signed in with email and password. The sidebar groups pages by room and shows only what each role may use. Search sits at the top of every page; your name opens Your settings.')}
+${mapBox('Staff app', 'ONE APP, ORGANISED BY ROOMS OF THE SHOP', `<div style="display: flex; flex-direction: column; gap: 4px">${mapP('Signed in with email and password. The sidebar groups pages by room and shows only what each role may use. Search sits at the top of every page (on the till it finds products too); your name opens Your settings.')}
 ${ROOMS_DIARY.map(([room, items]) => `<div style="padding-top: 8px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: ${C.muted}">${room}</div>` + items.map(([, label, , r]) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid ${C.border}"><span style="font-size: 14px; font-weight: 600">${label}</span><span style="display: flex; gap: 4px">${roleChips(r)}</span></div>`).join('')).join('')}</div>`)}
 ${mapBox('Till mode', 'ON A REGISTERED TILL', `<div style="display: flex; flex-direction: column; gap: 10px">${mapP('A till computer is set up once by a manager. It stays signed in, works offline, and staff check in with a PIN. The sidebar is folded to the rail and unfolds when you rest on it.')}
 ${mapLine('Start-up', `${mono('Till B1')} · Bolton · online or offline`)}
@@ -219,12 +241,13 @@ export const TITLES = {
   'your-settings': 'Your settings — opened from your name',
   'till-rail': 'Till — sidebar folded to the rail (rest on it to unfold)',
   'till-rail-open': 'Till — rail unfolded',
+  'till-search': 'Till — one search finds products, customers and jobs',
 };
 
 export const ROWS = [
   { label: 'App map', screens: ['map'] },
   { label: 'Staff app', screens: ['staff-app', 'staff-app-mechanic'] },
-  { label: 'Till mode', screens: ['till-rail', 'till-rail-open'] },
+  { label: 'Till mode', screens: ['till-rail', 'till-rail-open', 'till-search'] },
   { label: 'Your settings', screens: ['your-settings'] },
   { label: 'Customer website', screens: ['site', 'site-ocean'] },
 ];

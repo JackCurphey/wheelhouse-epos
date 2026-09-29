@@ -65,3 +65,11 @@ rail with labels and the phone top bar with a menu (68).
 11. **Where each role lands after signing in stands as drawn** (Jack,
     29 Sep): Owner and Manager → Office › Today; Staff → Front desk › Till
     (or the page they last used); Mechanic → Workshop › Diary.
+12. **The till's one search box finds products, customers and jobs**
+    (Jack, 29 Sep; audit H1): results are grouped; a product or scanned
+    barcode goes into the basket, and a customer's job loads its approved
+    work into the basket. No second search box on the till.
+13. **Till bar tidy-up (audit M1, M2)** (Jack agreed, 29 Sep): "Serving: Jo Taylor" switches who is
+    serving (the till's PIN check-in); the till's own menu button goes, since
+    the rail's name badge opens Your settings as everywhere else; the folded
+    rail's name badge carries a small cog.
