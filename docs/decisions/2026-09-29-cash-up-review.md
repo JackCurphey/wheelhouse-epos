@@ -16,3 +16,7 @@ from the machine itself rather than being typed in.
 
 1. **Journey 16 is next** (Jack, 29 Sep), chosen over Customer service,
    Owner setup and Opening the shop.
+2. **Each shop chooses whether the cash count is blind** (Jack, 29 Sep): a
+   till setting — "count first, then see the difference" or "show the
+   expected amount while counting". Drawn both ways. The default is to be
+   settled with Owner setup (journey 8); the drawings assume blind.
