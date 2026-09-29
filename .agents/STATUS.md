@@ -9,36 +9,21 @@
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
+**Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
+Workshop day is approved and in the big canvas; the next journey is Jack's
+choice (ask him first).
+
 **Workshop day redesign (28–29 Sep):** Jack reworked Workshop day around the
-diary. 68 decisions in `docs/decisions/2026-09-27-workshop-day-review.md`
+diary. 69 decisions in `docs/decisions/2026-09-27-workshop-day-review.md`
 (read it before any Workshop day work). Separate canvas, now one current page:
-https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U (desktop approved, decision
-68; tablet + phone being drawn). Generator: `docs/design/user-journeys/generator/`
+https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U (approved 29 Sep —
+desktop, tablet, phone; copied into the big canvas as journey 12). Generator: `docs/design/user-journeys/generator/`
 (`diary.mjs`, `job-page.mjs`, `build-diary.mjs --desktop --theme sand`;
 exploration boards: `job-options.mjs`, `looks.mjs`, `audit-ideas.mjs` via
 `--ideas`). Study and audit: `docs/design/user-journeys/job-page-study.md`,
 `workshop-day-ui-audit.md`. **New standard look: "Soft sand, dark rail",
 sans-serif only** (decisions 48, 53) — supersedes Fjell; the app code is still
 Fjell until switched.
-
-## Where things stand
-
-The customer booking journey at `/book` is built end to end (d1–d5: service →
-service list → problem → date → details → pending/booking link; PRs #75,
-#78–#80, #82, #84, #85, #87, #88) on top of server pieces 1–12 (piece 7 #76,
-8 #77, 9 #81, 10 #83, 11 #86, 12 #89). Piece 12 (27 Sep) is the server side of
-customer change/cancel via the booking link, plus staff accept/decline-change
-and `GET /api/workshop-waiting` with "Seen". Its spec is
-`docs/superpowers/specs/2026-09-27-book-server-12-change-cancel-design.md`.
-
-**The staff diary piece is merged (#91, 27 Sep).** Spec `docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md`;
-plan, decision log and spec walk in
-`docs/superpowers/plans/2026-09-27-staff-diary-waiting.md`. In the legacy diary
-(`public/app.js`) there is now a "Waiting for you" column, a review pop-up
-(Accept / Decline / Seen), grid markings, and version-checked diary saves. The
-rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
-`diary-review.js`, and the first browser tests for the legacy diary are in
-`tests/browser/diary-waiting.spec.ts`. Local checks and CI pass (PR #91).
 
 ## Release 2 and the design system (27 Sep, main session)
 
