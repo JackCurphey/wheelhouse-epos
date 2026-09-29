@@ -84,6 +84,19 @@ const STATUS_SHAPE = {
   ready: (ink) => `<path d="M1.3 5.1L3.9 7.7L8.7 2.1" stroke="${ink}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
   cancelled: (ink) => `<path d="M1.6 1.6L8.4 8.4M8.4 1.6L1.6 8.4" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`,
 };
+// Decision 57 (29 Sep): status is colour-only by default — the shapes above
+// were H1/S1's fix for the Week-view block being too narrow for a status
+// word, but a shape is still a second, always-on signal on top of colour.
+// Jack now wants colour alone by default, with the shape kept only as an
+// opt-in per-person accessibility setting (Settings › Accessibility, "Show
+// status symbols" — screens['settings-accessibility'] below), since a mark
+// that helps colour-blind readers is exactly what a11y settings are for. The
+// full status stays in every block's aria-label/title regardless of this
+// flag. SHOW_STATUS_SYMBOLS is this canvas's stand-in for that per-person
+// setting, drawn OFF (its real default) — exported so audit-ideas.mjs (which
+// reuses jobBlock/weekGrid for its before/after boards) sees the same
+// default rather than diverging from it.
+export const SHOW_STATUS_SYMBOLS = false;
 function statusDot(key, size = 13) {
   const [, ink] = ST[key];
   return `<svg width="${size}" height="${size}" viewBox="0 0 10 10" aria-hidden="true" style="position: absolute; top: 4px; right: 4px; flex-shrink: 0; filter: drop-shadow(0 0 1px rgba(255,255,255,0.9))">${STATUS_SHAPE[key](ink)}</svg>`;
@@ -484,8 +497,9 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // tiny/60-minute blocks stay single-line (no headroom to wrap without
   // overflowing the fixed row height and breaking the no-scroll board).
   const bikeWrap = narrow && roomy;
-  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${narrow ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
-${narrow ? statusDot(j.key) : ''}
+  const showSymbol = narrow && SHOW_STATUS_SYMBOLS;
+  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+${showSymbol ? statusDot(j.key) : ''}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; ${strike} ${bikeWrap ? 'white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
 ${line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
@@ -504,8 +518,8 @@ function pendingBlock(size, slotH, highlighted = false) {
   // Item 2 (27 Sep round 2): bike, then job title — the same bike/job-title-
   // first order as an ordinary job block; "Pending" itself now lives in the
   // corner dot + aria-label/title rather than a third text line.
-  return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" title="${esc(j.bike)} · ${esc(j.jobTitle)} · ${esc(j.customer)} · Pending · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 16px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${ring}">
-${statusDot('pending')}
+  return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" title="${esc(j.bike)} · ${esc(j.jobTitle)} · ${esc(j.customer)} · Pending · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${SHOW_STATUS_SYMBOLS ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${ring}">
+${SHOW_STATUS_SYMBOLS ? statusDot('pending') : ''}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.jobTitle)}</span>
 </a>`;
@@ -821,11 +835,13 @@ function changeSelectedDayList(size) {
 // H2 (29 Sep audit): this used to render as six near-invisible outlined
 // squares — the swatch <span> had a `width`/`height`/`background` but no
 // `display`, so as an inline element the browser ignored its box size
-// entirely and only the border painted. Fixed with `display: inline-block`,
-// and the swatch now carries the same status shape used on a narrow diary
-// block (statusDot) so the legend is a literal key to what's on the grid,
-// not just a colour reference.
-const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0">${statusDot(k, 11).replace('top: 4px; right: 4px;', 'top: 1.5px; right: 1.5px;')}</span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
+// entirely and only the border painted. Fixed with `display: inline-block`.
+// Decision 57 (29 Sep): status is colour-only by default, so the swatch is
+// just the tinted-fill/outline colour and the full word — no shape — unless
+// SHOW_STATUS_SYMBOLS is on (the same flag jobBlock/pendingBlock use), in
+// which case the swatch carries the same shape as the grid's blocks so the
+// legend stays a literal key to what's drawn.
+const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0">${SHOW_STATUS_SYMBOLS ? statusDot(k, 11).replace('top: 4px; right: 4px;', 'top: 1.5px; right: 1.5px;') : ''}</span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
 // Decision 13: the mechanic's diary is the standard diary filtered to that
 // mechanic, with one Me / Everyone switch in the normal toolbar position.
 // Mechanics can't accept bookings, but they can create a walk-in job (chosen
@@ -959,29 +975,93 @@ function blockPrefPanel(size) {
 ${grid('1fr 1fr', `${select('First line', ['Bike', 'Job title', 'Customer', 'Job number'], 'set-first-' + size)}${select('Second line', ['Job title', 'Bike', 'Customer', 'Job number'], 'set-second-' + size)}`, 14)}
 <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}">${eyebrow('Preview')}${blockPreviewCard('bike', 'jobTitle')}${note('The status always shows too, whatever the two lines above are set to.', 12)}</div>`, '', 16, 12);
 }
+// Decision 57 (29 Sep): Settings gains an Accessibility tab beside this
+// Diary tab. Real tabs (role="tablist"/"tab", aria-selected), ≥44px, each a
+// link to that tab's own board — desktop only for now (task scope; the tab
+// bar itself is drawn only on diary-settings-desktop/settings-accessibility).
+function settingsTabs(size, active) {
+  const tabs = [['diary', 'Diary', `diary-settings-${size}.dc.html`], ['accessibility', 'Accessibility', `settings-accessibility-${size}.dc.html`]];
+  return `<div role="tablist" aria-label="Settings sections" style="display: flex; gap: 4px; border-bottom: 1px solid ${C.border}">${tabs.map(([key, label, href]) => {
+    const on = key === active;
+    return `<a href="${href}" role="tab" aria-selected="${on}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; text-decoration: none; font-size: 14px; font-weight: 700; color: ${on ? C.ink : C.muted}; border-bottom: 2px solid ${on ? C.accent : 'transparent'}">${esc(label)}</a>`;
+  }).join('')}</div>`;
+}
 function diarySettingsBody(size) {
   // Desktop: side by side (the page doesn't scroll) — item 27 adds a whole
   // second settings group to what was previously a single-column page.
+  // Decision 57: status is colour-only by default now (word shown where
+  // there's room, e.g. Day view; the symbol is an opt-in accessibility
+  // setting, see Settings › Accessibility) — the older "never colour alone"
+  // copy is replaced below.
   if (size === 'desktop') {
     return stack(`${eyebrow('Office › Settings')}
+${settingsTabs(size, 'diary')}
 ${h2('Diary & storage', 20)}
-${note('Choose what each diary block shows, and whether this shop tracks storage slots. The status is always shown — never colour alone — and never truncates to something unreadable.')}
+${note('Choose what each diary block shows, and whether this shop tracks storage slots. Status shows as colour, plus the full word where there’s room; a symbol for each status is available in Settings › Accessibility.')}
 ${grid('1fr 1fr', `<div style="display: flex; flex-direction: column; gap: 12px">${h2('Diary blocks', 16)}${blockPrefPanel(size)}</div><div style="display: flex; flex-direction: column; gap: 12px">${h2('Storage slots', 16)}${storageSlotsSection(size)}</div>`, 24)}
-${button('Save', { size: 'sm' })}`, 16);
+${`<div>${button('Save settings')}</div>`}`, 16);
   }
   return stack(`${eyebrow('Office › Settings')}
 ${h2('Diary blocks', 20)}
-${note('Choose what each diary block shows. The status is always shown — never colour alone — and never truncates to something unreadable.')}
+${note('Choose what each diary block shows. Status shows as colour, plus the full word where there’s room.')}
 ${blockPrefPanel(size)}
 ${h2('Storage slots', 20)}
 ${note('Where bikes are kept while they’re in for work. Turn this off if this shop doesn’t use hooks or bays.')}
 ${storageSlotsSection(size)}
-${button('Save', { size: 'sm' })}`, 16);
+${`<div>${button('Save settings')}</div>`}`, 16);
 }
 screens['diary-settings'] = {
   desktop: shellDesktop('settings', 'Settings', `<div style="max-width: 920px">${diarySettingsBody('desktop')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
   tablet: shellTablet('settings', 'Settings', `<div style="max-width: 480px">${diarySettingsBody('tablet')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
   phone: shellPhone('Settings', phoneBody(diarySettingsBody('phone'), '', 12), { role: 'M', active: 'settings' }),
+};
+
+// 3c.ii settings-accessibility — decision 57 (29 Sep): a second Settings tab,
+// per person (not per shop, unlike diary-settings above) — Jack wants
+// Wheelhouse as accessible as possible, and these three choices depend on
+// who's using the screen. Desktop only, same shell as diary-settings.
+function a11ySwitch(id, on, label) {
+  return `<button type="button" id="${id}" role="switch" aria-checked="${on}" aria-label="${esc(label)}" style="position: relative; width: 44px; height: 44px; flex-shrink: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; display: inline-flex; align-items: center; justify-content: center; font-family: inherit; cursor: pointer">
+<span aria-hidden="true" style="position: relative; display: inline-block; width: 40px; height: 24px; border-radius: 999px; background: ${on ? C.accent : C.input}; flex-shrink: 0">
+<span style="position: absolute; top: 2px; left: ${on ? '18px' : '2px'}; width: 20px; height: 20px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 2px rgba(28,30,25,0.35)"></span>
+</span>
+</button>`;
+}
+function a11ySettingRow(id, label, desc, on, preview = '') {
+  return panel(`${row(`<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700; color: ${C.ink}">${esc(label)}</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">${esc(desc)}</span></div>${a11ySwitch(id, on, label)}`, 16, 'justify-content: space-between; align-items: flex-start')}${preview ? `<div style="padding-top: 10px; border-top: 1px solid ${C.border}">${preview}</div>` : ''}`, '', 16, 12);
+}
+// Two narrow diary blocks (jobBlock's own narrow-block markup, sized down)
+// with the shape mark drawn on, so "Show status symbols" previews what it
+// turns on regardless of SHOW_STATUS_SYMBOLS's own (off) default above.
+function symbolsPreview() {
+  const sample = [['scheduled', 'Trek Domane AL 3', 'Standard service'], ['waiting', 'Cannondale Quick', 'Gear adjustment']];
+  return `${eyebrow('Preview')}<div style="display: flex; gap: 8px; padding-top: 6px">${sample.map(([key, bike, title]) => {
+    const [bg, ink] = ST[key];
+    return `<div style="position: relative; width: 122px; box-sizing: border-box; padding: 3px 16px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}">
+<svg width="13" height="13" viewBox="0 0 10 10" aria-hidden="true" style="position: absolute; top: 4px; right: 4px">${STATUS_SHAPE[key](ink)}</svg>
+<div style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)}</div>
+<div style="font-size: 10px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(title)}</div>
+</div>`;
+  }).join('')}</div>`;
+}
+function largerTextPreview() {
+  const col = (size, label) => `<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 11px; color: ${C.muted}">${esc(label)}</span><span style="font-size: ${size}px; font-weight: 600; color: ${C.ink}">Standard service</span></span>`;
+  return `${eyebrow('Preview')}<div style="display: flex; align-items: flex-end; gap: 20px; padding-top: 6px">${col(14, 'Normal')}${col(17, 'Larger')}</div>`;
+}
+function accessibilityBody(size) {
+  return stack(`${eyebrow('Office › Settings')}
+${settingsTabs(size, 'accessibility')}
+${h2('Accessibility', 20)}
+${note('These settings are just for you, Jack Lewis — they don’t change what others see.')}
+${a11ySettingRow('a11y-symbols-' + size, 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview())}
+${a11ySettingRow('a11y-motion-' + size, 'Reduce motion', 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.', false)}
+${a11ySettingRow('a11y-text-' + size, 'Larger text', 'Makes text across Wheelhouse a step larger.', false, largerTextPreview())}
+${`<div>${button('Save settings')}</div>`}`, 16);
+}
+screens['settings-accessibility'] = {
+  desktop: shellDesktop('settings', 'Settings', `<div style="max-width: 720px">${accessibilityBody('desktop')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
+  tablet: desktopOnlyPlaceholder('tablet', 'diary-settings-tablet.dc.html', '‹ Back to Settings'),
+  phone: desktopOnlyPlaceholder('phone', 'diary-settings-phone.dc.html', '‹ Back to Settings'),
 };
 
 // 3d. change-selected — decision 19: built like waiting-open, but for Oliver
@@ -1855,13 +1935,22 @@ screens.customer = {
 // Keep the agreed screen order (brief's Row 1–5 order), with this round's new
 // boards (diary-day, diary-settings, change-selected, new-job-day,
 // new-job-pick, customer) slotted in beside the screens they extend.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+// settings-accessibility (decision 57) is Settings' other tab, so it's
+// ordered right after diary-settings here — this only affects the `screens`
+// object's own key order (Main page listing etc.), not canvas position; see
+// ROWS below for the canvas placement, which is deliberately different so no
+// existing board moves.
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'settings-accessibility', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
 
 export const ROWS = [
-  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview'] },
+  // settings-accessibility is appended at the end (after job-quick-overview,
+  // not after diary-settings) so every existing board on the row keeps its
+  // x position — build-diary.mjs lays a row out left to right in this array's
+  // order, so inserting it mid-row would shift change-selected onward.
+  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'settings-accessibility'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },

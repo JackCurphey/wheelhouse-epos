@@ -76,6 +76,7 @@ const TITLE_OVERRIDE = {
   'job-quick-overview': 'Diary · job overview (quick look)',
   'diary-day': 'Day view',
   'diary-settings': 'Diary settings',
+  'settings-accessibility': 'Settings · Accessibility',
   'new-job-day': 'New job (from the day view)',
   'job-overview': 'Job · expected',
   'job-book-in': 'Job · booked in, tag printed',
