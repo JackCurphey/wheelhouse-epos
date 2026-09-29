@@ -17,8 +17,8 @@ const money = (n) => `£${n.toFixed(2)}`;
 const label = (t) => `<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${t}</div>`;
 
 // The till page: folded rail, till bar, then the left side and the basket.
-function tillPage(left, right) {
-  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till')}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 20px; display: flex; gap: 20px">${left}${right}</main></div></div>`;
+function tillPage(left, right, { offline = null, notice = '' } = {}) {
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till')}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar({ offline })}${notice}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 20px; display: flex; gap: 20px">${left}${right}</main></div></div>`;
 }
 
 // ---------- Left side (decision 2): search, group pills, quick buttons ----------
@@ -288,6 +288,30 @@ screens['till-collect'] = {
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Mark collected')}`, 600)),
 };
 
+// ---------- When the internet drops (offline spec §3) ----------
+// Selling carries on: sales are saved on this till and send themselves, in
+// order, when the connection is back. No time limit; after four hours the
+// notice grows, because prices and customer details may be out of date.
+// Wheelhouse itself being unreachable counts the same. "[n]" = placeholder.
+const notice = (strong) => `<div role="status" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: ${strong ? '14px 20px' : '10px 20px'}; background: ${C.warnBg}; color: ${C.warnInk}; border-bottom: 1px solid ${C.border}">${icon(strong ? 'alert' : 'wifi', strong ? 22 : 18)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: ${strong ? 16 : 14}px; font-weight: 700">${strong ? 'Offline for over 4 hours — prices and customer details may be out of date' : 'No internet — keep selling. Sales are saved on this till and send themselves when it’s back.'}</span>${strong ? `<span style="font-size: 14px">Sales are still saved safely. Check prices on anything that changed recently.</span>` : ''}</span></div>`;
+screens['till-offline'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(false) }) };
+screens['till-offline-long'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(true) }) };
+const overTillOffline = (d) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(false) })}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${d}</div></div>`;
+screens['till-needs-net'] = {
+  desktop: overTillOffline(dialog('net-title', 'Refunds need the internet', 'The till is offline', `
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">A refund has to find the original sale, so it waits for the connection. The same goes for paying for a workshop job, changing products or prices, and reports.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Sales, parking, customers, accounts and loyalty all carry on as normal.</p>`, `<span></span>${button('OK')}`, 520)),
+};
+screens['till-no-signout'] = {
+  desktop: overTillOffline(dialog('signout-title', 'Can’t sign this till out yet', '[n] sales are still waiting to send', `
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Signing out would wipe sales that only exist on this till. It works as soon as they’ve sent — they go by themselves when the internet is back.</p>`, `<span></span>${button('OK')}`, 520)),
+};
+screens['till-failed'] = {
+  desktop: overTill(dialog('failed-title', 'Sales that didn’t send', 'Kept safely on this till — a manager checks each one', `
+<div>${listRow(`${mono('B1-[0000]')} · [n] items`, '[Reason from Wheelhouse, in plain words]', '[£ total]', button('Fix', { variant: 'default' }))}${listRow(`${mono('B1-[0000]')} · [n] items`, '[Reason from Wheelhouse, in plain words]', '[£ total]', button('Fix', { variant: 'default' }))}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Fixing opens the sale with the problem shown. Nothing is deleted.</p>`, '', 620)),
+};
+
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
   'till-line': 'Change a line — price, discount with a reason, note, remove',
@@ -312,10 +336,16 @@ export const TITLES = {
   'till-void': 'Void a sale — with a reason',
   'till-job': 'Pay for a workshop job — bike collected when paid',
   'till-collect': 'Hand over a click and collect order',
+  'till-offline': 'Offline — keep selling, sales wait to send',
+  'till-offline-long': 'Offline for over four hours — the notice grows',
+  'till-needs-net': 'Needs the internet — refunds and a few others wait',
+  'till-no-signout': 'Can’t sign out while sales are waiting',
+  'till-failed': 'Sales that didn’t send — for a manager',
 };
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-refund', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-collect'] },
+  { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-no-signout', 'till-failed'] },
 ];
