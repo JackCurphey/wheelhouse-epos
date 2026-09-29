@@ -20,3 +20,7 @@ from the machine itself rather than being typed in.
    till setting — "count first, then see the difference" or "show the
    expected amount while counting". Drawn both ways. The default is to be
    settled with Owner setup (journey 8); the drawings assume blind.
+3. **The cash count has a box for every note and coin, adding up to a total
+   that can also be typed over** (Jack, 29 Sep): staff can count £50 notes
+   down to 1p coins and let the till add up, or just type the total. Typing
+   the total directly takes over from the note-and-coin boxes.
