@@ -62,3 +62,6 @@ rail with labels and the phone top bar with a menu (68).
     the website: each shop gets as much customisation as is practical.
     Designed with the Release 2 theme work, not in journey A; the Ocean Blue
     board shows one shop's choice as an example.
+11. **Where each role lands after signing in stands as drawn** (Jack,
+    29 Sep): Owner and Manager → Office › Today; Staff → Front desk › Till
+    (or the page they last used); Mechanic → Workshop › Diary.
