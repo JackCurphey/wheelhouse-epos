@@ -38,3 +38,8 @@ redesign.
    confirmed in its docs (29 Sep): Magic Auth codes can be created and
    verified by API from your own screens; six digits, valid for 10 minutes.
    Chosen over the WorkOS page and over no customer sign-in for now.
+6. **Each person sets their own till PIN in Your settings** (Jack, 29 Sep):
+   a "Till PIN · Change PIN" line in the Your settings pop-up (journey A
+   decision 8), so nobody else knows it. A forgotten PIN is cleared by a
+   manager from the staff list (journey 8), and the person sets a new one.
+   Chosen over manager-set PINs and setting it at first till use.

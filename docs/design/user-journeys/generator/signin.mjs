@@ -9,7 +9,7 @@
 // facts are bracketed placeholders.
 import { C, MONO, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH } from './stage1.mjs';
-import { shellDesktop } from './diary.mjs';
+import { shellDesktop, screens as diaryScreens } from './diary.mjs';
 import { tillBar, siteDesktop } from './app-map.mjs';
 
 const SHOP = 'North Street Cycles';
@@ -92,6 +92,16 @@ screens['till-checkin'] = {
 </div>`),
 };
 
+// Decision 6: change your own PIN from Your settings — type the new PIN, then
+// again to confirm; each step checks itself on the 4th digit.
+screens['pin-change'] = {
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center">
+<div role="dialog" aria-modal="true" aria-labelledby="pin-title" style="width: 420px; box-sizing: border-box; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="pin-title" style="margin: 0; font-size: 20px; font-weight: 700">Change your till PIN</h2><span style="font-size: 13px; color: ${C.muted}">Step 1 of 2 · then type it again to confirm</span></div><a href="your-settings-desktop.dc.html" aria-label="Close, back to Your settings" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
+<div style="padding: 20px 28px 26px; display: flex; flex-direction: column; gap: 16px; text-align: center">${p('Type a new 4-digit PIN. It must be different from everyone else’s at the shop.', 14)}${dots(1)}${pinPad}</div>
+</div></div></div>`,
+};
+
 // ---------- Customers (decision 5) ----------
 // On the shop's own website, in its theme: Wheelhouse's own "email me a
 // code" screens; WorkOS sends and checks the six-digit code (valid 10
@@ -121,6 +131,7 @@ export const TITLES = {
   'auth-noaccess': 'Not part of your role',
   'till-setup': 'Set up this till (manager)',
   'till-checkin': 'Till check-in — PIN only',
+  'pin-change': 'Change your till PIN (from Your settings)',
   'cust-signin': 'Customer sign-in on the shop’s website — email me a code',
   'cust-code': 'Customer sign-in — enter the code (checks itself on the 6th digit)',
 };
@@ -128,6 +139,6 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin'] },
+  { label: 'Till', screens: ['till-setup', 'till-checkin', 'pin-change'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code'] },
 ];
