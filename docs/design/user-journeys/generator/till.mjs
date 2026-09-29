@@ -118,7 +118,7 @@ screens['till-variant'] = {
   desktop: overTill(dialog('var-title', '[Product with sizes and colours]', 'Pick one — tap an option to add it', `
 <div role="group" aria-label="Colour" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Colour</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Colour]', true)}${reasonPill('[Colour]')}</div></div>
 <div role="group" aria-label="Size" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Size</span><div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${opt('[Size]', '[n] in stock')}${opt('[Size]', '[n] in stock')}${opt('[Size]', '[n] in stock')}${opt('[Size]', 'None in stock', false, true)}</div></div>
-<p style="margin: 0; font-size: 13px; color: ${C.muted}">An option with none in stock can still be sold; the stock goes below zero and shows in Stock.</p>`, '')),
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">An option with none in stock can still be sold — its basket line then says “Stock says 0 — sold anyway” so the count can be checked (decision 5).</p>`, '')),
 };
 
 // Record a serial number: selling a bike (or anything the shop tracks by

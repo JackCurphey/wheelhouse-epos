@@ -33,3 +33,8 @@ full one, with one "Take payment" step that leaves room for the other.
    every discount in the reports** (Jack, 29 Sep) — no manager PIN and no
    limit. Chosen over a shop-set limit with a manager PIN above it, and
    manager-only discounts.
+5. **Selling something stock says is out of stock is allowed, with a
+   warning on the basket line — "Stock says 0 — sold anyway"** (Jack,
+   29 Sep): the item is in the customer's hand, so the sale is never
+   blocked; the warning flags the count for checking. Chosen over allowing
+   it silently and blocking it until a manager fixes the stock.
