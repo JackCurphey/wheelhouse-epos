@@ -73,3 +73,7 @@ rail with labels and the phone top bar with a menu (68).
     serving (the till's PIN check-in); the till's own menu button goes, since
     the rail's name badge opens Your settings as everywhere else; the folded
     rail's name badge carries a small cog.
+14. **Journey A desktop approved; tablet and phone next** (Jack, 29 Sep:
+    "yeah go ahead"). Every desktop decision carries over; hover becomes a
+    tap on touch screens; search becomes a magnifying-glass button
+    (decision 2).

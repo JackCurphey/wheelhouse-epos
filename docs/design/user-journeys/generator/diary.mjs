@@ -161,17 +161,23 @@ ${search ? headerSearch() : ''}${actions}
 }
 
 const RAIL_W = 84;
-export function shellTablet(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '' } = {}) {
+// Journey A decisions 2, 8, 9, 13: on tablet and phone the header search is a
+// magnifying-glass button, and your name badge (with a small cog) opens Your
+// settings.
+export const searchIconBtn = (dark = false) => `<button type="button" aria-label="Search jobs, customers, products" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: ${dark ? '0' : `1px solid ${C.input}`}; background: transparent; color: ${dark ? '#ffffff' : C.ink}">${icon('search', 20)}</button>`;
+export const avatarWithCog = (ini) => `<span style="position: relative; display: inline-block; width: 38px; height: 37px"><span style="position: absolute; top: 0; left: 0; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700">${ini}</span>${cogBadge()}</span>`;
+export const cogBadge = () => `<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: ${C.accentDark}; border: 1px solid rgba(255,255,255,0.45)">${icon('settings', 11)}</span>`;
+export function shellTablet(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '', search = true } = {}) {
   return `<div style="width: ${TW}px; height: ${TH}px; display: flex; background: ${C.bg}">
 <nav aria-label="Main" style="width: ${RAIL_W}px; flex-shrink: 0; min-height: 0; box-sizing: border-box; padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; background: ${C.accentDark}; color: #ffffff; align-items: stretch">
 <div style="display: flex; justify-content: center; padding: 0 0 2px; flex-shrink: 0">${logoSlot('Wheelhouse logo', true)}</div>
 <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px">${railList(role, active)}</div>
-<a href="#" aria-label="${esc(person)}, ${esc(roleName)} — sign out" style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700">${esc(person.split(' ').map((x) => x[0]).join(''))}</span></a>
+<a href="your-settings-tablet.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; color: #ffffff; text-decoration: none">${avatarWithCog(esc(person.split(' ').map((x) => x[0]).join('')))}</a>
 </nav>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 22px; display: flex; align-items: center; gap: 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
 <h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 20px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
-${actions}
+${search ? searchIconBtn() : ''}${actions}
 </header>
 <main style="flex-grow: 1; box-sizing: border-box; padding: 16px 22px; overflow: hidden; min-height: 0">${content}</main>
 </div>
@@ -181,11 +187,11 @@ ${actions}
 // title and an optional action (the diary's + New job), then the page.
 // `overlay` is drawn over the whole phone (bottom sheets, dimmed backdrops);
 // `pad` lets a page with its own full-bleed scrolling area drop main's padding.
-export function shellPhone(title, content, { menuOpen = false, role = 'S', active = 'diary', actions = '', overlay = '', pad = 14, person = 'Jo Taylor', roleName = 'Staff' } = {}) {
+export function shellPhone(title, content, { menuOpen = false, role = 'S', active = 'diary', actions = '', overlay = '', pad = 14, person = 'Jo Taylor', roleName = 'Staff', search = true } = {}) {
   const bar = `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; background: ${C.accentDark}; color: #ffffff">
 <button type="button" aria-label="Open menu" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
 <h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 18px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
-${actions}
+${search ? searchIconBtn(true) : ''}${actions}
 </header>`;
   const sheet = menuOpen ? `<div style="position: absolute; inset: 0; background: rgba(20,24,22,0.45)"></div>
 <nav aria-label="Main" style="position: absolute; top: 0; left: 0; bottom: 0; width: 300px; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 14px; background: ${C.accentDark}; color: #ffffff">
@@ -193,7 +199,7 @@ ${actions}
 ${siteSwitcher()}
 <div style="display: flex; flex-direction: column; gap: 8px">${navList(role, active)}</div>
 <div style="flex-grow: 1"></div>
-<div style="padding: 10px 8px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; font-size: 14px"><span>${esc(person)} · ${esc(roleName)}</span><a href="#" style="color: #ffffff">Sign out</a></div>
+<div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)"><a href="your-settings-phone.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${esc(person.split(' ').map((x) => x[0]).join(''))}</span><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${esc(person)}</span><span style="font-size: 12px; opacity: 0.8">${esc(roleName)}</span></span><span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span></a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-size: 13px; color: #ffffff">Sign out</a></div>
 </nav>` : '';
   return `<div style="position: relative; width: ${PW}px; height: ${PH}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${bar}<main style="flex-grow: 1; box-sizing: border-box; padding: ${pad}px; overflow: hidden; min-height: 0; display: flex; flex-direction: column">${content}</main>${sheet}${overlay}</div>`;
 }
