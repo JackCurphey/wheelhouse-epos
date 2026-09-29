@@ -263,6 +263,22 @@ answers, in the order given.
     dot/icon with the word where there's room (S1, which is also the fix for
     H1); the work-and-parts "Done" ticks get a full 44px touch area; S2–S4
     are drawn as before/after boards for Jack to choose.
+56. **The change-request arrow is a smooth curve** (Jack, 29 Sep, with a
+    reference image of a swooping curved arrow): it bows out in an arc from
+    the original job to the requested slot, drawn on top of the jobs in
+    between, arrowhead at the requested slot. Nice-to-have, not required
+    now: when the Change requested card is clicked, the arrow animates
+    (draws itself from the job to the new slot).
+57. **Status is colour-only by default; status symbols are an
+    accessibility setting** (Jack, 29 Sep): the diary shows status by colour
+    alone unless "Show status symbols" is switched on. Settings gains an
+    Accessibility tab (beside the diary settings). Jack wants Wheelhouse to
+    be as accessible as possible. Accessibility choices are per person
+    (each staff member's own), since they depend on who is using the screen.
+    The Accessibility tab has three settings (Jack, 29 Sep): Show status
+    symbols; Reduce motion (turns off animations such as the change-request
+    arrow, and follows the computer's own reduce-motion setting
+    automatically); Larger text (a step up in text size across the app).
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

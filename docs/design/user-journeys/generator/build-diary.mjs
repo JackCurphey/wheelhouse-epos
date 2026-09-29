@@ -1,9 +1,19 @@
 // Builds the Workshop diary redesign canvas (out-diary/project/*) from diary.mjs.
 // Separate from build.mjs: does not touch out/ or the user journeys canvas.
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { screens, ROWS, TW, TH } from './diary.mjs';
+import { screens as diaryScreens, ROWS as DIARY_ROWS, TW, TH, CUSTOMER_BOARD_H } from './diary.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { FONT_LINK, FONT, FONT_DISPLAY, C, THEME } from './ui.mjs';
+// Audit idea boards (decision 55, 29 Sep) — desktop-only, Sand-only (these
+// are options to choose between, not settled design; they don't belong in
+// the Fjell build). Importing this always (not just under Sand) keeps a
+// single code path; its extra screens/row are just not added below when
+// THEME !== 'sand'.
+import { screens as ideaScreens } from './audit-ideas.mjs';
+
+const screens = THEME === 'sand' ? { ...diaryScreens, ...ideaScreens } : diaryScreens;
+const IDEAS_ROW = { label: 'Audit ideas — before / after', screens: ['idea-s2-before', 'idea-s2-after', 'idea-s3-before', 'idea-s3-after', 'idea-s4-before', 'idea-s4-after', 'idea-s4-open'] };
+const ROWS = THEME === 'sand' ? [...DIARY_ROWS, IDEAS_ROW] : DIARY_ROWS;
 
 const here = new URL('./', import.meta.url).pathname;
 // Sand builds land in their own out-diary-sand/ directory so out-diary/
@@ -75,6 +85,13 @@ const TITLE_OVERRIDE = {
   'job-finished': 'Job · finished',
   'job-collection': 'Job · collection',
   'job-checklist': 'Job · full service checklist',
+  'idea-s2-before': 'S2 before · one-line customer strip',
+  'idea-s2-after': 'S2 after · two-row customer strip',
+  'idea-s3-before': 'S3 before · a note box under every checklist item',
+  'idea-s3-after': 'S3 after · collapsed checklist rows',
+  'idea-s4-before': 'S4 before · plain "N jobs" overlap summary',
+  'idea-s4-after': 'S4 after · stacked-card overlap control',
+  'idea-s4-open': 'S4 open · choosing a job from the stack',
 };
 const TITLE = (id) => TITLE_OVERRIDE[id] || id.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 
@@ -87,6 +104,12 @@ const ROW_GAP = 160;
 const TITLE_H = 223;
 const TITLE_GAP = 40;
 const ROW_H = Math.max(DH, TH, PH); // 844 (phone)
+// Part A.2 (29 Sep audit follow-up): customer-desktop is taller than every
+// other board (grown to fit its content without an in-canvas scrollbar —
+// see diary.mjs's CUSTOMER_BOARD_H comment). Rows size themselves to the
+// tallest board they actually contain (below), so this only grows the
+// "Customer account" row, not every row on the canvas.
+const BOARD_H_OVERRIDE = { 'customer-desktop.dc.html': CUSTOMER_BOARD_H };
 
 let y = 0;
 let rowFirstFile = null;
@@ -102,24 +125,28 @@ for (const rowDef of ROWS) {
   let x = 0;
   let firstFileInRow = null;
   let trailingGap = 0;
+  let rowMaxH = 0; // a row sizes itself to its tallest board (usually ROW_H; customer-desktop is taller — see BOARD_H_OVERRIDE)
   for (const id of rowDef.screens) {
     const scr = screens[id];
     for (const [size, w, h] of SIZES) {
+      if (!scr[size]) continue; // idea boards (audit-ideas.mjs) are desktop-only
       const file = `${id}-${size}.dc.html`;
-      const html = page(`${TITLE(id)} (${size})`, w, h, scr[size]);
+      const boardH = BOARD_H_OVERRIDE[file] || h;
+      const html = page(`${TITLE(id)} (${size})`, w, boardH, scr[size]);
       writeFileSync(root + 'project/' + file, html);
-      boards[file] = { x, y: boardY, w, h, title: `${TITLE(id)} · ${size}`, is_interactive: true };
+      boards[file] = { x, y: boardY, w, h: boardH, title: `${TITLE(id)} · ${size}`, is_interactive: true };
       order.push(file);
       firstFileInRow ??= file;
       x += w + GAP_SIZE;
       trailingGap = GAP_SIZE;
+      rowMaxH = Math.max(rowMaxH, boardH);
     }
     if (!DESKTOP_ONLY) { x += GAP_SCREEN - GAP_SIZE + 80; trailingGap = GAP_SCREEN - GAP_SIZE + 80; } // wider gap between screens than between a screen's own sizes
   }
   const rowWidth = Math.max(x - trailingGap, 1600);
   notes[`row_${rowDef.label.replace(/[^a-z0-9]+/gi, '_')}_title`] = { x: 0, y: rowTop, text: rowDef.label, kind: 'title1', maxW: rowWidth };
   rowSummaries.push({ label: rowDef.label, count: rowDef.screens.length, first: firstFileInRow });
-  y = boardY + ROW_H + ROW_GAP;
+  y = boardY + Math.max(rowMaxH, ROW_H) + ROW_GAP;
 }
 
 // Main.dc.html — title, one short paragraph, list of rows with links to each row's first board.

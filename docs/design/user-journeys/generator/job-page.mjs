@@ -74,6 +74,29 @@ export function finalCustStrip(customer, mechanicName, custHref = '#') {
 </div>`;
 }
 
+// M1/S2 (29 Sep audit, idea board only — not wired into the live job pages):
+// the single-line customer strip already sits close to full width with a
+// short example name and bike description (see the audit's M1); this is the
+// "after" for the S2 idea board — the same fields as finalCustStrip, split
+// into an identity row (name link, phone, email, the same three icon
+// buttons) and a logistics row (bike, storage, mechanic, plus — per Jack's
+// 29 Sep brief for this board — the spending-limit/ready-by/approved tags
+// moved down here from the job-details strip, so "who" and "what's booked
+// in" are visually separated from "what the diary/quote says").
+export function finalCustStripTwoRow(customer, mechanicName, custHref = '#', tags = '') {
+  const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" title="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
+  const custLinkF = `<a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
+  const identityRow = `<div style="box-sizing: border-box; padding: 2px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px">
+<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}">${custLinkF}<span>${esc(customer.phone)}</span><span>${esc(customer.email)}</span></div>
+<div style="display: flex; gap: 8px; flex-shrink: 0">${iconBtnF('inbox', `Message ${esc(customer.name)}`)}${iconBtnF('mail', `Email ${esc(customer.name)}`)}${iconBtnF('menu', 'Notes')}</div>
+</div>`;
+  const logisticsRow = `<div style="box-sizing: border-box; padding: 2px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid ${C.border}">
+<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}"><span>${esc(customer.bike)}</span>${customer.storageSlot ? `<span style="color: ${C.muted}">Kept on ${esc(customer.storageSlot)}</span>` : ''}<span>Mechanic: <strong>${esc(mechanicName)}</strong></span></div>
+<div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap">${tags}</div>
+</div>`;
+  return `<div style="flex-shrink: 0; box-sizing: border-box; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">${identityRow}${logisticsRow}</div>`;
+}
+
 // ---------- job details strip (job number, created, badges + status/time/ticks) ----------
 // Decision 42: the customer's spending limit from their booking (decision 41),
 // shown as a tag so a mechanic sees how far extra work can go before a call.
@@ -84,7 +107,7 @@ export const SPEND_LIMIT = 'Customer OK up to £200';
 // with a consequence if missed. Its own badge-shaped chip keeps the blue
 // tone but adds a solid coloured left edge and bold text, so it reads
 // heavier than an ordinary info badge without growing in size.
-const limitBadge = (text) => `<span style="display: inline-flex; align-items: center; padding: 3px 10px 3px 8px; border-radius: 999px; border-left: 3px solid ${C.blueInk}; background: ${C.blueBg}; color: ${C.blueInk}; font-size: 12px; font-weight: 700; white-space: nowrap">${esc(text)}</span>`;
+export const limitBadge = (text) => `<span style="display: inline-flex; align-items: center; padding: 3px 10px 3px 8px; border-radius: 999px; border-left: 3px solid ${C.blueInk}; background: ${C.blueBg}; color: ${C.blueInk}; font-size: 12px; font-weight: 700; white-space: nowrap">${esc(text)}</span>`;
 export function jobMetaRow(jobNum, created, readyByBadge, totalBadge, limit = SPEND_LIMIT) {
   return row(`${mono(jobNum, 'font-size: 13px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">${esc(created)}</span><span style="flex-grow: 1"></span>${limit ? limitBadge(limit) : ''}${readyByBadge}${totalBadge}`, 10);
 }
@@ -227,12 +250,16 @@ export function jobPopupContent({
   lines, totalLabel, totalValue, footerNote, quoteAction,
   footer, // html for dialogFooter's inner
   stageTop = '', // optional stage-only section (bike tag, waiting-for-parts, payment) — inserted above the job details/notes section
+  twoRowHeader = false, // S2 idea board only (29 Sep audit): finalCustStripTwoRow instead of finalCustStrip, with the limit/ready-by/approved tags moved into its logistics row instead of jobMetaRow
 }) {
   const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${left}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn({ customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref })}</div>`, 24);
-  const jobSection = panel(`${jobMetaRow(jobNum, created, readyByBadge, totalBadge, ...(limit !== undefined ? [limit] : []))}${jobBody}`, '', 3, 3);
+  const metaLimit = limit !== undefined ? limit : SPEND_LIMIT;
+  const jobSection = panel(`${jobMetaRow(jobNum, created, twoRowHeader ? '' : readyByBadge, twoRowHeader ? '' : totalBadge, twoRowHeader ? '' : metaLimit)}${jobBody}`, '', 3, 3);
   const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(lines, { totalLabel, totalValue, footerNote, quoteAction }), grow: false });
   const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 4, 1);
-  return `${finalTitleBar(titleId, jobTitle, status, tone, closeHref)}${finalCustStrip(customer, mechanicName, custHref)}${body}${footer ? dialogFooter(footer) : ''}`;
+  const headerTags = twoRowHeader ? `${metaLimit ? limitBadge(metaLimit) : ''}${readyByBadge}${totalBadge}` : '';
+  const custStripHtml = twoRowHeader ? finalCustStripTwoRow(customer, mechanicName, custHref, headerTags) : finalCustStrip(customer, mechanicName, custHref);
+  return `${finalTitleBar(titleId, jobTitle, status, tone, closeHref)}${custStripHtml}${body}${footer ? dialogFooter(footer) : ''}`;
 }
 
 // ---------- Full service checklist pop-up (decision 39) ----------
@@ -243,6 +270,24 @@ export function fullChecklistItem(it, id) {
   return `<div style="display: flex; flex-direction: column; gap: 4px">
 <label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}">${esc(it.t)}</span></label>
 ${field}${caption}
+</div>`;
+}
+// S3 idea board only (29 Sep audit): the checklist's ten items collapsed to
+// a tick + label by default — a full-width empty note textarea under every
+// item (the "before") pays the same visual cost whether it's used or not;
+// this shows the note only where one exists, and a "+ Add note" action on
+// the rest, so the two items that actually have something to say stand out
+// instead of getting lost among eight empty boxes. min-height: 44px on both
+// the label and the "+ Add note" button, per decision 34's touch-target floor.
+export function fullChecklistItemCollapsed(it, id) {
+  const tick = `<input id="${id}" type="checkbox"${it.checked ? ' checked' : ''} style="width: 22px; height: 22px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0">`;
+  const hasNote = !!it.note;
+  return `<div style="box-sizing: border-box; border-bottom: 1px solid ${C.border}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+<label for="${id}" style="flex-grow: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer">${tick}<span style="font-size: 14px; color: ${C.ink}">${esc(it.t)}</span></label>
+${hasNote ? '' : `<button type="button" aria-label="Add a note for ${esc(it.t)}" style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 10px; border-radius: 6px; border: 0; background: transparent; color: ${C.accentDark}; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer">${icon('plus', 14)}Add note</button>`}
+</div>
+${hasNote ? `<div style="box-sizing: border-box; padding: 0 0 10px 32px"><p style="margin: 0; font-size: 13px; line-height: 1.4; color: ${C.ink}; background: ${C.mutedBg}; border-radius: 6px; padding: 8px 10px">${esc(it.note)}</p></div>` : ''}
 </div>`;
 }
 export function fullChecklistHeader(titleId, subtitle, doneHref, closeHref) {
@@ -257,14 +302,23 @@ ${button('Done', { variant: 'primary', href: doneHref || null })}
 </div>
 </header>`;
 }
-export function fullChecklistDialog({ titleId = 'checklist-title', subtitle, checklist, doneHref = null, closeHref = '#', idPrefix = 'fcd' }) {
+export function fullChecklistDialog({ titleId = 'checklist-title', subtitle, checklist, doneHref = null, closeHref = '#', idPrefix = 'fcd', collapsed = false }) {
   const checkedCount = checklist.filter((c) => c.checked).length;
   const notedCount = checklist.filter((c) => c.note).length;
   const summary = `<div style="flex-shrink: 0; padding: 6px 24px 0"><span style="font-size: 13px; color: ${C.muted}">${esc(`${checkedCount} of ${checklist.length} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span></div>`;
-  const left = checklist.slice(0, 5);
-  const right = checklist.slice(5, 10);
-  const colHtml = (items, offset) => `<div style="display: flex; flex-direction: column; gap: 16px; min-height: 0">${items.map((it, i) => fullChecklistItem(it, `${idPrefix}-${offset + i}`)).join('')}</div>`;
-  const cols = grid('1fr 1fr', `${colHtml(left, 0)}${colHtml(right, 5)}`, 40, 'flex-grow: 1; min-height: 0; overflow: hidden;');
+  // S3 idea board only (collapsed=true): a single column of short rows reads
+  // top-to-bottom in about one screen (the audit spec's "AFTER" sketch),
+  // rather than the two 5-item columns the full note-per-item layout needs
+  // to fit at all.
+  let cols;
+  if (collapsed) {
+    cols = `<div style="flex-grow: 1; min-height: 0; overflow: hidden; max-width: 560px">${checklist.map((it, i) => fullChecklistItemCollapsed(it, `${idPrefix}-${i}`)).join('')}</div>`;
+  } else {
+    const left = checklist.slice(0, 5);
+    const right = checklist.slice(5, 10);
+    const colHtml = (items, offset) => `<div style="display: flex; flex-direction: column; gap: 16px; min-height: 0">${items.map((it, i) => fullChecklistItem(it, `${idPrefix}-${offset + i}`)).join('')}</div>`;
+    cols = grid('1fr 1fr', `${colHtml(left, 0)}${colHtml(right, 5)}`, 40, 'flex-grow: 1; min-height: 0; overflow: hidden;');
+  }
   const body = `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 24px 22px; display: flex; flex-direction: column">${cols}</div>`;
   return `<div role="dialog" aria-modal="true" aria-labelledby="${titleId}" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 28px 72px rgba(28,30,25,0.45); display: flex; flex-direction: column; overflow: hidden">
 ${fullChecklistHeader(titleId, subtitle, doneHref, closeHref)}${summary}${body}

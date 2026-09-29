@@ -120,8 +120,8 @@ function siteSwitcher() {
 }
 
 // ---------- Shells (copied/adapted from stage1.mjs staffDesktop/staffPhone: same look, new rooms) ----------
-export function shellDesktop(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '' } = {}) {
-  return `<div style="width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">
+export function shellDesktop(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '', height = DH } = {}) {
+  return `<div style="width: ${DW}px; height: ${height}px; display: flex; background: ${C.bg}">
 <nav aria-label="Main" style="width: 248px; flex-shrink: 0; box-sizing: border-box; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; background: ${C.accentDark}; color: #ffffff">
 <div style="display: flex; align-items: center; gap: 10px; padding: 4px 6px">${logoSlot('Wheelhouse logo', true)}<span style="font-size: 17px; font-weight: 700">Wheelhouse</span></div>
 ${siteSwitcher()}
@@ -221,7 +221,7 @@ function diaryFrozenContent(size, { highlightJob = null } = {}) {
 ${row(`${waitingColumn(size, -1)}${weekGrid({ days, size, slotH, mechFilter: 'Everyone', highlightJob })}`, 16, 'align-items: flex-start')}`, 12);
 }
 // Same, but for the mechanic's diary (decision 13: filtered to Alex, no Waiting column).
-function diaryFrozenContentMechanic(size) {
+export function diaryFrozenContentMechanic(size) {
   const days = size === 'desktop' ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4];
   const slotH = size === 'desktop' ? 29 : 30;
   return stack(`${mechToolbar(true, size, { newJob: `new-job-${size}.dc.html` })}${row(weekGrid({ days, size, slotH, mechFilter: 'Alex' }), 16, 'align-items: flex-start')}`, 12);
@@ -365,7 +365,7 @@ const BLOCK_PREF = { first: 'bike', second: 'jobTitle' };
 // the job page header show it; STORAGE_SLOTS is the shop's own list, edited in
 // diary-settings-desktop. storageOptions(def) reorders the list so a form's
 // select shows the wanted default as its first (selected) option.
-const STORAGE = { 'WH-1042': 'Hook 3', 'WH-1040': 'Hook 1' };
+export const STORAGE = { 'WH-1042': 'Hook 3', 'WH-1040': 'Hook 1' };
 const STORAGE_SLOTS = ['Hook 1', 'Hook 2', 'Hook 3', 'Hook 4', 'Hook 5', 'Hook 6', 'Workshop floor', 'Front window'];
 const storageOptions = (def) => [def, ...STORAGE_SLOTS.filter((s) => s !== def)];
 const STARTING_STATUS = ['Booked', 'Bike is here', 'Waiting for parts'];
@@ -530,6 +530,16 @@ function requestedOutlineBlock(size, slotH, highlighted = false) {
 // text. aria-hidden: the surrounding card/pop-up text already says
 // "Mon 10:00 → 14:00".
 let requestConnectorSeq = 0;
+// Decision 56 (29 Sep): the connector is a smooth curved arrow, not a
+// straight line — it bows out to the side (into the gutter/next column)
+// rather than running straight down through the two ordinary jobs sitting
+// between Mon 10:00 and 14:00, and it animates in ("draws itself") the first
+// time the Change requested card is clicked, per the reference swoosh Jack
+// attached. The curve is built in a fixed local coordinate space (0..W)
+// centred on the block's own horizontal middle, wider than a single Week
+// column, with the surrounding <svg> given overflow: visible — the actual
+// bow happens outside the column's own box, into the gutter, not by scaling
+// path coordinates as percentages (which SVG path data doesn't support).
 function requestConnector(size, slotH, highlighted = false) {
   // Jack, 28 Sep: the arrow shows only when the Change requested card is
   // clicked, and runs from the middle of the original job to the middle of
@@ -546,12 +556,39 @@ function requestConnector(size, slotH, highlighted = false) {
   const h = toMid - fromMid;
   if (h <= 8) return '';
   const stroke = ST.hold[1];
-  const markerId = `req-arrow-${size}-${requestConnectorSeq++}`;
-  return `<svg aria-hidden="true" focusable="false" style="position: absolute; left: 0; right: 0; top: ${fromMid}px; width: 100%; height: ${h}px; overflow: visible; pointer-events: none; z-index: 5">
-<defs><marker id="${markerId}" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,0 L4,8 Z" fill="${stroke}"/></marker></defs>
-<circle cx="50%" cy="0" r="4" fill="${stroke}"/>
-<line x1="50%" y1="0" x2="50%" y2="${(h - 2).toFixed(1)}" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.85"/>
-<line x1="50%" y1="0" x2="50%" y2="${(h - 2).toFixed(1)}" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" marker-end="url(#${markerId})"/>
+  const seq = requestConnectorSeq++;
+  const lineCls = `req-arrow-line-${size}-${seq}`;
+  const headCls = `req-arrow-head-${size}-${seq}`;
+  const drawKf = `reqArrowDraw${size}${seq}`;
+  const headKf = `reqArrowHead${size}${seq}`;
+  const W = 132; // local coordinate width — wider than a Week column so the bow reads clearly beyond the column's own edge
+  const cx = W / 2; // the block's own horizontal middle (start/end x)
+  const bow = 46; // how far the curve bows out towards the gutter/next column
+  const bendX = cx + bow;
+  const endY = h - 2;
+  const c1y = h * 0.32, c2y = h * 0.68;
+  const path = `M${cx},0 C${bendX.toFixed(1)},${c1y.toFixed(1)} ${bendX.toFixed(1)},${c2y.toFixed(1)} ${cx},${endY.toFixed(1)}`;
+  // Arrowhead: a small triangle, tip at the curve's end point, rotated to
+  // match the curve's tangent there (the last control point → end vector) so
+  // it points the way the line is actually travelling as it lands on the
+  // requested slot, not straight down.
+  const dx = -bow, dy = endY - c2y;
+  const angleDeg = (Math.atan2(dx, dy) * 180) / Math.PI;
+  return `<svg aria-hidden="true" focusable="false" viewBox="0 0 ${W} ${h}" style="position: absolute; left: 50%; top: ${fromMid}px; width: ${W}px; height: ${h}px; margin-left: ${-cx}px; overflow: visible; pointer-events: none; z-index: 5">
+<style>
+.${lineCls}{stroke-dasharray: 1000; stroke-dashoffset: 0;}
+.${headCls}{opacity: 1;}
+@media (prefers-reduced-motion: no-preference) {
+  .${lineCls}{animation: ${drawKf} 0.8s ease-out;}
+  .${headCls}{opacity: 0; animation: ${headKf} 0.25s ease-out 0.65s forwards;}
+  @keyframes ${drawKf} { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+  @keyframes ${headKf} { from { opacity: 0; } to { opacity: 1; } }
+}
+</style>
+<circle cx="${cx}" cy="0" r="4" fill="${stroke}"/>
+<path d="${path}" stroke="#ffffff" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.85"/>
+<path class="${lineCls}" pathLength="1000" d="${path}" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+<path class="${headCls}" d="M0,-6.5 L6,4.5 L-6,4.5 Z" fill="${stroke}" transform="translate(${cx},${endY}) rotate(${angleDeg.toFixed(1)})"/>
 </svg>`;
 }
 function combinedBlock(cluster, size, slotH, faded = false) {
@@ -567,6 +604,40 @@ function combinedBlock(cluster, size, slotH, faded = false) {
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${cluster.length} jobs · ${t0}</span>
 ${cluster.map((j) => `<span style="font-size: 10px; font-weight: 600; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(customerBikeOf(j)[1])} · ${esc(j.svc || '')}</span>`).join('')}
 </a>`;
+}
+// S4 idea board only (29 Sep audit, M4): a stacked-card look for an
+// overlapping slot — two thin card edges peeking out behind the front job's
+// block (offset up/right, lower z-index, no text of their own) plus a small
+// count badge with a chevron, so the shape itself reads "there's more
+// underneath, click to choose" instead of the plain "2 jobs · 09:00" caption
+// the "before" board uses. Not wired into the live diary (weekGrid's
+// overlapStyle option below is what switches a board over to this).
+function stackedJobsBlock(cluster, size, slotH, faded = false) {
+  const start = Math.min(...cluster.map((j) => j.start));
+  const end = Math.max(...cluster.map((j) => j.start + j.dur));
+  const top = ((start - GRID_START) / 30) * slotH + 2;
+  const h = Math.max(((end - start) / 30) * slotH - 4, slotH - 6);
+  const names = cluster.map((j) => `${customerBikeOf(j)[1]} · ${j.svc || ''} (${j.job})`).join(', ');
+  const t0 = `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`;
+  const t1 = `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
+  const front = cluster[0];
+  const [, frontBike] = customerBikeOf(front);
+  // Local coordinates (0,0 = this wrapper's own top-left corner — the
+  // wrapper is already placed at the cluster's real top/height in the
+  // column), not the column-relative `top` used to place the wrapper
+  // itself: reusing that here previously double-applied it, pushing the
+  // card edges and link hundreds of px below the wrapper's own box and
+  // inflating the whole grid's scrollHeight (caught by the strict fit check).
+  const edge = (offset, op) => `<div aria-hidden="true" style="position: absolute; left: ${offset}px; right: ${-offset}px; top: ${-offset}px; bottom: 0; border-radius: 5px; background: ${C.panel}; border: 1.75px solid ${C.ink}; opacity: ${op}"></div>`;
+  return `<div style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; ${faded ? 'opacity: 0.5;' : ''}">
+${edge(6, 0.45)}
+${edge(3, 0.7)}
+<a href="job-overview-${size}.dc.html" aria-label="${cluster.length} jobs booked ${t0} to ${t1}, click to choose which one to open: ${esc(names)}" title="${esc(names)}" style="position: absolute; inset: 0; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 22px 3px 6px; border-radius: 5px; background: ${C.panel}; border: 1.75px solid ${C.ink}; overflow: hidden">
+<span style="position: absolute; top: 3px; right: 3px; display: inline-flex; align-items: center; gap: 1px; padding: 1px 5px; border-radius: 999px; background: ${C.ink}; color: ${C.panel}; font-size: 9px; font-weight: 700">${cluster.length}<span style="display: inline-flex; transform: rotate(90deg)">${icon('chevron', 9, C.panel)}</span></span>
+<span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(frontBike)}</span>
+<span style="font-size: 10px; font-weight: 600; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(front.svc || '')} · ${t0}</span>
+</a>
+</div>`;
 }
 // The New job pick target (item 2 of the 27 Sep round, replaces the old
 // dashed "+ New job" slot hint everywhere — decision 22). Shown only on
@@ -607,7 +678,11 @@ function diaryDayFrozenContent(size, { highlightJob = null } = {}) {
   return stack(`${diaryToolbar('Everyone', size, { activeView: 'Day', newJob: `new-job-day-${size}.dc.html` })}
 ${row(`${waitingColumn(size, -1)}${dayMechGrid({ dayIdx: TODAY, size, slotH, highlightJob })}`, 16, 'align-items: flex-start')}`, 12);
 }
-function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot = null, highlightJob = null, pickMode = false }) {
+// overlapStyle: 'text' (live diary — combinedBlock's plain "N jobs · time"
+// caption) or 'stacked' (S4 idea board only — stackedJobsBlock's card-fan
+// look). Exported so audit-ideas.mjs can build a faithful "after" board with
+// the real grid, not a re-drawn approximation of it.
+export function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot = null, highlightJob = null, pickMode = false, overlapStyle = 'text' }) {
   const gridH = GRID_SLOTS * slotH;
   const hourLabels = Array.from({ length: 9 }, (_, i) => `${String(9 + i).padStart(2, '0')}:00`);
   const cols = `44px repeat(${days.length}, minmax(0, 1fr))`;
@@ -627,7 +702,7 @@ function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot 
     const isPickSlot = pickMode && selectSlot && d === selectSlot.day && (mechFilter === 'Everyone' || mechFilter === selectSlot.mech);
     const pickHint = isPickSlot ? pickHintSlot(size, slotH, ((selectSlot.start - GRID_START) / 30) * slotH + 2, selectSlot.label || '10:00', `new-job-${size}.dc.html`) : '';
     const clusters = clusterOverlaps(items);
-    const blocks = clusters.map((c) => (c.length === 1 ? jobBlock(c[0], size, slotH, highlightJob?.type === 'job' && c[0].job === highlightJob.job, highlightJob?.dim === c[0].job, pickMode) : combinedBlock(c, size, slotH, pickMode))).join('');
+    const blocks = clusters.map((c) => (c.length === 1 ? jobBlock(c[0], size, slotH, highlightJob?.type === 'job' && c[0].job === highlightJob.job, highlightJob?.dim === c[0].job, pickMode) : overlapStyle === 'stacked' ? stackedJobsBlock(c, size, slotH, pickMode) : combinedBlock(c, size, slotH, pickMode))).join('');
     // Decision 12: the pending request sits in its slot, Everyone view only (no mechanic yet).
     const pending = mechFilter === 'Everyone' && d === PENDING_DIARY.day ? pendingBlock(size, slotH, highlightJob?.type === 'pending') : '';
     const outline = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestedOutlineBlock(size, slotH, highlightJob?.type === 'outline') : '';
@@ -766,10 +841,18 @@ function mechToolbar(meSelected, size, { newJob = null } = {}) {
 export const screens = {};
 
 // 1. diary (Staff, Jo Taylor)
+// S4 idea board only (29 Sep audit): the exact desktop diary board,
+// parameterised on overlapStyle so audit-ideas.mjs's "after" board can reuse
+// this real builder (weekGrid + toolbar + waiting column + legend) instead
+// of a redrawn approximation. screens.diary.desktop below calls this with
+// the default 'text' style, so its own output is unchanged.
+export function buildDiaryDesktopBoard(overlapStyle = 'text') {
+  return shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', overlapStyle })}`, 16, 'align-items: flex-start')}
+${diaryLegend()}`, 12));
+}
 screens.diary = {
-  desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
-${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone' })}`, 16, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
+  desktop: buildDiaryDesktopBoard('text'),
   tablet: shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { newJob: 'new-job-tablet.dc.html' })}
 ${row(`${waitingColumn('tablet', -1, 190)}${weekGrid({ days: [0, 1, 2, 3, 4], size: 'tablet', mechFilter: 'Everyone', slotH: 30 })}`, 14, 'align-items: flex-start')}
 ${diaryLegend()}`, 12)),
@@ -1125,15 +1208,25 @@ ${custResult}
   const bikeBlock = showCustomer
     ? `${select('Bike', ['Trek Domane AL 3 · green'], 'nj-bike-' + size)}<div>${link('+ Add a bike')}</div>`
     : `${select('Bike', ['Select a customer first'], 'nj-bike-' + size)}<div>${link('+ Add a bike')}</div>`;
-  const leftCol = `<div style="display: flex; flex-direction: column; gap: 12px">
+  // Part A.3 (29 Sep audit follow-up): the strict fit check found the
+  // desktop new-job form's scrolling body ~43px taller than the pop-up —
+  // real content past the fold on a static canvas that can't be scrolled to
+  // prove it's there. The 43px only shows up on this board (new-job), not
+  // new-job-day, because this is the one with the "won't fit" warning banner
+  // (item 23) — that's the extra block the other board doesn't carry.
+  // Tightened rather than cut: column gap 12px→9px, "Note for the customer"
+  // 3 rows→2 (still fits the example text), dialog body padding 20px→14px
+  // (below, in newJobDialog) — together enough to bring it back within the
+  // fixed 800px board with no scrolling needed.
+  const leftCol = `<div style="display: flex; flex-direction: column; gap: 9px">
 ${customerBlock}
 ${bikeBlock}
 ${select('Work / service', SERVICE_OPTIONS.map(([n, d]) => `${n} · ${d} min`), 'nj-work-' + size)}
 ${field('Job title', { value: SERVICE_OPTIONS[0][0], id: 'nj-title-' + size, hint: 'Filled in from the work chosen. Shown on the diary block.' })}
-${area('Note for the customer', receiptNote, 'nj-receipt-' + size, 3)}
+${area('Note for the customer', receiptNote, 'nj-receipt-' + size, 2)}
 ${note('Printed on their receipt.', 12)}
 </div>`;
-  const rightCol = `<div style="display: flex; flex-direction: column; gap: 12px">
+  const rightCol = `<div style="display: flex; flex-direction: column; gap: 9px">
 ${banner(`${when} · ${mechanic}`, 'info')}
 ${note(mechHint)}
 ${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}
@@ -1161,7 +1254,7 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
   // never sits clipped below the fold — dialogBody's overflow:hidden is
   // right for those, not for this longer form; the footer (Cancel/Save job)
   // stays pinned outside the scrolling body either way.
-  const body = `<div style="flex-grow: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 14px">${centered}</div>`;
+  const body = `<div style="flex-grow: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 14px 20px; display: flex; flex-direction: column; gap: 14px">${centered}</div>`;
   const footer = size === 'desktop'
     ? row(`${button('Cancel', { variant: 'ghost', href: `${closeId}-${size}.dc.html` })}<div style="flex-grow: 1"></div>${button('Save job', { variant: 'primary' })}`, 10)
     : button('Save', { block: true });
@@ -1202,17 +1295,21 @@ screens['new-job-day'] = {
 // new-job-desktop. Tablet/phone aren't drawn this round (brief item 25) — New
 // job there goes straight to the New job form instead of through a pick step.
 function pickInstructionBar(size) {
-  return `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: 13px; font-weight: 600; color: ${C.accentDark}">
+  return `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 14px; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: 13px; font-weight: 600; color: ${C.accentDark}">
 <span>Click a free time in the diary for the new job. Esc to cancel.</span>
 <a href="diary-${size}.dc.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 13px; font-weight: 600; text-decoration: none">Cancel</a>
 </div>`;
 }
+// Part A.3 (29 Sep audit follow-up): a further 13px of the day grid was cut
+// off by main's overflow:hidden — not called out in the brief's two named
+// findings, but caught by the same strict check, so fixed the same way
+// (tightened stack/bar spacing, not a bigger board).
 function diaryPickContent(size) {
   const days = size === 'desktop' ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4];
   const slotH = size === 'desktop' ? 29 : 30;
   return stack(`${diaryToolbar('Everyone', size, { newJob: 'active' })}
 ${pickInstructionBar(size)}
-${row(`${waitingColumn(size, -1)}${weekGrid({ days, size, slotH, mechFilter: 'Everyone', pickMode: true, selectSlot: HINT_SLOT })}`, 16, 'align-items: flex-start')}`, 12);
+${row(`${waitingColumn(size, -1)}${weekGrid({ days, size, slotH, mechFilter: 'Everyone', pickMode: true, selectSlot: HINT_SLOT })}`, 16, 'align-items: flex-start')}`, 8);
 }
 function desktopOnlyPlaceholder(size, backHref, backLabel = '‹ Back to the diary') {
   const body = stack(`${note('This screen is being iterated on desktop first (27 Sep 2026 round). Tablet and phone will be redrawn once the desktop design is agreed.')}
@@ -1381,16 +1478,16 @@ ${panel(`${h2('History', 14)}${HISTORY_ALL.slice(0, historyUpTo).map(([t, d]) =>
 // ---------- Desktop: the settled job page (decision 40) — job-page.mjs's
 // job-final-2 rendering, driven by this stage's data. Tablet/phone keep the
 // pre-existing (not-yet-settled — decision 25) layout below unchanged.
-const DECLINED_NOTE_TEXT = 'Gear cable declined. Anything beyond these lines needs a new approval.';
+export const DECLINED_NOTE_TEXT = 'Gear cable declined. Anything beyond these lines needs a new approval.';
 const WORK_LINE_SERVICE = { work: 'Standard service', sub: 'Labour · 60 min', code: '', qty: '1', price: 65.0 };
 const WORK_LINE_PADS = { work: 'Shimano brake pads', sub: 'Part · B05S-RX', code: 'B05S-RX', qty: '1', price: 28.0, note: 'Rear pads worn — replacing' };
 const WORK_LINE_BRAKES = { work: 'Fit & adjust brakes', sub: 'Labour · 30 min', code: '', qty: '1', price: 18.0 };
 const WORK_LINE_CABLE = { work: 'Replace gear cable', sub: 'Optional · cable still serviceable', code: '', qty: '1', price: 12.0 };
-const WORK_TOTAL_APPROVED = 111.0; // service + pads + brakes (cable declined)
+export const WORK_TOTAL_APPROVED = 111.0; // service + pads + brakes (cable declined)
 const WORK_TOTAL_QUOTE = 123.0; // all four lines, pending
 const LINES_EXPECTED = [{ ...WORK_LINE_SERVICE, approval: 'Booked' }];
 const LINES_QUOTE = [WORK_LINE_SERVICE, WORK_LINE_PADS, WORK_LINE_BRAKES, WORK_LINE_CABLE].map((l) => ({ ...l, approval: 'Awaiting approval' }));
-const LINES_APPROVED = [
+export const LINES_APPROVED = [
   { ...WORK_LINE_SERVICE, approval: 'Approved' },
   { ...WORK_LINE_PADS, approval: 'Approved' },
   { ...WORK_LINE_BRAKES, approval: 'Approved' },
@@ -1401,12 +1498,12 @@ const LINES_WAITING = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads'
 // 10 once in the workshop — CHECKLIST_10's own fixed data (8 checked, 1
 // noted), kept the same at every later stage per the brief ("if the data
 // doesn't say, keep 8 of 10 and don't invent").
-const CHECKLIST_CHECKED = CHECKLIST_10.filter((c) => c.checked).length; // 8
-const CHECKLIST_NOTED = CHECKLIST_10.filter((c) => c.note).length; // 1
-const NOTES_CUSTOMER = [CUSTOMER_NOTE];
+export const CHECKLIST_CHECKED = CHECKLIST_10.filter((c) => c.checked).length; // 8
+export const CHECKLIST_NOTED = CHECKLIST_10.filter((c) => c.note).length; // 1
+export const NOTES_CUSTOMER = [CUSTOMER_NOTE];
 const NOTES_STAFF_NONE = [];
 const NOTES_STAFF_BOOKED = [STAFF_NOTE_BOOKED_IN];
-const NOTES_STAFF_FULL = [STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES];
+export const NOTES_STAFF_FULL = [STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES];
 
 // Compact stage-only top sections (task item 1's "any stage-only section from
 // the stages table") — same texts as the tablet/phone top()s below
@@ -1452,13 +1549,14 @@ function collectionHandback(size) {
 // passes its own readyBy (the day the job is moved to in the diary, per the
 // "Revised ready" date below) so the header badge and the compact left
 // column agree with the stage-specific delay text.
-const JOB_READY_BY = 'Thu 17 Sep';
-function buildJobPageDesktop({
+export const JOB_READY_BY = 'Thu 17 Sep';
+export function buildJobPageDesktop({
   mechanic = false, jobNum = 'WH-1042', status, tone, closeHref,
   stageTop = '', customerTexts, staffTexts, checkedCount, notedCount,
   checklistHref = null, leftStatus, bikeHere,
   lines, totalLabel, totalValue, footerNote = '', quoteAction = false,
   totalBadge = '', footer, limit, readyBy = JOB_READY_BY,
+  twoRowHeader = false, // S2 idea board only (29 Sep audit) — see job-page.mjs's jobPopupContent
 }) {
   const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
   const base = shellDesktop('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('desktop') : diaryFrozenContent('desktop'), opts);
@@ -1471,7 +1569,7 @@ function buildJobPageDesktop({
     left: jpJobLeftCol({ status: leftStatus, diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy, bikeHere, idPrefix: 'jp' }),
     customerTexts, staffTexts, checkedCount, totalCount: CHECKLIST_10.length, notedCount, checklistHref,
     lines, totalLabel, totalValue, footerNote, quoteAction,
-    footer, stageTop,
+    footer, stageTop, twoRowHeader,
   });
   return dialogOverlay(base, DW, DH, content, { pad: 32, full: true, labelledby: 'job-page-title' });
 }
@@ -1724,8 +1822,14 @@ function customerBody(size) {
     // that amount into the table instead of a service name. Bound directly
     // to j.svc (every JOBS entry already carries one) so the column can't
     // pick up unrelated free text again.
-    const work = (j.svc || '').toLowerCase();
-    return [mono(j.job), `${dayName} ${date} Sep · ${t}`, esc(work), statusBadge(j.key)];
+    // Part A.2 (29 Sep audit follow-up): j.svc reads as a natural-case
+    // fragment ("gear adjustment") — every other row on the page (job titles,
+    // service names elsewhere) is sentence case, so this table was the odd
+    // one out. Capitalise the first letter only (not .toUpperCase(), so
+    // "gear adjustment" reads as a name, not shouted).
+    const work = (j.svc || '').trim();
+    const workCased = work ? work[0].toUpperCase() + work.slice(1) : work;
+    return [mono(j.job), `${dayName} ${date} Sep · ${t}`, esc(workCased), statusBadge(j.key)];
   });
   return stack(`<div>${link('‹ Back to job', 'job-overview-desktop.dc.html')}</div>
 ${eyebrow('Front desk › Customers')}
@@ -1735,8 +1839,15 @@ ${panel(`${h2('Bikes on file', 15)}${txt(JOB_CUSTOMER.bike)}`, '', 14, 6)}
 ${panel(`${h2('Workshop jobs', 15)}${table([['Job'], ['When'], ['Work'], ['Status']], jobRows, { size: 13 })}`, '', 14, 10)}
 ${panel(`${h2('Purchases', 15)}${note('[past purchases from the till]')}`, '', 14, 6)}`, 16);
 }
+// Part A.2 (29 Sep audit follow-up): at the standard 800px board height this
+// page's content (contact, bikes, jobs, purchases) ran past the bottom —
+// fine in the real app (an ordinary page scrolls) but on a still canvas the
+// cut-off "Purchases" panel read as missing content. Grown to 1100px tall
+// (build-diary.mjs's CUSTOM_BOARD_SIZE) rather than trimmed, since trimming
+// would mean losing a real section to make the render fit, not the content.
+export const CUSTOMER_BOARD_H = 1100;
 screens.customer = {
-  desktop: shellDesktop('customers', 'Customer', `<div style="max-width: 760px">${customerBody('desktop')}</div>`),
+  desktop: shellDesktop('customers', 'Customer', `<div style="max-width: 760px">${customerBody('desktop')}</div>`, { height: CUSTOMER_BOARD_H }),
   tablet: desktopOnlyPlaceholder('tablet', 'job-overview-tablet.dc.html', '‹ Back to job'),
   phone: desktopOnlyPlaceholder('phone', 'job-overview-phone.dc.html', '‹ Back to job'),
 };
