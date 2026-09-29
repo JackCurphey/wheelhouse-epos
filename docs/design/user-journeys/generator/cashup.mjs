@@ -12,6 +12,7 @@ import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { TW, TH } from './diary.mjs';
 import { foldedRail, tillBar, tillPhoneBar } from './app-map.mjs';
+import { screens as tillScreens } from './till.mjs';
 
 let CUR = 'desktop';
 const WH = () => ({ desktop: [DW, DH], tablet: [TW, TH], phone: [PW, PH] })[CUR];
@@ -138,6 +139,22 @@ def('eod-card', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 
 def('eod-finish', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('matched')}${stepFinish(true)}`));
 def('eod-z', () => overlay(page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('matched')}${step(6, 'End-of-day report', 'done', 'Closed')}`), reportDialog()));
 
+// Decision 5: after the shop's closing time, owners and managers see "Close
+// the day" in the till bar (on a phone, a strip under the bar). Drawn on the
+// sale screen from journey 11 with Jack Lewis (Manager) serving.
+function entry() {
+  const base = tillScreens['till-sale'][CUR].replaceAll('Serving: Jo Taylor', 'Serving: Jack Lewis').replace('>Jo</button>', '>Jack</button>');
+  const btn = `<a href="eod-count-${CUR}.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 8px; background: #ffffff; color: ${C.ink}; text-decoration: none; font-size: 14px; font-weight: 700">${icon('cash', 16)}Close the day</a>`;
+  if (P()) {
+    const i = base.indexOf('</header>') + '</header>'.length;
+    return base.slice(0, i) + `<div style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}"><span style="font-size: 14px">It’s after [closing time]</span>${btn.replace('background: #ffffff; color: ' + C.ink, 'background: ' + C.ink + '; color: #ffffff')}</div>` + base.slice(i);
+  }
+  const marker = base.indexOf('aria-label="Past sales');
+  const at = base.lastIndexOf('<button', marker);
+  return base.slice(0, at) + btn + '\n' + base.slice(at);
+}
+def('eod-entry', () => entry());
+
 for (const size of ['desktop', 'tablet', 'phone']) {
   CUR = size;
   for (const [id, fn] of recipes) (screens[id] ??= {})[size] = fn();
@@ -145,6 +162,7 @@ for (const size of ['desktop', 'tablet', 'phone']) {
 CUR = 'desktop';
 
 export const TITLES = {
+  'eod-entry': 'Close the day appears in the till bar after closing time',
   'eod-waiting': 'Close the day — a till still has sales waiting',
   'eod-attention': 'Close the day — sales that need checking',
   'eod-count': 'Count the cash — note by note (blind)',
@@ -156,5 +174,5 @@ export const TITLES = {
   'eod-z': 'Day closed — the end-of-day report',
 };
 export const ROWS = [
-  { label: 'Close the day', screens: ['eod-waiting', 'eod-attention', 'eod-count', 'eod-count-shown', 'eod-count-result', 'eod-banking', 'eod-card', 'eod-finish', 'eod-z'] },
+  { label: 'Close the day', screens: ['eod-entry', 'eod-waiting', 'eod-attention', 'eod-count', 'eod-count-shown', 'eod-count-result', 'eod-banking', 'eod-card', 'eod-finish', 'eod-z'] },
 ];

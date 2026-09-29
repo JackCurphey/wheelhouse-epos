@@ -28,3 +28,7 @@ from the machine itself rather than being typed in.
    drawer, bank £[the rest]"** (Jack, 29 Sep): every day starts with the
    same float and the till works out the banking. Chosen over deciding each
    evening and banking everything.
+5. **"Close the day" appears in the till bar for owners and managers after
+   a time the shop sets** (Jack, 29 Sep): one tap at the end of the day,
+   nothing extra on the till during trading. The time is a till setting
+   (Owner setup, journey 8). Chosen over the till menu and Office › Today.
