@@ -1,14 +1,33 @@
 // Builds the canvas files (project/canvas.json + one .dc.html per screen) from journeys.mjs.
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { journeys } from './journeys.mjs';
 import * as stage1 from './stage1.mjs';
-import * as stage2 from './stage2.mjs';
-const DRAWN = { ...stage1.screens, ...stage2.screens };
+// stage2.mjs (the first Workshop day drawings) is superseded by the approved
+// redesign (decision 69); journey 12 now comes from the Soft sand build below.
+const DRAWN = { ...stage1.screens };
 import { FONT_LINK } from './ui.mjs';
+import { TOUCH_TITLE_OVERRIDE } from './diary-titles.mjs';
 import { workflow, WF_W, WF_H } from './workflow.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
 const root = here + 'out/';
+
+// Journey 12 (Workshop day) shows the approved redesign in Soft sand
+// (decisions 48 and 69). ui.mjs picks its theme when it loads, and this
+// process is Fjell, so the Soft sand boards are built in their own process
+// and read back from out-diary-sand/project/.
+execFileSync(process.execPath, ['build-diary.mjs', '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
+const SAND = here + 'out-diary-sand/project/';
+const SAND_SIZES = ['desktop', 'tablet', 'phone'];
+function sandBoard(id, size) {
+  const src = readFileSync(`${SAND}${id}-${size}.dc.html`, 'utf8');
+  const helmet = /<helmet>\n([\s\S]*?)<\/helmet>\n/.exec(src);
+  const body = /<\/helmet>\n([\s\S]*)\n<\/x-dc>/.exec(src);
+  const size_ = /"\$preview":\{"width":(\d+),"height":(\d+)\}/.exec(src);
+  if (!helmet || !body || !size_) throw new Error(`cannot read ${id}-${size} from the Soft sand build`);
+  return { helmet: helmet[1], inner: body[1], w: Number(size_[1]), h: Number(size_[2]) };
+}
 rmSync(root, { recursive: true, force: true });
 mkdirSync(root + 'project', { recursive: true });
 
@@ -37,7 +56,7 @@ function roleOf(designRole) {
 const deviceOf = (role, mobile) => (mobile ?? role === 'Customer') ? 'phone' : role === 'Mechanic' ? 'tablet' : 'desktop';
 const sizeOf = (device) => (device === 'phone' ? [390, 844] : [1100, 760]);
 
-function page(title, w, h, body) {
+function page(title, w, h, body, helmet = null) {
   return `<!doctype html>
 <html lang="en-GB">
 <head>
@@ -48,13 +67,13 @@ function page(title, w, h, body) {
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="${FONT_LINK.replace(/&/g, '&amp;')}">
+${helmet ?? `<link rel="stylesheet" href="${FONT_LINK.replace(/&/g, '&amp;')}">
 <style>
 body,button,input,select,textarea{font-family:${FONT}}
 body{margin:0;color:#1c1e19;background:#f3f2ee}
 a{color:#3f4d33}a:hover{color:#1c1e19}
 </style>
-</helmet>
+`}</helmet>
 ${body}
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":${w},"height":${h}}}'>
@@ -99,6 +118,21 @@ function drawnBoard(scr, w, h, meta, inner, nav) {
 ${strip(scr.status, meta, nav)}
 <div style="width: ${w}px; height: ${h}px; overflow: hidden">${inner}</div>
 </div>`;
+}
+
+// A Soft sand board: the canvas's own status strip (kept in Work Sans like
+// every other board) over the approved drawing, which keeps its own fonts.
+function sandBoardHtml(scr, w, h, meta, inner, nav) {
+  return `<div style="width: ${w}px; height: ${h + STRIP}px; display: flex; flex-direction: column; background: #ffffff">
+<div style="font-family: ${FONT}">${strip(scr.status, meta, nav)}</div>
+<div style="width: ${w}px; height: ${h}px; overflow: hidden">${inner}</div>
+</div>`;
+}
+// Links between the redesign's boards point at this canvas's file names
+// (j12-…); links to screens outside the redesign (the other rooms in the
+// sidebar) have no board here, so they lose their href.
+function relink(html, jid, known) {
+  return html.replace(/ href="([^"#][^"]*?\.dc\.html)"/g, (m, f) => (known.has(f) ? ` href="${jid}-${f}"` : ''));
 }
 
 function placeholderBoard(scr, w, h, meta, nav) {
@@ -146,6 +180,7 @@ let y = 360 + 60 + journeys.length * 58 + 140 + 1000;
 
 // A screen becomes one board, or two (desktop + phone) when it is a new drawing.
 const variantsOf = (j, x) => {
+  if (x.sand) return SAND_SIZES.map((v) => ({ file: `${j.id}-${x.id}-${v}.dc.html`, v, sand: true }));
   if (!x.drawn) return [{ file: `${j.id}-${x.id}.dc.html`, v: null }];
   const d = DRAWN[x.id];
   if (!d) throw new Error(`no drawing for ${x.id}`);
@@ -153,6 +188,19 @@ const variantsOf = (j, x) => {
   return [{ file: `${j.id}-${x.id}-desktop.dc.html`, v: 'desktop' }, { file: `${j.id}-${x.id}-phone.dc.html`, v: 'phone' }];
 };
 const seq = journeys.map((j) => j.rows.flatMap((r) => r.screens.flatMap((x) => variantsOf(j, x).map((o) => o.file))));
+// Every Soft sand board file name (as the redesign names them), for relink().
+const sandFiles = new Set(journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.filter((x) => x.sand).flatMap((x) => SAND_SIZES.map((v) => `${x.id}-${v}.dc.html`)))));
+// The redesign's own canvas must hold exactly these screens, in this order —
+// journeys.mjs lists them by hand (with plain titles), so check they agree.
+{
+  const sandCanvas = JSON.parse(readFileSync(SAND + 'canvas.json', 'utf8'));
+  const theirs = sandCanvas.order.filter((f) => f !== 'Main.dc.html');
+  const ours = journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.filter((x) => x.sand).flatMap((x) => SAND_SIZES.map((v) => `${x.id}-${v}.dc.html`))));
+  if (theirs.join() !== ours.join()) throw new Error('journey 12 in journeys.mjs no longer matches diary.mjs ROWS');
+  const theirRows = Object.values(sandCanvas.notes).map((n) => n.text);
+  const ourRows = journeys.flatMap((j) => j.rows.filter((r) => r.screens.some((x) => x.sand)).map((r) => r.label));
+  if (theirRows.join('|') !== ourRows.join('|')) throw new Error(`journey 12 rows differ from diary.mjs ROWS: ${theirRows.join(' | ')}`);
+}
 let numbered = 0;
 journeys.forEach((j, ji) => {
   const list = seq[ji];
@@ -164,10 +212,17 @@ journeys.forEach((j, ji) => {
     notes[`${j.id}_s${Object.keys(notes).length}`] = { x, y: y - 240, text: row.label, w: 520, size: 'l', bold: true, fill: 'gray', maxH: 150 };
     for (const scr0 of row.screens) {
       const scr = { ...scr0 };
-      for (const { file, v } of variantsOf(j, scr)) {
+      for (const { file, v, sand } of variantsOf(j, scr)) {
         const nav = { ...navFor(list, file), };
-        let title, meta, w, h, html;
-        if (v) {
+        let title, meta, w, h, html, helmet = null;
+        if (sand) {
+          const sb = sandBoard(scr.id, v);
+          [w, h] = [sb.w, sb.h];
+          meta = `${scr.role} · ${v}`;
+          title = `${(v !== 'desktop' && TOUCH_TITLE_OVERRIDE[scr.id]) || scr.title} (${v})`;
+          helmet = `<link rel="stylesheet" href="${FONT_LINK.replace(/&/g, '&amp;')}">\n${sb.helmet}`;
+          html = sandBoardHtml(scr, w, h, meta, relink(sb.inner, j.id, sandFiles), nav);
+        } else if (v) {
           const d = DRAWN[scr.id];
           if (v === 'single') { [w, h] = [stage1.MAP_W, stage1.MAP_H]; meta = scr.role; }
           else { [w, h] = v === 'desktop' ? [stage1.DW, stage1.DH] : [stage1.PW, stage1.PH]; meta = `${scr.role} · ${v}`; }
@@ -190,12 +245,12 @@ journeys.forEach((j, ji) => {
           html = placeholderBoard(scr, w, h, meta, nav);
         }
         if (boards[file]) throw new Error(`duplicate ${file}`);
-        writeFileSync(root + 'project/' + file, page(`${title} (${STATUS[scr.status].label})`, w, h + STRIP, html));
+        writeFileSync(root + 'project/' + file, page(`${title} (${STATUS[scr.status].label})`, w, h + STRIP, html, helmet));
         boards[file] = { x, y, w, h: h + STRIP, title: `${STATUS[scr.status].label} · ${title}`, is_interactive: true };
         order.push(file);
         tally[scr.status]++;
         tally.first ??= file;
-        x += w + (v === 'desktop' ? 40 : GAP_X);
+        x += w + (v === 'desktop' || v === 'tablet' ? 40 : GAP_X);
         tallest = Math.max(tallest, h + STRIP);
       }
     }
@@ -265,4 +320,8 @@ const canvas = {
   designSystems: JSON.parse(readFileSync(here + 'live-canvas.json', 'utf8')).designSystems ?? [],
 };
 writeFileSync(root + 'project/canvas.json', JSON.stringify(canvas, null, 1));
-console.log(JSON.stringify({ files: order.length, total, pages: pages.length, notes: Object.keys(notes).length }));
+// Boards on the live canvas that this build no longer makes: publish these as
+// null so they are removed.
+const removed = Object.keys(JSON.parse(readFileSync(here + 'live-canvas.json', 'utf8')).boards ?? {}).filter((f) => !boards[f]).sort();
+writeFileSync(root + 'removed.json', JSON.stringify(removed, null, 1) + '\n');
+console.log(JSON.stringify({ files: order.length, total, pages: pages.length, notes: Object.keys(notes).length, removed: removed.length }));

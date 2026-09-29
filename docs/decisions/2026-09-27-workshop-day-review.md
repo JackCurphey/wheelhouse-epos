@@ -331,6 +331,9 @@ answers, in the order given.
     "this all looks good, let's see it in tablet and phone too"). Every
     desktop decision carries over; hover features become long-press on
     touch screens.
+69. **Workshop day approved** (Jack, 29 Sep) — desktop, tablet and phone.
+    It is copied into the user journeys canvas as journey 12, status
+    Designed, in the Soft sand look.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas

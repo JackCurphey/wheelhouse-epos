@@ -67,10 +67,9 @@ rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
 
 ## Next, in order (Jack, 29 Sep)
 
-1. **Tablet and phone** of the Workshop day redesign (in progress), then Jack
-   approves the section.
-2. **Copy the section into the big user-journeys canvas** (journey 12), mark
-   it Designed, and publish the big canvas (its font fix is in `build.mjs`).
+1. Done 29 Sep: Workshop day approved (desktop, tablet, phone) and copied
+   into the big canvas as journey 12, status Designed (decision 69).
+2. Next design journey on the canvas, same way (design → approve → copy in).
 3. **Switch the app's tokens from Fjell to Soft sand** (`src/styles/theme.css`
    + the design-system artifact), sans-serif throughout.
 4. **Then build Workshop day, piece by piece**, in the React staff app

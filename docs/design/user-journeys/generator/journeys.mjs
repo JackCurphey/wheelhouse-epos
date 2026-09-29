@@ -11,8 +11,10 @@ export const g = ph('gap');
 export const o = ph('old');
 
 export const r = (id, title, role) => ({ id, status: 'review', title, role, drawn: true });
-import { WORKSHOP_ROWS } from './stage2.mjs';
-const WR = (label) => WORKSHOP_ROWS.find((x) => x.label === label).screens.map(([id, title, role]) => r(id, title, role));
+// sd(id, title, role) = an agreed Workshop day redesign screen (diary.mjs, Soft
+// sand look), shown at desktop, tablet and phone; build.mjs reads the boards
+// from the Soft sand build in out-diary-sand/.
+export const sd = (id, title, role) => ({ id, status: 'designed', title, role, sand: true });
 
 export const journeys = [
   {
@@ -234,22 +236,48 @@ export const journeys = [
     ],
   },
   {
+    // Workshop day redesign, approved by Jack 29 Sep (decision 69): the Soft
+    // sand build of diary.mjs (build-diary.mjs --theme sand), desktop + tablet
+    // + phone. Rows and screen order match diary.mjs ROWS; build.mjs checks.
     id: 'j12', name: 'Workshop day', who: 'Staff and Mechanic',
     rows: [
-      { label: 'Requests', screens: [
-        ...WR('Requests'), d('diagnosis-review'),
-        g('ws-waiting', 'Waiting for you (diary column)', 'Staff', 'Customers’ change requests and cancellations waiting for the shop, beside the diary.', ['Change requests with Accept or Decline', 'Cancellations to mark as seen'], { source: 'Designed with Jack in piece 12; not yet drawn' }),
+      { label: 'The diary', screens: [
+        sd('diary', 'Diary', 'Staff'),
+        sd('diary-mechanic', 'Diary · a mechanic’s view', 'Mechanic'),
+        sd('waiting-open', 'Pending request selected', 'Staff'),
+        sd('diary-day', 'Day view', 'Staff'),
+        sd('diary-settings', 'Diary settings', 'Manager'),
+        sd('change-selected', 'Change request selected', 'Staff'),
+        sd('diary-context-menu', 'Diary · right-click a job', 'Staff'),
+        sd('job-quick-overview', 'Diary · job overview (quick look)', 'Staff'),
+        sd('settings-accessibility', 'Settings · Accessibility', 'Manager'),
+        sd('diary-stack-hover', 'Diary · stacked jobs fanned out on hover', 'Staff'),
+        sd('diary-stack-open', 'Diary · choose a job from a stack', 'Staff'),
+        sd('diary-hover-summary', 'Diary · hover a job for its summary', 'Staff'),
       ] },
-      { label: 'Book the bike in', screens: [...WR('Book the bike in'), d('reprint'), d('print-error'), d('login'), d('denied'), d('job-card')] },
-      { label: 'Quote', screens: [...WR('Quote'), d('catalogue-search')] },
-      { label: 'Do the work', screens: [
-        ...WR('Do the work'), d('week'), d('month'), d('capacity-conflict'), d('claim-conflict'), d('mechanic-message'), d('message-error'),
-        g('ws-order-parts', 'Order parts for a job', 'Staff', 'Raise a purchase order line from a job and link the waiting job to it.', ['Parts needed', 'Supplier and price', 'Job waits for delivery'], { source: 'PUR-06 · JOB-11' }),
-        g('ws-reserve', 'Reserve parts for a job', 'Staff', 'Hold stock for a job so it is not sold at the till.', ['Parts reserved', 'Release'], { source: 'JOB-10' }),
-        g('ws-time', 'Time on the job', 'Mechanic', 'Start and stop time on a job.', ['Start, pause, stop', 'Time so far'], { source: 'JOB-20 · REP-09' }),
-        g('ws-wall', 'Workshop wall display', 'Mechanic', 'The day’s jobs on a screen in the workshop.', ['Today’s jobs by mechanic', 'Status'], { source: 'CAL-03 · CAL-17' }),
+      { label: 'Requests, as a pop-up', screens: [
+        sd('request-new', 'Booking request', 'Staff'),
+        sd('request-decline', 'Decline a booking request', 'Staff'),
+        sd('request-change', 'Change request', 'Staff'),
+        sd('request-cancel', 'Cancelled booking', 'Staff'),
       ] },
-      { label: 'Hand back', screens: [...WR('Hand back'), d('reopen')] },
+      { label: 'New job from an empty slot', screens: [
+        sd('new-job-pick', 'New job · choose a free time', 'Staff'),
+        sd('new-job', 'New job', 'Staff'),
+        sd('new-job-day', 'New job (from the day view)', 'Staff'),
+      ] },
+      { label: 'The job — one page, no tabs', screens: [
+        sd('job-overview', 'Job · expected', 'Staff'),
+        sd('job-book-in', 'Job · booked in, tag printed', 'Staff'),
+        sd('job-quote', 'Job · quote', 'Staff'),
+        sd('job-mechanic', 'Job · in the workshop (mechanic)', 'Mechanic'),
+        sd('job-waiting-parts', 'Job · waiting for parts', 'Staff'),
+        sd('job-finished', 'Job · finished', 'Staff'),
+        sd('job-collection', 'Job · collection', 'Staff'),
+        sd('job-checklist', 'Job · full service checklist', 'Mechanic'),
+      ] },
+      { label: 'Customer account', screens: [sd('customer', 'Customer account', 'Staff')] },
+      { label: 'Overview page', screens: [sd('overview', 'Workshop overview', 'Staff')] },
     ],
   },
   {
