@@ -108,3 +108,7 @@ full one, with one "Take payment" step that leaves room for the other.
     (once set up), and any others the shop adds — kept off the main
     pop-up so it stays uncluttered, but always one tap away. Opening it
     expands the list in place.
+16. **Journey 11 approved** (Jack, 29 Sep: "let's get it into the big
+    canvas") — desktop, tablet and phone. It is copied into the user
+    journeys canvas, status Designed; journey A's till boards there are
+    refreshed with the Past sales button.

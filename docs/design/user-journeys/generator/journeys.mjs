@@ -20,6 +20,8 @@ export const sd = (id, title, role) => ({ id, status: 'designed', title, role, s
 export const sa = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'app-map' });
 // sb(id, title, role) = an agreed journey B screen (signin.mjs, Soft sand).
 export const sb = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'signin' });
+// sc(id, title, role) = an agreed journey 11 screen (till.mjs, Soft sand).
+export const sc = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'till' });
 
 export const journeys = [
   {
@@ -217,34 +219,50 @@ export const journeys = [
   {
     id: 'j11', name: 'Selling at the till', who: 'Staff',
     rows: [
-      { label: 'A sale', screens: [
-        o('till-sale', 'Sale screen', 'Staff', 'Ring up a sale fast.', ['Search or scan', 'Basket with quantities and prices', 'Who is serving (checked-in staff)', 'Customer'], { today: 'The old till has search, basket, price changes, discount and cashier pills, but no product grid.', source: 'Release 2 piece 3 · TILL-01..04' }),
-        g('till-variant', 'Choose size and colour', 'Staff', 'Pick the exact item when a product comes in sizes and colours.', ['Grid of sizes and colours', 'Stock for each'], { source: 'INV-06' }),
-        g('till-serial', 'Record a serial number', 'Staff', 'Capture the frame number when a bike is sold.', ['Scan or type serial'], { source: 'INV-07' }),
-        o('till-customer', 'Find or add a customer', 'Staff', 'Attach a customer to the sale; works offline.', ['Search', 'Add new (possible duplicates flagged later)'], { today: 'The old till has a type-ahead customer picker with “new customer”.', source: 'Offline spec §3 · TILL-16' }),
-        g('till-discount', 'Discount with a reason', 'Staff', 'Discount a line or the whole sale; a manager PIN if staff are not allowed.', ['Amount or percent', 'Reason', 'Manager PIN when needed'], { today: 'The old till has a £ discount with no reason or permission check.', source: 'TILL-04 · ACC-04' }),
+      { label: "A sale", screens: [
+        sc("till-sale", "Sale: quick buttons by group, basket on the right", "Staff"),
+        sc("till-empty", "Empty basket", "Staff"),
+        sc("till-noresults", "Search with no results", "Staff"),
+        sc("till-line", "Change a line: price, discount with a reason, note, remove", "Staff"),
+        sc("till-discount", "Discount the whole sale", "Staff"),
+        sc("till-customer", "Add a customer: search, or add someone new", "Staff"),
+        sc("till-variant", "Choose size and colour", "Staff"),
+        sc("till-serial", "Record a frame number", "Staff"),
       ] },
-      { label: 'Taking payment', screens: [
-        o('till-pay', 'Take payment', 'Staff', 'Cash with change, card, or split.', ['Cash and change due', 'Card (typed into the card machine)', 'Split between methods'], { today: 'The old tender screen is marked as a placeholder in its own code.', source: 'TILL-05..07' }),
-        g('till-card', 'Card machine in progress', 'Staff', 'Only if Wheelhouse ever sends the amount to the card machine itself. Optional.', ['Waiting for card', 'Approved or declined'], { source: 'Offline spec §11 · PAY-03' }),
-        g('till-account', 'Account sale and loyalty', 'Staff', 'Put a sale on a customer’s account, and add or spend points.', ['Account balance and limit', 'Points'], { source: 'Release 2 piece 4' }),
-        g('till-giftcard', 'Gift card and store credit', 'Staff', 'Sell, top up and spend gift cards or credit.', ['Card number', 'Balance'], { source: 'TILL-18 · TILL-19' }),
-        g('till-deposit', 'Deposit or part payment', 'Staff', 'Take part of the money now.', ['Amount now', 'Balance left'], { source: 'TILL-17' }),
-        o('till-receipt', 'Receipt', 'Staff', 'Print, email or text the receipt.', ['Print', 'Email or text', 'Receipt number like B1-1042'], { today: 'The old receipt window’s Print button appears to print a blank page.', source: 'TILL-12 · TILL-13' }),
+      { label: "Taking payment", screens: [
+        sc("till-pay", "Take payment: card is one tap", "Staff"),
+        sc("till-pay-other", "Take payment: Other ways to pay opened", "Staff"),
+        sc("till-card", "Card: the amount is on the card machine, waiting for the card", "Staff"),
+        sc("till-card-declined", "Card declined", "Staff"),
+        sc("till-pay-cash", "Cash: notes to tap, change worked out", "Staff"),
+        sc("till-pay-split", "Split payment: part paid, the rest by card", "Staff"),
+        sc("till-receipt", "Paid: receipt choices, closes by itself", "Staff"),
       ] },
-      { label: 'Other till jobs', screens: [
-        g('till-park', 'Park and resume a sale', 'Staff', 'Hold a basket while serving someone else.', ['Parked sales list', 'Resume'], { source: 'TILL-08' }),
-        g('till-void', 'Void a sale', 'Staff', 'Cancel a sale that should not stand, with a reason.', ['Reason', 'Manager PIN when needed'], { source: 'TILL-10' }),
-        o('till-find', 'Find a past sale', 'Staff', 'Look up any sale by receipt number, customer or date.', ['Search by receipt number', 'Date range'], { today: 'The old sales history only filters Today or All time.', source: 'CUS-03' }),
-        g('till-refund', 'Refund, return or exchange', 'Staff', 'Take items back and give money or credit.', ['Find the original sale', 'Choose items', 'Refund method'], { source: 'TILL-09 · TILL-11' }),
-        g('till-job', 'Pay for a workshop job', 'Staff', 'Take payment for a finished job at the Wheelhouse till (replaces the Lightspeed handoff).', ['Agreed work and parts', 'Add products', 'Take payment'], { source: 'JOB-18 · Release 2 piece 4' }),
-        g('till-collect', 'Hand over a click and collect order', 'Staff', 'Give an online order to the customer.', ['Find order', 'Check items', 'Mark collected'], { source: 'ECOM-04' }),
+      { label: "Other ways to pay", screens: [
+        sc("till-giftcard", "Gift card or store credit", "Staff"),
+        sc("till-account", "Put on account: pay later", "Staff"),
+        sc("till-loyalty", "Loyalty points: shown with the customer in the basket", "Staff"),
+        sc("till-deposit", "Take a deposit: part now, the rest later", "Staff"),
       ] },
-      { label: 'When the internet drops', screens: [
-        g('till-offline', 'Offline banner', 'Staff', 'Calm notice that sales are being saved on this till; more prominent after four hours.', ['Sales waiting count', 'Prices may be out of date (after four hours)'], { source: 'Offline spec §3 · plan 3' }),
-        g('till-needs-net', 'Needs the internet', 'Staff', 'What refunds, job payments, product edits and reports show while offline.', ['Why it cannot be done now', 'It will work when the connection is back'], { source: 'Offline spec §3' }),
-        g('till-no-signout', 'Can’t sign out yet', 'Staff', 'Stop the till being signed out or cleared while sales are waiting to send.', ['Sales waiting', 'Try again when connected'], { source: 'Offline spec §8' }),
-        g('till-failed', 'Sales that didn’t send', 'Manager', 'Sales the server could not store, kept on the till, with the reason.', ['Each sale and reason', 'Fix or re-enter'], { source: 'Offline plan 1 walk (“failed” results)' }),
+      { label: "Other till jobs", screens: [
+        sc("till-park", "Parked sales: resume", "Staff"),
+        sc("till-find", "Past sales: scan the receipt, or today’s list", "Staff"),
+        sc("till-sale-detail", "A past sale: refund, reprint, void", "Staff"),
+        sc("till-refund", "Refund from the original sale: back to the card", "Staff"),
+        sc("till-refund-cash", "Refund a cash sale: back in cash", "Staff"),
+        sc("till-refund-noreceipt", "No receipt: store credit only", "Staff"),
+        sc("till-void", "Void a sale: with a reason", "Staff"),
+        sc("till-job", "Pay for a workshop job: bike collected when paid", "Staff"),
+        sc("till-job-deposit", "Deposit on a workshop job: bike stays in", "Staff"),
+        sc("till-job-balance", "Workshop job back for collection: deposit taken off, pay the rest", "Staff"),
+        sc("till-collect", "Hand over a click and collect order", "Staff"),
+      ] },
+      { label: "When the internet drops", screens: [
+        sc("till-offline", "Offline: keep selling, sales wait to send", "Staff"),
+        sc("till-offline-long", "Offline for over four hours: the notice grows", "Staff"),
+        sc("till-needs-net", "Needs the internet: refunds and a few others wait", "Staff"),
+        sc("till-no-signout", "Can’t sign out while sales are waiting", "Staff"),
+        sc("till-failed", "Sales that didn’t send: for a manager", "Manager"),
       ] },
     ],
   },

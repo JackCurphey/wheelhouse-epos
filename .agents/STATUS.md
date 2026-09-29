@@ -10,9 +10,22 @@
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
-Workshop day (journey 12), App map and navigation (journey A) and Signing in
-and access (journey B) are approved and in the big canvas; the next journey is
-Jack's choice (ask him first).
+Workshop day (journey 12), App map and navigation (journey A), Signing in
+and access (journey B) and Selling at the till (journey 11) are approved and in
+the big canvas; the next journey is Jack's choice (ask him first).
+
+**Journey 11, Selling at the till (29 Sep):** approved at desktop, tablet and
+phone; 16 decisions in `docs/decisions/2026-09-29-selling-at-the-till-review.md`
+— quick buttons by group, a connected card machine (supersedes the offline
+spec's standalone-machine assumption; provider and offline card behaviour
+still to check), all five other ways to pay plus an "Other ways to pay" list,
+anyone may discount or void with a reason, refunds from the original sale,
+Past sales by receipt scan and today's list, deposits on workshop jobs with
+collection recorded when the rest is paid. Own canvas:
+https://claude.ai/artifact/Y9NppHkpYBrrRKjHw8FoLG . Generator: `till.mjs`
+(size-aware recipes) + `build-till.mjs --theme sand`; audit in
+`docs/design/user-journeys/till-ui-audit.md`. The till bar (app-map.mjs) gained
+Past sales, so journey A's till boards changed too.
 
 **Journey B, Signing in and access (29 Sep):** approved at desktop, tablet and
 phone; 10 decisions in `docs/decisions/2026-09-29-signing-in-review.md` —

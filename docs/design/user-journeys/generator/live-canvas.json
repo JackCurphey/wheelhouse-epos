@@ -1235,177 +1235,849 @@
    "title": "Designed · The workshop at a glance",
    "is_interactive": true
   },
-  "j11-till-sale.dc.html": {
+  "j11-till-sale-desktop.dc.html": {
    "x": 0,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Sale screen",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sale: quick buttons by group, basket on the right (desktop)",
    "is_interactive": true
   },
-  "j11-till-variant.dc.html": {
-   "x": 1180,
+  "j11-till-sale-tablet.dc.html": {
+   "x": 1320,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Choose size and colour",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Sale: quick buttons by group, basket on the right (tablet)",
    "is_interactive": true
   },
-  "j11-till-serial.dc.html": {
-   "x": 2360,
+  "j11-till-sale-phone.dc.html": {
+   "x": 2540,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Record a serial number",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Sale: quick buttons by group, basket on the right (phone)",
    "is_interactive": true
   },
-  "j11-till-customer.dc.html": {
-   "x": 3540,
+  "j11-till-empty-desktop.dc.html": {
+   "x": 3010,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Find or add a customer",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Empty basket (desktop)",
    "is_interactive": true
   },
-  "j11-till-discount.dc.html": {
-   "x": 4720,
+  "j11-till-empty-tablet.dc.html": {
+   "x": 4330,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Discount with a reason",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Empty basket (tablet)",
    "is_interactive": true
   },
-  "j11-till-pay.dc.html": {
-   "x": 6060,
+  "j11-till-empty-phone.dc.html": {
+   "x": 5550,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Take payment",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Empty basket (phone)",
    "is_interactive": true
   },
-  "j11-till-card.dc.html": {
-   "x": 7240,
+  "j11-till-noresults-desktop.dc.html": {
+   "x": 6020,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Card machine in progress",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Search with no results (desktop)",
    "is_interactive": true
   },
-  "j11-till-account.dc.html": {
-   "x": 8420,
+  "j11-till-noresults-tablet.dc.html": {
+   "x": 7340,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Account sale and loyalty",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Search with no results (tablet)",
    "is_interactive": true
   },
-  "j11-till-giftcard.dc.html": {
-   "x": 9600,
+  "j11-till-noresults-phone.dc.html": {
+   "x": 8560,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Gift card and store credit",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Search with no results (phone)",
    "is_interactive": true
   },
-  "j11-till-deposit.dc.html": {
-   "x": 10780,
+  "j11-till-line-desktop.dc.html": {
+   "x": 9030,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Deposit or part payment",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Change a line: price, discount with a reason, note, remove (desktop)",
    "is_interactive": true
   },
-  "j11-till-receipt.dc.html": {
-   "x": 11960,
+  "j11-till-line-tablet.dc.html": {
+   "x": 10350,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Receipt",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Change a line: price, discount with a reason, note, remove (tablet)",
    "is_interactive": true
   },
-  "j11-till-park.dc.html": {
-   "x": 13300,
+  "j11-till-line-phone.dc.html": {
+   "x": 11570,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Park and resume a sale",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Change a line: price, discount with a reason, note, remove (phone)",
    "is_interactive": true
   },
-  "j11-till-void.dc.html": {
-   "x": 14480,
+  "j11-till-discount-desktop.dc.html": {
+   "x": 12040,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Void a sale",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Discount the whole sale (desktop)",
    "is_interactive": true
   },
-  "j11-till-find.dc.html": {
-   "x": 15660,
+  "j11-till-discount-tablet.dc.html": {
+   "x": 13360,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Find a past sale",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Discount the whole sale (tablet)",
    "is_interactive": true
   },
-  "j11-till-refund.dc.html": {
-   "x": 16840,
+  "j11-till-discount-phone.dc.html": {
+   "x": 14580,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Refund, return or exchange",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Discount the whole sale (phone)",
    "is_interactive": true
   },
-  "j11-till-job.dc.html": {
-   "x": 18020,
+  "j11-till-customer-desktop.dc.html": {
+   "x": 15050,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Pay for a workshop job",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a customer: search, or add someone new (desktop)",
    "is_interactive": true
   },
-  "j11-till-collect.dc.html": {
-   "x": 19200,
+  "j11-till-customer-tablet.dc.html": {
+   "x": 16370,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Hand over a click and collect order",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Add a customer: search, or add someone new (tablet)",
    "is_interactive": true
   },
-  "j11-till-offline.dc.html": {
-   "x": 20540,
+  "j11-till-customer-phone.dc.html": {
+   "x": 17590,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Offline banner",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Add a customer: search, or add someone new (phone)",
    "is_interactive": true
   },
-  "j11-till-needs-net.dc.html": {
-   "x": 21720,
+  "j11-till-variant-desktop.dc.html": {
+   "x": 18060,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Needs the internet",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Choose size and colour (desktop)",
    "is_interactive": true
   },
-  "j11-till-no-signout.dc.html": {
-   "x": 22900,
+  "j11-till-variant-tablet.dc.html": {
+   "x": 19380,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Can’t sign out yet",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Choose size and colour (tablet)",
    "is_interactive": true
   },
-  "j11-till-failed.dc.html": {
-   "x": 24080,
+  "j11-till-variant-phone.dc.html": {
+   "x": 20600,
    "y": 25778,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Sales that didn’t send",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Choose size and colour (phone)",
+   "is_interactive": true
+  },
+  "j11-till-serial-desktop.dc.html": {
+   "x": 21070,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Record a frame number (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-serial-tablet.dc.html": {
+   "x": 22390,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Record a frame number (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-serial-phone.dc.html": {
+   "x": 23610,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Record a frame number (phone)",
+   "is_interactive": true
+  },
+  "j11-till-pay-desktop.dc.html": {
+   "x": 24240,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Take payment: card is one tap (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-pay-tablet.dc.html": {
+   "x": 25560,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Take payment: card is one tap (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-pay-phone.dc.html": {
+   "x": 26780,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Take payment: card is one tap (phone)",
+   "is_interactive": true
+  },
+  "j11-till-pay-other-desktop.dc.html": {
+   "x": 27250,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Take payment: Other ways to pay opened (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-pay-other-tablet.dc.html": {
+   "x": 28570,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Take payment: Other ways to pay opened (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-pay-other-phone.dc.html": {
+   "x": 29790,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Take payment: Other ways to pay opened (phone)",
+   "is_interactive": true
+  },
+  "j11-till-card-desktop.dc.html": {
+   "x": 30260,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Card: the amount is on the card machine, waiting for the card (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-card-tablet.dc.html": {
+   "x": 31580,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Card: the amount is on the card machine, waiting for the card (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-card-phone.dc.html": {
+   "x": 32800,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Card: the amount is on the card machine, waiting for the card (phone)",
+   "is_interactive": true
+  },
+  "j11-till-card-declined-desktop.dc.html": {
+   "x": 33270,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Card declined (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-card-declined-tablet.dc.html": {
+   "x": 34590,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Card declined (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-card-declined-phone.dc.html": {
+   "x": 35810,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Card declined (phone)",
+   "is_interactive": true
+  },
+  "j11-till-pay-cash-desktop.dc.html": {
+   "x": 36280,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Cash: notes to tap, change worked out (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-pay-cash-tablet.dc.html": {
+   "x": 37600,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Cash: notes to tap, change worked out (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-pay-cash-phone.dc.html": {
+   "x": 38820,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Cash: notes to tap, change worked out (phone)",
+   "is_interactive": true
+  },
+  "j11-till-pay-split-desktop.dc.html": {
+   "x": 39290,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Split payment: part paid, the rest by card (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-pay-split-tablet.dc.html": {
+   "x": 40610,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Split payment: part paid, the rest by card (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-pay-split-phone.dc.html": {
+   "x": 41830,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Split payment: part paid, the rest by card (phone)",
+   "is_interactive": true
+  },
+  "j11-till-receipt-desktop.dc.html": {
+   "x": 42300,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Paid: receipt choices, closes by itself (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-receipt-tablet.dc.html": {
+   "x": 43620,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Paid: receipt choices, closes by itself (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-receipt-phone.dc.html": {
+   "x": 44840,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Paid: receipt choices, closes by itself (phone)",
+   "is_interactive": true
+  },
+  "j11-till-giftcard-desktop.dc.html": {
+   "x": 45470,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Gift card or store credit (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-giftcard-tablet.dc.html": {
+   "x": 46790,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Gift card or store credit (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-giftcard-phone.dc.html": {
+   "x": 48010,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Gift card or store credit (phone)",
+   "is_interactive": true
+  },
+  "j11-till-account-desktop.dc.html": {
+   "x": 48480,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Put on account: pay later (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-account-tablet.dc.html": {
+   "x": 49800,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Put on account: pay later (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-account-phone.dc.html": {
+   "x": 51020,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Put on account: pay later (phone)",
+   "is_interactive": true
+  },
+  "j11-till-loyalty-desktop.dc.html": {
+   "x": 51490,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Loyalty points: shown with the customer in the basket (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-loyalty-tablet.dc.html": {
+   "x": 52810,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Loyalty points: shown with the customer in the basket (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-loyalty-phone.dc.html": {
+   "x": 54030,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Loyalty points: shown with the customer in the basket (phone)",
+   "is_interactive": true
+  },
+  "j11-till-deposit-desktop.dc.html": {
+   "x": 54500,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Take a deposit: part now, the rest later (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-deposit-tablet.dc.html": {
+   "x": 55820,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Take a deposit: part now, the rest later (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-deposit-phone.dc.html": {
+   "x": 57040,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Take a deposit: part now, the rest later (phone)",
+   "is_interactive": true
+  },
+  "j11-till-park-desktop.dc.html": {
+   "x": 57670,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Parked sales: resume (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-park-tablet.dc.html": {
+   "x": 58990,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Parked sales: resume (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-park-phone.dc.html": {
+   "x": 60210,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Parked sales: resume (phone)",
+   "is_interactive": true
+  },
+  "j11-till-find-desktop.dc.html": {
+   "x": 60680,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Past sales: scan the receipt, or today’s list (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-find-tablet.dc.html": {
+   "x": 62000,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Past sales: scan the receipt, or today’s list (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-find-phone.dc.html": {
+   "x": 63220,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Past sales: scan the receipt, or today’s list (phone)",
+   "is_interactive": true
+  },
+  "j11-till-sale-detail-desktop.dc.html": {
+   "x": 63690,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A past sale: refund, reprint, void (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-sale-detail-tablet.dc.html": {
+   "x": 65010,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · A past sale: refund, reprint, void (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-sale-detail-phone.dc.html": {
+   "x": 66230,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · A past sale: refund, reprint, void (phone)",
+   "is_interactive": true
+  },
+  "j11-till-refund-desktop.dc.html": {
+   "x": 66700,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Refund from the original sale: back to the card (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-refund-tablet.dc.html": {
+   "x": 68020,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Refund from the original sale: back to the card (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-refund-phone.dc.html": {
+   "x": 69240,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Refund from the original sale: back to the card (phone)",
+   "is_interactive": true
+  },
+  "j11-till-refund-cash-desktop.dc.html": {
+   "x": 69710,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Refund a cash sale: back in cash (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-refund-cash-tablet.dc.html": {
+   "x": 71030,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Refund a cash sale: back in cash (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-refund-cash-phone.dc.html": {
+   "x": 72250,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Refund a cash sale: back in cash (phone)",
+   "is_interactive": true
+  },
+  "j11-till-refund-noreceipt-desktop.dc.html": {
+   "x": 72720,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · No receipt: store credit only (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-refund-noreceipt-tablet.dc.html": {
+   "x": 74040,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · No receipt: store credit only (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-refund-noreceipt-phone.dc.html": {
+   "x": 75260,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · No receipt: store credit only (phone)",
+   "is_interactive": true
+  },
+  "j11-till-void-desktop.dc.html": {
+   "x": 75730,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Void a sale: with a reason (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-void-tablet.dc.html": {
+   "x": 77050,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Void a sale: with a reason (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-void-phone.dc.html": {
+   "x": 78270,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Void a sale: with a reason (phone)",
+   "is_interactive": true
+  },
+  "j11-till-job-desktop.dc.html": {
+   "x": 78740,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Pay for a workshop job: bike collected when paid (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-job-tablet.dc.html": {
+   "x": 80060,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Pay for a workshop job: bike collected when paid (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-job-phone.dc.html": {
+   "x": 81280,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Pay for a workshop job: bike collected when paid (phone)",
+   "is_interactive": true
+  },
+  "j11-till-job-deposit-desktop.dc.html": {
+   "x": 81750,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deposit on a workshop job: bike stays in (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-job-deposit-tablet.dc.html": {
+   "x": 83070,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Deposit on a workshop job: bike stays in (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-job-deposit-phone.dc.html": {
+   "x": 84290,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Deposit on a workshop job: bike stays in (phone)",
+   "is_interactive": true
+  },
+  "j11-till-job-balance-desktop.dc.html": {
+   "x": 84760,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Workshop job back for collection: deposit taken off, pay the rest (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-job-balance-tablet.dc.html": {
+   "x": 86080,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Workshop job back for collection: deposit taken off, pay the rest (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-job-balance-phone.dc.html": {
+   "x": 87300,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Workshop job back for collection: deposit taken off, pay the rest (phone)",
+   "is_interactive": true
+  },
+  "j11-till-collect-desktop.dc.html": {
+   "x": 87770,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Hand over a click and collect order (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-collect-tablet.dc.html": {
+   "x": 89090,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Hand over a click and collect order (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-collect-phone.dc.html": {
+   "x": 90310,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Hand over a click and collect order (phone)",
+   "is_interactive": true
+  },
+  "j11-till-offline-desktop.dc.html": {
+   "x": 90940,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Offline: keep selling, sales wait to send (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-offline-tablet.dc.html": {
+   "x": 92260,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Offline: keep selling, sales wait to send (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-offline-phone.dc.html": {
+   "x": 93480,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Offline: keep selling, sales wait to send (phone)",
+   "is_interactive": true
+  },
+  "j11-till-offline-long-desktop.dc.html": {
+   "x": 93950,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Offline for over four hours: the notice grows (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-offline-long-tablet.dc.html": {
+   "x": 95270,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Offline for over four hours: the notice grows (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-offline-long-phone.dc.html": {
+   "x": 96490,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Offline for over four hours: the notice grows (phone)",
+   "is_interactive": true
+  },
+  "j11-till-needs-net-desktop.dc.html": {
+   "x": 96960,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Needs the internet: refunds and a few others wait (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-needs-net-tablet.dc.html": {
+   "x": 98280,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Needs the internet: refunds and a few others wait (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-needs-net-phone.dc.html": {
+   "x": 99500,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Needs the internet: refunds and a few others wait (phone)",
+   "is_interactive": true
+  },
+  "j11-till-no-signout-desktop.dc.html": {
+   "x": 99970,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Can’t sign out while sales are waiting (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-no-signout-tablet.dc.html": {
+   "x": 101290,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Can’t sign out while sales are waiting (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-no-signout-phone.dc.html": {
+   "x": 102510,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Can’t sign out while sales are waiting (phone)",
+   "is_interactive": true
+  },
+  "j11-till-failed-desktop.dc.html": {
+   "x": 102980,
+   "y": 25778,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sales that didn’t send: for a manager (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-failed-tablet.dc.html": {
+   "x": 104300,
+   "y": 25778,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Sales that didn’t send: for a manager (tablet)",
+   "is_interactive": true
+  },
+  "j11-till-failed-phone.dc.html": {
+   "x": 105520,
+   "y": 25778,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Sales that didn’t send: for a manager (phone)",
    "is_interactive": true
   },
   "j12-diary-desktop.dc.html": {
    "x": 0,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary (desktop)",
@@ -1413,7 +2085,7 @@
   },
   "j12-diary-tablet.dc.html": {
    "x": 1320,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary (tablet)",
@@ -1421,7 +2093,7 @@
   },
   "j12-diary-phone.dc.html": {
    "x": 2540,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary (phone)",
@@ -1429,7 +2101,7 @@
   },
   "j12-diary-mechanic-desktop.dc.html": {
    "x": 3010,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary · a mechanic’s view (desktop)",
@@ -1437,7 +2109,7 @@
   },
   "j12-diary-mechanic-tablet.dc.html": {
    "x": 4330,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary · a mechanic’s view (tablet)",
@@ -1445,7 +2117,7 @@
   },
   "j12-diary-mechanic-phone.dc.html": {
    "x": 5550,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary · a mechanic’s view (phone)",
@@ -1453,7 +2125,7 @@
   },
   "j12-waiting-open-desktop.dc.html": {
    "x": 6020,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Pending request selected (desktop)",
@@ -1461,7 +2133,7 @@
   },
   "j12-waiting-open-tablet.dc.html": {
    "x": 7340,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Pending request selected (tablet)",
@@ -1469,7 +2141,7 @@
   },
   "j12-waiting-open-phone.dc.html": {
    "x": 8560,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Pending request selected (phone)",
@@ -1477,7 +2149,7 @@
   },
   "j12-diary-day-desktop.dc.html": {
    "x": 9030,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Day view (desktop)",
@@ -1485,7 +2157,7 @@
   },
   "j12-diary-day-tablet.dc.html": {
    "x": 10350,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Day view (tablet)",
@@ -1493,7 +2165,7 @@
   },
   "j12-diary-day-phone.dc.html": {
    "x": 11570,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Day view (phone)",
@@ -1501,7 +2173,7 @@
   },
   "j12-diary-settings-desktop.dc.html": {
    "x": 12040,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary settings (desktop)",
@@ -1509,7 +2181,7 @@
   },
   "j12-diary-settings-tablet.dc.html": {
    "x": 13360,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary settings (tablet)",
@@ -1517,7 +2189,7 @@
   },
   "j12-diary-settings-phone.dc.html": {
    "x": 14580,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary settings (phone)",
@@ -1525,7 +2197,7 @@
   },
   "j12-change-selected-desktop.dc.html": {
    "x": 15050,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change request selected (desktop)",
@@ -1533,7 +2205,7 @@
   },
   "j12-change-selected-tablet.dc.html": {
    "x": 16370,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Change request selected (tablet)",
@@ -1541,7 +2213,7 @@
   },
   "j12-change-selected-phone.dc.html": {
    "x": 17590,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Change request selected (phone)",
@@ -1549,7 +2221,7 @@
   },
   "j12-diary-context-menu-desktop.dc.html": {
    "x": 18060,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary · right-click a job (desktop)",
@@ -1557,7 +2229,7 @@
   },
   "j12-diary-context-menu-tablet.dc.html": {
    "x": 19380,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary · press and hold a job (tablet)",
@@ -1565,7 +2237,7 @@
   },
   "j12-diary-context-menu-phone.dc.html": {
    "x": 20600,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary · press and hold a job (phone)",
@@ -1573,7 +2245,7 @@
   },
   "j12-job-quick-overview-desktop.dc.html": {
    "x": 21070,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary · job overview (quick look) (desktop)",
@@ -1581,7 +2253,7 @@
   },
   "j12-job-quick-overview-tablet.dc.html": {
    "x": 22390,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary · job overview (quick look) (tablet)",
@@ -1589,7 +2261,7 @@
   },
   "j12-job-quick-overview-phone.dc.html": {
    "x": 23610,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary · job overview (quick look) (phone)",
@@ -1597,7 +2269,7 @@
   },
   "j12-settings-accessibility-desktop.dc.html": {
    "x": 24080,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings · Accessibility (desktop)",
@@ -1605,7 +2277,7 @@
   },
   "j12-settings-accessibility-tablet.dc.html": {
    "x": 25400,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Settings · Accessibility (tablet)",
@@ -1613,7 +2285,7 @@
   },
   "j12-settings-accessibility-phone.dc.html": {
    "x": 26620,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Settings · Accessibility (phone)",
@@ -1621,7 +2293,7 @@
   },
   "j12-diary-stack-hover-desktop.dc.html": {
    "x": 27090,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary · stacked jobs fanned out on hover (desktop)",
@@ -1629,7 +2301,7 @@
   },
   "j12-diary-stack-hover-tablet.dc.html": {
    "x": 28410,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary · press and hold a stack to fan it out (tablet)",
@@ -1637,7 +2309,7 @@
   },
   "j12-diary-stack-hover-phone.dc.html": {
    "x": 29630,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary · press and hold a stack to fan it out (phone)",
@@ -1645,7 +2317,7 @@
   },
   "j12-diary-stack-open-desktop.dc.html": {
    "x": 30100,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary · choose a job from a stack (desktop)",
@@ -1653,7 +2325,7 @@
   },
   "j12-diary-stack-open-tablet.dc.html": {
    "x": 31420,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary · tap a stack to choose a job (tablet)",
@@ -1661,7 +2333,7 @@
   },
   "j12-diary-stack-open-phone.dc.html": {
    "x": 32640,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary · tap a stack to choose a job (phone)",
@@ -1669,7 +2341,7 @@
   },
   "j12-diary-hover-summary-desktop.dc.html": {
    "x": 33110,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary · hover a job for its summary (desktop)",
@@ -1677,7 +2349,7 @@
   },
   "j12-diary-hover-summary-tablet.dc.html": {
    "x": 34430,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary · keep holding a job for its summary (tablet)",
@@ -1685,7 +2357,7 @@
   },
   "j12-diary-hover-summary-phone.dc.html": {
    "x": 35650,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary · keep holding a job for its summary (phone)",
@@ -1693,7 +2365,7 @@
   },
   "j12-request-new-desktop.dc.html": {
    "x": 36280,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Booking request (desktop)",
@@ -1701,7 +2373,7 @@
   },
   "j12-request-new-tablet.dc.html": {
    "x": 37600,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Booking request (tablet)",
@@ -1709,7 +2381,7 @@
   },
   "j12-request-new-phone.dc.html": {
    "x": 38820,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Booking request (phone)",
@@ -1717,7 +2389,7 @@
   },
   "j12-request-decline-desktop.dc.html": {
    "x": 39290,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Decline a booking request (desktop)",
@@ -1725,7 +2397,7 @@
   },
   "j12-request-decline-tablet.dc.html": {
    "x": 40610,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Decline a booking request (tablet)",
@@ -1733,7 +2405,7 @@
   },
   "j12-request-decline-phone.dc.html": {
    "x": 41830,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Decline a booking request (phone)",
@@ -1741,7 +2413,7 @@
   },
   "j12-request-change-desktop.dc.html": {
    "x": 42300,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change request (desktop)",
@@ -1749,7 +2421,7 @@
   },
   "j12-request-change-tablet.dc.html": {
    "x": 43620,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Change request (tablet)",
@@ -1757,7 +2429,7 @@
   },
   "j12-request-change-phone.dc.html": {
    "x": 44840,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Change request (phone)",
@@ -1765,7 +2437,7 @@
   },
   "j12-request-cancel-desktop.dc.html": {
    "x": 45310,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Cancelled booking (desktop)",
@@ -1773,7 +2445,7 @@
   },
   "j12-request-cancel-tablet.dc.html": {
    "x": 46630,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Cancelled booking (tablet)",
@@ -1781,7 +2453,7 @@
   },
   "j12-request-cancel-phone.dc.html": {
    "x": 47850,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Cancelled booking (phone)",
@@ -1789,7 +2461,7 @@
   },
   "j12-new-job-pick-desktop.dc.html": {
    "x": 48480,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · New job · choose a free time (desktop)",
@@ -1797,7 +2469,7 @@
   },
   "j12-new-job-pick-tablet.dc.html": {
    "x": 49800,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · New job · tap a free time (tablet)",
@@ -1805,7 +2477,7 @@
   },
   "j12-new-job-pick-phone.dc.html": {
    "x": 51020,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · New job · tap a free time (phone)",
@@ -1813,7 +2485,7 @@
   },
   "j12-new-job-desktop.dc.html": {
    "x": 51490,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · New job (desktop)",
@@ -1821,7 +2493,7 @@
   },
   "j12-new-job-tablet.dc.html": {
    "x": 52810,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · New job (tablet)",
@@ -1829,7 +2501,7 @@
   },
   "j12-new-job-phone.dc.html": {
    "x": 54030,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · New job (phone)",
@@ -1837,7 +2509,7 @@
   },
   "j12-new-job-day-desktop.dc.html": {
    "x": 54500,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · New job (from the day view) (desktop)",
@@ -1845,7 +2517,7 @@
   },
   "j12-new-job-day-tablet.dc.html": {
    "x": 55820,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · New job (from the day view) (tablet)",
@@ -1853,7 +2525,7 @@
   },
   "j12-new-job-day-phone.dc.html": {
    "x": 57040,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · New job (from the day view) (phone)",
@@ -1861,7 +2533,7 @@
   },
   "j12-job-overview-desktop.dc.html": {
    "x": 57670,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · expected (desktop)",
@@ -1869,7 +2541,7 @@
   },
   "j12-job-overview-tablet.dc.html": {
    "x": 58990,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · expected (tablet)",
@@ -1877,7 +2549,7 @@
   },
   "j12-job-overview-phone.dc.html": {
    "x": 60210,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · expected (phone)",
@@ -1885,7 +2557,7 @@
   },
   "j12-job-book-in-desktop.dc.html": {
    "x": 60680,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · booked in, tag printed (desktop)",
@@ -1893,7 +2565,7 @@
   },
   "j12-job-book-in-tablet.dc.html": {
    "x": 62000,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · booked in, tag printed (tablet)",
@@ -1901,7 +2573,7 @@
   },
   "j12-job-book-in-phone.dc.html": {
    "x": 63220,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · booked in, tag printed (phone)",
@@ -1909,7 +2581,7 @@
   },
   "j12-job-quote-desktop.dc.html": {
    "x": 63690,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · quote (desktop)",
@@ -1917,7 +2589,7 @@
   },
   "j12-job-quote-tablet.dc.html": {
    "x": 65010,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · quote (tablet)",
@@ -1925,7 +2597,7 @@
   },
   "j12-job-quote-phone.dc.html": {
    "x": 66230,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · quote (phone)",
@@ -1933,7 +2605,7 @@
   },
   "j12-job-mechanic-desktop.dc.html": {
    "x": 66700,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · in the workshop (mechanic) (desktop)",
@@ -1941,7 +2613,7 @@
   },
   "j12-job-mechanic-tablet.dc.html": {
    "x": 68020,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · in the workshop (mechanic) (tablet)",
@@ -1949,7 +2621,7 @@
   },
   "j12-job-mechanic-phone.dc.html": {
    "x": 69240,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · in the workshop (mechanic) (phone)",
@@ -1957,7 +2629,7 @@
   },
   "j12-job-waiting-parts-desktop.dc.html": {
    "x": 69710,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · waiting for parts (desktop)",
@@ -1965,7 +2637,7 @@
   },
   "j12-job-waiting-parts-tablet.dc.html": {
    "x": 71030,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · waiting for parts (tablet)",
@@ -1973,7 +2645,7 @@
   },
   "j12-job-waiting-parts-phone.dc.html": {
    "x": 72250,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · waiting for parts (phone)",
@@ -1981,7 +2653,7 @@
   },
   "j12-job-finished-desktop.dc.html": {
    "x": 72720,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · finished (desktop)",
@@ -1989,7 +2661,7 @@
   },
   "j12-job-finished-tablet.dc.html": {
    "x": 74040,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · finished (tablet)",
@@ -1997,7 +2669,7 @@
   },
   "j12-job-finished-phone.dc.html": {
    "x": 75260,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · finished (phone)",
@@ -2005,7 +2677,7 @@
   },
   "j12-job-collection-desktop.dc.html": {
    "x": 75730,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · collection (desktop)",
@@ -2013,7 +2685,7 @@
   },
   "j12-job-collection-tablet.dc.html": {
    "x": 77050,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · collection (tablet)",
@@ -2021,7 +2693,7 @@
   },
   "j12-job-collection-phone.dc.html": {
    "x": 78270,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · collection (phone)",
@@ -2029,7 +2701,7 @@
   },
   "j12-job-checklist-desktop.dc.html": {
    "x": 78740,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · full service checklist (desktop)",
@@ -2037,7 +2709,7 @@
   },
   "j12-job-checklist-tablet.dc.html": {
    "x": 80060,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · full service checklist (tablet)",
@@ -2045,7 +2717,7 @@
   },
   "j12-job-checklist-phone.dc.html": {
    "x": 81280,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · full service checklist (phone)",
@@ -2053,7 +2725,7 @@
   },
   "j12-customer-desktop.dc.html": {
    "x": 81910,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 1156,
    "title": "Designed · Customer account (desktop)",
@@ -2061,7 +2733,7 @@
   },
   "j12-customer-tablet.dc.html": {
    "x": 83230,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Customer account (tablet)",
@@ -2069,7 +2741,7 @@
   },
   "j12-customer-phone.dc.html": {
    "x": 84450,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Customer account (phone)",
@@ -2077,7 +2749,7 @@
   },
   "j12-overview-desktop.dc.html": {
    "x": 85080,
-   "y": 27594,
+   "y": 27678,
    "w": 1280,
    "h": 856,
    "title": "Designed · Workshop overview (desktop)",
@@ -2085,7 +2757,7 @@
   },
   "j12-overview-tablet.dc.html": {
    "x": 86400,
-   "y": 27594,
+   "y": 27678,
    "w": 1180,
    "h": 876,
    "title": "Designed · Workshop overview (tablet)",
@@ -2093,7 +2765,7 @@
   },
   "j12-overview-phone.dc.html": {
    "x": 87620,
-   "y": 27594,
+   "y": 27678,
    "w": 390,
    "h": 900,
    "title": "Designed · Workshop overview (phone)",
@@ -2101,7 +2773,7 @@
   },
   "j13-po-suppliers.dc.html": {
    "x": 0,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Old app · Suppliers",
@@ -2109,7 +2781,7 @@
   },
   "j13-po-feed.dc.html": {
    "x": 1180,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Old app · Supplier catalogue",
@@ -2117,7 +2789,7 @@
   },
   "j13-po-list.dc.html": {
    "x": 2520,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Old app · Purchase orders",
@@ -2125,7 +2797,7 @@
   },
   "j13-po-edit.dc.html": {
    "x": 3700,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Old app · Draft a purchase order",
@@ -2133,7 +2805,7 @@
   },
   "j13-po-send.dc.html": {
    "x": 4880,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Send the order",
@@ -2141,7 +2813,7 @@
   },
   "j13-po-suggest.dc.html": {
    "x": 6060,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Reorder suggestions",
@@ -2149,7 +2821,7 @@
   },
   "j13-po-receive.dc.html": {
    "x": 7400,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Old app · Receive a delivery",
@@ -2157,7 +2829,7 @@
   },
   "j13-po-invoice.dc.html": {
    "x": 8580,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Check the supplier invoice",
@@ -2165,7 +2837,7 @@
   },
   "j13-po-labels.dc.html": {
    "x": 9760,
-   "y": 29750,
+   "y": 29834,
    "w": 1100,
    "h": 816,
    "title": "Old app · Print labels",
@@ -2173,7 +2845,7 @@
   },
   "j14-stock-list.dc.html": {
    "x": 0,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Old app · Stock list",
@@ -2181,7 +2853,7 @@
   },
   "j14-stock-product.dc.html": {
    "x": 1180,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Old app · Product page",
@@ -2189,7 +2861,7 @@
   },
   "j14-stock-variants.dc.html": {
    "x": 2360,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sizes and colours",
@@ -2197,7 +2869,7 @@
   },
   "j14-stock-serials.dc.html": {
    "x": 3540,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Serial numbers",
@@ -2205,7 +2877,7 @@
   },
   "j14-stock-pricing.dc.html": {
    "x": 4720,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Price rules",
@@ -2213,7 +2885,7 @@
   },
   "j14-stock-sites.dc.html": {
    "x": 6060,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Stock by site",
@@ -2221,7 +2893,7 @@
   },
   "j14-stock-transfer.dc.html": {
    "x": 7240,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Transfer between sites",
@@ -2229,7 +2901,7 @@
   },
   "j14-take-start.dc.html": {
    "x": 8580,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Start a stock take",
@@ -2237,7 +2909,7 @@
   },
   "j14-take-count.dc.html": {
    "x": 9760,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Count",
@@ -2245,7 +2917,7 @@
   },
   "j14-take-diff.dc.html": {
    "x": 10940,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Differences",
@@ -2253,7 +2925,7 @@
   },
   "j14-take-post.dc.html": {
    "x": 12120,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Apply the count",
@@ -2261,7 +2933,7 @@
   },
   "j14-stock-adjust.dc.html": {
    "x": 13460,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Old app · Adjust stock",
@@ -2269,7 +2941,7 @@
   },
   "j14-stock-check.dc.html": {
    "x": 14640,
-   "y": 31566,
+   "y": 31650,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Check these (below zero)",
@@ -2277,7 +2949,7 @@
   },
   "j15-customers.dc.html": {
    "x": 0,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Designed · Customer & bike records",
@@ -2285,7 +2957,7 @@
   },
   "j15-customer-record.dc.html": {
    "x": 1180,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Designed · Edit a customer and bike",
@@ -2293,7 +2965,7 @@
   },
   "j15-duplicates.dc.html": {
    "x": 2360,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Designed · Review a possible duplicate",
@@ -2301,7 +2973,7 @@
   },
   "j15-cust-history.dc.html": {
    "x": 3540,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Not designed · One history per customer",
@@ -2309,7 +2981,7 @@
   },
   "j15-cust-groups.dc.html": {
    "x": 4720,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Old app · Customer groups",
@@ -2317,7 +2989,7 @@
   },
   "j15-cust-loyalty.dc.html": {
    "x": 6060,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Loyalty points",
@@ -2325,7 +2997,7 @@
   },
   "j15-cust-account.dc.html": {
    "x": 7240,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Credit account",
@@ -2333,7 +3005,7 @@
   },
   "j15-cust-consent.dc.html": {
    "x": 8420,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Marketing permission",
@@ -2341,7 +3013,7 @@
   },
   "j15-cust-privacy.dc.html": {
    "x": 9600,
-   "y": 33382,
+   "y": 33466,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Privacy requests",
@@ -2349,7 +3021,7 @@
   },
   "j16-eod-synced.dc.html": {
    "x": 0,
-   "y": 35198,
+   "y": 35282,
    "w": 1100,
    "h": 816,
    "title": "Not designed · All tills sent their sales",
@@ -2357,7 +3029,7 @@
   },
   "j16-eod-attention.dc.html": {
    "x": 1180,
-   "y": 35198,
+   "y": 35282,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Needs attention",
@@ -2365,7 +3037,7 @@
   },
   "j16-eod-count.dc.html": {
    "x": 2360,
-   "y": 35198,
+   "y": 35282,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Cash count",
@@ -2373,7 +3045,7 @@
   },
   "j16-eod-banking.dc.html": {
    "x": 3540,
-   "y": 35198,
+   "y": 35282,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Paid-outs and banking",
@@ -2381,7 +3053,7 @@
   },
   "j16-eod-card.dc.html": {
    "x": 4720,
-   "y": 35198,
+   "y": 35282,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Card totals check",
@@ -2389,7 +3061,7 @@
   },
   "j16-eod-z.dc.html": {
    "x": 5900,
-   "y": 35198,
+   "y": 35282,
    "w": 1100,
    "h": 816,
    "title": "Not designed · End-of-day report",
@@ -2397,7 +3069,7 @@
   },
   "j17-rep-today.dc.html": {
    "x": 0,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Old app · Today",
@@ -2405,7 +3077,7 @@
   },
   "j17-rep-sales.dc.html": {
    "x": 1180,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sales report",
@@ -2413,7 +3085,7 @@
   },
   "j17-rep-margin.dc.html": {
    "x": 2360,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Margin and stock value",
@@ -2421,7 +3093,7 @@
   },
   "j17-rep-vat.dc.html": {
    "x": 3540,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · VAT summary",
@@ -2429,7 +3101,7 @@
   },
   "j17-rep-workshop.dc.html": {
    "x": 4720,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Workshop report",
@@ -2437,7 +3109,7 @@
   },
   "j17-rep-customers.dc.html": {
    "x": 5900,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Returning customers",
@@ -2445,7 +3117,7 @@
   },
   "j17-acc-connect.dc.html": {
    "x": 7240,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Connect Xero or QuickBooks",
@@ -2453,7 +3125,7 @@
   },
   "j17-acc-map.dc.html": {
    "x": 8420,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Match accounts",
@@ -2461,7 +3133,7 @@
   },
   "j17-acc-log.dc.html": {
    "x": 9600,
-   "y": 37014,
+   "y": 37098,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sent to accounts",
@@ -2469,7 +3141,7 @@
   },
   "j18-site-settings.dc.html": {
    "x": 0,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Old app · Website settings",
@@ -2477,7 +3149,7 @@
   },
   "j18-site-theme.dc.html": {
    "x": 1180,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Theme editor",
@@ -2485,7 +3157,7 @@
   },
   "j18-site-pages.dc.html": {
    "x": 2360,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Pages",
@@ -2493,7 +3165,7 @@
   },
   "j18-site-publish.dc.html": {
    "x": 3540,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Preview and publish",
@@ -2501,7 +3173,7 @@
   },
   "j18-site-domain.dc.html": {
    "x": 4720,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Own web address",
@@ -2509,7 +3181,7 @@
   },
   "j18-site-shopify.dc.html": {
    "x": 5900,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Old app · Shopify connection (to retire)",
@@ -2517,7 +3189,7 @@
   },
   "j18-site-payments.dc.html": {
    "x": 7240,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Online payments setup",
@@ -2525,7 +3197,7 @@
   },
   "j18-site-orders.dc.html": {
    "x": 8420,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Online orders",
@@ -2533,7 +3205,7 @@
   },
   "j18-site-collect.dc.html": {
    "x": 9600,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Click and collect queue",
@@ -2541,7 +3213,7 @@
   },
   "j18-site-refund.dc.html": {
    "x": 10780,
-   "y": 38830,
+   "y": 38914,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Refund an online order",
@@ -2549,7 +3221,7 @@
   },
   "j19-multi-switch.dc.html": {
    "x": 0,
-   "y": 40646,
+   "y": 40730,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Site switcher",
@@ -2557,7 +3229,7 @@
   },
   "j19-multi-reports.dc.html": {
    "x": 1180,
-   "y": 40646,
+   "y": 40730,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Reports and cash-up by site",
@@ -2565,7 +3237,7 @@
   },
   "j19-multi-tills.dc.html": {
    "x": 2360,
-   "y": 40646,
+   "y": 40730,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Tills across sites",
@@ -2573,7 +3245,7 @@
   },
   "j20-ops-audit.dc.html": {
    "x": 0,
-   "y": 42462,
+   "y": 42546,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Activity log",
@@ -2581,7 +3253,7 @@
   },
   "j20-ops-devices.dc.html": {
    "x": 1180,
-   "y": 42462,
+   "y": 42546,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Signed-in devices",
@@ -2589,7 +3261,7 @@
   },
   "j20-ops-feedback.dc.html": {
    "x": 2360,
-   "y": 42462,
+   "y": 42546,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Send feedback",
@@ -2597,7 +3269,7 @@
   },
   "j21-connect.dc.html": {
    "x": 0,
-   "y": 44278,
+   "y": 44362,
    "w": 1100,
    "h": 816,
    "title": "Designed · Connect the one chosen Lightspeed",
@@ -2605,7 +3277,7 @@
   },
   "j21-connect-proof.dc.html": {
    "x": 1180,
-   "y": 44278,
+   "y": 44362,
    "w": 1100,
    "h": 816,
    "title": "Designed · Verify connector capabilities",
@@ -2613,7 +3285,7 @@
   },
   "j21-pos.dc.html": {
    "x": 2360,
-   "y": 44278,
+   "y": 44362,
    "w": 1100,
    "h": 816,
    "title": "Designed · Handoff agreed work to Lightspeed",
@@ -2621,7 +3293,7 @@
   },
   "j21-pos-done.dc.html": {
    "x": 3540,
-   "y": 44278,
+   "y": 44362,
    "w": 1100,
    "h": 816,
    "title": "Designed · See the linked work order",
@@ -2629,7 +3301,7 @@
   },
   "j21-pos-unknown.dc.html": {
    "x": 4720,
-   "y": 44278,
+   "y": 44362,
    "w": 1100,
    "h": 816,
    "title": "Designed · Uncertain Lightspeed handoff",
@@ -2807,27 +3479,111 @@
   "j10-open-float.dc.html",
   "j10-open-tills.dc.html",
   "j10-desk.dc.html",
-  "j11-till-sale.dc.html",
-  "j11-till-variant.dc.html",
-  "j11-till-serial.dc.html",
-  "j11-till-customer.dc.html",
-  "j11-till-discount.dc.html",
-  "j11-till-pay.dc.html",
-  "j11-till-card.dc.html",
-  "j11-till-account.dc.html",
-  "j11-till-giftcard.dc.html",
-  "j11-till-deposit.dc.html",
-  "j11-till-receipt.dc.html",
-  "j11-till-park.dc.html",
-  "j11-till-void.dc.html",
-  "j11-till-find.dc.html",
-  "j11-till-refund.dc.html",
-  "j11-till-job.dc.html",
-  "j11-till-collect.dc.html",
-  "j11-till-offline.dc.html",
-  "j11-till-needs-net.dc.html",
-  "j11-till-no-signout.dc.html",
-  "j11-till-failed.dc.html",
+  "j11-till-sale-desktop.dc.html",
+  "j11-till-sale-tablet.dc.html",
+  "j11-till-sale-phone.dc.html",
+  "j11-till-empty-desktop.dc.html",
+  "j11-till-empty-tablet.dc.html",
+  "j11-till-empty-phone.dc.html",
+  "j11-till-noresults-desktop.dc.html",
+  "j11-till-noresults-tablet.dc.html",
+  "j11-till-noresults-phone.dc.html",
+  "j11-till-line-desktop.dc.html",
+  "j11-till-line-tablet.dc.html",
+  "j11-till-line-phone.dc.html",
+  "j11-till-discount-desktop.dc.html",
+  "j11-till-discount-tablet.dc.html",
+  "j11-till-discount-phone.dc.html",
+  "j11-till-customer-desktop.dc.html",
+  "j11-till-customer-tablet.dc.html",
+  "j11-till-customer-phone.dc.html",
+  "j11-till-variant-desktop.dc.html",
+  "j11-till-variant-tablet.dc.html",
+  "j11-till-variant-phone.dc.html",
+  "j11-till-serial-desktop.dc.html",
+  "j11-till-serial-tablet.dc.html",
+  "j11-till-serial-phone.dc.html",
+  "j11-till-pay-desktop.dc.html",
+  "j11-till-pay-tablet.dc.html",
+  "j11-till-pay-phone.dc.html",
+  "j11-till-pay-other-desktop.dc.html",
+  "j11-till-pay-other-tablet.dc.html",
+  "j11-till-pay-other-phone.dc.html",
+  "j11-till-card-desktop.dc.html",
+  "j11-till-card-tablet.dc.html",
+  "j11-till-card-phone.dc.html",
+  "j11-till-card-declined-desktop.dc.html",
+  "j11-till-card-declined-tablet.dc.html",
+  "j11-till-card-declined-phone.dc.html",
+  "j11-till-pay-cash-desktop.dc.html",
+  "j11-till-pay-cash-tablet.dc.html",
+  "j11-till-pay-cash-phone.dc.html",
+  "j11-till-pay-split-desktop.dc.html",
+  "j11-till-pay-split-tablet.dc.html",
+  "j11-till-pay-split-phone.dc.html",
+  "j11-till-receipt-desktop.dc.html",
+  "j11-till-receipt-tablet.dc.html",
+  "j11-till-receipt-phone.dc.html",
+  "j11-till-giftcard-desktop.dc.html",
+  "j11-till-giftcard-tablet.dc.html",
+  "j11-till-giftcard-phone.dc.html",
+  "j11-till-account-desktop.dc.html",
+  "j11-till-account-tablet.dc.html",
+  "j11-till-account-phone.dc.html",
+  "j11-till-loyalty-desktop.dc.html",
+  "j11-till-loyalty-tablet.dc.html",
+  "j11-till-loyalty-phone.dc.html",
+  "j11-till-deposit-desktop.dc.html",
+  "j11-till-deposit-tablet.dc.html",
+  "j11-till-deposit-phone.dc.html",
+  "j11-till-park-desktop.dc.html",
+  "j11-till-park-tablet.dc.html",
+  "j11-till-park-phone.dc.html",
+  "j11-till-find-desktop.dc.html",
+  "j11-till-find-tablet.dc.html",
+  "j11-till-find-phone.dc.html",
+  "j11-till-sale-detail-desktop.dc.html",
+  "j11-till-sale-detail-tablet.dc.html",
+  "j11-till-sale-detail-phone.dc.html",
+  "j11-till-refund-desktop.dc.html",
+  "j11-till-refund-tablet.dc.html",
+  "j11-till-refund-phone.dc.html",
+  "j11-till-refund-cash-desktop.dc.html",
+  "j11-till-refund-cash-tablet.dc.html",
+  "j11-till-refund-cash-phone.dc.html",
+  "j11-till-refund-noreceipt-desktop.dc.html",
+  "j11-till-refund-noreceipt-tablet.dc.html",
+  "j11-till-refund-noreceipt-phone.dc.html",
+  "j11-till-void-desktop.dc.html",
+  "j11-till-void-tablet.dc.html",
+  "j11-till-void-phone.dc.html",
+  "j11-till-job-desktop.dc.html",
+  "j11-till-job-tablet.dc.html",
+  "j11-till-job-phone.dc.html",
+  "j11-till-job-deposit-desktop.dc.html",
+  "j11-till-job-deposit-tablet.dc.html",
+  "j11-till-job-deposit-phone.dc.html",
+  "j11-till-job-balance-desktop.dc.html",
+  "j11-till-job-balance-tablet.dc.html",
+  "j11-till-job-balance-phone.dc.html",
+  "j11-till-collect-desktop.dc.html",
+  "j11-till-collect-tablet.dc.html",
+  "j11-till-collect-phone.dc.html",
+  "j11-till-offline-desktop.dc.html",
+  "j11-till-offline-tablet.dc.html",
+  "j11-till-offline-phone.dc.html",
+  "j11-till-offline-long-desktop.dc.html",
+  "j11-till-offline-long-tablet.dc.html",
+  "j11-till-offline-long-phone.dc.html",
+  "j11-till-needs-net-desktop.dc.html",
+  "j11-till-needs-net-tablet.dc.html",
+  "j11-till-needs-net-phone.dc.html",
+  "j11-till-no-signout-desktop.dc.html",
+  "j11-till-no-signout-tablet.dc.html",
+  "j11-till-no-signout-phone.dc.html",
+  "j11-till-failed-desktop.dc.html",
+  "j11-till-failed-tablet.dc.html",
+  "j11-till-failed-phone.dc.html",
   "j12-diary-desktop.dc.html",
   "j12-diary-tablet.dc.html",
   "j12-diary-phone.dc.html",
@@ -3359,7 +4115,7 @@
    "maxH": 150
   },
   "j11_s41": {
-   "x": 6060,
+   "x": 24240,
    "y": 25538,
    "text": "Taking payment",
    "w": 520,
@@ -3369,7 +4125,17 @@
    "maxH": 150
   },
   "j11_s42": {
-   "x": 13300,
+   "x": 45470,
+   "y": 25538,
+   "text": "Other ways to pay",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j11_s43": {
+   "x": 57670,
    "y": 25538,
    "text": "Other till jobs",
    "w": 520,
@@ -3378,8 +4144,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j11_s43": {
-   "x": 20540,
+  "j11_s44": {
+   "x": 90940,
    "y": 25538,
    "text": "When the internet drops",
    "w": 520,
@@ -3393,11 +4159,11 @@
    "y": 25218,
    "text": "11 · Selling at the till — Staff",
    "kind": "title1",
-   "maxW": 25180
+   "maxW": 105910
   },
-  "j12_s45": {
+  "j12_s46": {
    "x": 0,
-   "y": 27354,
+   "y": 27438,
    "text": "The diary",
    "w": 520,
    "size": "l",
@@ -3405,9 +4171,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s46": {
+  "j12_s47": {
    "x": 36280,
-   "y": 27354,
+   "y": 27438,
    "text": "Requests, as a pop-up",
    "w": 520,
    "size": "l",
@@ -3415,9 +4181,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s47": {
+  "j12_s48": {
    "x": 48480,
-   "y": 27354,
+   "y": 27438,
    "text": "New job from an empty slot",
    "w": 520,
    "size": "l",
@@ -3425,9 +4191,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s48": {
+  "j12_s49": {
    "x": 57670,
-   "y": 27354,
+   "y": 27438,
    "text": "The job — one page, no tabs",
    "w": 520,
    "size": "l",
@@ -3435,9 +4201,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s49": {
+  "j12_s50": {
    "x": 81910,
-   "y": 27354,
+   "y": 27438,
    "text": "Customer account",
    "w": 520,
    "size": "l",
@@ -3445,9 +4211,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s50": {
+  "j12_s51": {
    "x": 85080,
-   "y": 27354,
+   "y": 27438,
    "text": "Overview page",
    "w": 520,
    "size": "l",
@@ -3457,14 +4223,14 @@
   },
   "j12_title": {
    "x": 0,
-   "y": 27034,
+   "y": 27118,
    "text": "12 · Workshop day — Staff and Mechanic",
    "kind": "title1",
    "maxW": 88010
   },
-  "j13_s52": {
+  "j13_s53": {
    "x": 0,
-   "y": 29510,
+   "y": 29594,
    "text": "Suppliers",
    "w": 520,
    "size": "l",
@@ -3472,9 +4238,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s53": {
+  "j13_s54": {
    "x": 2520,
-   "y": 29510,
+   "y": 29594,
    "text": "Orders",
    "w": 520,
    "size": "l",
@@ -3482,9 +4248,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s54": {
+  "j13_s55": {
    "x": 7400,
-   "y": 29510,
+   "y": 29594,
    "text": "Delivery",
    "w": 520,
    "size": "l",
@@ -3494,14 +4260,14 @@
   },
   "j13_title": {
    "x": 0,
-   "y": 29190,
+   "y": 29274,
    "text": "13 · Receiving stock and purchase orders — Staff and Manager",
    "kind": "title1",
    "maxW": 10860
   },
-  "j14_s56": {
+  "j14_s57": {
    "x": 0,
-   "y": 31326,
+   "y": 31410,
    "text": "Products",
    "w": 520,
    "size": "l",
@@ -3509,9 +4275,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s57": {
+  "j14_s58": {
    "x": 6060,
-   "y": 31326,
+   "y": 31410,
    "text": "Across sites",
    "w": 520,
    "size": "l",
@@ -3519,9 +4285,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s58": {
+  "j14_s59": {
    "x": 8580,
-   "y": 31326,
+   "y": 31410,
    "text": "Stock take",
    "w": 520,
    "size": "l",
@@ -3529,9 +4295,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s59": {
+  "j14_s60": {
    "x": 13460,
-   "y": 31326,
+   "y": 31410,
    "text": "Corrections",
    "w": 520,
    "size": "l",
@@ -3541,14 +4307,14 @@
   },
   "j14_title": {
    "x": 0,
-   "y": 31006,
+   "y": 31090,
    "text": "14 · Stock take and stock control — Staff and Manager",
    "kind": "title1",
    "maxW": 15740
   },
-  "j15_s61": {
+  "j15_s62": {
    "x": 0,
-   "y": 33142,
+   "y": 33226,
    "text": "Customers",
    "w": 520,
    "size": "l",
@@ -3556,9 +4322,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j15_s62": {
+  "j15_s63": {
    "x": 6060,
-   "y": 33142,
+   "y": 33226,
    "text": "Loyalty and accounts",
    "w": 520,
    "size": "l",
@@ -3568,14 +4334,14 @@
   },
   "j15_title": {
    "x": 0,
-   "y": 32822,
+   "y": 32906,
    "text": "15 · Customer service — Staff and Manager",
    "kind": "title1",
    "maxW": 10700
   },
-  "j16_s64": {
+  "j16_s65": {
    "x": 0,
-   "y": 34958,
+   "y": 35042,
    "text": "Closing",
    "w": 520,
    "size": "l",
@@ -3585,14 +4351,14 @@
   },
   "j16_title": {
    "x": 0,
-   "y": 34638,
+   "y": 34722,
    "text": "16 · End-of-day cash-up — Staff and Manager",
    "kind": "title1",
    "maxW": 7000
   },
-  "j17_s66": {
+  "j17_s67": {
    "x": 0,
-   "y": 36774,
+   "y": 36858,
    "text": "Reports",
    "w": 520,
    "size": "l",
@@ -3600,9 +4366,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s67": {
+  "j17_s68": {
    "x": 7240,
-   "y": 36774,
+   "y": 36858,
    "text": "Accounts software",
    "w": 520,
    "size": "l",
@@ -3612,14 +4378,14 @@
   },
   "j17_title": {
    "x": 0,
-   "y": 36454,
+   "y": 36538,
    "text": "17 · Reports and accounts — Manager and Owner",
    "kind": "title1",
    "maxW": 10700
   },
-  "j18_s69": {
+  "j18_s70": {
    "x": 0,
-   "y": 38590,
+   "y": 38674,
    "text": "Design the website",
    "w": 520,
    "size": "l",
@@ -3627,9 +4393,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s70": {
+  "j18_s71": {
    "x": 7240,
-   "y": 38590,
+   "y": 38674,
    "text": "Online orders",
    "w": 520,
    "size": "l",
@@ -3639,14 +4405,14 @@
   },
   "j18_title": {
    "x": 0,
-   "y": 38270,
+   "y": 38354,
    "text": "18 · Website management — Manager",
    "kind": "title1",
    "maxW": 11880
   },
-  "j19_s72": {
+  "j19_s73": {
    "x": 0,
-   "y": 40406,
+   "y": 40490,
    "text": "Across sites",
    "w": 520,
    "size": "l",
@@ -3656,14 +4422,14 @@
   },
   "j19_title": {
    "x": 0,
-   "y": 40086,
+   "y": 40170,
    "text": "19 · Multiple sites — Owner and Manager",
    "kind": "title1",
    "maxW": 3460
   },
-  "j20_s74": {
+  "j20_s75": {
    "x": 0,
-   "y": 42222,
+   "y": 42306,
    "text": "Oversight",
    "w": 520,
    "size": "l",
@@ -3673,14 +4439,14 @@
   },
   "j20_title": {
    "x": 0,
-   "y": 41902,
+   "y": 41986,
    "text": "20 · Management oversight — Owner",
    "kind": "title1",
    "maxW": 3460
   },
-  "j21_s76": {
+  "j21_s77": {
    "x": 0,
-   "y": 44038,
+   "y": 44122,
    "text": "Connection and handoff",
    "w": 520,
    "size": "l",
@@ -3690,7 +4456,7 @@
   },
   "j21_title": {
    "x": 0,
-   "y": 43718,
+   "y": 43802,
    "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
    "kind": "title1",
    "maxW": 5820

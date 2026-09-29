@@ -21,8 +21,15 @@ and interaction rules apply to every journey).
 - **Journey B (Signing in and access) is approved** (29 Sep) and in the big
   canvas as Designed; its own canvas: https://claude.ai/artifact/5Ho8DsRVvHXEcJBnGu1GXe ,
   decisions in `docs/decisions/2026-09-29-signing-in-review.md`.
-- The overview counts each screen once: 231 screens — 97 designed, 0 for
-  review, 6 built, 19 old app only, 109 not designed yet.
+- **Journey 11 (Selling at the till) is approved** (29 Sep) and in the big
+  canvas as Designed; its own canvas: https://claude.ai/artifact/Y9NppHkpYBrrRKjHw8FoLG ,
+  decisions in `docs/decisions/2026-09-29-selling-at-the-till-review.md`.
+- The overview counts each screen once: 245 screens — 132 designed, 0 for
+  review, 6 built, 14 old app only, 93 not designed yet.
+- **Drawing all three sizes at once:** `till.mjs` defines each screen with
+  `def(id, () => …)` and helpers read `CUR` (desktop / tablet / phone) — a
+  pattern worth reusing for the next journey rather than drawing each size
+  by hand. Renders: set a font-wait timeout; macOS has no `timeout` command.
 - **A new journey's own canvas:** write `<name>.mjs` (screens as
   `{desktop, tablet, phone}` or `single`, plus `TITLES` and `ROWS`) and a
   three-line `build-<name>.mjs` calling `buildSandCanvas` from
