@@ -29,3 +29,7 @@ full one, with one "Take payment" step that leaves room for the other.
    tap on the line's − and + without opening anything. Follows the
    pop-ups-in-the-middle rule (Workshop day 15, 16). Chosen over expanding
    the line in place and a price-only edit.
+4. **Anyone can give any discount; the reason is recorded and managers see
+   every discount in the reports** (Jack, 29 Sep) — no manager PIN and no
+   limit. Chosen over a shop-set limit with a manager PIN above it, and
+   manager-only discounts.

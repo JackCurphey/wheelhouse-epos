@@ -89,10 +89,63 @@ screens['till-line'] = {
   desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${tillPage(leftSide(), basket([PADS, BRAKES]))}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center">${lineDialog()}</div></div>`,
 };
 
+// ---------- Pop-ups over the till ----------
+function dialog(id, title, sub, body, footer, w = 520) {
+  return `<div role="dialog" aria-modal="true" aria-labelledby="${id}" style="width: ${w}px; max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden">
+<div style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="${id}" style="margin: 0; font-size: 20px; font-weight: 700">${title}</h2>${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</div><a href="till-sale-desktop.dc.html" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
+<div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px">${body}</div>
+${footer ? `<div style="flex-shrink: 0; display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footer}</div>` : ''}
+</div>`;
+}
+const overTill = (d, lines = [PADS, BRAKES]) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${tillPage(leftSide(), basket(lines))}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${d}</div></div>`;
+
+// Add a customer (works offline): search, or add someone new with just a
+// name and one way to reach them. Tapping a result adds them at once.
+const custRow = (name, sub) => `<a href="#" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; box-sizing: border-box; padding: 8px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="font-size: 13px; font-weight: 600">Add to sale</span></a>`;
+screens['till-customer'] = {
+  desktop: overTill(dialog('cust-title', 'Add a customer', 'Optional — for a receipt by email, an account, or their bike history', `
+<label style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input type="search" aria-label="Search customers by name, phone or email" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
+${custRow('Maya Patel', 'maya@example.com · Trek Domane AL 3')}
+<div style="padding-top: 14px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 12px"><span style="font-size: 14px; font-weight: 700">Or add someone new</span>
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px">${field('Name', { placeholder: 'First and last name' })}${field('Phone or email', { placeholder: 'Either is fine' })}</div>
+${button('Add new customer to sale', { variant: 'default', block: true })}</div>`, '')),
+};
+
+// Choose size and colour: products that come in sizes and colours open this
+// first (INV-06). One tap on an in-stock option adds it.
+const opt = (t, stock, on = false, out = false) => `<button type="button" aria-pressed="${on}"${out ? ' aria-disabled="true"' : ''} style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 64px; border-radius: 10px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : out ? C.mutedBg : C.panel}; color: ${on ? C.panel : out ? C.muted : C.ink}; font-family: inherit"><span style="font-size: 16px; font-weight: 700">${t}</span><span style="font-size: 12px; ${on ? '' : `color: ${C.muted}`}">${stock}</span></button>`;
+screens['till-variant'] = {
+  desktop: overTill(dialog('var-title', '[Product with sizes and colours]', 'Pick one — tap an option to add it', `
+<div role="group" aria-label="Colour" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Colour</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Colour]', true)}${reasonPill('[Colour]')}</div></div>
+<div role="group" aria-label="Size" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Size</span><div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${opt('[Size]', '[n] in stock')}${opt('[Size]', '[n] in stock')}${opt('[Size]', '[n] in stock')}${opt('[Size]', 'None in stock', false, true)}</div></div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">An option with none in stock can still be sold; the stock goes below zero and shows in Stock.</p>`, '')),
+};
+
+// Record a serial number: selling a bike (or anything the shop tracks by
+// serial) asks for its frame number straight away (INV-07).
+screens['till-serial'] = {
+  desktop: overTill(dialog('serial-title', 'Frame number', '[Bike name] · this product is tracked by serial number', `
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('check', 18)}<input aria-label="Frame number" placeholder="Scan the frame barcode or type the number" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">It goes on the receipt and the customer’s bike record, so the bike can be traced for warranty or if it’s stolen.</p>`, `${button('Skip for now', { variant: 'ghost' })}${button('Add to sale')}`)),
+};
+
+// A discount on the whole sale — "Add a discount" in the basket. Same
+// controls as a line (decision 3); anyone can give it (decision 4).
+screens['till-discount'] = {
+  desktop: overTill(dialog('disc-title', 'Discount the whole sale', 'Sale total £74.00 · 3 items', `
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Discount</span><div style="display: flex; gap: 10px; align-items: center">${seg(['£', '%'], 0, 'Discount as pounds or percent')}<input aria-label="Discount amount" value="4.00" style="width: 110px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"><span style="font-size: 14px; color: ${C.muted}">New total ${mono('£70.00')}</span></div></div>
+<div role="group" aria-label="Reason for the discount" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">The reason is kept with the sale and shows in the discounts report.</p>`, `${button('Remove discount', { variant: 'danger' })}${button('Done')}`)),
+};
+
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
   'till-line': 'Change a line — price, discount with a reason, note, remove',
+  'till-discount': 'Discount the whole sale',
+  'till-customer': 'Add a customer — search, or add someone new',
+  'till-variant': 'Choose size and colour',
+  'till-serial': 'Record a frame number',
 };
 export const ROWS = [
-  { label: 'A sale', screens: ['till-sale', 'till-line'] },
+  { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
 ];
