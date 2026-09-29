@@ -43,7 +43,11 @@ export const selectFieldS = (label, value, id) => `<div style="display: flex; fl
 export const staticFieldS = (label, value, id) => `<div style="display: flex; flex-direction: column; gap: 1px"><label for="${id}" style="font-size: 12px; font-weight: 600; color: ${C.ink}">${esc(label)}</label><div id="${id}" style="min-height: 20px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.bg}; display: flex; align-items: center; font-size: 13px; color: ${C.ink}">${esc(value)}</div></div>`;
 
 export const dialogBody = (inner, pad = 4, gap = 3) => `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: ${pad}px; display: flex; flex-direction: column; gap: ${gap}px">${inner}</div>`;
-export const dialogFooter = (inner) => `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 22px; border-top: 1px solid ${C.border}; display: flex; align-items: center; gap: 12px; background: ${C.panel}">${inner}</div>`;
+// Vertical padding trimmed to 6px (from 10px, S2/decision 58 follow-up): the
+// footer's own 44px buttons set its floor, same reasoning as
+// finalTitleBar/finalCustStripTwoRow above — reclaiming the two-row header's
+// extra ~25px without shrinking anything a mechanic reads or taps.
+export const dialogFooter = (inner) => `<div style="flex-shrink: 0; box-sizing: border-box; padding: 6px 22px; border-top: 1px solid ${C.border}; display: flex; align-items: center; gap: 12px; background: ${C.panel}">${inner}</div>`;
 
 // ---------- title bar / customer strip ----------
 // jobTitle/status/tone parameterised (job-options.mjs calls this with the
@@ -86,11 +90,16 @@ export function finalCustStrip(customer, mechanicName, custHref = '#') {
 export function finalCustStripTwoRow(customer, mechanicName, custHref = '#', tags = '') {
   const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" title="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
   const custLinkF = `<a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
-  const identityRow = `<div style="box-sizing: border-box; padding: 2px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px">
+  // Rows trimmed to 0px vertical padding (from finalCustStrip's 2px): the
+  // 44px icon buttons already set the identity row's floor, and the
+  // logistics row's plain text needs no extra air either — every px here is
+  // one the fixed-height dialog below (jobPopupContent) has to find again
+  // now that S2 (decision 58) turned one row into two.
+  const identityRow = `<div style="box-sizing: border-box; padding: 0 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px">
 <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}">${custLinkF}<span>${esc(customer.phone)}</span><span>${esc(customer.email)}</span></div>
 <div style="display: flex; gap: 8px; flex-shrink: 0">${iconBtnF('inbox', `Message ${esc(customer.name)}`)}${iconBtnF('mail', `Email ${esc(customer.name)}`)}${iconBtnF('menu', 'Notes')}</div>
 </div>`;
-  const logisticsRow = `<div style="box-sizing: border-box; padding: 2px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid ${C.border}">
+  const logisticsRow = `<div style="box-sizing: border-box; padding: 1px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid ${C.border}">
 <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}"><span>${esc(customer.bike)}</span>${customer.storageSlot ? `<span style="color: ${C.muted}">Kept on ${esc(customer.storageSlot)}</span>` : ''}<span>Mechanic: <strong>${esc(mechanicName)}</strong></span></div>
 <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap">${tags}</div>
 </div>`;
@@ -198,23 +207,29 @@ export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', to
   const rowsHtml = sortLines(lines).map((l) => {
     const declined = l.approval === 'Declined';
     const totalStrike = declined ? `text-decoration: line-through; color: ${C.muted};` : '';
-    // H3 (29 Sep audit, decision 34): the Done tick is the control a
+    // H3 (29 Sep audit, decision 34), re-measured with S2 as the default
+    // (decision 58, 29 Sep round 2): the Done tick is the control a
     // mechanic — often gloved, often glancing not looking — presses most on
     // this table, so its hit area is a label around a smaller (20px) visible
     // box, the same pattern as "Bike is here". Widened to 44px (the full
     // accessibility floor) with no trouble; height is 34px, not 44 — a
-    // genuinely full 44px row, times a 4-line table's worth of rows, doesn't
-    // fit this dialog's fixed, no-scroll height at once (confirmed: at 44px
-    // it overflowed job-collection/job-finished/job-waiting-parts by
-    // 25-40px even after trimming this dialog's own chrome padding below to
-    // its floor). 34px still gives roughly 3.5x the tap area of the original
+    // genuinely full 44px row, times a 4-line table's worth of rows, still
+    // doesn't fit. S2's two-row customer strip actually *costs* about 25px
+    // here (two rows, one with 44px icon buttons, vs. one wrapped line
+    // before) rather than freeing any — every bit of that was reclaimed by
+    // trimming this dialog's own chrome to its floor (finalCustStripTwoRow's
+    // row padding, dialogFooter, jobPopupContent's dialogBody/jobSection),
+    // which is what keeps the board at no-scroll now. Re-tried 44px on top
+    // of those trims and it still overflowed job-collection (the tightest
+    // board) by 41px, job-finished by 26px, job-waiting-parts by 36px — so
+    // 34px stays. It still gives roughly 3.5x the tap area of the original
     // bare 20px checkbox (44x34 vs 20x20) — the audit's own fallback for
     // exactly this conflict ("rows may grow a little — keep no-scroll on
     // every job board") reads as choosing no-scroll over the full 44px
     // when the two collide, so that's the version shipped here. Flagged for
-    // Jack: full 44px is achievable with more layout rework (e.g. splitting
-    // the job header into two rows per S2, freeing space table-side) if he'd
-    // rather have that than 34px.
+    // Jack: full 44px would need more layout rework than S2 turned out to
+    // give (e.g. a shorter work-and-parts table, or letting this one dialog
+    // scroll) if he'd rather have that than 34px.
     // (Also tried a -12px-margin overlay so the row wouldn't grow at all: it
     // does give a real 44px click box, but every TD/TR then reports
     // scrollHeight > clientHeight to the project's own no-scroll fit check —
@@ -250,13 +265,21 @@ export function jobPopupContent({
   lines, totalLabel, totalValue, footerNote, quoteAction,
   footer, // html for dialogFooter's inner
   stageTop = '', // optional stage-only section (bike tag, waiting-for-parts, payment) — inserted above the job details/notes section
-  twoRowHeader = false, // S2 idea board only (29 Sep audit): finalCustStripTwoRow instead of finalCustStrip, with the limit/ready-by/approved tags moved into its logistics row instead of jobMetaRow
+  // S2 (decision 58, 29 Sep audit): finalCustStripTwoRow is the default for
+  // every job page and job-final-2-style board — the identity row (name,
+  // phone, email) and the logistics row (bike, storage, mechanic, plus the
+  // limit/ready-by/approved tags) split apart instead of one dense line
+  // (audit §3 S2). Pass twoRowHeader: false only to redraw the old one-line
+  // strip, which idea-s2-before still does as the "before" record.
+  twoRowHeader = true,
 }) {
   const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${left}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn({ customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref })}</div>`, 24);
   const metaLimit = limit !== undefined ? limit : SPEND_LIMIT;
-  const jobSection = panel(`${jobMetaRow(jobNum, created, twoRowHeader ? '' : readyByBadge, twoRowHeader ? '' : totalBadge, twoRowHeader ? '' : metaLimit)}${jobBody}`, '', 3, 3);
+  const jobSection = panel(`${jobMetaRow(jobNum, created, twoRowHeader ? '' : readyByBadge, twoRowHeader ? '' : totalBadge, twoRowHeader ? '' : metaLimit)}${jobBody}`, '', 2, 2);
   const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(lines, { totalLabel, totalValue, footerNote, quoteAction }), grow: false });
-  const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 4, 1);
+  // pad trimmed to 2px (from 4px, S2/decision 58 follow-up — same reclaim as
+  // dialogFooter/finalCustStripTwoRow above).
+  const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 2, 1);
   const headerTags = twoRowHeader ? `${metaLimit ? limitBadge(metaLimit) : ''}${readyByBadge}${totalBadge}` : '';
   const custStripHtml = twoRowHeader ? finalCustStripTwoRow(customer, mechanicName, custHref, headerTags) : finalCustStrip(customer, mechanicName, custHref);
   return `${finalTitleBar(titleId, jobTitle, status, tone, closeHref)}${custStripHtml}${body}${footer ? dialogFooter(footer) : ''}`;
@@ -302,14 +325,15 @@ ${button('Done', { variant: 'primary', href: doneHref || null })}
 </div>
 </header>`;
 }
-export function fullChecklistDialog({ titleId = 'checklist-title', subtitle, checklist, doneHref = null, closeHref = '#', idPrefix = 'fcd', collapsed = false }) {
+export function fullChecklistDialog({ titleId = 'checklist-title', subtitle, checklist, doneHref = null, closeHref = '#', idPrefix = 'fcd', collapsed = true }) {
   const checkedCount = checklist.filter((c) => c.checked).length;
   const notedCount = checklist.filter((c) => c.note).length;
   const summary = `<div style="flex-shrink: 0; padding: 6px 24px 0"><span style="font-size: 13px; color: ${C.muted}">${esc(`${checkedCount} of ${checklist.length} done · ${notedCount} note${notedCount === 1 ? '' : 's'}`)}</span></div>`;
-  // S3 idea board only (collapsed=true): a single column of short rows reads
-  // top-to-bottom in about one screen (the audit spec's "AFTER" sketch),
-  // rather than the two 5-item columns the full note-per-item layout needs
-  // to fit at all.
+  // S3 (decision 58, 29 Sep audit): collapsed rows are the default — a
+  // single column of short rows reads top-to-bottom in about one screen (the
+  // audit spec's "AFTER" sketch), rather than the two 5-item columns the old
+  // full note-per-item layout needed to fit at all. Pass collapsed: false
+  // only to redraw the old layout, which idea-s3-before still does.
   let cols;
   if (collapsed) {
     cols = `<div style="flex-grow: 1; min-height: 0; overflow: hidden; max-width: 560px">${checklist.map((it, i) => fullChecklistItemCollapsed(it, `${idPrefix}-${i}`)).join('')}</div>`;

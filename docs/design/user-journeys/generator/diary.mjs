@@ -321,11 +321,20 @@ const JOBS = [
   { day: 1, start: 9 * 60, dur: 60, mech: 'Jo', key: 'cancelled', job: 'WH-1058', svc: 'Safety check', title: 'Aisha Khan · Cannondale Quick', detail: 'Safety check · cancelled' },
   { day: 1, start: 12 * 60, dur: 60, mech: 'Jo', key: 'scheduled', job: 'WH-1059', svc: 'Gear adjustment', title: 'Maya Patel · Trek Domane AL 3', detail: '12:00–13:00 · gear adjustment' },
   { day: 1, start: 16 * 60, dur: 60, mech: 'Jo', key: 'ready', job: 'WH-1060', svc: 'Standard service', title: 'Jamie Brooks · Giant Escape 2', detail: '16:00–17:00 · standard service' },
-  // Wed 16 Sep.
-  { day: 2, start: 9 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1061', svc: 'Gear adjustment', title: 'Aisha Khan · Cannondale Quick', detail: '09:00–10:00 · gear adjustment' },
+  // Wed 16 Sep. WH-1061 and WH-1064 are a deliberate partial overlap
+  // (decision 59, 29 Sep round 2): Alex's WH-1061 now runs 09:00–11:00 and
+  // Jo's WH-1064 now runs 10:00–12:00 (both were 60 min, ending exactly
+  // where the next job in their own column starts, so lengthening them to
+  // 120 min doesn't collide with WH-1062/WH-1065) — different mechanics,
+  // different start times, sharing 10:00–11:00, in the Everyone week view.
+  // This is the calendar-style side-by-side case; every other protected
+  // example (WH-1042 Thu 11:30, Oliver Chen's Mon 10:00 change request, Sam
+  // Reed's Fri 10:00 pending request, Tue 10:00 free for new-job-pick, Jo's
+  // Thu 16:00 free) is untouched.
+  { day: 2, start: 9 * 60, dur: 120, mech: 'Alex', key: 'scheduled', job: 'WH-1061', svc: 'Gear adjustment', title: 'Aisha Khan · Cannondale Quick', detail: '09:00–11:00 · gear adjustment' },
   { day: 2, start: 11 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1062', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '11:00–12:00 · standard service' },
   { day: 2, start: 14 * 60, dur: 60, mech: 'Alex', key: 'ready', job: 'WH-1063', svc: 'Safety check', title: 'Jamie Brooks · Giant Escape 2', detail: '14:00–15:00 · safety check' },
-  { day: 2, start: 10 * 60, dur: 60, mech: 'Jo', key: 'scheduled', job: 'WH-1064', svc: 'Gear adjustment', title: 'Oliver Chen · Brompton C Line', detail: '10:00–11:00 · gear adjustment' },
+  { day: 2, start: 10 * 60, dur: 120, mech: 'Jo', key: 'scheduled', job: 'WH-1064', svc: 'Gear adjustment', title: 'Oliver Chen · Brompton C Line', detail: '10:00–12:00 · gear adjustment' },
   { day: 2, start: 12 * 60, dur: 60, mech: 'Jo', key: 'waiting', job: 'WH-1065', svc: 'Standard service', title: 'Aisha Khan · Cannondale Quick', detail: '12:00–13:00 · standard service' },
   { day: 2, start: 15 * 60, dur: 60, mech: 'Jo', key: 'ready', job: 'WH-1066', svc: 'Safety check', title: 'Jamie Brooks · Giant Escape 2', detail: '15:00–16:00 · safety check' },
   // Fri 18 Sep — Sam Reed's pending request sits alongside the day's jobs
@@ -456,13 +465,72 @@ function clusterOverlaps(items) {
   }
   return clusters;
 }
+// Decision 59 (29 Sep round 2): within one overlap cluster, jobs sharing the
+// exact same start time collapse into one "unit" (the stacked-card control,
+// S4, covers that case — see stackedJobsBlock); jobs that overlap without
+// sharing a start are laid out calendar-style, each at its own true
+// start/end, sharing the column's width only for the overlapping group
+// (lanes) — the classic sweep-line "assign the first free lane, free it
+// again once its job ends" algorithm, scoped to one cluster at a time so an
+// unrelated job later in the same column never inherits another cluster's
+// lane count.
+function layoutOverlap(cluster) {
+  const byStart = new Map();
+  for (const j of cluster) {
+    if (!byStart.has(j.start)) byStart.set(j.start, []);
+    byStart.get(j.start).push(j);
+  }
+  const units = [...byStart.entries()]
+    .map(([start, jobs]) => ({ start, end: Math.max(...jobs.map((j) => j.start + j.dur)), jobs }))
+    .sort((a, b) => a.start - b.start);
+  const laneEnds = [];
+  for (const u of units) {
+    let lane = laneEnds.findIndex((e) => e <= u.start);
+    if (lane === -1) lane = laneEnds.length;
+    laneEnds[lane] = u.end;
+    u.lane = lane;
+  }
+  const total = laneEnds.length;
+  return units.map((u) => ({ ...u, total }));
+}
+// The CSS rect for a lane unit sharing width with `total` other lanes in its
+// overlapping group; null (the caller's own default) when total is 1 — a
+// unit with the column to itself keeps the ordinary full-width block.
+function laneRect(lane, total) {
+  if (total <= 1) return null;
+  const gap = 4;
+  return { left: `calc(3px + (100% - 6px) * ${lane} / ${total})`, width: `calc((100% - 6px) / ${total} - ${gap}px)` };
+}
+// Decision 59: a narrow lane block (or a stacked-card control) expands to a
+// readable width on hover, after ~300ms so a passing pointer doesn't
+// trigger it. The delay lives on the `:hover` rule (not the base rule) —
+// that's what makes it apply only when *entering* hover, not when leaving
+// it. With no transition declared at all outside the reduced-motion media
+// query, a reduced-motion user gets the same end state instantly.
+let hoverSeq = 0;
+function laneHoverCSS(cls) {
+  // No z-index on the resting rule — only :hover gets one. A resting
+  // z-index (even 1) would give this deeply-nested block an explicit
+  // stacking level with nothing above it to contain it, so it would paint
+  // over a later, unrelated sibling with no z-index of its own (e.g. a job
+  // pop-up's dimmed backdrop, itself further down the DOM but at the
+  // default "auto" stacking level) — exactly the kind of bug this comment
+  // is here to stop someone reintroducing.
+  return `<style>
+.${cls}:hover{z-index: 9; left: 3px !important; width: calc(100% - 6px) !important; box-shadow: 0 10px 26px rgba(28,30,25,0.3);}
+@media (prefers-reduced-motion: no-preference) {
+  .${cls}{transition: left 160ms ease, width 160ms ease, box-shadow 160ms ease;}
+  .${cls}:hover{transition-delay: 300ms;}
+}
+</style>`;
+}
 // `narrow` is true for a Week-view block (7 columns, ~95px each) and false
 // for a Day-view block (2 mechanic columns, ~450px each). H1/S1 (29 Sep
 // audit): Week view never has room to spell out a status word next to a bike
 // name and job title, so a narrow block drops the word for the statusDot
 // corner mark instead; a wide Day-view block keeps the word written out in
 // full, as before, since it has the room.
-function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true) {
+function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null) {
   const [bg, ink] = ST[j.key];
   const blockLabel = BLOCK_LABEL[j.key];
   const [customer, bike] = customerBikeOf(j);
@@ -498,7 +566,12 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // overflowing the fixed row height and breaking the no-scroll board).
   const bikeWrap = narrow && roomy;
   const showSymbol = narrow && SHOW_STATUS_SYMBOLS;
-  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+  // Decision 59: a lane block (part of a partial overlap, `rect` set) may be
+  // narrow enough to truncate the bike name/job title — acceptable, since
+  // hovering it (laneHoverCSS below) expands it to a readable width.
+  const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
+  const hoverCls = rect ? `wh-lane-${size}-${hoverSeq++}` : '';
+  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${hoverCls ? `class="${hoverCls}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
 ${showSymbol ? statusDot(j.key) : ''}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; ${strike} ${bikeWrap ? 'white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
@@ -619,14 +692,20 @@ function combinedBlock(cluster, size, slotH, faded = false) {
 ${cluster.map((j) => `<span style="font-size: 10px; font-weight: 600; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(customerBikeOf(j)[1])} · ${esc(j.svc || '')}</span>`).join('')}
 </a>`;
 }
-// S4 idea board only (29 Sep audit, M4): a stacked-card look for an
-// overlapping slot — two thin card edges peeking out behind the front job's
+// S4 (decision 58/59, 29 Sep audit): a stacked-card look for jobs sharing
+// one start time — two thin card edges peeking out behind the front job's
 // block (offset up/right, lower z-index, no text of their own) plus a small
 // count badge with a chevron, so the shape itself reads "there's more
 // underneath, click to choose" instead of the plain "2 jobs · 09:00" caption
-// the "before" board uses. Not wired into the live diary (weekGrid's
-// overlapStyle option below is what switches a board over to this).
-function stackedJobsBlock(cluster, size, slotH, faded = false) {
+// idea-s4-before still records. This is now the live diary's default
+// (weekGrid's overlapStyle option below); idea-s4-before still builds the
+// old combinedBlock caption directly, not through here.
+// rect: a lane rect (laneRect()) when this stack shares its cluster's width
+// with a partial overlap (decision 59) — null for the ordinary full-width
+// case. forceExpand: bakes in the hover-expanded fan-out state without
+// relying on CSS :hover — used by the diary-stack-hover static board (task
+// item 3) so Jack can see the expanded state without hovering.
+function stackedJobsBlock(cluster, size, slotH, faded = false, rect = null, forceExpand = false) {
   const start = Math.min(...cluster.map((j) => j.start));
   const end = Math.max(...cluster.map((j) => j.start + j.dur));
   const top = ((start - GRID_START) / 30) * slotH + 2;
@@ -643,7 +722,52 @@ function stackedJobsBlock(cluster, size, slotH, faded = false) {
   // card edges and link hundreds of px below the wrapper's own box and
   // inflating the whole grid's scrollHeight (caught by the strict fit check).
   const edge = (offset, op) => `<div aria-hidden="true" style="position: absolute; left: ${offset}px; right: ${-offset}px; top: ${-offset}px; bottom: 0; border-radius: 5px; background: ${C.panel}; border: 1.75px solid ${C.ink}; opacity: ${op}"></div>`;
-  return `<div style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; ${faded ? 'opacity: 0.5;' : ''}">
+  const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
+  // Decision 59: hovering the stack ~300ms lifts it and fans its jobs out as
+  // full-size diary blocks, side by side, overlapping neighbouring days (the
+  // day column itself has no overflow:hidden — only the outer grid does —
+  // so the fan can spill into the next day's column without being clipped).
+  const seq = hoverSeq++;
+  const wrapCls = `wh-stack-${size}-${seq}`;
+  const fanCls = `wh-fan-${size}-${seq}`;
+  const fanTile = (j) => {
+    const [tbg, tink] = ST[j.key];
+    const [, tbike] = customerBikeOf(j);
+    const th = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
+    return `<a href="job-overview-${size}.dc.html" aria-label="${esc(tbike)}, ${esc(j.svc || '')}, ${esc(j.job)}" style="position: relative; width: 128px; flex-shrink: 0; height: ${th}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 6px; border-radius: 5px; background: ${tbg}; border: 1.75px solid ${tink}; overflow: hidden">
+<span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(tbike)}</span>
+<span style="font-size: 10px; font-weight: 700; color: ${tink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.svc || '')}</span>
+<span style="font-size: 9px; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.job)}</span>
+</a>`;
+  };
+  // overflow:hidden + max-width:0 on the collapsed (non-hover, non-
+  // forceExpand) state, not just opacity:0 — the fan's tiles are real
+  // fixed-width content, and an invisible-but-still-laid-out row would still
+  // report as overflowing its column to the project's fit check even though
+  // nothing is visible. Collapsed, this element clips both axes, so the
+  // check's own "intentional clipping" rule skips it outright, exactly as
+  // it does for any other genuinely-clipped element.
+  const fanStyle = forceExpand
+    ? 'opacity: 1; pointer-events: auto; overflow: visible; max-width: none; filter: drop-shadow(0 10px 26px rgba(28,30,25,0.32));'
+    : 'opacity: 0; pointer-events: none; overflow: hidden; max-width: 0;';
+  const fan = `<div class="${fanCls}" aria-hidden="${!forceExpand}" style="position: absolute; left: 0; top: 0; display: flex; gap: 6px; ${fanStyle}">${cluster.map(fanTile).join('')}</div>`;
+  // No resting z-index here either, for the same reason as laneHoverCSS —
+  // only :hover raises it.
+  const hoverCSS = forceExpand ? '' : `<style>
+.${wrapCls} .${fanCls}{opacity: 0; pointer-events: none; overflow: hidden; max-width: 0;}
+.${wrapCls}:hover{z-index: 9;}
+.${wrapCls}:hover .${fanCls}{opacity: 1; pointer-events: auto; overflow: visible; max-width: none; filter: drop-shadow(0 10px 26px rgba(28,30,25,0.32));}
+@media (prefers-reduced-motion: no-preference) {
+  .${wrapCls} .${fanCls}{transition: opacity 160ms ease;}
+  .${wrapCls}:hover .${fanCls}{transition-delay: 300ms;}
+}
+</style>`;
+  // forceExpand has no :hover rule to raise z-index for it (hoverCSS is
+  // skipped), so it's set directly inline here — otherwise a later day
+  // column in DOM order (e.g. Friday, painted after Thursday) would paint
+  // over the fanned-out tiles instead of the fan sitting above it.
+  const wrapZ = forceExpand ? 'z-index: 9;' : '';
+  return `${hoverCSS}<div class="${wrapCls}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; ${wrapZ} ${faded ? 'opacity: 0.5;' : ''}">
 ${edge(6, 0.45)}
 ${edge(3, 0.7)}
 <a href="job-overview-${size}.dc.html" aria-label="${cluster.length} jobs booked ${t0} to ${t1}, click to choose which one to open: ${esc(names)}" title="${esc(names)}" style="position: absolute; inset: 0; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px 22px 3px 6px; border-radius: 5px; background: ${C.panel}; border: 1.75px solid ${C.ink}; overflow: hidden">
@@ -651,6 +775,7 @@ ${edge(3, 0.7)}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(frontBike)}</span>
 <span style="font-size: 10px; font-weight: 600; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(front.svc || '')} · ${t0}</span>
 </a>
+${fan}
 </div>`;
 }
 // The New job pick target (item 2 of the 27 Sep round, replaces the old
@@ -665,6 +790,24 @@ function pickHintSlot(size, slotH, top, label, href) {
 // example week already has a mechanic, and the "No time" row above already
 // covers bikes with no set time, so a permanently-empty column would show
 // nothing real; add it when there is an actual unassigned job to show.
+// Renders one overlap cluster (decision 59): each same-start unit as a
+// stacked-card control (full lane width when it has the column to itself,
+// a shared lane width when it doesn't); units that overlap without sharing
+// a start get their own lane, side by side, at their own true start/end
+// (calendar style). `forceExpandStart`: the start time (minutes) of the one
+// unit to render pre-expanded (diary-stack-hover, task item 3) — null for
+// the ordinary hover-driven behaviour everywhere else.
+function renderCluster(cluster, size, slotH, { highlightJob = null, faded = false, forceExpandStart = null, narrow = true } = {}) {
+  const units = layoutOverlap(cluster);
+  return units.map((u) => {
+    const rect = laneRect(u.lane, u.total);
+    if (u.jobs.length === 1) {
+      const j = u.jobs[0];
+      return jobBlock(j, size, slotH, highlightJob?.type === 'job' && j.job === highlightJob.job, highlightJob?.dim === j.job, faded, narrow, rect);
+    }
+    return stackedJobsBlock(u.jobs, size, slotH, faded, rect, forceExpandStart !== null && u.start === forceExpandStart);
+  }).join('');
+}
 const DAY_MECHS = [['Alex', 'Alex Morgan'], ['Jo', 'Jo Taylor']];
 function dayMechGrid({ dayIdx, size, slotH = 29, highlightJob = null }) {
   const gridH = GRID_SLOTS * slotH;
@@ -675,7 +818,11 @@ function dayMechGrid({ dayIdx, size, slotH = 29, highlightJob = null }) {
   const col = (m, i) => {
     const items = JOBS.filter((j) => j.day === dayIdx && j.mech === m);
     const clusters = clusterOverlaps(items);
-    const blocks = clusters.map((c) => (c.length === 1 ? jobBlock(c[0], size, slotH, highlightJob?.type === 'job' && c[0].job === highlightJob.job, false, false, false) : combinedBlock(c, size, slotH))).join('');
+    // Decision 59: the day grid gets the same stacked-card/lane treatment as
+    // the week grid (one mechanic's own column never actually overlaps in
+    // this example data, but a same-start pair from a shared "Everyone"
+    // filter elsewhere in the diary can still land here in future data).
+    const blocks = clusters.map((c) => renderCluster(c, size, slotH, { highlightJob, narrow: false })).join('');
     return `<div style="grid-column: ${i + 2}; grid-row: 2; position: relative; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} background: repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)">${blocks}</div>`;
   };
   return `<div role="grid" aria-label="Workshop diary, Thursday 17 September 2026, by mechanic" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: ${cols}; grid-template-rows: auto ${gridH}px; border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden; background: ${C.panel}">
@@ -692,11 +839,14 @@ function diaryDayFrozenContent(size, { highlightJob = null } = {}) {
   return stack(`${diaryToolbar('Everyone', size, { activeView: 'Day', newJob: `new-job-day-${size}.dc.html` })}
 ${row(`${waitingColumn(size, -1)}${dayMechGrid({ dayIdx: TODAY, size, slotH, highlightJob })}`, 16, 'align-items: flex-start')}`, 12);
 }
-// overlapStyle: 'text' (live diary — combinedBlock's plain "N jobs · time"
-// caption) or 'stacked' (S4 idea board only — stackedJobsBlock's card-fan
-// look). Exported so audit-ideas.mjs can build a faithful "after" board with
-// the real grid, not a re-drawn approximation of it.
-export function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot = null, highlightJob = null, pickMode = false, overlapStyle = 'text' }) {
+// overlapStyle: 'stacked' (decision 58/59, the live diary's default —
+// stacked-card control for same-start overlaps, lanes for partial overlaps)
+// or 'text' (idea-s4-before's old record — combinedBlock's plain "N jobs ·
+// time" caption). Exported so audit-ideas.mjs can build faithful before/
+// after boards with the real grid, not a re-drawn approximation of it.
+// forceExpandStack: { day, start } — pre-expands one stacked-card control
+// without relying on CSS :hover (diary-stack-hover, task item 3).
+export function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot = null, highlightJob = null, pickMode = false, overlapStyle = 'stacked', forceExpandStack = null }) {
   const gridH = GRID_SLOTS * slotH;
   const hourLabels = Array.from({ length: 9 }, (_, i) => `${String(9 + i).padStart(2, '0')}:00`);
   const cols = `44px repeat(${days.length}, minmax(0, 1fr))`;
@@ -716,7 +866,10 @@ export function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', sele
     const isPickSlot = pickMode && selectSlot && d === selectSlot.day && (mechFilter === 'Everyone' || mechFilter === selectSlot.mech);
     const pickHint = isPickSlot ? pickHintSlot(size, slotH, ((selectSlot.start - GRID_START) / 30) * slotH + 2, selectSlot.label || '10:00', `new-job-${size}.dc.html`) : '';
     const clusters = clusterOverlaps(items);
-    const blocks = clusters.map((c) => (c.length === 1 ? jobBlock(c[0], size, slotH, highlightJob?.type === 'job' && c[0].job === highlightJob.job, highlightJob?.dim === c[0].job, pickMode) : overlapStyle === 'stacked' ? stackedJobsBlock(c, size, slotH, pickMode) : combinedBlock(c, size, slotH, pickMode))).join('');
+    const forceExpandStart = forceExpandStack && d === forceExpandStack.day ? forceExpandStack.start : null;
+    const blocks = overlapStyle === 'stacked'
+      ? clusters.map((c) => renderCluster(c, size, slotH, { highlightJob, faded: pickMode, forceExpandStart })).join('')
+      : clusters.map((c) => (c.length === 1 ? jobBlock(c[0], size, slotH, highlightJob?.type === 'job' && c[0].job === highlightJob.job, highlightJob?.dim === c[0].job, pickMode) : combinedBlock(c, size, slotH, pickMode))).join('');
     // Decision 12: the pending request sits in its slot, Everyone view only (no mechanic yet).
     const pending = mechFilter === 'Everyone' && d === PENDING_DIARY.day ? pendingBlock(size, slotH, highlightJob?.type === 'pending') : '';
     const outline = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestedOutlineBlock(size, slotH, highlightJob?.type === 'outline') : '';
@@ -857,18 +1010,17 @@ function mechToolbar(meSelected, size, { newJob = null } = {}) {
 export const screens = {};
 
 // 1. diary (Staff, Jo Taylor)
-// S4 idea board only (29 Sep audit): the exact desktop diary board,
-// parameterised on overlapStyle so audit-ideas.mjs's "after" board can reuse
-// this real builder (weekGrid + toolbar + waiting column + legend) instead
-// of a redrawn approximation. screens.diary.desktop below calls this with
-// the default 'text' style, so its own output is unchanged.
-export function buildDiaryDesktopBoard(overlapStyle = 'text') {
+// Parameterised on overlapStyle (default 'stacked', decision 58/59) so
+// audit-ideas.mjs's idea-s4-before can still reuse this real builder
+// (weekGrid + toolbar + waiting column + legend) with the old 'text' style,
+// instead of a redrawn approximation.
+export function buildDiaryDesktopBoard(overlapStyle = 'stacked') {
   return shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
 ${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', overlapStyle })}`, 16, 'align-items: flex-start')}
 ${diaryLegend()}`, 12));
 }
 screens.diary = {
-  desktop: buildDiaryDesktopBoard('text'),
+  desktop: buildDiaryDesktopBoard(),
   tablet: shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { newJob: 'new-job-tablet.dc.html' })}
 ${row(`${waitingColumn('tablet', -1, 190)}${weekGrid({ days: [0, 1, 2, 3, 4], size: 'tablet', mechFilter: 'Everyone', slotH: 30 })}`, 14, 'align-items: flex-start')}
 ${diaryLegend()}`, 12)),
@@ -1636,7 +1788,7 @@ export function buildJobPageDesktop({
   checklistHref = null, leftStatus, bikeHere,
   lines, totalLabel, totalValue, footerNote = '', quoteAction = false,
   totalBadge = '', footer, limit, readyBy = JOB_READY_BY,
-  twoRowHeader = false, // S2 idea board only (29 Sep audit) — see job-page.mjs's jobPopupContent
+  twoRowHeader = true, // S2 (decision 58, 29 Sep audit) — see job-page.mjs's jobPopupContent; pass false for idea-s2-before's old-record only
 }) {
   const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
   const base = shellDesktop('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('desktop') : diaryFrozenContent('desktop'), opts);
@@ -1932,6 +2084,57 @@ screens.customer = {
   phone: desktopOnlyPlaceholder('phone', 'job-overview-phone.dc.html', '‹ Back to job'),
 };
 
+// 27/28. diary-stack-hover / diary-stack-open (decision 59, 29 Sep round 2,
+// task items 3/4): static records of the stacked-card control's hover-
+// expanded state and its click-to-choose popover — both built from the real
+// weekGrid/stackedJobsBlock, not a redrawn approximation, so what's shown is
+// faithful to the live 'stacked' diary. Thursday (TODAY) 09:00 is the same
+// stack idea-s4-after/idea-s4-open already used (WH-1038, WH-1040).
+const STACK_EXAMPLE = { day: TODAY, start: 9 * 60 };
+// diary-stack-hover: the fan baked in (forceExpandStack), no need to hover
+// in a still render.
+screens['diary-stack-hover'] = {
+  desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
+${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', forceExpandStack: STACK_EXAMPLE })}`, 16, 'align-items: flex-start')}
+${diaryLegend()}`, 12)),
+  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
+  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+};
+// diary-stack-open: clicking a stack opens a small popover of the stacked
+// jobs as real diary blocks (decision 59) — same tinted-fill/outline
+// styling as the grid's own jobBlock, full popover width, each clickable —
+// replacing idea-s4-open's plain text list (kept, unchanged, as the old
+// record). Anchor coordinates measured against the real rendered 'stacked'
+// board (Thursday/today column, 09:00 — WH-1038/WH-1040, same slot
+// idea-s4-open measured): x 860.7, y 208, w 91.6, h 83 — fixed since this
+// layout is static, not user-resizable.
+function stackOpenPopover(cluster, anchor) {
+  const popW = 260;
+  const left = anchor.x + anchor.w / 2 - popW / 2;
+  const top = anchor.y + anchor.h + 8;
+  const blockRow = (j) => {
+    const [bg, ink] = ST[j.key];
+    const [, bike] = customerBikeOf(j);
+    const t0 = `${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`;
+    return `<a href="job-overview-desktop.dc.html" aria-label="${esc(bike)}, ${esc(j.svc || '')}, ${esc(j.job)}" style="display: flex; flex-direction: column; gap: 1px; text-decoration: none; color: inherit; box-sizing: border-box; padding: 7px 10px; border-radius: 6px; background: ${bg}; border: 1.75px solid ${ink}">
+<span style="font-size: 12px; font-weight: 700; color: ${C.ink}">${esc(bike)}</span>
+<span style="font-size: 11px; font-weight: 700; color: ${ink}">${esc(j.svc || '')} · ${esc(t0)}</span>
+</a>`;
+  };
+  return `<div role="dialog" aria-label="Choose which job to open" style="position: absolute; left: ${left}px; top: ${top}px; width: ${popW}px; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.25); padding: 8px; display: flex; flex-direction: column; gap: 4px; z-index: 20">
+<div style="padding: 4px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: ${C.muted}">${cluster.length} jobs at 09:00</div>
+${cluster.map(blockRow).join('')}
+</div>`;
+}
+screens['diary-stack-open'] = {
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">
+${buildDiaryDesktopBoard('stacked')}
+${stackOpenPopover(JOBS.filter((j) => j.day === STACK_EXAMPLE.day && j.start === STACK_EXAMPLE.start), { x: 860.7, y: 208, w: 91.6, h: 83 })}
+</div>`,
+  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
+  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+};
+
 // Keep the agreed screen order (brief's Row 1–5 order), with this round's new
 // boards (diary-day, diary-settings, change-selected, new-job-day,
 // new-job-pick, customer) slotted in beside the screens they extend.
@@ -1940,7 +2143,7 @@ screens.customer = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'settings-accessibility', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'settings-accessibility', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -1950,7 +2153,11 @@ export const ROWS = [
   // not after diary-settings) so every existing board on the row keeps its
   // x position — build-diary.mjs lays a row out left to right in this array's
   // order, so inserting it mid-row would shift change-selected onward.
-  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'settings-accessibility'] },
+  // diary-stack-hover/diary-stack-open (task items 3/4, 29 Sep round 2) are
+  // appended after settings-accessibility for the same reason: appending,
+  // not inserting, is what puts them at exactly x 12240/13600, y 263 without
+  // moving any existing board on this row.
+  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'settings-accessibility', 'diary-stack-hover', 'diary-stack-open'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },

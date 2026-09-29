@@ -77,6 +77,8 @@ const TITLE_OVERRIDE = {
   'diary-day': 'Day view',
   'diary-settings': 'Diary settings',
   'settings-accessibility': 'Settings · Accessibility',
+  'diary-stack-hover': 'Diary · stacked jobs fanned out on hover',
+  'diary-stack-open': 'Diary · choose a job from a stack',
   'new-job-day': 'New job (from the day view)',
   'job-overview': 'Job · expected',
   'job-book-in': 'Job · booked in, tag printed',

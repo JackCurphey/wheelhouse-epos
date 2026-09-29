@@ -279,6 +279,25 @@ answers, in the order given.
     symbols; Reduce motion (turns off animations such as the change-request
     arrow, and follows the computer's own reduce-motion setting
     automatically); Larger text (a step up in text size across the app).
+58. **Audit ideas S2, S3 and S4 adopted** (Jack, 29 Sep): the job's
+    customer strip in two rows; the Full service checklist in collapsed
+    tick-and-label rows with a note box only where a note exists; overlapping
+    jobs shown as a stacked-card control.
+59. **Stacked jobs expand on hover and open as real blocks** (Jack, 29 Sep):
+    hovering a stack for about 300 ms lifts and fans the stacked jobs out
+    (covering neighbouring days for the moment) so each can be seen;
+    choosing from a stack shows the actual diary blocks (same look as the
+    rest of the diary), not a text list. Jobs that only partly overlap in
+    time (e.g. 9–11 and 10–12) sit side by side, each at its true start and
+    end and sharing the day's width only where they overlap (calendar
+    style); the stacked-card control is for jobs that start at the same
+    time; hover-to-expand helps with the narrower side-by-side blocks.
+60. **The diary toolbar gives each control its own shape** (Jack, 29 Sep):
+    Week / Day as a segmented switch; Previous / Next as small arrow buttons
+    either side of the date range, with Today as a small text button;
+    the mechanic filter as people chips (initial badge + name, tinted when
+    selected, not solid); New job the one solid dark button, alone at the
+    right. Grouped left to right: view · dates · people and New job.
 
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
