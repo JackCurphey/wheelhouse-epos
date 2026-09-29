@@ -40,3 +40,6 @@ from the machine itself rather than being typed in.
    drawn; each till closes on its own; a closed day can be reopened by a
    manager from Reports, with a reason; the phone report shows the date and
    who closed it.
+7. **Journey 16 approved** (Jack, 29 Sep: "let's get it into the big
+   canvas") — desktop, tablet and phone; copied into the user journeys
+   canvas, status Designed.

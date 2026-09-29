@@ -11,8 +11,19 @@ pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
 Workshop day (journey 12), App map and navigation (journey A), Signing in
-and access (journey B) and Selling at the till (journey 11) are approved and in
-the big canvas; the next journey is Jack's choice (ask him first).
+and access (journey B), Selling at the till (journey 11) and End-of-day
+cash-up (journey 16) are approved and in the big canvas; the next journey is
+Jack's choice (ask him first). **The big canvas is near its 512-file limit**
+(452 files after journey 16) — see the handover before copying in another
+journey.
+
+**Journey 16, End-of-day cash-up (29 Sep):** approved at all sizes; 7
+decisions in `docs/decisions/2026-09-29-cash-up-review.md` — one "Close the day"
+page with six folding steps, opened from a till-bar button after the shop's
+closing time; blind counting is a shop setting; a box per note and coin with
+an editable total; a standard float with the rest banked. Own canvas:
+https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE . Generator: `cashup.mjs` +
+`build-cashup.mjs --theme sand`; audit in `docs/design/user-journeys/cashup-ui-audit.md`.
 
 **Journey 11, Selling at the till (29 Sep):** approved at desktop, tablet and
 phone; 16 decisions in `docs/decisions/2026-09-29-selling-at-the-till-review.md`

@@ -22,6 +22,8 @@ export const sa = (id, title, role) => ({ id, status: 'designed', title, role, s
 export const sb = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'signin' });
 // sc(id, title, role) = an agreed journey 11 screen (till.mjs, Soft sand).
 export const sc = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'till' });
+// sd16(id, title, role) = an agreed journey 16 screen (cashup.mjs, Soft sand).
+export const sd16 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'cashup' });
 
 export const journeys = [
   {
@@ -376,13 +378,21 @@ export const journeys = [
   {
     id: 'j16', name: 'End-of-day cash-up', who: 'Staff and Manager',
     rows: [
-      { label: 'Closing', screens: [
-        g('eod-synced', 'All tills sent their sales', 'Manager', 'Check every till has sent its sales before cashing up.', ['Tills with sales waiting'], { source: 'Offline spec §8' }),
-        g('eod-attention', 'Needs attention', 'Manager', 'Sales the server recorded but flagged.', ['Unknown product or customer', 'Payments that don’t add up', 'Reused receipt number'], { source: 'Offline plan 1 (data built)' }),
-        g('eod-count', 'Cash count', 'Staff', 'Count each till’s cash.', ['Expected, counted, difference'], { source: 'TILL-14 · TILL-15' }),
-        g('eod-banking', 'Paid-outs and banking', 'Manager', 'Cash taken out during the day and cash to bank.', ['Paid-outs with reasons', 'To bank'], { source: 'TILL-14' }),
-        g('eod-card', 'Card totals check', 'Staff', 'Compare card sales with the card machine’s own total.', ['Wheelhouse card total', 'Card machine total', 'Difference'], { source: 'Implied: the card machine is standalone' }),
-        g('eod-z', 'End-of-day report', 'Manager', 'The day’s summary, printed or saved.', ['Sales by payment type', 'VAT', 'Refunds and voids'], { source: 'TILL-14' }),
+      { label: "Close the day", screens: [
+        sd16("eod-entry", "Close the day appears in the till bar after closing time", "Manager"),
+        sd16("eod-waiting", "Close the day: a till still has sales waiting", "Manager"),
+        sd16("eod-attention", "Close the day: sales that need checking", "Manager"),
+        sd16("eod-check", "Checking a flagged sale", "Manager"),
+        sd16("eod-count", "Count the cash: note by note (blind)", "Staff"),
+        sd16("eod-count-shown", "Count the cash: with the expected amount shown (shop setting)", "Staff"),
+        sd16("eod-count-result", "Count the cash: the difference", "Staff"),
+        sd16("eod-count-exact", "Count the cash: spot on", "Staff"),
+        sd16("eod-banking", "Paid-outs and banking: leave the float, bank the rest", "Manager"),
+        sd16("eod-banking-none", "Paid-outs and banking: nothing taken out today", "Manager"),
+        sd16("eod-paidout", "Add a paid-out", "Manager"),
+        sd16("eod-card", "Card sales don’t match the card machine", "Manager"),
+        sd16("eod-finish", "Ready to close the day", "Manager"),
+        sd16("eod-z", "Day closed: the end-of-day report", "Manager"),
       ] },
     ],
   },

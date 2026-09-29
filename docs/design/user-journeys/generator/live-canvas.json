@@ -3019,57 +3019,345 @@
    "title": "Not designed · Privacy requests",
    "is_interactive": true
   },
-  "j16-eod-synced.dc.html": {
+  "j16-eod-entry-desktop.dc.html": {
    "x": 0,
    "y": 35282,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · All tills sent their sales",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Close the day appears in the till bar after closing time (desktop)",
    "is_interactive": true
   },
-  "j16-eod-attention.dc.html": {
-   "x": 1180,
+  "j16-eod-entry-tablet.dc.html": {
+   "x": 1320,
    "y": 35282,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Needs attention",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Close the day appears in the till bar after closing time (tablet)",
    "is_interactive": true
   },
-  "j16-eod-count.dc.html": {
-   "x": 2360,
+  "j16-eod-entry-phone.dc.html": {
+   "x": 2540,
    "y": 35282,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Cash count",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Close the day appears in the till bar after closing time (phone)",
    "is_interactive": true
   },
-  "j16-eod-banking.dc.html": {
-   "x": 3540,
+  "j16-eod-waiting-desktop.dc.html": {
+   "x": 3010,
    "y": 35282,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Paid-outs and banking",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Close the day: a till still has sales waiting (desktop)",
    "is_interactive": true
   },
-  "j16-eod-card.dc.html": {
-   "x": 4720,
+  "j16-eod-waiting-tablet.dc.html": {
+   "x": 4330,
    "y": 35282,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Card totals check",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Close the day: a till still has sales waiting (tablet)",
    "is_interactive": true
   },
-  "j16-eod-z.dc.html": {
-   "x": 5900,
+  "j16-eod-waiting-phone.dc.html": {
+   "x": 5550,
    "y": 35282,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · End-of-day report",
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Close the day: a till still has sales waiting (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-attention-desktop.dc.html": {
+   "x": 6020,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Close the day: sales that need checking (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-attention-tablet.dc.html": {
+   "x": 7340,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Close the day: sales that need checking (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-attention-phone.dc.html": {
+   "x": 8560,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Close the day: sales that need checking (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-check-desktop.dc.html": {
+   "x": 9030,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Checking a flagged sale (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-check-tablet.dc.html": {
+   "x": 10350,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Checking a flagged sale (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-check-phone.dc.html": {
+   "x": 11570,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Checking a flagged sale (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-count-desktop.dc.html": {
+   "x": 12040,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Count the cash: note by note (blind) (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-count-tablet.dc.html": {
+   "x": 13360,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Count the cash: note by note (blind) (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-count-phone.dc.html": {
+   "x": 14580,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Count the cash: note by note (blind) (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-count-shown-desktop.dc.html": {
+   "x": 15050,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Count the cash: with the expected amount shown (shop setting) (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-count-shown-tablet.dc.html": {
+   "x": 16370,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Count the cash: with the expected amount shown (shop setting) (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-count-shown-phone.dc.html": {
+   "x": 17590,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Count the cash: with the expected amount shown (shop setting) (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-count-result-desktop.dc.html": {
+   "x": 18060,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Count the cash: the difference (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-count-result-tablet.dc.html": {
+   "x": 19380,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Count the cash: the difference (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-count-result-phone.dc.html": {
+   "x": 20600,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Count the cash: the difference (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-count-exact-desktop.dc.html": {
+   "x": 21070,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Count the cash: spot on (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-count-exact-tablet.dc.html": {
+   "x": 22390,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Count the cash: spot on (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-count-exact-phone.dc.html": {
+   "x": 23610,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Count the cash: spot on (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-banking-desktop.dc.html": {
+   "x": 24080,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Paid-outs and banking: leave the float, bank the rest (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-banking-tablet.dc.html": {
+   "x": 25400,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Paid-outs and banking: leave the float, bank the rest (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-banking-phone.dc.html": {
+   "x": 26620,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Paid-outs and banking: leave the float, bank the rest (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-banking-none-desktop.dc.html": {
+   "x": 27090,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Paid-outs and banking: nothing taken out today (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-banking-none-tablet.dc.html": {
+   "x": 28410,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Paid-outs and banking: nothing taken out today (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-banking-none-phone.dc.html": {
+   "x": 29630,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Paid-outs and banking: nothing taken out today (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-paidout-desktop.dc.html": {
+   "x": 30100,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a paid-out (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-paidout-tablet.dc.html": {
+   "x": 31420,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Add a paid-out (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-paidout-phone.dc.html": {
+   "x": 32640,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Add a paid-out (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-card-desktop.dc.html": {
+   "x": 33110,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Card sales don’t match the card machine (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-card-tablet.dc.html": {
+   "x": 34430,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Card sales don’t match the card machine (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-card-phone.dc.html": {
+   "x": 35650,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Card sales don’t match the card machine (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-finish-desktop.dc.html": {
+   "x": 36120,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ready to close the day (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-finish-tablet.dc.html": {
+   "x": 37440,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Ready to close the day (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-finish-phone.dc.html": {
+   "x": 38660,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Ready to close the day (phone)",
+   "is_interactive": true
+  },
+  "j16-eod-z-desktop.dc.html": {
+   "x": 39130,
+   "y": 35282,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Day closed: the end-of-day report (desktop)",
+   "is_interactive": true
+  },
+  "j16-eod-z-tablet.dc.html": {
+   "x": 40450,
+   "y": 35282,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Day closed: the end-of-day report (tablet)",
+   "is_interactive": true
+  },
+  "j16-eod-z-phone.dc.html": {
+   "x": 41670,
+   "y": 35282,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Day closed: the end-of-day report (phone)",
    "is_interactive": true
   },
   "j17-rep-today.dc.html": {
    "x": 0,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Old app · Today",
@@ -3077,7 +3365,7 @@
   },
   "j17-rep-sales.dc.html": {
    "x": 1180,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sales report",
@@ -3085,7 +3373,7 @@
   },
   "j17-rep-margin.dc.html": {
    "x": 2360,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Margin and stock value",
@@ -3093,7 +3381,7 @@
   },
   "j17-rep-vat.dc.html": {
    "x": 3540,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · VAT summary",
@@ -3101,7 +3389,7 @@
   },
   "j17-rep-workshop.dc.html": {
    "x": 4720,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Workshop report",
@@ -3109,7 +3397,7 @@
   },
   "j17-rep-customers.dc.html": {
    "x": 5900,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Returning customers",
@@ -3117,7 +3405,7 @@
   },
   "j17-acc-connect.dc.html": {
    "x": 7240,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Connect Xero or QuickBooks",
@@ -3125,7 +3413,7 @@
   },
   "j17-acc-map.dc.html": {
    "x": 8420,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Match accounts",
@@ -3133,7 +3421,7 @@
   },
   "j17-acc-log.dc.html": {
    "x": 9600,
-   "y": 37098,
+   "y": 37182,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sent to accounts",
@@ -3141,7 +3429,7 @@
   },
   "j18-site-settings.dc.html": {
    "x": 0,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Old app · Website settings",
@@ -3149,7 +3437,7 @@
   },
   "j18-site-theme.dc.html": {
    "x": 1180,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Theme editor",
@@ -3157,7 +3445,7 @@
   },
   "j18-site-pages.dc.html": {
    "x": 2360,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Pages",
@@ -3165,7 +3453,7 @@
   },
   "j18-site-publish.dc.html": {
    "x": 3540,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Preview and publish",
@@ -3173,7 +3461,7 @@
   },
   "j18-site-domain.dc.html": {
    "x": 4720,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Own web address",
@@ -3181,7 +3469,7 @@
   },
   "j18-site-shopify.dc.html": {
    "x": 5900,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Old app · Shopify connection (to retire)",
@@ -3189,7 +3477,7 @@
   },
   "j18-site-payments.dc.html": {
    "x": 7240,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Online payments setup",
@@ -3197,7 +3485,7 @@
   },
   "j18-site-orders.dc.html": {
    "x": 8420,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Online orders",
@@ -3205,7 +3493,7 @@
   },
   "j18-site-collect.dc.html": {
    "x": 9600,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Click and collect queue",
@@ -3213,7 +3501,7 @@
   },
   "j18-site-refund.dc.html": {
    "x": 10780,
-   "y": 38914,
+   "y": 38998,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Refund an online order",
@@ -3221,7 +3509,7 @@
   },
   "j19-multi-switch.dc.html": {
    "x": 0,
-   "y": 40730,
+   "y": 40814,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Site switcher",
@@ -3229,7 +3517,7 @@
   },
   "j19-multi-reports.dc.html": {
    "x": 1180,
-   "y": 40730,
+   "y": 40814,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Reports and cash-up by site",
@@ -3237,7 +3525,7 @@
   },
   "j19-multi-tills.dc.html": {
    "x": 2360,
-   "y": 40730,
+   "y": 40814,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Tills across sites",
@@ -3245,7 +3533,7 @@
   },
   "j20-ops-audit.dc.html": {
    "x": 0,
-   "y": 42546,
+   "y": 42630,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Activity log",
@@ -3253,7 +3541,7 @@
   },
   "j20-ops-devices.dc.html": {
    "x": 1180,
-   "y": 42546,
+   "y": 42630,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Signed-in devices",
@@ -3261,7 +3549,7 @@
   },
   "j20-ops-feedback.dc.html": {
    "x": 2360,
-   "y": 42546,
+   "y": 42630,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Send feedback",
@@ -3269,7 +3557,7 @@
   },
   "j21-connect.dc.html": {
    "x": 0,
-   "y": 44362,
+   "y": 44446,
    "w": 1100,
    "h": 816,
    "title": "Designed · Connect the one chosen Lightspeed",
@@ -3277,7 +3565,7 @@
   },
   "j21-connect-proof.dc.html": {
    "x": 1180,
-   "y": 44362,
+   "y": 44446,
    "w": 1100,
    "h": 816,
    "title": "Designed · Verify connector capabilities",
@@ -3285,7 +3573,7 @@
   },
   "j21-pos.dc.html": {
    "x": 2360,
-   "y": 44362,
+   "y": 44446,
    "w": 1100,
    "h": 816,
    "title": "Designed · Handoff agreed work to Lightspeed",
@@ -3293,7 +3581,7 @@
   },
   "j21-pos-done.dc.html": {
    "x": 3540,
-   "y": 44362,
+   "y": 44446,
    "w": 1100,
    "h": 816,
    "title": "Designed · See the linked work order",
@@ -3301,7 +3589,7 @@
   },
   "j21-pos-unknown.dc.html": {
    "x": 4720,
-   "y": 44362,
+   "y": 44446,
    "w": 1100,
    "h": 816,
    "title": "Designed · Uncertain Lightspeed handoff",
@@ -3702,12 +3990,48 @@
   "j15-cust-account.dc.html",
   "j15-cust-consent.dc.html",
   "j15-cust-privacy.dc.html",
-  "j16-eod-synced.dc.html",
-  "j16-eod-attention.dc.html",
-  "j16-eod-count.dc.html",
-  "j16-eod-banking.dc.html",
-  "j16-eod-card.dc.html",
-  "j16-eod-z.dc.html",
+  "j16-eod-entry-desktop.dc.html",
+  "j16-eod-entry-tablet.dc.html",
+  "j16-eod-entry-phone.dc.html",
+  "j16-eod-waiting-desktop.dc.html",
+  "j16-eod-waiting-tablet.dc.html",
+  "j16-eod-waiting-phone.dc.html",
+  "j16-eod-attention-desktop.dc.html",
+  "j16-eod-attention-tablet.dc.html",
+  "j16-eod-attention-phone.dc.html",
+  "j16-eod-check-desktop.dc.html",
+  "j16-eod-check-tablet.dc.html",
+  "j16-eod-check-phone.dc.html",
+  "j16-eod-count-desktop.dc.html",
+  "j16-eod-count-tablet.dc.html",
+  "j16-eod-count-phone.dc.html",
+  "j16-eod-count-shown-desktop.dc.html",
+  "j16-eod-count-shown-tablet.dc.html",
+  "j16-eod-count-shown-phone.dc.html",
+  "j16-eod-count-result-desktop.dc.html",
+  "j16-eod-count-result-tablet.dc.html",
+  "j16-eod-count-result-phone.dc.html",
+  "j16-eod-count-exact-desktop.dc.html",
+  "j16-eod-count-exact-tablet.dc.html",
+  "j16-eod-count-exact-phone.dc.html",
+  "j16-eod-banking-desktop.dc.html",
+  "j16-eod-banking-tablet.dc.html",
+  "j16-eod-banking-phone.dc.html",
+  "j16-eod-banking-none-desktop.dc.html",
+  "j16-eod-banking-none-tablet.dc.html",
+  "j16-eod-banking-none-phone.dc.html",
+  "j16-eod-paidout-desktop.dc.html",
+  "j16-eod-paidout-tablet.dc.html",
+  "j16-eod-paidout-phone.dc.html",
+  "j16-eod-card-desktop.dc.html",
+  "j16-eod-card-tablet.dc.html",
+  "j16-eod-card-phone.dc.html",
+  "j16-eod-finish-desktop.dc.html",
+  "j16-eod-finish-tablet.dc.html",
+  "j16-eod-finish-phone.dc.html",
+  "j16-eod-z-desktop.dc.html",
+  "j16-eod-z-tablet.dc.html",
+  "j16-eod-z-phone.dc.html",
   "j17-rep-today.dc.html",
   "j17-rep-sales.dc.html",
   "j17-rep-margin.dc.html",
@@ -4342,7 +4666,7 @@
   "j16_s65": {
    "x": 0,
    "y": 35042,
-   "text": "Closing",
+   "text": "Close the day",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -4354,11 +4678,11 @@
    "y": 34722,
    "text": "16 · End-of-day cash-up — Staff and Manager",
    "kind": "title1",
-   "maxW": 7000
+   "maxW": 42060
   },
   "j17_s67": {
    "x": 0,
-   "y": 36858,
+   "y": 36942,
    "text": "Reports",
    "w": 520,
    "size": "l",
@@ -4368,7 +4692,7 @@
   },
   "j17_s68": {
    "x": 7240,
-   "y": 36858,
+   "y": 36942,
    "text": "Accounts software",
    "w": 520,
    "size": "l",
@@ -4378,14 +4702,14 @@
   },
   "j17_title": {
    "x": 0,
-   "y": 36538,
+   "y": 36622,
    "text": "17 · Reports and accounts — Manager and Owner",
    "kind": "title1",
    "maxW": 10700
   },
   "j18_s70": {
    "x": 0,
-   "y": 38674,
+   "y": 38758,
    "text": "Design the website",
    "w": 520,
    "size": "l",
@@ -4395,7 +4719,7 @@
   },
   "j18_s71": {
    "x": 7240,
-   "y": 38674,
+   "y": 38758,
    "text": "Online orders",
    "w": 520,
    "size": "l",
@@ -4405,14 +4729,14 @@
   },
   "j18_title": {
    "x": 0,
-   "y": 38354,
+   "y": 38438,
    "text": "18 · Website management — Manager",
    "kind": "title1",
    "maxW": 11880
   },
   "j19_s73": {
    "x": 0,
-   "y": 40490,
+   "y": 40574,
    "text": "Across sites",
    "w": 520,
    "size": "l",
@@ -4422,14 +4746,14 @@
   },
   "j19_title": {
    "x": 0,
-   "y": 40170,
+   "y": 40254,
    "text": "19 · Multiple sites — Owner and Manager",
    "kind": "title1",
    "maxW": 3460
   },
   "j20_s75": {
    "x": 0,
-   "y": 42306,
+   "y": 42390,
    "text": "Oversight",
    "w": 520,
    "size": "l",
@@ -4439,14 +4763,14 @@
   },
   "j20_title": {
    "x": 0,
-   "y": 41986,
+   "y": 42070,
    "text": "20 · Management oversight — Owner",
    "kind": "title1",
    "maxW": 3460
   },
   "j21_s77": {
    "x": 0,
-   "y": 44122,
+   "y": 44206,
    "text": "Connection and handoff",
    "w": 520,
    "size": "l",
@@ -4456,7 +4780,7 @@
   },
   "j21_title": {
    "x": 0,
-   "y": 43802,
+   "y": 43886,
    "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
    "kind": "title1",
    "maxW": 5820

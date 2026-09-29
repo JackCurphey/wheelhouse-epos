@@ -24,8 +24,15 @@ and interaction rules apply to every journey).
 - **Journey 11 (Selling at the till) is approved** (29 Sep) and in the big
   canvas as Designed; its own canvas: https://claude.ai/artifact/Y9NppHkpYBrrRKjHw8FoLG ,
   decisions in `docs/decisions/2026-09-29-selling-at-the-till-review.md`.
-- The overview counts each screen once: 245 screens — 132 designed, 0 for
-  review, 6 built, 14 old app only, 93 not designed yet.
+- **Journey 16 (End-of-day cash-up) is approved** (29 Sep) and in the big
+  canvas as Designed; its own canvas: https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE .
+- The overview counts each screen once: 253 screens — 146 designed, 0 for
+  review, 6 built, 14 old app only, 87 not designed yet.
+- **Capacity warning:** a Design canvas holds at most 512 files; the big
+  canvas has 452 after journey 16. Copying in another journey at three sizes
+  will hit the limit. Decide with Jack before the next copy-in (e.g. the big
+  canvas keeps desktop only and links to each journey's own canvas for
+  tablet and phone, or split it into two canvases).
 - **Drawing all three sizes at once:** `till.mjs` defines each screen with
   `def(id, () => …)` and helpers read `CUR` (desktop / tablet / phone) — a
   pattern worth reusing for the next journey rather than drawing each size
