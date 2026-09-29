@@ -92,3 +92,14 @@ full one, with one "Take payment" step that leaves room for the other.
     Workshop day 48); the frame-number box gets a scan icon; the £/%
     switch remembers the last choice, starting with £; click and collect
     starts unticked; the gift card hint is shortened.
+13. **Past sales opens on "Scan or type the receipt number", with today's
+    sales on this till listed underneath; older sales are found through the
+    customer's page** (Jack, 29 Sep). Receipts carry a barcode so a refund
+    is usually one scan. No free search by date or card digits. (Jack worried
+    a search over every sale would be slow; it wouldn't be — the database
+    indexes sales — but the narrower, pointed design suits the till.) A
+    walk-in with no receipt and no customer can't be found, so gets store
+    credit (decision 9). Chosen over removing Past sales and keeping the
+    free search.
+14. **Journey 11 desktop approved with that change** (Jack, 29 Sep: "I
+    think this looks really good"); tablet and phone next.

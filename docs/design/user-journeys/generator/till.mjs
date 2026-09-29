@@ -242,11 +242,15 @@ screens['till-park'] = {
 
 // Find a past sale — by receipt number, customer, card or date.
 const datePill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
+// Decision 13: scan or type the receipt number; today's sales on this till
+// underneath; older sales are found on the customer's page.
 screens['till-find'] = {
-  desktop: overTill(dialog('find-title', 'Find a past sale', 'Receipt number, customer, the last four digits of a card, or a date', `
-<label style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input type="search" aria-label="Search past sales" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
-<div role="group" aria-label="When" style="display: flex; flex-wrap: wrap; gap: 8px">${datePill('Today', true)}${datePill('Yesterday')}${datePill('Last 7 days')}${datePill('Pick dates…')}</div>
-<div>${listRow(`${mono('B1-[0000]')} · Maya Patel`, 'Today [time] · 3 items · card · Jo Taylor', money(TOTAL), button('Open', { variant: 'default' }))}</div>`, '', 640)),
+  desktop: overTill(dialog('find-title', 'Past sales', 'Scan the receipt, or pick from today', `
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input aria-label="Scan or type the receipt number" placeholder="Scan or type the receipt number, e.g. B1-0001" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+<div style="display: flex; flex-direction: column"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}; padding-bottom: 6px">Today on Till B1</div>
+${listRow(`${mono('B1-[0000]')} · Maya Patel`, '[time] · 3 items · card · Jo Taylor', money(TOTAL), button('Open', { variant: 'default' }))}
+${listRow(`${mono('B1-[0000]')} · [No customer]`, '[time] · [n] items · cash · [name]', '[£ total]', button('Open', { variant: 'default' }))}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Older sale? Find the customer — their page shows every sale. No receipt and no customer: store credit only.</p>`, '', 640)),
 };
 
 // Refund (decision 9): from the original sale; money back the way it was paid.
@@ -371,7 +375,7 @@ export const TITLES = {
   'till-loyalty': 'Loyalty points — shown with the customer in the basket',
   'till-deposit': 'Take a deposit — part now, the rest later',
   'till-park': 'Parked sales — resume',
-  'till-find': 'Find a past sale',
+  'till-find': 'Past sales — scan the receipt, or today’s list',
   'till-refund': 'Refund from the original sale — back to the card',
   'till-refund-noreceipt': 'No receipt — store credit only',
   'till-void': 'Void a sale — with a reason',
