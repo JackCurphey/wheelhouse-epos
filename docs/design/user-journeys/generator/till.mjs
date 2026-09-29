@@ -139,18 +139,33 @@ screens['till-discount'] = {
 };
 
 // ---------- Taking payment ----------
-// Standalone card machine (offline spec: Paymentsense): staff key the amount
-// into it; the till records "card, £X". Card for the exact total is the
-// usual case, so it is one tap after "Take payment" (journey A decision 6).
+// Decision 6: the card machine is connected — choosing Card sends the amount
+// to it; the till shows its progress. Card for the exact total is the usual
+// case, so it is one tap after "Take payment" (journey A decision 6).
 const TOTAL = 74;
 const bigMethod = (title, sub, ic, primary = false) => `<button type="button" style="display: flex; align-items: center; gap: 16px; width: 100%; min-height: 84px; box-sizing: border-box; padding: 14px 18px; border-radius: 12px; border: 1px solid ${primary ? C.ink : C.border}; background: ${primary ? C.ink : C.panel}; color: ${primary ? C.panel : C.ink}; font-family: inherit; text-align: left">${icon(ic, 26)}<span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="font-size: 18px; font-weight: 700">${title}</span><span style="font-size: 13px; ${primary ? 'opacity: 0.85' : `color: ${C.muted}`}">${sub}</span></span></button>`;
 const payHead = (title, sub) => [`${title}`, sub];
 screens['till-pay'] = {
   desktop: overTill(dialog('pay-title', `Take payment · ${money(TOTAL)}`, 'Jo Taylor serving · 3 items', `
-${bigMethod(`Card · ${money(TOTAL)}`, `Key ${money(TOTAL)} into the card machine, then tap here once it says approved`, 'card', true)}
+${bigMethod(`Card · ${money(TOTAL)}`, `Sends ${money(TOTAL)} to the card machine`, 'card', true)}
 ${bigMethod('Cash', 'Enter what the customer hands you; the till works out the change', 'cash')}
 <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Split between methods', 'Gift card or credit', 'On account'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)),
 };
+// The card machine at work (decision 6): waiting for the card, then
+// approved (straight on to the receipt) or declined. If the machine doesn't
+// answer, staff can key the amount in on it by hand and say so here.
+function cardDialog(state) {
+  const body = {
+    waiting: `<div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 12px 0; text-align: center"><span style="display: inline-flex; width: 72px; height: 72px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; color: ${C.ink}">${icon('card', 34)}</span><span style="font-size: 22px; font-weight: 700">Waiting for the card</span>${mono(money(TOTAL), 'font-size: 34px')}<span style="font-size: 15px; color: ${C.muted}">On the card machine now — the customer taps, inserts or swipes.</span></div>`,
+    declined: `<div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 12px 0; text-align: center"><span style="display: inline-flex; width: 72px; height: 72px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.dangerBg}; color: ${C.dangerInk}">${icon('alert', 34)}</span><span style="font-size: 22px; font-weight: 700">Card declined</span><span style="font-size: 15px; color: ${C.muted}">The card machine said no — nothing was taken. Try the card again, another card, or another way to pay.</span></div>`,
+  }[state];
+  const footer = state === 'waiting'
+    ? `${button('Cancel', { variant: 'ghost' })}<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Machine not answering? Key it in on the machine instead</a>`
+    : `${button('Pay another way', { variant: 'default' })}${button('Try the card again')}`;
+  return dialog('card-title', `Card · ${money(TOTAL)}`, 'Jo Taylor serving · 3 items', body, footer, 560);
+}
+screens['till-card'] = { desktop: overTill(cardDialog('waiting')) };
+screens['till-card-declined'] = { desktop: overTill(cardDialog('declined')) };
 const noteBtn = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 60px; border-radius: 10px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: ${MONO}; font-size: 18px">${t}</button>`;
 screens['till-pay-cash'] = {
   desktop: overTill(dialog('cash-title', `Cash · ${money(TOTAL)} to pay`, 'Tap what the customer handed you, or type it', `
@@ -163,7 +178,7 @@ screens['till-pay-split'] = {
   desktop: overTill(dialog('split-title', `Split payment · ${money(TOTAL)}`, 'Take it in parts — each part is recorded as it goes', `
 <div style="display: flex; flex-direction: column">${paidRow('Cash', '£20.00')}</div>
 <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="font-size: 18px; font-weight: 700">Still to pay</span>${mono('£54.00', 'font-size: 34px')}</div>
-${bigMethod('Card · £54.00', 'Key £54.00 into the card machine, then tap here once it says approved', 'card', true)}
+${bigMethod('Card · £54.00', 'Sends £54.00 to the card machine', 'card', true)}
 <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Cash', 'Gift card or credit', 'Another amount'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)),
 };
 
@@ -175,10 +190,12 @@ export const TITLES = {
   'till-variant': 'Choose size and colour',
   'till-serial': 'Record a frame number',
   'till-pay': 'Take payment — card is one tap',
+  'till-card': 'Card — the amount is on the card machine, waiting for the card',
+  'till-card-declined': 'Card declined',
   'till-pay-cash': 'Cash — notes to tap, change worked out',
   'till-pay-split': 'Split payment — part paid, the rest by card',
 };
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
-  { label: 'Taking payment', screens: ['till-pay', 'till-pay-cash', 'till-pay-split'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split'] },
 ];

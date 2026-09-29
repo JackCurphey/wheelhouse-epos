@@ -38,3 +38,14 @@ full one, with one "Take payment" step that leaves room for the other.
    29 Sep): the item is in the customer's hand, so the sale is never
    blocked; the warning flags the count for checking. Chosen over allowing
    it silently and blocking it until a manager fixes the stock.
+6. **The card machine is connected to the till** (Jack, 29 Sep): choosing
+   Card sends the amount to the card machine by itself; staff no longer key
+   it in. The till shows the card machine's progress (waiting for the
+   card, approved, declined). This changes the Release 2 offline spec's
+   assumption (`docs/superpowers/specs/2026-09-27-release-2-foundations-offline-design.md`,
+   "standalone Paymentsense: staff type the amount in") — that is how the
+   shop works today, not the target. Still to check before building: which
+   card machine and provider can take amounts from the till, and what
+   happens when the internet is down (most card machines need their own
+   connection to approve). The design keeps a fallback — "Key it in on the
+   card machine instead" — for when the machine isn't answering.
