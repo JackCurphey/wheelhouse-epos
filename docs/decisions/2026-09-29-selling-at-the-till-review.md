@@ -60,3 +60,12 @@ full one, with one "Take payment" step that leaves room for the other.
    later — ties to Workshop day decision 63, payment and collection as one
    step). Each opens from "Take payment", or from the customer in the
    basket for points.
+9. **Refunds start from the original sale** (Jack, 29 Sep): find the sale
+   (receipt number, customer, card or date), choose what comes back, and
+   the money goes back the way it was paid — to a card through the
+   connected card machine (decision 6). With no receipt or record, it's
+   store credit only. Keeps stock and VAT right and stops cash going out
+   for things not bought at the shop. Chosen over any-refund-with-a-reason
+   and a manager PIN for every refund.
+   (Also 29 Sep: Jack prefers to work through journeys one at a time in a
+   single session, not in parallel sessions.)

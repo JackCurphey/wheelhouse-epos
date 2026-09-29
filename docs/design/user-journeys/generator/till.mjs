@@ -10,6 +10,7 @@
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { DW, DH } from './stage1.mjs';
 import { foldedRail, tillBar } from './app-map.mjs';
+import { LINES_APPROVED, WORK_TOTAL_APPROVED } from './diary.mjs';
 
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
 const money = (n) => `£${n.toFixed(2)}`;
@@ -224,6 +225,69 @@ ${infoRow('Deposit now', money(TOTAL * 0.25), true)}${infoRow('Left to pay later
 <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('user', 18)}<span style="font-size: 15px; font-weight: 600; flex-grow: 1">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">needed for a deposit</span></div>`, `${button('Back', { variant: 'ghost' })}${button(`Take ${money(TOTAL * 0.25)} now`)}`, 580)),
 };
 
+// ---------- Other till jobs ----------
+const tickRow = (name, sub, amount, on) => `<label style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 4px; border-top: 1px solid ${C.border}"><input type="checkbox"${on ? ' checked' : ''} style="width: 22px; height: 22px; margin: 0; accent-color: ${C.ink}; flex-shrink: 0"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${mono(amount, 'font-size: 15px')}</label>`;
+const listRow = (main, sub, right, action) => `<div style="display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 8px 4px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${main}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${right ? mono(right, 'font-size: 15px') : ''}${action}</div>`;
+
+// Park and resume: "Park" in the basket keeps the sale; a count appears by
+// the basket's title and opens this list.
+screens['till-park'] = {
+  desktop: overTill(dialog('park-title', 'Parked sales', 'Kept on this till until someone resumes or clears them', `
+<div>${listRow('Maya Patel · 3 items', 'Parked by Jo Taylor · [time]', money(TOTAL), button('Resume', { variant: 'default' }))}${listRow('[No customer] · [n] items', 'Parked by [name] · [time]', '[£ total]', button('Resume', { variant: 'default' }))}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Resuming puts the parked sale back in the basket. Anything already in the basket is parked in its place.</p>`, '', 600)),
+};
+
+// Find a past sale — by receipt number, customer, card or date.
+const datePill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
+screens['till-find'] = {
+  desktop: overTill(dialog('find-title', 'Find a past sale', 'Receipt number, customer, the last four digits of a card, or a date', `
+<label style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input type="search" aria-label="Search past sales" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
+<div role="group" aria-label="When" style="display: flex; flex-wrap: wrap; gap: 8px">${datePill('Today', true)}${datePill('Yesterday')}${datePill('Last 7 days')}${datePill('Pick dates…')}</div>
+<div>${listRow(`${mono('B1-[0000]')} · Maya Patel`, 'Today [time] · 3 items · card · Jo Taylor', money(TOTAL), button('Open', { variant: 'default' }))}</div>`, '', 640)),
+};
+
+// Refund (decision 9): from the original sale; money back the way it was paid.
+screens['till-refund'] = {
+  desktop: overTill(dialog('refund-title', `Refund from ${'B1-[0000]'}`, 'Maya Patel · today · paid by card', `
+<div>${tickRow('Shimano brake pads', 'Part · B05S-RX · 1 of 2', '£28.00', true)}${tickRow('Shimano brake pads', 'Part · B05S-RX · 2 of 2', '£28.00', false)}${tickRow('Fit & adjust brakes', 'Labour · 30 min', '£18.00', false)}</div>
+<div role="group" aria-label="Reason" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700">Refund to the card</span><span style="font-size: 13px; color: ${C.muted}">Sent to the card machine — the customer taps the same card</span></span>${mono('£28.00', 'font-size: 26px')}</div>`, `${button('Back', { variant: 'ghost' })}${button('Refund £28.00 to the card')}`, 600)),
+};
+screens['till-refund-noreceipt'] = {
+  desktop: overTill(dialog('noreceipt-title', 'No receipt or record', 'Refunds without the original sale go on store credit', `
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Scan or pick what’s coming back, and the value goes on the customer’s store credit to spend another time.</p>
+<div>${tickRow('[Item coming back]', '[Part number]', '[£ price]', true)}</div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('user', 18)}<span style="font-size: 15px; font-weight: 600; flex-grow: 1">[Customer]</span><span style="font-size: 13px; color: ${C.muted}">needed for store credit</span></div>`, `${button('Back', { variant: 'ghost' })}${button('Add [£] to store credit')}`, 600)),
+};
+
+// Void a sale that shouldn't stand — with a reason.
+screens['till-void'] = {
+  desktop: overTill(dialog('void-title', 'Void this sale', `${'B1-[0000]'} · Maya Patel · ${money(TOTAL)} · card`, `
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">The sale is kept, marked void, and taken out of the day’s takings. Card money goes back through the card machine; stock goes back on the shelf.</p>
+<div role="group" aria-label="Reason" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>`, `${button('Keep the sale', { variant: 'ghost' })}${button('Void sale', { variant: 'danger' })}`, 560)),
+};
+
+// Pay for a workshop job: the job's approved work loads into the basket
+// (journey A, decision 12). Paying also records collection by default,
+// with a pill to say the bike stays (Workshop day decision 63).
+const jobLines = LINES_APPROVED.filter((l) => l.approval === 'Approved').map((l) => ({ name: l.work, sub: l.sub, price: l.price, qty: 1 }));
+function jobBasket() {
+  const b = basket(jobLines, { customer: 'Maya Patel · workshop job WH-1042' });
+  const pill = `<button type="button" aria-pressed="true" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${C.ink}; background: ${C.ink}; color: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600">${icon('check', 15, C.panel)}Bike collected when paid</button>`;
+  const discount = /<a href="#" style="align-self: flex-start;[^>]*>Add a discount<\/a>/;
+  const m = b.match(discount);
+  if (!m) throw new Error('basket discount link not found');
+  return b.replace(m[0], `<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">${m[0].replace('align-self: flex-start; ', '')}${pill}</div>`);
+}
+screens['till-job'] = { desktop: tillPage(leftSide(), jobBasket()) };
+
+// Hand over a click and collect order.
+screens['till-collect'] = {
+  desktop: overTill(dialog('collect-title', 'Click and collect · order [number]', '[Customer] · paid online [date]', `
+<div>${tickRow('[Item]', '[Size or colour] · from [shelf or storage spot]', '[£ price]', true)}${tickRow('[Item]', '[Size or colour]', '[£ price]', true)}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Mark collected')}`, 600)),
+};
+
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
   'till-line': 'Change a line — price, discount with a reason, note, remove',
@@ -241,9 +305,17 @@ export const TITLES = {
   'till-account': 'Put on account — pay later',
   'till-loyalty': 'Loyalty points — shown with the customer in the basket',
   'till-deposit': 'Take a deposit — part now, the rest later',
+  'till-park': 'Parked sales — resume',
+  'till-find': 'Find a past sale',
+  'till-refund': 'Refund from the original sale — back to the card',
+  'till-refund-noreceipt': 'No receipt — store credit only',
+  'till-void': 'Void a sale — with a reason',
+  'till-job': 'Pay for a workshop job — bike collected when paid',
+  'till-collect': 'Hand over a click and collect order',
 };
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
+  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-refund', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-collect'] },
 ];
