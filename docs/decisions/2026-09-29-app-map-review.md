@@ -77,3 +77,7 @@ rail with labels and the phone top bar with a menu (68).
     "yeah go ahead"). Every desktop decision carries over; hover becomes a
     tap on touch screens; search becomes a magnifying-glass button
     (decision 2).
+15. **Journey A approved** (Jack, 29 Sep: "yeah this looks good") —
+    desktop, tablet and phone. It is copied into the user journeys canvas,
+    status Designed, in the Soft sand look; Workshop day's boards there are
+    refreshed to show the header search and the Your settings badge.

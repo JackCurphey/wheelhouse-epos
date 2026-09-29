@@ -13,7 +13,12 @@ and interaction rules apply to every journey).
 - Its working canvas (one current page, 88 boards):
   https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U — shared "anyone with the
   link" by Jack. The big canvas is private.
-- The overview counts each screen once: 227 screens — 73 designed, 20 for
+- **Journey A (App map and navigation) is approved** (29 Sep) and in the big
+  canvas as Designed; its own canvas: https://claude.ai/artifact/FC2MdE2iBHvvtASi98cCLA ,
+  decisions in `docs/decisions/2026-09-29-app-map-review.md` (6 — as few
+  clicks as possible — and 2 — search on every staff page — apply to every
+  journey).
+- The overview counts each screen once: 233 screens — 85 designed, 14 for
   review, 6 built, 19 old app only, 109 not designed yet.
 - Branch `feat/workshop-diary-design` holds all of this, committed, **not
   pushed, no PR**. Ask Jack before pushing / opening a PR.
@@ -56,9 +61,12 @@ and interaction rules apply to every journey).
   `{desktop, tablet, phone}` markup) and a build script writing
   `out-<name>-sand/project/*.dc.html` + `canvas.json` for its own new Design
   canvas (quickstart → Design type → publish with `type_url`).
-- **Copying into the big canvas:** `build.mjs` now reads journey 12 from the
-  Soft sand build (`sandBoard`, `relink`, a mismatch guard against the
-  screen list) — generalise that for the next journey rather than redrawing.
+- **Copying into the big canvas:** `build.mjs` reads every Soft sand journey
+  from its own build via `SAND_SOURCES` (journey 12 = `diary`, journey A =
+  `app-map`). For the next journey: add its source there, list its screens in
+  `journeys.mjs` with a marker like `sa()` (sizes are read from whichever
+  boards its canvas has), and the mismatch guard checks order and rows.
+  Cross-journey links are relinked automatically.
   Always refresh `generator/live-canvas.json` from the live big canvas first,
   publish only changed boards + `Main.dc.html` + `canvas.json` (≤255 files per
   call; `canvas.json` last), old files as `null`.

@@ -14,19 +14,32 @@ export const r = (id, title, role) => ({ id, status: 'review', title, role, draw
 // sd(id, title, role) = an agreed Workshop day redesign screen (diary.mjs, Soft
 // sand look), shown at desktop, tablet and phone; build.mjs reads the boards
 // from the Soft sand build in out-diary-sand/.
-export const sd = (id, title, role) => ({ id, status: 'designed', title, role, sand: true });
+export const sd = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'diary' });
+// sa(id, title, role) = an agreed journey A screen (app-map.mjs, Soft sand);
+// build.mjs reads its boards (whatever sizes it has) from out-app-map-sand/.
+export const sa = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'app-map' });
 
 export const journeys = [
   {
     id: 'ja', num: 'A', name: 'App map and navigation', who: 'Everyone',
     rows: [
-      { label: 'How it fits together', screens: [r('map', 'How Wheelhouse fits together', 'Everyone')] },
-      { label: 'Navigation shells', screens: [
-        r('shell-staff', 'Staff app', 'Manager'),
-        r('shell-staff-menu', 'Staff app: menu open / mechanic view', 'Manager'),
-        r('shell-till', 'Till mode', 'Staff'),
-        r('shell-site', 'Customer website', 'Customer'),
-        r('shell-site-menu', 'Customer website: menu open', 'Customer'),
+      { label: 'App map', screens: [sa('map', 'How Wheelhouse fits together', 'Everyone')] },
+      { label: 'Staff app', screens: [
+        sa('staff-app', 'Staff app: search on every page, your name opens Your settings', 'Staff'),
+        sa('staff-app-mechanic', 'Staff app: a mechanic sees only the Workshop room', 'Mechanic'),
+        sa('staff-app-menu', 'Staff app: phone menu open', 'Staff'),
+      ] },
+      { label: 'Till mode', screens: [
+        sa('till-rail', 'Till: sidebar folded to the rail', 'Staff'),
+        sa('till-rail-open', 'Till: rail unfolded', 'Staff'),
+        sa('till-search', 'Till: one search finds products, customers and jobs', 'Staff'),
+      ] },
+      { label: 'Your settings', screens: [sa('your-settings', 'Your settings', 'Everyone')] },
+      { label: 'Customer website', screens: [
+        sa('site', 'Customer website: default theme', 'Customer'),
+        sa('site-menu', 'Customer website: phone menu open', 'Customer'),
+        sa('site-ocean', 'Customer website: a shop’s own theme', 'Customer'),
+        sa('site-ocean-menu', 'Customer website: phone menu, shop’s own theme', 'Customer'),
       ] },
     ],
   },

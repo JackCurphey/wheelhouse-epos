@@ -1,5 +1,5 @@
 // Builds the canvas files (project/canvas.json + one .dc.html per screen) from journeys.mjs.
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { journeys } from './journeys.mjs';
 import * as stage1 from './stage1.mjs';
@@ -13,18 +13,26 @@ import { workflow, WF_W, WF_H } from './workflow.mjs';
 const here = new URL('./', import.meta.url).pathname;
 const root = here + 'out/';
 
-// Journey 12 (Workshop day) shows the approved redesign in Soft sand
-// (decisions 48 and 69). ui.mjs picks its theme when it loads, and this
-// process is Fjell, so the Soft sand boards are built in their own process
-// and read back from out-diary-sand/project/.
-execFileSync(process.execPath, ['build-diary.mjs', '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
-const SAND = here + 'out-diary-sand/project/';
-const SAND_SIZES = ['desktop', 'tablet', 'phone'];
-function sandBoard(id, size) {
-  const src = readFileSync(`${SAND}${id}-${size}.dc.html`, 'utf8');
-  const helmet = /<helmet>\n([\s\S]*?)<\/helmet>\n/.exec(src);
-  const body = /<\/helmet>\n([\s\S]*)\n<\/x-dc>/.exec(src);
-  const size_ = /"\$preview":\{"width":(\d+),"height":(\d+)\}/.exec(src);
+// Journeys drawn in Soft sand on their own canvases (decisions 48 and 69 of
+// Workshop day; decision 15 of journey A). ui.mjs picks its theme when it
+// loads, and this process is Fjell, so each Soft sand canvas is built in its
+// own process and its boards read back from its project/ folder.
+// Journey 12 = diary.mjs; journey A = app-map.mjs.
+const SAND_SOURCES = {
+  diary: { script: 'build-diary.mjs', dir: here + 'out-diary-sand/project/' },
+  'app-map': { script: 'build-app-map.mjs', dir: here + 'out-app-map-sand/project/' },
+};
+for (const s of Object.values(SAND_SOURCES)) execFileSync(process.execPath, [s.script, '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
+const SAND_SIZES = ['single', 'desktop', 'tablet', 'phone'];
+const sandFile = (id, size) => (size === 'single' ? `${id}.dc.html` : `${id}-${size}.dc.html`);
+// The sizes a Soft sand screen was drawn at: whichever boards its own canvas has.
+const sandSizesOf = (src, id) => SAND_SIZES.filter((v) => existsSync(SAND_SOURCES[src].dir + sandFile(id, v)));
+function sandBoard(src, id, size) {
+  const f = SAND_SOURCES[src].dir + sandFile(id, size);
+  const src_ = readFileSync(f, 'utf8');
+  const helmet = /<helmet>\n([\s\S]*?)<\/helmet>\n/.exec(src_);
+  const body = /<\/helmet>\n([\s\S]*)\n<\/x-dc>/.exec(src_);
+  const size_ = /"\$preview":\{"width":(\d+),"height":(\d+)\}/.exec(src_);
   if (!helmet || !body || !size_) throw new Error(`cannot read ${id}-${size} from the Soft sand build`);
   return { helmet: helmet[1], inner: body[1], w: Number(size_[1]), h: Number(size_[2]) };
 }
@@ -128,11 +136,12 @@ function sandBoardHtml(scr, w, h, meta, inner, nav) {
 <div style="width: ${w}px; height: ${h}px; overflow: hidden">${inner}</div>
 </div>`;
 }
-// Links between the redesign's boards point at this canvas's file names
-// (j12-…); links to screens outside the redesign (the other rooms in the
-// sidebar) have no board here, so they lose their href.
-function relink(html, jid, known) {
-  return html.replace(/ href="([^"#][^"]*?\.dc\.html)"/g, (m, f) => (known.has(f) ? ` href="${jid}-${f}"` : ''));
+// Links between Soft sand boards point at this canvas's file names (j12-…,
+// ja-…) — including across journeys, e.g. the sidebar's name button to
+// journey A's Your settings; links to screens with no board here (the other
+// rooms in the sidebar) lose their href.
+function relink(html, known) {
+  return html.replace(/ href="([^"#][^"]*?\.dc\.html)"/g, (m, f) => (known.has(f) ? ` href="${known.get(f)}-${f}"` : ''));
 }
 
 function placeholderBoard(scr, w, h, meta, nav) {
@@ -180,7 +189,7 @@ let y = 360 + 60 + journeys.length * 58 + 140 + 1000;
 
 // A screen becomes one board, or two (desktop + phone) when it is a new drawing.
 const variantsOf = (j, x) => {
-  if (x.sand) return SAND_SIZES.map((v) => ({ file: `${j.id}-${x.id}-${v}.dc.html`, v, sand: true }));
+  if (x.sand) return sandSizesOf(x.sand, x.id).map((v) => ({ file: `${j.id}-${sandFile(x.id, v)}`, v, sand: x.sand }));
   if (!x.drawn) return [{ file: `${j.id}-${x.id}.dc.html`, v: null }];
   const d = DRAWN[x.id];
   if (!d) throw new Error(`no drawing for ${x.id}`);
@@ -188,18 +197,26 @@ const variantsOf = (j, x) => {
   return [{ file: `${j.id}-${x.id}-desktop.dc.html`, v: 'desktop' }, { file: `${j.id}-${x.id}-phone.dc.html`, v: 'phone' }];
 };
 const seq = journeys.map((j) => j.rows.flatMap((r) => r.screens.flatMap((x) => variantsOf(j, x).map((o) => o.file))));
-// Every Soft sand board file name (as the redesign names them), for relink().
-const sandFiles = new Set(journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.filter((x) => x.sand).flatMap((x) => SAND_SIZES.map((v) => `${x.id}-${v}.dc.html`)))));
-// The redesign's own canvas must hold exactly these screens, in this order —
-// journeys.mjs lists them by hand (with plain titles), so check they agree.
-{
-  const sandCanvas = JSON.parse(readFileSync(SAND + 'canvas.json', 'utf8'));
+// Every Soft sand board file name (as its own canvas names it) → the journey
+// that holds it here, for relink().
+const sandFiles = new Map();
+for (const j of journeys) for (const r of j.rows) for (const x of r.screens) if (x.sand) for (const v of sandSizesOf(x.sand, x.id)) {
+  const f = sandFile(x.id, v);
+  if (sandFiles.has(f)) throw new Error(`two Soft sand boards are both called ${f}`);
+  sandFiles.set(f, j.id);
+}
+// Each Soft sand canvas must hold exactly the screens journeys.mjs lists for
+// it, in the same order and rows — journeys.mjs lists them by hand (with
+// plain titles), so check they agree.
+for (const [src, { dir }] of Object.entries(SAND_SOURCES)) {
+  const sandCanvas = JSON.parse(readFileSync(dir + 'canvas.json', 'utf8'));
   const theirs = sandCanvas.order.filter((f) => f !== 'Main.dc.html');
-  const ours = journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.filter((x) => x.sand).flatMap((x) => SAND_SIZES.map((v) => `${x.id}-${v}.dc.html`))));
-  if (theirs.join() !== ours.join()) throw new Error('journey 12 in journeys.mjs no longer matches diary.mjs ROWS');
+  const mine = journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.filter((x) => x.sand === src)));
+  const ours = mine.flatMap((x) => sandSizesOf(src, x.id).map((v) => sandFile(x.id, v)));
+  if (theirs.join() !== ours.join()) throw new Error(`journeys.mjs no longer matches ${src}'s own canvas:\n theirs ${theirs.join()}\n ours ${ours.join()}`);
   const theirRows = Object.values(sandCanvas.notes).map((n) => n.text);
-  const ourRows = journeys.flatMap((j) => j.rows.filter((r) => r.screens.some((x) => x.sand)).map((r) => r.label));
-  if (theirRows.join('|') !== ourRows.join('|')) throw new Error(`journey 12 rows differ from diary.mjs ROWS: ${theirRows.join(' | ')}`);
+  const ourRows = journeys.flatMap((j) => j.rows.filter((r) => r.screens.some((x) => x.sand === src)).map((r) => r.label));
+  if (theirRows.join('|') !== ourRows.join('|')) throw new Error(`${src} rows differ: ${theirRows.join(' | ')}`);
 }
 let numbered = 0;
 journeys.forEach((j, ji) => {
@@ -216,12 +233,12 @@ journeys.forEach((j, ji) => {
         const nav = { ...navFor(list, file), };
         let title, meta, w, h, html, helmet = null;
         if (sand) {
-          const sb = sandBoard(scr.id, v);
+          const sb = sandBoard(sand, scr.id, v);
           [w, h] = [sb.w, sb.h];
-          meta = `${scr.role} · ${v}`;
-          title = `${(v !== 'desktop' && TOUCH_TITLE_OVERRIDE[scr.id]) || scr.title} (${v})`;
+          meta = v === 'single' ? scr.role : `${scr.role} · ${v}`;
+          title = v === 'single' ? scr.title : `${(sand === 'diary' && v !== 'desktop' && TOUCH_TITLE_OVERRIDE[scr.id]) || scr.title} (${v})`;
           helmet = `<link rel="stylesheet" href="${FONT_LINK.replace(/&/g, '&amp;')}">\n${sb.helmet}`;
-          html = sandBoardHtml(scr, w, h, meta, relink(sb.inner, j.id, sandFiles), nav);
+          html = sandBoardHtml(scr, w, h, meta, relink(sb.inner, sandFiles), nav);
         } else if (v) {
           const d = DRAWN[scr.id];
           if (v === 'single') { [w, h] = [stage1.MAP_W, stage1.MAP_H]; meta = scr.role; }

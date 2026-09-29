@@ -10,8 +10,17 @@
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
-Workshop day is approved and in the big canvas; the next journey is Jack's
-choice (ask him first).
+Workshop day (journey 12) and App map and navigation (journey A) are approved
+and in the big canvas; the next journey is Jack's choice (ask him first).
+
+**Journey A, App map and navigation (29 Sep):** approved at desktop, tablet
+and phone; 15 decisions in `docs/decisions/2026-09-29-app-map-review.md`
+(two apply everywhere: **6, as few clicks as possible**; 2, one search box on
+every staff page). Own canvas: https://claude.ai/artifact/FC2MdE2iBHvvtASi98cCLA .
+Generator: `app-map.mjs` + `build-app-map.mjs --theme sand`; audit in
+`docs/design/user-journeys/app-map-ui-audit.md`. The shared staff shells in
+`diary.mjs` now carry the header search and the Your settings name button,
+so Workshop day's boards were refreshed too.
 
 **Workshop day redesign (28–29 Sep):** Jack reworked Workshop day around the
 diary. 69 decisions in `docs/decisions/2026-09-27-workshop-day-review.md`

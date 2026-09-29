@@ -16,87 +16,215 @@
    "y": 2894,
    "w": 1760,
    "h": 1236,
-   "title": "For review · How Wheelhouse fits together",
+   "title": "Designed · How Wheelhouse fits together",
    "is_interactive": true
   },
-  "ja-shell-staff-desktop.dc.html": {
+  "ja-staff-app-desktop.dc.html": {
    "x": 2000,
    "y": 2894,
    "w": 1280,
    "h": 856,
-   "title": "For review · Staff app (desktop)",
+   "title": "Designed · Staff app: search on every page, your name opens Your settings (desktop)",
    "is_interactive": true
   },
-  "ja-shell-staff-phone.dc.html": {
+  "ja-staff-app-tablet.dc.html": {
    "x": 3320,
    "y": 2894,
-   "w": 390,
-   "h": 900,
-   "title": "For review · Staff app (phone)",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Staff app: search on every page, your name opens Your settings (tablet)",
    "is_interactive": true
   },
-  "ja-shell-staff-menu-desktop.dc.html": {
-   "x": 3790,
+  "ja-staff-app-phone.dc.html": {
+   "x": 4540,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Staff app: search on every page, your name opens Your settings (phone)",
+   "is_interactive": true
+  },
+  "ja-staff-app-mechanic-desktop.dc.html": {
+   "x": 5010,
    "y": 2894,
    "w": 1280,
    "h": 856,
-   "title": "For review · Staff app: menu open / mechanic view (desktop)",
+   "title": "Designed · Staff app: a mechanic sees only the Workshop room (desktop)",
    "is_interactive": true
   },
-  "ja-shell-staff-menu-phone.dc.html": {
-   "x": 5110,
+  "ja-staff-app-mechanic-tablet.dc.html": {
+   "x": 6330,
+   "y": 2894,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Staff app: a mechanic sees only the Workshop room (tablet)",
+   "is_interactive": true
+  },
+  "ja-staff-app-mechanic-phone.dc.html": {
+   "x": 7550,
    "y": 2894,
    "w": 390,
    "h": 900,
-   "title": "For review · Staff app: menu open / mechanic view (phone)",
+   "title": "Designed · Staff app: a mechanic sees only the Workshop room (phone)",
    "is_interactive": true
   },
-  "ja-shell-till-desktop.dc.html": {
-   "x": 5580,
+  "ja-staff-app-menu-phone.dc.html": {
+   "x": 8020,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Staff app: phone menu open (phone)",
+   "is_interactive": true
+  },
+  "ja-till-rail-desktop.dc.html": {
+   "x": 8650,
    "y": 2894,
    "w": 1280,
    "h": 856,
-   "title": "For review · Till mode (desktop)",
+   "title": "Designed · Till: sidebar folded to the rail (desktop)",
    "is_interactive": true
   },
-  "ja-shell-till-phone.dc.html": {
-   "x": 6900,
+  "ja-till-rail-tablet.dc.html": {
+   "x": 9970,
+   "y": 2894,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Till: sidebar folded to the rail (tablet)",
+   "is_interactive": true
+  },
+  "ja-till-rail-phone.dc.html": {
+   "x": 11190,
    "y": 2894,
    "w": 390,
    "h": 900,
-   "title": "For review · Till mode (phone)",
+   "title": "Designed · Till: sidebar folded to the rail (phone)",
    "is_interactive": true
   },
-  "ja-shell-site-desktop.dc.html": {
-   "x": 7370,
+  "ja-till-rail-open-desktop.dc.html": {
+   "x": 11660,
    "y": 2894,
    "w": 1280,
    "h": 856,
-   "title": "For review · Customer website (desktop)",
+   "title": "Designed · Till: rail unfolded (desktop)",
    "is_interactive": true
   },
-  "ja-shell-site-phone.dc.html": {
-   "x": 8690,
+  "ja-till-rail-open-tablet.dc.html": {
+   "x": 12980,
    "y": 2894,
-   "w": 390,
-   "h": 900,
-   "title": "For review · Customer website (phone)",
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Till: rail unfolded (tablet)",
    "is_interactive": true
   },
-  "ja-shell-site-menu-desktop.dc.html": {
-   "x": 9160,
+  "ja-till-search-desktop.dc.html": {
+   "x": 14200,
    "y": 2894,
    "w": 1280,
    "h": 856,
-   "title": "For review · Customer website: menu open (desktop)",
+   "title": "Designed · Till: one search finds products, customers and jobs (desktop)",
    "is_interactive": true
   },
-  "ja-shell-site-menu-phone.dc.html": {
-   "x": 10480,
+  "ja-till-search-tablet.dc.html": {
+   "x": 15520,
+   "y": 2894,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Till: one search finds products, customers and jobs (tablet)",
+   "is_interactive": true
+  },
+  "ja-till-search-phone.dc.html": {
+   "x": 16740,
    "y": 2894,
    "w": 390,
    "h": 900,
-   "title": "For review · Customer website: menu open (phone)",
+   "title": "Designed · Till: one search finds products, customers and jobs (phone)",
+   "is_interactive": true
+  },
+  "ja-your-settings-desktop.dc.html": {
+   "x": 17370,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your settings (desktop)",
+   "is_interactive": true
+  },
+  "ja-your-settings-tablet.dc.html": {
+   "x": 18690,
+   "y": 2894,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Your settings (tablet)",
+   "is_interactive": true
+  },
+  "ja-your-settings-phone.dc.html": {
+   "x": 19910,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Your settings (phone)",
+   "is_interactive": true
+  },
+  "ja-site-desktop.dc.html": {
+   "x": 20540,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Customer website: default theme (desktop)",
+   "is_interactive": true
+  },
+  "ja-site-tablet.dc.html": {
+   "x": 21860,
+   "y": 2894,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Customer website: default theme (tablet)",
+   "is_interactive": true
+  },
+  "ja-site-phone.dc.html": {
+   "x": 23080,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Customer website: default theme (phone)",
+   "is_interactive": true
+  },
+  "ja-site-menu-phone.dc.html": {
+   "x": 23550,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Customer website: phone menu open (phone)",
+   "is_interactive": true
+  },
+  "ja-site-ocean-desktop.dc.html": {
+   "x": 24020,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Customer website: a shop’s own theme (desktop)",
+   "is_interactive": true
+  },
+  "ja-site-ocean-tablet.dc.html": {
+   "x": 25340,
+   "y": 2894,
+   "w": 1180,
+   "h": 876,
+   "title": "Designed · Customer website: a shop’s own theme (tablet)",
+   "is_interactive": true
+  },
+  "ja-site-ocean-phone.dc.html": {
+   "x": 26560,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Customer website: a shop’s own theme (phone)",
+   "is_interactive": true
+  },
+  "ja-site-ocean-menu-phone.dc.html": {
+   "x": 27030,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Customer website: phone menu, shop’s own theme (phone)",
    "is_interactive": true
   },
   "jb-auth-signin-desktop.dc.html": {
@@ -2463,16 +2591,32 @@
   "Main.dc.html",
   "Workflow.dc.html",
   "ja-map.dc.html",
-  "ja-shell-staff-desktop.dc.html",
-  "ja-shell-staff-phone.dc.html",
-  "ja-shell-staff-menu-desktop.dc.html",
-  "ja-shell-staff-menu-phone.dc.html",
-  "ja-shell-till-desktop.dc.html",
-  "ja-shell-till-phone.dc.html",
-  "ja-shell-site-desktop.dc.html",
-  "ja-shell-site-phone.dc.html",
-  "ja-shell-site-menu-desktop.dc.html",
-  "ja-shell-site-menu-phone.dc.html",
+  "ja-staff-app-desktop.dc.html",
+  "ja-staff-app-tablet.dc.html",
+  "ja-staff-app-phone.dc.html",
+  "ja-staff-app-mechanic-desktop.dc.html",
+  "ja-staff-app-mechanic-tablet.dc.html",
+  "ja-staff-app-mechanic-phone.dc.html",
+  "ja-staff-app-menu-phone.dc.html",
+  "ja-till-rail-desktop.dc.html",
+  "ja-till-rail-tablet.dc.html",
+  "ja-till-rail-phone.dc.html",
+  "ja-till-rail-open-desktop.dc.html",
+  "ja-till-rail-open-tablet.dc.html",
+  "ja-till-search-desktop.dc.html",
+  "ja-till-search-tablet.dc.html",
+  "ja-till-search-phone.dc.html",
+  "ja-your-settings-desktop.dc.html",
+  "ja-your-settings-tablet.dc.html",
+  "ja-your-settings-phone.dc.html",
+  "ja-site-desktop.dc.html",
+  "ja-site-tablet.dc.html",
+  "ja-site-phone.dc.html",
+  "ja-site-menu-phone.dc.html",
+  "ja-site-ocean-desktop.dc.html",
+  "ja-site-ocean-tablet.dc.html",
+  "ja-site-ocean-phone.dc.html",
+  "ja-site-ocean-menu-phone.dc.html",
   "jb-auth-signin-desktop.dc.html",
   "jb-auth-signin-phone.dc.html",
   "jb-auth-forgot-desktop.dc.html",
@@ -2771,7 +2915,7 @@
   "ja_s0": {
    "x": 0,
    "y": 2654,
-   "text": "How it fits together",
+   "text": "App map",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -2781,7 +2925,37 @@
   "ja_s1": {
    "x": 2000,
    "y": 2654,
-   "text": "Navigation shells",
+   "text": "Staff app",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "ja_s2": {
+   "x": 8650,
+   "y": 2654,
+   "text": "Till mode",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "ja_s3": {
+   "x": 17370,
+   "y": 2654,
+   "text": "Your settings",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "ja_s4": {
+   "x": 20540,
+   "y": 2654,
+   "text": "Customer website",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -2793,9 +2967,9 @@
    "y": 2334,
    "text": "A · App map and navigation — Everyone",
    "kind": "title1",
-   "maxW": 10870
+   "maxW": 27420
   },
-  "jb_s3": {
+  "jb_s6": {
    "x": 0,
    "y": 4890,
    "text": "Staff",
@@ -2805,7 +2979,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "jb_s4": {
+  "jb_s7": {
    "x": 16270,
    "y": 4890,
    "text": "Till",
@@ -2815,7 +2989,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "jb_s5": {
+  "jb_s8": {
    "x": 21800,
    "y": 4890,
    "text": "Customers",
@@ -2832,7 +3006,7 @@
    "kind": "title1",
    "maxW": 26240
   },
-  "j01_s7": {
+  "j01_s10": {
    "x": 0,
    "y": 6790,
    "text": "Browse",
@@ -2842,7 +3016,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j01_s8": {
+  "j01_s11": {
    "x": 2510,
    "y": 6790,
    "text": "When things go wrong",
@@ -2859,7 +3033,7 @@
    "kind": "title1",
    "maxW": 3370
   },
-  "j02_s10": {
+  "j02_s13": {
    "x": 0,
    "y": 8690,
    "text": "Checkout",
@@ -2869,7 +3043,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j02_s11": {
+  "j02_s14": {
    "x": 2040,
    "y": 8690,
    "text": "After ordering",
@@ -2886,7 +3060,7 @@
    "kind": "title1",
    "maxW": 2900
   },
-  "j03_s13": {
+  "j03_s16": {
    "x": 0,
    "y": 10590,
    "text": "Booking",
@@ -2896,7 +3070,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j03_s14": {
+  "j03_s17": {
    "x": 4860,
    "y": 10590,
    "text": "Change, cancel and problems",
@@ -2913,7 +3087,7 @@
    "kind": "title1",
    "maxW": 9010
   },
-  "j04_s16": {
+  "j04_s19": {
    "x": 0,
    "y": 12490,
    "text": "While the bike is in",
@@ -2930,7 +3104,7 @@
    "kind": "title1",
    "maxW": 3680
   },
-  "j05_s18": {
+  "j05_s21": {
    "x": 0,
    "y": 14390,
    "text": "Collection",
@@ -2947,7 +3121,7 @@
    "kind": "title1",
    "maxW": 1800
   },
-  "j06_s20": {
+  "j06_s23": {
    "x": 0,
    "y": 16290,
    "text": "Waiting for Jack’s explanation",
@@ -2964,7 +3138,7 @@
    "kind": "title1",
    "maxW": 1600
   },
-  "j07_s22": {
+  "j07_s25": {
    "x": 0,
    "y": 18190,
    "text": "Account",
@@ -2974,7 +3148,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s23": {
+  "j07_s26": {
    "x": 1100,
    "y": 18190,
    "text": "Messages and privacy",
@@ -2991,7 +3165,7 @@
    "kind": "title1",
    "maxW": 2900
   },
-  "j08_s25": {
+  "j08_s28": {
    "x": 0,
    "y": 20090,
    "text": "Getting started",
@@ -3001,7 +3175,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s26": {
+  "j08_s29": {
    "x": 4880,
    "y": 20090,
    "text": "People",
@@ -3011,7 +3185,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s27": {
+  "j08_s30": {
    "x": 10940,
    "y": 20090,
    "text": "Selling and printing",
@@ -3021,7 +3195,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s28": {
+  "j08_s31": {
    "x": 15820,
    "y": 20090,
    "text": "Workshop and messages",
@@ -3031,7 +3205,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j08_s29": {
+  "j08_s32": {
    "x": 26600,
    "y": 20090,
    "text": "Data",
@@ -3048,7 +3222,7 @@
    "kind": "title1",
    "maxW": 27700
   },
-  "j09_s31": {
+  "j09_s34": {
    "x": 0,
    "y": 21906,
    "text": "Bring the data across",
@@ -3058,7 +3232,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j09_s32": {
+  "j09_s35": {
    "x": 6060,
    "y": 21906,
    "text": "Run alongside, then switch",
@@ -3075,7 +3249,7 @@
    "kind": "title1",
    "maxW": 9520
   },
-  "j10_s34": {
+  "j10_s37": {
    "x": 0,
    "y": 23722,
    "text": "Morning",
@@ -3092,7 +3266,7 @@
    "kind": "title1",
    "maxW": 5820
   },
-  "j11_s36": {
+  "j11_s39": {
    "x": 0,
    "y": 25538,
    "text": "A sale",
@@ -3102,7 +3276,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j11_s37": {
+  "j11_s40": {
    "x": 6060,
    "y": 25538,
    "text": "Taking payment",
@@ -3112,7 +3286,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j11_s38": {
+  "j11_s41": {
    "x": 13300,
    "y": 25538,
    "text": "Other till jobs",
@@ -3122,7 +3296,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j11_s39": {
+  "j11_s42": {
    "x": 20540,
    "y": 25538,
    "text": "When the internet drops",
@@ -3139,7 +3313,7 @@
    "kind": "title1",
    "maxW": 25180
   },
-  "j12_s41": {
+  "j12_s44": {
    "x": 0,
    "y": 27354,
    "text": "The diary",
@@ -3149,7 +3323,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s42": {
+  "j12_s45": {
    "x": 36280,
    "y": 27354,
    "text": "Requests, as a pop-up",
@@ -3159,7 +3333,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s43": {
+  "j12_s46": {
    "x": 48480,
    "y": 27354,
    "text": "New job from an empty slot",
@@ -3169,7 +3343,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s44": {
+  "j12_s47": {
    "x": 57670,
    "y": 27354,
    "text": "The job — one page, no tabs",
@@ -3179,7 +3353,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s45": {
+  "j12_s48": {
    "x": 81910,
    "y": 27354,
    "text": "Customer account",
@@ -3189,7 +3363,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j12_s46": {
+  "j12_s49": {
    "x": 85080,
    "y": 27354,
    "text": "Overview page",
@@ -3206,7 +3380,7 @@
    "kind": "title1",
    "maxW": 88010
   },
-  "j13_s48": {
+  "j13_s51": {
    "x": 0,
    "y": 29510,
    "text": "Suppliers",
@@ -3216,7 +3390,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s49": {
+  "j13_s52": {
    "x": 2520,
    "y": 29510,
    "text": "Orders",
@@ -3226,7 +3400,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s50": {
+  "j13_s53": {
    "x": 7400,
    "y": 29510,
    "text": "Delivery",
@@ -3243,7 +3417,7 @@
    "kind": "title1",
    "maxW": 10860
   },
-  "j14_s52": {
+  "j14_s55": {
    "x": 0,
    "y": 31326,
    "text": "Products",
@@ -3253,7 +3427,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s53": {
+  "j14_s56": {
    "x": 6060,
    "y": 31326,
    "text": "Across sites",
@@ -3263,7 +3437,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s54": {
+  "j14_s57": {
    "x": 8580,
    "y": 31326,
    "text": "Stock take",
@@ -3273,7 +3447,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s55": {
+  "j14_s58": {
    "x": 13460,
    "y": 31326,
    "text": "Corrections",
@@ -3290,7 +3464,7 @@
    "kind": "title1",
    "maxW": 15740
   },
-  "j15_s57": {
+  "j15_s60": {
    "x": 0,
    "y": 33142,
    "text": "Customers",
@@ -3300,7 +3474,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j15_s58": {
+  "j15_s61": {
    "x": 6060,
    "y": 33142,
    "text": "Loyalty and accounts",
@@ -3317,7 +3491,7 @@
    "kind": "title1",
    "maxW": 10700
   },
-  "j16_s60": {
+  "j16_s63": {
    "x": 0,
    "y": 34958,
    "text": "Closing",
@@ -3334,7 +3508,7 @@
    "kind": "title1",
    "maxW": 7000
   },
-  "j17_s62": {
+  "j17_s65": {
    "x": 0,
    "y": 36774,
    "text": "Reports",
@@ -3344,7 +3518,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s63": {
+  "j17_s66": {
    "x": 7240,
    "y": 36774,
    "text": "Accounts software",
@@ -3361,7 +3535,7 @@
    "kind": "title1",
    "maxW": 10700
   },
-  "j18_s65": {
+  "j18_s68": {
    "x": 0,
    "y": 38590,
    "text": "Design the website",
@@ -3371,7 +3545,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s66": {
+  "j18_s69": {
    "x": 7240,
    "y": 38590,
    "text": "Online orders",
@@ -3388,7 +3562,7 @@
    "kind": "title1",
    "maxW": 11880
   },
-  "j19_s68": {
+  "j19_s71": {
    "x": 0,
    "y": 40406,
    "text": "Across sites",
@@ -3405,7 +3579,7 @@
    "kind": "title1",
    "maxW": 3460
   },
-  "j20_s70": {
+  "j20_s73": {
    "x": 0,
    "y": 42222,
    "text": "Oversight",
@@ -3422,7 +3596,7 @@
    "kind": "title1",
    "maxW": 3460
   },
-  "j21_s72": {
+  "j21_s75": {
    "x": 0,
    "y": 44038,
    "text": "Connection and handoff",
