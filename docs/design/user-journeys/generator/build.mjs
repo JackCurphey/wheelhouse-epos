@@ -27,9 +27,21 @@ const SAND_SOURCES = {
 };
 for (const s of Object.values(SAND_SOURCES)) execFileSync(process.execPath, [s.script, '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
 const SAND_SIZES = ['single', 'desktop', 'tablet', 'phone'];
+// Each journey's own canvas, where all three sizes live.
+const SAND_CANVAS = {
+  diary: 'https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U',
+  'app-map': 'https://claude.ai/artifact/FC2MdE2iBHvvtASi98cCLA',
+  signin: 'https://claude.ai/artifact/5Ho8DsRVvHXEcJBnGu1GXe',
+  till: 'https://claude.ai/artifact/Y9NppHkpYBrrRKjHw8FoLG',
+  cashup: 'https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE',
+};
 const sandFile = (id, size) => (size === 'single' ? `${id}.dc.html` : `${id}-${size}.dc.html`);
 // The sizes a Soft sand screen was drawn at: whichever boards its own canvas has.
 const sandSizesOf = (src, id) => SAND_SIZES.filter((v) => existsSync(SAND_SOURCES[src].dir + sandFile(id, v)));
+// The big canvas shows one board per screen (decision 8 of journey 16, Jack,
+// 29 Sep — the canvas holds at most 512 files): desktop, or the one-off
+// large board, or — for a phone-only screen — its only size.
+const bigSizeOf = (src, id) => { const all = sandSizesOf(src, id); return all.includes('single') ? 'single' : all.includes('desktop') ? 'desktop' : all[0]; };
 function sandBoard(src, id, size) {
   const f = SAND_SOURCES[src].dir + sandFile(id, size);
   const src_ = readFileSync(f, 'utf8');
@@ -101,7 +113,7 @@ const navLink = (href, text, label) => href
   ? `<a href="${href}" aria-label="${label}" style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; background: rgba(255,255,255,0.18); color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none">${text}</a>`
   : `<span style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; color: rgba(255,255,255,0.45); font-size: 14px; font-weight: 600">${text}</span>`;
 
-function strip(st, meta, nav) {
+function strip(st, meta, nav, extra = '') {
   const s = STATUS[st];
   return `<div style="height: ${STRIP}px; box-sizing: border-box; padding: 0 10px 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: ${s.bar}; color: #ffffff">
 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
@@ -109,7 +121,7 @@ function strip(st, meta, nav) {
 <span style="font-size: 12px; font-weight: 500; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(meta)} · ${nav.pos}</span>
 </div>
 <nav style="display: flex; gap: 6px; flex-shrink: 0">
-${navLink(nav.prev, '‹ Prev', 'Previous screen')}
+${extra}${navLink(nav.prev, '‹ Prev', 'Previous screen')}
 ${navLink('Main.dc.html', 'Overview', 'Back to the overview')}
 ${navLink(nav.next, 'Next ›', 'Next screen')}
 </nav>
@@ -134,8 +146,9 @@ ${strip(scr.status, meta, nav)}
 // A Soft sand board: the canvas's own status strip (kept in Work Sans like
 // every other board) over the approved drawing, which keeps its own fonts.
 function sandBoardHtml(scr, w, h, meta, inner, nav) {
+  const others = SAND_CANVAS[scr.sand] ? navLink(SAND_CANVAS[scr.sand], w < 500 ? 'Sizes ↗' : 'Tablet and phone ↗', 'Tablet and phone, on this journey’s own canvas') : '';
   return `<div style="width: ${w}px; height: ${h + STRIP}px; display: flex; flex-direction: column; background: #ffffff">
-<div style="font-family: ${FONT}">${strip(scr.status, meta, nav)}</div>
+<div style="font-family: ${FONT}">${strip(scr.status, meta, nav, others)}</div>
 <div style="width: ${w}px; height: ${h}px; overflow: hidden">${inner}</div>
 </div>`;
 }
@@ -192,7 +205,7 @@ let y = 360 + 60 + journeys.length * 58 + 140 + 1000;
 
 // A screen becomes one board, or two (desktop + phone) when it is a new drawing.
 const variantsOf = (j, x) => {
-  if (x.sand) return sandSizesOf(x.sand, x.id).map((v) => ({ file: `${j.id}-${sandFile(x.id, v)}`, v, sand: x.sand }));
+  if (x.sand) { const v = bigSizeOf(x.sand, x.id); return [{ file: `${j.id}-${sandFile(x.id, v)}`, v, sand: x.sand }]; }
   if (!x.drawn) return [{ file: `${j.id}-${x.id}.dc.html`, v: null }];
   const d = DRAWN[x.id];
   if (!d) throw new Error(`no drawing for ${x.id}`);
@@ -203,7 +216,7 @@ const seq = journeys.map((j) => j.rows.flatMap((r) => r.screens.flatMap((x) => v
 // Every Soft sand board file name (as its own canvas names it) → the journey
 // that holds it here, for relink().
 const sandFiles = new Map();
-for (const j of journeys) for (const r of j.rows) for (const x of r.screens) if (x.sand) for (const v of sandSizesOf(x.sand, x.id)) {
+for (const j of journeys) for (const r of j.rows) for (const x of r.screens) if (x.sand) for (const v of [bigSizeOf(x.sand, x.id)]) {
   const f = sandFile(x.id, v);
   if (sandFiles.has(f)) throw new Error(`two Soft sand boards are both called ${f}`);
   sandFiles.set(f, j.id);

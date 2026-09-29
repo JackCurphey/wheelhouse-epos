@@ -43,3 +43,10 @@ from the machine itself rather than being typed in.
 7. **Journey 16 approved** (Jack, 29 Sep: "let's get it into the big
    canvas") — desktop, tablet and phone; copied into the user journeys
    canvas, status Designed.
+8. **The big user-journeys canvas shows desktop only from now on** (Jack,
+   29 Sep; applies to every journey, not just this one): each redesigned
+   screen appears once, at desktop (or at its only size, for phone-only
+   screens), with a link on its strip to its journey's own canvas where the
+   tablet and phone boards live. Frees about 280 files under the canvas's
+   512-file limit. Chosen over splitting the big canvas in two and a mixed
+   rule.

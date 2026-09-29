@@ -28,11 +28,14 @@ and interaction rules apply to every journey).
   canvas as Designed; its own canvas: https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE .
 - The overview counts each screen once: 253 screens — 146 designed, 0 for
   review, 6 built, 14 old app only, 87 not designed yet.
-- **Capacity warning:** a Design canvas holds at most 512 files; the big
-  canvas has 452 after journey 16. Copying in another journey at three sizes
-  will hit the limit. Decide with Jack before the next copy-in (e.g. the big
-  canvas keeps desktop only and links to each journey's own canvas for
-  tablet and phone, or split it into two canvases).
+- **The big canvas is desktop only** (Jack, 29 Sep; journey 16 decision 8):
+  a Design canvas holds at most 512 files, so each redesigned screen appears
+  once — desktop, the one-off large board, or a phone-only screen's only
+  size (`bigSizeOf` in build.mjs) — with a "Tablet and phone ↗" link on its
+  strip to its journey's own canvas (`SAND_CANVAS`). Add the new journey's
+  canvas to `SAND_CANVAS` when copying it in. 257 files after the switch.
+  A publish carries at most 255 files, so a big change goes in two rounds:
+  changed boards with canvas.json first, then removals.
 - **Drawing all three sizes at once:** `till.mjs` defines each screen with
   `def(id, () => …)` and helpers read `CUR` (desktop / tablet / phone) — a
   pattern worth reusing for the next journey rather than drawing each size

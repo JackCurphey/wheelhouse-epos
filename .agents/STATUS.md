@@ -13,9 +13,9 @@ pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11) and End-of-day
 cash-up (journey 16) are approved and in the big canvas; the next journey is
-Jack's choice (ask him first). **The big canvas is near its 512-file limit**
-(452 files after journey 16) — see the handover before copying in another
-journey.
+Jack's choice (ask him first). The big canvas is now **desktop only**, each
+board linking to its journey's own canvas for tablet and phone (257 files of
+the 512 a canvas can hold).
 
 **Journey 16, End-of-day cash-up (29 Sep):** approved at all sizes; 7
 decisions in `docs/decisions/2026-09-29-cash-up-review.md` — one "Close the day"
