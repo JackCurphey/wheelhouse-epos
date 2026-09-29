@@ -248,11 +248,11 @@ journeys.forEach((j, ji) => {
         writeFileSync(root + 'project/' + file, page(`${title} (${STATUS[scr.status].label})`, w, h + STRIP, html, helmet));
         boards[file] = { x, y, w, h: h + STRIP, title: `${STATUS[scr.status].label} · ${title}`, is_interactive: true };
         order.push(file);
-        tally[scr.status]++;
         tally.first ??= file;
         x += w + (v === 'desktop' || v === 'tablet' ? 40 : GAP_X);
         tallest = Math.max(tallest, h + STRIP);
       }
+      tally[scr.status]++; // count each screen once, whatever its sizes (Jack, 29 Sep)
     }
     x += 160; // a wider gap between sections of the same journey
   }
