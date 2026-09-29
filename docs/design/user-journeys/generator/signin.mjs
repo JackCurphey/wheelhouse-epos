@@ -109,15 +109,6 @@ ${p('Wheelhouse picked this for you — nobody else at the shop has it. Learn it
 </div></div></div>`,
 };
 
-// Decision 7: five wrong PINs in a row lock the till for a minute.
-screens['till-locked'] = {
-  desktop: tillFrame(`<div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center">
-${roundIcon('lock', C.warnBg, C.warnInk)}${h1('Too many wrong PINs', 28)}
-<div style="width: 400px">${p('This till is paused for a minute to stop PINs being guessed. Forgotten yours? A manager can clear it from the staff list, and Wheelhouse will give you a new one.')}</div>
-<div role="timer" aria-label="Try again in 0 minutes 48 seconds" style="font-family: ${MONO}; font-size: 40px; color: ${C.ink}">0:48</div>
-</div>`),
-};
-
 // ---------- Customers (decision 5) ----------
 // On the shop's own website, in its theme: Wheelhouse's own "email me a
 // code" screens; WorkOS sends and checks the six-digit code (valid 10
@@ -148,7 +139,6 @@ export const TITLES = {
   'till-setup': 'Set up this till (manager)',
   'till-checkin': 'Till check-in — PIN only',
   'pin-change': 'Your new till PIN — Wheelhouse picks it',
-  'till-locked': 'Till paused after 5 wrong PINs',
   'cust-signin': 'Customer sign-in on the shop’s website — email me a code',
   'cust-code': 'Customer sign-in — enter the code (checks itself on the 6th digit)',
 };
@@ -156,6 +146,6 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-locked', 'pin-change'] },
+  { label: 'Till', screens: ['till-setup', 'till-checkin', 'pin-change'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code'] },
 ];

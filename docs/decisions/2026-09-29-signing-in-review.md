@@ -48,6 +48,8 @@ redesign.
    colleague's PIN whenever a choice clashed. Change PIN shows a new random
    4-digit PIN nobody else has, with "Give me a different one"; nobody can
    probe for others' PINs. (Chosen over 6-digit chosen PINs and going back
-   to name-then-PIN.) Proposed alongside and not objected to: **the till
-   locks for a minute after 5 wrong PINs in a row**, so PINs can't be
-   guessed by trying every number.
+   to name-then-PIN.) A one-minute lock after 5 wrong PINs was proposed
+   alongside — see decision 8.
+8. **No lock after wrong PINs** (Jack, 29 Sep): being checked in as
+   someone else at a till isn't sensitive enough to justify it — at worst a
+   sale is recorded under the wrong name. The "Till paused" board is dropped.
