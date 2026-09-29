@@ -74,27 +74,29 @@ function denomGrid(filled) {
 const totalBox = (value) => `<label style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700">Cash counted</span><span style="font-size: 13px; color: ${C.muted}">Adds up from the boxes — or type the total</span></span><input aria-label="Cash counted, total" value="${value}" style="width: 140px; min-height: 48px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 8px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 22px; color: ${C.ink}"></label>`;
 function stepCount(mode) {
   const total = `£${countTotal.toFixed(2)}`;
+  if (mode === 'exact') return step(3, 'Count the cash', 'done', 'Spot on', `${row('Counted', total)}${row('The till expected', total)}<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: ${C.okBg}; color: ${C.successInk}"><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700">${icon('check', 18)}Spot on</span>${mono('£0.00', 'font-size: 18px')}</div><div style="display: flex; justify-content: space-between; gap: 10px">${button('Count again', { variant: 'ghost' })}${button('Keep this count and go on')}</div>`);
   if (mode === 'blind') return step(3, 'Count the cash', 'todo', 'To do', `${note('Count the drawer and fill in how many of each. The till shows what it expected once you’ve finished.')}${denomGrid(true)}${totalBox(total)}<div style="display: flex; justify-content: flex-end">${button('Done counting — show the difference')}</div>`);
   if (mode === 'shown') return step(3, 'Count the cash', 'todo', 'To do', `${note('Count the drawer and fill in how many of each.')}<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 10px 14px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 15px">The till expects</span>${mono('[£ expected]', 'font-size: 18px')}</div>${denomGrid(true)}${totalBox(total)}<div style="display: flex; justify-content: flex-end">${button('Done counting')}</div>`);
   // result
   return step(3, 'Count the cash', 'done', 'Counted', `${row('Counted', total)}${row('The till expected', '[£ expected]')}${row('Difference', '[£ over or short]', true)}
 <div role="group" aria-label="Reason for a difference" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">If there’s a difference, why? <span style="font-weight: 400; color: ${C.muted}">(optional)</span></span><input aria-label="Reason for the difference" placeholder="e.g. change given wrongly" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>
-<div style="display: flex; justify-content: space-between; gap: 10px">${button('Count again', { variant: 'ghost' })}${button('Keep this count')}</div>`);
+<div style="display: flex; justify-content: space-between; gap: 10px">${button('Count again', { variant: 'ghost' })}${button('Keep this count and go on')}</div>`);
 }
 
 // 4. Paid-outs and banking (decision 4): leave the standard float, bank the rest.
-function stepBanking(open) {
+function stepBanking(open, none = false) {
   if (!open) return step(4, 'Paid-outs and banking', 'todo', 'To do');
+  const paidOuts = none ? `<div style="padding: 10px 0; border-top: 1px solid ${C.border}; font-size: 14px; color: ${C.muted}">No cash taken out today.</div>` : `<div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">[What it was for]</span><span style="font-size: 13px; color: ${C.muted}">[time] · [name]</span></span>${mono('[£ amount]', 'font-size: 15px')}</div>`;
   return step(4, 'Paid-outs and banking', 'todo', 'To do', `
 <div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700; padding-bottom: 6px">Cash taken out today</span>
-<div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">[What it was for]</span><span style="font-size: 13px; color: ${C.muted}">[time] · [name]</span></span>${mono('[£ amount]', 'font-size: 15px')}</div>
+${paidOuts}
 <div style="padding-top: 6px">${button('Add a paid-out', { variant: 'default' })}</div></div>
 <div style="display: flex; flex-direction: column; padding: 6px 16px 10px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}">
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0"><span style="font-size: 16px; font-weight: 700">Leave in the drawer</span>${mono('[£ float]', 'font-size: 20px')}</div>
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">Bank</span>${mono('[£ counted − float]', 'font-size: 20px')}</div>
 </div>
 ${note('The float is the shop’s standard amount, so tomorrow starts the same. Bag the rest for the bank.')}
-<div style="display: flex; justify-content: flex-end">${button('Banking bagged')}</div>`);
+<div style="display: flex; justify-content: flex-end">${button('Banking bagged — next step')}</div>`);
 }
 
 // 5. Card check: the connected card machine (journey 11 decision 6) sends its
@@ -112,7 +114,7 @@ const stepFinish = (open) => step(6, 'End-of-day report', 'todo', open ? 'Ready'
 // The report itself (a pop-up over the page on desktop and tablet).
 function reportDialog() {
   const body = `${row('Sales', '[£ total]', true)}${row('Card', '[£]')}${row('Cash', '[£]')}${row('Gift cards, credit, accounts, other', '[£]')}${row('Refunds', '[£]')}${row('Voids', '[n] · [£]')}${row('Discounts given', '[n] · [£]')}${row('VAT in today’s sales', '[£]')}${row('Cash difference', '[£ over or short]')}${row('Banked', '[£]')}`;
-  if (P()) return `<div role="dialog" aria-modal="true" aria-labelledby="z-title" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: ${C.bg}"><div style="display: flex; align-items: center; gap: 10px; padding: 12px 8px 12px 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><h2 id="z-title" style="margin: 0; font-size: 18px; font-weight: 700; flex-grow: 1">Day closed · Till B1</h2><a href="#" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('close', 20)}</a></div><div data-scroll style="flex-grow: 1; overflow-y: auto; padding: 8px 16px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Email', { variant: 'default' })}${button('Print')}</div></div>`;
+  if (P()) return `<div role="dialog" aria-modal="true" aria-labelledby="z-title" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: ${C.bg}"><div style="display: flex; align-items: center; gap: 10px; padding: 12px 8px 12px 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="z-title" style="margin: 0; font-size: 18px; font-weight: 700">Day closed · Till B1</h2><span style="font-size: 13px; color: ${C.muted}">[today’s date] · closed by Jack Lewis</span></div><a href="#" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('close', 20)}</a></div><div data-scroll style="flex-grow: 1; overflow-y: auto; padding: 8px 16px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Email', { variant: 'default' })}${button('Print')}</div></div>`;
   return `<div role="dialog" aria-modal="true" aria-labelledby="z-title" style="width: 560px; max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden">
 <div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="z-title" style="margin: 0; font-size: 20px; font-weight: 700">Day closed · Till B1</h2><span style="font-size: 13px; color: ${C.muted}">[today’s date] · closed by Jack Lewis · saved to Reports</span></div><a href="#" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
 <div style="padding: 8px 22px 16px">${body}</div>
@@ -125,6 +127,22 @@ function overlay(base, d) {
   return `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${base}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${d}</div></div>`;
 }
 
+// Small pop-ups over the page (desktop, tablet); full screen on a phone.
+function popup(id, title, sub, body, footer) {
+  if (P()) return `<div role="dialog" aria-modal="true" aria-labelledby="${id}" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: ${C.bg}"><div style="display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="${id}" style="margin: 0; font-size: 18px; font-weight: 700">${title}</h2><span style="font-size: 13px; color: ${C.muted}">${sub}</span></div><a href="#" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('close', 20)}</a></div><div data-scroll style="flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footer}</div></div>`;
+  return `<div role="dialog" aria-modal="true" aria-labelledby="${id}" style="width: 520px; max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden"><div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="${id}" style="margin: 0; font-size: 20px; font-weight: 700">${title}</h2><span style="font-size: 13px; color: ${C.muted}">${sub}</span></div><a href="#" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div><div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footer}</div></div>`;
+}
+const pill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
+const paidOutDialog = () => popup('po-title', 'Cash taken out', 'From Till B1’s drawer · the drawer opens when you confirm', `
+${field('Amount', { placeholder: '£0.00' })}
+<div role="group" aria-label="What it was for" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">What it was for</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${pill('[Shop’s reason]', true)}${pill('[Shop’s reason]')}${pill('Other…')}</div></div>
+${field('Note (optional)', { placeholder: 'e.g. a receipt number' })}
+${note('Taken out by Jack Lewis. It comes off the cash the till expects.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Take it out · open the drawer')}`);
+const checkDialog = () => popup('check-title', `Sale ${'B1-[0000]'}`, '[time] · [name] serving · flagged: [unknown product on a sale]', `
+${row('[Line the till didn’t recognise]', '[£ price]')}
+${note('The till sold something Wheelhouse doesn’t know — usually a product added on another till while this one was offline. Pick the product it should be.')}
+<label style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input aria-label="Find the product" placeholder="Find the product" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>`, `${button('Leave for now', { variant: 'ghost' })}${button('Save and mark checked')}`);
+
 // ---------- Screens ----------
 export const screens = {};
 const recipes = [];
@@ -134,6 +152,10 @@ def('eod-attention', () => page(`${stepTills(false)}${stepAttention(true)}${step
 def('eod-count', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('blind')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
 def('eod-count-shown', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('shown')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
 def('eod-count-result', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('result')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-count-exact', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('exact')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-check', () => overlay(page(`${stepTills(false)}${stepAttention(true)}${step(3, 'Count the cash', 'todo', 'To do')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`), checkDialog()));
+def('eod-banking-none', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${stepBanking(true, true)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-paidout', () => overlay(page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${stepBanking(true)}${stepCard('matched')}${stepFinish(false)}`), paidOutDialog()));
 def('eod-banking', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${stepBanking(true)}${stepCard('matched')}${stepFinish(false)}`));
 def('eod-card', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('mismatch')}${stepFinish(false)}`));
 def('eod-finish', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('matched')}${stepFinish(true)}`));
@@ -168,11 +190,15 @@ export const TITLES = {
   'eod-count': 'Count the cash — note by note (blind)',
   'eod-count-shown': 'Count the cash — with the expected amount shown (shop setting)',
   'eod-count-result': 'Count the cash — the difference',
+  'eod-count-exact': 'Count the cash — spot on',
+  'eod-check': 'Checking a flagged sale',
   'eod-banking': 'Paid-outs and banking — leave the float, bank the rest',
+  'eod-banking-none': 'Paid-outs and banking — nothing taken out today',
+  'eod-paidout': 'Add a paid-out',
   'eod-card': 'Card sales don’t match the card machine',
   'eod-finish': 'Ready to close the day',
   'eod-z': 'Day closed — the end-of-day report',
 };
 export const ROWS = [
-  { label: 'Close the day', screens: ['eod-entry', 'eod-waiting', 'eod-attention', 'eod-count', 'eod-count-shown', 'eod-count-result', 'eod-banking', 'eod-card', 'eod-finish', 'eod-z'] },
+  { label: 'Close the day', screens: ['eod-entry', 'eod-waiting', 'eod-attention', 'eod-check', 'eod-count', 'eod-count-shown', 'eod-count-result', 'eod-count-exact', 'eod-banking', 'eod-banking-none', 'eod-paidout', 'eod-card', 'eod-finish', 'eod-z'] },
 ];

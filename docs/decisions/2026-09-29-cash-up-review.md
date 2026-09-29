@@ -32,3 +32,11 @@ from the machine itself rather than being typed in.
    a time the shop sets** (Jack, 29 Sep): one tap at the end of the day,
    nothing extra on the till during trading. The time is a till setting
    (Owner setup, journey 8). Chosen over the till menu and Office › Today.
+6. **Audit fixes adopted** (Jack, 29 Sep; `docs/design/user-journeys/cashup-ui-audit.md`):
+   finishing a step opens the next one by itself (about 6 taps for a clean
+   night); "Check" on a flagged sale opens that sale; "Add a paid-out" opens
+   a small pop-up (amount, what it was for, who); a count that matches
+   exactly shows "Spot on" with no reason box; a night with no paid-outs is
+   drawn; each till closes on its own; a closed day can be reopened by a
+   manager from Reports, with a reason; the phone report shows the date and
+   who closed it.
