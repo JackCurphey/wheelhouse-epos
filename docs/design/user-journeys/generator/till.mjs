@@ -46,12 +46,12 @@ const line = (l) => `<div style="display: flex; flex-direction: column; gap: 8px
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(money(l.price * l.qty), 'font-size: 16px')}</div>
 <div style="display: flex; align-items: center; justify-content: space-between">${stepper(l.qty, l.name)}<span style="font-size: 13px; color: ${C.muted}">${l.qty > 1 ? `${money(l.price)} each` : ''}</span></div>
 </div>`;
-function basket(lines, { customer = null } = {}) {
+function basket(lines, { customer = null, points = false } = {}) {
   const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
   const vat = total / 6; // UK prices include 20% VAT: VAT is one sixth of the price
   return card(`<div style="height: 100%; box-sizing: border-box; padding: 18px; display: flex; flex-direction: column; gap: 12px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 style="margin: 0; font-size: 17px; font-weight: 700">Sale</h2><span style="display: flex; gap: 4px">${button('Park', { variant: 'ghost' })}${button('Clear', { variant: 'ghost' })}</span></div>
-${customer ? `<a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid ${C.border}; border-radius: 8px; text-decoration: none; color: ${C.ink}"><span style="font-size: 14px; font-weight: 600">${esc(customer)}</span></a>` : `<button type="button" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px dashed ${C.input}; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('user', 16)}Add a customer <span style="font-weight: 400; color: ${C.muted}">(optional)</span></button>`}
+${customer ? `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid ${C.border}; border-radius: 8px"><a href="#" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: ${C.ink}">${icon('user', 16)}<span style="font-size: 14px; font-weight: 600">${esc(customer)}</span></a>${points ? `<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">[n] loyalty points</span><span style="font-size: 13px; color: ${C.muted}">Worth [£ amount] off this sale</span></span>${button('Use points', { variant: 'default' })}</div>` : ''}</div>` : `<button type="button" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px dashed ${C.input}; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('user', 16)}Add a customer <span style="font-weight: 400; color: ${C.muted}">(optional)</span></button>`}
 <div style="display: flex; flex-direction: column">${lines.map(line).join('')}</div>
 <div style="flex-grow: 1"></div>
 <a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Add a discount</a>
@@ -149,7 +149,7 @@ screens['till-pay'] = {
   desktop: overTill(dialog('pay-title', `Take payment · ${money(TOTAL)}`, 'Jo Taylor serving · 3 items', `
 ${bigMethod(`Card · ${money(TOTAL)}`, `Sends ${money(TOTAL)} to the card machine`, 'card', true)}
 ${bigMethod('Cash', 'Enter what the customer hands you; the till works out the change', 'cash')}
-<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Split between methods', 'Gift card or credit', 'On account'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)),
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${['Split', 'Gift card or credit', 'On account', 'Deposit'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)),
 };
 // The card machine at work (decision 6): waiting for the card, then
 // approved (straight on to the receipt) or declined. If the machine doesn't
@@ -193,6 +193,37 @@ screens['till-receipt'] = {
 <p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)),
 };
 
+// ---------- Other ways to pay (decision 8) ----------
+// Balances, limits and point values are placeholders — nothing real exists.
+const infoRow = (k, v, strong = false) => `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; ${strong ? 'font-weight: 700' : ''}">${k}</span><span style="font-family: ${MONO}; font-size: ${strong ? 18 : 15}px">${v}</span></div>`;
+screens['till-giftcard'] = {
+  desktop: overTill(dialog('gift-title', 'Gift card or store credit', `${money(TOTAL)} to pay`, `
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input aria-label="Scan or type a gift card number, or find a customer’s credit" placeholder="Scan or type the gift card number — or a customer’s name for their credit" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
+<div style="display: flex; flex-direction: column; padding: 4px 16px 8px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">
+<div style="padding: 10px 0 6px; font-size: 15px; font-weight: 700">Gift card ${mono('•••• [0000]')}</div>
+${infoRow('Balance', '[£ balance]')}${infoRow('Use for this sale', '[£ up to the total]', true)}${infoRow('Left on the card after', '[£ left]')}
+</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">If the card doesn’t cover it all, the rest is taken another way — the same as a split payment. Selling or topping up a gift card is a quick button, like any product.</p>`, `${button('Back', { variant: 'ghost' })}${button('Use gift card')}`, 580)),
+};
+screens['till-account'] = {
+  desktop: overTill(dialog('acct-title', `Put on account · ${money(TOTAL)}`, 'Pay later — the sale goes on the customer’s account', `
+<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('user', 18)}<span style="font-size: 15px; font-weight: 600; flex-grow: 1">Maya Patel</span><a href="#" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Change</a></div>
+<div style="display: flex; flex-direction: column; padding: 4px 16px 8px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">
+${infoRow('Owed now', '[£ owed]')}${infoRow('This sale', money(TOTAL))}${infoRow('Owed after this sale', '[£ owed after]', true)}${infoRow('Account limit', '[£ limit]')}
+</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Only customers with an account can pay this way; the shop sets each one up with a limit.</p>`, `${button('Back', { variant: 'ghost' })}${button(`Put ${money(TOTAL)} on Maya’s account`)}`, 580), [PADS, BRAKES]),
+};
+screens['till-loyalty'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES], { customer: 'Maya Patel', points: true })) };
+const pctPill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 52px; border-radius: 10px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 16px; font-weight: 600">${t}</button>`;
+screens['till-deposit'] = {
+  desktop: overTill(dialog('dep-title', `Take a deposit · sale ${money(TOTAL)}`, 'Part now, the rest later — kept with the customer and the sale', `
+<div role="group" aria-label="How much now" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${pctPill('10%')}${pctPill('25%', true)}${pctPill('50%')}${pctPill('Other')}</div>
+<div style="display: flex; flex-direction: column; padding: 4px 16px 8px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">
+${infoRow('Deposit now', money(TOTAL * 0.25), true)}${infoRow('Left to pay later', money(TOTAL * 0.75))}
+</div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('user', 18)}<span style="font-size: 15px; font-weight: 600; flex-grow: 1">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">needed for a deposit</span></div>`, `${button('Back', { variant: 'ghost' })}${button(`Take ${money(TOTAL * 0.25)} now`)}`, 580)),
+};
+
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
   'till-line': 'Change a line — price, discount with a reason, note, remove',
@@ -206,8 +237,13 @@ export const TITLES = {
   'till-pay-cash': 'Cash — notes to tap, change worked out',
   'till-pay-split': 'Split payment — part paid, the rest by card',
   'till-receipt': 'Paid — receipt choices, closes by itself',
+  'till-giftcard': 'Gift card or store credit',
+  'till-account': 'Put on account — pay later',
+  'till-loyalty': 'Loyalty points — shown with the customer in the basket',
+  'till-deposit': 'Take a deposit — part now, the rest later',
 };
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
+  { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
 ];

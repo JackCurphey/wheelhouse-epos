@@ -54,3 +54,9 @@ full one, with one "Take payment" step that leaves room for the other.
    customer's email or phone is filled in when they're on the sale; doing
    nothing starts the next sale. Chosen over always printing and never
    printing unless asked.
+8. **The till takes all five other ways to pay** (Jack, 29 Sep): gift
+   cards (sell, top up, spend), store credit, customer accounts (pay later),
+   loyalty points (earn and spend), and deposits (part now, the rest
+   later — ties to Workshop day decision 63, payment and collection as one
+   step). Each opens from "Take payment", or from the customer in the
+   basket for points.
