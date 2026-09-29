@@ -98,6 +98,16 @@ const TITLE_OVERRIDE = {
   'idea-s4-open': 'S4 open · choosing a job from the stack',
 };
 const TITLE = (id) => TITLE_OVERRIDE[id] || id.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+// Decision 68: on tablet and phone, hover and right-click become press-and-
+// hold, so those boards are titled for the touch gesture they show.
+const TOUCH_TITLE_OVERRIDE = {
+  'diary-context-menu': 'Diary · press and hold a job',
+  'diary-stack-hover': 'Diary · press and hold a stack to fan it out',
+  'diary-stack-open': 'Diary · tap a stack to choose a job',
+  'diary-hover-summary': 'Diary · keep holding a job for its summary',
+  'new-job-pick': 'New job · tap a free time',
+};
+const TITLE_FOR = (id, size) => (size !== 'desktop' && TOUCH_TITLE_OVERRIDE[id]) || TITLE(id);
 
 const boards = {};
 const order = [];
@@ -136,9 +146,9 @@ for (const rowDef of ROWS) {
       if (!scr[size]) continue; // idea boards (audit-ideas.mjs) are desktop-only
       const file = `${id}-${size}.dc.html`;
       const boardH = BOARD_H_OVERRIDE[file] || h;
-      const html = page(`${TITLE(id)} (${size})`, w, boardH, scr[size]);
+      const html = page(`${TITLE_FOR(id, size)} (${size})`, w, boardH, scr[size]);
       writeFileSync(root + 'project/' + file, html);
-      boards[file] = { x, y: boardY, w, h: boardH, title: `${TITLE(id)} · ${size}`, is_interactive: true };
+      boards[file] = { x, y: boardY, w, h: boardH, title: `${TITLE_FOR(id, size)} · ${size}`, is_interactive: true };
       order.push(file);
       firstFileInRow ??= file;
       x += w + GAP_SIZE;
@@ -188,5 +198,8 @@ const canvas = {
 };
 writeFileSync(root + 'project/canvas.json', JSON.stringify(canvas, null, 1));
 
-const screenCount = Object.keys(screens).length;
-console.log(JSON.stringify({ desktopOnly: DESKTOP_ONLY, screens: screenCount, boards: order.length, expected: screenCount * boardsPerScreen + 1 }));
+// Counted from the rows actually laid out (not every screen defined — the
+// audit idea boards are defined under Sand but only placed with --ideas).
+const placed = ROWS.flatMap((r) => r.screens);
+const expected = placed.reduce((n, id) => n + SIZES.filter(([size]) => screens[id][size]).length, 0) + 1;
+console.log(JSON.stringify({ desktopOnly: DESKTOP_ONLY, theme: THEME, screens: placed.length, boards: order.length, expected }));

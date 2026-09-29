@@ -12,7 +12,7 @@ import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
 // in job-options.mjs. Shared with that file via job-page.mjs so neither file
 // depends on the other's internals (see that module's header comment).
 import {
-  jobPopupContent, jobLeftCol as jpJobLeftCol, fullChecklistDialog, togglePill,
+  jobPopupContent, jobLeftCol as jpJobLeftCol, fullChecklistDialog, togglePill, jobPhoneSections, fullChecklistItemCollapsed,
   CHECKLIST_10, CUSTOMER_NOTE, STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES,
   panel as jpPanel, row as jpRow, h2 as jpH2, mono as jpMono,
 } from './job-page.mjs';
@@ -44,9 +44,7 @@ const table = (cols, rows, { size = 14, pad = '9px 12px' } = {}) => `<table styl
 <thead><tr>${cols.map(([c, a]) => `<th scope="col" style="text-align: ${a || 'left'}; padding: 8px 12px; font-size: 12px; font-weight: 600; color: ${C.muted}; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">${c ? esc(c) : '<span style="position: absolute; width: 1px; height: 1px; overflow: hidden">Action</span>'}</th>`).join('')}</tr></thead>
 <tbody>${rows.map((r) => `<tr>${r.map((cell, i) => `<td style="text-align: ${cols[i][1] || 'left'}; vertical-align: middle; padding: ${pad}; border-bottom: 1px solid ${C.border}">${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 const two = (a, b) => `<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">${a}</span><span style="font-size: 13px; color: ${C.muted}">${b}</span></div>`;
-const rowCard = (left, right = '', extra = '', pad = '10px 12px') => card(`<div style="padding: ${pad}; display: flex; align-items: center; justify-content: space-between; gap: 10px">${left}${right ? `<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0">${right}</div>` : ''}</div>`, `box-shadow: none; ${extra}`);
-const phoneBody = (top, bottom = '', gap = 12) => `<div style="height: 100%; display: flex; flex-direction: column; gap: ${gap}px"><div data-fit style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; gap: ${gap}px; overflow: hidden">${top}</div>${bottom ? `<div style="display: flex; flex-direction: column; gap: 8px">${bottom}</div>` : ''}</div>`;
-const segmented = (items, activeIdx, label) => `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; gap: 6px; flex-wrap: wrap">${items.map((t, i) => `<button type="button" aria-pressed="${i === activeIdx}" style="min-height: 36px; padding: 0 12px; border-radius: 6px; font-family: inherit; font-size: 13px; font-weight: 600; border: 1px solid ${i === activeIdx ? C.accent : C.input}; background: ${i === activeIdx ? C.accent : C.panel}; color: ${i === activeIdx ? '#ffffff' : C.ink}">${esc(t)}</button>`).join('')}</div>`;
+const segmented = (items, activeIdx, label, minH = 36, fontSize = 13) => `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; gap: 6px; flex-wrap: wrap">${items.map((t, i) => `<button type="button" aria-pressed="${i === activeIdx}" style="min-height: ${minH}px; padding: 0 12px; border-radius: 6px; font-family: inherit; font-size: ${fontSize}px; font-weight: 600; border: 1px solid ${i === activeIdx ? C.accent : C.input}; background: ${i === activeIdx ? C.accent : C.panel}; color: ${i === activeIdx ? '#ffffff' : C.ink}">${esc(t)}</button>`).join('')}</div>`;
 
 // ---------- Wheelhouse status colours (brief exception to "ui.mjs tokens only") ----------
 // Sand values are look-4's own `status` object (looks.mjs, decision 48) —
@@ -120,13 +118,13 @@ const navList = (role, active) => roomsFor(role).map(([room, items]) => `<div st
 
 function railItem([key, label, ic], active) {
   const on = key === active;
-  return `<a href="${key}-tablet.dc.html" aria-current="${on ? 'page' : 'false'}" aria-label="${esc(label)}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 44px; flex-shrink: 0; padding: 4px 2px; border-radius: 8px; text-decoration: none; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}">${icon(ic, 19)}<span style="font-size: 10px; font-weight: 600; line-height: 1.1; text-align: center">${esc(label)}</span></a>`;
+  // Decision 68: the tablet's charcoal icon rail — a real label under every
+  // icon at 12px (the labels-≥12px floor), each item a ≥44px touch target;
+  // the amber inset edge is the rail's active marker (the one thick edge the
+  // Soft sand look keeps, as on the desktop sidebar).
+  return `<a href="${key}-tablet.dc.html" aria-current="${on ? 'page' : 'false'}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 46px; flex-shrink: 0; box-sizing: border-box; padding: 4px 3px; border-radius: 8px; text-decoration: none; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}">${icon(ic, 19)}<span style="font-size: 12px; font-weight: ${on ? 700 : 500}; line-height: 1.12; text-align: center">${esc(label)}</span></a>`;
 }
-// A role that sees every room (e.g. a Manager) has more items than a short
-// tablet rail can show at 50px each — 44px is the accessibility floor, so
-// items shrink to that and the list scrolls (shellTablet) rather than
-// overflow the sidebar.
-const railList = (role, active) => roomsFor(role).map(([, items], i) => `<div style="display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; ${i ? 'padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.18)' : ''}">${items.map((n) => railItem(n, active)).join('')}</div>`).join('');
+const railList = (role, active) => roomsFor(role).map(([, items], i) => `<div style="display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; ${i ? 'padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.18)' : ''}">${items.map((n) => railItem(n, active)).join('')}</div>`).join('');
 
 function siteSwitcher() {
   return `<button type="button" aria-label="Switch site" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #ffffff; font-family: inherit; text-align: left">
@@ -157,27 +155,31 @@ ${actions}
 </div>`;
 }
 
+const RAIL_W = 84;
 export function shellTablet(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '' } = {}) {
   return `<div style="width: ${TW}px; height: ${TH}px; display: flex; background: ${C.bg}">
-<nav aria-label="Main" style="width: 72px; flex-shrink: 0; min-height: 0; box-sizing: border-box; padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; background: ${C.accentDark}; color: #ffffff; align-items: stretch">
+<nav aria-label="Main" style="width: ${RAIL_W}px; flex-shrink: 0; min-height: 0; box-sizing: border-box; padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; background: ${C.accentDark}; color: #ffffff; align-items: stretch">
 <div style="display: flex; justify-content: center; padding: 0 0 2px; flex-shrink: 0">${logoSlot('Wheelhouse logo', true)}</div>
-<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px">${railList(role, active)}</div>
-<a href="#" aria-label="Sign out, ${esc(person)}" style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; color: #ffffff"><span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 11px; font-weight: 700">${esc(person.split(' ').map((x) => x[0]).join(''))}</span></a>
+<div style="flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px">${railList(role, active)}</div>
+<a href="#" aria-label="${esc(person)}, ${esc(roleName)} — sign out" style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700">${esc(person.split(' ').map((x) => x[0]).join(''))}</span></a>
 </nav>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 22px; display: flex; align-items: center; gap: 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
-<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 19px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
+<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 20px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
 ${actions}
 </header>
 <main style="flex-grow: 1; box-sizing: border-box; padding: 16px 22px; overflow: hidden; min-height: 0">${content}</main>
 </div>
 </div>`;
 }
-
-export function shellPhone(title, content, { menuOpen = false, role = 'S', active = 'diary', actions = '' } = {}) {
-  const bar = `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 8px; background: ${C.accentDark}; color: #ffffff">
-<button type="button" aria-label="Open menu" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
-<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 17px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
+// Phone (decision 68): a charcoal top bar with the menu button, the page
+// title and an optional action (the diary's + New job), then the page.
+// `overlay` is drawn over the whole phone (bottom sheets, dimmed backdrops);
+// `pad` lets a page with its own full-bleed scrolling area drop main's padding.
+export function shellPhone(title, content, { menuOpen = false, role = 'S', active = 'diary', actions = '', overlay = '', pad = 14, person = 'Jo Taylor', roleName = 'Staff' } = {}) {
+  const bar = `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; background: ${C.accentDark}; color: #ffffff">
+<button type="button" aria-label="Open menu" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
+<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 18px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
 ${actions}
 </header>`;
   const sheet = menuOpen ? `<div style="position: absolute; inset: 0; background: rgba(20,24,22,0.45)"></div>
@@ -186,9 +188,9 @@ ${actions}
 ${siteSwitcher()}
 <div style="display: flex; flex-direction: column; gap: 8px">${navList(role, active)}</div>
 <div style="flex-grow: 1"></div>
-<div style="padding: 10px 8px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; font-size: 14px"><span>Jo Taylor · Staff</span><a href="#" style="color: #ffffff">Sign out</a></div>
+<div style="padding: 10px 8px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; font-size: 14px"><span>${esc(person)} · ${esc(roleName)}</span><a href="#" style="color: #ffffff">Sign out</a></div>
 </nav>` : '';
-  return `<div style="position: relative; width: ${PW}px; height: ${PH}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${bar}<main style="flex-grow: 1; box-sizing: border-box; padding: 14px; overflow: hidden; min-height: 0">${content}</main>${sheet}</div>`;
+  return `<div style="position: relative; width: ${PW}px; height: ${PH}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${bar}<main style="flex-grow: 1; box-sizing: border-box; padding: ${pad}px; overflow: hidden; min-height: 0; display: flex; flex-direction: column">${content}</main>${sheet}${overlay}</div>`;
 }
 
 // ---------- Dialog (requests and jobs open as a centred pop-up over the dimmed diary — decisions 15, 16) ----------
@@ -203,23 +205,30 @@ ${baseShell}
 </div>
 </div>`;
 }
-function dialogHeader(title, closeHref, sub = '', id) {
+function dialogHeader(title, closeHref, sub = '', id, size = 'desktop') {
   return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><h2 id="${id}" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 18px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h2>${sub ? `<span style="font-size: 12px; color: ${C.muted}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${sub}</span>` : ''}</div>
-<a href="${closeHref}" aria-label="Close" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
+<a href="${closeHref}" aria-label="Close" style="width: ${size === 'desktop' ? 40 : 44}px; height: ${size === 'desktop' ? 40 : 44}px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
 </header>`;
 }
 const dialogBody = (inner, pad = 20, gap = 14) => `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: ${pad}px; display: flex; flex-direction: column; gap: ${gap}px">${inner}</div>`;
 const dialogFooter = (inner) => `<div style="flex-shrink: 0; box-sizing: border-box; padding: 14px 20px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 8px; background: ${C.panel}">${inner}</div>`;
 // Phone: the pop-up fills the screen, with a title bar and a back/close control (decision 15, 16; brief item 3).
-function dialogPhone(title, backHref, bodyInner, footerInner = '', sub = '') {
+function dialogPhone(title, backHref, bodyInner, footerInner = '', sub = '', { scroll = false, titleExtra = '', headerAction = '', backLabel = 'Close, back to the diary', bodyPad = 14, bodyGap = 12 } = {}) {
+  // Decision 68: on a phone every pop-up fills the screen with a title bar
+  // and a back/close control. `scroll`: only the pages allowed to scroll on a
+  // phone (the job page, New job) set it — their body is the one scrolling
+  // area (data-scroll marks it for the strict fit check); the footer with the
+  // main action stays pinned below it.
+  const bodyScroll = scroll ? 'overflow-x: hidden; overflow-y: auto;' : 'overflow: hidden;';
   return `<div style="width: ${PW}px; height: ${PH}px; display: flex; flex-direction: column; background: ${C.panel}; overflow: hidden">
-<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid ${C.border}">
-<a href="${backHref}" aria-label="Close, back to the diary" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('back', 22)}</a>
-<div style="display: flex; flex-direction: column; gap: 0; min-width: 0; flex-grow: 1"><h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>${sub ? `<span style="font-size: 11px; color: ${C.muted}">${sub}</span>` : ''}</div>
+<header style="min-height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 6px 8px 6px 4px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid ${C.border}">
+<a href="${backHref}" aria-label="${esc(backLabel)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('back', 22)}</a>
+<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-grow: 1"><div style="display: flex; align-items: center; gap: 8px; min-width: 0"><h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>${titleExtra}</div>${sub ? `<span style="font-size: 12px; color: ${C.muted}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${sub}</span>` : ''}</div>
+${headerAction}
 </header>
-<main style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; gap: 12px">${bodyInner}</main>
-${footerInner ? `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid ${C.border}">${footerInner}</div>` : ''}
+<main${scroll ? ' data-scroll="page"' : ''} style="flex-grow: 1; min-height: 0; ${bodyScroll} box-sizing: border-box; padding: ${bodyPad}px; display: flex; flex-direction: column; gap: ${bodyGap}px">${bodyInner}</main>
+${footerInner ? `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footerInner}</div>` : ''}
 </div>`;
 }
 
@@ -229,6 +238,7 @@ ${footerInner ? `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10
 // pop-up belongs to: { type: 'pending' } for the purple pending block, or
 // { type: 'job', job: 'WH-xxxx' } for an ordinary job block.
 function diaryFrozenContent(size, { highlightJob = null } = {}) {
+  if (size !== 'desktop') return tabletDiaryContent({ highlightJob });
   const days = size === 'desktop' ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4];
   const slotH = size === 'desktop' ? 29 : 30;
   return stack(`${diaryToolbar('Everyone', size, { newJob: defaultNewJobHref(size) })}
@@ -236,6 +246,7 @@ ${row(`${waitingColumn(size, -1)}${weekGrid({ days, size, slotH, mechFilter: 'Ev
 }
 // Same, but for the mechanic's diary (decision 13: filtered to Alex, no Waiting column).
 export function diaryFrozenContentMechanic(size) {
+  if (size !== 'desktop') return tabletDiaryContent({ mechanic: true, newJob: 'new-job-tablet.dc.html' });
   const days = size === 'desktop' ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4];
   const slotH = size === 'desktop' ? 29 : 30;
   return stack(`${mechToolbar(true, size, { newJob: `new-job-${size}.dc.html` })}${row(weekGrid({ days, size, slotH, mechFilter: 'Alex' }), 16, 'align-items: flex-start')}`, 12);
@@ -245,7 +256,7 @@ function requestDialog(size, w, h, { id, title, sub, body, footer, highlightJob 
   const base = size === 'desktop'
     ? shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob }))
     : shellTablet('diary', 'Workshop diary', diaryFrozenContent('tablet', { highlightJob }));
-  return dialogOverlay(base, w, h, `${dialogHeader(title, `diary-${size}.dc.html`, sub, id)}${dialogBody(body(size))}${footer ? dialogFooter(footer(size)) : ''}`, { pad: 40, maxWidth: DIALOG_W, labelledby: id });
+  return dialogOverlay(base, w, h, `${dialogHeader(title, `diary-${size}.dc.html`, sub, id, size)}${dialogBody(body(size))}${footer ? dialogFooter(footer(size)) : ''}`, { pad: 40, maxWidth: DIALOG_W, labelledby: id });
 }
 
 // ---------- Bike tag barcode (real-looking Code 128 style bars) ----------
@@ -264,7 +275,6 @@ function barcode128(value, w = 220, h = 46) {
 // share (27 Sep round, item 24): Maya Patel's email is the one already used
 // in newJobBody's custResult ("maya@example.test"); nothing here is invented.
 const JOB_CUSTOMER = { name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.test', bike: 'Trek Domane AL 3 · green · black mudguards' };
-const JOB_CUSTOMER_LABEL = 'Maya Patel · Trek Domane AL 3';
 // Service options for new-job-desktop's service select (item 23): durations
 // match what's already used across the example week's JOBS below, so the
 // "60 min" the warning quotes is the real duration of the first (default) option.
@@ -325,7 +335,6 @@ const QUICK_NOTES = [
   { who: 'Jo Taylor', when: '09:05', text: 'Bike booked in, tag printed.' },
   { who: 'Alex Morgan', when: '12:10', text: CHECKLIST.find((c) => c.t === 'Brakes bled & adjusted').note },
 ];
-const linesTableRows = () => LINE_ORDER.map((i) => { const [w, s, a] = LINES[i]; return [two(w, s), '1', mono(a), badge(...DECISIONS[i])]; });
 
 // Mon 14 – Sun 20 Sep 2026; today is Thu 17 Sep.
 const DAYS = [['Mon', 14], ['Tue', 15], ['Wed', 16], ['Thu', 17], ['Fri', 18], ['Sat', 19], ['Sun', 20]];
@@ -446,8 +455,7 @@ const PENDING_DIARY = { day: 4, start: 10 * 60, dur: 45, customer: 'Sam Reed', b
 // Oliver Chen's change request: shown at its current time (WH-1052, Mon 10:00,
 // amber) plus a dashed "requested" outline at the proposed new time (14:00).
 // Item 2: the outline reads "Brompton C Line · Requested 14:00" — bike, not
-// the customer's name (person stays for the aria-label and the phone list,
-// which isn't redrawn this round — decision 25).
+// the customer's name (person stays for the aria-label).
 const REQUEST_OUTLINE = { day: 0, start: 14 * 60, dur: 60, label: 'Requested 14:00', person: 'Oliver Chen', bike: 'Brompton C Line' };
 // Waiting for you: one of each kind (stage2's requests and REQ example customers).
 const WAITING = [
@@ -462,6 +470,7 @@ const REQ_LINK = { 'New booking request': 'request-new', 'Change request': 'requ
 // shows an Open button; a single click's link target is the "selected" state
 // (waiting-open, same size) — the Open button is what goes to the request itself.
 function waitingCard(w, size, selected = false) {
+  if (size !== 'desktop') return touchWaitingCard(w, size, selected);
   const [bg, ink, label] = ST[w.tone];
   const inner = `<span style="display: inline-flex; align-self: flex-start; padding: 2px 8px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 11px; font-weight: 700">${esc(label)}</span>
 <span style="font-size: 13px; font-weight: 700">${esc(w.customer)}</span>
@@ -483,10 +492,9 @@ function waitingColumn(size, selectedIdx = -1, width = 224, hint = false) {
   return `<div style="display: flex; flex-direction: column; gap: 8px; width: ${width}px; flex-shrink: 0">
 <h2 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 14px; font-weight: 700">Waiting for you (${WAITING.length})</h2>
 ${WAITING.map((w, i) => waitingCard(w, size, i === selectedIdx)).join('')}
-${hint ? note('Double-click a card to open it.') : ''}
+${hint ? note(size === 'desktop' ? 'Double-click a card to open it.' : 'Tap the card again to open it.') : ''}
 </div>`;
 }
-const waitingButton = (size) => button(`Waiting (${WAITING.length})`, { variant: 'default', href: `waiting-open-${size}.dc.html`, iconName: 'inbox' });
 
 // ---------- The diary grid (week view: desktop 7 days, tablet 5 days) ----------
 const GRID_START = 9 * 60, GRID_SLOTS = 18; // 09:00–18:00, 30-minute slots
@@ -547,6 +555,26 @@ function laneRect(lane, total) {
 // it. With no transition declared at all outside the reduced-motion media
 // query, a reduced-motion user gets the same end state instantly.
 let hoverSeq = 0;
+// Decision 68 (29 Sep): tablet and phone get their own counter, so redrawing
+// them never renumbers a desktop board's class names. Before this round the
+// (then stale) tablet week grids shared hoverSeq, interleaved between the
+// desktop boards — 7 numbers per Everyone week grid, 1 per Alex-only grid —
+// so the desktop numbering this canvas has always shipped includes those
+// gaps. keepDesktopSeq() below replays exactly those gaps at the same points
+// (straight after each screen whose old tablet board consumed them), which is
+// what keeps every desktop board byte-identical to the pre-redraw build.
+let devSeq = 0;
+const nextSeq = (size) => (size === 'desktop' ? hoverSeq++ : devSeq++);
+const LEGACY_TABLET_SEQ = {
+  diary: 7, 'diary-mechanic': 1, 'waiting-open': 7, 'change-selected': 7,
+  'request-new': 7, 'request-decline': 7, 'request-change': 7, 'request-cancel': 7, 'new-job': 7,
+  'job-overview': 7, 'job-book-in': 7, 'job-quote': 7, 'job-mechanic': 1, 'job-waiting-parts': 7, 'job-finished': 7, 'job-collection': 7,
+};
+const LEGACY_TABLET_CONNECTOR_SEQ = { 'change-selected': 1 };
+function keepDesktopSeq(id) {
+  hoverSeq += LEGACY_TABLET_SEQ[id] || 0;
+  requestConnectorSeq += LEGACY_TABLET_CONNECTOR_SEQ[id] || 0;
+}
 // diary-hover-summary (decision 65) needs WH-1042's quick-look card rendered
 // already open, without relying on CSS :hover, for one static board — set
 // just before building that one frozen diary and cleared right after, so
@@ -575,6 +603,7 @@ function laneHoverCSS(cls) {
 // corner mark instead; a wide Day-view block keeps the word written out in
 // full, as before, since it has the room.
 function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null) {
+  if (size !== 'desktop') return touchJobBlock(j, size, slotH, { highlighted, lightMarked, faded, narrow, rect });
   const [bg, ink] = ST[j.key];
   const blockLabel = BLOCK_LABEL[j.key];
   const [customer, bike] = customerBikeOf(j);
@@ -614,13 +643,13 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // narrow enough to truncate the bike name/job title — acceptable, since
   // hovering it (laneHoverCSS below) expands it to a readable width.
   const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
-  const hoverCls = rect ? `wh-lane-${size}-${hoverSeq++}` : '';
+  const hoverCls = rect ? `wh-lane-${size}-${nextSeq(size)}` : '';
   // Decision 65: only WH-1042 carries a hover summary — it's the one example
   // job in this file with notes, line items and cost data (QUICK_NOTES/
   // LINES); the other example jobs don't have that data, so nothing is
   // invented for them. Week view only (narrow) — see jobHoverSummaryMarkup.
   const isSummaryJob = narrow && j.job === 'WH-1042';
-  const summaryCls = isSummaryJob ? `wh-hovsum-${size}-${hoverSeq++}` : '';
+  const summaryCls = isSummaryJob ? `wh-hovsum-${size}-${nextSeq(size)}` : '';
   const classAttr = [hoverCls, summaryCls].filter(Boolean).join(' ');
   return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
 ${showSymbol ? statusDot(j.key) : ''}
@@ -706,6 +735,7 @@ ${LINE_ORDER.map((i) => { const [w, , a] = LINES[i]; const declined = DECISIONS[
 // Only ever drawn in the (narrow) Week view, so it always carries the corner
 // dot too (H1/S1) rather than the "Pending" word taking a whole line.
 function pendingBlock(size, slotH, highlighted = false) {
+  if (size !== 'desktop') return touchPendingBlock(size, slotH, highlighted);
   const j = PENDING_DIARY;
   const [bg, ink] = ST.pending;
   const top = ((j.start - GRID_START) / 30) * slotH + 2;
@@ -723,6 +753,7 @@ ${SHOW_STATUS_SYMBOLS ? statusDot('pending') : ''}
 // A dashed outline showing where a change request asked to move to (Oliver
 // Chen's Brompton, Mon 10:00 → 14:00); the job itself stays drawn at 10:00.
 function requestedOutlineBlock(size, slotH, highlighted = false) {
+  if (size !== 'desktop') return touchOutlineBlock(size, slotH, highlighted);
   const j = REQUEST_OUTLINE;
   const top = ((j.start - GRID_START) / 30) * slotH + 2;
   const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
@@ -766,7 +797,7 @@ function requestConnector(size, slotH, highlighted = false) {
   const h = toMid - fromMid;
   if (h <= 8) return '';
   const stroke = ST.hold[1];
-  const seq = requestConnectorSeq++;
+  const seq = size === "desktop" ? requestConnectorSeq++ : devSeq++;
   const lineCls = `req-arrow-line-${size}-${seq}`;
   const headCls = `req-arrow-head-${size}-${seq}`;
   const drawKf = `reqArrowDraw${size}${seq}`;
@@ -829,6 +860,7 @@ ${cluster.map((j) => `<span style="font-size: 10px; font-weight: 600; color: ${C
 // relying on CSS :hover — used by the diary-stack-hover static board (task
 // item 3) so Jack can see the expanded state without hovering.
 function stackedJobsBlock(cluster, size, slotH, faded = false, rect = null, forceExpand = false) {
+  if (size !== 'desktop') return touchStackBlock(cluster, size, slotH, { faded, rect, forceExpand });
   const start = Math.min(...cluster.map((j) => j.start));
   const end = Math.max(...cluster.map((j) => j.start + j.dur));
   const top = ((start - GRID_START) / 30) * slotH + 2;
@@ -853,7 +885,7 @@ function stackedJobsBlock(cluster, size, slotH, faded = false, rect = null, forc
   // downwards) rather than fanning out to the right. The day column itself
   // has no overflow:hidden — only the outer grid does — so the fan can still
   // spill sideways into a neighbouring day's column without being clipped.
-  const seq = hoverSeq++;
+  const seq = nextSeq(size);
   const wrapCls = `wh-stack-${size}-${seq}`;
   const fanCls = `wh-fan-${size}-${seq}`;
   const fanTile = (j) => {
@@ -916,6 +948,7 @@ ${fan}
 // new-job-pick, over the free slot the pointer would click; solid (not
 // dashed) so it reads as a hover target rather than an always-on hint.
 function pickHintSlot(size, slotH, top, label, href) {
+  if (size !== 'desktop') return `<a href="${href}" aria-label="Choose ${esc(label)} for the new job" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${slotH - 4}px; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 0 4px; border-radius: 6px; border: 1.5px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: ${size === 'phone' ? 14 : 12}px; font-weight: 700; box-shadow: 0 0 0 4px rgba(${C.highlightRgb},0.4)"><span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(label)}</span></a>`;
   return `<a href="${href}" aria-label="Choose ${esc(label)} for the new job" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${slotH - 4}px; text-decoration: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 5px; border: 1.5px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 11px; font-weight: 700; box-shadow: 0 0 0 4px rgba(${C.highlightRgb},0.4)">${esc(label)}</a>`;
 }
 // The day-view grid (brief item 18 / decision 18): one column per mechanic,
@@ -943,6 +976,7 @@ function renderCluster(cluster, size, slotH, { highlightJob = null, faded = fals
 }
 const DAY_MECHS = [['Alex', 'Alex Morgan'], ['Jo', 'Jo Taylor']];
 function dayMechGrid({ dayIdx, size, slotH = 29, highlightJob = null }) {
+  const T = size !== 'desktop';
   const gridH = GRID_SLOTS * slotH;
   const hourLabels = Array.from({ length: 9 }, (_, i) => `${String(9 + i).padStart(2, '0')}:00`);
   const cols = `44px repeat(${DAY_MECHS.length}, minmax(0, 1fr))`;
@@ -961,13 +995,14 @@ function dayMechGrid({ dayIdx, size, slotH = 29, highlightJob = null }) {
   return `<div role="grid" aria-label="Workshop diary, Thursday 17 September 2026, by mechanic" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: ${cols}; grid-template-rows: auto ${gridH}px; border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden; background: ${C.panel}">
 <div style="grid-column: 1; grid-row: 1; border-bottom: 1px solid ${C.border}; background: ${C.mutedBg}"></div>
 ${DAY_MECHS.map(([m, name], i) => header(m, name, i)).join('')}
-<div style="grid-column: 1; grid-row: 2; position: relative; height: ${gridH}px; background: ${C.mutedBg}">${hourLabels.map((t, i) => `<span style="position: absolute; top: ${i * 2 * slotH - 6}px; right: 4px; font-family: ${MONO}; font-size: 10px; color: ${C.muted}">${t}</span>`).join('')}</div>
+<div style="grid-column: 1; grid-row: 2; position: relative; height: ${gridH}px; background: ${C.mutedBg}">${hourLabels.map((t, i) => `<span style="position: absolute; top: ${i * 2 * slotH - (T ? 7 : 6)}px; right: 4px; font-family: ${MONO}; font-size: ${T ? 12 : 10}px; color: ${C.muted}">${t}</span>`).join('')}</div>
 ${DAY_MECHS.map(([m], i) => col(m, i)).join('')}
 </div>`;
 }
 // Freezes the day view behind a pop-up opened from it (new-job-day) — the
 // day-view equivalent of diaryFrozenContent.
 function diaryDayFrozenContent(size, { highlightJob = null } = {}) {
+  if (size !== 'desktop') return tabletDiaryContent({ activeView: 'Day', highlightJob, newJob: 'new-job-day-tablet.dc.html' });
   const slotH = size === 'desktop' ? 29 : 30;
   return stack(`${diaryToolbar('Everyone', size, { activeView: 'Day', newJob: `new-job-day-${size}.dc.html` })}
 ${row(`${waitingColumn(size, -1)}${dayMechGrid({ dayIdx: TODAY, size, slotH, highlightJob })}`, 16, 'align-items: flex-start')}`, 12);
@@ -979,18 +1014,21 @@ ${row(`${waitingColumn(size, -1)}${dayMechGrid({ dayIdx: TODAY, size, slotH, hig
 // after boards with the real grid, not a re-drawn approximation of it.
 // forceExpandStack: { day, start } — pre-expands one stacked-card control
 // without relying on CSS :hover (diary-stack-hover, task item 3).
-export function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot = null, highlightJob = null, pickMode = false, overlapStyle = 'stacked', forceExpandStack = null }) {
+export function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', selectSlot = null, highlightJob = null, pickMode = false, overlapStyle = 'stacked', forceExpandStack = null, overlayFor = null }) {
+  // Decision 68: T = a touch board (tablet). Labels step up to the 12px floor;
+  // desktop output is unchanged (every T ternary resolves to the old literal).
+  const T = size !== 'desktop';
   const gridH = GRID_SLOTS * slotH;
   const hourLabels = Array.from({ length: 9 }, (_, i) => `${String(9 + i).padStart(2, '0')}:00`);
   const cols = `44px repeat(${days.length}, minmax(0, 1fr))`;
   const dayHeader = (d, i) => {
     const [name, date] = DAYS[d]; const isToday = d === TODAY;
     return `<div style="grid-column: ${i + 2}; grid-row: 1; box-sizing: border-box; padding: 6px 8px; border-bottom: 1px solid ${C.border}; ${i ? `border-left: 1px solid ${C.border};` : ''} background: ${isToday ? C.mutedBg : C.panel}; display: flex; flex-direction: column; align-items: center">
-<span style="font-size: 11px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px">${name}</span>
+<span style="font-size: ${T ? 12 : 11}px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px">${name}</span>
 <span style="font-size: 14px; font-weight: 700; color: ${isToday ? C.accentDark : C.ink}">${date}${isToday ? ' · Today' : ''}</span>
 </div>`;
   };
-  const unschedRow = `<div style="grid-column: 2 / span ${days.length}; grid-row: 2; box-sizing: border-box; padding: 4px 8px; border-bottom: 1px solid ${C.border}; display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; align-items: center; overflow: hidden">${UNSCHEDULED.map((u) => `<a href="job-overview-${size}.dc.html" style="text-decoration: none; display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: ${ST.scheduled[0]}; color: ${ST.scheduled[1]}; font-size: 11px; font-weight: 700; white-space: nowrap">${esc(u.job)} · ${esc(u.title)}</a>`).join('')}</div>`;
+  const unschedRow = `<div style="grid-column: 2 / span ${days.length}; grid-row: 2; box-sizing: border-box; padding: 4px 8px; border-bottom: 1px solid ${C.border}; display: flex; flex-wrap: wrap; gap: 5px; min-height: 26px; align-items: center; overflow: hidden">${UNSCHEDULED.map((u) => `<a href="job-overview-${size}.dc.html" style="text-decoration: none; display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: ${ST.scheduled[0]}; color: ${ST.scheduled[1]}; font-size: ${T ? 12 : 11}px; font-weight: 700; white-space: nowrap${T ? '; min-height: 24px; box-sizing: border-box; border: 1px solid ' + ST.scheduled[1] : ''}">${esc(u.job)} · ${esc(u.title)}</a>`).join('')}</div>`;
   const dayColumn = (d, i) => {
     const items = JOBS.filter((j) => j.day === d && (mechFilter === 'Everyone' || j.mech === mechFilter));
     // Pick mode (new-job-pick, item 2): the pointer's slot shows as a solid
@@ -1008,14 +1046,14 @@ export function weekGrid({ days, size, slotH = 29, mechFilter = 'Everyone', sele
     const outline = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestedOutlineBlock(size, slotH, highlightJob?.type === 'outline') : '';
     const connector = mechFilter === 'Everyone' && d === REQUEST_OUTLINE.day ? requestConnector(size, slotH, highlightJob?.type === 'outline') : '';
     const tint = pickMode ? `linear-gradient(rgba(${C.highlightRgb},0.08), rgba(${C.highlightRgb},0.08)), ` : '';
-    return `<div style="grid-column: ${i + 2}; grid-row: 3; position: relative; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} ${pickMode ? 'cursor: pointer;' : ''} background: ${tint}repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)">${blocks}${pickHint}${pending}${outline}${connector}</div>`;
+    return `<div style="grid-column: ${i + 2}; grid-row: 3; position: relative; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} ${pickMode ? 'cursor: pointer;' : ''} background: ${tint}repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)">${blocks}${pickHint}${pending}${outline}${connector}${overlayFor && overlayFor.day === d ? overlayFor.html : ''}</div>`;
   };
   return `<div role="grid" aria-label="Workshop diary, week of Monday 14 September 2026" style="flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: ${cols}; grid-template-rows: auto auto ${gridH}px; border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden; background: ${C.panel}">
 <div style="grid-column: 1; grid-row: 1; border-bottom: 1px solid ${C.border}; background: ${C.mutedBg}"></div>
 ${days.map((d, i) => dayHeader(d, i)).join('')}
-<div style="grid-column: 1; grid-row: 2; border-bottom: 1px solid ${C.border}; background: ${C.mutedBg}; font-size: 9px; font-weight: 700; color: ${C.muted}; text-align: center; padding-top: 3px; line-height: 1.1">No<br>time</div>
+<div style="grid-column: 1; grid-row: 2; border-bottom: 1px solid ${C.border}; background: ${C.mutedBg}; font-size: ${T ? 12 : 9}px; font-weight: 700; color: ${C.muted}; text-align: center; padding-top: 3px; line-height: 1.1">No<br>time</div>
 ${unschedRow}
-<div style="grid-column: 1; grid-row: 3; position: relative; height: ${gridH}px; background: ${C.mutedBg}">${hourLabels.map((t, i) => `<span style="position: absolute; top: ${i * 2 * slotH - 6}px; right: 4px; font-family: ${MONO}; font-size: 10px; color: ${C.muted}">${t}</span>`).join('')}</div>
+<div style="grid-column: 1; grid-row: 3; position: relative; height: ${gridH}px; background: ${C.mutedBg}">${hourLabels.map((t, i) => `<span style="position: absolute; top: ${i * 2 * slotH - (T ? 7 : 6)}px; right: 4px; font-family: ${MONO}; font-size: ${T ? 12 : 10}px; color: ${C.muted}">${t}</span>`).join('')}</div>
 ${days.map((d, i) => dayColumn(d, i)).join('')}
 </div>`;
 }
@@ -1028,7 +1066,7 @@ function viewSwitch(active, size) {
   const items = [['Week', `diary-${size}.dc.html`], ['Day', `diary-day-${size}.dc.html`]];
   return `<div role="tablist" aria-label="Diary view" style="display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; box-sizing: border-box; min-height: 44px; padding: 3px; border-radius: 10px; background: ${C.mutedBg}">${items.map(([t, href]) => {
     const on = t === active;
-    return `<a href="${href}" role="tab" aria-selected="${on}" style="min-height: 38px; padding: 0 16px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; background: ${on ? C.panel : 'transparent'}; color: ${C.ink}; ${on ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.14);' : ''}">${t}</a>`;
+    return `<a href="${href}" role="tab" aria-selected="${on}" style="min-height: ${size === 'desktop' ? 38 : 44}px; padding: 0 16px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; text-decoration: none; background: ${on ? C.panel : 'transparent'}; color: ${C.ink}; ${on ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.14);' : ''}">${t}</a>`;
   }).join('')}</div>`;
 }
 // Decision 60: Previous/Next as small icon-only arrow buttons either side of
@@ -1043,14 +1081,14 @@ const dateArrow = (dir, label) => `<button type="button" aria-label="${esc(label
 // day grid below — shows the one day). Both labels are drawn once here so
 // every toolbar (diary, diary-day, the diary frozen behind a pop-up, the
 // mechanic diary, pick mode) shows the same text.
-function dateNav(activeView) {
+function dateNav(activeView, size = 'desktop') {
   const isDay = activeView === 'Day';
   const label = isDay ? 'Thursday 17 September' : '14–20 September 2026';
   const unit = isDay ? 'day' : 'week';
   return `<div style="display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0">${dateArrow('prev', `Previous ${unit}`)}
 <span style="min-width: ${isDay ? 146 : 164}px; text-align: center; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${esc(label)}</span>
 ${dateArrow('next', `Next ${unit}`)}
-<button type="button" style="min-height: 36px; padding: 0 10px; margin-left: 2px; border-radius: 6px; font-family: inherit; font-size: 13px; font-weight: 600; border: 1px solid transparent; background: transparent; color: ${C.ink}">Today</button></div>`;
+<button type="button" style="min-height: ${size === 'desktop' ? 36 : 44}px; padding: 0 10px; margin-left: 2px; border-radius: 6px; font-family: inherit; font-size: ${size === 'desktop' ? 13 : 14}px; font-weight: 600; border: 1px solid transparent; background: transparent; color: ${C.ink}">Today</button></div>`;
 }
 // Decision 60: the mechanic filter drawn as "people chips" — a small round
 // initial badge (or a group icon for "Everyone") plus the name, lightly
@@ -1059,17 +1097,17 @@ ${dateArrow('next', `Next ${unit}`)}
 // arrows. Reused for the mechanic diary's Me/Everyone switch (decision 13).
 const CHIP_TEXT = { Everyone: 'Everyone', Alex: 'Alex', Jo: 'Jo', Me: 'Me' };
 const CHIP_INITIAL = { Everyone: 'group', Alex: 'A', Jo: 'J', Me: 'M' };
-function personChip(key, active) {
+function personChip(key, active, size = 'desktop') {
   const initial = CHIP_INITIAL[key] || key[0];
   const badgeInk = active ? C.accentSoftInk : C.muted;
   const badgeBg = active ? '#ffffff' : C.mutedBg;
   const badge = initial === 'group'
     ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; flex-shrink: 0">${icon('customers', 13)}</span>`
-    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; font-size: 11px; font-weight: 700; flex-shrink: 0">${esc(initial)}</span>`;
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; font-size: ${size === 'desktop' ? 11 : 12}px; font-weight: 700; flex-shrink: 0">${esc(initial)}</span>`;
   return `<button type="button" aria-pressed="${active}" style="display: inline-flex; align-items: center; gap: 7px; min-height: 44px; box-sizing: border-box; padding: 5px 14px 5px 5px; border-radius: 999px; font-family: inherit; font-size: 13px; font-weight: 600; border: 1px solid ${active ? 'transparent' : C.input}; background: ${active ? C.accentSoft : C.panel}; color: ${active ? C.accentSoftInk : C.ink}">${badge}${esc(CHIP_TEXT[key] || key)}</button>`;
 }
-function mechChips(selectedKey, keys, label) {
-  return `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0">${keys.map((k) => personChip(k, k === selectedKey)).join('')}</div>`;
+function mechChips(selectedKey, keys, label, size = 'desktop') {
+  return `<div role="group" aria-label="${esc(label)}" style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0">${keys.map((k) => personChip(k, k === selectedKey, size)).join('')}</div>`;
 }
 // Decision 66: a plain radio pill for a short/grouped choice on a form (work,
 // starting status, storage hook) — same shape as the toolbar's person chips
@@ -1096,19 +1134,19 @@ function pillRadioGroup(labelText, options, selectedIdx, groupId, pillFn = (o, a
 // select — the shop's mechanics plus the shared queue, styled like the
 // toolbar's person chips (initial badge + name, tinted when selected).
 const MECH_PILL_OPTIONS = [['Alex', 'A'], ['Jo', 'J'], ['Shared queue', 'group']];
-function mechanicPill(key, initial, active) {
+function mechanicPill(key, initial, active, size = 'desktop') {
   const badgeInk = active ? C.accentSoftInk : C.muted;
   const badgeBg = active ? '#ffffff' : C.mutedBg;
   const badge = initial === 'group'
     ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; flex-shrink: 0">${icon('customers', 13)}</span>`
-    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; font-size: 11px; font-weight: 700; flex-shrink: 0">${esc(initial)}</span>`;
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: ${badgeBg}; color: ${badgeInk}; font-size: ${size === 'desktop' ? 11 : 12}px; font-weight: 700; flex-shrink: 0">${esc(initial)}</span>`;
   return `<span role="radio" aria-checked="${active}" tabindex="${active ? '0' : '-1'}" style="display: inline-flex; align-items: center; gap: 7px; min-height: 44px; box-sizing: border-box; padding: 5px 14px 5px 5px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid ${active ? 'transparent' : C.input}; background: ${active ? C.accentSoft : C.panel}; color: ${active ? C.accentSoftInk : C.ink}">${badge}${esc(key)}</span>`;
 }
 function mechanicPillGroup(size, selectedKey = 'Shared queue') {
   const groupId = 'req-new-mech-' + size;
   return `<div style="display: flex; flex-direction: column; gap: 6px">
 <span id="${groupId}-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span>
-<div role="radiogroup" aria-labelledby="${groupId}-label" style="display: flex; flex-wrap: wrap; gap: 6px">${MECH_PILL_OPTIONS.map(([key, initial]) => mechanicPill(key, initial, key === selectedKey)).join('')}</div>
+<div role="radiogroup" aria-labelledby="${groupId}-label" style="display: flex; flex-wrap: wrap; gap: 6px">${MECH_PILL_OPTIONS.map(([key, initial]) => mechanicPill(key, initial, key === selectedKey, size)).join('')}</div>
 </div>`;
 }
 // "New job" is a button in the diary toolbar, not a slot hint (decision 22).
@@ -1121,9 +1159,9 @@ function newJobButtonActive() {
   return `<button type="button" aria-pressed="true" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 11px 16px; border-radius: 6px; font-weight: 600; font-family: inherit; font-size: 15px; border: 1px solid ${C.accent}; background: ${C.accent}; color: #ffffff">${icon('check', 16)}Choose a time</button>`;
 }
 // Default New job target for a frozen diary background (behind a request or
-// job pop-up): the pick flow exists on desktop only (new-job-pick); tablet
-// and phone go straight to the New job form this round (brief item 25).
-const defaultNewJobHref = (size) => (size === 'desktop' ? 'new-job-pick-desktop.dc.html' : `new-job-${size}.dc.html`);
+// job pop-up): the pick step (new-job-pick) at every size — decision 68
+// gives tablet and phone the same "choose a time" step as desktop.
+const defaultNewJobHref = (size) => `new-job-pick-${size}.dc.html`;
 // Decision 60: each control gets its own shape, grouped left to right —
 // view (segmented switch) · dates (arrows + label + Today) · people (chips)
 // and New job, alone with a clear gap before it. Two flex-grow spacers put
@@ -1132,79 +1170,9 @@ const defaultNewJobHref = (size) => (size === 'desktop' ? 'new-job-pick-desktop.
 // desktop board's width comfortably holds all four groups on one line.
 function diaryToolbar(mechFilter, size, { mechOptions = ['Everyone', 'Alex', 'Jo'], activeView = 'Week', newJob = null } = {}) {
   const nj = newJob === 'active' ? newJobButtonActive() : newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch(activeView, size)}<div style="flex-grow: 1"></div>${dateNav(activeView)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic')}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
+  return row(`${viewSwitch(activeView, size)}<div style="flex-grow: 1"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
 
-// Phone: one day at a time, jobs listed down a time line.
-function dayStrip(selectedIdx) {
-  return `<div role="tablist" aria-label="Choose a day" style="display: flex; gap: 3px">${DAYS.map(([name, date], i) => {
-    const on = i === selectedIdx, isToday = i === TODAY;
-    return `<a href="#" role="tab" aria-selected="${on}" style="flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 44px; justify-content: center; border-radius: 8px; text-decoration: none; background: ${on ? C.accent : 'transparent'}; color: ${on ? '#ffffff' : C.ink}">
-<span style="font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: ${on ? 0.9 : 0.7}">${name}</span><span style="font-size: 13px; font-weight: 700">${date}</span>
-${isToday ? `<span style="position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 999px; background: ${on ? '#ffffff' : C.accent}"></span>` : ''}
-</a>`;
-  }).join('')}</div>`;
-}
-function dayTimelineRow(j, size) {
-  const [bg, ink] = ST[j.key];
-  const label = j.key === 'pending' ? 'Pending' : BLOCK_LABEL[j.key];
-  // The pending item (PENDING_DIARY, spread with key: 'pending' — see
-  // dayTimeline below) carries its own customer/bike fields rather than a
-  // parseable title; there's no job number yet, so the job-title stands in
-  // for it below (phone isn't redrawn this round — decision 25 — this is
-  // just keeping the existing customer-led list working with the 27 Sep
-  // round 2 data shape).
-  const [customer, bike] = j.key === 'pending' ? [j.customer, j.bike] : customerBikeOf(j);
-  const jobRef = j.key === 'pending' ? j.jobTitle : j.job;
-  const href = `${j.link || 'job-overview'}-${size}.dc.html`;
-  const strike = j.key === 'cancelled' ? 'text-decoration: line-through;' : '';
-  const ring = j._mark === 'accent' ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55);` : j._mark === 'light' ? `box-shadow: 0 0 0 2px ${C.muted};` : '';
-  // Derived from j.start rather than parsed out of j.detail — some jobs'
-  // detail text doesn't lead with a time range (e.g. the change request's
-  // "Change requested · 10:00 → 14:00"), which broke the time column.
-  const startTime = `${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`;
-  return `<a href="${href}" aria-label="${esc(customer)}, ${esc(jobRef)}, ${esc(label)}, ${esc(j.detail)}" style="display: flex; gap: 10px; text-decoration: none; color: inherit">
-<div style="width: 52px; flex-shrink: 0; font-family: ${MONO}; font-size: 12px; color: ${C.muted}; padding-top: 10px">${esc(startTime)}</div>
-<div style="flex-grow: 1; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; background: ${bg}; border: 1.75px solid ${ink}; ${ring}">
-<div style="font-size: 13px; font-weight: 700; color: ${C.ink}; ${strike}">${esc(customer)}${bike ? ` · ${esc(bike)}` : ''}</div>
-<div style="font-size: 11px; font-weight: 700; color: ${ink}">${esc(jobRef)} · ${esc(label)} · ${esc(j.detail)}</div>
-</div></a>`;
-}
-function dayTimeline(dayIdx, size, { mechFilter = 'Everyone', highlightPending = false } = {}) {
-  const items = JOBS.filter((j) => j.day === dayIdx && (mechFilter === 'Everyone' || j.mech === mechFilter));
-  // Decision 12: the pending request also shows in the day list, Everyone view only.
-  if (mechFilter === 'Everyone' && dayIdx === PENDING_DIARY.day) items.push({ ...PENDING_DIARY, key: 'pending', link: 'request-new', _mark: highlightPending ? 'accent' : null });
-  items.sort((a, b) => a.start - b.start);
-  const rows = items.map((j) => dayTimelineRow(j, size));
-  if (dayIdx === 0 && UNSCHEDULED.length) rows.unshift(`<a href="job-overview-${size}.dc.html" style="display: flex; align-items: center; gap: 8px; text-decoration: none; padding: 8px 10px; border-radius: 8px; background: ${ST.scheduled[0]}; color: ${ST.scheduled[1]}; font-size: 12px; font-weight: 700">${esc(UNSCHEDULED[0].job)} · ${esc(UNSCHEDULED[0].title)} · Unscheduled</a>`);
-  return rows.length ? stack(rows.join(''), 8) : note('Nothing booked in for this day yet.');
-}
-// Phone/tablet's diary toolbar has no room for a "New job" button (decision
-// 22 still needs one reachable without the removed slot hint) — a small icon
-// button in the phone header's action slot, next to the menu/title.
-const newJobPhoneAction = (href) => `<a href="${href}" aria-label="New job" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: ${C.accent}; color: #ffffff">${icon('plus', 20)}</a>`;
-// Phone equivalent of the dashed "requested 14:00" outline block, for the
-// change-selected day list (decision 19).
-function requestedOutlineRow(size) {
-  const j = REQUEST_OUTLINE;
-  return `<a href="change-selected-${size}.dc.html" aria-label="${esc(j.person)} asked to move to ${esc(j.label)}" style="display: flex; gap: 10px; text-decoration: none; color: inherit">
-<div style="width: 52px; flex-shrink: 0; font-family: ${MONO}; font-size: 12px; color: ${C.muted}; padding-top: 10px">14:00</div>
-<div style="flex-grow: 1; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1.5px dashed ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${ST.hold[1]}; font-size: 12px; font-weight: 700; box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55)">${esc(j.person)} · ${esc(j.label)}</div></a>`;
-}
-// Monday's day list with the current 10:00 job lightly marked and the
-// requested 14:00 slot highlighted (decision 19, brief item 4).
-function changeSelectedDayList(size) {
-  const items = JOBS.filter((j) => j.day === 0).map((j) => (j.job === 'WH-1052' ? { ...j, _mark: 'light' } : j));
-  items.sort((a, b) => a.start - b.start);
-  const rows = [];
-  let placed = false;
-  for (const j of items) {
-    if (!placed && j.start > REQUEST_OUTLINE.start) { rows.push(requestedOutlineRow(size)); placed = true; }
-    rows.push(dayTimelineRow(j, size));
-  }
-  if (!placed) rows.push(requestedOutlineRow(size));
-  return stack(rows.join(''), 8);
-}
 
 // ---------- Diary badges / note ----------
 // H2 (29 Sep audit): this used to render as six near-invisible outlined
@@ -1225,7 +1193,315 @@ const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending:
 // for a mechanic's own single-column view this round).
 function mechToolbar(meSelected, size, { newJob = null } = {}) {
   const nj = newJob ? newJobButton(newJob) : '';
-  return row(`${viewSwitch('Week', size)}<div style="flex-grow: 1"></div>${dateNav('Week')}<div style="flex-grow: 1"></div>${mechChips(meSelected ? 'Me' : 'Everyone', ['Me', 'Everyone'], 'Whose diary')}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
+  return row(`${viewSwitch('Week', size)}<div style="flex-grow: 1"></div>${dateNav('Week', size)}<div style="flex-grow: 1"></div>${mechChips(meSelected ? 'Me' : 'Everyone', ['Me', 'Everyone'], 'Whose diary', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
+}
+
+// ============================================================================
+// Tablet and phone (decision 68, 29 Sep): every desktop decision carried over
+// to touch screens. Tablet = landscape 1180x820 with the charcoal icon rail;
+// phone = 390x844 with a top bar. Hover becomes long-press; labels step up to
+// the 12px floor; controls are at least 44px. Nothing here is used by a
+// desktop board, so desktop output is untouched.
+// ============================================================================
+const touchFs = (size) => (size === 'phone' ? { b: 14, s: 13, x: 12 } : { b: 12, s: 12, x: 12 });
+const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const touchRing = (highlighted, lightMarked) => (highlighted ? `box-shadow: 0 0 0 2px ${C.accent}, 0 0 0 6px rgba(${C.highlightRgb},0.55);` : lightMarked ? `box-shadow: 0 0 0 2px ${C.muted};` : '');
+// A diary block on a touch screen: bike, then job title (decision 29), status
+// by colour alone (decision 57) — the status word is added only where a block
+// is wide enough to spell it out (the tablet Day view), as on desktop. How
+// many lines show is worked out from the block's real height so nothing is
+// cut off mid-line.
+function touchJobBlock(j, size, slotH, { highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null } = {}) {
+  const [bg, ink, statusWord] = ST[j.key];
+  const [customer, bike] = customerBikeOf(j);
+  const jobTitle = j.svc || '';
+  const fs = touchFs(size);
+  const top = ((j.start - GRID_START) / 30) * slotH + 2;
+  const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
+  const lineH = Math.ceil(fs.b * 1.25);
+  const fitLines = Math.max(1, Math.floor((h - 8) / lineH));
+  const cancelled = j.key === 'cancelled';
+  const strike = cancelled ? 'text-decoration: line-through;' : '';
+  const slot = STORAGE[j.job];
+  const extra = narrow ? slot || '' : [BLOCK_LABEL[j.key], slot].filter(Boolean).join(' · ');
+  const one = (t, style) => `<span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${lineH}px; ${style}">${esc(t)}</span>`;
+  const bikeStyle = `font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}; ${strike}`;
+  const titleStyle = `font-size: ${fs.s}px; font-weight: 700; color: ${ink};`;
+  let lines;
+  if (fitLines <= 1) lines = one(`${bike} · ${jobTitle}`, bikeStyle);
+  else if (fitLines === 2) lines = one(bike, bikeStyle) + one(narrow ? jobTitle : [jobTitle, BLOCK_LABEL[j.key]].join(' · '), titleStyle);
+  else lines = one(bike, bikeStyle) + one(jobTitle, titleStyle) + (extra ? one(extra, `font-size: ${fs.x}px; color: ${C.ink}; opacity: 0.8; ${strike}`) : '');
+  const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
+  const href = `${j.link || 'job-overview'}-${size}.dc.html`;
+  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(statusWord)}, ${esc(j.detail)}. Press and hold for more." style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; box-sizing: border-box; padding: 3px 7px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${touchRing(highlighted, lightMarked)}">${lines}</a>`;
+}
+function touchPendingBlock(size, slotH, highlighted = false) {
+  const j = PENDING_DIARY;
+  const [bg, ink] = ST.pending;
+  const fs = touchFs(size);
+  const top = ((j.start - GRID_START) / 30) * slotH + 2;
+  const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
+  const lineH = Math.ceil(fs.b * 1.25);
+  const two = h - 8 >= lineH * 2;
+  const one = (t, style) => `<span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${lineH}px; ${style}">${esc(t)}</span>`;
+  return `<a href="request-new-${size}.dc.html" aria-label="${esc(j.bike)}, ${esc(j.jobTitle)}, ${esc(j.customer)}, Pending, ${esc(j.detail)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; box-sizing: border-box; padding: 3px 7px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden; ${touchRing(highlighted, false)}">${two ? one(j.bike, `font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}`) + one(j.jobTitle, `font-size: ${fs.s}px; font-weight: 700; color: ${ink}`) : one(`${j.bike} · ${j.jobTitle}`, `font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}`)}</a>`;
+}
+function touchOutlineBlock(size, slotH, highlighted = false) {
+  const j = REQUEST_OUTLINE;
+  const fs = touchFs(size);
+  const top = ((j.start - GRID_START) / 30) * slotH + 2;
+  const h = Math.max((j.dur / 30) * slotH - 4, slotH - 6);
+  return `<a href="change-selected-${size}.dc.html" aria-label="${esc(j.person)} asked to move to ${esc(j.label)}" style="position: absolute; left: 3px; right: 3px; top: ${top}px; height: ${h}px; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; padding: 2px 4px; border-radius: 6px; border: 1.5px dashed ${ST.hold[1]}; background: ${ST.hold[0]}; color: ${ST.hold[1]}; font-size: ${fs.x}px; line-height: 1.2; font-weight: 700; overflow: hidden; text-align: center; ${touchRing(highlighted, false)}"><span>${esc(j.bike)}</span><span>${esc(j.label)}</span></a>`;
+}
+// One stacked job drawn as a real diary block (decisions 59/61) — used by the
+// long-press fan-out and the tap-to-choose sheet/popover.
+function touchStackTile(j, size, slotH, width) {
+  const [bg, ink] = ST[j.key];
+  const [, bike] = customerBikeOf(j);
+  const fs = touchFs(size);
+  const th = Math.max((j.dur / 30) * slotH - 4, 56);
+  return `<a href="job-overview-${size}.dc.html" aria-label="${esc(bike)}, ${esc(j.svc || '')}, ${esc(j.job)}, ${esc(ST[j.key][2])}" style="position: relative; ${width ? `width: ${width}px;` : ''} height: ${th}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 1px; box-sizing: border-box; padding: 5px 8px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden">
+<span style="font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)}</span>
+<span style="font-size: ${fs.s}px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.svc || '')}</span>
+<span style="font-size: 12px; color: ${C.ink}; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.job)} · ${esc(hhmm(j.start))}–${esc(hhmm(j.start + j.dur))}</span>
+</a>`;
+}
+// The stacked-card control on touch (decision 58/S4): tap opens the chooser
+// (diary-stack-open); press and hold fans the jobs out in place, centred on
+// the stack, two per row (decisions 59/61 — hover becomes long-press).
+function touchStackBlock(cluster, size, slotH, { faded = false, rect = null, forceExpand = false } = {}) {
+  const fs = touchFs(size);
+  const start = Math.min(...cluster.map((j) => j.start));
+  const end = Math.max(...cluster.map((j) => j.start + j.dur));
+  const top = ((start - GRID_START) / 30) * slotH + 2;
+  const h = Math.max(((end - start) / 30) * slotH - 4, slotH - 6);
+  const names = cluster.map((j) => `${customerBikeOf(j)[1]} · ${j.svc || ''} (${j.job})`).join(', ');
+  const front = cluster[0];
+  const [, frontBike] = customerBikeOf(front);
+  const edge = (offset, op) => `<div aria-hidden="true" style="position: absolute; left: ${offset}px; right: ${-offset}px; top: ${-offset}px; bottom: 0; border-radius: 6px; background: ${C.panel}; border: 1px solid ${C.ink}; opacity: ${op}"></div>`;
+  const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
+  const tileW = size === 'phone' ? 146 : 150;
+  const fanCols = Math.min(cluster.length, 2);
+  const fanW = fanCols === 2 ? tileW * 2 + 8 : tileW;
+  // The fanned jobs sit on a lifted tray (decision 61: centred on the stack, two
+  // per row) so they read as picked up off the diary, not as more blocks in it.
+  const fan = forceExpand ? `<div role="group" aria-label="${cluster.length} jobs at ${hhmm(start)}, fanned out" style="position: absolute; left: 50%; margin-left: ${-(fanW / 2) - 8}px; top: -8px; box-sizing: border-box; padding: 8px; border-radius: 10px; background: ${C.panel}; border: 1px solid ${C.border}; box-shadow: 0 14px 32px rgba(28,30,25,0.32); display: grid; grid-template-columns: repeat(${fanCols}, ${tileW}px); grid-auto-rows: max-content; gap: 8px; z-index: 2">${cluster.map((j) => touchStackTile(j, size, slotH, tileW)).join('')}</div>` : '';
+  return `<div style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; ${forceExpand ? 'z-index: 9;' : ''} ${faded ? 'opacity: 0.5;' : ''}">
+${edge(6, 0.45)}${edge(3, 0.7)}
+<a href="diary-stack-open-${size}.dc.html" aria-label="${cluster.length} jobs booked ${hhmm(start)} to ${hhmm(end)}. Tap to choose which one to open; press and hold to fan them out: ${esc(names)}" style="position: absolute; inset: 0; text-decoration: none; color: inherit; display: flex; flex-direction: column; box-sizing: border-box; padding: 4px 34px 4px 7px; border-radius: 6px; background: ${C.panel}; border: 1px solid ${C.ink}; overflow: hidden">
+<span style="position: absolute; top: 4px; right: 4px; display: inline-flex; align-items: center; gap: 2px; padding: 1px 5px 1px 7px; border-radius: 999px; background: ${C.ink}; color: ${C.panel}; font-size: 12px; font-weight: 700; line-height: 16px">${cluster.length}<span style="display: inline-flex; transform: rotate(90deg)">${icon('chevron', 11, C.panel)}</span></span>
+<span style="font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3">${esc(frontBike)}</span>
+<span style="font-size: ${fs.s}px; font-weight: 600; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3">${esc(front.svc || '')} · ${hhmm(start)}</span>
+</a>${fan}
+</div>`;
+}
+
+// ---------- touch pieces shared by tablet and phone ----------
+// The job's quick-look summary (decision 65's hover card; decision 37's
+// content: notes, line items, cost — no customer details beyond the header).
+// On touch it's what pressing and holding a job shows.
+function touchSummaryContent(size, { twoCol = true } = {}) {
+  const approvedTotal = LINES.filter((_, i) => DECISIONS[i][0] === 'Approved').reduce((sum, [, , a]) => sum + Number(a.replace('£', '')), 0);
+  const notesCol = `<div style="display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-width: 0">
+<span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: ${C.muted}">Notes</span>
+${QUICK_NOTES.map((n) => `<div style="display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 12px; font-weight: 700; color: ${C.muted}">${n.who === 'Customer' ? 'Customer' : `${esc(n.who)}${n.when ? ` · ${esc(n.when)}` : ''}`}</span>
+<span style="font-size: 14px; line-height: 1.35; color: ${C.ink}">${esc(n.text)}</span>
+</div>`).join('')}
+</div>`;
+  const itemsCol = `<div style="display: flex; flex-direction: column; gap: 6px; ${twoCol ? 'flex: 0 0 200px' : ''}">
+<span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: ${C.muted}">Line items</span>
+${LINE_ORDER.map((i) => { const [w, , a] = LINES[i]; const declined = DECISIONS[i][0] === 'Declined'; return `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px; line-height: 1.3; ${declined ? `text-decoration: line-through; color: ${C.muted};` : ''}"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0">${w}</span>${mono(a, declined ? `color: ${C.muted}` : '')}</div>`; }).join('')}
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 3px; padding-top: 6px; border-top: 1px solid ${C.border}"><span style="font-size: 14px; font-weight: 700; color: ${C.ink}">Cost</span>${mono(`£${approvedTotal.toFixed(2)}`, 'font-size: 16px; font-weight: 700')}</div>
+</div>`;
+  return twoCol ? `<div style="display: flex; gap: 18px; align-items: flex-start">${notesCol}${itemsCol}</div>` : `${notesCol}<div style="padding-top: 12px; border-top: 1px solid ${C.border}">${itemsCol}</div>`;
+}
+const SUMMARY_JOB = () => JOBS.find((j) => j.job === 'WH-1042');
+function touchSummaryHeader(size) {
+  const j = SUMMARY_JOB();
+  const [customer, bike] = customerBikeOf(j);
+  return `<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700; color: ${C.ink}">${esc(j.svc)} · ${esc(j.job)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(customer)} · ${esc(bike)}</span></div>`;
+}
+// The long-press menu (decision 37's right-click menu, decision 65: long-press
+// on touch). Keep holding = the summary straight away (decision 37's "hold
+// the right mouse button" on a touch screen).
+function touchMenuItems(size, onKey = null) {
+  const items = [['open', 'Open job', `job-overview-${size}.dc.html`], ['overview', 'View overview', `job-quick-overview-${size}.dc.html`]];
+  return items.map(([k, label, href]) => `<a role="menuitem" href="${href}" style="display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 600; color: ${C.ink}; ${k === onKey ? `background: ${C.hover}; outline: 2px solid ${C.accent}; outline-offset: -2px;` : ''}">${esc(label)}</a>`).join('');
+}
+const TOUCH_MENU_TIP = 'Tip: keep holding to see the job’s summary straight away.';
+
+// Phone bottom sheet over a dimmed page (the Waiting list, the long-press
+// menu and summary, the stack chooser). Height is to content, capped.
+function phoneSheet({ id, title, sub = '', body, footer = '', closeHref, maxH = 640, role = 'dialog' }) {
+  return `<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45)"></div>
+<div role="${role}" aria-modal="true" aria-labelledby="${id}" style="position: absolute; left: 0; right: 0; bottom: 0; max-height: ${maxH}px; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.panel}; border-radius: 16px 16px 0 0; box-shadow: 0 -12px 40px rgba(28,30,25,0.3); overflow: hidden">
+<div aria-hidden="true" style="display: flex; justify-content: center; padding: 8px 0 0"><span style="width: 40px; height: 4px; border-radius: 999px; background: ${C.border}"></span></div>
+<header style="flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 6px 8px 10px 16px; border-bottom: 1px solid ${C.border}">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-top: 8px"><h2 id="${id}" style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 17px; font-weight: 700">${esc(title)}</h2>${sub ? `<span style="font-size: 13px; color: ${C.muted}">${esc(sub)}</span>` : ''}</div>
+<a href="${closeHref}" aria-label="Close" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
+</header>
+<div style="flex: 1 1 auto; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">${body}</div>
+${footer ? `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 16px 16px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 8px">${footer}</div>` : ''}
+</div>`;
+}
+
+// ---------- Tablet diary (week/day grid with the Waiting column) ----------
+// A Waiting for you card on touch (decision 14: the first tap highlights the
+// job in the diary and shows Open; a second tap opens it). Same content as
+// desktop at touch sizes; used in the tablet column and the phone sheet.
+function touchWaitingCard(w, size, selected = false) {
+  const [bg, ink, label] = ST[w.tone];
+  const inner = `<span style="display: inline-flex; align-self: flex-start; padding: 2px 8px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700">${esc(label)}</span>
+<span style="font-size: 15px; font-weight: 700">${esc(w.customer)}</span>
+<span style="font-size: 13px; color: ${C.muted}">${esc(w.bike)}</span>
+<span style="font-size: 13px; color: ${C.ink}">${esc(w.detail)}</span>`;
+  if (selected) {
+    return `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 2px solid ${C.accent}; box-shadow: 0 0 0 3px rgba(${C.highlightRgb},0.45); background: ${C.panel}">
+<div style="display: flex; flex-direction: column; gap: 4px">${inner}</div>
+<a href="${REQ_LINK[w.kind]}-${size}.dc.html" style="align-self: ${size === 'phone' ? 'stretch' : 'flex-start'}; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none">Open</a>
+</div>`;
+  }
+  const selectHref = w.kind === 'Change request' ? `change-selected-${size}.dc.html` : `waiting-open-${size}.dc.html`;
+  return `<a href="${selectHref}" style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}">${inner}</a>`;
+}
+// Tablet long-press results, drawn inside the job's own day column of the
+// week grid (weekGrid's overlayFor), so they sit beside the pressed block.
+const blockTopOf = (j, slotH) => ((j.start - GRID_START) / 30) * slotH + 2;
+function tabletMenuPopover() {
+  const j = SUMMARY_JOB();
+  return `<div role="menu" aria-label="Job actions" style="position: absolute; left: calc(100% + 4px); top: ${blockTopOf(j, 30)}px; width: 236px; box-sizing: border-box; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 6px; display: flex; flex-direction: column; gap: 2px; z-index: 12">
+${touchMenuItems('tablet')}
+<div style="padding: 8px 12px 4px; border-top: 1px solid ${C.border}; margin-top: 4px; font-size: 12px; line-height: 1.4; color: ${C.muted}">${TOUCH_MENU_TIP}</div>
+</div>`;
+}
+function tabletSummaryPopover() {
+  const j = SUMMARY_JOB();
+  const colsAfter = DAYS.length - 1 - j.day;
+  return `<div role="dialog" aria-label="Job summary" style="position: absolute; right: calc(${-100 * colsAfter}% + 8px); top: ${Math.max(4, blockTopOf(j, 30) - 24)}px; width: 480px; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.28); padding: 14px; display: flex; flex-direction: column; gap: 10px; z-index: 12">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px">${touchSummaryHeader('tablet')}${button('Open job', { variant: 'default', href: 'job-overview-tablet.dc.html' })}</div>
+${touchSummaryContent('tablet')}
+</div>`;
+}
+function tabletStackPopover() {
+  const cluster = JOBS.filter((j) => j.day === STACK_EXAMPLE.day && j.start === STACK_EXAMPLE.start);
+  const tileW = 150;
+  const popW = tileW * 2 + 8 + 20;
+  const start = Math.min(...cluster.map((j) => j.start)), end = Math.max(...cluster.map((j) => j.start + j.dur));
+  const top = ((start - GRID_START) / 30) * 30 + 2 + ((end - start) / 30) * 30 - 4 + 8;
+  return `<div role="dialog" aria-label="Choose which job to open" style="position: absolute; left: 50%; margin-left: ${-popW / 2}px; top: ${top}px; width: ${popW}px; box-sizing: border-box; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(28,30,25,0.25); padding: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 20">
+<div style="padding: 2px 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: ${C.muted}">${cluster.length} jobs at ${hhmm(start)}</div>
+<div style="display: grid; grid-template-columns: repeat(2, ${tileW}px); grid-auto-rows: max-content; gap: 8px">${cluster.map((j) => touchStackTile(j, 'tablet', 30, tileW)).join('')}</div>
+</div>`;
+}
+const T_WAIT_W = 184;
+function tabletDiaryContent({ mechFilter = 'Everyone', activeView = 'Week', selectedIdx = -1, hint = false, highlightJob = null, pickMode = false, selectSlot = null, forceExpandStack = null, overlayFor = null, newJob = 'new-job-pick-tablet.dc.html', mechanic = false, legend = true } = {}) {
+  const size = 'tablet';
+  const toolbar = mechanic ? mechToolbar(true, size, { newJob }) : diaryToolbar(mechFilter, size, { activeView, newJob: pickMode ? 'active' : newJob });
+  const grid = activeView === 'Day'
+    ? dayMechGrid({ dayIdx: TODAY, size, slotH: 30, highlightJob })
+    : weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size, slotH: 30, mechFilter: mechanic ? 'Alex' : mechFilter, highlightJob, pickMode, selectSlot, forceExpandStack, overlayFor });
+  const body = mechanic ? row(grid, 14, 'align-items: flex-start') : row(`${waitingColumn(size, selectedIdx, T_WAIT_W, hint)}${grid}`, 14, 'align-items: flex-start');
+  return stack(`${toolbar}${pickMode ? pickInstructionBar(size) : ''}
+${body}
+${legend && !pickMode ? diaryLegend() : ''}`, pickMode ? 8 : 12);
+}
+const tabletDiary = (opts = {}, shellOpts = {}) => shellTablet('diary', 'Workshop diary', tabletDiaryContent(opts), shellOpts);
+const MECH_SHELL = { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' };
+
+// ---------- Phone diary (one day down a time line) ----------
+const P_SLOT = 44; // 30 minutes = 44px, so an hour-long job is an 84px block
+const P_GUTTER = 48;
+function phoneWeekNav() {
+  return `<div style="display: flex; align-items: center; gap: 2px; flex-shrink: 0">${dateArrow('prev', 'Previous week')}<span style="min-width: 74px; text-align: center; font-size: 14px; font-weight: 700; color: ${C.ink}; white-space: nowrap">14–20 Sep</span>${dateArrow('next', 'Next week')}</div>`;
+}
+// Replaces the Week/Day switch on a phone (decision 68): the week's seven days,
+// the chosen one raised like the desktop view switch's selected half.
+function phoneDayStrip(selectedIdx, hrefFor = () => '#') {
+  return `<div role="tablist" aria-label="Choose a day" style="display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: ${C.mutedBg}">${DAYS.map(([name, date], i) => {
+    const on = i === selectedIdx, isToday = i === TODAY;
+    return `<a href="${hrefFor(i)}" role="tab" aria-selected="${on}" aria-label="${name} ${date} September${isToday ? ', today' : ''}" style="flex: 1 1 0; min-width: 0; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 48px; border-radius: 8px; text-decoration: none; background: ${on ? C.panel : 'transparent'}; color: ${C.ink}; ${on ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.14);' : ''}">
+<span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: ${on ? C.ink : C.muted}">${name}</span><span style="font-size: 16px; font-weight: 700; line-height: 1.2">${date}</span>
+${isToday ? `<span aria-hidden="true" style="position: absolute; bottom: 4px; width: 5px; height: 5px; border-radius: 999px; background: ${C.highlight}"></span>` : ''}
+</a>`;
+  }).join('')}</div>`;
+}
+// People filter on a phone: one chip that opens the choice (Everyone / Alex /
+// Jo), since three chips and the Waiting button don't fit one row.
+function phonePeopleChip(label, initial = 'group') {
+  const badge = initial === 'group'
+    ? `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: #ffffff; color: ${C.accentSoftInk}; flex-shrink: 0">${icon('customers', 14)}</span>`
+    : `<span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: #ffffff; color: ${C.accentSoftInk}; font-size: 12px; font-weight: 700; flex-shrink: 0">${esc(initial)}</span>`;
+  return `<button type="button" aria-haspopup="listbox" aria-label="Showing ${esc(label)}. Change whose jobs are shown" style="display: inline-flex; align-items: center; gap: 7px; min-height: 44px; box-sizing: border-box; padding: 5px 10px 5px 6px; border-radius: 999px; font-family: inherit; font-size: 14px; font-weight: 600; border: 1px solid transparent; background: ${C.accentSoft}; color: ${C.accentSoftInk}; white-space: nowrap">${badge}${esc(label)}${icon('chevron', 16)}</button>`;
+}
+// "Waiting (3)" (decision 68): the Waiting column becomes a button in the
+// phone's top bar that opens the list as a sheet (waiting-open-phone).
+const phoneWaitingButton = (href = 'waiting-open-phone.dc.html') => `<a href="${href}" aria-label="Waiting for you, ${WAITING.length}" style="display: inline-flex; align-items: center; gap: 7px; min-height: 44px; box-sizing: border-box; padding: 0 10px 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.35); color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; flex-shrink: 0">${icon('inbox', 18)}Waiting<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; background: ${C.panel}; color: ${C.ink}; font-size: 13px; font-weight: 700">${WAITING.length}</span></a>`;
+// pressed: the pick step is running (decision 22) — the + shows as held down,
+// amber-ringed, until a time is tapped or Cancel is pressed.
+const phoneNewJobAction = (href, pressed = false) => `<a href="${href}" aria-label="New job"${pressed ? ' aria-pressed="true"' : ''} style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: ${pressed ? C.accentSoft : C.panel}; color: ${pressed ? C.accentSoftInk : C.ink}; ${pressed ? `box-shadow: 0 0 0 3px ${C.highlight};` : ''}">${icon('plus', 22)}</a>`;
+// The day's time line: an hour ruler, then one column (Everyone, jobs that
+// share a start as the stacked-card control, partial overlaps side by side —
+// decision 59) or one column per mechanic (the Day view's "Jo's side").
+function phoneTimeline({ day, columns, highlightJob = null, pickMode = false, selectSlot = null, forceExpandStack = null, overlayFor = null, merged = true }) {
+  const slotH = P_SLOT;
+  const gridH = GRID_SLOTS * slotH;
+  const hourLabels = Array.from({ length: 9 }, (_, i) => `${String(9 + i).padStart(2, '0')}:00`);
+  const lines = `repeating-linear-gradient(to bottom, transparent 0, transparent ${slotH - 1}px, ${C.mutedBg} ${slotH - 1}px, ${C.mutedBg} ${slotH}px, transparent ${slotH}px, transparent ${slotH * 2 - 1}px, ${C.border} ${slotH * 2 - 1}px, ${C.border} ${slotH * 2}px)`;
+  const col = (c, i) => {
+    const items = JOBS.filter((j) => j.day === day && (!c.mech || j.mech === c.mech));
+    const clusters = clusterOverlaps(items);
+    const forceExpandStart = forceExpandStack && day === forceExpandStack.day ? forceExpandStack.start : null;
+    const blocks = clusters.map((cl) => renderCluster(cl, 'phone', slotH, { highlightJob, faded: pickMode, forceExpandStart, narrow: true })).join('');
+    const pending = merged && day === PENDING_DIARY.day ? pendingBlock('phone', slotH, highlightJob?.type === 'pending') : '';
+    const outline = merged && day === REQUEST_OUTLINE.day ? requestedOutlineBlock('phone', slotH, highlightJob?.type === 'outline') : '';
+    const isPick = pickMode && selectSlot && day === selectSlot.day && (!c.mech || c.mech === selectSlot.mech);
+    const pick = isPick ? pickHintSlot('phone', slotH, ((selectSlot.start - GRID_START) / 30) * slotH + 2, selectSlot.label, 'new-job-phone.dc.html') : '';
+    const tint = pickMode ? `linear-gradient(rgba(${C.highlightRgb},0.08), rgba(${C.highlightRgb},0.08)), ` : '';
+    const over = overlayFor && overlayFor.col === i ? overlayFor.html : '';
+    return `<div style="position: relative; flex: 1 1 0; min-width: 0; height: ${gridH}px; ${i ? `border-left: 1px solid ${C.border};` : ''} background: ${tint}${lines}">${blocks}${pending}${outline}${pick}${over}</div>`;
+  };
+  const header = columns.length > 1 ? `<div style="display: flex; padding-left: ${P_GUTTER}px; position: sticky; top: 0; z-index: 4; background: ${C.bg}">${columns.map((c, i) => `<div style="flex: 1 1 0; min-width: 0; padding: 6px 4px; text-align: center; font-size: 14px; font-weight: 700; color: ${C.ink}; ${i ? `border-left: 1px solid ${C.border};` : ''} border-bottom: 1px solid ${C.border}">${esc(c.label)}</div>`).join('')}</div>` : '';
+  return `${header}<div role="grid" aria-label="Workshop diary, ${esc(DAYS[day][0])} ${DAYS[day][1]} September 2026" style="display: flex; padding-top: 8px">
+<div aria-hidden="true" style="position: relative; width: ${P_GUTTER}px; flex-shrink: 0; height: ${gridH}px">${hourLabels.map((t, i) => `<span style="position: absolute; top: ${i * 2 * slotH - 8}px; left: 0; font-family: ${MONO}; font-size: 12px; color: ${C.muted}">${t}</span>`).join('')}</div>
+${columns.map(col).join('')}
+</div>`;
+}
+const NO_TIME_ROW = (size) => `<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 12px; font-weight: 700; color: ${C.muted}; text-transform: uppercase; letter-spacing: 0.4px">No time</span>${UNSCHEDULED.map((u) => `<a href="job-overview-${size}.dc.html" style="text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 999px; background: ${ST.scheduled[0]}; border: 1px solid ${ST.scheduled[1]}; color: ${ST.scheduled[1]}; font-size: 13px; font-weight: 700; white-space: nowrap">${esc(u.job)} · ${esc(u.title)}</a>`).join('')}</div>`;
+// A phone diary page. mode: 'everyone' (one merged column), 'byMech' (the Day
+// view — one column per mechanic), 'mechanic' (Alex's own diary, Me/Everyone).
+function phoneDiaryContent({ day = TODAY, mode = 'everyone', highlightJob = null, pickMode = false, selectSlot = null, forceExpandStack = null, overlayFor = null, bar = '' } = {}) {
+  const columns = mode === 'byMech' ? DAY_MECHS.map(([m, name]) => ({ mech: m, label: name })) : mode === 'mechanic' ? [{ mech: 'Alex', label: 'Alex Morgan' }] : [{ mech: null, label: 'Everyone' }];
+  const people = mode === 'mechanic' ? mechChips('Me', ['Me', 'Everyone'], 'Whose diary', 'phone') : phonePeopleChip(mode === 'byMech' ? 'By mechanic' : 'Everyone');
+  const controls = `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 14px 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid ${C.border}; background: ${C.bg}">
+${pickMode ? pickInstructionBar('phone') : `<div style="display: flex; align-items: center; justify-content: space-between; gap: 6px">${people}${phoneWeekNav()}</div>`}
+${phoneDayStrip(day)}
+${mode === 'byMech' ? '' : NO_TIME_ROW('phone')}
+</div>`;
+  // The time line is the one part of the phone diary that scrolls
+  // (data-scroll marks it for the strict fit check).
+  const tl = phoneTimeline({ day, columns, highlightJob, pickMode, selectSlot, forceExpandStack, overlayFor, merged: mode === 'everyone' });
+  // position/z-index: its own stacking context, so the sticky mechanic header
+  // and a fanned stack stay inside it, under any sheet drawn over the page.
+  return `${controls}<div data-scroll="page" style="position: relative; z-index: 0; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; box-sizing: border-box; padding: 0 14px 14px">${tl}</div>${bar}`;
+}
+const phoneDiary = (opts = {}, shellOpts = {}) => shellPhone('Diary', phoneDiaryContent(opts), {
+  active: 'diary', pad: 0,
+  actions: `${opts.mode === 'mechanic' ? '' : phoneWaitingButton()}${phoneNewJobAction(opts.mode === 'mechanic' ? 'new-job-phone.dc.html' : opts.mode === 'byMech' ? 'new-job-day-phone.dc.html' : 'new-job-pick-phone.dc.html', !!opts.pickMode)}`,
+  ...shellOpts,
+});
+// The selected-card bar pinned under a phone diary (decisions 14/19): the
+// first tap highlights the job in the day list and shows this; tapping again
+// (or Open) opens the request.
+function phoneSelectedBar({ tone, title, detail, openHref }) {
+  const [bg, ink, label] = ST[tone];
+  return `<div role="status" style="flex-shrink: 0; box-sizing: border-box; padding: 10px 14px 12px; border-top: 1px solid ${C.border}; background: ${C.panel}; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 -6px 18px rgba(28,30,25,0.08)">
+<div style="display: flex; align-items: center; gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1; min-width: 0"><span style="align-self: flex-start; display: inline-flex; padding: 2px 8px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700">${esc(label)}</span><span style="font-size: 15px; font-weight: 700; color: ${C.ink}">${esc(title)}</span><span style="font-size: 14px; color: ${C.ink}">${detail}</span></div>
+<a href="${openHref}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 72px; padding: 0 16px; box-sizing: border-box; border-radius: 8px; background: ${C.accent}; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none">Open</a>
+</div>
+<span style="font-size: 12px; color: ${C.muted}">Tap the card again to open it.</span>
+</div>`;
 }
 
 // ---------- Screens ----------
@@ -1243,28 +1519,20 @@ ${diaryLegend()}`, 12));
 }
 screens.diary = {
   desktop: buildDiaryDesktopBoard(),
-  tablet: shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { newJob: 'new-job-tablet.dc.html' })}
-${row(`${waitingColumn('tablet', -1, 190)}${weekGrid({ days: [0, 1, 2, 3, 4], size: 'tablet', mechFilter: 'Everyone', slotH: 30 })}`, 14, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
-  phone: shellPhone('Diary', phoneBody(`${waitingButton('phone')}
-${dayStrip(TODAY)}
-${eyebrow('Thursday 17 September')}
-${dayTimeline(TODAY, 'phone', { mechFilter: 'Everyone' })}`, '', 10), { active: 'diary', actions: newJobPhoneAction('new-job-phone.dc.html') }),
+  tablet: tabletDiary(),
+  phone: phoneDiary({ day: TODAY, mode: 'everyone' }),
 };
+keepDesktopSeq('diary');
 
 // 2. diary-mechanic (Mechanic, Alex Morgan) — opens on Me; no Waiting column
 screens['diary-mechanic'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${mechToolbar(true, 'desktop', { newJob: 'new-job-desktop.dc.html' })}
 ${row(weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Alex' }), 16, 'align-items: flex-start')}
 ${diaryLegend()}`, 12), { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' }),
-  tablet: shellTablet('diary', 'Workshop diary', stack(`${mechToolbar(true, 'tablet', { newJob: 'new-job-tablet.dc.html' })}
-${row(weekGrid({ days: [0, 1, 2, 3, 4], size: 'tablet', mechFilter: 'Alex', slotH: 30 }), 14, 'align-items: flex-start')}
-${diaryLegend()}`, 12), { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' }),
-  phone: shellPhone('Diary', phoneBody(`${segmented(['Me', 'Everyone'], 0, 'Whose diary')}
-${dayStrip(TODAY)}
-${eyebrow('Thursday 17 September')}
-${dayTimeline(TODAY, 'phone', { mechFilter: 'Alex' })}`, '', 10), { role: 'K', active: 'diary', actions: newJobPhoneAction('new-job-phone.dc.html') }),
+  tablet: tabletDiary({ mechanic: true, newJob: 'new-job-tablet.dc.html' }, MECH_SHELL),
+  phone: phoneDiary({ day: TODAY, mode: 'mechanic' }, { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' }),
 };
+keepDesktopSeq('diary-mechanic');
 
 // 3. waiting-open — decision 14, "request selected": one click has highlighted
 // Sam Reed's card (ring + Open button) and jumped the diary to its week, with
@@ -1276,15 +1544,16 @@ screens['waiting-open'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
 ${row(`${waitingColumn('desktop', 0, 224, true)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'pending' } })}`, 16, 'align-items: flex-start')}
 ${diaryLegend()}`, 12)),
-  tablet: shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { newJob: 'new-job-tablet.dc.html' })}
-${row(`${waitingColumn('tablet', 0, 190, true)}${weekGrid({ days: [0, 1, 2, 3, 4], size: 'tablet', mechFilter: 'Everyone', slotH: 30, highlightJob: { type: 'pending' } })}`, 14, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
-  phone: shellPhone('Diary', phoneBody(`${waitingButton('phone')}
-${dayStrip(4)}
-${eyebrow('Friday 18 September')}
-${dayTimeline(4, 'phone', { mechFilter: 'Everyone', highlightPending: true })}`, `${row(`<div style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 14px; font-weight: 700">Sam Reed · Pending request</span></div>${button('Open', { size: 'sm', href: 'request-new-phone.dc.html' })}`, 10)}
-${note('Tap again to open.')}`, 10), { active: 'diary', actions: newJobPhoneAction('new-job-phone.dc.html') }),
+  tablet: tabletDiary({ selectedIdx: 0, hint: true, highlightJob: { type: 'pending' } }),
+  // Phone: the Waiting sheet is open and Sam Reed's card has been tapped once
+  // — it's highlighted with Open, and the diary behind has jumped to Friday
+  // with the pending block ringed (decision 14).
+  phone: phoneDiary({ day: 4, highlightJob: { type: 'pending' } }, {
+    overlay: phoneSheet({ id: 'waiting-sheet-title', title: `Waiting for you (${WAITING.length})`, closeHref: 'diary-phone.dc.html', maxH: 490,
+      body: `${WAITING.map((w, i) => touchWaitingCard(w, 'phone', i === 0)).join('')}` }),
+  }),
 };
+keepDesktopSeq('waiting-open');
 
 // 3b. diary-day — brief item 18: one column per mechanic, Thu 17 Sep, same
 // time rows and Waiting column as the week view. The Day button is selected;
@@ -1295,13 +1564,10 @@ screens['diary-day'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { activeView: 'Day', newJob: 'new-job-day-desktop.dc.html' })}
 ${row(`${waitingColumn('desktop', -1)}${dayMechGrid({ dayIdx: TODAY, size: 'desktop' })}`, 16, 'align-items: flex-start')}
 ${diaryLegend()}`, 12)),
-  tablet: shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { activeView: 'Day', newJob: 'new-job-day-tablet.dc.html' })}
-${row(`${waitingColumn('tablet', -1, 190)}${dayMechGrid({ dayIdx: TODAY, size: 'tablet', slotH: 30 })}`, 14, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
-  phone: shellPhone('Diary', phoneBody(`${waitingButton('phone')}
-${segmented(['Alex', 'Jo'], 1, 'Mechanic')}
-${eyebrow('Thursday 17 September')}
-${dayTimeline(TODAY, 'phone', { mechFilter: 'Jo' })}`, '', 10), { active: 'diary', actions: newJobPhoneAction('new-job-day-phone.dc.html') }),
+  tablet: tabletDiary({ activeView: 'Day', newJob: 'new-job-day-tablet.dc.html' }),
+  // Phone: the Day view is one column per mechanic (decision 18's "Jo's
+  // side"), chosen from the people chip ("By mechanic").
+  phone: phoneDiary({ day: TODAY, mode: 'byMech' }),
 };
 
 // 3c. diary-settings — Office › Settings, shown for a Manager (brief item 1):
@@ -1310,44 +1576,49 @@ ${dayTimeline(TODAY, 'phone', { mechFilter: 'Jo' })}`, '', 10), { active: 'diary
 // chosen for line 1/2 (defaults bike/job title), and always shows the status
 // as its own third line — e.g. "Trek Domane AL 3 / Standard service /
 // Scheduled".
-function blockPreviewCard(first, second) {
+function blockPreviewCard(first, second, size = 'desktop') {
+  const T = size !== 'desktop';
   const sample = { customer: 'Maya Patel', job: 'WH-1042', bike: 'Trek Domane AL 3', jobTitle: 'Standard service' };
   const line1 = sample[first] || sample.bike;
   const line2 = sample[second] || sample.jobTitle;
   return `<div aria-label="Block preview" style="width: 190px; box-sizing: border-box; padding: 6px 8px; border-radius: 5px; background: ${ST.scheduled[0]}; border: 1.75px solid ${ST.scheduled[1]}">
 <div style="font-size: 12px; font-weight: 700; color: ${C.ink}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(line1)}</div>
-<div style="font-size: 11px; font-weight: 700; color: ${C.ink}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(line2)}</div>
-<div style="font-size: 11px; font-weight: 700; color: ${ST.scheduled[1]}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Scheduled</div>
+<div style="font-size: ${T ? 12 : 11}px; font-weight: 700; color: ${C.ink}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(line2)}</div>
+<div style="font-size: ${T ? 12 : 11}px; font-weight: 700; color: ${ST.scheduled[1]}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Scheduled</div>
 </div>`;
 }
 // Item 27 (27 Sep round): storage slots are optional per shop, turned on or
 // off here; when on, the shop keeps its own list of hooks and spaces.
-function toggleSwitch(label, on, id) {
-  return `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
-<label for="${id}" style="font-size: 15px; font-weight: 700; color: ${C.ink}">${esc(label)}</label>
-<span id="${id}" role="switch" aria-checked="${on}" style="position: relative; display: inline-flex; align-items: center; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}; flex-shrink: 0">
+function toggleSwitch(label, on, id, size = 'desktop') {
+  // Tablet/phone (decision 68): the same switch in a full 44px button (the
+  // Accessibility tab's a11ySwitch) instead of the 26px desktop track.
+  const sw = size !== 'desktop' ? a11ySwitch(id, on, label) : `<span id="${id}" role="switch" aria-checked="${on}" style="position: relative; display: inline-flex; align-items: center; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}; flex-shrink: 0">
 <span style="position: absolute; top: 3px; left: ${on ? '21px' : '3px'}; width: 20px; height: 20px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 2px rgba(28,30,25,0.35)"></span>
-</span>
+</span>`;
+  return `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px${size === 'desktop' ? '' : '; min-height: 44px'}">
+<label for="${id}" style="font-size: 15px; font-weight: 700; color: ${C.ink}">${esc(label)}</label>
+${sw}
 </div>`;
 }
 // A compact wrapping chip, not a full-width row per slot — a vertical list of
 // rowCards for up to 8 slots didn't fit this page's height budget alongside
 // the block-preference panel (shellDesktop's <main> doesn't scroll).
-function storageSlotChip(name) {
+function storageSlotChip(name, size = 'desktop') {
+  if (size !== 'desktop') return `<span style="display: inline-flex; align-items: center; gap: 2px; min-height: 44px; box-sizing: border-box; padding: 0 0 0 12px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(name)}<button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; margin: -1px 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 0; background: transparent; color: ${C.muted}"><span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: ${C.mutedBg}">${icon('close', 13)}</span></button></span>`;
   return `<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 13px; font-weight: 600; color: ${C.ink}">${esc(name)}<button type="button" aria-label="Remove ${esc(name)}" style="width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 0; background: ${C.mutedBg}; color: ${C.muted}">${icon('close', 12)}</button></span>`;
 }
 function storageSlotsSection(size) {
-  return panel(`${toggleSwitch('Storage slots', true, 'storage-toggle-' + size)}
+  return panel(`${toggleSwitch('Storage slots', true, 'storage-toggle-' + size, size)}
 ${note('On for this shop. Staff can note where a bike is kept, and the diary block shows the slot where there’s room.', 12)}
-<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}">${STORAGE_SLOTS.map(storageSlotChip).join('')}</div>
-<div>${button('+ Add a slot', { variant: 'default', size: 'sm' })}</div>`, '', 16, 12);
+<div style="display: flex; flex-wrap: wrap; gap: ${size === 'desktop' ? 8 : size === 'phone' ? 4 : 6}px; padding-top: ${size === 'phone' ? 8 : 10}px; border-top: 1px solid ${C.border}">${STORAGE_SLOTS.map((n) => storageSlotChip(n, size)).join('')}</div>
+<div>${button('+ Add a slot', { variant: 'default', size: size === 'desktop' ? 'sm' : 'default' })}</div>`, '', size === 'phone' ? 12 : 16, size === 'phone' ? 8 : 12);
 }
 // Item 29/4 (27 Sep round 2): "Job title" joins customer, bike and job number
 // as a block-line choice; the default is bike first, job title second.
 function blockPrefPanel(size) {
   return panel(`${h2('What shows on a block', 15)}
 ${grid('1fr 1fr', `${select('First line', ['Bike', 'Job title', 'Customer', 'Job number'], 'set-first-' + size)}${select('Second line', ['Job title', 'Bike', 'Customer', 'Job number'], 'set-second-' + size)}`, 14)}
-<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}">${eyebrow('Preview')}${blockPreviewCard('bike', 'jobTitle')}${note('The status always shows too, whatever the two lines above are set to.', 12)}</div>`, '', 16, 12);
+<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}">${eyebrow('Preview')}${blockPreviewCard('bike', 'jobTitle', size)}${note('The status always shows too, whatever the two lines above are set to.', 12)}</div>`, '', 16, 12);
 }
 // Decision 57 (29 Sep): Settings gains an Accessibility tab beside this
 // Diary tab. Real tabs (role="tablist"/"tab", aria-selected), ≥44px, each a
@@ -1367,7 +1638,7 @@ function diarySettingsBody(size) {
   // there's room, e.g. Day view; the symbol is an opt-in accessibility
   // setting, see Settings › Accessibility) — the older "never colour alone"
   // copy is replaced below.
-  if (size === 'desktop') {
+  if (size !== 'phone') {
     return stack(`${eyebrow('Office › Settings')}
 ${settingsTabs(size, 'diary')}
 ${h2('Diary & storage', 20)}
@@ -1375,19 +1646,19 @@ ${note('Choose what each diary block shows, and whether this shop tracks storage
 ${grid('1fr 1fr', `<div style="display: flex; flex-direction: column; gap: 12px">${h2('Diary blocks', 16)}${blockPrefPanel(size)}</div><div style="display: flex; flex-direction: column; gap: 12px">${h2('Storage slots', 16)}${storageSlotsSection(size)}</div>`, 24)}
 ${`<div>${button('Save settings')}</div>`}`, 16);
   }
-  return stack(`${eyebrow('Office › Settings')}
-${h2('Diary blocks', 20)}
-${note('Choose what each diary block shows. Status shows as colour, plus the full word where there’s room.')}
+  // Phone (decision 68): the same two tabs and panels, one column; the top
+  // bar already says Settings, the tab names the section and each panel
+  // explains itself, so the breadcrumb, heading and intro are left off — the
+  // page fits a phone without scrolling.
+  return stack(`${settingsTabs(size, 'diary')}
 ${blockPrefPanel(size)}
-${h2('Storage slots', 20)}
-${note('Where bikes are kept while they’re in for work. Turn this off if this shop doesn’t use hooks or bays.')}
 ${storageSlotsSection(size)}
-${`<div>${button('Save settings')}</div>`}`, 16);
+${button('Save settings', { block: true })}`, 8);
 }
 screens['diary-settings'] = {
   desktop: shellDesktop('settings', 'Settings', `<div style="max-width: 920px">${diarySettingsBody('desktop')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
-  tablet: shellTablet('settings', 'Settings', `<div style="max-width: 480px">${diarySettingsBody('tablet')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
-  phone: shellPhone('Settings', phoneBody(diarySettingsBody('phone'), '', 12), { role: 'M', active: 'settings' }),
+  tablet: shellTablet('settings', 'Settings', `<div style="max-width: 1000px">${diarySettingsBody('tablet')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
+  phone: shellPhone('Settings', diarySettingsBody('phone'), { role: 'M', active: 'settings', person: 'Jack Lewis', roleName: 'Manager' }),
 };
 
 // 3c.ii settings-accessibility — decision 57 (29 Sep): a second Settings tab,
@@ -1407,35 +1678,39 @@ function a11ySettingRow(id, label, desc, on, preview = '') {
 // Two narrow diary blocks (jobBlock's own narrow-block markup, sized down)
 // with the shape mark drawn on, so "Show status symbols" previews what it
 // turns on regardless of SHOW_STATUS_SYMBOLS's own (off) default above.
-function symbolsPreview() {
+function symbolsPreview(size = 'desktop') {
+  const T = size !== 'desktop';
   const sample = [['scheduled', 'Trek Domane AL 3', 'Standard service'], ['waiting', 'Cannondale Quick', 'Gear adjustment']];
   return `${eyebrow('Preview')}<div style="display: flex; gap: 8px; padding-top: 6px">${sample.map(([key, bike, title]) => {
     const [bg, ink] = ST[key];
-    return `<div style="position: relative; width: 122px; box-sizing: border-box; padding: 3px 16px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}">
+    return `<div style="position: relative; width: ${T ? 140 : 122}px; box-sizing: border-box; padding: 3px 16px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}">
 <svg width="13" height="13" viewBox="0 0 10 10" aria-hidden="true" style="position: absolute; top: 4px; right: 4px">${STATUS_SHAPE[key](ink)}</svg>
-<div style="font-size: 11px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)}</div>
-<div style="font-size: 10px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(title)}</div>
+<div style="font-size: ${T ? 12 : 11}px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)}</div>
+<div style="font-size: ${T ? 12 : 10}px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(title)}</div>
 </div>`;
   }).join('')}</div>`;
 }
-function largerTextPreview() {
-  const col = (size, label) => `<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 11px; color: ${C.muted}">${esc(label)}</span><span style="font-size: ${size}px; font-weight: 600; color: ${C.ink}">Standard service</span></span>`;
+function largerTextPreview(dev = 'desktop') {
+  const col = (size, label) => `<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: ${dev === 'desktop' ? 11 : 12}px; color: ${C.muted}">${esc(label)}</span><span style="font-size: ${size}px; font-weight: 600; color: ${C.ink}">Standard service</span></span>`;
   return `${eyebrow('Preview')}<div style="display: flex; align-items: flex-end; gap: 20px; padding-top: 6px">${col(14, 'Normal')}${col(17, 'Larger')}</div>`;
 }
 function accessibilityBody(size) {
-  return stack(`${eyebrow('Office › Settings')}
+  // Phone (decision 68): no breadcrumb or repeated heading — the top bar and
+  // the tab already say where you are — so the three settings fit unscrolled.
+  const P = size === 'phone';
+  return stack(`${P ? '' : eyebrow('Office › Settings')}
 ${settingsTabs(size, 'accessibility')}
-${h2('Accessibility', 20)}
+${P ? '' : h2('Accessibility', 20)}
 ${note('These settings are just for you, Jack Lewis — they don’t change what others see.')}
-${a11ySettingRow('a11y-symbols-' + size, 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview())}
+${a11ySettingRow('a11y-symbols-' + size, 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview(size))}
 ${a11ySettingRow('a11y-motion-' + size, 'Reduce motion', 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.', false)}
-${a11ySettingRow('a11y-text-' + size, 'Larger text', 'Makes text across Wheelhouse a step larger.', false, largerTextPreview())}
-${`<div>${button('Save settings')}</div>`}`, 16);
+${a11ySettingRow('a11y-text-' + size, 'Larger text', 'Makes text across Wheelhouse a step larger.', false, largerTextPreview(size))}
+${P ? button('Save settings', { block: true }) : `<div>${button('Save settings')}</div>`}`, P ? 12 : 16);
 }
 screens['settings-accessibility'] = {
   desktop: shellDesktop('settings', 'Settings', `<div style="max-width: 720px">${accessibilityBody('desktop')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
-  tablet: desktopOnlyPlaceholder('tablet', 'diary-settings-tablet.dc.html', '‹ Back to Settings'),
-  phone: desktopOnlyPlaceholder('phone', 'diary-settings-phone.dc.html', '‹ Back to Settings'),
+  tablet: shellTablet('settings', 'Settings', `<div style="max-width: 760px">${accessibilityBody('tablet')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
+  phone: shellPhone('Settings', accessibilityBody('phone'), { role: 'M', active: 'settings', person: 'Jack Lewis', roleName: 'Manager' }),
 };
 
 // 3d. change-selected — decision 19: built like waiting-open, but for Oliver
@@ -1445,15 +1720,13 @@ screens['change-selected'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
 ${row(`${waitingColumn('desktop', 1, 224, true)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', highlightJob: { type: 'outline', dim: 'WH-1052' } })}`, 16, 'align-items: flex-start')}
 ${diaryLegend()}`, 12)),
-  tablet: shellTablet('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'tablet', { newJob: 'new-job-tablet.dc.html' })}
-${row(`${waitingColumn('tablet', 1, 190, true)}${weekGrid({ days: [0, 1, 2, 3, 4], size: 'tablet', mechFilter: 'Everyone', slotH: 30, highlightJob: { type: 'outline', dim: 'WH-1052' } })}`, 14, 'align-items: flex-start')}
-${diaryLegend()}`, 12)),
-  phone: shellPhone('Diary', phoneBody(`${waitingButton('phone')}
-${dayStrip(0)}
-${eyebrow('Monday 14 September')}
-${changeSelectedDayList('phone')}`, `${row(`<div style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 14px; font-weight: 700">Oliver Chen · Change request · Mon 10:00 → 14:00</span></div>${button('Open', { size: 'sm', href: 'request-change-phone.dc.html' })}`, 10)}
-${note('Tap again to open.')}`, 10), { active: 'diary', actions: newJobPhoneAction('new-job-phone.dc.html') }),
+  tablet: tabletDiary({ selectedIdx: 1, hint: true, highlightJob: { type: 'outline', dim: 'WH-1052' } }),
+  // Phone (decision 68): no curved arrow in a one-column day list — the move
+  // is spelled out in the selected-card bar and the requested 14:00 is the
+  // ringed slot in Monday's time line, the current 10:00 job lightly marked.
+  phone: phoneDiary({ day: 0, highlightJob: { type: 'outline', dim: 'WH-1052' }, bar: phoneSelectedBar({ tone: 'hold', title: 'Oliver Chen · Brompton C Line', detail: `Mon ${mono('10:00')} → ${mono('14:00')}`, openHref: 'request-change-phone.dc.html' }) }),
 };
+keepDesktopSeq('change-selected');
 
 // 3e. diary-context-menu / job-quick-overview — decision 37 (28 Sep round):
 // right-clicking a diary block offers "Open job" and "View overview", the
@@ -1479,8 +1752,12 @@ screens['diary-context-menu'] = {
     ]);
     return `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${base}${menu}</div>`;
   })(),
-  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
-  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+  // Tablet/phone: right-click becomes press-and-hold (decision 65).
+  tablet: tabletDiary({ highlightJob: { type: 'job', job: 'WH-1042' }, overlayFor: { day: TODAY, html: tabletMenuPopover() } }),
+  phone: phoneDiary({ day: TODAY, highlightJob: { type: 'job', job: 'WH-1042' } }, {
+    overlay: phoneSheet({ id: 'job-menu-title', title: 'Standard service · WH-1042', sub: 'Maya Patel · Trek Domane AL 3', closeHref: 'diary-phone.dc.html',
+      body: `<div role="menu" aria-label="Job actions" style="display: flex; flex-direction: column; gap: 4px">${touchMenuItems('phone')}</div><p style="margin: 0; font-size: 13px; line-height: 1.4; color: ${C.muted}">${TOUCH_MENU_TIP}</p>` }),
+  }),
 };
 
 // job-quick-overview's own body is built further down this file, once
@@ -1511,6 +1788,7 @@ screens['request-new'] = {
   phone: dialogPhone('Sam Reed · Specialized Sirrus', reqCloseHref('phone'), stack(requestNewBody('phone'), 12),
     `${button('Accept', { block: true })}${grid('1fr 1fr', `${button('Another time', { variant: 'default', block: true })}${button('Decline', { variant: 'ghost', block: true, href: 'request-decline-phone.dc.html' })}`, 8)}`, 'Pending request'),
 };
+keepDesktopSeq('request-new');
 
 // 5. request-decline — message copied from stage2 `reject`
 const DECLINE_MSG = 'Sorry, we can’t fit this service in on Thursday. Please try Friday, or call us and we’ll help find another day.';
@@ -1529,6 +1807,7 @@ screens['request-decline'] = {
   tablet: requestDialog('tablet', TW, TH, reqDeclineOpts),
   phone: dialogPhone('Decline request', reqCloseHref('phone'), stack(requestDeclineBody('phone'), 12), `${button('Decline & notify customer', { variant: 'danger', block: true })}${button('Keep request', { variant: 'default', block: true })}`, 'Sam Reed · Specialized Sirrus'),
 };
+keepDesktopSeq('request-decline');
 
 // 6. request-change — Oliver Chen, from/to times; no "Seen"
 function requestChangeBody() {
@@ -1548,6 +1827,7 @@ screens['request-change'] = {
   phone: dialogPhone('Change request', reqCloseHref('phone'), requestChangeBody(),
     `${button('Accept', { block: true })}${button('Decline', { variant: 'default', block: true })}${button('Open full job', { variant: 'ghost', block: true, href: 'job-overview-phone.dc.html' })}`, 'Oliver Chen · Brompton C Line'),
 };
+keepDesktopSeq('request-change');
 
 // 7. request-cancel — Aisha Khan; one action, "Seen"
 function requestCancelBody() {
@@ -1566,6 +1846,7 @@ screens['request-cancel'] = {
   tablet: requestDialog('tablet', TW, TH, reqCancelOpts),
   phone: dialogPhone('Cancelled booking', reqCloseHref('phone'), requestCancelBody(), button('Seen', { block: true }), 'Aisha Khan · Cannondale Quick'),
 };
+keepDesktopSeq('request-cancel');
 
 // ---------- Row 3: New job from an empty slot (decision 16 — same near-fullscreen treatment as a job pop-up) ----------
 const custResult = `<div style="padding: 6px 12px; border-radius: 8px; border: 2px solid ${C.accent}; background: ${C.mutedBg}; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">07700 900 142 · maya@example.test</span><span style="font-size: 13px">Trek Domane AL 3 · green</span></div>`;
@@ -1653,26 +1934,7 @@ function newJobBody(size, opts = {}) {
   const svcDur = serviceDurationOf(service);
   const timeLabel = when.split('· ')[1] || when;
   const warn = freeMinutes != null && svcDur > freeMinutes;
-  if (size !== 'desktop') {
-    // Tablet and phone aren't redrawn this round (decision 25) — unchanged
-    // single-column form.
-    const customerBlock = showCustomer
-      ? `${field('Find customer by name, phone or email', { value: 'Maya Patel', id: 'nj-find-' + size })}
-${custResult}
-<div>${link('+ New customer')}</div>
-${field('Bike', { value: 'Trek Domane AL 3 · green', id: 'nj-bike-' + size })}`
-      : `${field('Find customer by name, phone or email', { placeholder: 'Search by name, phone or email', id: 'nj-find-' + size })}
-<div>${link('+ New customer')}</div>
-${field('Bike', { placeholder: 'Bike make and model', id: 'nj-bike-' + size })}`;
-    const workBlock = `${field('Work / service', { value: 'Standard service; inspect rear brake', id: 'nj-work-' + size })}
-${area('What the customer told us', receiptNote, 'nj-told-' + size, 2)}
-${field('Estimated time', { value: '60 minutes', id: 'nj-time-' + size })}`;
-    return `${banner(`${when} · ${mechanic}`, 'info')}
-${note(mechHint)}
-${customerBlock}
-${workBlock}
-${note('Bikes with no set time go in the diary’s “No time” row at the top instead.')}`;
-  }
+  if (size !== 'desktop') return newJobBodyTouch(size, opts);
   // Desktop (item 26 of the 27 Sep round): follows Citrus Lime's "Create a
   // Workshop Job" structure, in Fjell — two columns (customer/bike/work left,
   // dates/status/storage/notes right) in the existing near-fullscreen pop-up,
@@ -1720,6 +1982,61 @@ ${staffNotesBlock(size, staffNotes)}
   return `${newBuildCheck(size)}
 ${grid('1fr 1fr', `${leftCol}${rightCol}`, 28)}`;
 }
+// New job on tablet and phone (decision 68): the desktop form's fields and
+// branching pills exactly (decisions 26, 50, 51, 54, 66), at touch size —
+// every pill, toggle and link a full 44px. Tablet lays them out in three
+// columns so the pop-up still doesn't scroll; phone is one scrolling column
+// with Save pinned below it.
+const touchLink = (t, href = '#') => `<a href="${href}" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.accentDark}">${esc(t)}</a>`;
+function newJobBodyTouch(size, opts = {}) {
+  const {
+    when = 'Tue 15 Sep · 10:00', mechanic = 'Alex Morgan',
+    mechHint = 'Mechanic chosen automatically: most free time on Tuesday. To change it, drag the job to another mechanic in the Day view.',
+    showCustomer = true, freeMinutes = null, service = 'Standard service', startingStatusIdx = 0, bikeHereChecked = false,
+    storageDefault = 'Hook 3', receiptNote = 'Rear brake squeals and feels weak.', staffNotes = [],
+  } = opts;
+  const svcDur = serviceDurationOf(service);
+  const timeLabel = when.split('· ')[1] || when;
+  const warn = freeMinutes != null && svcDur > freeMinutes;
+  const pill = (t, a) => radioPill(t, a);
+  const groupNames = Object.keys(SERVICE_GROUPS);
+  const activeGroup = serviceGroupOf(service);
+  const g = (inner, gap = 4) => `<div style="display: flex; flex-direction: column; gap: ${gap}px">${inner}</div>`;
+  const hint = (t) => note(t, 13);
+  const whenBlock = g(`${banner(`${esc(when)} · ${esc(mechanic)}`, 'info')}${hint(mechHint)}${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}`, 6);
+  const newBuild = g(`${togglePill('New bike build or pre-delivery check', false, 'nj-newbuild-' + size, 'align-self: flex-start')}${hint('Customer becomes optional.')}`);
+  const customer = showCustomer
+    ? g(`${field('Find customer by name, phone or email', { value: 'Maya Patel', id: 'nj-find-' + size })}${custResult}<div>${touchLink('+ New customer')}</div>`)
+    : g(`${field('Find customer by name, phone or email', { placeholder: 'Search by name, phone or email', id: 'nj-find-' + size })}<div>${touchLink('+ New customer')}</div>`);
+  const bike = g(`${select('Bike', [showCustomer ? 'Trek Domane AL 3 · green' : 'Select a customer first'], 'nj-bike-' + size)}<div>${touchLink('+ Add a bike')}</div>`);
+  const work = `<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span id="nj-work-group-${size}-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Work</span>${touchLink('Search services')}</div>
+<div role="radiogroup" aria-labelledby="nj-work-group-${size}-label" style="display: flex; flex-wrap: wrap; gap: 6px">${groupNames.map((n) => pill(n, n === activeGroup)).join('')}</div>
+<span id="nj-work-service-${size}-label" style="font-size: 12px; font-weight: 600; color: ${C.muted}">${esc(activeGroup)}</span>
+<div role="radiogroup" aria-labelledby="nj-work-service-${size}-label" style="display: flex; flex-wrap: wrap; gap: 6px">${SERVICE_GROUPS[activeGroup].map((n) => pill(`${n} · ${serviceDurationOf(n)} min`, n === service)).join('')}</div>
+</div>`;
+  const title = field('Job title', { value: service, id: 'nj-title-' + size, hint: 'Filled in from the work chosen. Shown on the diary block.' });
+  const receipt = g(`${area('Note for the customer', receiptNote, 'nj-receipt-' + size, 2)}${hint('Printed on their receipt.')}`);
+  const status = pillRadioGroup('Starting status', STARTING_STATUS, startingStatusIdx, 'nj-status-' + size, pill);
+  const hereNow = g(`${togglePill('The bike is here now', bikeHereChecked, 'nj-herenow-' + size, 'align-self: flex-start')}${hint('Books it in straight away, ready to print the bike tag.')}`);
+  const storage = g(`${pillRadioGroup('Where the bike is kept', STORAGE_SLOTS, STORAGE_SLOTS.indexOf(storageDefault), 'nj-storage-' + size, pill)}${hint('Storage slots are on for this shop. Turn them off in Settings.')}`);
+  const staff = `<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 14px; font-weight: 600; color: ${C.ink}">Staff notes</span>
+${staffNotes.length ? `<div>${staffNotes.map((n) => `<div style="display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px solid ${C.border}"><span style="font-size: 12px; color: ${C.muted}">${esc(n.who)} · ${esc(n.when)}</span><span style="font-size: 14px; color: ${C.ink}">${esc(n.text)}</span></div>`).join('')}</div>` : ''}
+<div style="display: flex; gap: 8px"><input id="nj-staffnote-${size}" type="text" placeholder="Add a note for other staff" aria-label="Add a note for other staff" style="flex-grow: 1; min-width: 0; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; padding: 11px 10px; min-height: 44px; font-size: 14px; font-family: inherit; color: ${C.ink}">${button('Add note', { variant: 'default' })}</div>
+${hint('Internal only — not shown to the customer.')}
+</div>`;
+  if (size === 'phone') {
+    // Decision 54: the chosen time and mechanic lead the form.
+    return [whenBlock, newBuild, customer, bike, work, title, receipt, status, hereNow, storage, staff].join('\n');
+  }
+  const col = (label, inner) => `<section aria-label="${esc(label)}" style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${inner}</section>`;
+  return `<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; align-items: start">
+${col('When', `${whenBlock}${storage}${staff}`)}
+${col('Customer and bike', `${newBuild}${customer}${bike}${receipt}`)}
+${col('The work', `${work}${title}${status}${hereNow}`)}
+</div>`;
+}
 // The form itself stays a readable single column at tablet/phone (brief
 // leaves this open — decision: the outer pop-up still takes most of the
 // screen, per decision 16); desktop uses two columns (item 26).
@@ -1728,7 +2045,7 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
     ? shellDesktop('diary', 'Workshop diary', baseFn('desktop'))
     : shellTablet('diary', 'Workshop diary', baseFn('tablet'));
   const id = 'new-job-title';
-  const maxW = size === 'desktop' ? 1000 : 640;
+  const maxW = size === 'desktop' ? 1000 : 1100;
   const centered = `<div style="max-width: ${maxW}px; margin: 0 auto; width: 100%">${newJobBody(size, bodyOpts)}</div>`;
   // A single scrolling column (unlike the job pages' two independently
   // scrolling columns), so the service select's warning banner (item 23)
@@ -1741,11 +2058,13 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
   // overflow:hidden/auto — a static canvas can't prove there's more past a
   // scrollbar) found both new-job and new-job-day taller than this pop-up
   // again. Tightened the same way as Part A.3: body padding 14px→10px here.
-  const body = `<div style="flex-grow: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 6px 20px; display: flex; flex-direction: column; gap: 14px">${centered}</div>`;
-  const footer = size === 'desktop'
+  const body = size === 'desktop'
+    ? `<div style="flex-grow: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 6px 20px; display: flex; flex-direction: column; gap: 14px">${centered}</div>`
+    : `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 24px; display: flex; flex-direction: column">${centered}</div>`; // tablet: fits without scrolling (decision 68)
+  const footer = size !== 'phone'
     ? row(`${button('Cancel', { variant: 'ghost', href: `${closeId}-${size}.dc.html` })}<div style="flex-grow: 1"></div>${button('Save job', { variant: 'primary' })}`, 10)
     : button('Save', { block: true });
-  return dialogOverlay(base, w, h, `${dialogHeader('New job', `${closeId}-${size}.dc.html`, '', id)}${body}${dialogFooter(footer)}`, { pad, full: true, labelledby: id });
+  return dialogOverlay(base, w, h, `${dialogHeader('New job', `${closeId}-${size}.dc.html`, '', id, size)}${body}${dialogFooter(footer)}`, { pad, full: true, labelledby: id });
 }
 // Tue 15 Sep · 10:00 · Alex Morgan has 30 minutes free before Alex's next job
 // (10:30, WH-1081) — item 23's warning example. Ready by (decision 51) is the
@@ -1754,9 +2073,10 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
 const NEW_JOB_OPTS = { freeMinutes: 30, service: 'Standard service', storageDefault: 'Hook 3', receiptNote: 'Rear brake squeals and feels weak.' };
 screens['new-job'] = {
   desktop: newJobDialog('desktop', DW, DH, 6, { baseFn: (s) => diaryFrozenContent(s), bodyOpts: NEW_JOB_OPTS }),
-  tablet: newJobDialog('tablet', TW, TH, 28, { baseFn: (s) => diaryFrozenContent(s) }),
-  phone: dialogPhone('New job', 'diary-phone.dc.html', stack(newJobBody('phone'), 10), button('Save', { block: true })),
+  tablet: newJobDialog('tablet', TW, TH, 20, { baseFn: (s) => diaryPickContent(s), bodyOpts: NEW_JOB_OPTS }),
+  phone: dialogPhone('New job', 'new-job-pick-phone.dc.html', newJobBody('phone', NEW_JOB_OPTS), button('Save job', { variant: 'primary', block: true }), '', { scroll: true, backLabel: 'Cancel, back to the diary', bodyGap: 14 }),
 };
+keepDesktopSeq('new-job');
 // new-job-day (brief item 2): opened from Jo's column in the day view, Thu 17
 // Sep 16:00 — the mechanic is pre-filled from the column clicked, not chosen
 // automatically, and there's no matching customer search result yet. Jo's
@@ -1774,17 +2094,21 @@ const NEW_JOB_DAY_OPTS = {
 };
 screens['new-job-day'] = {
   desktop: newJobDialog('desktop', DW, DH, 6, { baseFn: (s) => diaryDayFrozenContent(s), closeId: 'diary-day', bodyOpts: NEW_JOB_DAY_OPTS }),
-  tablet: newJobDialog('tablet', TW, TH, 28, { baseFn: (s) => diaryDayFrozenContent(s), closeId: 'diary-day', bodyOpts: NEW_JOB_DAY_OPTS }),
-  phone: dialogPhone('New job', 'diary-day-phone.dc.html', stack(newJobBody('phone', NEW_JOB_DAY_OPTS), 10), button('Save', { block: true })),
+  tablet: newJobDialog('tablet', TW, TH, 20, { baseFn: (s) => diaryDayFrozenContent(s), closeId: 'diary-day', bodyOpts: NEW_JOB_DAY_OPTS }),
+  phone: dialogPhone('New job', 'diary-day-phone.dc.html', newJobBody('phone', NEW_JOB_DAY_OPTS), button('Save job', { variant: 'primary', block: true }), '', { scroll: true, backLabel: 'Cancel, back to the diary', bodyGap: 14 }),
 };
 // new-job-pick (desktop only, item 1 of the 27 Sep round): the state after
 // pressing "New job" in the diary toolbar — the button reads "Choose a time",
 // a slim instruction bar sits above the grid, free time is gently tinted and
 // busy blocks fade back, and the picked slot (Tue 15 Sep · 10:00 · Alex, which
 // stays free in the example data) shows as a solid hover target linking to
-// new-job-desktop. Tablet/phone aren't drawn this round (brief item 25) — New
-// job there goes straight to the New job form instead of through a pick step.
+// new-job-desktop. Tablet and phone (decision 68) draw the same step: "Tap a
+// free time", with a Cancel button in place of Esc.
 function pickInstructionBar(size) {
+  if (size !== 'desktop') return `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 1px 1px 1px 14px; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: 14px; font-weight: 600; color: ${C.accentDark}">
+<span>Tap a free time ${size === 'phone' ? '' : 'in the diary '}for the new job.</span>
+<a href="diary-${size}.dc.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 14px; font-weight: 600; text-decoration: none; flex-shrink: 0">Cancel</a>
+</div>`;
   return `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 14px; border-radius: 8px; background: ${C.hover}; border: 1px solid ${C.accent}; font-size: 13px; font-weight: 600; color: ${C.accentDark}">
 <span>Click a free time in the diary for the new job. Esc to cancel.</span>
 <a href="diary-${size}.dc.html" style="display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-size: 13px; font-weight: 600; text-decoration: none">Cancel</a>
@@ -1795,21 +2119,17 @@ function pickInstructionBar(size) {
 // findings, but caught by the same strict check, so fixed the same way
 // (tightened stack/bar spacing, not a bigger board).
 function diaryPickContent(size) {
+  if (size !== 'desktop') return tabletDiaryContent({ pickMode: true, selectSlot: HINT_SLOT });
   const days = size === 'desktop' ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4];
   const slotH = size === 'desktop' ? 29 : 30;
   return stack(`${diaryToolbar('Everyone', size, { newJob: 'active' })}
 ${pickInstructionBar(size)}
 ${row(`${waitingColumn(size, -1)}${weekGrid({ days, size, slotH, mechFilter: 'Everyone', pickMode: true, selectSlot: HINT_SLOT })}`, 16, 'align-items: flex-start')}`, 8);
 }
-function desktopOnlyPlaceholder(size, backHref, backLabel = '‹ Back to the diary') {
-  const body = stack(`${note('This screen is being iterated on desktop first (27 Sep 2026 round). Tablet and phone will be redrawn once the desktop design is agreed.')}
-<div>${link(backLabel, backHref)}</div>`, 12);
-  return size === 'phone' ? shellPhone('Not drawn yet', phoneBody(body), { active: 'diary' }) : shellTablet('diary', 'Not drawn yet', `<div style="max-width: 480px">${body}</div>`);
-}
 screens['new-job-pick'] = {
   desktop: shellDesktop('diary', 'Workshop diary', diaryPickContent('desktop')),
-  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
-  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+  tablet: shellTablet('diary', 'Workshop diary', diaryPickContent('tablet')),
+  phone: phoneDiary({ day: HINT_SLOT.day, pickMode: true, selectSlot: HINT_SLOT }),
 };
 
 // ---------- Row 4: The job — ONE page, no tabs (decision 20 supersedes the
@@ -1819,56 +2139,9 @@ screens['new-job-pick'] = {
 // section is emphasised, and the footer's action(s) — brief item 5. ----------
 const jobCloseHref = (size, mechanic = false) => `${mechanic ? 'diary-mechanic' : 'diary'}-${size}.dc.html`;
 
-// Header: job number, status badge, stage (the title), with the customer's
-// details — name (linking to their account), phone, email and bike — moved
-// in underneath (item 24 of the 27 Sep round; the separate "Customer & bike"
-// card is dropped from the left column below to make room for it there).
-// Fix (27 Sep round): the header used to show the stage twice — the status
-// badge ("Expected") followed by a plain-text stage label that, on
-// job-overview, was also "Expected". The stage label now only shows when it
-// says something the badge doesn't already say.
-const showsStage = (stageLabel, status) => stageLabel && stageLabel !== status;
-function jobPageHeader(jobNum, status, tone, stageLabel, closeHref, id, customer = JOB_CUSTOMER, storageSlot = null) {
-  const custLink = `<a href="customer-desktop.dc.html" aria-label="View ${esc(customer.name)}'s account" style="display: inline-flex; align-items: center; gap: 4px; font-size: 16px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}<span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 13, C.accentDark)}</span></a>`;
-  return `<header style="flex-shrink: 0; box-sizing: border-box; padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; border-bottom: 1px solid ${C.border}; background: ${C.panel}">
-<div style="display: flex; flex-direction: column; gap: 7px; min-width: 0">
-<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
-<h2 id="${id}" style="margin: 0; font-family: ${MONO}; font-size: 16px; font-weight: 700">${esc(jobNum)}</h2>${badge(status, tone)}${showsStage(stageLabel, status) ? `<span style="font-size: 12px; color: ${C.muted}">${esc(stageLabel)}</span>` : ''}
-</div>
-<div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">${custLink}<span style="font-size: 13px; color: ${C.muted}">${esc(customer.phone)} · ${esc(customer.email)}</span></div>
-<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap"><span style="font-size: 13px; color: ${C.ink}">${esc(customer.bike)}</span>${storageSlot ? `<span style="font-size: 12px; color: ${C.muted}">Kept on ${esc(storageSlot)}</span>` : ''}</div>
-</div>
-<a href="${closeHref}" aria-label="Close, back to the diary" style="width: 40px; height: 40px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
-</header>`;
-}
-// A subtle cue that the column scrolls further, instead of tabs to click through.
-const scrollCue = () => `<div aria-hidden="true" style="position: sticky; bottom: 0; left: 0; display: flex; justify-content: center; padding: 3px 0 0; pointer-events: none; background: linear-gradient(to bottom, rgba(251,251,249,0) 0%, ${C.panel} 75%)">${icon('chevron', 14, C.muted)}</div>`;
-// Left column: customer & bike, what the customer told us, the agreed work /
-// quote lines with totals and approval state (brief item 5).
-function jobLeftColumn(size, { editQuote = false } = {}) {
-  const total = LINES.reduce((sum, [, , a]) => sum + Number(a.replace('£', '')), 0);
-  const approvedTotal = LINES.filter((_, i) => DECISIONS[i][0] === 'Approved').reduce((sum, [, , a]) => sum + Number(a.replace('£', '')), 0);
-  // Item 24: the "Customer & bike" card moved into the pop-up header, freeing
-  // this column to lead with what the customer told us and the agreed work.
-  return stack(`${panel(`${h2('What the customer told us', 15)}${quote(CONCERN)}`, '', 14, 6)}
-${panel(`${h2(editQuote ? 'Quote (edit mode) · revision 2' : 'Agreed work', 15)}${table([['Work'], ['Qty', 'center'], ['Amount', 'right'], ['Approval']], linesTableRows(), { size: 13, pad: '7px 8px' })}<div style="display: flex; justify-content: space-between; padding-top: 6px; border-top: 1px solid ${C.border}; font-size: 14px; font-weight: 700"><span>${editQuote ? 'All proposed work' : 'Approved total'}</span>${mono(editQuote ? `£${total.toFixed(2)}` : `£${approvedTotal.toFixed(2)}`)}</div>${editQuote ? area('Message to Maya', 'We found worn rear pads. The gear cable is optional; it can wait.', 'quote-msg-' + size, 3) : note('Gear cable declined. Anything beyond these lines needs a new approval.', 12)}`, '', 14, 8)}
-${scrollCue()}`, 12);
-}
-function checklistRow(item, idx, size) {
-  const id = `cl-${idx}-${size}`;
-  let sub;
-  if (item.note) sub = area('Note for the customer', item.note, id + '-note', 2);
-  else if (item.checked) sub = note(`<span style="color: ${C.muted}">Customer sees: “All working well”</span>`, 12);
-  else sub = `<div>${link('+ Add note')}</div>`;
-  return `<div style="display: flex; flex-direction: column; gap: 5px; padding: 8px 0; ${idx ? `border-top: 1px solid ${C.border};` : ''}">${check(item.t, item.checked, id)}<div style="padding-left: 28px">${sub}</div></div>`;
-}
-function checklistPanel(size, { emphasize = false } = {}) {
-  return panel(`${h2('Standard service checklist', emphasize ? 16 : 15)}${CHECKLIST.map((it, i) => checklistRow(it, i, size)).join('')}`, emphasize ? `border-color: ${C.accent}` : '', 14, 4);
-}
-
-function quickNoteRow(n) {
+function quickNoteRow(n, size = 'desktop') {
   const tag = n.who === 'Customer'
-    ? `<span style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: ${C.mutedBg}; color: ${C.muted}; font-size: 11px; font-weight: 700">Customer</span>`
+    ? `<span style="display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: ${C.mutedBg}; color: ${C.muted}; font-size: ${size === 'desktop' ? 11 : 12}px; font-weight: 700">Customer</span>`
     : `<span style="font-size: 12px; font-weight: 700; color: ${C.muted}">${esc(n.who)}</span><span style="font-size: 12px; color: ${C.muted}">${mono(n.when)}</span>`;
   return `<div style="display: flex; flex-direction: column; gap: 3px">
 <div style="display: flex; align-items: center; gap: 6px">${tag}</div>
@@ -1877,72 +2150,24 @@ function quickNoteRow(n) {
 }
 function jobQuickOverviewBody(size) {
   const approvedTotal = LINES.filter((_, i) => DECISIONS[i][0] === 'Approved').reduce((sum, [, , a]) => sum + Number(a.replace('£', '')), 0);
-  return `${panel(`${h2('Notes', 14)}${stack(QUICK_NOTES.map(quickNoteRow).join(''), 10)}`, '', 14, 8)}
-${panel(`${h2('Line items', 14)}${table([['Work'], ['Amount', 'right']], LINE_ORDER.map((i) => { const [w, s, a] = LINES[i]; return [two(w, s), DECISIONS[i][0] === 'Declined' ? mono(a, `text-decoration: line-through; color: ${C.muted}`) : mono(a)]; }), { size: 13, pad: '7px 8px' })}<div style="display: flex; align-items: center; gap: 6px; padding-top: 4px"><span style="font-size: 11px; color: ${C.muted}">Declined lines are struck through.</span></div>`, '', 14, 8)}
+  return `${panel(`${h2('Notes', 14)}${stack(QUICK_NOTES.map((n) => quickNoteRow(n, size)).join(''), 10)}`, '', 14, 8)}
+${panel(`${h2('Line items', 14)}${table([['Work'], ['Amount', 'right']], LINE_ORDER.map((i) => { const [w, s, a] = LINES[i]; return [two(w, s), DECISIONS[i][0] === 'Declined' ? mono(a, `text-decoration: line-through; color: ${C.muted}`) : mono(a)]; }), { size: 13, pad: '7px 8px' })}<div style="display: flex; align-items: center; gap: 6px; padding-top: 4px"><span style="font-size: ${size === 'desktop' ? 11 : 12}px; color: ${C.muted}">Declined lines are struck through.</span></div>`, '', 14, 8)}
 ${row(`<span style="font-size: 15px; font-weight: 700">Cost</span><span style="flex-grow: 1"></span>${mono(`£${approvedTotal.toFixed(2)}`, 'font-size: 18px; font-weight: 700')}`, 10)}
-<div>${link('Open job', `job-overview-${size}.dc.html`)}</div>`;
+${size === 'phone' ? '' : size === 'tablet' ? `<div>${touchLink('Open job', `job-overview-${size}.dc.html`)}</div>` : `<div>${link('Open job', `job-overview-${size}.dc.html`)}</div>`}`;
 }
 screens['job-quick-overview'] = {
   desktop: (() => {
     const base = shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob: { type: 'job', job: 'WH-1042' } }));
     return dialogOverlay(base, DW, DH, `${dialogHeader('Standard service · WH-1042', 'diary-desktop.dc.html', 'Maya Patel · Trek Domane AL 3', 'quick-overview-title')}${dialogBody(jobQuickOverviewBody('desktop'), 18, 14)}`, { pad: 40, maxWidth: 560, labelledby: 'quick-overview-title' });
   })(),
-  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
-  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+  tablet: dialogOverlay(tabletDiary({ highlightJob: { type: 'job', job: 'WH-1042' } }), TW, TH, `${dialogHeader('Standard service · WH-1042', 'diary-tablet.dc.html', 'Maya Patel · Trek Domane AL 3', 'quick-overview-title', 'tablet')}${dialogBody(jobQuickOverviewBody('tablet'), 18, 14)}`, { pad: 40, maxWidth: 560, labelledby: 'quick-overview-title' }),
+  // Phone: the overview fills the screen (decision 15/16's phone rule), Open
+  // job pinned at the bottom.
+  phone: dialogPhone('Standard service · WH-1042', 'diary-phone.dc.html', jobQuickOverviewBody('phone'), button('Open job', { block: true, href: 'job-overview-phone.dc.html' }), 'Maya Patel · Trek Domane AL 3'),
 };
-// Messages: latest few + a reply box (brief item 5's right-hand section).
-function messagesPanel(size) {
-  return panel(`${h2('Messages', 15)}${stack(`${note(`<strong>You</strong> · today ${mono('09:14')} — “Your bike is booked in and we’ve started the safety check.”`)}${note(`<strong>Maya Patel</strong> · today ${mono('09:20')} — “Thanks, how long roughly?”`)}`, 8)}${area('Reply to Maya', '', 'msg-reply-' + size, 2)}${button('Send', { size: 'sm' })}`, '', 14, 8);
-}
-// History: a compact timeline (brief item 5's right-hand section).
-const HISTORY_ALL = [
-  ['08:02', 'Booking confirmed by Maya Patel'],
-  ['09:05', 'Bike booked in · tag printed'],
-  ['09:40', 'Quote sent — awaiting approval'],
-  ['10:10', 'Quote approved (pads); gear cable declined'],
-  ['11:30', 'Work started by Alex Morgan'],
-  ['15:30', 'Work finished — final checks complete'],
-  ['16:52', 'Payment taken at the Wheelhouse till'],
-  ['17:05', 'Collected by Maya Patel'],
-];
-function historyPanel(size, upTo) {
-  return panel(`${h2('History', 15)}${HISTORY_ALL.slice(0, upTo).map(([t, d]) => `<div style="display: flex; gap: 8px; font-size: 12px; color: ${C.muted}"><span style="font-family: ${MONO}; flex-shrink: 0">${esc(t)}</span><span>${esc(d)}</span></div>`).join('')}`, '', 14, 6);
-}
-// Right column: an optional stage-specific top section (e.g. the bike tag, the
-// delay note), then the checklist (wide — where the mechanic works), then
-// messages and history lower down (brief item 5).
-function jobRightColumn(size, { top = '', emphasizeChecklist = false, historyUpTo = 4 } = {}) {
-  return stack(`${top}${checklistPanel(size, { emphasize: emphasizeChecklist })}${grid('1.4fr 1fr', `${messagesPanel(size)}${historyPanel(size, historyUpTo)}`, 14)}${scrollCue()}`, 12);
-}
-function jobColumns(left, right, leftMax = 320) {
-  return `<div style="flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(260px, ${leftMax}px) minmax(0, 1fr); gap: 20px">
-<div style="min-width: 0; min-height: 0; overflow: hidden auto; display: flex; flex-direction: column">${left}</div>
-<div style="min-width: 0; min-height: 0; overflow: hidden auto; display: flex; flex-direction: column">${right}</div>
-</div>`;
-}
-// One scrolling column for the phone, in the same order as the columns above —
-// no tabs and no tap-to-open accordions (the page is short enough to scroll
-// straight through); the main action stays pinned in the footer.
-function jobPhoneBody(size, { jobNum, status, tone, stageLabel, top = '', historyUpTo = 4, editQuote = false, customer = JOB_CUSTOMER }) {
-  return stack(`<div style="display: flex; flex-direction: column; gap: 5px">
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 style="margin: 0; font-family: ${MONO}; font-size: 14px; font-weight: 700">${esc(jobNum)}</h2>${badge(status, tone)}</div>
-${showsStage(stageLabel, status) ? `<span style="font-size: 11px; color: ${C.muted}">${esc(stageLabel)}</span>` : ''}
-<a href="customer-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}<span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 12, C.accentDark)}</span></a>
-<span style="font-size: 12px; color: ${C.muted}">${esc(customer.phone)} · ${esc(customer.email)}</span>
-<span style="font-size: 12px; color: ${C.ink}">${esc(customer.bike)}</span>
-</div>
-${panel(`${h2('What the customer told us', 14)}${quote(CONCERN)}`, '', 12, 5)}
-${panel(`${h2(editQuote ? 'Quote (edit mode)' : 'Agreed work', 14)}${table([['Work'], ['Amount', 'right']], LINES.map(([w, , a], i) => [two(w, ''), mono(a)]), { size: 12, pad: '5px 6px' })}`, '', 12, 5)}
-${top}
-${panel(`${h2('Standard service checklist', 14)}${CHECKLIST.map((it, i) => checklistRow(it, i, size)).join('')}`, '', 12, 4)}
-${panel(`${h2('Messages', 14)}${note(`<strong>Maya Patel</strong> · ${mono('09:20')} — “Thanks, how long roughly?”`, 12)}`, '', 12, 5)}
-${panel(`${h2('History', 14)}${HISTORY_ALL.slice(0, historyUpTo).map(([t, d]) => `<div style="display: flex; gap: 8px; font-size: 11px; color: ${C.muted}"><span style="font-family: ${MONO}; flex-shrink: 0">${esc(t)}</span><span>${esc(d)}</span></div>`).join('')}`, '', 12, 5)}`, 12);
-}
-// Builds the desktop/tablet/phone triple for one job stage. All seven stages
-// share this one builder — only the config below differs (brief item 5).
-// ---------- Desktop: the settled job page (decision 40) — job-page.mjs's
-// job-final-2 rendering, driven by this stage's data. Tablet/phone keep the
-// pre-existing (not-yet-settled — decision 25) layout below unchanged.
+// ---------- The settled job page (decision 40) — job-page.mjs's job-final-2
+// rendering, driven by each stage's data, at all three sizes (see
+// buildJobPage below).
 export const DECLINED_NOTE_TEXT = 'Gear cable declined. Anything beyond these lines needs a new approval.';
 const WORK_LINE_SERVICE = { work: 'Standard service', sub: 'Labour · 60 min', code: '', qty: '1', price: 65.0 };
 const WORK_LINE_PADS = { work: 'Shimano brake pads', sub: 'Part · B05S-RX', code: 'B05S-RX', qty: '1', price: 28.0, note: 'Rear pads worn — replacing' };
@@ -1974,11 +2199,12 @@ export const NOTES_STAFF_FULL = [STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES];
 // the stages table") — same texts as the tablet/phone top()s below
 // (bookInTop/waitingTop/finishedTop/collectionTop), repacked to fit the
 // notes-box layout's tighter vertical budget.
-function tagStripCompact() {
-  return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 13)}${badge('Acknowledged', 'green')}</div><span style="font-size: 11px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 11px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div>`, 12, 'align-items: center')}`, '', 6, 0);
+function tagStripCompact(size = 'desktop') {
+  const f = size === 'desktop' ? 11 : 12;
+  return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 13)}${badge('Acknowledged', 'green')}</div><span style="font-size: ${f}px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: ${f}px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div>`, 12, 'align-items: center')}`, '', 6, 0);
 }
-function waitingStripCompact() {
-  return jpPanel(`${jpRow(`${badge('Waiting for parts', 'amber')}<span style="font-size: 13px; font-weight: 600">Replacement rear brake pads delayed</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span>`, 10)}<span style="font-size: 11px; color: ${C.muted}; line-height: 1.3">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`, 6, 3);
+function waitingStripCompact(size = 'desktop') {
+  return jpPanel(`${jpRow(`${badge('Waiting for parts', 'amber')}<span style="font-size: 13px; font-weight: 600">Replacement rear brake pads delayed</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span>`, 10)}<span style="font-size: ${size === 'desktop' ? 11 : 12}px; color: ${C.muted}; line-height: 1.3">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`, 6, 3);
 }
 function finishedStripCompact() {
   return jpPanel(`${jpRow(`<span style="font-size: 13px">Alex finished the work and final checks at ${jpMono('15:30')}. The bike is still in the shop.</span><span style="flex-grow: 1"></span><span style="font-size: 13px; font-weight: 700">Agreed work ${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span>`, 10)}`, '', 6, 0);
@@ -2003,9 +2229,11 @@ function collectionStripCompact() {
 // 28px) — this sits in the dialog's fixed-height footer chrome, so it stays
 // as compact as the two items can read while still each being a real
 // checkbox + label a mechanic can tap.
-const handbackItem = (label, id) => `<label for="${id}" style="display: flex; align-items: center; gap: 8px; min-height: 24px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 16px; height: 16px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 13px; color: ${C.ink}">${esc(label)}</span></label>`;
+const handbackItem = (label, id, size = 'desktop') => size === 'desktop'
+  ? `<label for="${id}" style="display: flex; align-items: center; gap: 8px; min-height: 24px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 16px; height: 16px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 13px; color: ${C.ink}">${esc(label)}</span></label>`
+  : `<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 14px; color: ${C.ink}">${esc(label)}</span></label>`;
 function collectionHandback(size) {
-  return `<div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap">${handbackItem('Bike handed to the customer or authorised collector', 'coll-hb1-' + size)}${handbackItem('Lock key and rear light returned', 'coll-hb2-' + size)}</div>`;
+  return `<div style="display: flex; ${size === 'phone' ? 'flex-direction: column; align-items: stretch; gap: 0' : size === 'tablet' ? 'align-items: center; gap: 18px; flex-shrink: 0' : 'align-items: center; gap: 18px; flex-wrap: wrap'}">${handbackItem('Bike handed to the customer or authorised collector', 'coll-hb1-' + size, size)}${handbackItem('Lock key and rear light returned', 'coll-hb2-' + size, size)}</div>`;
 }
 
 // Decision 51 (28 Sep 2026): ready-by is the diary day, not a separate field
@@ -2039,23 +2267,45 @@ export function buildJobPageDesktop({
   return dialogOverlay(base, DW, DH, content, { pad: 32, full: true, labelledby: 'job-page-title' });
 }
 
-// Builds the desktop/tablet/phone triple for one job stage. Desktop uses the
-// settled job-page.mjs layout (desktop config below); tablet/phone share this
-// one builder — only the config differs (brief item 5), as before this round.
-function buildJobPage({ jobNum = 'WH-1042', status, tone, stageLabel, top = () => '', emphasizeChecklist = false, historyUpTo = 4, editQuote = false, footer, mechanic = false, desktop = {} }) {
-  const id = 'job-page-title';
+// Phone versions of the stage-only strips (same texts as the desktop compact
+// strips above, stacked for a narrow screen).
+const phoneStagePanel = (inner, extra = '') => `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; ${extra}">${inner}</div>`;
+const PHONE_STAGE_TOP = {
+  bookIn: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 15)}${badge('Acknowledged', 'green')}</div>${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span>`),
+  waiting: () => phoneStagePanel(`<div>${badge('Waiting for parts', 'amber')}</div><span style="font-size: 15px; font-weight: 600">Replacement rear brake pads delayed</span><span style="font-size: 14px">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.35">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`),
+  finished: () => phoneStagePanel(`<span style="font-size: 14px">Alex finished the work and final checks at ${jpMono('15:30')}. The bike is still in the shop.</span><span style="font-size: 15px; font-weight: 700">Agreed work ${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span>`),
+  collection: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Paid', 'green')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span></div><span style="font-size: 13px; color: ${C.muted}">Payment already taken.</span>`),
+};
+// Builds the desktop/tablet/phone triple for one job stage (decision 40: the
+// settled job page at every stage). Desktop: buildJobPageDesktop, unchanged.
+// Tablet (decision 68): the same pop-up layout — two-row customer strip,
+// details + notes box, full work-and-parts table — over the tablet diary, not
+// scrolling, with a full 44px Done tick. Phone: one scrolling page
+// (jobPhoneSections) with the stage's main action pinned below.
+// touch.footer(size) / touch.stageTop(size) / touch.phoneTop give each size's
+// own links and text sizes; the desktop config itself is untouched.
+function buildJobPage({ jobNum = 'WH-1042', status, tone, mechanic = false, desktop = {}, touch = {} }) {
   const closeHref = (size) => jobCloseHref(size, mechanic);
-  const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
-  function build(size, w, h, pad) {
+  const opts = mechanic ? MECH_SHELL : {};
+  const common = (size) => ({
+    customer: { ...JOB_CUSTOMER, storageSlot: STORAGE[jobNum] }, mechanicName: 'Alex Morgan', custHref: `customer-${size}.dc.html`,
+    jobNum, created: 'Created Thu 17 Sep · by Jo Taylor', limit: desktop.limit,
+    readyByBadge: badge(`Ready by ${desktop.readyBy || JOB_READY_BY}`, 'grey'), totalBadge: desktop.totalBadge || '',
+    left: jpJobLeftCol({ status: desktop.leftStatus, diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: desktop.readyBy || JOB_READY_BY, bikeHere: desktop.bikeHere, idPrefix: 'jp-' + size, stackTimes: size === 'phone' }),
+    customerTexts: desktop.customerTexts, staffTexts: desktop.staffTexts, checkedCount: desktop.checkedCount, totalCount: CHECKLIST_10.length, notedCount: desktop.notedCount,
+    checklistHref: desktop.checklistHref ? `job-checklist-${size}.dc.html` : null,
+    lines: desktop.lines, totalLabel: desktop.totalLabel, totalValue: desktop.totalValue, footerNote: desktop.footerNote, quoteAction: !!desktop.quoteAction,
+  });
+  const tablet = () => {
     const base = shellTablet('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('tablet') : diaryFrozenContent('tablet'), opts);
-    const chrome = jobPageHeader(jobNum, status, tone, stageLabel, closeHref(size), id, JOB_CUSTOMER, null);
-    const body = dialogBody(jobColumns(jobLeftColumn(size, { editQuote }), jobRightColumn(size, { top: top(size), emphasizeChecklist, historyUpTo }), 400), 24, 0);
-    return dialogOverlay(base, w, h, `${chrome}${body}${footer ? dialogFooter(footer(size)) : ''}`, { pad, full: true, labelledby: id });
-  }
+    const content = jobPopupContent({ ...common('tablet'), titleId: 'job-page-title', jobTitle: 'Standard service', status, tone, closeHref: closeHref('tablet'), footer: touch.footer('tablet'), stageTop: touch.stageTop ? touch.stageTop('tablet') : '', doneH: 44, touchLinks: true });
+    return dialogOverlay(base, TW, TH, content, { pad: 20, full: true, labelledby: 'job-page-title' });
+  };
+  const phone = () => dialogPhone('Standard service', closeHref('phone'), jobPhoneSections({ ...common('phone'), stageTop: touch.phoneTop ? touch.phoneTop() : '' }), touch.footer('phone'), '', { scroll: true, titleExtra: badge(status, tone), bodyGap: 10 });
   return {
     desktop: buildJobPageDesktop({ ...desktop, jobNum, status, tone, mechanic, closeHref: closeHref('desktop') }),
-    tablet: build('tablet', TW, TH, 28),
-    phone: dialogPhone(JOB_CUSTOMER_LABEL, closeHref('phone'), jobPhoneBody('phone', { jobNum, status, tone, stageLabel, top: top('phone'), historyUpTo, editQuote }), footer ? footer('phone') : '', stageLabel),
+    tablet: tablet(),
+    phone: phone(),
   };
 }
 
@@ -2063,8 +2313,8 @@ function buildJobPage({ jobNum = 'WH-1042', status, tone, stageLabel, top = () =
 // section (decision 40's rollout — nothing's happened yet). Checklist: 0 of
 // 10. Work: the booked service line only, not yet started.
 screens['job-overview'] = buildJobPage({
-  status: 'Expected', tone: 'blue', stageLabel: 'Expected', historyUpTo: 1,
-  footer: (size) => button('Book in', { block: true, href: `job-book-in-${size}.dc.html` }),
+  status: 'Expected', tone: 'blue',
+  touch: { footer: (size) => button('Book in', { variant: 'primary', block: true, href: `job-book-in-${size}.dc.html` }) },
   desktop: {
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_NONE,
     checkedCount: 0, notedCount: 0,
@@ -2073,25 +2323,14 @@ screens['job-overview'] = buildJobPage({
     footer: button('Book in', { variant: 'primary', block: true, href: 'job-book-in-desktop.dc.html' }),
   },
 });
+keepDesktopSeq('job-overview');
 
-// 10. job-book-in — "Job · booked in, tag printed"; tag preview with a Code
-// 128 barcode + print status, near the top of the right column (tablet/phone).
-function tagPreview() {
-  return `<figure aria-label="Bike tag preview" style="margin: 0; box-sizing: border-box; padding: 14px; border-radius: 8px; border: 1px solid ${C.ink}; background: #ffffff; display: flex; flex-direction: column; gap: 5px">
-<div style="font-size: 10px; font-weight: 700; letter-spacing: 1px">NORTH STREET CYCLES</div>
-<div style="font-family: ${MONO}; font-size: 26px; line-height: 1.1">WH-1042</div>
-<div style="font-size: 12px; font-weight: 700">TREK DOMANE AL 3</div>
-<div style="font-size: 12px">Green · black mudguards</div>
-${barcode128('WH-1042', 220, 42)}
-<div style="text-align: center; font-family: ${MONO}; font-size: 12px">WH-1042</div>
-<div style="font-size: 11px; color: ${C.muted}">Scan the barcode to open the staff job</div>
-<div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; padding-top: 5px; border-top: 1px solid ${C.border}"><span>IN: <span style="font-family: ${MONO}">17 SEP 2026</span></span><span>KEEP WITH BIKE</span></div>
-</figure>`;
-}
-const bookInTop = () => `${row(`${tagPreview()}${panel(`${row(`${h2('Bike tag sent', 14)}${badge('Acknowledged', 'green')}`, 10, 'justify-content: space-between')}${txt('Front desk Zebra · 1 copy', 13)}${note(`${mono('09:12')} · printed by Jack Lewis`, 12)}${note('Attach the tag where it can be scanned without removing it from the bike.', 12)}`, '', 12, 6)}`, 12, 'align-items: flex-start; flex-wrap: wrap')}`;
 screens['job-book-in'] = buildJobPage({
-  status: 'In workshop', tone: 'blue', stageLabel: 'Booked in, tag printed', top: bookInTop, historyUpTo: 2,
-  footer: (size) => button('Full job', { variant: 'default', block: true, href: `job-overview-${size}.dc.html` }),
+  status: 'In workshop', tone: 'blue',
+  touch: {
+    footer: (size) => `${button('Send quote', { variant: 'default', block: true, href: `job-quote-${size}.dc.html` })}${button('Start work', { variant: 'primary', block: true, href: `job-mechanic-${size}.dc.html` })}`,
+    stageTop: (size) => tagStripCompact(size), phoneTop: PHONE_STAGE_TOP.bookIn,
+  },
   desktop: {
     stageTop: tagStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
@@ -2101,13 +2340,14 @@ screens['job-book-in'] = buildJobPage({
     footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
   },
 });
+keepDesktopSeq('job-book-in');
 
 // 11. job-quote — "Job · quote"; the quote (left column) is in edit mode on
 // tablet/phone. Desktop: the four lines pending approval, "Send quote" both
 // in the table toolbar and the footer.
 screens['job-quote'] = buildJobPage({
-  status: 'Awaiting approval', tone: 'purple', stageLabel: 'Quote — awaiting approval', editQuote: true, historyUpTo: 3,
-  footer: () => button('Send quote', { block: true }),
+  status: 'Awaiting approval', tone: 'purple',
+  touch: { footer: () => button('Send quote', { variant: 'primary', block: true }) },
   desktop: {
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
     checkedCount: 0, notedCount: 0,
@@ -2122,13 +2362,14 @@ screens['job-quote'] = buildJobPage({
     footer: button('Send quote', { variant: 'primary', block: true }),
   },
 });
+keepDesktopSeq('job-quote');
 
 // 12. job-mechanic — "Job · in the workshop (mechanic)"; the worked example
 // (decision 40's base board, job-final-2 itself) — close → diary-mechanic;
 // the "Full service checklist" bar links to job-checklist (task item 2).
 screens['job-mechanic'] = buildJobPage({
-  status: 'In workshop', tone: 'blue', stageLabel: 'In the workshop', emphasizeChecklist: true, historyUpTo: 5, mechanic: true,
-  footer: (size) => button('Mark ready for collection', { block: true, href: `job-finished-${size}.dc.html` }),
+  status: 'In workshop', tone: 'blue', mechanic: true,
+  touch: { footer: (size) => button('Mark ready for collection', { variant: 'primary', block: true, href: `job-finished-${size}.dc.html` }) },
   desktop: {
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
@@ -2139,6 +2380,7 @@ screens['job-mechanic'] = buildJobPage({
     footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-desktop.dc.html' }),
   },
 });
+keepDesktopSeq('job-mechanic');
 
 // 13. job-waiting-parts — "Job · waiting for parts"; a delay/parts section on
 // top (tablet/phone: waitingTop; desktop: waitingStripCompact, same texts).
@@ -2147,10 +2389,12 @@ screens['job-mechanic'] = buildJobPage({
 // so the field's label says "in the diary" and the job page's own ready-by
 // badge/field (readyBy below) match it rather than the ordinary Thu 17 Sep.
 const WAITING_READY_BY = 'Sat 19 Sep';
-const waitingTop = (size) => panel(`${h2('Waiting for parts', 15)}${field('Part / reason', { value: 'Replacement rear brake pads delayed', id: 'wp-reason-' + size })}${field('Moved to, in the diary', { type: 'datetime-local', value: '2026-09-19T16:00', id: 'wp-revised-' + size })}${area('Customer update', 'The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.', 'wp-update-' + size, 3)}${note('This moves the job’s ready-by date. It does not mark the bike ready.', 12)}`, `border-color: ${ST.waiting[1]}`, 14, 8);
 screens['job-waiting-parts'] = buildJobPage({
-  status: 'Waiting for parts', tone: 'amber', stageLabel: 'Waiting for parts', top: waitingTop, historyUpTo: 5,
-  footer: () => button('Save delay & send update', { block: true }),
+  status: 'Waiting for parts', tone: 'amber',
+  touch: {
+    footer: (size) => `${button('Mark ready for collection', { variant: 'default', block: true })}${note('Target dates are estimates. This update does not mark the bike ready.', size === 'phone' ? 13 : 12)}`,
+    stageTop: (size) => waitingStripCompact(size), phoneTop: PHONE_STAGE_TOP.waiting,
+  },
   desktop: {
     stageTop: waitingStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
@@ -2161,18 +2405,14 @@ screens['job-waiting-parts'] = buildJobPage({
     footer: `${button('Mark ready for collection', { variant: 'default', block: true })}${note('Target dates are estimates. This update does not mark the bike ready.', 12)}`,
   },
 });
+keepDesktopSeq('job-waiting-parts');
 
-// 14. job-finished — "Job · finished"; one "Take payment" step (Wheelhouse
-// till). L1 (29 Sep audit): "Take payment" used to be the only primary
-// button on the job page carrying an icon while its siblings ("Book in",
-// "Start work", "Send quote", "Mark ready for collection", "Record
-// collection") had none — dropped the icon here so the convention is "no
-// icons on primary job-stage buttons" everywhere, not "some do, some don't".
-const finishedTop = (size) => `${banner(`Alex finished the work and final checks at ${mono('15:30')}. The bike is still in the shop.`)}
-${panel(`${h2('Payment', 15)}<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 14px">Agreed work</span>${mono('£111.00', 'font-size: 18px')}</div>`, '', 14, 6)}`;
 screens['job-finished'] = buildJobPage({
-  status: 'Work finished', tone: 'grey', stageLabel: 'Work finished', top: finishedTop, historyUpTo: 6,
-  footer: (size) => `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
+  status: 'Work finished', tone: 'grey',
+  touch: {
+    footer: (size) => `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', size === 'phone' ? 13 : 12)}`,
+    stageTop: () => finishedStripCompact(), phoneTop: PHONE_STAGE_TOP.finished,
+  },
   desktop: {
     stageTop: finishedStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
@@ -2183,13 +2423,14 @@ screens['job-finished'] = buildJobPage({
     footer: `${button('Mark ready & notify customer', { block: true })}${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-desktop.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
   },
 });
+keepDesktopSeq('job-finished');
 
-// 15. job-collection — "Job · collection"; hand-back checklist, paid state.
-const collectionTop = (size) => `${panel(`${h2('Hand the bike back', 15)}${check('Bike handed to the customer or authorised collector', true, 'coll1-' + size)}${check('Lock key and rear light returned', true, 'coll2-' + size)}${field('Collected by', { value: 'Maya Patel', id: 'coll-by-' + size })}`, '', 14, 8)}
-${panel(`${row(`${h2('Payment', 15)}${badge('Paid', 'green')}`, 10, 'justify-content: space-between')}<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 14px">Agreed work</span>${mono('£111.00', 'font-size: 18px')}</div>${note('Taken at the Wheelhouse till today at ' + mono('16:52') + '.', 12)}`, '', 14, 8)}`;
 screens['job-collection'] = buildJobPage({
-  status: 'Ready for collection', tone: 'green', stageLabel: 'Ready for collection', top: collectionTop, historyUpTo: 8,
-  footer: () => button('Record collection', { block: true }),
+  status: 'Ready for collection', tone: 'green',
+  touch: {
+    footer: (size) => `${collectionHandback(size)}${button('Record collection', { variant: 'primary', block: true })}`,
+    stageTop: () => collectionStripCompact(), phoneTop: PHONE_STAGE_TOP.collection,
+  },
   desktop: {
     stageTop: collectionStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
@@ -2200,6 +2441,7 @@ screens['job-collection'] = buildJobPage({
     footer: `${collectionHandback('desktop')}${button('Record collection', { variant: 'primary', block: true })}`,
   },
 });
+keepDesktopSeq('job-collection');
 
 // 16. job-checklist — "Job · full service checklist" (task item 2): the Full
 // service checklist full-screen pop-up (as job-final-2-detailed), stacked
@@ -2230,17 +2472,46 @@ ${fullChecklistDialog({ titleId: 'job-checklist-title', subtitle: 'Standard serv
 </div>
 </div>`;
   })(),
-  tablet: desktopOnlyPlaceholder('tablet', 'job-mechanic-tablet.dc.html', '‹ Back to the job'),
-  phone: desktopOnlyPlaceholder('phone', 'job-mechanic-phone.dc.html', '‹ Back to the job'),
+  // Tablet: the same full-screen pop-up stacked over the (dimmed) job, over
+  // the mechanic's tablet diary.
+  tablet: (() => {
+    const base = shellTablet('diary', 'Workshop diary', diaryFrozenContentMechanic('tablet'), MECH_SHELL);
+    const jobLayer = jobPopupContent({
+      titleId: 'job-page-title', jobTitle: 'Standard service', status: 'In workshop', tone: 'blue', closeHref: 'diary-mechanic-tablet.dc.html',
+      customer: { ...JOB_CUSTOMER, storageSlot: STORAGE['WH-1042'] }, mechanicName: 'Alex Morgan', custHref: 'customer-tablet.dc.html',
+      jobNum: 'WH-1042', created: 'Created Thu 17 Sep · by Jo Taylor',
+      readyByBadge: badge(`Ready by ${JOB_READY_BY}`, 'grey'), totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+      left: jpJobLeftCol({ status: 'In workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: JOB_READY_BY, bikeHere: true, idPrefix: 'jpc-tablet' }),
+      customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: CHECKLIST_CHECKED, totalCount: CHECKLIST_10.length, notedCount: CHECKLIST_NOTED, checklistHref: null,
+      lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT, quoteAction: false, doneH: 44, touchLinks: true,
+      footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-tablet.dc.html' }),
+    });
+    return `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">
+${base}
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.45); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 20px">
+<div role="dialog" aria-modal="true" aria-hidden="true" style="width: 100%; height: 100%; box-sizing: border-box; background: ${C.panel}; border-radius: 14px; box-shadow: 0 24px 64px rgba(28,30,25,0.35); display: flex; flex-direction: column; overflow: hidden">
+${jobLayer}
+</div>
+</div>
+<div style="position: absolute; inset: 0; background: rgba(28,30,25,0.55); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 14px">
+${fullChecklistDialog({ titleId: 'job-checklist-title', subtitle: 'Standard service · WH-1042 · Trek Domane AL 3', checklist: CHECKLIST_10, doneHref: 'job-mechanic-tablet.dc.html', closeHref: 'job-mechanic-tablet.dc.html', idPrefix: 'jc-tablet' })}
+</div>
+</div>`;
+  })(),
+  // Phone: a full-screen page of collapsed tick-and-label rows (decision 58,
+  // S3) — a note shows only where one exists — with Done pinned below.
+  phone: dialogPhone('Full service checklist', 'job-mechanic-phone.dc.html',
+    `<span style="font-size: 14px; color: ${C.muted}">${CHECKLIST_CHECKED} of ${CHECKLIST_10.length} done · ${CHECKLIST_NOTED} note${CHECKLIST_NOTED === 1 ? '' : 's'}</span><div>${CHECKLIST_10.map((it, i) => fullChecklistItemCollapsed(it, `jc-phone-${i}`)).join('')}</div>`,
+    button('Done', { variant: 'primary', block: true, href: 'job-mechanic-phone.dc.html' }), 'Standard service · WH-1042 · Trek Domane AL 3', { backLabel: 'Close, back to the job', bodyGap: 4, bodyPad: 16 }),
 };
 
 
 // ---------- Row 5: Overview page (stage2 `desk`, under Workshop › Overview) ----------
 const STATS_DESK = [['Expected today', '8 bikes', '3 still to arrive'], ['In the workshop', '12', '4 ready to collect'], ['Planned effort', '6h / 8h', 'Shared and assigned, counted once']];
 const ARRIVALS = [
-  ['WH-1042', 'Maya Patel', 'Trek Domane AL 3', 'Standard service', () => button('Book in', { size: 'sm', href: 'job-overview-desktop.dc.html' })],
-  ['WH-1045', 'Jamie Brooks', 'Giant Escape 2', 'Gear adjustment', () => `<span style="font-size: 13px">${mono('10:30')} appointment</span>`],
-  ['WH-1047', 'Aisha Khan', 'Cannondale Quick', 'Safety check', () => '<span style="font-size: 13px">Drop-off</span>'],
+  ['WH-1042', 'Maya Patel', 'Trek Domane AL 3', 'Standard service', (size = 'desktop') => button('Book in', { size: size === 'desktop' ? 'sm' : 'default', href: `job-overview-${size}.dc.html` })],
+  ['WH-1045', 'Jamie Brooks', 'Giant Escape 2', 'Gear adjustment', (size = 'desktop') => `<span style="font-size: ${size === 'desktop' ? 13 : 14}px">${mono('10:30')} appointment</span>`],
+  ['WH-1047', 'Aisha Khan', 'Cannondale Quick', 'Safety check', (size = 'desktop') => `<span style="font-size: ${size === 'desktop' ? 13 : 14}px">Drop-off</span>`],
 ];
 // M7 (29 Sep audit): "6h / 8h" takes a moment of mental maths to read as a
 // proportion, sitting beside two cards that are plain counts — a thin fill
@@ -2255,19 +2526,25 @@ ${grid('repeat(3, minmax(0, 1fr))', STATS_DESK.map(([k, v, s]) => {
     const fill = m ? statFill(Math.min(100, Math.round((Number(m[1]) / Number(m[2])) * 100))) : '';
     return panel(`${eyebrow(k)}<div style="font-size: 24px; font-weight: 700">${esc(v)}</div>${fill}${note(s)}`, '', 16, 4);
   }).join(''))}
-${segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs')}
-${card(table([['Job / customer'], ['Bike'], ['Work'], ['Custody'], ['', 'right']], ARRIVALS.map(([j, n, b, w, a]) => [`${mono(j)} · ${esc(n)}`, esc(b), esc(w), badge('Expected', 'blue'), a()])), 'overflow: hidden')}`, 14);
+${size === 'desktop' ? segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs') : segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs', 44, 14)}
+${card(table([['Job / customer'], ['Bike'], ['Work'], ['Custody'], ['', 'right']], ARRIVALS.map(([j, n, b, w, a]) => [`${mono(j)} · ${esc(n)}`, esc(b), esc(w), badge('Expected', 'blue'), a(size)]), size === 'desktop' ? {} : { size: 15, pad: '8px 12px' }), 'overflow: hidden')}`, 14);
 }
+// Phone overview (decision 68): the same three figures, the same four
+// filters (wrapping, 44px), and the arrivals as rows with their action.
 function overviewPhoneContent(size) {
-  return stack(`${txt('Thursday 17 September', 14, `color: ${C.muted}`)}
-${STATS_DESK.map(([k, v, s]) => rowCard(`<div style="display: flex; flex-direction: column; gap: 2px">${eyebrow(k)}<span style="font-size: 12px; color: ${C.muted}">${esc(s)}</span></div>`, `<span style="font-size: 18px; font-weight: 700">${esc(v)}</span>`)).join('')}
-${segmented(['Arrivals · 3', 'Shared · 4'], 0, 'Show jobs')}
-${ARRIVALS.map(([j, n, b, w, a]) => rowCard(two(`${mono(j)} · ${esc(n)}`, `${esc(b)} · ${esc(w)}`), a())).join('')}`, 10);
+  return stack(`${txt('Thursday 17 September · one shop, one view of the work', 14, `color: ${C.muted}`)}
+${STATS_DESK.map(([k, v, s]) => {
+    const m = /^(\d+(?:\.\d+)?)h\s*\/\s*(\d+(?:\.\d+)?)h$/.exec(v);
+    const fill = m ? statFill(Math.min(100, Math.round((Number(m[1]) / Number(m[2])) * 100))) : '';
+    return card(`<div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 4px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">${eyebrow(k)}<span style="font-size: 20px; font-weight: 700">${esc(v)}</span></div>${fill}<span style="font-size: 13px; color: ${C.muted}">${esc(s)}</span></div>`);
+  }).join('')}
+${segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs', 44, 14)}
+${card(ARRIVALS.map(([j, n, b, w, a], i) => `<div style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${i ? `border-top: 1px solid ${C.border};` : ''}"><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${mono(j)} · ${esc(n)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(b)} · ${esc(w)}</span><span>${badge('Expected', 'blue')}</span></div><div style="flex-shrink: 0">${a(size)}</div></div>`).join(''))}`, 10);
 }
 screens.overview = {
   desktop: shellDesktop('overview', 'Workshop overview', overviewContent('desktop')),
   tablet: shellTablet('overview', 'Workshop overview', overviewContent('tablet')),
-  phone: shellPhone('Overview', phoneBody(overviewPhoneContent('phone'), '', 10), { active: 'overview' }),
+  phone: shellPhone('Overview', overviewPhoneContent('phone'), { active: 'overview' }),
 };
 
 // ---------- Row 6: Customer account (desktop only, item 3 of the 27 Sep round) ----------
@@ -2310,11 +2587,29 @@ ${panel(`${h2('Purchases', 15)}${note('[past purchases from the till]')}`, '', 1
 // cut-off "Purchases" panel read as missing content. Grown to 1100px tall
 // (build-diary.mjs's CUSTOM_BOARD_SIZE) rather than trimmed, since trimming
 // would mean losing a real section to make the render fit, not the content.
+// Customer account on tablet and phone (decision 68): the same content as
+// customer-desktop. Tablet: two columns so it fits the screen unscrolled;
+// phone: one scrolling page (allowed), the jobs as stacked rows.
+function customerTouch(size) {
+  const mayaJobs = JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => a.day - b.day || a.start - b.start);
+  const when = (j) => `${DAYS[j.day][0]} ${DAYS[j.day][1]} Sep · ${hhmm(j.start)}`;
+  const work = (j) => { const w = (j.svc || '').trim(); return w ? w[0].toUpperCase() + w.slice(1) : w; };
+  const head = stack(`<div>${touchLink('‹ Back to job', `job-overview-${size}.dc.html`)}</div>${eyebrow('Front desk › Customers')}${h2(JOB_CUSTOMER.name, 22)}`, 4);
+  const contact = panel(`${h2('Contact details', 15)}${txt(JOB_CUSTOMER.phone)}${txt(JOB_CUSTOMER.email)}`, '', 14, 6);
+  const bikes = panel(`${h2('Bikes on file', 15)}${txt(JOB_CUSTOMER.bike)}`, '', 14, 6);
+  const purchases = panel(`${h2('Purchases', 15)}${note('[past purchases from the till]')}`, '', 14, 6);
+  if (size === 'tablet') {
+    const jobRows = mayaJobs.map((j) => [mono(j.job), when(j), esc(work(j)), statusBadge(j.key)]);
+    return grid('minmax(0, 340px) minmax(0, 1fr)', `${stack(`${head}${contact}${bikes}${purchases}`, 14)}${panel(`${h2('Workshop jobs', 15)}${table([['Job'], ['When'], ['Work'], ['Status']], jobRows, { size: 14, pad: '10px 12px' })}`, '', 14, 10)}`, 24);
+  }
+  const rows = mayaJobs.map((j, i) => `<a href="job-overview-${size}.dc.html" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 8px 0; text-decoration: none; color: ${C.ink}; ${i ? `border-top: 1px solid ${C.border};` : ''}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${esc(work(j))}</span><span style="font-size: 13px; color: ${C.muted}">${mono(j.job)} · ${esc(when(j))}</span></span>${statusBadge(j.key)}</a>`).join('');
+  return stack(`${head}${contact}${bikes}${panel(`${h2('Workshop jobs', 15)}<div>${rows}</div>`, '', 14, 6)}${purchases}`, 12);
+}
 export const CUSTOMER_BOARD_H = 1100;
 screens.customer = {
   desktop: shellDesktop('customers', 'Customer', `<div style="max-width: 760px">${customerBody('desktop')}</div>`, { height: CUSTOMER_BOARD_H }),
-  tablet: desktopOnlyPlaceholder('tablet', 'job-overview-tablet.dc.html', '‹ Back to job'),
-  phone: desktopOnlyPlaceholder('phone', 'job-overview-phone.dc.html', '‹ Back to job'),
+  tablet: shellTablet('customers', 'Customer', customerTouch('tablet')),
+  phone: shellPhone('Customer', `<div data-scroll="page" style="flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; box-sizing: border-box; padding: 14px">${customerTouch('phone')}</div>`, { active: 'customers', pad: 0 }),
 };
 
 // 27/28. diary-stack-hover / diary-stack-open (decision 59, 29 Sep round 2,
@@ -2330,8 +2625,10 @@ screens['diary-stack-hover'] = {
   desktop: shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
 ${row(`${waitingColumn('desktop', -1)}${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone', forceExpandStack: STACK_EXAMPLE })}`, 16, 'align-items: flex-start')}
 ${diaryLegend()}`, 12)),
-  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
-  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+  // Tablet/phone: hover becomes press-and-hold (decision 68) — the stack's
+  // jobs fan out in place, centred on it, two per row (decision 61).
+  tablet: tabletDiary({ forceExpandStack: STACK_EXAMPLE }),
+  phone: phoneDiary({ day: TODAY, forceExpandStack: STACK_EXAMPLE }),
 };
 // diary-stack-open: clicking a stack opens a small popover of the stacked
 // jobs as real diary blocks (decision 59) — same tinted-fill/outline
@@ -2369,8 +2666,13 @@ screens['diary-stack-open'] = {
 ${buildDiaryDesktopBoard('stacked')}
 ${stackOpenPopover(JOBS.filter((j) => j.day === STACK_EXAMPLE.day && j.start === STACK_EXAMPLE.start), { x: 860.7, y: 208, w: 91.6, h: 83 })}
 </div>`,
-  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
-  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+  tablet: tabletDiary({ overlayFor: { day: TODAY, html: tabletStackPopover() } }),
+  // Phone: tapping the stack opens a sheet of the stacked jobs as real diary
+  // blocks, two per row (decisions 59/61).
+  phone: phoneDiary({ day: TODAY }, {
+    overlay: phoneSheet({ id: 'stack-sheet-title', title: '2 jobs at 09:00', sub: 'Thursday 17 September · choose one to open', closeHref: 'diary-phone.dc.html',
+      body: `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">${JOBS.filter((j) => j.day === STACK_EXAMPLE.day && j.start === STACK_EXAMPLE.start).map((j) => touchStackTile(j, 'phone', 30, null)).join('')}</div>` }),
+  }),
 };
 
 // diary-hover-summary (decision 65, 29 Sep round 2, task item 3): a static
@@ -2385,8 +2687,14 @@ screens['diary-hover-summary'] = {
     FORCE_HOVER_SUMMARY_JOB = null;
     return board;
   })(),
-  tablet: desktopOnlyPlaceholder('tablet', 'diary-tablet.dc.html'),
-  phone: desktopOnlyPlaceholder('phone', 'diary-phone.dc.html'),
+  // Tablet/phone (decision 68): hover becomes press-and-hold — keep holding a
+  // job and its summary (notes, line items, cost) opens beside it (tablet) or
+  // as a sheet (phone).
+  tablet: tabletDiary({ highlightJob: { type: 'job', job: 'WH-1042' }, overlayFor: { day: TODAY, html: tabletSummaryPopover() } }),
+  phone: phoneDiary({ day: TODAY, highlightJob: { type: 'job', job: 'WH-1042' } }, {
+    overlay: phoneSheet({ id: 'job-summary-title', title: 'Standard service · WH-1042', sub: 'Maya Patel · Trek Domane AL 3', closeHref: 'diary-phone.dc.html', maxH: 700,
+      body: touchSummaryContent('phone', { twoCol: false }), footer: button('Open job', { variant: 'default', block: true, href: 'job-overview-phone.dc.html' }) }),
+  }),
 };
 
 // Keep the agreed screen order (brief's Row 1–5 order), with this round's new

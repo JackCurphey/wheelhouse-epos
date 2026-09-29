@@ -87,9 +87,9 @@ export function finalCustStrip(customer, mechanicName, custHref = '#') {
 // 29 Sep brief for this board — the spending-limit/ready-by/approved tags
 // moved down here from the job-details strip, so "who" and "what's booked
 // in" are visually separated from "what the diary/quote says").
-export function finalCustStripTwoRow(customer, mechanicName, custHref = '#', tags = '') {
+export function finalCustStripTwoRow(customer, mechanicName, custHref = '#', tags = '', touchLinks = false) {
   const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" title="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
-  const custLinkF = `<a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
+  const custLinkF = `<a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="${touchLinks ? 'display: inline-flex; align-items: center; min-height: 44px; ' : ''}font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
   // Rows trimmed to 0px vertical padding (from finalCustStrip's 2px): the
   // 44px icon buttons already set the identity row's floor, and the
   // logistics row's plain text needs no extra air either — every px here is
@@ -125,9 +125,9 @@ export function jobMetaRow(jobNum, created, readyByBadge, totalBadge, limit = SP
 // tick box; "New bike build" is dropped from the job page entirely — it only
 // appears on the New job form, before the job exists (the `newBuild` param is
 // gone — nothing calls this with it any more).
-export function jobLeftCol({ status, diaryTime, readyBy, bikeHere, idPrefix }) {
+export function jobLeftCol({ status, diaryTime, readyBy, bikeHere, idPrefix, stackTimes = false }) {
   return `${selectFieldS('Status', status, `${idPrefix}-status`)}
-${grid('1fr 1fr', `${staticFieldS('Diary time', diaryTime, `${idPrefix}-time`)}${staticFieldS('Ready by', readyBy, `${idPrefix}-ready`)}`, 12)}
+${grid(stackTimes ? '1fr' : '1fr 1fr', `${staticFieldS('Diary time', diaryTime, `${idPrefix}-time`)}${staticFieldS('Ready by', readyBy, `${idPrefix}-ready`)}`, 12)}
 ${togglePill('Bike is here', bikeHere, `${idPrefix}-here`)}`;
 }
 
@@ -194,7 +194,7 @@ ${header}
 // sort applied at render — `lines` itself is never reordered by hand.
 const classifyLine = (sub = '') => (/^Labour\b/i.test(sub) ? 0 : /^Part\b/i.test(sub) ? 1 : 2);
 const sortLines = (lines) => lines.map((l, i) => [l, i]).sort(([a, ai], [b, bi]) => classifyLine(a.sub) - classifyLine(b.sub) || ai - bi).map(([l]) => l);
-export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', totalValue, footerNote = '', quoteAction = false } = {}) {
+export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', totalValue, footerNote = '', quoteAction = false, doneH = 34 } = {}) {
   const toolbarBtns = quoteAction
     ? `${ghostBtn('Send quote', 'mail')}${ghostBtn('Add item', 'plus')}${ghostBtn('Print', 'reports')}`
     : `${ghostBtn('Add item', 'plus')}${ghostBtn('Scan barcode', 'search')}${ghostBtn('Print', 'reports')}`;
@@ -241,7 +241,7 @@ export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', to
     return `<tr>
 ${tdF(mono(l.code || '—'))}
 ${tdF(`<span><span style="font-weight: 600">${esc(l.work)}</span><span style="font-size: 12px; color: ${C.muted}"> · ${esc(l.sub)}</span></span>`)}
-${tdF(`<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 34px; cursor: pointer"><input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`, 'text-align: center; padding-top: 0; padding-bottom: 0')}
+${tdF(`<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: ${doneH}px; cursor: pointer"><input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`, 'text-align: center; padding-top: 0; padding-bottom: 0')}
 ${tdF(l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(l.qty))}
 ${tdF('—', `color: ${C.muted}; font-size: 12px`)}
@@ -275,17 +275,86 @@ export function jobPopupContent({
   // (audit §3 S2). Pass twoRowHeader: false only to redraw the old one-line
   // strip, which idea-s2-before still does as the "before" record.
   twoRowHeader = true,
+  touchLinks = false, // decision 68: tablet — the customer link gets a 44px-tall hit area (same row height)
+  doneH = 34, // decision 68: the tablet board has the room for a full 44px Done tick; desktop keeps 34px (see H3 above)
 }) {
   const jobBody = grid('420px 1fr', `<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">${left}</div><div style="display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden">${bigNotesColumn({ customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref })}</div>`, 24);
   const metaLimit = limit !== undefined ? limit : SPEND_LIMIT;
   const jobSection = panel(`${jobMetaRow(jobNum, created, twoRowHeader ? '' : readyByBadge, twoRowHeader ? '' : totalBadge, twoRowHeader ? '' : metaLimit)}${jobBody}`, '', 2, 2);
-  const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(lines, { totalLabel, totalValue, footerNote, quoteAction }), grow: false });
+  const workSection = plainFinalSection('Work and parts', { body: finalWorkAndPartsBody(lines, { totalLabel, totalValue, footerNote, quoteAction, doneH }), grow: false });
   // pad trimmed to 2px (from 4px, S2/decision 58 follow-up — same reclaim as
   // dialogFooter/finalCustStripTwoRow above).
   const body = dialogBody(`${stageTop}${jobSection}${workSection}`, 2, 1);
   const headerTags = twoRowHeader ? `${metaLimit ? limitBadge(metaLimit) : ''}${readyByBadge}${totalBadge}` : '';
-  const custStripHtml = twoRowHeader ? finalCustStripTwoRow(customer, mechanicName, custHref, headerTags) : finalCustStrip(customer, mechanicName, custHref);
+  const custStripHtml = twoRowHeader ? finalCustStripTwoRow(customer, mechanicName, custHref, headerTags, touchLinks) : finalCustStrip(customer, mechanicName, custHref);
   return `${finalTitleBar(titleId, jobTitle, status, tone, closeHref)}${custStripHtml}${body}${footer ? dialogFooter(footer) : ''}`;
+}
+
+// ---------- The job page on a phone (decision 68) ----------
+// One scrolling page in decision 35's three parts: (1) information — the
+// two-row customer strip stacked (S2), any stage-only section, the job
+// details; (2) the notes box — customer section on top, underline, plain
+// notes, the Full service checklist bar (decisions 38/39); (3) work and parts
+// as stacked rows, not a wide table, with Add item / Scan barcode ready
+// (decisions 31/33/46). The stage's main action is pinned below by the
+// caller. Same data as the desktop pop-up; nothing new.
+const approvalTone = (a) => ({ Approved: 'green', Declined: 'red', 'Awaiting approval': 'purple', 'On order': 'amber', Booked: 'grey' })[a] || 'grey';
+const partHead = (n, t) => `<div style="padding: 4px 2px 0">${h2(t, 16)}</div>`;
+export function jobPhoneSections({
+  customer, mechanicName, custHref, jobNum, created, limit, readyByBadge, totalBadge, left,
+  customerTexts, staffTexts, checkedCount, totalCount, notedCount, checklistHref,
+  lines, totalLabel, totalValue, footerNote = '', quoteAction = false, stageTop = '',
+}) {
+  const iconBtn = (name, label) => `<button type="button" aria-label="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
+  const metaLimit = limit !== undefined ? limit : SPEND_LIMIT;
+  const strip = `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.mutedBg}; overflow: hidden">
+<div style="padding: 8px 8px 10px 12px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; gap: 6px"><a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="flex-grow: 1; display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>${iconBtn('inbox', `Message ${customer.name}`)}${iconBtn('mail', `Email ${customer.name}`)}${iconBtn('menu', 'Notes')}</div>
+<span style="font-size: 14px; color: ${C.ink}">${esc(customer.phone)}</span><span style="font-size: 14px; color: ${C.ink}">${esc(customer.email)}</span>
+</div>
+<div style="padding: 10px 12px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: ${C.ink}">
+<span>${esc(customer.bike)}</span>
+<span>${customer.storageSlot ? `<span style="color: ${C.muted}">Kept on ${esc(customer.storageSlot)}</span> · ` : ''}Mechanic: <strong>${esc(mechanicName)}</strong></span>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px">${metaLimit ? limitBadge(metaLimit) : ''}${readyByBadge}${totalBadge}</div>
+</div>
+</div>`;
+  const details = `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap">${mono(jobNum, 'font-size: 14px; font-weight: 700')}<span style="font-size: 13px; color: ${C.muted}">${esc(created)}</span></div>
+${left}
+</div>`;
+  const notes = `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.accent}; border-radius: 10px; background: ${C.bg}; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px">
+${h2('Notes', 15)}
+<div style="min-height: 150px; box-sizing: border-box; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px">${bigNoteBody(customerTexts, staffTexts)}</div>
+${detailedNotesButton(checkedCount, totalCount, notedCount, checklistHref)}
+</div>`;
+  const tb = (text, iconName) => `<button type="button" style="flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 8px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 14px; font-weight: 600; white-space: nowrap">${icon(iconName, 16)}${esc(text)}</button>`;
+  const toolbar = `<div style="display: flex; gap: 6px">${quoteAction ? `${tb('Send quote', 'mail')}${tb('Add item', 'plus')}${tb('Print', 'reports')}` : `${tb('Add item', 'plus')}${tb('Scan barcode', 'search')}${tb('Print', 'reports')}`}</div>`;
+  const rowHtml = (l, i) => {
+    const declined = l.approval === 'Declined';
+    const done = l.done ?? l.approval === 'Approved';
+    return `<div style="display: flex; align-items: flex-start; gap: 6px; padding: 8px 0; border-top: 1px solid ${C.border}">
+<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0; margin-left: -8px; cursor: pointer"><input type="checkbox" ${done ? 'checked' : ''} style="width: 22px; height: 22px; margin: 0; accent-color: ${C.accent}"></label>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-top: 3px">
+<span style="font-size: 15px; font-weight: 600; color: ${C.ink}">${esc(l.work)}</span>
+<span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)} · Qty ${esc(l.qty)}</span>
+${l.note ? `<span style="font-size: 13px; color: ${C.ink}">${esc(l.note)}</span>` : ''}
+<div style="padding-top: 2px">${badge(l.approval, approvalTone(l.approval))}</div>
+</div>
+${mono(`£${l.price.toFixed(2)}`, `flex-shrink: 0; padding-top: 4px; font-size: 15px; font-weight: 600; ${declined ? `text-decoration: line-through; color: ${C.muted};` : `color: ${C.ink};`}`)}
+</div>`;
+  };
+  const work = `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px">
+${toolbar}
+${quoteAction ? `<p style="margin: 0; font-size: 13px; line-height: 1.35; color: ${C.muted}">${esc("Quotes are sent when the total is over the customer's limit, or they set none.")}</p>` : ''}
+<div>${sortLines(lines).map(rowHtml).join('')}
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 700">${esc(totalLabel)}</span>${mono(`£${totalValue.toFixed(2)}`, 'font-size: 17px; font-weight: 700')}</div></div>
+${footerNote ? `<p style="margin: 0; font-size: 13px; line-height: 1.35; color: ${C.muted}">${esc(footerNote)}</p>` : ''}
+</div>`;
+  // Parts 1 and 2 carry their own titles (the customer's name, "Notes");
+  // part 3 gets a heading, since its box starts with its toolbar.
+  return `${strip}${stageTop}${details}
+${notes}
+${partHead('3', 'Work and parts')}${work}`;
 }
 
 // ---------- Full service checklist pop-up (decision 39) ----------
