@@ -17,8 +17,8 @@ const money = (n) => `£${n.toFixed(2)}`;
 const label = (t) => `<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${t}</div>`;
 
 // The till page: folded rail, till bar, then the left side and the basket.
-function tillPage(left, right, { offline = null, notice = '' } = {}) {
-  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till')}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar({ offline })}${notice}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 20px; display: flex; gap: 20px">${left}${right}</main></div></div>`;
+function tillPage(left, right, { offline = null, offlineLong = false, notice = '' } = {}) {
+  return `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till')}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar({ offline, offlineLong })}${notice}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 20px; display: flex; gap: 20px">${left}${right}</main></div></div>`;
 }
 
 // ---------- Left side (decision 2): search, group pills, quick buttons ----------
@@ -43,9 +43,10 @@ ${searchBox}
 
 // ---------- Right side: the basket ----------
 const stepper = (qty, name) => `<div role="group" aria-label="Quantity of ${esc(name)}" style="display: inline-flex; align-items: center; border: 1px solid ${C.border}; border-radius: 8px; overflow: hidden"><button type="button" aria-label="One fewer" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">−</button><span style="min-width: 28px; text-align: center; font-family: ${MONO}; font-size: 15px">${qty}</span><button type="button" aria-label="One more" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">+</button></div>`;
-const line = (l) => `<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid ${C.border}">
-<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(money(l.price * l.qty), 'font-size: 16px')}</div>
-<div style="display: flex; align-items: center; justify-content: space-between">${stepper(l.qty, l.name)}<span style="font-size: 13px; color: ${C.muted}">${l.qty > 1 ? `${money(l.price)} each` : ''}</span></div>
+const signed = (n) => (n < 0 ? `−${money(-n)}` : money(n));
+const line = (l) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 9px 0; border-top: 1px solid ${C.border}">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(signed(l.price * l.qty), 'font-size: 16px')}</div>
+${l.fixed ? '' : `<div style="display: flex; align-items: center; justify-content: space-between">${stepper(l.qty, l.name)}<span style="font-size: 13px; color: ${C.muted}">${l.qty > 1 ? `${money(l.price)} each` : ''}</span></div>`}
 </div>`;
 function basket(lines, { customer = null, points = false } = {}) {
   const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
@@ -53,14 +54,14 @@ function basket(lines, { customer = null, points = false } = {}) {
   return card(`<div style="height: 100%; box-sizing: border-box; padding: 18px; display: flex; flex-direction: column; gap: 12px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><h2 style="margin: 0; font-size: 17px; font-weight: 700">Sale</h2><span style="display: flex; gap: 4px">${button('Park', { variant: 'ghost' })}${button('Clear', { variant: 'ghost' })}</span></div>
 ${customer ? `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid ${C.border}; border-radius: 8px"><a href="#" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: ${C.ink}">${icon('user', 16)}<span style="font-size: 14px; font-weight: 600">${esc(customer)}</span></a>${points ? `<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">[n] loyalty points</span><span style="font-size: 13px; color: ${C.muted}">Worth [£ amount] off this sale</span></span>${button('Use points', { variant: 'default' })}</div>` : ''}</div>` : `<button type="button" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px dashed ${C.input}; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('user', 16)}Add a customer <span style="font-weight: 400; color: ${C.muted}">(optional)</span></button>`}
-<div style="display: flex; flex-direction: column">${lines.map(line).join('')}</div>
+${lines.length ? `<div style="display: flex; flex-direction: column">${lines.map(line).join('')}</div>` : `<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; color: ${C.muted}"><span style="font-size: 15px; font-weight: 600; color: ${C.ink}">Nothing in the sale yet</span><span style="font-size: 14px">Tap a quick button, search, or scan a barcode.</span></div>`}
 <div style="flex-grow: 1"></div>
 <a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Add a discount</a>
 <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">
 <div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 16px; font-weight: 700">Total</span>${mono(money(total), 'font-size: 26px')}</div>
 <div style="display: flex; justify-content: space-between; font-size: 13px; color: ${C.muted}"><span>Includes VAT</span>${mono(money(vat))}</div>
 </div>
-${button(`Take payment · ${money(total)}`, { block: true })}
+${lines.length ? button(`Take payment · ${money(total)}`, { block: true }) : `<button type="button" disabled style="display: flex; width: 100%; align-items: center; justify-content: center; min-height: 44px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 15px; font-weight: 600">Take payment</button>`}
 </div>`, 'width: 380px; flex-shrink: 0; height: 100%');
 }
 
@@ -79,11 +80,12 @@ function lineDialog() {
 <div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="line-title" style="margin: 0; font-size: 20px; font-weight: 700">Shimano brake pads</h2><span style="font-size: 13px; color: ${C.muted}">Part · ${mono('B05S-RX')} · 2 in the sale</span></div><a href="till-sale-desktop.dc.html" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
 <div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 18px">
 ${field('Price each', { value: '£28.00', hint: 'The usual price is £28.00.' })}
-<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Discount</span><div style="display: flex; gap: 10px; align-items: center">${seg(['£', '%'], 1, 'Discount as pounds or percent')}<input aria-label="Discount amount" value="10" style="width: 110px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"><span style="font-size: 14px; color: ${C.muted}">= ${mono('£5.60')} off, ${mono('£50.40')} for 2</span></div></div>
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Discount</span><div style="display: flex; gap: 10px; align-items: center">${seg(['£', '%'], 0, 'Discount as pounds or percent')}<input aria-label="Discount amount" value="5.60" style="width: 110px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"><span style="font-size: 14px; color: ${C.muted}">off the line · ${mono('£50.40')} for 2</span></div></div>
 <div role="group" aria-label="Reason for the discount" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
 ${field('Note (optional)', { placeholder: 'e.g. a serial number', hint: 'Shows on the receipt.' })}
+<div>${button('Remove from sale', { variant: 'danger' })}</div>
 </div>
-<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Remove from sale', { variant: 'danger' })}${button('Done')}</div>
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Cancel', { variant: 'ghost' })}${button('Done')}</div>
 </div>`;
 }
 screens['till-line'] = {
@@ -126,7 +128,7 @@ screens['till-variant'] = {
 // serial) asks for its frame number straight away (INV-07).
 screens['till-serial'] = {
   desktop: overTill(dialog('serial-title', 'Frame number', '[Bike name] · this product is tracked by serial number', `
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('check', 18)}<input aria-label="Frame number" placeholder="Scan the frame barcode or type the number" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 18)}<input aria-label="Frame number" placeholder="Scan the frame barcode or type the number" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
 <p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">It goes on the receipt and the customer’s bike record, so the bike can be traced for warranty or if it’s stolen.</p>`, `${button('Skip for now', { variant: 'ghost' })}${button('Add to sale')}`)),
 };
 
@@ -136,7 +138,8 @@ screens['till-discount'] = {
   desktop: overTill(dialog('disc-title', 'Discount the whole sale', 'Sale total £74.00 · 3 items', `
 <div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Discount</span><div style="display: flex; gap: 10px; align-items: center">${seg(['£', '%'], 0, 'Discount as pounds or percent')}<input aria-label="Discount amount" value="4.00" style="width: 110px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"><span style="font-size: 14px; color: ${C.muted}">New total ${mono('£70.00')}</span></div></div>
 <div role="group" aria-label="Reason for the discount" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
-<p style="margin: 0; font-size: 13px; color: ${C.muted}">The reason is kept with the sale and shows in the discounts report.</p>`, `${button('Remove discount', { variant: 'danger' })}${button('Done')}`)),
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">The reason is kept with the sale and shows in the discounts report.</p>
+<div>${button('Remove discount', { variant: 'danger' })}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Done')}`)),
 };
 
 // ---------- Taking payment ----------
@@ -199,7 +202,7 @@ screens['till-receipt'] = {
 const infoRow = (k, v, strong = false) => `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; ${strong ? 'font-weight: 700' : ''}">${k}</span><span style="font-family: ${MONO}; font-size: ${strong ? 18 : 15}px">${v}</span></div>`;
 screens['till-giftcard'] = {
   desktop: overTill(dialog('gift-title', 'Gift card or store credit', `${money(TOTAL)} to pay`, `
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input aria-label="Scan or type a gift card number, or find a customer’s credit" placeholder="Scan or type the gift card number — or a customer’s name for their credit" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input aria-label="Scan or type a gift card number, or find a customer’s credit" placeholder="Scan the card, or a customer’s name for credit" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
 <div style="display: flex; flex-direction: column; padding: 4px 16px 8px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">
 <div style="padding: 10px 0 6px; font-size: 15px; font-weight: 700">Gift card ${mono('•••• [0000]')}</div>
 ${infoRow('Balance', '[£ balance]')}${infoRow('Use for this sale', '[£ up to the total]', true)}${infoRow('Left on the card after', '[£ left]')}
@@ -271,9 +274,9 @@ screens['till-void'] = {
 // (journey A, decision 12). Paying also records collection by default,
 // with a pill to say the bike stays (Workshop day decision 63).
 const jobLines = LINES_APPROVED.filter((l) => l.approval === 'Approved').map((l) => ({ name: l.work, sub: l.sub, price: l.price, qty: 1 }));
-function jobBasket() {
-  const b = basket(jobLines, { customer: 'Maya Patel · workshop job WH-1042' });
-  const pill = `<button type="button" aria-pressed="true" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${C.ink}; background: ${C.ink}; color: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600">${icon('check', 15, C.panel)}Bike collected when paid</button>`;
+function jobBasket(collected = true, extra = []) {
+  const b = basket([...jobLines, ...extra], { customer: 'Maya Patel · workshop job WH-1042' });
+  const pill = `<button type="button" aria-pressed="${collected}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${collected ? C.ink : C.border}; background: ${collected ? C.ink : 'transparent'}; color: ${collected ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${collected ? icon('check', 15, C.panel) : ''}Bike collected when paid</button>`;
   const discount = /<a href="#" style="align-self: flex-start;[^>]*>Add a discount<\/a>/;
   const m = b.match(discount);
   if (!m) throw new Error('basket discount link not found');
@@ -284,7 +287,7 @@ screens['till-job'] = { desktop: tillPage(leftSide(), jobBasket()) };
 // Hand over a click and collect order.
 screens['till-collect'] = {
   desktop: overTill(dialog('collect-title', 'Click and collect · order [number]', '[Customer] · paid online [date]', `
-<div>${tickRow('[Item]', '[Size or colour] · from [shelf or storage spot]', '[£ price]', true)}${tickRow('[Item]', '[Size or colour]', '[£ price]', true)}</div>
+<div>${tickRow('[Item]', '[Size or colour] · from [shelf or storage spot]', '[£ price]', false)}${tickRow('[Item]', '[Size or colour]', '[£ price]', false)}</div>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Mark collected')}`, 600)),
 };
 
@@ -293,9 +296,9 @@ screens['till-collect'] = {
 // order, when the connection is back. No time limit; after four hours the
 // notice grows, because prices and customer details may be out of date.
 // Wheelhouse itself being unreachable counts the same. "[n]" = placeholder.
-const notice = (strong) => `<div role="status" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: ${strong ? '14px 20px' : '10px 20px'}; background: ${C.warnBg}; color: ${C.warnInk}; border-bottom: 1px solid ${C.border}">${icon(strong ? 'alert' : 'wifi', strong ? 22 : 18)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: ${strong ? 16 : 14}px; font-weight: 700">${strong ? 'Offline for over 4 hours — prices and customer details may be out of date' : 'No internet — keep selling. Sales are saved on this till and send themselves when it’s back.'}</span>${strong ? `<span style="font-size: 14px">Sales are still saved safely. Check prices on anything that changed recently.</span>` : ''}</span></div>`;
+const notice = (strong) => `<div role="status" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: ${strong ? '14px 20px' : '10px 20px'}; background: ${strong ? C.warnBg : C.mutedBg}; color: ${strong ? C.warnInk : C.ink}; border-bottom: 1px solid ${C.border}">${icon(strong ? 'alert' : 'wifi', strong ? 22 : 18)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: ${strong ? 16 : 14}px; font-weight: 700">${strong ? 'Offline for over 4 hours — prices and customer details may be out of date' : 'No internet — keep selling. Sales are saved on this till and send themselves when it’s back.'}</span>${strong ? `<span style="font-size: 14px">Sales are still saved safely. Check prices on anything that changed recently.</span>` : ''}</span></div>`;
 screens['till-offline'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(false) }) };
-screens['till-offline-long'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(true) }) };
+screens['till-offline-long'] = { desktop: tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', offlineLong: true, notice: notice(true) }) };
 const overTillOffline = (d) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(false) })}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${d}</div></div>`;
 screens['till-needs-net'] = {
   desktop: overTillOffline(dialog('net-title', 'Refunds need the internet', 'The till is offline', `
@@ -310,6 +313,44 @@ screens['till-failed'] = {
   desktop: overTill(dialog('failed-title', 'Sales that didn’t send', 'Kept safely on this till — a manager checks each one', `
 <div>${listRow(`${mono('B1-[0000]')} · [n] items`, '[Reason from Wheelhouse, in plain words]', '[£ total]', button('Fix', { variant: 'default' }))}${listRow(`${mono('B1-[0000]')} · [n] items`, '[Reason from Wheelhouse, in plain words]', '[£ total]', button('Fix', { variant: 'default' }))}</div>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Fixing opens the sale with the problem shown. Nothing is deleted.</p>`, '', 620)),
+};
+
+// ---------- Audit additions (decision 12) ----------
+screens['till-empty'] = { desktop: tillPage(leftSide(), basket([])) };
+function noResults() {
+  return `<div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs" value="[what was typed]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+<div role="status" style="position: absolute; top: 60px; left: 0; right: 0; z-index: 3; box-sizing: border-box; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)"><span style="font-size: 16px; font-weight: 700">Nothing matches “[what was typed]”</span><span style="font-size: 14px; color: ${C.muted}">Try part of the name, a part number, a phone number or a job number — or scan the barcode.</span></div>
+</div>`;
+}
+screens['till-noresults'] = { desktop: tillPage(noResults(), basket([PADS, BRAKES])) };
+
+// Past sales → a sale: Refund, Void, Reprint (decision 12).
+screens['till-sale-detail'] = {
+  desktop: overTill(dialog('detail-title', `Sale ${'B1-[0000]'}`, 'Today [time] · Maya Patel · Jo Taylor serving · card', `
+<div>${listRow('Shimano brake pads × 2', 'Part · B05S-RX', '£56.00', '')}${listRow('Fit & adjust brakes', 'Labour · 30 min', '£18.00', '')}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">Total · card</span>${mono(money(TOTAL), 'font-size: 22px')}</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${button('Refund', { variant: 'default' })}${button('Reprint receipt', { variant: 'default' })}${button('Void', { variant: 'danger' })}</div>`, '', 600)),
+};
+
+// Refund a cash sale: money back in cash, the drawer opens.
+screens['till-refund-cash'] = {
+  desktop: overTill(dialog('refundcash-title', `Refund from ${'B1-[0000]'}`, 'Maya Patel · today · paid in cash', `
+<div>${tickRow('Shimano brake pads', 'Part · B05S-RX · 1 of 2', '£28.00', true)}${tickRow('Shimano brake pads', 'Part · B05S-RX · 2 of 2', '£28.00', false)}${tickRow('Fit & adjust brakes', 'Labour · 30 min', '£18.00', false)}</div>
+<div role="group" aria-label="Reason" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700">Give back in cash</span><span style="font-size: 13px; color: ${C.muted}">The drawer opens when you confirm</span></span>${mono('£28.00', 'font-size: 26px')}</div>`, `${button('Back', { variant: 'ghost' })}${button('Refund £28.00 · open the drawer')}`, 600)),
+};
+
+// ---------- Deposits on a workshop job (decision 11) ----------
+const JOB_DEPOSIT = WORK_TOTAL_APPROVED * 0.25; // 25% chosen in the example
+screens['till-job-deposit'] = {
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${tillPage(leftSide(), jobBasket(false))}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${dialog('jobdep-title', `Take a deposit · job WH-1042 · ${money(WORK_TOTAL_APPROVED)}`, 'Maya Patel · Trek Domane AL 3', `
+<div role="group" aria-label="How much now" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${pctPill('10%')}${pctPill('25%', true)}${pctPill('50%')}${pctPill('Other')}</div>
+<div style="display: flex; flex-direction: column; padding: 4px 16px 8px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">${infoRow('Deposit now', money(JOB_DEPOSIT), true)}${infoRow('Paid at collection', money(WORK_TOTAL_APPROVED - JOB_DEPOSIT))}</div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px">${icon('workshop', 18)}<span><strong>Bike stays in.</strong> “Bike collected when paid” is switched off for now — it comes back on when the rest is paid.</span></div>`, `${button('Back', { variant: 'ghost' })}${button(`Take ${money(JOB_DEPOSIT)} now`)}`, 600)}</div></div>`,
+};
+screens['till-job-balance'] = {
+  desktop: tillPage(leftSide(), jobBasket(true, [{ name: 'Deposit paid', sub: '[date] · card', price: -JOB_DEPOSIT, qty: 1, fixed: true }])),
 };
 
 export const TITLES = {
@@ -336,6 +377,12 @@ export const TITLES = {
   'till-void': 'Void a sale — with a reason',
   'till-job': 'Pay for a workshop job — bike collected when paid',
   'till-collect': 'Hand over a click and collect order',
+  'till-empty': 'Empty basket',
+  'till-noresults': 'Search with no results',
+  'till-sale-detail': 'A past sale — refund, reprint, void',
+  'till-refund-cash': 'Refund a cash sale — back in cash',
+  'till-job-deposit': 'Deposit on a workshop job — bike stays in',
+  'till-job-balance': 'Workshop job back for collection — deposit taken off, pay the rest',
   'till-offline': 'Offline — keep selling, sales wait to send',
   'till-offline-long': 'Offline for over four hours — the notice grows',
   'till-needs-net': 'Needs the internet — refunds and a few others wait',
@@ -343,9 +390,9 @@ export const TITLES = {
   'till-failed': 'Sales that didn’t send — for a manager',
 };
 export const ROWS = [
-  { label: 'A sale', screens: ['till-sale', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
+  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
-  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-refund', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-collect'] },
+  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-sale-detail', 'till-refund', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect'] },
   { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-no-signout', 'till-failed'] },
 ];

@@ -74,3 +74,21 @@ full one, with one "Take payment" step that leaves room for the other.
     PIN (in the spirit of decision 4), and paying for a workshop job also
     marks the bike collected by default, with a pill to switch it off
     (Workshop day decision 63 made concrete).
+11. **Part-paying a workshop job starts from the payment** (Jack, 29 Sep):
+    "Deposit" on Take payment switches "Bike collected when paid" off by
+    itself and says the bike stays in with the rest paid at collection.
+    When the customer comes back, the job loads with a "Deposit paid" line,
+    only the balance to pay, and the collected pill on again — so paying
+    the rest also records collection. Paying everything now but collecting
+    later = switch the pill off before paying. Chosen over starting from
+    the pill. (Jack also confirmed collected-when-paid as the default.)
+12. **Audit fixes adopted** (Jack, 29 Sep; `docs/design/user-journeys/till-ui-audit.md`):
+    safe choice on the left and the confirming action on the right in every
+    pop-up (Remove moves into the pop-up's body); a "Past sales" button in
+    the till bar opens Find, and each past sale offers Refund, Void and
+    Reprint; the empty basket, search with no results, and refunding a cash
+    sale are drawn; the routine offline notice turns warm grey, keeping the
+    warning colour for the four-hour notice (amber means "you are here",
+    Workshop day 48); the frame-number box gets a scan icon; the £/%
+    switch remembers the last choice, starting with £; click and collect
+    starts unticked; the gift card hint is shortened.
