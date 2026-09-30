@@ -96,7 +96,7 @@ const custRow = ([n, bike, ph]) => `<a href="#" style="display: flex; align-item
 const customerList = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 980px">
 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap"><label style="flex-grow: 1; min-width: 220px; display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input aria-label="Find a customer" placeholder="Name, phone, email or postcode" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>${button('+ Add a customer')}</div>
 ${card(CUSTOMERS.map(custRow).join('').replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden')}
-${note('Most recent first. Search finds anyone by name, phone, email or postcode.')}</div>`, STAFF);
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">${note('Most recent first. Search finds anyone by name, phone, email or postcode.')}<a href="cs-privacy-desktop.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Privacy requests · [n] open</a></div></div>`, STAFF);
 // Add a customer (decision 3): a person or a company or club; address and
 // a note are optional; marketing permission starts off (booking spec).
 function addDialog(company = false, match = false) {
@@ -159,6 +159,19 @@ const groupsOpen = () => `${groupRow('[Club name] members', '[n]% off', '[n] cus
 <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px">${note('The till gives the discount by itself when a group member is added to a sale, with the group as the reason.')}${button('+ Add a group', { variant: 'default' })}</div>`;
 def('cs-groups', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ groups: groupsOpen() }), { who: { role: 'M', person: 'Jack Lewis', roleName: 'Manager' } }));
 
+// ---------- Privacy requests (decision 9) ----------
+// Reached from Customers; each request is dated, with the answer due within
+// one month (UK data protection). Deleting keeps sales without the name.
+const MANAGER_WHO = { role: 'M', person: 'Jack Lewis', roleName: 'Manager' };
+const reqRow = (who, what, asked, due, open) => `<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 60px; padding: 8px 14px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 200px"><span style="font-size: 15px; font-weight: 700">${who} · ${what}</span><span style="font-size: 13px; color: ${C.muted}">Asked ${asked} · ${open ? `answer by ${due}` : `done ${due}`}</span></span>${open ? button(what.startsWith('Delete') ? 'Delete their details' : 'Send the copy', { variant: what.startsWith('Delete') ? 'danger' : 'default' }) : `<span style="font-size: 14px; color: ${C.muted}">Done</span>`}</div>`;
+const privacyPage = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 980px">
+<a href="cs-list-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; align-self: flex-start; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: none">${icon('back', 16)}Customers</a>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: 22px; font-weight: 700">Privacy requests</h2>${note('When someone asks for a copy of what the shop holds about them, or for it to be deleted. Answer within one month.')}</div>${button('+ Log a request', { variant: 'default' })}</div>
+${card(`${reqRow('[Customer]', 'Copy of their data', '[date]', '[date]', true)}${reqRow('[Customer]', 'Delete their details', '[date]', '[date]', true)}${reqRow('[Customer]', 'Copy of their data', '[date]', '[date]', false)}`.replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden')}</div>`, MANAGER_WHO);
+const deleteDialog = () => popup('del-title', 'Delete [Customer]’s details?', 'A privacy request asked on [date]', `${note('Their name, phone, email, address, note and bikes are removed. Sales and jobs stay in the books without their name, because the shop must keep them for tax. This can’t be undone.')}`, `${button('Keep their details', { variant: 'ghost' })}${button('Delete their details', { variant: 'danger' })}`, 560);
+def('cs-privacy', privacyPage);
+def('cs-privacy-delete', () => overlay(privacyPage(), deleteDialog()));
+
 def('cs-opt-folds', optionFolds);
 def('cs-opt-timeline', optionTimeline);
 
@@ -174,6 +187,8 @@ export const TITLES = {
   'cs-account': 'Her account: balance, her limit, statement, pay it off',
   'cs-transfer': 'Record a bank transfer',
   'cs-groups': 'Settings › Payments › Customer groups',
+  'cs-privacy': 'Privacy requests: dated, answered within a month',
+  'cs-privacy-delete': 'Deleting someone’s details: sales stay, without their name',
   'cs-add-match': 'Adding someone who’s already here',
   'cs-page-dup': 'A possible duplicate, flagged on the page',
   'cs-merge': 'The same person? Keep or merge',
@@ -184,6 +199,7 @@ export const ROWS = [
   { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-off', 'cs-add', 'cs-add-company'] },
   { label: 'Accounts (pay later)', screens: ['cs-account', 'cs-transfer'] },
   { label: 'Customer groups', screens: ['cs-groups'] },
+  { label: 'Privacy requests', screens: ['cs-privacy', 'cs-privacy-delete'] },
   { label: 'Possible duplicates', screens: ['cs-add-match', 'cs-page-dup', 'cs-merge'] },
   { label: 'Options: the shape of the customer page (decision 2: option 2)', screens: ['cs-opt-folds', 'cs-opt-timeline'] },
 ];
