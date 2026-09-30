@@ -14,8 +14,9 @@ later) that parts should carry their measurements and specifications —
 "bearings with a 30 mm outside diameter" — so staff can search by them.
 Real example data: Shimano brake pads B05S-RX £28.00 on job WH-1042 (Maya
 Patel); every other product, supplier, cost and stock level is a bracketed
-placeholder. Designed in the Soft sand look on its own canvas, desktop
-first, then tablet and phone. Rules for every journey apply (Workshop day
+placeholder. Designed in the Soft sand look on its own canvas
+(https://claude.ai/artifact/RsbUcYNz9QfEF8LAbxSKwo), desktop first, then
+tablet and phone. Generator: `receiving.mjs` + `build-receiving.mjs --theme sand`. Rules for every journey apply (Workshop day
 45, 48, 50, 53, 57, 62, 65–67; A2, A6 — as few clicks as possible).
 
 1. **Journey 13 is next** (Jack, 30 Sep), chosen over Book a repair, and

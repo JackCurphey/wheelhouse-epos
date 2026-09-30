@@ -2701,3 +2701,28 @@ function collectedStripCompact() {
 }
 const undoFooter = (size) => `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-grow: 1; min-height: 48px; padding: 4px 6px 4px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}Collected · the job is closed</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>`;
 screens['job-collected'] = jobVariant('Collected', 'grey', collectedStripCompact, () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Collected', 'grey')}<span style="font-size: 15px; font-weight: 700">[time]</span></div><span style="font-size: 13px; color: ${C.muted}">Handed over by Jo Taylor</span>`), undoFooter);
+
+// Journey 13 decision 2 (30 Sep): a part a job is waiting for gets flagged
+// when it's booked in. The job stays "Waiting for parts" until someone
+// carries on; the strip says the part is here, and the line's In stock says Arrived.
+function partArrivedStrip() {
+  return jpPanel(`${jpRow(`${badge('Part arrived', 'green')}<span style="font-size: 13px; font-weight: 600">Shimano brake pads B05S-RX booked in</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Delivery booked in at [time] by Jack Lewis</span>`, 10)}`, `border-color: ${ST.ready[1]}`, 6, 3);
+}
+// The line stays approved and not done; its In stock cell says it arrived.
+const LINES_ARRIVED = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads' ? { ...l, done: false, stock: 'Arrived' } : l));
+screens['job-part-arrived'] = buildJobPage({
+  status: 'Waiting for parts', tone: 'amber',
+  touch: {
+    footer: (size) => `${button('Carry on with the work', { block: true })}${footNote('Moves the job back to In the workshop.', size)}`,
+    stageTop: () => partArrivedStrip(), phoneTop: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Part arrived', 'green')}<span style="font-size: 15px; font-weight: 700">Shimano brake pads</span></div><span style="font-size: 13px; color: ${C.muted}">Booked in at [time] by Jack Lewis</span>`),
+  },
+  desktop: {
+    stageTop: partArrivedStrip(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: 'Waiting for parts', bikeHere: true, readyBy: WAITING_READY_BY,
+    lines: LINES_ARRIVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: `${button('Carry on with the work', { block: true })}${footNote('Moves the job back to In the workshop.', 'desktop')}`,
+  },
+});

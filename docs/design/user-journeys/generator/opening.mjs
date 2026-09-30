@@ -78,7 +78,7 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // H3: "Seen" clears a short float in one click.
 // Journey 9 decision 3 (refresh): while a shop runs alongside Citrus Lime,
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
-export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, as = null } = {}) {
+export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
@@ -93,6 +93,8 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Journey 5 audit H4: the number is on the line; "Contacted" records it.
     // The line goes by itself when the bike is handed over.
     uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', `Cannondale Quick · reminder sent [date] · ${mono('[phone]')}`, button('Contacted', { variant: 'default' }), warnLead),
+    // Journey 13 decision 2: the restock list, for managers.
+    restock && line('[n] products running low or selling fast', 'Restock list · Stockroom › Deliveries and orders', button('Restock list', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('purchasing', 18)}</span>`),
     refresh && line('Time to refresh from Citrus Lime', 'Every [day] · last refreshed [date]', button('Refresh now', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('inbox', 18)}</span>`),
     waiting && line('Till B1 has [n] sales waiting to send', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Try again', { variant: 'default' }), warnLead),
   ].filter(Boolean);

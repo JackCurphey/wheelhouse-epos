@@ -244,7 +244,7 @@ ${tdF(`<span><span style="font-weight: 600">${esc(l.work)}</span><span style="fo
 ${tdF(`<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: ${doneH}px; cursor: pointer"><input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`, 'text-align: center; padding-top: 0; padding-bottom: 0')}
 ${tdF(l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(l.qty))}
-${tdF('—', `color: ${C.muted}; font-size: 12px`)}
+${tdF(l.stock ? `<span style="font-weight: 600; color: ${C.successInk}">${esc(l.stock)}</span>` : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(`£${l.price.toFixed(2)}`))}
 ${tdF(mono(`£${l.price.toFixed(2)}`, `font-weight: 600; ${totalStrike}`))}
 ${tdF(badge(l.approval, approvalTone(l.approval)))}
