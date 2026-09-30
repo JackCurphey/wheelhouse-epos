@@ -338,3 +338,10 @@ answers, in the order given.
 These were drawn in a separate canvas for Jack to review
 (https://claude.ai/artifact/GMFs2ZkesazrNPv9StM21U). The user journeys canvas
 is updated to match once he approves.
+
+**Later change (30 Sep, Owner setup decision 12):** the Diary & storage
+settings board (`diary-settings`) now sits inside Settings › Workshop, as
+two folding sections, "Diary blocks" and "Storage slots", with the approved
+content unchanged — see `docs/decisions/2026-09-30-owner-setup-review.md`.
+Desktop replaced on this journey's canvas and the big canvas; tablet and
+phone follow when journey 8's tablet and phone are drawn.
