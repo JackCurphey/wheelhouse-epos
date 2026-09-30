@@ -207,3 +207,7 @@ one from the staff list.
 Payments gains a fifth section, "Customer groups" (a name and a discount
 the till gives by itself); the Payments boards and the phone's Settings
 list were republished here and on the big canvas.
+
+**Later change (30 Sep, Customer service decision 10):** the separate
+Loyalty points switch in Payments › Ways to pay is gone; Store credit gains
+"Customers earn back [n]% of what they spend" (0% turns earning off).

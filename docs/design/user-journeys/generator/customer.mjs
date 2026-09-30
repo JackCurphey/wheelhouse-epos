@@ -71,7 +71,7 @@ const smallLink = (t) => `<a href="#" style="display: inline-flex; align-items: 
 const warranty = (inWarranty) => inWarranty
   ? `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: ${C.successInk}">${icon('check', 14)}Under warranty · [n] months left</span>`
   : `<span style="font-size: 13px; color: ${C.muted}">Warranty ended [date]</span>`;
-function summary({ accounts = true, loyalty = true, credit = true } = {}) {
+function summary({ accounts = true, credit = true } = {}) {
   const details = `${secHead('Details', smallLink('Edit'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; color: ${C.muted}">Address</span><span style="font-size: 15px; line-height: 1.45">[address]<br>[postcode]</span></div>
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; color: ${C.muted}">Group</span><span style="font-size: 15px; font-weight: 600; text-align: right">[Club name] members · [n]% off</span></div>
@@ -79,7 +79,7 @@ function summary({ accounts = true, loyalty = true, credit = true } = {}) {
   const bikes = `${secHead('Bikes', smallLink('+ Add'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">Trek Domane AL 3</span><span style="font-size: 13px; color: ${C.muted}">Green · black mudguards · bought here [date]</span>${warranty(true)}</div>`;
   // Decision 6: only what the shop has switched on in Payments › Ways to pay.
-  const glance = `${secHead('At a glance')}${accounts ? facts('<a href="cs-account-desktop.dc.html" style="color: ' + C.ink + '; font-weight: 600">Owes on account</a>', mono('[£ owed]')) : ''}${loyalty ? facts('Loyalty points', mono('[n]')) : ''}${credit ? facts('Store credit', mono('[£]')) : ''}${facts('Marketing', '[yes or no]')}`;
+  const glance = `${secHead('At a glance')}${accounts ? facts('<a href="cs-account-desktop.dc.html" style="color: ' + C.ink + '; font-weight: 600">Owes on account</a>', mono('[£ owed]')) : ''}${credit ? facts('Store credit', mono('[£]') + ' <span style="font-size: 13px; font-weight: 400; color: ' + C.muted + '">· earned by buying</span>') : ''}${facts('Marketing', '[yes or no]')}`;
   return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${bikes}${glance}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
 }
 function history(filter = 'Everything') {
@@ -115,7 +115,7 @@ ${field('Note (optional)', { placeholder: 'e.g. prefers texts, not calls' })}
 
 def('cs-list', customerList);
 def('cs-page', () => customerPage());
-def('cs-page-off', () => customerPage({ accounts: false, loyalty: false }));
+def('cs-page-off', () => customerPage({ accounts: false }));
 def('cs-add', () => overlay(customerList(), addDialog()));
 def('cs-add-company', () => overlay(customerList(), addDialog(true)));
 
@@ -181,7 +181,7 @@ for (const [id, fn] of recipes) screens[id] = { desktop: fn() };
 export const TITLES = {
   'cs-list': 'Customers: find someone, or add them',
   'cs-page': 'A customer’s page: details, bikes with warranty, one history',
-  'cs-page-off': 'A shop with accounts and loyalty switched off (Payments › Ways to pay)',
+  'cs-page-off': 'A shop with customer accounts switched off (Payments › Ways to pay)',
   'cs-add': 'Add a customer: a person',
   'cs-add-company': 'Add a customer: a company or club',
   'cs-account': 'Her account: balance, her limit, statement, pay it off',

@@ -274,7 +274,7 @@ export const journeys = [
       { label: "Other ways to pay", screens: [
         sc("till-giftcard", "Gift card or store credit", "Staff"),
         sc("till-account", "Put on account: pay later", "Staff"),
-        sc("till-loyalty", "Loyalty points: shown with the customer in the basket", "Staff"),
+        sc("till-loyalty", "Store credit, earned by buying: shown with the customer in the basket", "Staff"),
         sc("till-deposit", "Take a deposit: part now, the rest later", "Staff"),
       ] },
       { label: "Other till jobs", screens: [

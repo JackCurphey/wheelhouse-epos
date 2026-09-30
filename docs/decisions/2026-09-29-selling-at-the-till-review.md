@@ -112,3 +112,9 @@ full one, with one "Take payment" step that leaves room for the other.
     canvas") — desktop, tablet and phone. It is copied into the user
     journeys canvas, status Designed; journey A's till boards there are
     refreshed with the Past sales button.
+
+
+**Later change (30 Sep, Customer service decision 10):** loyalty is store
+credit earned by buying — no separate points. The basket's customer row now
+reads "[£] store credit · Earned on past purchases · Use it" (board
+`till-loyalty`, all sizes), republished here and on the big canvas.
