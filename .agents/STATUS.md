@@ -25,8 +25,8 @@ company or club customers; bike warranty; duplicates caught while adding;
 account payments at the till or by bank transfer; customer groups with an
 automatic discount (Settings › Payments); privacy requests list; loyalty is
 store credit earned by buying (journeys 11 and 8 updated). UI audit done
-and fixes adopted (decision 12, `customer-ui-audit.md`). Desktop drawn (22
-boards); next: Jack reviews desktop, then tablet and phone; on approval
+and fixes adopted (decision 12, `customer-ui-audit.md`). Desktop approved
+(decision 13); tablet and phone drawn (60 boards); next: Jack approves, then big canvas; on approval
 this page replaces journey 12's Customer account board (decision 11). Own
 canvas: https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox . Generator:
 `customer.mjs` + `build-customer.mjs --theme sand`.

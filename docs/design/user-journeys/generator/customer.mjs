@@ -227,8 +227,14 @@ def('cs-edit', () => overlay(customerPage(), editDialog()));
 def('cs-opt-folds', optionFolds);
 def('cs-opt-timeline', optionTimeline);
 
+// Decision 13: every board at desktop, tablet and phone, except the two
+// layout options (desktop only).
+const DESKTOP_ONLY = new Set(['cs-opt-folds', 'cs-opt-timeline']);
+for (const size of ['desktop', 'tablet', 'phone']) {
+  setSize(size);
+  for (const [id, fn] of recipes) if (size === 'desktop' || !DESKTOP_ONLY.has(id)) (screens[id] ??= {})[size] = fn();
+}
 setSize('desktop');
-for (const [id, fn] of recipes) screens[id] = { desktop: fn() };
 
 export const TITLES = {
   'cs-list': 'Customers: find someone, or add them',
