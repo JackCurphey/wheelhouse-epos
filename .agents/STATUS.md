@@ -18,6 +18,13 @@ Jack's choice (ask him first). The big canvas is now **desktop only**, each
 board linking to its journey's own canvas for tablet and phone (268 files of
 the 512 a canvas can hold).
 
+**Journey 15, Customer service (30 Sep, in progress):** decisions in
+`docs/decisions/2026-09-30-customer-service-review.md`; first question is the
+shape of the customer page (two options drawn). Own canvas:
+https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox . Generator: `customer.mjs`
++ `build-customer.mjs --theme sand` (reuses `settings-frame.mjs` for the
+frame at every size and diary.mjs's example week for Maya's jobs).
+
 **Journey 8, Owner setup (30 Sep):** approved at desktop, tablet and phone
 and copied into the big canvas; 23 decisions in
 `docs/decisions/2026-09-30-owner-setup-review.md` — Settings in the Office

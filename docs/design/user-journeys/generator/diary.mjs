@@ -50,7 +50,7 @@ const segmented = (items, activeIdx, label, minH = 36, fontSize = 13) => `<div r
 // ---------- Wheelhouse status colours (brief exception to "ui.mjs tokens only") ----------
 // Sand values are look-4's own `status` object (looks.mjs, decision 48) —
 // the same five status colours Jack reviewed on the job-page look boards.
-const ST = THEME === 'sand' ? {
+export const ST = THEME === 'sand' ? {
   pending: ['#ECE3F2', '#5C3E87', 'Pending'],
   scheduled: ['#E4EAF3', '#294872', 'Scheduled'],
   waiting: ['#F5E3D0', '#8B4715', 'Waiting for parts'],
@@ -349,15 +349,15 @@ const QUICK_NOTES = [
 ];
 
 // Mon 14 – Sun 20 Sep 2026; today is Thu 17 Sep.
-const DAYS = [['Mon', 14], ['Tue', 15], ['Wed', 16], ['Thu', 17], ['Fri', 18], ['Sat', 19], ['Sun', 20]];
-const TODAY = 3;
+export const DAYS = [['Mon', 14], ['Tue', 15], ['Wed', 16], ['Thu', 17], ['Fri', 18], ['Sat', 19], ['Sun', 20]];
+export const TODAY = 3;
 const HINT_SLOT = { day: 1, start: 10 * 60, mech: 'Alex', label: '10:00 · Alex Morgan' }; // Tue 15 Sep · 10:00 · Alex Morgan
 
 // Jobs already booked in / scheduled (from stage2.mjs COLS and ARRIVALS), plus a
 // fuller example week (Mon–Sat) reusing only stage2/diary customers, bikes and
 // services so both the standard and mechanic diaries read like a normal working
 // week. New WH-10xx numbers continue on from the ones already used (1038–1048).
-const JOBS = [
+export const JOBS = [
   // Thu 17 Sep (today) — as already drawn, plus more of the same day's load.
   { day: TODAY, start: 9 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1038', svc: 'Safety check', title: 'Safety check', detail: '09:00–10:00' },
   { day: TODAY, start: 9 * 60, dur: 90, mech: 'Jo', key: 'scheduled', job: 'WH-1040', svc: 'Gear service', title: 'Gear service', detail: '09:00–10:30' },
@@ -426,7 +426,7 @@ const JOBS = [
 // invented) — job title is the block's line 2, editable, per decision 29.
 const KNOWN_CUSTOMERS = ['Maya Patel', 'Oliver Chen', 'Sam Reed', 'Jamie Brooks', 'Aisha Khan'];
 const CUSTOMER_OVERRIDE = { 'WH-1038': ['Jamie Brooks', 'Giant Escape 2'], 'WH-1040': ['Aisha Khan', 'Cannondale Quick'] };
-function customerBikeOf(j) {
+export function customerBikeOf(j) {
   if (CUSTOMER_OVERRIDE[j.job]) return CUSTOMER_OVERRIDE[j.job];
   const parts = String(j.title).split(' · ');
   if (KNOWN_CUSTOMERS.includes(parts[0])) return [parts[0], parts[1] || ''];
