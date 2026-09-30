@@ -14,7 +14,9 @@ Selling at the till 10–11 later changed — this journey settles it. Real
 example data: WH-1042, Maya Patel, Trek Domane AL 3, Standard service £65.00,
 Shimano brake pads £28.00, Fit & adjust brakes £18.00, gear cable declined,
 £111.00 agreed, Hook 3, mechanic Alex Morgan. Designed in the Soft sand look
-on its own canvas, desktop first, then tablet and phone. Rules for every
+on its own canvas (https://claude.ai/artifact/LdnE9ayZJ1L2qu6suqcC2W),
+desktop first, then tablet and phone. Generator: `collect.mjs` +
+`build-collect.mjs --theme sand`. Rules for every
 journey apply (Workshop day 45, 48, 50, 53, 57, 62, 65–67; A2, A6 — as few
 clicks as possible).
 
