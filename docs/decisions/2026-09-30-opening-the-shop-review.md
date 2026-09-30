@@ -28,3 +28,9 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    them (Owner setup decision 9's switch), so a colleague's short float
    isn't broadcast. Chosen over everyone seeing the whole page and taking
    Today away from Staff.
+5. **Checking in only records who's in and when — no check-out or hours
+   list for now** (Jack, 30 Sep): the PIN check-in unlocks the till and
+   stamps the time Today shows under Who's in. Keeps the start of the day
+   to one step. Hours worked (check-out, a weekly hours list, breaks) can
+   be added later without changing this screen. Chosen over check in and
+   out with an hours list, and check in and out with breaks.
