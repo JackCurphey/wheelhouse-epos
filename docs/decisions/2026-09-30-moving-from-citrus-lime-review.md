@@ -30,3 +30,11 @@ few clicks as possible).
    Where both changed the same thing, Citrus Lime wins until switch-over and
    the owner is told. Chosen over refreshing whenever the owner likes, and
    importing once plus a final catch-up.
+4. **The move has its own page under Office while it's on** (Jack, 30 Sep):
+   Office › "Moving from Citrus Lime", with three stages across the top —
+   Bring your data → Run alongside → Switch over — showing where the shop
+   is, the last refresh and what's next. Today's weekly reminder and the
+   Getting started "Moving from another system?" link land here. The page
+   leaves the sidebar a week after switch-over; its history stays under
+   Settings › Your data. Chosen over a section in Settings › Your data and a
+   step inside Getting started.
