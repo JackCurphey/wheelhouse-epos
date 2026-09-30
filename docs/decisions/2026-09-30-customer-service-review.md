@@ -40,3 +40,10 @@ possible; Owner setup 4 — changes save as you go).
    (offline spec). The Release 1 example "Maya P." with the same phone is
    the example. Chosen over a Possible duplicates list only and catching
    them only while adding.
+6. **The customer page shows only the money features the shop has switched
+   on** (Jack, 30 Sep: customer credit "should be an option the business
+   owner turns on or off, and if off it doesn't show as an option on the
+   customer pages"): the switches already exist in Settings › Payments ›
+   Ways to pay (Owner setup 8 — store credit, customer accounts, loyalty
+   points); when one is off, its line in At a glance, its history entries
+   filter and its buttons don't appear on the customer page (or the till).
