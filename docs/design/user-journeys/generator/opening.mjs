@@ -53,13 +53,17 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // attention are for owners, managers and anyone with "Can close the day".
 // Decision 6: someone due in who hasn't checked in just shows — "Not in yet",
 // then "Late" once their start time has passed. No alert, no Needs attention.
-function today({ short = false, waiting = false, staff = false, late = false } = {}) {
+// Decision 7: if last night's day was never closed, the till still opens with
+// the usual float check; "Yesterday wasn't closed" goes to Needs attention.
+function today({ short = false, waiting = false, staff = false, late = false, unclosed = false } = {}) {
   const tills = section('Tills', line('Till B1', `Open · float checked by Jo Taylor at [time]`, waiting ? tag('[n] sales waiting to send', 'warn') : tag(short ? 'Float short' : 'All sent', short ? 'warn' : 'ok')));
   const who = section('Who’s in', `${line('Jo Taylor', 'Checked in at [time] · Staff', tag('In'))}${line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey'))}${line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))}`);
   const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', '3 still to arrive')}${stat('Ready to collect', '4', 'In the workshop now')}</div>
 ${line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span style="font-size: 14px">${mono('10:30')} appointment</span>`)}${line('WH-1047 · Aisha Khan', 'Cannondale Quick · Safety check', '<span style="font-size: 14px">Drop-off</span>')}${line('WH-1042 · Maya Patel', 'Trek Domane AL 3 · Standard service', button('Book in', { variant: 'default' }))}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Open the diary</a>`);
   const attention = section('Needs attention', short
     ? line('Till B1’s float was [£] short this morning', 'Counted by Jo Taylor at [time] · “[their reason]”', button('Check', { variant: 'default' }))
+    : unclosed
+    ? line('Wednesday 16 September wasn’t closed', 'Till B1 · yesterday’s takings still to count', button('Close it', { variant: 'default' }))
     : `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid ${C.border}; font-size: 15px; color: ${C.muted}">${icon('check', 16)}Nothing needs you right now</div>`);
   const left = staff ? who : `${attention}${tills}${who}`;
   const cols = isPhone() ? `${left}${work}` : `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start"><div style="display: flex; flex-direction: column; gap: 14px">${left}</div><div style="display: flex; flex-direction: column; gap: 14px">${work}</div></div>`;
@@ -74,6 +78,7 @@ def('op-today-short', () => today({ short: true }));
 def('op-today-waiting', () => today({ waiting: true }));
 def('op-today-staff', () => today({ staff: true }));
 def('op-today-late', () => today({ late: true }));
+def('op-today-unclosed', () => today({ unclosed: true }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
 const SIZES = ['desktop'];
@@ -92,8 +97,9 @@ export const TITLES = {
   'op-today-waiting': 'Today, with sales waiting to send',
   'op-today-staff': 'Today, as Staff see it',
   'op-today-late': 'Today, when someone due in is late',
+  'op-today-unclosed': 'Today, when yesterday wasn’t closed',
 };
 export const ROWS = [
   { label: 'Opening the till', screens: ['op-float-check', 'op-float-count', 'op-float-short'] },
-  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-waiting', 'op-today-staff', 'op-today-late'] },
+  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-waiting', 'op-today-staff', 'op-today-late', 'op-today-unclosed'] },
 ];

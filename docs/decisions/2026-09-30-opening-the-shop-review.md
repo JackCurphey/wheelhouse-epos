@@ -41,3 +41,11 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    to move their bikes — the manager sees it at a glance. Chosen over
    flagging it under Needs attention after a set time, and a "Mark as off
    today" button that hands their bikes to someone else.
+7. **If last night's day wasn't closed, the till opens as normal and it's
+   flagged on Today** (Jack, 30 Sep): the first person in gets the usual
+   float check, and "Wednesday 16 September wasn't closed — Till B1 ·
+   yesterday's takings still to count" goes to Needs attention with a
+   "Close it" button for owners, managers and anyone with "Can close the
+   day". The first customer is never blocked and Staff aren't handed a job
+   that isn't theirs. Chosen over closing yesterday first before any sale,
+   and letting whoever is first choose.
