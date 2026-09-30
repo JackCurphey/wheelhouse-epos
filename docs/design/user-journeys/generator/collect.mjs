@@ -49,7 +49,7 @@ const work = () => box('What we did', `<div role="list">${approved.map((l) => ro
 ${declined.map((l) => `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Not done — you said not now: ${esc(l.work)} (${money(l.price)})</p>`).join('')}`);
 // Workshop day 21: a ticked item with no note reads "All working well".
 // Audit M1: a note is labelled as what the mechanic found; the count says
-// how many of the checks were done (wording to confirm with Jack).
+// how many of the checks were done (wording confirmed by Jack, 30 Sep).
 const ticked = CHECKLIST_10.filter((c) => c.checked);
 const okMark = `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: ${C.successInk}; white-space: nowrap">${icon('check', 14)}All working well</span>`;
 const checks = () => box('Full service checklist', `<div role="list">${ticked.map((c) => row(esc(c.t), c.note ? `<span style="font-size: 14px; line-height: 1.45"><span style="font-weight: 600">What the mechanic found:</span> ${esc(c.note)}</span>` : '', c.note ? '' : okMark)).join('')}</div>
@@ -110,7 +110,7 @@ ${note('When on, staff tick two things before Hand over, or at the till after pa
 // the preview, as on the "Bike ready" board.
 const waitingDialog = () => popup('wait-title', 'Bike still waiting', 'Sent when a ready bike isn’t collected after [n] days — set in Settings › Workshop › Collection', `
 <div role="group" aria-label="Send by" style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600; flex-grow: 1">Send by</span>${chan('Text', true)}${chan('Email', false)}</div>
-${wordingBox('wait-words', 'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].')}
+${wordingBox('wait-words', 'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].', isPhone() ? 8 : 4)}
 ${bubble('Hi Maya, just a reminder that your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Job WH-1042. We’re open [opening hours].')}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
 
 def('cp-summary', () => summary('pay'));
@@ -133,8 +133,8 @@ def('cp-setting', () => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, wor
 def('cp-messages', () => msgPage({ list: msgListOpen() }));
 def('cp-message-wording', () => overlay(msgPage({ list: msgListOpen() }), waitingDialog()));
 
-// Desktop first (journey process); tablet and phone once desktop is approved.
-const SIZES = ['desktop'];
+// Desktop first (journey process); tablet and phone drawn after the UI audit.
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });

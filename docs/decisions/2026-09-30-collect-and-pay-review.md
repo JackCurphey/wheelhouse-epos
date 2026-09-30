@@ -60,7 +60,8 @@ clicks as possible).
    - H4: Today's uncollected line shows the customer's [phone] and a
      "Contacted" button; the line goes by itself at hand-over.
    - M1: the checklist note is labelled "What the mechanic found:", and a
-     grey line says "8 of 10 checks done." (wording to confirm with Jack).
+     grey line says "8 of 10 checks done." (wording confirmed by Jack, 30 Sep:
+     keep both as drawn).
    - M2: at the till a job's agreed lines are locked (no − / +), marked
      "agreed on the job"; anything extra is added separately.
    - M3: "Not paid yet · £111.00 to pay" and "Paid online · [date]" in
