@@ -292,6 +292,19 @@ def('set-msg-list', () => msgPage({ list: msgListOpen() }));
 def('set-msg-edit', () => overlay(msgPage({ list: msgListOpen() }), editMsgDialog()));
 def('set-msg-new', () => overlay(msgPage({ list: msgListOpen() }), newMsgDialog()));
 
+// ---------- Your data (Release 2 rule 5: everything can be exported;
+// decision 4: every settings change is recorded) ----------
+const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
+const exportOpen = () => `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">${['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs'].map((t) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('check', 16)}<span style="font-size: 15px; font-weight: 600">${t}</span></div>`).join('')}</div>
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px">${note('Spreadsheets that open in Excel or Google Sheets — yours to keep, whatever happens.')}${button('Download everything')}</div>`;
+const histRow = (what, before, after) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${what}</span><span style="font-size: 13px; color: ${C.muted}">[name] · [date and time]</span></span><span style="font-size: 14px; color: ${C.muted}">${before}</span><span aria-hidden="true" style="color: ${C.muted}">→</span><span style="font-size: 14px; font-weight: 600">${after}</span></div>`;
+const historyOpen = () => `${histRow('End of day › Float', '[£ before]', '[£ after]')}${histRow('Staff and roles › Jo Taylor · Works in the workshop', 'Off', 'On')}${histRow('Till › Quick buttons · Shimano brake pads B05S-RX', '—', 'Added to Workshop')}
+${note('Every change made in Settings, newest first, with what it was before.')}`;
+const dataFolds = (open = {}) => fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '');
+const dataPage = (open) => settingsPage('data', 'Your data', DATA_INTRO, dataFolds(open));
+def('set-data-export', () => dataPage({ export: exportOpen() }));
+def('set-data-history', () => dataPage({ history: historyOpen() }));
+
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
@@ -329,6 +342,8 @@ Object.assign(TITLES, {
   'set-msg-list': 'Messages › Automatic messages — text, email or both',
   'set-msg-edit': 'Change a message’s wording, with a preview',
   'set-msg-new': 'Add your own automatic message',
+  'set-data-export': 'Your data › Download everything',
+  'set-data-history': 'Your data › Settings changes',
   'set-workshop-mechanics': 'Workshop › Mechanics',
   'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
 });
@@ -339,5 +354,6 @@ export const ROWS = [
   { label: 'Shop and sites', screens: ['set-shop-details', 'set-shop-hours'] },
   { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-diary'] },
   { label: 'Messages', screens: ['set-msg-list', 'set-msg-edit', 'set-msg-new'] },
+  { label: 'Your data', screens: ['set-data-export', 'set-data-history'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];
