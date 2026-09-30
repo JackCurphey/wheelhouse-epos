@@ -8,6 +8,7 @@
 // 1280x800, 1180x820 and 390x844.
 import { C, MONO, FONT_DISPLAY, THEME, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
+import { settingsPage, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
 // The settled job page (decision 40, 28 Sep 2026 round) — board job-final-2
 // in job-options.mjs. Shared with that file via job-page.mjs so neither file
 // depends on the other's internals (see that module's header comment).
@@ -1618,18 +1619,26 @@ function storageSlotChip(name, size = 'desktop') {
   if (size !== 'desktop') return `<span style="display: inline-flex; align-items: center; gap: 2px; min-height: 44px; box-sizing: border-box; padding: 0 0 0 12px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(name)}<button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; margin: -1px 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 0; background: transparent; color: ${C.muted}"><span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: ${C.mutedBg}">${icon('close', 13)}</span></button></span>`;
   return `<span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 13px; font-weight: 600; color: ${C.ink}">${esc(name)}<button type="button" aria-label="Remove ${esc(name)}" style="width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 0; background: ${C.mutedBg}; color: ${C.muted}">${icon('close', 12)}</button></span>`;
 }
-function storageSlotsSection(size) {
-  return panel(`${toggleSwitch('Storage slots', true, 'storage-toggle-' + size, size)}
+// The section's content on its own, so Owner setup (journey 8, decision 12)
+// can show it as a folding section in Settings › Workshop.
+export function storageSlotsContent(size) {
+  return `${toggleSwitch('Storage slots', true, 'storage-toggle-' + size, size)}
 ${note('On for this shop. Staff can note where a bike is kept, and the diary block shows the slot where there’s room.', 12)}
 <div style="display: flex; flex-wrap: wrap; gap: ${size === 'desktop' ? 8 : size === 'phone' ? 4 : 6}px; padding-top: ${size === 'phone' ? 8 : 10}px; border-top: 1px solid ${C.border}">${STORAGE_SLOTS.map((n) => storageSlotChip(n, size)).join('')}</div>
-<div>${button('+ Add a slot', { variant: 'default', size: size === 'desktop' ? 'sm' : 'default' })}</div>`, '', size === 'phone' ? 12 : 16, size === 'phone' ? 8 : 12);
+<div>${button('+ Add a slot', { variant: 'default', size: size === 'desktop' ? 'sm' : 'default' })}</div>`;
+}
+function storageSlotsSection(size) {
+  return panel(storageSlotsContent(size), '', size === 'phone' ? 12 : 16, size === 'phone' ? 8 : 12);
 }
 // Item 29/4 (27 Sep round 2): "Job title" joins customer, bike and job number
 // as a block-line choice; the default is bike first, job title second.
+export function blockPrefContent(size) {
+  return `${grid('1fr 1fr', `${select('First line', ['Bike', 'Job title', 'Customer', 'Job number'], 'set-first-' + size)}${select('Second line', ['Job title', 'Bike', 'Customer', 'Job number'], 'set-second-' + size)}`, 14)}
+<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}">${eyebrow('Preview')}${blockPreviewCard('bike', 'jobTitle', size)}${note('The status always shows too, whatever the two lines above are set to.', 12)}</div>`;
+}
 function blockPrefPanel(size) {
   return panel(`${h2('What shows on a block', 15)}
-${grid('1fr 1fr', `${select('First line', ['Bike', 'Job title', 'Customer', 'Job number'], 'set-first-' + size)}${select('Second line', ['Job title', 'Bike', 'Customer', 'Job number'], 'set-second-' + size)}`, 14)}
-<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}">${eyebrow('Preview')}${blockPreviewCard('bike', 'jobTitle', size)}${note('The status always shows too, whatever the two lines above are set to.', 12)}</div>`, '', 16, 12);
+${blockPrefContent(size)}`, '', 16, 12);
 }
 // Decision 57 (29 Sep): Settings gains an Accessibility tab beside this
 // Diary tab. Real tabs (role="tablist"/"tab", aria-selected), ≥44px, each a
@@ -1667,7 +1676,12 @@ ${storageSlotsSection(size)}
 ${button('Save settings', { block: true })}`, 8);
 }
 screens['diary-settings'] = {
-  desktop: shellDesktop('settings', 'Settings', `<div style="max-width: 920px">${diarySettingsBody('desktop')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
+  // Journey 8 decision 12 (30 Sep): the same settings, now two folding
+  // sections in Owner setup's Settings › Workshop. Tablet and phone follow
+  // when journey 8's tablet and phone are drawn. A getter, because
+  // settings-frame.mjs imports this file: building it on first read (after
+  // every module has loaded) avoids the import cycle's start-up order.
+  get desktop() { return settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ diary: blockPrefContent('desktop'), storage: storageSlotsContent('desktop') })); },
   tablet: shellTablet('settings', 'Settings', `<div style="max-width: 1000px">${diarySettingsBody('tablet')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
   phone: shellPhone('Settings', diarySettingsBody('phone'), { role: 'M', active: 'settings', person: 'Jack Lewis', roleName: 'Manager' }),
 };

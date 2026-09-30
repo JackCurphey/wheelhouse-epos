@@ -9,42 +9,16 @@
 // Accessories) and buttons (Standard service £65, Fit & adjust brakes £18,
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { shellDesktop } from './diary.mjs';
+import { AREAS, fold, pill, offer, choice, note, shell, settingsPage, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
+import { screens as diaryScreens } from './diary.mjs';
 import { popup, overlay } from './cashup.mjs';
 
 export const screens = {};
 const recipes = [];
 const def = (id, fn) => recipes.push([id, fn]);
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
-const note = (t) => `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
-const shell = (content) => shellDesktop('settings', 'Settings', content, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' });
 
-// The areas of Settings, each with what it holds — every item is one an
-// approved journey hands to Owner setup (see the decision file's background).
-const AREAS = [
-  ['shop', 'Shop and sites', 'Name, address, VAT, opening hours, sites'],
-  ['staff', 'Staff and roles', 'People, roles, clearing a forgotten PIN'],
-  ['till', 'Till', 'Quick buttons, reasons, receipts, printers, tills'],
-  ['payments', 'Payments', 'Card machine, other ways to pay, gift cards, accounts'],
-  ['eod', 'End of day', 'Float, when Close the day appears, blind count'],
-  ['workshop', 'Workshop', 'Services, mechanics, diary, storage slots'],
-  ['messages', 'Messages', 'Texts and emails to customers'],
-  ['data', 'Your data', 'Export everything'],
-];
 
-// A folding section: title, a one-line summary on the right, a chevron.
-function fold(title, summary, content = '') {
-  const open = !!content;
-  return `<div style="border-top: 1px solid ${C.border}">
-<button type="button" aria-expanded="${open}" style="display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; box-sizing: border-box; padding: 8px 18px; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}">
-<span style="font-size: 16px; font-weight: 700; flex-grow: 1">${esc(title)}</span>
-<span style="font-size: 13px; color: ${C.muted}; text-align: right">${summary}</span>
-<span style="display: inline-flex; transform: rotate(${open ? 180 : 0}deg); color: ${C.muted}">${icon('chevron', 16)}</span>
-</button>
-${open ? `<div style="padding: 0 18px 18px; display: flex; flex-direction: column; gap: 12px">${content}</div>` : ''}
-</div>`;
-}
-const pill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
 const qb = (name, price) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="color: ${C.muted}; font-size: 16px" aria-hidden="true">⋮⋮</span><span style="font-size: 15px; font-weight: 600; flex-grow: 1">${esc(name)}</span>${mono(price, 'font-size: 15px')}</div>`;
 
 // The Till area's sections; `compact` trims the open section for the
@@ -97,18 +71,6 @@ ${card(tillSections(), 'overflow: hidden')}
 }
 
 // ---------- The Till area (decision 3's layout; decision 4: saves as you go) ----------
-function settingsPage(active, title, intro, sections, { toast = '' } = {}) {
-  const list = `<nav aria-label="Settings areas" style="width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">${AREAS.map(([k, t]) => {
-    const on = k === active;
-    return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: ${on ? 700 : 500}; color: ${C.ink}; background: ${on ? C.mutedBg : 'transparent'}">${on ? `<span style="width: 6px; height: 6px; border-radius: 999px; background: ${C.accent}"></span>` : `<span style="width: 6px"></span>`}${esc(t)}</a>`;
-  }).join('')}</nav>`;
-  const body = `<div data-scroll style="flex-grow: 1; min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px">
-<div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: 22px; font-weight: 700">${esc(title)}</h2>${note(intro)}</div>
-${card(sections, 'overflow: hidden; flex-shrink: 0')}
-</div>`;
-  const t = toast ? `<div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; padding: 6px 6px 6px 18px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}${toast}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>` : '';
-  return shell(`<div style="position: relative; display: flex; gap: 28px; height: 100%">${list}${body}${t}</div>`);
-}
 const TILL_INTRO = 'What staff see and use at the till. Changes save as you make them.';
 const tillFolds = (open = {}) =>
   fold('Quick buttons', 'Workshop, Parts, Accessories', open.quick || '')
@@ -144,7 +106,6 @@ ${note('The till always offers “Other…” as well, so staff can type a reaso
 // Receipts: which choices the Paid pop-up offers (journey 11 decision 7),
 // the words at the bottom, and a preview. The barcode is always printed
 // (journey 11 decision 13), so it isn't a setting.
-const offer = (t, on) => `<button type="button" aria-pressed="${on}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${on ? icon('check', 15, C.panel) : ''}${t}</button>`;
 const receiptPreview = () => `<div aria-label="Receipt preview" style="width: 230px; flex-shrink: 0; box-sizing: border-box; padding: 16px 14px; background: #ffffff; border: 1px solid ${C.border}; border-radius: 4px; font-family: ${MONO}; font-size: 11px; line-height: 1.5; color: ${C.ink}; display: flex; flex-direction: column; gap: 6px">
 <div style="text-align: center; font-weight: 700; font-size: 12px">North Street Cycles</div><div style="text-align: center">Bolton · Till B1</div>
 <div style="border-top: 1px dashed ${C.border}; padding-top: 6px; display: flex; justify-content: space-between"><span>Standard service</span><span>£65.00</span></div>
@@ -179,7 +140,6 @@ def('set-till-tills', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({
 // ---------- End of day (cash-up decisions 2, 4, 5; decision 6: blind on) ----------
 const EOD_INTRO = 'How the till closes each day. Changes save as you make them.';
 const moneyInput = (id, label, value) => `<div style="display: flex; align-items: center; gap: 10px"><label for="${id}" style="font-size: 15px; font-weight: 600; flex-grow: 1">${label}</label><input id="${id}" value="${value}" style="width: 140px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></div>`;
-const choice = (label, items) => `<div role="group" aria-label="${esc(label)}" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">${label}</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${items.map(([t, on]) => pill(t, on)).join('')}</div></div>`;
 const eodFolds = () =>
   fold('Float', '[£ float]', `${moneyInput('eod-float', 'Leave this much in the drawer each night', '[£ float]')}${note('Close the day works out the rest to bank, so every day starts with the same float.')}`)
   + fold('Close the day', 'After [closing time]', `${moneyInput('eod-time', 'Show “Close the day” in the till bar after', '[time]')}${note('Owners and managers see it on every till after this time. Nobody else does.')}`)
@@ -256,6 +216,24 @@ def('set-staff-person-workshop', () => overlay(staffPage({ people: peopleOpen(fa
 def('set-staff-clear-pin', () => overlay(staffPage({ people: peopleOpen(false) }), clearPinDialog()));
 def('set-staff-roles', () => staffPage({ roles: rolesOpen() }));
 
+// ---------- Workshop (decisions 11, 12; Workshop day 62, 66) ----------
+// Services by group (Workshop day 66: shops group their own services) —
+// names and times from the diary's services; only Standard service has a
+// real price, the rest are placeholders.
+const serviceRow = (name, mins, price, hover = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)}" style="width: 28px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${mins} min in the diary</span></span>${mono(price, 'font-size: 15px')}${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button><button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.danger}">Remove</button>` : ''}</div>`;
+const servicesOpen = () => `<div role="group" aria-label="Service groups" style="display: flex; flex-wrap: wrap; gap: 8px">${pill('Full service')}${pill('Individual service', true)}${pill('+ Add a group')}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">${serviceRow('Safety check', 60, '[£ price]')}${serviceRow('Gear adjustment', 60, '[£ price]', true)}${serviceRow('Brake service', 45, '[£ price]')}</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">${button('+ Add a service', { variant: 'default' })}${note('Groups and services show as pills, in this order, when a job is booked.')}</div>`;
+// Mechanics: everyone with "Works in the workshop" on (decision 11), set in
+// Staff and roles — listed here so it can be found from either place.
+const mechRow = (name, role, online) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${role}</span></span><span style="font-size: 14px; color: ${online ? C.ink : C.muted}">${online ? 'Customers can book online' : 'Booked in by staff only'}</span></div>`;
+const mechanicsOpen = () => `${mechRow('Alex Morgan', 'Mechanic', true)}${mechRow('Jo Taylor', 'Staff', false)}
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 4px">${note('Everyone with “Works in the workshop” switched on gets a column in the diary.')}${button('Change in Staff and roles', { variant: 'default' })}</div>`;
+const workshopPage = (open) => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds(open));
+def('set-workshop-services', () => workshopPage({ services: servicesOpen() }));
+def('set-workshop-mechanics', () => workshopPage({ mechanics: mechanicsOpen() }));
+def('set-workshop-diary', () => diaryScreens['diary-settings'].desktop);
+
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
@@ -287,10 +265,14 @@ Object.assign(TITLES, {
   'set-staff-person-workshop': 'Works in the workshop — but not bookable online',
   'set-staff-clear-pin': 'Clear a forgotten PIN',
   'set-staff-roles': 'Staff and roles › What each role can do',
+  'set-workshop-services': 'Workshop › Services, by group',
+  'set-workshop-mechanics': 'Workshop › Mechanics',
+  'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
 });
 export const ROWS = [
   { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-person-workshop', 'set-staff-clear-pin', 'set-staff-roles'] },
+  { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-diary'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];
