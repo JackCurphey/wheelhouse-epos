@@ -213,6 +213,43 @@ def('set-pay-ways', () => settingsPage('payments', 'Payments', PAY_INTRO, payFol
 def('set-pay-other', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ other: payOther() })));
 def('set-pay-card', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ card: payCard() })));
 
+// ---------- Staff and roles (decisions 8–10; signing in 6–7) ----------
+// Seen by Jack Lewis (Manager). Only the Owner adds or removes people.
+const STAFF_INTRO = 'Who works here, and what each person can do. Changes save as you make them.';
+const SWITCHES = ['Can use the till', 'Can see reports', 'Can close the day', 'Can order stock', 'Can edit the website', 'Can change settings'];
+const personRow = (name, role, extras, { you = false, hover = false } = {}) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}">
+<span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: ${C.mutedBg}; font-size: 13px; font-weight: 700; flex-shrink: 0">${name.split(' ').map((x) => x[0]).join('')}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${esc(name)}${you ? `<span style="font-weight: 400; color: ${C.muted}"> · you</span>` : ''}</span><span style="font-size: 13px; color: ${C.muted}">${esc(role)}${extras ? ` · ${esc(extras)}` : ''}</span></span>
+${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Open</button>` : `<span style="display: inline-flex; color: ${C.muted}; padding: 0 12px; transform: rotate(-90deg)">${icon('chevron', 16)}</span>`}</div>`;
+const peopleOpen = (hover = true) => `<div style="display: flex; flex-direction: column; gap: 8px">${personRow('Jack Lewis', 'Manager', '', { you: true })}${personRow('Jo Taylor', 'Staff', '', { hover })}${personRow('Alex Morgan', 'Mechanic', 'can use the till')}</div>
+${note('Only the owner can add or remove people. Everyone sets their own till PIN in Your settings.')}`;
+const roleLine = (r, d) => `<div style="display: flex; gap: 16px; padding: 12px 0; border-top: 1px solid ${C.border}"><span style="width: 110px; flex-shrink: 0; font-size: 15px; font-weight: 700">${r}</span><span style="font-size: 15px; line-height: 1.5">${d}</span></div>`;
+const rolesOpen = () => `${roleLine('Owner', 'Everything, including adding and removing people and tills.')}${roleLine('Manager', 'Everything except adding and removing people and tills.')}${roleLine('Staff', 'The till, customers, messages, stock and the workshop diary.')}${roleLine('Mechanic', 'The workshop diary and jobs.')}
+${note('Switches on a person add to their role — up to everything a Manager can do.')}`;
+const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '');
+
+// One person, in a pop-up in the middle (Workshop day 15, 16). The role by
+// pill; the switches as toggle pills; the PIN line (signing in 6).
+function personDialog({ all = false } = {}) {
+  // Staff already have the till by their role, so that one says Included.
+  const inc = (s) => s === 'Can use the till';
+  const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all ? 'On' : 'Off', all)}</div>`;
+  return popup('p-title', 'Jo Taylor', 'Staff · [email]', `
+${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 15px; font-weight: 600">Also allowed to</span>${all ? `<span style="font-size: 13px; color: ${C.muted}">Everything a Manager can do</span>` : button('Give everything a Manager can do', { variant: 'default' })}</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">${SWITCHES.map(sw).join('')}</div>
+${all ? note('Jo can now do everything a Manager can. Jo’s role still says Staff.') : ''}</div>
+<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div>`, `<span></span>${button('Done')}`);
+}
+const clearPinDialog = () => popup('pin-title', 'Clear Jo Taylor’s till PIN?', 'For when Jo has forgotten it', `${note('Jo won’t be able to check in at the till until they get a new PIN in Your settings. Nobody else sees the new one.')}`, `${button('Keep the PIN', { variant: 'ghost' })}${button('Clear the PIN')}`);
+
+const staffPage = (open) => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds(open));
+def('set-staff', () => staffPage({ people: peopleOpen() }));
+def('set-staff-person', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog()));
+def('set-staff-person-all', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ all: true })));
+def('set-staff-clear-pin', () => overlay(staffPage({ people: peopleOpen(false) }), clearPinDialog()));
+def('set-staff-roles', () => staffPage({ roles: rolesOpen() }));
+
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
@@ -238,9 +275,15 @@ Object.assign(TITLES, {
   'set-pay-ways': 'Payments › Ways to pay — each on or off',
   'set-pay-other': 'Payments › Other ways to pay',
   'set-pay-card': 'Payments › Card machine',
+  'set-staff': 'Staff and roles › People',
+  'set-staff-person': 'One person — role, switches, till PIN',
+  'set-staff-person-all': 'Give everything a Manager can do',
+  'set-staff-clear-pin': 'Clear a forgotten PIN',
+  'set-staff-roles': 'Staff and roles › What each role can do',
 });
 export const ROWS = [
   { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
+  { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];

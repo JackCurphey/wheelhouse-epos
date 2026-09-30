@@ -17,6 +17,17 @@ Jack's choice (ask him first). The big canvas is now **desktop only**, each
 board linking to its journey's own canvas for tablet and phone (257 files of
 the 512 a canvas can hold).
 
+**Journey 8, Owner setup (30 Sep, in progress):** Settings first (decision
+2), desktop only so far; 10 decisions in
+`docs/decisions/2026-09-30-owner-setup-review.md` — areas listed down the
+left, changes save as you go with Undo, blind counting on by default, one
+shop-wide account limit, four fixed roles plus switches that can add up to
+a Manager. Drawn: Till, End of day, Payments, Staff and roles. Still to
+draw: Shop and sites, Workshop, Messages, Your data; then first-run setup;
+then tablet and phone. Own canvas:
+https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B . Generator: `setup.mjs` +
+`build-setup.mjs --theme sand`.
+
 **Journey 16, End-of-day cash-up (29 Sep):** approved at all sizes; 7
 decisions in `docs/decisions/2026-09-29-cash-up-review.md` — one "Close the day"
 page with six folding steps, opened from a till-bar button after the shop's
