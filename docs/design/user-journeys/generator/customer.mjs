@@ -71,13 +71,14 @@ const smallLink = (t) => `<a href="#" style="display: inline-flex; align-items: 
 const warranty = (inWarranty) => inWarranty
   ? `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: ${C.successInk}">${icon('check', 14)}Under warranty · [n] months left</span>`
   : `<span style="font-size: 13px; color: ${C.muted}">Warranty ended [date]</span>`;
-function summary() {
+function summary({ accounts = true, loyalty = true, credit = true } = {}) {
   const details = `${secHead('Details', smallLink('Edit'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; color: ${C.muted}">Address</span><span style="font-size: 15px; line-height: 1.45">[address]<br>[postcode]</span></div>
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 13px; font-weight: 700">Note</span><span style="font-size: 14px; line-height: 1.45">[A note everyone in the shop should know]</span></div>`;
   const bikes = `${secHead('Bikes', smallLink('+ Add'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">Trek Domane AL 3</span><span style="font-size: 13px; color: ${C.muted}">Green · black mudguards · bought here [date]</span>${warranty(true)}</div>`;
-  const glance = `${secHead('At a glance')}${facts('Owes on account', mono('[£ owed]'))}${facts('Loyalty points', mono('[n]'))}${facts('Store credit', mono('[£]'))}${facts('Marketing', '[yes or no]')}`;
+  // Decision 6: only what the shop has switched on in Payments › Ways to pay.
+  const glance = `${secHead('At a glance')}${accounts ? facts('Owes on account', mono('[£ owed]')) : ''}${loyalty ? facts('Loyalty points', mono('[n]')) : ''}${credit ? facts('Store credit', mono('[£]')) : ''}${facts('Marketing', '[yes or no]')}`;
   return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${bikes}${glance}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
 }
 function history(filter = 'Everything') {
@@ -86,7 +87,7 @@ function history(filter = 'Everything') {
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 17px; font-weight: 700">History</span><div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${['Everything', 'Jobs', 'Sales', 'Messages'].map((t) => pill(t, t === filter)).join('')}</div></div>
 <div style="display: flex; flex-direction: column">${rows}</div></div>`, 'flex-grow: 1; min-width: 0');
 }
-const customerPage = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${header()}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary()}${history()}</div></div>`, STAFF);
+const customerPage = (on = {}) => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${header()}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary(on)}${history()}</div></div>`, STAFF);
 
 // ---------- Customers: find someone, or add them ----------
 const CUSTOMERS = [['Maya Patel', 'Trek Domane AL 3', MAYA.phone], ['Oliver Chen', 'Brompton C Line', '[phone]'], ['Sam Reed', 'Specialized Sirrus', '[phone]'], ['Jamie Brooks', 'Giant Escape 2', '[phone]'], ['Aisha Khan', 'Cannondale Quick', '[phone]']];
@@ -111,7 +112,8 @@ ${field('Note (optional)', { placeholder: 'e.g. prefers texts, not calls' })}
 }
 
 def('cs-list', customerList);
-def('cs-page', customerPage);
+def('cs-page', () => customerPage());
+def('cs-page-off', () => customerPage({ accounts: false, loyalty: false }));
 def('cs-add', () => overlay(customerList(), addDialog()));
 def('cs-add-company', () => overlay(customerList(), addDialog(true)));
 
@@ -139,6 +141,7 @@ for (const [id, fn] of recipes) screens[id] = { desktop: fn() };
 export const TITLES = {
   'cs-list': 'Customers: find someone, or add them',
   'cs-page': 'A customer’s page: details, bikes with warranty, one history',
+  'cs-page-off': 'A shop with accounts and loyalty switched off (Payments › Ways to pay)',
   'cs-add': 'Add a customer: a person',
   'cs-add-company': 'Add a customer: a company or club',
   'cs-add-match': 'Adding someone who’s already here',
@@ -148,7 +151,7 @@ export const TITLES = {
   'cs-opt-timeline': 'Option 2: a summary on the left, one history on the right',
 };
 export const ROWS = [
-  { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-add', 'cs-add-company'] },
+  { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-off', 'cs-add', 'cs-add-company'] },
   { label: 'Possible duplicates', screens: ['cs-add-match', 'cs-page-dup', 'cs-merge'] },
   { label: 'Options: the shape of the customer page (decision 2: option 2)', screens: ['cs-opt-folds', 'cs-opt-timeline'] },
 ];
