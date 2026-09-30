@@ -17,13 +17,16 @@ const root = here + 'out/';
 // Workshop day; decision 15 of journey A). ui.mjs picks its theme when it
 // loads, and this process is Fjell, so each Soft sand canvas is built in its
 // own process and its boards read back from its project/ folder.
-// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs.
+// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs; journey 8 = setup.mjs.
 const SAND_SOURCES = {
   diary: { script: 'build-diary.mjs', dir: here + 'out-diary-sand/project/' },
   'app-map': { script: 'build-app-map.mjs', dir: here + 'out-app-map-sand/project/' },
   signin: { script: 'build-signin.mjs', dir: here + 'out-signin-sand/project/' },
   till: { script: 'build-till.mjs', dir: here + 'out-till-sand/project/' },
   cashup: { script: 'build-cashup.mjs', dir: here + 'out-cashup-sand/project/' },
+  // explore: exploration boards kept on the journey's own canvas only (the
+  // three layout options Jack chose between, journey 8 decision 3).
+  setup: { script: 'build-setup.mjs', dir: here + 'out-setup-sand/project/', explore: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'], exploreRow: 'Options' },
 };
 for (const s of Object.values(SAND_SOURCES)) execFileSync(process.execPath, [s.script, '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
 const SAND_SIZES = ['single', 'desktop', 'tablet', 'phone'];
@@ -34,6 +37,7 @@ const SAND_CANVAS = {
   signin: 'https://claude.ai/artifact/5Ho8DsRVvHXEcJBnGu1GXe',
   till: 'https://claude.ai/artifact/Y9NppHkpYBrrRKjHw8FoLG',
   cashup: 'https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE',
+  setup: 'https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B',
 };
 const sandFile = (id, size) => (size === 'single' ? `${id}.dc.html` : `${id}-${size}.dc.html`);
 // The sizes a Soft sand screen was drawn at: whichever boards its own canvas has.
@@ -224,13 +228,14 @@ for (const j of journeys) for (const r of j.rows) for (const x of r.screens) if 
 // Each Soft sand canvas must hold exactly the screens journeys.mjs lists for
 // it, in the same order and rows — journeys.mjs lists them by hand (with
 // plain titles), so check they agree.
-for (const [src, { dir }] of Object.entries(SAND_SOURCES)) {
+for (const [src, { dir, explore = [], exploreRow = null }] of Object.entries(SAND_SOURCES)) {
   const sandCanvas = JSON.parse(readFileSync(dir + 'canvas.json', 'utf8'));
-  const theirs = sandCanvas.order.filter((f) => f !== 'Main.dc.html');
+  const isExplore = (f) => explore.some((id) => f.startsWith(id + '-') || f === id + '.dc.html');
+  const theirs = sandCanvas.order.filter((f) => f !== 'Main.dc.html' && !isExplore(f));
   const mine = journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.filter((x) => x.sand === src)));
   const ours = mine.flatMap((x) => sandSizesOf(src, x.id).map((v) => sandFile(x.id, v)));
   if (theirs.join() !== ours.join()) throw new Error(`journeys.mjs no longer matches ${src}'s own canvas:\n theirs ${theirs.join()}\n ours ${ours.join()}`);
-  const theirRows = Object.values(sandCanvas.notes).map((n) => n.text);
+  const theirRows = Object.values(sandCanvas.notes).map((n) => n.text).filter((t) => !(exploreRow && t.startsWith(exploreRow)));
   const ourRows = journeys.flatMap((j) => j.rows.filter((r) => r.screens.some((x) => x.sand === src)).map((r) => r.label));
   if (theirRows.join('|') !== ourRows.join('|')) throw new Error(`${src} rows differ: ${theirRows.join(' | ')}`);
 }

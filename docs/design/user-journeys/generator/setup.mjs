@@ -455,7 +455,7 @@ Object.assign(TITLES, {
   'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
 });
 export const ROWS = [
-  { label: 'First-run setup (decision 16)', screens: ['fr-today', 'fr-step', 'fr-done'] },
+  { label: 'First-run setup', screens: ['fr-today', 'fr-step', 'fr-done'] },
   { label: 'Till settings', screens: ['set-list', 'set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills', 'set-till-tills-owner', 'set-till-remove', 'set-till-empty'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-eod-close', 'set-save-failed', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles', 'set-staff-invite'] },

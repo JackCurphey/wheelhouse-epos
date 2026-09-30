@@ -29,29 +29,28 @@ holding desktop, tablet and phone:
 | B Signing in and access | https://claude.ai/artifact/5Ho8DsRVvHXEcJBnGu1GXe | `docs/decisions/2026-09-29-signing-in-review.md` (10) |
 | 11 Selling at the till | https://claude.ai/artifact/Y9NppHkpYBrrRKjHw8FoLG | `docs/decisions/2026-09-29-selling-at-the-till-review.md` (16) |
 | 16 End-of-day cash-up | https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE | `docs/decisions/2026-09-29-cash-up-review.md` (8) |
+| 8 Owner setup | https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B | `docs/decisions/2026-09-30-owner-setup-review.md` (22) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md` (this folder).
 
-Overview count (each screen once): 252 screens — 145 designed, 6 built, 14
-old app only, 87 not designed yet, 0 for review (30 Sep: journey 12's
-Settings · Accessibility board removed, Owner setup decision 15).
+Overview count (each screen once): 265 screens — 167 designed, 6 built, 14
+old app only, 78 not designed yet, 0 for review (30 Sep: journey 8 in;
+journey 12's Settings · Accessibility board removed, Owner setup decision 15).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
 placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
 collect, 3 Book a repair, 4 Drop off and approve the quote, 5 Collect the
-bike and pay, 6 Cycle to Work, 7 Account, history and reminders, 8 Owner setup
-and onboarding, 9 Moving from Citrus Lime, 10 Opening the shop and checking
+bike and pay, 6 Cycle to Work, 7 Account, history and reminders, 9 Moving from Citrus Lime, 10 Opening the shop and checking
 in, 13 Receiving stock and purchase orders, 14 Stock take and stock control,
 15 Customer service, 17 Reports and accounts, 18 Website management, 19
 Multiple sites, 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **8 Owner setup**
-(where the shop sets up everything the till assumes — quick buttons and
-groups, discount/refund/paid-out reasons, "Other" ways to pay, account
-limits, float, closing time, blind-count setting, staff and roles, clearing
-a forgotten PIN), **15 Customer service** (the customer page — older sales
+Strong candidates, because finished journeys lean on them: **15 Customer
+service** (the customer page — older sales
 and refunds are found there, till decision 13), **10 Opening the shop**
-(pairs with cash-up: float, who's in), **5 Collect the bike and pay** (much
+(pairs with cash-up and journey 8: float, who's in — journey 8 set each
+mechanic's working days), **9 Moving from Citrus Lime** (journey 8's
+checklist links to it), **5 Collect the bike and pay** (much
 now decided in journey 11: deposits on jobs, collected-when-paid).
 
 ## Rules that apply to every journey (Jack's decisions)
@@ -123,10 +122,17 @@ Generator: `docs/design/user-journeys/generator/`.
 **The big canvas is desktop only** (cash-up decision 8): a canvas holds at
 most 512 files, so each screen appears once — desktop, the one large app map,
 or a phone-only screen's only size — with a "Tablet and phone ↗" link to its
-journey's canvas. 257 files now. A publish carries at most 255 files: split
+journey's canvas. 268 files now. A publish carries at most 255 files: split
 big changes (changed boards with `canvas.json` first, removals second).
 
 ## Gotchas that cost time
+
+- **The Settings frame is shared.** `settings-frame.mjs` (journey 8) draws
+  Settings at every size and also journey 12's `diary-settings` boards, so
+  it and `diary.mjs` import each other; `diary-settings` is built by getters
+  to dodge the start-up order. Change the frame → rebuild and diff journey 12.
+- **Exploration boards stay off the big canvas** via `explore` on a
+  `SAND_SOURCES` entry in `build.mjs` (journey 8's layout options).
 
 - **Check other journeys when you touch a shared frame.** `app-map.mjs` and
   `diary.mjs` shells feed several journeys. Before and after, build the
@@ -160,9 +166,11 @@ big changes (changed boards with `canvas.json` first, removals second).
 - Card machine: which provider can take amounts from the till, and card
   payments when the internet is down (till 6 — supersedes the offline spec's
   standalone-machine line).
-- Settings designed nowhere yet (Owner setup, journey 8): quick buttons and
-  groups, reasons, "Other" ways to pay, account limits, float, closing time,
-  blind count on or off, till PIN clearing.
+- Journey 8 drafts awaiting Jack's OK: the "Bike ready" message wording;
+  online booking on for Mechanics and off for others by default; Close the
+  day at closing time by default for a new shop (decision 18). Parked:
+  unselected-pill border contrast 1.31:1 — a design-wide token fix for the
+  Soft sand switch (journey 8 audit M6).
 - Workshop day: multi-day jobs (52), mechanic sign-off (64), tap a phone
   number to see texts (49); customer spending limit on `/book` (41).
 - Switch the app's tokens from Fjell to Soft sand, then build Workshop day

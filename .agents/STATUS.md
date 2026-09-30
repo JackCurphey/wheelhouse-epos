@@ -11,29 +11,26 @@ pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
 Workshop day (journey 12), App map and navigation (journey A), Signing in
-and access (journey B), Selling at the till (journey 11) and End-of-day
-cash-up (journey 16) are approved and in the big canvas; the next journey is
+and access (journey B), Selling at the till (journey 11), End-of-day
+cash-up (journey 16) and Owner setup (journey 8) are approved and in the
+big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (257 files of
+board linking to its journey's own canvas for tablet and phone (268 files of
 the 512 a canvas can hold).
 
-**Journey 8, Owner setup (30 Sep, in progress):** Settings first (decision
-2), desktop only so far; decisions in
-`docs/decisions/2026-09-30-owner-setup-review.md` — areas listed down the
-left, changes save as you go with Undo, blind counting on by default, one
-shop-wide account limit, four fixed roles plus switches that can add up to
-a Manager; a works-in-the-workshop switch with online booking and working
-days; site opening hours; journey 12's diary settings moved into Settings ›
-Workshop (republished on journey 12's canvas and the big canvas, desktop).
-20 decisions. All eight Settings areas drawn at desktop (Till, End of day,
-Payments, Staff and roles, Shop and sites, Workshop, Messages, Your data).
-Journey 12's stale Settings · Accessibility board removed (decision 15).
-First-run setup drawn (decision 16). UI audit done and fixes adopted
-(decision 17, `setup-ui-audit.md`). Desktop approved (decision 21);
-tablet and phone drawn 30 Sep (111 boards). Next: Jack approves tablet and
-phone, then copy into the big canvas. Own canvas:
-https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B . Generator: `setup.mjs` +
-`build-setup.mjs --theme sand`.
+**Journey 8, Owner setup (30 Sep):** approved at desktop, tablet and phone
+and copied into the big canvas; 22 decisions in
+`docs/decisions/2026-09-30-owner-setup-review.md` — Settings in the Office
+room lists eight areas down the left (phone: a list, then each area), each
+area's settings fold, changes save as you go with Undo; four fixed roles
+plus switches that can add up to a Manager; "Works in the workshop" with
+online booking and working days; a Shared queue row; Close the day up to an
+hour before closing; a Getting started checklist for a new owner. Journey
+12's diary settings now sit in Settings › Workshop (all sizes) and its
+stale Accessibility board is gone. Own canvas:
+https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B . Generator: `setup.mjs`
++ `settings-frame.mjs` + `build-setup.mjs --theme sand`; audit in
+`docs/design/user-journeys/setup-ui-audit.md`.
 
 **Journey 16, End-of-day cash-up (29 Sep):** approved at all sizes; 7
 decisions in `docs/decisions/2026-09-29-cash-up-review.md` — one "Close the day"

@@ -24,6 +24,8 @@ export const sb = (id, title, role) => ({ id, status: 'designed', title, role, s
 export const sc = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'till' });
 // sd16(id, title, role) = an agreed journey 16 screen (cashup.mjs, Soft sand).
 export const sd16 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'cashup' });
+// sd8(id, title, role) = an agreed journey 8 screen (setup.mjs, Soft sand).
+export const sd8 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'setup' });
 
 export const journeys = [
   {
@@ -164,28 +166,57 @@ export const journeys = [
   {
     id: 'j08', name: 'Owner setup and onboarding', who: 'Owner and Manager',
     rows: [
-      { label: 'Getting started', screens: [
-        g('setup-checklist', 'First-run checklist', 'Owner', 'The steps a new shop takes, in order, with progress.', ['Shop details, sites, tills, staff, products, services', 'What is done and what is next'], { source: 'FD-07' }),
-        d('settings'),
-        g('setup-sites', 'Sites', 'Owner', 'Add and name each shop location, with its code.', ['Site name and code (for example B for Bolton)', 'Address and hours per site'], { source: 'Offline plan 1 (built on the server) · ACC-09' }),
-        g('setup-register-till', 'Register a till', 'Manager', 'Set up a computer as a till, for example “Bolton, till 1 — B1”.', ['Choose site and till number', 'One-time key shown once', 'Switch a till off', 'Replace a till computer (reissue)'], { source: 'Offline spec §5 · plan 3' }),
+      { label: "First-run setup", screens: [
+        sd8("fr-today", "Getting started: the owner’s checklist on Today", "Owner"),
+        sd8("fr-step", "A step opened from the checklist", "Owner"),
+        sd8("fr-done", "All set up: the checklist goes", "Owner"),
       ] },
-      { label: 'People', screens: [
-        d('staff-settings'), d('staff-edit'), d('staff-deactivate'),
-        g('setup-pin', 'Set a staff PIN', 'Manager', 'Give each member of staff a 4–6 digit PIN for checking in at the till.', ['Set or change PIN', 'Never shown again after saving'], { source: 'Offline spec §4 (built on the server)' }),
-        g('setup-roles', 'Roles and permissions', 'Owner', 'Who can discount, refund, see reports and edit stock.', ['Owner, Manager, Staff, Mechanic', 'What each role can do'], { source: 'ACC-04 · piece 3' }),
+      { label: "Till settings", screens: [
+        sd8("set-list", "Settings on a phone: the list of areas", "Manager"),
+        sd8("set-till-quick", "Till › Quick buttons: hover a button to edit or remove it", "Manager"),
+        sd8("set-till-quick-add", "Add a quick button", "Manager"),
+        sd8("set-till-quick-saved", "Saved as you go, with Undo", "Manager"),
+        sd8("set-till-reasons", "Till › Reasons: a list for each kind", "Manager"),
+        sd8("set-till-receipts", "Till › Receipts", "Manager"),
+        sd8("set-till-printer", "Till › Printer and cash drawer", "Manager"),
+        sd8("set-till-tills", "Till › Tills: as a Manager sees it", "Manager"),
+        sd8("set-till-tills-owner", "Till › Tills: as the owner sees it", "Owner"),
+        sd8("set-till-remove", "Removing a till asks first", "Owner"),
+        sd8("set-till-empty", "A new shop: no quick buttons yet", "Owner"),
       ] },
-      { label: 'Selling and printing', screens: [
-        g('setup-vat', 'VAT rates', 'Manager', 'The VAT rates products can use.', ['Standard, reduced, zero', 'Default for new products'], { source: 'REP-05 · every product has a VAT rate' }),
-        g('setup-till', 'Till and receipt settings', 'Manager', 'How payments and receipts work.', ['Payment types', 'Receipt layout and footer', 'Receipt number format'], { source: 'TILL-12 · piece 3' }),
-        d('printer-settings'),
-        g('setup-receipt-printer', 'Receipt printer and cash drawer', 'Manager', 'Connect the receipt printer and cash drawer to each till.', ['Choose printer', 'Test print', 'Cash drawer opens on cash sales'], { source: 'HW-04 · TILL-20' }),
+      { label: "End of day and payment settings", screens: [
+        sd8("set-eod", "End of day: float", "Manager"),
+        sd8("set-eod-close", "End of day: Close the day at, or before, closing time", "Manager"),
+        sd8("set-save-failed", "A change that couldn’t be saved", "Manager"),
+        sd8("set-pay-ways", "Payments › Ways to pay: each on or off", "Manager"),
+        sd8("set-pay-other", "Payments › Other ways to pay", "Manager"),
+        sd8("set-pay-card", "Payments › Card machine", "Manager"),
       ] },
-      { label: 'Workshop and messages', screens: [
-        d('services'), d('service-edit'), d('hours'), d('booking-settings'), d('message-settings'), d('channel-edit'), d('channel-proof'), d('template'), d('setup-saved'),
+      { label: "Staff and roles", screens: [
+        sd8("set-staff", "Staff and roles › People", "Manager"),
+        sd8("set-staff-person", "One person: role, switches, till PIN", "Manager"),
+        sd8("set-staff-person-all", "Give everything a Manager can do", "Manager"),
+        sd8("set-staff-clear-pin", "Clear a forgotten PIN", "Manager"),
+        sd8("set-staff-roles", "Staff and roles › What each role can do", "Manager"),
+        sd8("set-staff-invite", "The owner invites someone", "Owner"),
       ] },
-      { label: 'Data', screens: [
-        g('setup-export', 'Export everything', 'Owner', 'Download all of the shop’s data at any time.', ['What to export', 'Download'], { source: 'Release 2 rule 5 · DAT-01' }),
+      { label: "Shop and sites", screens: [
+        sd8("set-shop-details", "Shop and sites › Shop details", "Manager"),
+        sd8("set-shop-hours", "Shop and sites › Opening hours", "Manager"),
+      ] },
+      { label: "Workshop settings", screens: [
+        sd8("set-workshop-services", "Workshop › Services, by group", "Manager"),
+        sd8("set-workshop-mechanics", "Workshop › Mechanics", "Manager"),
+        sd8("set-workshop-diary", "Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)", "Manager"),
+      ] },
+      { label: "Messages", screens: [
+        sd8("set-msg-list", "Messages › Automatic messages: text, email or both", "Manager"),
+        sd8("set-msg-edit", "Change a message’s wording, with a preview", "Manager"),
+        sd8("set-msg-new", "Add your own automatic message", "Manager"),
+      ] },
+      { label: "Your data", screens: [
+        sd8("set-data-export", "Your data › Download everything", "Manager"),
+        sd8("set-data-history", "Your data › Settings changes", "Manager"),
       ] },
     ],
   },
