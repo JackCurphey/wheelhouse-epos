@@ -18,6 +18,13 @@ Jack's choice (ask him first). The big canvas is now **desktop only**, each
 board linking to its journey's own canvas for tablet and phone (278 files of
 the 512 a canvas can hold).
 
+**Journey 10, Opening the shop (30 Sep, in progress):** decisions in
+`docs/decisions/2026-09-30-opening-the-shop-review.md` — a one-tap float
+check when the till opens; Office › Today is the start-of-day overview
+(tills, who's in, workshop today, needs attention). Desktop drawn (6
+boards). Own canvas: https://claude.ai/artifact/E9XTaKJys2WH3gpgwfPJbq .
+Generator: `opening.mjs` + `build-opening.mjs --theme sand`.
+
 **Journey 15, Customer service (30 Sep):** approved at desktop, tablet and
 phone and copied into the big canvas; 14 decisions in
 `docs/decisions/2026-09-30-customer-service-review.md` — a summary and one
