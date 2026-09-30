@@ -28,3 +28,13 @@ clicks as possible).
    (Selling at the till 10). Depends on online card payments (journey 18
    and a payment provider not yet chosen). Chosen over reading-only
    summaries with everyone paying in the shop, and online payment only.
+3. **One main button on the job at collection, depending on whether it's
+   paid** (Jack, 30 Sep): not paid yet — "Take payment" opens the till with
+   the job loaded and "Bike collected when paid" on, and paying records
+   collection (no second step); paid online or in full earlier — "Hand
+   over" records collection in one tap. Journey 12's two hand-back ticks
+   ("Bike handed to the customer or authorised collector", "Lock key and
+   rear light returned") become optional reminders a shop can switch on,
+   off by default. Journey 12's "Ready for collection" board is redrawn to
+   match. Chosen over keeping the ticks required and keeping journey 12's
+   separate "Record collection" step.

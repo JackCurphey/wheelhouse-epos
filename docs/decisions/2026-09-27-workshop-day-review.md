@@ -354,3 +354,10 @@ this journey — Accessibility lives in Your settings (app map decision 8).
 account board (`customer`) is now journey 15's customer page — a summary on
 the left, one history on the right — at every size, on this journey's
 canvas and the big canvas.
+
+**Later change (30 Sep 2026, Collect the bike and pay decision 3):** the
+"Ready for collection" board no longer has a separate "Record collection"
+step. Its main button is "Take payment" (paying at the till records
+collection, Selling at the till 10) or, when already paid, "Hand over". The
+two hand-back ticks are optional reminders a shop can switch on, off by
+default.
