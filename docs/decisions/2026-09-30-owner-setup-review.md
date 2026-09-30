@@ -35,3 +35,20 @@ one from the staff list.
    and an Undo** (Jack, 30 Sep): no Save buttons. Every change is recorded
    (who, when, what it was before). Chosen over a Save button per section
    and confirming only settings that affect money or sign-in.
+5. **Each kind of reason has its own list** (Jack, 30 Sep): Till ›
+   Reasons holds separate lists for discount, void, refund and paid-out,
+   picked by pill; the till's pop-ups show only their own kind, plus
+   "Other…". Chosen over one shared list and a Wheelhouse-suggested
+   starting set. Board: `set-till-reasons`. Two choices drawn on the Till
+   boards stand unless Jack objects: a shop can switch off Print, Email or
+   Text in the Paid pop-up ("No receipt" always stays), and a quick
+   button's price always comes from its product.
+
+## Noted for later (not for this journey)
+
+- **Search products by their measurements and specifications** (Jack, 30
+  Sep): when stock is booked in, parts can carry bike-specific details —
+  a bearing's dimensions, how many gears a derailleur is for — so staff
+  can search by them ("bearings with a 30 mm outside diameter") instead of
+  by name. Belongs with receiving stock (journey 13), stock control
+  (journey 14) and the till and header search.

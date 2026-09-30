@@ -152,6 +152,10 @@ big changes (changed boards with `canvas.json` first, removals second).
 
 ## Open items carried forward
 
+- Search products by measurements and specifications (bearing sizes,
+  derailleur gears) — Jack's idea, 30 Sep; for journeys 13, 14 and search.
+  Recorded in `docs/decisions/2026-09-30-owner-setup-review.md`.
+
 - Card machine: which provider can take amounts from the till, and card
   payments when the internet is down (till 6 — supersedes the offline spec's
   standalone-machine line).
