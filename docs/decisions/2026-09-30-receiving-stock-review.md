@@ -70,3 +70,16 @@ the supplier integrations above.
    stock is known individually; the till then picks which one is being sold
    instead of typing it (a knock-on for Selling at the till's "Record a
    frame number"). Chosen over only at the sale, and either.
+6. **A quick invoice check, which the shop can switch off** (Jack, 30 Sep:
+   "1 but have it be an option in settings to turn on or off"): on a
+   booked-in delivery, "Add the invoice" takes the invoice number and its
+   total before VAT (the PDF can be attached); Wheelhouse compares it with
+   the cost of what was booked in. If they match the delivery is marked
+   "Invoice checked"; if not it shows the difference ("Invoice £[x] ·
+   booked in £[y] · £[z] more") to query with the supplier, or accept.
+   Deliveries waiting for their invoice are tagged in Recent deliveries.
+   Shown to the people who can order stock. A settings switch turns the
+   whole check off for shops that check invoices in their accounts software.
+   Compares totals only, so it doesn't say which line differs — that comes
+   with the supplier-file upload (Noted for later, decision 3). Chosen over
+   line by line, and leaving it to the accounts software.

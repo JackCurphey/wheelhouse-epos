@@ -47,7 +47,7 @@ ${section('Orders', list([
   line('[Supplier] · [n] lines', 'Ordered [date] · [n] still to come', tag('Part received', 'grey')),
   line('[Supplier] · [n] lines', 'Draft · not ordered yet', tag('Draft', 'grey')),
 ]), button('+ New order', { variant: 'default' }))}`}
-${section('Recent deliveries', list([line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', link('Open'))]))}
+${section('Recent deliveries', list([line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', `${staff ? '' : tag('Invoice to check', 'warn')}${link('Open')}`)]))}
 ${staff ? note('Orders and the restock list are for people who can order stock.') : ''}`, staff ? JO : MANAGER);
 
 // ---------- Decision 3: scan a delivery in ----------
@@ -87,6 +87,26 @@ const bookedBoard = () => stockPage('Receive a delivery', `${section('Booked in'
 ${list([line('Job WH-1042 · Maya Patel', `Trek Domane AL 3 · was waiting for ${PADS} — flagged on the job for Alex Morgan`, link('Open the job'), waitingLead)])}
 <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px">${button('Print labels', { variant: 'default' })}${button('Receive another delivery', { variant: 'default' })}</div>`)}`);
 
+// ---------- Decision 6: a quick invoice check (a settings switch) ----------
+// The invoice total before VAT is compared with the cost of what was booked
+// in — totals only. Shown to people who can order stock.
+const deliveryLines = list([
+  line(PADS, `B05S-RX · ${mono('[n]')} × £[cost]`, mono('£[cost]')),
+  line('[Product]', `[Supplier code] · ${mono('[n]')} × £[cost]`, mono('£[cost]')),
+]);
+const invoiceBody = (state) => state === 'diff'
+  ? `<div role="status" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}"><span style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700">${icon('alert', 18)}The invoice doesn’t match</span><span style="font-size: 15px; color: ${C.ink}">Invoice ${mono('£[x]')} · booked in ${mono('£[y]')} · ${mono('£[z]')} more</span></div>
+<span style="font-size: 14px; color: ${C.muted}">Invoice [number] · added [date] by Jack Lewis · [invoice].pdf</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">${button('Mark as queried with [Supplier]', { variant: 'default' })}${button('Accept the difference', { variant: 'default' })}</div>`
+  : `${note('Add the invoice when it comes, to check you’ve been charged for what arrived.')}<div>${button('Add the invoice')}</div>`;
+const deliveryBoard = (state = 'none') => stockPage('Delivery', `${section('[Supplier] · [n] items', `<span style="font-size: 14px; color: ${C.muted}">Booked in [date] by Jack Lewis</span>${deliveryLines}
+<div style="display: flex; justify-content: space-between; gap: 10px; padding-top: 6px; font-size: 15px"><span>Booked-in cost, before VAT</span>${mono('£[y]', 'font-size: 16px; font-weight: 700')}</div>`)}
+${section('Invoice', invoiceBody(state), state === 'diff' ? tag('Doesn’t match', 'warn') : tag('Not checked yet', 'grey'))}`);
+const invoicePopup = () => popup('inv-title', 'Add the invoice', '[Supplier] · delivery booked in [date]', `
+<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)'}; gap: 12px">${fieldRow('inv-no', 'Invoice number', '[number]')}${fieldRow('inv-total', 'Total before VAT', '£[x]')}</div>
+<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px">${icon('plus', 16)}<span style="flex-grow: 1">Attach the PDF (optional)</span>${link('Choose a file')}</div>
+${note(`Booked in: ${mono('£[y]')} before VAT. Wheelhouse compares the two totals.`)}`, `${button('Cancel', { variant: 'default' })}${button('Check it')}`, 560);
+
 // ---------- Decision 2: a purchase order, built by hand ----------
 const poLine = (name, code, n, cost) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 2fr) auto minmax(0, 0.8fr) 44px'}; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${code}</span></span>${qty(n, name)}${isPhone() ? '' : `<span style="font-family: ${MONO}; font-size: 15px; text-align: right">${cost}</span><button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}">${icon('close', 18)}</button>`}</div>`;
 const orderBoard = () => stockPage('New order', `${section('New order', `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label for="po-supplier" style="font-size: 14px; font-weight: 600">Supplier</label><select id="po-supplier" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>[Supplier]</option></select></div>
@@ -111,6 +131,9 @@ def('rs-add-product', () => overlay(receiveBoard(true), addProduct()));
 def('rs-frame', () => overlay(receiveBoard(false), framePopup()));
 def('rs-booked', () => bookedBoard());
 def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
+def('rs-delivery', () => deliveryBoard());
+def('rs-invoice', () => overlay(deliveryBoard(), invoicePopup()));
+def('rs-invoice-diff', () => deliveryBoard('diff'));
 def('rs-order', () => orderBoard());
 def('rs-restock', () => restockBoard());
 def('rs-today-restock', () => today({ restock: true }));
@@ -131,11 +154,15 @@ export const TITLES = {
   'rs-frame': 'A bike in the delivery: its frame number first',
   'rs-booked': 'Booked in: stock updated, the waiting job flagged',
   'rs-job-arrived': 'The job: its part has arrived',
+  'rs-delivery': 'A booked-in delivery, its invoice not checked yet',
+  'rs-invoice': 'Add the invoice: its total against what was booked in',
+  'rs-invoice-diff': 'The invoice doesn’t match: the difference, to query',
   'rs-order': 'A purchase order, built by hand',
   'rs-restock': 'Restock list: download for the supplier’s basket',
   'rs-today-restock': 'Today: the restock list, for managers',
 };
 export const ROWS = [
   { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-frame', 'rs-booked', 'rs-job-arrived'] },
+  { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-diff'] },
   { label: 'Ordering', screens: ['rs-order', 'rs-restock', 'rs-today-restock'] },
 ];
