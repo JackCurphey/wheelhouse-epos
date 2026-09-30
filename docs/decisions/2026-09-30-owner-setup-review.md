@@ -52,6 +52,14 @@ one from the staff list.
    sets "Most a customer can owe"; a trusted club or regular can be given
    a different limit from their customer page (journey 15). Chosen over one
    limit with no exceptions and a limit set per customer only.
+8. **Four fixed roles — Owner, Manager, Staff, Mechanic — plus a few
+   per-person switches** (Jack, 30 Sep): each role has a plain
+   description of what it can do; a handful of switches on a person cover
+   the in-between cases (e.g. a senior mechanic who can see reports). No
+   shop-made roles, which also avoids WorkOS's one-way organisation-level
+   roles (auth spec §6.2). "Staff" is the till role the auth spec calls
+   `cashier`. Which switches exist is the next question. Chosen over fixed
+   roles only and a permissions grid.
 
 ## Noted for later (not for this journey)
 
