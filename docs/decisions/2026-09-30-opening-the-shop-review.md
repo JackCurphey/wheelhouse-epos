@@ -15,3 +15,10 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    Count it"; Count it opens the same note-and-coin count as cash-up
    (journey 16 decision 3). Catches overnight problems at the start of the
    day. Chosen over no morning check and a full count every morning.
+3. **The start-of-day overview is Office › Today** (Jack, 30 Sep): one
+   page where owners and managers land, with four parts — Tills (open,
+   float checked, sales waiting to send), Who's in (checked in, and who's
+   due from their working days), Workshop today (bikes due in, bikes ready
+   to collect) and Needs attention (e.g. a float that didn't match).
+   Replaces the "[The rest of Today]" placeholder in journey 8. Chosen over
+   a Today card on the till after check-in and both.
