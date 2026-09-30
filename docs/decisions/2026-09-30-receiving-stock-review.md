@@ -43,3 +43,17 @@ first, then tablet and phone. Rules for every journey apply (Workshop day
 showing Madison's own website orders as a feed in Wheelhouse and creating a
 purchase order from one, so orders placed on the supplier's site are known
 without retyping.
+3. **Deliveries are scanned in** (Jack, 30 Sep): "Receive a delivery",
+   pick the supplier if you like, scan each item as it comes out of the box
+   (each scan adds one; a quantity can be typed); an unknown barcode opens
+   "Add this product", where its measurements and specifications are filled
+   in (Owner setup, Noted for later); if there's an order for that supplier
+   the list shows what's still to come; "Book in" adds the stock, flags any
+   job waiting for one of these parts and offers labels. Items without a
+   barcode are found by typing. Chosen over typing it in from the delivery
+   note, and uploading the supplier's file.
+
+**Noted for later (Jack, 30 Sep: "I would definitely like 3 in the
+future"):** upload the supplier's delivery or invoice file to book a whole
+delivery in at once — once each supplier's file format is known, alongside
+the supplier integrations above.
