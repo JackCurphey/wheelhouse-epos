@@ -101,6 +101,13 @@ one from the staff list.
     "Close the day" keeps its own time in End of day, filled in from the
     site's closing time. Overlaps journey 10 (who's in today). Chosen over
     one set of hours for everything and separate workshop hours.
+14. **Shops can reword, switch on or off, and choose text or email for
+    every automatic message — and create their own** (Jack, 30 Sep):
+    Wheelhouse supplies starting wording for each (drafted for Jack's
+    approval), edited with a live preview and tap-in placeholders
+    (customer's name, job number…). Shops can also add their own automatic
+    messages with a "send when…" trigger. Overlaps journey 7 (reminders).
+    Chosen over rewording only and fixed wording.
 
 ## Noted for later (not for this journey)
 
