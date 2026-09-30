@@ -135,6 +135,39 @@ const bothPopup = () => popup('both-title', 'Changed in both', 'Refresh on [date
 <div role="list">${bothRow('[Product] · price', mono('£[price]'), mono('£[price]'))}${bothRow('[Customer] · phone', '[phone]', '[phone]')}</div>`, `<span></span>${button('Got it')}`, 720);
 const bothBoard = () => overlay(alongsideBoard(), bothPopup());
 
+// ---------- Decision 7: switch over — a checklist that ticks itself ----------
+// Then the owner picks the day; that morning: one last refresh, practice
+// sales cleared, tills made real; then the first full trading week.
+const tick = (done) => `<span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; ${done ? `background: ${C.okBg}; color: ${C.successInk}` : `border: 2px solid ${C.input}; box-sizing: border-box`}">${done ? icon('check', 15) : ''}</span>`;
+const readyRow = (t, sub, done, action = '') => line(t, sub, done ? tag('Done') : `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">${tag('Not yet', 'grey')}${action}</span>`, tick(done));
+const offBtn = (t) => button(t).replace(/^<(\w+)/, '<$1 disabled aria-disabled="true"').replace('style="', 'style="opacity: 0.45; cursor: not-allowed; ');
+const READY = (all) => [
+  readyRow('The weekly check matched [n] weeks in a row', '[n] of [n] so far', true),
+  readyRow('The card machine is connected', 'Settings › Payments', true),
+  readyRow('Everyone has made a practice sale', all ? 'Jo Taylor, Alex Morgan, Jack Lewis' : 'Jo Taylor and Jack Lewis have · Alex Morgan hasn’t yet', all, link('Remind Alex')),
+  readyRow('The website is moved', 'Website', all, link('Open Website')),
+];
+const readyBoard = (all) => movePage(section('Before you switch over', `${note(all ? 'Everything’s ready. Pick the day — it can be any day the shop is open.' : 'Each of these ticks itself when it’s done. Once they’re all ticked, you pick the day.')}
+${list(READY(all))}
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px">${helpLink}${all ? button('Pick the day') : offBtn('Pick the day')}</div>`));
+const pickDay = () => popup('day-title', 'Pick switch-over day', 'Everything on the checklist is ticked', `<div style="display: flex; flex-direction: column; gap: 6px"><label for="sw-day" style="font-size: 14px; font-weight: 600">Switch over on</label><input id="sw-day" type="text" value="[date]" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">That morning</span><ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.5"><li>One last refresh from Citrus Lime</li><li>Practice sales are cleared</li><li>The tills take real money</li></ol></div>
+${note('Keep Citrus Lime until the first full week — including a weekend — is done on Wheelhouse.')}`, `${button('Back', { variant: 'default' })}${button('Switch over on [date]')}`, 560);
+// The morning: three steps, one after another.
+const stepRow = (n, t, sub, state, action = '') => line(t, sub, state === 'done' ? tag('Done') : state === 'now' ? action : tag('Next', 'grey'), `<span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; ${state === 'done' ? `background: ${C.okBg}; color: ${C.successInk}` : state === 'now' ? `background: ${C.ink}; color: #ffffff` : `background: ${C.mutedBg}; color: ${C.muted}`}">${state === 'done' ? icon('check', 15) : n}</span>`);
+const morningBoard = () => movePage(section('Switch-over day · [date]', `${note('Do this before the first sale of the day. It takes a few minutes.')}
+${list([
+    stepRow(1, 'One last refresh from Citrus Lime', 'Last night’s files · only what changed comes across', 'done'),
+    stepRow(2, 'Clear the practice sales', `${mono('[n]')} practice sales · they were never real money`, 'now', button('Clear them')),
+    stepRow(3, 'Make the tills real', 'The practice band goes from every till', 'next'),
+  ])}`, helpLink));
+// The first full trading week, including a weekend (the finish line).
+const DAYS7 = [1, 2, 3, 4, 5, 6, 7].map((n) => `Day ${n}`); // from switch-over day, whichever day that is
+const dayBox = (d, i) => { const done = i < 4, today = i === 4; return `<li style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; padding: 10px 4px; border-radius: 10px; border: 1px solid ${today ? C.ink : C.border}; background: ${C.panel}" ${today ? 'aria-current="date"' : ''}><span style="font-size: 14px; font-weight: 700">${d}</span>${done ? `<span style="display: inline-flex; color: ${C.successInk}">${icon('check', 18)}</span><span style="font-size: 12px; color: ${C.muted}">Traded</span>` : `<span style="font-size: 12px; color: ${C.muted}">${today ? 'Today' : 'To come'}</span>`}</li>`; };
+const weekBoard = () => movePage(`${section('Your first week on Wheelhouse', `${note('Day 5 of 7. When the week — weekend included — is done, you can switch Citrus Lime off.')}
+<ol aria-label="The first trading week" style="margin: 0; padding: 0; list-style: none; display: flex; gap: 8px">${DAYS7.map(dayBox).join('')}</ol>
+${list([line('Citrus Lime', 'Keep it until [date] · nothing needs doing in it', tag('Still on', 'grey'))])}`, helpLink)}`);
+
 // ---------- Decision 6: every till is in practice until switch-over ----------
 // The card machine isn't used: the practice card step lets staff try both
 // outcomes. Totals come from journey 11's example sale.
@@ -142,6 +175,11 @@ const practiceCard = () => popup('pc-title', 'Card payment · £74.00 · practic
 def('mv-practice-sale', () => practiceScreen('till-sale', SIZE));
 def('mv-practice-card', () => overlay(practiceScreen('till-sale', SIZE), practiceCard()));
 
+def('mv-ready', () => { STAGE = 2; return readyBoard(false); });
+def('mv-ready-all', () => { STAGE = 2; return readyBoard(true); });
+def('mv-pick-day', () => { STAGE = 2; return overlay(readyBoard(true), pickDay()); });
+def('mv-morning', () => { STAGE = 2; return morningBoard(); });
+def('mv-week', () => { STAGE = 2; return weekBoard(); });
 def('mv-start', () => { STAGE = 0; return startBoard(); });
 def('mv-progress', () => { STAGE = 0; return progressBoard(); });
 def('mv-summary', () => { STAGE = 0; return summaryBoard(); });
@@ -172,9 +210,15 @@ export const TITLES = {
   'mv-check-result': 'The weekly check: three match, one doesn’t',
   'mv-practice-sale': 'The till before switch-over: practice, not real money',
   'mv-practice-card': 'A practice card payment: try either outcome',
+  'mv-ready': 'Switch over: the checklist, two still to do',
+  'mv-ready-all': 'Switch over: everything ticked',
+  'mv-pick-day': 'Pick switch-over day',
+  'mv-morning': 'Switch-over morning: last refresh, clear practice, tills real',
+  'mv-week': 'The first full week on Wheelhouse',
 };
 export const ROWS = [
   { label: 'Bring your data', screens: ['mv-start', 'mv-progress', 'mv-summary', 'mv-fix'] },
   { label: 'Run alongside', screens: ['mv-today-refresh', 'mv-alongside', 'mv-both', 'mv-check', 'mv-check-result'] },
   { label: 'Practice at the till', screens: ['mv-practice-sale', 'mv-practice-card'] },
+  { label: 'Switch over', screens: ['mv-ready', 'mv-ready-all', 'mv-pick-day', 'mv-morning', 'mv-week'] },
 ];
