@@ -161,6 +161,13 @@ big changes (changed boards with `canvas.json` first, removals second).
 
 ## Open items carried forward
 
+- WH-1045 Jamie Brooks is on Thursday 17 at 10:30 on the Workshop Overview
+  and journey 10's Today, but the diary (`diary.mjs`, day 4) puts it on
+  Friday 18 at 11:00. Found by journey 10's UI audit (L5); not changed,
+  since journey 12 is approved — settle which is right with Jack.
+- Design-wide, parked from journey 10's UI audit (L5): every pop-up's ✕ is
+  a link rather than a button (`popup()` in settings-frame.mjs and
+  cashup.mjs), and Today and Reports share the same sidebar icon.
 - Maya Patel's example email differs: `maya@example.test` (diary.mjs,
   job-page.mjs, customer.mjs) vs `maya@example.com` (till.mjs, signin.mjs).
   Pick one and republish the approved boards that show it.

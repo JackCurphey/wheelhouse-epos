@@ -49,3 +49,29 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    day". The first customer is never blocked and Staff aren't handed a job
    that isn't theirs. Chosen over closing yesterday first before any sale,
    and letting whoever is first choose.
+8. **UI audit fixes, all as recommended** (Jack, 30 Sep; audit in
+   `docs/design/user-journeys/opening-ui-audit.md`):
+   - H1: a count that matches closes the pop-up with "Float checked"; a new
+     "The float is over" pop-up matches the short one; "Done counting"
+     stays off until a box has a number. An over float goes to Needs
+     attention only when yesterday was closed (otherwise "wasn't closed"
+     already explains it).
+   - H2: sales waiting to send also go to Needs attention after [n]
+     minutes, with "Try again".
+   - H3: "Check" on a short float becomes "Seen" — one click clears it and
+     Tills then reads "Float short · seen by Jack Lewis". "Close it" lands
+     on journey 16's close the day for Wednesday 16 September.
+   - M1: no ✕ on the float check; "Count it" and "Looks right" are the
+     only ways out.
+   - M2: Needs attention shows a count ("Needs attention · 2") and a
+     warning icon on each line; a board shows two items stacked.
+   - M3: a "Still to arrive" heading only — the rows otherwise stay as the
+     approved Workshop Overview draws them.
+   - L1–L4: warning icon on the difference, no double rule, "[reason]"
+     instead of an invented example; 44px count boxes and no expected
+     float on the count (blind counting); "Hello, Jo", "The shop's float",
+     "All sales sent", spacing above two-line rows; labelled sections and
+     lists for screen readers.
+   - L5: the ✕-as-link and the shared Today/Reports icon are parked as
+     design-wide fixes; the WH-1045 day and time mismatch with the diary
+     is logged in the handover's open items.
