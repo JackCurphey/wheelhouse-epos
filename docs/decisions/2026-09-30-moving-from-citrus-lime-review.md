@@ -73,3 +73,33 @@ few clicks as possible).
    weekly check matched 2 weeks in a row" with a "Change" link that opens a
    small choice (2, 3, 4 or another number). Settles decision 7's [n].
    Chosen over a fixed 2 weeks and a fixed 4 weeks.
+9. **UI audit fixes, all as recommended** (Jack, 30 Sep; audit in
+   `docs/design/user-journeys/moving-ui-audit.md`):
+   - H1: the three stages are links; Run alongside reads "Still running" on
+     the switch-over checklist and "Done" only from switch-over day.
+   - H2: a week counts only when all four figures match; "Ask us to help"
+     is the way out. Revisit once Citrus Lime's real reports are known.
+   - H3: the refresh note says what stays and the one exception — where
+     both changed the same thing, Citrus Lime's is kept until switch-over.
+   - M1: a slim drop zone on the Weekly refresh card (Today's "Refresh now"
+     opens it); "Change day" opens day buttons.
+   - M2: each figure in the weekly check checks itself — no Check button;
+     column names are spoken to screen readers.
+   - M3: every Fix and Leave it out button is named after its row; an
+     "Everything's sorted" board, with left-out rows kept under Settings ›
+     Your data.
+   - M4: the progress board announces itself, has "Ask us to help" and a
+     "Couldn't read it — Choose another file" state; workshop jobs agree
+     with the summary.
+   - M5: "Running alongside puts every till into practice until switch-over
+     day" under "Next: run alongside", and a Tills card on Run alongside.
+   - M6: switch-over day is picked from the next open days, the first
+     already chosen, with "Another day…".
+   - M7: clearing practice sales and making the tills real is one button,
+     "Clear and go real", confirmed once.
+   - L1: each day shows its weekday; shut days don't count; a finished
+     week board ("A full week on Wheelhouse") with every stage done.
+   - L2: chip then link on every checklist row; the website row says what
+     it means; the owner is counted in "Everyone has made a practice sale";
+     "Pick the day" stays reachable by keyboard; Cancel beside Save; "Ask
+     us to help" always top right of its card.
