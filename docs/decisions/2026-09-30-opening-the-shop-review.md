@@ -22,3 +22,9 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    to collect) and Needs attention (e.g. a float that didn't match).
    Replaces the "[The rest of Today]" placeholder in journey 8. Chosen over
    a Today card on the till after check-in and both.
+4. **Staff see Who's in and Workshop today on Today; the money side is for
+   owners, managers and anyone with "Can close the day"** (Jack, 30 Sep):
+   Tills and Needs attention (a short float, sales waiting) show only to
+   them (Owner setup decision 9's switch), so a colleague's short float
+   isn't broadcast. Chosen over everyone seeing the whole page and taking
+   Today away from Staff.
