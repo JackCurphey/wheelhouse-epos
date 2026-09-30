@@ -76,7 +76,9 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // the usual float check; "Wednesday 16 September wasn't closed" goes to Needs
 // attention. Audit H2: sales waiting to send go there too (after [n] minutes);
 // H3: "Seen" clears a short float in one click.
-function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false } = {}) {
+// Journey 9 decision 3 (refresh): while a shop runs alongside Citrus Lime,
+// the weekly "Time to refresh" reminder joins Needs attention for the owner.
+export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
@@ -86,13 +88,14 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
   const items = [
     short && !seen && line('Till B1’s float was [£] short this morning', 'Counted by Jo Taylor at [time] · “[their reason]”', button('Seen', { variant: 'default' }), warnLead),
     unclosed && line('Wednesday 16 September wasn’t closed', 'Till B1 · yesterday’s takings still to count', button('Close it', { variant: 'default' }), warnLead),
+    refresh && line('Time to refresh from Citrus Lime', 'Every [day] · last refreshed [date]', button('Refresh now', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('inbox', 18)}</span>`),
     waiting && line('Till B1 has [n] sales waiting to send', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Try again', { variant: 'default' }), warnLead),
   ].filter(Boolean);
   const attention = section('Needs attention', items.length ? list(items)
     : `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid ${C.border}; font-size: 15px; color: ${C.muted}">${icon('check', 16)}Nothing needs you right now</div>`, '', items.length);
   const left = staff ? who : `${attention}${tills}${who}`;
   const cols = isPhone() ? `${left}${work}` : `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start"><div style="display: flex; flex-direction: column; gap: 14px">${left}</div><div style="display: flex; flex-direction: column; gap: 14px">${work}</div></div>`;
-  return page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton · open [opens]–[closes]')}${cols}</div>`, staff ? STAFF : MANAGER);
+  return page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton · open [opens]–[closes]')}${cols}</div>`, as || (staff ? STAFF : MANAGER));
 }
 
 // "Close it" lands on journey 16's close-the-day page, for yesterday (audit H3).

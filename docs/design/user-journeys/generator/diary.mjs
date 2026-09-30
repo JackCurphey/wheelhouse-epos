@@ -112,13 +112,13 @@ export const ROOMS_DIARY = [
 ];
 const roomsFor = (role) => ROOMS_DIARY.map(([room, items]) => [room, items.filter((i) => i[3].includes(role))]).filter(([, items]) => items.length);
 
-function sideItem([key, label, ic], active) {
+export function sideItem([key, label, ic], active) {
   const on = key === active;
   return `<a href="${key}-desktop.dc.html" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: ${on ? 700 : 500}; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}">${icon(ic, 18)}<span>${esc(label)}</span></a>`;
 }
 const navList = (role, active) => roomsFor(role).map(([room, items]) => `<div style="display: flex; flex-direction: column; gap: 2px"><div style="padding: 2px 12px 2px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(243,242,238,0.7)">${room}</div>${items.map((n) => sideItem(n, active)).join('')}</div>`).join('');
 
-function railItem([key, label, ic], active) {
+export function railItem([key, label, ic], active) {
   const on = key === active;
   // Decision 68: the tablet's charcoal icon rail — a real label under every
   // icon at 12px (the labels-≥12px floor), each item a ≥44px touch target;

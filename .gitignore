@@ -46,3 +46,4 @@ uploads/
 # Playwright output (npm run test:browser)
 test-results/
 playwright-report/
+out-moving-sand/

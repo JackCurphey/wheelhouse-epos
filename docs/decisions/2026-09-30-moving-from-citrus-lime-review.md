@@ -7,7 +7,9 @@ weekend, on Wheelhouse alone — `docs/superpowers/specs/2026-09-27-release-2-de
 Owner setup's Getting started checklist links here (Owner setup decision 16).
 The biggest open risk: what Citrus Lime lets a shop export, and in what
 format, is not yet known (Release 2 design §4). Designed in the Soft sand
-look on its own canvas, desktop first, then tablet and phone. Rules for
+look on its own canvas (https://claude.ai/artifact/Wkp23VuCPRydTjfYmJgKo9),
+desktop first, then tablet and phone. Generator: `moving.mjs` +
+`build-moving.mjs --theme sand`. Rules for
 every journey apply (Workshop day 45, 48, 50, 53, 57, 62, 65–67; A2, A6 — as
 few clicks as possible).
 
