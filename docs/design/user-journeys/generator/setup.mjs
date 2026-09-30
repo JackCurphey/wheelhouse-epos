@@ -176,6 +176,43 @@ def('set-till-receipts', () => settingsPage('till', 'Till', TILL_INTRO, tillFold
 def('set-till-printer', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ printer: printerOpen() })));
 def('set-till-tills', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsOpen() })));
 
+// ---------- End of day (cash-up decisions 2, 4, 5; decision 6: blind on) ----------
+const EOD_INTRO = 'How the till closes each day. Changes save as you make them.';
+const moneyInput = (id, label, value) => `<div style="display: flex; align-items: center; gap: 10px"><label for="${id}" style="font-size: 15px; font-weight: 600; flex-grow: 1">${label}</label><input id="${id}" value="${value}" style="width: 140px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></div>`;
+const choice = (label, items) => `<div role="group" aria-label="${esc(label)}" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">${label}</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${items.map(([t, on]) => pill(t, on)).join('')}</div></div>`;
+const eodFolds = () =>
+  fold('Float', '[£ float]', `${moneyInput('eod-float', 'Leave this much in the drawer each night', '[£ float]')}${note('Close the day works out the rest to bank, so every day starts with the same float.')}`)
+  + fold('Close the day', 'After [closing time]', `${moneyInput('eod-time', 'Show “Close the day” in the till bar after', '[time]')}${note('Owners and managers see it on every till after this time. Nobody else does.')}`)
+  + fold('Counting the cash', 'Blind', `${choice('While counting', [['Count first, then see the difference', true], ['Show the expected amount', false]])}${note('Counting first means staff can’t just match the number they see, so the difference is a real one.')}`);
+def('set-eod', () => settingsPage('eod', 'End of day', EOD_INTRO, eodFolds()));
+
+// ---------- Payments (journey 11 decisions 6, 8, 15) ----------
+const PAY_INTRO = 'How customers can pay. Changes save as you make them.';
+// A way to pay, switched on or off with a toggle pill (Workshop day 50); an
+// "on" way can show its one setting underneath.
+const way = (name, sub, on, extra = '') => `<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${on === null ? '' : offer(on ? 'On' : 'Off', on)}</div>${extra}</div>`;
+const limitInput = `<div style="display: flex; align-items: center; gap: 10px"><label for="pay-limit" style="font-size: 14px; flex-grow: 1">Most a customer can owe</label><input id="pay-limit" value="[£ limit]" style="width: 120px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"></div>`;
+const payWays = () => `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start">${way('Cash', 'Always on', null)}${way('Card', 'Through the card machine', true)}
+${way('Gift cards', 'Sell, top up and spend', true)}${way('Store credit', 'Given on refunds without a receipt', true)}
+${way('Customer accounts', 'Pay later, settled from the customer’s page', true, limitInput)}${way('Loyalty points', 'Earn and spend', false)}
+${way('Deposits', 'Part now, the rest later, on workshop jobs', true)}</div>`;
+const otherRow = (t, sub) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 12px; color: ${C.muted}">${sub}</span></span><button type="button" aria-label="Remove ${esc(t)}" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; display: inline-flex; align-items: center; justify-content: center">${icon('close', 16)}</button></div>`;
+const payOther = () => `<div style="display: flex; flex-direction: column; gap: 8px">${otherRow('Finance', 'Recorded at the till; the finance company pays the shop')}${otherRow('Cycle to Work', 'Recorded at the till; the scheme pays the shop')}${otherRow('Payment link', 'Needs setting up with [payment provider] first')}</div>
+<div style="display: flex; gap: 8px"><input aria-label="New way to pay" placeholder="Add another way to pay" style="flex-grow: 1; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}">${button('Add', { variant: 'default' })}</div>
+${note('These sit under “Other” at the bottom of Take payment, one tap away.')}`;
+// Card machine: the provider is still an open question (journey 11
+// decision 6), so it is a bracketed placeholder.
+const payCard = () => `${kv('Till B1', `<span style="display: inline-flex; align-items: center; gap: 6px; color: ${C.successInk}">${icon('check', 16)}[Card machine] connected</span>`)}
+<div style="display: flex; gap: 8px; padding-top: 4px">${button('Connect a card machine', { variant: 'default' })}</div>
+${note('The till sends the amount to the machine, so nobody keys it in twice. Each till has its own machine.')}`;
+const payFolds = (open = {}) =>
+  fold('Card machine', '[Card machine] · Till B1', open.card || '')
+  + fold('Ways to pay', 'Cash, card and 4 more', open.ways || '')
+  + fold('Other ways to pay', 'Finance, Cycle to Work, payment link', open.other || '');
+def('set-pay-ways', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ ways: payWays() })));
+def('set-pay-other', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ other: payOther() })));
+def('set-pay-card', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ card: payCard() })));
+
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
@@ -197,8 +234,13 @@ Object.assign(TITLES, {
   'set-till-receipts': 'Till › Receipts',
   'set-till-printer': 'Till › Printer and cash drawer',
   'set-till-tills': 'Till › Tills',
+  'set-eod': 'End of day — float, when Close the day appears, blind counting',
+  'set-pay-ways': 'Payments › Ways to pay — each on or off',
+  'set-pay-other': 'Payments › Other ways to pay',
+  'set-pay-card': 'Payments › Card machine',
 });
 export const ROWS = [
   { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills'] },
+  { label: 'End of day and payment settings', screens: ['set-eod', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];
