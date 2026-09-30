@@ -2189,27 +2189,23 @@ function finishedStripCompact() {
 // "Record collection" button and a "Ready for collection" status — unclear
 // whether the bike had already left. Split in two: this strip states only
 // the one thing that's already a settled fact (payment), as a fact, with no
-// clock-time that could read as "the whole handover already happened"; the
-// hand-back items move to collectionHandback(), unticked, next to the
-// "Record collection" button itself — a checklist of what that button is
-// about to confirm, not a record of what already occurred.
+// clock-time that could read as "the whole handover already happened".
 function collectionStripCompact() {
   return jpPanel(`${jpRow(`${badge('Paid', 'green')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Payment already taken.</span>`, 8)}`, '', 6, 3);
 }
-// Forward-looking hand-back checklist (H5): the same two facts the shop
-// already tracks for this job (decision-approved example data, nothing
-// invented) — shown unticked, inline directly above "Record collection", so
-// it's plainly "check these, then record it" rather than a receipt. One row,
-// not stacked, and a smaller item height than the check() default (24px, not
-// 28px) — this sits in the dialog's fixed-height footer chrome, so it stays
-// as compact as the two items can read while still each being a real
-// checkbox + label a mechanic can tap.
-const handbackItem = (label, id, size = 'desktop') => size === 'desktop'
-  ? `<label for="${id}" style="display: flex; align-items: center; gap: 8px; min-height: 24px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 16px; height: 16px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 13px; color: ${C.ink}">${esc(label)}</span></label>`
-  : `<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 14px; color: ${C.ink}">${esc(label)}</span></label>`;
-function collectionHandback(size) {
-  return `<div style="display: flex; ${size === 'phone' ? 'flex-direction: column; align-items: stretch; gap: 0' : size === 'tablet' ? 'align-items: center; gap: 18px; flex-shrink: 0' : 'align-items: center; gap: 18px; flex-wrap: wrap'}">${handbackItem('Bike handed to the customer or authorised collector', 'coll-hb1-' + size, size)}${handbackItem('Lock key and rear light returned', 'coll-hb2-' + size, size)}</div>`;
+// Collect the bike and pay decision 3 (30 Sep): no separate "Record
+// collection" step. Paid already (online, or in full earlier) — "Hand over"
+// records collection in one tap. The two hand-back ticks are optional
+// reminders a shop can switch on (Settings › Workshop › Collection), off by
+// default, so they are not drawn here.
+const handOverFooter = (size) => `${button('Hand over', { variant: 'primary', block: true })}${note('Records that the bike has gone.', size === 'phone' ? 13 : 12)}`;
+// Not paid yet — "Take payment" opens the till with the job loaded and
+// "Bike collected when paid" on (Selling at the till 10); paying records
+// collection.
+function unpaidStripCompact() {
+  return jpPanel(`${jpRow(`${badge('To pay', 'amber')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Customer told the bike is ready.</span>`, 8)}`, '', 6, 3);
 }
+const takePaymentFooter = (size) => `${button('Take payment', { variant: 'primary', block: true })}${note('Opens the till with this job. Paying also records collection.', size === 'phone' ? 13 : 12)}`;
 
 // Decision 51 (28 Sep 2026): ready-by is the diary day, not a separate field
 // — WH-1042 sits Thu 17 Sep 11:30–13:00 in the diary, so "Ready by Thu 17
@@ -2249,6 +2245,7 @@ const PHONE_STAGE_TOP = {
   bookIn: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 15)}${badge('Acknowledged', 'green')}</div>${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span>`),
   waiting: () => phoneStagePanel(`<div>${badge('Waiting for parts', 'amber')}</div><span style="font-size: 15px; font-weight: 600">Replacement rear brake pads delayed</span><span style="font-size: 14px">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.35">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`),
   finished: () => phoneStagePanel(`<span style="font-size: 14px">Alex finished the work and final checks at ${jpMono('15:30')}. The bike is still in the shop.</span><span style="font-size: 15px; font-weight: 700">Agreed work ${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span>`),
+  unpaid: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('To pay', 'amber')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span></div><span style="font-size: 13px; color: ${C.muted}">Customer told the bike is ready.</span>`),
   collection: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Paid', 'green')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span></div><span style="font-size: 13px; color: ${C.muted}">Payment already taken.</span>`),
 };
 // Builds the desktop/tablet/phone triple for one job stage (decision 40: the
@@ -2403,7 +2400,7 @@ keepDesktopSeq('job-finished');
 screens['job-collection'] = buildJobPage({
   status: 'Ready for collection', tone: 'green',
   touch: {
-    footer: (size) => `${collectionHandback(size)}${button('Record collection', { variant: 'primary', block: true })}`,
+    footer: (size) => handOverFooter(size),
     stageTop: () => collectionStripCompact(), phoneTop: PHONE_STAGE_TOP.collection,
   },
   desktop: {
@@ -2413,10 +2410,12 @@ screens['job-collection'] = buildJobPage({
     leftStatus: 'Ready for collection', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
-    footer: `${collectionHandback('desktop')}${button('Record collection', { variant: 'primary', block: true })}`,
+    footer: handOverFooter('desktop'),
   },
 });
 keepDesktopSeq('job-collection');
+
+
 
 // 16. job-checklist — "Job · full service checklist" (task item 2): the Full
 // service checklist full-screen pop-up (as job-final-2-detailed), stacked
@@ -2649,3 +2648,22 @@ export const ROWS = [
   { label: 'Customer account', screens: ['customer'] },
   { label: 'Overview page', screens: ['overview'] },
 ];
+
+// Journey 5 (Collect the bike and pay): ready, not paid yet. Drawn for
+// journey 5's canvas; not a row of journey 12's.
+screens['job-ready-unpaid'] = buildJobPage({
+  status: 'Ready for collection', tone: 'green',
+  touch: {
+    footer: (size) => takePaymentFooter(size),
+    stageTop: () => unpaidStripCompact(), phoneTop: PHONE_STAGE_TOP.unpaid,
+  },
+  desktop: {
+    stageTop: unpaidStripCompact(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: 'Ready for collection', bikeHere: true,
+    lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: takePaymentFooter('desktop'),
+  },
+});

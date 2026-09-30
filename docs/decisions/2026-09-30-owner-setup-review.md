@@ -211,3 +211,8 @@ list were republished here and on the big canvas.
 **Later change (30 Sep, Customer service decision 10):** the separate
 Loyalty points switch in Payments › Ways to pay is gone; Store credit gains
 "Customers earn back [n]% of what they spend" (0% turns earning off).
+
+**Later change (30 Sep 2026, Collect the bike and pay decision 3):**
+Settings › Workshop gains a fifth section, "Collection" — hand-back
+reminders, off by default. The three Workshop boards (services, mechanics,
+diary) now show it folded.

@@ -360,4 +360,7 @@ canvas and the big canvas.
 step. Its main button is "Take payment" (paying at the till records
 collection, Selling at the till 10) or, when already paid, "Hand over". The
 two hand-back ticks are optional reminders a shop can switch on, off by
-default.
+default. Settings › Workshop (the diary settings board) gains that "Collection"
+section. Republished on 30 Sep; the published journey 12 copies of these
+two boards were an older build (the sidebar's user block predated a later
+shared-frame change), now current.
