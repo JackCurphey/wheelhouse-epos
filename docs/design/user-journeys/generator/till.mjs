@@ -23,8 +23,19 @@ const WH = () => ({ desktop: [DW, DH], tablet: [TW, TH], phone: [PW, PH] })[CUR]
 // The till page: folded rail, till bar, then the left side and the basket.
 // Phone (journey A's phone till): menu bar, the left side, and the basket as
 // a bar along the bottom — or the whole basket when it is the point.
+// Journey 9 decision 6: until switch-over every till is in practice, with a
+// band across the top. Off for every till board of this journey.
+let PRACTICE = false;
+const practiceBand = () => `<div role="status" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: ${CUR === 'phone' ? '8px 14px' : '10px 20px'}; background: ${C.blueBg}; color: ${C.blueInk}; border-bottom: 1px solid ${C.border}">${icon('alert', 20)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">Practice: not real money</span>${CUR === 'phone' ? '' : '<span style="font-size: 13px">Sales here don’t use the card machine or count in the drawer, and are cleared on switch-over day.</span>'}</span></div>`;
+// Draw one of this journey's till boards in practice (journey 9).
+export function practiceScreen(id, size) {
+  const fn = recipes.find(([k]) => k === id)[1];
+  const was = CUR; CUR = size; PRACTICE = true;
+  try { return fn(); } finally { PRACTICE = false; CUR = was; }
+}
 function tillPage(left, right, { offline = null, offlineLong = false, notice = '' } = {}) {
   const [W, H] = WH();
+  if (PRACTICE) notice = practiceBand() + notice;
   if (CUR === 'phone') {
     const full = right.includes('data-basket-full');
     return `<div style="position: relative; width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${tillPhoneBar('Jo Taylor', offline !== null)}${notice}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column">${full ? right : left}</main>${full ? '' : right}</div>`;

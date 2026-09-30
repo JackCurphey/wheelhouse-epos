@@ -17,6 +17,7 @@ import { C, MONO, icon, button, card } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone } from './settings-frame.mjs';
 import { sideItem, railItem } from './diary.mjs';
 import { today } from './opening.mjs';
+import { practiceScreen } from './till.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -134,6 +135,13 @@ const bothPopup = () => popup('both-title', 'Changed in both', 'Refresh on [date
 <div role="list">${bothRow('[Product] · price', mono('£[price]'), mono('£[price]'))}${bothRow('[Customer] · phone', '[phone]', '[phone]')}</div>`, `<span></span>${button('Got it')}`, 720);
 const bothBoard = () => overlay(alongsideBoard(), bothPopup());
 
+// ---------- Decision 6: every till is in practice until switch-over ----------
+// The card machine isn't used: the practice card step lets staff try both
+// outcomes. Totals come from journey 11's example sale.
+const practiceCard = () => popup('pc-title', 'Card payment · £74.00 · practice', 'The card machine isn’t used in practice', `${note('Try what happens either way. Nothing is charged and nothing goes in the drawer.')}`, `${button('Pretend it’s declined', { variant: 'default' })}${button('Pretend it’s paid')}`, 520);
+def('mv-practice-sale', () => practiceScreen('till-sale', SIZE));
+def('mv-practice-card', () => overlay(practiceScreen('till-sale', SIZE), practiceCard()));
+
 def('mv-start', () => { STAGE = 0; return startBoard(); });
 def('mv-progress', () => { STAGE = 0; return progressBoard(); });
 def('mv-summary', () => { STAGE = 0; return summaryBoard(); });
@@ -162,8 +170,11 @@ export const TITLES = {
   'mv-both': 'Changed in both: Citrus Lime’s kept',
   'mv-check': 'The weekly check: type in Citrus Lime’s figures',
   'mv-check-result': 'The weekly check: three match, one doesn’t',
+  'mv-practice-sale': 'The till before switch-over: practice, not real money',
+  'mv-practice-card': 'A practice card payment: try either outcome',
 };
 export const ROWS = [
   { label: 'Bring your data', screens: ['mv-start', 'mv-progress', 'mv-summary', 'mv-fix'] },
   { label: 'Run alongside', screens: ['mv-today-refresh', 'mv-alongside', 'mv-both', 'mv-check', 'mv-check-result'] },
+  { label: 'Practice at the till', screens: ['mv-practice-sale', 'mv-practice-card'] },
 ];
