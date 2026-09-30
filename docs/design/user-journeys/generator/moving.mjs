@@ -106,6 +106,27 @@ ${section('What the last refresh changed', `${list([
     line('Changed in both — Citrus Lime’s kept', count('[n]'), link('See them')),
   ])}`)}`);
 
+// Decision 5: after each refresh, last week's totals from Wheelhouse beside
+// a box for Citrus Lime's figure; a tick or the difference, and a record of
+// the weeks that matched.
+const CHECKS = ['Sales total', 'Number of sales', 'Stock value', 'Number of customers'];
+const money = (k) => k === 'Sales total' || k === 'Stock value';
+const checkCols = () => isPhone() ? '1fr' : 'minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr)';
+function checkRow(k, result) {
+  const id = `cl-${slug(k)}`;
+  const fig = mono(money(k) ? '£[figure]' : '[figure]', 'font-size: 15px');
+  const box = result ? fig
+    : `<input id="${id}" inputmode="decimal" aria-label="Citrus Lime’s ${k.toLowerCase()}" placeholder="${money(k) ? '£' : ''}" style="width: 140px; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">`;
+  const verdict = !result ? '<span></span>' : k === 'Stock value' ? `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">${tag('[£] different', 'warn')}${helpLink}</span>` : `<span>${tag('Matches')}</span>`;
+  // Phone: no column headings, so each figure says whose it is.
+  const who = (t) => isPhone() ? `<span style="color: ${C.muted}">${t}</span> ` : '';
+  return `<div role="listitem" style="display: grid; grid-template-columns: ${checkCols()}; gap: ${isPhone() ? 6 : 12}px; align-items: center; min-height: 60px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}"><label for="${id}" style="font-size: 15px; font-weight: 600">${k}</label><span style="font-size: 14px">${who('Wheelhouse')}${fig}</span><span style="display: flex; align-items: center; gap: 8px; font-size: 14px">${who('Citrus Lime')}${box}</span>${verdict}</div>`;
+}
+const checkHead = () => isPhone() ? '' : `<div aria-hidden="true" style="display: grid; grid-template-columns: ${checkCols()}; gap: 12px; padding: 4px 0; font-size: 13px; font-weight: 700; color: ${C.muted}"><span></span><span>Wheelhouse</span><span>Citrus Lime</span><span></span></div>`;
+const checkSection = (result) => section('Check last week against Citrus Lime', `${note(result ? '3 of 4 match. The weeks that match build up the case for switching over.' : 'Type in the same four figures from Citrus Lime’s reports for [date]–[date].')}
+${checkHead()}<div role="list">${CHECKS.map((k) => checkRow(k, result)).join('')}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px">${result ? `<span style="font-size: 14px; color: ${C.muted}">Weeks that matched: ${mono('[n]')} of ${mono('[n]')}</span>${button('Check again', { variant: 'default' })}` : `<span></span>${button('Check')}`}</div>`);
+
 // Where both changed the same thing: Citrus Lime wins until switch-over,
 // and the owner is told what was kept.
 const bothRow = (what, cl, wh) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)'}; gap: ${isPhone() ? 4 : 12}px; align-items: center; min-height: 52px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">${what}</span><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px"><span><span style="color: ${C.muted}">Citrus Lime:</span> ${cl}</span>${tag('Kept')}</span><span style="font-size: 14px; color: ${C.muted}">Wheelhouse: <s>${wh}</s></span></div>`;
@@ -120,6 +141,8 @@ def('mv-fix', () => { STAGE = 0; return fixBoard(); });
 def('mv-today-refresh', () => todayRefresh());
 def('mv-alongside', () => { STAGE = 1; return alongsideBoard(); });
 def('mv-both', () => { STAGE = 1; return bothBoard(); });
+def('mv-check', () => { STAGE = 1; return movePage(checkSection(false)); });
+def('mv-check-result', () => { STAGE = 1; return movePage(checkSection(true)); });
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
 const SIZES = ['desktop'];
@@ -137,8 +160,10 @@ export const TITLES = {
   'mv-today-refresh': 'Today: time to refresh from Citrus Lime',
   'mv-alongside': 'Run alongside: the weekly refresh',
   'mv-both': 'Changed in both: Citrus Lime’s kept',
+  'mv-check': 'The weekly check: type in Citrus Lime’s figures',
+  'mv-check-result': 'The weekly check: three match, one doesn’t',
 };
 export const ROWS = [
   { label: 'Bring your data', screens: ['mv-start', 'mv-progress', 'mv-summary', 'mv-fix'] },
-  { label: 'Run alongside', screens: ['mv-today-refresh', 'mv-alongside', 'mv-both'] },
+  { label: 'Run alongside', screens: ['mv-today-refresh', 'mv-alongside', 'mv-both', 'mv-check', 'mv-check-result'] },
 ];
