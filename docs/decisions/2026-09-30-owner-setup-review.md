@@ -160,6 +160,12 @@ one from the staff list.
     and "Show it as a column in the diary". Whoever takes a job drags it
     to their column, or it stays in the queue. Chosen over no settings
     for it and a group of people sharing the jobs.
+20. **The person pop-up puts the role across the top** (Jack, 30 Sep: the
+    right-hand side "is at the top, and it looks kind of off" — "you have
+    the roles at the top and everything else is organized underneath"):
+    Role runs full width; "Also allowed to" and "Works in the workshop"
+    start level beneath it. The "Give everything" note merges into one line
+    under "Also allowed to".
 
 ## Noted for later (not for this journey)
 
