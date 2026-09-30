@@ -17,3 +17,17 @@ possible; Owner setup 4 — changes save as you go).
    one page of folding sections. Jack adds: "more customer information,
    like address for example" — which details is the next question.
    Board: `cs-opt-timeline` (customer.mjs).
+3. **A customer record also holds an address with postcode and a note**
+   (Jack, 30 Sep): both optional; the note is for what everyone in the shop
+   should know ("prefers texts") and stays factual, since customers can ask
+   to see what's held. Not held: a second phone, date of birth. **Company
+   or club customers:** Jack wants to be asked "is this a company account"
+   when a customer is made — drawn as a Person / Company or club choice on
+   Add a customer, which shows a company name. (Jack also floated a shop
+   setting for it; drawn without one unless he asks.)
+4. **Bikes bought at the shop show their warranty** (Jack, 30 Sep: "you can
+   see for example if this bike still has warranty and/or how much longer
+   it has"): on the customer's Bikes list, a bike sold by the shop shows
+   when it was bought and the warranty left, or that it has ended. The
+   warranty length comes from the bike's product record (stock, journey
+   14). Bikes brought in from elsewhere show no warranty line.
