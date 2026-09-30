@@ -177,6 +177,10 @@ one from the staff list.
     steps are whole tappable rows on a phone. Journey 12's Diary & storage
     tablet and phone boards now use the same frame (decision 12 done at
     every size); its old tabbed Settings code is removed.
+22. **Journey 8 approved at desktop, tablet and phone** (Jack, 30 Sep: "I
+    like this. Let's continue on."): copied into the big user-journeys
+    canvas as Designed, desktop only there, each board linking to this
+    journey's canvas for tablet and phone (cash-up decision 8).
 
 ## Noted for later (not for this journey)
 
