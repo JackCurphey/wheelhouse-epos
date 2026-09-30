@@ -90,3 +90,24 @@ possible; Owner setup 4 — changes save as you go).
     did for the diary settings: one customer page everywhere; the job
     page's customer link opens it. Journey 12's canvas and the big canvas
     are updated then, with a dated note in its decision file.
+12. **UI audit fixes adopted, with all five recommendations** (Jack, 30
+    Sep; `docs/design/user-journeys/customer-ui-audit.md`): the history is
+    newest first with what's open now at the top, then "Show all", and
+    shows refunds, messages and store credit changes, with an empty state
+    for a new customer; an "Owes [£]" chip beside the name and in the list,
+    an over-limit state, and the limit read-only for Staff; whole rows
+    clickable at 44px with arrows; a back link to Customers; marketing
+    switched in one tap; the merge shows only fields that differ, with each
+    record's jobs and sales counted; phone or email (at least one) when
+    adding; store credit reasons as pills; an overdue privacy request; the
+    bank transfer pre-filled. Missing states (company customer, no email,
+    undone merge, no groups, empty filter) are rules, not drawings.
+    **Decisions:** (1) a sale that would go over the account limit warns
+    and is allowed, with a reason recorded for managers; (2) deleting
+    someone who owes money, holds store credit or has a bike in is blocked
+    until settled; (3) one search — the header's — and Customers becomes a
+    recent-customers list; (4) Edit details keeps its pop-up, button "Save
+    changes"; (5) "Add to a sale" shows only on a till — the staff app
+    offers "New job". Dismissed after checking: the Add pop-ups don't
+    overflow (measured), and the sale pop-up's Refund is the confirming
+    action on the right, as the rule says.
