@@ -51,7 +51,11 @@ export function settingsPage(active, title, intro, sections, { toast = '', banne
 <div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: 22px; font-weight: 700">${esc(title)}</h2>${note(intro)}</div>
 ${card(sections, 'overflow: hidden; flex-shrink: 0')}
 </div>`;
-  const t = toast ? `<div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; padding: 6px 6px 6px 18px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}${toast}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>` : '';
+  // Decision 17 (H4): the same note after every change; a failed save says
+  // so and offers Try again instead of Undo.
+  const fail = toast && toast.fail;
+  const text = toast && toast.text ? toast.text : toast;
+  const t = toast ? `<div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; padding: 6px 6px 6px 18px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)"><span style="display: inline-flex; align-items: center; gap: 8px">${icon(fail ? 'alert' : 'check', 16)}${text}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700; white-space: nowrap">${fail ? 'Try again' : 'Undo'}</button></div>` : '';
   const inner = `<div style="position: relative; display: flex; gap: 28px; height: 100%">${list}${body}${t}</div>`;
   return who ? shellDesktop('settings', 'Settings', inner, who) : shell(inner);
 }
@@ -63,4 +67,4 @@ export const workshopFolds = (open = {}) =>
   + fold('Mechanics', 'Alex Morgan, Jo Taylor', open.mechanics || '')
   + fold('Diary blocks', 'Bike, then job title', open.diary || '')
   + fold('Storage slots', 'On · 8 slots', open.storage || '');
-export const WORKSHOP_INTRO = 'Services, who works in the workshop, and how the diary looks. Changes save as you make them.';
+export const WORKSHOP_INTRO = 'Services, who works in the workshop, and how the diary looks.';
