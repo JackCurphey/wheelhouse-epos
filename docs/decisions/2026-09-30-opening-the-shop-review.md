@@ -10,3 +10,8 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
 
 1. **Journey 10 is next** (Jack, 30 Sep), chosen over Collect the bike and
    pay, Account and reminders, and Moving from Citrus Lime.
+2. **A one-tap float check when the till opens** (Jack, 30 Sep): the first
+   person to check in sees "The drawer should have £[float] — Looks right /
+   Count it"; Count it opens the same note-and-coin count as cash-up
+   (journey 16 decision 3). Catches overnight problems at the start of the
+   day. Chosen over no morning check and a full count every morning.
