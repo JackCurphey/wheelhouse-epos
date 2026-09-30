@@ -118,3 +118,8 @@ full one, with one "Take payment" step that leaves room for the other.
 credit earned by buying — no separate points. The basket's customer row now
 reads "[£] store credit · Earned on past purchases · Use it" (board
 `till-loyalty`, all sizes), republished here and on the big canvas.
+
+**Later change (30 Sep 2026, Collect the bike and pay decision 5, audit
+M2):** a workshop job's agreed lines are locked in the till basket — no
+− / + — and marked "agreed on the job"; anything extra is added separately.
+Affects the job, deposit and balance boards.

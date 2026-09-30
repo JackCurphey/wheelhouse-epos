@@ -2190,22 +2190,27 @@ function finishedStripCompact() {
 // whether the bike had already left. Split in two: this strip states only
 // the one thing that's already a settled fact (payment), as a fact, with no
 // clock-time that could read as "the whole handover already happened".
+// Collect the bike and pay audit M3 (30 Sep): say how and when it was paid.
 function collectionStripCompact() {
-  return jpPanel(`${jpRow(`${badge('Paid', 'green')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Payment already taken.</span>`, 8)}`, '', 6, 3);
+  return jpPanel(`${jpRow(`${badge('Paid', 'green')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Paid online · [date]</span>`, 8)}`, '', 6, 3);
 }
 // Collect the bike and pay decision 3 (30 Sep): no separate "Record
 // collection" step. Paid already (online, or in full earlier) — "Hand over"
 // records collection in one tap. The two hand-back ticks are optional
 // reminders a shop can switch on (Settings › Workshop › Collection), off by
 // default, so they are not drawn here.
-const handOverFooter = (size) => `${button('Hand over', { variant: 'primary', block: true })}${note('Records that the bike has gone.', size === 'phone' ? 13 : 12)}`;
+// Audit M3: the note sits in a fixed-width slot so the main button is the
+// same width whichever it is.
+const footNote = (t, size) => size === 'phone' ? note(t, 13) : `<div style="flex: 0 0 240px">${note(t, 12)}</div>`;
+const handOverFooter = (size) => `${button('Hand over', { variant: 'primary', block: true })}${footNote('Records that the bike has gone.', size)}`;
 // Not paid yet — "Take payment" opens the till with the job loaded and
 // "Bike collected when paid" on (Selling at the till 10); paying records
 // collection.
-function unpaidStripCompact() {
-  return jpPanel(`${jpRow(`${badge('To pay', 'amber')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Customer told the bike is ready.</span>`, 8)}`, '', 6, 3);
+function unpaidStripCompact(deposit = 0) {
+  const due = WORK_TOTAL_APPROVED - deposit;
+  return jpPanel(`${jpRow(`${badge('Not paid yet', 'amber')}<span style="font-size: 13px; font-weight: 700">${jpMono(`£${due.toFixed(2)}`)} to pay</span>${deposit ? `<span style="font-size: 12px; color: ${C.muted}">Deposit paid ${jpMono(`£${deposit.toFixed(2)}`)} · [date]</span>` : ''}<span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Customer told the bike is ready.</span>`, 8)}`, '', 6, 3);
 }
-const takePaymentFooter = (size) => `${button('Take payment', { variant: 'primary', block: true })}${note('Opens the till with this job. Paying also records collection.', size === 'phone' ? 13 : 12)}`;
+const takePaymentFooter = (size) => `${button('Take payment', { variant: 'primary', block: true })}${footNote('Opens the till with this job. Paying also records collection.', size)}`;
 
 // Decision 51 (28 Sep 2026): ready-by is the diary day, not a separate field
 // — WH-1042 sits Thu 17 Sep 11:30–13:00 in the diary, so "Ready by Thu 17
@@ -2245,8 +2250,8 @@ const PHONE_STAGE_TOP = {
   bookIn: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 15)}${badge('Acknowledged', 'green')}</div>${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span>`),
   waiting: () => phoneStagePanel(`<div>${badge('Waiting for parts', 'amber')}</div><span style="font-size: 15px; font-weight: 600">Replacement rear brake pads delayed</span><span style="font-size: 14px">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.35">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`),
   finished: () => phoneStagePanel(`<span style="font-size: 14px">Alex finished the work and final checks at ${jpMono('15:30')}. The bike is still in the shop.</span><span style="font-size: 15px; font-weight: 700">Agreed work ${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span>`),
-  unpaid: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('To pay', 'amber')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span></div><span style="font-size: 13px; color: ${C.muted}">Customer told the bike is ready.</span>`),
-  collection: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Paid', 'green')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span></div><span style="font-size: 13px; color: ${C.muted}">Payment already taken.</span>`),
+  unpaid: (deposit = 0) => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Not paid yet', 'amber')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${(WORK_TOTAL_APPROVED - deposit).toFixed(2)}`)} to pay</span></div><span style="font-size: 13px; color: ${C.muted}">${deposit ? `Deposit paid ${jpMono(`£${deposit.toFixed(2)}`)} · ` : ''}Customer told the bike is ready.</span>`),
+  collection: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Paid', 'green')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${WORK_TOTAL_APPROVED.toFixed(2)}`)}</span></div><span style="font-size: 13px; color: ${C.muted}">Paid online · [date]</span>`),
 };
 // Builds the desktop/tablet/phone triple for one job stage (decision 40: the
 // settled job page at every stage). Desktop: buildJobPageDesktop, unchanged.
@@ -2667,3 +2672,32 @@ screens['job-ready-unpaid'] = buildJobPage({
     footer: takePaymentFooter('desktop'),
   },
 });
+
+// Journey 5 audit (30 Sep). H2: a deposit was taken — only the balance is
+// to pay (Selling at the till 11's example: 25% of £111.00).
+const J5_DEPOSIT = WORK_TOTAL_APPROVED * 0.25;
+const jobVariant = (status, tone, strip, phoneTop, footer) => buildJobPage({
+  status, tone,
+  touch: { footer: (size) => footer(size), stageTop: () => strip(), phoneTop },
+  desktop: {
+    stageTop: strip(),
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+    leftStatus: status, bikeHere: status !== 'Collected',
+    lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    footer: footer('desktop'),
+  },
+});
+screens['job-ready-deposit'] = jobVariant('Ready for collection', 'green', () => unpaidStripCompact(J5_DEPOSIT), () => PHONE_STAGE_TOP.unpaid(J5_DEPOSIT), takePaymentFooter);
+// M5: with Hand-back reminders on, the two ticks come back above Hand over.
+const handbackTick = (label, id, size) => `<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 14px; color: ${C.ink}; ${size === 'phone' ? '' : 'white-space: nowrap'}">${esc(label)}</span></label>`;
+const handbackTicks = (size) => `<div role="group" aria-label="Before you hand over" style="display: flex; flex-shrink: 0; ${size === 'phone' ? 'flex-direction: column' : 'column-gap: 18px'}">${handbackTick('Bike handed to the customer or authorised collector', 'hb1-' + size, size)}${handbackTick('Lock key and rear light returned', 'hb2-' + size, size)}</div>`;
+screens['job-collection-ticks'] = jobVariant('Ready for collection', 'green', collectionStripCompact, PHONE_STAGE_TOP.collection, (size) => `${handbackTicks(size)}${handOverFooter(size)}`);
+// M4: after Hand over (or paying at the till): Collected, with Undo for a
+// few minutes.
+function collectedStripCompact() {
+  return jpPanel(`${jpRow(`${badge('Collected', 'grey')}<span style="font-size: 13px; font-weight: 700">[time] · handed over by Jo Taylor</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Paid online · [date]</span>`, 8)}`, '', 6, 3);
+}
+const undoFooter = (size) => `<div role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-grow: 1; min-height: 48px; padding: 4px 6px 4px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}Collected · the job is closed</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>`;
+screens['job-collected'] = jobVariant('Collected', 'grey', collectedStripCompact, () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Collected', 'grey')}<span style="font-size: 15px; font-weight: 700">[time]</span></div><span style="font-size: 13px; color: ${C.muted}">Handed over by Jo Taylor</span>`), undoFooter);

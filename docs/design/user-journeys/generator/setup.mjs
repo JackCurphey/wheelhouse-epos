@@ -464,3 +464,6 @@ export const ROWS = [
   { label: 'Your data', screens: ['set-data-export', 'set-data-history'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];
+
+// For journey 5's "Bike still waiting" wording board.
+export { chan, wordingBox, bubble, msgPage, msgListOpen };

@@ -90,7 +90,9 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     unclosed && line('Wednesday 16 September wasn’t closed', 'Till B1 · yesterday’s takings still to count', button('Close it', { variant: 'default' }), warnLead),
     // Journey 5 decision 4: a ready bike left too long.
     // WH-1050 is the diary's oldest ready job (Mon 14 Sep).
-    uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', 'Cannondale Quick · Safety check · reminder sent [date]', button('Contact them', { variant: 'default' }), warnLead),
+    // Journey 5 audit H4: the number is on the line; "Contacted" records it.
+    // The line goes by itself when the bike is handed over.
+    uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', `Cannondale Quick · reminder sent [date] · ${mono('[phone]')}`, button('Contacted', { variant: 'default' }), warnLead),
     refresh && line('Time to refresh from Citrus Lime', 'Every [day] · last refreshed [date]', button('Refresh now', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('inbox', 18)}</span>`),
     waiting && line('Till B1 has [n] sales waiting to send', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Try again', { variant: 'default' }), warnLead),
   ].filter(Boolean);

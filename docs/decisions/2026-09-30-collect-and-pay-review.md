@@ -47,3 +47,33 @@ clicks as possible).
    also set there, the bike shows on Today under Needs attention (drawn
    with WH-1050, the diary's oldest ready job: "ready since Mon 14 Sep") with "Contact them". Chosen over the reminder
    message only, and adding storage charges.
+5. **UI audit fixes, all as recommended** (Jack, 30 Sep; audit in
+   `docs/design/user-journeys/collect-ui-audit.md`):
+   - H1: the link after paying shows "£111.00 paid on [date]" and no Pay
+     button; it stays live for [n] days after collection, then says it has
+     expired; a card that doesn't go through says nothing was taken.
+   - H2: after a deposit, the link and the job page show "Deposit paid
+     £27.75 · [date]" and £83.25 to pay (journey 11's example).
+   - H3: no double payment — the counter strip says "Paid online · [date]";
+     while a till sale for the job is under way, the link says it's being
+     paid at the counter and offers no Pay button.
+   - H4: Today's uncollected line shows the customer's [phone] and a
+     "Contacted" button; the line goes by itself at hand-over.
+   - M1: the checklist note is labelled "What the mechanic found:", and a
+     grey line says "8 of 10 checks done." (wording to confirm with Jack).
+   - M2: at the till a job's agreed lines are locked (no − / +), marked
+     "agreed on the job"; anything extra is added separately.
+   - M3: "Not paid yet · £111.00 to pay" and "Paid online · [date]" in
+     words; the main button is the same width on both.
+   - M4: after Hand over (or paying), "Collected · the job is closed" with
+     Undo for a few minutes, and the job's Collected state.
+   - M5: the hand-back switch says On/Off and the whole row is the control;
+     the day counts say they run from when the bike is marked ready; the
+     two ticks are drawn as they appear when it's on.
+   - M6: "Bike still waiting" has its wording, built from "Bike ready".
+   - L1: labelled sections, the pay card first in reading order, the Paid
+     page's heading announced.
+   - L2: "just give your name" on the in-shop page; the Paid page keeps the
+     shop's details; Aisha Khan's Cannondale being both WH-1050 (ready) and
+     WH-1047 (arriving) on the same Today is example-data overlap, noted in
+     the handover rather than changing the approved diary.

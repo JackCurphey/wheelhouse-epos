@@ -300,7 +300,9 @@ def('till-void', () => overTill(dialog('void-title', 'Void this sale', `${'B1-[0
 // Pay for a workshop job: the job's approved work loads into the basket
 // (journey A, decision 12). Paying also records collection by default,
 // with a pill to say the bike stays (Workshop day decision 63).
-const jobLines = LINES_APPROVED.filter((l) => l.approval === 'Approved').map((l) => ({ name: l.work, sub: l.sub, price: l.price, qty: 1 }));
+// Collect the bike and pay audit M2 (30 Sep): a job's agreed lines are
+// locked at the till — no − / +; anything extra is added separately.
+const jobLines = LINES_APPROVED.filter((l) => l.approval === 'Approved').map((l) => ({ name: l.work, sub: `${l.sub} · agreed on the job`, price: l.price, qty: 1, fixed: true }));
 function jobBasket(collected = true, extra = []) {
   const b = basket([...jobLines, ...extra], { customer: 'Maya Patel · workshop job WH-1042', full: true });
   const pill = `<button type="button" aria-pressed="${collected}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${collected ? C.ink : C.border}; background: ${collected ? C.ink : 'transparent'}; color: ${collected ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${collected ? icon('check', 15, C.panel) : ''}Bike collected when paid</button>`;

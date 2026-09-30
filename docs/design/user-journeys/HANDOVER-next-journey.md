@@ -160,6 +160,10 @@ big changes (changed boards with `canvas.json` first, removals second).
 
 ## Open items carried forward
 
+- Example-data overlap: the diary's example customers repeat across jobs, so
+  journey 5's Today flag (WH-1050, Aisha Khan's Cannondale Quick, ready since
+  Mon 14 Sep) sits beside WH-1047 (the same bike arriving) on journey 10's
+  Today. Noted, not changed — the diary is approved.
 - What Citrus Lime lets a shop export (files, formats, columns, reports) is
   still unchecked — journey 9 draws every file name, count and figure as a
   [placeholder], and decision 2's behind-the-scenes matching and decision
