@@ -43,6 +43,10 @@ one from the staff list.
    boards stand unless Jack objects: a shop can switch off Print, Email or
    Text in the Paid pop-up ("No receipt" always stays), and a quick
    button's price always comes from its product.
+6. **Blind counting starts on for a new shop** (Jack, 30 Sep): settles
+   cash-up decision 2's default — staff count first, then see the
+   difference; the shop can turn it off in Settings › End of day. Chosen
+   over off by default and asking during first-run setup.
 
 ## Noted for later (not for this journey)
 
