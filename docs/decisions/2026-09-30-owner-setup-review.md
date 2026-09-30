@@ -93,6 +93,14 @@ one from the staff list.
     canvas and in the big canvas. Desktop now; its tablet and phone boards
     are replaced when this journey's tablet and phone are drawn. Chosen
     over leaving journey 12's board until the build.
+13. **Opening hours per site, plus each mechanic's own working days**
+    (Jack, 30 Sep): Shop and sites holds each site's opening hours;
+    everyone with "Works in the workshop" on has working days set on their
+    person in Staff and roles, so online booking only offers a mechanic on
+    days they're in and the diary knows who's working. Drawn assumption:
+    "Close the day" keeps its own time in End of day, filled in from the
+    site's closing time. Overlaps journey 10 (who's in today). Chosen over
+    one set of hours for everything and separate workshop hours.
 
 ## Noted for later (not for this journey)
 
