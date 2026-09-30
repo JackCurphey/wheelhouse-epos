@@ -108,6 +108,14 @@ one from the staff list.
     (customer's name, job number…). Shops can also add their own automatic
     messages with a "send when…" trigger. Overlaps journey 7 (reminders).
     Chosen over rewording only and fixed wording.
+15. **Journey 12's "Settings · Accessibility" board is removed** (Jack,
+    30 Sep: "let's remove it from the journey"): Accessibility lives in
+    Your settings (app map decision 8), whose approved board is in journey
+    A. Removed from journey 12's canvas (all three sizes) and the big
+    canvas; the accessibility helpers stay in `diary.mjs` for Your
+    settings. Chosen over leaving it marked "Moved". Journey 12's tablet
+    and phone Diary settings boards still show the old Diary /
+    Accessibility tabs until they are redrawn (decision 12).
 
 ## Noted for later (not for this journey)
 

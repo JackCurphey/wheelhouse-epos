@@ -1719,24 +1719,9 @@ export function largerTextPreview(dev = 'desktop') {
   const col = (size, label) => `<span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: ${dev === 'desktop' ? 11 : 12}px; color: ${C.muted}">${esc(label)}</span><span style="font-size: ${size}px; font-weight: 600; color: ${C.ink}">Standard service</span></span>`;
   return `${eyebrow('Preview')}<div style="display: flex; align-items: flex-end; gap: 20px; padding-top: 6px">${col(14, 'Normal')}${col(17, 'Larger')}</div>`;
 }
-function accessibilityBody(size) {
-  // Phone (decision 68): no breadcrumb or repeated heading — the top bar and
-  // the tab already say where you are — so the three settings fit unscrolled.
-  const P = size === 'phone';
-  return stack(`${P ? '' : eyebrow('Office › Settings')}
-${settingsTabs(size, 'accessibility')}
-${P ? '' : h2('Accessibility', 20)}
-${note('These settings are just for you, Jack Lewis — they don’t change what others see.')}
-${a11ySettingRow('a11y-symbols-' + size, 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview(size))}
-${a11ySettingRow('a11y-motion-' + size, 'Reduce motion', 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.', false)}
-${a11ySettingRow('a11y-text-' + size, 'Larger text', 'Makes text across Wheelhouse a step larger.', false, largerTextPreview(size))}
-${P ? button('Save settings', { block: true }) : `<div>${button('Save settings')}</div>`}`, P ? 12 : 16);
-}
-screens['settings-accessibility'] = {
-  desktop: shellDesktop('settings', 'Settings', `<div style="max-width: 720px">${accessibilityBody('desktop')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
-  tablet: shellTablet('settings', 'Settings', `<div style="max-width: 760px">${accessibilityBody('tablet')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
-  phone: shellPhone('Settings', accessibilityBody('phone'), { role: 'M', active: 'settings', person: 'Jack Lewis', roleName: 'Manager' }),
-};
+// The Settings · Accessibility board was removed on 30 Sep (Owner setup
+// decision 15): Accessibility lives in Your settings (app map decision 8),
+// which uses the helpers above.
 
 // 3d. change-selected — decision 19: built like waiting-open, but for Oliver
 // Chen's change request. The requested 14:00 time is the highlighted target;
@@ -2730,7 +2715,7 @@ screens['diary-hover-summary'] = {
 // object's own key order (Main page listing etc.), not canvas position; see
 // ROWS below for the canvas placement, which is deliberately different so no
 // existing board moves.
-const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'settings-accessibility', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
+const ORDER = ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary', 'request-new', 'request-decline', 'request-change', 'request-cancel', 'new-job-pick', 'new-job', 'new-job-day', 'job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist', 'customer', 'overview'];
 const ordered = Object.fromEntries(ORDER.map((k) => [k, screens[k]]));
 for (const k of Object.keys(screens)) delete screens[k];
 Object.assign(screens, ordered);
@@ -2746,7 +2731,7 @@ export const ROWS = [
   // moving any existing board on this row. diary-hover-summary (29 Sep round
   // 3, task item 3) is appended after diary-stack-open for the same reason
   // again — x 14960, y 263, no existing board moves.
-  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'settings-accessibility', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
+  { label: 'The diary', screens: ['diary', 'diary-mechanic', 'waiting-open', 'diary-day', 'diary-settings', 'change-selected', 'diary-context-menu', 'job-quick-overview', 'diary-stack-hover', 'diary-stack-open', 'diary-hover-summary'] },
   { label: 'Requests, as a pop-up', screens: ['request-new', 'request-decline', 'request-change', 'request-cancel'] },
   { label: 'New job from an empty slot', screens: ['new-job-pick', 'new-job', 'new-job-day'] },
   { label: 'The job — one page, no tabs', screens: ['job-overview', 'job-book-in', 'job-quote', 'job-mechanic', 'job-waiting-parts', 'job-finished', 'job-collection', 'job-checklist'] },

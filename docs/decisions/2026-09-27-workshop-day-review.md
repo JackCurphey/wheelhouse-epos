@@ -345,3 +345,7 @@ two folding sections, "Diary blocks" and "Storage slots", with the approved
 content unchanged — see `docs/decisions/2026-09-30-owner-setup-review.md`.
 Desktop replaced on this journey's canvas and the big canvas; tablet and
 phone follow when journey 8's tablet and phone are drawn.
+
+**Later change (30 Sep, Owner setup decision 15):** the Settings ·
+Accessibility board (`settings-accessibility`, decision 57) is removed from
+this journey — Accessibility lives in Your settings (app map decision 8).

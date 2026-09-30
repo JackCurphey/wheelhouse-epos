@@ -283,7 +283,6 @@ export const journeys = [
         sd('change-selected', 'Change request selected', 'Staff'),
         sd('diary-context-menu', 'Diary · right-click a job', 'Staff'),
         sd('job-quick-overview', 'Diary · job overview (quick look)', 'Staff'),
-        sd('settings-accessibility', 'Settings · Accessibility', 'Manager'),
         sd('diary-stack-hover', 'Diary · stacked jobs fanned out on hover', 'Staff'),
         sd('diary-stack-open', 'Diary · choose a job from a stack', 'Staff'),
         sd('diary-hover-summary', 'Diary · hover a job for its summary', 'Staff'),

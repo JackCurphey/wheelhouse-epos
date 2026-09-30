@@ -1267,16 +1267,8 @@
    "title": "Designed · Diary · job overview (quick look) (desktop)",
    "is_interactive": true
   },
-  "j12-settings-accessibility-desktop.dc.html": {
-   "x": 10560,
-   "y": 27634,
-   "w": 1280,
-   "h": 856,
-   "title": "Designed · Settings · Accessibility (desktop)",
-   "is_interactive": true
-  },
   "j12-diary-stack-hover-desktop.dc.html": {
-   "x": 11880,
+   "x": 10560,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1284,7 +1276,7 @@
    "is_interactive": true
   },
   "j12-diary-stack-open-desktop.dc.html": {
-   "x": 13200,
+   "x": 11880,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1292,7 +1284,7 @@
    "is_interactive": true
   },
   "j12-diary-hover-summary-desktop.dc.html": {
-   "x": 14520,
+   "x": 13200,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1300,7 +1292,7 @@
    "is_interactive": true
   },
   "j12-request-new-desktop.dc.html": {
-   "x": 16000,
+   "x": 14680,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1308,7 +1300,7 @@
    "is_interactive": true
   },
   "j12-request-decline-desktop.dc.html": {
-   "x": 17320,
+   "x": 16000,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1316,7 +1308,7 @@
    "is_interactive": true
   },
   "j12-request-change-desktop.dc.html": {
-   "x": 18640,
+   "x": 17320,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1324,7 +1316,7 @@
    "is_interactive": true
   },
   "j12-request-cancel-desktop.dc.html": {
-   "x": 19960,
+   "x": 18640,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1332,7 +1324,7 @@
    "is_interactive": true
   },
   "j12-new-job-pick-desktop.dc.html": {
-   "x": 21440,
+   "x": 20120,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1340,7 +1332,7 @@
    "is_interactive": true
   },
   "j12-new-job-desktop.dc.html": {
-   "x": 22760,
+   "x": 21440,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1348,7 +1340,7 @@
    "is_interactive": true
   },
   "j12-new-job-day-desktop.dc.html": {
-   "x": 24080,
+   "x": 22760,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1356,7 +1348,7 @@
    "is_interactive": true
   },
   "j12-job-overview-desktop.dc.html": {
-   "x": 25560,
+   "x": 24240,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1364,7 +1356,7 @@
    "is_interactive": true
   },
   "j12-job-book-in-desktop.dc.html": {
-   "x": 26880,
+   "x": 25560,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1372,7 +1364,7 @@
    "is_interactive": true
   },
   "j12-job-quote-desktop.dc.html": {
-   "x": 28200,
+   "x": 26880,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1380,7 +1372,7 @@
    "is_interactive": true
   },
   "j12-job-mechanic-desktop.dc.html": {
-   "x": 29520,
+   "x": 28200,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1388,7 +1380,7 @@
    "is_interactive": true
   },
   "j12-job-waiting-parts-desktop.dc.html": {
-   "x": 30840,
+   "x": 29520,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1396,7 +1388,7 @@
    "is_interactive": true
   },
   "j12-job-finished-desktop.dc.html": {
-   "x": 32160,
+   "x": 30840,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1404,7 +1396,7 @@
    "is_interactive": true
   },
   "j12-job-collection-desktop.dc.html": {
-   "x": 33480,
+   "x": 32160,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1412,7 +1404,7 @@
    "is_interactive": true
   },
   "j12-job-checklist-desktop.dc.html": {
-   "x": 34800,
+   "x": 33480,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -1420,7 +1412,7 @@
    "is_interactive": true
   },
   "j12-customer-desktop.dc.html": {
-   "x": 36280,
+   "x": 34960,
    "y": 27634,
    "w": 1280,
    "h": 1156,
@@ -1428,7 +1420,7 @@
    "is_interactive": true
   },
   "j12-overview-desktop.dc.html": {
-   "x": 37760,
+   "x": 36440,
    "y": 27634,
    "w": 1280,
    "h": 856,
@@ -2211,7 +2203,6 @@
   "j12-change-selected-desktop.dc.html",
   "j12-diary-context-menu-desktop.dc.html",
   "j12-job-quick-overview-desktop.dc.html",
-  "j12-settings-accessibility-desktop.dc.html",
   "j12-diary-stack-hover-desktop.dc.html",
   "j12-diary-stack-open-desktop.dc.html",
   "j12-diary-hover-summary-desktop.dc.html",
@@ -2741,7 +2732,7 @@
    "maxH": 150
   },
   "j12_s47": {
-   "x": 16000,
+   "x": 14680,
    "y": 27394,
    "text": "Requests, as a pop-up",
    "w": 520,
@@ -2751,7 +2742,7 @@
    "maxH": 150
   },
   "j12_s48": {
-   "x": 21440,
+   "x": 20120,
    "y": 27394,
    "text": "New job from an empty slot",
    "w": 520,
@@ -2761,7 +2752,7 @@
    "maxH": 150
   },
   "j12_s49": {
-   "x": 25560,
+   "x": 24240,
    "y": 27394,
    "text": "The job — one page, no tabs",
    "w": 520,
@@ -2771,7 +2762,7 @@
    "maxH": 150
   },
   "j12_s50": {
-   "x": 36280,
+   "x": 34960,
    "y": 27394,
    "text": "Customer account",
    "w": 520,
@@ -2781,7 +2772,7 @@
    "maxH": 150
   },
   "j12_s51": {
-   "x": 37760,
+   "x": 36440,
    "y": 27394,
    "text": "Overview page",
    "w": 520,
@@ -2795,7 +2786,7 @@
    "y": 27074,
    "text": "12 · Workshop day — Staff and Mechanic",
    "kind": "title1",
-   "maxW": 39000
+   "maxW": 37680
   },
   "j13_s53": {
    "x": 0,

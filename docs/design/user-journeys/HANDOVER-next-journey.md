@@ -33,8 +33,9 @@ holding desktop, tablet and phone:
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md` (this folder).
 
-Overview count (each screen once): 253 screens — 146 designed, 6 built, 14
-old app only, 87 not designed yet, 0 for review.
+Overview count (each screen once): 252 screens — 145 designed, 6 built, 14
+old app only, 87 not designed yet, 0 for review (30 Sep: journey 12's
+Settings · Accessibility board removed, Owner setup decision 15).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
 placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
