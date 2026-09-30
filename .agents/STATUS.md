@@ -18,12 +18,18 @@ Jack's choice (ask him first). The big canvas is now **desktop only**, each
 board linking to its journey's own canvas for tablet and phone (268 files of
 the 512 a canvas can hold).
 
-**Journey 15, Customer service (30 Sep, in progress):** decisions in
-`docs/decisions/2026-09-30-customer-service-review.md`; first question is the
-shape of the customer page (two options drawn). Own canvas:
-https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox . Generator: `customer.mjs`
-+ `build-customer.mjs --theme sand` (reuses `settings-frame.mjs` for the
-frame at every size and diary.mjs's example week for Maya's jobs).
+**Journey 15, Customer service (30 Sep, in progress):** 12 decisions in
+`docs/decisions/2026-09-30-customer-service-review.md` — a summary and one
+history per customer (newest first, open now at the top); address, note,
+company or club customers; bike warranty; duplicates caught while adding;
+account payments at the till or by bank transfer; customer groups with an
+automatic discount (Settings › Payments); privacy requests list; loyalty is
+store credit earned by buying (journeys 11 and 8 updated). UI audit done
+and fixes adopted (decision 12, `customer-ui-audit.md`). Desktop drawn (22
+boards); next: Jack reviews desktop, then tablet and phone; on approval
+this page replaces journey 12's Customer account board (decision 11). Own
+canvas: https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox . Generator:
+`customer.mjs` + `build-customer.mjs --theme sand`.
 
 **Journey 8, Owner setup (30 Sep):** approved at desktop, tablet and phone
 and copied into the big canvas; 23 decisions in
