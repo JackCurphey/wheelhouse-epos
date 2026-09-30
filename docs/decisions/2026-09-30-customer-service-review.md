@@ -73,3 +73,15 @@ possible; Owner setup 4 — changes save as you go).
    sidebar changes; chosen over an Office sidebar entry and a section in
    Settings › Your data. Each request shows when it was asked and when an
    answer is due (one month, UK data protection).
+10. **Loyalty is store credit: customers earn store credit by buying**
+    (Jack, 30 Sep: "I would like the store credit and loyalty points to be
+    the same thing, as in a customer can earn store credit by buying
+    things"): no separate points. The shop sets how much comes back ([n]%
+    of what's spent) in Settings › Payments › Ways to pay, on the Store
+    credit switch, which also covers refunds without a receipt (till 9). The
+    customer page shows one "Store credit" line; staff can add or take it
+    away with a reason. Knock-on, done the same day: journey 11's basket row
+    "[n] loyalty points · Use points" becomes "[£] store credit · Use it"
+    (board `till-loyalty`); journey 8's separate Loyalty points switch goes.
+    Supersedes the points half of till decision 8 and journey 15 option
+    "points per £1".
