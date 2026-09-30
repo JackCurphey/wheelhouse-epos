@@ -68,4 +68,8 @@ possible; Owner setup 4 — changes save as you go).
    worked on and marked done, giving a paper trail if a customer complains.
    Deleting keeps sales for tax without the person's name (retention rules
    in the workshop-first build spec). Chosen over actions on the customer's
-   page only and both. Where the list lives is the next question.
+   page only and both. **The list opens from a "Privacy requests · [n]
+   open" link at the top of the Customers page** (Jack, 30 Sep), so no
+   sidebar changes; chosen over an Office sidebar entry and a section in
+   Settings › Your data. Each request shows when it was asked and when an
+   answer is due (one month, UK data protection).
