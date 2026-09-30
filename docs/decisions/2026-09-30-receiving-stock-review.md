@@ -64,3 +64,9 @@ the supplier integrations above.
    show only to owners, managers and anyone with the "Can order stock"
    switch (Owner setup 9). Chosen over receiving only with "Can order
    stock", and everyone seeing everything.
+5. **A bike's frame number is recorded when it's booked in** (Jack, 30
+   Sep): scanning a bike in a delivery asks for its frame number (scan the
+   sticker on the frame, or type it) before it counts, so every bike in
+   stock is known individually; the till then picks which one is being sold
+   instead of typing it (a knock-on for Selling at the till's "Record a
+   frame number"). Chosen over only at the sale, and either.
