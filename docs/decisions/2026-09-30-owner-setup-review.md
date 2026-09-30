@@ -86,6 +86,13 @@ one from the staff list.
     don't have a proper schedule." Online booking starts on for Mechanics
     and off for everyone else (drawn assumption). Chosen over the Mechanic
     role only and a separate mechanics list.
+12. **Journey 12's "Diary & storage" settings board is redrawn inside
+    Settings › Workshop** (Jack, 30 Sep): its approved content (what a diary
+    block shows, storage slots) becomes two folding sections in the
+    Workshop area, replacing the old tabbed Settings page on journey 12's
+    canvas and in the big canvas. Desktop now; its tablet and phone boards
+    are replaced when this journey's tablet and phone are drawn. Chosen
+    over leaving journey 12's board until the build.
 
 ## Noted for later (not for this journey)
 
