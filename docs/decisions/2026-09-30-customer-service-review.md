@@ -31,3 +31,12 @@ possible; Owner setup 4 — changes save as you go).
    when it was bought and the warranty left, or that it has ended. The
    warranty length comes from the bike's product record (stock, journey
    14). Bikes brought in from elsewhere show no warranty line.
+5. **Possible duplicates are caught while adding, and flagged on the
+   customer's page** (Jack, 30 Sep): while typing in Add a customer, a
+   match on phone, email or name shows "already has this number — use
+   them instead?"; one that slips through (two tills offline) shows a
+   notice on the page, "Might be the same as Maya P.", with Check opening
+   a side-by-side keep-or-merge comparison. Nothing merges automatically
+   (offline spec). The Release 1 example "Maya P." with the same phone is
+   the example. Chosen over a Possible duplicates list only and catching
+   them only while adding.
