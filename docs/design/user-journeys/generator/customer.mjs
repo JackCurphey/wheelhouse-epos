@@ -78,7 +78,7 @@ function summary({ accounts = true, loyalty = true, credit = true } = {}) {
   const bikes = `${secHead('Bikes', smallLink('+ Add'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">Trek Domane AL 3</span><span style="font-size: 13px; color: ${C.muted}">Green · black mudguards · bought here [date]</span>${warranty(true)}</div>`;
   // Decision 6: only what the shop has switched on in Payments › Ways to pay.
-  const glance = `${secHead('At a glance')}${accounts ? facts('Owes on account', mono('[£ owed]')) : ''}${loyalty ? facts('Loyalty points', mono('[n]')) : ''}${credit ? facts('Store credit', mono('[£]')) : ''}${facts('Marketing', '[yes or no]')}`;
+  const glance = `${secHead('At a glance')}${accounts ? facts('<a href="cs-account-desktop.dc.html" style="color: ' + C.ink + '; font-weight: 600">Owes on account</a>', mono('[£ owed]')) : ''}${loyalty ? facts('Loyalty points', mono('[n]')) : ''}${credit ? facts('Store credit', mono('[£]')) : ''}${facts('Marketing', '[yes or no]')}`;
   return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${bikes}${glance}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
 }
 function history(filter = 'Everything') {
@@ -132,6 +132,25 @@ def('cs-add-match', () => overlay(customerList(), addDialog(false, true)));
 def('cs-page-dup', customerPageDup);
 def('cs-merge', () => overlay(customerPageDup(), mergeDialog()));
 
+// ---------- Account (decision 7; Owner setup decision 7) ----------
+// Opened from "Owes on account" in At a glance: the balance, the statement,
+// her own limit, and the two ways to pay it off.
+const stmtRow = (what, when, amt) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px">${what}</span><span style="font-size: 13px; color: ${C.muted}">${when}</span></span>${mono(amt, 'font-size: 15px')}</div>`;
+function accountDialog() {
+  const big = (k, v) => `<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}"><span style="font-size: 13px; color: ${C.muted}">${k}</span>${mono(v, 'font-size: 20px')}</div>`;
+  return popup('acct-title', 'Maya Patel’s account', 'Pay later, settled from here', `
+<div style="display: flex; gap: 10px; flex-wrap: wrap">${big('Owes now', '[£ owed]')}</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><label style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Most Maya can owe</span><span style="font-size: 13px; color: ${C.muted}">The shop’s limit is [£ limit] · managers can change hers</span></label><input aria-label="Maya’s own limit" value="[£ limit]" style="width: 120px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"></div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 700; padding-bottom: 6px">Statement</span>${stmtRow('Sale on account · B1-[0000]', '[date]', '+[£]')}${stmtRow('Paid by bank transfer · [reference]', '[date]', '−[£]')}${stmtRow('Sale on account · B1-[0000]', '[date]', '+[£]')}</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">${button('Email the statement', { variant: 'default' })}${button('Record a bank transfer', { variant: 'default' })}</div>`, `${button('Close', { variant: 'ghost' })}${button('Take a payment at the till')}`, 640);
+}
+const transferDialog = () => popup('bt-title', 'Record a bank transfer', 'For money that didn’t come through the till', `
+${field('Amount', { placeholder: '£0.00' })}
+<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('Date it arrived', { placeholder: '[date]' })}${field('Reference', { placeholder: 'As it shows on the bank statement' })}</div>
+${note('It comes off what Maya owes. It isn’t counted in the till’s takings, so cash-up isn’t affected.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Record it')}`, 560);
+def('cs-account', () => overlay(customerPage(), accountDialog()));
+def('cs-transfer', () => overlay(customerPage(), transferDialog()));
+
 def('cs-opt-folds', optionFolds);
 def('cs-opt-timeline', optionTimeline);
 
@@ -144,6 +163,8 @@ export const TITLES = {
   'cs-page-off': 'A shop with accounts and loyalty switched off (Payments › Ways to pay)',
   'cs-add': 'Add a customer: a person',
   'cs-add-company': 'Add a customer: a company or club',
+  'cs-account': 'Her account: balance, her limit, statement, pay it off',
+  'cs-transfer': 'Record a bank transfer',
   'cs-add-match': 'Adding someone who’s already here',
   'cs-page-dup': 'A possible duplicate, flagged on the page',
   'cs-merge': 'The same person? Keep or merge',
@@ -152,6 +173,7 @@ export const TITLES = {
 };
 export const ROWS = [
   { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-off', 'cs-add', 'cs-add-company'] },
+  { label: 'Accounts (pay later)', screens: ['cs-account', 'cs-transfer'] },
   { label: 'Possible duplicates', screens: ['cs-add-match', 'cs-page-dup', 'cs-merge'] },
   { label: 'Options: the shape of the customer page (decision 2: option 2)', screens: ['cs-opt-folds', 'cs-opt-timeline'] },
 ];
