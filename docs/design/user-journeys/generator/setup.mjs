@@ -274,7 +274,13 @@ const servicesOpen = () => `<div role="group" aria-label="Service groups" style=
 // Mechanics: everyone with "Works in the workshop" on (decision 11), set in
 // Staff and roles — listed here so it can be found from either place.
 const mechRow = (name, role, online) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${role}</span></span><span style="font-size: 14px; color: ${online ? C.ink : C.muted}">${online ? 'Customers can book online' : 'Booked in by staff only'}</span></div>`;
-const mechanicsOpen = () => `${mechRow('Alex Morgan', 'Mechanic', true)}${mechRow('Jo Taylor', 'Staff', false)}
+// Decision 19: the Shared queue (Workshop day 32, 62) — jobs for whoever's
+// free — sits beside the people, with a name the shop can change.
+const queueRow = () => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid ${C.border}">
+<div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1"><label for="queue-name" style="font-size: 13px; color: ${C.muted}">Jobs for whoever’s free — called</label><input id="queue-name" value="Shared queue" style="width: 260px; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; font-weight: 700; color: ${C.ink}"></span></div>
+${toggleLine('Customers can book it online', 'Off: only staff put jobs in it', true)}
+${toggleLine('Show it as a column in the diary', 'Off: its jobs show in the diary’s row for bikes with no set time', false)}</div>`;
+const mechanicsOpen = () => `${mechRow('Alex Morgan', 'Mechanic', true)}${mechRow('Jo Taylor', 'Staff', false)}${queueRow()}
 <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 4px">${note('Everyone with “Works in the workshop” switched on gets a column in the diary.')}${button('Change in Staff and roles', { variant: 'default' })}</div>`;
 const workshopPage = (open) => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds(open));
 def('set-workshop-services', () => workshopPage({ services: servicesOpen() }));

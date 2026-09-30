@@ -64,7 +64,7 @@ ${card(sections, 'overflow: hidden; flex-shrink: 0')}
 // list; decision 12 brings journey 12's diary block and storage settings).
 export const workshopFolds = (open = {}) =>
   fold('Services', 'Full service, Individual service', open.services || '')
-  + fold('Mechanics', 'Alex Morgan, Jo Taylor', open.mechanics || '')
+  + fold('Mechanics', 'Alex Morgan, Jo Taylor, Shared queue', open.mechanics || '')
   + fold('Diary blocks', 'Bike, then job title', open.diary || '')
   + fold('Storage slots', 'On · 8 slots', open.storage || '');
 export const WORKSHOP_INTRO = 'Services, who works in the workshop, and how the diary looks.';
