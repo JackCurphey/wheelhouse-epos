@@ -97,12 +97,14 @@ ${card(CUSTOMERS.map(custRow).join('').replace('border-top: 1px solid', 'border-
 ${note('Most recent first. Search finds anyone by name, phone, email or postcode.')}</div>`, STAFF);
 // Add a customer (decision 3): a person or a company or club; address and
 // a note are optional; marketing permission starts off (booking spec).
-function addDialog(company = false) {
+function addDialog(company = false, match = false) {
   const who = choice('This is', [['A person', !company], ['A company or club', company]]);
-  const names = company ? `${field('Company or club name', { placeholder: 'e.g. the club’s name' })}${field('Contact name', { placeholder: 'Who we deal with' })}` : field('Name', { placeholder: 'First and last name' });
+  const names = company ? `${field('Company or club name', { placeholder: 'e.g. the club’s name' })}${field('Contact name', { placeholder: 'Who we deal with' })}` : field('Name', { placeholder: 'First and last name', value: match ? 'Maya P.' : '' });
+  // Decision 5: a match shows while typing, before anyone is added twice.
+  const found = match ? `<div role="status" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: 8px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">Maya Patel already has this number</span><span style="font-size: 13px; color: ${C.muted}">${mono(MAYA.phone)} · Trek Domane AL 3</span></span>${button('Use Maya Patel', { variant: 'default' })}</div>` : '';
   const two = (a, b) => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${a}${b}</div>`;
   return popup('add-title', 'Add a customer', 'Only a name and one way to reach them are needed', `${who}${names}
-${two(field('Phone', { type: 'tel' }), field('Email', { type: 'email' }))}
+${two(field('Phone', { type: 'tel', value: match ? MAYA.phone : '' }), field('Email', { type: 'email' }))}${found}
 ${two(field('Address (optional)'), field('Postcode (optional)'))}
 ${field('Note (optional)', { placeholder: 'e.g. prefers texts, not calls' })}
 <div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Happy to hear about offers</span><span style="font-size: 13px; color: ${C.muted}">Only if they say yes. Job updates always go.</span></span>${offer('Off', false)}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Add the customer')}`, 640);
@@ -112,6 +114,21 @@ def('cs-list', customerList);
 def('cs-page', customerPage);
 def('cs-add', () => overlay(customerList(), addDialog()));
 def('cs-add-company', () => overlay(customerList(), addDialog(true)));
+
+// Decision 5: one that slipped through (two tills offline) is flagged on the
+// page; Check opens a side-by-side comparison. Nothing merges by itself.
+const dupNotice = () => `<div role="status" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 8px 8px 14px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="display: inline-flex; color: ${C.ink}">${icon('user', 18)}</span><span style="font-size: 15px; flex-grow: 1"><strong>Might be the same person as Maya P.</strong> <span style="color: ${C.muted}">· same phone number</span></span>${button('Check', { variant: 'default' })}</div>`;
+const customerPageDup = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${header()}${dupNotice()}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary()}${history()}</div></div>`, STAFF);
+function mergeDialog() {
+  const cmpRow = (label, a, b, keepA = true) => `<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : '120px 1fr 1fr'}; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">${label}</span>${[[a, keepA], [b, !keepA]].map(([v, on]) => `<button type="button" aria-pressed="${on}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${on ? C.ink : C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; text-align: left; color: ${C.ink}">${on ? icon('check', 15) : '<span style="width: 15px"></span>'}${v}</button>`).join('')}</div>`;
+  const heads = isPhone() ? '' : `<div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 10px"><span></span><span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 15px; font-weight: 700">Maya P.</span></div>`;
+  return popup('merge-title', 'The same person?', 'Pick what to keep. Jobs, sales and bikes from both are kept together.', `${heads}
+${cmpRow('Name', 'Maya Patel', 'Maya P.')}${cmpRow('Phone', mono(MAYA.phone), mono(MAYA.phone))}${cmpRow('Email', MAYA.email, '[none]')}${cmpRow('Address', '[address]', '[none]')}
+${note('Added on [date] and [date], on different tills. Merging can be undone from the customer’s page for [n] days.')}`, `${button('They’re different people', { variant: 'ghost' })}${button('Merge into one')}`, 760);
+}
+def('cs-add-match', () => overlay(customerList(), addDialog(false, true)));
+def('cs-page-dup', customerPageDup);
+def('cs-merge', () => overlay(customerPageDup(), mergeDialog()));
 
 def('cs-opt-folds', optionFolds);
 def('cs-opt-timeline', optionTimeline);
@@ -124,10 +141,14 @@ export const TITLES = {
   'cs-page': 'A customer’s page: details, bikes with warranty, one history',
   'cs-add': 'Add a customer: a person',
   'cs-add-company': 'Add a customer: a company or club',
+  'cs-add-match': 'Adding someone who’s already here',
+  'cs-page-dup': 'A possible duplicate, flagged on the page',
+  'cs-merge': 'The same person? Keep or merge',
   'cs-opt-folds': 'Option 1: one page, everything in folding sections',
   'cs-opt-timeline': 'Option 2: a summary on the left, one history on the right',
 };
 export const ROWS = [
   { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-add', 'cs-add-company'] },
+  { label: 'Possible duplicates', screens: ['cs-add-match', 'cs-page-dup', 'cs-merge'] },
   { label: 'Options: the shape of the customer page (decision 2: option 2)', screens: ['cs-opt-folds', 'cs-opt-timeline'] },
 ];
