@@ -47,6 +47,11 @@ one from the staff list.
    cash-up decision 2's default — staff count first, then see the
    difference; the shop can turn it off in Settings › End of day. Chosen
    over off by default and asking during first-run setup.
+7. **Customer accounts have one shop-wide limit, which can be changed for a
+   single customer on their page** (Jack, 30 Sep): Payments › Ways to pay
+   sets "Most a customer can owe"; a trusted club or regular can be given
+   a different limit from their customer page (journey 15). Chosen over one
+   limit with no exceptions and a limit set per customer only.
 
 ## Noted for later (not for this journey)
 
