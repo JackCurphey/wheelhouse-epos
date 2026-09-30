@@ -47,3 +47,11 @@ possible; Owner setup 4 — changes save as you go).
    Ways to pay (Owner setup 8 — store credit, customer accounts, loyalty
    points); when one is off, its line in At a glance, its history entries
    filter and its buttons don't appear on the customer page (or the till).
+7. **Paying off an account: "Take a payment" at the till, or "Record a bank
+   transfer" on the page** (Jack, 30 Sep): card and cash go through the
+   till (journey 11) with the balance ready to pay, so the drawer, card
+   machine and cash-up stay right; money that never touches the till (a
+   club's bank transfer) is recorded in a small pop-up. Both open from the
+   customer's Account pop-up, which also holds the statement and the
+   per-customer limit (Owner setup decision 7). Chosen over the till only
+   and a record-a-payment pop-up only.
