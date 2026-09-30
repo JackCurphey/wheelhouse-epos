@@ -69,6 +69,14 @@ one from the staff list.
    same permissions, ultimately, as a manager". So the role is what a
    person is; the switches can add up to a Manager's abilities.
 
+10. **A "Can change settings" switch, and one tap to "Give everything a
+    Manager can do"** (Jack, 30 Sep): with it, a Staff member's switches
+    can add up to exactly a Manager (Settings includes clearing a
+    forgotten PIN). Nobody can switch off their own "Can change settings".
+    Only the Owner adds or removes staff and registers tills (auth spec
+    §6.2, offline spec) — stands, Jack not objecting. Chosen over the
+    Settings switch alone and keeping Settings to Owners and Managers.
+
 ## Noted for later (not for this journey)
 
 - **Search products by their measurements and specifications** (Jack, 30
