@@ -116,6 +116,12 @@ one from the staff list.
     settings. Chosen over leaving it marked "Moved". Journey 12's tablet
     and phone Diary settings boards still show the old Diary /
     Accessibility tabs until they are redrawn (decision 12).
+16. **First-run setup is a "Getting started" checklist that links into
+    Settings** (Jack, 30 Sep): at the top of Office › Today for the owner;
+    each step opens the right Settings section and ticks itself when done;
+    the shop can trade before finishing; the checklist goes when every step
+    is ticked. Chosen over a setup wizard before the app opens and starting
+    with a Citrus Lime import (journey 9 — still offered as a link).
 
 ## Noted for later (not for this journey)
 
