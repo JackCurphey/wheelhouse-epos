@@ -113,3 +113,8 @@ possible; Owner setup 4 — changes save as you go).
     action on the right, as the rule says.
 13. **Desktop approved; on to tablet and phone** (Jack, 30 Sep: "I've looked
     through the pages, that looks very good").
+14. **Journey 15 approved at desktop, tablet and phone** (Jack, 30 Sep:
+    "copy it into the big canvas and swap journey 12"): copied into the big
+    user-journeys canvas as Designed (desktop there, linking here for
+    tablet and phone), and journey 12's Customer account board replaced by
+    this customer page (decision 11).
