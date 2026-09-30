@@ -122,6 +122,27 @@ one from the staff list.
     the shop can trade before finishing; the checklist goes when every step
     is ticked. Chosen over a setup wizard before the app opens and starting
     with a Citrus Lime import (journey 9 — still offered as a link).
+17. **UI audit fixes adopted, as recommended** (Jack, 30 Sep: "let's go
+    with all your recommendations"; `docs/design/user-journeys/setup-ui-audit.md`):
+    owner-only actions (make or remove a till, add or remove people) are
+    hidden from everyone but the Owner, and removing a till asks first; the
+    owner invites people from Staff and roles; each checklist step says
+    what ticks it, finished steps fold away, and an opened step offers
+    "Next step" instead of "step 3 of 8"; a new shop's empty lists are
+    drawn (one board, the rest by the same rule); "Saved · Undo" follows
+    every change, and a save that fails for want of internet says so with
+    Try again; one fold rule everywhere — one section open, the first
+    unfinished or the one a link pointed to; "Count first" replaces
+    "Blind"; Shop details gains the address; Jo Taylor is drawn the same on
+    every board; reorder handles are 44px and also move by keyboard;
+    Remove is an outlined button; "Clear the PIN" is outlined red like
+    Void; the repeated "Changes save as you make them" line goes.
+    **"Close the day" follows the site's closing time** — End of day's own
+    time box goes (settles the decision 13 assumption). Dismissed: text
+    sizes (labels may be 12px); parked: unselected-pill border contrast
+    (1.31:1 — the same pills in every journey, a design-wide token fix for
+    the Soft sand switch). The other missing states (M14–M20) are rules in
+    the audit file, not drawings.
 
 ## Noted for later (not for this journey)
 
