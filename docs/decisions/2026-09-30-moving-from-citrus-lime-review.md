@@ -13,3 +13,12 @@ few clicks as possible).
 
 1. **Journey 9 is next** (Jack, 30 Sep), chosen over Collect the bike and
    pay, and Receiving stock and purchase orders.
+2. **Done with the owner, not by them** (Jack, 30 Sep): the owner uploads
+   their Citrus Lime export files; Wheelhouse matches the columns behind the
+   scenes and shows a plain summary (how many products, customers and so on
+   came across, and how many need a look). The owner only fixes the few rows
+   that didn't fit; anything odd has an "Ask us to help" button. No
+   column-matching screen for the owner. Depends on knowing what Citrus
+   Lime's exports actually contain — still to be checked from Jack's shop's
+   Citrus Lime admin before this is built. Chosen over fully self-service
+   (the owner matches every column) and us running the import for them.
