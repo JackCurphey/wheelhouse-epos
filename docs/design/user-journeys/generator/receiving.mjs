@@ -28,23 +28,27 @@ const list = (items) => `<div role="list">${items.join('')}</div>`;
 const line = (left, sub, right = '', lead = '') => `<div role="listitem" style="display: flex; align-items: center; gap: 12px; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}; ${isPhone() ? 'flex-wrap: wrap' : ''}">${lead}<span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${left}</span>${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</span>${right}</div>`;
 const tag = (t, tone = 'ok') => { const [bg, ink] = tone === 'ok' ? [C.okBg, C.successInk] : tone === 'warn' ? [C.warnBg, C.warnInk] : [C.mutedBg, C.muted]; return `<span style="display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${tone === 'ok' ? icon('check', 13) : tone === 'warn' ? icon('alert', 13) : ''}${t}</span>`; };
 const link = (t) => `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</a>`;
-const stockPage = (title, content) => page('deliveries', title, `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 960px">${content}</div>`, MANAGER);
+// Decision 4: everyone can receive; orders and the restock list need "Can
+// order stock" (Owner setup 9). Jo Taylor (Staff) is drawn without it.
+const JO = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
+const stockPage = (title, content, who = MANAGER) => page('deliveries', title, `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 960px">${content}</div>`, who);
 const qty = (n, label) => `<span role="group" aria-label="How many ${esc(label)}" style="display: inline-flex; align-items: center; border: 1px solid ${C.border}; border-radius: 8px; overflow: hidden; flex-shrink: 0"><button type="button" aria-label="One fewer" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">−</button><span style="min-width: 40px; text-align: center; font-family: ${MONO}; font-size: 15px">${n}</span><button type="button" aria-label="One more" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">+</button></span>`;
 const PADS = 'Shimano brake pads';
 
 // ---------- Stockroom › Deliveries and orders ----------
 // Decision 2: receiving comes first (most shops order on supplier websites);
 // the restock list and any orders sit below.
-const hubBoard = () => stockPage('Deliveries and orders', `${section('A delivery arrived?', `${note('Scan each item as it comes out of the box. Works with or without an order.')}<div>${button('Receive a delivery')}</div>`)}
-${section('Restock list', list([
+const hubBoard = (staff = false) => stockPage('Deliveries and orders', `${section('A delivery arrived?', `${note('Scan each item as it comes out of the box. Works with or without an order.')}<div>${button('Receive a delivery')}</div>`)}
+${staff ? '' : `${section('Restock list', list([
   line('Running low', `${mono('[n]')} products at or under their low-stock level`, link('See the list')),
   line('Selling fast', `${mono('[n]')} products sold more than usual in the last [n] days`, link('See the list')),
 ]))}
 ${section('Orders', list([
   line('[Supplier] · [n] lines', 'Ordered [date] · [n] still to come', tag('Part received', 'grey')),
   line('[Supplier] · [n] lines', 'Draft · not ordered yet', tag('Draft', 'grey')),
-]), button('+ New order', { variant: 'default' }))}
-${section('Recent deliveries', list([line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', link('Open'))]))}`);
+]), button('+ New order', { variant: 'default' }))}`}
+${section('Recent deliveries', list([line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', link('Open'))]))}
+${staff ? note('Orders and the restock list are for people who can order stock.') : ''}`, staff ? JO : MANAGER);
 
 // ---------- Decision 3: scan a delivery in ----------
 const scanBox = `<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input type="search" aria-label="Scan a barcode, or type to search" placeholder="Scan a barcode, or type to search" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>`;
@@ -96,6 +100,7 @@ ${isPhone() ? '' : `<div aria-hidden="true" style="display: grid; grid-template-
 ${note('Downloads a CSV file in [the supplier’s basket-upload format] — to be checked for each supplier.')}`)}`);
 
 def('rs-hub', () => hubBoard());
+def('rs-hub-staff', () => hubBoard(true));
 def('rs-receive', () => receiveBoard(true));
 def('rs-add-product', () => overlay(receiveBoard(true), addProduct()));
 def('rs-booked', () => bookedBoard());
@@ -114,6 +119,7 @@ SIZE = 'desktop';
 
 export const TITLES = {
   'rs-hub': 'Stockroom › Deliveries and orders',
+  'rs-hub-staff': 'Deliveries and orders, as Staff see it',
   'rs-receive': 'Receive a delivery: scan each item',
   'rs-add-product': 'A barcode Wheelhouse doesn’t know: Add this product, with its measurements',
   'rs-booked': 'Booked in: stock updated, the waiting job flagged',
@@ -123,6 +129,6 @@ export const TITLES = {
   'rs-today-restock': 'Today: the restock list, for managers',
 };
 export const ROWS = [
-  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-receive', 'rs-add-product', 'rs-booked', 'rs-job-arrived'] },
+  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-booked', 'rs-job-arrived'] },
   { label: 'Ordering', screens: ['rs-order', 'rs-restock', 'rs-today-restock'] },
 ];
