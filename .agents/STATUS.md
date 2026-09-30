@@ -18,13 +18,17 @@ board linking to its journey's own canvas for tablet and phone (257 files of
 the 512 a canvas can hold).
 
 **Journey 8, Owner setup (30 Sep, in progress):** Settings first (decision
-2), desktop only so far; 10 decisions in
+2), desktop only so far; decisions in
 `docs/decisions/2026-09-30-owner-setup-review.md` — areas listed down the
 left, changes save as you go with Undo, blind counting on by default, one
 shop-wide account limit, four fixed roles plus switches that can add up to
-a Manager. Drawn: Till, End of day, Payments, Staff and roles. Still to
-draw: Shop and sites, Workshop, Messages, Your data; then first-run setup;
-then tablet and phone. Own canvas:
+a Manager; a works-in-the-workshop switch with online booking and working
+days; site opening hours; journey 12's diary settings moved into Settings ›
+Workshop (republished on journey 12's canvas and the big canvas, desktop).
+13 decisions. Drawn: Till, End of day, Payments, Staff and roles, Shop and
+sites, Workshop. Still to draw: Messages, Your data; then first-run setup;
+then tablet and phone. Open: journey 12's Settings · Accessibility board is
+stale (Accessibility moved to Your settings, app map 8). Own canvas:
 https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B . Generator: `setup.mjs` +
 `build-setup.mjs --theme sand`.
 

@@ -191,20 +191,24 @@ const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Mo
 // Decision 11: "Works in the workshop" gives a diary column; turning it on
 // shows whether customers can book this person online.
 const toggleLine = (t, sub, on, indent = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; ${indent ? `margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}` : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${offer(on ? 'On' : 'Off', on)}</div>`;
-const workshopBlock = (on) => `<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid ${C.border}">${toggleLine('Works in the workshop', 'Gets a column in the diary', on)}${on ? toggleLine('Customers can book Jo online', 'Off: staff can still book jobs in for Jo', false, true) : ''}</div>`;
+// Decision 13: each workshop person's working days, as toggle pills.
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const dayPill = (d, on) => `<button type="button" aria-pressed="${on}" aria-label="${d}" style="min-width: 48px; min-height: 44px; padding: 0 10px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${d}</button>`;
+const workingDays = () => `<div role="group" aria-label="Works in the workshop on" style="display: flex; flex-direction: column; gap: 8px; margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">In the workshop on</span><div style="display: flex; flex-wrap: wrap; gap: 6px">${DAYS.map((d) => dayPill(d, ['Tue', 'Wed', 'Sat'].includes(d))).join('')}</div></div>`;
+const workshopBlock = (on) => `<div style="display: flex; flex-direction: column; gap: 6px">${toggleLine('Works in the workshop', 'Gets a column in the diary', on)}${on ? `${toggleLine('Customers can book Jo online', 'Off: staff can still book jobs in for Jo', false, true)}${workingDays()}` : ''}</div>`;
 // One person, in a pop-up in the middle (Workshop day 15, 16). The role by
 // pill; the switches as toggle pills; the PIN line (signing in 6).
 function personDialog({ all = false, workshop = false } = {}) {
   // Staff already have the till by their role, so that one says Included.
   const inc = (s) => s === 'Can use the till';
   const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all ? 'On' : 'Off', all)}</div>`;
-  return popup('p-title', 'Jo Taylor', 'Staff · [email]', `
+  return popup('p-title', 'Jo Taylor', 'Staff · [email]', `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: start"><div style="display: flex; flex-direction: column; gap: 16px">
 ${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}
-<div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 15px; font-weight: 600">Also allowed to</span>${all ? `<span style="font-size: 13px; color: ${C.muted}">Everything a Manager can do</span>` : button('Give everything a Manager can do', { variant: 'default' })}</div>
-<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">${SWITCHES.map(sw).join('')}</div>
+<div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">Also allowed to</span>${all ? `<span style="font-size: 13px; color: ${C.muted}">Everything a Manager can do</span>` : button('Give everything a Manager can do', { variant: 'default', block: true })}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">${SWITCHES.map(sw).join('')}</div>
 ${all ? note('Jo can now do everything a Manager can. Jo’s role still says Staff.') : ''}</div>
-${workshopBlock(workshop)}
-<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div>`, `<span></span>${button('Done')}`);
+</div><div style="display: flex; flex-direction: column; gap: 16px">${workshopBlock(workshop)}
+<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
 }
 const clearPinDialog = () => popup('pin-title', 'Clear Jo Taylor’s till PIN?', 'For when Jo has forgotten it', `${note('Jo won’t be able to check in at the till until they get a new PIN in Your settings. Nobody else sees the new one.')}`, `${button('Keep the PIN', { variant: 'ghost' })}${button('Clear the PIN')}`);
 
@@ -215,6 +219,23 @@ def('set-staff-person-all', () => overlay(staffPage({ people: peopleOpen(false) 
 def('set-staff-person-workshop', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ workshop: true })));
 def('set-staff-clear-pin', () => overlay(staffPage({ people: peopleOpen(false) }), clearPinDialog()));
 def('set-staff-roles', () => staffPage({ roles: rolesOpen() }));
+
+// ---------- Shop and sites (decision 13) ----------
+const SHOP_INTRO = 'The shop’s details, its sites and their opening hours. Changes save as you make them.';
+const inputRow = (id, label, value) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}"><label for="${id}" style="width: 160px; flex-shrink: 0; font-size: 15px; font-weight: 600">${label}</label><input id="${id}" value="${esc(value)}" style="flex-grow: 1; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>`;
+const detailsOpen = () => `${inputRow('shop-name', 'Shop name', 'North Street Cycles')}${inputRow('shop-phone', 'Phone', '[phone number]')}${inputRow('shop-email', 'Email', '[email address]')}${inputRow('shop-vat', 'VAT number', '[VAT number]')}
+${note('These show on receipts, emails and the website.')}`;
+const timeBox = (label, v) => `<input aria-label="${label}" value="${v}" style="width: 96px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">`;
+const hoursRow = (d, open) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 50px; border-top: 1px solid ${C.border}"><span style="width: 60px; font-size: 15px; font-weight: 600">${d}</span>${open ? `${timeBox(`${d} opens`, '[opens]')}<span style="color: ${C.muted}">to</span>${timeBox(`${d} closes`, '[closes]')}` : ''}<span style="flex-grow: 1"></span>${offer(open ? 'Open' : 'Closed', open)}</div>`;
+const hoursOpen = () => `${DAYS.map((d) => hoursRow(d, d !== 'Sun')).join('')}
+${note('Close the day starts from the closing time. Online booking only offers mechanics on the days they’re in, set on each person.')}`;
+const shopFolds = (open = {}) =>
+  fold('Shop details', 'North Street Cycles', open.details || '')
+  + fold('Opening hours · Bolton', 'Closed Sundays', open.hours || '')
+  + fold('Sites', 'Bolton', open.sites || '');
+const shopPage = (open) => settingsPage('shop', 'Shop and sites', SHOP_INTRO, shopFolds(open));
+def('set-shop-details', () => shopPage({ details: detailsOpen() }));
+def('set-shop-hours', () => shopPage({ hours: hoursOpen() }));
 
 // ---------- Workshop (decisions 11, 12; Workshop day 62, 66) ----------
 // Services by group (Workshop day 66: shops group their own services) —
@@ -262,9 +283,11 @@ Object.assign(TITLES, {
   'set-staff': 'Staff and roles › People',
   'set-staff-person': 'One person — role, switches, till PIN',
   'set-staff-person-all': 'Give everything a Manager can do',
-  'set-staff-person-workshop': 'Works in the workshop — but not bookable online',
+  'set-staff-person-workshop': 'Works in the workshop on set days — not bookable online',
   'set-staff-clear-pin': 'Clear a forgotten PIN',
   'set-staff-roles': 'Staff and roles › What each role can do',
+  'set-shop-details': 'Shop and sites › Shop details',
+  'set-shop-hours': 'Shop and sites › Opening hours',
   'set-workshop-services': 'Workshop › Services, by group',
   'set-workshop-mechanics': 'Workshop › Mechanics',
   'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
@@ -273,6 +296,7 @@ export const ROWS = [
   { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-person-workshop', 'set-staff-clear-pin', 'set-staff-roles'] },
+  { label: 'Shop and sites', screens: ['set-shop-details', 'set-shop-hours'] },
   { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-diary'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];
