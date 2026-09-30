@@ -60,6 +60,14 @@ one from the staff list.
    roles (auth spec §6.2). "Staff" is the till role the auth spec calls
    `cashier`. Which switches exist is the next question. Chosen over fixed
    roles only and a permissions grid.
+9. **All five switches, and a Staff member can be given everything a
+   Manager can do** (Jack, 30 Sep): Can see reports, Can close the day, Can
+   order stock, Can edit the website, Can use the till (for mechanics).
+   Jack's reason: at his shop he isn't a manager but has an administrator
+   account in Citrus Lime with all the same abilities — "have the distinct
+   roles, but be able to give someone who is a staff member all of the
+   same permissions, ultimately, as a manager". So the role is what a
+   person is; the switches can add up to a Manager's abilities.
 
 ## Noted for later (not for this journey)
 
