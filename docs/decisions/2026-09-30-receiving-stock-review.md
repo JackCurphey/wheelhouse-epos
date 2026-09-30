@@ -20,3 +20,26 @@ first, then tablet and phone. Rules for every journey apply (Workshop day
 
 1. **Journey 13 is next** (Jack, 30 Sep), chosen over Book a repair, and
    Drop off and approve the quote.
+2. **Orders are built by hand for now; ordering on the supplier's website
+   and only receiving in Wheelhouse stays fully supported** (Jack, 30 Sep:
+   "currently we do it like you have it in #3, and I know some shops will
+   only ever do it like that … I think we should go with 2 for now"). A
+   purchase order is opened, a supplier chosen and lines added; shops that
+   order on supplier websites skip orders and just receive deliveries.
+   Plus, from Jack:
+   - **A part a job is waiting for gets flagged when it's booked in**: when
+     a delivery includes a part on a job marked "On order" (Workshop day,
+     waiting for parts), receiving it flags that job.
+   - **A restock list**: in the Stockroom (and, for managers, on Today),
+     what's running low or has sold a lot recently — e.g. "we sold 5
+     Shimano chains and 10 pairs of brake pads" — which can be downloaded
+     as a CSV to upload to a supplier's website basket (Jack: "I don't
+     think it would be possible to add the stuff directly from
+     Wheelhouse"). Which file format each supplier's basket accepts is
+     still to be checked; drawn as a placeholder.
+   Chosen over one self-filling draft per supplier, and receiving only.
+
+**Noted for later (Jack, 30 Sep):** supplier integrations — for example
+showing Madison's own website orders as a feed in Wheelhouse and creating a
+purchase order from one, so orders placed on the supplier's site are known
+without retyping.
