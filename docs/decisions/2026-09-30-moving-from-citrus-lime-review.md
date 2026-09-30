@@ -22,3 +22,11 @@ few clicks as possible).
    Lime's exports actually contain — still to be checked from Jack's shop's
    Citrus Lime admin before this is built. Chosen over fully self-service
    (the owner matches every column) and us running the import for them.
+3. **A weekly refresh with a reminder while running alongside** (Jack, 30
+   Sep): once a week, on a day the owner picks, Today shows "Time to refresh
+   from Citrus Lime"; the owner drops in the new export files and Wheelhouse
+   updates only what changed (new products, price changes, new customers),
+   never overwriting what was done in Wheelhouse (practice jobs, notes).
+   Where both changed the same thing, Citrus Lime wins until switch-over and
+   the owner is told. Chosen over refreshing whenever the owner likes, and
+   importing once plus a final catch-up.
