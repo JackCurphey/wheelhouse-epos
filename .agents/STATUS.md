@@ -19,7 +19,7 @@ board linking to its journey's own canvas for tablet and phone (268 files of
 the 512 a canvas can hold).
 
 **Journey 8, Owner setup (30 Sep):** approved at desktop, tablet and phone
-and copied into the big canvas; 22 decisions in
+and copied into the big canvas; 23 decisions in
 `docs/decisions/2026-09-30-owner-setup-review.md` — Settings in the Office
 room lists eight areas down the left (phone: a list, then each area), each
 area's settings fold, changes save as you go with Undo; four fixed roles

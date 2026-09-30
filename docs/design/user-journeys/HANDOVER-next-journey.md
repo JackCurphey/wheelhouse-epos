@@ -166,7 +166,8 @@ big changes (changed boards with `canvas.json` first, removals second).
 - Card machine: which provider can take amounts from the till, and card
   payments when the internet is down (till 6 — supersedes the offline spec's
   standalone-machine line).
-- Journey 8 draft awaiting Jack's OK: the "Bike ready" message wording. Parked:
+- Journey 5 must provide the job link journey 8 decision 23 sends in "Bike
+  ready": one job's summary, no sign-in, nothing else visible. Parked:
   unselected-pill border contrast 1.31:1 — a design-wide token fix for the
   Soft sand switch (journey 8 audit M6).
 - Workshop day: multi-day jobs (52), mechanic sign-off (64), tap a phone

@@ -182,6 +182,17 @@ one from the staff list.
     like this. Let's continue on."): copied into the big user-journeys
     canvas as Designed, desktop only there, each board linking to this
     journey's canvas for tablet and phone (cash-up decision 8).
+23. **The "Bike ready" starting wording includes the amount to pay and a
+    link to the job** (Jack, 30 Sep: "can we have 2 and then also add the
+    option to link the job notes as well so a customer can see everything
+    that was done before they pick it up?"): "Hi [first name], your [bike]
+    is ready to collect from [shop]. [Amount to pay] to pay on collection.
+    See what we did: [link to the job]. Job [number]. We're open [opening
+    hours]." The amount is what's left after any deposit. The link opens
+    that one job's summary (journey 5's "Job done: summary and invoice")
+    with nothing to sign into, and shows only that job. "Amount to pay" and
+    "Link to the job" join the tap-in placeholders. Chosen over pointing to
+    the customer's account and doing both.
 
 ## Noted for later (not for this journey)
 
