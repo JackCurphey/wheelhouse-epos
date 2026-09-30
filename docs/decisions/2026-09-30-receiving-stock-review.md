@@ -101,3 +101,11 @@ the supplier integrations above.
    per item received; items with the maker's barcode start at 0; any count
    can be changed, and the label printer picked. Chosen over a label for
    every item, and no labels at booking in. Board: `rs-labels`.
+9. **A delivery that isn't right is marked at booking in** (Jack, 30 Sep):
+   each scanned line has "Problem?" — Damaged, Wrong item or Missing, how
+   many, and an optional note. Damaged and wrong items aren't added to
+   stock and go on "To return to [Supplier]" in Deliveries and orders (for
+   people who can order stock), each with a "Returned" button; missing
+   items stay "to come" on the order. Chosen over simply not booking them
+   in, and a full returns process with return numbers and credit notes.
+   Board: `rs-problem`; `rs-hub` gains the To return list.

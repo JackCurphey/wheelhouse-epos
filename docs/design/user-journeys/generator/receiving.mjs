@@ -47,6 +47,10 @@ ${section('Orders', list([
   line('[Supplier] · [n] lines', 'Ordered [date] · [n] still to come', tag('Part received', 'grey')),
   line('[Supplier] · [n] lines', 'Draft · not ordered yet', tag('Draft', 'grey')),
 ]), button('+ New order', { variant: 'default' }))}`}
+${staff ? '' : section('To return to [Supplier]', list([
+  line('[Product]', 'Damaged · [n] · from the delivery on [date]', button('Returned', { variant: 'default' })),
+  line('[Product]', 'Wrong item · [n] · from the delivery on [date]', button('Returned', { variant: 'default' })),
+]))}
 ${section('Recent deliveries', list([line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', `${staff ? '' : tag('Invoice to check', 'warn')}${link('Open')}`)]))}
 ${staff ? note('Orders and the restock list are for people who can order stock.') : ''}`, staff ? JO : MANAGER);
 
@@ -54,10 +58,12 @@ ${staff ? note('Orders and the restock list are for people who can order stock.'
 const scanBox = `<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input type="search" aria-label="Scan a barcode, or type to search" placeholder="Scan a barcode, or type to search" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>`;
 const supplierPick = `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label for="rs-supplier" style="font-size: 14px; font-weight: 600">From</label><select id="rs-supplier" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>[Supplier] (optional)</option></select><span style="font-size: 13px; color: ${C.muted}">Picking one shows what’s still to come on its orders</span></div>`;
 const waitingLead = `<span style="display: inline-flex; color: ${C.warnInk}" aria-hidden="true">${icon('workshop', 18)}</span>`;
+// Decision 9: each scanned line can be marked damaged, wrong or missing.
+const withProblem = (right) => `<span style="display: inline-flex; align-items: center; gap: 12px">${right}${link('Problem?')}</span>`;
 const scannedRows = (unknown) => list([
-  line(PADS, `B05S-RX · <strong style="color: ${C.warnInk}">Job WH-1042 is waiting for 1</strong>`, qty('[n]', PADS), waitingLead),
-  line('[Product]', '[Supplier code] · on your order: [n]', qty('[n]', 'Product')),
-  line('[Product]', '[Supplier code] · not on an order', qty('[n]', 'Product')),
+  line(PADS, `B05S-RX · <strong style="color: ${C.warnInk}">Job WH-1042 is waiting for 1</strong>`, withProblem(qty('[n]', PADS)), waitingLead),
+  line('[Product]', '[Supplier code] · on your order: [n]', withProblem(qty('[n]', 'Product'))),
+  line('[Product]', '[Supplier code] · not on an order', withProblem(qty('[n]', 'Product'))),
   ...(unknown ? [line(mono('[barcode]'), 'Not in Wheelhouse yet', button('Add this product', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.warnInk}" aria-hidden="true">${icon('alert', 18)}</span>`)] : []),
 ]);
 const receiveBoard = (unknown = true) => stockPage('Receive a delivery', `${section('Receive a delivery', `${supplierPick}${scanBox}
@@ -123,6 +129,15 @@ ${list([
 ])}
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label for="lb-printer" style="font-size: 14px; font-weight: 600">Printer</label><select id="lb-printer" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>[Label printer]</option></select></div>`, `${button('Cancel', { variant: 'default' })}${button('Print [n] labels')}`, 600);
 
+// Decision 9: "Problem?" on a scanned line. Damaged and wrong items aren't
+// added to stock and go on the supplier's "To return" list; missing ones
+// stay "to come" on the order.
+const problemPopup = () => popup('pb-title', 'Something wrong?', `[Product] · [Supplier code] · [n] scanned`, `
+<div role="group" aria-label="What’s wrong" style="display: flex; flex-wrap: wrap; gap: 8px">${['Damaged', 'Wrong item', 'Missing'].map((t, i) => `<button type="button" aria-pressed="${i === 0}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${i === 0 ? C.ink : C.border}; background: ${i === 0 ? C.ink : C.panel}; color: ${i === 0 ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`).join('')}</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 15px; font-weight: 600">How many</span>${qty('[n]', 'Damaged')}</div>
+${fieldRow('pb-note', 'Note (optional)', '')}
+${note('Damaged items aren’t added to stock. They go on “To return to [Supplier]” in Deliveries and orders until they’re sent back.')}`, `${button('Cancel', { variant: 'default' })}${button('Mark as damaged')}`, 560);
+
 // ---------- Decision 2: a purchase order, built by hand ----------
 const poLine = (name, code, n, cost) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 2fr) auto minmax(0, 0.8fr) 44px'}; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${code}</span></span>${qty(n, name)}${isPhone() ? '' : `<span style="font-family: ${MONO}; font-size: 15px; text-align: right">${cost}</span><button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}">${icon('close', 18)}</button>`}</div>`;
 const orderBoard = () => stockPage('New order', `${section('New order', `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label for="po-supplier" style="font-size: 14px; font-weight: 600">Supplier</label><select id="po-supplier" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>[Supplier]</option></select></div>
@@ -145,6 +160,7 @@ def('rs-hub-staff', () => hubBoard(true));
 def('rs-receive', () => receiveBoard(true));
 def('rs-add-product', () => overlay(receiveBoard(true), addProduct()));
 def('rs-frame', () => overlay(receiveBoard(false), framePopup()));
+def('rs-problem', () => overlay(receiveBoard(false), problemPopup()));
 def('rs-booked', () => bookedBoard());
 def('rs-labels', () => overlay(bookedBoard(), labelsPopup()));
 def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
@@ -170,6 +186,7 @@ export const TITLES = {
   'rs-receive': 'Receive a delivery: scan each item',
   'rs-add-product': 'A barcode Wheelhouse doesn’t know: Add this product, with its measurements',
   'rs-frame': 'A bike in the delivery: its frame number first',
+  'rs-problem': 'Something wrong with an item: damaged, wrong or missing',
   'rs-booked': 'Booked in: stock updated, the waiting job flagged',
   'rs-labels': 'Print labels: only what needs one',
   'rs-job-arrived': 'The job: its part has arrived',
@@ -182,7 +199,7 @@ export const TITLES = {
   'rs-today-restock': 'Today: the restock list, for managers',
 };
 export const ROWS = [
-  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-frame', 'rs-booked', 'rs-labels', 'rs-job-arrived'] },
+  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-frame', 'rs-problem', 'rs-booked', 'rs-labels', 'rs-job-arrived'] },
   { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-diff', 'rs-invoice-setting'] },
   { label: 'Ordering', screens: ['rs-order', 'rs-restock', 'rs-today-restock'] },
 ];
