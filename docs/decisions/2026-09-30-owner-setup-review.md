@@ -25,3 +25,9 @@ one from the staff list.
    the journey can still split into 8a Settings and 8b First-run setup if
    one canvas gets too large. Chosen over first-run setup first and
    splitting into two journeys straight away.
+3. **Settings lists its areas down the left, with the chosen area beside
+   them** (Jack, 30 Sep): eight areas — Shop and sites, Staff and roles,
+   Till, Payments, End of day, Workshop, Messages, Your data — each one
+   click away, the area's settings as folding sections. Chosen over one long
+   page of folding sections and a page of area cards. How the list shows on
+   tablet and phone is still to draw. Board: `so-list` (setup.mjs).
