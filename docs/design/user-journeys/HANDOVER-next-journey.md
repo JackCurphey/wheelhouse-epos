@@ -167,8 +167,7 @@ big changes (changed boards with `canvas.json` first, removals second).
   payments when the internet is down (till 6 — supersedes the offline spec's
   standalone-machine line).
 - Journey 8 drafts awaiting Jack's OK: the "Bike ready" message wording;
-  online booking on for Mechanics and off for others by default; Close the
-  day at closing time by default for a new shop (decision 18). Parked:
+  online booking on for Mechanics and off for others by default. Parked:
   unselected-pill border contrast 1.31:1 — a design-wide token fix for the
   Soft sand switch (journey 8 audit M6).
 - Workshop day: multi-day jobs (52), mechanic sign-off (64), tap a phone

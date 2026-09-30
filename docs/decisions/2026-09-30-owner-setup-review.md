@@ -149,7 +149,8 @@ one from the staff list.
     before, or 1 hour before, counted from the site's closing time. Restores
     the early option decision 17 had dropped when it removed End of day's
     own time box. Drawn with 1 hour before chosen; the default for a new
-    shop is at closing time unless Jack says otherwise. Also (Jack, same
+    shop is **30 minutes before closing** (Jack, 30 Sep, settling the
+    draft). Also (Jack, same
     message): a workshop person's seven day pills sit on one line.
 19. **The Shared queue gets a row in Workshop › Mechanics** (Jack, 30 Sep:
     for jobs "booked in for the shop floor to do rather than a certain
