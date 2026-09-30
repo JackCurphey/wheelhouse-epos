@@ -75,6 +75,17 @@ one from the staff list.
     Only the Owner adds or removes staff and registers tills (auth spec
     §6.2, offline spec) — stands, Jack not objecting. Chosen over the
     Settings switch alone and keeping Settings to Owners and Managers.
+11. **A "Works in the workshop" switch decides who is a mechanic in the
+    diary, with a second switch for online booking** (Jack, 30 Sep): anyone
+    with it on gets a diary column and can be picked on a booking (Workshop
+    day 62); it is on for everyone with the Mechanic role. Turning it on
+    shows a second switch, "Customers can book this person online".
+    Jack's example: "I'm a salesman, but I work downstairs and I can do
+    little jobs on demand… we want to book that into the diary, but I
+    don't necessarily want people to be able to book my time in because I
+    don't have a proper schedule." Online booking starts on for Mechanics
+    and off for everyone else (drawn assumption). Chosen over the Mechanic
+    role only and a separate mechanics list.
 
 ## Noted for later (not for this journey)
 
