@@ -55,3 +55,11 @@ possible; Owner setup 4 — changes save as you go).
    customer's Account pop-up, which also holds the statement and the
    per-customer limit (Owner setup decision 7). Chosen over the till only
    and a record-a-payment pop-up only.
+8. **Customer groups with an automatic discount** (Jack, 30 Sep): the shop
+   sets up groups in Settings › Payments › Customer groups (a name and a
+   discount, e.g. "[Club name] members · [n]% off"); a customer can be in a
+   group, shown in their Details and chosen when adding them; when a group
+   member is added to a sale the till gives the discount by itself, with
+   the group as its reason, so it shows in the discount reports (till
+   decision 4). The old app had groups (CUS-02). Chosen over groups as
+   labels only and no groups. Adds a section to journey 8's Payments area.
