@@ -31,7 +31,7 @@ const header = () => `<div style="display: flex; align-items: center; gap: 16px;
 ${button('New job', { variant: 'default' })}${button('Add to a sale')}</div>`;
 
 const jobRow = (j) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}">${mono(j.job, 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${cap(j.svc)}</span><span style="font-size: 13px; color: ${C.muted}">${when(j)} · ${j.mech === 'Alex' ? 'Alex Morgan' : 'Jo Taylor'}</span></span>${status(j.key)}</div>`;
-const saleRow = () => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}">${mono('B1-[0000]', 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Sale · Till B1</span><span style="font-size: 13px; color: ${C.muted}">[date] · [what was bought]</span></span>${mono('[£ total]', 'font-size: 15px')}</div>`;
+const saleRow = () => `<a href="cs-sale-desktop.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono('B1-[0000]', 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Sale · Till B1</span><span style="font-size: 13px; color: ${C.muted}">[date] · [what was bought]</span></span>${mono('[£ total]', 'font-size: 15px')}</a>`;
 
 // ---------- Option 1: one page, everything in folding sections ----------
 function optionFolds() {
@@ -79,7 +79,7 @@ function summary({ accounts = true, credit = true } = {}) {
   const bikes = `${secHead('Bikes', smallLink('+ Add'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">Trek Domane AL 3</span><span style="font-size: 13px; color: ${C.muted}">Green · black mudguards · bought here [date]</span>${warranty(true)}</div>`;
   // Decision 6: only what the shop has switched on in Payments › Ways to pay.
-  const glance = `${secHead('At a glance')}${accounts ? facts('<a href="cs-account-desktop.dc.html" style="color: ' + C.ink + '; font-weight: 600">Owes on account</a>', mono('[£ owed]')) : ''}${credit ? facts('Store credit', mono('[£]') + ' <span style="font-size: 13px; font-weight: 400; color: ' + C.muted + '">· earned by buying</span>') : ''}${facts('Marketing', '[yes or no]')}`;
+  const glance = `${secHead('At a glance')}${accounts ? facts('<a href="cs-account-desktop.dc.html" style="color: ' + C.ink + '; font-weight: 600">Owes on account</a>', mono('[£ owed]')) : ''}${credit ? facts('<a href="cs-credit-desktop.dc.html" style="color: ' + C.ink + '; font-weight: 600">Store credit</a>', mono('[£]')) : ''}${facts('Marketing', '[yes or no]')}`;
   return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${bikes}${glance}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
 }
 function history(filter = 'Everything') {
@@ -172,6 +172,33 @@ const deleteDialog = () => popup('del-title', 'Delete [Customer]’s details?', 
 def('cs-privacy', privacyPage);
 def('cs-privacy-delete', () => overlay(privacyPage(), deleteDialog()));
 
+// ---------- From the page: a sale, store credit, editing details ----------
+// A sale in the history opens as the till's past sale (journey 11 decision
+// 13): refunds start there. A job opens the job page (journey 12).
+function saleDialog() {
+  const line = (t, sub, amt) => `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${mono(amt, 'font-size: 15px')}</div>`;
+  return popup('sale-title', `Sale ${'B1-[0000]'}`, 'Till B1 · [date] · served by [name] · Maya Patel', `${line('[What was bought]', '[quantity]', '[£]')}${line('[What was bought]', '[quantity]', '[£]')}
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-top: 1px solid ${C.ink}"><span style="font-size: 16px; font-weight: 700">Total</span>${mono('[£ total]', 'font-size: 18px')}</div>
+<div style="display: flex; justify-content: space-between; font-size: 14px; color: ${C.muted}"><span>Paid by</span><span>[card or cash]</span></div>`, `${button('Print the receipt', { variant: 'ghost' })}${button('Refund at the till')}`, 560);
+}
+// Decision 10: store credit, earned by buying, can be added or taken away
+// with a reason, like a discount.
+const creditDialog = () => popup('cr-title', 'Maya Patel’s store credit', 'Has [£] now', `
+${choice('Change', [['Add credit', true], ['Take some away', false]])}
+${field('Amount', { placeholder: '£0.00' })}
+${field('Reason', { placeholder: 'e.g. a goodwill gesture' })}
+${note('The change and its reason show in her history and in the reports.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add the credit')}`, 520);
+const editDialog = () => popup('edit-title', 'Edit Maya Patel’s details', 'Changes save when you press Done', `
+${field('Name', { value: MAYA.name })}
+<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('Phone', { value: MAYA.phone })}${field('Email', { value: MAYA.email })}</div>
+<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('Address', { value: '[address]' })}${field('Postcode', { value: '[postcode]' })}</div>
+${choice('Group', [['None', false], ['[Club name] members', true]])}
+${field('Note', { value: '[A note everyone in the shop should know]' })}
+<div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Happy to hear about offers</span><span style="font-size: 13px; color: ${C.muted}">Agreed [date]</span></span>${offer('On', true)}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Done')}`, 640);
+def('cs-sale', () => overlay(customerPage(), saleDialog()));
+def('cs-credit', () => overlay(customerPage(), creditDialog()));
+def('cs-edit', () => overlay(customerPage(), editDialog()));
+
 def('cs-opt-folds', optionFolds);
 def('cs-opt-timeline', optionTimeline);
 
@@ -182,6 +209,9 @@ export const TITLES = {
   'cs-list': 'Customers: find someone, or add them',
   'cs-page': 'A customer’s page: details, bikes with warranty, one history',
   'cs-page-off': 'A shop with customer accounts switched off (Payments › Ways to pay)',
+  'cs-sale': 'A sale from her history: refunds start here',
+  'cs-credit': 'Add or take away store credit, with a reason',
+  'cs-edit': 'Edit her details',
   'cs-add': 'Add a customer: a person',
   'cs-add-company': 'Add a customer: a company or club',
   'cs-account': 'Her account: balance, her limit, statement, pay it off',
@@ -196,7 +226,7 @@ export const TITLES = {
   'cs-opt-timeline': 'Option 2: a summary on the left, one history on the right',
 };
 export const ROWS = [
-  { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-off', 'cs-add', 'cs-add-company'] },
+  { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-off', 'cs-sale', 'cs-credit', 'cs-edit', 'cs-add', 'cs-add-company'] },
   { label: 'Accounts (pay later)', screens: ['cs-account', 'cs-transfer'] },
   { label: 'Customer groups', screens: ['cs-groups'] },
   { label: 'Privacy requests', screens: ['cs-privacy', 'cs-privacy-delete'] },

@@ -159,6 +159,10 @@ big changes (changed boards with `canvas.json` first, removals second).
 
 ## Open items carried forward
 
+- Maya Patel's example email differs: `maya@example.test` (diary.mjs,
+  job-page.mjs, customer.mjs) vs `maya@example.com` (till.mjs, signin.mjs).
+  Pick one and republish the approved boards that show it.
+
 - Search products by measurements and specifications (bearing sizes,
   derailleur gears) — Jack's idea, 30 Sep; for journeys 13, 14 and search.
   Recorded in `docs/decisions/2026-09-30-owner-setup-review.md`.
