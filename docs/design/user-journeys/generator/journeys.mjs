@@ -28,6 +28,8 @@ export const sd16 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd8 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'setup' });
 // sd15(id, title, role) = an agreed journey 15 screen (customer.mjs, Soft sand).
 export const sd15 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'customer' });
+// sd10(id, title, role) = an agreed journey 10 screen (opening.mjs, Soft sand).
+export const sd10 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'opening' });
 
 export const journeys = [
   {
@@ -242,11 +244,26 @@ export const journeys = [
   {
     id: 'j10', name: 'Opening the shop and checking in', who: 'Staff and Manager',
     rows: [
-      { label: 'Morning', screens: [
+      { label: "Opening the till", screens: [
+        sd10("op-float-check", "First in: a one-tap float check", "Staff"),
+        sd10("op-float-count", "Count it: note by note", "Staff"),
+        sd10("op-float-matched", "The count matches: the till is ready", "Staff"),
+        sd10("op-float-short", "The float is short", "Staff"),
+        sd10("op-float-over", "The float is over", "Staff"),
+      ] },
+      { label: "Office › Today", screens: [
+        sd10("op-today", "Office › Today: the start of the day", "Manager"),
+        sd10("op-today-short", "Today, with a short float to check", "Manager"),
+        sd10("op-today-seen", "Today, after the short float is marked Seen", "Manager"),
+        sd10("op-today-waiting", "Today, with sales waiting to send", "Manager"),
+        sd10("op-today-unclosed", "Today, when yesterday wasn’t closed", "Manager"),
+        sd10("op-close-yesterday", "“Close it”: yesterday’s close the day", "Manager"),
+        sd10("op-today-two", "Today, with two things to deal with", "Manager"),
+        sd10("op-today-staff", "Today, as Staff see it", "Staff"),
+        sd10("op-today-late", "Today, when someone due in is late", "Manager"),
+      ] },
+      { label: 'Also at the start of the day', screens: [
         g('open-start', 'Till start-up', 'Staff', 'What a registered till shows when it opens.', ['Site and till code', 'Connected, or offline with sales waiting', 'Last updated'], { source: 'Offline spec §5' }),
-        g('open-checkin', 'Staff check-in with PIN', 'Staff', 'Each person checks in once a day; works offline.', ['Pick your name', 'Enter PIN', 'Who is already in'], { source: 'Offline spec §4 · plan 3' }),
-        g('open-float', 'Opening float', 'Staff', 'Count the cash in the drawer at the start of the day.', ['Count by coin and note', 'Expected vs counted'], { source: 'TILL-15' }),
-        g('open-tills', 'Tills overview', 'Manager', 'Every till: when it last synced and how many sales it is holding.', ['One row per till, by site', 'Offline tills highlighted'], { source: 'Offline spec §8 · plan 3 (data built)' }),
         d('desk'),
       ] },
     ],

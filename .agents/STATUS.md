@@ -12,18 +12,22 @@ pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
 Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11), End-of-day
-cash-up (journey 16), Owner setup (journey 8) and Customer service (journey
-15) are approved and in the big canvas; the next journey is
+cash-up (journey 16), Owner setup (journey 8), Customer service (journey
+15) and Opening the shop (journey 10) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (278 files of
+board linking to its journey's own canvas for tablet and phone (289 files of
 the 512 a canvas can hold).
 
-**Journey 10, Opening the shop (30 Sep, in progress):** decisions in
+**Journey 10, Opening the shop (30 Sep):** approved at desktop, tablet and
+phone and copied into the big canvas; 8 decisions in
 `docs/decisions/2026-09-30-opening-the-shop-review.md` — a one-tap float
-check when the till opens; Office › Today is the start-of-day overview
-(tills, who's in, workshop today, needs attention). Desktop drawn (6
-boards). Own canvas: https://claude.ai/artifact/E9XTaKJys2WH3gpgwfPJbq .
-Generator: `opening.mjs` + `build-opening.mjs --theme sand`.
+check (no ✕; Count it for a note-and-coin count; matched, short and over);
+Office › Today for owners and managers (Needs attention with a count, Tills,
+Who's in, Workshop today), Staff see only Who's in and Workshop today;
+check-in records who's in only; late just shows; an unclosed day is flagged,
+not blocking. UI audit `opening-ui-audit.md`. 14 screens, 43 boards. Own
+canvas: https://claude.ai/artifact/E9XTaKJys2WH3gpgwfPJbq . Generator:
+`opening.mjs` + `build-opening.mjs --theme sand`.
 
 **Journey 15, Customer service (30 Sep):** approved at desktop, tablet and
 phone and copied into the big canvas; 14 decisions in

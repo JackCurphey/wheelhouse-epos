@@ -17,7 +17,7 @@ const root = here + 'out/';
 // Workshop day; decision 15 of journey A). ui.mjs picks its theme when it
 // loads, and this process is Fjell, so each Soft sand canvas is built in its
 // own process and its boards read back from its project/ folder.
-// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs; journey 8 = setup.mjs; journey 15 = customer.mjs.
+// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs; journey 8 = setup.mjs; journey 15 = customer.mjs; journey 10 = opening.mjs.
 const SAND_SOURCES = {
   diary: { script: 'build-diary.mjs', dir: here + 'out-diary-sand/project/' },
   'app-map': { script: 'build-app-map.mjs', dir: here + 'out-app-map-sand/project/' },
@@ -28,6 +28,7 @@ const SAND_SOURCES = {
   // three layout options Jack chose between, journey 8 decision 3).
   setup: { script: 'build-setup.mjs', dir: here + 'out-setup-sand/project/', explore: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'], exploreRow: 'Options' },
   customer: { script: 'build-customer.mjs', dir: here + 'out-customer-sand/project/', explore: ['cs-opt-folds', 'cs-opt-timeline'], exploreRow: 'Options' },
+  opening: { script: 'build-opening.mjs', dir: here + 'out-opening-sand/project/' },
 };
 for (const s of Object.values(SAND_SOURCES)) execFileSync(process.execPath, [s.script, '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
 const SAND_SIZES = ['single', 'desktop', 'tablet', 'phone'];
@@ -40,6 +41,7 @@ const SAND_CANVAS = {
   cashup: 'https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE',
   setup: 'https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B',
   customer: 'https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox',
+  opening: 'https://claude.ai/artifact/E9XTaKJys2WH3gpgwfPJbq',
 };
 const sandFile = (id, size) => (size === 'single' ? `${id}.dc.html` : `${id}-${size}.dc.html`);
 // The sizes a Soft sand screen was drawn at: whichever boards its own canvas has.
