@@ -31,3 +31,7 @@ one from the staff list.
    click away, the area's settings as folding sections. Chosen over one long
    page of folding sections and a page of area cards. How the list shows on
    tablet and phone is still to draw. Board: `so-list` (setup.mjs).
+4. **Settings save as soon as they're changed, with a short "Saved" note
+   and an Undo** (Jack, 30 Sep): no Save buttons. Every change is recorded
+   (who, when, what it was before). Chosen over a Save button per section
+   and confirming only settings that affect money or sign-in.
