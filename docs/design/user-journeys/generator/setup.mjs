@@ -8,7 +8,7 @@
 // Lewis (Manager), the till's quick-button groups (Workshop, Parts,
 // Accessories) and buttons (Standard service £65, Fit & adjust brakes £18,
 // Replace gear cable £12). Everything else is a bracketed placeholder.
-import { C, MONO, esc, icon, button, card } from './ui.mjs';
+import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { AREAS, fold, pill, offer, choice, note, shell, settingsPage, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
 import { screens as diaryScreens } from './diary.mjs';
 import { popup, overlay } from './cashup.mjs';
@@ -255,6 +255,43 @@ def('set-workshop-services', () => workshopPage({ services: servicesOpen() }));
 def('set-workshop-mechanics', () => workshopPage({ mechanics: mechanicsOpen() }));
 def('set-workshop-diary', () => diaryScreens['diary-settings'].desktop);
 
+// ---------- Messages (decision 14) ----------
+// The automatic messages are the ones journeys 2–4 already send (booking
+// confirmed, quote to approve, bike ready, order ready to collect). The
+// wording shown is a starting draft for Jack to approve, not settled copy.
+const MSG_INTRO = 'The texts and emails customers get from the shop. Changes save as you make them.';
+const chan = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.mutedBg : 'transparent'}; color: ${on ? C.ink : C.muted}; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px">${on ? icon('check', 14) : ''}${t}</button>`;
+const msgRow = (name, when, text, email, hover = false) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 0 8px 0 14px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${when}</span></span>${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit wording</button>` : ''}${chan('Text', text)}${chan('Email', email)}${offer('On', true)}</div>`;
+const msgListOpen = () => `<div style="display: flex; flex-direction: column; gap: 8px">
+${msgRow('Booking confirmed', 'When a repair is booked', false, true)}
+${msgRow('Quote to approve', 'When a job needs the customer’s OK', true, true)}
+${msgRow('Bike ready', 'When a job is finished', true, false, true)}
+${msgRow('Order ready to collect', 'When an online order is ready', false, true)}</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">${button('+ Add your own message', { variant: 'default' })}${note('Tap Text or Email to choose how each is sent — or both.')}</div>`;
+const msgFolds = (open = {}) =>
+  fold('Automatic messages', '4 on', open.list || '')
+  + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
+const msgPage = (open) => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds(open));
+const chip = (t) => `<button type="button" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px dashed ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; font-weight: 600; color: ${C.ink}">+ ${t}</button>`;
+const wordingBox = (id, value, rows = 4) => `<div style="display: flex; flex-direction: column; gap: 8px"><label for="${id}" style="font-size: 15px; font-weight: 600">Wording</label><textarea id="${id}" rows="${rows}" style="box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; line-height: 1.5; color: ${C.ink}; resize: none">${value}</textarea><div role="group" aria-label="Put in" style="display: flex; flex-wrap: wrap; gap: 6px">${chip('Customer’s first name')}${chip('Bike')}${chip('Job number')}${chip('Shop name')}${chip('Opening hours')}</div></div>`;
+const bubble = (t) => `<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">PREVIEW · TEXT TO MAYA PATEL</span><div style="align-self: flex-start; max-width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.5">${t}</div></div>`;
+const editMsgDialog = () => popup('msg-title', 'Bike ready', 'Sent when a job is finished', `
+<div role="group" aria-label="Send by" style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600; flex-grow: 1">Send by</span>${chan('Text', true)}${chan('Email', false)}</div>
+${wordingBox('msg-words', 'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. Job [Job number]. We’re open [Opening hours].')}
+${bubble('Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles. Job WH-1042. We’re open [opening hours].')}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
+// Decision 14: the shop's own automatic messages, with a "send when…".
+// Marketing only reaches customers who allow it (journey 7, acct-unsubscribe).
+const newMsgDialog = () => popup('new-msg-title', 'Your own message', 'Sent automatically', `
+${field('Name', { placeholder: 'e.g. Service reminder' })}
+${choice('Send it', [['After a job is collected', true], ['Before a booked job', false], ['After a sale', false]])}
+<div style="display: flex; align-items: center; gap: 10px"><label for="msg-after" style="font-size: 15px; font-weight: 600; flex-grow: 1">How long after</label><input id="msg-after" value="[n]" style="width: 72px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">${pill('Days')}${pill('Months', true)}</div>
+<div role="group" aria-label="Send by" style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600; flex-grow: 1">Send by</span>${chan('Text', false)}${chan('Email', true)}</div>
+${wordingBox('new-msg-words', '', 2)}
+${note('Only customers who’ve agreed to hear from the shop get messages like this. Job updates always go.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add the message')}`, 620);
+def('set-msg-list', () => msgPage({ list: msgListOpen() }));
+def('set-msg-edit', () => overlay(msgPage({ list: msgListOpen() }), editMsgDialog()));
+def('set-msg-new', () => overlay(msgPage({ list: msgListOpen() }), newMsgDialog()));
+
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
@@ -289,6 +326,9 @@ Object.assign(TITLES, {
   'set-shop-details': 'Shop and sites › Shop details',
   'set-shop-hours': 'Shop and sites › Opening hours',
   'set-workshop-services': 'Workshop › Services, by group',
+  'set-msg-list': 'Messages › Automatic messages — text, email or both',
+  'set-msg-edit': 'Change a message’s wording, with a preview',
+  'set-msg-new': 'Add your own automatic message',
   'set-workshop-mechanics': 'Workshop › Mechanics',
   'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
 });
@@ -298,5 +338,6 @@ export const ROWS = [
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-person-workshop', 'set-staff-clear-pin', 'set-staff-roles'] },
   { label: 'Shop and sites', screens: ['set-shop-details', 'set-shop-hours'] },
   { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-diary'] },
+  { label: 'Messages', screens: ['set-msg-list', 'set-msg-edit', 'set-msg-new'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];

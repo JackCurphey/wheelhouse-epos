@@ -25,8 +25,8 @@ shop-wide account limit, four fixed roles plus switches that can add up to
 a Manager; a works-in-the-workshop switch with online booking and working
 days; site opening hours; journey 12's diary settings moved into Settings ›
 Workshop (republished on journey 12's canvas and the big canvas, desktop).
-13 decisions. Drawn: Till, End of day, Payments, Staff and roles, Shop and
-sites, Workshop. Still to draw: Messages, Your data; then first-run setup;
+14 decisions. Drawn: Till, End of day, Payments, Staff and roles, Shop and
+sites, Workshop, Messages. Still to draw: Your data; then first-run setup;
 then tablet and phone. Open: journey 12's Settings · Accessibility board is
 stale (Accessibility moved to Your settings, app map 8). Own canvas:
 https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B . Generator: `setup.mjs` +
