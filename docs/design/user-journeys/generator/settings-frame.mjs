@@ -42,17 +42,18 @@ export const offer = (t, on) => `<button type="button" aria-pressed="${on}" styl
 
 export const choice = (label, items) => `<div role="group" aria-label="${esc(label)}" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">${label}</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${items.map(([t, on]) => pill(t, on)).join('')}</div></div>`;
 
-export function settingsPage(active, title, intro, sections, { toast = '' } = {}) {
+export function settingsPage(active, title, intro, sections, { toast = '', banner = '', who = null } = {}) {
   const list = `<nav aria-label="Settings areas" style="width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">${AREAS.map(([k, t]) => {
     const on = k === active;
     return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: ${on ? 700 : 500}; color: ${C.ink}; background: ${on ? C.mutedBg : 'transparent'}">${on ? `<span style="width: 6px; height: 6px; border-radius: 999px; background: ${C.accent}"></span>` : `<span style="width: 6px"></span>`}${esc(t)}</a>`;
   }).join('')}</nav>`;
-  const body = `<div data-scroll style="flex-grow: 1; min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px">
+  const body = `<div data-scroll style="flex-grow: 1; min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px">${banner}
 <div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: 22px; font-weight: 700">${esc(title)}</h2>${note(intro)}</div>
 ${card(sections, 'overflow: hidden; flex-shrink: 0')}
 </div>`;
   const t = toast ? `<div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; padding: 6px 6px 6px 18px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}${toast}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>` : '';
-  return shell(`<div style="position: relative; display: flex; gap: 28px; height: 100%">${list}${body}${t}</div>`);
+  const inner = `<div style="position: relative; display: flex; gap: 28px; height: 100%">${list}${body}${t}</div>`;
+  return who ? shellDesktop('settings', 'Settings', inner, who) : shell(inner);
 }
 
 // The Workshop area's sections (journey 8 decision 11 gives the mechanics

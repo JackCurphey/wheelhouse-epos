@@ -10,7 +10,7 @@
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { AREAS, fold, pill, offer, choice, note, shell, settingsPage, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
-import { screens as diaryScreens } from './diary.mjs';
+import { screens as diaryScreens, shellDesktop } from './diary.mjs';
 import { popup, overlay } from './cashup.mjs';
 
 export const screens = {};
@@ -305,6 +305,48 @@ const dataPage = (open) => settingsPage('data', 'Your data', DATA_INTRO, dataFol
 def('set-data-export', () => dataPage({ export: exportOpen() }));
 def('set-data-history', () => dataPage({ history: historyOpen() }));
 
+// ---------- First-run setup (decision 16): a Getting started checklist ----------
+// Shown to the shop's owner at the top of Office › Today. No owner name
+// exists in the example data, so the owner is labelled by role only.
+const OWNER = { role: 'O', person: 'Shop owner', roleName: 'Owner' };
+const STEPS = [
+  ['Shop details and opening hours', 'Shop and sites', true],
+  ['Make this computer a till', 'Till › Tills', true],
+  ['Connect the card machine', 'Payments', false],
+  ['Add your staff', 'Staff and roles', false],
+  ['Workshop services and prices', 'Workshop', false],
+  ['Quick buttons for the till', 'Till', false],
+  ['Float and closing up', 'End of day', false],
+  ['Check the messages customers get', 'Messages', false],
+];
+const doneCount = STEPS.filter((x) => x[2]).length;
+const stepRow = ([t, where, done], i, next) => `<div style="display: flex; align-items: center; gap: 14px; min-height: 56px; border-top: 1px solid ${C.border}">
+<span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${done ? C.okBg : C.mutedBg}; color: ${done ? C.successInk : C.ink}; font-size: 13px; font-weight: 700">${done ? icon('check', 15) : i + 1}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: ${done ? 500 : 700}; color: ${done ? C.muted : C.ink}">${t}</span><span style="font-size: 13px; color: ${C.muted}">${done ? 'Done' : `In Settings › ${where}`}</span></span>
+${done ? '' : button(next ? 'Start' : 'Set up', { variant: next ? 'accent' : 'default' })}</div>`;
+function gettingStarted() {
+  const firstTodo = STEPS.findIndex((x) => !x[2]);
+  return card(`<div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Getting started</h2><span style="font-size: 14px; color: ${C.muted}">${doneCount} of ${STEPS.length} done</span></div>
+<div aria-hidden="true" style="height: 6px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${Math.round((doneCount / STEPS.length) * 100)}%; height: 100%; background: ${C.ink}"></div></div>
+${note('You can sell straight away — do these in any order. Each one ticks itself when it’s done.')}
+<div style="display: flex; flex-direction: column">${STEPS.map((st, i) => stepRow(st, i, i === firstTodo)).join('')}</div>
+<div style="padding-top: 8px; border-top: 1px solid ${C.border}"><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Moving from another system? Bring your customers and stock across</a></div>
+</div>`);
+}
+const todayRest = `<div style="min-height: 120px; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: ${C.muted}">[The rest of Today]</div>`;
+const todayPage = (top) => shellDesktop('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; max-width: 900px">${top}${todayRest}</div>`, OWNER);
+// A step opened from the checklist: the usual Settings section, with a strip
+// saying where you are in Getting started and the way back.
+const stepBanner = (n, t) => `<div style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 6px 6px 14px; border-radius: 10px; background: ${C.mutedBg}"><span style="font-size: 14px"><strong>Getting started</strong> · step ${n} of ${STEPS.length}: ${t}</span><a href="fr-today-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('back', 16)}Back to the checklist</a></div>`;
+const payCardNone = () => `${kv('Till B1', `<span style="color: ${C.muted}">No card machine yet</span>`)}
+<div style="display: flex; gap: 8px; padding-top: 4px">${button('Connect a card machine')}</div>
+${note('The till sends the amount to the machine, so nobody keys it in twice.')}`;
+const allSet = card(`<div style="padding: 18px 12px 18px 22px; display: flex; align-items: center; gap: 14px"><span style="display: inline-flex; width: 32px; height: 32px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 18)}</span><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 16px; font-weight: 700">You’re all set up</span><span style="font-size: 14px; color: ${C.muted}">You can change any of it in Settings.</span></span><button type="button" aria-label="Close" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.ink}; display: inline-flex; align-items: center; justify-content: center">${icon('close', 18)}</button></div>`);
+def('fr-today', () => todayPage(gettingStarted()));
+def('fr-step', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ card: payCardNone() }).replace('[Card machine] · Till B1', 'Not connected'), { banner: stepBanner(3, 'Connect the card machine'), who: OWNER }));
+def('fr-done', () => todayPage(allSet));
+
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
@@ -344,10 +386,14 @@ Object.assign(TITLES, {
   'set-msg-new': 'Add your own automatic message',
   'set-data-export': 'Your data › Download everything',
   'set-data-history': 'Your data › Settings changes',
+  'fr-today': 'Getting started — the owner’s checklist on Today',
+  'fr-step': 'A step opened from the checklist',
+  'fr-done': 'All set up — the checklist goes',
   'set-workshop-mechanics': 'Workshop › Mechanics',
   'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
 });
 export const ROWS = [
+  { label: 'First-run setup (decision 16)', screens: ['fr-today', 'fr-step', 'fr-done'] },
   { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-person-workshop', 'set-staff-clear-pin', 'set-staff-roles'] },
