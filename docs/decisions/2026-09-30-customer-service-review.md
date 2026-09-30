@@ -63,3 +63,9 @@ possible; Owner setup 4 — changes save as you go).
    the group as its reason, so it shows in the discount reports (till
    decision 4). The old app had groups (CUS-02). Chosen over groups as
    labels only and no groups. Adds a section to journey 8's Payments area.
+9. **Privacy requests are handled from a list, with dates** (Jack, 30 Sep):
+   each request (a copy of their data, or deleting their details) is logged,
+   worked on and marked done, giving a paper trail if a customer complains.
+   Deleting keeps sales for tax without the person's name (retention rules
+   in the workshop-first build spec). Chosen over actions on the customer's
+   page only and both. Where the list lives is the next question.
