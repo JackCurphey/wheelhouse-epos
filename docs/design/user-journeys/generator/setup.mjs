@@ -9,7 +9,7 @@
 // Accessories) and buttons (Standard service £65, Fit & adjust brakes £18,
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
-import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
+import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO, payFolds, PAY_INTRO } from './settings-frame.mjs';
 import { screens as diaryScreens } from './diary.mjs';
 
 export const screens = {};
@@ -165,7 +165,6 @@ def('set-eod-close', () => settingsPage('eod', 'End of day', EOD_INTRO, eodFolds
 def('set-save-failed', () => settingsPage('eod', 'End of day', EOD_INTRO, eodFolds({ float: floatOpen() }), { toast: { fail: true, text: 'Not saved — no internet connection. Your change is kept here.' } }));
 
 // ---------- Payments (journey 11 decisions 6, 8, 15) ----------
-const PAY_INTRO = 'How customers can pay.';
 // A way to pay, switched on or off with a toggle pill (Workshop day 50); an
 // "on" way can show its one setting underneath.
 const way = (name, sub, on, extra = '') => `<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${on === null ? '' : offer(on ? 'On' : 'Off', on)}</div>${extra}</div>`;
@@ -183,10 +182,6 @@ ${note('These sit under “Other” at the bottom of Take payment, one tap away.
 const payCard = () => `${kv('Till B1', `<span style="display: inline-flex; align-items: center; gap: 6px; color: ${C.successInk}">${icon('check', 16)}[Card machine] connected</span>`)}
 <div style="display: flex; gap: 8px; padding-top: 4px">${button('Connect a card machine', { variant: 'default' })}</div>
 ${note('The till sends the amount to the machine, so nobody keys it in twice. Each till has its own machine.')}`;
-const payFolds = (open = {}) =>
-  fold('Card machine', '[Card machine] · Till B1', open.card || '')
-  + fold('Ways to pay', 'Cash, card and 4 more', open.ways || '')
-  + fold('Other ways to pay', 'Finance, Cycle to Work, payment link', open.other || '');
 def('set-pay-ways', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ ways: payWays() })));
 def('set-pay-other', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ other: payOther() })));
 def('set-pay-card', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ card: payCard() })));

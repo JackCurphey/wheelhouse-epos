@@ -202,3 +202,8 @@ one from the staff list.
   can search by them ("bearings with a 30 mm outside diameter") instead of
   by name. Belongs with receiving stock (journey 13), stock control
   (journey 14) and the till and header search.
+
+**Later change (30 Sep, Customer service decision 8):** Settings ›
+Payments gains a fifth section, "Customer groups" (a name and a discount
+the till gives by itself); the Payments boards and the phone's Settings
+list were republished here and on the big canvas.

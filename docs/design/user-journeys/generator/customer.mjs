@@ -8,7 +8,7 @@
 // approved £111 on WH-1042. Anything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { JOBS, DAYS, ST, customerBikeOf } from './diary.mjs';
-import { page, fold, pill, offer, choice, note, popup, overlay, setSize, isPhone } from './settings-frame.mjs';
+import { page, fold, pill, offer, choice, note, popup, overlay, setSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
 import { field } from './ui.mjs';
 
 export const screens = {};
@@ -74,6 +74,7 @@ const warranty = (inWarranty) => inWarranty
 function summary({ accounts = true, loyalty = true, credit = true } = {}) {
   const details = `${secHead('Details', smallLink('Edit'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; color: ${C.muted}">Address</span><span style="font-size: 15px; line-height: 1.45">[address]<br>[postcode]</span></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; color: ${C.muted}">Group</span><span style="font-size: 15px; font-weight: 600; text-align: right">[Club name] members · [n]% off</span></div>
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 13px; font-weight: 700">Note</span><span style="font-size: 14px; line-height: 1.45">[A note everyone in the shop should know]</span></div>`;
   const bikes = `${secHead('Bikes', smallLink('+ Add'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">Trek Domane AL 3</span><span style="font-size: 13px; color: ${C.muted}">Green · black mudguards · bought here [date]</span>${warranty(true)}</div>`;
@@ -107,6 +108,7 @@ function addDialog(company = false, match = false) {
   return popup('add-title', 'Add a customer', 'Only a name and one way to reach them are needed', `${who}${names}
 ${two(field('Phone', { type: 'tel', value: match ? MAYA.phone : '' }), field('Email', { type: 'email' }))}${found}
 ${two(field('Address (optional)'), field('Postcode (optional)'))}
+${choice('Group (optional)', [['None', true], ['[Club name] members', false]])}
 ${field('Note (optional)', { placeholder: 'e.g. prefers texts, not calls' })}
 <div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Happy to hear about offers</span><span style="font-size: 13px; color: ${C.muted}">Only if they say yes. Job updates always go.</span></span>${offer('Off', false)}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Add the customer')}`, 640);
 }
@@ -151,6 +153,12 @@ ${note('It comes off what Maya owes. It isn’t counted in the till’s takings,
 def('cs-account', () => overlay(customerPage(), accountDialog()));
 def('cs-transfer', () => overlay(customerPage(), transferDialog()));
 
+// ---------- Customer groups (decision 8): Settings › Payments ----------
+const groupRow = (name, off, count) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px 0 14px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${count}</span></span>${mono(off, 'font-size: 15px')}<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button></div>`;
+const groupsOpen = () => `${groupRow('[Club name] members', '[n]% off', '[n] customers')}
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px">${note('The till gives the discount by itself when a group member is added to a sale, with the group as the reason.')}${button('+ Add a group', { variant: 'default' })}</div>`;
+def('cs-groups', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ groups: groupsOpen() }), { who: { role: 'M', person: 'Jack Lewis', roleName: 'Manager' } }));
+
 def('cs-opt-folds', optionFolds);
 def('cs-opt-timeline', optionTimeline);
 
@@ -165,6 +173,7 @@ export const TITLES = {
   'cs-add-company': 'Add a customer: a company or club',
   'cs-account': 'Her account: balance, her limit, statement, pay it off',
   'cs-transfer': 'Record a bank transfer',
+  'cs-groups': 'Settings › Payments › Customer groups',
   'cs-add-match': 'Adding someone who’s already here',
   'cs-page-dup': 'A possible duplicate, flagged on the page',
   'cs-merge': 'The same person? Keep or merge',
@@ -174,6 +183,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-off', 'cs-add', 'cs-add-company'] },
   { label: 'Accounts (pay later)', screens: ['cs-account', 'cs-transfer'] },
+  { label: 'Customer groups', screens: ['cs-groups'] },
   { label: 'Possible duplicates', screens: ['cs-add-match', 'cs-page-dup', 'cs-merge'] },
   { label: 'Options: the shape of the customer page (decision 2: option 2)', screens: ['cs-opt-folds', 'cs-opt-timeline'] },
 ];

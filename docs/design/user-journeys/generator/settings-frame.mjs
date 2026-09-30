@@ -40,7 +40,7 @@ export const AREAS = [
   ['shop', 'Shop and sites', 'Name, address, VAT, opening hours, sites'],
   ['staff', 'Staff and roles', 'People, roles, clearing a forgotten PIN'],
   ['till', 'Till', 'Quick buttons, reasons, receipts, printers, tills'],
-  ['payments', 'Payments', 'Card machine, other ways to pay, gift cards, accounts'],
+  ['payments', 'Payments', 'Card machine, ways to pay, accounts, customer groups'],
   ['eod', 'End of day', 'Float, when Close the day appears, counting the cash'],
   ['workshop', 'Workshop', 'Services, mechanics, diary, storage slots'],
   ['messages', 'Messages', 'Texts and emails to customers'],
@@ -129,3 +129,11 @@ export const workshopFolds = (open = {}) =>
   + fold('Diary blocks', 'Bike, then job title', open.diary || '')
   + fold('Storage slots', 'On · 8 slots', open.storage || '');
 export const WORKSHOP_INTRO = 'Services, who works in the workshop, and how the diary looks.';
+// The Payments area's sections (journey 8; customer groups from journey 15
+// decision 8).
+export const PAY_INTRO = 'How customers can pay.';
+export const payFolds = (open = {}) =>
+  fold('Card machine', '[Card machine] · Till B1', open.card || '')
+  + fold('Ways to pay', 'Cash, card and 4 more', open.ways || '')
+  + fold('Other ways to pay', 'Finance, Cycle to Work, payment link', open.other || '')
+  + fold('Customer groups', '[Club name] members', open.groups || '');
