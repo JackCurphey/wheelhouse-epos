@@ -29,13 +29,14 @@ holding desktop, tablet and phone:
 | B Signing in and access | https://claude.ai/artifact/5Ho8DsRVvHXEcJBnGu1GXe | `docs/decisions/2026-09-29-signing-in-review.md` (10) |
 | 11 Selling at the till | https://claude.ai/artifact/Y9NppHkpYBrrRKjHw8FoLG | `docs/decisions/2026-09-29-selling-at-the-till-review.md` (16) |
 | 16 End-of-day cash-up | https://claude.ai/artifact/3HPUfUPUHUCh8YVizLW8HE | `docs/decisions/2026-09-29-cash-up-review.md` (8) |
-| 8 Owner setup | https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B | `docs/decisions/2026-09-30-owner-setup-review.md` (22) |
+| 8 Owner setup | https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B | `docs/decisions/2026-09-30-owner-setup-review.md` (23) |
+| 15 Customer service | https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox | `docs/decisions/2026-09-30-customer-service-review.md` (14) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md` (this folder).
 
-Overview count (each screen once): 265 screens — 167 designed, 6 built, 14
-old app only, 78 not designed yet, 0 for review (30 Sep: journey 8 in;
+Overview count (each screen once): 278 screens — 183 designed, 6 built, 13
+old app only, 73 not designed yet, 0 for review (30 Sep: journeys 8 and 15 in;
 journey 12's Settings · Accessibility board removed, Owner setup decision 15).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
@@ -43,11 +44,9 @@ placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
 collect, 3 Book a repair, 4 Drop off and approve the quote, 5 Collect the
 bike and pay, 6 Cycle to Work, 7 Account, history and reminders, 9 Moving from Citrus Lime, 10 Opening the shop and checking
 in, 13 Receiving stock and purchase orders, 14 Stock take and stock control,
-15 Customer service, 17 Reports and accounts, 18 Website management, 19
+17 Reports and accounts, 18 Website management, 19
 Multiple sites, 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **15 Customer
-service** (the customer page — older sales
-and refunds are found there, till decision 13), **10 Opening the shop**
+Strong candidates, because finished journeys lean on them: **10 Opening the shop**
 (pairs with cash-up and journey 8: float, who's in — journey 8 set each
 mechanic's working days), **9 Moving from Citrus Lime** (journey 8's
 checklist links to it), **5 Collect the bike and pay** (much
@@ -122,7 +121,7 @@ Generator: `docs/design/user-journeys/generator/`.
 **The big canvas is desktop only** (cash-up decision 8): a canvas holds at
 most 512 files, so each screen appears once — desktop, the one large app map,
 or a phone-only screen's only size — with a "Tablet and phone ↗" link to its
-journey's canvas. 268 files now. A publish carries at most 255 files: split
+journey's canvas. 278 files now. A publish carries at most 255 files: split
 big changes (changed boards with `canvas.json` first, removals second).
 
 ## Gotchas that cost time
@@ -131,6 +130,9 @@ big changes (changed boards with `canvas.json` first, removals second).
   Settings at every size and also journey 12's `diary-settings` boards, so
   it and `diary.mjs` import each other; `diary-settings` is built by getters
   to dodge the start-up order. Change the frame → rebuild and diff journey 12.
+- **Journey 15's boards build on demand** (getters): `diary.mjs` uses its
+  customer page for journey 12's `customer` board, and the two import each
+  other.
 - **Exploration boards stay off the big canvas** via `explore` on a
   `SAND_SOURCES` entry in `build.mjs` (journey 8's layout options).
 

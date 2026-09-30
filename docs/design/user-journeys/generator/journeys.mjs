@@ -26,6 +26,8 @@ export const sc = (id, title, role) => ({ id, status: 'designed', title, role, s
 export const sd16 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'cashup' });
 // sd8(id, title, role) = an agreed journey 8 screen (setup.mjs, Soft sand).
 export const sd8 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'setup' });
+// sd15(id, title, role) = an agreed journey 15 screen (customer.mjs, Soft sand).
+export const sd15 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'customer' });
 
 export const journeys = [
   {
@@ -392,16 +394,34 @@ export const journeys = [
   {
     id: 'j15', name: 'Customer service', who: 'Staff and Manager',
     rows: [
-      { label: 'Customers', screens: [
-        d('customers'), d('customer-record'), d('duplicates'),
-        g('cust-history', 'One history per customer', 'Staff', 'Sales and workshop jobs together for each customer.', ['Timeline of sales and jobs', 'Bikes'], { today: 'The old customer page shows bikes and texts, but not jobs or quotes.', source: 'CUS-03 · CUS-04 · piece 4' }),
-        o('cust-groups', 'Customer groups', 'Manager', 'Groups that get a discount, such as club members.', ['Group name and discount'], { today: 'The old app has a groups table.', source: 'CUS-02' }),
+      { label: "Customers and the customer page", screens: [
+        sd15("cs-list", "Customers: find someone, or add them", "Staff"),
+        sd15("cs-page", "A customer’s page: details, bikes with warranty, one history", "Staff"),
+        sd15("cs-page-over", "Over her account limit", "Staff"),
+        sd15("cs-page-new", "A new customer: nothing in the history yet", "Staff"),
+        sd15("cs-page-off", "A shop with customer accounts switched off (Payments › Ways to pay)", "Staff"),
+        sd15("cs-sale", "A sale from her history: refunds start here", "Staff"),
+        sd15("cs-credit", "Add or take away store credit, with a reason", "Staff"),
+        sd15("cs-edit", "Edit her details", "Staff"),
+        sd15("cs-add", "Add a customer: a person", "Staff"),
+        sd15("cs-add-company", "Add a customer: a company or club", "Staff"),
       ] },
-      { label: 'Loyalty and accounts', screens: [
-        g('cust-loyalty', 'Loyalty points', 'Staff', 'See and adjust a customer’s points.', ['Balance', 'History', 'Adjust with reason'], { source: 'Release 2 piece 4' }),
-        g('cust-account', 'Credit account', 'Manager', 'Limit, statement and payments on account.', ['Limit', 'Statement', 'Take a payment', 'Over the limit'], { source: 'Release 2 piece 4 · offline default 3' }),
-        g('cust-consent', 'Marketing permission', 'Staff', 'Whether a customer agreed to marketing, and when.', ['Permission and date'], { source: 'CUS-06' }),
-        g('cust-privacy', 'Privacy requests', 'Manager', 'Handle a request for a copy of, or deletion of, a customer’s data.', ['Request', 'Export', 'Delete'], { source: 'LEG-09' }),
+      { label: "Accounts (pay later)", screens: [
+        sd15("cs-account", "Her account: balance, her limit, statement, pay it off", "Staff"),
+        sd15("cs-transfer", "Record a bank transfer", "Staff"),
+      ] },
+      { label: "Customer groups", screens: [
+        sd15("cs-groups", "Settings › Payments › Customer groups", "Manager"),
+      ] },
+      { label: "Privacy requests", screens: [
+        sd15("cs-privacy", "Privacy requests: dated, answered within a month", "Manager"),
+        sd15("cs-privacy-delete", "Deleting someone’s details: sales stay, without their name", "Manager"),
+        sd15("cs-privacy-blocked", "Can’t delete yet: money, credit or a bike still open", "Manager"),
+      ] },
+      { label: "Possible duplicates", screens: [
+        sd15("cs-add-match", "Adding someone who’s already here", "Staff"),
+        sd15("cs-page-dup", "A possible duplicate, flagged on the page", "Staff"),
+        sd15("cs-merge", "The same person? Keep or merge", "Staff"),
       ] },
     ],
   },

@@ -8,7 +8,7 @@
 // approved £111 on WH-1042. Anything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { JOBS, DAYS, ST, customerBikeOf } from './diary.mjs';
-import { page, fold, pill, offer, choice, note, popup, overlay, setSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
+import { page, fold, pill, offer, choice, note, popup, overlay, setSize, withSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
 import { field } from './ui.mjs';
 
 export const screens = {};
@@ -18,7 +18,10 @@ const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${
 const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 
 const MAYA = { name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.test', bike: 'Trek Domane AL 3 · green · black mudguards' };
-const mayaJobs = JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => b.day - a.day || b.start - a.start);
+// Built on first use, not at load: diary.mjs imports this file (journey 15
+// decision 11) and JOBS isn't ready while that import is starting up.
+let _mj;
+const mj = () => (_mj ??= JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => b.day - a.day || b.start - a.start));
 const when = (j) => { const [d, n] = DAYS[j.day]; return `${d} ${n} Sep · ${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`; };
 const status = (key) => { const [bg, ink, word] = ST[key]; return `<span style="display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${word}</span>`; };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -40,9 +43,9 @@ const saleRow = () => `<a href="cs-sale-desktop.dc.html" style="display: flex; a
 
 // ---------- Option 1: one page, everything in folding sections ----------
 function optionFolds() {
-  const jobs = `${mayaJobs.slice(0, 4).map(jobRow).join('')}<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ${mayaJobs.length} jobs</a>`;
+  const jobs = `${mj().slice(0, 4).map(jobRow).join('')}<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ${mj().length} jobs</a>`;
   const sections = fold('Bikes', 'Trek Domane AL 3')
-    + fold('Workshop jobs', `${mayaJobs.length} jobs`, jobs)
+    + fold('Workshop jobs', `${mj().length} jobs`, jobs)
     + fold('Sales and refunds', 'B1-[0000] and [n] more')
     + fold('Account and loyalty', 'Owes [£] · [n] points')
     + fold('Messages', 'Texts and emails sent')
@@ -59,7 +62,7 @@ function optionTimeline() {
 <span style="font-size: 15px; font-weight: 700; padding: 16px 0 8px">At a glance</span>
 ${facts('Owes on account', mono('[£ owed]'))}${facts('Loyalty points', mono('[n]'))}${facts('Store credit', mono('[£]'))}${facts('Marketing', '[yes or no]')}
 </div>`, 'width: 300px; flex-shrink: 0; align-self: flex-start');
-  const history = `${mayaJobs.slice(0, 5).map(jobRow).join('')}${saleRow()}`;
+  const history = `${mj().slice(0, 5).map(jobRow).join('')}${saleRow()}`;
   const right = card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 17px; font-weight: 700">History</span><div role="group" aria-label="Show" style="display: flex; gap: 6px">${pill('Everything', true)}${pill('Jobs')}${pill('Sales')}${pill('Messages')}</div></div>
 <div style="display: flex; flex-direction: column">${history}</div></div>`, 'flex-grow: 1; min-width: 0');
@@ -96,8 +99,8 @@ const subHead = (t) => `<span style="font-size: 13px; font-weight: 700; color: $
 function history(filter = 'Everything', empty = false) {
   const pills = `<div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${['Everything', 'Jobs', 'Sales', 'Messages'].map((t) => pill(t, t === filter)).join('')}</div>`;
   if (empty) return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 17px; font-weight: 700">History</span><div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 16px; border: 2px dashed ${C.border}; border-radius: 10px; text-align: center"><span style="font-size: 16px; font-weight: 700">Nothing yet</span>${note('Jobs, sales and messages show here, newest first.')}${button('New job', { variant: 'default' })}</div></div>`, 'flex-grow: 1; min-width: 0');
-  const open = mayaJobs.filter((j) => j.key !== 'ready');
-  const past = mayaJobs.filter((j) => j.key === 'ready');
+  const open = mj().filter((j) => j.key !== 'ready');
+  const past = mj().filter((j) => j.key === 'ready');
   const rows = `${subHead('Open now')}${open.slice(0, 3).map(jobRow).join('')}
 ${subHead('Earlier, newest first')}${past.slice(0, 1).map(jobRow).join('')}${otherRow('Refund', 'Refund · Till B1', '[date] · [what came back]', mono('−[£]', 'font-size: 15px'))}${saleRow()}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
 <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ([n])</a>`;
@@ -144,7 +147,7 @@ const dupNotice = () => `<div role="status" style="display: flex; align-items: c
 const customerPageDup = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${backLink()}${header()}${dupNotice()}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary()}${history()}</div></div>`, STAFF);
 function mergeDialog() {
   const cmpRow = (label, a, b, keepA = true) => `<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : '120px 1fr 1fr'}; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">${label}</span>${[[a, keepA], [b, !keepA]].map(([v, on]) => `<button type="button" aria-pressed="${on}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${on ? C.ink : C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; text-align: left; color: ${C.ink}">${on ? icon('check', 15) : '<span style="width: 15px"></span>'}${v}</button>`).join('')}</div>`;
-  const heads = isPhone() ? '' : `<div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 10px"><span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">${mayaJobs.length} jobs · [n] sales</span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya P.</span><span style="font-size: 13px; color: ${C.muted}">[n] jobs · [n] sales</span></span></div>`;
+  const heads = isPhone() ? '' : `<div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 10px"><span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">${mj().length} jobs · [n] sales</span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya P.</span><span style="font-size: 13px; color: ${C.muted}">[n] jobs · [n] sales</span></span></div>`;
   return popup('merge-title', 'The same person?', 'Pick what to keep. Jobs, sales and bikes from both are kept together.', `${heads}
 ${note('Only what’s different is shown. Both have ' + MAYA.phone + '.')}${cmpRow('Name', 'Maya Patel', 'Maya P.')}${cmpRow('Email', MAYA.email, '[none]')}${cmpRow('Address', '[address]', '[none]')}
 ${note('Added on [date] and [date], on different tills. Merging can be undone from the customer’s page for [n] days.')}`, `${button('They’re different people', { variant: 'ghost' })}${button('Merge into one')}`, 760);
@@ -228,13 +231,16 @@ def('cs-opt-folds', optionFolds);
 def('cs-opt-timeline', optionTimeline);
 
 // Decision 13: every board at desktop, tablet and phone, except the two
-// layout options (desktop only).
+// layout options (desktop only). Boards are built when first read (getters),
+// so importing this file draws nothing.
 const DESKTOP_ONLY = new Set(['cs-opt-folds', 'cs-opt-timeline']);
-for (const size of ['desktop', 'tablet', 'phone']) {
-  setSize(size);
-  for (const [id, fn] of recipes) if (size === 'desktop' || !DESKTOP_ONLY.has(id)) (screens[id] ??= {})[size] = fn();
+for (const [id, fn] of recipes) {
+  const sizes = DESKTOP_ONLY.has(id) ? ['desktop'] : ['desktop', 'tablet', 'phone'];
+  screens[id] = {};
+  for (const size of sizes) Object.defineProperty(screens[id], size, { enumerable: true, get: () => withSize(size, fn) });
 }
-setSize('desktop');
+// Journey 12's Customer account board is this page (decision 11).
+export const customerPageAt = (size) => withSize(size, () => customerPage());
 
 export const TITLES = {
   'cs-list': 'Customers: find someone, or add them',

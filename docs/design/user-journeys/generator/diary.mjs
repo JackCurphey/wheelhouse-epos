@@ -9,6 +9,7 @@
 import { C, MONO, FONT_DISPLAY, THEME, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
 import { settingsPage, workshopFolds, WORKSHOP_INTRO, withSize } from './settings-frame.mjs';
+import { customerPageAt } from './customer.mjs';
 // The settled job page (decision 40, 28 Sep 2026 round) — board job-final-2
 // in job-options.mjs. Shared with that file via job-page.mjs so neither file
 // depends on the other's internals (see that module's header comment).
@@ -2521,69 +2522,15 @@ screens.overview = {
   phone: shellPhone('Overview', overviewPhoneContent('phone'), { active: 'overview' }),
 };
 
-// ---------- Row 6: Customer account (desktop only, item 3 of the 27 Sep round) ----------
-// Front desk › Customers › Maya Patel — reached from the customer link on
-// every job board. Jobs are pulled straight from JOBS/customerBikeOf (WH-1042
-// and every other Maya Patel job already in the example week — nothing
-// hand-picked), so this stays consistent if the example week changes.
-function customerBody(size) {
-  const mayaJobs = JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => a.day - b.day || a.start - b.start);
-  const jobRows = mayaJobs.map((j) => {
-    const [dayName, date] = DAYS[j.day];
-    const t = `${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`;
-    // L2 (29 Sep audit): this used to parse the Work column out of j.detail's
-    // free-text string (splitting on "·" and taking whatever came after) —
-    // WH-1042's detail happens to read "11:30–13:00 · approved £111" (the
-    // approval amount, not the service), so the parsed "work" text leaked
-    // that amount into the table instead of a service name. Bound directly
-    // to j.svc (every JOBS entry already carries one) so the column can't
-    // pick up unrelated free text again.
-    // Part A.2 (29 Sep audit follow-up): j.svc reads as a natural-case
-    // fragment ("gear adjustment") — every other row on the page (job titles,
-    // service names elsewhere) is sentence case, so this table was the odd
-    // one out. Capitalise the first letter only (not .toUpperCase(), so
-    // "gear adjustment" reads as a name, not shouted).
-    const work = (j.svc || '').trim();
-    const workCased = work ? work[0].toUpperCase() + work.slice(1) : work;
-    return [mono(j.job), `${dayName} ${date} Sep · ${t}`, esc(workCased), statusBadge(j.key)];
-  });
-  return stack(`<div>${link('‹ Back to job', 'job-overview-desktop.dc.html')}</div>
-${eyebrow('Front desk › Customers')}
-${h2(JOB_CUSTOMER.name, 22)}
-${panel(`${h2('Contact details', 15)}${txt(JOB_CUSTOMER.phone)}${txt(JOB_CUSTOMER.email)}`, '', 14, 6)}
-${panel(`${h2('Bikes on file', 15)}${txt(JOB_CUSTOMER.bike)}`, '', 14, 6)}
-${panel(`${h2('Workshop jobs', 15)}${table([['Job'], ['When'], ['Work'], ['Status']], jobRows, { size: 13 })}`, '', 14, 10)}
-${panel(`${h2('Purchases', 15)}${note('[past purchases from the till]')}`, '', 14, 6)}`, 16);
-}
-// Part A.2 (29 Sep audit follow-up): at the standard 800px board height this
-// page's content (contact, bikes, jobs, purchases) ran past the bottom —
-// fine in the real app (an ordinary page scrolls) but on a still canvas the
-// cut-off "Purchases" panel read as missing content. Grown to 1100px tall
-// (build-diary.mjs's CUSTOM_BOARD_SIZE) rather than trimmed, since trimming
-// would mean losing a real section to make the render fit, not the content.
-// Customer account on tablet and phone (decision 68): the same content as
-// customer-desktop. Tablet: two columns so it fits the screen unscrolled;
-// phone: one scrolling page (allowed), the jobs as stacked rows.
-function customerTouch(size) {
-  const mayaJobs = JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => a.day - b.day || a.start - b.start);
-  const when = (j) => `${DAYS[j.day][0]} ${DAYS[j.day][1]} Sep · ${hhmm(j.start)}`;
-  const work = (j) => { const w = (j.svc || '').trim(); return w ? w[0].toUpperCase() + w.slice(1) : w; };
-  const head = stack(`<div>${touchLink('‹ Back to job', `job-overview-${size}.dc.html`)}</div>${eyebrow('Front desk › Customers')}${h2(JOB_CUSTOMER.name, 22)}`, 4);
-  const contact = panel(`${h2('Contact details', 15)}${txt(JOB_CUSTOMER.phone)}${txt(JOB_CUSTOMER.email)}`, '', 14, 6);
-  const bikes = panel(`${h2('Bikes on file', 15)}${txt(JOB_CUSTOMER.bike)}`, '', 14, 6);
-  const purchases = panel(`${h2('Purchases', 15)}${note('[past purchases from the till]')}`, '', 14, 6);
-  if (size === 'tablet') {
-    const jobRows = mayaJobs.map((j) => [mono(j.job), when(j), esc(work(j)), statusBadge(j.key)]);
-    return grid('minmax(0, 340px) minmax(0, 1fr)', `${stack(`${head}${contact}${bikes}${purchases}`, 14)}${panel(`${h2('Workshop jobs', 15)}${table([['Job'], ['When'], ['Work'], ['Status']], jobRows, { size: 14, pad: '10px 12px' })}`, '', 14, 10)}`, 24);
-  }
-  const rows = mayaJobs.map((j, i) => `<a href="job-overview-${size}.dc.html" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 8px 0; text-decoration: none; color: ${C.ink}; ${i ? `border-top: 1px solid ${C.border};` : ''}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${esc(work(j))}</span><span style="font-size: 13px; color: ${C.muted}">${mono(j.job)} · ${esc(when(j))}</span></span>${statusBadge(j.key)}</a>`).join('');
-  return stack(`${head}${contact}${bikes}${panel(`${h2('Workshop jobs', 15)}<div>${rows}</div>`, '', 14, 6)}${purchases}`, 12);
-}
-export const CUSTOMER_BOARD_H = 1100;
+// ---------- Row 6: Customer account ----------
+// Journey 15 decision 11 (30 Sep): the customer page is journey 15's — a
+// summary on the left, one history on the right — at every size. Getters,
+// because customer.mjs imports this file (see diary-settings above).
+export const CUSTOMER_BOARD_H = DH;
 screens.customer = {
-  desktop: shellDesktop('customers', 'Customer', `<div style="max-width: 760px">${customerBody('desktop')}</div>`, { height: CUSTOMER_BOARD_H }),
-  tablet: shellTablet('customers', 'Customer', customerTouch('tablet')),
-  phone: shellPhone('Customer', `<div data-scroll="page" style="flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; box-sizing: border-box; padding: 14px">${customerTouch('phone')}</div>`, { active: 'customers', pad: 0 }),
+  get desktop() { return customerPageAt('desktop'); },
+  get tablet() { return customerPageAt('tablet'); },
+  get phone() { return customerPageAt('phone'); },
 };
 
 // 27/28. diary-stack-hover / diary-stack-open (decision 59, 29 Sep round 2,

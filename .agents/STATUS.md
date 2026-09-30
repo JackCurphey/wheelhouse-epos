@@ -12,24 +12,23 @@ pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
 Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11), End-of-day
-cash-up (journey 16) and Owner setup (journey 8) are approved and in the
-big canvas; the next journey is
+cash-up (journey 16), Owner setup (journey 8) and Customer service (journey
+15) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (268 files of
+board linking to its journey's own canvas for tablet and phone (278 files of
 the 512 a canvas can hold).
 
-**Journey 15, Customer service (30 Sep, in progress):** 12 decisions in
+**Journey 15, Customer service (30 Sep):** approved at desktop, tablet and
+phone and copied into the big canvas; 14 decisions in
 `docs/decisions/2026-09-30-customer-service-review.md` — a summary and one
-history per customer (newest first, open now at the top); address, note,
-company or club customers; bike warranty; duplicates caught while adding;
-account payments at the till or by bank transfer; customer groups with an
-automatic discount (Settings › Payments); privacy requests list; loyalty is
-store credit earned by buying (journeys 11 and 8 updated). UI audit done
-and fixes adopted (decision 12, `customer-ui-audit.md`). Desktop approved
-(decision 13); tablet and phone drawn (60 boards); next: Jack approves, then big canvas; on approval
-this page replaces journey 12's Customer account board (decision 11). Own
-canvas: https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox . Generator:
-`customer.mjs` + `build-customer.mjs --theme sand`.
+history per customer; address, note, company or club customers; bike
+warranty; duplicates caught while adding; account payments at the till or
+by bank transfer; customer groups with an automatic discount; privacy
+requests list; loyalty is store credit earned by buying (journeys 11 and 8
+updated). Journey 12's Customer account board is now this page. Own canvas:
+https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox . Generator:
+`customer.mjs` + `build-customer.mjs --theme sand`; audit in
+`customer-ui-audit.md`.
 
 **Journey 8, Owner setup (30 Sep):** approved at desktop, tablet and phone
 and copied into the big canvas; 23 decisions in

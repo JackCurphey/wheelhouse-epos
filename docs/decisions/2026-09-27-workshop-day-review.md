@@ -349,3 +349,8 @@ phone follow when journey 8's tablet and phone are drawn.
 **Later change (30 Sep, Owner setup decision 15):** the Settings ·
 Accessibility board (`settings-accessibility`, decision 57) is removed from
 this journey — Accessibility lives in Your settings (app map decision 8).
+
+**Later change (30 Sep, Customer service decision 11):** the Customer
+account board (`customer`) is now journey 15's customer page — a summary on
+the left, one history on the right — at every size, on this journey's
+canvas and the big canvas.

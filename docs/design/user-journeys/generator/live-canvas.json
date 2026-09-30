@@ -1519,7 +1519,7 @@
    "x": 34960,
    "y": 27718,
    "w": 1280,
-   "h": 1156,
+   "h": 856,
    "title": "Designed · Customer account (desktop)",
    "is_interactive": true
   },
@@ -1533,7 +1533,7 @@
   },
   "j13-po-suppliers.dc.html": {
    "x": 0,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Old app · Suppliers",
@@ -1541,7 +1541,7 @@
   },
   "j13-po-feed.dc.html": {
    "x": 1180,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Old app · Supplier catalogue",
@@ -1549,7 +1549,7 @@
   },
   "j13-po-list.dc.html": {
    "x": 2520,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Old app · Purchase orders",
@@ -1557,7 +1557,7 @@
   },
   "j13-po-edit.dc.html": {
    "x": 3700,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Old app · Draft a purchase order",
@@ -1565,7 +1565,7 @@
   },
   "j13-po-send.dc.html": {
    "x": 4880,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Send the order",
@@ -1573,7 +1573,7 @@
   },
   "j13-po-suggest.dc.html": {
    "x": 6060,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Reorder suggestions",
@@ -1581,7 +1581,7 @@
   },
   "j13-po-receive.dc.html": {
    "x": 7400,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Old app · Receive a delivery",
@@ -1589,7 +1589,7 @@
   },
   "j13-po-invoice.dc.html": {
    "x": 8580,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Check the supplier invoice",
@@ -1597,7 +1597,7 @@
   },
   "j13-po-labels.dc.html": {
    "x": 9760,
-   "y": 29874,
+   "y": 29574,
    "w": 1100,
    "h": 816,
    "title": "Old app · Print labels",
@@ -1605,7 +1605,7 @@
   },
   "j14-stock-list.dc.html": {
    "x": 0,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Old app · Stock list",
@@ -1613,7 +1613,7 @@
   },
   "j14-stock-product.dc.html": {
    "x": 1180,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Old app · Product page",
@@ -1621,7 +1621,7 @@
   },
   "j14-stock-variants.dc.html": {
    "x": 2360,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sizes and colours",
@@ -1629,7 +1629,7 @@
   },
   "j14-stock-serials.dc.html": {
    "x": 3540,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Serial numbers",
@@ -1637,7 +1637,7 @@
   },
   "j14-stock-pricing.dc.html": {
    "x": 4720,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Price rules",
@@ -1645,7 +1645,7 @@
   },
   "j14-stock-sites.dc.html": {
    "x": 6060,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Stock by site",
@@ -1653,7 +1653,7 @@
   },
   "j14-stock-transfer.dc.html": {
    "x": 7240,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Transfer between sites",
@@ -1661,7 +1661,7 @@
   },
   "j14-take-start.dc.html": {
    "x": 8580,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Start a stock take",
@@ -1669,7 +1669,7 @@
   },
   "j14-take-count.dc.html": {
    "x": 9760,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Count",
@@ -1677,7 +1677,7 @@
   },
   "j14-take-diff.dc.html": {
    "x": 10940,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Differences",
@@ -1685,7 +1685,7 @@
   },
   "j14-take-post.dc.html": {
    "x": 12120,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Apply the count",
@@ -1693,7 +1693,7 @@
   },
   "j14-stock-adjust.dc.html": {
    "x": 13460,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Old app · Adjust stock",
@@ -1701,87 +1701,167 @@
   },
   "j14-stock-check.dc.html": {
    "x": 14640,
-   "y": 31690,
+   "y": 31390,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Check these (below zero)",
    "is_interactive": true
   },
-  "j15-customers.dc.html": {
+  "j15-cs-list-desktop.dc.html": {
    "x": 0,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · Customer & bike records",
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Customers: find someone, or add them (desktop)",
    "is_interactive": true
   },
-  "j15-customer-record.dc.html": {
-   "x": 1180,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · Edit a customer and bike",
+  "j15-cs-page-desktop.dc.html": {
+   "x": 1320,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A customer’s page: details, bikes with warranty, one history (desktop)",
    "is_interactive": true
   },
-  "j15-duplicates.dc.html": {
-   "x": 2360,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · Review a possible duplicate",
+  "j15-cs-page-over-desktop.dc.html": {
+   "x": 2640,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Over her account limit (desktop)",
    "is_interactive": true
   },
-  "j15-cust-history.dc.html": {
-   "x": 3540,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · One history per customer",
+  "j15-cs-page-new-desktop.dc.html": {
+   "x": 3960,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A new customer: nothing in the history yet (desktop)",
    "is_interactive": true
   },
-  "j15-cust-groups.dc.html": {
-   "x": 4720,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Customer groups",
+  "j15-cs-page-off-desktop.dc.html": {
+   "x": 5280,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A shop with customer accounts switched off (Payments › Ways to pay) (desktop)",
    "is_interactive": true
   },
-  "j15-cust-loyalty.dc.html": {
-   "x": 6060,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Loyalty points",
+  "j15-cs-sale-desktop.dc.html": {
+   "x": 6600,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A sale from her history: refunds start here (desktop)",
    "is_interactive": true
   },
-  "j15-cust-account.dc.html": {
-   "x": 7240,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Credit account",
+  "j15-cs-credit-desktop.dc.html": {
+   "x": 7920,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add or take away store credit, with a reason (desktop)",
    "is_interactive": true
   },
-  "j15-cust-consent.dc.html": {
-   "x": 8420,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Marketing permission",
+  "j15-cs-edit-desktop.dc.html": {
+   "x": 9240,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Edit her details (desktop)",
    "is_interactive": true
   },
-  "j15-cust-privacy.dc.html": {
-   "x": 9600,
-   "y": 33506,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Privacy requests",
+  "j15-cs-add-desktop.dc.html": {
+   "x": 10560,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a customer: a person (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-add-company-desktop.dc.html": {
+   "x": 11880,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a customer: a company or club (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-account-desktop.dc.html": {
+   "x": 13360,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Her account: balance, her limit, statement, pay it off (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-transfer-desktop.dc.html": {
+   "x": 14680,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Record a bank transfer (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-groups-desktop.dc.html": {
+   "x": 16160,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Payments › Customer groups (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-privacy-desktop.dc.html": {
+   "x": 17640,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Privacy requests: dated, answered within a month (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-privacy-delete-desktop.dc.html": {
+   "x": 18960,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deleting someone’s details: sales stay, without their name (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-privacy-blocked-desktop.dc.html": {
+   "x": 20280,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Can’t delete yet: money, credit or a bike still open (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-add-match-desktop.dc.html": {
+   "x": 21760,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Adding someone who’s already here (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-page-dup-desktop.dc.html": {
+   "x": 23080,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A possible duplicate, flagged on the page (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-merge-desktop.dc.html": {
+   "x": 24400,
+   "y": 33206,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The same person? Keep or merge (desktop)",
    "is_interactive": true
   },
   "j16-eod-entry-desktop.dc.html": {
    "x": 0,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Close the day appears in the till bar after closing time (desktop)",
@@ -1789,7 +1869,7 @@
   },
   "j16-eod-waiting-desktop.dc.html": {
    "x": 1320,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Close the day: a till still has sales waiting (desktop)",
@@ -1797,7 +1877,7 @@
   },
   "j16-eod-attention-desktop.dc.html": {
    "x": 2640,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Close the day: sales that need checking (desktop)",
@@ -1805,7 +1885,7 @@
   },
   "j16-eod-check-desktop.dc.html": {
    "x": 3960,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Checking a flagged sale (desktop)",
@@ -1813,7 +1893,7 @@
   },
   "j16-eod-count-desktop.dc.html": {
    "x": 5280,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Count the cash: note by note (blind) (desktop)",
@@ -1821,7 +1901,7 @@
   },
   "j16-eod-count-shown-desktop.dc.html": {
    "x": 6600,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Count the cash: with the expected amount shown (shop setting) (desktop)",
@@ -1829,7 +1909,7 @@
   },
   "j16-eod-count-result-desktop.dc.html": {
    "x": 7920,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Count the cash: the difference (desktop)",
@@ -1837,7 +1917,7 @@
   },
   "j16-eod-count-exact-desktop.dc.html": {
    "x": 9240,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Count the cash: spot on (desktop)",
@@ -1845,7 +1925,7 @@
   },
   "j16-eod-banking-desktop.dc.html": {
    "x": 10560,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Paid-outs and banking: leave the float, bank the rest (desktop)",
@@ -1853,7 +1933,7 @@
   },
   "j16-eod-banking-none-desktop.dc.html": {
    "x": 11880,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Paid-outs and banking: nothing taken out today (desktop)",
@@ -1861,7 +1941,7 @@
   },
   "j16-eod-paidout-desktop.dc.html": {
    "x": 13200,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a paid-out (desktop)",
@@ -1869,7 +1949,7 @@
   },
   "j16-eod-card-desktop.dc.html": {
    "x": 14520,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Card sales don’t match the card machine (desktop)",
@@ -1877,7 +1957,7 @@
   },
   "j16-eod-finish-desktop.dc.html": {
    "x": 15840,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Ready to close the day (desktop)",
@@ -1885,7 +1965,7 @@
   },
   "j16-eod-z-desktop.dc.html": {
    "x": 17160,
-   "y": 35322,
+   "y": 35062,
    "w": 1280,
    "h": 856,
    "title": "Designed · Day closed: the end-of-day report (desktop)",
@@ -1893,7 +1973,7 @@
   },
   "j17-rep-today.dc.html": {
    "x": 0,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Old app · Today",
@@ -1901,7 +1981,7 @@
   },
   "j17-rep-sales.dc.html": {
    "x": 1180,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sales report",
@@ -1909,7 +1989,7 @@
   },
   "j17-rep-margin.dc.html": {
    "x": 2360,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Margin and stock value",
@@ -1917,7 +1997,7 @@
   },
   "j17-rep-vat.dc.html": {
    "x": 3540,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · VAT summary",
@@ -1925,7 +2005,7 @@
   },
   "j17-rep-workshop.dc.html": {
    "x": 4720,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Workshop report",
@@ -1933,7 +2013,7 @@
   },
   "j17-rep-customers.dc.html": {
    "x": 5900,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Returning customers",
@@ -1941,7 +2021,7 @@
   },
   "j17-acc-connect.dc.html": {
    "x": 7240,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Connect Xero or QuickBooks",
@@ -1949,7 +2029,7 @@
   },
   "j17-acc-map.dc.html": {
    "x": 8420,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Match accounts",
@@ -1957,7 +2037,7 @@
   },
   "j17-acc-log.dc.html": {
    "x": 9600,
-   "y": 37178,
+   "y": 36918,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Sent to accounts",
@@ -1965,7 +2045,7 @@
   },
   "j18-site-settings.dc.html": {
    "x": 0,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Old app · Website settings",
@@ -1973,7 +2053,7 @@
   },
   "j18-site-theme.dc.html": {
    "x": 1180,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Theme editor",
@@ -1981,7 +2061,7 @@
   },
   "j18-site-pages.dc.html": {
    "x": 2360,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Pages",
@@ -1989,7 +2069,7 @@
   },
   "j18-site-publish.dc.html": {
    "x": 3540,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Preview and publish",
@@ -1997,7 +2077,7 @@
   },
   "j18-site-domain.dc.html": {
    "x": 4720,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Own web address",
@@ -2005,7 +2085,7 @@
   },
   "j18-site-shopify.dc.html": {
    "x": 5900,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Old app · Shopify connection (to retire)",
@@ -2013,7 +2093,7 @@
   },
   "j18-site-payments.dc.html": {
    "x": 7240,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Online payments setup",
@@ -2021,7 +2101,7 @@
   },
   "j18-site-orders.dc.html": {
    "x": 8420,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Online orders",
@@ -2029,7 +2109,7 @@
   },
   "j18-site-collect.dc.html": {
    "x": 9600,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Click and collect queue",
@@ -2037,7 +2117,7 @@
   },
   "j18-site-refund.dc.html": {
    "x": 10780,
-   "y": 38994,
+   "y": 38734,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Refund an online order",
@@ -2045,7 +2125,7 @@
   },
   "j19-multi-switch.dc.html": {
    "x": 0,
-   "y": 40810,
+   "y": 40550,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Site switcher",
@@ -2053,7 +2133,7 @@
   },
   "j19-multi-reports.dc.html": {
    "x": 1180,
-   "y": 40810,
+   "y": 40550,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Reports and cash-up by site",
@@ -2061,7 +2141,7 @@
   },
   "j19-multi-tills.dc.html": {
    "x": 2360,
-   "y": 40810,
+   "y": 40550,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Tills across sites",
@@ -2069,7 +2149,7 @@
   },
   "j20-ops-audit.dc.html": {
    "x": 0,
-   "y": 42626,
+   "y": 42366,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Activity log",
@@ -2077,7 +2157,7 @@
   },
   "j20-ops-devices.dc.html": {
    "x": 1180,
-   "y": 42626,
+   "y": 42366,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Signed-in devices",
@@ -2085,7 +2165,7 @@
   },
   "j20-ops-feedback.dc.html": {
    "x": 2360,
-   "y": 42626,
+   "y": 42366,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Send feedback",
@@ -2093,7 +2173,7 @@
   },
   "j21-connect.dc.html": {
    "x": 0,
-   "y": 44442,
+   "y": 44182,
    "w": 1100,
    "h": 816,
    "title": "Designed · Connect the one chosen Lightspeed",
@@ -2101,7 +2181,7 @@
   },
   "j21-connect-proof.dc.html": {
    "x": 1180,
-   "y": 44442,
+   "y": 44182,
    "w": 1100,
    "h": 816,
    "title": "Designed · Verify connector capabilities",
@@ -2109,7 +2189,7 @@
   },
   "j21-pos.dc.html": {
    "x": 2360,
-   "y": 44442,
+   "y": 44182,
    "w": 1100,
    "h": 816,
    "title": "Designed · Handoff agreed work to Lightspeed",
@@ -2117,7 +2197,7 @@
   },
   "j21-pos-done.dc.html": {
    "x": 3540,
-   "y": 44442,
+   "y": 44182,
    "w": 1100,
    "h": 816,
    "title": "Designed · See the linked work order",
@@ -2125,7 +2205,7 @@
   },
   "j21-pos-unknown.dc.html": {
    "x": 4720,
-   "y": 44442,
+   "y": 44182,
    "w": 1100,
    "h": 816,
    "title": "Designed · Uncertain Lightspeed handoff",
@@ -2362,15 +2442,25 @@
   "j14-take-post.dc.html",
   "j14-stock-adjust.dc.html",
   "j14-stock-check.dc.html",
-  "j15-customers.dc.html",
-  "j15-customer-record.dc.html",
-  "j15-duplicates.dc.html",
-  "j15-cust-history.dc.html",
-  "j15-cust-groups.dc.html",
-  "j15-cust-loyalty.dc.html",
-  "j15-cust-account.dc.html",
-  "j15-cust-consent.dc.html",
-  "j15-cust-privacy.dc.html",
+  "j15-cs-list-desktop.dc.html",
+  "j15-cs-page-desktop.dc.html",
+  "j15-cs-page-over-desktop.dc.html",
+  "j15-cs-page-new-desktop.dc.html",
+  "j15-cs-page-off-desktop.dc.html",
+  "j15-cs-sale-desktop.dc.html",
+  "j15-cs-credit-desktop.dc.html",
+  "j15-cs-edit-desktop.dc.html",
+  "j15-cs-add-desktop.dc.html",
+  "j15-cs-add-company-desktop.dc.html",
+  "j15-cs-account-desktop.dc.html",
+  "j15-cs-transfer-desktop.dc.html",
+  "j15-cs-groups-desktop.dc.html",
+  "j15-cs-privacy-desktop.dc.html",
+  "j15-cs-privacy-delete-desktop.dc.html",
+  "j15-cs-privacy-blocked-desktop.dc.html",
+  "j15-cs-add-match-desktop.dc.html",
+  "j15-cs-page-dup-desktop.dc.html",
+  "j15-cs-merge-desktop.dc.html",
   "j16-eod-entry-desktop.dc.html",
   "j16-eod-waiting-desktop.dc.html",
   "j16-eod-attention-desktop.dc.html",
@@ -2937,7 +3027,7 @@
   },
   "j13_s56": {
    "x": 0,
-   "y": 29634,
+   "y": 29334,
    "text": "Suppliers",
    "w": 520,
    "size": "l",
@@ -2947,7 +3037,7 @@
   },
   "j13_s57": {
    "x": 2520,
-   "y": 29634,
+   "y": 29334,
    "text": "Orders",
    "w": 520,
    "size": "l",
@@ -2957,7 +3047,7 @@
   },
   "j13_s58": {
    "x": 7400,
-   "y": 29634,
+   "y": 29334,
    "text": "Delivery",
    "w": 520,
    "size": "l",
@@ -2967,14 +3057,14 @@
   },
   "j13_title": {
    "x": 0,
-   "y": 29314,
+   "y": 29014,
    "text": "13 · Receiving stock and purchase orders — Staff and Manager",
    "kind": "title1",
    "maxW": 10860
   },
   "j14_s60": {
    "x": 0,
-   "y": 31450,
+   "y": 31150,
    "text": "Products",
    "w": 520,
    "size": "l",
@@ -2984,7 +3074,7 @@
   },
   "j14_s61": {
    "x": 6060,
-   "y": 31450,
+   "y": 31150,
    "text": "Across sites",
    "w": 520,
    "size": "l",
@@ -2994,7 +3084,7 @@
   },
   "j14_s62": {
    "x": 8580,
-   "y": 31450,
+   "y": 31150,
    "text": "Stock take",
    "w": 520,
    "size": "l",
@@ -3004,7 +3094,7 @@
   },
   "j14_s63": {
    "x": 13460,
-   "y": 31450,
+   "y": 31150,
    "text": "Corrections",
    "w": 520,
    "size": "l",
@@ -3014,15 +3104,15 @@
   },
   "j14_title": {
    "x": 0,
-   "y": 31130,
+   "y": 30830,
    "text": "14 · Stock take and stock control — Staff and Manager",
    "kind": "title1",
    "maxW": 15740
   },
   "j15_s65": {
    "x": 0,
-   "y": 33266,
-   "text": "Customers",
+   "y": 32966,
+   "text": "Customers and the customer page",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -3030,9 +3120,39 @@
    "maxH": 150
   },
   "j15_s66": {
-   "x": 6060,
-   "y": 33266,
-   "text": "Loyalty and accounts",
+   "x": 13360,
+   "y": 32966,
+   "text": "Accounts (pay later)",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s67": {
+   "x": 16160,
+   "y": 32966,
+   "text": "Customer groups",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s68": {
+   "x": 17640,
+   "y": 32966,
+   "text": "Privacy requests",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s69": {
+   "x": 21760,
+   "y": 32966,
+   "text": "Possible duplicates",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -3041,14 +3161,14 @@
   },
   "j15_title": {
    "x": 0,
-   "y": 32946,
+   "y": 32646,
    "text": "15 · Customer service — Staff and Manager",
    "kind": "title1",
-   "maxW": 10700
+   "maxW": 25640
   },
-  "j16_s68": {
+  "j16_s71": {
    "x": 0,
-   "y": 35082,
+   "y": 34822,
    "text": "Close the day",
    "w": 520,
    "size": "l",
@@ -3058,14 +3178,14 @@
   },
   "j16_title": {
    "x": 0,
-   "y": 34762,
+   "y": 34502,
    "text": "16 · End-of-day cash-up — Staff and Manager",
    "kind": "title1",
    "maxW": 18400
   },
-  "j17_s70": {
+  "j17_s73": {
    "x": 0,
-   "y": 36938,
+   "y": 36678,
    "text": "Reports",
    "w": 520,
    "size": "l",
@@ -3073,9 +3193,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s71": {
+  "j17_s74": {
    "x": 7240,
-   "y": 36938,
+   "y": 36678,
    "text": "Accounts software",
    "w": 520,
    "size": "l",
@@ -3085,14 +3205,14 @@
   },
   "j17_title": {
    "x": 0,
-   "y": 36618,
+   "y": 36358,
    "text": "17 · Reports and accounts — Manager and Owner",
    "kind": "title1",
    "maxW": 10700
   },
-  "j18_s73": {
+  "j18_s76": {
    "x": 0,
-   "y": 38754,
+   "y": 38494,
    "text": "Design the website",
    "w": 520,
    "size": "l",
@@ -3100,9 +3220,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s74": {
+  "j18_s77": {
    "x": 7240,
-   "y": 38754,
+   "y": 38494,
    "text": "Online orders",
    "w": 520,
    "size": "l",
@@ -3112,14 +3232,14 @@
   },
   "j18_title": {
    "x": 0,
-   "y": 38434,
+   "y": 38174,
    "text": "18 · Website management — Manager",
    "kind": "title1",
    "maxW": 11880
   },
-  "j19_s76": {
+  "j19_s79": {
    "x": 0,
-   "y": 40570,
+   "y": 40310,
    "text": "Across sites",
    "w": 520,
    "size": "l",
@@ -3129,14 +3249,14 @@
   },
   "j19_title": {
    "x": 0,
-   "y": 40250,
+   "y": 39990,
    "text": "19 · Multiple sites — Owner and Manager",
    "kind": "title1",
    "maxW": 3460
   },
-  "j20_s78": {
+  "j20_s81": {
    "x": 0,
-   "y": 42386,
+   "y": 42126,
    "text": "Oversight",
    "w": 520,
    "size": "l",
@@ -3146,14 +3266,14 @@
   },
   "j20_title": {
    "x": 0,
-   "y": 42066,
+   "y": 41806,
    "text": "20 · Management oversight — Owner",
    "kind": "title1",
    "maxW": 3460
   },
-  "j21_s80": {
+  "j21_s83": {
    "x": 0,
-   "y": 44202,
+   "y": 43942,
    "text": "Connection and handoff",
    "w": 520,
    "size": "l",
@@ -3163,7 +3283,7 @@
   },
   "j21_title": {
    "x": 0,
-   "y": 43882,
+   "y": 43622,
    "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
    "kind": "title1",
    "maxW": 5820
