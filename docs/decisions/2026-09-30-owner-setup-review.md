@@ -84,7 +84,7 @@ one from the staff list.
     little jobs on demand… we want to book that into the diary, but I
     don't necessarily want people to be able to book my time in because I
     don't have a proper schedule." Online booking starts on for Mechanics
-    and off for everyone else (drawn assumption). Chosen over the Mechanic
+    and off for everyone else (Jack, 30 Sep, settling the draft). Chosen over the Mechanic
     role only and a separate mechanics list.
 12. **Journey 12's "Diary & storage" settings board is redrawn inside
     Settings › Workshop** (Jack, 30 Sep): its approved content (what a diary
