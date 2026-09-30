@@ -169,7 +169,14 @@ one from the staff list.
 21. **Desktop approved; on to tablet and phone** (Jack, 30 Sep: "I think
     that looks good. Should we go on to just make the mobile pages, and
     then we can finish the section up?"). Tablet and phone follow the
-    journeys before: the same recipes at three sizes.
+    journeys before: the same recipes at three sizes. Drawn 30 Sep: tablet
+    keeps the desktop layout with a narrower area list; a phone opens
+    Settings on the list of areas (`set-list`) and each area is its own page
+    with "‹ Settings" back; pop-ups fill the phone; hover-only Edit and
+    Remove aren't drawn on a phone (a tap opens the row); the checklist's
+    steps are whole tappable rows on a phone. Journey 12's Diary & storage
+    tablet and phone boards now use the same frame (decision 12 done at
+    every size); its old tabbed Settings code is removed.
 
 ## Noted for later (not for this journey)
 

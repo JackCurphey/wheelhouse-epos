@@ -9,9 +9,8 @@
 // Accessories) and buttons (Standard service £65, Fit & adjust brakes £18,
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
-import { AREAS, fold, pill, offer, choice, note, shell, settingsPage, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
-import { screens as diaryScreens, shellDesktop } from './diary.mjs';
-import { popup, overlay } from './cashup.mjs';
+import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
+import { screens as diaryScreens } from './diary.mjs';
 
 export const screens = {};
 // The shop's owner — no owner name exists in the example data (decision 16).
@@ -84,10 +83,10 @@ const tillFolds = (open = {}) =>
 // Quick buttons: groups as pills, the group's buttons in till order. Hover a
 // button to reveal Edit and Remove (right-click / long-press kept, Workshop
 // day 65); drag the handle to reorder.
-const qbRow = (name, sub, price, hover = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)} — drag, or use the arrow keys" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${esc(sub)}</span></span>${mono(price, 'font-size: 15px')}${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button>${button('Remove', { variant: 'danger' })}` : ''}</div>`;
+const qbRow = (name, sub, price, hv = false, hover = hv && !isPhone()) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)} — drag, or use the arrow keys" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${esc(sub)}</span></span>${mono(price, 'font-size: 15px')}${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button>${button('Remove', { variant: 'danger' })}` : ''}</div>`;
 const quickOpen = (hover = true, added = false) => `<div role="group" aria-label="Quick button groups" style="display: flex; flex-wrap: wrap; gap: 8px">${pill('Workshop', true)}${pill('Parts')}${pill('Accessories')}${pill('+ Add a group')}</div>
 <div style="display: flex; flex-direction: column; gap: 8px">${qbRow('Standard service', 'Labour · 60 min', '£65.00')}${qbRow('Fit & adjust brakes', 'Labour · 30 min', '£18.00', hover)}${qbRow('Replace gear cable', 'Labour', '£12.00')}${added ? qbRow('Shimano brake pads B05S-RX', 'Part', '£28.00') : ''}</div>
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">${button('+ Add a button', { variant: 'default' })}${note('Buttons show on the till in this order.')}</div>`;
+<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Add a button', { variant: 'default' })}${note('Buttons show on the till in this order.')}</div>`;
 
 // Add a quick button: find the product or service, pick its group. The
 // button's name and price come from the product; the name can be shortened.
@@ -114,7 +113,7 @@ const receiptPreview = () => `<div aria-label="Receipt preview" style="width: 23
 <div style="display: flex; justify-content: space-between; font-weight: 700"><span>Total</span><span>£65.00</span></div><div style="display: flex; justify-content: space-between"><span>incl. VAT</span><span>£10.83</span></div>
 <div style="border-top: 1px dashed ${C.border}; padding-top: 6px; text-align: center; color: ${C.muted}">[Your words at the bottom]</div>
 <div aria-hidden="true" style="height: 30px; margin-top: 4px; background: repeating-linear-gradient(90deg, ${C.ink} 0 2px, #ffffff 2px 4px, ${C.ink} 4px 5px, #ffffff 5px 8px)"></div><div style="text-align: center">B1-[0000]</div></div>`;
-const receiptsOpen = () => `<div style="display: flex; gap: 24px; align-items: flex-start"><div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+const receiptsOpen = () => `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 24px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}"><div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
 <div role="group" aria-label="What the Paid pop-up offers" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">After a sale, offer</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${offer('Print', true)}${offer('Email', true)}${offer('Text', true)}</div><span style="font-size: 13px; color: ${C.muted}">“No receipt” is always there too.</span></div>
 <div style="display: flex; flex-direction: column; gap: 6px"><label for="rc-foot" style="font-size: 14px; font-weight: 600">Words at the bottom</label><textarea id="rc-foot" rows="3" placeholder="e.g. your returns policy, a thank-you" style="box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}; resize: none"></textarea></div>
 ${note('The shop’s name and address come from Shop and sites. Every receipt carries a barcode so a refund can find the sale.')}
@@ -171,7 +170,7 @@ const PAY_INTRO = 'How customers can pay.';
 // "on" way can show its one setting underneath.
 const way = (name, sub, on, extra = '') => `<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${on === null ? '' : offer(on ? 'On' : 'Off', on)}</div>${extra}</div>`;
 const limitInput = `<div style="display: flex; align-items: center; gap: 10px"><label for="pay-limit" style="font-size: 14px; flex-grow: 1">Most a customer can owe</label><input id="pay-limit" value="[£ limit]" style="width: 120px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"></div><span style="font-size: 13px; color: ${C.muted}">For everyone. Change it for one customer on their page.</span>`;
-const payWays = () => `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start">${way('Cash', 'Always on', null)}${way('Card', 'Through the card machine', true)}
+const payWays = () => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px; align-items: start">${way('Cash', 'Always on', null)}${way('Card', 'Through the card machine', true)}
 ${way('Gift cards', 'Sell, top up and spend', true)}${way('Store credit', 'Given on refunds without a receipt', true)}
 ${way('Customer accounts', 'Pay later, settled from the customer’s page', true, limitInput)}${way('Loyalty points', 'Earn and spend', false)}
 ${way('Deposits', 'Part now, the rest later, on workshop jobs', true)}</div>`;
@@ -196,12 +195,12 @@ def('set-pay-card', () => settingsPage('payments', 'Payments', PAY_INTRO, payFol
 // Seen by Jack Lewis (Manager). Only the Owner adds or removes people.
 const STAFF_INTRO = 'Who works here, and what each person can do.';
 const SWITCHES = ['Can use the till', 'Can see reports', 'Can close the day', 'Can order stock', 'Can edit the website', 'Can change settings'];
-const personRow = (name, role, extras, { you = false, hover = false } = {}) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}">
+const personRow = (name, role, extras, { you = false, hover: hv = false } = {}, hover = hv && !isPhone()) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}">
 <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: ${C.mutedBg}; font-size: 13px; font-weight: 700; flex-shrink: 0">${name.split(' ').map((x) => x[0]).join('')}</span>
 <span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${esc(name)}${you ? `<span style="font-weight: 400; color: ${C.muted}"> · you</span>` : ''}</span><span style="font-size: 13px; color: ${C.muted}">${esc(role)}${extras ? ` · ${esc(extras)}` : ''}</span></span>
 ${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Open</button>` : `<span style="display: inline-flex; color: ${C.muted}; padding: 0 12px; transform: rotate(-90deg)">${icon('chevron', 16)}</span>`}</div>`;
 const peopleOpen = (hover = true, owner = false) => `<div style="display: flex; flex-direction: column; gap: 8px">${personRow('Jack Lewis', 'Manager', '', { you: !owner })}${personRow('Jo Taylor', 'Staff', 'works in the workshop', { hover })}${personRow('Alex Morgan', 'Mechanic', 'can use the till')}</div>
-${owner ? `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">${button('+ Invite someone', { variant: 'default' })}${note('Everyone sets their own till PIN in Your settings.')}</div>` : note('Only the owner can add or remove people. Everyone sets their own till PIN in Your settings.')}`;
+${owner ? `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Invite someone', { variant: 'default' })}${note('Everyone sets their own till PIN in Your settings.')}</div>` : note('Only the owner can add or remove people. Everyone sets their own till PIN in Your settings.')}`;
 const roleLine = (r, d) => `<div style="display: flex; gap: 16px; padding: 12px 0; border-top: 1px solid ${C.border}"><span style="width: 110px; flex-shrink: 0; font-size: 15px; font-weight: 700">${r}</span><span style="font-size: 15px; line-height: 1.5">${d}</span></div>`;
 const rolesOpen = () => `${roleLine('Owner', 'Everything, including adding and removing people and tills.')}${roleLine('Manager', 'Everything except adding and removing people and tills.')}${roleLine('Staff', 'The till, customers, messages, stock and the workshop diary.')}${roleLine('Mechanic', 'The workshop diary and jobs.')}
 ${note('Switches on a person add to their role — up to everything a Manager can do.')}`;
@@ -209,11 +208,11 @@ const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Mo
 
 // Decision 11: "Works in the workshop" gives a diary column; turning it on
 // shows whether customers can book this person online.
-const toggleLine = (t, sub, on, indent = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; ${indent ? `margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}` : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${offer(on ? 'On' : 'Off', on)}</div>`;
+const toggleLine = (t, sub, on, indent = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; ${indent ? `margin-left: ${isPhone() ? 0 : 18}px; padding-left: ${isPhone() ? 0 : 14}px; border-left: ${isPhone() ? 0 : 1}px solid ${C.border}` : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${offer(on ? 'On' : 'Off', on)}</div>`;
 // Decision 13: each workshop person's working days, as toggle pills.
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const dayPill = (d, on) => `<button type="button" aria-pressed="${on}" aria-label="${d}" style="min-width: 44px; min-height: 44px; padding: 0 6px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${d}</button>`;
-const workingDays = () => `<div role="group" aria-label="Works in the workshop on" style="display: flex; flex-direction: column; gap: 8px; margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">In the workshop on</span><div style="display: flex; flex-wrap: nowrap; gap: 4px">${DAYS.map((d) => dayPill(d, ['Tue', 'Wed', 'Sat'].includes(d))).join('')}</div></div>`;
+const workingDays = () => `<div role="group" aria-label="Works in the workshop on" style="display: flex; flex-direction: column; gap: 8px; margin-left: ${isPhone() ? 0 : 18}px; padding-left: ${isPhone() ? 0 : 14}px; border-left: ${isPhone() ? 0 : 1}px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">In the workshop on</span><div style="display: flex; flex-wrap: nowrap; gap: 4px">${DAYS.map((d) => dayPill(d, ['Tue', 'Wed', 'Sat'].includes(d))).join('')}</div></div>`;
 const workshopBlock = (on) => `<div style="display: flex; flex-direction: column; gap: 6px">${toggleLine('Works in the workshop', 'Gets a column in the diary', on)}${on ? `${toggleLine('Customers can book Jo online', 'Off: staff can still book jobs in for Jo', false, true)}${workingDays()}` : ''}</div>`;
 // One person, in a pop-up in the middle (Workshop day 15, 16). The role by
 // pill; the switches as toggle pills; the PIN line (signing in 6).
@@ -224,7 +223,7 @@ function personDialog({ all = false, workshop = true } = {}) {
   // Jack (30 Sep): the role runs across the top; both columns start together
 // underneath it.
   return popup('p-title', 'Jo Taylor', 'Staff · [email]', `${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}
-<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: start; padding-top: 16px; border-top: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: ${isPhone() ? 20 : 28}px; align-items: start; padding-top: 16px; border-top: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 16px">
 <div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">Also allowed to</span>${all ? `<span style="font-size: 13px; color: ${C.muted}">Everything a Manager can do — Jo’s role still says Staff</span>` : button('Give everything a Manager can do', { variant: 'default', block: true })}</div>
 <div style="display: flex; flex-direction: column; gap: 8px">${SWITCHES.map(sw).join('')}</div>
 </div>
@@ -250,11 +249,13 @@ def('set-staff-invite', () => overlay(settingsPage('staff', 'Staff and roles', S
 
 // ---------- Shop and sites (decision 13) ----------
 const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
-const inputRow = (id, label, value) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}"><label for="${id}" style="width: 160px; flex-shrink: 0; font-size: 15px; font-weight: 600">${label}</label><input id="${id}" value="${esc(value)}" style="flex-grow: 1; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>`;
+const inputRow = (id, label, value) => `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'stretch' : 'center'}; gap: ${isPhone() ? 6 : 12}px; min-height: 52px; padding: ${isPhone() ? '8px 0' : '0'}; border-top: 1px solid ${C.border}"><label for="${id}" style="width: ${isPhone() ? 'auto' : '160px'}; flex-shrink: 0; font-size: 15px; font-weight: 600">${label}</label><input id="${id}" value="${esc(value)}" style="flex-grow: 1; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>`;
 const detailsOpen = () => `${inputRow('shop-name', 'Shop name', 'North Street Cycles')}${inputRow('shop-address', 'Address', '[address]')}${inputRow('shop-phone', 'Phone', '[phone number]')}${inputRow('shop-email', 'Email', '[email address]')}${inputRow('shop-vat', 'VAT number', '[VAT number]')}
 ${note('These show on receipts, emails and the website.')}`;
 const timeBox = (label, v) => `<input aria-label="${label}" value="${v}" style="width: 96px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">`;
-const hoursRow = (d, open) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 50px; border-top: 1px solid ${C.border}"><span style="width: 60px; font-size: 15px; font-weight: 600">${d}</span>${open ? `${timeBox(`${d} opens`, '[opens]')}<span style="color: ${C.muted}">to</span>${timeBox(`${d} closes`, '[closes]')}` : ''}<span style="flex-grow: 1"></span>${offer(open ? 'Open' : 'Closed', open)}</div>`;
+const hoursRow = (d, open) => isPhone()
+  ? `<div style="display: flex; flex-direction: column; gap: 8px; padding: 8px 0; border-top: 1px solid ${C.border}"><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 15px; font-weight: 600">${d}</span>${offer(open ? 'Open' : 'Closed', open)}</div>${open ? `<div style="display: flex; align-items: center; gap: 8px">${timeBox(`${d} opens`, '[opens]')}<span style="color: ${C.muted}">to</span>${timeBox(`${d} closes`, '[closes]')}</div>` : ''}</div>`
+  : `<div style="display: flex; align-items: center; gap: 12px; min-height: 50px; border-top: 1px solid ${C.border}"><span style="width: 60px; font-size: 15px; font-weight: 600">${d}</span>${open ? `${timeBox(`${d} opens`, '[opens]')}<span style="color: ${C.muted}">to</span>${timeBox(`${d} closes`, '[closes]')}` : ''}<span style="flex-grow: 1"></span>${offer(open ? 'Open' : 'Closed', open)}</div>`;
 const hoursOpen = () => `${DAYS.map((d) => hoursRow(d, d !== 'Sun')).join('')}
 ${note('Close the day appears in time for closing, as set in End of day. Online booking only offers mechanics on the days they’re in, set on each person.')}`;
 const shopFolds = (open = {}) =>
@@ -269,10 +270,10 @@ def('set-shop-hours', () => shopPage({ hours: hoursOpen() }));
 // Services by group (Workshop day 66: shops group their own services) —
 // names and times from the diary's services; only Standard service has a
 // real price, the rest are placeholders.
-const serviceRow = (name, mins, price, hover = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)} — drag, or use the arrow keys" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${mins} min in the diary</span></span>${mono(price, 'font-size: 15px')}${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button>${button('Remove', { variant: 'danger' })}` : ''}</div>`;
+const serviceRow = (name, mins, price, hv = false, hover = hv && !isPhone()) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)} — drag, or use the arrow keys" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${mins} min in the diary</span></span>${mono(price, 'font-size: 15px')}${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button>${button('Remove', { variant: 'danger' })}` : ''}</div>`;
 const servicesOpen = () => `<div role="group" aria-label="Service groups" style="display: flex; flex-wrap: wrap; gap: 8px">${pill('Full service')}${pill('Individual service', true)}${pill('+ Add a group')}</div>
 <div style="display: flex; flex-direction: column; gap: 8px">${serviceRow('Safety check', 60, '[£ price]')}${serviceRow('Gear adjustment', 60, '[£ price]', true)}${serviceRow('Brake service', 45, '[£ price]')}</div>
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">${button('+ Add a service', { variant: 'default' })}${note('Groups and services show as pills, in this order, when a job is booked.')}</div>`;
+<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Add a service', { variant: 'default' })}${note('Groups and services show as pills, in this order, when a job is booked.')}</div>`;
 // Mechanics: everyone with "Works in the workshop" on (decision 11), set in
 // Staff and roles — listed here so it can be found from either place.
 const mechRow = (name, role, online) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${role}</span></span><span style="font-size: 14px; color: ${online ? C.ink : C.muted}">${online ? 'Customers can book online' : 'Booked in by staff only'}</span></div>`;
@@ -287,7 +288,7 @@ const mechanicsOpen = () => `${mechRow('Alex Morgan', 'Mechanic', true)}${mechRo
 const workshopPage = (open) => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds(open));
 def('set-workshop-services', () => workshopPage({ services: servicesOpen() }));
 def('set-workshop-mechanics', () => workshopPage({ mechanics: mechanicsOpen() }));
-def('set-workshop-diary', () => diaryScreens['diary-settings'].desktop);
+def('set-workshop-diary', () => diaryScreens['diary-settings'][size()]);
 
 // ---------- Messages (decision 14) ----------
 // The automatic messages are the ones journeys 2–4 already send (booking
@@ -295,13 +296,13 @@ def('set-workshop-diary', () => diaryScreens['diary-settings'].desktop);
 // wording shown is a starting draft for Jack to approve, not settled copy.
 const MSG_INTRO = 'The texts and emails customers get from the shop.';
 const chan = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.mutedBg : 'transparent'}; color: ${on ? C.ink : C.muted}; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px">${on ? icon('check', 14) : ''}${t}</button>`;
-const msgRow = (name, when, text, email, hover = false) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 0 8px 0 14px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${when}</span></span>${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit wording</button>` : ''}${chan('Text', text)}${chan('Email', email)}${offer('On', true)}</div>`;
+const msgRow = (name, when, text, email, hv = false, hover = hv && !isPhone()) => `<div style="display: flex; flex-wrap: ${isPhone() ? 'wrap' : 'nowrap'}; align-items: center; gap: 10px; min-height: 60px; padding: ${isPhone() ? '10px 10px 10px 14px' : '0 8px 0 14px'}; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; flex-basis: ${isPhone() ? '100%' : 'auto'}"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${when}</span></span>${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit wording</button>` : ''}${chan('Text', text)}${chan('Email', email)}${offer('On', true)}</div>`;
 const msgListOpen = () => `<div style="display: flex; flex-direction: column; gap: 8px">
 ${msgRow('Booking confirmed', 'When a repair is booked', false, true)}
 ${msgRow('Quote to approve', 'When a job needs the customer’s OK', true, true)}
 ${msgRow('Bike ready', 'When a job is finished', true, false, true)}
 ${msgRow('Order ready to collect', 'When an online order is ready', false, true)}</div>
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">${button('+ Add your own message', { variant: 'default' })}${note('Tap Text or Email to choose how each is sent — or both.')}</div>`;
+<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Add your own message', { variant: 'default' })}${note('Tap Text or Email to choose how each is sent — or both.')}</div>`;
 const msgFolds = (open = {}) =>
   fold('Automatic messages', '4 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
@@ -329,7 +330,7 @@ def('set-msg-new', () => overlay(msgPage({ list: msgListOpen() }), newMsgDialog(
 // ---------- Your data (Release 2 rule 5: everything can be exported;
 // decision 4: every settings change is recorded) ----------
 const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
-const exportOpen = () => `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">${['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs'].map((t) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('check', 16)}<span style="font-size: 15px; font-weight: 600">${t}</span></div>`).join('')}</div>
+const exportOpen = () => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs'].map((t) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('check', 16)}<span style="font-size: 15px; font-weight: 600">${t}</span></div>`).join('')}</div>
 <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px">${note('Spreadsheets that open in Excel or Google Sheets — yours to keep, whatever happens.')}${button('Download everything')}</div>`;
 const histRow = (what, before, after) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${what}</span><span style="font-size: 13px; color: ${C.muted}">[name] · [date and time]</span></span><span style="font-size: 14px; color: ${C.muted}">${before}</span><span aria-hidden="true" style="color: ${C.muted}">→</span><span style="font-size: 14px; font-weight: 600">${after}</span></div>`;
 const historyOpen = () => `${histRow('End of day › Float', '[£ before]', '[£ after]')}${histRow('Staff and roles › Jo Taylor · Works in the workshop', 'Off', 'On')}${histRow('Till › Quick buttons · Shimano brake pads B05S-RX', '—', 'Added to Workshop')}
@@ -355,28 +356,36 @@ const STEPS = [
 const doneCount = STEPS.filter((x) => x[2]).length;
 // Decision 17 (H2, M12): each step says what ticks it; finished steps fold
 // into one line so the card stays short.
-const stepRow = ([t, where, done, tick], i, next) => `<div style="display: flex; align-items: center; gap: 14px; min-height: 56px; border-top: 1px solid ${C.border}">
+const stepRow = ([t, where, done, tick], i, next) => isPhone()
+  // Phone: the whole row is the link; the next step has a dark outline.
+  ? `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 60px; margin-top: 6px; padding: 8px 10px; border-radius: 10px; border: 1px solid ${next ? C.ink : C.border}; text-decoration: none; color: ${C.ink}">
+<span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-size: 13px; font-weight: 700">${i + 1}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${t}</span><span style="font-size: 13px; color: ${C.muted}">Ticks when ${tick}</span></span>
+<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`
+  : `<div style="display: flex; align-items: center; gap: 14px; min-height: 56px; border-top: 1px solid ${C.border}">
 <span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; color: ${C.ink}; font-size: 13px; font-weight: 700">${i + 1}</span>
 <span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${t}</span><span style="font-size: 13px; color: ${C.muted}">Settings › ${where} · ticks when ${tick}</span></span>
 ${button(next ? 'Start' : 'Set up', { variant: next ? 'accent' : 'default' })}</div>`;
+const moveLink = `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Moving from another system?</a>`;
 function gettingStarted() {
   const firstTodo = STEPS.findIndex((x) => !x[2]);
   const done = STEPS.filter((x) => x[2]).map((x) => x[0]);
-  return card(`<div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 12px">
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Getting started</h2><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Moving from another system?</a></div>
+  return card(`<div style="padding: ${isPhone() ? '16px 14px' : '20px 22px'}; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Getting started</h2>${isPhone() ? '' : moveLink}</div>
 <div aria-hidden="true" style="height: 6px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${Math.round((doneCount / STEPS.length) * 100)}%; height: 100%; background: ${C.ink}"></div></div>
 ${note('Your till is ready, so you can sell now — do the rest in any order.')}
 <button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0; border: 0; border-top: 1px solid ${C.border}; background: transparent; font-family: inherit; text-align: left; color: ${C.muted}"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 15)}</span><span style="font-size: 14px; flex-grow: 1">${doneCount} done: ${done.join(', ')}</span>${icon('chevron', 16)}</button>
 <div style="display: flex; flex-direction: column">${STEPS.map((st, i) => (st[2] ? '' : stepRow(st, i, i === firstTodo))).join('')}</div>
+${isPhone() ? moveLink : ''}
 </div>`);
 }
 const todayRest = `<div style="min-height: 120px; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: ${C.muted}">[The rest of Today]</div>`;
-const todayPage = (top) => shellDesktop('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; max-width: 900px">${top}${todayRest}</div>`, OWNER);
+const todayPage = (top) => page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; max-width: 900px">${top}${todayRest}</div>`, OWNER);
 // A step opened from the checklist: the usual Settings section, with a strip
 // saying where you are in Getting started and the way back.
 // Decision 17 (M11): no "step 3 of 8" — the strip names the step, offers the
 // next one (one click instead of two) and the way back.
-const stepBanner = (t, nextT) => `<div style="flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="font-size: 14px; flex-grow: 1"><strong>Getting started:</strong> ${t}</span><a href="fr-today-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('back', 16)}Checklist</a>${button(`Next: ${nextT}`, { variant: 'default' })}</div>`;
+const stepBanner = (t, nextT) => `<div style="flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 6px 6px 14px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="font-size: 14px; flex-grow: 1"><strong>Getting started:</strong> ${t}</span><a href="fr-today-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('back', 16)}Checklist</a>${button(`Next: ${nextT}`, { variant: 'default' })}</div>`;
 const payCardNone = () => `${kv('Till B1', `<span style="color: ${C.muted}">No card machine yet</span>`)}
 <div style="display: flex; gap: 8px; padding-top: 4px">${button('Connect a card machine')}</div>
 ${note('The till sends the amount to the machine, so nobody keys it in twice.')}`;
@@ -390,7 +399,16 @@ def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
 def('so-hub-area', optionHubArea);
 
-for (const [id, fn] of recipes) screens[id] = { desktop: fn() };
+// Decision 21: every board at desktop, tablet and phone, except the three
+// layout options (desktop only) and the phone's list of Settings areas.
+const DESKTOP_ONLY = new Set(['so-list', 'so-onepage', 'so-hub', 'so-hub-area']);
+for (const size of ['desktop', 'tablet', 'phone']) {
+  setSize(size);
+  for (const [id, fn] of recipes) if (size === 'desktop' || !DESKTOP_ONLY.has(id)) (screens[id] ??= {})[size] = fn();
+}
+setSize('phone');
+screens['set-list'] = { phone: settingsList() };
+setSize('desktop');
 
 export const TITLES = {
   'so-list': 'Option 1 — areas listed down the left, the chosen area beside them',
@@ -399,6 +417,7 @@ export const TITLES = {
   'so-hub-area': 'Option 3 — …each opening its own page',
 };
 Object.assign(TITLES, {
+  'set-list': 'Settings on a phone — the list of areas',
   'set-till-quick': 'Till › Quick buttons — hover a button to edit or remove it',
   'set-till-quick-add': 'Add a quick button',
   'set-till-quick-saved': 'Saved as you go, with Undo',
@@ -437,7 +456,7 @@ Object.assign(TITLES, {
 });
 export const ROWS = [
   { label: 'First-run setup (decision 16)', screens: ['fr-today', 'fr-step', 'fr-done'] },
-  { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills', 'set-till-tills-owner', 'set-till-remove', 'set-till-empty'] },
+  { label: 'Till settings', screens: ['set-list', 'set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills', 'set-till-tills-owner', 'set-till-remove', 'set-till-empty'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-eod-close', 'set-save-failed', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
   { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles', 'set-staff-invite'] },
   { label: 'Shop and sites', screens: ['set-shop-details', 'set-shop-hours'] },

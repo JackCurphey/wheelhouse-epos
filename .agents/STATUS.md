@@ -29,8 +29,9 @@ Workshop (republished on journey 12's canvas and the big canvas, desktop).
 Payments, Staff and roles, Shop and sites, Workshop, Messages, Your data).
 Journey 12's stale Settings · Accessibility board removed (decision 15).
 First-run setup drawn (decision 16). UI audit done and fixes adopted
-(decision 17, `setup-ui-audit.md`). Next: Jack reviews desktop, then
-tablet and phone. Own canvas:
+(decision 17, `setup-ui-audit.md`). Desktop approved (decision 21);
+tablet and phone drawn 30 Sep (111 boards). Next: Jack approves tablet and
+phone, then copy into the big canvas. Own canvas:
 https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B . Generator: `setup.mjs` +
 `build-setup.mjs --theme sand`.
 

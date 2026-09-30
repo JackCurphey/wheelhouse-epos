@@ -8,7 +8,7 @@
 // 1280x800, 1180x820 and 390x844.
 import { C, MONO, FONT_DISPLAY, THEME, esc, icon, button, field, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
-import { settingsPage, workshopFolds, WORKSHOP_INTRO } from './settings-frame.mjs';
+import { settingsPage, workshopFolds, WORKSHOP_INTRO, withSize } from './settings-frame.mjs';
 // The settled job page (decision 40, 28 Sep 2026 round) — board job-final-2
 // in job-options.mjs. Shared with that file via job-page.mjs so neither file
 // depends on the other's internals (see that module's header comment).
@@ -1640,50 +1640,14 @@ function blockPrefPanel(size) {
   return panel(`${h2('What shows on a block', 15)}
 ${blockPrefContent(size)}`, '', 16, 12);
 }
-// Decision 57 (29 Sep): Settings gains an Accessibility tab beside this
-// Diary tab. Real tabs (role="tablist"/"tab", aria-selected), ≥44px, each a
-// link to that tab's own board — desktop only for now (task scope; the tab
-// bar itself is drawn only on diary-settings-desktop/settings-accessibility).
-function settingsTabs(size, active) {
-  const tabs = [['diary', 'Diary', `diary-settings-${size}.dc.html`], ['accessibility', 'Accessibility', `settings-accessibility-${size}.dc.html`]];
-  return `<div role="tablist" aria-label="Settings sections" style="display: flex; gap: 4px; border-bottom: 1px solid ${C.border}">${tabs.map(([key, label, href]) => {
-    const on = key === active;
-    return `<a href="${href}" role="tab" aria-selected="${on}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; text-decoration: none; font-size: 14px; font-weight: 700; color: ${on ? C.ink : C.muted}; border-bottom: 2px solid ${on ? C.accent : 'transparent'}">${esc(label)}</a>`;
-  }).join('')}</div>`;
-}
-function diarySettingsBody(size) {
-  // Desktop: side by side (the page doesn't scroll) — item 27 adds a whole
-  // second settings group to what was previously a single-column page.
-  // Decision 57: status is colour-only by default now (word shown where
-  // there's room, e.g. Day view; the symbol is an opt-in accessibility
-  // setting, see Settings › Accessibility) — the older "never colour alone"
-  // copy is replaced below.
-  if (size !== 'phone') {
-    return stack(`${eyebrow('Office › Settings')}
-${settingsTabs(size, 'diary')}
-${h2('Diary & storage', 20)}
-${note('Choose what each diary block shows, and whether this shop tracks storage slots. Status shows as colour, plus the full word where there’s room; a symbol for each status is available in Settings › Accessibility.')}
-${grid('1fr 1fr', `<div style="display: flex; flex-direction: column; gap: 12px">${h2('Diary blocks', 16)}${blockPrefPanel(size)}</div><div style="display: flex; flex-direction: column; gap: 12px">${h2('Storage slots', 16)}${storageSlotsSection(size)}</div>`, 24)}
-${`<div>${button('Save settings')}</div>`}`, 16);
-  }
-  // Phone (decision 68): the same two tabs and panels, one column; the top
-  // bar already says Settings, the tab names the section and each panel
-  // explains itself, so the breadcrumb, heading and intro are left off — the
-  // page fits a phone without scrolling.
-  return stack(`${settingsTabs(size, 'diary')}
-${blockPrefPanel(size)}
-${storageSlotsSection(size)}
-${button('Save settings', { block: true })}`, 8);
-}
 screens['diary-settings'] = {
-  // Journey 8 decision 12 (30 Sep): the same settings, now two folding
-  // sections in Owner setup's Settings › Workshop. Tablet and phone follow
-  // when journey 8's tablet and phone are drawn. A getter, because
-  // settings-frame.mjs imports this file: building it on first read (after
-  // every module has loaded) avoids the import cycle's start-up order.
-  get desktop() { return settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ diary: blockPrefContent('desktop'), storage: storageSlotsContent('desktop') })); },
-  tablet: shellTablet('settings', 'Settings', `<div style="max-width: 1000px">${diarySettingsBody('tablet')}</div>`, { role: 'M', person: 'Jack Lewis', roleName: 'Manager' }),
-  phone: shellPhone('Settings', diarySettingsBody('phone'), { role: 'M', active: 'settings', person: 'Jack Lewis', roleName: 'Manager' }),
+  // Journey 8 decisions 12 and 21 (30 Sep): the same settings, as two folding
+  // sections in Owner setup's Settings › Workshop, at every size. Getters,
+  // because settings-frame.mjs imports this file: building on first read
+  // (after every module has loaded) avoids the import cycle's start-up order.
+  get desktop() { return withSize('desktop', () => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ diary: blockPrefContent('desktop'), storage: storageSlotsContent('desktop') }))); },
+  get tablet() { return withSize('tablet', () => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ diary: blockPrefContent('tablet'), storage: storageSlotsContent('tablet') }))); },
+  get phone() { return withSize('phone', () => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ diary: blockPrefContent('phone'), storage: storageSlotsContent('phone') }))); },
 };
 
 // 3c.ii settings-accessibility — decision 57 (29 Sep): a second Settings tab,
