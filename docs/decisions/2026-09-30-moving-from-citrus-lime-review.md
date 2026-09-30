@@ -40,3 +40,11 @@ few clicks as possible).
    leaves the sidebar a week after switch-over; its history stays under
    Settings › Your data. Chosen over a section in Settings › Your data and a
    step inside Getting started.
+5. **A weekly check against Citrus Lime after each refresh** (Jack, 30
+   Sep): once the refresh is in, the move page shows Wheelhouse's own totals
+   for last week — sales total, number of sales, stock value, number of
+   customers — each beside a box for Citrus Lime's figure. The owner types
+   the four numbers from Citrus Lime's reports; each row gets a tick or the
+   difference, with "Ask us to help" on one that doesn't match. The weeks
+   that matched are kept as a record for deciding when to switch over.
+   Chosen over uploading Citrus Lime's report file and no comparison screen.
