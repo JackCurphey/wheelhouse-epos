@@ -111,3 +111,5 @@ possible; Owner setup 4 — changes save as you go).
     offers "New job". Dismissed after checking: the Add pop-ups don't
     overflow (measured), and the sale pop-up's Refund is the confirming
     action on the right, as the rule says.
+13. **Desktop approved; on to tablet and phone** (Jack, 30 Sep: "I've looked
+    through the pages, that looks very good").
