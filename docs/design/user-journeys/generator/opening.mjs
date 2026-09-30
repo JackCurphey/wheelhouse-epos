@@ -47,7 +47,7 @@ ${totalRow('Counted', '[£ counted]', { strong: true })}`, `${button('Back', { v
 
 // The count matches: the pop-up closes, the till is ready, and a short
 // "Float checked" message shows (audit H1).
-const matched = () => `<div style="position: relative">${tillBase()}<div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)">${icon('check', 16)}Float checked · Till B1 · counted by Jo Taylor</div></div>`;
+const matched = () => `<div style="position: relative">${tillBase()}<div role="status" style="position: absolute; ${isPhone() ? 'left: 12px; right: 12px; bottom: 112px' : 'left: 50%; bottom: 24px; transform: translateX(-50%)'}; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)">${icon('check', 16)}Float checked · Till B1 · counted by Jo Taylor</div></div>`;
 
 // A difference: say so, ask why (optional). Short always goes to Needs
 // attention; over only when yesterday was closed (audit H1 — otherwise
@@ -113,8 +113,8 @@ def('op-today-two', () => today({ short: true, unclosed: true }));
 def('op-today-staff', () => today({ staff: true }));
 def('op-today-late', () => today({ late: true }));
 
-// Desktop first (journey process); tablet and phone once desktop is approved.
-const SIZES = ['desktop'];
+// Desktop first (journey process); tablet and phone drawn after the UI audit.
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const size of SIZES) screens[id][size] = withSize(size, () => { SIZE = size; return fn(); });
