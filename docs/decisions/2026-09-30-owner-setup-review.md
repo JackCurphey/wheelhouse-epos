@@ -166,6 +166,10 @@ one from the staff list.
     Role runs full width; "Also allowed to" and "Works in the workshop"
     start level beneath it. The "Give everything" note merges into one line
     under "Also allowed to".
+21. **Desktop approved; on to tablet and phone** (Jack, 30 Sep: "I think
+    that looks good. Should we go on to just make the mobile pages, and
+    then we can finish the section up?"). Tablet and phone follow the
+    journeys before: the same recipes at three sizes.
 
 ## Noted for later (not for this journey)
 
