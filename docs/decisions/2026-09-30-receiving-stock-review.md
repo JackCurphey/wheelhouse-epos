@@ -58,3 +58,9 @@ without retyping.
 future"):** upload the supplier's delivery or invoice file to book a whole
 delivery in at once — once each supplier's file format is known, alongside
 the supplier integrations above.
+4. **Everyone can receive deliveries; ordering needs "Can order stock"**
+   (Jack, 30 Sep): Staff see Stockroom › Deliveries and orders with
+   "Receive a delivery" and recent deliveries; orders and the restock list
+   show only to owners, managers and anyone with the "Can order stock"
+   switch (Owner setup 9). Chosen over receiving only with "Can order
+   stock", and everyone seeing everything.
