@@ -18,6 +18,16 @@ Jack's choice (ask him first). The big canvas is now **desktop only**, each
 board linking to its journey's own canvas for tablet and phone (289 files of
 the 512 a canvas can hold).
 
+**Journey 9, Moving from Citrus Lime (30 Sep, in progress):** decisions in
+`docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` (8 so far) —
+the owner drops in Citrus Lime exports and Wheelhouse matches them; a
+weekly refresh and a weekly check against Citrus Lime while running
+alongside; every till is practice until switch-over; a self-ticking
+switch-over checklist, then the owner picks the day. Desktop drawn (18
+boards). Own canvas: https://claude.ai/artifact/Wkp23VuCPRydTjfYmJgKo9 .
+Generator: `moving.mjs` + `build-moving.mjs --theme sand`. What Citrus Lime
+exports is still unknown — everything depending on it is bracketed.
+
 **Journey 10, Opening the shop (30 Sep):** approved at desktop, tablet and
 phone and copied into the big canvas; 8 decisions in
 `docs/decisions/2026-09-30-opening-the-shop-review.md` — a one-tap float

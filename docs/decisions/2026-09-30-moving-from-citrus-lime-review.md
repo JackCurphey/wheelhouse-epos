@@ -68,3 +68,8 @@ few clicks as possible).
    Release 2 finish line), after which Citrus Lime can be switched off.
    Chosen over a single "Switch over" button, and a Wheelhouse person
    signing off with the shop.
+8. **The owner picks how many matching weeks come before switch-over,
+   2 by default** (Jack, 30 Sep): the checklist's first item reads "The
+   weekly check matched 2 weeks in a row" with a "Change" link that opens a
+   small choice (2, 3, 4 or another number). Settles decision 7's [n].
+   Chosen over a fixed 2 weeks and a fixed 4 weeks.

@@ -139,10 +139,14 @@ const bothBoard = () => overlay(alongsideBoard(), bothPopup());
 // Then the owner picks the day; that morning: one last refresh, practice
 // sales cleared, tills made real; then the first full trading week.
 const tick = (done) => `<span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; ${done ? `background: ${C.okBg}; color: ${C.successInk}` : `border: 2px solid ${C.input}; box-sizing: border-box`}">${done ? icon('check', 15) : ''}</span>`;
-const readyRow = (t, sub, done, action = '') => line(t, sub, done ? tag('Done') : `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">${tag('Not yet', 'grey')}${action}</span>`, tick(done));
+const readyRow = (t, sub, done, action = '', extra = '') => line(t, sub, `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">${extra}${done ? tag('Done') : `${tag('Not yet', 'grey')}${action}`}</span>`, tick(done));
+// Decision 8: the owner picks how many matching weeks, 2 by default.
+const weekPill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-width: 64px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`;
+const weeksPopup = () => popup('wk-title', 'Matching weeks before switch-over', 'The weekly check must match this many weeks in a row', `<div role="group" aria-label="Weeks in a row" style="display: flex; flex-wrap: wrap; gap: 8px">${weekPill('2', true)}${weekPill('3')}${weekPill('4')}${weekPill('Other…')}</div>
+${note('2 proves a refresh came across cleanly twice running. More weeks take in a month-end, but the move takes longer.')}`, `${button('Back', { variant: 'default' })}${button('Save')}`, 520);
 const offBtn = (t) => button(t).replace(/^<(\w+)/, '<$1 disabled aria-disabled="true"').replace('style="', 'style="opacity: 0.45; cursor: not-allowed; ');
 const READY = (all) => [
-  readyRow('The weekly check matched [n] weeks in a row', '[n] of [n] so far', true),
+  readyRow('The weekly check matched 2 weeks in a row', '2 of 2 so far', true, '', link('Change')),
   readyRow('The card machine is connected', 'Settings › Payments', true),
   readyRow('Everyone has made a practice sale', all ? 'Jo Taylor, Alex Morgan, Jack Lewis' : 'Jo Taylor and Jack Lewis have · Alex Morgan hasn’t yet', all, link('Remind Alex')),
   readyRow('The website is moved', 'Website', all, link('Open Website')),
@@ -176,6 +180,7 @@ def('mv-practice-sale', () => practiceScreen('till-sale', SIZE));
 def('mv-practice-card', () => overlay(practiceScreen('till-sale', SIZE), practiceCard()));
 
 def('mv-ready', () => { STAGE = 2; return readyBoard(false); });
+def('mv-weeks', () => { STAGE = 2; return overlay(readyBoard(false), weeksPopup()); });
 def('mv-ready-all', () => { STAGE = 2; return readyBoard(true); });
 def('mv-pick-day', () => { STAGE = 2; return overlay(readyBoard(true), pickDay()); });
 def('mv-morning', () => { STAGE = 2; return morningBoard(); });
@@ -211,6 +216,7 @@ export const TITLES = {
   'mv-practice-sale': 'The till before switch-over: practice, not real money',
   'mv-practice-card': 'A practice card payment: try either outcome',
   'mv-ready': 'Switch over: the checklist, two still to do',
+  'mv-weeks': 'Change how many weeks must match (2 by default)',
   'mv-ready-all': 'Switch over: everything ticked',
   'mv-pick-day': 'Pick switch-over day',
   'mv-morning': 'Switch-over morning: last refresh, clear practice, tills real',
@@ -220,5 +226,5 @@ export const ROWS = [
   { label: 'Bring your data', screens: ['mv-start', 'mv-progress', 'mv-summary', 'mv-fix'] },
   { label: 'Run alongside', screens: ['mv-today-refresh', 'mv-alongside', 'mv-both', 'mv-check', 'mv-check-result'] },
   { label: 'Practice at the till', screens: ['mv-practice-sale', 'mv-practice-card'] },
-  { label: 'Switch over', screens: ['mv-ready', 'mv-ready-all', 'mv-pick-day', 'mv-morning', 'mv-week'] },
+  { label: 'Switch over', screens: ['mv-ready', 'mv-weeks', 'mv-ready-all', 'mv-pick-day', 'mv-morning', 'mv-week'] },
 ];
