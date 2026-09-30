@@ -299,10 +299,11 @@ const msgListOpen = () => `<div style="display: flex; flex-direction: column; ga
 ${msgRow('Booking confirmed', 'When a repair is booked', false, true)}
 ${msgRow('Quote to approve', 'When a job needs the customer’s OK', true, true)}
 ${msgRow('Bike ready', 'When a job is finished', true, false, true)}
+${msgRow('Bike still waiting', 'When a ready bike isn’t collected after [n] days', true, false)}
 ${msgRow('Order ready to collect', 'When an online order is ready', false, true)}</div>
 <div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Add your own message', { variant: 'default' })}${note('Tap Text or Email to choose how each is sent — or both.')}</div>`;
 const msgFolds = (open = {}) =>
-  fold('Automatic messages', '4 on', open.list || '')
+  fold('Automatic messages', '5 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 const msgPage = (open) => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds(open));
 const chip = (t) => `<button type="button" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px dashed ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; font-weight: 600; color: ${C.ink}">+ ${t}</button>`;

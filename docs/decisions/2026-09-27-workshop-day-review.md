@@ -363,4 +363,5 @@ two hand-back ticks are optional reminders a shop can switch on, off by
 default. Settings › Workshop (the diary settings board) gains that "Collection"
 section. Republished on 30 Sep; the published journey 12 copies of these
 two boards were an older build (the sidebar's user block predated a later
-shared-frame change), now current.
+shared-frame change), now current. Later the same day (Collect the bike and pay decision 4) the section's
+summary became "Reminder after [n] days · hand-back reminders off".

@@ -44,6 +44,6 @@ clicks as possible).
    (Jack, 30 Sep): after [n] days (the shop sets it, in Settings › Workshop
    › Collection) the customer gets a "Bike still waiting" message — one of
    the editable automatic messages (Owner setup 14); after a longer wait,
-   also set there, the bike shows on Today under Needs attention ("WH-1042
-   ready for [n] days") with "Contact them". Chosen over the reminder
+   also set there, the bike shows on Today under Needs attention (drawn
+   with WH-1050, the diary's oldest ready job: "ready since Mon 14 Sep") with "Contact them". Chosen over the reminder
    message only, and adding storage charges.

@@ -216,3 +216,7 @@ Loyalty points switch in Payments › Ways to pay is gone; Store credit gains
 Settings › Workshop gains a fifth section, "Collection" — hand-back
 reminders, off by default. The three Workshop boards (services, mechanics,
 diary) now show it folded.
+Later (same day, decision 4 there): the Collection section also sets when a
+"Bike still waiting" reminder goes and when an uncollected bike shows on
+Today (summary "Reminder after [n] days · hand-back reminders off"); and
+Messages › Automatic messages gains "Bike still waiting" (text, on) — "5 on".

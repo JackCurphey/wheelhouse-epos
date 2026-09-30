@@ -130,8 +130,9 @@ export const workshopFolds = (open = {}) =>
   + fold('Mechanics', 'Alex Morgan, Jo Taylor, Shared queue', open.mechanics || '')
   + fold('Diary blocks', 'Bike, then job title', open.diary || '')
   + fold('Storage slots', 'On · 8 slots', open.storage || '')
-  // Collect the bike and pay decision 3: hand-back reminders, off by default.
-  + fold('Collection', 'Hand-back reminders off', open.collection || '');
+  // Collect the bike and pay decisions 3 and 4: a reminder and a flag for
+  // uncollected bikes; hand-back reminders, off by default.
+  + fold('Collection', 'Reminder after [n] days · hand-back reminders off', open.collection || '');
 export const WORKSHOP_INTRO = 'Services, who works in the workshop, and how the diary looks.';
 // The Payments area's sections (journey 8; customer groups from journey 15
 // decision 8).

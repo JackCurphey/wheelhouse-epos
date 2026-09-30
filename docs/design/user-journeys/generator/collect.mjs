@@ -15,6 +15,8 @@ import { settingsPage, workshopFolds, WORKSHOP_INTRO, note, withSize, isPhone, s
 import { screens as diaryScreens, toggleSwitch, LINES_APPROVED, WORK_TOTAL_APPROVED } from './diary.mjs';
 import { screens as tillScreens } from './till.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
+import { today } from './opening.mjs';
+import { screens as setupScreens } from './setup.mjs';
 import { CHECKLIST_10, CUSTOMER_NOTE } from './job-page.mjs';
 
 export const screens = {};
@@ -74,8 +76,12 @@ ${h('Paid — thank you, Maya', 22)}
 // Paid online: the main button is Hand over (journey 12's board, redrawn).
 
 // ---------- Settings › Workshop › Collection (decision 3) ----------
-const collectionOpen = () => `${toggleSwitch('Hand-back reminders', false, 'hb-sw', size())}
-${note('When on, staff confirm two things before Hand over, or at the till after paying: the bike went to the customer or someone they sent, and the lock key and rear light were returned. Off, collection is one tap.')}`;
+// Decision 4: a reminder, then a flag on Today, for a bike left uncollected.
+const days = (id, label, hint) => `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><label for="${id}" style="font-size: 15px; font-weight: 700">${label}</label><span style="font-size: 13px; color: ${C.muted}">${hint}</span></span><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px"><input id="${id}" inputmode="numeric" value="[n]" style="width: 64px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">days</span></div>`;
+const collectionOpen = () => `${days('rem-days', 'Remind the customer after', 'Sends “Bike still waiting” — <a href="#" style="color: inherit">edit it in Messages</a>')}
+${days('flag-days', 'Show it on Today after', 'Under Needs attention, for owners and managers')}
+<div style="padding-top: 10px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 8px">${toggleSwitch('Hand-back reminders', false, 'hb-sw', size())}
+${note('When on, staff confirm two things before Hand over, or at the till after paying: the bike went to the customer or someone they sent, and the lock key and rear light were returned. Off, collection is one tap.')}</div>`;
 
 def('cp-summary', () => summary(true));
 def('cp-pay', () => payOnline());
@@ -84,6 +90,8 @@ def('cp-summary-inshop', () => summary(false));
 def('cp-ready-unpaid', () => diaryScreens['job-ready-unpaid'][SIZE]);
 def('cp-till', () => tillScreens['till-job'][SIZE]);
 def('cp-ready-paid', () => diaryScreens['job-collection'][SIZE]);
+def('cp-today-uncollected', () => today({ uncollected: true }));
+def('cp-messages', () => setupScreens['set-msg-list'][SIZE]);
 def('cp-setting', () => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ collection: collectionOpen() })));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -102,10 +110,13 @@ export const TITLES = {
   'cp-ready-unpaid': 'At the counter, not paid: Take payment',
   'cp-till': 'The till: the job loaded, collected when paid',
   'cp-ready-paid': 'At the counter, paid online: Hand over',
-  'cp-setting': 'Settings › Workshop › Collection: hand-back reminders',
+  'cp-today-uncollected': 'Today: a ready bike left too long',
+  'cp-messages': 'Settings › Messages: “Bike still waiting”',
+  'cp-setting': 'Settings › Workshop › Collection: reminder, flag, hand-back',
 };
 export const ROWS = [
   { label: 'The customer’s link', screens: ['cp-summary', 'cp-pay', 'cp-paid', 'cp-summary-inshop'] },
   { label: 'At the counter', screens: ['cp-ready-unpaid', 'cp-till', 'cp-ready-paid'] },
-  { label: 'Settings', screens: ['cp-setting'] },
+  { label: 'Not collected', screens: ['cp-today-uncollected'] },
+  { label: 'Settings', screens: ['cp-setting', 'cp-messages'] },
 ];
