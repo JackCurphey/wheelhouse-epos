@@ -51,9 +51,11 @@ const stat = (k, v, sub) => `<div style="display: flex; flex-direction: column; 
 const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // Decision 4: Staff see Who's in and Workshop today; Tills and Needs
 // attention are for owners, managers and anyone with "Can close the day".
-function today({ short = false, waiting = false, staff = false } = {}) {
+// Decision 6: someone due in who hasn't checked in just shows — "Not in yet",
+// then "Late" once their start time has passed. No alert, no Needs attention.
+function today({ short = false, waiting = false, staff = false, late = false } = {}) {
   const tills = section('Tills', line('Till B1', `Open · float checked by Jo Taylor at [time]`, waiting ? tag('[n] sales waiting to send', 'warn') : tag(short ? 'Float short' : 'All sent', short ? 'warn' : 'ok')));
-  const who = section('Who’s in', `${line('Jo Taylor', 'Checked in at [time] · Staff', tag('In'))}${line('Alex Morgan', 'Due in today · Mechanic', tag('Not in yet', 'grey'))}${line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))}`);
+  const who = section('Who’s in', `${line('Jo Taylor', 'Checked in at [time] · Staff', tag('In'))}${line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey'))}${line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))}`);
   const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', '3 still to arrive')}${stat('Ready to collect', '4', 'In the workshop now')}</div>
 ${line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span style="font-size: 14px">${mono('10:30')} appointment</span>`)}${line('WH-1047 · Aisha Khan', 'Cannondale Quick · Safety check', '<span style="font-size: 14px">Drop-off</span>')}${line('WH-1042 · Maya Patel', 'Trek Domane AL 3 · Standard service', button('Book in', { variant: 'default' }))}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Open the diary</a>`);
   const attention = section('Needs attention', short
@@ -71,6 +73,7 @@ def('op-today', () => today());
 def('op-today-short', () => today({ short: true }));
 def('op-today-waiting', () => today({ waiting: true }));
 def('op-today-staff', () => today({ staff: true }));
+def('op-today-late', () => today({ late: true }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
 const SIZES = ['desktop'];
@@ -88,8 +91,9 @@ export const TITLES = {
   'op-today-short': 'Today, with a short float to check',
   'op-today-waiting': 'Today, with sales waiting to send',
   'op-today-staff': 'Today, as Staff see it',
+  'op-today-late': 'Today, when someone due in is late',
 };
 export const ROWS = [
   { label: 'Opening the till', screens: ['op-float-check', 'op-float-count', 'op-float-short'] },
-  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-waiting', 'op-today-staff'] },
+  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-waiting', 'op-today-staff', 'op-today-late'] },
 ];

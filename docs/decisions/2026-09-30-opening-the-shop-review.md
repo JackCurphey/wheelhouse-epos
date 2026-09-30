@@ -34,3 +34,10 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    to one step. Hours worked (check-out, a weekly hours list, breaks) can
    be added later without changing this screen. Chosen over check in and
    out with an hours list, and check in and out with breaks.
+6. **Someone due in who hasn't checked in just shows on Who's in — no
+   alert** (Jack, 30 Sep): "Not in yet" in grey, turning to "Late" (still
+   grey) once their start time has passed; the line reads "Due in at
+   [start time]". Nothing goes to Needs attention and nobody is prompted
+   to move their bikes — the manager sees it at a glance. Chosen over
+   flagging it under Needs attention after a set time, and a "Mark as off
+   today" button that hands their bikes to someone else.
