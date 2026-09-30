@@ -95,3 +95,9 @@ the supplier integrations above.
    and tabs across each room (hard to fit on a phone). Replaces Owner
    setup decision 3's eight areas. Board: `rs-invoice-setting`; every
    Settings board is redrawn.
+8. **Labels only for what needs one** (Jack, 30 Sep): after "Book in",
+   "Print labels" lists what was booked in; products without their own
+   barcode, and new products added in this delivery, start at one label
+   per item received; items with the maker's barcode start at 0; any count
+   can be changed, and the label printer picked. Chosen over a label for
+   every item, and no labels at booking in. Board: `rs-labels`.

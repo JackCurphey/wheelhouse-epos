@@ -111,6 +111,18 @@ ${note(`Booked in: ${mono('£[y]')} before VAT. Wheelhouse compares the two tota
 const invoiceSetting = () => settingsPage('stock', 'Stockroom', STOCK_INTRO, stockFolds({ invoices: `${rowSwitch('Check supplier invoices', true)}
 ${note('On a booked-in delivery, “Add the invoice” compares the invoice total with what was booked in. Turn it off if you check invoices in your accounts software instead.')}` }));
 
+// Decision 8: labels for what needs one — no maker's barcode, or new in this
+// delivery — one per item received; barcoded items start at 0.
+const labelRow = (name, sub, n) => line(name, sub, qty(n, name));
+const labelsPopup = () => popup('lb-title', 'Print labels', '[Supplier] · booked in just now', `
+${note('Set for what needs a label: products without their own barcode, and new ones added in this delivery. Change any count.')}
+${list([
+  labelRow('[Product]', 'No barcode of its own · [n] received', '[n]'),
+  labelRow('[Product name]', 'New in this delivery · [n] received', '[n]'),
+  labelRow('[Product]', 'Has its own barcode · [n] received', '0'),
+])}
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label for="lb-printer" style="font-size: 14px; font-weight: 600">Printer</label><select id="lb-printer" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>[Label printer]</option></select></div>`, `${button('Cancel', { variant: 'default' })}${button('Print [n] labels')}`, 600);
+
 // ---------- Decision 2: a purchase order, built by hand ----------
 const poLine = (name, code, n, cost) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 2fr) auto minmax(0, 0.8fr) 44px'}; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${code}</span></span>${qty(n, name)}${isPhone() ? '' : `<span style="font-family: ${MONO}; font-size: 15px; text-align: right">${cost}</span><button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}">${icon('close', 18)}</button>`}</div>`;
 const orderBoard = () => stockPage('New order', `${section('New order', `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label for="po-supplier" style="font-size: 14px; font-weight: 600">Supplier</label><select id="po-supplier" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>[Supplier]</option></select></div>
@@ -134,6 +146,7 @@ def('rs-receive', () => receiveBoard(true));
 def('rs-add-product', () => overlay(receiveBoard(true), addProduct()));
 def('rs-frame', () => overlay(receiveBoard(false), framePopup()));
 def('rs-booked', () => bookedBoard());
+def('rs-labels', () => overlay(bookedBoard(), labelsPopup()));
 def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
 def('rs-delivery', () => deliveryBoard());
 def('rs-invoice', () => overlay(deliveryBoard(), invoicePopup()));
@@ -158,6 +171,7 @@ export const TITLES = {
   'rs-add-product': 'A barcode Wheelhouse doesn’t know: Add this product, with its measurements',
   'rs-frame': 'A bike in the delivery: its frame number first',
   'rs-booked': 'Booked in: stock updated, the waiting job flagged',
+  'rs-labels': 'Print labels: only what needs one',
   'rs-job-arrived': 'The job: its part has arrived',
   'rs-delivery': 'A booked-in delivery, its invoice not checked yet',
   'rs-invoice': 'Add the invoice: its total against what was booked in',
@@ -168,7 +182,7 @@ export const TITLES = {
   'rs-today-restock': 'Today: the restock list, for managers',
 };
 export const ROWS = [
-  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-frame', 'rs-booked', 'rs-job-arrived'] },
+  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-frame', 'rs-booked', 'rs-labels', 'rs-job-arrived'] },
   { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-diff', 'rs-invoice-setting'] },
   { label: 'Ordering', screens: ['rs-order', 'rs-restock', 'rs-today-restock'] },
 ];
