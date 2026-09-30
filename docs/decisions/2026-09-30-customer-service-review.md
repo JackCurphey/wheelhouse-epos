@@ -85,3 +85,8 @@ possible; Owner setup 4 — changes save as you go).
     (board `till-loyalty`); journey 8's separate Loyalty points switch goes.
     Supersedes the points half of till decision 8 and journey 15 option
     "points per £1".
+11. **This customer page replaces journey 12's "Customer account" board**
+    (Jack, 30 Sep), once journey 15 is approved — as journey 8 decision 12
+    did for the diary settings: one customer page everywhere; the job
+    page's customer link opens it. Journey 12's canvas and the big canvas
+    are updated then, with a dated note in its decision file.
