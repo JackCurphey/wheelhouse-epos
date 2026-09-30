@@ -228,9 +228,13 @@ const rolesOpen = () => `${roleLine('Owner', 'Everything, including adding and r
 ${note('Switches on a person add to their role — up to everything a Manager can do.')}`;
 const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '');
 
+// Decision 11: "Works in the workshop" gives a diary column; turning it on
+// shows whether customers can book this person online.
+const toggleLine = (t, sub, on, indent = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; ${indent ? `margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}` : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${offer(on ? 'On' : 'Off', on)}</div>`;
+const workshopBlock = (on) => `<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid ${C.border}">${toggleLine('Works in the workshop', 'Gets a column in the diary', on)}${on ? toggleLine('Customers can book Jo online', 'Off: staff can still book jobs in for Jo', false, true) : ''}</div>`;
 // One person, in a pop-up in the middle (Workshop day 15, 16). The role by
 // pill; the switches as toggle pills; the PIN line (signing in 6).
-function personDialog({ all = false } = {}) {
+function personDialog({ all = false, workshop = false } = {}) {
   // Staff already have the till by their role, so that one says Included.
   const inc = (s) => s === 'Can use the till';
   const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all ? 'On' : 'Off', all)}</div>`;
@@ -239,6 +243,7 @@ ${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}
 <div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 15px; font-weight: 600">Also allowed to</span>${all ? `<span style="font-size: 13px; color: ${C.muted}">Everything a Manager can do</span>` : button('Give everything a Manager can do', { variant: 'default' })}</div>
 <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">${SWITCHES.map(sw).join('')}</div>
 ${all ? note('Jo can now do everything a Manager can. Jo’s role still says Staff.') : ''}</div>
+${workshopBlock(workshop)}
 <div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div>`, `<span></span>${button('Done')}`);
 }
 const clearPinDialog = () => popup('pin-title', 'Clear Jo Taylor’s till PIN?', 'For when Jo has forgotten it', `${note('Jo won’t be able to check in at the till until they get a new PIN in Your settings. Nobody else sees the new one.')}`, `${button('Keep the PIN', { variant: 'ghost' })}${button('Clear the PIN')}`);
@@ -247,6 +252,7 @@ const staffPage = (open) => settingsPage('staff', 'Staff and roles', STAFF_INTRO
 def('set-staff', () => staffPage({ people: peopleOpen() }));
 def('set-staff-person', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog()));
 def('set-staff-person-all', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ all: true })));
+def('set-staff-person-workshop', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ workshop: true })));
 def('set-staff-clear-pin', () => overlay(staffPage({ people: peopleOpen(false) }), clearPinDialog()));
 def('set-staff-roles', () => staffPage({ roles: rolesOpen() }));
 
@@ -278,12 +284,13 @@ Object.assign(TITLES, {
   'set-staff': 'Staff and roles › People',
   'set-staff-person': 'One person — role, switches, till PIN',
   'set-staff-person-all': 'Give everything a Manager can do',
+  'set-staff-person-workshop': 'Works in the workshop — but not bookable online',
   'set-staff-clear-pin': 'Clear a forgotten PIN',
   'set-staff-roles': 'Staff and roles › What each role can do',
 });
 export const ROWS = [
   { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
-  { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles'] },
+  { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-person-workshop', 'set-staff-clear-pin', 'set-staff-roles'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];
