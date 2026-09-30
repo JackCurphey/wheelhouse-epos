@@ -123,3 +123,9 @@ reads "[£] store credit · Earned on past purchases · Use it" (board
 M2):** a workshop job's agreed lines are locked in the till basket — no
 − / + — and marked "agreed on the job"; anything extra is added separately.
 Affects the job, deposit and balance boards.
+
+**Later change (30 Sep 2026, Receiving stock decision 5):** a bike's frame
+number is now recorded when it's booked in, so "Record a frame number"
+becomes "Which one?" — pick from the bikes in stock by frame number, or scan
+the frame on the bike; "Skip for now" stays for stock that came in without
+one.

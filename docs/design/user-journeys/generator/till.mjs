@@ -167,8 +167,12 @@ def('till-variant', () => overTill(dialog('var-title', '[Product with sizes and 
 
 // Record a serial number: selling a bike (or anything the shop tracks by
 // serial) asks for its frame number straight away (INV-07).
-def('till-serial', () => overTill(dialog('serial-title', 'Frame number', '[Bike name] · this product is tracked by serial number', `
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 18)}<input aria-label="Frame number" placeholder="Scan the frame barcode or type the number" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
+// Receiving stock decision 5 (30 Sep): frame numbers are recorded when bikes
+// are booked in, so the till picks which one is being sold — or scans it.
+const frameOption = (on, i) => `<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${on ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}; cursor: pointer"><input type="radio" name="frame" ${on ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"><span style="font-family: ${MONO}; font-size: 15px; flex-grow: 1">[frame number]</span><span style="font-size: 13px; color: ${C.muted}">Booked in [date]</span></label>`;
+def('till-serial', () => overTill(dialog('serial-title', 'Which one?', '[Bike name] · [n] in stock, each with its frame number', `
+<div role="radiogroup" aria-label="Frame number" style="display: flex; flex-direction: column; gap: 8px">${[true, false, false].map(frameOption).join('')}</div>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 18)}<input aria-label="Or scan the frame" placeholder="Or scan the frame on the bike" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
 <p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">It goes on the receipt and the customer’s bike record, so the bike can be traced for warranty or if it’s stolen.</p>`, `${button('Skip for now', { variant: 'ghost' })}${button('Add to sale')}`)));
 
 // A discount on the whole sale — "Add a discount" in the basket. Same

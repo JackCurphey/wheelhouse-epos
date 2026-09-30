@@ -77,6 +77,11 @@ const addProduct = () => popup('add-title', 'Add this product', `Barcode ${'[bar
 <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 700">Measurements and specifications</span><span style="font-size: 13px; color: ${C.muted}">Staff can search by these — for example, bearings with a 30 mm outside diameter.</span>
 <div role="list" style="display: flex; flex-direction: column; gap: 8px">${specRow('[Measurement]', '[value]', '[unit]')}${specRow('[Measurement]', '[value]', '[unit]')}</div><div>${button('+ Add a measurement', { variant: 'default' })}</div></div>`, `${button('Cancel', { variant: 'default' })}${button('Add and count 1')}`, 680);
 
+// Decision 5: a bike asks for its frame number before it counts.
+const framePopup = () => popup('frame-title', 'Frame number', '[Bike name] · bike [n] of [n] in this delivery', `
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 18)}<input aria-label="Frame number" placeholder="Scan the sticker on the frame, or type it" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
+${note('Each bike is then known by its frame number — the till picks it at the sale, and its warranty starts from the right bike.')}`, `${button('Cancel', { variant: 'default' })}${button('Count this bike')}`, 560);
+
 // After Book in: stock is updated; the waiting job is flagged; labels offered.
 const bookedBoard = () => stockPage('Receive a delivery', `${section('Booked in', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${mono('[n]')} items booked in · stock updated</p>
 ${list([line('Job WH-1042 · Maya Patel', `Trek Domane AL 3 · was waiting for ${PADS} — flagged on the job for Alex Morgan`, link('Open the job'), waitingLead)])}
@@ -103,6 +108,7 @@ def('rs-hub', () => hubBoard());
 def('rs-hub-staff', () => hubBoard(true));
 def('rs-receive', () => receiveBoard(true));
 def('rs-add-product', () => overlay(receiveBoard(true), addProduct()));
+def('rs-frame', () => overlay(receiveBoard(false), framePopup()));
 def('rs-booked', () => bookedBoard());
 def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
 def('rs-order', () => orderBoard());
@@ -122,6 +128,7 @@ export const TITLES = {
   'rs-hub-staff': 'Deliveries and orders, as Staff see it',
   'rs-receive': 'Receive a delivery: scan each item',
   'rs-add-product': 'A barcode Wheelhouse doesn’t know: Add this product, with its measurements',
+  'rs-frame': 'A bike in the delivery: its frame number first',
   'rs-booked': 'Booked in: stock updated, the waiting job flagged',
   'rs-job-arrived': 'The job: its part has arrived',
   'rs-order': 'A purchase order, built by hand',
@@ -129,6 +136,6 @@ export const TITLES = {
   'rs-today-restock': 'Today: the restock list, for managers',
 };
 export const ROWS = [
-  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-booked', 'rs-job-arrived'] },
+  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-frame', 'rs-booked', 'rs-job-arrived'] },
   { label: 'Ordering', screens: ['rs-order', 'rs-restock', 'rs-today-restock'] },
 ];
