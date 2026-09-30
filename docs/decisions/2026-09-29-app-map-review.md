@@ -81,3 +81,12 @@ rail with labels and the phone top bar with a menu (68).
     desktop, tablet and phone. It is copied into the user journeys canvas,
     status Designed, in the Soft sand look; Workshop day's boards there are
     refreshed to show the header search and the Your settings badge.
+
+**Later change (30 Sep 2026, Receiving stock decision 4):** Stockroom ›
+Deliveries and orders now shows for Staff too (it was owners and managers
+only) — anyone can receive a delivery; orders and the restock list inside
+it need "Can order stock". Every Staff board's sidebar, rail and phone menu
+gained the item; republished on journeys A, B, 5, 9, 10, 11, 12, 15, 16 and
+the big canvas. While republishing, journey 12's canvas turned out to hold
+an older build of most of its boards (from before this journey's header
+search and "Your settings" footer); those boards are now current.
