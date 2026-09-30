@@ -32,24 +32,23 @@ holding desktop, tablet and phone:
 | 8 Owner setup | https://claude.ai/artifact/EN9dy5TkNzuwJcUCSpLW1B | `docs/decisions/2026-09-30-owner-setup-review.md` (23) |
 | 15 Customer service | https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox | `docs/decisions/2026-09-30-customer-service-review.md` (14) |
 | 10 Opening the shop | https://claude.ai/artifact/E9XTaKJys2WH3gpgwfPJbq | `docs/decisions/2026-09-30-opening-the-shop-review.md` (8) |
+| 9 Moving from Citrus Lime | https://claude.ai/artifact/Wkp23VuCPRydTjfYmJgKo9 | `docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` (9) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md` (this folder).
 
-Overview count (each screen once): 286 screens — 197 designed, 6 built, 13
-old app only, 70 not designed yet, 0 for review (30 Sep: journeys 8, 15 and
-10 in; journey 10's three old gaps — check-in, opening float, tills overview —
-replaced by its 14 screens; "Till start-up" stays a gap and the workshop desk
-stays, in a row "Also at the start of the day").
+Overview count (each screen once): 300 screens — 219 designed, 6 built, 13
+old app only, 62 not designed yet, 0 for review (30 Sep: journeys 8, 15, 10
+and 9 in; journey 9's eight old gaps replaced by its 22 screens; journey 10's
+"Till start-up" stays a gap).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
 placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
 collect, 3 Book a repair, 4 Drop off and approve the quote, 5 Collect the
-bike and pay, 6 Cycle to Work, 7 Account, history and reminders, 9 Moving from Citrus Lime, 13 Receiving stock and purchase orders, 14 Stock take and stock control,
+bike and pay, 6 Cycle to Work, 7 Account, history and reminders, 13 Receiving stock and purchase orders, 14 Stock take and stock control,
 17 Reports and accounts, 18 Website management, 19
 Multiple sites, 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **9 Moving from Citrus Lime** (journey 8's
-checklist links to it), **5 Collect the bike and pay** (much
+Strong candidates, because finished journeys lean on them: **5 Collect the bike and pay** (much
 now decided in journey 11: deposits on jobs, collected-when-paid).
 
 ## Rules that apply to every journey (Jack's decisions)
@@ -121,7 +120,7 @@ Generator: `docs/design/user-journeys/generator/`.
 **The big canvas is desktop only** (cash-up decision 8): a canvas holds at
 most 512 files, so each screen appears once — desktop, the one large app map,
 or a phone-only screen's only size — with a "Tablet and phone ↗" link to its
-journey's canvas. 289 files now. A publish carries at most 255 files: split
+journey's canvas. 303 files now. A publish carries at most 255 files: split
 big changes (changed boards with `canvas.json` first, removals second).
 
 ## Gotchas that cost time
@@ -161,6 +160,11 @@ big changes (changed boards with `canvas.json` first, removals second).
 
 ## Open items carried forward
 
+- What Citrus Lime lets a shop export (files, formats, columns, reports) is
+  still unchecked — journey 9 draws every file name, count and figure as a
+  [placeholder], and decision 2's behind-the-scenes matching and decision
+  9's "a week counts when all four match" both depend on it. Jack is best
+  placed to check, from his shop's Citrus Lime admin (Release 2 design §4).
 - WH-1045 Jamie Brooks is on Thursday 17 at 10:30 on the Workshop Overview
   and journey 10's Today, but the diary (`diary.mjs`, day 4) puts it on
   Friday 18 at 11:00. Found by journey 10's UI audit (L5); not changed,

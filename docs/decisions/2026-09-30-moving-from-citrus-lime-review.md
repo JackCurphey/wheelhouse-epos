@@ -103,3 +103,7 @@ few clicks as possible).
      it means; the owner is counted in "Everyone has made a practice sale";
      "Pick the day" stays reachable by keyboard; Cancel beside Save; "Ask
      us to help" always top right of its card.
+10. **Approved and copied into the big canvas** (Jack, 30 Sep: "yeah lets
+    copy it into the big canvas"): desktop, tablet and phone approved; the
+    eight old journey 9 placeholders are replaced by the 22 designed
+    screens.

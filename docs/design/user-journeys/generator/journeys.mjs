@@ -28,6 +28,8 @@ export const sd16 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd8 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'setup' });
 // sd15(id, title, role) = an agreed journey 15 screen (customer.mjs, Soft sand).
 export const sd15 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'customer' });
+// sd9(id, title, role) = an agreed journey 9 screen (moving.mjs, Soft sand).
+export const sd9 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'moving' });
 // sd10(id, title, role) = an agreed journey 10 screen (opening.mjs, Soft sand).
 export const sd10 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'opening' });
 
@@ -227,17 +229,35 @@ export const journeys = [
   {
     id: 'j09', name: 'Moving from Citrus Lime', who: 'Owner',
     rows: [
-      { label: 'Bring the data across', screens: [
-        g('move-upload', 'Upload Citrus Lime exports', 'Owner', 'Bring products, stock, customers, sales and workshop jobs across.', ['One upload per kind of data', 'What each file must contain'], { source: 'Release 2 piece 1 (depends on what Citrus Lime exports)' }),
-        g('move-map', 'Match the columns', 'Owner', 'Check each Citrus Lime column lands in the right place before importing.', ['Column matching', 'Preview of the first rows'], { source: 'Implied by Release 2 piece 1' }),
-        g('move-run', 'Import progress and result', 'Owner', 'What came across and what did not.', ['Counts per kind of data', 'Rows needing attention'], { source: 'Implied by Release 2 piece 1' }),
-        g('move-fix', 'Rows to fix', 'Owner', 'Rows that could not be imported, with the reason, to fix and retry.', ['Reason per row', 'Fix and retry'], { source: 'Release 1 scope reduction' }),
-        g('move-schedule', 'Keep in step (re-import)', 'Owner', 'Re-run the import on a schedule while running alongside Citrus Lime.', ['Schedule', 'History of runs'], { source: 'Release 2 piece 1' }),
+      { label: "Bring your data", screens: [
+        sd9("mv-start", "Bring your data: the files to drop in", "Owner"),
+        sd9("mv-progress", "Bringing it across (starts by itself)", "Owner"),
+        sd9("mv-progress-failed", "A file Wheelhouse couldn’t read", "Owner"),
+        sd9("mv-summary", "Here’s what came across", "Owner"),
+        sd9("mv-fix", "The few that need a look", "Owner"),
+        sd9("mv-sorted", "Everything’s sorted", "Owner"),
       ] },
-      { label: 'Run alongside, then switch', screens: [
-        g('move-compare', 'Compare with Citrus Lime', 'Owner', 'Check Wheelhouse agrees with Citrus Lime, for example a week’s sales totals.', ['Side-by-side totals', 'Differences'], { source: 'Release 2 rule 7' }),
-        g('move-practice', 'Practice mode', 'Staff', 'Make it obvious when a till or screen is practice, not real money.', ['Clear practice marker', 'Practice sales kept separate'], { source: 'Release 2 piece 3' }),
-        g('move-switch', 'Switch-over checklist', 'Owner', 'Everything that must be true before turning Citrus Lime off, then the first week on Wheelhouse alone.', ['Checklist', 'Trading-week tracker'], { source: 'Release 2 finish line' }),
+      { label: "Run alongside", screens: [
+        sd9("mv-today-refresh", "Today: time to refresh from Citrus Lime", "Owner"),
+        sd9("mv-alongside", "Run alongside: the weekly refresh", "Owner"),
+        sd9("mv-change-day", "Change the refresh day", "Owner"),
+        sd9("mv-both", "Changed in both: Citrus Lime’s kept", "Owner"),
+        sd9("mv-check", "The weekly check: each figure checks itself", "Owner"),
+        sd9("mv-check-result", "The weekly check: three match, one doesn’t", "Owner"),
+      ] },
+      { label: "Practice at the till", screens: [
+        sd9("mv-practice-sale", "The till before switch-over: practice, not real money", "Staff"),
+        sd9("mv-practice-card", "A practice card payment: try either outcome", "Staff"),
+      ] },
+      { label: "Switch over", screens: [
+        sd9("mv-ready", "Switch over: the checklist, two still to do", "Owner"),
+        sd9("mv-weeks", "Change how many weeks must match (2 by default)", "Owner"),
+        sd9("mv-ready-all", "Switch over: everything ticked", "Owner"),
+        sd9("mv-pick-day", "Pick switch-over day", "Owner"),
+        sd9("mv-morning", "Switch-over morning: last refresh, then clear practice and go real", "Owner"),
+        sd9("mv-go-real", "Clear practice sales and go real?", "Owner"),
+        sd9("mv-week", "The first full week on Wheelhouse", "Owner"),
+        sd9("mv-week-done", "A full week done: Citrus Lime can go", "Owner"),
       ] },
     ],
   },

@@ -13,20 +13,24 @@ pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11), End-of-day
 cash-up (journey 16), Owner setup (journey 8), Customer service (journey
-15) and Opening the shop (journey 10) are approved and in the big canvas; the next journey is
+15), Opening the shop (journey 10) and Moving from Citrus Lime (journey 9)
+are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (289 files of
+board linking to its journey's own canvas for tablet and phone (303 files of
 the 512 a canvas can hold).
 
-**Journey 9, Moving from Citrus Lime (30 Sep, in progress):** decisions in
-`docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` (8 so far) —
-the owner drops in Citrus Lime exports and Wheelhouse matches them; a
-weekly refresh and a weekly check against Citrus Lime while running
-alongside; every till is practice until switch-over; a self-ticking
-switch-over checklist, then the owner picks the day. Desktop drawn (18
-boards). Own canvas: https://claude.ai/artifact/Wkp23VuCPRydTjfYmJgKo9 .
-Generator: `moving.mjs` + `build-moving.mjs --theme sand`. What Citrus Lime
-exports is still unknown — everything depending on it is bracketed.
+**Journey 9, Moving from Citrus Lime (30 Sep):** approved at desktop,
+tablet and phone and copied into the big canvas; 9 decisions in
+`docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` — Office ›
+Moving from Citrus Lime with three stages; the owner drops in Citrus Lime
+exports and Wheelhouse matches them; a weekly refresh and a self-checking
+weekly comparison while running alongside; every till is practice until
+switch-over; a self-ticking switch-over checklist (matching weeks, 2 by
+default), the owner picks the day, one "Clear and go real" step, then the
+first full week. UI audit `moving-ui-audit.md`. 22 screens, 67 boards. Own
+canvas: https://claude.ai/artifact/Wkp23VuCPRydTjfYmJgKo9 . Generator:
+`moving.mjs` + `build-moving.mjs --theme sand`. What Citrus Lime exports is
+still unknown — everything depending on it is bracketed.
 
 **Journey 10, Opening the shop (30 Sep):** approved at desktop, tablet and
 phone and copied into the big canvas; 8 decisions in
