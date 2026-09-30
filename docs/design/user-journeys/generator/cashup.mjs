@@ -121,14 +121,14 @@ function reportDialog() {
 <div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Email it', { variant: 'ghost' })}${button('Print')}</div>
 </div>`;
 }
-function overlay(base, d) {
+export function overlay(base, d) {
   const [W, H] = WH();
   if (P()) return `<div style="width: ${W}px; height: ${H}px; display: flex">${d}</div>`;
   return `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${base}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${d}</div></div>`;
 }
 
 // Small pop-ups over the page (desktop, tablet); full screen on a phone.
-function popup(id, title, sub, body, footer) {
+export function popup(id, title, sub, body, footer) {
   if (P()) return `<div role="dialog" aria-modal="true" aria-labelledby="${id}" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: ${C.bg}"><div style="display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="${id}" style="margin: 0; font-size: 18px; font-weight: 700">${title}</h2><span style="font-size: 13px; color: ${C.muted}">${sub}</span></div><a href="#" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('close', 20)}</a></div><div data-scroll style="flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footer}</div></div>`;
   return `<div role="dialog" aria-modal="true" aria-labelledby="${id}" style="width: 520px; max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden"><div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="${id}" style="margin: 0; font-size: 20px; font-weight: 700">${title}</h2><span style="font-size: 13px; color: ${C.muted}">${sub}</span></div><a href="#" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div><div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footer}</div></div>`;
 }

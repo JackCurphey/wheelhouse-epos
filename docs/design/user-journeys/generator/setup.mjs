@@ -10,6 +10,7 @@
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { shellDesktop } from './diary.mjs';
+import { popup, overlay } from './cashup.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -95,6 +96,86 @@ ${card(tillSections(), 'overflow: hidden')}
 </div>`);
 }
 
+// ---------- The Till area (decision 3's layout; decision 4: saves as you go) ----------
+function settingsPage(active, title, intro, sections, { toast = '' } = {}) {
+  const list = `<nav aria-label="Settings areas" style="width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">${AREAS.map(([k, t]) => {
+    const on = k === active;
+    return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: ${on ? 700 : 500}; color: ${C.ink}; background: ${on ? C.mutedBg : 'transparent'}">${on ? `<span style="width: 6px; height: 6px; border-radius: 999px; background: ${C.accent}"></span>` : `<span style="width: 6px"></span>`}${esc(t)}</a>`;
+  }).join('')}</nav>`;
+  const body = `<div data-scroll style="flex-grow: 1; min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: 22px; font-weight: 700">${esc(title)}</h2>${note(intro)}</div>
+${card(sections, 'overflow: hidden; flex-shrink: 0')}
+</div>`;
+  const t = toast ? `<div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; padding: 6px 6px 6px 18px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)"><span style="display: inline-flex; align-items: center; gap: 8px">${icon('check', 16)}${toast}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button></div>` : '';
+  return shell(`<div style="position: relative; display: flex; gap: 28px; height: 100%">${list}${body}${t}</div>`);
+}
+const TILL_INTRO = 'What staff see and use at the till. Changes save as you make them.';
+const tillFolds = (open = {}) =>
+  fold('Quick buttons', 'Workshop, Parts, Accessories', open.quick || '')
+  + fold('Reasons', 'Discount, void, refund, paid-out', open.reasons || '')
+  + fold('Receipts', 'Print, email or text', open.receipts || '')
+  + fold('Printer and cash drawer', '[Receipt printer]', open.printer || '')
+  + fold('Tills', 'Till B1', open.tills || '');
+
+// Quick buttons: groups as pills, the group's buttons in till order. Hover a
+// button to reveal Edit and Remove (right-click / long-press kept, Workshop
+// day 65); drag the handle to reorder.
+const qbRow = (name, sub, price, hover = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)}" style="width: 28px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${esc(sub)}</span></span>${mono(price, 'font-size: 15px')}${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button><button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.danger}">Remove</button>` : ''}</div>`;
+const quickOpen = (hover = true, added = false) => `<div role="group" aria-label="Quick button groups" style="display: flex; flex-wrap: wrap; gap: 8px">${pill('Workshop', true)}${pill('Parts')}${pill('Accessories')}${pill('+ Add a group')}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">${qbRow('Standard service', 'Labour · 60 min', '£65.00')}${qbRow('Fit & adjust brakes', 'Labour · 30 min', '£18.00', hover)}${qbRow('Replace gear cable', 'Labour', '£12.00')}${added ? qbRow('Shimano brake pads B05S-RX', 'Part', '£28.00') : ''}</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">${button('+ Add a button', { variant: 'default' })}${note('Buttons show on the till in this order.')}</div>`;
+
+// Add a quick button: find the product or service, pick its group. The
+// button's name and price come from the product; the name can be shortened.
+const addButtonDialog = () => popup('qb-title', 'Add a quick button', 'To the Workshop group', `
+<label style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input aria-label="Find a product or service" value="brake pads" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.mutedBg}"><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Shimano brake pads B05S-RX</span><span style="font-size: 12px; color: ${C.muted}">Part</span></span>${mono('£28.00', 'font-size: 15px')}${icon('check', 18)}</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="qb-name" style="font-size: 14px; font-weight: 600">Name on the button</label><input id="qb-name" value="Shimano brake pads B05S-RX" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"><span style="font-size: 13px; color: ${C.muted}">The price always comes from the product.</span></div>
+<div role="group" aria-label="Group" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Group</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${pill('Workshop', true)}${pill('Parts')}${pill('Accessories')}</div></div>`, `${button('Cancel', { variant: 'ghost' })}${button('Add the button')}`);
+
+// Reasons: one list per kind, picked by pill. "Other…" is always offered at
+// the till (journey 11's pop-ups), so staff can type their own.
+const reasonRow = (t) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 6px 0 10px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move" style="width: 28px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="font-size: 15px; flex-grow: 1">${t}</span><button type="button" aria-label="Remove this reason" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; display: inline-flex; align-items: center; justify-content: center">${icon('close', 16)}</button></div>`;
+const reasonsOpen = () => `<div role="group" aria-label="Which reasons" style="display: flex; flex-wrap: wrap; gap: 8px">${pill('Discount', true)}${pill('Void')}${pill('Refund')}${pill('Paid-out')}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">${reasonRow('[Shop’s reason]')}${reasonRow('[Shop’s reason]')}${reasonRow('[Shop’s reason]')}</div>
+<div style="display: flex; gap: 8px"><input aria-label="New discount reason" placeholder="Add a discount reason" style="flex-grow: 1; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}">${button('Add', { variant: 'default' })}</div>
+${note('The till always offers “Other…” as well, so staff can type a reason that isn’t on the list. Every reason shows in the reports.')}`;
+
+// Receipts: which choices the Paid pop-up offers (journey 11 decision 7),
+// the words at the bottom, and a preview. The barcode is always printed
+// (journey 11 decision 13), so it isn't a setting.
+const offer = (t, on) => `<button type="button" aria-pressed="${on}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${on ? icon('check', 15, C.panel) : ''}${t}</button>`;
+const receiptPreview = () => `<div aria-label="Receipt preview" style="width: 230px; flex-shrink: 0; box-sizing: border-box; padding: 16px 14px; background: #ffffff; border: 1px solid ${C.border}; border-radius: 4px; font-family: ${MONO}; font-size: 11px; line-height: 1.5; color: ${C.ink}; display: flex; flex-direction: column; gap: 6px">
+<div style="text-align: center; font-weight: 700; font-size: 12px">North Street Cycles</div><div style="text-align: center">Bolton · Till B1</div>
+<div style="border-top: 1px dashed ${C.border}; padding-top: 6px; display: flex; justify-content: space-between"><span>Standard service</span><span>£65.00</span></div>
+<div style="display: flex; justify-content: space-between; font-weight: 700"><span>Total</span><span>£65.00</span></div><div style="display: flex; justify-content: space-between"><span>incl. VAT</span><span>£10.83</span></div>
+<div style="border-top: 1px dashed ${C.border}; padding-top: 6px; text-align: center; color: ${C.muted}">[Your words at the bottom]</div>
+<div aria-hidden="true" style="height: 30px; margin-top: 4px; background: repeating-linear-gradient(90deg, ${C.ink} 0 2px, #ffffff 2px 4px, ${C.ink} 4px 5px, #ffffff 5px 8px)"></div><div style="text-align: center">B1-[0000]</div></div>`;
+const receiptsOpen = () => `<div style="display: flex; gap: 24px; align-items: flex-start"><div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+<div role="group" aria-label="What the Paid pop-up offers" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">After a sale, offer</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${offer('Print', true)}${offer('Email', true)}${offer('Text', true)}</div><span style="font-size: 13px; color: ${C.muted}">“No receipt” is always there too.</span></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="rc-foot" style="font-size: 14px; font-weight: 600">Words at the bottom</label><textarea id="rc-foot" rows="3" placeholder="e.g. your returns policy, a thank-you" style="box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}; resize: none"></textarea></div>
+${note('The shop’s name and address come from Shop and sites. Every receipt carries a barcode so a refund can find the sale.')}
+</div>${receiptPreview()}</div>`;
+
+// Printer and cash drawer: the till's receipt printer; the drawer opens
+// through it.
+const kv = (k, v) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid ${C.border}"><span style="font-size: 15px">${k}</span><span style="font-size: 15px; font-weight: 600">${v}</span></div>`;
+const printerOpen = () => `${kv('Till B1’s receipt printer', '[Receipt printer]')}${kv('Status', `<span style="display: inline-flex; align-items: center; gap: 6px; color: ${C.successInk}">${icon('check', 16)}Connected</span>`)}${kv('Cash drawer', 'Opens through the printer')}
+<div style="display: flex; gap: 8px; padding-top: 4px">${button('Print a test receipt', { variant: 'default' })}${button('Open the drawer', { variant: 'default' })}</div>`;
+
+// Tills: every computer registered as a till. Registering is owner-only for
+// now (offline spec l.211), done on the computer that will be the till.
+const tillsOpen = () => `<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">Till B1</span><span style="font-size: 13px; color: ${C.muted}">Bolton · registered [date] by [name]</span></span><button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Rename</button>${button('Remove', { variant: 'danger' })}</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px">${button('Make this computer a till', { variant: 'default' })}${note('Only the owner can add a till. Do it on the computer that will be the till.')}</div>`;
+
+def('set-till-quick', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ quick: quickOpen() })));
+def('set-till-quick-add', () => overlay(settingsPage('till', 'Till', TILL_INTRO, tillFolds({ quick: quickOpen(false) })), addButtonDialog()));
+def('set-till-quick-saved', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ quick: quickOpen(false, true) }), { toast: 'Saved · Shimano brake pads added to Workshop' }));
+def('set-till-reasons', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ reasons: reasonsOpen() })));
+def('set-till-receipts', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ receipts: receiptsOpen() })));
+def('set-till-printer', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ printer: printerOpen() })));
+def('set-till-tills', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsOpen() })));
+
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
 def('so-hub', optionHub);
@@ -108,6 +189,16 @@ export const TITLES = {
   'so-hub': 'Option 3 — a page of area cards…',
   'so-hub-area': 'Option 3 — …each opening its own page',
 };
+Object.assign(TITLES, {
+  'set-till-quick': 'Till › Quick buttons — hover a button to edit or remove it',
+  'set-till-quick-add': 'Add a quick button',
+  'set-till-quick-saved': 'Saved as you go, with Undo',
+  'set-till-reasons': 'Till › Reasons — a list for each kind',
+  'set-till-receipts': 'Till › Receipts',
+  'set-till-printer': 'Till › Printer and cash drawer',
+  'set-till-tills': 'Till › Tills',
+});
 export const ROWS = [
-  { label: 'Options — the shape of Settings', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
+  { label: 'Till settings', screens: ['set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills'] },
+  { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];

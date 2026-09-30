@@ -1600,7 +1600,7 @@ function blockPreviewCard(first, second, size = 'desktop') {
 }
 // Item 27 (27 Sep round): storage slots are optional per shop, turned on or
 // off here; when on, the shop keeps its own list of hooks and spaces.
-function toggleSwitch(label, on, id, size = 'desktop') {
+export function toggleSwitch(label, on, id, size = 'desktop') {
   // Tablet/phone (decision 68): the same switch in a full 44px button (the
   // Accessibility tab's a11ySwitch) instead of the 26px desktop track.
   const sw = size !== 'desktop' ? a11ySwitch(id, on, label) : `<span id="${id}" role="switch" aria-checked="${on}" style="position: relative; display: inline-flex; align-items: center; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}; flex-shrink: 0">
