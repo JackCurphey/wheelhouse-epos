@@ -47,10 +47,12 @@ function stages() {
     const done = i < STAGE && !running;
     const state = running ? 'Still running' : done ? 'Done' : i === STAGE ? 'Now' : 'Later';
     const [bg, ink] = done ? [C.okBg, C.successInk] : i === STAGE ? [C.ink, '#ffffff'] : [C.mutedBg, C.muted];
+    // Phone: three compact boxes in a row, the state spoken but not shown.
+    if (isPhone()) return `<li style="display: flex; flex: 1 1 0; min-width: 0"><a href="#stage-${i + 1}" ${i === STAGE ? 'aria-current="step"' : ''} style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex-grow: 1; min-width: 0; min-height: 64px; box-sizing: border-box; padding: 8px; border-radius: 10px; border: 1px solid ${i === STAGE ? C.ink : C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}"><span style="display: inline-flex; width: 24px; height: 24px; border-radius: 999px; align-items: center; justify-content: center; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700">${done ? icon('check', 13) : i + 1}</span><span style="font-size: 13px; font-weight: 700; line-height: 1.25">${t}${srOnly(` · ${state}`)}</span></a></li>`;
     // Audit H1: each stage is a link to its part of the page.
     return `<li style="display: flex; flex: 1 1 0; min-width: 0"><a href="#stage-${i + 1}" ${i === STAGE ? 'aria-current="step"' : ''} style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 56px; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid ${i === STAGE ? C.ink : C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}"><span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${bg}; color: ${ink}; font-size: 13px; font-weight: 700">${done ? icon('check', 15) : i + 1}</span><span style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><span style="font-size: 15px; font-weight: 700">${t}</span><span style="font-size: 13px; color: ${C.muted}">${state}</span></span></a></li>`;
   };
-  return `<nav aria-label="Stages of the move"><ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 8px">${STAGES.map(item).join('')}</ol></nav>`;
+  return `<nav aria-label="Stages of the move"><ol style="margin: 0; padding: 0; list-style: none; display: flex; gap: ${isPhone() ? 6 : 8}px">${STAGES.map(item).join('')}</ol></nav>`;
 }
 const slug = (t) => t.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
 const section = (title, body, action = '') => `<section aria-labelledby="t-${slug(title)}" style="flex-shrink: 0">${card(`<div style="padding: ${isPhone() ? '14px' : '16px 20px'}; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><h2 id="t-${slug(title)}" style="margin: 0; font-size: 18px; font-weight: 700">${title}</h2>${action}</div>${body}</div>`)}</section>`;
@@ -201,9 +203,11 @@ const goReal = () => popup('real-title', 'Clear practice sales and go real?', 'S
 
 // The first full trading week, including a weekend (the finish line).
 const DAYS7 = [1, 2, 3, 4, 5, 6, 7].map((n) => `Day ${n}`); // from switch-over day, whichever day that is
-const dayBox = (d, i, all = false) => { const done = all || i < 4, today = !all && i === 4; return `<li style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; padding: 10px 4px; border-radius: 10px; border: 1px solid ${today ? C.ink : C.border}; background: ${C.panel}" ${today ? 'aria-current="date"' : ''}><span style="font-size: 14px; font-weight: 700">${d}</span><span style="font-size: 12px; color: ${C.muted}">[weekday]</span>${done ? `<span style="display: inline-flex; color: ${C.successInk}">${icon('check', 18)}</span><span style="font-size: 12px; color: ${C.muted}">Traded</span>` : `<span style="font-size: 12px; color: ${C.muted}">${today ? 'Today' : 'To come'}</span>`}</li>`; };
+const dayBox = (d, i, all = false) => { const done = all || i < 4, today = !all && i === 4;
+  if (isPhone()) return `<li style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border-radius: 10px; border: 1px solid ${today ? C.ink : C.border}; background: ${C.panel}" ${today ? 'aria-current="date"' : ''}><span style="font-size: 15px; font-weight: 700">${d}</span><span style="font-size: 13px; color: ${C.muted}; flex-grow: 1">[weekday]</span>${done ? tag('Traded') : `<span style="font-size: 13px; color: ${C.muted}">${today ? 'Today' : 'To come'}</span>`}</li>`;
+  return `<li style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1 1 0; min-width: 0; padding: 10px 4px; border-radius: 10px; border: 1px solid ${today ? C.ink : C.border}; background: ${C.panel}" ${today ? 'aria-current="date"' : ''}><span style="font-size: 14px; font-weight: 700">${d}</span><span style="font-size: 12px; color: ${C.muted}">[weekday]</span>${done ? `<span style="display: inline-flex; color: ${C.successInk}">${icon('check', 18)}</span><span style="font-size: 12px; color: ${C.muted}">Traded</span>` : `<span style="font-size: 12px; color: ${C.muted}">${today ? 'Today' : 'To come'}</span>`}</li>`; };
 const weekBoard = (all = false) => movePage(`${section(all ? 'A full week on Wheelhouse' : 'Your first week on Wheelhouse', `${note(all ? 'Seven trading days, weekend included. You can switch Citrus Lime off now.' : 'Day 5 of 7. Days the shop is shut don’t count. When the week — weekend included — is done, you can switch Citrus Lime off.')}
-<ol aria-label="The first trading week" style="margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: ${isPhone() ? 'wrap' : 'nowrap'}; gap: 8px">${DAYS7.map((d, i) => dayBox(d, i, all)).join('')}</ol>
+<ol aria-label="The first trading week" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: ${isPhone() ? 6 : 8}px">${DAYS7.map((d, i) => dayBox(d, i, all)).join('')}</ol>
 ${list([line('Citrus Lime', all ? 'Switch it off in Citrus Lime when you’re ready · this page leaves the sidebar in a week' : 'Keep it until [date] · nothing needs doing in it')])}`, helpLink)}`);
 
 // ---------- Decision 6: every till is in practice until switch-over ----------
@@ -235,7 +239,7 @@ def('mv-check', () => { STAGE = 1; return movePage(checkSection(false)); });
 def('mv-check-result', () => { STAGE = 1; return movePage(checkSection(true)); });
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
-const SIZES = ['desktop'];
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const size of SIZES) screens[id][size] = withSize(size, () => { SIZE = size; return fn(); });
