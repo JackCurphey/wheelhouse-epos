@@ -20,3 +20,11 @@ clicks as possible).
 
 1. **Journey 5 is next** (Jack, 30 Sep), chosen over Receiving stock and
    purchase orders, and Book a repair.
+2. **The customer can pay online from the job summary, when the shop has
+   online payments switched on** (Jack, 30 Sep): the summary the "Bike
+   ready" link opens shows what was done and the amount to pay, with "Pay
+   now". A bike paid online is handed over at the counter in one tap; one
+   not paid is paid at the till as now, which also records collection
+   (Selling at the till 10). Depends on online card payments (journey 18
+   and a payment provider not yet chosen). Chosen over reading-only
+   summaries with everyone paying in the shop, and online payment only.
