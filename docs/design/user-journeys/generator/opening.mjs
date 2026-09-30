@@ -48,7 +48,10 @@ const section = (title, body, action = '') => card(`<div style="padding: 14px 18
 const line = (left, sub, right = '') => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${left}</span>${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</span>${right}</div>`;
 const tag = (t, tone = 'ok') => { const [bg, ink] = tone === 'ok' ? [C.okBg, C.successInk] : tone === 'warn' ? [C.warnBg, C.warnInk] : [C.mutedBg, C.muted]; return `<span style="display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${tone === 'ok' ? icon('check', 13) : tone === 'warn' ? icon('alert', 13) : ''}${t}</span>`; };
 const stat = (k, v, sub) => `<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}"><span style="font-size: 13px; color: ${C.muted}">${k}</span><span style="font-size: 20px; font-weight: 700">${v}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></div>`;
-function today({ short = false, waiting = false } = {}) {
+const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
+// Decision 4: Staff see Who's in and Workshop today; Tills and Needs
+// attention are for owners, managers and anyone with "Can close the day".
+function today({ short = false, waiting = false, staff = false } = {}) {
   const tills = section('Tills', line('Till B1', `Open · float checked by Jo Taylor at [time]`, waiting ? tag('[n] sales waiting to send', 'warn') : tag(short ? 'Float short' : 'All sent', short ? 'warn' : 'ok')));
   const who = section('Who’s in', `${line('Jo Taylor', 'Checked in at [time] · Staff', tag('In'))}${line('Alex Morgan', 'Due in today · Mechanic', tag('Not in yet', 'grey'))}${line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))}`);
   const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', '3 still to arrive')}${stat('Ready to collect', '4', 'In the workshop now')}</div>
@@ -56,8 +59,9 @@ ${line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span st
   const attention = section('Needs attention', short
     ? line('Till B1’s float was [£] short this morning', 'Counted by Jo Taylor at [time] · “[their reason]”', button('Check', { variant: 'default' }))
     : `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid ${C.border}; font-size: 15px; color: ${C.muted}">${icon('check', 16)}Nothing needs you right now</div>`);
-  const cols = isPhone() ? `${attention}${tills}${who}${work}` : `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start"><div style="display: flex; flex-direction: column; gap: 14px">${attention}${tills}${who}</div><div style="display: flex; flex-direction: column; gap: 14px">${work}</div></div>`;
-  return page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton · open [opens]–[closes]')}${cols}</div>`, MANAGER);
+  const left = staff ? who : `${attention}${tills}${who}`;
+  const cols = isPhone() ? `${left}${work}` : `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start"><div style="display: flex; flex-direction: column; gap: 14px">${left}</div><div style="display: flex; flex-direction: column; gap: 14px">${work}</div></div>`;
+  return page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton · open [opens]–[closes]')}${cols}</div>`, staff ? STAFF : MANAGER);
 }
 
 def('op-float-check', () => overlay(tillBase(), floatCheck()));
@@ -66,6 +70,7 @@ def('op-float-short', () => overlay(tillBase(), floatShort()));
 def('op-today', () => today());
 def('op-today-short', () => today({ short: true }));
 def('op-today-waiting', () => today({ waiting: true }));
+def('op-today-staff', () => today({ staff: true }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
 const SIZES = ['desktop'];
@@ -82,8 +87,9 @@ export const TITLES = {
   'op-today': 'Office › Today: the start of the day',
   'op-today-short': 'Today, with a short float to check',
   'op-today-waiting': 'Today, with sales waiting to send',
+  'op-today-staff': 'Today, as Staff see it',
 };
 export const ROWS = [
   { label: 'Opening the till', screens: ['op-float-check', 'op-float-count', 'op-float-short'] },
-  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-waiting'] },
+  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-waiting', 'op-today-staff'] },
 ];
