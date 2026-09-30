@@ -56,3 +56,15 @@ few clicks as possible).
    tills become real. Nobody can take real money in both systems by
    mistake, and there is nothing for staff to switch. Chosen over a
    practice switch on each till and a separate practice till.
+7. **Switch-over is a readiness checklist that ticks itself, then the
+   owner picks the day** (Jack, 30 Sep): the Switch over stage lists what
+   must be true first — [n] weeks in a row where the weekly check matched
+   (the number is Jack's to set; drawn as [n]), the card machine connected
+   (journey 8), every member of staff has made a practice sale, the website
+   moved (journey 18) — each ticking itself. When all are ticked the owner
+   picks a date; that morning Wheelhouse asks for one last refresh from
+   Citrus Lime, clears the practice sales and makes the tills real; then a
+   tracker counts the first full trading week including a weekend (the
+   Release 2 finish line), after which Citrus Lime can be switched off.
+   Chosen over a single "Switch over" button, and a Wheelhouse person
+   signing off with the shop.
