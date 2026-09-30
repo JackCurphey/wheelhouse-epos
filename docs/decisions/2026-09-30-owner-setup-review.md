@@ -143,6 +143,14 @@ one from the staff list.
     (1.31:1 — the same pills in every journey, a design-wide token fix for
     the Soft sand switch). The other missing states (M14–M20) are rules in
     the audit file, not drawings.
+18. **"Close the day" can appear before closing time** (Jack, 30 Sep: he
+    wants the option "to appear, say, about an hour or so before closing
+    time"): End of day › Close the day offers At closing time, 30 minutes
+    before, or 1 hour before, counted from the site's closing time. Restores
+    the early option decision 17 had dropped when it removed End of day's
+    own time box. Drawn with 1 hour before chosen; the default for a new
+    shop is at closing time unless Jack says otherwise. Also (Jack, same
+    message): a workshop person's seven day pills sit on one line.
 
 ## Noted for later (not for this journey)
 

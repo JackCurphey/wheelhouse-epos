@@ -153,11 +153,13 @@ const EOD_INTRO = 'How the till closes each day.';
 const moneyInput = (id, label, value) => `<div style="display: flex; align-items: center; gap: 10px"><label for="${id}" style="font-size: 15px; font-weight: 600; flex-grow: 1">${label}</label><input id="${id}" value="${value}" style="width: 140px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></div>`;
 const eodFolds = (open = {}) =>
   fold('Float', '[£ float]', open.float || '')
-  + fold('Close the day', 'After closing time', open.close || '')
+  + fold('Close the day', '1 hour before closing', open.close || '')
   + fold('Counting the cash', 'Count first', open.count || '');
 const floatOpen = () => `${moneyInput('eod-float', 'Leave this much in the drawer each night', '[£ float]')}${note('Close the day works out the rest to bank, so every day starts with the same float.')}`;
 // Decision 17: Close the day follows the site's closing time — no time of its own.
-const closeOpen = () => `${note('“Close the day” appears in the till bar for owners and managers after the shop’s closing time.')}<div>${button('Change opening hours', { variant: 'default' })}</div>`;
+// Decision 18: it can appear before closing time, so cashing up can start
+// while the last customers are served.
+const closeOpen = () => `${choice('Show “Close the day” in the till bar', [['At closing time', false], ['30 minutes before', false], ['1 hour before', true]])}${note('Owners and managers see it on every till from then on. Closing time comes from the opening hours.')}<div>${button('Change opening hours', { variant: 'default' })}</div>`;
 def('set-eod', () => settingsPage('eod', 'End of day', EOD_INTRO, eodFolds({ float: floatOpen() })));
 def('set-eod-close', () => settingsPage('eod', 'End of day', EOD_INTRO, eodFolds({ close: closeOpen() })));
 // Decision 17 (H4): a change that can't be saved says so, and keeps it.
@@ -210,8 +212,8 @@ const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Mo
 const toggleLine = (t, sub, on, indent = false) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 48px; ${indent ? `margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}` : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${offer(on ? 'On' : 'Off', on)}</div>`;
 // Decision 13: each workshop person's working days, as toggle pills.
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const dayPill = (d, on) => `<button type="button" aria-pressed="${on}" aria-label="${d}" style="min-width: 48px; min-height: 44px; padding: 0 10px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${d}</button>`;
-const workingDays = () => `<div role="group" aria-label="Works in the workshop on" style="display: flex; flex-direction: column; gap: 8px; margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">In the workshop on</span><div style="display: flex; flex-wrap: wrap; gap: 6px">${DAYS.map((d) => dayPill(d, ['Tue', 'Wed', 'Sat'].includes(d))).join('')}</div></div>`;
+const dayPill = (d, on) => `<button type="button" aria-pressed="${on}" aria-label="${d}" style="min-width: 44px; min-height: 44px; padding: 0 6px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${d}</button>`;
+const workingDays = () => `<div role="group" aria-label="Works in the workshop on" style="display: flex; flex-direction: column; gap: 8px; margin-left: 18px; padding-left: 14px; border-left: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">In the workshop on</span><div style="display: flex; flex-wrap: nowrap; gap: 4px">${DAYS.map((d) => dayPill(d, ['Tue', 'Wed', 'Sat'].includes(d))).join('')}</div></div>`;
 const workshopBlock = (on) => `<div style="display: flex; flex-direction: column; gap: 6px">${toggleLine('Works in the workshop', 'Gets a column in the diary', on)}${on ? `${toggleLine('Customers can book Jo online', 'Off: staff can still book jobs in for Jo', false, true)}${workingDays()}` : ''}</div>`;
 // One person, in a pop-up in the middle (Workshop day 15, 16). The role by
 // pill; the switches as toggle pills; the PIN line (signing in 6).
@@ -252,7 +254,7 @@ ${note('These show on receipts, emails and the website.')}`;
 const timeBox = (label, v) => `<input aria-label="${label}" value="${v}" style="width: 96px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">`;
 const hoursRow = (d, open) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 50px; border-top: 1px solid ${C.border}"><span style="width: 60px; font-size: 15px; font-weight: 600">${d}</span>${open ? `${timeBox(`${d} opens`, '[opens]')}<span style="color: ${C.muted}">to</span>${timeBox(`${d} closes`, '[closes]')}` : ''}<span style="flex-grow: 1"></span>${offer(open ? 'Open' : 'Closed', open)}</div>`;
 const hoursOpen = () => `${DAYS.map((d) => hoursRow(d, d !== 'Sun')).join('')}
-${note('Close the day appears after closing time. Online booking only offers mechanics on the days they’re in, set on each person.')}`;
+${note('Close the day appears in time for closing, as set in End of day. Online booking only offers mechanics on the days they’re in, set on each person.')}`;
 const shopFolds = (open = {}) =>
   fold('Shop details', 'North Street Cycles', open.details || '')
   + fold('Opening hours · Bolton', 'Closed Sundays', open.hours || '')
@@ -400,7 +402,7 @@ Object.assign(TITLES, {
   'set-till-remove': 'Removing a till asks first',
   'set-till-empty': 'A new shop — no quick buttons yet',
   'set-eod': 'End of day — float',
-  'set-eod-close': 'End of day — Close the day follows closing time',
+  'set-eod-close': 'End of day — Close the day at, or before, closing time',
   'set-save-failed': 'A change that couldn’t be saved',
   'set-pay-ways': 'Payments › Ways to pay — each on or off',
   'set-pay-other': 'Payments › Other ways to pay',
