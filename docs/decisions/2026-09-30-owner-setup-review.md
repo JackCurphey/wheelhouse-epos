@@ -151,6 +151,15 @@ one from the staff list.
     own time box. Drawn with 1 hour before chosen; the default for a new
     shop is at closing time unless Jack says otherwise. Also (Jack, same
     message): a workshop person's seven day pills sit on one line.
+19. **The Shared queue gets a row in Workshop › Mechanics** (Jack, 30 Sep:
+    for jobs "booked in for the shop floor to do rather than a certain
+    mechanic" — "me and someone else will just kind of figure it out
+    between us"): journey 12's Shared queue (Workshop day 32, 62) sits in
+    the Mechanics list beside the people, with a name the shop can change
+    (e.g. "Shop floor") and two switches — "Customers can book it online"
+    and "Show it as a column in the diary". Whoever takes a job drags it
+    to their column, or it stays in the queue. Chosen over no settings
+    for it and a group of people sharing the jobs.
 
 ## Noted for later (not for this journey)
 
