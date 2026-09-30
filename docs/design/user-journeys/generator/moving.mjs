@@ -112,7 +112,7 @@ ${list([fixRow('[Customer name]', 'Looks like the same person as [customer name]
 ${list([fixRow('[Job number]', 'The customer on this job isn’t in the customers file')])}
 <div style="display: flex; justify-content: flex-end; padding-top: 6px">${button('Done for now')}</div>`, helpLink)}`);
 // Audit M3: when every row is fixed or left out.
-const sortedBoard = () => movePage(section('Everything’s sorted', `${note('Everything that fitted is in. The ones you left out are listed under Settings › Your data, to add by hand when you like.')}
+const sortedBoard = () => movePage(section('Everything’s sorted', `${note('Everything that fitted is in. The ones you left out are listed under Settings › Office › Your data, to add by hand when you like.')}
 ${list([line('Left out', `${count('[n]')} rows`, link('See them'))])}
 <div style="display: flex; justify-content: flex-end; padding-top: 6px">${button('Next: run alongside')}</div>
 ${nextLine}`, helpLink));
@@ -179,7 +179,7 @@ const weeksPopup = () => popup('wk-title', 'Matching weeks before switch-over', 
 ${note('2 proves a refresh came across cleanly twice running. More weeks take in a month-end, but the move takes longer.')}`, `${button('Cancel', { variant: 'default' })}${button('Save')}`, 520);
 const READY = (all) => [
   readyRow('The weekly check matched 2 weeks in a row', '2 of 2 so far', true, link('Change')),
-  readyRow('The card machine is connected', 'Settings › Payments', true),
+  readyRow('The card machine is connected', 'Settings › Front desk › Payments', true),
   readyRow('Everyone has made a practice sale', all ? 'Jo Taylor, Alex Morgan, Jack Lewis and you' : 'Jo Taylor, Jack Lewis and you have · Alex Morgan hasn’t yet', all, all ? '' : link('Remind Alex')),
   readyRow('The website is moved', 'Your website runs on Wheelhouse, not Citrus Lime', all, all ? '' : link('Open Website')),
 ];

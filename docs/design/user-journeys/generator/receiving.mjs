@@ -11,7 +11,7 @@
 // for by job WH-1042 (Maya Patel, Trek Domane AL 3). Every other product,
 // supplier, cost, count and date is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { page, note, popup, overlay, withSize, isPhone, MANAGER } from './settings-frame.mjs';
+import { page, note, popup, overlay, withSize, isPhone, MANAGER, settingsPage, rowSwitch, stockFolds, STOCK_INTRO } from './settings-frame.mjs';
 import { screens as diaryScreens } from './diary.mjs';
 import { today } from './opening.mjs';
 
@@ -107,6 +107,10 @@ const invoicePopup = () => popup('inv-title', 'Add the invoice', '[Supplier] · 
 <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px">${icon('plus', 16)}<span style="flex-grow: 1">Attach the PDF (optional)</span>${link('Choose a file')}</div>
 ${note(`Booked in: ${mono('£[y]')} before VAT. Wheelhouse compares the two totals.`)}`, `${button('Cancel', { variant: 'default' })}${button('Check it')}`, 560);
 
+// The switch (decision 6), in Settings › Stockroom (decision 7).
+const invoiceSetting = () => settingsPage('stock', 'Stockroom', STOCK_INTRO, stockFolds({ invoices: `${rowSwitch('Check supplier invoices', true)}
+${note('On a booked-in delivery, “Add the invoice” compares the invoice total with what was booked in. Turn it off if you check invoices in your accounts software instead.')}` }));
+
 // ---------- Decision 2: a purchase order, built by hand ----------
 const poLine = (name, code, n, cost) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 2fr) auto minmax(0, 0.8fr) 44px'}; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${code}</span></span>${qty(n, name)}${isPhone() ? '' : `<span style="font-family: ${MONO}; font-size: 15px; text-align: right">${cost}</span><button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}">${icon('close', 18)}</button>`}</div>`;
 const orderBoard = () => stockPage('New order', `${section('New order', `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><label for="po-supplier" style="font-size: 14px; font-weight: 600">Supplier</label><select id="po-supplier" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>[Supplier]</option></select></div>
@@ -134,6 +138,7 @@ def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
 def('rs-delivery', () => deliveryBoard());
 def('rs-invoice', () => overlay(deliveryBoard(), invoicePopup()));
 def('rs-invoice-diff', () => deliveryBoard('diff'));
+def('rs-invoice-setting', () => invoiceSetting());
 def('rs-order', () => orderBoard());
 def('rs-restock', () => restockBoard());
 def('rs-today-restock', () => today({ restock: true }));
@@ -157,12 +162,13 @@ export const TITLES = {
   'rs-delivery': 'A booked-in delivery, its invoice not checked yet',
   'rs-invoice': 'Add the invoice: its total against what was booked in',
   'rs-invoice-diff': 'The invoice doesn’t match: the difference, to query',
+  'rs-invoice-setting': 'Settings › Stockroom: the invoice check, on or off',
   'rs-order': 'A purchase order, built by hand',
   'rs-restock': 'Restock list: download for the supplier’s basket',
   'rs-today-restock': 'Today: the restock list, for managers',
 };
 export const ROWS = [
   { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-frame', 'rs-booked', 'rs-job-arrived'] },
-  { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-diff'] },
+  { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-diff', 'rs-invoice-setting'] },
   { label: 'Ordering', screens: ['rs-order', 'rs-restock', 'rs-today-restock'] },
 ];

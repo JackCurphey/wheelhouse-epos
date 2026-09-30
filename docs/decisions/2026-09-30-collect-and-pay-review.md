@@ -83,3 +83,9 @@ clicks as possible).
    and pay-online gaps are replaced by the 19 designed screens; the old
    "Bike ready" phone screen and the receipt gap stay in a row "Also at
    collection".
+
+**Later change (30 Sep 2026, Receiving stock decision 7):** Settings now has
+four pages, one per room — Front desk (Till, Payments, Messages, End of
+day), Workshop, Stockroom (new) and Office (Shop and sites, Staff and roles,
+Your data). A room with several areas shows them as headings with a "Jump
+to" row of pills; a phone opens on the list of four rooms. The collection setting stays in Settings › Workshop; the "Bike still waiting" wording is now under Settings › Front desk › Messages.

@@ -366,3 +366,9 @@ two boards were an older build (the sidebar's user block predated a later
 shared-frame change), now current. Later the same day (Collect the bike and pay decision 4) the section's
 summary became "Reminder after [n] days · hand-back reminders off". Later still (decision 5 there): the paid strip reads "Paid online · [date]"
 and the Hand over button keeps one width.
+
+**Later change (30 Sep 2026, Receiving stock decision 7):** Settings now has
+four pages, one per room — Front desk (Till, Payments, Messages, End of
+day), Workshop, Stockroom (new) and Office (Shop and sites, Staff and roles,
+Your data). A room with several areas shows them as headings with a "Jump
+to" row of pills; a phone opens on the list of four rooms. Diary and storage settings stay in Settings › Workshop, now with the room's heading above the scrolling part.

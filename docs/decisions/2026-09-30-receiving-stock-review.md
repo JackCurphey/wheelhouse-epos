@@ -83,3 +83,15 @@ the supplier integrations above.
    Compares totals only, so it doesn't say which line differs — that comes
    with the supplier-file upload (Noted for later, decision 3). Chosen over
    line by line, and leaving it to the accounts software.
+7. **Settings has four pages, one per room** (Jack, 30 Sep: "I think there
+   should be 4 main settings pages, which correspond to each of the rooms,
+   so front desk, workshop, stockroom, office"): Front desk holds Till,
+   Payments, Messages and End of day; Workshop is as before; Stockroom is
+   new and holds the supplier invoice switch (decision 6); Office holds
+   Shop and sites, Staff and roles, and Your data. A room with several
+   areas shows them as headings, each with its folding sections, and a
+   "Jump to" row of pills; a phone opens Settings on the list of four
+   rooms. Chosen over a short list of sections per room (one more click)
+   and tabs across each room (hard to fit on a phone). Replaces Owner
+   setup decision 3's eight areas. Board: `rs-invoice-setting`; every
+   Settings board is redrawn.

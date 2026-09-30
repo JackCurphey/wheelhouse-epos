@@ -118,3 +118,9 @@ possible; Owner setup 4 — changes save as you go).
     user-journeys canvas as Designed (desktop there, linking here for
     tablet and phone), and journey 12's Customer account board replaced by
     this customer page (decision 11).
+
+**Later change (30 Sep 2026, Receiving stock decision 7):** Settings now has
+four pages, one per room — Front desk (Till, Payments, Messages, End of
+day), Workshop, Stockroom (new) and Office (Shop and sites, Staff and roles,
+Your data). A room with several areas shows them as headings with a "Jump
+to" row of pills; a phone opens on the list of four rooms. Customer groups are now under Settings › Front desk › Payments.

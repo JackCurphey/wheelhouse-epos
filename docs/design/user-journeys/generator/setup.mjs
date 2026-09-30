@@ -9,7 +9,7 @@
 // Accessories) and buttons (Standard service £65, Fit & adjust brakes £18,
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
-import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO, payFolds, PAY_INTRO } from './settings-frame.mjs';
+import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO, payFolds, PAY_INTRO, TILL_INTRO, tillFolds, EOD_INTRO, eodFolds, STAFF_INTRO, staffFolds, SHOP_INTRO, shopFolds, MSG_INTRO, msgFolds, DATA_INTRO, dataFolds } from './settings-frame.mjs';
 import { screens as diaryScreens } from './diary.mjs';
 
 export const screens = {};
@@ -72,13 +72,6 @@ ${card(tillSections(), 'overflow: hidden')}
 }
 
 // ---------- The Till area (decision 3's layout; decision 4: saves as you go) ----------
-const TILL_INTRO = 'What staff see and use at the till.';
-const tillFolds = (open = {}) =>
-  fold('Quick buttons', 'Workshop, Parts, Accessories', open.quick || '')
-  + fold('Reasons', 'Discount, void, refund, paid-out', open.reasons || '')
-  + fold('Receipts', 'Print, email or text', open.receipts || '')
-  + fold('Printer and cash drawer', '[Receipt printer]', open.printer || '')
-  + fold('Tills', 'Till B1', open.tills || '');
 
 // Quick buttons: groups as pills, the group's buttons in till order. Hover a
 // button to reveal Edit and Remove (right-click / long-press kept, Workshop
@@ -148,12 +141,7 @@ def('set-till-remove', () => overlay(settingsPage('till', 'Till', TILL_INTRO, ti
 def('set-till-empty', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ quick: quickEmpty() }).replace('Workshop, Parts, Accessories', 'None yet'), { who: OWNER }));
 
 // ---------- End of day (cash-up decisions 2, 4, 5; decision 6: blind on) ----------
-const EOD_INTRO = 'How the till closes each day.';
 const moneyInput = (id, label, value) => `<div style="display: flex; align-items: center; gap: 10px"><label for="${id}" style="font-size: 15px; font-weight: 600; flex-grow: 1">${label}</label><input id="${id}" value="${value}" style="width: 140px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></div>`;
-const eodFolds = (open = {}) =>
-  fold('Float', '[£ float]', open.float || '')
-  + fold('Close the day', '1 hour before closing', open.close || '')
-  + fold('Counting the cash', 'Count first', open.count || '');
 const floatOpen = () => `${moneyInput('eod-float', 'Leave this much in the drawer each night', '[£ float]')}${note('Close the day works out the rest to bank, so every day starts with the same float.')}`;
 // Decision 17: Close the day follows the site's closing time — no time of its own.
 // Decision 18: it can appear before closing time, so cashing up can start
@@ -191,7 +179,6 @@ def('set-pay-card', () => settingsPage('payments', 'Payments', PAY_INTRO, payFol
 
 // ---------- Staff and roles (decisions 8–10; signing in 6–7) ----------
 // Seen by Jack Lewis (Manager). Only the Owner adds or removes people.
-const STAFF_INTRO = 'Who works here, and what each person can do.';
 const SWITCHES = ['Can use the till', 'Can see reports', 'Can close the day', 'Can order stock', 'Can edit the website', 'Can change settings'];
 const personRow = (name, role, extras, { you = false, hover: hv = false } = {}, hover = hv && !isPhone()) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}">
 <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: ${C.mutedBg}; font-size: 13px; font-weight: 700; flex-shrink: 0">${name.split(' ').map((x) => x[0]).join('')}</span>
@@ -202,7 +189,6 @@ ${owner ? `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : '
 const roleLine = (r, d) => `<div style="display: flex; gap: 16px; padding: 12px 0; border-top: 1px solid ${C.border}"><span style="width: 110px; flex-shrink: 0; font-size: 15px; font-weight: 700">${r}</span><span style="font-size: 15px; line-height: 1.5">${d}</span></div>`;
 const rolesOpen = () => `${roleLine('Owner', 'Everything, including adding and removing people and tills.')}${roleLine('Manager', 'Everything except adding and removing people and tills.')}${roleLine('Staff', 'The till, customers, messages, stock and the workshop diary.')}${roleLine('Mechanic', 'The workshop diary and jobs.')}
 ${note('Switches on a person add to their role — up to everything a Manager can do.')}`;
-const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '');
 
 // Decision 11: "Works in the workshop" gives a diary column; turning it on
 // shows whether customers can book this person online.
@@ -246,7 +232,6 @@ ${note('You can add switches once they’ve joined. They choose their own till P
 def('set-staff-invite', () => overlay(settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds({ people: peopleOpen(false, true) }), { who: OWNER }), inviteDialog()));
 
 // ---------- Shop and sites (decision 13) ----------
-const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
 const inputRow = (id, label, value) => `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'stretch' : 'center'}; gap: ${isPhone() ? 6 : 12}px; min-height: 52px; padding: ${isPhone() ? '8px 0' : '0'}; border-top: 1px solid ${C.border}"><label for="${id}" style="width: ${isPhone() ? 'auto' : '160px'}; flex-shrink: 0; font-size: 15px; font-weight: 600">${label}</label><input id="${id}" value="${esc(value)}" style="flex-grow: 1; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>`;
 const detailsOpen = () => `${inputRow('shop-name', 'Shop name', 'North Street Cycles')}${inputRow('shop-address', 'Address', '[address]')}${inputRow('shop-phone', 'Phone', '[phone number]')}${inputRow('shop-email', 'Email', '[email address]')}${inputRow('shop-vat', 'VAT number', '[VAT number]')}
 ${note('These show on receipts, emails and the website.')}`;
@@ -256,10 +241,6 @@ const hoursRow = (d, open) => isPhone()
   : `<div style="display: flex; align-items: center; gap: 12px; min-height: 50px; border-top: 1px solid ${C.border}"><span style="width: 60px; font-size: 15px; font-weight: 600">${d}</span>${open ? `${timeBox(`${d} opens`, '[opens]')}<span style="color: ${C.muted}">to</span>${timeBox(`${d} closes`, '[closes]')}` : ''}<span style="flex-grow: 1"></span>${offer(open ? 'Open' : 'Closed', open)}</div>`;
 const hoursOpen = () => `${DAYS.map((d) => hoursRow(d, d !== 'Sun')).join('')}
 ${note('Close the day appears in time for closing, as set in End of day. Online booking only offers mechanics on the days they’re in, set on each person.')}`;
-const shopFolds = (open = {}) =>
-  fold('Shop details', 'North Street Cycles', open.details || '')
-  + fold('Opening hours · Bolton', 'Closed Sundays', open.hours || '')
-  + fold('Sites', 'Bolton', open.sites || '');
 const shopPage = (open) => settingsPage('shop', 'Shop and sites', SHOP_INTRO, shopFolds(open));
 def('set-shop-details', () => shopPage({ details: detailsOpen() }));
 def('set-shop-hours', () => shopPage({ hours: hoursOpen() }));
@@ -292,7 +273,6 @@ def('set-workshop-diary', () => diaryScreens['diary-settings'][size()]);
 // The automatic messages are the ones journeys 2–4 already send (booking
 // confirmed, quote to approve, bike ready, order ready to collect). The
 // wording shown is a starting draft for Jack to approve, not settled copy.
-const MSG_INTRO = 'The texts and emails customers get from the shop.';
 const chan = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.mutedBg : 'transparent'}; color: ${on ? C.ink : C.muted}; font-family: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px">${on ? icon('check', 14) : ''}${t}</button>`;
 const msgRow = (name, when, text, email, hv = false, hover = hv && !isPhone()) => `<div style="display: flex; flex-wrap: ${isPhone() ? 'wrap' : 'nowrap'}; align-items: center; gap: 10px; min-height: 60px; padding: ${isPhone() ? '10px 10px 10px 14px' : '0 8px 0 14px'}; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; flex-basis: ${isPhone() ? '100%' : 'auto'}"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${when}</span></span>${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit wording</button>` : ''}${chan('Text', text)}${chan('Email', email)}${offer('On', true)}</div>`;
 const msgListOpen = () => `<div style="display: flex; flex-direction: column; gap: 8px">
@@ -302,9 +282,6 @@ ${msgRow('Bike ready', 'When a job is finished', true, false, true)}
 ${msgRow('Bike still waiting', 'When a ready bike isn’t collected after [n] days', true, false)}
 ${msgRow('Order ready to collect', 'When an online order is ready', false, true)}</div>
 <div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Add your own message', { variant: 'default' })}${note('Tap Text or Email to choose how each is sent — or both.')}</div>`;
-const msgFolds = (open = {}) =>
-  fold('Automatic messages', '5 on', open.list || '')
-  + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 const msgPage = (open) => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds(open));
 const chip = (t) => `<button type="button" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px dashed ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; font-weight: 600; color: ${C.ink}">+ ${t}</button>`;
 const wordingBox = (id, value, rows = 4) => `<div style="display: flex; flex-direction: column; gap: 8px"><label for="${id}" style="font-size: 15px; font-weight: 600">Wording</label><textarea id="${id}" rows="${rows}" style="box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; line-height: 1.5; color: ${C.ink}; resize: none">${value}</textarea><div role="group" aria-label="Put in" style="display: flex; flex-wrap: wrap; gap: 6px">${chip('Customer’s first name')}${chip('Bike')}${chip('Job number')}${chip('Amount to pay')}${chip('Link to the job')}${chip('Shop name')}${chip('Opening hours')}</div></div>`;
@@ -328,13 +305,11 @@ def('set-msg-new', () => overlay(msgPage({ list: msgListOpen() }), newMsgDialog(
 
 // ---------- Your data (Release 2 rule 5: everything can be exported;
 // decision 4: every settings change is recorded) ----------
-const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
 const exportOpen = () => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${['Customers', 'Sales and refunds', 'Stock', 'Workshop jobs'].map((t) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${icon('check', 16)}<span style="font-size: 15px; font-weight: 600">${t}</span></div>`).join('')}</div>
 <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px">${note('Spreadsheets that open in Excel or Google Sheets — yours to keep, whatever happens.')}${button('Download everything')}</div>`;
 const histRow = (what, before, after) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${what}</span><span style="font-size: 13px; color: ${C.muted}">[name] · [date and time]</span></span><span style="font-size: 14px; color: ${C.muted}">${before}</span><span aria-hidden="true" style="color: ${C.muted}">→</span><span style="font-size: 14px; font-weight: 600">${after}</span></div>`;
 const historyOpen = () => `${histRow('End of day › Float', '[£ before]', '[£ after]')}${histRow('Staff and roles › Jo Taylor · Works in the workshop', 'Off', 'On')}${histRow('Till › Quick buttons · Shimano brake pads B05S-RX', '—', 'Added to Workshop')}
 ${note('Every change made in Settings, newest first, with what it was before.')}`;
-const dataFolds = (open = {}) => fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '');
 const dataPage = (open) => settingsPage('data', 'Your data', DATA_INTRO, dataFolds(open));
 def('set-data-export', () => dataPage({ export: exportOpen() }));
 def('set-data-history', () => dataPage({ history: historyOpen() }));
@@ -416,7 +391,7 @@ export const TITLES = {
   'so-hub-area': 'Option 3 — …each opening its own page',
 };
 Object.assign(TITLES, {
-  'set-list': 'Settings on a phone — the list of areas',
+  'set-list': 'Settings on a phone — the list of rooms',
   'set-till-quick': 'Till › Quick buttons — hover a button to edit or remove it',
   'set-till-quick-add': 'Add a quick button',
   'set-till-quick-saved': 'Saved as you go, with Undo',

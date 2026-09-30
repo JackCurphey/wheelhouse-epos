@@ -14,7 +14,7 @@
 // (25%, £27.75), North Street Cycles, Bolton. Anything else is a bracketed
 // placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { settingsPage, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone, size } from './settings-frame.mjs';
+import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone, size } from './settings-frame.mjs';
 import { screens as diaryScreens, LINES_APPROVED, WORK_TOTAL_APPROVED } from './diary.mjs';
 import { screens as tillScreens } from './till.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
@@ -99,7 +99,6 @@ const expired = () => centred(box('This link has expired', `<p style="margin: 0;
 // Audit M5: the hand-back switch says On or Off in words, the whole row is
 // the control, and the day counts say what they count from.
 const days = (id, label, hint) => `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 52px"><span style="display: flex; flex-direction: column; gap: 2px"><label for="${id}" style="font-size: 15px; font-weight: 700">${label}</label><span style="font-size: 13px; color: ${C.muted}">${hint}</span></span><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 14px"><input id="${id}" inputmode="numeric" value="[n]" style="width: 64px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">days</span></div>`;
-const rowSwitch = (label, on) => `<button type="button" role="switch" aria-checked="${on}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}"><span style="font-size: 15px; font-weight: 700">${label}</span><span style="display: inline-flex; align-items: center; gap: 10px"><span style="font-size: 14px; font-weight: 600; color: ${on ? C.ink : C.muted}">${on ? 'On' : 'Off'}</span><span aria-hidden="true" style="position: relative; display: inline-block; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}"><span style="position: absolute; top: 3px; left: ${on ? 21 : 3}px; width: 20px; height: 20px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 2px rgba(28,30,25,0.35)"></span></span></span></button>`;
 const collectionOpen = () => `${days('rem-days', 'Remind the customer after', 'Counted from when the bike is marked ready · sends “Bike still waiting” — <a href="#" style="color: inherit">edit it in Messages</a>')}
 ${days('flag-days', 'Show it on Today after', 'Counted the same way, and longer than the reminder · for owners and managers')}
 <div style="padding-top: 10px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 6px">${rowSwitch('Hand-back reminders', false)}
@@ -159,7 +158,7 @@ export const TITLES = {
   'cp-collected': 'Collected, with Undo for a few minutes',
   'cp-today-uncollected': 'Today: a ready bike left too long',
   'cp-setting': 'Settings › Workshop › Collection: reminder, flag, hand-back',
-  'cp-messages': 'Settings › Messages: “Bike still waiting”',
+  'cp-messages': 'Settings › Front desk › Messages: “Bike still waiting”',
   'cp-message-wording': '“Bike still waiting”: the wording',
 };
 export const ROWS = [

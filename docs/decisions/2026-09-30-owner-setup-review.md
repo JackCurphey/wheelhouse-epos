@@ -220,3 +220,9 @@ Later (same day, decision 4 there): the Collection section also sets when a
 "Bike still waiting" reminder goes and when an uncollected bike shows on
 Today (summary "Reminder after [n] days · hand-back reminders off"); and
 Messages › Automatic messages gains "Bike still waiting" (text, on) — "5 on".
+
+**Later change (30 Sep 2026, Receiving stock decision 7):** Settings now has
+four pages, one per room — Front desk (Till, Payments, Messages, End of
+day), Workshop, Stockroom (new) and Office (Shop and sites, Staff and roles,
+Your data). A room with several areas shows them as headings with a "Jump
+to" row of pills; a phone opens on the list of four rooms. This replaces decision 3's eight areas down the left and decision 21's phone list of areas; every Settings board is redrawn. The option boards for decision 3 are kept as they were.

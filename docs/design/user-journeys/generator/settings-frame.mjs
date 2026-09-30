@@ -47,6 +47,19 @@ export const AREAS = [
   ['data', 'Your data', 'Download everything, settings changes'],
 ];
 
+// Journey 13 decision 7 (Jack, 30 Sep): Settings has four pages, one per
+// room of the app. A room holding several of the areas above shows them as
+// headings, each with its folding sections, and a "Jump to" row of pills.
+// AREAS stays as it was for Owner setup's decision 3 option boards.
+export const SETTINGS_ROOMS = [
+  ['frontdesk', 'Front desk', 'The till, payments, messages to customers and closing the day.', 'Till, payments, messages, end of day', ['till', 'payments', 'messages', 'eod']],
+  ['workshop', 'Workshop', '', 'Services, mechanics, diary, storage, collection', ['workshop']],
+  ['stockroom', 'Stockroom', '', 'Supplier invoices', ['stock']],
+  ['office', 'Office', 'The shop and its sites, the people who work here, and your data.', 'Shop and sites, staff and roles, your data', ['shop', 'staff', 'data']],
+];
+const roomOf = (area) => SETTINGS_ROOMS.find((r) => r[4].includes(area));
+const areaTitle = (k) => (AREAS.find((a) => a[0] === k) || [k, k])[1];
+
 // A folding section: title, a one-line summary, a chevron. On a phone the
 // summary sits under the title rather than beside it.
 export function fold(title, summary, content = '') {
@@ -81,29 +94,42 @@ function toastHtml(toast) {
   return `<div role="status" style="position: absolute; ${place}; display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)"><span style="display: inline-flex; align-items: center; gap: 8px; flex-grow: 1">${icon(fail ? 'alert' : 'check', 16)}${text}</span><button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700; white-space: nowrap">${fail ? 'Try again' : 'Undo'}</button></div>`;
 }
 
+// A room's settings page. `active` is the area being shown; a board is drawn
+// as if "Jump to" had taken the page to that area, so the areas above it in
+// the room have scrolled out of view and the ones below follow on.
 export function settingsPage(active, title, intro, sections, { toast = '', banner = '', who = MANAGER } = {}) {
   const P = SIZE === 'phone';
-  const heading = `<div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: ${P ? 20 : 22}px; font-weight: 700">${esc(title)}</h2>${note(intro)}</div>`;
+  const [room, roomName, roomIntro, , areas] = roomOf(active);
+  const many = areas.length > 1;
+  const heading = `<div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: ${P ? 20 : 22}px; font-weight: 700">${esc(roomName)}</h2>${note(many ? roomIntro : intro)}</div>`;
+  const jump = many ? `<div role="group" aria-label="Jump to" style="display: flex; flex-wrap: wrap; gap: 8px">${areas.map((k) => pill(areaTitle(k), k === active)).join('')}</div>` : '';
+  const block = (k) => {
+    const body = card(k === active ? sections : AREA_FOLDS[k](), 'overflow: hidden; flex-shrink: 0');
+    if (!many) return body;
+    return `<section aria-labelledby="set-${k}" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0"><div style="display: flex; flex-direction: column; gap: 2px"><h3 id="set-${k}" style="margin: 0; font-size: 18px; font-weight: 700">${esc(k === active ? title : areaTitle(k))}</h3>${note(k === active ? intro : AREA_INTROS[k])}</div>${body}</section>`;
+  };
+  const shown = areas.slice(areas.indexOf(active)).map(block).join('');
+  const top = `${banner}${heading}${jump}`;
   if (P) {
     const back = `<a href="set-list-phone.dc.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; align-self: flex-start; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: none">${icon('back', 16)}Settings</a>`;
-    const body = `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${back}${banner}${heading}${card(sections, 'overflow: hidden; flex-shrink: 0')}</div>`;
-    return shellPhone('Settings', `<div style="position: relative; display: flex; flex-direction: column; height: 100%">${body}${toastHtml(toast)}</div>`, { ...who, active: 'settings' });
+    const body = `<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 10px">${back}${top}</div><div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${shown}</div>`;
+    return shellPhone('Settings', `<div style="position: relative; display: flex; flex-direction: column; gap: 12px; height: 100%">${body}${toastHtml(toast)}</div>`, { ...who, active: 'settings' });
   }
-  const list = `<nav aria-label="Settings areas" style="width: ${SIZE === 'tablet' ? 190 : 220}px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">${AREAS.map(([k, t]) => {
-    const on = k === active;
+  const list = `<nav aria-label="Settings" style="width: ${SIZE === 'tablet' ? 190 : 220}px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">${SETTINGS_ROOMS.map(([k, t]) => {
+    const on = k === room;
     return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: ${on ? 700 : 500}; color: ${C.ink}; background: ${on ? C.mutedBg : 'transparent'}">${on ? `<span style="width: 6px; height: 6px; border-radius: 999px; background: ${C.accent}"></span>` : `<span style="width: 6px"></span>`}${esc(t)}</a>`;
   }).join('')}</nav>`;
-  const body = `<div data-scroll style="flex-grow: 1; min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px">${banner}
-${heading}
-${card(sections, 'overflow: hidden; flex-shrink: 0')}
+  const body = `<div style="flex-grow: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px"><div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 12px">${top}</div>
+<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px">${shown}</div>
 </div>`;
   return shell(`<div style="position: relative; display: flex; gap: ${SIZE === 'tablet' ? 20 : 28}px; height: 100%">${list}${body}${toastHtml(toast)}</div>`, who);
 }
 
-// Phone only: Settings opens on its list of areas (decision 21).
+// Phone only: Settings opens on its list of rooms (decision 21; journey 13
+// decision 7).
 export function settingsList(who = MANAGER) {
-  const row = ([k, t, sub]) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${esc(t)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(sub)}</span></span><span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
-  return shellPhone('Settings', `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto">${card(AREAS.map(row).join('').replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden')}</div>`, { ...who, active: 'settings' });
+  const row = ([, t, , sub]) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${esc(t)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(sub)}</span></span><span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
+  return shellPhone('Settings', `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto">${card(SETTINGS_ROOMS.map(row).join('').replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden')}</div>`, { ...who, active: 'settings' });
 }
 
 // Pop-ups: in the middle on desktop and tablet (Workshop day 15, 16), the
@@ -142,3 +168,42 @@ export const payFolds = (open = {}) =>
   + fold('Ways to pay', 'Cash, card and 4 more', open.ways || '')
   + fold('Other ways to pay', 'Finance, Cycle to Work, payment link', open.other || '')
   + fold('Customer groups', '[Club name] members', open.groups || '');
+
+// The other areas' sections (journey 8), here so every room's settings
+// page can show all of its areas (journey 13 decision 7).
+export const TILL_INTRO = 'What staff see and use at the till.';
+export const tillFolds = (open = {}) =>
+  fold('Quick buttons', 'Workshop, Parts, Accessories', open.quick || '')
+  + fold('Reasons', 'Discount, void, refund, paid-out', open.reasons || '')
+  + fold('Receipts', 'Print, email or text', open.receipts || '')
+  + fold('Printer and cash drawer', '[Receipt printer]', open.printer || '')
+  + fold('Tills', 'Till B1', open.tills || '');
+export const EOD_INTRO = 'How the till closes each day.';
+export const eodFolds = (open = {}) =>
+  fold('Float', '[£ float]', open.float || '')
+  + fold('Close the day', '1 hour before closing', open.close || '')
+  + fold('Counting the cash', 'Count first', open.count || '');
+export const STAFF_INTRO = 'Who works here, and what each person can do.';
+export const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '');
+export const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
+export const shopFolds = (open = {}) =>
+  fold('Shop details', 'North Street Cycles', open.details || '')
+  + fold('Opening hours · Bolton', 'Closed Sundays', open.hours || '')
+  + fold('Sites', 'Bolton', open.sites || '');
+export const MSG_INTRO = 'The texts and emails customers get from the shop.';
+export const msgFolds = (open = {}) =>
+  fold('Automatic messages', '5 on', open.list || '')
+  + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
+export const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
+export const dataFolds = (open = {}) => fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '');
+
+// An on/off switch on its own row (journey 5's hand-back reminders).
+export const rowSwitch = (label, on) => `<button type="button" role="switch" aria-checked="${on}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}"><span style="font-size: 15px; font-weight: 700">${label}</span><span style="display: inline-flex; align-items: center; gap: 10px"><span style="font-size: 14px; font-weight: 600; color: ${on ? C.ink : C.muted}">${on ? 'On' : 'Off'}</span><span aria-hidden="true" style="position: relative; display: inline-block; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}"><span style="position: absolute; top: 3px; left: ${on ? 21 : 3}px; width: 20px; height: 20px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 2px rgba(28,30,25,0.35)"></span></span></span></button>`;
+
+// Stockroom (journey 13 decision 6): the supplier invoice check, on or off.
+export const STOCK_INTRO = 'Deliveries and what suppliers charge for them.';
+export const stockFolds = (open = {}) =>
+  fold('Supplier invoices', 'Checked against deliveries · on', open.invoices || '');
+
+const AREA_FOLDS = { till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
+const AREA_INTROS = { till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };

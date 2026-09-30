@@ -163,7 +163,7 @@ export const journeys = [
       ] },
       { label: "Settings", screens: [
         sd5("cp-setting", "Settings › Workshop › Collection: reminder, flag, hand-back", "Manager"),
-        sd5("cp-messages", "Settings › Messages: “Bike still waiting”", "Manager"),
+        sd5("cp-messages", "Settings › Front desk › Messages: “Bike still waiting”", "Manager"),
         sd5("cp-message-wording", "“Bike still waiting”: the wording", "Manager"),
       ] },
       { label: 'Also at collection', screens: [
@@ -205,7 +205,7 @@ export const journeys = [
         sd8("fr-done", "All set up: the checklist goes", "Owner"),
       ] },
       { label: "Till settings", screens: [
-        sd8("set-list", "Settings on a phone: the list of areas", "Manager"),
+        sd8("set-list", "Settings on a phone: the list of rooms", "Manager"),
         sd8("set-till-quick", "Till › Quick buttons: hover a button to edit or remove it", "Manager"),
         sd8("set-till-quick-add", "Add a quick button", "Manager"),
         sd8("set-till-quick-saved", "Saved as you go, with Undo", "Manager"),
@@ -475,7 +475,7 @@ export const journeys = [
         sd15("cs-transfer", "Record a bank transfer", "Staff"),
       ] },
       { label: "Customer groups", screens: [
-        sd15("cs-groups", "Settings › Payments › Customer groups", "Manager"),
+        sd15("cs-groups", "Settings › Front desk › Payments › Customer groups", "Manager"),
       ] },
       { label: "Privacy requests", screens: [
         sd15("cs-privacy", "Privacy requests: dated, answered within a month", "Manager"),

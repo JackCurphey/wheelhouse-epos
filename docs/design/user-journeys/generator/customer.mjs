@@ -175,7 +175,7 @@ ${note('It comes off what Maya owes. It isn’t counted in the till’s takings,
 def('cs-account', () => overlay(customerPage(), accountDialog()));
 def('cs-transfer', () => overlay(customerPage(), transferDialog()));
 
-// ---------- Customer groups (decision 8): Settings › Payments ----------
+// ---------- Customer groups (decision 8): Settings › Front desk › Payments ----------
 const groupRow = (name, off, count) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px 0 14px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${count}</span></span>${mono(off, 'font-size: 15px')}<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button></div>`;
 const groupsOpen = () => `${groupRow('[Club name] members', '[n]% off', '[n] customers')}
 <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px">${note('The till gives the discount by itself when a group member is added to a sale, with the group as the reason.')}${button('+ Add a group', { variant: 'default' })}</div>`;
@@ -255,7 +255,7 @@ export const TITLES = {
   'cs-add-company': 'Add a customer: a company or club',
   'cs-account': 'Her account: balance, her limit, statement, pay it off',
   'cs-transfer': 'Record a bank transfer',
-  'cs-groups': 'Settings › Payments › Customer groups',
+  'cs-groups': 'Settings › Front desk › Payments › Customer groups',
   'cs-privacy': 'Privacy requests: dated, answered within a month',
   'cs-privacy-blocked': 'Can’t delete yet: money, credit or a bike still open',
   'cs-privacy-delete': 'Deleting someone’s details: sales stay, without their name',

@@ -72,7 +72,9 @@ https://claude.ai/artifact/LbStDU6XExLrd7FNd2zEox . Generator:
 **Journey 8, Owner setup (30 Sep):** approved at desktop, tablet and phone
 and copied into the big canvas; 23 decisions in
 `docs/decisions/2026-09-30-owner-setup-review.md` — Settings in the Office
-room lists eight areas down the left (phone: a list, then each area), each
+room lists eight areas down the left (phone: a list, then each area) —
+since journey 13 decision 7, four pages, one per room: Front desk, Workshop,
+Stockroom, Office, with the areas as headings and a Jump to row — each
 area's settings fold, changes save as you go with Undo; four fixed roles
 plus switches that can add up to a Manager; "Works in the workshop" with
 online booking and working days; a Shared queue row; Close the day up to an

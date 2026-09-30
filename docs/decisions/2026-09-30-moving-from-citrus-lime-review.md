@@ -107,3 +107,9 @@ few clicks as possible).
     copy it into the big canvas"): desktop, tablet and phone approved; the
     eight old journey 9 placeholders are replaced by the 22 designed
     screens.
+
+**Later change (30 Sep 2026, Receiving stock decision 7):** Settings now has
+four pages, one per room — Front desk (Till, Payments, Messages, End of
+day), Workshop, Stockroom (new) and Office (Shop and sites, Staff and roles,
+Your data). A room with several areas shows them as headings with a "Jump
+to" row of pills; a phone opens on the list of four rooms. The switch-over checklist now points to Settings › Front desk › Payments, and the left-out list to Settings › Office › Your data.
