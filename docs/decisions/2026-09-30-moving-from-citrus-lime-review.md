@@ -48,3 +48,11 @@ few clicks as possible).
    difference, with "Ask us to help" on one that doesn't match. The weeks
    that matched are kept as a record for deciding when to switch over.
    Chosen over uploading Citrus Lime's report file and no comparison screen.
+6. **Every Wheelhouse till is in practice until switch-over** (Jack, 30
+   Sep): while the move is at Run alongside, every till shows a band across
+   the top, "Practice: not real money". Practice sales don't touch the card
+   machine or the cash drawer count, stay out of reports and the weekly
+   check, and are cleared on switch-over day, when the band goes and the
+   tills become real. Nobody can take real money in both systems by
+   mistake, and there is nothing for staff to switch. Chosen over a
+   practice switch on each till and a separate practice till.
