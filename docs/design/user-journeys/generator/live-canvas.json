@@ -539,32 +539,168 @@
       "title": "Designed · Change customer update channels",
       "is_interactive": true
     },
-    "j05-ready.dc.html": {
+    "j05-cp-summary-desktop.dc.html": {
       "x": 0,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The “Bike ready” link: what we did, and Pay now (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-summary-deposit-desktop.dc.html": {
+      "x": 1320,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The same link, after a deposit: only the rest to pay (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-pay-desktop.dc.html": {
+      "x": 2640,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Pay online (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-pay-failed-desktop.dc.html": {
+      "x": 3960,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Pay online: the card didn’t go through (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-paid-desktop.dc.html": {
+      "x": 5280,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Paid — see you soon (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-summary-paid-desktop.dc.html": {
+      "x": 6600,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The link opened again after paying (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-summary-counter-desktop.dc.html": {
+      "x": 7920,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The link while it’s being paid at the counter (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-summary-inshop-desktop.dc.html": {
+      "x": 9240,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The same link, for a shop without online payments (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-expired-desktop.dc.html": {
+      "x": 10560,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The link, [n] days after collection (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-ready-unpaid-desktop.dc.html": {
+      "x": 12040,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · At the counter, not paid: Take payment (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-ready-deposit-desktop.dc.html": {
+      "x": 13360,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · At the counter, deposit paid: the rest to pay (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-till-desktop.dc.html": {
+      "x": 14680,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The till: the job’s lines locked, collected when paid (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-ready-paid-desktop.dc.html": {
+      "x": 16000,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · At the counter, paid online: Hand over (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-ready-ticks-desktop.dc.html": {
+      "x": 17320,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Hand over, with hand-back reminders switched on (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-collected-desktop.dc.html": {
+      "x": 18640,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Collected, with Undo for a few minutes (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-today-uncollected-desktop.dc.html": {
+      "x": 20120,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today: a ready bike left too long (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-setting-desktop.dc.html": {
+      "x": 21600,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Workshop › Collection: reminder, flag, hand-back (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-messages-desktop.dc.html": {
+      "x": 22920,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Messages: “Bike still waiting” (desktop)",
+      "is_interactive": true
+    },
+    "j05-cp-message-wording-desktop.dc.html": {
+      "x": 24240,
+      "y": 14630,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · “Bike still waiting”: the wording (desktop)",
+      "is_interactive": true
+    },
+    "j05-ready.dc.html": {
+      "x": 25720,
       "y": 14630,
       "w": 390,
       "h": 900,
       "title": "Designed · Customer is invited to collect",
       "is_interactive": true
     },
-    "j05-done-summary.dc.html": {
-      "x": 470,
-      "y": 14630,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Job done: summary and invoice",
-      "is_interactive": true
-    },
-    "j05-done-pay.dc.html": {
-      "x": 940,
-      "y": 14630,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Pay online for workshop work",
-      "is_interactive": true
-    },
     "j05-done-receipt.dc.html": {
-      "x": 1410,
+      "x": 26190,
       "y": 14630,
       "w": 390,
       "h": 900,
@@ -2496,9 +2632,26 @@
     "j04-ceiling.dc.html",
     "j04-customer-message.dc.html",
     "j04-preferences.dc.html",
+    "j05-cp-summary-desktop.dc.html",
+    "j05-cp-summary-deposit-desktop.dc.html",
+    "j05-cp-pay-desktop.dc.html",
+    "j05-cp-pay-failed-desktop.dc.html",
+    "j05-cp-paid-desktop.dc.html",
+    "j05-cp-summary-paid-desktop.dc.html",
+    "j05-cp-summary-counter-desktop.dc.html",
+    "j05-cp-summary-inshop-desktop.dc.html",
+    "j05-cp-expired-desktop.dc.html",
+    "j05-cp-ready-unpaid-desktop.dc.html",
+    "j05-cp-ready-deposit-desktop.dc.html",
+    "j05-cp-till-desktop.dc.html",
+    "j05-cp-ready-paid-desktop.dc.html",
+    "j05-cp-ready-ticks-desktop.dc.html",
+    "j05-cp-collected-desktop.dc.html",
+    "j05-cp-today-uncollected-desktop.dc.html",
+    "j05-cp-setting-desktop.dc.html",
+    "j05-cp-messages-desktop.dc.html",
+    "j05-cp-message-wording-desktop.dc.html",
     "j05-ready.dc.html",
-    "j05-done-summary.dc.html",
-    "j05-done-pay.dc.html",
     "j05-done-receipt.dc.html",
     "j06-c2w-customer.dc.html",
     "j06-c2w-staff.dc.html",
@@ -2937,7 +3090,47 @@
     "j05_s22": {
       "x": 0,
       "y": 14390,
-      "text": "Collection",
+      "text": "The customer’s link",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j05_s23": {
+      "x": 12040,
+      "y": 14390,
+      "text": "At the counter",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j05_s24": {
+      "x": 20120,
+      "y": 14390,
+      "text": "Not collected",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j05_s25": {
+      "x": 21600,
+      "y": 14390,
+      "text": "Settings",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j05_s26": {
+      "x": 25720,
+      "y": 14390,
+      "text": "Also at collection",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -2949,9 +3142,9 @@
       "y": 14070,
       "text": "05 · Collect the bike and pay — Customer",
       "kind": "title1",
-      "maxW": 1800
+      "maxW": 26580
     },
-    "j06_s24": {
+    "j06_s28": {
       "x": 0,
       "y": 16290,
       "text": "Waiting for Jack’s explanation",
@@ -2968,7 +3161,7 @@
       "kind": "title1",
       "maxW": 1600
     },
-    "j07_s26": {
+    "j07_s30": {
       "x": 0,
       "y": 18190,
       "text": "Account",
@@ -2978,7 +3171,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j07_s27": {
+    "j07_s31": {
       "x": 1100,
       "y": 18190,
       "text": "Messages and privacy",
@@ -2995,7 +3188,7 @@
       "kind": "title1",
       "maxW": 2900
     },
-    "j08_s29": {
+    "j08_s33": {
       "x": 0,
       "y": 20090,
       "text": "First-run setup",
@@ -3005,7 +3198,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s30": {
+    "j08_s34": {
       "x": 4120,
       "y": 20090,
       "text": "Till settings",
@@ -3015,7 +3208,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s31": {
+    "j08_s35": {
       "x": 17950,
       "y": 20090,
       "text": "End of day and payment settings",
@@ -3025,7 +3218,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s32": {
+    "j08_s36": {
       "x": 26030,
       "y": 20090,
       "text": "Staff and roles",
@@ -3035,7 +3228,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s33": {
+    "j08_s37": {
       "x": 34110,
       "y": 20090,
       "text": "Shop and sites",
@@ -3045,7 +3238,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s34": {
+    "j08_s38": {
       "x": 36910,
       "y": 20090,
       "text": "Workshop settings",
@@ -3055,7 +3248,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s35": {
+    "j08_s39": {
       "x": 41030,
       "y": 20090,
       "text": "Messages",
@@ -3065,7 +3258,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s36": {
+    "j08_s40": {
       "x": 45150,
       "y": 20090,
       "text": "Your data",
@@ -3082,7 +3275,7 @@
       "kind": "title1",
       "maxW": 47710
     },
-    "j09_s38": {
+    "j09_s42": {
       "x": 0,
       "y": 21990,
       "text": "Bring your data",
@@ -3092,7 +3285,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s39": {
+    "j09_s43": {
       "x": 8080,
       "y": 21990,
       "text": "Run alongside",
@@ -3102,7 +3295,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s40": {
+    "j09_s44": {
       "x": 16160,
       "y": 21990,
       "text": "Practice at the till",
@@ -3112,7 +3305,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s41": {
+    "j09_s45": {
       "x": 18960,
       "y": 21990,
       "text": "Switch over",
@@ -3129,7 +3322,7 @@
       "kind": "title1",
       "maxW": 29440
     },
-    "j10_s43": {
+    "j10_s47": {
       "x": 0,
       "y": 23846,
       "text": "Opening the till",
@@ -3139,7 +3332,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j10_s44": {
+    "j10_s48": {
       "x": 6760,
       "y": 23846,
       "text": "Office › Today",
@@ -3149,7 +3342,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j10_s45": {
+    "j10_s49": {
       "x": 18800,
       "y": 23846,
       "text": "Also at the start of the day",
@@ -3166,7 +3359,7 @@
       "kind": "title1",
       "maxW": 21080
     },
-    "j11_s47": {
+    "j11_s51": {
       "x": 0,
       "y": 25702,
       "text": "A sale",
@@ -3176,7 +3369,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s48": {
+    "j11_s52": {
       "x": 10720,
       "y": 25702,
       "text": "Taking payment",
@@ -3186,7 +3379,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s49": {
+    "j11_s53": {
       "x": 20120,
       "y": 25702,
       "text": "Other ways to pay",
@@ -3196,7 +3389,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s50": {
+    "j11_s54": {
       "x": 25560,
       "y": 25702,
       "text": "Other till jobs",
@@ -3206,7 +3399,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s51": {
+    "j11_s55": {
       "x": 40240,
       "y": 25702,
       "text": "When the internet drops",
@@ -3223,7 +3416,7 @@
       "kind": "title1",
       "maxW": 46760
     },
-    "j12_s53": {
+    "j12_s57": {
       "x": 0,
       "y": 27558,
       "text": "The diary",
@@ -3233,7 +3426,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s54": {
+    "j12_s58": {
       "x": 14680,
       "y": 27558,
       "text": "Requests, as a pop-up",
@@ -3243,7 +3436,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s55": {
+    "j12_s59": {
       "x": 20120,
       "y": 27558,
       "text": "New job from an empty slot",
@@ -3253,7 +3446,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s56": {
+    "j12_s60": {
       "x": 24240,
       "y": 27558,
       "text": "The job — one page, no tabs",
@@ -3263,7 +3456,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s57": {
+    "j12_s61": {
       "x": 34960,
       "y": 27558,
       "text": "Customer account",
@@ -3273,7 +3466,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s58": {
+    "j12_s62": {
       "x": 36440,
       "y": 27558,
       "text": "Overview page",
@@ -3290,7 +3483,7 @@
       "kind": "title1",
       "maxW": 37680
     },
-    "j13_s60": {
+    "j13_s64": {
       "x": 0,
       "y": 29414,
       "text": "Suppliers",
@@ -3300,7 +3493,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s61": {
+    "j13_s65": {
       "x": 2520,
       "y": 29414,
       "text": "Orders",
@@ -3310,7 +3503,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s62": {
+    "j13_s66": {
       "x": 7400,
       "y": 29414,
       "text": "Delivery",
@@ -3327,7 +3520,7 @@
       "kind": "title1",
       "maxW": 10860
     },
-    "j14_s64": {
+    "j14_s68": {
       "x": 0,
       "y": 31230,
       "text": "Products",
@@ -3337,7 +3530,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s65": {
+    "j14_s69": {
       "x": 6060,
       "y": 31230,
       "text": "Across sites",
@@ -3347,7 +3540,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s66": {
+    "j14_s70": {
       "x": 8580,
       "y": 31230,
       "text": "Stock take",
@@ -3357,7 +3550,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s67": {
+    "j14_s71": {
       "x": 13460,
       "y": 31230,
       "text": "Corrections",
@@ -3374,7 +3567,7 @@
       "kind": "title1",
       "maxW": 15740
     },
-    "j15_s69": {
+    "j15_s73": {
       "x": 0,
       "y": 33046,
       "text": "Customers and the customer page",
@@ -3384,7 +3577,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s70": {
+    "j15_s74": {
       "x": 13360,
       "y": 33046,
       "text": "Accounts (pay later)",
@@ -3394,7 +3587,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s71": {
+    "j15_s75": {
       "x": 16160,
       "y": 33046,
       "text": "Customer groups",
@@ -3404,7 +3597,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s72": {
+    "j15_s76": {
       "x": 17640,
       "y": 33046,
       "text": "Privacy requests",
@@ -3414,7 +3607,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s73": {
+    "j15_s77": {
       "x": 21760,
       "y": 33046,
       "text": "Possible duplicates",
@@ -3431,7 +3624,7 @@
       "kind": "title1",
       "maxW": 25640
     },
-    "j16_s75": {
+    "j16_s79": {
       "x": 0,
       "y": 34902,
       "text": "Close the day",
@@ -3448,7 +3641,7 @@
       "kind": "title1",
       "maxW": 18400
     },
-    "j17_s77": {
+    "j17_s81": {
       "x": 0,
       "y": 36758,
       "text": "Reports",
@@ -3458,7 +3651,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j17_s78": {
+    "j17_s82": {
       "x": 7240,
       "y": 36758,
       "text": "Accounts software",
@@ -3475,7 +3668,7 @@
       "kind": "title1",
       "maxW": 10700
     },
-    "j18_s80": {
+    "j18_s84": {
       "x": 0,
       "y": 38574,
       "text": "Design the website",
@@ -3485,7 +3678,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j18_s81": {
+    "j18_s85": {
       "x": 7240,
       "y": 38574,
       "text": "Online orders",
@@ -3502,7 +3695,7 @@
       "kind": "title1",
       "maxW": 11880
     },
-    "j19_s83": {
+    "j19_s87": {
       "x": 0,
       "y": 40390,
       "text": "Across sites",
@@ -3519,7 +3712,7 @@
       "kind": "title1",
       "maxW": 3460
     },
-    "j20_s85": {
+    "j20_s89": {
       "x": 0,
       "y": 42206,
       "text": "Oversight",
@@ -3536,7 +3729,7 @@
       "kind": "title1",
       "maxW": 3460
     },
-    "j21_s87": {
+    "j21_s91": {
       "x": 0,
       "y": 44022,
       "text": "Connection and handoff",

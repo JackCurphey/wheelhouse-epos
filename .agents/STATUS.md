@@ -13,11 +13,25 @@ pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11), End-of-day
 cash-up (journey 16), Owner setup (journey 8), Customer service (journey
-15), Opening the shop (journey 10) and Moving from Citrus Lime (journey 9)
-are approved and in the big canvas; the next journey is
+15), Opening the shop (journey 10), Moving from Citrus Lime (journey 9) and
+Collect the bike and pay (journey 5) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (303 files of
+board linking to its journey's own canvas for tablet and phone (320 files of
 the 512 a canvas can hold).
+
+**Journey 5, Collect the bike and pay (30 Sep):** approved at desktop,
+tablet and phone and copied into the big canvas; 6 decisions in
+`docs/decisions/2026-09-30-collect-and-pay-review.md` — the "Bike ready"
+link opens one job's summary (what was done, the checklist, Pay now when
+online payments are on; paid, deposit, being-paid-at-the-counter and expired
+states); at the counter one main button, Take payment or Hand over, then
+Collected with Undo; hand-back reminders optional (off); a "Bike still
+waiting" reminder then a Today flag. Knock-ons: journey 12's collection
+board redrawn, Settings › Workshop gains Collection, Messages gains "Bike
+still waiting", the till locks a job's agreed lines. UI audit
+`collect-ui-audit.md`. 19 screens, 58 boards. Own canvas:
+https://claude.ai/artifact/LdnE9ayZJ1L2qu6suqcC2W . Generator: `collect.mjs`
++ `build-collect.mjs --theme sand`.
 
 **Journey 9, Moving from Citrus Lime (30 Sep):** approved at desktop,
 tablet and phone and copied into the big canvas; 9 decisions in

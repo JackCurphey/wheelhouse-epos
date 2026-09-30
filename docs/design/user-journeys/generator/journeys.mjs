@@ -28,6 +28,8 @@ export const sd16 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd8 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'setup' });
 // sd15(id, title, role) = an agreed journey 15 screen (customer.mjs, Soft sand).
 export const sd15 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'customer' });
+// sd5(id, title, role) = an agreed journey 5 screen (collect.mjs, Soft sand).
+export const sd5 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'collect' });
 // sd9(id, title, role) = an agreed journey 9 screen (moving.mjs, Soft sand).
 export const sd9 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'moving' });
 // sd10(id, title, role) = an agreed journey 10 screen (opening.mjs, Soft sand).
@@ -137,10 +139,35 @@ export const journeys = [
   {
     id: 'j05', name: 'Collect the bike and pay', who: 'Customer',
     rows: [
-      { label: 'Collection', screens: [
+      { label: "The customer’s link", screens: [
+        sd5("cp-summary", "The “Bike ready” link: what we did, and Pay now", "Customer"),
+        sd5("cp-summary-deposit", "The same link, after a deposit: only the rest to pay", "Customer"),
+        sd5("cp-pay", "Pay online", "Customer"),
+        sd5("cp-pay-failed", "Pay online: the card didn’t go through", "Customer"),
+        sd5("cp-paid", "Paid — see you soon", "Customer"),
+        sd5("cp-summary-paid", "The link opened again after paying", "Customer"),
+        sd5("cp-summary-counter", "The link while it’s being paid at the counter", "Customer"),
+        sd5("cp-summary-inshop", "The same link, for a shop without online payments", "Customer"),
+        sd5("cp-expired", "The link, [n] days after collection", "Customer"),
+      ] },
+      { label: "At the counter", screens: [
+        sd5("cp-ready-unpaid", "At the counter, not paid: Take payment", "Staff"),
+        sd5("cp-ready-deposit", "At the counter, deposit paid: the rest to pay", "Staff"),
+        sd5("cp-till", "The till: the job’s lines locked, collected when paid", "Staff"),
+        sd5("cp-ready-paid", "At the counter, paid online: Hand over", "Staff"),
+        sd5("cp-ready-ticks", "Hand over, with hand-back reminders switched on", "Staff"),
+        sd5("cp-collected", "Collected, with Undo for a few minutes", "Staff"),
+      ] },
+      { label: "Not collected", screens: [
+        sd5("cp-today-uncollected", "Today: a ready bike left too long", "Manager"),
+      ] },
+      { label: "Settings", screens: [
+        sd5("cp-setting", "Settings › Workshop › Collection: reminder, flag, hand-back", "Manager"),
+        sd5("cp-messages", "Settings › Messages: “Bike still waiting”", "Manager"),
+        sd5("cp-message-wording", "“Bike still waiting”: the wording", "Manager"),
+      ] },
+      { label: 'Also at collection', screens: [
         d('ready'),
-        g('done-summary', 'Job done: summary and invoice', 'Customer', 'Everything that was done, in one message, with a way to pay.', ['Work done, with photos', 'Itemised invoice', 'Pay now (if paying online)'], { source: 'DONE-01..08' }),
-        g('done-pay', 'Pay online for workshop work', 'Customer', 'Pay before or at collection without waiting at the counter.', ['Amount and what it covers', 'Card payment', 'Paid confirmation'], { source: 'DONE-05 · PAY-05' }),
         g('done-receipt', 'Receipt or invoice by email', 'Customer', 'A copy for the customer’s records.', ['Shop details and VAT number', 'Lines, VAT, total, how paid'], { source: 'TILL-13 · DONE-04' }),
       ] },
     ],

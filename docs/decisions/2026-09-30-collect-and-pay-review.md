@@ -78,3 +78,8 @@ clicks as possible).
      shop's details; Aisha Khan's Cannondale being both WH-1050 (ready) and
      WH-1047 (arriving) on the same Today is example-data overlap, noted in
      the handover rather than changing the approved diary.
+6. **Approved and copied into the big canvas** (Jack, 30 Sep: "copy it into
+   the big canvas"): desktop, tablet and phone approved; journey 5's summary
+   and pay-online gaps are replaced by the 19 designed screens; the old
+   "Bike ready" phone screen and the receipt gap stay in a row "Also at
+   collection".
