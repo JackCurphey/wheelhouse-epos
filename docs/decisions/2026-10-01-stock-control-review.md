@@ -127,3 +127,9 @@ A2, A6 — as few clicks as possible).
     cancelled while on its way, a short transfer shows on Today; areas
     used before are suggested; and the list's missing states (no results,
     an unknown barcode, a size search, a new shop) are drawn.
+12. **Tablet and phone drawn** (Jack, 1 Oct: "yeah this looks all good, lets
+    do the phone and tablet"). Every board is now at desktop, tablet and
+    phone. Two phone-only layouts: the Change prices preview stacks each
+    product (Now → New, then Margin) instead of a four-column table, and on
+    Today the below-zero line puts "See them" and "Count them" under its
+    words. The tablet layouts follow the desktop ones.

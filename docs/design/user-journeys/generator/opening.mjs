@@ -100,7 +100,8 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Journey 14 decision 6: a stock adjustment worth more than the amount
     // set in Settings › Stockroom; "Seen" clears it.
     // Journey 14 decision 9: products sold below zero, counted quickly.
-    below && line('[n] products below zero', 'Sold more than Wheelhouse thought were here · Count them starts a count straight away', `<span style="display: inline-flex; align-items: center; gap: 6px"><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">See them</a>${button('Count them', { variant: 'default' }).replace('style="', 'style="white-space: nowrap; ')}</span>`, warnLead),
+    // On phone the two actions sit under the words, so the words keep the width.
+    below && (() => { const acts = `<span style="display: inline-flex; align-items: center; gap: 6px"><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">See them</a>${button('Count them', { variant: 'default' }).replace('style="', 'style="white-space: nowrap; ')}</span>`; const sub = 'Sold more than Wheelhouse thought were here · Count them starts a count straight away'; return isPhone() ? line('[n] products below zero', `${sub}<span style="display: flex; margin-top: 4px; color: ${C.ink}">${acts}</span>`, '', warnLead) : line('[n] products below zero', sub, acts, warnLead); })(),
     // Journey 14 audit M8: the product name opens its page.
     adjusted && line(`Stock adjusted: <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; color: ${C.ink}">[Product]</a> −[n] · £[value]`, 'Damaged · by Jo Taylor at [time]', button('Seen', { variant: 'default' }), warnLead),
     // Journey 14 decision 8 (audit M13): a transfer that arrived short.
