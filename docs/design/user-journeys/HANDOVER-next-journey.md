@@ -57,6 +57,14 @@ Multiple sites, 20 Management oversight, 21 Lightspeed shops (Release 1).
 Strong candidates, because finished journeys lean on them: **3 Book a repair** (feeds journey 12's
 requests; partly depends on the website, 18).
 
+**Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
+ux audit at the end when all the pages are done?"). Each journey keeps its own
+UI audit; once every journey is drawn, one UX walk-through follows whole
+stories across journeys (for example book → drop off and approve the quote →
+collect and pay) and different kinds of people, looking for gaps at the
+hand-offs. Testing with real customers on a clickable prototype is the step
+after that.
+
 ## Rules that apply to every journey (Jack's decisions)
 
 - **Look: "Soft sand, dark rail"**, sans-serif only — Public Sans, DM Mono for
