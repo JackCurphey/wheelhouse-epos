@@ -15,10 +15,31 @@ and access (journey B), Selling at the till (journey 11), End-of-day
 cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 15), Opening the shop (journey 10), Moving from Citrus Lime (journey 9) and
 Collect the bike and pay (journey 5), Receiving stock and purchase orders
-(journey 13) and Stock take and stock control (journey 14) are approved and in the big canvas; the next journey is
+(journey 13), Stock take and stock control (journey 14) and Book a repair
+(journey 3) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (362 files of
+board linking to its journey's own canvas for tablet and phone (380 files of
 the 512 a canvas can hold).
+
+**Journey 3, Book a repair (1 Oct):** approved at desktop, tablet and phone
+and copied into the big canvas; 13 decisions in
+`docs/decisions/2026-10-01-book-a-repair-review.md` — the whole `/book`
+flow redrawn on the shop's website in Soft sand: one page a step at a time
+(service, bike, when, details) with "Your booking" alongside (a bar on
+phone); every service at once; signing in offered, never required; a
+two-week strip of days with "Earliest"; optional deposits (a shop setting,
+off by default) refunded up to a cut-off, refunded if the shop declines, a
+fixed amount for "Not sure" bookings; confirming automatically as a shop
+setting; nothing typed is lost (and a dropped payment is checked, never
+re-paid); the booking's own page to change the date, answer an offered time
+or cancel; "Your bookings" when signed in; Settings › Workshop › Online
+booking (new row on the Workshop settings boards); a "Booking messages"
+group in Settings › Messages ("10 on"); the diary's request pop-ups gain
+deposit versions. UI audit `book-ui-audit.md`, every recommendation taken.
+37 screens, 111 boards. Own canvas:
+https://claude.ai/artifact/KxkLMpRgFk23oeFJdfuq95 . Generator: `book.mjs` +
+`build-book.mjs --theme sand`. Planned: one UX audit across journeys once
+all are drawn.
 
 **Journey 14, Stock take and stock control (1 Oct):** approved at desktop,
 tablet and phone and copied into the big canvas; 12 decisions in

@@ -38,6 +38,8 @@ export const sd10 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd13 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'receiving' });
 // sd14(id, title, role) = an agreed journey 14 screen (stock.mjs, Soft sand).
 export const sd14 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'stock' });
+// sd3(id, title, role) = an agreed journey 3 screen (book.mjs, Soft sand).
+export const sd3 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'book' });
 
 export const journeys = [
   {
@@ -120,13 +122,54 @@ export const journeys = [
     ],
   },
   {
-    id: 'j03', name: 'Book a repair', who: 'Customer',
+    id: 'j03', name: 'Book a repair', who: 'Customer, Staff and Manager',
     rows: [
-      { label: 'Booking', screens: [b('service'), b('service-list'), d('diagnosis'), b('problem'), b('date'), d('appointment'), d('full'), b('details'), b('pending'), d('confirmed')] },
-      { label: 'Change, cancel and problems', screens: [
-        d('reschedule'), d('change-pending'), d('cancel'), d('cancelled'), d('rejected'), d('expired'), d('service-status'),
-        g('book-sending', 'Leaving while the request is sending', 'Customer', 'What the customer sees if they press Back while their booking request is still sending.', ['Whether the request got through', 'Their booking link if it did', 'Try again if it did not'], { source: 'Known follow-up in the project status notes' }),
-        g('book-deposit', 'Pay a deposit when booking', 'Customer', 'Only if shops want deposits. Not decided: deposits were left out of Release 1.', ['Amount and what it covers', 'Pay', 'What happens on cancelling'], { source: 'BOOK-09 · PAY-04 · decision of 23 Sep' }),
+      { label: "Booking", screens: [
+        sd3("bk-service", "Book a repair: every service at once", "Customer"),
+        sd3("bk-service-many", "A shop with many single jobs: search them", "Customer"),
+        sd3("bk-bike", "Your bike, and what to look at", "Customer"),
+        sd3("bk-bike-signed-in", "Signed in, in a shop that takes a deposit", "Customer"),
+        sd3("bk-not-sure", "Not sure what’s wrong: tell us what you’ve noticed", "Customer"),
+        sd3("bk-when", "When: Earliest, then a strip of days and times", "Customer"),
+        sd3("bk-when-full", "A full day says why", "Customer"),
+        sd3("bk-when-dropoff", "A shop that takes drop-off days: the window and the mechanic", "Customer"),
+        sd3("bk-details", "Your details, and how to send updates", "Customer"),
+        sd3("bk-details-deposit", "Pay the deposit and send", "Customer"),
+      ] },
+      { label: "Sending", screens: [
+        sd3("bk-sending", "Sending", "Customer"),
+        sd3("bk-card-failed", "The card didn’t go through", "Customer"),
+        sd3("bk-not-sent", "Not sent yet — everything kept", "Customer"),
+        sd3("bk-checking-payment", "The connection dropped after paying: checking, not paying again", "Customer"),
+        sd3("bk-resume", "Coming back: carry on where you left off", "Customer"),
+        sd3("bk-request", "Request received: waiting for the shop", "Customer"),
+        sd3("bk-confirmed", "Confirmed straight away (the shop’s setting)", "Customer"),
+      ] },
+      { label: "Your booking", screens: [
+        sd3("bk-bookings", "Signed in: Your bookings", "Customer"),
+        sd3("bk-page-request", "The booking’s page while it’s still a request", "Customer"),
+        sd3("bk-offered", "The shop suggests another time: accept, or cancel", "Customer"),
+        sd3("bk-page", "The booking’s page, confirmed", "Customer"),
+        sd3("bk-page-dropoff", "A drop-off booking, no deposit, the mechanic picked", "Customer"),
+        sd3("bk-change", "Change the date, in place", "Customer"),
+        sd3("bk-change-pending", "New date waiting for the shop", "Customer"),
+        sd3("bk-change-declined", "The shop couldn’t do the new date", "Customer"),
+      ] },
+      { label: "Cancelling", screens: [
+        sd3("bk-cancel", "Cancel: the deposit comes back", "Customer"),
+        sd3("bk-cancel-late", "Cancel after the cut-off: the deposit is kept", "Customer"),
+        sd3("bk-cancelled", "Cancelled, deposit refunded", "Customer"),
+        sd3("bk-cancelled-late", "Cancelled after the cut-off, deposit kept", "Customer"),
+        sd3("bk-declined", "The shop couldn’t fit it in", "Customer"),
+        sd3("bk-expired", "The link, 30 days after the booked date", "Customer"),
+        sd3("bk-unavailable", "Online booking unavailable", "Customer"),
+      ] },
+      { label: "The shop’s side", screens: [
+        sd3("bk-staff-request", "The diary: a request with a deposit", "Staff"),
+        sd3("bk-staff-decline", "Declining it refunds the deposit", "Staff"),
+        sd3("bk-messages", "Settings › Front desk › Messages: the booking messages", "Manager"),
+        sd3("bk-settings", "Settings › Workshop › Online booking", "Manager"),
+        sd3("bk-settings-deposits", "Online booking, scrolled: deposits and terms", "Manager"),
       ] },
     ],
   },

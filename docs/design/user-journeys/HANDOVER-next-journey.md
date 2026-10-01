@@ -36,26 +36,27 @@ holding desktop, tablet and phone:
 | 5 Collect the bike and pay | https://claude.ai/artifact/LdnE9ayZJ1L2qu6suqcC2W | `docs/decisions/2026-09-30-collect-and-pay-review.md` (6) |
 | 13 Receiving stock and purchase orders | https://claude.ai/artifact/RsbUcYNz9QfEF8LAbxSKwo | `docs/decisions/2026-09-30-receiving-stock-review.md` (11) |
 | 14 Stock take and stock control | https://claude.ai/artifact/7oZPudk8GGxqY9L1iXBvbV | `docs/decisions/2026-10-01-stock-control-review.md` (12) |
+| 3 Book a repair | https://claude.ai/artifact/KxkLMpRgFk23oeFJdfuq95 | `docs/decisions/2026-10-01-book-a-repair-review.md` (13) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md`,
 `setup-ui-audit.md`, `customer-ui-audit.md`, `opening-ui-audit.md`,
 `moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md`,
-`stock-ui-audit.md` (this folder).
+`stock-ui-audit.md`, `book-ui-audit.md` (this folder).
 
-Overview count (each screen once): 360 screens — 300 designed, 6 built, 6
-old app only, 48 not designed yet, 0 for review (1 Oct: journey 14 in; its
-13 old placeholder screens — stock list, product, sizes, serials, price
-rules, sites, transfer, stock take, adjust, below zero — all replaced by its
-35 screens).
+Overview count (each screen once): 378 screens — 326 designed, 0 built, 6
+old app only, 46 not designed yet, 0 for review (1 Oct: journey 3 in; its
+17 Release 1 screens and 2 gaps — leaving while sending, a deposit — all
+replaced by its 37 screens).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
 placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
-collect, 3 Book a repair, 4 Drop off and approve the quote, 6 Cycle to Work, 7 Account, history and reminders,
+collect, 4 Drop off and approve the quote, 6 Cycle to Work, 7 Account, history and reminders,
 17 Reports and accounts, 18 Website management, 19
 Multiple sites, 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **3 Book a repair** (feeds journey 12's
-requests; partly depends on the website, 18).
+Strong candidates, because finished journeys lean on them: **4 Drop off and
+approve the quote** (follows journey 3's booking and leads into journey 5's
+collection), **19 Multiple sites** (journey 14's transfers).
 
 **Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
 ux audit at the end when all the pages are done?"). Each journey keeps its own
@@ -134,7 +135,7 @@ Generator: `docs/design/user-journeys/generator/`.
 **The big canvas is desktop only** (cash-up decision 8): a canvas holds at
 most 512 files, so each screen appears once — desktop, the one large app map,
 or a phone-only screen's only size — with a "Tablet and phone ↗" link to its
-journey's canvas. 362 files now. A publish carries at most 255 files: split
+journey's canvas. 380 files now. A publish carries at most 255 files: split
 big changes (changed boards with `canvas.json` first, removals second).
 
 ## Gotchas that cost time
