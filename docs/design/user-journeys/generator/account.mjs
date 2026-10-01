@@ -82,12 +82,13 @@ const yourData = (pending) => cardBox(`${h2('Your data', 'a-data')}
 
 // History rows: a kind, what it was, when, and what's on the right.
 const kind = (t) => `<span style="flex-shrink: 0; width: 76px; font-size: 13px; font-weight: 700; color: ${C.muted}">${t}</span>`;
-const hRow = (k, title, sub, right = '') => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 6px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${kind(k)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${title}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${right}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
+// On a phone the kind joins the line under the title, so the title has room.
+const hRow = (k, title, sub, right = '') => `<a href="#" style="display: flex; align-items: center; gap: ${isPhone() ? 8 : 12}px; min-height: 60px; padding: 6px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${isPhone() ? '' : kind(k)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600; ${isPhone() ? 'line-height: 1.35' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${title}</span><span style="font-size: 13px; color: ${C.muted}">${isPhone() ? `${k} · ` : ''}${sub}</span></span>${right}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
 const subHead = (t) => `<h3 style="margin: 0; padding: 12px 0 4px; font-size: 13px; font-weight: 700; color: ${C.muted}">${t}</h3>`;
 // Audit M4: the chip is the tracker's current step.
-const repairNow = hRow('Repair', `${mono('WH-1042')} · ${MAYA.bike} · Standard service`, 'Booked in Thu 17 Sep · expected ready Thu 17 Sep', badge('In the shop', 'blue'));
+const repairNow = () => hRow('Repair', `${mono('WH-1042')} · ${MAYA.bike} · Standard service`, 'Booked in Thu 17 Sep · expected ready Thu 17 Sep', badge('In the shop', 'blue'));
 // Audit M3: job notes and questions each get a row, titled by their first line.
-const noteRow = hRow('Message', `Note on ${mono('WH-1042')}`, '[date] · North Street Cycles replied', badge('Replied', 'green'));
+const noteRow = () => hRow('Message', `Note on ${mono('WH-1042')}`, '[date] · North Street Cycles replied', badge('Replied', 'green'));
 const questionRow = (sent) => hRow('Message', '[The first line of Maya’s question]', `[date] · ${sent ? 'waiting for a reply' : 'North Street Cycles replied'}`, badge(sent ? 'Sent' : 'Replied', sent ? 'grey' : 'green'));
 // Audit L1: every past row has a receipt.
 const pastRepair = () => hRow('Repair', `${mono('WH-[0000]')} · ${MAYA.bike} · [Work done]`, '[date] · collected · receipt', mono('£[total]', 'font-size: 15px'));
@@ -99,7 +100,7 @@ function history(filter = 'Everything', { empty = false, talk = '' } = {}) {
   if (empty) return cardBox(`${top}<div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 12px; text-align: center">${p('Nothing here yet. Your repairs and purchases with North Street Cycles show here.', `color: ${C.muted}; max-width: 360px`)}${button('Book a repair')}</div>`);
   const all = filter === 'Everything', repairs = filter !== 'Purchases', buys = filter !== 'Repairs';
   // "Now" holds what's open or waiting; answered messages move to "Earlier".
-  const now = [repairs && repairNow, all && talk === 'answered' && noteRow, all && talk === 'sent' && questionRow(true)].filter(Boolean).join('');
+  const now = [repairs && repairNow(), all && talk === 'answered' && noteRow(), all && talk === 'sent' && questionRow(true)].filter(Boolean).join('');
   const earlier = [all && talk === 'answered' && questionRow(false), buys && purchase(), repairs && pastRepair(), buys && onlineOrder(), repairs && pastRepair()].filter(Boolean).join('');
   return cardBox(`${top}<div style="display: flex; flex-direction: column">${now ? `${subHead('Now')}${now}` : ''}${subHead('Earlier, newest first')}${earlier}</div>${link('Show more')}`);
 }
@@ -109,7 +110,7 @@ function accountPage({ filter = 'Everything', empty = false, talk = '', contact 
 <div style="display: flex; flex-wrap: wrap; gap: 8px">${button('Ask the shop a question', { variant: 'default' })}${button('Book a repair')}</div></div>`;
   const left = `<div style="display: flex; flex-direction: column; gap: 16px; width: ${isPhone() ? 'auto' : '360px'}; flex-shrink: 0">${bikes(empty, c.reminders)}${empty ? '' : credit()}${aboutYou(c)}</div>`;
   const right = `<div style="display: flex; flex-direction: column; gap: 16px; flex-grow: 1; min-width: 0">${history(filter, { empty, talk })}${yourData(pending)}</div>`;
-  const body = isPhone() ? `${right}${left}` : `<div style="display: flex; gap: 16px; align-items: flex-start">${left}${right}</div>`;
+  const body = isPhone() ? `${bikes(empty, c.reminders)}${history(filter, { empty, talk })}${empty ? '' : credit()}${aboutYou(c)}${yourData(pending)}` : `<div style="display: flex; gap: 16px; align-items: flex-start">${left}${right}</div>`;
   return site(`<div style="width: 100%; max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">${banner}${head}${body}</div>`);
 }
 
@@ -156,7 +157,7 @@ const CONVS = {
 };
 const SENT_HOW = 'Sent to Maya by text, with a link to reply on the job’s page.';
 const INBOX_NOTE = 'Messages from customers — from a job’s page, or their account. Replies go the way each customer chose, with a link back.';
-function inbox({ sent = false, filter = 'Needs a reply', empty = false } = {}) {
+function inbox({ sent = false, filter = 'Needs a reply', empty = false, listOnly = false } = {}) {
   const maya = convRow({ ...CONVS.maya, last: sent ? 'You: [Jo’s reply]' : CONVS.maya.last, waiting: !sent, open: !empty });
   const q = convRow({ ...CONVS.q, waiting: true });
   const done = [convRow(CONVS.done1), convRow(CONVS.done2)];
@@ -168,7 +169,7 @@ function inbox({ sent = false, filter = 'Needs a reply', empty = false } = {}) {
 <div role="group" aria-label="Show" style="display: flex; gap: 6px">${pill(`Needs a reply · ${count}`, filter === 'Needs a reply')}${pill('All', filter === 'All')}</div>
 ${card(`<nav aria-label="Conversations" style="padding: 6px; display: flex; flex-direction: column; gap: 2px">${listBody}</nav>`)}</div>`;
   const wrap = (inner) => page('messages', 'Messages', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note(INBOX_NOTE)}${inner}</div>`, STAFF);
-  if (empty) return wrap(`<div style="display: flex; gap: 16px; align-items: flex-start">${list}${card(`<p style="margin: 0; padding: 40px 20px; text-align: center; font-size: 15px; color: ${C.muted}">Choose a conversation to read it.</p>`, 'flex-grow: 1; min-width: 0')}</div>`);
+  if (empty || (listOnly && isPhone())) return isPhone() ? wrap(list) : wrap(`<div style="display: flex; gap: 16px; align-items: flex-start">${list}${card(`<p style="margin: 0; padding: 40px 20px; text-align: center; font-size: 15px; color: ${C.muted}">Choose a conversation to read it.</p>`, 'flex-grow: 1; min-width: 0')}</div>`);
   const items = sent ? [msg(false, 'Maya Patel', '[day, time]', '[Maya’s note to the shop]'), msg(true, 'You (Jo Taylor)', 'just now', '[Jo’s reply]')] : [msg(false, 'Maya Patel', '[day, time]', '[Maya’s note to the shop]')];
   // Audit L7: after sending, "See the text Maya gets", and a box to reply again.
   const after = sent ? `${statusBar(`${SENT_HOW} <a href="#" style="color: inherit">See the text Maya gets</a>`)}${writeBox('reply', 'Reply again', '', 'Send reply', SENT_HOW)}` : writeBox('reply', 'Reply', '[Jo’s reply]', 'Send reply', SENT_HOW);
@@ -176,7 +177,9 @@ ${card(`<nav aria-label="Conversations" style="padding: 6px; display: flex; flex
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 700">${MAYA.name}</span><span style="font-size: 13px; color: ${C.muted}">${MAYA.bikeLong} · ${mono('WH-1042')} · <a href="tel:07700900142" style="color: inherit">${mono(MAYA.phone)}</a></span></span><span style="display: flex; gap: 16px">${link('Open the job')}${link('Customer page')}</span></div>
 ${p('On the job’s page · started by Maya', `font-size: 13px; color: ${C.muted}`)}
 ${thread(items, 'Conversation with Maya Patel')}${after}</div>`, 'flex-grow: 1; min-width: 0');
-  return wrap(isPhone() ? list : `<div style="display: flex; gap: 16px; align-items: flex-start">${list}${conv}</div>`);
+  // Decision 7: on a phone, the list, then the conversation with a way back.
+  if (isPhone()) return wrap(`${backTo(`Messages · needs a reply ${count}`)}${conv}`);
+  return wrap(`<div style="display: flex; gap: 16px; align-items: flex-start">${list}${conv}</div>`);
 }
 
 // ---------- Service reminders (decision 2) ----------
@@ -251,7 +254,7 @@ const scrolled = (html, px) => `<style>.ac-scrolled > * { position: relative; to
 
 // ---------- The boards ----------
 def('ac-account', () => accountPage());
-def('ac-account-lower', () => scrolled(accountPage(), 380));
+def('ac-account-lower', () => scrolled(accountPage(), { desktop: 380, tablet: 380, phone: 1150 }[SIZE]));
 def('ac-account-repairs', () => accountPage({ filter: 'Repairs' }));
 def('ac-account-new', () => accountPage({ empty: true }));
 def('ac-receipt', () => overlay(accountPage({ filter: 'Purchases' }), receiptDialog()));
@@ -265,7 +268,8 @@ def('ac-question', () => questionPage());
 def('ac-account-asked', () => accountPage({ talk: 'answered' }));
 def('ac-inbox', () => inbox());
 def('ac-inbox-sent', () => inbox({ sent: true }));
-def('ac-inbox-all', () => inbox({ sent: true, filter: 'All' }));
+def('ac-inbox-all', () => inbox({ sent: true, filter: 'All', listOnly: true }));
+def('ac-inbox-list', () => inbox({ listOnly: true }));
 def('ac-inbox-empty', () => inbox({ empty: true }));
 def('ac-reply-text', () => overlay(inbox({ sent: true }), popup('txt-title', 'What Maya gets', 'A text, because Maya chose text', phoneText('North Street Cycles replied about your Trek Domane AL 3 (WH-1042): [Jo’s reply]. Replies to this number aren’t read — reply on your page: [link]'), button('Close', { variant: 'default' }), 480)));
 def('ac-today', () => today({ replies: true, deleteRequest: true, arrived: true }));
@@ -292,11 +296,12 @@ def('ac-account-delete-cancelled', () => accountPage({ banner: statusBar('Reques
 def('ac-privacy-requests', () => privacyPageAt(SIZE, true));
 def('ac-customer-delete', () => customerPageWith(SIZE, { deleteRequest: true }));
 
-// Desktop first (journey process); tablet and phone drawn after the UI audit.
-const SIZES = ['desktop'];
+// Every board at desktop, tablet and phone; the inbox's list on its own is
+// a phone screen only (on wider screens it sits beside the conversation).
+const PHONE_ONLY = new Set(['ac-inbox-list']);
 for (const [id, fn] of recipes) {
   screens[id] = {};
-  for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });
+  for (const sz of PHONE_ONLY.has(id) ? ['phone'] : ['desktop', 'tablet', 'phone']) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });
 }
 SIZE = 'desktop';
 
@@ -317,6 +322,7 @@ export const TITLES = {
   'ac-inbox': 'Staff Messages: needs a reply, and the open conversation',
   'ac-inbox-sent': 'Reply sent the way Maya chose; reply again',
   'ac-inbox-all': 'All conversations, “Needs a reply” in words',
+  'ac-inbox-list': 'On a phone: the list first',
   'ac-inbox-empty': 'Nothing needs a reply',
   'ac-reply-text': 'The text Maya gets, linking back',
   'ac-today': 'Today: messages needing a reply, and a request to delete an account',
@@ -346,7 +352,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Your account', screens: ['ac-account', 'ac-account-lower', 'ac-account-repairs', 'ac-account-new', 'ac-receipt', 'ac-receipt-sent'] },
   { label: 'Talking to the shop', screens: ['ac-job-note', 'ac-job-note-sent', 'ac-job-note-answered', 'ac-ask', 'ac-account-question-sent', 'ac-question', 'ac-account-asked'] },
-  { label: 'The shop’s side of messages', screens: ['ac-inbox', 'ac-inbox-sent', 'ac-inbox-all', 'ac-inbox-empty', 'ac-reply-text', 'ac-today'] },
+  { label: 'The shop’s side of messages', screens: ['ac-inbox-list', 'ac-inbox', 'ac-inbox-sent', 'ac-inbox-all', 'ac-inbox-empty', 'ac-reply-text', 'ac-today'] },
   { label: 'Service reminders', screens: ['ac-book-remind', 'ac-collect-remind', 'ac-services', 'ac-service-edit', 'ac-messages', 'ac-reminder-wording', 'ac-reminder-landing'] },
   { label: 'Reviews and how we contact you', screens: ['ac-review-first', 'ac-review-setting', 'ac-contact', 'ac-contact-changed', 'ac-stopped', 'ac-stopped-on'] },
   { label: 'Your data', screens: ['ac-download', 'ac-download-failed', 'ac-delete', 'ac-delete-blocked', 'ac-delete-sent', 'ac-account-delete-pending', 'ac-account-delete-cancelled', 'ac-privacy-requests', 'ac-customer-delete'] },

@@ -117,3 +117,11 @@ canvas. Rules for every journey apply (Workshop day
    website header now marks "Account" whenever a page opens as Account, so
    Signing in's customer sign-in and code boards gain the underline too; they
    are carried over when journey 7 goes into the big canvas.
+9. **Tablet and phone drawn** (Jack, 1 Oct: "lets do that"). Every board is
+   now at desktop, tablet and phone. On a phone the account reads top to
+   bottom as bikes, history, store credit, details and how we contact you,
+   then your data, and history rows put their kind ("Repair", "Purchase",
+   "Message") under the title so the title has room. The staff inbox is two
+   screens on a phone, as decision 7 says: the list (its own board), then the
+   conversation with a way back. Pop-ups fill the screen; staff boards use
+   the app's own tablet and phone layouts.

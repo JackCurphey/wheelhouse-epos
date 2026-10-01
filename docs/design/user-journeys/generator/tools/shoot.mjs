@@ -21,7 +21,7 @@ for (const [id, s] of Object.entries(screens)) for (const [size, html] of Object
   await p.setContent(`<link rel="stylesheet" href="${FONT_LINK}"><style>body,button,input,select,textarea{font-family:${FONT}}body{margin:0;color:${C.ink};background:${C.bg}}</style>${html}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
   await Promise.race([p.evaluate(() => document.fonts.ready), new Promise((r) => setTimeout(r, 6000))]);
   const info = await p.evaluate(([W, H]) => {
-    const font = getComputedStyle(document.querySelector('h2, span')).fontFamily.split(',')[0];
+    const font = getComputedStyle(document.querySelector('h2, span, p, button')).fontFamily.split(',')[0];
     const over = [...document.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.right > W + 0.5 || r.bottom > H + 0.5; }).length;
     const clipped = [...document.querySelectorAll('*')].filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).filter((e) => !['INPUT', 'HTML', 'BODY'].includes(e.tagName)).map((e) => e.tagName + ':' + (e.textContent || '').trim().slice(0, 30));
     return { font, over, clipped: clipped.slice(0, 5) };
