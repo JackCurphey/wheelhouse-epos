@@ -93,8 +93,10 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Journey 5 audit H4: the number is on the line; "Contacted" records it.
     // The line goes by itself when the bike is handed over.
     uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', `Cannondale Quick · reminder sent [date] · ${mono('[phone]')}`, button('Contacted', { variant: 'default' }), warnLead),
-    // Journey 13 decision 2: the restock list, for managers.
-    restock && line('[n] products running low or selling fast', 'Restock list · Stockroom › Deliveries and orders', button('Restock list', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('purchasing', 18)}</span>`),
+    // Journey 13 decision 2: the restock list, for owners, managers and
+    // anyone who can order stock (audit L6). It counts what's new since the
+    // list was last opened and clears when opened or downloaded (audit M11).
+    restock && line('[n] new products running low or selling fast', 'Since the restock list was last opened', button('Open', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('purchasing', 18)}</span>`),
     refresh && line('Time to refresh from Citrus Lime', 'Every [day] · last refreshed [date]', button('Refresh now', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('inbox', 18)}</span>`),
     waiting && line('Till B1 has [n] sales waiting to send', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Try again', { variant: 'default' }), warnLead),
   ].filter(Boolean);

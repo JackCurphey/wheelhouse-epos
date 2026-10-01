@@ -615,6 +615,11 @@ function laneHoverCSS(cls) {
 // name and job title, so a narrow block drops the word for the statusDot
 // corner mark instead; a wide Day-view block keeps the word written out in
 // full, as before, since it has the room.
+// Journey 13 audit H1: when a part a job was waiting for is booked in, the
+// job's diary block and its Overview row say "Part arrived" until the work
+// carries on. Off everywhere unless a board is drawn inside withPartArrived().
+let PART_ARRIVED = null;
+export function withPartArrived(job, fn) { const was = PART_ARRIVED; PART_ARRIVED = job; try { return fn(); } finally { PART_ARRIVED = was; } }
 function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null) {
   if (size !== 'desktop') return touchJobBlock(j, size, slotH, { highlighted, lightMarked, faded, narrow, rect });
   const [bg, ink] = ST[j.key];
@@ -644,6 +649,7 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // Wide (Day view): unchanged — there's room to write the status out.
   const line2 = narrow ? jobTitle : tiny ? jobTitle : roomy ? jobTitle : [jobTitle, blockLabel].filter(Boolean).join(' · ');
   const line3 = narrow ? (roomy ? slot || '' : '') : roomy ? [blockLabel, slot].filter(Boolean).join(' · ') : '';
+  const arrived = PART_ARRIVED === j.job;
   // Audit H1: bike names ("Trek Domane AL 3", "Brompton C Line") were
   // truncating mid-word on their own, even before status text was added to
   // the block. Where a narrow block is tall enough to spare the room (roomy,
@@ -664,11 +670,11 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   const isSummaryJob = narrow && j.job === 'WH-1042';
   const summaryCls = isSummaryJob ? `wh-hovsum-${size}-${nextSeq(size)}` : '';
   const classAttr = [hoverCls, summaryCls].filter(Boolean).join(' ');
-  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}${arrived ? ', part arrived' : ''}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
 ${showSymbol ? statusDot(j.key) : ''}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; ${strike} ${bikeWrap ? 'white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
-${line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
+${arrived ? `<span style="display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: ${ST.ready[1]}; white-space: nowrap">${icon('check', 11)}Part arrived</span>` : line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
 </a>${isSummaryJob ? jobHoverSummaryMarkup(j, size, summaryCls, FORCE_HOVER_SUMMARY_JOB === j.job, top) : ''}`;
 }
 // Decision 65: resting on WH-1042's block for ~0.6s shows a small quick-look
@@ -2506,7 +2512,7 @@ ${grid('repeat(3, minmax(0, 1fr))', STATS_DESK.map(([k, v, s]) => {
     return panel(`${eyebrow(k)}<div style="font-size: 24px; font-weight: 700">${esc(v)}</div>${fill}${note(s)}`, '', 16, 4);
   }).join(''))}
 ${size === 'desktop' ? segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs') : segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs', 44, 14)}
-${card(table([['Job / customer'], ['Bike'], ['Work'], ['Custody'], ['', 'right']], ARRIVALS.map(([j, n, b, w, a]) => [`${mono(j)} · ${esc(n)}`, esc(b), esc(w), badge('Expected', 'blue'), a(size)]), size === 'desktop' ? {} : { size: 15, pad: '8px 12px' }), 'overflow: hidden')}`, 14);
+${card(table([['Job / customer'], ['Bike'], ['Work'], ['Custody'], ['', 'right']], ARRIVALS.map(([j, n, b, w, a]) => [`${mono(j)} · ${esc(n)}`, esc(b), PART_ARRIVED === j ? `${esc(w)} ${badge('Part arrived', 'green')}` : esc(w), badge('Expected', 'blue'), a(size)]), size === 'desktop' ? {} : { size: 15, pad: '8px 12px' }), 'overflow: hidden')}`, 14);
 }
 // Phone overview (decision 68): the same three figures, the same four
 // filters (wrapping, 44px), and the arrivals as rows with their action.
@@ -2520,6 +2526,7 @@ ${STATS_DESK.map(([k, v, s]) => {
 ${segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs', 44, 14)}
 ${card(ARRIVALS.map(([j, n, b, w, a], i) => `<div style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${i ? `border-top: 1px solid ${C.border};` : ''}"><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${mono(j)} · ${esc(n)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(b)} · ${esc(w)}</span><span>${badge('Expected', 'blue')}</span></div><div style="flex-shrink: 0">${a(size)}</div></div>`).join(''))}`, 10);
 }
+export const overviewDesktop = () => shellDesktop('overview', 'Workshop overview', overviewContent('desktop'));
 screens.overview = {
   desktop: shellDesktop('overview', 'Workshop overview', overviewContent('desktop')),
   tablet: shellTablet('overview', 'Workshop overview', overviewContent('tablet')),
@@ -2706,7 +2713,7 @@ screens['job-collected'] = jobVariant('Collected', 'grey', collectedStripCompact
 // when it's booked in. The job stays "Waiting for parts" until someone
 // carries on; the strip says the part is here, and the line's In stock says Arrived.
 function partArrivedStrip() {
-  return jpPanel(`${jpRow(`${badge('Part arrived', 'green')}<span style="font-size: 13px; font-weight: 600">Shimano brake pads B05S-RX booked in</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Delivery booked in at [time] by Jack Lewis</span>`, 10)}`, `border-color: ${ST.ready[1]}`, 6, 3);
+  return jpPanel(`${jpRow(`${badge('Part arrived', 'green')}<a href="rs-delivery-desktop.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; font-weight: 600; color: ${C.ink}">Shimano brake pads B05S-RX booked in</a><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Delivery booked in at [time] by Jack Lewis</span>`, 10)}`, `border-color: ${ST.ready[1]}`, 6, 3);
 }
 // The line stays approved and not done; its In stock cell says it arrived.
 const LINES_ARRIVED = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads' ? { ...l, done: false, stock: 'Arrived' } : l));

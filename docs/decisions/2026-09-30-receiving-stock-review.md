@@ -109,3 +109,23 @@ the supplier integrations above.
    items stay "to come" on the order. Chosen over simply not booking them
    in, and a full returns process with return numbers and credit notes.
    Board: `rs-problem`; `rs-hub` gains the To return list.
+10. **UI audit: every recommendation taken** (Jack, 1 Oct: "1"). From
+    `design/user-journeys/receiving-ui-audit.md`: "Part arrived" also on the
+    job's diary block and Overview row (drawn as journey 13 boards
+    `rs-diary-arrived` and `rs-overview-arrived`; journey 12's approved
+    boards keep their story); a count can be typed between − and +; the
+    invoice's Checked, Queried and Accepted (one click, Undo) states; items
+    set aside as problems listed on the delivery and named in a difference;
+    the hub reordered (To return second, only when something's on it) with
+    an empty Orders state; orders open, and a part-delivered order can be
+    received against or closed; Book in stops while an unknown barcode is on
+    the list; a frame sticker counts itself and a frame number already in
+    stock is caught; "Waiting for invoice" in grey and "Partly delivered";
+    the restock list grouped by supplier with a download each; suppliers as
+    pills and the label printer the one used last; measurement names
+    suggested from those used before; Today's restock line counts what's new
+    and clears when opened or downloaded, for owners, managers and anyone
+    who can order stock; Staff see a delivery without costs or the invoice;
+    actions drawn as links are buttons, repeated ones name their row; the
+    booked-in board's next steps; and Settings' Jump to pills are links and
+    fold titles headings (shared frame — on-screen renders unchanged).

@@ -68,11 +68,14 @@ export function fold(title, summary, content = '') {
   const head = P
     ? `<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${esc(title)}</span><span style="font-size: 13px; color: ${C.muted}">${summary}</span></span>`
     : `<span style="font-size: 16px; font-weight: 700; flex-grow: 1">${esc(title)}</span><span style="font-size: 13px; color: ${C.muted}; text-align: right">${summary}</span>`;
+  // Journey 13 audit M13: the fold's button sits inside a heading, so a
+  // screen reader's list of headings reaches every section. h3 by default;
+  // settingsPage makes it h4 under an area's h3.
   return `<div style="border-top: 1px solid ${C.border}">
-<button type="button" aria-expanded="${open}" style="display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; box-sizing: border-box; padding: 8px ${P ? 14 : 18}px; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}">
+<h3 data-fold style="margin: 0; font-size: inherit; font-weight: inherit"><button type="button" aria-expanded="${open}" style="display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; box-sizing: border-box; padding: 8px ${P ? 14 : 18}px; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}">
 ${head}
 <span style="display: inline-flex; transform: rotate(${open ? 180 : 0}deg); color: ${C.muted}">${icon('chevron', 16)}</span>
-</button>
+</button></h3>
 ${open ? `<div style="padding: 0 ${P ? 14 : 18}px ${P ? 14 : 18}px; display: flex; flex-direction: column; gap: 12px">${content}</div>` : ''}
 </div>`;
 }
@@ -102,9 +105,12 @@ export function settingsPage(active, title, intro, sections, { toast = '', banne
   const [room, roomName, roomIntro, , areas] = roomOf(active);
   const many = areas.length > 1;
   const heading = `<div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: ${P ? 20 : 22}px; font-weight: 700">${esc(roomName)}</h2>${note(many ? roomIntro : intro)}</div>`;
-  const jump = many ? `<div role="group" aria-label="Jump to" style="display: flex; flex-wrap: wrap; gap: 8px">${areas.map((k) => pill(areaTitle(k), k === active)).join('')}</div>` : '';
+  // Journey 13 audit M13: Jump to is navigation — links, with aria-current.
+  const jumpLink = (k) => { const on = k === active; return `<a href="#set-${k}" aria-current="${on ? 'location' : 'false'}" style="display: inline-flex; align-items: center; box-sizing: border-box; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-size: 14px; font-weight: 600; text-decoration: none">${esc(areaTitle(k))}</a>`; };
+  const jump = many ? `<nav aria-label="Jump to" style="display: flex; flex-wrap: wrap; gap: 8px">${areas.map(jumpLink).join('')}</nav>` : '';
+  const lift = (html) => (many ? html.replace(/<h3 data-fold/g, '<h4 data-fold').replace(/<\/button><\/h3>/g, '</button></h4>') : html);
   const block = (k) => {
-    const body = card(k === active ? sections : AREA_FOLDS[k](), 'overflow: hidden; flex-shrink: 0');
+    const body = card(lift(k === active ? sections : AREA_FOLDS[k]()), 'overflow: hidden; flex-shrink: 0');
     if (!many) return body;
     return `<section aria-labelledby="set-${k}" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0"><div style="display: flex; flex-direction: column; gap: 2px"><h3 id="set-${k}" style="margin: 0; font-size: 18px; font-weight: 700">${esc(k === active ? title : areaTitle(k))}</h3>${note(k === active ? intro : AREA_INTROS[k])}</div>${body}</section>`;
   };
