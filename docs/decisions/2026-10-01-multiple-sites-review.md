@@ -125,3 +125,10 @@ clicks as possible).
     layouts. Open: on tablet and phone the chosen shop's name shows only in
     the menu, not on every page as decision 1 asks — to settle when journey
     19's switcher is carried into every journey.
+11. **On tablet and phone the shop's name sits under each page's title**
+    (Jack, 1 Oct: "I think 1"). Where the switcher is out of sight — the
+    narrow sidebar on a tablet, the menu sheet on a phone — a business with
+    more than one shop shows "North Street Cycles · Bolton" (or "All shops")
+    in small type under the page title, so every page says which shop it is
+    showing (decision 1). A one-shop business sees the title alone. Chosen
+    over putting the shop in the phone header's title ("Today · Bolton").

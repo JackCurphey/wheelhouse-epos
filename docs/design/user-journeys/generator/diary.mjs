@@ -134,6 +134,15 @@ const railList = (role, active) => roomsFor(role).map(([, items], i) => `<div st
 // before journey 19 keep the old markup until it is carried across.
 let SITE_NOW = 'Bolton', SITE_MODE = null;
 export const withSite = (name, fn, mode = 'menu') => { const was = [SITE_NOW, SITE_MODE]; SITE_NOW = name; SITE_MODE = mode; try { return fn(); } finally { [SITE_NOW, SITE_MODE] = was; } };
+// Multiple sites decision 11: on tablet and phone, where the switcher is
+// out of sight, a business with more than one shop names the shop under
+// each page's title. One shop (or a board drawn before journey 19): the
+// title alone, as before.
+function shopTitle(title, size, dark) {
+  const h1 = `<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: ${size}px; font-weight: 700; ${SITE_MODE === 'menu' || SITE_MODE === 'open' ? 'line-height: 1.2; ' : 'flex-grow: 1; '}overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>`;
+  if (SITE_MODE !== 'menu' && SITE_MODE !== 'open') return h1;
+  return `<div style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0">${h1}<span style="font-size: 12px; font-weight: 600; ${dark ? 'opacity: 0.85' : `color: ${C.muted}`}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${SITE_NOW === 'All shops' ? 'All shops' : `${SHOP} · ${SITE_NOW}`}</span></div>`;
+}
 function siteSwitcher() {
   if (SITE_MODE === 'one') return `<div style="display: flex; flex-direction: column; gap: 2px; min-height: 40px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.08); color: #ffffff"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">${SITE_NOW}</span></div>`;
   const a11y = SITE_MODE ? `aria-label="Shop: ${SITE_NOW}. Choose a shop" aria-haspopup="menu" aria-expanded="${SITE_MODE === 'open'}"` : 'aria-label="Switch site"';
@@ -186,7 +195,7 @@ export function shellTablet(active, title, content, { role = 'S', person = 'Jo T
 </nav>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 22px; display: flex; align-items: center; gap: 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
-<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 20px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
+${shopTitle(title, 20, false)}
 ${search ? searchIconBtn() : ''}${actions}
 </header>
 <main style="flex-grow: 1; box-sizing: border-box; padding: 16px 22px; overflow: hidden; min-height: 0">${content}</main>
@@ -200,7 +209,7 @@ ${search ? searchIconBtn() : ''}${actions}
 export function shellPhone(title, content, { menuOpen = false, role = 'S', active = 'diary', actions = '', overlay = '', pad = 14, person = 'Jo Taylor', roleName = 'Staff', search = true } = {}) {
   const bar = `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; gap: 6px; background: ${C.accentDark}; color: #ffffff">
 <button type="button" aria-label="Open menu" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
-<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: 18px; font-weight: 700; flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>
+${shopTitle(title, 18, true)}
 ${search ? searchIconBtn(true) : ''}${actions}
 </header>`;
   const sheet = menuOpen ? `<div style="position: absolute; inset: 0; background: rgba(20,24,22,0.45)"></div>
