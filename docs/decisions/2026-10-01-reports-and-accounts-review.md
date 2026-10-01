@@ -81,3 +81,13 @@ few clicks as possible).
    and job pages already record. Chosen over jobs and takings only, and
    adding each mechanic's speed against the planned time (which would need
    a timer on every job).
+7. **A graph at the top of every report, the table underneath** (Jack, 1
+   Oct: "are able to add graphs too? some stores might like to visualise the
+   data" — then "1"). Bars for a period split by day, category or shop, a
+   line for a trend over months, with the period before shown faintly
+   behind. The graph follows "Change what's shown", so saved reports get one
+   too; anyone can hide graphs in Your settings. The table always stays
+   below, so exact figures, screen readers and downloads still work. No real
+   figures exist, so the drawn graphs are even placeholder bars marked
+   "[£]" — they show where the graph goes, not a real shape. Chosen over a
+   Graph / Table switch, and graphs only on a separate Overview page.
