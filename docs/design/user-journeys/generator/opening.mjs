@@ -78,7 +78,7 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // H3: "Seen" clears a short float in one click.
 // Journey 9 decision 3 (refresh): while a shop runs alongside Citrus Lime,
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
-export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, as = null } = {}) {
+export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
@@ -92,6 +92,9 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // WH-1050 is the diary's oldest ready job (Mon 14 Sep).
     // Journey 5 audit H4: the number is on the line; "Contacted" records it.
     // The line goes by itself when the bike is handed over.
+    // Drop off and approve the quote decision 4: still no answer after the
+    // reminder; "Record their answer" takes a phone answer.
+    noAnswer && line('WH-1042 · Maya Patel — no answer to the quote yet', `Sent [time] · reminder sent [time] · ${mono('07700 900 142')}`, button('Record their answer', { variant: 'default' }), warnLead),
     uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', `Cannondale Quick · reminder sent [date] · ${mono('[phone]')}`, button('Contacted', { variant: 'default' }), warnLead),
     // Journey 13 decision 2: the restock list, for owners, managers and
     // anyone who can order stock (audit L6). It counts what's new since the

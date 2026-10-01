@@ -104,3 +104,9 @@ when booking). The Automatic messages summary now reads "10 on" wherever it
 shows, including the closed row on the Front desk settings boards. The
 Online booking row's summary adds the deposit: "Exact times · 2 hours'
 notice · deposit [n]% · each booking a request".
+
+**Later change (1 Oct 2026, Drop off and approve the quote decisions 4–5):**
+in Settings › Front desk › Messages, "Quote to approve" now goes the way the
+customer chose ("Customer's choice") and reads "When a job needs the
+customer's OK · reminder after [n] hours with no answer". Nothing else on the
+Messages boards changed.

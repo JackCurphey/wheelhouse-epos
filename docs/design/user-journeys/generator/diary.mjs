@@ -2369,6 +2369,27 @@ screens['job-quote'] = buildJobPage({
 });
 keepDesktopSeq('job-quote');
 
+// Drop off and approve the quote (journey 4) decisions 2, 3 and 5: the quote
+// while it's built — each new line marked Needed or Optional, with a photo
+// control (the pads have one) — then, once sent, the same job awaiting the
+// customer. The booked service is already agreed. Drawn on journey 4's
+// canvas; job-quote above is unchanged.
+const LINES_QUOTE_BUILD = [{ ...WORK_LINE_SERVICE, approval: 'Booked' }, { ...WORK_LINE_PADS, approval: 'Awaiting approval', need: 'Needed', photos: 1 }, { ...WORK_LINE_BRAKES, approval: 'Awaiting approval', need: 'Needed', photos: 0 }, { ...WORK_LINE_CABLE, approval: 'Awaiting approval', need: 'Optional', photos: 0 }];
+const LINES_QUOTE_SENT = LINES_QUOTE_BUILD.map(({ need, ...l }) => l);
+export const quoteJobBoards = (sent = false) => buildJobPage({
+  status: sent ? 'Awaiting approval' : 'In workshop', tone: sent ? 'purple' : 'blue',
+  touch: { footer: () => (sent ? button('Record their answer', { variant: 'default', block: true }) : button('Send quote', { variant: 'primary', block: true })) },
+  desktop: {
+    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+    checkedCount: 0, notedCount: 0,
+    leftStatus: sent ? 'Awaiting approval' : 'In workshop', bikeHere: true,
+    lines: sent ? LINES_QUOTE_SENT : LINES_QUOTE_BUILD, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: !sent,
+    limit: 'No spending limit set',
+    totalBadge: badge(`Proposed £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'purple'),
+    footer: sent ? button('Record their answer', { variant: 'default', block: true }) : button('Send quote', { variant: 'primary', block: true }),
+  },
+});
+
 // 12. job-mechanic — "Job · in the workshop (mechanic)"; the worked example
 // (decision 40's base board, job-final-2 itself) — close → diary-mechanic;
 // the "Full service checklist" bar links to job-checklist (task item 2).

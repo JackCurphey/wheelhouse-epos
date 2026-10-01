@@ -148,3 +148,9 @@ possible).
     strip scrolls sideways; pop-ups fill the screen. The tablet keeps the
     desktop's two columns. The website's tablet header now marks "Book a
     repair" as the current page on these boards (it was fixed to "Shop").
+
+**Later change (1 Oct 2026, Drop off and approve the quote decisions 4–5):**
+in Settings › Front desk › Messages, "Quote to approve" now goes the way the
+customer chose ("Customer's choice") and reads "When a job needs the
+customer's OK · reminder after [n] hours with no answer". Nothing else on the
+Messages boards changed.

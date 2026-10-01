@@ -280,7 +280,7 @@ const msgRow = (name, when, text, email, hv = false, hover = hv && !isPhone()) =
 const BOOKING_MSGS = [['Request received', 'When a booking request is sent'], ['Booking confirmed', 'When a booking is accepted, or confirmed straight away'], ['New time offered', 'When the shop suggests another time'], ['Request declined', 'When the shop can’t fit a booking in'], ['Date change answered', 'When the shop accepts or declines a new date'], ['Booking cancelled', 'When a booking is cancelled']];
 const msgRowChoice = (name, when) => `<div style="display: flex; flex-wrap: ${isPhone() ? 'wrap' : 'nowrap'}; align-items: center; gap: 10px; min-height: 60px; padding: ${isPhone() ? '10px 10px 10px 14px' : '0 8px 0 14px'}; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; flex-basis: ${isPhone() ? '100%' : 'auto'}"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${when}</span></span><span style="font-size: 13px; color: ${C.muted}; white-space: nowrap">Customer’s choice</span>${offer('On', true)}</div>`;
 const msgListOpen = () => `<div style="display: flex; flex-direction: column; gap: 8px">
-${msgRow('Quote to approve', 'When a job needs the customer’s OK', true, true)}
+${msgRowChoice('Quote to approve', 'When a job needs the customer’s OK · reminder after [n] hours with no answer')}
 ${msgRow('Bike ready', 'When a job is finished', true, false, true)}
 ${msgRow('Bike still waiting', 'When a ready bike isn’t collected after [n] days', true, false)}
 ${msgRow('Order ready to collect', 'When an online order is ready', false, true)}

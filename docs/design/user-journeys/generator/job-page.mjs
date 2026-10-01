@@ -194,6 +194,12 @@ ${header}
 // sort applied at render — `lines` itself is never reordered by hand.
 const classifyLine = (sub = '') => (/^Labour\b/i.test(sub) ? 0 : /^Part\b/i.test(sub) ? 1 : 2);
 const sortLines = (lines) => lines.map((l, i) => [l, i]).sort(([a, ai], [b, bi]) => classifyLine(a.sub) - classifyLine(b.sub) || ai - bi).map(([l]) => l);
+// Drop off and approve the quote, decisions 2, 3 and 5: while a quote is
+// being built, each new line carries Needed or Optional (lines with \`need\`)
+// and a photo control (lines with \`photos\`, a count). Lines without them
+// draw exactly as before.
+const needToggle = (l, h = 26) => `<span role="radiogroup" aria-label="${esc(l.work)}: needed or optional" style="display: inline-flex; border: 1px solid ${C.input}; border-radius: 6px; overflow: hidden">${['Needed', 'Optional'].map((o) => `<button type="button" role="radio" aria-checked="${l.need === o}" style="min-height: ${h}px; padding: 0 8px; border: 0; background: ${l.need === o ? C.ink : C.panel}; color: ${l.need === o ? '#ffffff' : C.ink}; font-family: inherit; font-size: 12px; font-weight: 600">${o}</button>`).join('')}</span>`;
+const photoBtn = (l, h = 26) => (l.photos === undefined ? '' : `<button type="button" aria-label="${l.photos ? `${l.photos} photo — view or add for ${esc(l.work)}` : `Add photo for ${esc(l.work)}`}" style="display: inline-flex; align-items: center; gap: 4px; min-height: ${h}px; padding: 0 8px; border-radius: 6px; border: 1px ${l.photos ? 'solid' : 'dashed'} ${C.input}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 12px; font-weight: 600; white-space: nowrap">${icon('camera', 13)}${l.photos ? `${l.photos} photo` : 'Add photo'}</button>`);
 export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', totalValue, footerNote = '', quoteAction = false, doneH = 34 } = {}) {
   const toolbarBtns = quoteAction
     ? `${ghostBtn('Send quote', 'mail')}${ghostBtn('Add item', 'plus')}${ghostBtn('Print', 'reports')}`
@@ -242,12 +248,12 @@ export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', to
 ${tdF(mono(l.code || '—'))}
 ${tdF(`<span><span style="font-weight: 600">${esc(l.work)}</span><span style="font-size: 12px; color: ${C.muted}"> · ${esc(l.sub)}</span></span>`)}
 ${tdF(`<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: ${doneH}px; cursor: pointer"><input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`, 'text-align: center; padding-top: 0; padding-bottom: 0')}
-${tdF(l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
+${tdF(l.photos !== undefined ? `<span style="display: inline-flex; align-items: center; gap: 6px">${l.note ? esc(l.note) : ''}${photoBtn(l)}</span>` : l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(l.qty))}
 ${tdF(l.stock ? `<span style="font-weight: 600; color: ${C.successInk}">${esc(l.stock)}</span>` : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(`£${l.price.toFixed(2)}`))}
 ${tdF(mono(`£${l.price.toFixed(2)}`, `font-weight: 600; ${totalStrike}`))}
-${tdF(badge(l.approval, approvalTone(l.approval)))}
+${tdF(l.need ? needToggle(l) : badge(l.approval, approvalTone(l.approval)))}
 </tr>`;
   }).join('');
   const totalRow = `<tr><td colspan="7" style="padding: 3px 10px; text-align: right; font-size: 14px; font-weight: 700">${esc(totalLabel)}</td><td style="padding: 3px 10px">${mono(`£${totalValue.toFixed(2)}`, 'font-weight: 700; font-size: 15px')}</td><td></td></tr>`;
@@ -338,7 +344,7 @@ ${detailedNotesButton(checkedCount, totalCount, notedCount, checklistHref)}
 <span style="font-size: 15px; font-weight: 600; color: ${C.ink}">${esc(l.work)}</span>
 <span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)} · Qty ${esc(l.qty)}</span>
 ${l.note ? `<span style="font-size: 13px; color: ${C.ink}">${esc(l.note)}</span>` : ''}
-<div style="padding-top: 2px">${badge(l.approval, approvalTone(l.approval))}</div>
+${l.need || l.photos !== undefined ? `<div style="padding-top: 2px; display: flex; flex-wrap: wrap; gap: 6px">${l.need ? needToggle(l, 44) : badge(l.approval, approvalTone(l.approval))}${photoBtn(l, 44)}</div>` : `<div style="padding-top: 2px">${badge(l.approval, approvalTone(l.approval))}</div>`}
 </div>
 ${mono(`£${l.price.toFixed(2)}`, `flex-shrink: 0; padding-top: 4px; font-size: 15px; font-weight: 600; ${declined ? `text-decoration: line-through; color: ${C.muted};` : `color: ${C.ink};`}`)}
 </div>`;

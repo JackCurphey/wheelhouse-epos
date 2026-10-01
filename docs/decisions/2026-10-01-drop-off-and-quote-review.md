@@ -1,0 +1,73 @@
+# Journey 4, Drop off and approve the quote — Jack's decisions (1 Oct 2026)
+
+Journey 4 is the bike's time in the shop from the customer's side: dropping
+it off, seeing how it's going, and approving or declining extra work the
+mechanic finds — plus the staff screens that send the quote. Background, not
+reopened here: booking in, the tag and storage slots, and the job page at
+each stage are drawn and approved (Workshop day 4, 20, 27); the customer
+sets a spending limit when booking and work under it skips the quote
+(Workshop day 41–43); a customer's decision on a quote line is final, and a
+change means a new revision from the shop (2026-09-23 quote line decisions
+are final); the booking's own page (Book a repair 10) and the "Bike ready"
+link with Pay now (Collect and pay 2; Owner setup 23); one update channel
+chosen at booking (Book a repair 6, Book d5). Real example data: Maya Patel,
+WH-1042, Trek Domane AL 3, the lines and prices in `LINES_APPROVED` (Standard
+service £65, Shimano brake pads B05S-RX £28, Fit & adjust brakes £18,
+Replace gear cable £12 declined; £111.00 approved), her note and the
+mechanic's note (`job-page.mjs`), Alex Morgan, North Street Cycles, Bolton;
+every other value is a bracketed placeholder. As on the diary's own quote
+board, the example has no spending limit set (Workshop day 43: under a limit
+no quote is sent). Generator: `quote.mjs` + `build-quote.mjs --theme sand`. Designed in the Soft sand look
+on its own canvas (https://claude.ai/artifact/XWm8FSLNSWC4de3vcCAKWC), desktop first, then tablet and phone. Rules for every
+journey apply (Workshop day 45, 48, 50, 53, 57, 62, 65–67; A2, A6 — as few
+clicks as possible).
+
+1. **One page per job, changing as the job moves on** (Jack, 1 Oct: "1").
+   The link from booking keeps working the whole way: the booking page
+   before drop-off (Book a repair 10); once the bike is in, progress
+   ("In the workshop"); a quote, when there is one, at the top to approve
+   line by line; then journey 5's "Ready to collect" with Pay now. Every
+   message links to the same page. Chosen over separate pages with their
+   own links, and keeping Release 1's progress page with the quote as its
+   own page.
+2. **A quote is answered with ticks set the way the mechanic recommends,
+   and one button** (Jack, 1 Oct: "1"). Each new line shows its price, the
+   mechanic's reason and "Needed" or "Optional"; needed lines start ticked,
+   optional ones unticked; lines that only make sense together (pads and
+   fitting) tick and untick as a pair; the total updates as the customer
+   goes; the button says what happens ("Approve £111.00"); before sending,
+   "You can't change these answers afterwards — call us if you change your
+   mind" (decisions are final, 2026-09-23). Staff mark each line Needed or
+   Optional when building the quote. Chosen over Yes or No on every line
+   with nothing chosen, and approve-all or decline-all.
+3. **Photos on each quote line, added by the mechanic from the job page**
+   (Jack, 1 Oct: "1"), closing the Release 1 gap "Inspection findings with
+   photos" (INS-02, DONE-02). The mechanic taps "Add photo" on a line from a
+   tablet or phone in the workshop; the customer sees a small picture beside
+   that line's reason and can tap to enlarge it; photos are optional; the
+   same photos show on the "Ready to collect" summary (journey 5). Chosen
+   over written reasons only, and a separate "What we found" section.
+4. **No answer to a quote: a reminder, then a flag for staff, and staff
+   can record a phone answer** (Jack, 1 Oct: "1"). After a time the shop
+   sets ([n] hours), the customer gets one reminder; still nothing, and the
+   job shows "No answer yet" on Today and in the diary with the customer's
+   number. "Record their answer" lets staff tick what the customer agreed
+   on the phone, saved with who took the call and when. A quote never
+   expires by itself; staff can withdraw it. Chosen over expiring after a
+   set number of days, and nothing automatic.
+5. **Sending a quote is one click, then Undo** (Jack, 1 Oct: "1"). On the
+   job page's table each line carries Needed or Optional and "Add photo",
+   set as lines are added. "Send quote" sends straight away, the way the
+   customer chose (text, WhatsApp or email); a bar says "Quote sent to Maya
+   by text · Undo" for a minute, with "See what Maya sees"; the job turns
+   purple ("Awaiting approval"). The wording is set once in Settings ›
+   Messages ("Quote to approve"). Chosen over a preview pop-up first, and a
+   separate quote-building page (Workshop day 20: one job page).
+6. **While the bike is in, a four-step tracker with the expected ready
+   time** (Jack, 1 Oct: "1"). Booked → In the shop → Being worked on →
+   Ready, the current step marked; "Expected ready: [day, date, time]";
+   the work agreed so far and its total; "Add a note for the shop" as on
+   the booking page. The tracker moves by itself as staff use the job page
+   (book in, start work, finished); waiting for parts reads "Waiting for a
+   part — we'll update you". Chosen over a full timeline with times, and
+   one status line.
