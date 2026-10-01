@@ -42,6 +42,7 @@ const ROWS_ALL = [
   { name: TREK, sub: '[Category] · [n] bikes, each by frame number', stock: '[n]', price: '£[price]', margin: '[n]%' },
   { name: '[Product]', sub: '[Supplier code] · [Category] · [Supplier]', stock: '[n]', state: 'low', price: '£[price]', margin: '[n]%' },
   { name: '[Product]', sub: '[Supplier code] · [Category] · [Supplier]', stock: '−[n]', state: 'below', price: '£[price]', margin: '[n]%' },
+  { name: '[Product with sizes]', sub: '[Category] · [n] sizes · [n] colours', stock: '[n]', price: '£[price]', margin: '[n]%' },
   { name: '[Product]', sub: '[Supplier code] · [Category] · [Supplier]', stock: '[n]', price: '£[price]', margin: '[n]%' },
   { name: '[Product]', sub: '[Supplier code] · [Category] · [Supplier]', stock: '[n]', price: '£[price]', margin: '[n]%' },
 ];
@@ -86,9 +87,19 @@ const bikeBoard = () => productPage(`${summary({ name: TREK, codes: '[Category] 
 ${box('Bikes by frame number', `<div role="list">${frameRow('[frame number]', tag('In stock', 'grey'), 'Booked in [date] from [Supplier]')}${frameRow('[frame number]', tag('In stock', 'grey'), 'Booked in [date] from [Supplier]')}${frameRow('[frame number]', tag('Sold'), `Sold to <a href="#" style="color: ${C.ink}">[Customer]</a> · [date] · warranty to [date]`)}</div>`)}
 ${history([histRow('Sold', 'Till B1 · frame [frame number] · to [Customer]', '−1', 'Jo Taylor'), histRow('Received', 'Delivery from [Supplier] · 3 frame numbers', '+3', 'Jack Lewis')])}</div>`);
 
+// ---------- Decision 4: sizes and colours, one grid ----------
+// Sizes across, colours down; each cell is its own stock and barcode.
+const SIZES_ = ['S', 'M', 'L', 'XL'];
+const GRID = [['[n]', '[n]', '0', '[n]'], ['[n]', '−1', '[n]', '[n]']];
+const cell = (v, size, colour) => { const zero = v === '0'; const below = v.startsWith('−'); return `<td style="padding: 0; border-top: 1px solid ${C.border}"><a href="#" aria-label="${esc(colour)}, size ${size}: ${zero ? 'none in stock' : below ? `${v}, below zero` : `${v} in stock`}" style="display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 52px; text-decoration: none; color: ${below ? C.warnInk : zero ? C.muted : C.ink}; background: ${below ? C.warnBg : 'transparent'}; font-family: ${MONO}; font-size: 15px; font-weight: 700">${below ? icon('alert', 13) : ''}${v}</a></td>`; };
+const sizeGrid = () => box('Sizes and colours', `<table style="width: 100%; border-collapse: collapse; table-layout: fixed"><caption style="${visuallyHidden}">Stock by size and colour</caption><thead><tr><th scope="col" style="text-align: left; padding: 6px 0; font-size: 13px; color: ${C.muted}">Colour</th>${SIZES_.map((z) => `<th scope="col" style="padding: 6px 0; font-size: 13px; color: ${C.muted}">${z}</th>`).join('')}</tr></thead><tbody>${GRID.map((r, i) => `<tr><th scope="row" style="text-align: left; padding: 0; border-top: 1px solid ${C.border}; font-size: 15px; font-weight: 600">[Colour ${i + 1}]</th>${r.map((v, j) => cell(v, SIZES_[j], `[Colour ${i + 1}]`)).join('')}</tr>`).join('')}</tbody></table>
+${note('Each size and colour has its own barcode. Open one to see its history or adjust it. 0 means none in stock; a size below zero needs checking.')}`, linkBtn('+ Add a size or colour'));
+const sizesBoard = () => productPage(`${summary({ name: '[Product with sizes]', codes: '[Category] · [Supplier] · [n] sizes · [n] colours', price: '£[price]', kind: 'sizes' })}<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${sizeGrid()}${history([histRow('Sold', 'Size M · [Colour 1] · Till B1', '−1', 'Jo Taylor'), histRow('Received', 'Delivery from [Supplier] · 4 sizes', '+[n]', 'Jack Lewis')])}</div>`);
+
 def('st-list', () => listBoard());
 def('st-product', () => productBoard());
 def('st-product-bike', () => bikeBoard());
+def('st-product-sizes', () => sizesBoard());
 def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -104,8 +115,9 @@ export const TITLES = {
   'st-search-measure': 'Searching by a measurement: “bearing 30 mm”',
   'st-product': 'A product’s page: summary left, stock history right',
   'st-product-bike': 'A bike’s page: each frame number, in stock or sold',
+  'st-product-sizes': 'Sizes and colours: one product, a grid of stock',
 };
 export const ROWS = [
   { label: 'Finding stock', screens: ['st-list', 'st-search-measure'] },
-  { label: 'A product', screens: ['st-product', 'st-product-bike'] },
+  { label: 'A product', screens: ['st-product', 'st-product-bike', 'st-product-sizes'] },
 ];

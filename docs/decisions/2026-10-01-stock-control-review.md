@@ -37,3 +37,11 @@ A2, A6 — as few clicks as possible).
    each with who and why. A bike's page lists its frame numbers first: in
    stock, or sold and to whom. Chosen over folding sections, and tabs.
    Boards: `st-product`, `st-product-bike`.
+4. **Sizes and colours: one product, with a grid on its page** (Jack, 1
+   Oct: "1"). The stock list keeps one row per product, with its total and
+   "[n] sizes · [n] colours"; the product page shows sizes across and
+   colours down, each cell its own stock (each size and colour keeps its
+   own barcode, Release 2 rule 3). Scanning a barcode or searching "jersey
+   M" opens that size and colour; the till sells it as one. Chosen over
+   each size as its own product, and rows that open out. Board:
+   `st-product-sizes`; `st-list` gains a product with sizes.
