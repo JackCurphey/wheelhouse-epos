@@ -201,7 +201,8 @@ const workshopBlock = (on, siteDays = '') => `<div style="display: flex; flex-di
 // One person, in a pop-up in the middle (Workshop day 15, 16). The role by
 // pill; the switches as toggle pills; the PIN line (signing in 6).
 // Multiple sites decision 4 (audit M7): Works at, and days per shop.
-function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '' } = {}) {
+// Reports and accounts decision 5: "Can see costs and margin" after "Can see reports".
+function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '', costs = false } = {}) {
   // Staff already have the till by their role, so that one says Included.
   const inc = (s) => s === 'Can use the till';
   const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all ? 'On' : 'Off', all)}</div>`;
@@ -210,7 +211,7 @@ function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '
   return popup('p-title', 'Jo Taylor', 'Staff · [email]', `${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}${worksAt}
 <div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: ${isPhone() ? 20 : 28}px; align-items: start; padding-top: 16px; border-top: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 16px">
 <div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">Also allowed to</span>${all ? `<span style="font-size: 13px; color: ${C.muted}">Everything a Manager can do — Jo’s role still says Staff</span>` : button('Give everything a Manager can do', { variant: 'default', block: true })}</div>
-<div style="display: flex; flex-direction: column; gap: 8px">${SWITCHES.map(sw).join('')}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">${(costs ? SWITCHES.flatMap((s) => (s === 'Can see reports' ? [s, 'Can see costs and margin'] : [s])) : SWITCHES).map(sw).join('')}</div>
 </div>
 </div><div style="display: flex; flex-direction: column; gap: 16px">${workshopBlock(workshop, siteDays)}
 <div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
