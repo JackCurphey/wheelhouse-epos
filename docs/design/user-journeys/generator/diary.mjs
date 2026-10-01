@@ -129,10 +129,10 @@ export function railItem([key, label, ic], active) {
 const railList = (role, active) => roomsFor(role).map(([, items], i) => `<div style="display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; ${i ? 'padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.18)' : ''}">${items.map((n) => railItem(n, active)).join('')}</div>`).join('');
 
 // Multiple sites decision 1: the switcher shows the chosen shop, or "All shops".
-// Audit H4: named "Shop: Bolton. Choose a shop", with its open state; M4:
-// someone with one shop sees the shop's name and no switcher. Boards drawn
-// before journey 19 keep the old markup until it is carried across.
-let SITE_NOW = 'Bolton', SITE_MODE = null;
+// Multiple sites (journey 19) audit H4: named "Shop: Bolton. Choose a shop",
+// with its open state; M4: someone with one shop sees the shop's name and no
+// switcher. The example business has two shops, so every board uses the menu.
+let SITE_NOW = 'Bolton', SITE_MODE = 'menu';
 export const withSite = (name, fn, mode = 'menu') => { const was = [SITE_NOW, SITE_MODE]; SITE_NOW = name; SITE_MODE = mode; try { return fn(); } finally { [SITE_NOW, SITE_MODE] = was; } };
 // Multiple sites decision 11: on tablet and phone, where the switcher is
 // out of sight, a business with more than one shop names the shop under
@@ -1770,8 +1770,8 @@ const reqCloseHref = (size) => `diary-${size}.dc.html`;
 // 4. request-new — Sam Reed / Specialized Sirrus / Brake service (stage2 REQ
 // example; no price source yet, so this reads "Price to be confirmed" —
 // H4 (29 Sep audit): was a literal unrendered "[price]" template tag.
-function requestNewBody(size, deposit = false) {
-  return `${eyebrow(`Received today at ${mono('08:15')}`)}
+function requestNewBody(size, deposit = false, from = '') {
+  return `${eyebrow(from || `Received today at ${mono('08:15')}`)}
 ${row(`${h2('Sam Reed', 18)}${statusBadge('pending')}`, 10, 'justify-content: space-between')}
 ${txt('Specialized Sirrus · grey', 14, `color: ${C.muted}`)}
 <div style="display: flex; flex-direction: column; gap: 6px">${h2('What the customer told us', 14)}${quote('No message from the customer.')}</div>
@@ -2060,13 +2060,13 @@ ${col('The work', `${work}${title}${status}${hereNow}`)}
 // The form itself stays a readable single column at tablet/phone (brief
 // leaves this open — decision: the outer pop-up still takes most of the
 // screen, per decision 16); desktop uses two columns (item 26).
-function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {} } = {}) {
+function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {}, top = '', saveLabel = 'Save job' } = {}) {
   const base = size === 'desktop'
     ? shellDesktop('diary', 'Workshop diary', baseFn('desktop'))
     : shellTablet('diary', 'Workshop diary', baseFn('tablet'));
   const id = 'new-job-title';
   const maxW = size === 'desktop' ? 1000 : 1100;
-  const centered = `<div style="max-width: ${maxW}px; margin: 0 auto; width: 100%">${newJobBody(size, bodyOpts)}</div>`;
+  const centered = top ? `<div style="max-width: ${maxW}px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 10px">${top}${newJobBody(size, bodyOpts)}</div>` : `<div style="max-width: ${maxW}px; margin: 0 auto; width: 100%">${newJobBody(size, bodyOpts)}</div>`;
   // A single scrolling column (unlike the job pages' two independently
   // scrolling columns), so the service select's warning banner (item 23)
   // never sits clipped below the fold — dialogBody's overflow:hidden is
@@ -2082,7 +2082,7 @@ function newJobDialog(size, w, h, pad, { baseFn, closeId = 'diary', bodyOpts = {
     ? `<div style="flex-grow: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; padding: 6px 20px; display: flex; flex-direction: column; gap: 14px">${centered}</div>`
     : `<div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 24px; display: flex; flex-direction: column">${centered}</div>`; // tablet: fits without scrolling (decision 68)
   const footer = size !== 'phone'
-    ? row(`${button('Cancel', { variant: 'ghost', href: `${closeId}-${size}.dc.html` })}<div style="flex-grow: 1"></div>${button('Save job', { variant: 'primary' })}`, 10)
+    ? row(`${button('Cancel', { variant: 'ghost', href: `${closeId}-${size}.dc.html` })}<div style="flex-grow: 1"></div>${button(saveLabel, { variant: 'primary' })}`, 10)
     : button('Save', { block: true });
   return dialogOverlay(base, w, h, `${dialogHeader('New job', `${closeId}-${size}.dc.html`, '', id, size)}${body}${dialogFooter(footer)}`, { pad, full: true, labelledby: id });
 }
@@ -2806,3 +2806,16 @@ screens['job-part-arrived'] = buildJobPage({
     footer: `${button('Carry on with the work', { block: true })}${footNote('Moves the job back to In the workshop.', 'desktop')}`,
   },
 });
+
+// Multiple sites decision 12: a job booked into another shop's workshop goes
+// there as a request. Booking it: a "Workshop at" choice above the form, and
+// the button says where it goes. Receiving it: the request says who sent it.
+const OTHER = '[Second site]';
+const shopPick = () => `<div role="radiogroup" aria-label="Workshop at" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 14px; font-weight: 700; margin-right: 4px">Workshop at</span>${['Bolton', OTHER].map((n) => `<button type="button" role="radio" aria-checked="${n === OTHER}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${n === OTHER ? C.ink : C.input}; background: ${n === OTHER ? C.ink : C.panel}; color: ${n === OTHER ? '#ffffff' : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${n}</button>`).join('')}<span style="flex-basis: 100%; font-size: 13px; color: ${C.muted}">Goes to ${OTHER} as a request. Their workshop accepts it or offers another time, and you and the customer hear back.</span></div>`;
+export const newJobOtherShopAt = (size) => withSite('Bolton', () => size === 'phone'
+  ? dialogPhone('New job', 'new-job-pick-phone.dc.html', `${shopPick()}${newJobBody('phone', NEW_JOB_OPTS)}`, button(`Send request to ${OTHER}`, { variant: 'primary', block: true }), '', { scroll: true, backLabel: 'Cancel, back to the diary', bodyGap: 14 })
+  : newJobDialog(size, size === 'desktop' ? DW : TW, size === 'desktop' ? DH : TH, size === 'desktop' ? 6 : 20, { baseFn: (s) => (s === 'desktop' ? diaryFrozenContent(s) : diaryPickContent(s)), bodyOpts: NEW_JOB_OPTS, top: shopPick(), saveLabel: `Send request to ${OTHER}` }));
+const FROM = `From Bolton · booked by Jo Taylor at ${mono('[time]')}`;
+export const requestFromShopAt = (size) => withSite(OTHER, () => size === 'phone'
+  ? dialogPhone('Sam Reed · Specialized Sirrus', reqCloseHref('phone'), stack(requestNewBody('phone', false, FROM), 12), `${button('Accept', { block: true })}${grid('1fr 1fr', `${button('Another time', { variant: 'default', block: true })}${button('Decline', { variant: 'ghost', block: true })}`, 8)}`, 'Request from Bolton')
+  : requestDialog(size, size === 'desktop' ? DW : TW, size === 'desktop' ? DH : TH, { ...reqNewOpts, sub: 'Request from Bolton', body: (sz) => requestNewBody(sz, false, FROM) }));

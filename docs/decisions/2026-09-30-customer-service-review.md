@@ -142,3 +142,9 @@ lands on Privacy requests saying where it came from and what's in the way
 details" held back until it's clear, and a line on their customer page;
 drawn on the journey 7 canvas. The Customers boards here only change where
 the Front desk Settings summary shows ("11 on").
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

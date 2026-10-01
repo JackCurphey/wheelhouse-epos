@@ -75,3 +75,9 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    - L5: the ✕-as-link and the shared Today/Reports icon are parked as
      design-wide fixes; the WH-1045 day and time mismatch with the diary
      is logged in the handover's open items.
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

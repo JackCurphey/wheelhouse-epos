@@ -127,3 +127,9 @@ due its next service — And ask me for a review after I collect" box under
 Pay now (on the pay and deposit states); Settings › Messages gains the
 "Bringing customers back" group ("Service reminder", "Review request"), so
 the Automatic messages section reads "11 on".
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

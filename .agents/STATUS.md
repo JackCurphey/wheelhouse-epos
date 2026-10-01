@@ -16,11 +16,28 @@ cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 15), Opening the shop (journey 10), Moving from Citrus Lime (journey 9) and
 Collect the bike and pay (journey 5), Receiving stock and purchase orders
 (journey 13), Stock take and stock control (journey 14), Book a repair
-(journey 3), Drop off and approve the quote (journey 4) and Account, history
-and reminders (journey 7) are approved and in the big canvas; the next journey is
+(journey 3), Drop off and approve the quote (journey 4), Account, history
+and reminders (journey 7) and Multiple sites (journey 19) are approved and in
+the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (434 files of
+board linking to its journey's own canvas for tablet and phone (452 files of
 the 512 a canvas can hold).
+
+**Journey 19, Multiple sites (1 Oct):** approved at desktop, tablet and phone
+and copied into the big canvas; 12 decisions in
+`docs/decisions/2026-10-01-multiple-sites-review.md` — the whole app works
+for the chosen shop, with "All shops" for the owner (and managers at two or
+more shops); one business with prices and services that can differ by shop,
+set on the item; "Works at" per person with a mechanic's days per shop (a day
+at one shop only); booking starts with "Which shop?"; Today across all shops;
+"+ Add a shop" with a checklist; every till grouped by shop; a till always
+sells for its own shop; the shop named under titles on tablet and phone; a
+job booked into another shop's workshop arrives there as a request (Jack's
+idea, decision 12). UI audit `sites-ui-audit.md`, every recommendation taken.
+22 screens, 67 boards. Own canvas:
+https://claude.ai/artifact/LXYUo9UQymsN2VyNSynAcB . Generator: `sites.mjs` +
+`build-sites.mjs --theme sand`. The switcher's new name and the tablet/phone
+shop line were carried into every staff board.
 
 **Journey 7, Account, history and reminders (1 Oct):** approved at desktop,
 tablet and phone and copied into the big canvas; 9 decisions in

@@ -132,3 +132,12 @@ clicks as possible).
     in small type under the page title, so every page says which shop it is
     showing (decision 1). A one-shop business sees the title alone. Chosen
     over putting the shop in the phone header's title ("Today · Bolton").
+12. **A job booked into another shop's workshop arrives there as a request**
+    (Jack, 1 Oct: "yeah lets go with one" — his idea). When staff at one
+    shop book a job for the other shop's workshop, it lands in that shop's
+    diary as a purple request, like an online booking (Book a repair 3;
+    Workshop day), marked "From [shop] · booked by [person]". Someone there
+    who can accept bookings accepts it, offers another time, or declines with
+    a reason; the shop that booked it and the customer hear the answer.
+    Chosen over booking it straight in with a note to check, and following
+    each shop's online-booking setting.

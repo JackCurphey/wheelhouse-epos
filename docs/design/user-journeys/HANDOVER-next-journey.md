@@ -39,31 +39,33 @@ holding desktop, tablet and phone:
 | 3 Book a repair | https://claude.ai/artifact/KxkLMpRgFk23oeFJdfuq95 | `docs/decisions/2026-10-01-book-a-repair-review.md` (13) |
 | 4 Drop off and approve the quote | https://claude.ai/artifact/XWm8FSLNSWC4de3vcCAKWC | `docs/decisions/2026-10-01-drop-off-and-quote-review.md` (8) |
 | 7 Account, history and reminders | https://claude.ai/artifact/Hoz1q28Frh9M7hNgV2bo3b | `docs/decisions/2026-10-01-account-and-reminders-review.md` (9) |
+| 19 Multiple sites | https://claude.ai/artifact/LXYUo9UQymsN2VyNSynAcB | `docs/decisions/2026-10-01-multiple-sites-review.md` (12) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md`,
 `setup-ui-audit.md`, `customer-ui-audit.md`, `opening-ui-audit.md`,
 `moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md`,
 `stock-ui-audit.md`, `book-ui-audit.md`, `quote-ui-audit.md`,
-`account-ui-audit.md` (this folder).
+`account-ui-audit.md`, `sites-ui-audit.md` (this folder).
 
-Overview count (each screen once): 431 screens — 386 designed, 0 built, 6
-old app only, 39 not designed yet, 0 for review (1 Oct: journey 7 in; its six
-gaps — history, balance, reminder, review request, unsubscribe, privacy —
-replaced by its 42 screens. Journey 7 also changed boards elsewhere: the
-reminder tick on booking step 4 (journey 3) and the ready page (journeys 4,
-5); a "Bringing customers back" group in Settings › Messages, "11 on"
-wherever the Front desk summary shows (journeys 3, 4, 5, 8, 15); "Account"
-marked in the website header on the customer sign-in boards (journey B)).
+Overview count (each screen once): 451 screens — 408 designed, 0 built, 6
+old app only, 37 not designed yet, 0 for review (1 Oct: journey 19 in; its
+site switcher and tills gaps replaced by its 22 screens, "Reports and cash-up
+by site" kept as a gap for journey 17. Journey 19 also changed every staff
+board: the shop switcher is named "Shop: Bolton. Choose a shop", and on
+tablet and phone the shop's name sits under each page title (journey 19
+decisions 9, 11); the diary canvas's live copy was an older build (no header
+search on phone, older mechanic footer) and was brought up to date).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
 placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
-collect, 6 Cycle to Work, 17 Reports and accounts, 18 Website management, 19
-Multiple sites, 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **19 Multiple
-sites** (journey 14's transfers), **17 Reports and accounts**, **2 Buy
-online / click and collect** (journey 7's account history lists online
-orders; customer orders, below, touch it).
+collect, 6 Cycle to Work, 17 Reports and accounts, 18 Website management,
+20 Management oversight, 21 Lightspeed shops (Release 1).
+Strong candidates, because finished journeys lean on them: **17 Reports and
+accounts** (reports and cash-up by shop, "All shops" — journey 19 decisions 1,
+8), **2 Buy online / click and collect** (journey 7's account history lists
+online orders; customer orders, below, touch it), **20 Management
+oversight**.
 
 **Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
 ux audit at the end when all the pages are done?"). Each journey keeps its own
@@ -150,7 +152,7 @@ Generator: `docs/design/user-journeys/generator/`.
 **The big canvas is desktop only** (cash-up decision 8): a canvas holds at
 most 512 files, so each screen appears once — desktop, the one large app map,
 or a phone-only screen's only size — with a "Tablet and phone ↗" link to its
-journey's canvas. 434 files now. A publish carries at most 255 files: split
+journey's canvas. 452 files now. A publish carries at most 255 files: split
 big changes (changed boards with `canvas.json` first, removals second).
 
 ## Gotchas that cost time
@@ -215,6 +217,13 @@ big changes (changed boards with `canvas.json` first, removals second).
   the customer page and the website request on Privacy requests are drawn on
   journey 7's canvas only; Customer service's and Opening the shop's own
   boards don't show them.
+- Journey 19 left for later: Book a repair's own boards (journey 3) show a
+  one-shop booking — the "Which shop?" step is drawn on journey 19's canvas
+  only; Staff and roles' person boards (journey 8) don't show "Works at" —
+  journey 19 draws it; the new-job form for another shop's workshop still
+  shows Bolton's own mechanic and storage slot (the receiving shop sets
+  those); the second shop has no real name, address or code ("[Second
+  site]") — Jack can supply them.
 - Maya Patel's example email differs: `maya@example.test` (diary.mjs,
   job-page.mjs, customer.mjs) vs `maya@example.com` (till.mjs, signin.mjs).
   Pick one and republish the approved boards that show it.

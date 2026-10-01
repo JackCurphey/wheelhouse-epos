@@ -113,3 +113,9 @@ the ready page (journey 5's, shown here at Ready) has the same unticked
 "Remind me when my bike is due its next service" box under Pay now, saying
 "the way you chose when you booked"; Settings › Messages gains the
 "Bringing customers back" group ("Service reminder", "Review request").
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

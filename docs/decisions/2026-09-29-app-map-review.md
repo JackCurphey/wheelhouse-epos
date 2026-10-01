@@ -90,3 +90,9 @@ gained the item; republished on journeys A, B, 5, 9, 10, 11, 12, 15, 16 and
 the big canvas. While republishing, journey 12's canvas turned out to hold
 an older build of most of its boards (from before this journey's header
 search and "Your settings" footer); those boards are now current.
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

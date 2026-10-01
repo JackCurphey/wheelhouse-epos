@@ -22,7 +22,7 @@
 // placeholders.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { page, offer, note, popup, overlay, withSize, isPhone, settingsPage, shopFolds, SHOP_INTRO, tillFolds, TILL_INTRO, workshopFolds, WORKSHOP_INTRO, MANAGER } from './settings-frame.mjs';
-import { withSite } from './diary.mjs';
+import { withSite, newJobOtherShopAt, requestFromShopAt } from './diary.mjs';
 import { today, section, list, line, tag, warnLead } from './opening.mjs';
 import { servicesOpen, personDialog, staffPage, peopleOpen } from './setup.mjs';
 import { screens as stockScreens } from './stock.mjs';
@@ -186,6 +186,9 @@ def('ms-add-shop', () => overlay(sitesBoard(), addShopDialog()));
 def('ms-add-shop-error', () => overlay(sitesBoard(), addShopDialog(true)));
 def('ms-today-new', () => todayNew());
 def('ms-tills', () => tillsBoard());
+// Decision 12: a job for the other shop's workshop goes there as a request.
+def('ms-job-other-shop', () => newJobOtherShopAt(SIZE));
+def('ms-request-from-shop', () => requestFromShopAt(SIZE));
 
 // Every board at desktop, tablet and phone.
 const SIZES = ['desktop', 'tablet', 'phone'];
@@ -216,10 +219,13 @@ export const TITLES = {
   'ms-add-shop-error': 'A code another shop already uses',
   'ms-today-new': 'Today at a new shop: what to do next',
   'ms-tills': 'Settings › Till › Tills: every till, by shop',
+  'ms-job-other-shop': 'Booking a job into the other shop’s workshop: it goes as a request',
+  'ms-request-from-shop': 'At [Second site]: the request, from Bolton, to accept',
 };
 export const ROWS = [
   { label: 'Choosing a shop', screens: ['ms-switch-open', 'ms-switched', 'ms-today-all', 'ms-pick-shop', 'ms-till-other', 'ms-one-shop'] },
   { label: 'Prices and services by shop', screens: ['ms-service-price', 'ms-service-not-offered', 'ms-services-differs', 'ms-product-price'] },
   { label: 'People and booking', screens: ['ms-person', 'ms-book-shop', 'ms-book-shop-chosen', 'ms-book-shop-change'] },
+  { label: 'Jobs between shops', screens: ['ms-job-other-shop', 'ms-request-from-shop'] },
   { label: 'Adding a shop, and its tills', screens: ['ms-sites', 'ms-sites-manager', 'ms-add-shop', 'ms-add-shop-error', 'ms-today-new', 'ms-tills'] },
 ];

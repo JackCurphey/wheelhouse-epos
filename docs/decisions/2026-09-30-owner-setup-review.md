@@ -262,3 +262,9 @@ timed on each service in Settings › Workshop › Services) and "Review request
 (off until the shop adds its review page) — each ending with a fixed "Stop
 these: [link]" the shop can't delete. The Automatic messages summary reads
 "11 on" wherever the Front desk area is shown.
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

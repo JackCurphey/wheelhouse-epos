@@ -44,6 +44,8 @@ export const sd3 = (id, title, role) => ({ id, status: 'designed', title, role, 
 export const sd4 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'quote' });
 // sd7(id, title, role) = an agreed journey 7 screen (account.mjs, Soft sand).
 export const sd7 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'account' });
+// sd19(id, title, role) = an agreed journey 19 screen (sites.mjs, Soft sand).
+export const sd19 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'sites' });
 
 export const journeys = [
   {
@@ -723,12 +725,42 @@ export const journeys = [
     ],
   },
   {
-    id: 'j19', name: 'Multiple sites', who: 'Owner and Manager',
+    id: 'j19', name: 'Multiple sites', who: 'Owner, Manager and Staff',
     rows: [
-      { label: 'Across sites', screens: [
-        g('multi-switch', 'Site switcher', 'Staff', 'Which shop you are working in, on every staff screen.', ['Current site', 'Switch site'], { source: 'Release 2 rule 3 · ACC-09' }),
+      { label: "Choosing a shop", screens: [
+        sd19("ms-switch-open", "The shop switcher open: your shops, and “All shops” (owner)", "Owner"),
+        sd19("ms-switched", "After switching: “Now working in [Second site]”", "Owner"),
+        sd19("ms-today-all", "Today, all shops: a row per shop, one list of what needs you", "Owner"),
+        sd19("ms-pick-shop", "“All shops” on the diary: choose one", "Owner"),
+        sd19("ms-till-other", "A till sells for its own shop, whatever the menu says", "Staff"),
+        sd19("ms-one-shop", "Someone with one shop: its name, no switcher (staff with two shops get their shops, no “All shops”)", "Staff"),
+      ] },
+      { label: "Prices and services by shop", screens: [
+        sd19("ms-service-price", "A service: price for all shops, different at one, where it’s offered", "Owner"),
+        sd19("ms-service-not-offered", "Not offered at one shop", "Owner"),
+        sd19("ms-services-differs", "Services list at [Second site]: its price beside the all-shops one", "Owner"),
+        sd19("ms-product-price", "A product’s price, different at one shop", "Owner"),
+      ] },
+      { label: "People and booking", screens: [
+        sd19("ms-person", "A person: where they work, and workshop days at each shop", "Owner"),
+        sd19("ms-book-shop", "Book a repair: “Which shop?” first, nothing chosen", "Customer"),
+        sd19("ms-book-shop-chosen", "Came from Bolton’s page: the shop chosen, straight to the service", "Customer"),
+        sd19("ms-book-shop-change", "Changing the shop: what it resets", "Customer"),
+      ] },
+      { label: "Jobs between shops", screens: [
+        sd19("ms-job-other-shop", "Booking a job into the other shop’s workshop: it goes as a request", "Staff"),
+        sd19("ms-request-from-shop", "At [Second site]: the request, from Bolton, to accept", "Mechanic"),
+      ] },
+      { label: "Adding a shop, and its tills", screens: [
+        sd19("ms-sites", "Settings › Shop and sites: each shop (owner)", "Owner"),
+        sd19("ms-sites-manager", "The same, as a manager sees it", "Manager"),
+        sd19("ms-add-shop", "Add a shop: code suggested, hours copied", "Owner"),
+        sd19("ms-add-shop-error", "A code another shop already uses", "Owner"),
+        sd19("ms-today-new", "Today at a new shop: what to do next", "Owner"),
+        sd19("ms-tills", "Settings › Till › Tills: every till, by shop", "Owner"),
+      ] },
+      { label: 'Drawn with Reports and accounts (journey 17)', screens: [
         g('multi-reports', 'Reports and cash-up by site', 'Manager', 'Every report and cash-up for one site or all of them.', ['Site filter'], { source: 'ACC-09' }),
-        g('multi-tills', 'Tills across sites', 'Manager', 'All tills at all sites, from anywhere.', ['By site: last sync, sales waiting'], { source: 'Offline spec §8' }),
       ] },
     ],
   },

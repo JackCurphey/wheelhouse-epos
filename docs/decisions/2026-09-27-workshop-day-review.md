@@ -387,3 +387,9 @@ when booking). The Automatic messages summary now reads "10 on" wherever it
 shows, including the closed row on the Front desk settings boards. The
 Online booking row's summary adds the deposit: "Exact times · 2 hours'
 notice · deposit [n]% · each booking a request".
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

@@ -125,3 +125,9 @@ canvas. Rules for every journey apply (Workshop day
    screens on a phone, as decision 7 says: the list (its own board), then the
    conversation with a way back. Pop-ups fill the screen; staff boards use
    the app's own tablet and phone layouts.
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.

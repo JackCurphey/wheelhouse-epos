@@ -3371,33 +3371,193 @@
       "title": "Not designed · Refund an online order",
       "is_interactive": true
     },
-    "j19-multi-switch.dc.html": {
+    "j19-ms-switch-open-desktop.dc.html": {
       "x": 0,
       "y": 40666,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Site switcher",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The shop switcher open: your shops, and “All shops” (owner) (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-switched-desktop.dc.html": {
+      "x": 1320,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · After switching: “Now working in [Second site]” (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-today-all-desktop.dc.html": {
+      "x": 2640,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today, all shops: a row per shop, one list of what needs you (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-pick-shop-desktop.dc.html": {
+      "x": 3960,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · “All shops” on the diary: choose one (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-till-other-desktop.dc.html": {
+      "x": 5280,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A till sells for its own shop, whatever the menu says (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-one-shop-desktop.dc.html": {
+      "x": 6600,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Someone with one shop: its name, no switcher (staff with two shops get their shops, no “All shops”) (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-service-price-desktop.dc.html": {
+      "x": 8080,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A service: price for all shops, different at one, where it’s offered (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-service-not-offered-desktop.dc.html": {
+      "x": 9400,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Not offered at one shop (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-services-differs-desktop.dc.html": {
+      "x": 10720,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Services list at [Second site]: its price beside the all-shops one (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-product-price-desktop.dc.html": {
+      "x": 12040,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A product’s price, different at one shop (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-person-desktop.dc.html": {
+      "x": 13520,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A person: where they work, and workshop days at each shop (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-book-shop-desktop.dc.html": {
+      "x": 14840,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Book a repair: “Which shop?” first, nothing chosen (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-book-shop-chosen-desktop.dc.html": {
+      "x": 16160,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Came from Bolton’s page: the shop chosen, straight to the service (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-book-shop-change-desktop.dc.html": {
+      "x": 17480,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Changing the shop: what it resets (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-job-other-shop-desktop.dc.html": {
+      "x": 18960,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Booking a job into the other shop’s workshop: it goes as a request (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-request-from-shop-desktop.dc.html": {
+      "x": 20280,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · At [Second site]: the request, from Bolton, to accept (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-sites-desktop.dc.html": {
+      "x": 21760,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Shop and sites: each shop (owner) (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-sites-manager-desktop.dc.html": {
+      "x": 23080,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The same, as a manager sees it (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-add-shop-desktop.dc.html": {
+      "x": 24400,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Add a shop: code suggested, hours copied (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-add-shop-error-desktop.dc.html": {
+      "x": 25720,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A code another shop already uses (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-today-new-desktop.dc.html": {
+      "x": 27040,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today at a new shop: what to do next (desktop)",
+      "is_interactive": true
+    },
+    "j19-ms-tills-desktop.dc.html": {
+      "x": 28360,
+      "y": 40666,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Till › Tills: every till, by shop (desktop)",
       "is_interactive": true
     },
     "j19-multi-reports.dc.html": {
-      "x": 1180,
+      "x": 29840,
       "y": 40666,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Reports and cash-up by site",
       "is_interactive": true
     },
-    "j19-multi-tills.dc.html": {
-      "x": 2360,
-      "y": 40666,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Tills across sites",
-      "is_interactive": true
-    },
     "j20-ops-audit.dc.html": {
       "x": 0,
-      "y": 42482,
+      "y": 42522,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Activity log",
@@ -3405,7 +3565,7 @@
     },
     "j20-ops-devices.dc.html": {
       "x": 1180,
-      "y": 42482,
+      "y": 42522,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Signed-in devices",
@@ -3413,7 +3573,7 @@
     },
     "j20-ops-feedback.dc.html": {
       "x": 2360,
-      "y": 42482,
+      "y": 42522,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Send feedback",
@@ -3421,7 +3581,7 @@
     },
     "j21-connect.dc.html": {
       "x": 0,
-      "y": 44298,
+      "y": 44338,
       "w": 1100,
       "h": 816,
       "title": "Designed · Connect the one chosen Lightspeed",
@@ -3429,7 +3589,7 @@
     },
     "j21-connect-proof.dc.html": {
       "x": 1180,
-      "y": 44298,
+      "y": 44338,
       "w": 1100,
       "h": 816,
       "title": "Designed · Verify connector capabilities",
@@ -3437,7 +3597,7 @@
     },
     "j21-pos.dc.html": {
       "x": 2360,
-      "y": 44298,
+      "y": 44338,
       "w": 1100,
       "h": 816,
       "title": "Designed · Handoff agreed work to Lightspeed",
@@ -3445,7 +3605,7 @@
     },
     "j21-pos-done.dc.html": {
       "x": 3540,
-      "y": 44298,
+      "y": 44338,
       "w": 1100,
       "h": 816,
       "title": "Designed · See the linked work order",
@@ -3453,7 +3613,7 @@
     },
     "j21-pos-unknown.dc.html": {
       "x": 4720,
-      "y": 44298,
+      "y": 44338,
       "w": 1100,
       "h": 816,
       "title": "Designed · Uncertain Lightspeed handoff",
@@ -3898,9 +4058,29 @@
     "j18-site-orders.dc.html",
     "j18-site-collect.dc.html",
     "j18-site-refund.dc.html",
-    "j19-multi-switch.dc.html",
+    "j19-ms-switch-open-desktop.dc.html",
+    "j19-ms-switched-desktop.dc.html",
+    "j19-ms-today-all-desktop.dc.html",
+    "j19-ms-pick-shop-desktop.dc.html",
+    "j19-ms-till-other-desktop.dc.html",
+    "j19-ms-one-shop-desktop.dc.html",
+    "j19-ms-service-price-desktop.dc.html",
+    "j19-ms-service-not-offered-desktop.dc.html",
+    "j19-ms-services-differs-desktop.dc.html",
+    "j19-ms-product-price-desktop.dc.html",
+    "j19-ms-person-desktop.dc.html",
+    "j19-ms-book-shop-desktop.dc.html",
+    "j19-ms-book-shop-chosen-desktop.dc.html",
+    "j19-ms-book-shop-change-desktop.dc.html",
+    "j19-ms-job-other-shop-desktop.dc.html",
+    "j19-ms-request-from-shop-desktop.dc.html",
+    "j19-ms-sites-desktop.dc.html",
+    "j19-ms-sites-manager-desktop.dc.html",
+    "j19-ms-add-shop-desktop.dc.html",
+    "j19-ms-add-shop-error-desktop.dc.html",
+    "j19-ms-today-new-desktop.dc.html",
+    "j19-ms-tills-desktop.dc.html",
     "j19-multi-reports.dc.html",
-    "j19-multi-tills.dc.html",
     "j20-ops-audit.dc.html",
     "j20-ops-devices.dc.html",
     "j20-ops-feedback.dc.html",
@@ -4904,7 +5084,57 @@
     "j19_s103": {
       "x": 0,
       "y": 40426,
-      "text": "Across sites",
+      "text": "Choosing a shop",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j19_s104": {
+      "x": 8080,
+      "y": 40426,
+      "text": "Prices and services by shop",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j19_s105": {
+      "x": 13520,
+      "y": 40426,
+      "text": "People and booking",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j19_s106": {
+      "x": 18960,
+      "y": 40426,
+      "text": "Jobs between shops",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j19_s107": {
+      "x": 21760,
+      "y": 40426,
+      "text": "Adding a shop, and its tills",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j19_s108": {
+      "x": 29840,
+      "y": 40426,
+      "text": "Drawn with Reports and accounts (journey 17)",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -4914,14 +5144,14 @@
     "j19_title": {
       "x": 0,
       "y": 40106,
-      "text": "19 · Multiple sites — Owner and Manager",
+      "text": "19 · Multiple sites — Owner, Manager and Staff",
       "kind": "title1",
-      "maxW": 3460,
+      "maxW": 30940,
       "w": 240
     },
-    "j20_s105": {
+    "j20_s110": {
       "x": 0,
-      "y": 42242,
+      "y": 42282,
       "text": "Oversight",
       "w": 520,
       "size": "l",
@@ -4931,15 +5161,15 @@
     },
     "j20_title": {
       "x": 0,
-      "y": 41922,
+      "y": 41962,
       "text": "20 · Management oversight — Owner",
       "kind": "title1",
       "maxW": 3460,
       "w": 240
     },
-    "j21_s107": {
+    "j21_s112": {
       "x": 0,
-      "y": 44058,
+      "y": 44098,
       "text": "Connection and handoff",
       "w": 520,
       "size": "l",
@@ -4949,7 +5179,7 @@
     },
     "j21_title": {
       "x": 0,
-      "y": 43738,
+      "y": 43778,
       "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
       "kind": "title1",
       "maxW": 5820,
