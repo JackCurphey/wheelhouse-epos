@@ -115,3 +115,13 @@ clicks as possible).
    checklist buttons that say what they do; and the Lows (one grid for
    Today's shop rows, the shop tag in ink, Jack Lewis as Owner, "[Second
    site]" on reused boards, "Copy hours from Bolton", "Price differs").
+10. **Tablet and phone drawn** (Jack, 1 Oct: "yeah go ahead with that").
+    Every board is now at desktop, tablet and phone. On tablet and phone the
+    shop switcher sits in the unfolded sidebar and the menu sheet, so
+    choosing a shop opens "Choose a shop" as a pop-up (full screen on a
+    phone). On a phone Today's shop rows stack: the shop's name with its till
+    status beside it, then sales, bikes expected and ready on one line.
+    Pop-ups fill the screen; staff boards use the app's own tablet and phone
+    layouts. Open: on tablet and phone the chosen shop's name shows only in
+    the menu, not on every page as decision 1 asks — to settle when journey
+    19's switcher is carried into every journey.

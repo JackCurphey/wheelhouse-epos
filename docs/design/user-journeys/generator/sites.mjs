@@ -51,7 +51,10 @@ const switchMenu = () => `<div role="menu" aria-label="Choose a shop" style="pos
 ${shopOption('Bolton', '24 North Street · tills B1–B3', true)}${shopOption(SECOND, '[Address] · [n] tills', false)}
 <div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>
 ${shopOption('All shops', 'Today, reports and stock for every shop', false)}</div>`;
-const withMenu = (base) => `<div style="position: relative; width: ${DIMS[SIZE][0]}px; height: ${DIMS[SIZE][1]}px; overflow: hidden">${base}${switchMenu()}</div>`;
+// On tablet and phone the switcher is in the unfolded sidebar and the menu
+// sheet; choosing opens the same list as a pop-up.
+const withMenu = (base) => SIZE === 'desktop' ? `<div style="position: relative; width: ${DIMS[SIZE][0]}px; height: ${DIMS[SIZE][1]}px; overflow: hidden">${base}${switchMenu()}</div>`
+  : overlay(base, popup('shop-title', 'Choose a shop', 'You’re working in Bolton', `<div role="menu" aria-labelledby="shop-title" style="display: flex; flex-direction: column; gap: 2px">${shopOption('Bolton', '24 North Street · tills B1–B3', true)}${shopOption(SECOND, '[Address] · [n] tills', false)}<div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>${shopOption('All shops', 'Today, reports and stock for every shop', false)}</div>`, '', 420));
 
 // Today at [Second site]: its own lines, the ones the "All shops" list
 // carries (audit M13). After a switch it says so (M3).
@@ -70,10 +73,10 @@ ${section('Workshop today', `<p style="margin: 0; font-size: 15px; color: ${C.mu
 const gridCols = () => (isPhone() ? '1fr' : 'minmax(180px, 1.2fr) repeat(3, minmax(0, 1fr)) 190px');
 const head = (t) => `<span role="columnheader" style="font-size: 12px; font-weight: 700; color: ${C.muted}">${t}</span>`;
 const cell = (v) => `<span role="cell" style="font-size: 15px; font-weight: 600">${v}</span>`;
-const shopGridRow = (name, sales, expected, ready, tillTag) => `<div role="row" style="display: grid; grid-template-columns: ${gridCols()}; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-top: 1px solid ${C.border}"><span role="rowheader" style="display: flex; flex-direction: column; gap: 2px"><a href="#" aria-label="Work in ${esc(name)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.ink}">${name}<span aria-hidden="true" style="color: ${C.muted}">›</span></a><span style="font-size: 12px; color: ${C.muted}">Open [opens]–[closes]</span></span>${cell(mono(sales))}${cell(expected)}${cell(ready)}<span role="cell"><a href="#" aria-label="${esc(name)} tills: see every till" style="display: inline-flex; align-items: center; min-height: 44px; text-decoration: none">${tillTag}</a></span></div>`;
+const shopGridRow = (name, sales, expected, ready, tillTag) => isPhone() ? `<div role="row" style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid ${C.border}"><span role="rowheader" style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><a href="#" aria-label="Work in ${esc(name)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.ink}">${name}<span aria-hidden="true" style="color: ${C.muted}">›</span></a><a href="#" aria-label="${esc(name)} tills: see every till" style="display: inline-flex; align-items: center; min-height: 44px; text-decoration: none">${tillTag}</a></span><span style="font-size: 14px; color: ${C.muted}">Sales so far <strong style="color: ${C.ink}">${mono(sales)}</strong> · ${expected} expected · ${ready} ready</span></div>` : `<div role="row" style="display: grid; grid-template-columns: ${gridCols()}; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-top: 1px solid ${C.border}"><span role="rowheader" style="display: flex; flex-direction: column; gap: 2px"><a href="#" aria-label="Work in ${esc(name)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.ink}">${name}<span aria-hidden="true" style="color: ${C.muted}">›</span></a><span style="font-size: 12px; color: ${C.muted}">Open [opens]–[closes]</span></span>${cell(mono(sales))}${cell(expected)}${cell(ready)}<span role="cell"><a href="#" aria-label="${esc(name)} tills: see every till" style="display: inline-flex; align-items: center; min-height: 44px; text-decoration: none">${tillTag}</a></span></div>`;
 const shopTag = (name) => `<span style="font-weight: 700; color: ${C.ink}">${name} · </span>`;
 const todayAll = () => withSite('All shops', () => page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · All shops')}
-${section('Shops', `<div role="table" aria-label="Shops today"><div role="row" style="display: grid; grid-template-columns: ${gridCols()}; gap: 12px; padding-bottom: 6px">${head('Shop')}${head('Sales so far')}${head('Bikes expected')}${head('Ready to collect')}${head('Tills')}</div>${shopGridRow('Bolton', '£[sales]', '8 bikes', '4', tag('All sales sent'))}${shopGridRow(SECOND, '£[sales]', '[n] bikes', '[n]', tag('[n] sales waiting', 'warn'))}</div>`)}
+${section('Shops', `<div role="table" aria-label="Shops today">${isPhone() ? '' : `<div role="row" style="display: grid; grid-template-columns: ${gridCols()}; gap: 12px; padding-bottom: 6px">${head('Shop')}${head('Sales so far')}${head('Bikes expected')}${head('Ready to collect')}${head('Tills')}</div>`}${shopGridRow('Bolton', '£[sales]', '8 bikes', '4', tag('All sales sent'))}${shopGridRow(SECOND, '£[sales]', '[n] bikes', '[n]', tag('[n] sales waiting', 'warn'))}</div>`)}
 ${section('Needs attention', list(SECOND_LINES().map((l) => l.replace('<span style="font-size: 15px; font-weight: 600">', `<span style="font-size: 15px; font-weight: 600">${shopTag(SECOND)}`))), '', 3)}</div>`, OWNER));
 
 // "All shops" on a page that needs one shop: say so, one tap each.
@@ -160,7 +163,7 @@ const tillsGrouped = () => `<div style="display: flex; flex-direction: column">$
 ${shopHead(SECOND, '[n] tills')}${tillRow('[code]1', '[n] minutes ago', '[n] sales waiting')}${tillRow('[code]2', 'at [time]', '')}${addTill(SECOND)}</div>
 ${note('Sales waiting send by themselves when the till is back online. “+ Add a till” is done on the computer that will be the till.')}`;
 const scrolled = (html, px) => `<style>.ms-scrolled > * { position: relative; top: -${px}px }</style>${html.replace(/<div data-scroll style="([^"]*?)overflow-y: auto;/, '<div data-scroll class="ms-scrolled" style="$1overflow-y: hidden;')}`;
-const tillsBoard = () => scrolled(settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsGrouped() }), { who: OWNER }).replace('>Till B1<', `>Bolton B1–B3 · ${SECOND} [n] tills<`), { desktop: 250, tablet: 250, phone: 600 }[SIZE]);
+const tillsBoard = () => scrolled(settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsGrouped() }), { who: OWNER }).replace('>Till B1<', `>Bolton B1–B3 · ${SECOND} [n] tills<`), { desktop: 250, tablet: 250, phone: 330 }[SIZE]);
 
 // ---------- The boards ----------
 def('ms-switch-open', () => withMenu(withSite('Bolton', () => today({ as: OWNER }), 'open')));
@@ -184,8 +187,8 @@ def('ms-add-shop-error', () => overlay(sitesBoard(), addShopDialog(true)));
 def('ms-today-new', () => todayNew());
 def('ms-tills', () => tillsBoard());
 
-// Desktop first (journey process); tablet and phone drawn after the UI audit.
-const SIZES = ['desktop'];
+// Every board at desktop, tablet and phone.
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });
