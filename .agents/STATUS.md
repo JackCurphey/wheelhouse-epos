@@ -15,11 +15,33 @@ and access (journey B), Selling at the till (journey 11), End-of-day
 cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 15), Opening the shop (journey 10), Moving from Citrus Lime (journey 9) and
 Collect the bike and pay (journey 5), Receiving stock and purchase orders
-(journey 13), Stock take and stock control (journey 14) and Book a repair
-(journey 3) are approved and in the big canvas; the next journey is
+(journey 13), Stock take and stock control (journey 14), Book a repair
+(journey 3) and Drop off and approve the quote (journey 4) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (380 files of
+board linking to its journey's own canvas for tablet and phone (397 files of
 the 512 a canvas can hold).
+
+**Journey 4, Drop off and approve the quote (1 Oct):** approved at desktop,
+tablet and phone and copied into the big canvas; 8 decisions in
+`docs/decisions/2026-10-01-drop-off-and-quote-review.md` — one page per job
+from the booking link to "Ready to collect" (journey 5's ready page now
+carries the same "Your booking" line, the tracker at Ready, the pads photo
+and "Add a note for the shop"); a four-step tracker with the expected ready
+time; a quote answered with ticks set the way the mechanic recommends,
+pairs ticking together, "Your answers are final once sent." beside one
+button (no confirm pop-up; on tablet and phone the total and button are a
+bar pinned below); photos on quote lines; declining all, deposits carried
+through, a changed quote, a withdrawn quote; staff send in one click with
+Undo, mark each line Needed or Optional with its reason, "Goes with" and a
+photo (44px controls); no answer → a reminder, then Today's "No answer
+yet", and "Record their answer" for phone answers; Settings › Messages rows
+all editable, with the quote reminder as its own line and "Customer's
+choice" on Bike ready and Bike still waiting. UI audit `quote-ui-audit.md`,
+every recommendation taken. 23 screens, 69 boards. Own canvas:
+https://claude.ai/artifact/XWm8FSLNSWC4de3vcCAKWC . Generator: `quote.mjs` +
+`build-quote.mjs --theme sand`. Release 1's message thread and update
+preferences stay in "Also in this journey". Noted for later: customer
+orders (a part ordered in to collect).
 
 **Journey 3, Book a repair (1 Oct):** approved at desktop, tablet and phone
 and copied into the big canvas; 13 decisions in

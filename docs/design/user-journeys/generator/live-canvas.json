@@ -619,56 +619,192 @@
       "title": "Designed · Online booking, scrolled: deposits and terms (desktop)",
       "is_interactive": true
     },
-    "j04-progress.dc.html": {
+    "j04-dq-in-shop-desktop.dc.html": {
       "x": 0,
       "y": 12686,
-      "w": 390,
-      "h": 900,
-      "title": "Designed · Return to the private progress link",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The job’s page once the bike is in: where it is, when it’s ready (desktop)",
       "is_interactive": true
     },
-    "j04-quote-findings.dc.html": {
-      "x": 470,
+    "j04-dq-waiting-part-desktop.dc.html": {
+      "x": 1320,
       "y": 12686,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Inspection findings with photos",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Waiting for a part (desktop)",
       "is_interactive": true
     },
-    "j04-approval.dc.html": {
-      "x": 940,
+    "j04-dq-ready-desktop.dc.html": {
+      "x": 2640,
       "y": 12686,
-      "w": 390,
-      "h": 900,
-      "title": "Designed · Approve each line",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Ready to collect (journey 5): the same page, at Ready (desktop)",
       "is_interactive": true
     },
-    "j04-approval-done.dc.html": {
-      "x": 1410,
+    "j04-dq-quote-desktop.dc.html": {
+      "x": 4120,
       "y": 12686,
-      "w": 390,
-      "h": 900,
-      "title": "Designed · Know what was agreed",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A quote to answer: ticked the way the mechanic recommends (desktop)",
       "is_interactive": true
     },
-    "j04-stale.dc.html": {
-      "x": 1880,
+    "j04-dq-quote-photo-desktop.dc.html": {
+      "x": 5440,
       "y": 12686,
-      "w": 390,
-      "h": 900,
-      "title": "Designed · A quote changed before approval",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A line’s photo, enlarged (desktop)",
       "is_interactive": true
     },
-    "j04-ceiling.dc.html": {
-      "x": 2350,
+    "j04-dq-quote-untick-desktop.dc.html": {
+      "x": 6760,
       "y": 12686,
-      "w": 390,
-      "h": 900,
-      "title": "Designed · Agree a spending ceiling",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Ticking the optional line: the total follows (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-quote-decline-desktop.dc.html": {
+      "x": 8080,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Unticking the needed pair: what happens without it (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-quote-deposit-desktop.dc.html": {
+      "x": 9400,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A quote after a deposit: still to pay (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-quote-reminded-desktop.dc.html": {
+      "x": 10720,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · After the reminder: when it was sent, and reminded (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-quote-newer-desktop.dc.html": {
+      "x": 12040,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The quote has changed: earlier answers kept (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-withdrawn-desktop.dc.html": {
+      "x": 13360,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The shop withdrew the quote (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-answered-desktop.dc.html": {
+      "x": 14840,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Answered: the work carries on (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-answered-declined-desktop.dc.html": {
+      "x": 16160,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Answered no thanks to all of it (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-answered-deposit-desktop.dc.html": {
+      "x": 17480,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Answered, with the deposit taken off (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-answered-by-phone-desktop.dc.html": {
+      "x": 18800,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Answered by phone, recorded by the shop (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-job-quote-desktop.dc.html": {
+      "x": 20280,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Job page: each new line Needed or Optional, its reason, a photo, what it goes with (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-job-sent-desktop.dc.html": {
+      "x": 21600,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Sending the quote, with Undo for a minute (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-today-no-answer-desktop.dc.html": {
+      "x": 22920,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today: no answer to a quote (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-record-answer-desktop.dc.html": {
+      "x": 24240,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Record their answer, from a phone call (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-job-withdraw-desktop.dc.html": {
+      "x": 25560,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Withdraw the quote (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-job-answered-desktop.dc.html": {
+      "x": 26880,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The job page once answered: approved and declined (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-job-waiting-desktop.dc.html": {
+      "x": 28200,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The job page: waiting for a part (Workshop day) (desktop)",
+      "is_interactive": true
+    },
+    "j04-dq-messages-desktop.dc.html": {
+      "x": 29520,
+      "y": 12686,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Front desk › Messages: the quote and its reminder (desktop)",
       "is_interactive": true
     },
     "j04-customer-message.dc.html": {
-      "x": 2820,
+      "x": 31000,
       "y": 12686,
       "w": 390,
       "h": 900,
@@ -676,7 +812,7 @@
       "is_interactive": true
     },
     "j04-preferences.dc.html": {
-      "x": 3290,
+      "x": 31470,
       "y": 12686,
       "w": 390,
       "h": 900,
@@ -3130,12 +3266,29 @@
     "j03-bk-messages-desktop.dc.html",
     "j03-bk-settings-desktop.dc.html",
     "j03-bk-settings-deposits-desktop.dc.html",
-    "j04-progress.dc.html",
-    "j04-quote-findings.dc.html",
-    "j04-approval.dc.html",
-    "j04-approval-done.dc.html",
-    "j04-stale.dc.html",
-    "j04-ceiling.dc.html",
+    "j04-dq-in-shop-desktop.dc.html",
+    "j04-dq-waiting-part-desktop.dc.html",
+    "j04-dq-ready-desktop.dc.html",
+    "j04-dq-quote-desktop.dc.html",
+    "j04-dq-quote-photo-desktop.dc.html",
+    "j04-dq-quote-untick-desktop.dc.html",
+    "j04-dq-quote-decline-desktop.dc.html",
+    "j04-dq-quote-deposit-desktop.dc.html",
+    "j04-dq-quote-reminded-desktop.dc.html",
+    "j04-dq-quote-newer-desktop.dc.html",
+    "j04-dq-withdrawn-desktop.dc.html",
+    "j04-dq-answered-desktop.dc.html",
+    "j04-dq-answered-declined-desktop.dc.html",
+    "j04-dq-answered-deposit-desktop.dc.html",
+    "j04-dq-answered-by-phone-desktop.dc.html",
+    "j04-dq-job-quote-desktop.dc.html",
+    "j04-dq-job-sent-desktop.dc.html",
+    "j04-dq-today-no-answer-desktop.dc.html",
+    "j04-dq-record-answer-desktop.dc.html",
+    "j04-dq-job-withdraw-desktop.dc.html",
+    "j04-dq-job-answered-desktop.dc.html",
+    "j04-dq-job-waiting-desktop.dc.html",
+    "j04-dq-messages-desktop.dc.html",
     "j04-customer-message.dc.html",
     "j04-preferences.dc.html",
     "j05-cp-summary-desktop.dc.html",
@@ -3664,15 +3817,55 @@
       "fill": "gray",
       "maxH": 150
     },
+    "j04_s24": {
+      "x": 4120,
+      "y": 12446,
+      "text": "The quote",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j04_s25": {
+      "x": 14840,
+      "y": 12446,
+      "text": "Answered",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j04_s26": {
+      "x": 20280,
+      "y": 12446,
+      "text": "The shop’s side",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j04_s27": {
+      "x": 31000,
+      "y": 12446,
+      "text": "Also in this journey",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
     "j04_title": {
       "x": 0,
       "y": 12126,
-      "text": "04 · Drop off and approve the quote — Customer",
+      "text": "04 · Drop off and approve the quote — Customer and Staff",
       "kind": "title1",
-      "maxW": 3680,
+      "maxW": 31860,
       "w": 240
     },
-    "j05_s25": {
+    "j05_s29": {
       "x": 0,
       "y": 14346,
       "text": "The customer’s link",
@@ -3682,7 +3875,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j05_s26": {
+    "j05_s30": {
       "x": 12040,
       "y": 14346,
       "text": "At the counter",
@@ -3692,7 +3885,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j05_s27": {
+    "j05_s31": {
       "x": 20120,
       "y": 14346,
       "text": "Not collected",
@@ -3702,7 +3895,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j05_s28": {
+    "j05_s32": {
       "x": 21600,
       "y": 14346,
       "text": "Settings",
@@ -3712,7 +3905,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j05_s29": {
+    "j05_s33": {
       "x": 25720,
       "y": 14346,
       "text": "Also at collection",
@@ -3730,7 +3923,7 @@
       "maxW": 26580,
       "w": 240
     },
-    "j06_s31": {
+    "j06_s35": {
       "x": 0,
       "y": 16246,
       "text": "Waiting for Jack’s explanation",
@@ -3748,7 +3941,7 @@
       "maxW": 1600,
       "w": 240
     },
-    "j07_s33": {
+    "j07_s37": {
       "x": 0,
       "y": 18146,
       "text": "Account",
@@ -3758,7 +3951,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j07_s34": {
+    "j07_s38": {
       "x": 1100,
       "y": 18146,
       "text": "Messages and privacy",
@@ -3776,7 +3969,7 @@
       "maxW": 2900,
       "w": 240
     },
-    "j08_s36": {
+    "j08_s40": {
       "x": 0,
       "y": 20046,
       "text": "First-run setup",
@@ -3786,7 +3979,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s37": {
+    "j08_s41": {
       "x": 4120,
       "y": 20046,
       "text": "Till settings",
@@ -3796,7 +3989,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s38": {
+    "j08_s42": {
       "x": 17950,
       "y": 20046,
       "text": "End of day and payment settings",
@@ -3806,7 +3999,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s39": {
+    "j08_s43": {
       "x": 26030,
       "y": 20046,
       "text": "Staff and roles",
@@ -3816,7 +4009,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s40": {
+    "j08_s44": {
       "x": 34110,
       "y": 20046,
       "text": "Shop and sites",
@@ -3826,7 +4019,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s41": {
+    "j08_s45": {
       "x": 36910,
       "y": 20046,
       "text": "Workshop settings",
@@ -3836,7 +4029,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s42": {
+    "j08_s46": {
       "x": 41030,
       "y": 20046,
       "text": "Messages",
@@ -3846,7 +4039,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s43": {
+    "j08_s47": {
       "x": 45150,
       "y": 20046,
       "text": "Your data",
@@ -3864,7 +4057,7 @@
       "maxW": 47710,
       "w": 240
     },
-    "j09_s45": {
+    "j09_s49": {
       "x": 0,
       "y": 21946,
       "text": "Bring your data",
@@ -3874,7 +4067,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s46": {
+    "j09_s50": {
       "x": 8080,
       "y": 21946,
       "text": "Run alongside",
@@ -3884,7 +4077,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s47": {
+    "j09_s51": {
       "x": 16160,
       "y": 21946,
       "text": "Practice at the till",
@@ -3894,7 +4087,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s48": {
+    "j09_s52": {
       "x": 18960,
       "y": 21946,
       "text": "Switch over",
@@ -3912,7 +4105,7 @@
       "maxW": 29440,
       "w": 240
     },
-    "j10_s50": {
+    "j10_s54": {
       "x": 0,
       "y": 23802,
       "text": "Opening the till",
@@ -3922,7 +4115,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j10_s51": {
+    "j10_s55": {
       "x": 6760,
       "y": 23802,
       "text": "Office › Today",
@@ -3932,7 +4125,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j10_s52": {
+    "j10_s56": {
       "x": 18800,
       "y": 23802,
       "text": "Also at the start of the day",
@@ -3950,7 +4143,7 @@
       "maxW": 21080,
       "w": 240
     },
-    "j11_s54": {
+    "j11_s58": {
       "x": 0,
       "y": 25658,
       "text": "A sale",
@@ -3960,7 +4153,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s55": {
+    "j11_s59": {
       "x": 10720,
       "y": 25658,
       "text": "Taking payment",
@@ -3970,7 +4163,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s56": {
+    "j11_s60": {
       "x": 20120,
       "y": 25658,
       "text": "Other ways to pay",
@@ -3980,7 +4173,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s57": {
+    "j11_s61": {
       "x": 25560,
       "y": 25658,
       "text": "Other till jobs",
@@ -3990,7 +4183,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s58": {
+    "j11_s62": {
       "x": 40240,
       "y": 25658,
       "text": "When the internet drops",
@@ -4008,7 +4201,7 @@
       "maxW": 46760,
       "w": 240
     },
-    "j12_s60": {
+    "j12_s64": {
       "x": 0,
       "y": 27514,
       "text": "The diary",
@@ -4018,7 +4211,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s61": {
+    "j12_s65": {
       "x": 14680,
       "y": 27514,
       "text": "Requests, as a pop-up",
@@ -4028,7 +4221,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s62": {
+    "j12_s66": {
       "x": 20120,
       "y": 27514,
       "text": "New job from an empty slot",
@@ -4038,7 +4231,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s63": {
+    "j12_s67": {
       "x": 24240,
       "y": 27514,
       "text": "The job — one page, no tabs",
@@ -4048,7 +4241,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s64": {
+    "j12_s68": {
       "x": 34960,
       "y": 27514,
       "text": "Customer account",
@@ -4058,7 +4251,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s65": {
+    "j12_s69": {
       "x": 36440,
       "y": 27514,
       "text": "Overview page",
@@ -4076,7 +4269,7 @@
       "maxW": 37680,
       "w": 240
     },
-    "j13_s67": {
+    "j13_s71": {
       "x": 0,
       "y": 29370,
       "text": "Receiving a delivery",
@@ -4086,7 +4279,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s68": {
+    "j13_s72": {
       "x": 16000,
       "y": 29370,
       "text": "The waiting job",
@@ -4096,7 +4289,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s69": {
+    "j13_s73": {
       "x": 20120,
       "y": 29370,
       "text": "Checking the invoice",
@@ -4106,7 +4299,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s70": {
+    "j13_s74": {
       "x": 30840,
       "y": 29370,
       "text": "Ordering",
@@ -4116,7 +4309,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s71": {
+    "j13_s75": {
       "x": 36280,
       "y": 29370,
       "text": "Also in this journey",
@@ -4134,7 +4327,7 @@
       "maxW": 39740,
       "w": 240
     },
-    "j14_s73": {
+    "j14_s77": {
       "x": 0,
       "y": 31226,
       "text": "Finding stock",
@@ -4144,7 +4337,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s74": {
+    "j14_s78": {
       "x": 12040,
       "y": 31226,
       "text": "Categories and their details",
@@ -4154,7 +4347,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s75": {
+    "j14_s79": {
       "x": 14840,
       "y": 31226,
       "text": "A product",
@@ -4164,7 +4357,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s76": {
+    "j14_s80": {
       "x": 20280,
       "y": 31226,
       "text": "Changing prices",
@@ -4174,7 +4367,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s77": {
+    "j14_s81": {
       "x": 24400,
       "y": 31226,
       "text": "Correcting stock",
@@ -4184,7 +4377,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s78": {
+    "j14_s82": {
       "x": 31160,
       "y": 31226,
       "text": "Between shops",
@@ -4194,7 +4387,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s79": {
+    "j14_s83": {
       "x": 37920,
       "y": 31226,
       "text": "Stock take",
@@ -4212,7 +4405,7 @@
       "maxW": 47080,
       "w": 240
     },
-    "j15_s81": {
+    "j15_s85": {
       "x": 0,
       "y": 33082,
       "text": "Customers and the customer page",
@@ -4222,7 +4415,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s82": {
+    "j15_s86": {
       "x": 13360,
       "y": 33082,
       "text": "Accounts (pay later)",
@@ -4232,7 +4425,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s83": {
+    "j15_s87": {
       "x": 16160,
       "y": 33082,
       "text": "Customer groups",
@@ -4242,7 +4435,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s84": {
+    "j15_s88": {
       "x": 17640,
       "y": 33082,
       "text": "Privacy requests",
@@ -4252,7 +4445,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s85": {
+    "j15_s89": {
       "x": 21760,
       "y": 33082,
       "text": "Possible duplicates",
@@ -4270,7 +4463,7 @@
       "maxW": 25640,
       "w": 240
     },
-    "j16_s87": {
+    "j16_s91": {
       "x": 0,
       "y": 34938,
       "text": "Close the day",
@@ -4288,7 +4481,7 @@
       "maxW": 18400,
       "w": 240
     },
-    "j17_s89": {
+    "j17_s93": {
       "x": 0,
       "y": 36794,
       "text": "Reports",
@@ -4298,7 +4491,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j17_s90": {
+    "j17_s94": {
       "x": 7240,
       "y": 36794,
       "text": "Accounts software",
@@ -4316,7 +4509,7 @@
       "maxW": 10700,
       "w": 240
     },
-    "j18_s92": {
+    "j18_s96": {
       "x": 0,
       "y": 38610,
       "text": "Design the website",
@@ -4326,7 +4519,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j18_s93": {
+    "j18_s97": {
       "x": 7240,
       "y": 38610,
       "text": "Online orders",
@@ -4344,7 +4537,7 @@
       "maxW": 11880,
       "w": 240
     },
-    "j19_s95": {
+    "j19_s99": {
       "x": 0,
       "y": 40426,
       "text": "Across sites",
@@ -4362,7 +4555,7 @@
       "maxW": 3460,
       "w": 240
     },
-    "j20_s97": {
+    "j20_s101": {
       "x": 0,
       "y": 42242,
       "text": "Oversight",
@@ -4380,7 +4573,7 @@
       "maxW": 3460,
       "w": 240
     },
-    "j21_s99": {
+    "j21_s103": {
       "x": 0,
       "y": 44058,
       "text": "Connection and handoff",

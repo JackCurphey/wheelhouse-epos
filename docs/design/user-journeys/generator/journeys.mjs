@@ -40,6 +40,8 @@ export const sd13 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd14 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'stock' });
 // sd3(id, title, role) = an agreed journey 3 screen (book.mjs, Soft sand).
 export const sd3 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'book' });
+// sd4(id, title, role) = an agreed journey 4 screen (quote.mjs, Soft sand).
+export const sd4 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'quote' });
 
 export const journeys = [
   {
@@ -174,13 +176,40 @@ export const journeys = [
     ],
   },
   {
-    id: 'j04', name: 'Drop off and approve the quote', who: 'Customer',
+    id: 'j04', name: 'Drop off and approve the quote', who: 'Customer and Staff',
     rows: [
-      { label: 'While the bike is in', screens: [
-        d('progress'),
-        g('quote-findings', 'Inspection findings with photos', 'Customer', 'Show what the mechanic found, with photos, before asking for approval.', ['Each finding with its photo', 'Why it matters', 'Link to approve the work'], { source: 'INS-02 · DONE-02' }),
-        d('approval'), d('approval-done'), d('stale'), d('ceiling'), d('customer-message'), d('preferences'),
+      { label: "While the bike is in", screens: [
+        sd4("dq-in-shop", "The job’s page once the bike is in: where it is, when it’s ready", "Customer"),
+        sd4("dq-waiting-part", "Waiting for a part", "Customer"),
+        sd4("dq-ready", "Ready to collect (journey 5): the same page, at Ready", "Customer"),
       ] },
+      { label: "The quote", screens: [
+        sd4("dq-quote", "A quote to answer: ticked the way the mechanic recommends", "Customer"),
+        sd4("dq-quote-photo", "A line’s photo, enlarged", "Customer"),
+        sd4("dq-quote-untick", "Ticking the optional line: the total follows", "Customer"),
+        sd4("dq-quote-decline", "Unticking the needed pair: what happens without it", "Customer"),
+        sd4("dq-quote-deposit", "A quote after a deposit: still to pay", "Customer"),
+        sd4("dq-quote-reminded", "After the reminder: when it was sent, and reminded", "Customer"),
+        sd4("dq-quote-newer", "The quote has changed: earlier answers kept", "Customer"),
+        sd4("dq-withdrawn", "The shop withdrew the quote", "Customer"),
+      ] },
+      { label: "Answered", screens: [
+        sd4("dq-answered", "Answered: the work carries on", "Customer"),
+        sd4("dq-answered-declined", "Answered no thanks to all of it", "Customer"),
+        sd4("dq-answered-deposit", "Answered, with the deposit taken off", "Customer"),
+        sd4("dq-answered-by-phone", "Answered by phone, recorded by the shop", "Customer"),
+      ] },
+      { label: "The shop’s side", screens: [
+        sd4("dq-job-quote", "Job page: each new line Needed or Optional, its reason, a photo, what it goes with", "Staff"),
+        sd4("dq-job-sent", "Sending the quote, with Undo for a minute", "Staff"),
+        sd4("dq-today-no-answer", "Today: no answer to a quote", "Staff"),
+        sd4("dq-record-answer", "Record their answer, from a phone call", "Staff"),
+        sd4("dq-job-withdraw", "Withdraw the quote", "Staff"),
+        sd4("dq-job-answered", "The job page once answered: approved and declined", "Staff"),
+        sd4("dq-job-waiting", "The job page: waiting for a part (Workshop day)", "Staff"),
+        sd4("dq-messages", "Settings › Front desk › Messages: the quote and its reminder", "Manager"),
+      ] },
+      { label: 'Also in this journey', screens: [d('customer-message'), d('preferences')] },
     ],
   },
   {
