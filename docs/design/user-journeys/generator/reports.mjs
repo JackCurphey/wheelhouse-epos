@@ -18,6 +18,7 @@ import { page, pill, offer, note, popup, overlay, withSize, isPhone, settingsPag
 import { withSite } from './diary.mjs';
 import { today } from './opening.mjs';
 import { personDialog, staffPage, peopleOpen } from './setup.mjs';
+import { yourSettingsDialog } from './app-map.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -36,7 +37,7 @@ const back = () => `<a href="#" style="display: inline-flex; align-items: center
 const linkBtn = (t, label = '') => `<button type="button"${label ? ` aria-label="${esc(label)}"` : ''} style="min-height: 44px; padding: 0 4px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: underline">${t}</button>`;
 
 // The period choice every report opens with (decision 1).
-const PERIODS = ['Today', 'This week', 'This month', 'Last month', 'Pick dates'];
+const PERIODS = ['Today', 'This week', 'This month', 'Last month', 'Last 12 months', 'Pick dates'];
 const periodRow = (on = 'This week', extra = '') => `<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px"><div role="group" aria-label="Period" style="display: flex; flex-wrap: wrap; gap: 6px">${PERIODS.map((p) => pill(p, p === on)).join('')}</div><div style="display: flex; flex-wrap: wrap; gap: 8px">${extra}${button('Change what’s shown', { variant: 'default' })}${button('Download', { variant: 'default' })}</div></div>`;
 const head = (title, sub, period, extra) => `${back()}<div style="display: flex; flex-direction: column; gap: 4px"><h1 style="margin: 0; font-size: ${isPhone() ? 22 : 26}px; font-weight: 700">${title}</h1>${note(sub)}</div>${periodRow(period, extra)}`;
 // A headline figure with the comparison to the period before.
@@ -61,6 +62,19 @@ const graph = (title, labels, valueLabel = '[£]') => {
 <div aria-hidden="true" style="display: flex; align-items: flex-end; gap: ${isPhone() ? 4 : 10}px; padding: 6px 0 0; border-bottom: 1px solid ${C.border}">${bars}</div></figure>`;
 };
 const DAY_LABELS = DAYS.map(([d]) => d);
+// A trend over months is a line (decision 7): even placeholder points, the
+// year before as a dashed line. Real figures will give it its shape.
+const MONTHS = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
+const lineGraph = (title, labels) => {
+  const W = isPhone() ? 330 : 1000, H = isPhone() ? 130 : 170, step = W / (labels.length - 1), y = Math.round(H * 0.45), y2 = Math.round(H * 0.6);
+  const pts = labels.map((_, i) => `${Math.round(i * step)},${y}`).join(' ');
+  const pts2 = labels.map((_, i) => `${Math.round(i * step)},${y2}`).join(' ');
+  return `<figure style="margin: 0; display: flex; flex-direction: column; gap: 10px" role="img" aria-label="${esc(title)}. The figures are in the table below.">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><figcaption style="font-size: 15px; font-weight: 700">${title}</figcaption><span style="display: inline-flex; align-items: center; gap: 14px; font-size: 12px; color: ${C.muted}"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 16px; height: 0; border-top: 3px solid ${C.ink}"></span>Last 12 months</span><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 16px; height: 0; border-top: 2px dashed ${C.input}"></span>The 12 months before</span></span></div>
+<svg aria-hidden="true" viewBox="-8 -8 ${W + 16} ${H + 16}" style="width: 100%; height: ${H + 16}px; overflow: visible"><polyline points="${pts2}" fill="none" stroke="${C.input}" stroke-width="2" stroke-dasharray="6 5"/><polyline points="${pts}" fill="none" stroke="${C.ink}" stroke-width="3"/>${labels.map((_, i) => `<circle cx="${Math.round(i * step)}" cy="${y}" r="4" fill="${C.ink}"/>`).join('')}<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="${C.border}"/></svg>
+<div aria-hidden="true" style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600">${labels.map((l, i) => `<span style="${isPhone() && i % 2 ? 'visibility: hidden' : ''}">${l}</span>`).join('')}</div>
+<p style="margin: 0; font-size: 12px; color: ${C.muted}">Each point: £[£]. The line takes its shape from real figures.</p></figure>`;
+};
 
 // ---------- The Reports page (decisions 1, 2, 5) ----------
 const REPORTS = [
@@ -96,6 +110,13 @@ ${box(`${graph('Items sold by product', ['[Product]', '[Product]', '[Product]', 
 const saveDialog = () => popup('sv-title', 'Save as my report', 'Items sold · by product · Accessories only', `${field('Name', { value: '[Report name]' })}
 <div role="radiogroup" aria-label="Who can see it" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Who can see it</span><div style="display: flex; flex-wrap: wrap; gap: 6px">${offer('Just me', false)}${offer('Me and the other managers', true)}</div></div>
 ${note('It opens on the latest period each time, under “Your reports”.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Save')}`, 520);
+
+// The same report over a year: a line (decision 7).
+const salesYear = () => wrap(`${head('Sales', 'North Street Cycles, Bolton · October 2025 – September 2026, compared with the 12 months before', 'Last 12 months')}
+${stats([stat('Takings', '£[£]', 'The 12 months before £[£]'), stat('Number of sales', '[n]', 'Before [n]'), stat('Average sale', '£[£]', 'Before £[£]'), stat('Refunds', '£[£]', 'Before £[£]')])}
+${box(`${lineGraph('Takings by month', MONTHS)}${table('Takings by month', ['Month', 'Takings', 'Sales', 'Average'], MONTHS.map((m) => [m, '[£]', '[n]', '[£]']), ['12 months', '[£]', '[n]', '[£]'])}`)}`);
+// Your settings: graphs on or off, for you (decision 7).
+const settingsGraphs = () => overlay(home(), yourSettingsDialog(SIZE, { graphs: true }).replace('Jo Taylor · Staff', 'Jack Lewis · Owner'));
 
 // ---------- Takings and cash-ups (Cash-up 6) ----------
 const dayRow = (day, till, by, diff, warn = false) => [`${day} · ${mono(till)}`, `[£]`, `[£]`, warn ? `<span style="color: ${C.warnInk}; font-weight: 700">${diff}</span>` : diff, `<span style="font-family: inherit">${by}</span>`];
@@ -156,6 +177,8 @@ def('rp-home', () => home());
 def('rp-home-staff', () => home(true));
 def('rp-sales', () => sales());
 def('rp-sales-all', () => sales('All shops'));
+def('rp-sales-year', () => salesYear());
+def('rp-your-settings', () => settingsGraphs());
 def('rp-change', () => overlay(sales(), changePanel()));
 def('rp-changed', () => changed());
 def('rp-save', () => overlay(changed(), saveDialog()));
@@ -185,6 +208,8 @@ export const TITLES = {
   'rp-home-staff': 'Reports for Staff with “Can see reports” (no costs or margin)',
   'rp-sales': 'Sales: this week against last, day by day',
   'rp-sales-all': 'Sales for all shops: shop by shop',
+  'rp-sales-year': 'Sales over 12 months: a line, against the year before',
+  'rp-your-settings': 'Your settings: show graphs in reports (on or off, just for you)',
   'rp-change': 'Change what’s shown: measure, split, only',
   'rp-changed': 'The changed report: items sold, by product, Accessories only',
   'rp-save': 'Save as my report: name, who can see it',
@@ -202,7 +227,7 @@ export const TITLES = {
   'rp-person': 'A person: “Can see reports” and “Can see costs and margin”',
 };
 export const ROWS = [
-  { label: 'Reports', screens: ['rp-home', 'rp-home-staff', 'rp-sales', 'rp-sales-all'] },
+  { label: 'Reports', screens: ['rp-home', 'rp-home-staff', 'rp-sales', 'rp-sales-all', 'rp-sales-year', 'rp-your-settings'] },
   { label: 'Your own reports', screens: ['rp-change', 'rp-changed', 'rp-save'] },
   { label: 'Takings, VAT and margin', screens: ['rp-takings', 'rp-day', 'rp-reopen', 'rp-vat', 'rp-margin'] },
   { label: 'Workshop and discounts', screens: ['rp-workshop', 'rp-discounts'] },
