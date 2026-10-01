@@ -20,7 +20,7 @@
 // Bolton, and Workshop day 41's "up to £200". Anything else is a bracketed
 // placeholder.
 import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
-import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone } from './settings-frame.mjs';
+import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone, remindBox } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { CUSTOMER_NOTE } from './job-page.mjs';
 import { requestDepositBoard } from './diary.mjs';
@@ -185,7 +185,7 @@ const DONE_WHEN = `${DAY_SHORT}, arrive 09:30`;
 // Audit M4: no terms tick box — the sentence by the button is the agreement.
 // Audit M2: the button says what will happen. A shop that confirms
 // automatically shows "Confirm booking" / "Pay £[deposit] and book".
-const detailsBody = ({ deposit = false, signedIn = false, state = '' } = {}) => {
+const detailsBody = ({ deposit = false, signedIn = false, state = '', remind = false } = {}) => {
   const contact = signedIn
     ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">${MAYA.name} · ${mono(MAYA.phone)} · ${MAYA.email} ${link('Change')}</p>`
     : `${bfield('Your name', { value: MAYA.name, auto: 'name' })}${twoCol(bfield('Mobile number', { value: MAYA.phone, type: 'tel', auto: 'tel' }), bfield('Email', { value: MAYA.email, type: 'email', auto: 'email', hint: 'For your receipt, and updates if you choose Email' }))}`;
@@ -202,7 +202,9 @@ const detailsBody = ({ deposit = false, signedIn = false, state = '' } = {}) => 
   const label = state === 'sending' ? 'Sending…' : state === 'checking' ? 'Check again' : state === 'not-sent' || state === 'card-failed' ? 'Try again' : deposit ? 'Pay £[deposit] and send request' : 'Send booking request';
   const agree = `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">By sending, you agree to North Street Cycles’ <a href="#" style="color: ${C.ink}; font-weight: 600">booking terms</a> and <a href="#" style="color: ${C.ink}; font-weight: 600">privacy notice</a>.</p>`;
   const send = `<div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap">${state === 'sending' ? `<span role="status" style="font-size: 14px; color: ${C.muted}">Sending your booking — this takes a moment.</span>` : ''}${button(label).replace('style="', state === 'sending' ? 'aria-disabled="true" style="opacity: 0.75; ' : 'style="')}</div>`;
-  return `${contact}${updates}${pay}${notSent}${agree}${send}`;
+  // Account, history and reminders decision 2: say yes once to service reminders.
+  const remindTick = remind ? remindBox() : '';
+  return `${contact}${updates}${remindTick}${pay}${notSent}${agree}${send}`;
 };
 
 // ---------- Booked: the customer's answer (decision 8) ----------
@@ -413,3 +415,6 @@ export const ROWS = [
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
   { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-deposits'] },
 ];
+
+// Account, history and reminders decision 2: step 4 with the reminder tick.
+export const detailsRemindAt = (size) => withSize(size, () => { const was = SIZE; SIZE = size; FID = 0; try { return layout(steps(4, DONE3, detailsBody({ remind: true })), S({ bike: BIKE, when: DONE_WHEN, limit: true })); } finally { SIZE = was; } });

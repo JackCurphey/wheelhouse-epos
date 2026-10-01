@@ -219,3 +219,7 @@ export const stockFolds = (open = {}) =>
 
 const AREA_FOLDS = { till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
 const AREA_INTROS = { till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
+
+// Account, history and reminders decision 2: the customer's one yes to
+// service reminders, at booking and at collection.
+export const remindBox = (checked = true) => `<label style="display: flex; gap: 12px; align-items: flex-start; min-height: 44px; cursor: pointer"><input type="checkbox"${checked ? ' checked' : ''} style="width: 22px; height: 22px; margin: 1px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Remind me when my bike is due its next service</span><span style="font-size: 13px; color: ${C.muted}">One message, the way you chose above. Stop any time.</span></span></label>`;

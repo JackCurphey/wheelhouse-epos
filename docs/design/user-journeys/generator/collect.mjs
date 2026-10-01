@@ -14,7 +14,7 @@
 // (25%, £27.75), North Street Cycles, Bolton. Anything else is a bracketed
 // placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone, size } from './settings-frame.mjs';
+import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone, size, remindBox } from './settings-frame.mjs';
 import { screens as diaryScreens, LINES_APPROVED, WORK_TOTAL_APPROVED } from './diary.mjs';
 import { screens as tillScreens } from './till.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
@@ -59,7 +59,7 @@ const checks = () => box('Full service checklist', `<div role="list">${ticked.ma
 const yourNote = () => box('What you told us', `<p style="margin: 0; font-size: 15px; line-height: 1.5">“${esc(CUSTOMER_NOTE)}”</p>`, 16);
 
 // The pay card in each state (decision 2; audit H1, H2, H3).
-function pay(state) {
+function pay(state, remind = false) {
   const due = state === 'deposit' ? WORK_TOTAL_APPROVED - DEPOSIT : WORK_TOTAL_APPROVED;
   const depositLine = state === 'deposit' ? `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Deposit paid ${money(DEPOSIT)} · [date]</p>` : '';
   if (state === 'paid') return box('Paid', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${money(WORK_TOTAL_APPROVED)} paid on [date]</p>
@@ -69,7 +69,7 @@ function pay(state) {
   if (state === 'inshop') return box('To pay when you collect', `${mono(money(due), 'font-size: 30px')}
 ${note('Pay at the counter by card or cash. When you come in, just give your name.')}${shopLines}`);
   return box('To pay', `${mono(money(due), 'font-size: 30px')}${depositLine}
-${button(`Pay ${money(due)} now`, { block: true })}${note('Or pay when you collect — either is fine.')}${shopLines}${button('Add a note for the shop', { variant: 'default' })}`);
+${button(`Pay ${money(due)} now`, { block: true })}${note('Or pay when you collect — either is fine.')}${remind ? `<div style="padding-top: 8px; border-top: 1px solid ${C.border}">${remindBox()}</div>` : ''}${shopLines}${button('Add a note for the shop', { variant: 'default' })}`);
 }
 
 // Drop off and approve the quote audit H4: the same page as the booking and
@@ -79,9 +79,9 @@ const trackerDone = () => `<ol aria-label="Where your bike is" style="list-style
 const heading = () => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1>${trackerDone()}</div>`;
 // Audit L1: the pay card comes first in reading order; on a wide screen it
 // sits in the right-hand column.
-function summary(state) {
-  if (isPhone()) return site(`${heading()}${pay(state)}${work()}${checks()}${yourNote()}`);
-  return site(`${heading()}<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start"><div style="grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${pay(state)}</div><div style="grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${work()}${checks()}${yourNote()}</div></div>`);
+function summary(state, remind = false) {
+  if (isPhone()) return site(`${heading()}${pay(state, remind)}${work()}${checks()}${yourNote()}`);
+  return site(`${heading()}<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start"><div style="grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${pay(state, remind)}</div><div style="grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${work()}${checks()}${yourNote()}</div></div>`);
 }
 
 // Paying online: the payment provider's own card form sits inside the page
@@ -173,3 +173,6 @@ export const ROWS = [
   { label: 'Not collected', screens: ['cp-today-uncollected'] },
   { label: 'Settings', screens: ['cp-setting', 'cp-messages', 'cp-message-wording'] },
 ];
+
+// Account, history and reminders decision 2: the reminder tick, at collection.
+export const summaryRemindAt = (size) => withSize(size, () => { const was = SIZE; SIZE = size; try { return summary('pay', true); } finally { SIZE = was; } });
