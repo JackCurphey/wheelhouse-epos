@@ -67,10 +67,11 @@ const box = (title, body, action = '') => card(`<div style="padding: ${isPhone()
 const kv = (k, v) => `<div style="display: flex; justify-content: space-between; gap: 12px; min-height: 32px; align-items: center; font-size: 15px"><span style="color: ${C.muted}">${k}</span><span>${v}</span></div>`;
 const linkBtn = (t, label = '') => `<button type="button"${label ? ` aria-label="${esc(label)}"` : ''} style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 4px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: underline">${t}</button>`;
 const back = `<a href="st-list-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; align-self: flex-start; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: none">${icon('back', 16)}Stock</a>`;
+let SITES = false;
 const summary = ({ name, codes, price, kind = 'part' }) => `<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
 ${card(`<div style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start"><div role="img" aria-label="Photo of ${esc(name)}" style="width: 88px; height: 88px; flex-shrink: 0; border-radius: 8px; border: 1px dashed ${C.border}; background: ${C.mutedBg}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: ${C.muted}">[Photo]</div><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><h2 style="margin: 0; font-size: 20px; font-weight: 700">${name}</h2><span style="font-size: 13px; color: ${C.muted}">${codes}</span><div style="display: flex; gap: 8px; padding-top: 6px">${button('Edit', { variant: 'default' })}${button('Adjust stock', { variant: 'default' })}</div></div></div>`, 'flex-shrink: 0')}
 ${box('Price', `${kv('Price', mono(price))}${kv('Cost', mono('£[cost]'))}${kv('Margin', '[n]%')}${kv('VAT', '[VAT rate]')}`)}
-${box('In stock', `${kv('Bolton', `${mono('[n]')}`)}${kv('Low-stock level', mono('[n]'))}`)}
+${box('In stock', SITES ? `${kv('Bolton', mono('[n]'))}${kv('[Site 2]', mono('[n]'))}${kv('On its way to [Site 2]', mono('[n]'))}${kv('Low-stock level', mono('[n] each'))}` : `${kv('Bolton', `${mono('[n]')}`)}${kv('Low-stock level', mono('[n]'))}`, SITES ? linkBtn('Send to another shop') : '')}
 ${kind === 'part' ? box('Measurements and specifications', `${kv('[Measurement]', '[value] [unit]')}${kv('[Measurement]', '[value] [unit]')}`, linkBtn('Edit', 'Edit measurements')) : ''}
 </div>`;
 const histRow = (what, detail, change, who) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 1fr) 64px'}; gap: 12px; align-items: center; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${what}</span><span style="font-size: 13px; color: ${C.muted}">${detail} · ${who} · [date and time]</span></span><span style="text-align: right">${mono(change, 'font-size: 15px; font-weight: 700')}</span></div>`;
@@ -153,6 +154,17 @@ const pricesPopup = () => popup('pr-title', 'Change prices', '3 products from [S
 <table style="width: 100%; border-collapse: collapse"><caption style="${visuallyHidden}">Prices before and after</caption><thead><tr><th scope="col" style="text-align: left; font-size: 13px; color: ${C.muted}; padding-bottom: 6px">Product</th><th scope="col" style="text-align: right; font-size: 13px; color: ${C.muted}">Now</th><th scope="col" style="text-align: right; font-size: 13px; color: ${C.muted}">New</th><th scope="col" style="text-align: right; font-size: 13px; color: ${C.muted}">Margin</th></tr></thead><tbody>${pRow(PADS, 'B05S-RX', '£28.00', '£[price]', '[n]%', '[n]%')}${pRow('[Product]', '[Supplier code]', '£[price]', '£[price]', '[n]%', '[n]%')}${pRow('[Product]', '[Supplier code]', '£[price]', '£[price]', '[n]%', '[n]%')}</tbody></table>
 ${note('Nothing changes until you press Change. Each change goes into the product’s history; the till and website use the new price straight away.')}`, `${button('Cancel', { variant: 'default' })}${button('Change 3 prices')}`, 720);
 
+// ---------- Decision 8: send, then receive ----------
+const sitesBoard = () => { SITES = true; try { return productPage(`${summary({ name: PADS, codes: 'B05S-RX · [Category] · [Supplier] · barcode [barcode]', price: '£28.00' })}<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${history([histRow('Sent to [Site 2]', 'On its way · transfer T-[0000]', '−[n]', 'Jack Lewis'), ...PADS_HIST.slice(0, 3)])}</div>`); } finally { SITES = false; } };
+const sendPopup = () => popup('tr-title', 'Send to another shop', 'From Bolton', `
+<div role="group" aria-label="To" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600; margin-right: 4px">To</span>${pillBtn('[Site 2]', true)}${pillBtn('[Site 3]', false)}</div>
+<div role="list">${line(PADS, 'B05S-RX · Bolton has [n]', qty('[n]', `How many ${PADS} to send`))}</div>${linkBtn('+ Add another product')}
+${note('The stock leaves Bolton now and shows as on its way. [Site 2] scans it in when it arrives; anything missing is flagged to both shops.')}`, `${button('Cancel', { variant: 'default' })}${button('Send')}`, 600);
+const incomingBoard = () => page('deliveries', 'Deliveries and orders', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 960px">
+${box('A delivery arrived?', `${note('Scan each item as it comes out of the box. Works with or without an order.')}<div>${button('Receive a delivery', { variant: 'default' })}</div>`)}
+${box('On its way from another shop', `<div role="list">${line('From [Site 2] · [n] items', 'Transfer T-[0000] · sent [date] by [name]', `${tag('On its way', 'grey')}${button('Receive it')}`)}</div>${note('Scan the items in as you would a delivery. Anything that doesn’t arrive is flagged here and at [Site 2].')}`)}
+</div>`, MANAGER);
+
 def('st-list', () => listBoard());
 def('st-product', () => productBoard());
 def('st-product-bike', () => bikeBoard());
@@ -167,6 +179,9 @@ def('st-today-adjust', () => today({ adjusted: true }));
 def('st-setting-adjust', () => adjustSetting());
 def('st-list-ticked', () => tickedBoard());
 def('st-prices', () => overlay(tickedBoard(), pricesPopup()));
+def('tr-sites', () => sitesBoard());
+def('tr-send', () => overlay(sitesBoard(), sendPopup()));
+def('tr-incoming', () => incomingBoard());
 def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -188,6 +203,9 @@ export const TITLES = {
   'st-adjust': 'Adjust stock: the change and a reason',
   'st-today-adjust': 'Today: a big adjustment, for the manager',
   'st-setting-adjust': 'Settings › Stockroom: when an adjustment shows on Today',
+  'tr-sites': 'A product’s stock at each shop, and on its way',
+  'tr-send': 'Send to another shop',
+  'tr-incoming': 'Deliveries and orders: on its way from another shop',
   'tk-hub': 'Stockroom › Stock take: counts in progress and finished',
   'tk-start': 'Start a count: the whole shop, a category or an area',
   'tk-count': 'Counting, without the expected number',
@@ -199,5 +217,6 @@ export const ROWS = [
   { label: 'A product', screens: ['st-product', 'st-product-bike', 'st-product-sizes'] },
   { label: 'Changing prices', screens: ['st-list-ticked', 'st-prices'] },
   { label: 'Correcting stock', screens: ['st-adjust', 'st-today-adjust', 'st-setting-adjust'] },
+  { label: 'Between shops', screens: ['tr-sites', 'tr-send', 'tr-incoming'] },
   { label: 'Stock take', screens: ['tk-hub', 'tk-start', 'tk-count', 'tk-diff', 'tk-applied'] },
 ];

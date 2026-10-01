@@ -72,3 +72,12 @@ A2, A6 — as few clicks as possible).
    in each product's history. Chosen over price rules that run by
    themselves, and one product at a time. Boards: `st-list-ticked`,
    `st-prices`.
+8. **Stock moves between shops by send, then receive** (Jack, 1 Oct:
+   "1"). "Send to another shop" (on a product, or from ticked products)
+   takes the shop and the counts; the stock leaves straight away and shows
+   as on its way. The other shop sees "On its way from [Site]" in
+   Deliveries and orders and scans it in like a delivery (journey 13);
+   anything missing is flagged to both shops. A product's page shows its
+   stock at each shop and on its way. Chosen over one-step moves, and
+   leaving transfers to journey 19. Boards: `tr-sites`, `tr-send`,
+   `tr-incoming`.
