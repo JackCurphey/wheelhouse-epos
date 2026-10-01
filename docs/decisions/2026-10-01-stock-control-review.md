@@ -106,3 +106,24 @@ A2, A6 — as few clicks as possible).
     details made up as products are added, and a fixed list. Boards:
     `st-categories`, `st-category-edit`, `st-filter-bearings`; `rs-add-product`
     redrawn.
+11. **UI audit: every recommendation taken** (Jack, 1 Oct: "lets do all the
+    recommendations"). From `design/user-journeys/stock-ui-audit.md`:
+    products nobody scanned are left as they are unless the manager presses
+    "Count them as none", and the below-zero count shows a "still to find"
+    list; Adjust stock takes the change or the count after it, with no
+    reason picked until one is (the reasons follow the sign; Other needs a
+    note); tick boxes always on the stock list, with tick-all and "Send to
+    another shop" on the ticked bar; a detail's unit or choices are entered
+    as it's added, and a removed detail can be undone until Save; bulk price
+    changes and applied counts have Undo, and "Apply to [n] products";
+    recounts and two people counting the same product are shown; **Staff
+    see no cost or margin, and can't change prices, edit or add products or
+    categories — they can adjust, count and send**; a product's page leads
+    with stock, then details, then price and cost, and its history lines
+    link to the job, sale, delivery, count or transfer (price changes
+    included); "Count them" on Today starts the count at once; the header
+    search finds products by measurement too; a category is picked by
+    searching, and its details become columns; a wrong send can be
+    cancelled while on its way, a short transfer shows on Today; areas
+    used before are suggested; and the list's missing states (no results,
+    an unknown barcode, a size search, a new shop) are drawn.

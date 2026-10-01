@@ -78,7 +78,7 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // H3: "Seen" clears a short float in one click.
 // Journey 9 decision 3 (refresh): while a shop runs alongside Citrus Lime,
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
-export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, as = null } = {}) {
+export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
@@ -100,8 +100,11 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Journey 14 decision 6: a stock adjustment worth more than the amount
     // set in Settings › Stockroom; "Seen" clears it.
     // Journey 14 decision 9: products sold below zero, counted quickly.
-    below && line('[n] products below zero', 'Sold more than Wheelhouse thought were here · count them to correct stock', button('Count them', { variant: 'default' }).replace('style="', 'style="white-space: nowrap; '), warnLead),
-    adjusted && line('Stock adjusted: [Product] −[n] · £[value]', 'Damaged · by Jo Taylor at [time]', button('Seen', { variant: 'default' }), warnLead),
+    below && line('[n] products below zero', 'Sold more than Wheelhouse thought were here · Count them starts a count straight away', `<span style="display: inline-flex; align-items: center; gap: 6px"><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">See them</a>${button('Count them', { variant: 'default' }).replace('style="', 'style="white-space: nowrap; ')}</span>`, warnLead),
+    // Journey 14 audit M8: the product name opens its page.
+    adjusted && line(`Stock adjusted: <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; color: ${C.ink}">[Product]</a> −[n] · £[value]`, 'Damaged · by Jo Taylor at [time]', button('Seen', { variant: 'default' }), warnLead),
+    // Journey 14 decision 8 (audit M13): a transfer that arrived short.
+    transferShort && line('Transfer T-[0000] from [Site 2] arrived 1 short', 'Booked in by Jack Lewis at [time] · [Site 2] has been told', button('Open', { variant: 'default' }), warnLead),
     refresh && line('Time to refresh from Citrus Lime', 'Every [day] · last refreshed [date]', button('Refresh now', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('inbox', 18)}</span>`),
     waiting && line('Till B1 has [n] sales waiting to send', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Try again', { variant: 'default' }), warnLead),
   ].filter(Boolean);

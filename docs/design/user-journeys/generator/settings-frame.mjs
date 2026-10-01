@@ -54,7 +54,7 @@ export const AREAS = [
 export const SETTINGS_ROOMS = [
   ['frontdesk', 'Front desk', 'The till, payments, messages to customers and closing the day.', 'Till, payments, messages, end of day', ['till', 'payments', 'messages', 'eod']],
   ['workshop', 'Workshop', '', 'Services, mechanics, diary, storage, collection', ['workshop']],
-  ['stockroom', 'Stockroom', '', 'Supplier invoices', ['stock']],
+  ['stockroom', 'Stockroom', '', 'Supplier invoices, stock adjustments, categories', ['stock']],
   ['office', 'Office', 'The shop and its sites, the people who work here, and your data.', 'Shop and sites, staff and roles, your data', ['shop', 'staff', 'data']],
 ];
 const roomOf = (area) => SETTINGS_ROOMS.find((r) => r[4].includes(area));
@@ -207,7 +207,7 @@ export const dataFolds = (open = {}) => fold('Download everything', 'Customers, 
 export const rowSwitch = (label, on) => `<button type="button" role="switch" aria-checked="${on}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}"><span style="font-size: 15px; font-weight: 700">${label}</span><span style="display: inline-flex; align-items: center; gap: 10px"><span style="font-size: 14px; font-weight: 600; color: ${on ? C.ink : C.muted}">${on ? 'On' : 'Off'}</span><span aria-hidden="true" style="position: relative; display: inline-block; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}"><span style="position: absolute; top: 3px; left: ${on ? 21 : 3}px; width: 20px; height: 20px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 2px rgba(28,30,25,0.35)"></span></span></span></button>`;
 
 // Stockroom (journey 13 decision 6): the supplier invoice check, on or off.
-export const STOCK_INTRO = 'Deliveries and what suppliers charge for them.';
+export const STOCK_INTRO = 'Supplier invoices, stock adjustments, and each category’s details.';
 export const stockFolds = (open = {}) =>
   fold('Supplier invoices', 'Checked against deliveries · on', open.invoices || '')
   // Journey 14 decision 6: big stock adjustments show on Today.
