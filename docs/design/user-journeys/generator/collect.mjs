@@ -79,7 +79,7 @@ const trackerDone = () => `<ol aria-label="Where your bike is" style="list-style
 const heading = () => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1>${trackerDone()}</div>`;
 // Audit L1: the pay card comes first in reading order; on a wide screen it
 // sits in the right-hand column.
-function summary(state, remind = false) {
+function summary(state, remind = true) {
   if (isPhone()) return site(`${heading()}${pay(state, remind)}${work()}${checks()}${yourNote()}`);
   return site(`${heading()}<div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start"><div style="grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${pay(state, remind)}</div><div style="grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 16px">${work()}${checks()}${yourNote()}</div></div>`);
 }

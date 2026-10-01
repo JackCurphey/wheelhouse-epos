@@ -185,7 +185,7 @@ const DONE_WHEN = `${DAY_SHORT}, arrive 09:30`;
 // Audit M4: no terms tick box — the sentence by the button is the agreement.
 // Audit M2: the button says what will happen. A shop that confirms
 // automatically shows "Confirm booking" / "Pay £[deposit] and book".
-const detailsBody = ({ deposit = false, signedIn = false, state = '', remind = false } = {}) => {
+const detailsBody = ({ deposit = false, signedIn = false, state = '', remind = true } = {}) => {
   const contact = signedIn
     ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">${MAYA.name} · ${mono(MAYA.phone)} · ${MAYA.email} ${link('Change')}</p>`
     : `${bfield('Your name', { value: MAYA.name, auto: 'name' })}${twoCol(bfield('Mobile number', { value: MAYA.phone, type: 'tel', auto: 'tel' }), bfield('Email', { value: MAYA.email, type: 'email', auto: 'email', hint: 'For your receipt, and updates if you choose Email' }))}`;

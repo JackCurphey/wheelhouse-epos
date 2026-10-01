@@ -161,3 +161,12 @@ hovered row), "Bike ready" and "Bike still waiting" go the way the customer
 chose (the "Bike ready" wording pop-up says so instead of Text/Email
 switches), and "Quote to approve" has its reminder as its own line with an
 [n] hours box.
+
+**Later change (1 Oct 2026, Account, history and reminders decisions 2, 5 and 8):**
+step 4 ("Your details") has an unticked box under "Send me updates by":
+"Remind me when my bike is due its next service — And ask me for a review
+after I collect. One message each, the way you chose above. Stop any time."
+It is the customer's one yes to service reminders and review requests. In
+Settings › Messages a "Bringing customers back" group follows the booking
+messages: "Service reminder" (on, customer's choice) and "Review request"
+(off until the shop sets it up), each ending "Stop these: [link]".

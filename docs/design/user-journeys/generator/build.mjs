@@ -17,7 +17,7 @@ const root = here + 'out/';
 // Workshop day; decision 15 of journey A). ui.mjs picks its theme when it
 // loads, and this process is Fjell, so each Soft sand canvas is built in its
 // own process and its boards read back from its project/ folder.
-// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs; journey 8 = setup.mjs; journey 15 = customer.mjs; journey 10 = opening.mjs; journey 9 = moving.mjs; journey 5 = collect.mjs; journey 13 = receiving.mjs; journey 14 = stock.mjs; journey 3 = book.mjs; journey 4 = quote.mjs.
+// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs; journey 8 = setup.mjs; journey 15 = customer.mjs; journey 10 = opening.mjs; journey 9 = moving.mjs; journey 5 = collect.mjs; journey 13 = receiving.mjs; journey 14 = stock.mjs; journey 3 = book.mjs; journey 4 = quote.mjs; journey 7 = account.mjs.
 const SAND_SOURCES = {
   diary: { script: 'build-diary.mjs', dir: here + 'out-diary-sand/project/' },
   'app-map': { script: 'build-app-map.mjs', dir: here + 'out-app-map-sand/project/' },
@@ -35,6 +35,7 @@ const SAND_SOURCES = {
   stock: { script: 'build-stock.mjs', dir: here + 'out-stock-sand/project/' },
   book: { script: 'build-book.mjs', dir: here + 'out-book-sand/project/' },
   quote: { script: 'build-quote.mjs', dir: here + 'out-quote-sand/project/' },
+  account: { script: 'build-account.mjs', dir: here + 'out-account-sand/project/' },
 };
 for (const s of Object.values(SAND_SOURCES)) execFileSync(process.execPath, [s.script, '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
 const SAND_SIZES = ['single', 'desktop', 'tablet', 'phone'];
@@ -54,6 +55,7 @@ const SAND_CANVAS = {
   stock: 'https://claude.ai/artifact/7oZPudk8GGxqY9L1iXBvbV',
   book: 'https://claude.ai/artifact/KxkLMpRgFk23oeFJdfuq95',
   quote: 'https://claude.ai/artifact/XWm8FSLNSWC4de3vcCAKWC',
+  account: 'https://claude.ai/artifact/Hoz1q28Frh9M7hNgV2bo3b',
 };
 const sandFile = (id, size) => (size === 'single' ? `${id}.dc.html` : `${id}-${size}.dc.html`);
 // The sizes a Soft sand screen was drawn at: whichever boards its own canvas has.

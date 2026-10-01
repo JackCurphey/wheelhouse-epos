@@ -42,6 +42,8 @@ export const sd14 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd3 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'book' });
 // sd4(id, title, role) = an agreed journey 4 screen (quote.mjs, Soft sand).
 export const sd4 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'quote' });
+// sd7(id, title, role) = an agreed journey 7 screen (account.mjs, Soft sand).
+export const sd7 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'account' });
 
 export const journeys = [
   {
@@ -258,17 +260,61 @@ export const journeys = [
     ],
   },
   {
-    id: 'j07', name: 'Account, history and reminders', who: 'Customer',
+    id: 'j07', name: 'Account, history and reminders', who: 'Customer and Staff',
     rows: [
-      { label: 'Account', screens: [
-        g('acct-history', 'Service history and book again', 'Customer', 'Every past job for each bike, and one tap to book the same again.', ['Bikes', 'Past jobs with dates and work done', 'Book again'], { source: 'Release 2 piece 9 · BIKE-02' }),
-        g('acct-balance', 'Loyalty points and account balance', 'Customer', 'Open question: do customers see their points or account balance?', ['Points balance', 'Account statement'], { source: 'Release 2 piece 4' }),
+      { label: "Your account", screens: [
+        sd7("ac-account", "Your account: bikes, details and how we contact you; one history", "Customer"),
+        sd7("ac-account-lower", "Further down: how we contact you, and your data", "Customer"),
+        sd7("ac-account-repairs", "History showing repairs only", "Customer"),
+        sd7("ac-account-new", "A new account, with nothing in it yet", "Customer"),
+        sd7("ac-receipt", "A receipt, from the history", "Customer"),
+        sd7("ac-receipt-sent", "The receipt emailed", "Customer"),
       ] },
-      { label: 'Messages and privacy', screens: [
-        g('acct-reminder', 'Service reminder and landing page', 'Customer', '“Your bike is due a service”, leading straight into booking.', ['Which bike, when last serviced', 'Book now'], { source: 'Release 2 piece 9 · COM-07' }),
-        g('acct-review', 'Review request after collection', 'Customer', 'Ask happy customers for a review.', ['Link to leave a review'], { source: 'COM-08' }),
-        g('acct-unsubscribe', 'Stop marketing messages', 'Customer', 'Opt out of marketing without affecting job updates.', ['Marketing on or off', 'Job updates unchanged'], { source: 'CUS-06 · COM-09' }),
-        g('acct-privacy', 'Privacy notice and data requests', 'Customer', 'Read the privacy notice; ask for a copy of, or deletion of, personal data.', ['Privacy notice', 'Request a copy', 'Request deletion'], { source: 'LEG-02 · LEG-09' }),
+      { label: "Talking to the shop", screens: [
+        sd7("ac-job-note", "A job’s page: “Add a note for the shop”", "Customer"),
+        sd7("ac-job-note-sent", "The note sent, waiting for a reply", "Customer"),
+        sd7("ac-job-note-answered", "The shop’s reply, on the job’s page", "Customer"),
+        sd7("ac-ask", "Ask the shop a question, from the account", "Customer"),
+        sd7("ac-account-question-sent", "The question sent: in the history, waiting", "Customer"),
+        sd7("ac-question", "The question and its answer", "Customer"),
+        sd7("ac-account-asked", "The history once answered: the note and the question", "Customer"),
+      ] },
+      { label: "The shop’s side of messages", screens: [
+        sd7("ac-inbox-list", "On a phone: the list first", "Staff"),
+        sd7("ac-inbox", "Staff Messages: needs a reply, and the open conversation", "Staff"),
+        sd7("ac-inbox-sent", "Reply sent the way Maya chose; reply again", "Staff"),
+        sd7("ac-inbox-all", "All conversations, “Needs a reply” in words", "Staff"),
+        sd7("ac-inbox-empty", "Nothing needs a reply", "Staff"),
+        sd7("ac-reply-text", "The text Maya gets, linking back", "Staff"),
+        sd7("ac-today", "Today: messages needing a reply, and a request to delete an account", "Manager"),
+      ] },
+      { label: "Service reminders", screens: [
+        sd7("ac-book-remind", "Booking: “Remind me…”, unticked, with a review request", "Customer"),
+        sd7("ac-collect-remind", "Ready to collect: the same tick", "Customer"),
+        sd7("ac-services", "Settings › Workshop › Services: each service’s reminder", "Manager"),
+        sd7("ac-service-edit", "A service’s reminder time", "Manager"),
+        sd7("ac-messages", "Settings › Messages: service reminders and review requests", "Manager"),
+        sd7("ac-reminder-wording", "The service reminder’s wording; “Stop these” always added", "Manager"),
+        sd7("ac-reminder-landing", "The reminder’s link: booking, bike and service chosen, saying why", "Customer"),
+      ] },
+      { label: "Reviews and how we contact you", screens: [
+        sd7("ac-review-first", "Review requests the first time: add a review page, then switch on", "Manager"),
+        sd7("ac-review-setting", "Review requests: the review page, when, the wording", "Manager"),
+        sd7("ac-contact", "How we contact you", "Customer"),
+        sd7("ac-contact-changed", "A switch changed, and said so", "Customer"),
+        sd7("ac-stopped", "“Stop these”: stopped in one click, no signing in", "Customer"),
+        sd7("ac-stopped-on", "Turned back on", "Customer"),
+      ] },
+      { label: "Your data", screens: [
+        sd7("ac-download", "Download a copy of your data: straight away", "Customer"),
+        sd7("ac-download-failed", "The download didn’t start", "Customer"),
+        sd7("ac-delete", "Ask us to delete your account: store credit will be lost", "Customer"),
+        sd7("ac-delete-blocked", "Can’t delete yet: the bike is still with us", "Customer"),
+        sd7("ac-delete-sent", "Deletion request sent", "Customer"),
+        sd7("ac-account-delete-pending", "The request on the account, with Cancel my request", "Customer"),
+        sd7("ac-account-delete-cancelled", "Request cancelled", "Customer"),
+        sd7("ac-privacy-requests", "The shop’s Privacy requests: from the website, and what’s in the way", "Manager"),
+        sd7("ac-customer-delete", "The staff customer page: the request, and what’s in the way", "Staff"),
       ] },
     ],
   },

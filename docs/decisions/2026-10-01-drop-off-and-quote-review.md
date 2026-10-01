@@ -107,3 +107,9 @@ clicks as possible).
    "Send your answers?" pop-up (the re-check decision 7 asked for). The
    tracker stacks on phone; pop-ups fill the screen; staff boards use the
    job page's own tablet and phone layouts.
+
+**Later change (1 Oct 2026, Account, history and reminders decisions 2, 5 and 8):**
+the ready page (journey 5's, shown here at Ready) has the same unticked
+"Remind me when my bike is due its next service" box under Pay now, saying
+"the way you chose when you booked"; Settings › Messages gains the
+"Bringing customers back" group ("Service reminder", "Review request").

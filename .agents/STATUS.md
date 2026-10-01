@@ -5,7 +5,7 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-09-29. **Merged to `main`:** #90, #91, #92 (names), #93
+**Updated:** 2026-10-01. **Merged to `main`:** #90, #91, #92 (names), #93
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
@@ -16,10 +16,29 @@ cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 15), Opening the shop (journey 10), Moving from Citrus Lime (journey 9) and
 Collect the bike and pay (journey 5), Receiving stock and purchase orders
 (journey 13), Stock take and stock control (journey 14), Book a repair
-(journey 3) and Drop off and approve the quote (journey 4) are approved and in the big canvas; the next journey is
+(journey 3), Drop off and approve the quote (journey 4) and Account, history
+and reminders (journey 7) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (397 files of
+board linking to its journey's own canvas for tablet and phone (434 files of
 the 512 a canvas can hold).
+
+**Journey 7, Account, history and reminders (1 Oct):** approved at desktop,
+tablet and phone and copied into the big canvas; 9 decisions in
+`docs/decisions/2026-10-01-account-and-reminders-review.md` — one account
+page shaped like the staff customer page (bikes with warranty and next
+service, store credit, details and how we contact you; one history of
+repairs, purchases and messages; your data under it); service reminders
+timed per service, with one unticked "Remind me… and ask me for a review"
+box at booking and collection; conversations on the website (notes on a
+job's page, "Ask the shop a question") answered from a two-pane staff
+Messages inbox, replies going the customer's way with a link back; "Your
+data": an instant download, deletion as a request the customer can cancel
+until staff confirm (store credit warned, not blocking); review requests
+off by default, the same link for everyone; one "How we contact you" with
+named switches and a one-click "Stop these" in every optional message. UI
+audit `account-ui-audit.md`, every recommendation taken. 42 screens, 125
+boards. Own canvas: https://claude.ai/artifact/Hoz1q28Frh9M7hNgV2bo3b .
+Generator: `account.mjs` + `build-account.mjs --theme sand`.
 
 **Journey 4, Drop off and approve the quote (1 Oct):** approved at desktop,
 tablet and phone and copied into the big canvas; 8 decisions in

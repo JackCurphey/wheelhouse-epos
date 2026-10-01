@@ -254,3 +254,11 @@ hovered row), "Bike ready" and "Bike still waiting" go the way the customer
 chose (the "Bike ready" wording pop-up says so instead of Text/Email
 switches), and "Quote to approve" has its reminder as its own line with an
 [n] hours box.
+
+**Later change (1 Oct 2026, Account, history and reminders decisions 2, 5 and 8):**
+Settings › Front desk › Messages gains a "Bringing customers back" group after
+the booking messages — "Service reminder" (on, the way each customer chose,
+timed on each service in Settings › Workshop › Services) and "Review request"
+(off until the shop adds its review page) — each ending with a fixed "Stop
+these: [link]" the shop can't delete. The Automatic messages summary reads
+"11 on" wherever the Front desk area is shown.

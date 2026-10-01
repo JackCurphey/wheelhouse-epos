@@ -134,3 +134,11 @@ when booking). The Automatic messages summary now reads "10 on" wherever it
 shows, including the closed row on the Front desk settings boards. The
 Online booking row's summary adds the deposit: "Exact times · 2 hours'
 notice · deposit [n]% · each booking a request".
+
+**Later change (1 Oct 2026, Account, history and reminders decisions 4 and 8):**
+a customer can ask to delete their account from the website. The request
+lands on Privacy requests saying where it came from and what's in the way
+(a bike still in, store credit that will be lost), with "Delete their
+details" held back until it's clear, and a line on their customer page;
+drawn on the journey 7 canvas. The Customers boards here only change where
+the Front desk Settings summary shows ("11 on").

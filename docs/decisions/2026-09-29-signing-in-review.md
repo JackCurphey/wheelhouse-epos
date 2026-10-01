@@ -63,3 +63,8 @@ redesign.
     desktop, tablet and phone. It is copied into the user journeys canvas,
     status Designed, in the Soft sand look. The booking-link pages (no
     sign-in) stay as the Release 1 designs.
+
+**Later change (1 Oct 2026, Account, history and reminders decision 8, audit
+L2):** on the customer sign-in and code boards the website header marks
+"Account" as the current page (bold, underlined, announced as the current
+page), as on every account page.

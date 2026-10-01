@@ -1003,52 +1003,340 @@
       "title": "Not designed · Cycle to Work: staff side",
       "is_interactive": true
     },
-    "j07-acct-history.dc.html": {
+    "j07-ac-account-desktop.dc.html": {
       "x": 0,
       "y": 18386,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Service history and book again",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Your account: bikes, details and how we contact you; one history (desktop)",
       "is_interactive": true
     },
-    "j07-acct-balance.dc.html": {
-      "x": 470,
+    "j07-ac-account-lower-desktop.dc.html": {
+      "x": 1320,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Further down: how we contact you, and your data (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-account-repairs-desktop.dc.html": {
+      "x": 2640,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · History showing repairs only (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-account-new-desktop.dc.html": {
+      "x": 3960,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A new account, with nothing in it yet (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-receipt-desktop.dc.html": {
+      "x": 5280,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A receipt, from the history (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-receipt-sent-desktop.dc.html": {
+      "x": 6600,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The receipt emailed (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-job-note-desktop.dc.html": {
+      "x": 8080,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A job’s page: “Add a note for the shop” (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-job-note-sent-desktop.dc.html": {
+      "x": 9400,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The note sent, waiting for a reply (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-job-note-answered-desktop.dc.html": {
+      "x": 10720,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The shop’s reply, on the job’s page (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-ask-desktop.dc.html": {
+      "x": 12040,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Ask the shop a question, from the account (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-account-question-sent-desktop.dc.html": {
+      "x": 13360,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The question sent: in the history, waiting (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-question-desktop.dc.html": {
+      "x": 14680,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The question and its answer (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-account-asked-desktop.dc.html": {
+      "x": 16000,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The history once answered: the note and the question (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-inbox-list-phone.dc.html": {
+      "x": 17480,
       "y": 18386,
       "w": 390,
       "h": 900,
-      "title": "Not designed · Loyalty points and account balance",
+      "title": "Designed · On a phone: the list first (phone)",
       "is_interactive": true
     },
-    "j07-acct-reminder.dc.html": {
-      "x": 1100,
+    "j07-ac-inbox-desktop.dc.html": {
+      "x": 17950,
       "y": 18386,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Service reminder and landing page",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Staff Messages: needs a reply, and the open conversation (desktop)",
       "is_interactive": true
     },
-    "j07-acct-review.dc.html": {
-      "x": 1570,
+    "j07-ac-inbox-sent-desktop.dc.html": {
+      "x": 19270,
       "y": 18386,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Review request after collection",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Reply sent the way Maya chose; reply again (desktop)",
       "is_interactive": true
     },
-    "j07-acct-unsubscribe.dc.html": {
-      "x": 2040,
+    "j07-ac-inbox-all-desktop.dc.html": {
+      "x": 20590,
       "y": 18386,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Stop marketing messages",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · All conversations, “Needs a reply” in words (desktop)",
       "is_interactive": true
     },
-    "j07-acct-privacy.dc.html": {
-      "x": 2510,
+    "j07-ac-inbox-empty-desktop.dc.html": {
+      "x": 21910,
       "y": 18386,
-      "w": 390,
-      "h": 900,
-      "title": "Not designed · Privacy notice and data requests",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Nothing needs a reply (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-reply-text-desktop.dc.html": {
+      "x": 23230,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The text Maya gets, linking back (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-today-desktop.dc.html": {
+      "x": 24550,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today: messages needing a reply, and a request to delete an account (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-book-remind-desktop.dc.html": {
+      "x": 26030,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Booking: “Remind me…”, unticked, with a review request (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-collect-remind-desktop.dc.html": {
+      "x": 27350,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Ready to collect: the same tick (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-services-desktop.dc.html": {
+      "x": 28670,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Workshop › Services: each service’s reminder (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-service-edit-desktop.dc.html": {
+      "x": 29990,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A service’s reminder time (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-messages-desktop.dc.html": {
+      "x": 31310,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Messages: service reminders and review requests (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-reminder-wording-desktop.dc.html": {
+      "x": 32630,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The service reminder’s wording; “Stop these” always added (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-reminder-landing-desktop.dc.html": {
+      "x": 33950,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The reminder’s link: booking, bike and service chosen, saying why (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-review-first-desktop.dc.html": {
+      "x": 35430,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Review requests the first time: add a review page, then switch on (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-review-setting-desktop.dc.html": {
+      "x": 36750,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Review requests: the review page, when, the wording (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-contact-desktop.dc.html": {
+      "x": 38070,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · How we contact you (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-contact-changed-desktop.dc.html": {
+      "x": 39390,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A switch changed, and said so (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-stopped-desktop.dc.html": {
+      "x": 40710,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · “Stop these”: stopped in one click, no signing in (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-stopped-on-desktop.dc.html": {
+      "x": 42030,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Turned back on (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-download-desktop.dc.html": {
+      "x": 43510,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Download a copy of your data: straight away (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-download-failed-desktop.dc.html": {
+      "x": 44830,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The download didn’t start (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-delete-desktop.dc.html": {
+      "x": 46150,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Ask us to delete your account: store credit will be lost (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-delete-blocked-desktop.dc.html": {
+      "x": 47470,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Can’t delete yet: the bike is still with us (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-delete-sent-desktop.dc.html": {
+      "x": 48790,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Deletion request sent (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-account-delete-pending-desktop.dc.html": {
+      "x": 50110,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The request on the account, with Cancel my request (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-account-delete-cancelled-desktop.dc.html": {
+      "x": 51430,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Request cancelled (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-privacy-requests-desktop.dc.html": {
+      "x": 52750,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The shop’s Privacy requests: from the website, and what’s in the way (desktop)",
+      "is_interactive": true
+    },
+    "j07-ac-customer-delete-desktop.dc.html": {
+      "x": 54070,
+      "y": 18386,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The staff customer page: the request, and what’s in the way (desktop)",
       "is_interactive": true
     },
     "j08-fr-today-desktop.dc.html": {
@@ -3314,12 +3602,48 @@
     "j05-done-receipt.dc.html",
     "j06-c2w-customer.dc.html",
     "j06-c2w-staff.dc.html",
-    "j07-acct-history.dc.html",
-    "j07-acct-balance.dc.html",
-    "j07-acct-reminder.dc.html",
-    "j07-acct-review.dc.html",
-    "j07-acct-unsubscribe.dc.html",
-    "j07-acct-privacy.dc.html",
+    "j07-ac-account-desktop.dc.html",
+    "j07-ac-account-lower-desktop.dc.html",
+    "j07-ac-account-repairs-desktop.dc.html",
+    "j07-ac-account-new-desktop.dc.html",
+    "j07-ac-receipt-desktop.dc.html",
+    "j07-ac-receipt-sent-desktop.dc.html",
+    "j07-ac-job-note-desktop.dc.html",
+    "j07-ac-job-note-sent-desktop.dc.html",
+    "j07-ac-job-note-answered-desktop.dc.html",
+    "j07-ac-ask-desktop.dc.html",
+    "j07-ac-account-question-sent-desktop.dc.html",
+    "j07-ac-question-desktop.dc.html",
+    "j07-ac-account-asked-desktop.dc.html",
+    "j07-ac-inbox-list-phone.dc.html",
+    "j07-ac-inbox-desktop.dc.html",
+    "j07-ac-inbox-sent-desktop.dc.html",
+    "j07-ac-inbox-all-desktop.dc.html",
+    "j07-ac-inbox-empty-desktop.dc.html",
+    "j07-ac-reply-text-desktop.dc.html",
+    "j07-ac-today-desktop.dc.html",
+    "j07-ac-book-remind-desktop.dc.html",
+    "j07-ac-collect-remind-desktop.dc.html",
+    "j07-ac-services-desktop.dc.html",
+    "j07-ac-service-edit-desktop.dc.html",
+    "j07-ac-messages-desktop.dc.html",
+    "j07-ac-reminder-wording-desktop.dc.html",
+    "j07-ac-reminder-landing-desktop.dc.html",
+    "j07-ac-review-first-desktop.dc.html",
+    "j07-ac-review-setting-desktop.dc.html",
+    "j07-ac-contact-desktop.dc.html",
+    "j07-ac-contact-changed-desktop.dc.html",
+    "j07-ac-stopped-desktop.dc.html",
+    "j07-ac-stopped-on-desktop.dc.html",
+    "j07-ac-download-desktop.dc.html",
+    "j07-ac-download-failed-desktop.dc.html",
+    "j07-ac-delete-desktop.dc.html",
+    "j07-ac-delete-blocked-desktop.dc.html",
+    "j07-ac-delete-sent-desktop.dc.html",
+    "j07-ac-account-delete-pending-desktop.dc.html",
+    "j07-ac-account-delete-cancelled-desktop.dc.html",
+    "j07-ac-privacy-requests-desktop.dc.html",
+    "j07-ac-customer-delete-desktop.dc.html",
     "j08-fr-today-desktop.dc.html",
     "j08-fr-step-desktop.dc.html",
     "j08-fr-done-desktop.dc.html",
@@ -3944,7 +4268,7 @@
     "j07_s37": {
       "x": 0,
       "y": 18146,
-      "text": "Account",
+      "text": "Your account",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -3952,9 +4276,49 @@
       "maxH": 150
     },
     "j07_s38": {
-      "x": 1100,
+      "x": 8080,
       "y": 18146,
-      "text": "Messages and privacy",
+      "text": "Talking to the shop",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j07_s39": {
+      "x": 17480,
+      "y": 18146,
+      "text": "The shop’s side of messages",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j07_s40": {
+      "x": 26030,
+      "y": 18146,
+      "text": "Service reminders",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j07_s41": {
+      "x": 35430,
+      "y": 18146,
+      "text": "Reviews and how we contact you",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j07_s42": {
+      "x": 43510,
+      "y": 18146,
+      "text": "Your data",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -3964,12 +4328,12 @@
     "j07_title": {
       "x": 0,
       "y": 17826,
-      "text": "07 · Account, history and reminders — Customer",
+      "text": "07 · Account, history and reminders — Customer and Staff",
       "kind": "title1",
-      "maxW": 2900,
+      "maxW": 55310,
       "w": 240
     },
-    "j08_s40": {
+    "j08_s44": {
       "x": 0,
       "y": 20046,
       "text": "First-run setup",
@@ -3979,7 +4343,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s41": {
+    "j08_s45": {
       "x": 4120,
       "y": 20046,
       "text": "Till settings",
@@ -3989,7 +4353,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s42": {
+    "j08_s46": {
       "x": 17950,
       "y": 20046,
       "text": "End of day and payment settings",
@@ -3999,7 +4363,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s43": {
+    "j08_s47": {
       "x": 26030,
       "y": 20046,
       "text": "Staff and roles",
@@ -4009,7 +4373,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s44": {
+    "j08_s48": {
       "x": 34110,
       "y": 20046,
       "text": "Shop and sites",
@@ -4019,7 +4383,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s45": {
+    "j08_s49": {
       "x": 36910,
       "y": 20046,
       "text": "Workshop settings",
@@ -4029,7 +4393,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s46": {
+    "j08_s50": {
       "x": 41030,
       "y": 20046,
       "text": "Messages",
@@ -4039,7 +4403,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j08_s47": {
+    "j08_s51": {
       "x": 45150,
       "y": 20046,
       "text": "Your data",
@@ -4057,7 +4421,7 @@
       "maxW": 47710,
       "w": 240
     },
-    "j09_s49": {
+    "j09_s53": {
       "x": 0,
       "y": 21946,
       "text": "Bring your data",
@@ -4067,7 +4431,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s50": {
+    "j09_s54": {
       "x": 8080,
       "y": 21946,
       "text": "Run alongside",
@@ -4077,7 +4441,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s51": {
+    "j09_s55": {
       "x": 16160,
       "y": 21946,
       "text": "Practice at the till",
@@ -4087,7 +4451,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j09_s52": {
+    "j09_s56": {
       "x": 18960,
       "y": 21946,
       "text": "Switch over",
@@ -4105,7 +4469,7 @@
       "maxW": 29440,
       "w": 240
     },
-    "j10_s54": {
+    "j10_s58": {
       "x": 0,
       "y": 23802,
       "text": "Opening the till",
@@ -4115,7 +4479,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j10_s55": {
+    "j10_s59": {
       "x": 6760,
       "y": 23802,
       "text": "Office › Today",
@@ -4125,7 +4489,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j10_s56": {
+    "j10_s60": {
       "x": 18800,
       "y": 23802,
       "text": "Also at the start of the day",
@@ -4143,7 +4507,7 @@
       "maxW": 21080,
       "w": 240
     },
-    "j11_s58": {
+    "j11_s62": {
       "x": 0,
       "y": 25658,
       "text": "A sale",
@@ -4153,7 +4517,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s59": {
+    "j11_s63": {
       "x": 10720,
       "y": 25658,
       "text": "Taking payment",
@@ -4163,7 +4527,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s60": {
+    "j11_s64": {
       "x": 20120,
       "y": 25658,
       "text": "Other ways to pay",
@@ -4173,7 +4537,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s61": {
+    "j11_s65": {
       "x": 25560,
       "y": 25658,
       "text": "Other till jobs",
@@ -4183,7 +4547,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j11_s62": {
+    "j11_s66": {
       "x": 40240,
       "y": 25658,
       "text": "When the internet drops",
@@ -4201,7 +4565,7 @@
       "maxW": 46760,
       "w": 240
     },
-    "j12_s64": {
+    "j12_s68": {
       "x": 0,
       "y": 27514,
       "text": "The diary",
@@ -4211,7 +4575,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s65": {
+    "j12_s69": {
       "x": 14680,
       "y": 27514,
       "text": "Requests, as a pop-up",
@@ -4221,7 +4585,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s66": {
+    "j12_s70": {
       "x": 20120,
       "y": 27514,
       "text": "New job from an empty slot",
@@ -4231,7 +4595,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s67": {
+    "j12_s71": {
       "x": 24240,
       "y": 27514,
       "text": "The job — one page, no tabs",
@@ -4241,7 +4605,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s68": {
+    "j12_s72": {
       "x": 34960,
       "y": 27514,
       "text": "Customer account",
@@ -4251,7 +4615,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j12_s69": {
+    "j12_s73": {
       "x": 36440,
       "y": 27514,
       "text": "Overview page",
@@ -4269,7 +4633,7 @@
       "maxW": 37680,
       "w": 240
     },
-    "j13_s71": {
+    "j13_s75": {
       "x": 0,
       "y": 29370,
       "text": "Receiving a delivery",
@@ -4279,7 +4643,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s72": {
+    "j13_s76": {
       "x": 16000,
       "y": 29370,
       "text": "The waiting job",
@@ -4289,7 +4653,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s73": {
+    "j13_s77": {
       "x": 20120,
       "y": 29370,
       "text": "Checking the invoice",
@@ -4299,7 +4663,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s74": {
+    "j13_s78": {
       "x": 30840,
       "y": 29370,
       "text": "Ordering",
@@ -4309,7 +4673,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j13_s75": {
+    "j13_s79": {
       "x": 36280,
       "y": 29370,
       "text": "Also in this journey",
@@ -4327,7 +4691,7 @@
       "maxW": 39740,
       "w": 240
     },
-    "j14_s77": {
+    "j14_s81": {
       "x": 0,
       "y": 31226,
       "text": "Finding stock",
@@ -4337,7 +4701,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s78": {
+    "j14_s82": {
       "x": 12040,
       "y": 31226,
       "text": "Categories and their details",
@@ -4347,7 +4711,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s79": {
+    "j14_s83": {
       "x": 14840,
       "y": 31226,
       "text": "A product",
@@ -4357,7 +4721,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s80": {
+    "j14_s84": {
       "x": 20280,
       "y": 31226,
       "text": "Changing prices",
@@ -4367,7 +4731,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s81": {
+    "j14_s85": {
       "x": 24400,
       "y": 31226,
       "text": "Correcting stock",
@@ -4377,7 +4741,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s82": {
+    "j14_s86": {
       "x": 31160,
       "y": 31226,
       "text": "Between shops",
@@ -4387,7 +4751,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j14_s83": {
+    "j14_s87": {
       "x": 37920,
       "y": 31226,
       "text": "Stock take",
@@ -4405,7 +4769,7 @@
       "maxW": 47080,
       "w": 240
     },
-    "j15_s85": {
+    "j15_s89": {
       "x": 0,
       "y": 33082,
       "text": "Customers and the customer page",
@@ -4415,7 +4779,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s86": {
+    "j15_s90": {
       "x": 13360,
       "y": 33082,
       "text": "Accounts (pay later)",
@@ -4425,7 +4789,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s87": {
+    "j15_s91": {
       "x": 16160,
       "y": 33082,
       "text": "Customer groups",
@@ -4435,7 +4799,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s88": {
+    "j15_s92": {
       "x": 17640,
       "y": 33082,
       "text": "Privacy requests",
@@ -4445,7 +4809,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s89": {
+    "j15_s93": {
       "x": 21760,
       "y": 33082,
       "text": "Possible duplicates",
@@ -4463,7 +4827,7 @@
       "maxW": 25640,
       "w": 240
     },
-    "j16_s91": {
+    "j16_s95": {
       "x": 0,
       "y": 34938,
       "text": "Close the day",
@@ -4481,7 +4845,7 @@
       "maxW": 18400,
       "w": 240
     },
-    "j17_s93": {
+    "j17_s97": {
       "x": 0,
       "y": 36794,
       "text": "Reports",
@@ -4491,7 +4855,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j17_s94": {
+    "j17_s98": {
       "x": 7240,
       "y": 36794,
       "text": "Accounts software",
@@ -4509,7 +4873,7 @@
       "maxW": 10700,
       "w": 240
     },
-    "j18_s96": {
+    "j18_s100": {
       "x": 0,
       "y": 38610,
       "text": "Design the website",
@@ -4519,7 +4883,7 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j18_s97": {
+    "j18_s101": {
       "x": 7240,
       "y": 38610,
       "text": "Online orders",
@@ -4537,7 +4901,7 @@
       "maxW": 11880,
       "w": 240
     },
-    "j19_s99": {
+    "j19_s103": {
       "x": 0,
       "y": 40426,
       "text": "Across sites",
@@ -4555,7 +4919,7 @@
       "maxW": 3460,
       "w": 240
     },
-    "j20_s101": {
+    "j20_s105": {
       "x": 0,
       "y": 42242,
       "text": "Oversight",
@@ -4573,7 +4937,7 @@
       "maxW": 3460,
       "w": 240
     },
-    "j21_s103": {
+    "j21_s107": {
       "x": 0,
       "y": 44058,
       "text": "Connection and handoff",

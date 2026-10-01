@@ -200,7 +200,7 @@ export const shopFolds = (open = {}) =>
   + fold('Sites', 'Bolton', open.sites || '');
 export const MSG_INTRO = 'The texts and emails customers get from the shop.';
 export const msgFolds = (open = {}) =>
-  fold('Automatic messages', '10 on', open.list || '')
+  fold('Automatic messages', '11 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 export const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
 export const dataFolds = (open = {}) => fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '');

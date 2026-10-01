@@ -120,3 +120,10 @@ details; journey 5's two columns and content are kept. "Not done — you said
 not now" reads "no thanks". In Settings › Messages every row has "Edit",
 "Bike ready" and "Bike still waiting" go the way the customer chose, and the
 "Bike still waiting" wording pop-up says so instead of Text/Email switches.
+
+**Later change (1 Oct 2026, Account, history and reminders decisions 2, 5 and 8):**
+the "Bike ready" page's pay card has an unticked "Remind me when my bike is
+due its next service — And ask me for a review after I collect" box under
+Pay now (on the pay and deposit states); Settings › Messages gains the
+"Bringing customers back" group ("Service reminder", "Review request"), so
+the Automatic messages section reads "11 on".
