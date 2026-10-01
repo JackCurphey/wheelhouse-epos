@@ -129,3 +129,9 @@ the supplier integrations above.
     actions drawn as links are buttons, repeated ones name their row; the
     booked-in board's next steps; and Settings' Jump to pills are links and
     fold titles headings (shared frame — on-screen renders unchanged).
+11. **Tablet and phone drawn** (Jack, 1 Oct: "lets draw the tablet and
+    phone"): all 27 boards at three sizes, the same recipes. On a phone the
+    restock list shows stock and sales under each product with its count
+    beneath; the diary and Overview "Part arrived" boards use journey 12's
+    own tablet and phone diary and Overview, with the badge on the job's
+    block and row.

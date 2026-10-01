@@ -14,7 +14,7 @@
 // supplier, cost, count and date is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone, MANAGER, settingsPage, rowSwitch, stockFolds, STOCK_INTRO } from './settings-frame.mjs';
-import { screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, overviewDesktop } from './diary.mjs';
+import { screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, tabletDiary, phoneDiary, TODAY, overviewAt } from './diary.mjs';
 import { today } from './opening.mjs';
 
 export const screens = {};
@@ -55,7 +55,7 @@ const supplierPills = (label, hint = '') => `<div style="display: flex; flex-wra
 const scanBox = (ph = 'Scan a barcode, or type to search') => `<style>.rs-scan::placeholder { color: ${C.muted}; opacity: 1 }</style><label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input class="rs-scan" type="search" aria-label="${ph}" placeholder="${ph}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>`;
 const PADS = 'Shimano brake pads';
 const fieldRow = (id, label, value = '', w = '100%') => `<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><label for="${id}" style="font-size: 14px; font-weight: 600">${label}</label><input id="${id}" value="${value}" style="width: ${w}; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div>`;
-const amberBox = (head, body) => `<div role="status" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}"><span style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700">${icon('alert', 18)}${head}</span>${body ? `<span style="font-size: 15px; color: ${C.ink}">${body}</span>` : ''}</div>`;
+const amberBox = (head, body) => `<div role="status" style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}"><span style="display: flex; align-items: flex-start; gap: 8px; font-size: 16px; font-weight: 700">${icon('alert', 18)}<span>${head}</span></span>${body ? `<span style="font-size: 15px; color: ${C.ink}">${body}</span>` : ''}</div>`;
 const actions = (left, right) => `<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px">${left}<span style="display: flex; flex-wrap: wrap; gap: 8px">${right}</span></div>`;
 
 // ---------- Stockroom › Deliveries and orders ----------
@@ -227,7 +227,7 @@ ${note('Closing the order drops anything still to come.')}`)}`);
 // 44px cell is the tick box; each value is named for a screen reader.
 const tick = (label) => `<label style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px"><input type="checkbox" checked aria-label="${esc(label)}" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`;
 const cols = () => (isPhone() ? '44px 1fr' : '44px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto');
-const restockRow = (name, code, stock, sold, suggest) => `<div role="listitem" style="display: grid; grid-template-columns: ${cols()}; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid ${C.border}">${tick(`Include ${name}`)}<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${code}</span></span>${isPhone() ? '' : `<span style="font-size: 14px"><span style="${visuallyHidden}">In stock: </span>${stock}</span><span style="font-size: 14px"><span style="${visuallyHidden}">Sold, last [n] days: </span>${sold}</span>${qty(suggest, `Reorder ${name}`)}`}</div>`;
+const restockRow = (name, code, stock, sold, suggest) => `<div role="listitem" style="display: grid; grid-template-columns: ${cols()}; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid ${C.border}">${tick(`Include ${name}`)}<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${code}${isPhone() ? ` · in stock ${stock} · sold ${sold}` : ''}</span>${isPhone() ? `<span style="padding-top: 6px">${qty(suggest, `Reorder ${name}`)}</span>` : ''}</span>${isPhone() ? '' : `<span style="font-size: 14px"><span style="${visuallyHidden}">In stock: </span>${stock}</span><span style="font-size: 14px"><span style="${visuallyHidden}">Sold, last [n] days: </span>${sold}</span>${qty(suggest, `Reorder ${name}`)}`}</div>`;
 const supplierGroup = (sup, rows, n) => `<section aria-labelledby="g-${slug(sup)}" style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px">
 <div style="display: flex; align-items: center; gap: 12px">${tick(`Include everything from ${sup}`)}<h3 id="g-${slug(sup)}" style="margin: 0; font-size: 16px; font-weight: 700">${sup}</h3></div>
 <div role="list">${rows}</div>
@@ -253,8 +253,8 @@ def('rs-booked', () => bookedBoard());
 def('rs-labels', () => overlay(bookedBoard(), labelsPopup()));
 def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
 // Audit H1: the badge on the diary block and the Overview row too.
-def('rs-diary-arrived', () => withPartArrived('WH-1042', () => buildDiaryDesktopBoard()));
-def('rs-overview-arrived', () => withPartArrived('WH-1042', () => overviewDesktop()));
+def('rs-diary-arrived', () => withPartArrived('WH-1042', () => (SIZE === 'desktop' ? buildDiaryDesktopBoard() : SIZE === 'tablet' ? tabletDiary() : phoneDiary({ day: TODAY, mode: 'everyone' }))));
+def('rs-overview-arrived', () => withPartArrived('WH-1042', () => overviewAt(SIZE)));
 def('rs-delivery', () => deliveryBoard('waiting', { problems: true }));
 def('rs-invoice', () => overlay(deliveryBoard('waiting', { problems: true }), invoicePopup()));
 def('rs-invoice-checked', () => deliveryBoard('checked'));
@@ -268,8 +268,8 @@ def('rs-order-ordered', () => orderedBoard());
 def('rs-restock', () => restockBoard());
 def('rs-today-restock', () => today({ restock: true }));
 
-// Desktop first (journey process); tablet and phone once desktop is approved.
-const SIZES = ['desktop'];
+// All three sizes (desktop approved after the UI audit, decision 10).
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });

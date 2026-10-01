@@ -1246,13 +1246,16 @@ function touchJobBlock(j, size, slotH, { highlighted = false, lightMarked = fals
   const one = (t, style) => `<span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${lineH}px; ${style}">${esc(t)}</span>`;
   const bikeStyle = `font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}; ${strike}`;
   const titleStyle = `font-size: ${fs.s}px; font-weight: 700; color: ${ink};`;
+  const arrived = PART_ARRIVED === j.job;
+  const arrivedLine = `<span style="display: flex; align-items: center; gap: 3px; white-space: nowrap; line-height: ${lineH}px; font-size: ${fs.x}px; font-weight: 700; color: ${ST.ready[1]}">${icon('check', fs.x)}Part arrived</span>`;
   let lines;
-  if (fitLines <= 1) lines = one(`${bike} · ${jobTitle}`, bikeStyle);
+  if (arrived) lines = fitLines <= 1 ? one(`${bike} · Part arrived`, bikeStyle) : fitLines === 2 ? one(bike, bikeStyle) + arrivedLine : one(bike, bikeStyle) + one(jobTitle, titleStyle) + arrivedLine;
+  else if (fitLines <= 1) lines = one(`${bike} · ${jobTitle}`, bikeStyle);
   else if (fitLines === 2) lines = one(bike, bikeStyle) + one(narrow ? jobTitle : [jobTitle, BLOCK_LABEL[j.key]].join(' · '), titleStyle);
   else lines = one(bike, bikeStyle) + one(jobTitle, titleStyle) + (extra ? one(extra, `font-size: ${fs.x}px; color: ${C.ink}; opacity: 0.8; ${strike}`) : '');
   const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
   const href = `${j.link || 'job-overview'}-${size}.dc.html`;
-  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(statusWord)}, ${esc(j.detail)}. Press and hold for more." style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; box-sizing: border-box; padding: 3px 7px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${touchRing(highlighted, lightMarked)}">${lines}</a>`;
+  return `<a href="${href}" aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(statusWord)}${arrived ? ', part arrived' : ''}, ${esc(j.detail)}. Press and hold for more." style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; box-sizing: border-box; padding: 3px 7px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${touchRing(highlighted, lightMarked)}">${lines}</a>`;
 }
 function touchPendingBlock(size, slotH, highlighted = false) {
   const j = PENDING_DIARY;
@@ -1425,7 +1428,7 @@ function tabletDiaryContent({ mechFilter = 'Everyone', activeView = 'Week', sele
 ${body}
 ${legend && !pickMode ? diaryLegend() : ''}`, pickMode ? 8 : 12);
 }
-const tabletDiary = (opts = {}, shellOpts = {}) => shellTablet('diary', 'Workshop diary', tabletDiaryContent(opts), shellOpts);
+export const tabletDiary = (opts = {}, shellOpts = {}) => shellTablet('diary', 'Workshop diary', tabletDiaryContent(opts), shellOpts);
 const MECH_SHELL = { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' };
 
 // ---------- Phone diary (one day down a time line) ----------
@@ -1504,7 +1507,7 @@ ${mode === 'byMech' ? '' : NO_TIME_ROW('phone')}
   // and a fanned stack stay inside it, under any sheet drawn over the page.
   return `${controls}<div data-scroll="page" style="position: relative; z-index: 0; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; box-sizing: border-box; padding: 0 14px 14px">${tl}</div>${bar}`;
 }
-const phoneDiary = (opts = {}, shellOpts = {}) => shellPhone('Diary', phoneDiaryContent(opts), {
+export const phoneDiary = (opts = {}, shellOpts = {}) => shellPhone('Diary', phoneDiaryContent(opts), {
   active: 'diary', pad: 0,
   actions: `${opts.mode === 'mechanic' ? '' : phoneWaitingButton()}${phoneNewJobAction(opts.mode === 'mechanic' ? 'new-job-phone.dc.html' : opts.mode === 'byMech' ? 'new-job-day-phone.dc.html' : 'new-job-pick-phone.dc.html', !!opts.pickMode)}`,
   ...shellOpts,
@@ -2524,9 +2527,10 @@ ${STATS_DESK.map(([k, v, s]) => {
     return card(`<div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 4px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">${eyebrow(k)}<span style="font-size: 20px; font-weight: 700">${esc(v)}</span></div>${fill}<span style="font-size: 13px; color: ${C.muted}">${esc(s)}</span></div>`);
   }).join('')}
 ${segmented(['Arrivals · 3', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'], 0, 'Show jobs', 44, 14)}
-${card(ARRIVALS.map(([j, n, b, w, a], i) => `<div style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${i ? `border-top: 1px solid ${C.border};` : ''}"><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${mono(j)} · ${esc(n)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(b)} · ${esc(w)}</span><span>${badge('Expected', 'blue')}</span></div><div style="flex-shrink: 0">${a(size)}</div></div>`).join(''))}`, 10);
+${card(ARRIVALS.map(([j, n, b, w, a], i) => `<div style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${i ? `border-top: 1px solid ${C.border};` : ''}"><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${mono(j)} · ${esc(n)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(b)} · ${esc(w)}</span><span>${badge('Expected', 'blue')}${PART_ARRIVED === j ? ` ${badge('Part arrived', 'green')}` : ''}</span></div><div style="flex-shrink: 0">${a(size)}</div></div>`).join(''))}`, 10);
 }
 export const overviewDesktop = () => shellDesktop('overview', 'Workshop overview', overviewContent('desktop'));
+export const overviewAt = (size) => size === 'desktop' ? overviewDesktop() : size === 'tablet' ? shellTablet('overview', 'Workshop overview', overviewContent('tablet')) : shellPhone('Overview', overviewPhoneContent('phone'), { active: 'overview' });
 screens.overview = {
   desktop: shellDesktop('overview', 'Workshop overview', overviewContent('desktop')),
   tablet: shellTablet('overview', 'Workshop overview', overviewContent('tablet')),
