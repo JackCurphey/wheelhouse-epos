@@ -194,10 +194,10 @@ export const eodFolds = (open = {}) =>
 export const STAFF_INTRO = 'Who works here, and what each person can do.';
 export const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '');
 export const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
-export const shopFolds = (open = {}) =>
+export const shopFolds = (open = {}, sites = 'Bolton') =>
   fold('Shop details', 'North Street Cycles', open.details || '')
   + fold('Opening hours · Bolton', 'Closed Sundays', open.hours || '')
-  + fold('Sites', 'Bolton', open.sites || '');
+  + fold('Sites', sites, open.sites || '');
 export const MSG_INTRO = 'The texts and emails customers get from the shop.';
 export const msgFolds = (open = {}) =>
   fold('Automatic messages', '11 on', open.list || '')

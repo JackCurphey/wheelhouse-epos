@@ -88,3 +88,30 @@ clicks as possible).
    in the sidebar, and Today's rows only. Reports and cash-up totals by shop
    follow decision 1 (the chosen shop, or all shops) and are drawn with
    journey 17, Reports and accounts, not here.
+9. **UI audit: every recommendation taken** (Jack, 1 Oct: "yeah go ahead with
+   them all"). From `design/user-journeys/sites-ui-audit.md`: **the owner
+   always sees every shop; a manager gets "All shops" only when they work at
+   two or more shops, and it combines just those; someone with one shop sees
+   no switcher** (H1, option 1); **a till always sells for its own shop** — if
+   the sidebar shows another shop, the Till page says "This till is Bolton's.
+   Sales here are Bolton's." (H2, option 1); on Today's "All shops" rows the
+   shop name ("Work in Bolton") and the till status are separate targets (H3,
+   option 1); **a day taken at another shop is greyed out there and says
+   where ("Thu · Bolton") — untick it at Bolton first to move it**, and
+   unticking a shop warns about jobs booked there (H5, option 1); "Add a
+   shop" shows the copied hours in one line and a placeholder for any cost
+   (M2, option 2); the one-shop sidebar and a manager's Shop and sites are
+   drawn, the staff switcher described (M4); lists show the chosen shop's
+   price beside the all-shops one (M5, option 1); **booking's "Which shop?"
+   has nothing chosen unless the customer came from that shop's page, and
+   tapping a shop goes straight on** (M8, option 1); **"shop" wherever staff
+   read it ("Switch shop"), "Sites" only in Settings** (M12, option 2); the
+   "All shops" Today lists [Second site] lines only, so it agrees with
+   Bolton's own Today (M13, option 1). Also: the switcher's name, open state
+   and focus; a code suggestion and a duplicate-code error; "Now working in
+   [Second site]" after a switch; the "not offered" state; Works at inside the
+   real person pop-up; the shop in "Your booking" and what changing it
+   resets; tills grouped under clearer shop headings with "+ Add a till";
+   checklist buttons that say what they do; and the Lows (one grid for
+   Today's shop rows, the shop tag in ink, Jack Lewis as Owner, "[Second
+   site]" on reused boards, "Copy hours from Bolton", "Price differs").

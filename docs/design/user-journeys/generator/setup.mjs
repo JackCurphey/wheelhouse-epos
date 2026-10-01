@@ -196,22 +196,23 @@ const toggleLine = (t, sub, on, indent = false) => `<div style="display: flex; a
 // Decision 13: each workshop person's working days, as toggle pills.
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const dayPill = (d, on) => `<button type="button" aria-pressed="${on}" aria-label="${d}" style="min-width: 44px; min-height: 44px; padding: 0 6px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${d}</button>`;
-const workingDays = () => `<div role="group" aria-label="Works in the workshop on" style="display: flex; flex-direction: column; gap: 8px; margin-left: ${isPhone() ? 0 : 18}px; padding-left: ${isPhone() ? 0 : 14}px; border-left: ${isPhone() ? 0 : 1}px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">In the workshop on</span><div style="display: flex; flex-wrap: nowrap; gap: 4px">${DAYS.map((d) => dayPill(d, ['Tue', 'Wed', 'Sat'].includes(d))).join('')}</div></div>`;
-const workshopBlock = (on) => `<div style="display: flex; flex-direction: column; gap: 6px">${toggleLine('Works in the workshop', 'Gets a column in the diary', on)}${on ? `${toggleLine('Customers can book Jo online', 'Off: staff can still book jobs in for Jo', false, true)}${workingDays()}` : ''}</div>`;
+const workingDays = (shop = '') => `<div role="group" aria-label="Works in the workshop on${shop ? ` at ${shop}` : ''}" style="display: flex; flex-direction: column; gap: 8px; margin-left: ${isPhone() ? 0 : 18}px; padding-left: ${isPhone() ? 0 : 14}px; border-left: ${isPhone() ? 0 : 1}px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">In the workshop on${shop ? ` · ${shop}` : ''}</span><div style="display: flex; flex-wrap: nowrap; gap: 4px">${DAYS.map((d) => dayPill(d, ['Tue', 'Wed', 'Sat'].includes(d))).join('')}</div></div>`;
+const workshopBlock = (on, siteDays = '') => `<div style="display: flex; flex-direction: column; gap: 6px">${toggleLine('Works in the workshop', 'Gets a column in the diary', on)}${on ? `${toggleLine('Customers can book Jo online', 'Off: staff can still book jobs in for Jo', false, true)}${siteDays ? `${workingDays('Bolton')}${siteDays}` : workingDays()}` : ''}</div>`;
 // One person, in a pop-up in the middle (Workshop day 15, 16). The role by
 // pill; the switches as toggle pills; the PIN line (signing in 6).
-function personDialog({ all = false, workshop = true } = {}) {
+// Multiple sites decision 4 (audit M7): Works at, and days per shop.
+function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '' } = {}) {
   // Staff already have the till by their role, so that one says Included.
   const inc = (s) => s === 'Can use the till';
   const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all ? 'On' : 'Off', all)}</div>`;
   // Jack (30 Sep): the role runs across the top; both columns start together
 // underneath it.
-  return popup('p-title', 'Jo Taylor', 'Staff · [email]', `${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}
+  return popup('p-title', 'Jo Taylor', 'Staff · [email]', `${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}${worksAt}
 <div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: ${isPhone() ? 20 : 28}px; align-items: start; padding-top: 16px; border-top: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 16px">
 <div style="display: flex; flex-direction: column; gap: 8px"><div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">Also allowed to</span>${all ? `<span style="font-size: 13px; color: ${C.muted}">Everything a Manager can do — Jo’s role still says Staff</span>` : button('Give everything a Manager can do', { variant: 'default', block: true })}</div>
 <div style="display: flex; flex-direction: column; gap: 8px">${SWITCHES.map(sw).join('')}</div>
 </div>
-</div><div style="display: flex; flex-direction: column; gap: 16px">${workshopBlock(workshop)}
+</div><div style="display: flex; flex-direction: column; gap: 16px">${workshopBlock(workshop, siteDays)}
 <div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
 }
 const clearPinDialog = () => popup('pin-title', 'Clear Jo Taylor’s till PIN?', 'For when Jo has forgotten it', `${note('Jo won’t be able to check in at the till until they get a new PIN in Your settings. Nobody else sees the new one.')}`, `${button('Keep the PIN', { variant: 'ghost' })}${button('Clear the PIN', { variant: 'danger' })}`);
@@ -459,4 +460,4 @@ export const ROWS = [
 ];
 
 // For journey 5's "Bike still waiting" wording board.
-export { chan, wordingBox, bubble, msgPage, msgListOpen, servicesOpen, editBtn };
+export { chan, wordingBox, bubble, msgPage, msgListOpen, servicesOpen, editBtn, personDialog, staffPage, peopleOpen };

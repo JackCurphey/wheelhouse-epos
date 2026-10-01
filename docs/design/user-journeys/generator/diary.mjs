@@ -129,10 +129,15 @@ export function railItem([key, label, ic], active) {
 const railList = (role, active) => roomsFor(role).map(([, items], i) => `<div style="display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; ${i ? 'padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.18)' : ''}">${items.map((n) => railItem(n, active)).join('')}</div>`).join('');
 
 // Multiple sites decision 1: the switcher shows the chosen shop, or "All shops".
-let SITE_NOW = 'Bolton';
-export const withSite = (name, fn) => { const was = SITE_NOW; SITE_NOW = name; try { return fn(); } finally { SITE_NOW = was; } };
+// Audit H4: named "Shop: Bolton. Choose a shop", with its open state; M4:
+// someone with one shop sees the shop's name and no switcher. Boards drawn
+// before journey 19 keep the old markup until it is carried across.
+let SITE_NOW = 'Bolton', SITE_MODE = null;
+export const withSite = (name, fn, mode = 'menu') => { const was = [SITE_NOW, SITE_MODE]; SITE_NOW = name; SITE_MODE = mode; try { return fn(); } finally { [SITE_NOW, SITE_MODE] = was; } };
 function siteSwitcher() {
-  return `<button type="button" aria-label="Switch site" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #ffffff; font-family: inherit; text-align: left">
+  if (SITE_MODE === 'one') return `<div style="display: flex; flex-direction: column; gap: 2px; min-height: 40px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.08); color: #ffffff"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">${SITE_NOW}</span></div>`;
+  const a11y = SITE_MODE ? `aria-label="Shop: ${SITE_NOW}. Choose a shop" aria-haspopup="menu" aria-expanded="${SITE_MODE === 'open'}"` : 'aria-label="Switch site"';
+  return `<button type="button" ${a11y} style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #ffffff; font-family: inherit; text-align: left">
 <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">${SITE_NOW}</span></span>${icon('chevron', 16)}</button>`;
 }
 
