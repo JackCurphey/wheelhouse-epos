@@ -88,3 +88,21 @@ A2, A6 — as few clicks as possible).
    goes when none are below zero. Chosen over the filter only, and folding
    them into the next stock take. Boards: `st-today-below`,
    `tk-start-below`.
+10. **Each category has its own details, set in Settings › Stockroom ›
+    Categories** (Jack, 1 Oct: "for each different product category can we
+    have some identifiers sub categories that we can make, like all
+    derailleurs will have a "amount of gears" option and all bearings will
+    have inner, outer and height categories? these are just examples and
+    are not the only ones i want"; then "1"). The owner gives each category
+    a list of details — a name, the kind of answer (a number with a unit, a
+    choice from a list, or text). Categories can sit inside others
+    (Drivetrain › Derailleurs) and inherit the parent's details. Adding a
+    product, or editing one, shows its category's details to fill in; on
+    Stock, picking a category adds filters for its details ("Outer
+    diameter 30 mm"); typing "bearing 30 mm" still works. Jack's examples
+    are drawn: Bearings (inner diameter, outer diameter, height) and
+    Derailleurs (number of gears). Replaces journey 13's free-typed
+    measurements (decision 3; audit M9's suggested names). Chosen over
+    details made up as products are added, and a fixed list. Boards:
+    `st-categories`, `st-category-edit`, `st-filter-bearings`; `rs-add-product`
+    redrawn.

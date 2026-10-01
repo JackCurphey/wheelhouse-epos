@@ -30,7 +30,7 @@ const TREK = 'Trek Domane AL 3';
 // One search box: name, barcode, supplier code or a measurement.
 const searchBox = (value = '') => `<style>.st-search::placeholder { color: ${C.muted}; opacity: 1 }</style><label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input class="st-search" type="search" aria-label="Search stock: name, barcode, supplier code or a measurement" placeholder="Name, barcode, supplier code — or a measurement, like “bearing 30 mm”" value="${esc(value)}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}">${icon('scan', 20)}</label>`;
 const FILTERS = ['All', 'Running low', 'Below zero', '[Category]', '[Category]', '[Category]'];
-const filters = (on = 0) => `<div role="group" aria-label="Show" style="display: flex; gap: 8px; ${isPhone() ? 'overflow-x: auto; padding-bottom: 2px' : 'flex-wrap: wrap'}">${FILTERS.map((t, i) => pillBtn(t, i === on)).join('')}</div>`;
+const filters = (on = 0, labels = FILTERS) => `<div role="group" aria-label="Show" style="display: flex; gap: 8px; ${isPhone() ? 'overflow-x: auto; padding-bottom: 2px' : 'flex-wrap: wrap'}">${labels.map((t, i) => pillBtn(t, i === on)).join('')}</div>`;
 let TICKS = false;
 const COLS = () => (isPhone() ? `${TICKS ? '44px ' : ''}1fr auto` : `${TICKS ? '44px ' : ''}minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) 24px`);
 const tickBox = (label, on) => `<label style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px"><input type="checkbox" ${on ? 'checked ' : ''}aria-label="${esc(label)}" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`;
@@ -52,12 +52,12 @@ const ROWS_ALL = [
 // A measurement search: the matching measurement is shown on each row, so
 // it's clear why the product came up.
 const ROWS_MEASURE = [
-  { name: '[Bearing]', sub: `[Supplier code] · <strong style="color: ${C.ink}">Outside diameter 30 mm</strong> · inside [n] mm`, stock: '[n]', price: '£[price]', margin: '[n]%' },
-  { name: '[Bearing]', sub: `[Supplier code] · <strong style="color: ${C.ink}">Outside diameter 30 mm</strong> · inside [n] mm`, stock: '[n]', state: 'low', price: '£[price]', margin: '[n]%' },
+  { name: '[Bearing]', sub: `[Supplier code] · Inner [n] mm · <strong style="color: ${C.ink}">Outer diameter 30 mm</strong> · height [n] mm`, stock: '[n]', price: '£[price]', margin: '[n]%' },
+  { name: '[Bearing]', sub: `[Supplier code] · Inner [n] mm · <strong style="color: ${C.ink}">Outer diameter 30 mm</strong> · height [n] mm`, stock: '[n]', state: 'low', price: '£[price]', margin: '[n]%' },
 ];
-const listBoard = ({ query = '', rows = ROWS_ALL, summary = `${mono('[n]')} products`, bar = '' } = {}) => stockPage('Stock', `<div style="display: flex; flex-direction: column; gap: 12px; flex-shrink: 0">
+const listBoard = ({ query = '', rows = ROWS_ALL, summary = `${mono('[n]')} products`, bar = '', filt = filters(0) } = {}) => stockPage('Stock', `<div style="display: flex; flex-direction: column; gap: 12px; flex-shrink: 0">
 <div style="display: flex; align-items: center; gap: 10px"><div style="flex-grow: 1; min-width: 0">${searchBox(query)}</div>${isPhone() ? '' : button('+ Add a product', { variant: 'default' })}</div>
-${filters(0)}
+${filt}
 <p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">${summary}</p>${bar}</div>
 ${card(`${isPhone() ? '' : `<div style="padding-top: 12px">${head()}</div>`}<div role="list">${rows.map(row).join('')}</div>`, 'overflow: hidden; flex-shrink: 0')}`);
 
@@ -72,7 +72,7 @@ const summary = ({ name, codes, price, kind = 'part' }) => `<div style="display:
 ${card(`<div style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start"><div role="img" aria-label="Photo of ${esc(name)}" style="width: 88px; height: 88px; flex-shrink: 0; border-radius: 8px; border: 1px dashed ${C.border}; background: ${C.mutedBg}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: ${C.muted}">[Photo]</div><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><h2 style="margin: 0; font-size: 20px; font-weight: 700">${name}</h2><span style="font-size: 13px; color: ${C.muted}">${codes}</span><div style="display: flex; gap: 8px; padding-top: 6px">${button('Edit', { variant: 'default' })}${button('Adjust stock', { variant: 'default' })}</div></div></div>`, 'flex-shrink: 0')}
 ${box('Price', `${kv('Price', mono(price))}${kv('Cost', mono('£[cost]'))}${kv('Margin', '[n]%')}${kv('VAT', '[VAT rate]')}`)}
 ${box('In stock', SITES ? `${kv('Bolton', mono('[n]'))}${kv('[Site 2]', mono('[n]'))}${kv('On its way to [Site 2]', mono('[n]'))}${kv('Low-stock level', mono('[n] each'))}` : `${kv('Bolton', `${mono('[n]')}`)}${kv('Low-stock level', mono('[n]'))}`, SITES ? linkBtn('Send to another shop') : '')}
-${kind === 'part' ? box('Measurements and specifications', `${kv('[Measurement]', '[value] [unit]')}${kv('[Measurement]', '[value] [unit]')}`, linkBtn('Edit', 'Edit measurements')) : ''}
+${kind === 'part' ? box('Details · [Category]', `${kv('[Detail]', '[value] [unit]')}${kv('[Detail]', '[value] [unit]')}`, linkBtn('Edit', 'Edit details')) : ''}
 </div>`;
 const histRow = (what, detail, change, who) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 1fr) 64px'}; gap: 12px; align-items: center; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${what}</span><span style="font-size: 13px; color: ${C.muted}">${detail} · ${who} · [date and time]</span></span><span style="text-align: right">${mono(change, 'font-size: 15px; font-weight: 700')}</span></div>`;
 const HIST = ['Everything', 'Sold', 'Received', 'Counted and adjusted'];
@@ -165,6 +165,22 @@ ${box('A delivery arrived?', `${note('Scan each item as it comes out of the box.
 ${box('On its way from another shop', `<div role="list">${line('From [Site 2] · [n] items', 'Transfer T-[0000] · sent [date] by [name]', `${tag('On its way', 'grey')}${button('Receive it')}`)}</div>${note('Scan the items in as you would a delivery. Anything that doesn’t arrive is flagged here and at [Site 2].')}`)}
 </div>`, MANAGER);
 
+// ---------- Decision 10: each category's own details ----------
+const detailFilter = (label, value, unit) => `<label style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 6px 0 12px; border: 1px solid ${value ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}; font-size: 14px; font-weight: 600">${label}<input value="${value}" placeholder="Any" aria-label="${esc(label)}" style="width: 64px; min-height: 36px; box-sizing: border-box; text-align: right; border: 0; background: transparent; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">${unit}</label>`;
+const bearingsBoard = () => listBoard({ rows: ROWS_MEASURE, summary: `${mono('2')} bearings with an outer diameter of 30 mm`, filt: `${filters(1, ['All', 'Bearings', 'Running low', 'Below zero', '[Category]', '[Category]'])}<div role="group" aria-label="Bearings details" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 14px; color: ${C.muted}">Bearings details:</span>${detailFilter('Inner diameter', '', 'mm')}${detailFilter('Outer diameter', '30', 'mm')}${detailFilter('Height', '', 'mm')}</div>` });
+const catRow = (name, details, depth = 0) => `<div role="listitem" style="display: flex; align-items: center; gap: 12px; min-height: 56px; box-sizing: border-box; padding: 8px 0 8px ${depth * 24}px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${depth ? `<span aria-hidden="true" style="color: ${C.muted}">↳ </span>` : ''}${name}</span><span style="font-size: 13px; color: ${C.muted}">${details}</span></span>${linkBtn('Edit', `Edit ${name}`)}</div>`;
+const categoriesOpen = () => `<div role="list">${catRow('Bearings', 'Inner diameter (mm) · Outer diameter (mm) · Height (mm)')}${catRow('Drivetrain', '[Detail] · passed down to its sub-categories')}${catRow('Derailleurs', 'Number of gears (a choice) · and Drivetrain’s details', 1)}${catRow('[Category]', '[Detail] · [Detail]')}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">${button('+ Add a category', { variant: 'default' })}${note('A product shows its category’s details to fill in, and Stock can filter by them.')}</div>`;
+const categoriesBoard = () => settingsPage('stock', 'Stockroom', STOCK_INTRO, stockFolds({ categories: categoriesOpen() }));
+const KINDS = [['A number with a unit', false], ['A choice from a list', true], ['Text', false]];
+const detailEditRow = (name, kind, extra) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 1fr) minmax(0, 1.4fr) 44px'}; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid ${C.border}"><input aria-label="Detail name" value="${name}" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; color: ${C.ink}"><span style="font-size: 14px; color: ${C.muted}">${kind}${extra ? ` · ${extra}` : ''}</span><button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}">${icon('close', 18)}</button></div>`;
+const categoryEdit = () => popup('cat-title', 'Derailleurs', 'A sub-category of Drivetrain', `
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="cat-parent" style="font-size: 14px; font-weight: 600">Inside</label><select id="cat-parent" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>Drivetrain</option></select></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 15px; font-weight: 700">From Drivetrain</span><span style="font-size: 14px; color: ${C.muted}">[Detail] — change it on Drivetrain</span></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px; font-weight: 700">Derailleurs’ own details</span><div role="list">${detailEditRow('Number of gears', 'A choice from a list', '[n], [n], [n]')}</div></div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 14px; font-weight: 700">Add a detail</span><input aria-label="New detail name" placeholder="Name, like “Mount”" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: inherit; font-size: 15px; color: ${C.ink}"><div role="group" aria-label="Kind of answer" style="display: flex; flex-wrap: wrap; gap: 8px">${KINDS.map(([t, on]) => pillBtn(t, on)).join('')}</div><div>${button('Add this detail', { variant: 'default' })}</div></div>
+${note('Every derailleur — already in stock or added later — gets these details to fill in.')}`, `${button('Cancel', { variant: 'default' })}${button('Save')}`, 640);
+
 def('st-list', () => listBoard());
 def('st-product', () => productBoard());
 def('st-product-bike', () => bikeBoard());
@@ -184,7 +200,10 @@ def('tr-send', () => overlay(sitesBoard(), sendPopup()));
 def('tr-incoming', () => incomingBoard());
 def('st-today-below', () => today({ below: true }));
 def('tk-start-below', () => overlay(takeHub(), startPopup(true)));
-def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
+def('st-filter-bearings', () => bearingsBoard());
+def('st-categories', () => categoriesBoard());
+def('st-category-edit', () => overlay(categoriesBoard(), categoryEdit()));
+def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} bearings with an outer diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
 const SIZES = ['desktop'];
@@ -197,6 +216,9 @@ SIZE = 'desktop';
 export const TITLES = {
   'st-list': 'Stockroom › Stock: search, filters, every product',
   'st-search-measure': 'Searching by a measurement: “bearing 30 mm”',
+  'st-filter-bearings': 'Filtering a category by its details: bearings, outer diameter 30 mm',
+  'st-categories': 'Settings › Stockroom › Categories: each with its own details',
+  'st-category-edit': 'Editing a category: Derailleurs, number of gears',
   'st-product': 'A product’s page: summary left, stock history right',
   'st-product-bike': 'A bike’s page: each frame number, in stock or sold',
   'st-product-sizes': 'Sizes and colours: one product, a grid of stock',
@@ -217,7 +239,8 @@ export const TITLES = {
   'tk-applied': 'Count applied: every change recorded',
 };
 export const ROWS = [
-  { label: 'Finding stock', screens: ['st-list', 'st-search-measure'] },
+  { label: 'Finding stock', screens: ['st-list', 'st-search-measure', 'st-filter-bearings'] },
+  { label: 'Categories and their details', screens: ['st-categories', 'st-category-edit'] },
   { label: 'A product', screens: ['st-product', 'st-product-bike', 'st-product-sizes'] },
   { label: 'Changing prices', screens: ['st-list-ticked', 'st-prices'] },
   { label: 'Correcting stock', screens: ['st-adjust', 'st-today-adjust', 'st-setting-adjust', 'st-today-below', 'tk-start-below'] },

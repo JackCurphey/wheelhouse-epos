@@ -140,3 +140,11 @@ the supplier integrations above.
 Settings › Stockroom gains a second section, "Stock adjustments" (show an
 adjustment on Today when it is worth more than £[amount]); the
 `rs-invoice-setting` boards show it folded under "Supplier invoices".
+
+**Later change (1 Oct 2026, Stock take and stock control decision 10):**
+"Add this product" no longer has free-typed measurements with suggested
+names (decision 3; audit M9). Picking the product's category brings up that
+category's own details, set in Settings › Stockroom › Categories — for a
+bearing, inner diameter, outer diameter and height. Settings › Stockroom
+gains a "Categories" section, so the `rs-invoice-setting` boards show it
+folded too.
