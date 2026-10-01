@@ -57,7 +57,38 @@ ${filters(0)}
 <p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">${summary}</p></div>
 ${card(`${isPhone() ? '' : `<div style="padding-top: 12px">${head()}</div>`}<div role="list">${rows.map(row).join('')}</div>`, 'overflow: hidden; flex-shrink: 0')}`);
 
+// ---------- Decision 3: a product's page ----------
+// Left, the summary; right, one history (the customer page's shape).
+const box = (title, body, action = '') => card(`<div style="padding: ${isPhone() ? '14px' : '16px 18px'}; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 10px"><h2 style="margin: 0; font-size: 16px; font-weight: 700">${title}</h2>${action}</div>${body}</div>`, 'flex-shrink: 0');
+const kv = (k, v) => `<div style="display: flex; justify-content: space-between; gap: 12px; min-height: 32px; align-items: center; font-size: 15px"><span style="color: ${C.muted}">${k}</span><span>${v}</span></div>`;
+const linkBtn = (t, label = '') => `<button type="button"${label ? ` aria-label="${esc(label)}"` : ''} style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 4px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: underline">${t}</button>`;
+const back = `<a href="st-list-desktop.dc.html" style="display: inline-flex; align-items: center; gap: 4px; min-height: 44px; align-self: flex-start; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: none">${icon('back', 16)}Stock</a>`;
+const summary = ({ name, codes, price, kind = 'part' }) => `<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
+${card(`<div style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start"><div role="img" aria-label="Photo of ${esc(name)}" style="width: 88px; height: 88px; flex-shrink: 0; border-radius: 8px; border: 1px dashed ${C.border}; background: ${C.mutedBg}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: ${C.muted}">[Photo]</div><div style="display: flex; flex-direction: column; gap: 4px; min-width: 0"><h2 style="margin: 0; font-size: 20px; font-weight: 700">${name}</h2><span style="font-size: 13px; color: ${C.muted}">${codes}</span><div style="display: flex; gap: 8px; padding-top: 6px">${button('Edit', { variant: 'default' })}${button('Adjust stock', { variant: 'default' })}</div></div></div>`, 'flex-shrink: 0')}
+${box('Price', `${kv('Price', mono(price))}${kv('Cost', mono('£[cost]'))}${kv('Margin', '[n]%')}${kv('VAT', '[VAT rate]')}`)}
+${box('In stock', `${kv('Bolton', `${mono('[n]')}`)}${kv('Low-stock level', mono('[n]'))}`)}
+${kind === 'part' ? box('Measurements and specifications', `${kv('[Measurement]', '[value] [unit]')}${kv('[Measurement]', '[value] [unit]')}`, linkBtn('Edit', 'Edit measurements')) : ''}
+</div>`;
+const histRow = (what, detail, change, who) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 1fr) 64px'}; gap: 12px; align-items: center; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${what}</span><span style="font-size: 13px; color: ${C.muted}">${detail} · ${who} · [date and time]</span></span><span style="text-align: right">${mono(change, 'font-size: 15px; font-weight: 700')}</span></div>`;
+const HIST = ['Everything', 'Sold', 'Received', 'Counted and adjusted'];
+const history = (rows) => box('Stock history', `<div role="group" aria-label="Show" style="display: flex; flex-wrap: wrap; gap: 8px">${HIST.map((t, i) => pillBtn(t, i === 0)).join('')}</div><div role="list">${rows.join('')}</div>`);
+const PADS_HIST = [
+  histRow('Used on job WH-1042', 'Maya Patel · Trek Domane AL 3', '−1', 'Alex Morgan'),
+  histRow('Sold', 'Till B1 · sale B1-[0000]', '−1', 'Jo Taylor'),
+  histRow('Received', 'Delivery from [Supplier]', '+[n]', 'Jack Lewis'),
+  histRow('Adjusted', 'Reason: [reason]', '−1', 'Jack Lewis'),
+  histRow('Counted', 'Stock take · counted [n], expected [n]', '±[n]', 'Jo Taylor'),
+];
+const frameRow = (frame, state, sub) => `<div role="listitem" style="display: flex; align-items: center; gap: 12px; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}; ${isPhone() ? 'flex-wrap: wrap' : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0"><span style="font-size: 15px; font-weight: 600">Frame ${mono(frame)}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${state}</div>`;
+const productPage = (two) => stockPage('Product', `${back}<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 380px) minmax(0, 1fr)'}; gap: 14px; align-items: start">${two}</div>`);
+const productBoard = () => productPage(`${summary({ name: PADS, codes: 'B05S-RX · [Category] · [Supplier] · barcode [barcode]', price: '£28.00' })}<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${history(PADS_HIST)}</div>`);
+const bikeBoard = () => productPage(`${summary({ name: TREK, codes: '[Category] · [Supplier] · barcode [barcode]', price: '£[price]', kind: 'bike' })}<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
+${box('Bikes by frame number', `<div role="list">${frameRow('[frame number]', tag('In stock', 'grey'), 'Booked in [date] from [Supplier]')}${frameRow('[frame number]', tag('In stock', 'grey'), 'Booked in [date] from [Supplier]')}${frameRow('[frame number]', tag('Sold'), `Sold to <a href="#" style="color: ${C.ink}">[Customer]</a> · [date] · warranty to [date]`)}</div>`)}
+${history([histRow('Sold', 'Till B1 · frame [frame number] · to [Customer]', '−1', 'Jo Taylor'), histRow('Received', 'Delivery from [Supplier] · 3 frame numbers', '+3', 'Jack Lewis')])}</div>`);
+
 def('st-list', () => listBoard());
+def('st-product', () => productBoard());
+def('st-product-bike', () => bikeBoard());
 def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -71,7 +102,10 @@ SIZE = 'desktop';
 export const TITLES = {
   'st-list': 'Stockroom › Stock: search, filters, every product',
   'st-search-measure': 'Searching by a measurement: “bearing 30 mm”',
+  'st-product': 'A product’s page: summary left, stock history right',
+  'st-product-bike': 'A bike’s page: each frame number, in stock or sold',
 };
 export const ROWS = [
   { label: 'Finding stock', screens: ['st-list', 'st-search-measure'] },
+  { label: 'A product', screens: ['st-product', 'st-product-bike'] },
 ];

@@ -28,3 +28,12 @@ A2, A6 — as few clicks as possible).
    low, Below zero, then categories); each row shows the product, stock,
    price and margin, and opens the product's page. Chosen over categories
    first, and search only. Boards: `st-list`, `st-search-measure`.
+3. **A product's page: a summary on the left, one history on the right**
+   (Jack, 1 Oct: "1"), the same shape as the customer page (Customer
+   service decision 2). Left: photo, name and codes, price, cost, margin
+   and VAT, measurements and specifications, stock at each site, with Edit
+   and Adjust stock. Right: one history of everything that changed its
+   stock, newest first — sold, used on a job, received, counted, adjusted —
+   each with who and why. A bike's page lists its frame numbers first: in
+   stock, or sold and to whom. Chosen over folding sections, and tabs.
+   Boards: `st-product`, `st-product-bike`.
