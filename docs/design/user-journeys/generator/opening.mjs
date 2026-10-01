@@ -169,3 +169,6 @@ export const ROWS = [
   { label: 'Opening the till', screens: ['op-float-check', 'op-float-count', 'op-float-matched', 'op-float-short', 'op-float-over'] },
   { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-seen', 'op-today-waiting', 'op-today-unclosed', 'op-close-yesterday', 'op-today-two', 'op-today-staff', 'op-today-late'] },
 ];
+
+// Multiple sites (journey 19): Today's parts, for the "All shops" Today.
+export { section, list, line, tag, stat, warnLead };

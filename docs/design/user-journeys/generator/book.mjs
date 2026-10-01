@@ -421,3 +421,10 @@ export const detailsRemindAt = (size) => withSize(size, () => { const was = SIZE
 // Account, history and reminders audit L4: the reminder's link, saying why
 // the bike and service are already chosen.
 export const whenFromReminderAt = (size, line) => withSize(size, () => { const was = SIZE; SIZE = size; FID = 0; try { return layout(steps(3, [DONE_SERVICE, DONE_BIKE], `${line}${whenAppt()}`), S({ bike: BIKE, when: DONE_WHEN, limit: true })); } finally { SIZE = was; } });
+
+// Multiple sites decision 5: "Which shop?" comes first when a business has
+// more than one; chosen, it becomes a line with Change above step 1.
+export const shopCardOpen = (body) => `<section aria-labelledby="step-shop" style="flex-shrink: 0">${card(`<div style="padding: ${isPhone() ? 16 : 20}px; display: flex; flex-direction: column; gap: 12px"><h2 id="step-shop" tabindex="-1" style="margin: 0; font-size: 20px; font-weight: 700">Which shop?</h2>${body}</div>`, `border: 2px solid ${C.ink}`)}</section>`;
+export const shopDone = (name) => card(`<div style="padding: 12px 18px; display: flex; align-items: center; gap: 12px"><span aria-hidden="true" style="display: inline-flex; color: ${C.successInk}">${icon('store', 20)}</span><h2 style="margin: 0; display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0; font-size: 15px; font-weight: 400"><span style="font-size: 13px; color: ${C.muted}">Shop</span><span style="font-weight: 600">${name}</span></h2>${link('Change')}</div>`);
+export const shopStepAt = (size, body) => withSize(size, () => { const was = SIZE; SIZE = size; FID = 0; try { return layout(`${shopCardOpen(body)}${stepsLater(1)}`, S({ service: null, price: null }), false, { top: true }); } finally { SIZE = was; } });
+export const serviceAfterShopAt = (size, name) => withSize(size, () => { const was = SIZE; SIZE = size; FID = 0; try { return layout(`${shopDone(name)}${steps(1, [], serviceStep())}`, S(), false, { top: true }); } finally { SIZE = was; } });
