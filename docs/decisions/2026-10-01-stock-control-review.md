@@ -81,3 +81,10 @@ A2, A6 — as few clicks as possible).
    stock at each shop and on its way. Chosen over one-step moves, and
    leaving transfers to journey 19. Boards: `tr-sites`, `tr-send`,
    `tr-incoming`.
+9. **Products below zero go on the manager's Today, with a quick count**
+   (Jack, 1 Oct: "1"). "[n] products below zero" shows on Today with
+   "Count them", which starts a stock take of just those products (decision
+   5's screens); the "Below zero" filter on Stock lists them too. The line
+   goes when none are below zero. Chosen over the filter only, and folding
+   them into the next stock take. Boards: `st-today-below`,
+   `tk-start-below`.

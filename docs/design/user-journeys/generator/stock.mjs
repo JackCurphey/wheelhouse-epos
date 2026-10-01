@@ -108,10 +108,10 @@ const link = (t, label = '') => `<a href="#"${label ? ` aria-label="${esc(label)
 const takeHub = () => takePage('Stock take', `${box('Count stock', `${note('Count the whole shop, a category or an area. Staff join on their phones; the shop stays open.')}<div>${button('Start a count')}</div>`)}
 ${box('Counts in progress', `<div role="list">${line('[Area]', `Started [time] by Jack Lewis · ${mono('[n]')} items counted · Jo Taylor and Alex Morgan counting`, `${tag('Counting', 'grey')}${link('Open', 'Open the count of [Area]')}`)}${line('[Category]', `Started [time] by Jack Lewis · everyone has finished`, `${tag('Ready to check')}${link('Check it', 'Check the count of [Category]')}`)}</div>`)}
 ${box('Finished counts', `<div role="list">${line('Whole shop', `Applied [date] by Jack Lewis · ${mono('[n]')} products changed · £[value] under`, link('Open', 'Open the whole-shop count from [date]'))}</div>`)}`);
-const AREAS_ = [['Whole shop', false], ['A category', false], ['An area', true]];
-const startPopup = () => popup('tk-title', 'Start a count', 'Staff can join it from Stock take on any device', `
-<div role="group" aria-label="What to count" style="display: flex; flex-wrap: wrap; gap: 8px">${AREAS_.map(([t, on]) => pillBtn(t, on)).join('')}</div>
-<div style="display: flex; flex-direction: column; gap: 6px"><label for="tk-area" style="font-size: 14px; font-weight: 600">Which area</label><input id="tk-area" value="[Area]" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div>
+const AREAS_ = (below) => [['Whole shop', false], ['A category', false], ['An area', !below], ['Below zero', below]];
+const startPopup = (below = false) => popup('tk-title', 'Start a count', 'Staff can join it from Stock take on any device', `
+<div role="group" aria-label="What to count" style="display: flex; flex-wrap: wrap; gap: 8px">${AREAS_(below).map(([t, on]) => pillBtn(t, on)).join('')}</div>
+${below ? `<p style="margin: 0; font-size: 15px">${mono('[n]')} products below zero, including [Product with sizes], size M · [Colour 1]</p>` : `<div style="display: flex; flex-direction: column; gap: 6px"><label for="tk-area" style="font-size: 14px; font-weight: 600">Which area</label><input id="tk-area" value="[Area]" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div>`}
 ${note('Counters don’t see what Wheelhouse expects, so they count what’s really there. Sales during the count are allowed for.')}`, `${button('Cancel', { variant: 'default' })}${button('Start the count')}`, 560);
 const qty = (n, label) => `<span role="group" aria-label="${esc(label)}" style="display: inline-flex; align-items: center; border: 1px solid ${C.border}; border-radius: 8px; overflow: hidden; flex-shrink: 0"><button type="button" aria-label="One fewer" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">−</button><input inputmode="numeric" aria-label="How many" value="${n}" style="width: 52px; height: 44px; box-sizing: border-box; border: 0; border-left: 1px solid ${C.border}; border-right: 1px solid ${C.border}; background: #ffffff; text-align: center; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"><button type="button" aria-label="One more" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">+</button></span>`;
 const countBoard = () => takePage('Counting [Area]', `${box('Counting [Area]', `${searchBox().replace(/Name, barcode, supplier code — or a measurement, like “bearing 30 mm”/g, 'Scan each item, or type to find it').replace('Search stock: name, barcode, supplier code or a measurement', 'Scan each item, or type to find it')}
@@ -182,6 +182,8 @@ def('st-prices', () => overlay(tickedBoard(), pricesPopup()));
 def('tr-sites', () => sitesBoard());
 def('tr-send', () => overlay(sitesBoard(), sendPopup()));
 def('tr-incoming', () => incomingBoard());
+def('st-today-below', () => today({ below: true }));
+def('tk-start-below', () => overlay(takeHub(), startPopup(true)));
 def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -206,6 +208,8 @@ export const TITLES = {
   'tr-sites': 'A product’s stock at each shop, and on its way',
   'tr-send': 'Send to another shop',
   'tr-incoming': 'Deliveries and orders: on its way from another shop',
+  'st-today-below': 'Today: products below zero, with Count them',
+  'tk-start-below': 'A quick count of just the products below zero',
   'tk-hub': 'Stockroom › Stock take: counts in progress and finished',
   'tk-start': 'Start a count: the whole shop, a category or an area',
   'tk-count': 'Counting, without the expected number',
@@ -216,7 +220,7 @@ export const ROWS = [
   { label: 'Finding stock', screens: ['st-list', 'st-search-measure'] },
   { label: 'A product', screens: ['st-product', 'st-product-bike', 'st-product-sizes'] },
   { label: 'Changing prices', screens: ['st-list-ticked', 'st-prices'] },
-  { label: 'Correcting stock', screens: ['st-adjust', 'st-today-adjust', 'st-setting-adjust'] },
+  { label: 'Correcting stock', screens: ['st-adjust', 'st-today-adjust', 'st-setting-adjust', 'st-today-below', 'tk-start-below'] },
   { label: 'Between shops', screens: ['tr-sites', 'tr-send', 'tr-incoming'] },
   { label: 'Stock take', screens: ['tk-hub', 'tk-start', 'tk-count', 'tk-diff', 'tk-applied'] },
 ];
