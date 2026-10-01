@@ -36,6 +36,8 @@ export const sd9 = (id, title, role) => ({ id, status: 'designed', title, role, 
 export const sd10 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'opening' });
 // sd13(id, title, role) = an agreed journey 13 screen (receiving.mjs, Soft sand).
 export const sd13 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'receiving' });
+// sd14(id, title, role) = an agreed journey 14 screen (stock.mjs, Soft sand).
+export const sd14 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'stock' });
 
 export const journeys = [
   {
@@ -459,26 +461,54 @@ export const journeys = [
   {
     id: 'j14', name: 'Stock take and stock control', who: 'Staff and Manager',
     rows: [
-      { label: 'Products', screens: [
-        o('stock-list', 'Stock list', 'Staff', 'Every product with price, cost, margin and stock.', ['Search and filter', 'Stock by site'], { today: 'The old “Stockroom” tab has search, filters and bulk label printing.', source: 'INV-01' }),
-        o('stock-product', 'Product page', 'Staff', 'Everything about one product.', ['Photos and description', 'Price, cost, VAT', 'Stock by site', 'Stock history'], { today: 'The old product page has no photo or stock history.', source: 'INV-04' }),
-        g('stock-variants', 'Sizes and colours', 'Manager', 'Set up a product’s sizes and colours, each with its own stock and barcode.', ['Size and colour grid'], { source: 'INV-06 · Release 2 rule 3' }),
-        g('stock-serials', 'Serial numbers', 'Staff', 'Every bike by frame number: in stock, sold, to whom.', ['Search by serial', 'History'], { source: 'INV-07' }),
-        g('stock-pricing', 'Price rules', 'Manager', 'Reprice many products at once.', ['Margin rules', 'Bulk change with preview'], { source: 'INV-11' }),
+      { label: "Finding stock", screens: [
+        sd14("st-list", "Stockroom › Stock: search, filters, tick boxes, every product", "Manager"),
+        sd14("st-list-staff", "Stock as Staff see it: no cost or margin", "Staff"),
+        sd14("st-search-measure", "Searching by a measurement: “bearing 30 mm”", "Manager"),
+        sd14("st-filter-bearings", "A category picked: bearings, its details as columns", "Manager"),
+        sd14("st-filter-derailleurs", "A category picked: derailleurs, number of gears", "Manager"),
+        sd14("st-search-size", "Searching a size: that size and colour", "Manager"),
+        sd14("st-list-none", "Nothing matches the search", "Manager"),
+        sd14("st-list-unknown", "A barcode Wheelhouse doesn’t know", "Manager"),
+        sd14("st-list-new", "A new shop: no products yet", "Manager"),
       ] },
-      { label: 'Across sites', screens: [
-        g('stock-sites', 'Stock by site', 'Manager', 'How many of each product at each shop.', ['Per-site columns'], { source: 'INV-12' }),
-        g('stock-transfer', 'Transfer between sites', 'Staff', 'Send stock from one shop to another.', ['Send', 'In transit', 'Receive'], { source: 'Release 2 piece 2' }),
+      { label: "Categories and their details", screens: [
+        sd14("st-categories", "Settings › Stockroom › Categories: each with its own details", "Manager"),
+        sd14("st-category-edit", "Editing a category: Derailleurs, its choices and units", "Manager"),
       ] },
-      { label: 'Stock take', screens: [
-        g('take-start', 'Start a stock take', 'Manager', 'Choose what to count.', ['Whole shop, a section or a category'], { source: 'INV-05' }),
-        g('take-count', 'Count', 'Staff', 'Scan or type counts, ideally on a phone.', ['Scan to count', 'Running total'], { source: 'INV-05' }),
-        g('take-diff', 'Differences', 'Manager', 'What the count found against what the system expected.', ['Over and under, with value'], { source: 'INV-05 · piece 2 (compare with Citrus Lime)' }),
-        g('take-post', 'Apply the count', 'Manager', 'Correct stock to the count, with a record of the change.', ['Summary', 'Apply'], { source: 'INV-05' }),
+      { label: "A product", screens: [
+        sd14("st-product", "A product’s page: stock first, history with links", "Manager"),
+        sd14("st-product-staff", "A product’s page as Staff see it", "Staff"),
+        sd14("st-product-bike", "A bike’s page: each frame number, in stock or sold", "Manager"),
+        sd14("st-product-sizes", "Sizes and colours: one product, a grid of stock", "Manager"),
       ] },
-      { label: 'Corrections', screens: [
-        o('stock-adjust', 'Adjust stock', 'Staff', 'Correct one product’s stock with a reason.', ['New quantity', 'Reason'], { today: 'The old app has an adjust window.', source: 'INV-03' }),
-        g('stock-check', 'Check these (below zero)', 'Manager', 'Products sold below zero, so someone can count them.', ['One line per product', 'Mark resolved'], { source: 'Offline spec §5 (data built)' }),
+      { label: "Changing prices", screens: [
+        sd14("st-list-ticked", "Ticked products: labels, send, change prices", "Manager"),
+        sd14("st-prices", "Change prices: by a percentage, rounded, with a preview", "Manager"),
+        sd14("st-prices-done", "Prices changed, with Undo", "Manager"),
+      ] },
+      { label: "Correcting stock", screens: [
+        sd14("st-adjust", "Adjust stock: the change or the count after it, and a reason", "Staff"),
+        sd14("st-today-adjust", "Today: a big adjustment, for the manager", "Manager"),
+        sd14("st-setting-adjust", "Settings › Stockroom: when an adjustment shows on Today", "Manager"),
+        sd14("st-today-below", "Today: products below zero, with Count them", "Manager"),
+        sd14("tk-count-below", "Counting the products below zero: still to find", "Staff"),
+      ] },
+      { label: "Between shops", screens: [
+        sd14("tr-sites", "A product’s stock at each shop, and on its way", "Manager"),
+        sd14("tr-send", "Send to another shop", "Staff"),
+        sd14("tr-incoming", "Deliveries and orders: on its way, in and out", "Staff"),
+        sd14("tr-receive", "Receiving a transfer: one short", "Staff"),
+        sd14("tr-today-short", "Today: a transfer arrived short", "Manager"),
+      ] },
+      { label: "Stock take", screens: [
+        sd14("tk-hub", "Stockroom › Stock take: counts in progress and finished", "Manager"),
+        sd14("tk-hub-staff", "Stock take as Staff see it: join a count", "Staff"),
+        sd14("tk-start", "Start a count: an area, with areas used before", "Manager"),
+        sd14("tk-start-category", "Start a count: a category", "Manager"),
+        sd14("tk-count", "Counting, without the expected number; a recount asked", "Staff"),
+        sd14("tk-diff", "Check the count: largest first, recount, not counted", "Manager"),
+        sd14("tk-applied", "Count applied, with Undo", "Manager"),
       ] },
     ],
   },

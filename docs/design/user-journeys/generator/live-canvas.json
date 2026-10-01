@@ -2107,113 +2107,289 @@
       "title": "Not designed · Send the order",
       "is_interactive": true
     },
-    "j14-stock-list.dc.html": {
+    "j14-st-list-desktop.dc.html": {
       "x": 0,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Old app · Stock list",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Stockroom › Stock: search, filters, tick boxes, every product (desktop)",
       "is_interactive": true
     },
-    "j14-stock-product.dc.html": {
-      "x": 1180,
+    "j14-st-list-staff-desktop.dc.html": {
+      "x": 1320,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Old app · Product page",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Stock as Staff see it: no cost or margin (desktop)",
       "is_interactive": true
     },
-    "j14-stock-variants.dc.html": {
-      "x": 2360,
+    "j14-st-search-measure-desktop.dc.html": {
+      "x": 2640,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Sizes and colours",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Searching by a measurement: “bearing 30 mm” (desktop)",
       "is_interactive": true
     },
-    "j14-stock-serials.dc.html": {
-      "x": 3540,
+    "j14-st-filter-bearings-desktop.dc.html": {
+      "x": 3960,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Serial numbers",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A category picked: bearings, its details as columns (desktop)",
       "is_interactive": true
     },
-    "j14-stock-pricing.dc.html": {
-      "x": 4720,
+    "j14-st-filter-derailleurs-desktop.dc.html": {
+      "x": 5280,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Price rules",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A category picked: derailleurs, number of gears (desktop)",
       "is_interactive": true
     },
-    "j14-stock-sites.dc.html": {
-      "x": 6060,
+    "j14-st-search-size-desktop.dc.html": {
+      "x": 6600,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Stock by site",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Searching a size: that size and colour (desktop)",
       "is_interactive": true
     },
-    "j14-stock-transfer.dc.html": {
-      "x": 7240,
+    "j14-st-list-none-desktop.dc.html": {
+      "x": 7920,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Transfer between sites",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Nothing matches the search (desktop)",
       "is_interactive": true
     },
-    "j14-take-start.dc.html": {
-      "x": 8580,
+    "j14-st-list-unknown-desktop.dc.html": {
+      "x": 9240,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Start a stock take",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A barcode Wheelhouse doesn’t know (desktop)",
       "is_interactive": true
     },
-    "j14-take-count.dc.html": {
-      "x": 9760,
+    "j14-st-list-new-desktop.dc.html": {
+      "x": 10560,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Count",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A new shop: no products yet (desktop)",
       "is_interactive": true
     },
-    "j14-take-diff.dc.html": {
-      "x": 10940,
+    "j14-st-categories-desktop.dc.html": {
+      "x": 12040,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Differences",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Stockroom › Categories: each with its own details (desktop)",
       "is_interactive": true
     },
-    "j14-take-post.dc.html": {
-      "x": 12120,
+    "j14-st-category-edit-desktop.dc.html": {
+      "x": 13360,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Apply the count",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Editing a category: Derailleurs, its choices and units (desktop)",
       "is_interactive": true
     },
-    "j14-stock-adjust.dc.html": {
-      "x": 13460,
+    "j14-st-product-desktop.dc.html": {
+      "x": 14840,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Old app · Adjust stock",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A product’s page: stock first, history with links (desktop)",
       "is_interactive": true
     },
-    "j14-stock-check.dc.html": {
-      "x": 14640,
+    "j14-st-product-staff-desktop.dc.html": {
+      "x": 16160,
       "y": 31510,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Check these (below zero)",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A product’s page as Staff see it (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-product-bike-desktop.dc.html": {
+      "x": 17480,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A bike’s page: each frame number, in stock or sold (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-product-sizes-desktop.dc.html": {
+      "x": 18800,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Sizes and colours: one product, a grid of stock (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-list-ticked-desktop.dc.html": {
+      "x": 20280,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Ticked products: labels, send, change prices (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-prices-desktop.dc.html": {
+      "x": 21600,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Change prices: by a percentage, rounded, with a preview (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-prices-done-desktop.dc.html": {
+      "x": 22920,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Prices changed, with Undo (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-adjust-desktop.dc.html": {
+      "x": 24400,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Adjust stock: the change or the count after it, and a reason (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-today-adjust-desktop.dc.html": {
+      "x": 25720,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today: a big adjustment, for the manager (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-setting-adjust-desktop.dc.html": {
+      "x": 27040,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Stockroom: when an adjustment shows on Today (desktop)",
+      "is_interactive": true
+    },
+    "j14-st-today-below-desktop.dc.html": {
+      "x": 28360,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today: products below zero, with Count them (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-count-below-desktop.dc.html": {
+      "x": 29680,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Counting the products below zero: still to find (desktop)",
+      "is_interactive": true
+    },
+    "j14-tr-sites-desktop.dc.html": {
+      "x": 31160,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A product’s stock at each shop, and on its way (desktop)",
+      "is_interactive": true
+    },
+    "j14-tr-send-desktop.dc.html": {
+      "x": 32480,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Send to another shop (desktop)",
+      "is_interactive": true
+    },
+    "j14-tr-incoming-desktop.dc.html": {
+      "x": 33800,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Deliveries and orders: on its way, in and out (desktop)",
+      "is_interactive": true
+    },
+    "j14-tr-receive-desktop.dc.html": {
+      "x": 35120,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Receiving a transfer: one short (desktop)",
+      "is_interactive": true
+    },
+    "j14-tr-today-short-desktop.dc.html": {
+      "x": 36440,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today: a transfer arrived short (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-hub-desktop.dc.html": {
+      "x": 37920,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Stockroom › Stock take: counts in progress and finished (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-hub-staff-desktop.dc.html": {
+      "x": 39240,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Stock take as Staff see it: join a count (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-start-desktop.dc.html": {
+      "x": 40560,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Start a count: an area, with areas used before (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-start-category-desktop.dc.html": {
+      "x": 41880,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Start a count: a category (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-count-desktop.dc.html": {
+      "x": 43200,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Counting, without the expected number; a recount asked (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-diff-desktop.dc.html": {
+      "x": 44520,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Check the count: largest first, recount, not counted (desktop)",
+      "is_interactive": true
+    },
+    "j14-tk-applied-desktop.dc.html": {
+      "x": 45840,
+      "y": 31510,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Count applied, with Undo (desktop)",
       "is_interactive": true
     },
     "j15-cs-list-desktop.dc.html": {
       "x": 0,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Customers: find someone, or add them (desktop)",
@@ -2221,7 +2397,7 @@
     },
     "j15-cs-page-desktop.dc.html": {
       "x": 1320,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · A customer’s page: details, bikes with warranty, one history (desktop)",
@@ -2229,7 +2405,7 @@
     },
     "j15-cs-page-over-desktop.dc.html": {
       "x": 2640,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Over her account limit (desktop)",
@@ -2237,7 +2413,7 @@
     },
     "j15-cs-page-new-desktop.dc.html": {
       "x": 3960,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · A new customer: nothing in the history yet (desktop)",
@@ -2245,7 +2421,7 @@
     },
     "j15-cs-page-off-desktop.dc.html": {
       "x": 5280,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · A shop with customer accounts switched off (Payments › Ways to pay) (desktop)",
@@ -2253,7 +2429,7 @@
     },
     "j15-cs-sale-desktop.dc.html": {
       "x": 6600,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · A sale from her history: refunds start here (desktop)",
@@ -2261,7 +2437,7 @@
     },
     "j15-cs-credit-desktop.dc.html": {
       "x": 7920,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Add or take away store credit, with a reason (desktop)",
@@ -2269,7 +2445,7 @@
     },
     "j15-cs-edit-desktop.dc.html": {
       "x": 9240,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Edit her details (desktop)",
@@ -2277,7 +2453,7 @@
     },
     "j15-cs-add-desktop.dc.html": {
       "x": 10560,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Add a customer: a person (desktop)",
@@ -2285,7 +2461,7 @@
     },
     "j15-cs-add-company-desktop.dc.html": {
       "x": 11880,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Add a customer: a company or club (desktop)",
@@ -2293,7 +2469,7 @@
     },
     "j15-cs-account-desktop.dc.html": {
       "x": 13360,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Her account: balance, her limit, statement, pay it off (desktop)",
@@ -2301,7 +2477,7 @@
     },
     "j15-cs-transfer-desktop.dc.html": {
       "x": 14680,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Record a bank transfer (desktop)",
@@ -2309,7 +2485,7 @@
     },
     "j15-cs-groups-desktop.dc.html": {
       "x": 16160,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Settings › Front desk › Payments › Customer groups (desktop)",
@@ -2317,7 +2493,7 @@
     },
     "j15-cs-privacy-desktop.dc.html": {
       "x": 17640,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Privacy requests: dated, answered within a month (desktop)",
@@ -2325,7 +2501,7 @@
     },
     "j15-cs-privacy-delete-desktop.dc.html": {
       "x": 18960,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Deleting someone’s details: sales stay, without their name (desktop)",
@@ -2333,7 +2509,7 @@
     },
     "j15-cs-privacy-blocked-desktop.dc.html": {
       "x": 20280,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Can’t delete yet: money, credit or a bike still open (desktop)",
@@ -2341,7 +2517,7 @@
     },
     "j15-cs-add-match-desktop.dc.html": {
       "x": 21760,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · Adding someone who’s already here (desktop)",
@@ -2349,7 +2525,7 @@
     },
     "j15-cs-page-dup-desktop.dc.html": {
       "x": 23080,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · A possible duplicate, flagged on the page (desktop)",
@@ -2357,7 +2533,7 @@
     },
     "j15-cs-merge-desktop.dc.html": {
       "x": 24400,
-      "y": 33326,
+      "y": 33366,
       "w": 1280,
       "h": 856,
       "title": "Designed · The same person? Keep or merge (desktop)",
@@ -2365,7 +2541,7 @@
     },
     "j16-eod-entry-desktop.dc.html": {
       "x": 0,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Close the day appears in the till bar after closing time (desktop)",
@@ -2373,7 +2549,7 @@
     },
     "j16-eod-waiting-desktop.dc.html": {
       "x": 1320,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Close the day: a till still has sales waiting (desktop)",
@@ -2381,7 +2557,7 @@
     },
     "j16-eod-attention-desktop.dc.html": {
       "x": 2640,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Close the day: sales that need checking (desktop)",
@@ -2389,7 +2565,7 @@
     },
     "j16-eod-check-desktop.dc.html": {
       "x": 3960,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Checking a flagged sale (desktop)",
@@ -2397,7 +2573,7 @@
     },
     "j16-eod-count-desktop.dc.html": {
       "x": 5280,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Count the cash: note by note (blind) (desktop)",
@@ -2405,7 +2581,7 @@
     },
     "j16-eod-count-shown-desktop.dc.html": {
       "x": 6600,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Count the cash: with the expected amount shown (shop setting) (desktop)",
@@ -2413,7 +2589,7 @@
     },
     "j16-eod-count-result-desktop.dc.html": {
       "x": 7920,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Count the cash: the difference (desktop)",
@@ -2421,7 +2597,7 @@
     },
     "j16-eod-count-exact-desktop.dc.html": {
       "x": 9240,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Count the cash: spot on (desktop)",
@@ -2429,7 +2605,7 @@
     },
     "j16-eod-banking-desktop.dc.html": {
       "x": 10560,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Paid-outs and banking: leave the float, bank the rest (desktop)",
@@ -2437,7 +2613,7 @@
     },
     "j16-eod-banking-none-desktop.dc.html": {
       "x": 11880,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Paid-outs and banking: nothing taken out today (desktop)",
@@ -2445,7 +2621,7 @@
     },
     "j16-eod-paidout-desktop.dc.html": {
       "x": 13200,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Add a paid-out (desktop)",
@@ -2453,7 +2629,7 @@
     },
     "j16-eod-card-desktop.dc.html": {
       "x": 14520,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Card sales don’t match the card machine (desktop)",
@@ -2461,7 +2637,7 @@
     },
     "j16-eod-finish-desktop.dc.html": {
       "x": 15840,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Ready to close the day (desktop)",
@@ -2469,7 +2645,7 @@
     },
     "j16-eod-z-desktop.dc.html": {
       "x": 17160,
-      "y": 35182,
+      "y": 35222,
       "w": 1280,
       "h": 856,
       "title": "Designed · Day closed: the end-of-day report (desktop)",
@@ -2477,7 +2653,7 @@
     },
     "j17-rep-today.dc.html": {
       "x": 0,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Old app · Today",
@@ -2485,7 +2661,7 @@
     },
     "j17-rep-sales.dc.html": {
       "x": 1180,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Sales report",
@@ -2493,7 +2669,7 @@
     },
     "j17-rep-margin.dc.html": {
       "x": 2360,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Margin and stock value",
@@ -2501,7 +2677,7 @@
     },
     "j17-rep-vat.dc.html": {
       "x": 3540,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · VAT summary",
@@ -2509,7 +2685,7 @@
     },
     "j17-rep-workshop.dc.html": {
       "x": 4720,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Workshop report",
@@ -2517,7 +2693,7 @@
     },
     "j17-rep-customers.dc.html": {
       "x": 5900,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Returning customers",
@@ -2525,7 +2701,7 @@
     },
     "j17-acc-connect.dc.html": {
       "x": 7240,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Connect Xero or QuickBooks",
@@ -2533,7 +2709,7 @@
     },
     "j17-acc-map.dc.html": {
       "x": 8420,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Match accounts",
@@ -2541,7 +2717,7 @@
     },
     "j17-acc-log.dc.html": {
       "x": 9600,
-      "y": 37038,
+      "y": 37078,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Sent to accounts",
@@ -2549,7 +2725,7 @@
     },
     "j18-site-settings.dc.html": {
       "x": 0,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Old app · Website settings",
@@ -2557,7 +2733,7 @@
     },
     "j18-site-theme.dc.html": {
       "x": 1180,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Theme editor",
@@ -2565,7 +2741,7 @@
     },
     "j18-site-pages.dc.html": {
       "x": 2360,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Pages",
@@ -2573,7 +2749,7 @@
     },
     "j18-site-publish.dc.html": {
       "x": 3540,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Preview and publish",
@@ -2581,7 +2757,7 @@
     },
     "j18-site-domain.dc.html": {
       "x": 4720,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Own web address",
@@ -2589,7 +2765,7 @@
     },
     "j18-site-shopify.dc.html": {
       "x": 5900,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Old app · Shopify connection (to retire)",
@@ -2597,7 +2773,7 @@
     },
     "j18-site-payments.dc.html": {
       "x": 7240,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Online payments setup",
@@ -2605,7 +2781,7 @@
     },
     "j18-site-orders.dc.html": {
       "x": 8420,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Online orders",
@@ -2613,7 +2789,7 @@
     },
     "j18-site-collect.dc.html": {
       "x": 9600,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Click and collect queue",
@@ -2621,7 +2797,7 @@
     },
     "j18-site-refund.dc.html": {
       "x": 10780,
-      "y": 38854,
+      "y": 38894,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Refund an online order",
@@ -2629,7 +2805,7 @@
     },
     "j19-multi-switch.dc.html": {
       "x": 0,
-      "y": 40670,
+      "y": 40710,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Site switcher",
@@ -2637,7 +2813,7 @@
     },
     "j19-multi-reports.dc.html": {
       "x": 1180,
-      "y": 40670,
+      "y": 40710,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Reports and cash-up by site",
@@ -2645,7 +2821,7 @@
     },
     "j19-multi-tills.dc.html": {
       "x": 2360,
-      "y": 40670,
+      "y": 40710,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Tills across sites",
@@ -2653,7 +2829,7 @@
     },
     "j20-ops-audit.dc.html": {
       "x": 0,
-      "y": 42486,
+      "y": 42526,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Activity log",
@@ -2661,7 +2837,7 @@
     },
     "j20-ops-devices.dc.html": {
       "x": 1180,
-      "y": 42486,
+      "y": 42526,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Signed-in devices",
@@ -2669,7 +2845,7 @@
     },
     "j20-ops-feedback.dc.html": {
       "x": 2360,
-      "y": 42486,
+      "y": 42526,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Send feedback",
@@ -2677,7 +2853,7 @@
     },
     "j21-connect.dc.html": {
       "x": 0,
-      "y": 44302,
+      "y": 44342,
       "w": 1100,
       "h": 816,
       "title": "Designed · Connect the one chosen Lightspeed",
@@ -2685,7 +2861,7 @@
     },
     "j21-connect-proof.dc.html": {
       "x": 1180,
-      "y": 44302,
+      "y": 44342,
       "w": 1100,
       "h": 816,
       "title": "Designed · Verify connector capabilities",
@@ -2693,7 +2869,7 @@
     },
     "j21-pos.dc.html": {
       "x": 2360,
-      "y": 44302,
+      "y": 44342,
       "w": 1100,
       "h": 816,
       "title": "Designed · Handoff agreed work to Lightspeed",
@@ -2701,7 +2877,7 @@
     },
     "j21-pos-done.dc.html": {
       "x": 3540,
-      "y": 44302,
+      "y": 44342,
       "w": 1100,
       "h": 816,
       "title": "Designed · See the linked work order",
@@ -2709,7 +2885,7 @@
     },
     "j21-pos-unknown.dc.html": {
       "x": 4720,
-      "y": 44302,
+      "y": 44342,
       "w": 1100,
       "h": 816,
       "title": "Designed · Uncertain Lightspeed handoff",
@@ -2996,19 +3172,41 @@
     "j13-po-suppliers.dc.html",
     "j13-po-feed.dc.html",
     "j13-po-send.dc.html",
-    "j14-stock-list.dc.html",
-    "j14-stock-product.dc.html",
-    "j14-stock-variants.dc.html",
-    "j14-stock-serials.dc.html",
-    "j14-stock-pricing.dc.html",
-    "j14-stock-sites.dc.html",
-    "j14-stock-transfer.dc.html",
-    "j14-take-start.dc.html",
-    "j14-take-count.dc.html",
-    "j14-take-diff.dc.html",
-    "j14-take-post.dc.html",
-    "j14-stock-adjust.dc.html",
-    "j14-stock-check.dc.html",
+    "j14-st-list-desktop.dc.html",
+    "j14-st-list-staff-desktop.dc.html",
+    "j14-st-search-measure-desktop.dc.html",
+    "j14-st-filter-bearings-desktop.dc.html",
+    "j14-st-filter-derailleurs-desktop.dc.html",
+    "j14-st-search-size-desktop.dc.html",
+    "j14-st-list-none-desktop.dc.html",
+    "j14-st-list-unknown-desktop.dc.html",
+    "j14-st-list-new-desktop.dc.html",
+    "j14-st-categories-desktop.dc.html",
+    "j14-st-category-edit-desktop.dc.html",
+    "j14-st-product-desktop.dc.html",
+    "j14-st-product-staff-desktop.dc.html",
+    "j14-st-product-bike-desktop.dc.html",
+    "j14-st-product-sizes-desktop.dc.html",
+    "j14-st-list-ticked-desktop.dc.html",
+    "j14-st-prices-desktop.dc.html",
+    "j14-st-prices-done-desktop.dc.html",
+    "j14-st-adjust-desktop.dc.html",
+    "j14-st-today-adjust-desktop.dc.html",
+    "j14-st-setting-adjust-desktop.dc.html",
+    "j14-st-today-below-desktop.dc.html",
+    "j14-tk-count-below-desktop.dc.html",
+    "j14-tr-sites-desktop.dc.html",
+    "j14-tr-send-desktop.dc.html",
+    "j14-tr-incoming-desktop.dc.html",
+    "j14-tr-receive-desktop.dc.html",
+    "j14-tr-today-short-desktop.dc.html",
+    "j14-tk-hub-desktop.dc.html",
+    "j14-tk-hub-staff-desktop.dc.html",
+    "j14-tk-start-desktop.dc.html",
+    "j14-tk-start-category-desktop.dc.html",
+    "j14-tk-count-desktop.dc.html",
+    "j14-tk-diff-desktop.dc.html",
+    "j14-tk-applied-desktop.dc.html",
     "j15-cs-list-desktop.dc.html",
     "j15-cs-page-desktop.dc.html",
     "j15-cs-page-over-desktop.dc.html",
@@ -3747,7 +3945,7 @@
     "j14_s70": {
       "x": 0,
       "y": 31270,
-      "text": "Products",
+      "text": "Finding stock",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -3755,9 +3953,9 @@
       "maxH": 150
     },
     "j14_s71": {
-      "x": 6060,
+      "x": 12040,
       "y": 31270,
-      "text": "Across sites",
+      "text": "Categories and their details",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -3765,9 +3963,9 @@
       "maxH": 150
     },
     "j14_s72": {
-      "x": 8580,
+      "x": 14840,
       "y": 31270,
-      "text": "Stock take",
+      "text": "A product",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -3775,9 +3973,39 @@
       "maxH": 150
     },
     "j14_s73": {
-      "x": 13460,
+      "x": 20280,
       "y": 31270,
-      "text": "Corrections",
+      "text": "Changing prices",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j14_s74": {
+      "x": 24400,
+      "y": 31270,
+      "text": "Correcting stock",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j14_s75": {
+      "x": 31160,
+      "y": 31270,
+      "text": "Between shops",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j14_s76": {
+      "x": 37920,
+      "y": 31270,
+      "text": "Stock take",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -3789,12 +4017,12 @@
       "y": 30950,
       "text": "14 · Stock take and stock control — Staff and Manager",
       "kind": "title1",
-      "maxW": 15740,
+      "maxW": 47080,
       "w": 240
     },
-    "j15_s75": {
+    "j15_s78": {
       "x": 0,
-      "y": 33086,
+      "y": 33126,
       "text": "Customers and the customer page",
       "w": 520,
       "size": "l",
@@ -3802,9 +4030,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s76": {
+    "j15_s79": {
       "x": 13360,
-      "y": 33086,
+      "y": 33126,
       "text": "Accounts (pay later)",
       "w": 520,
       "size": "l",
@@ -3812,9 +4040,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s77": {
+    "j15_s80": {
       "x": 16160,
-      "y": 33086,
+      "y": 33126,
       "text": "Customer groups",
       "w": 520,
       "size": "l",
@@ -3822,9 +4050,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s78": {
+    "j15_s81": {
       "x": 17640,
-      "y": 33086,
+      "y": 33126,
       "text": "Privacy requests",
       "w": 520,
       "size": "l",
@@ -3832,9 +4060,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j15_s79": {
+    "j15_s82": {
       "x": 21760,
-      "y": 33086,
+      "y": 33126,
       "text": "Possible duplicates",
       "w": 520,
       "size": "l",
@@ -3844,15 +4072,15 @@
     },
     "j15_title": {
       "x": 0,
-      "y": 32766,
+      "y": 32806,
       "text": "15 · Customer service — Staff and Manager",
       "kind": "title1",
       "maxW": 25640,
       "w": 240
     },
-    "j16_s81": {
+    "j16_s84": {
       "x": 0,
-      "y": 34942,
+      "y": 34982,
       "text": "Close the day",
       "w": 520,
       "size": "l",
@@ -3862,15 +4090,15 @@
     },
     "j16_title": {
       "x": 0,
-      "y": 34622,
+      "y": 34662,
       "text": "16 · End-of-day cash-up — Staff and Manager",
       "kind": "title1",
       "maxW": 18400,
       "w": 240
     },
-    "j17_s83": {
+    "j17_s86": {
       "x": 0,
-      "y": 36798,
+      "y": 36838,
       "text": "Reports",
       "w": 520,
       "size": "l",
@@ -3878,9 +4106,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j17_s84": {
+    "j17_s87": {
       "x": 7240,
-      "y": 36798,
+      "y": 36838,
       "text": "Accounts software",
       "w": 520,
       "size": "l",
@@ -3890,15 +4118,15 @@
     },
     "j17_title": {
       "x": 0,
-      "y": 36478,
+      "y": 36518,
       "text": "17 · Reports and accounts — Manager and Owner",
       "kind": "title1",
       "maxW": 10700,
       "w": 240
     },
-    "j18_s86": {
+    "j18_s89": {
       "x": 0,
-      "y": 38614,
+      "y": 38654,
       "text": "Design the website",
       "w": 520,
       "size": "l",
@@ -3906,9 +4134,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j18_s87": {
+    "j18_s90": {
       "x": 7240,
-      "y": 38614,
+      "y": 38654,
       "text": "Online orders",
       "w": 520,
       "size": "l",
@@ -3918,15 +4146,15 @@
     },
     "j18_title": {
       "x": 0,
-      "y": 38294,
+      "y": 38334,
       "text": "18 · Website management — Manager",
       "kind": "title1",
       "maxW": 11880,
       "w": 240
     },
-    "j19_s89": {
+    "j19_s92": {
       "x": 0,
-      "y": 40430,
+      "y": 40470,
       "text": "Across sites",
       "w": 520,
       "size": "l",
@@ -3936,15 +4164,15 @@
     },
     "j19_title": {
       "x": 0,
-      "y": 40110,
+      "y": 40150,
       "text": "19 · Multiple sites — Owner and Manager",
       "kind": "title1",
       "maxW": 3460,
       "w": 240
     },
-    "j20_s91": {
+    "j20_s94": {
       "x": 0,
-      "y": 42246,
+      "y": 42286,
       "text": "Oversight",
       "w": 520,
       "size": "l",
@@ -3954,15 +4182,15 @@
     },
     "j20_title": {
       "x": 0,
-      "y": 41926,
+      "y": 41966,
       "text": "20 · Management oversight — Owner",
       "kind": "title1",
       "maxW": 3460,
       "w": 240
     },
-    "j21_s93": {
+    "j21_s96": {
       "x": 0,
-      "y": 44062,
+      "y": 44102,
       "text": "Connection and handoff",
       "w": 520,
       "size": "l",
@@ -3972,7 +4200,7 @@
     },
     "j21_title": {
       "x": 0,
-      "y": 43742,
+      "y": 43782,
       "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
       "kind": "title1",
       "maxW": 5820,

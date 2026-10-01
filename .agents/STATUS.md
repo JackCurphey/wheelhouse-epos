@@ -14,11 +14,33 @@ Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11), End-of-day
 cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 15), Opening the shop (journey 10), Moving from Citrus Lime (journey 9) and
-Collect the bike and pay (journey 5) and Receiving stock and purchase orders
-(journey 13) are approved and in the big canvas; the next journey is
+Collect the bike and pay (journey 5), Receiving stock and purchase orders
+(journey 13) and Stock take and stock control (journey 14) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (340 files of
+board linking to its journey's own canvas for tablet and phone (362 files of
 the 512 a canvas can hold).
+
+**Journey 14, Stock take and stock control (1 Oct):** approved at desktop,
+tablet and phone and copied into the big canvas; 12 decisions in
+`docs/decisions/2026-10-01-stock-control-review.md` — Stock opens on one
+search (name, barcode, supplier code or a measurement, "bearing 30 mm") with
+filter pills and tick boxes; a product's page leads with stock, then
+details, then price and cost, with one linked history; sizes and colours as
+one product with a grid; bikes by frame number; prices changed in bulk with
+a preview and Undo; stock between shops sent, then received, a short
+transfer flagged on Today; blind stock takes a section at a time, with
+recounts and "Count them as none"; anyone adjusts stock with a reason, big
+adjustments on the manager's Today (amount in Settings › Stockroom);
+products below zero on Today with "Count them". Decision 10: **each category
+has its own details** (Bearings: inner and outer diameter, height;
+Derailleurs: number of gears), set in Settings › Stockroom › Categories,
+inherited by sub-categories, filling in when a product is added and becoming
+filters — replaces journey 13's free-typed measurements. Staff see no cost
+or margin and can't change prices or products. UI audit
+`stock-ui-audit.md`. 35 screens, 105 boards. Own canvas:
+https://claude.ai/artifact/7oZPudk8GGxqY9L1iXBvbV . Generator: `stock.mjs` +
+`build-stock.mjs --theme sand`. Parked: a shared tag helper for journeys 13
+and 14; radio-button semantics design-wide.
 
 **Journey 13, Receiving stock and purchase orders (30 Sep–1 Oct):**
 approved at desktop, tablet and phone and copied into the big canvas; 11
