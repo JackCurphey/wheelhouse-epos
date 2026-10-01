@@ -461,4 +461,4 @@ export const ROWS = [
 ];
 
 // For journey 5's "Bike still waiting" wording board.
-export { chan, wordingBox, bubble, msgPage, msgListOpen, servicesOpen, editBtn, personDialog, staffPage, peopleOpen };
+export { chan, wordingBox, bubble, msgPage, msgListOpen, servicesOpen, editBtn, personDialog, staffPage, peopleOpen, msgRow };

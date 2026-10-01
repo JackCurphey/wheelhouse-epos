@@ -126,13 +126,17 @@ export function button(text, { variant = 'accent', block = false, size = 'defaul
 }
 
 // Field = Label + Input, as registry/primitives/label.tsx + input.tsx
-export function field(label, { value = '', placeholder = '', type = 'text', hint = '', error = '', id } = {}) {
+// autocomplete and linked (Buy online audit M10, opt-in for now): autofill,
+// and the hint and error tied to the box for screen readers.
+export function field(label, { value = '', placeholder = '', type = 'text', hint = '', error = '', id, autocomplete = '', linked = false } = {}) {
   const fid = id || 'f-' + label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const desc = linked ? [hint && `${fid}-hint`, error && `${fid}-err`].filter(Boolean).join(' ') : '';
+  const extra = `${autocomplete ? ` autocomplete="${autocomplete}"` : ''}${desc ? ` aria-describedby="${desc}"` : ''}${linked && error ? ' aria-invalid="true"' : ''}`;
   return `<div style="display: flex; flex-direction: column; gap: 6px">
 <label for="${fid}" style="font-size: 14px; font-weight: 600; color: ${C.ink}">${esc(label)}</label>
-<input id="${fid}" type="${type}" value="${esc(value)}" placeholder="${esc(placeholder)}" style="width: 100%; box-sizing: border-box; border-radius: 6px; border: 1px solid ${error ? C.danger : C.input}; background: ${C.panel}; padding: 11px 10px; min-height: 44px; font-size: 14px; font-family: inherit; color: ${C.ink}">
-${hint ? `<div style="font-size: 13px; color: ${C.muted}; line-height: 1.4">${esc(hint)}</div>` : ''}
-${error ? `<div style="font-size: 13px; color: ${C.danger}; line-height: 1.4">${esc(error)}</div>` : ''}
+<input id="${fid}" type="${type}" value="${esc(value)}" placeholder="${esc(placeholder)}"${extra} style="width: 100%; box-sizing: border-box; border-radius: 6px; border: 1px solid ${error ? C.danger : C.input}; background: ${C.panel}; padding: 11px 10px; min-height: 44px; font-size: 14px; font-family: inherit; color: ${C.ink}">
+${hint ? `<div${linked ? ` id="${fid}-hint"` : ''} style="font-size: 13px; color: ${C.muted}; line-height: 1.4">${esc(hint)}</div>` : ''}
+${error ? `<div${linked ? ` id="${fid}-err"` : ''} style="font-size: 13px; color: ${C.danger}; line-height: 1.4">${esc(error)}</div>` : ''}
 </div>`;
 }
 

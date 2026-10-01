@@ -103,3 +103,31 @@ and phone. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    shop to see when it's ready" before one is chosen); checkout confirms it.
    With one shop the shop is named and there is nothing to choose. Chosen
    over choosing at checkout, and choosing item by item.
+9. **UI audit: every recommendation taken** (Jack, 1 Oct: "yeah go ahead
+   with them all"). From `design/user-journeys/online-ui-audit.md`:
+   **stock is checked when the basket opens, at checkout and just before
+   payment** — a line that changed says so and nothing is taken for what
+   isn't there (H1); paying, the bank's check and "we couldn't confirm your
+   payment — don't pay again" are drawn, and gift cards and credit are only
+   spent when the order is paid (H2); every order shows **how it was paid,
+   and refunds go back the same way** (H3); "Mark ready" holds the email for
+   a few seconds with Undo, after which "Not ready after all" offers a sorry
+   email (H4); **Ready orders have "Hand over"**, opening the till's
+   hand-over (H5); field errors, "Change email" and "Email didn't arrive"
+   (H6); the other shop's "To send to Bolton", "Arrived", "Ordered · due
+   [date]" (M1); "Cancel and refund" moves into the order with a confirm and
+   a reason (M2); the shop chooser has nothing chosen and one tap saves it,
+   as booking's "Which shop?" (M3); Collected, cancelled by the shop, and a
+   cancel that arrives just after "Mark ready" (M4); **five online-order
+   emails in Settings › Messages**, the "ready" email drawn (M5); "we'll
+   email you a code" (M6); gift card code errors, money left on a gift card,
+   and credit covering the whole order (M7); the places that assume
+   collection are listed for when delivery comes (M8): the header's
+   "Collecting from", availability lines, the "Collect from" summary row,
+   the confirmation's steps, the order page's "Collect from" panel and the
+   staff group "Ready to collect"; out of stock here but in stock at the
+   other shop says so (M9); "Uncollected" on Today works as for bikes, with
+   "Contacted" (M12); a "Buying online" on/off at the top of the settings,
+   the "any of our shops" choice hidden for one-shop businesses (M13). Also
+   the accessibility pass (M10), the sidebar count and "orders" in search
+   (M11), and L1–L5.
