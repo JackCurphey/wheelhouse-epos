@@ -66,6 +66,14 @@ collect and pay) and different kinds of people, looking for gaps at the
 hand-offs. Testing with real customers on a clickable prototype is the step
 after that.
 
+**Noted for later: customer orders** (Jack, 1 Oct: "one thing as well i dont
+think we have solved is how to do customer orders, say we just order in a part
+for a customer for them to collect, not something we have to figure out now,
+just at some point"). A part ordered in for a customer to collect, outside a
+workshop job, isn't designed anywhere yet (checked journeys, decisions and
+specs on 1 Oct). It touches journey 13 (ordering and receiving), journey 11
+(the till and any deposit) and journey 2 (click and collect).
+
 ## Rules that apply to every journey (Jack's decisions)
 
 - **Look: "Soft sand, dark rail"**, sans-serif only — Public Sans, DM Mono for
