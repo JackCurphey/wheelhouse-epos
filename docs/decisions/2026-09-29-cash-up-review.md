@@ -50,3 +50,7 @@ from the machine itself rather than being typed in.
    tablet and phone boards live. Frees about 280 files under the canvas's
    512-file limit. Chosen over splitting the big canvas in two and a mixed
    rule.
+
+**Later change (1 Oct 2026, Reports and accounts decision 8):** closed days are
+listed, opened and reopened from Reports › Takings and cash-ups, and a reopened
+day is called out on every report it leaves out. No board here changed.

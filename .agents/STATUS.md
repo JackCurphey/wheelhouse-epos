@@ -17,11 +17,26 @@ cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 Collect the bike and pay (journey 5), Receiving stock and purchase orders
 (journey 13), Stock take and stock control (journey 14), Book a repair
 (journey 3), Drop off and approve the quote (journey 4), Account, history
-and reminders (journey 7) and Multiple sites (journey 19) are approved and in
+and reminders (journey 7), Multiple sites (journey 19) and Reports and
+accounts (journey 17) are approved and in
 the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (452 files of
+board linking to its journey's own canvas for tablet and phone (478 files of
 the 512 a canvas can hold).
+
+**Journey 17, Reports and accounts (1 Oct):** approved at desktop, tablet
+and phone and copied into the big canvas; 9 decisions in
+`docs/decisions/2026-10-01-reports-and-accounts-review.md` — six ready-made
+reports (Sales, Takings and cash-ups, Workshop, Discounts and refunds, Margin
+and stock value, VAT), each with "Change what's shown" and "Save as my
+report" (just me, or shared with managers); a graph above every report but
+VAT, the table always below, graphs switchable off in Your settings; VAT for
+the shop's VAT quarter, not filed from Wheelhouse; Xero or QuickBooks gets
+one summary per shop per closed day; two switches on a person, "Can see
+reports" and "Can see costs and margin" (carried into every person pop-up).
+UI audit `reports-ui-audit.md`, every recommendation taken. 34 screens, 103
+boards. Own canvas: https://claude.ai/artifact/NXHvoKd8wY8wpAhBYsPRUt .
+Generator: `reports.mjs` + `build-reports.mjs --theme sand`.
 
 **Journey 19, Multiple sites (1 Oct):** approved at desktop, tablet and phone
 and copied into the big canvas; 12 decisions in

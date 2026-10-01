@@ -202,7 +202,7 @@ const workshopBlock = (on, siteDays = '') => `<div style="display: flex; flex-di
 // pill; the switches as toggle pills; the PIN line (signing in 6).
 // Multiple sites decision 4 (audit M7): Works at, and days per shop.
 // Reports and accounts decision 5: "Can see costs and margin" after "Can see reports".
-function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '', costs = false, on = [], hints = {} } = {}) {
+function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '', costs = true, on = [], hints = {} } = {}) {
   // Staff already have the till by their role, so that one says Included.
   const inc = (s) => s === 'Can use the till';
   const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${hints[s] ? `<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 14px; font-weight: 600">${s}</span><span style="font-size: 12px; color: ${C.muted}; line-height: 1.35">${hints[s]}</span></span>` : `<span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>`}${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all || on.includes(s) ? 'On' : 'Off', all || on.includes(s))}</div>`;

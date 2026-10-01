@@ -40,30 +40,28 @@ holding desktop, tablet and phone:
 | 4 Drop off and approve the quote | https://claude.ai/artifact/XWm8FSLNSWC4de3vcCAKWC | `docs/decisions/2026-10-01-drop-off-and-quote-review.md` (8) |
 | 7 Account, history and reminders | https://claude.ai/artifact/Hoz1q28Frh9M7hNgV2bo3b | `docs/decisions/2026-10-01-account-and-reminders-review.md` (9) |
 | 19 Multiple sites | https://claude.ai/artifact/LXYUo9UQymsN2VyNSynAcB | `docs/decisions/2026-10-01-multiple-sites-review.md` (12) |
+| 17 Reports and accounts | https://claude.ai/artifact/NXHvoKd8wY8wpAhBYsPRUt | `docs/decisions/2026-10-01-reports-and-accounts-review.md` (9) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md`,
 `setup-ui-audit.md`, `customer-ui-audit.md`, `opening-ui-audit.md`,
 `moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md`,
 `stock-ui-audit.md`, `book-ui-audit.md`, `quote-ui-audit.md`,
-`account-ui-audit.md`, `sites-ui-audit.md` (this folder).
+`account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md` (this folder).
 
-Overview count (each screen once): 451 screens — 408 designed, 0 built, 6
-old app only, 37 not designed yet, 0 for review (1 Oct: journey 19 in; its
-site switcher and tills gaps replaced by its 22 screens, "Reports and cash-up
-by site" kept as a gap for journey 17. Journey 19 also changed every staff
-board: the shop switcher is named "Shop: Bolton. Choose a shop", and on
-tablet and phone the shop's name sits under each page title (journey 19
-decisions 9, 11); the diary canvas's live copy was an older build (no header
-search on phone, older mechanic footer) and was brought up to date).
+Overview count (each screen once): 476 screens — 442 designed, 0 built, 5
+old app only, 29 not designed yet, 0 for review; 478 files of the 512 a
+canvas can hold (1 Oct: journey 17 in; its 8 placeholders replaced by its 34
+screens, "Returning customers" kept as still to design, and journey 19's
+"Reports and cash-up by site" gap removed — journey 17 draws All shops
+versions. "Can see costs and margin" carried into every person pop-up).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
 placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
-collect, 6 Cycle to Work, 17 Reports and accounts, 18 Website management,
+collect, 6 Cycle to Work, 18 Website management,
 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **17 Reports and
-accounts** (reports and cash-up by shop, "All shops" — journey 19 decisions 1,
-8), **2 Buy online / click and collect** (journey 7's account history lists
+Strong candidates, because finished journeys lean on them: **2 Buy online /
+click and collect** (journey 7's account history lists
 online orders; customer orders, below, touch it), **20 Management
 oversight**.
 
@@ -224,6 +222,13 @@ big changes (changed boards with `canvas.json` first, removals second).
   shows Bolton's own mechanic and storage slot (the receiving shop sets
   those); the second shop has no real name, address or code ("[Second
   site]") — Jack can supply them.
+- Journey 17 left for later: the VAT layout and the Xero account mapping are
+  for the shop's accountant to confirm; the owner's Discounts and refunds
+  table scrolls sideways on a phone (five columns); "Returning customers"
+  (REP-10) is still to design; Opening the shop's own Today boards don't
+  show the Xero line — journey 17 draws it; "Show graphs in reports" is in
+  Your settings only for people who can see reports, so journey A's board
+  (Jo Taylor, Staff) doesn't show it.
 - Maya Patel's example email differs: `maya@example.test` (diary.mjs,
   job-page.mjs, customer.mjs) vs `maya@example.com` (till.mjs, signin.mjs).
   Pick one and republish the approved boards that show it.

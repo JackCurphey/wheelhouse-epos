@@ -46,6 +46,8 @@ export const sd4 = (id, title, role) => ({ id, status: 'designed', title, role, 
 export const sd7 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'account' });
 // sd19(id, title, role) = an agreed journey 19 screen (sites.mjs, Soft sand).
 export const sd19 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'sites' });
+// sd17(id, title, role) = an agreed journey 17 screen (reports.mjs, Soft sand).
+export const sd17 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'reports' });
 
 export const journeys = [
   {
@@ -688,20 +690,56 @@ export const journeys = [
     ],
   },
   {
-    id: 'j17', name: 'Reports and accounts', who: 'Manager and Owner',
+    id: 'j17', name: 'Reports and accounts', who: 'Owner, Manager and Staff',
     rows: [
-      { label: 'Reports', screens: [
-        o('rep-today', 'Today', 'Manager', 'How today is going.', ['Takings', 'Low stock', 'Top sellers', 'Workshop today'], { today: 'The old dashboard shows takings, low stock and top sellers, and nothing from the workshop.', source: 'REP-01..03' }),
-        g('rep-sales', 'Sales report', 'Manager', 'Sales for any date range, by site, category or staff.', ['Date range', 'Breakdowns', 'Export'], { source: 'REP-04' }),
-        g('rep-margin', 'Margin and stock value', 'Manager', 'Profit and what stock is worth.', ['Margin by category', 'Stock value'], { source: 'Release 2 piece 6' }),
-        g('rep-vat', 'VAT summary', 'Owner', 'Figures for the VAT return.', ['Output VAT by rate'], { source: 'REP-05' }),
-        g('rep-workshop', 'Workshop report', 'Manager', 'Jobs done, time, and how full the workshop was.', ['Throughput', 'Utilisation'], { source: 'REP-06..08' }),
-        g('rep-customers', 'Returning customers', 'Manager', 'How many customers come back.', ['Retention over time'], { source: 'REP-10' }),
+      { label: "Reports", screens: [
+        sd17("rp-home", "Reports: the ready-made reports, and your own", "Owner"),
+        sd17("rp-home-staff", "Reports for Staff with “Can see reports” (one shop, no costs)", "Staff"),
+        sd17("rp-report-menu", "A saved report’s menu: rename, share, delete", "Owner"),
+        sd17("rp-report-deleted", "A saved report deleted, with Undo", "Owner"),
+        sd17("rp-your-settings", "Your settings › Accessibility (scrolled down): show graphs in reports", "Owner"),
       ] },
-      { label: 'Accounts software', screens: [
-        g('acc-connect', 'Connect Xero or QuickBooks', 'Owner', 'Link the shop’s accounts software.', ['Choose Xero or QuickBooks', 'Connect'], { source: 'Release 2 piece 6' }),
-        g('acc-map', 'Match accounts', 'Owner', 'Which account each kind of sale and payment goes to.', ['Account for each category and payment type'], { source: 'Release 2 piece 6' }),
-        g('acc-log', 'Sent to accounts', 'Owner', 'What was sent and anything that failed.', ['Daily postings', 'Errors to fix'], { source: 'Release 2 piece 6' }),
+      { label: "Sales", screens: [
+        sd17("rp-sales", "Sales: this week so far, against the same days last week", "Owner"),
+        sd17("rp-sales-all", "Sales for all shops: shop by shop", "Owner"),
+        sd17("rp-sales-year", "Sales over 12 months: a line, against the year before", "Owner"),
+        sd17("rp-sales-empty", "Nothing sold yet, and nothing to compare with", "Owner"),
+        sd17("rp-pick-dates", "Pick dates", "Owner"),
+      ] },
+      { label: "Your own reports", screens: [
+        sd17("rp-change", "Change what’s shown: choices that don’t fit are greyed, with why", "Owner"),
+        sd17("rp-changed", "The changed report, with Save as my report", "Owner"),
+        sd17("rp-save", "Save as my report: Just me to start", "Owner"),
+        sd17("rp-save-taken", "A name you’ve already used", "Owner"),
+      ] },
+      { label: "Takings and cash-ups", screens: [
+        sd17("rp-takings", "Takings and cash-ups: each closed day opens from its row", "Owner"),
+        sd17("rp-takings-all", "Takings and cash-ups for all shops", "Owner"),
+        sd17("rp-day", "A closed day’s end-of-day report", "Owner"),
+        sd17("rp-reopen", "Reopen a closed day: a reason first", "Owner"),
+        sd17("rp-takings-reopened", "A reopened day, left out and said so", "Owner"),
+      ] },
+      { label: "VAT, margin, workshop and discounts", screens: [
+        sd17("rp-vat", "VAT for your VAT quarter, against the quarter before", "Owner"),
+        sd17("rp-vat-first", "When does your VAT quarter start? (asked once)", "Owner"),
+        sd17("rp-vat-all", "VAT for all shops", "Owner"),
+        sd17("rp-margin", "Margin and stock value", "Owner"),
+        sd17("rp-workshop", "Workshop: jobs, takings, how full, turnaround, quotes", "Owner"),
+        sd17("rp-discounts", "Discounts and refunds, with reasons and who gave them", "Owner"),
+        sd17("rp-discounts-staff", "Discounts and refunds as Staff see them (without who)", "Staff"),
+      ] },
+      { label: "Accounts software and who sees what", screens: [
+        sd17("rp-accounts-connect", "Settings › Your data › Accounts software: connect", "Owner"),
+        sd17("rp-accounts-map", "Which Xero account each line goes to", "Owner"),
+        sd17("rp-accounts-missing", "A category with no Xero account", "Owner"),
+        sd17("rp-accounts-log", "What was sent: sent, not sent, waiting, not closed yet", "Owner"),
+        sd17("rp-accounts-lost", "Xero disconnected: days wait to be sent", "Owner"),
+        sd17("rp-accounts-disconnect", "Disconnect Xero", "Owner"),
+        sd17("rp-today-accounts", "Today: Wednesday didn’t go to Xero", "Owner"),
+        sd17("rp-person", "A person: “Can see reports” on, “Can see costs and margin” off", "Owner"),
+      ] },
+      { label: 'Still to design', screens: [
+        g('rep-customers', 'Returning customers', 'Manager', 'How many customers come back.', ['Retention over time'], { source: 'REP-10' }),
       ] },
     ],
   },
@@ -758,9 +796,6 @@ export const journeys = [
         sd19("ms-add-shop-error", "A code another shop already uses", "Owner"),
         sd19("ms-today-new", "Today at a new shop: what to do next", "Owner"),
         sd19("ms-tills", "Settings › Till › Tills: every till, by shop", "Owner"),
-      ] },
-      { label: 'Drawn with Reports and accounts (journey 17)', screens: [
-        g('multi-reports', 'Reports and cash-up by site', 'Manager', 'Every report and cash-up for one site or all of them.', ['Site filter'], { source: 'ACC-09' }),
       ] },
     ],
   },

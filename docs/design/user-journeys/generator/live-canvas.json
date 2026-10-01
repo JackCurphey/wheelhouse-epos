@@ -3219,81 +3219,289 @@
       "title": "Designed · Day closed: the end-of-day report (desktop)",
       "is_interactive": true
     },
-    "j17-rep-today.dc.html": {
+    "j17-rp-home-desktop.dc.html": {
       "x": 0,
       "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Old app · Today",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Reports: the ready-made reports, and your own (desktop)",
       "is_interactive": true
     },
-    "j17-rep-sales.dc.html": {
-      "x": 1180,
+    "j17-rp-home-staff-desktop.dc.html": {
+      "x": 1320,
       "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Sales report",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Reports for Staff with “Can see reports” (one shop, no costs) (desktop)",
       "is_interactive": true
     },
-    "j17-rep-margin.dc.html": {
-      "x": 2360,
+    "j17-rp-report-menu-desktop.dc.html": {
+      "x": 2640,
       "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Margin and stock value",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A saved report’s menu: rename, share, delete (desktop)",
       "is_interactive": true
     },
-    "j17-rep-vat.dc.html": {
-      "x": 3540,
+    "j17-rp-report-deleted-desktop.dc.html": {
+      "x": 3960,
       "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · VAT summary",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A saved report deleted, with Undo (desktop)",
       "is_interactive": true
     },
-    "j17-rep-workshop.dc.html": {
-      "x": 4720,
+    "j17-rp-your-settings-desktop.dc.html": {
+      "x": 5280,
       "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Workshop report",
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Your settings › Accessibility (scrolled down): show graphs in reports (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-sales-desktop.dc.html": {
+      "x": 6760,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Sales: this week so far, against the same days last week (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-sales-all-desktop.dc.html": {
+      "x": 8080,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Sales for all shops: shop by shop (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-sales-year-desktop.dc.html": {
+      "x": 9400,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Sales over 12 months: a line, against the year before (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-sales-empty-desktop.dc.html": {
+      "x": 10720,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Nothing sold yet, and nothing to compare with (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-pick-dates-desktop.dc.html": {
+      "x": 12040,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Pick dates (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-change-desktop.dc.html": {
+      "x": 13520,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Change what’s shown: choices that don’t fit are greyed, with why (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-changed-desktop.dc.html": {
+      "x": 14840,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · The changed report, with Save as my report (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-save-desktop.dc.html": {
+      "x": 16160,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Save as my report: Just me to start (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-save-taken-desktop.dc.html": {
+      "x": 17480,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A name you’ve already used (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-takings-desktop.dc.html": {
+      "x": 18960,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Takings and cash-ups: each closed day opens from its row (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-takings-all-desktop.dc.html": {
+      "x": 20280,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Takings and cash-ups for all shops (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-day-desktop.dc.html": {
+      "x": 21600,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A closed day’s end-of-day report (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-reopen-desktop.dc.html": {
+      "x": 22920,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Reopen a closed day: a reason first (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-takings-reopened-desktop.dc.html": {
+      "x": 24240,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A reopened day, left out and said so (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-vat-desktop.dc.html": {
+      "x": 25720,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · VAT for your VAT quarter, against the quarter before (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-vat-first-desktop.dc.html": {
+      "x": 27040,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · When does your VAT quarter start? (asked once) (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-vat-all-desktop.dc.html": {
+      "x": 28360,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · VAT for all shops (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-margin-desktop.dc.html": {
+      "x": 29680,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Margin and stock value (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-workshop-desktop.dc.html": {
+      "x": 31000,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Workshop: jobs, takings, how full, turnaround, quotes (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-discounts-desktop.dc.html": {
+      "x": 32320,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Discounts and refunds, with reasons and who gave them (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-discounts-staff-desktop.dc.html": {
+      "x": 33640,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Discounts and refunds as Staff see them (without who) (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-accounts-connect-desktop.dc.html": {
+      "x": 35120,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Settings › Your data › Accounts software: connect (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-accounts-map-desktop.dc.html": {
+      "x": 36440,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Which Xero account each line goes to (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-accounts-missing-desktop.dc.html": {
+      "x": 37760,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A category with no Xero account (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-accounts-log-desktop.dc.html": {
+      "x": 39080,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · What was sent: sent, not sent, waiting, not closed yet (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-accounts-lost-desktop.dc.html": {
+      "x": 40400,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Xero disconnected: days wait to be sent (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-accounts-disconnect-desktop.dc.html": {
+      "x": 41720,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Disconnect Xero (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-today-accounts-desktop.dc.html": {
+      "x": 43040,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · Today: Wednesday didn’t go to Xero (desktop)",
+      "is_interactive": true
+    },
+    "j17-rp-person-desktop.dc.html": {
+      "x": 44360,
+      "y": 37034,
+      "w": 1280,
+      "h": 856,
+      "title": "Designed · A person: “Can see reports” on, “Can see costs and margin” off (desktop)",
       "is_interactive": true
     },
     "j17-rep-customers.dc.html": {
-      "x": 5900,
+      "x": 45840,
       "y": 37034,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Returning customers",
       "is_interactive": true
     },
-    "j17-acc-connect.dc.html": {
-      "x": 7240,
-      "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Connect Xero or QuickBooks",
-      "is_interactive": true
-    },
-    "j17-acc-map.dc.html": {
-      "x": 8420,
-      "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Match accounts",
-      "is_interactive": true
-    },
-    "j17-acc-log.dc.html": {
-      "x": 9600,
-      "y": 37034,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Sent to accounts",
-      "is_interactive": true
-    },
     "j18-site-settings.dc.html": {
       "x": 0,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Old app · Website settings",
@@ -3301,7 +3509,7 @@
     },
     "j18-site-theme.dc.html": {
       "x": 1180,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Theme editor",
@@ -3309,7 +3517,7 @@
     },
     "j18-site-pages.dc.html": {
       "x": 2360,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Pages",
@@ -3317,7 +3525,7 @@
     },
     "j18-site-publish.dc.html": {
       "x": 3540,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Preview and publish",
@@ -3325,7 +3533,7 @@
     },
     "j18-site-domain.dc.html": {
       "x": 4720,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Own web address",
@@ -3333,7 +3541,7 @@
     },
     "j18-site-shopify.dc.html": {
       "x": 5900,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Old app · Shopify connection (to retire)",
@@ -3341,7 +3549,7 @@
     },
     "j18-site-payments.dc.html": {
       "x": 7240,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Online payments setup",
@@ -3349,7 +3557,7 @@
     },
     "j18-site-orders.dc.html": {
       "x": 8420,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Online orders",
@@ -3357,7 +3565,7 @@
     },
     "j18-site-collect.dc.html": {
       "x": 9600,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Click and collect queue",
@@ -3365,7 +3573,7 @@
     },
     "j18-site-refund.dc.html": {
       "x": 10780,
-      "y": 38850,
+      "y": 38890,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Refund an online order",
@@ -3373,7 +3581,7 @@
     },
     "j19-ms-switch-open-desktop.dc.html": {
       "x": 0,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · The shop switcher open: your shops, and “All shops” (owner) (desktop)",
@@ -3381,7 +3589,7 @@
     },
     "j19-ms-switched-desktop.dc.html": {
       "x": 1320,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · After switching: “Now working in [Second site]” (desktop)",
@@ -3389,7 +3597,7 @@
     },
     "j19-ms-today-all-desktop.dc.html": {
       "x": 2640,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Today, all shops: a row per shop, one list of what needs you (desktop)",
@@ -3397,7 +3605,7 @@
     },
     "j19-ms-pick-shop-desktop.dc.html": {
       "x": 3960,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · “All shops” on the diary: choose one (desktop)",
@@ -3405,7 +3613,7 @@
     },
     "j19-ms-till-other-desktop.dc.html": {
       "x": 5280,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · A till sells for its own shop, whatever the menu says (desktop)",
@@ -3413,7 +3621,7 @@
     },
     "j19-ms-one-shop-desktop.dc.html": {
       "x": 6600,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Someone with one shop: its name, no switcher (staff with two shops get their shops, no “All shops”) (desktop)",
@@ -3421,7 +3629,7 @@
     },
     "j19-ms-service-price-desktop.dc.html": {
       "x": 8080,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · A service: price for all shops, different at one, where it’s offered (desktop)",
@@ -3429,7 +3637,7 @@
     },
     "j19-ms-service-not-offered-desktop.dc.html": {
       "x": 9400,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Not offered at one shop (desktop)",
@@ -3437,7 +3645,7 @@
     },
     "j19-ms-services-differs-desktop.dc.html": {
       "x": 10720,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Services list at [Second site]: its price beside the all-shops one (desktop)",
@@ -3445,7 +3653,7 @@
     },
     "j19-ms-product-price-desktop.dc.html": {
       "x": 12040,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · A product’s price, different at one shop (desktop)",
@@ -3453,7 +3661,7 @@
     },
     "j19-ms-person-desktop.dc.html": {
       "x": 13520,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · A person: where they work, and workshop days at each shop (desktop)",
@@ -3461,7 +3669,7 @@
     },
     "j19-ms-book-shop-desktop.dc.html": {
       "x": 14840,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Book a repair: “Which shop?” first, nothing chosen (desktop)",
@@ -3469,7 +3677,7 @@
     },
     "j19-ms-book-shop-chosen-desktop.dc.html": {
       "x": 16160,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Came from Bolton’s page: the shop chosen, straight to the service (desktop)",
@@ -3477,7 +3685,7 @@
     },
     "j19-ms-book-shop-change-desktop.dc.html": {
       "x": 17480,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Changing the shop: what it resets (desktop)",
@@ -3485,7 +3693,7 @@
     },
     "j19-ms-job-other-shop-desktop.dc.html": {
       "x": 18960,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Booking a job into the other shop’s workshop: it goes as a request (desktop)",
@@ -3493,7 +3701,7 @@
     },
     "j19-ms-request-from-shop-desktop.dc.html": {
       "x": 20280,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · At [Second site]: the request, from Bolton, to accept (desktop)",
@@ -3501,7 +3709,7 @@
     },
     "j19-ms-sites-desktop.dc.html": {
       "x": 21760,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Settings › Shop and sites: each shop (owner) (desktop)",
@@ -3509,7 +3717,7 @@
     },
     "j19-ms-sites-manager-desktop.dc.html": {
       "x": 23080,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · The same, as a manager sees it (desktop)",
@@ -3517,7 +3725,7 @@
     },
     "j19-ms-add-shop-desktop.dc.html": {
       "x": 24400,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Add a shop: code suggested, hours copied (desktop)",
@@ -3525,7 +3733,7 @@
     },
     "j19-ms-add-shop-error-desktop.dc.html": {
       "x": 25720,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · A code another shop already uses (desktop)",
@@ -3533,7 +3741,7 @@
     },
     "j19-ms-today-new-desktop.dc.html": {
       "x": 27040,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Today at a new shop: what to do next (desktop)",
@@ -3541,23 +3749,15 @@
     },
     "j19-ms-tills-desktop.dc.html": {
       "x": 28360,
-      "y": 40666,
+      "y": 40706,
       "w": 1280,
       "h": 856,
       "title": "Designed · Settings › Till › Tills: every till, by shop (desktop)",
       "is_interactive": true
     },
-    "j19-multi-reports.dc.html": {
-      "x": 29840,
-      "y": 40666,
-      "w": 1100,
-      "h": 816,
-      "title": "Not designed · Reports and cash-up by site",
-      "is_interactive": true
-    },
     "j20-ops-audit.dc.html": {
       "x": 0,
-      "y": 42522,
+      "y": 42562,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Activity log",
@@ -3565,7 +3765,7 @@
     },
     "j20-ops-devices.dc.html": {
       "x": 1180,
-      "y": 42522,
+      "y": 42562,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Signed-in devices",
@@ -3573,7 +3773,7 @@
     },
     "j20-ops-feedback.dc.html": {
       "x": 2360,
-      "y": 42522,
+      "y": 42562,
       "w": 1100,
       "h": 816,
       "title": "Not designed · Send feedback",
@@ -3581,7 +3781,7 @@
     },
     "j21-connect.dc.html": {
       "x": 0,
-      "y": 44338,
+      "y": 44378,
       "w": 1100,
       "h": 816,
       "title": "Designed · Connect the one chosen Lightspeed",
@@ -3589,7 +3789,7 @@
     },
     "j21-connect-proof.dc.html": {
       "x": 1180,
-      "y": 44338,
+      "y": 44378,
       "w": 1100,
       "h": 816,
       "title": "Designed · Verify connector capabilities",
@@ -3597,7 +3797,7 @@
     },
     "j21-pos.dc.html": {
       "x": 2360,
-      "y": 44338,
+      "y": 44378,
       "w": 1100,
       "h": 816,
       "title": "Designed · Handoff agreed work to Lightspeed",
@@ -3605,7 +3805,7 @@
     },
     "j21-pos-done.dc.html": {
       "x": 3540,
-      "y": 44338,
+      "y": 44378,
       "w": 1100,
       "h": 816,
       "title": "Designed · See the linked work order",
@@ -3613,7 +3813,7 @@
     },
     "j21-pos-unknown.dc.html": {
       "x": 4720,
-      "y": 44338,
+      "y": 44378,
       "w": 1100,
       "h": 816,
       "title": "Designed · Uncertain Lightspeed handoff",
@@ -4039,15 +4239,41 @@
     "j16-eod-card-desktop.dc.html",
     "j16-eod-finish-desktop.dc.html",
     "j16-eod-z-desktop.dc.html",
-    "j17-rep-today.dc.html",
-    "j17-rep-sales.dc.html",
-    "j17-rep-margin.dc.html",
-    "j17-rep-vat.dc.html",
-    "j17-rep-workshop.dc.html",
+    "j17-rp-home-desktop.dc.html",
+    "j17-rp-home-staff-desktop.dc.html",
+    "j17-rp-report-menu-desktop.dc.html",
+    "j17-rp-report-deleted-desktop.dc.html",
+    "j17-rp-your-settings-desktop.dc.html",
+    "j17-rp-sales-desktop.dc.html",
+    "j17-rp-sales-all-desktop.dc.html",
+    "j17-rp-sales-year-desktop.dc.html",
+    "j17-rp-sales-empty-desktop.dc.html",
+    "j17-rp-pick-dates-desktop.dc.html",
+    "j17-rp-change-desktop.dc.html",
+    "j17-rp-changed-desktop.dc.html",
+    "j17-rp-save-desktop.dc.html",
+    "j17-rp-save-taken-desktop.dc.html",
+    "j17-rp-takings-desktop.dc.html",
+    "j17-rp-takings-all-desktop.dc.html",
+    "j17-rp-day-desktop.dc.html",
+    "j17-rp-reopen-desktop.dc.html",
+    "j17-rp-takings-reopened-desktop.dc.html",
+    "j17-rp-vat-desktop.dc.html",
+    "j17-rp-vat-first-desktop.dc.html",
+    "j17-rp-vat-all-desktop.dc.html",
+    "j17-rp-margin-desktop.dc.html",
+    "j17-rp-workshop-desktop.dc.html",
+    "j17-rp-discounts-desktop.dc.html",
+    "j17-rp-discounts-staff-desktop.dc.html",
+    "j17-rp-accounts-connect-desktop.dc.html",
+    "j17-rp-accounts-map-desktop.dc.html",
+    "j17-rp-accounts-missing-desktop.dc.html",
+    "j17-rp-accounts-log-desktop.dc.html",
+    "j17-rp-accounts-lost-desktop.dc.html",
+    "j17-rp-accounts-disconnect-desktop.dc.html",
+    "j17-rp-today-accounts-desktop.dc.html",
+    "j17-rp-person-desktop.dc.html",
     "j17-rep-customers.dc.html",
-    "j17-acc-connect.dc.html",
-    "j17-acc-map.dc.html",
-    "j17-acc-log.dc.html",
     "j18-site-settings.dc.html",
     "j18-site-theme.dc.html",
     "j18-site-pages.dc.html",
@@ -4080,7 +4306,6 @@
     "j19-ms-add-shop-error-desktop.dc.html",
     "j19-ms-today-new-desktop.dc.html",
     "j19-ms-tills-desktop.dc.html",
-    "j19-multi-reports.dc.html",
     "j20-ops-audit.dc.html",
     "j20-ops-devices.dc.html",
     "j20-ops-feedback.dc.html",
@@ -5036,9 +5261,59 @@
       "maxH": 150
     },
     "j17_s98": {
-      "x": 7240,
+      "x": 6760,
       "y": 36794,
-      "text": "Accounts software",
+      "text": "Sales",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j17_s99": {
+      "x": 13520,
+      "y": 36794,
+      "text": "Your own reports",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j17_s100": {
+      "x": 18960,
+      "y": 36794,
+      "text": "Takings and cash-ups",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j17_s101": {
+      "x": 25720,
+      "y": 36794,
+      "text": "VAT, margin, workshop and discounts",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j17_s102": {
+      "x": 35120,
+      "y": 36794,
+      "text": "Accounts software and who sees what",
+      "w": 520,
+      "size": "l",
+      "bold": true,
+      "fill": "gray",
+      "maxH": 150
+    },
+    "j17_s103": {
+      "x": 45840,
+      "y": 36794,
+      "text": "Still to design",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -5048,14 +5323,14 @@
     "j17_title": {
       "x": 0,
       "y": 36474,
-      "text": "17 · Reports and accounts — Manager and Owner",
+      "text": "17 · Reports and accounts — Owner, Manager and Staff",
       "kind": "title1",
-      "maxW": 10700,
+      "maxW": 46940,
       "w": 240
     },
-    "j18_s100": {
+    "j18_s105": {
       "x": 0,
-      "y": 38610,
+      "y": 38650,
       "text": "Design the website",
       "w": 520,
       "size": "l",
@@ -5063,9 +5338,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j18_s101": {
+    "j18_s106": {
       "x": 7240,
-      "y": 38610,
+      "y": 38650,
       "text": "Online orders",
       "w": 520,
       "size": "l",
@@ -5075,15 +5350,15 @@
     },
     "j18_title": {
       "x": 0,
-      "y": 38290,
+      "y": 38330,
       "text": "18 · Website management — Manager",
       "kind": "title1",
       "maxW": 11880,
       "w": 240
     },
-    "j19_s103": {
+    "j19_s108": {
       "x": 0,
-      "y": 40426,
+      "y": 40466,
       "text": "Choosing a shop",
       "w": 520,
       "size": "l",
@@ -5091,9 +5366,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j19_s104": {
+    "j19_s109": {
       "x": 8080,
-      "y": 40426,
+      "y": 40466,
       "text": "Prices and services by shop",
       "w": 520,
       "size": "l",
@@ -5101,9 +5376,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j19_s105": {
+    "j19_s110": {
       "x": 13520,
-      "y": 40426,
+      "y": 40466,
       "text": "People and booking",
       "w": 520,
       "size": "l",
@@ -5111,9 +5386,9 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j19_s106": {
+    "j19_s111": {
       "x": 18960,
-      "y": 40426,
+      "y": 40466,
       "text": "Jobs between shops",
       "w": 520,
       "size": "l",
@@ -5121,20 +5396,10 @@
       "fill": "gray",
       "maxH": 150
     },
-    "j19_s107": {
+    "j19_s112": {
       "x": 21760,
-      "y": 40426,
+      "y": 40466,
       "text": "Adding a shop, and its tills",
-      "w": 520,
-      "size": "l",
-      "bold": true,
-      "fill": "gray",
-      "maxH": 150
-    },
-    "j19_s108": {
-      "x": 29840,
-      "y": 40426,
-      "text": "Drawn with Reports and accounts (journey 17)",
       "w": 520,
       "size": "l",
       "bold": true,
@@ -5143,15 +5408,15 @@
     },
     "j19_title": {
       "x": 0,
-      "y": 40106,
+      "y": 40146,
       "text": "19 · Multiple sites — Owner, Manager and Staff",
       "kind": "title1",
-      "maxW": 30940,
+      "maxW": 29600,
       "w": 240
     },
-    "j20_s110": {
+    "j20_s114": {
       "x": 0,
-      "y": 42282,
+      "y": 42322,
       "text": "Oversight",
       "w": 520,
       "size": "l",
@@ -5161,15 +5426,15 @@
     },
     "j20_title": {
       "x": 0,
-      "y": 41962,
+      "y": 42002,
       "text": "20 · Management oversight — Owner",
       "kind": "title1",
       "maxW": 3460,
       "w": 240
     },
-    "j21_s112": {
+    "j21_s116": {
       "x": 0,
-      "y": 44098,
+      "y": 44138,
       "text": "Connection and handoff",
       "w": 520,
       "size": "l",
@@ -5179,7 +5444,7 @@
     },
     "j21_title": {
       "x": 0,
-      "y": 43778,
+      "y": 43818,
       "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
       "kind": "title1",
       "maxW": 5820,

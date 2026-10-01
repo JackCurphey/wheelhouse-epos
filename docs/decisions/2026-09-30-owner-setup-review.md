@@ -268,3 +268,5 @@ switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
 state) for screen readers, and on tablet and phone — where the switcher is out
 of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
 under each staff page's title. Nothing else on these boards changed.
+
+**Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** the person pop-up in Staff and roles has a new switch, "Can see costs and margin", after "Can see reports" (Off for Jo Taylor; On with "Give everything a Manager can do"). Turning it on also turns on "Can see reports". Nothing else on these boards changed.

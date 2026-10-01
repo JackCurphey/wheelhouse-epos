@@ -141,3 +141,5 @@ clicks as possible).
     a reason; the shop that booked it and the customer hear the answer.
     Chosen over booking it straight in with a note to check, and following
     each shop's online-booking setting.
+
+**Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** the person pop-up has the new "Can see costs and margin" switch, as in Owner setup. The big canvas's "Reports and cash-up by site" placeholder is gone: Reports and accounts draws Sales, Takings and cash-ups and VAT for "All shops".

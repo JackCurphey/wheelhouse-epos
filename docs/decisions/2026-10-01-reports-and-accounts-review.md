@@ -119,3 +119,18 @@ few clicks as possible).
    unmapped lines (cash differences, refunds, discounts) — the mapping is for
    the shop's accountant to confirm (M15) — and the wording and screen-reader
    fixes.
+9. **Tablet and phone drawn; approved and copied into the big canvas**
+   (Jack, 1 Oct: "yeah that all looks good, lets get it on the canvas").
+   Tablet as desktop. On phone, Change what's shown and Download share the
+   row in two halves ("Download" for short), tables use smaller type with
+   headings that can wrap, and three boards are drawn scrolled to their
+   point (a saved report's menu, a category with no Xero account, Show
+   graphs in reports). The owner's Discounts and refunds table still scrolls
+   sideways on a phone. 34 screens, 103 boards. In the big canvas journey 17
+   replaces its old placeholders; "Returning customers" stays as still to
+   design, the old dashboard ("Today") is covered by Opening the shop, and
+   Multiple sites' "Reports and cash-up by site" is covered by the All shops
+   boards here. "Can see costs and margin" was carried into every person
+   pop-up (Owner setup, Multiple sites). "Show graphs in reports" shows in
+   Your settings only for people who can see reports, so Journey A's Your
+   settings (Jo Taylor, Staff) is unchanged.
