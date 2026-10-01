@@ -57,8 +57,15 @@ export const SETTINGS_ROOMS = [
   ['stockroom', 'Stockroom', '', 'Supplier invoices, stock adjustments, categories', ['stock']],
   ['office', 'Office', 'The shop and its sites, the people who work here, and your data.', 'Shop and sites, staff and roles, your data', ['shop', 'staff', 'data']],
 ];
-const roomOf = (area) => SETTINGS_ROOMS.find((r) => r[4].includes(area));
-const areaTitle = (k) => (AREAS.find((a) => a[0] === k) || [k, k])[1];
+// Buy online (journey 2): Front desk gains an "Online orders" area. Opt-in
+// for now (withOnlineArea), so other journeys' boards stay as approved.
+let ONLINE_AREA = false;
+export const withOnlineArea = (fn) => { const was = ONLINE_AREA; ONLINE_AREA = true; try { return fn(); } finally { ONLINE_AREA = was; } };
+const roomOf = (area) => {
+  const r = SETTINGS_ROOMS.find((x) => x[4].includes(area) || (area === 'online' && x[0] === 'frontdesk'));
+  return ONLINE_AREA && r[0] === 'frontdesk' ? [...r.slice(0, 4), [...r[4], 'online']] : r;
+};
+const areaTitle = (k) => (k === 'online' ? 'Online orders' : (AREAS.find((a) => a[0] === k) || [k, k])[1]);
 
 // A folding section: title, a one-line summary, a chevron. On a phone the
 // summary sits under the title rather than beside it.
@@ -217,8 +224,17 @@ export const stockFolds = (open = {}) =>
   // Journey 14 decision 10: each category's own details.
   + fold('Categories', 'Bearings, Drivetrain › Derailleurs and [n] more', open.categories || '');
 
-const AREA_FOLDS = { till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
-const AREA_INTROS = { till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
+// Buy online decisions 2, 3, 5 and 7: what the website sells, which
+// products show, paying online, and orders left uncollected.
+export const ONLINE_INTRO = 'What the website sells, paying online, and collecting orders.';
+export const onlineFolds = (open = {}) =>
+  fold('What the website sells', 'Only what’s on the shelf', open.sells || '')
+  + fold('Showing products', 'Set on each category and product', open.show || '')
+  + fold('Paying online', '[Payment provider] · gift cards and store credit', open.pay || '')
+  + fold('Not collected', 'Reminder after [n] days · on Today after [n] days', open.collect || '');
+
+const AREA_FOLDS = { online: onlineFolds, till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
+const AREA_INTROS = { online: ONLINE_INTRO, till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
 
 // Account, history and reminders decision 2: the customer's one yes to
 // service reminders, at booking and at collection.
