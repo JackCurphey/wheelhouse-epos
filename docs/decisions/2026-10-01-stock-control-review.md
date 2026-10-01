@@ -45,3 +45,13 @@ A2, A6 — as few clicks as possible).
    M" opens that size and colour; the till sells it as one. Chosen over
    each size as its own product, and rows that open out. Board:
    `st-product-sizes`; `st-list` gains a product with sizes.
+5. **A stock take is counted a section at a time, blind** (Jack, 1 Oct:
+   "1"). A manager starts a count of the whole shop, a category or an area
+   ("Wall 3"); staff join it, ideally on a phone; each scan adds one, or a
+   number is typed; the expected number is not shown while counting. Sales
+   carry on and are allowed for. When it's finished the manager sees the
+   differences, over and under with their value, can ask for a line to be
+   recounted, and applies the count, which records every change. Chosen
+   over showing the expected number, and whole-shop counts with the shop
+   closed. Boards: `tk-hub`, `tk-start`, `tk-count`, `tk-diff`,
+   `tk-applied`.

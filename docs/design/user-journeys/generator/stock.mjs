@@ -9,7 +9,7 @@
 // the Trek Domane AL 3. Every other product, price, cost, margin and count
 // is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { page, note, withSize, isPhone, MANAGER } from './settings-frame.mjs';
+import { page, note, popup, overlay, withSize, isPhone, MANAGER } from './settings-frame.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -96,10 +96,43 @@ const sizeGrid = () => box('Sizes and colours', `<table style="width: 100%; bord
 ${note('Each size and colour has its own barcode. Open one to see its history or adjust it. 0 means none in stock; a size below zero needs checking.')}`, linkBtn('+ Add a size or colour'));
 const sizesBoard = () => productPage(`${summary({ name: '[Product with sizes]', codes: '[Category] · [Supplier] · [n] sizes · [n] colours', price: '£[price]', kind: 'sizes' })}<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${sizeGrid()}${history([histRow('Sold', 'Size M · [Colour 1] · Till B1', '−1', 'Jo Taylor'), histRow('Received', 'Delivery from [Supplier] · 4 sizes', '+[n]', 'Jack Lewis')])}</div>`);
 
+// ---------- Decision 5: a stock take, counted blind ----------
+const JO = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
+const takePage = (title, content, who = MANAGER) => page('stocktake', title, `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 960px">${content}</div>`, who);
+const line = (left, sub, right = '') => `<div role="listitem" style="display: flex; align-items: center; gap: 12px; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}; ${isPhone() ? 'flex-wrap: wrap' : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${left}</span>${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</span>${right}</div>`;
+const link = (t, label = '') => `<a href="#"${label ? ` aria-label="${esc(label)}"` : ''} style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 4px; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${t}</a>`;
+const takeHub = () => takePage('Stock take', `${box('Count stock', `${note('Count the whole shop, a category or an area. Staff join on their phones; the shop stays open.')}<div>${button('Start a count')}</div>`)}
+${box('Counts in progress', `<div role="list">${line('[Area]', `Started [time] by Jack Lewis · ${mono('[n]')} items counted · Jo Taylor and Alex Morgan counting`, `${tag('Counting', 'grey')}${link('Open', 'Open the count of [Area]')}`)}${line('[Category]', `Started [time] by Jack Lewis · everyone has finished`, `${tag('Ready to check')}${link('Check it', 'Check the count of [Category]')}`)}</div>`)}
+${box('Finished counts', `<div role="list">${line('Whole shop', `Applied [date] by Jack Lewis · ${mono('[n]')} products changed · £[value] under`, link('Open', 'Open the whole-shop count from [date]'))}</div>`)}`);
+const AREAS_ = [['Whole shop', false], ['A category', false], ['An area', true]];
+const startPopup = () => popup('tk-title', 'Start a count', 'Staff can join it from Stock take on any device', `
+<div role="group" aria-label="What to count" style="display: flex; flex-wrap: wrap; gap: 8px">${AREAS_.map(([t, on]) => pillBtn(t, on)).join('')}</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="tk-area" style="font-size: 14px; font-weight: 600">Which area</label><input id="tk-area" value="[Area]" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div>
+${note('Counters don’t see what Wheelhouse expects, so they count what’s really there. Sales during the count are allowed for.')}`, `${button('Cancel', { variant: 'default' })}${button('Start the count')}`, 560);
+const qty = (n, label) => `<span role="group" aria-label="${esc(label)}" style="display: inline-flex; align-items: center; border: 1px solid ${C.border}; border-radius: 8px; overflow: hidden; flex-shrink: 0"><button type="button" aria-label="One fewer" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">−</button><input inputmode="numeric" aria-label="How many" value="${n}" style="width: 52px; height: 44px; box-sizing: border-box; border: 0; border-left: 1px solid ${C.border}; border-right: 1px solid ${C.border}; background: #ffffff; text-align: center; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"><button type="button" aria-label="One more" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">+</button></span>`;
+const countBoard = () => takePage('Counting [Area]', `${box('Counting [Area]', `${searchBox().replace(/Name, barcode, supplier code — or a measurement, like “bearing 30 mm”/g, 'Scan each item, or type to find it').replace('Search stock: name, barcode, supplier code or a measurement', 'Scan each item, or type to find it')}
+<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added ${PADS} · 1</p>
+<div role="list">${line(PADS, 'B05S-RX', qty('[n]', `Count of ${PADS}`))}${line('[Product]', '[Supplier code]', qty('[n]', 'Count of [Product]'))}${line('[Product with sizes]', 'Size M · [Colour 1]', qty('[n]', 'Count of [Product with sizes], size M'))}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px"><span style="font-size: 14px; color: ${C.muted}">${mono('[n]')} items counted by you · Alex Morgan is counting too</span>${button('I’ve finished my part')}</div>
+${note('Count what’s on the shelf. Anything sold while you count is allowed for.')}`)}`, JO);
+const diffRow = (name, sub, expected, counted, diff, value, tone) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 2fr) 90px 90px minmax(0, 1.1fr) auto'}; gap: 12px; align-items: center; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${isPhone() ? '' : `<span style="font-family: ${MONO}; font-size: 15px"><span style="${visuallyHidden}">Expected: </span>${expected}</span><span style="font-family: ${MONO}; font-size: 15px"><span style="${visuallyHidden}">Counted: </span>${counted}</span>`}<span>${tag(`${diff} · ${value}`, tone)}</span>${isPhone() ? '' : link('Recount', `Ask for ${name} to be recounted`)}</div>`;
+const diffBoard = () => takePage('Check the count', `${box('[Category] · counted [date]', `<p style="margin: 0; font-size: 15px">${mono('[n]')} products counted · ${mono('[n]')} match · ${mono('[n]')} differ · <strong>£[value] under</strong> in all</p>
+${isPhone() ? '' : `<div aria-hidden="true" style="display: grid; grid-template-columns: minmax(0, 2fr) 90px 90px minmax(0, 1.1fr) auto; gap: 12px; font-size: 13px; font-weight: 700; color: ${C.muted}"><span>Product</span><span>Expected</span><span>Counted</span><span>Difference</span><span style="width: 66px"></span></div>`}
+<div role="list">${diffRow(PADS, 'B05S-RX · 1 sold during the count, allowed for', '[n]', '[n]', '2 under', '£[value]', 'warn')}${diffRow('[Product]', '[Supplier code]', '[n]', '[n]', '1 over', '£[value]', 'grey')}${diffRow('[Product with sizes]', 'Size M · [Colour 1] · was below zero', '−1', '[n]', '[n] over', '£[value]', 'grey')}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px"><span style="font-size: 14px; color: ${C.muted}">Products that match aren’t listed. Recount sends a line back to the counters.</span><span style="display: flex; gap: 8px">${button('Apply the count')}</span></div>`)}`);
+const appliedBoard = () => takePage('Stock take', `${box('Count applied', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}[Category] · stock corrected for ${mono('[n]')} products</p>
+${note('Each change is in its product’s stock history as “Counted”, with who counted and who applied it. Products that were below zero are now corrected.')}
+<div style="display: flex; gap: 8px">${button('Download the count', { variant: 'default' })}${button('Back to Stock take', { variant: 'default' })}</div>`)}`);
+
 def('st-list', () => listBoard());
 def('st-product', () => productBoard());
 def('st-product-bike', () => bikeBoard());
 def('st-product-sizes', () => sizesBoard());
+def('tk-hub', () => takeHub());
+def('tk-start', () => overlay(takeHub(), startPopup()));
+def('tk-count', () => countBoard());
+def('tk-diff', () => diffBoard());
+def('tk-applied', () => appliedBoard());
 def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -116,8 +149,14 @@ export const TITLES = {
   'st-product': 'A product’s page: summary left, stock history right',
   'st-product-bike': 'A bike’s page: each frame number, in stock or sold',
   'st-product-sizes': 'Sizes and colours: one product, a grid of stock',
+  'tk-hub': 'Stockroom › Stock take: counts in progress and finished',
+  'tk-start': 'Start a count: the whole shop, a category or an area',
+  'tk-count': 'Counting, without the expected number',
+  'tk-diff': 'Check the count: over and under, with value',
+  'tk-applied': 'Count applied: every change recorded',
 };
 export const ROWS = [
   { label: 'Finding stock', screens: ['st-list', 'st-search-measure'] },
   { label: 'A product', screens: ['st-product', 'st-product-bike', 'st-product-sizes'] },
+  { label: 'Stock take', screens: ['tk-hub', 'tk-start', 'tk-count', 'tk-diff', 'tk-applied'] },
 ];
