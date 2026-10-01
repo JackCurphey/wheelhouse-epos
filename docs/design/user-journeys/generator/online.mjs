@@ -50,6 +50,7 @@ const refundWords = (what = '£[total]') => `${what} goes back the way you paid:
 // shop's name truncates with the full name in its label). toast: a message
 // over the page (audit L2).
 const site = (content, { basket = 0, twoShops = false, shopChosen = true, toast = '' } = {}) => {
+  if (twoShops && SIZE !== 'desktop') content = `<a href="#" style="flex-shrink: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 15px; color: ${C.ink}; text-decoration: none">${icon('store', 16)}<span style="flex-grow: 1">${shopChosen ? 'Collecting from <strong>Bolton</strong>' : '<strong>Choose a shop to collect from</strong>'}</span>${shopChosen ? '<span style="font-weight: 600; text-decoration: underline">Change</span>' : ''}</a>${content}`;
   const body = `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px">${content}</div>`;
   let html = SIZE === 'desktop' ? siteDesktop('sand', 'Shop', body) : SIZE === 'tablet' ? siteTablet('sand', body, 'Shop') : sitePhone('sand', { content: body });
   if (basket) html = html.replace(/aria-label="Basket, 0 items"/g, `aria-label="Basket, ${basket} item${basket > 1 ? 's' : ''}"`).replace(/(aria-label="Basket, \d items?"[^>]*>[\s\S]*?<\/svg>)Basket<\/a>/, `$1Basket · ${basket}</a>`);
@@ -127,7 +128,7 @@ const cardForm = (error = '') => `<div style="display: flex; flex-direction: col
 const creditBox = (on) => `<label style="display: flex; gap: 12px; align-items: flex-start; min-height: 44px; cursor: pointer"><input type="checkbox"${on ? ' checked' : ''} style="width: 22px; height: 22px; margin: 1px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Use my store credit · ${mono('£[credit]')}</span><span style="font-size: 13px; color: ${C.muted}">Ticked for you. The rest goes on your card.</span></span></label>`;
 // Audit M7: the gift card box, its error, and what's left on the card.
 const giftPart = (gift) => gift === 'applied'
-  ? `<div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 15px"><span style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="display: inline-flex; gap: 8px; align-items: center">${icon('check', 16)}Gift card ${mono('[gift card code]')} · ${mono('£[£]')} used</span>${linkBtn('Remove', 'Remove gift card')}</span><span style="font-size: 14px; color: ${C.ink}">${mono('£[£]')} left on your gift card for next time</span></div>`
+  ? `<div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 15px"><span style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px"><span style="display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: center">${icon('check', 16)}Gift card ${mono('[gift card code]', 'white-space: nowrap')} · ${mono('£[£]')} used</span>${linkBtn('Remove', 'Remove gift card')}</span><span style="font-size: 14px; color: ${C.ink}">${mono('£[£]')} left on your gift card for next time</span></div>`
   : gift === 'entry'
     ? `<div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px"><div style="flex: 1 1 260px">${field('Gift card code', { value: '[gift card code]', error: 'We don’t recognise that code. Check it against your card, or ask the shop.', autocomplete: 'off', linked: true })}</div>${button('Use it', { variant: 'default' })}</div>`
     : linkBtn('Have a gift card? Add it');
@@ -150,9 +151,14 @@ const checkout = (opts = {}) => {
         ? msg('<strong>We couldn’t confirm your payment.</strong> Don’t pay again — we’ll email maya@example.test within [n] minutes to say whether it went through.', 'bad', true)
         : `${opts.error ? msg('Your card was declined — nothing has been taken. Try another card, or Apple Pay or Google Pay.', 'bad', true) : ''}${button(label, { block: true })}`;
   const keep = credit || gift === 'applied' || covered ? note('Your store credit and gift card are only used once the order is paid.') : '';
-  const left = stack(h1('Checkout'), how(), details(opts.signedIn, opts.errors), pay(opts)).replace('min-width: 0">', `min-width: 0${scroll ? `; position: relative; top: -${scroll}px` : ''}">`);
-  const html = site(`${two(left, `<div style="position: sticky; top: 0">${summary(rows, `${cta}${keep}<p style="margin: 0; font-size: 13px; color: ${C.muted}; line-height: 1.5">By paying you agree to our <a href="#" style="color: ${C.ink}">terms</a>. You can cancel for a full refund until your order is ready.</p>`)}</div>`)}`, { basket: 2 });
-  return scroll ? html.replace(/<div data-scroll style="([^"]*?)overflow-y: auto;?/, '<div data-scroll style="$1overflow-y: hidden;') : html;
+  const terms = `<p style="margin: 0; font-size: 13px; color: ${C.muted}; line-height: 1.5">By paying you agree to our <a href="#" style="color: ${C.ink}">terms</a>. You can cancel for a full refund until your order is ready.</p>`;
+  const sc = isPhone() ? (opts.pscroll ?? 0) : scroll;
+  // On a phone the order sits at the top and Pay stays in a bar along the
+  // bottom, so the button and its messages are always in view.
+  const left = (isPhone() ? stack(h1('Checkout'), summary(rows, terms), how(), details(opts.signedIn, opts.errors), pay(opts), '<div style="height: 150px"></div>') : stack(h1('Checkout'), how(), details(opts.signedIn, opts.errors), pay(opts))).replace('min-width: 0">', `min-width: 0${sc ? `; position: relative; top: -${sc}px` : ''}">`);
+  const bar = `<div style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 8px; background: ${C.panel}; border-top: 1px solid ${C.border}">${cta}${keep}</div>`;
+  const html = isPhone() ? site(left, { basket: 2, toast: bar }) : site(`${two(left, `<div style="position: sticky; top: 0">${summary(rows, `${cta}${keep}${terms}`)}</div>`)}`, { basket: 2 });
+  return sc ? html.replace(/<div data-scroll style="([^"]*?)overflow-y: auto;?/, '<div data-scroll style="$1overflow-y: hidden;') : html;
 };
 // The bank's own check opens over checkout (the provider's window; audit H2).
 const bankCheck = () => popup('bk-title', 'Your bank wants to check it’s you', 'From [payment provider], for £[total] to North Street Cycles', `<div role="img" aria-label="Your bank's check" style="height: 200px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 2px dashed ${C.border}; color: ${C.muted}; font-size: 15px; text-align: center; padding: 12px">[Your bank’s check — for example, approve it in your banking app]</div>${note('Nothing is taken until your bank says yes. Then you’ll come straight back here.')}`, button('Cancel and go back', { variant: 'ghost' }), 520);
@@ -244,7 +250,7 @@ ${group('Ready to collect', toast ? 3 : 2, [
   orderRow({ who: '[Customer]', when: 'ready since [date]', items: it('[Product]'), action: handOver('[Customer]'), flag: from('Not collected · [n] days', 'amber') }),
 ], 'Hand over opens the till’s hand-over for that order — it’s already paid.')}
 ${group('Collected', '[n]', [orderRow({ who: '[Customer]', when: 'collected [time]', items: it('[Product]'), action: `<span style="font-size: 14px; color: ${C.muted}">by Jo Taylor</span>` })], 'The last 7 days. Older orders are on each customer’s page.')}
-</div>${toast ? `<div role="status" style="position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25); white-space: nowrap">${icon('check', 16)}Ready. The email goes to [Customer] in [n] seconds<button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 6px; background: rgba(255,255,255,0.16); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">Undo</button></div>` : ''}</div>`;
+</div>${toast ? `<div role="status" style="position: absolute; ${isPhone() ? 'left: 0; right: 0; bottom: 12px; white-space: normal' : 'left: 50%; bottom: 20px; transform: translateX(-50%); white-space: nowrap'}; display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)">${icon('check', 16)}<span style="flex-grow: 1">Ready. The email goes to [Customer] in [n] seconds</span><button type="button" style="flex-shrink: 0; min-height: 44px; padding: 0 14px; border: 0; border-radius: 6px; background: rgba(255,255,255,0.16); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">Undo</button></div>` : ''}</div>`;
   return staffPage('Online orders', content, STAFF, toast ? '2' : '3');
 };
 // [Second site]'s side of a move (audit M1).
@@ -254,7 +260,7 @@ ${group('To get ready', 0, [], 'Nothing to get ready here.')}</div>`, STAFF, '0'
 // One order, opened from the list. Audit M2: Close left, the main action
 // right; Cancel and refund in the body, beside Can't supply.
 const staffItem = (name, sub, price, tag) => `<div role="listitem" style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: ${C.muted}">${sub}${tag}</span></span>${mono(price, 'font-size: 15px')}</div>`;
-const orderFacts = () => `<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><span><strong>How</strong><br>Collect from Bolton</span><span><strong>Paid [time]</strong><br>${PAID_BY.map(([k, v]) => `${k} ${mono(v)}`).join('<br>')}</span><span><strong>Customer</strong><br>maya@example.test<br><a href="tel:07700900142" style="color: ${C.ink}">${mono('07700 900 142')}</a></span></div>`;
+const orderFacts = () => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 3}, minmax(0, 1fr)); gap: 12px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><span><strong>How</strong><br>Collect from Bolton</span><span><strong>Paid [time]</strong><br>${PAID_BY.map(([k, v]) => `${k} ${mono(v)}`).join('<br>')}</span><span><strong>Customer</strong><br>maya@example.test<br><a href="tel:07700900142" style="color: ${C.ink}">${mono('07700 900 142')}</a></span></div>`;
 const redBtn = (t) => `<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid ${C.danger}; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.danger}">${t}</button>`;
 const orderDialog = (ready = false) => popup('od-title', `${ORDER} · Maya Patel`, ready ? 'Ready since [time] · emailed' : '1 item still on its way', `<div role="list">${staffItem(PADS.name, `${mono(PADS.code)} · [shelf]`, PADS.price, from('On the shelf'))}${staffItem('[Product]', '[Size or colour]', '[£ price]', ready ? from('Here', 'green') : from('On its way from [Second site] · arrives [day]'))}</div>
 ${orderFacts()}
@@ -308,16 +314,16 @@ def('on-basket', () => basket());
 def('on-basket-changed', () => basket(true));
 def('on-basket-empty', () => basketEmpty());
 def('on-checkout', () => checkout());
-def('on-checkout-errors', () => checkout({ errors: true, scroll: 130 }));
-def('on-checkout-credit', () => checkout({ signedIn: true, credit: true, scroll: 200 }));
-def('on-checkout-covered', () => checkout({ signedIn: true, covered: true, scroll: 200 }));
-def('on-checkout-gift-code', () => checkout({ gift: 'entry', scroll: 330 }));
-def('on-checkout-gift', () => checkout({ gift: 'applied', scroll: 330 }));
-def('on-checkout-paying', () => checkout({ state: 'paying', scroll: 330 }));
-def('on-checkout-bank', () => overlay(checkout({ state: 'paying', scroll: 330 }), bankCheck()));
-def('on-checkout-declined', () => checkout({ error: 'Your card was declined — nothing has been taken.', scroll: 470 }));
-def('on-checkout-unsure', () => checkout({ state: 'unsure', scroll: 330 }));
-def('on-checkout-sold-out', () => checkout({ state: 'stock', scroll: 330 }));
+def('on-checkout-errors', () => checkout({ errors: true, scroll: 130, pscroll: 470 }));
+def('on-checkout-credit', () => checkout({ signedIn: true, credit: true, scroll: 200, pscroll: 560 }));
+def('on-checkout-covered', () => checkout({ signedIn: true, covered: true, scroll: 200, pscroll: 560 }));
+def('on-checkout-gift-code', () => checkout({ gift: 'entry', scroll: 330, pscroll: 880 }));
+def('on-checkout-gift', () => checkout({ gift: 'applied', scroll: 330, pscroll: 880 }));
+def('on-checkout-paying', () => checkout({ state: 'paying', scroll: 330, pscroll: 880 }));
+def('on-checkout-bank', () => overlay(checkout({ state: 'paying', scroll: 330, pscroll: 880 }), bankCheck()));
+def('on-checkout-declined', () => checkout({ error: 'Your card was declined — nothing has been taken.', scroll: 470, pscroll: 960 }));
+def('on-checkout-unsure', () => checkout({ state: 'unsure', scroll: 330, pscroll: 880 }));
+def('on-checkout-sold-out', () => checkout({ state: 'stock', scroll: 330, pscroll: 880 }));
 def('on-confirmed', () => confirmed());
 def('on-save-details', () => confirmed(true));
 def('on-order', () => orderPage('getting'));
@@ -350,8 +356,8 @@ def('on-settings-show', () => onlineSettings({ show: showOpen() }));
 def('on-settings-pay', () => onlineSettings({ pay: payOpen(), collect: collectOpen() }));
 def('on-messages', () => messagesBoard());
 
-// Desktop first (journey process); tablet and phone drawn after the UI audit.
-const SIZES = ['desktop'];
+// Desktop, tablet and phone (tablet and phone drawn after the UI audit).
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });
