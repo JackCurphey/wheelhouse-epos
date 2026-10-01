@@ -71,3 +71,29 @@ clicks as possible).
    (book in, start work, finished); waiting for parts reads "Waiting for a
    part — we'll update you". Chosen over a full timeline with times, and
    one status line.
+7. **UI audit: every recommendation taken** (Jack, 1 Oct: "yeah go ahead
+   with all of them"). From `design/user-journeys/quote-ui-audit.md`: the
+   button, pop-up and answered page follow the ticks — "Decline the extra
+   work" when nothing new is ticked, and an unticked "Needed" line says what
+   happens without it; **no "Send your answers?" pop-up on desktop** — "Your
+   answers are final once sent." beside the button, which sends in one click,
+   with "Not sure? Call [shop phone], or add a note for the shop." (H2,
+   option 2; re-check on phone); a deposit paid at booking shows as "Deposit
+   paid" and "Still to pay" on the quote and the job's page; **journey 5's
+   ready page keeps its two columns** but gains the "Your booking · WH-1042"
+   line, the tracker at Ready, the pads photo and "Add a note for the shop"
+   (H4, option 2); **staff Needed/Optional and photo buttons 44px** (M1,
+   option 2); the reason for the customer is the line's note, and **staff
+   choose which lines go together** ("Goes with: Shimano brake pads", M2,
+   option 1); the customer's page shows **facts only** — "Sent [day, time]",
+   "We sent a reminder at [time]" and the shop number (M3, option 1); a quote
+   can be withdrawn, with its customer page; the Undo bar says "Sending … in
+   1 minute" and sits above the footer; Today drops WH-1042 from "Still to
+   arrive" while its quote waits; **"Record their answer" keeps the
+   recommended ticks and the save button reads back what is saved** (M5,
+   option 1); screen-reader fixes; "No thanks" instead of "Not now"; "Agreed"
+   on the staff line; a tappable-photo cue; "Untick anything you don't want"
+   above the list; tracker labels aligned; "Edit wording" on every Messages
+   row, the reminder as its own line, and "Customer's choice" on "Bike ready"
+   and "Bike still waiting"; the job page's "Waiting for a part" step and the
+   answered job page drawn.

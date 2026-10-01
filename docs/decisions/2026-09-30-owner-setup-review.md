@@ -247,3 +247,10 @@ in Settings › Front desk › Messages, "Quote to approve" now goes the way the
 customer chose ("Customer's choice") and reads "When a job needs the
 customer's OK · reminder after [n] hours with no answer". Nothing else on the
 Messages boards changed.
+
+**Later change (1 Oct 2026, Drop off and approve the quote decision 7):** in
+Settings › Messages every row has a visible "Edit" ("Edit wording" on the
+hovered row), "Bike ready" and "Bike still waiting" go the way the customer
+chose (the "Bike ready" wording pop-up says so instead of Text/Email
+switches), and "Quote to approve" has its reminder as its own line with an
+[n] hours box.

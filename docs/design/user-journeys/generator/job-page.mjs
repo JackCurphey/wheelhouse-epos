@@ -198,8 +198,13 @@ const sortLines = (lines) => lines.map((l, i) => [l, i]).sort(([a, ai], [b, bi])
 // being built, each new line carries Needed or Optional (lines with \`need\`)
 // and a photo control (lines with \`photos\`, a count). Lines without them
 // draw exactly as before.
-const needToggle = (l, h = 26) => `<span role="radiogroup" aria-label="${esc(l.work)}: needed or optional" style="display: inline-flex; border: 1px solid ${C.input}; border-radius: 6px; overflow: hidden">${['Needed', 'Optional'].map((o) => `<button type="button" role="radio" aria-checked="${l.need === o}" style="min-height: ${h}px; padding: 0 8px; border: 0; background: ${l.need === o ? C.ink : C.panel}; color: ${l.need === o ? '#ffffff' : C.ink}; font-family: inherit; font-size: 12px; font-weight: 600">${o}</button>`).join('')}</span>`;
-const photoBtn = (l, h = 26) => (l.photos === undefined ? '' : `<button type="button" aria-label="${l.photos ? `${l.photos} photo — view or add for ${esc(l.work)}` : `Add photo for ${esc(l.work)}`}" style="display: inline-flex; align-items: center; gap: 4px; min-height: ${h}px; padding: 0 8px; border-radius: 6px; border: 1px ${l.photos ? 'solid' : 'dashed'} ${C.input}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 12px; font-weight: 600; white-space: nowrap">${icon('camera', 13)}${l.photos ? `${l.photos} photo` : 'Add photo'}</button>`);
+const needToggle = (l, h = 44) => `<span role="radiogroup" aria-label="${esc(l.work)}: needed or optional" style="display: inline-flex; border: 1px solid ${C.input}; border-radius: 6px; overflow: hidden">${['Needed', 'Optional'].map((o) => `<button type="button" role="radio" aria-checked="${l.need === o}" style="min-height: ${h}px; padding: 0 8px; border: 0; background: ${l.need === o ? C.ink : C.panel}; color: ${l.need === o ? '#ffffff' : C.ink}; font-family: inherit; font-size: 12px; font-weight: 600">${o}</button>`).join('')}</span>`;
+const photoBtn = (l, h = 44) => (l.photos === undefined ? '' : `<button type="button" aria-label="${l.photos ? `${l.photos} photo — view or add for ${esc(l.work)}` : `Add photo for ${esc(l.work)}`}" style="display: inline-flex; align-items: center; gap: 4px; min-height: ${h}px; padding: 0 8px; border-radius: 6px; border: 1px ${l.photos ? 'solid' : 'dashed'} ${C.input}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 12px; font-weight: 600; white-space: nowrap">${icon('camera', 13)}${l.photos ? `${l.photos} photo` : 'Add photo'}</button>`);
+// Audit M2 (journey 4): the line's note is the reason the customer reads;
+// staff choose which line a labour line goes with.
+const reasonCell = (l) => `<span style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; white-space: nowrap">${l.note ? esc(l.note) : l.pairWith ? '' : `<span style="font-style: italic">Reason for the customer</span>`}${l.pairWith ? `<label style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: ${C.ink}">Goes with<select style="min-height: 44px; box-sizing: border-box; padding: 0 6px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 12px; color: ${C.ink}"><option>${esc(l.pairWith)}</option><option>Nothing</option></select></label>` : ''}${photoBtn(l)}</span>`;
+// Audit L6 (journey 4): once sent, Needed or Optional stays as grey text.
+const approvalCell = (l, tone) => (l.need ? needToggle(l) : l.needText ? `<span style="display: inline-flex; align-items: center; gap: 6px">${badge(l.approval, tone)}<span style="font-size: 12px; color: ${C.muted}">${esc(l.needText)}</span></span>` : badge(l.approval, tone));
 export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', totalValue, footerNote = '', quoteAction = false, doneH = 34 } = {}) {
   const toolbarBtns = quoteAction
     ? `${ghostBtn('Send quote', 'mail')}${ghostBtn('Add item', 'plus')}${ghostBtn('Print', 'reports')}`
@@ -248,12 +253,12 @@ export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', to
 ${tdF(mono(l.code || '—'))}
 ${tdF(`<span><span style="font-weight: 600">${esc(l.work)}</span><span style="font-size: 12px; color: ${C.muted}"> · ${esc(l.sub)}</span></span>`)}
 ${tdF(`<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: ${doneH}px; cursor: pointer"><input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`, 'text-align: center; padding-top: 0; padding-bottom: 0')}
-${tdF(l.photos !== undefined ? `<span style="display: inline-flex; align-items: center; gap: 6px">${l.note ? esc(l.note) : ''}${photoBtn(l)}</span>` : l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
+${tdF(l.photos !== undefined ? reasonCell(l) : l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(l.qty))}
 ${tdF(l.stock ? `<span style="font-weight: 600; color: ${C.successInk}">${esc(l.stock)}</span>` : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(`£${l.price.toFixed(2)}`))}
 ${tdF(mono(`£${l.price.toFixed(2)}`, `font-weight: 600; ${totalStrike}`))}
-${tdF(l.need ? needToggle(l) : badge(l.approval, approvalTone(l.approval)))}
+${tdF(approvalCell(l, approvalTone(l.approval)))}
 </tr>`;
   }).join('');
   const totalRow = `<tr><td colspan="7" style="padding: 3px 10px; text-align: right; font-size: 14px; font-weight: 700">${esc(totalLabel)}</td><td style="padding: 3px 10px">${mono(`£${totalValue.toFixed(2)}`, 'font-weight: 700; font-size: 15px')}</td><td></td></tr>`;
@@ -344,7 +349,7 @@ ${detailedNotesButton(checkedCount, totalCount, notedCount, checklistHref)}
 <span style="font-size: 15px; font-weight: 600; color: ${C.ink}">${esc(l.work)}</span>
 <span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)} · Qty ${esc(l.qty)}</span>
 ${l.note ? `<span style="font-size: 13px; color: ${C.ink}">${esc(l.note)}</span>` : ''}
-${l.need || l.photos !== undefined ? `<div style="padding-top: 2px; display: flex; flex-wrap: wrap; gap: 6px">${l.need ? needToggle(l, 44) : badge(l.approval, approvalTone(l.approval))}${photoBtn(l, 44)}</div>` : `<div style="padding-top: 2px">${badge(l.approval, approvalTone(l.approval))}</div>`}
+${l.need || l.photos !== undefined ? `<div style="padding-top: 2px; display: flex; flex-wrap: wrap; gap: 6px">${approvalCell(l, approvalTone(l.approval))}${photoBtn(l)}${l.pairWith ? `<span style="font-size: 13px; color: ${C.muted}; align-self: center">Goes with ${esc(l.pairWith)}</span>` : ''}</div>` : `<div style="padding-top: 2px">${badge(l.approval, approvalTone(l.approval))}</div>`}
 </div>
 ${mono(`£${l.price.toFixed(2)}`, `flex-shrink: 0; padding-top: 4px; font-size: 15px; font-weight: 600; ${declined ? `text-decoration: line-through; color: ${C.muted};` : `color: ${C.ink};`}`)}
 </div>`;

@@ -110,3 +110,13 @@ in Settings › Front desk › Messages, "Quote to approve" now goes the way the
 customer chose ("Customer's choice") and reads "When a job needs the
 customer's OK · reminder after [n] hours with no answer". Nothing else on the
 Messages boards changed.
+
+**Later change (1 Oct 2026, Drop off and approve the quote decision 7):**
+the customer's ready page now reads as the same job page as the booking and
+the quote — "Your booking · WH-1042" above the heading, "Book a repair"
+marked in the website header, the four-step tracker at Ready, the pads photo
+on the "Shimano brake pads" row and "Add a note for the shop" under the shop
+details; journey 5's two columns and content are kept. "Not done — you said
+not now" reads "no thanks". In Settings › Messages every row has "Edit",
+"Bike ready" and "Bike still waiting" go the way the customer chose, and the
+"Bike still waiting" wording pop-up says so instead of Text/Email switches.

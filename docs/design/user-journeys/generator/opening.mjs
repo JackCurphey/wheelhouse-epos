@@ -82,9 +82,9 @@ export function today({ short = false, seen = false, waiting = false, staff = fa
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
-  const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', '3 still to arrive')}${stat('Ready to collect', '4', 'In the workshop now')}</div>
+  const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', noAnswer ? '2 still to arrive' : '3 still to arrive')}${stat('Ready to collect', '4', 'In the workshop now')}</div>
 <h3 style="margin: 6px 0 0; font-size: 14px; font-weight: 700">Still to arrive</h3>
-${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span style="font-size: 14px">${mono('10:30')} appointment</span>`), line('WH-1047 · Aisha Khan', 'Cannondale Quick · Safety check', '<span style="font-size: 14px">Drop-off</span>'), line('WH-1042 · Maya Patel', 'Trek Domane AL 3 · Standard service', button('Book in', { variant: 'default' }))])}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Open the diary</a>`);
+${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span style="font-size: 14px">${mono('10:30')} appointment</span>`), line('WH-1047 · Aisha Khan', 'Cannondale Quick · Safety check', '<span style="font-size: 14px">Drop-off</span>'), ...(noAnswer ? [] : [line('WH-1042 · Maya Patel', 'Trek Domane AL 3 · Standard service', button('Book in', { variant: 'default' }))])])}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Open the diary</a>`);
   const items = [
     short && !seen && line('Till B1’s float was [£] short this morning', 'Counted by Jo Taylor at [time] · “[their reason]”', button('Seen', { variant: 'default' }), warnLead),
     unclosed && line('Wednesday 16 September wasn’t closed', 'Till B1 · yesterday’s takings still to count', button('Close it', { variant: 'default' }), warnLead),
@@ -94,7 +94,7 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // The line goes by itself when the bike is handed over.
     // Drop off and approve the quote decision 4: still no answer after the
     // reminder; "Record their answer" takes a phone answer.
-    noAnswer && line('WH-1042 · Maya Patel — no answer to the quote yet', `Sent [time] · reminder sent [time] · ${mono('07700 900 142')}`, button('Record their answer', { variant: 'default' }), warnLead),
+    noAnswer && line('WH-1042 · Maya Patel — no answer to the quote yet', `Sent [time] · reminder sent [time] · <a href="tel:07700900142" style="color: inherit; white-space: nowrap">${mono('07700 900 142')}</a>`, button('Record their answer', { variant: 'default' }), warnLead),
     uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', `Cannondale Quick · reminder sent [date] · ${mono('[phone]')}`, button('Contacted', { variant: 'default' }), warnLead),
     // Journey 13 decision 2: the restock list, for owners, managers and
     // anyone who can order stock (audit L6). It counts what's new since the

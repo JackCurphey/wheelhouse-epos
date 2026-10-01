@@ -2374,21 +2374,33 @@ keepDesktopSeq('job-quote');
 // control (the pads have one) — then, once sent, the same job awaiting the
 // customer. The booked service is already agreed. Drawn on journey 4's
 // canvas; job-quote above is unchanged.
-const LINES_QUOTE_BUILD = [{ ...WORK_LINE_SERVICE, approval: 'Booked' }, { ...WORK_LINE_PADS, approval: 'Awaiting approval', need: 'Needed', photos: 1 }, { ...WORK_LINE_BRAKES, approval: 'Awaiting approval', need: 'Needed', photos: 0 }, { ...WORK_LINE_CABLE, approval: 'Awaiting approval', need: 'Optional', photos: 0 }];
-const LINES_QUOTE_SENT = LINES_QUOTE_BUILD.map(({ need, ...l }) => l);
-export const quoteJobBoards = (sent = false) => buildJobPage({
-  status: sent ? 'Awaiting approval' : 'In workshop', tone: sent ? 'purple' : 'blue',
-  touch: { footer: () => (sent ? button('Record their answer', { variant: 'default', block: true }) : button('Send quote', { variant: 'primary', block: true })) },
-  desktop: {
-    customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
-    checkedCount: 0, notedCount: 0,
-    leftStatus: sent ? 'Awaiting approval' : 'In workshop', bikeHere: true,
-    lines: sent ? LINES_QUOTE_SENT : LINES_QUOTE_BUILD, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: !sent,
-    limit: 'No spending limit set',
-    totalBadge: badge(`Proposed £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'purple'),
-    footer: sent ? button('Record their answer', { variant: 'default', block: true }) : button('Send quote', { variant: 'primary', block: true }),
-  },
-});
+const LINES_QUOTE_BUILD = [{ ...WORK_LINE_SERVICE, approval: 'Agreed' }, { ...WORK_LINE_PADS, approval: 'Awaiting approval', need: 'Needed', photos: 1 }, { ...WORK_LINE_BRAKES, approval: 'Awaiting approval', need: 'Needed', photos: 0, pairWith: 'Shimano brake pads' }, { ...WORK_LINE_CABLE, approval: 'Awaiting approval', need: 'Optional', photos: 0, note: 'Cable still serviceable' }];
+// Audit L6: once sent, Needed or Optional stays beside the chip.
+const LINES_QUOTE_SENT = LINES_QUOTE_BUILD.map(({ need, photos, pairWith, ...l }) => (need ? { ...l, needText: need } : l));
+// Audit L6: answered — the chips the customer's answers set.
+const LINES_QUOTE_ANSWERED = [{ ...WORK_LINE_SERVICE, approval: 'Agreed' }, { ...WORK_LINE_PADS, approval: 'Approved' }, { ...WORK_LINE_BRAKES, approval: 'Approved' }, { ...WORK_LINE_CABLE, approval: 'Declined' }];
+// Audit M3: once sent, the quote can also be withdrawn.
+const sentFooter = (block = true) => `${button('Record their answer', { variant: 'default', block })}${button('Withdraw quote', { variant: 'ghost', block })}`;
+export const quoteJobBoards = (stage = 'build') => {
+  const sent = stage === 'sent', answered = stage === 'answered';
+  const lines = answered ? LINES_QUOTE_ANSWERED : sent ? LINES_QUOTE_SENT : LINES_QUOTE_BUILD;
+  const status = sent ? 'Awaiting approval' : 'In workshop';
+  const footer = sent ? sentFooter() : answered ? button('Mark ready for collection', { variant: 'primary', block: true }) : button('Send quote', { variant: 'primary', block: true });
+  return buildJobPage({
+    status, tone: sent ? 'purple' : 'blue',
+    touch: { footer: () => footer },
+    desktop: {
+      customerTexts: NOTES_CUSTOMER, staffTexts: answered ? [...NOTES_STAFF_FULL, 'Maya answered the quote online at [time].'] : NOTES_STAFF_FULL,
+      checkedCount: 0, notedCount: 0,
+      leftStatus: status, bikeHere: true,
+      lines, totalLabel: answered ? 'Approved total' : 'Proposed total', totalValue: answered ? WORK_TOTAL_APPROVED : WORK_TOTAL_QUOTE, footerNote: answered ? DECLINED_NOTE_TEXT : '', quoteAction: stage === 'build',
+      limit: 'No spending limit set',
+      totalBadge: answered ? badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green') : badge(`Proposed £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'purple'),
+      footer,
+    },
+  });
+};
+
 
 // 12. job-mechanic — "Job · in the workshop (mechanic)"; the worked example
 // (decision 40's base board, job-final-2 itself) — close → diary-mechanic;

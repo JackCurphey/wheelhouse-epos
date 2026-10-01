@@ -34,7 +34,7 @@ let SIZE = 'desktop';
 // The shop's website frame, as journey B's customer pages use it.
 const site = (content) => {
   const body = `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px">${content}</div>`;
-  return SIZE === 'desktop' ? siteDesktop('sand', '', body) : SIZE === 'tablet' ? siteTablet('sand', body) : sitePhone('sand', { content: body });
+  return SIZE === 'desktop' ? siteDesktop('sand', 'Book a repair', body) : SIZE === 'tablet' ? siteTablet('sand', body, 'Book a repair') : sitePhone('sand', { content: body });
 };
 // Audit L1: each card is a labelled section.
 const slug = (t) => t.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
@@ -45,8 +45,10 @@ const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; 
 
 const approved = LINES_APPROVED.filter((l) => l.approval === 'Approved');
 const declined = LINES_APPROVED.filter((l) => l.approval === 'Declined');
-const work = () => box('What we did', `<div role="list">${approved.map((l) => row(esc(l.work), sub(l.note ? esc(l.note) : ''), mono(money(l.price), 'font-size: 15px'))).join('')}</div>
-${declined.map((l) => `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Not done — you said not now: ${esc(l.work)} (${money(l.price)})</p>`).join('')}`);
+// Drop off and approve the quote audit H4: the quote's photo carries through.
+const padsPhoto = `<button type="button" aria-label="Photo of Shimano brake pads: rear pads worn — open larger photo" style="position: relative; flex-shrink: 0; width: 96px; height: 72px; display: flex; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 12px; text-align: center">[Photo of the worn rear pads]</button>`;
+const work = () => box('What we did', `<div role="list">${approved.map((l) => row(esc(l.work), sub(l.note ? esc(l.note) : ''), l.code === 'B05S-RX' ? `<span style="display: inline-flex; align-items: flex-start; gap: 12px">${padsPhoto}${mono(money(l.price), 'font-size: 15px')}</span>` : mono(money(l.price), 'font-size: 15px'))).join('')}</div>
+${declined.map((l) => `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Not done — you said no thanks: ${esc(l.work)} (${money(l.price)})</p>`).join('')}`);
 // Workshop day 21: a ticked item with no note reads "All working well".
 // Audit M1: a note is labelled as what the mechanic found; the count says
 // how many of the checks were done (wording confirmed by Jack, 30 Sep).
@@ -67,10 +69,14 @@ function pay(state) {
   if (state === 'inshop') return box('To pay when you collect', `${mono(money(due), 'font-size: 30px')}
 ${note('Pay at the counter by card or cash. When you come in, just give your name.')}${shopLines}`);
   return box('To pay', `${mono(money(due), 'font-size: 30px')}${depositLine}
-${button(`Pay ${money(due)} now`, { block: true })}${note('Or pay when you collect — either is fine.')}${shopLines}`);
+${button(`Pay ${money(due)} now`, { block: true })}${note('Or pay when you collect — either is fine.')}${shopLines}${button('Add a note for the shop', { variant: 'default' })}`);
 }
 
-const heading = () => `<div style="display: flex; flex-direction: column; gap: 4px"><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1><span style="font-size: 15px; color: ${C.muted}">Job ${mono('WH-1042')} · Maya Patel</span></div>`;
+// Drop off and approve the quote audit H4: the same page as the booking and
+// the quote — the "Your booking" line and the tracker, now at Ready.
+const STEPS = ['Booked', 'In the shop', 'Being worked on', 'Ready'];
+const trackerDone = () => `<ol aria-label="Where your bike is" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: ${isPhone() ? 8 : 16}px">${STEPS.map((t, i) => `<li${i === 3 ? ' aria-current="step"' : ''} style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: ${i === 3 ? 700 : 500}"><span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; box-sizing: border-box; border-radius: 999px; ${i === 3 ? `background: ${C.ink}; color: #ffffff` : `background: ${C.okBg}; color: ${C.successInk}`}">${icon('check', 12)}</span>${t}</li>`).join('')}</ol>`;
+const heading = () => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1>${trackerDone()}</div>`;
 // Audit L1: the pay card comes first in reading order; on a wide screen it
 // sits in the right-hand column.
 function summary(state) {
@@ -108,7 +114,7 @@ ${note('When on, staff tick two things before Hand over, or at the till after pa
 // Built from the "Bike ready" wording (Owner setup 23). Maya's figures fill
 // the preview, as on the "Bike ready" board.
 const waitingDialog = () => popup('wait-title', 'Bike still waiting', 'Sent when a ready bike isn’t collected after [n] days — set in Settings › Workshop › Collection', `
-<div role="group" aria-label="Send by" style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600; flex-grow: 1">Send by</span>${chan('Text', true)}${chan('Email', false)}</div>
+<p style="margin: 0; font-size: 15px">Sent the way each customer chose: text, WhatsApp or email.</p>
 ${wordingBox('wait-words', 'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].', isPhone() ? 8 : 4)}
 ${bubble('Hi Maya, just a reminder that your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Job WH-1042. We’re open [opening hours].')}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
 

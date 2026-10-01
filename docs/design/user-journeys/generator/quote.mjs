@@ -1,5 +1,7 @@
 // Journey 4 — Drop off and approve the quote, in Soft sand on its own canvas.
 // Decisions: docs/decisions/2026-10-01-drop-off-and-quote-review.md
+// UI audit: docs/design/user-journeys/quote-ui-audit.md (decision 7: every
+// recommendation taken)
 //
 // Decision 1: one page per job, from the booking link to "Ready to collect".
 // 2: a quote answered with ticks set the way the mechanic recommends, pairs
@@ -10,8 +12,8 @@
 // Real example data only: Maya Patel, WH-1042, Trek Domane AL 3, the job's
 // lines and prices (Standard service £65, Shimano brake pads B05S-RX £28
 // "Rear pads worn — replacing", Fit & adjust brakes £18, Replace gear cable
-// £12 "Optional · cable still serviceable"; £111.00 approved, £123.00 if all),
-// the mechanic's note, Alex Morgan, Jo Taylor, booked in Thu 17 Sep at 09:12,
+// £12, cable still serviceable; £111.00 approved, £123.00 if all), the
+// mechanic's note, Alex Morgan, Jo Taylor, booked in Thu 17 Sep at 09:12,
 // ready by Thu 17 Sep, the delayed pads moved to Sat 19 Sep 16:00, North
 // Street Cycles, Bolton. Anything else is a bracketed placeholder. As on the
 // diary's own quote board, this example has no spending limit set (Workshop
@@ -20,7 +22,7 @@ import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
 import { popup, overlay, withSize, isPhone } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { STAFF_NOTE_BRAKES } from './job-page.mjs';
-import { quoteJobBoards } from './diary.mjs';
+import { quoteJobBoards, screens as diaryScreens } from './diary.mjs';
 import { today } from './opening.mjs';
 import { msgPage, msgListOpen } from './setup.mjs';
 import { screens as collectScreens } from './collect.mjs';
@@ -31,6 +33,7 @@ const def = (id, fn) => recipes.push([id, fn]);
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
 const money = (n) => `£${n.toFixed(2)}`;
 const VH = 'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0';
+const hidden = (t) => `<span style="${VH}">${t}</span>`;
 let SIZE = 'desktop';
 
 // ---------- The job's page (decision 1) ----------
@@ -40,15 +43,17 @@ const site = (content) => {
 };
 const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><strong>North Street Cycles, Bolton</strong><span>24 North Street · [shop phone]</span></div>`;
 const cardBox = (inner, extra = '') => card(`<div style="padding: ${isPhone() ? 16 : 22}px; display: flex; flex-direction: column; gap: 12px">${inner}</div>`, extra);
-const h2 = (t, id) => `<h2 id="${id}" style="margin: 0; font-size: 20px; font-weight: 700">${t}</h2>`;
+const h2 = (t, id, focus = false) => `<h2 id="${id}"${focus ? ' tabindex="-1"' : ''} style="margin: 0; font-size: 20px; font-weight: 700">${t}</h2>`;
 const page = (inner, { width = 720 } = {}) => site(`<div style="width: 100%; max-width: ${width}px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 tabindex="-1" style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Trek Domane AL 3 · Standard service</h1></div>${inner}</div>`);
+const note = (t) => `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
 
-// Decision 6: Booked → In the shop → Being worked on → Ready.
+// Decision 6: Booked → In the shop → Being worked on → Ready. Audit L4: the
+// circles are one size; audit M4: the current step is announced once.
 const STEPS = ['Booked', 'In the shop', 'Being worked on', 'Ready'];
 function tracker(at, { sub = '', warn = '' } = {}) {
   const dot = (i) => {
     const done = i < at, now = i === at;
-    return `<li style="display: flex; flex-direction: ${isPhone() ? 'row' : 'column'}; align-items: ${isPhone() ? 'center' : 'flex-start'}; gap: 8px; flex: 1 1 0; min-width: 0"${now ? ' aria-current="step"' : ''}><span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; ${done ? `background: ${C.okBg}; color: ${C.successInk}` : now ? `background: ${C.ink}; color: #ffffff` : `border: 1px solid ${C.border}; color: ${C.muted}`}; font-size: 13px; font-weight: 700">${done ? icon('check', 14) : i + 1}</span><span style="font-size: 14px; font-weight: ${now ? 700 : 500}; color: ${done || now ? C.ink : C.muted}">${STEPS[i]}<span style="${VH}">${done ? ', done' : now ? ', now' : ', to come'}</span></span></li>`;
+    return `<li style="display: flex; flex-direction: ${isPhone() ? 'row' : 'column'}; align-items: ${isPhone() ? 'center' : 'flex-start'}; gap: 8px; flex: 1 1 0; min-width: 0"${now ? ' aria-current="step"' : ''}><span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; box-sizing: border-box; flex-shrink: 0; border-radius: 999px; ${done ? `background: ${C.okBg}; color: ${C.successInk}` : now ? `background: ${C.ink}; color: #ffffff` : `border: 1px solid ${C.border}; color: ${C.muted}`}; font-size: 13px; font-weight: 700">${done ? icon('check', 14) : i + 1}</span><span style="font-size: 14px; font-weight: ${now ? 700 : 500}; color: ${done || now ? C.ink : C.muted}">${STEPS[i]}${done ? hidden(', done') : now ? '' : hidden(', to come')}</span></li>`;
   };
   return cardBox(`<h2 id="where" style="margin: 0; font-size: 18px; font-weight: 700">Where your bike is</h2>
 <ol aria-labelledby="where" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: ${isPhone() ? 10 : 12}px">${STEPS.map((_, i) => dot(i)).join('')}</ol>
@@ -56,71 +61,96 @@ ${warn ? `<p role="status" style="margin: 0; display: flex; gap: 10px; padding: 
 ${sub ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">${sub}</p>` : ''}`);
 }
 const kv = (k, v, extra = '') => `<div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px; ${extra}"><span style="color: ${C.muted}">${k}</span><span style="text-align: right; font-weight: 600">${v}</span></div>`;
+// Audit H3: a deposit paid at booking carries through, in journey 5's words.
+const depositRows = (total) => `${kv('Deposit paid', mono('£[deposit]'))}${kv('Still to pay when you collect', mono(total === null ? '£[balance]' : '£[balance]'))}`;
 // The work agreed so far (decision 6).
-const agreed = (rows, total) => cardBox(`<h2 id="agreed" style="margin: 0; font-size: 18px; font-weight: 700">Work agreed</h2><div aria-labelledby="agreed">${rows}${kv('<strong style="color: ' + C.ink + '">Total</strong>', mono(total, 'font-size: 17px'))}</div>
+const agreed = (rows, total, { deposit = false } = {}) => cardBox(`<h2 id="agreed" style="margin: 0; font-size: 18px; font-weight: 700">Work agreed</h2><div aria-labelledby="agreed">${rows}${kv(`<strong style="color: ${C.ink}">Total</strong>`, mono(total, 'font-size: 17px'))}${deposit ? depositRows(total) : ''}</div>
 <div style="display: flex; flex-wrap: wrap; gap: 10px">${button('Add a note for the shop', { variant: 'default' })}</div>${shopLines}`);
 const SERVICE_ROW = kv('Standard service', mono('£65.00'));
 const readyLine = `Expected ready: <strong>Thu 17 Sep</strong>, [time].`;
 
-// ---------- The quote (decisions 2 and 3) ----------
-// The new lines. Pads and fitting go together (decision 2).
+// ---------- The quote (decisions 2 and 3; audit H1, H2, M2–M4, L1–L3) ----------
+// The new lines; the reason is the line's note on the job page (audit M2),
+// and staff set which line goes with which.
 const NEW_LINES = [
-  { id: 'pads', work: 'Shimano brake pads', sub: 'Part · B05S-RX', reason: 'Rear pads worn — replacing', price: 28, need: 'Needed', pair: true, photo: true },
-  { id: 'fit', work: 'Fit & adjust brakes', sub: 'Labour · 30 min', reason: 'Goes with the new pads', price: 18, need: 'Needed', pair: true },
-  { id: 'cable', work: 'Replace gear cable', sub: 'Optional', reason: 'Cable still serviceable', price: 12, need: 'Optional' },
+  { id: 'pads', work: 'Shimano brake pads', reason: 'Rear pads worn — replacing', price: 28, need: 'Needed', photo: true, without: '[What happens without it, in Alex’s words]' },
+  { id: 'fit', work: 'Fit & adjust brakes', reason: 'Goes together with the new pads', price: 18, need: 'Needed', pair: 'pads' },
+  { id: 'cable', work: 'Replace gear cable', reason: 'Cable still serviceable', price: 12, need: 'Optional' },
 ];
-const photoThumb = (l, big = false) => `<button type="button" aria-label="Photo: ${esc(l.reason.toLowerCase())} — tap to enlarge" style="flex-shrink: 0; width: ${big ? '100%' : '96px'}; height: ${big ? 360 : 72}px; display: flex; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 12px; text-align: center">[Photo of the worn rear pads]</button>`;
-const quoteLine = (l, on) => `<li style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid ${C.border}">
-<label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-width: 0; min-height: 44px; cursor: pointer"><input type="checkbox"${on ? ' checked' : ''} style="width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">${l.work}</span>${badge(l.need, l.need === 'Needed' ? 'amber' : 'grey')}</span><span style="font-size: 14px; line-height: 1.45">${l.reason}${l.pair ? ` <span style="color: ${C.muted}">· goes together with ${l.id === 'pads' ? 'fitting' : 'the pads'}</span>` : ''}</span></span></label>
-${l.photo ? photoThumb(l) : ''}${mono(money(l.price), 'flex-shrink: 0; font-size: 16px; padding-top: 2px')}</li>`;
-function quoteCard({ ticks = { pads: true, fit: true, cable: false }, newer = false } = {}) {
-  const total = 65 + NEW_LINES.filter((l) => ticks[l.id]).reduce((a, l) => a + l.price, 0);
-  return cardBox(`${badge(newer ? 'The quote has changed' : 'Waiting for your answer', 'purple')}${h2(newer ? 'Alex has added to the quote' : 'Alex found more to do', 'q')}
+// Audit L2: the photo shows it can be enlarged.
+const photoThumb = (big = false) => `<button type="button" aria-label="Photo of Shimano brake pads: rear pads worn — open larger photo" style="position: relative; flex-shrink: 0; width: ${big ? '100%' : '96px'}; height: ${big ? 360 : 72}px; display: flex; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 12px; text-align: center">[Photo of the worn rear pads]${big ? '' : `<span aria-hidden="true" style="position: absolute; right: 4px; bottom: 4px; display: inline-flex; padding: 3px; border-radius: 6px; background: ${C.ink}; color: #ffffff">${icon('search', 12)}</span>`}</button>`;
+// Audit M4: the price is part of the tick box's label.
+const quoteLine = (l, on) => `<li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid ${C.border}"><div style="display: flex; gap: 12px; align-items: flex-start">
+<label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-width: 0; min-height: 44px; cursor: pointer"><input type="checkbox"${on ? ' checked' : ''} style="width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1"><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">${l.work}</span>${badge(l.need, l.need === 'Needed' ? 'amber' : 'grey')}<span style="margin-left: auto">${mono(money(l.price), 'font-size: 16px')}</span></span><span style="font-size: 14px; line-height: 1.45">${l.reason}</span></span></label>
+${l.photo ? `<span style="display: flex; flex-direction: column; align-items: center; gap: 2px">${photoThumb()}<span style="font-size: 12px; color: ${C.muted}">Tap to enlarge</span></span>` : ''}</div>
+${!on && l.need === 'Needed' && l.without ? `<p style="margin: 0 0 0 34px; padding: 8px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Alex recommends this.</strong> ${l.without}</p>` : ''}</li>`;
+function quoteCard({ ticks = { pads: true, fit: true, cable: false }, newer = false, deposit = false, reminded = false } = {}) {
+  const newOnes = NEW_LINES.filter((l) => ticks[l.id]);
+  const total = 65 + newOnes.reduce((a, l) => a + l.price, 0);
+  const label = newer ? 'Approve £[total]' : newOnes.length ? `Approve ${money(total)}` : 'Decline the extra work';
+  // Audit M3: facts only — when it was sent, and any reminder.
+  const sentLine = `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Sent Thu 17 Sep, [time]${reminded ? ' · we sent a reminder at [time]' : ''}</p>`;
+  return cardBox(`${badge(newer ? 'The quote has changed' : 'Waiting for your answer', 'purple')}${h2(newer ? 'Alex has added to the quote' : 'Alex recommends more work', 'q')}${sentLine}
 <p style="margin: 0; font-size: 15px; line-height: 1.5">${newer ? 'Your earlier answers are kept. Please answer the new line below.' : `“${STAFF_NOTE_BRAKES}” — Alex Morgan, your mechanic`}</p>
-${newer ? `<div>${kv('Already agreed', 'Standard service, brake pads, fitting · ' + mono('£111.00'))}${kv('You said not now', 'Replace gear cable')}</div>` : ''}
-<ul aria-labelledby="q" style="list-style: none; margin: 0; padding: 0">${newer ? `<li style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid ${C.border}"><label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-height: 44px"><input type="checkbox" checked style="width: 22px; height: 22px; margin: 2px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">[New line]</span>${badge('Needed', 'amber')}</span><span style="font-size: 14px">[The mechanic’s reason]</span></span></label>${mono('£[price]', 'font-size: 16px')}</li>` : NEW_LINES.map((l) => quoteLine(l, ticks[l.id])).join('')}</ul>
-${newer ? '' : `<div>${kv('Already agreed', 'Standard service · ' + mono('£65.00'))}</div>`}
-<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="font-size: 15px">New total <strong>${mono(newer ? '£[total]' : money(total), 'font-size: 18px')}</strong></span>${button(newer ? 'Approve £[total]' : `Approve ${money(total)}`)}</div>
-<p style="margin: 0; font-size: 13px; line-height: 1.45; color: ${C.muted}">Untick anything you don’t want. Prices include VAT; nothing is paid now.</p>`, `border: 2px solid ${C.ink}`);
+${newer ? `<div>${kv('Already agreed', `Standard service, brake pads, fitting · ${mono('£111.00')}`)}${kv('You said no thanks', 'Replace gear cable')}</div>` : ''}
+<p style="margin: 0; font-size: 15px; font-weight: 600">Untick anything you don’t want.</p>
+<ul aria-labelledby="q" style="list-style: none; margin: 0; padding: 0">${newer ? `<li style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid ${C.border}"><label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-height: 44px"><input type="checkbox" checked style="width: 22px; height: 22px; margin: 2px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">[New line]</span>${badge('Needed', 'amber')}<span style="margin-left: auto">${mono('£[price]', 'font-size: 16px')}</span></span><span style="font-size: 14px">[The mechanic’s reason]</span></span></label></li>` : NEW_LINES.map((l) => quoteLine(l, ticks[l.id])).join('')}</ul>
+${newer ? '' : `<div>${kv('Already agreed', `Standard service · ${mono('£65.00')}`)}</div>`}
+<div aria-live="polite" style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">${kv(`<strong style="color: ${C.ink}">New total</strong>`, mono(newer ? '£[total]' : money(total), 'font-size: 18px'), 'border-top: 0; padding-top: 0')}${deposit ? depositRows(total) : ''}${ticks.pads === false ? hidden('Fit & adjust brakes unticked too.') : ''}</div>
+<p style="margin: 0; font-size: 14px; font-weight: 600">Your answers are final once sent.</p>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">${note(deposit ? 'Prices include VAT. Nothing to pay today — the rest is due when you collect.' : 'Prices include VAT. Nothing to pay today.')}${button(label)}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 14px">Not sure? Call ${mono('[shop phone]')}, or</span>${button('Add a note for the shop', { variant: 'default' })}</div>`, `border: 2px solid ${C.ink}`);
 }
 const quotePage = (opts = {}) => page(`${quoteCard(opts)}${tracker(1, { sub: `The rest of the service is going ahead. ${readyLine}` })}`);
-// Decision 2: before sending, say the answers are final.
-const confirmDialog = () => popup('confirm-title', 'Send your answers?', 'Trek Domane AL 3 · WH-1042', `<div>${kv('Yes', 'Shimano brake pads, Fit & adjust brakes')}${kv('Not now', 'Replace gear cable')}${kv('<strong style="color: ' + C.ink + '">New total</strong>', mono('£111.00', 'font-size: 17px'))}</div>
-<p style="margin: 0; display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span>You can’t change these answers afterwards — call us on [shop phone] if you change your mind.</span></p>`, `${button('Go back', { variant: 'ghost' })}${button('Send my answers')}`, 520);
 // Decision 3: a photo, enlarged.
-const photoDialog = () => popup('photo-title', 'Shimano brake pads', 'Rear pads worn — replacing', photoThumb(NEW_LINES[0], true), button('Close', { variant: 'default' }), 720);
-// Answered: the job carries on.
-const DONE_ROWS = `${SERVICE_ROW}${kv('Shimano brake pads', mono('£28.00'))}${kv('Fit & adjust brakes', mono('£18.00'))}${kv(`<span style="color: ${C.muted}">Replace gear cable · not now</span>`, mono('£12.00', `text-decoration: line-through; color: ${C.muted}`))}`;
-const answered = (byPhone = false) => page(`<div role="status">${cardBox(`${badge('Answered', 'green')}${h2(byPhone ? 'Your answers, from your call' : 'Thanks, Maya — Alex is carrying on', 'ans')}<p style="margin: 0; font-size: 15px; line-height: 1.5">${byPhone ? 'You answered by phone with Jo Taylor at [time]. Here’s what was agreed.' : 'We’ve saved your answers. The work you agreed is going ahead.'}</p>`)}</div>${tracker(2, { sub: readyLine })}${agreed(DONE_ROWS, '£111.00')}`);
+const photoDialog = () => popup('photo-title', 'Shimano brake pads', 'Rear pads worn — replacing', photoThumb(true), button('Close', { variant: 'default' }), 720);
+// Answered (audit H1: all declined has its own words; L1: "No thanks").
+const noThanks = (work, price) => kv(`<span style="color: ${C.muted}">${work} · no thanks</span>`, mono(price, `text-decoration: line-through; color: ${C.muted}`));
+const DONE_ROWS = `${SERVICE_ROW}${kv('Shimano brake pads', mono('£28.00'))}${kv('Fit & adjust brakes', mono('£18.00'))}${noThanks('Replace gear cable', '£12.00')}`;
+const DECLINED_ROWS = `${SERVICE_ROW}${noThanks('Shimano brake pads', '£28.00')}${noThanks('Fit & adjust brakes', '£18.00')}${noThanks('Replace gear cable', '£12.00')}`;
+const answered = ({ byPhone = false, declined = false, deposit = false } = {}) => page(`<div role="status">${badge('Answered', 'green')}</div>${cardBox(`${h2(byPhone ? 'Your answers, from your call' : declined ? 'Thanks, Maya — Alex will carry on with the service' : 'Thanks, Maya — Alex is carrying on', 'ans', true)}<p style="margin: 0; font-size: 15px; line-height: 1.5">${byPhone ? 'You answered by phone with Jo Taylor at [time]. Here’s what was agreed.' : declined ? 'You didn’t add any extra work. We’ve saved your answers.' : 'We’ve saved your answers. The work you agreed is going ahead.'}</p>`)}${tracker(2, { sub: readyLine })}${agreed(declined ? DECLINED_ROWS : DONE_ROWS, declined ? '£65.00' : '£111.00', { deposit })}`);
 // Decision 6: the tracker on its own, at each stage.
 const inShop = () => page(`${tracker(1, { sub: `We’ve got your bike — booked in Thu 17 Sep at ${mono('09:12')}. ${readyLine}` })}${agreed(SERVICE_ROW, '£65.00')}`);
 const waitingPart = () => page(`${tracker(2, { warn: '<strong>Waiting for a part — we’ll update you.</strong> Your new brake pads are taking longer to arrive.', sub: `Expected ready: <strong>Sat 19 Sep</strong>, ${mono('16:00')}.` })}${agreed(DONE_ROWS, '£111.00')}`);
+// Audit M3: a withdrawn quote, on the customer's page.
+const withdrawn = () => page(`${cardBox(`${badge('Quote withdrawn', 'grey')}${h2('Alex has withdrawn this quote', 'wd')}<p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing to answer. Call ${mono('[shop phone]')} if you have a question.</p>`)}${tracker(1, { sub: readyLine })}${agreed(SERVICE_ROW, '£65.00')}`);
 
 // ---------- The shop's side (decisions 4 and 5) ----------
-// The sent board carries the Undo bar for a minute (decision 5).
-const withToast = (base, [W, H]) => `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${base}<div role="status" style="position: absolute; left: 50%; bottom: ${isPhone() ? 96 : 28}px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; max-width: calc(100% - 32px); box-sizing: border-box; padding: 10px 12px 10px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.25)"><span>Quote sent to Maya by text</span><button type="button" style="min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.5); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; color: #ffffff; font-size: 14px; font-weight: 600">See what Maya sees</a></div></div>`;
+// Audit M3/L4: the Undo bar says it's still sending, for how long, and sits
+// above the footer bar.
+const withToast = (base, [W, H]) => `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${base}<div role="status" style="position: absolute; left: 50%; bottom: ${isPhone() ? 150 : 96}px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; max-width: calc(100% - 32px); box-sizing: border-box; padding: 10px 12px 10px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.25)"><span>Sending the quote to Maya by text in 1 minute</span><button type="button" style="min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.5); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">Undo</button><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; color: #ffffff; font-size: 14px; font-weight: 600">See what Maya sees</a></div></div>`;
 const DIMS = { desktop: [1280, 800], tablet: [1180, 820], phone: [390, 844] };
-// Decision 4: staff record an answer given on the phone.
-const recordDialog = () => popup('record-title', 'Record Maya’s answer', 'Quote for WH-1042 · answered by phone', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Tick what Maya agreed to on the phone. Her answers are final once saved, as if she’d answered online.</p>
+// Decision 4 with audit M5: the recommended ticks, and a save button that
+// reads back what will be saved.
+const recordDialog = () => popup('record-title', 'Record Maya’s answer', 'Quote for WH-1042 · answered by phone', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Tick what Maya agreed to on the phone. These answers are final once saved, as if answered online.</p>
 <div role="group" aria-label="What Maya agreed to">${NEW_LINES.map((l) => `<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid ${C.border}; font-size: 15px"><input type="checkbox"${l.id !== 'cable' ? ' checked' : ''} style="width: 22px; height: 22px; accent-color: ${C.ink}"><span style="flex-grow: 1"><strong>${l.work}</strong> <span style="color: ${C.muted}">· ${l.need}</span></span>${mono(money(l.price))}</label>`).join('')}</div>
-${kv('<strong style="color: ' + C.ink + '">New total</strong>', mono('£111.00', 'font-size: 17px'))}
-<p style="margin: 0; font-size: 14px; color: ${C.muted}">Saved as answered by phone, taken by Jo Taylor at [time]. Maya gets a text with what was agreed.</p>`, `${button('Cancel', { variant: 'ghost' })}${button('Save her answer')}`, 560);
+${kv(`<strong style="color: ${C.ink}">New total</strong>`, mono('£111.00', 'font-size: 17px'))}
+${note('Saved as answered by phone, taken by Jo Taylor at [time]. Maya gets a text — the way Maya chose — with what was agreed.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Save: yes to 2 lines, no thanks to 1')}`, 560);
+const withdrawDialog = () => popup('withdraw-title', 'Withdraw this quote?', 'WH-1042 · Maya Patel', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Maya’s page will say the quote was withdrawn and there’s nothing to answer. Only the booked Standard service stays agreed.</p>`, `${button('Keep the quote', { variant: 'ghost' })}${button('Withdraw quote', { variant: 'danger' })}`, 520);
 
 // ---------- The boards ----------
 def('dq-in-shop', () => inShop());
+def('dq-waiting-part', () => waitingPart());
+def('dq-ready', () => collectScreens['cp-summary'][SIZE]);
 def('dq-quote', () => quotePage());
 def('dq-quote-photo', () => overlay(quotePage(), photoDialog()));
 def('dq-quote-untick', () => quotePage({ ticks: { pads: true, fit: true, cable: true } }));
-def('dq-quote-confirm', () => overlay(quotePage(), confirmDialog()));
+def('dq-quote-decline', () => quotePage({ ticks: { pads: false, fit: false, cable: false } }));
+def('dq-quote-deposit', () => quotePage({ deposit: true }));
+def('dq-quote-reminded', () => quotePage({ reminded: true }));
 def('dq-answered', () => answered());
-def('dq-answered-phone', () => answered(true));
+def('dq-answered-declined', () => answered({ declined: true }));
+def('dq-answered-deposit', () => answered({ deposit: true }));
+def('dq-answered-phone', () => answered({ byPhone: true }));
 def('dq-quote-newer', () => page(`${quoteCard({ newer: true })}${tracker(2, { sub: readyLine })}`));
-def('dq-waiting-part', () => waitingPart());
-def('dq-ready', () => collectScreens['cp-summary'][SIZE]);
-def('dq-job-quote', () => quoteJobBoards()[SIZE]);
-def('dq-job-sent', () => withToast(quoteJobBoards(true)[SIZE], DIMS[SIZE]));
+def('dq-withdrawn', () => withdrawn());
+def('dq-job-quote', () => quoteJobBoards('build')[SIZE]);
+def('dq-job-sent', () => withToast(quoteJobBoards('sent')[SIZE], DIMS[SIZE]));
 def('dq-today-no-answer', () => today({ noAnswer: true }));
-def('dq-record-answer', () => overlay(quoteJobBoards(true)[SIZE], recordDialog()));
+def('dq-record-answer', () => overlay(quoteJobBoards('sent')[SIZE], recordDialog()));
+def('dq-job-withdraw', () => overlay(quoteJobBoards('sent')[SIZE], withdrawDialog()));
+def('dq-job-answered', () => quoteJobBoards('answered')[SIZE]);
+def('dq-job-waiting', () => diaryScreens['job-waiting-parts'][SIZE]);
 def('dq-messages', () => msgPage({ list: msgListOpen() }));
 
 // Desktop first (journey process); tablet and phone drawn after the UI audit.
@@ -133,23 +163,32 @@ SIZE = 'desktop';
 
 export const TITLES = {
   'dq-in-shop': 'The job’s page once the bike is in: where it is, when it’s ready',
+  'dq-waiting-part': 'Waiting for a part',
+  'dq-ready': 'Ready to collect (journey 5): the same page, at Ready',
   'dq-quote': 'A quote to answer: ticked the way the mechanic recommends',
   'dq-quote-photo': 'A line’s photo, enlarged',
   'dq-quote-untick': 'Ticking the optional line: the total follows',
-  'dq-quote-confirm': 'Send your answers? They’re final',
+  'dq-quote-decline': 'Unticking the needed pair: what happens without it',
+  'dq-quote-deposit': 'A quote after a deposit: still to pay',
+  'dq-quote-reminded': 'After the reminder: when it was sent, and reminded',
   'dq-answered': 'Answered: the work carries on',
+  'dq-answered-declined': 'Answered no thanks to all of it',
+  'dq-answered-deposit': 'Answered, with the deposit taken off',
   'dq-answered-phone': 'Answered by phone, recorded by the shop',
   'dq-quote-newer': 'The quote has changed: earlier answers kept',
-  'dq-waiting-part': 'Waiting for a part',
-  'dq-ready': 'Ready to collect (journey 5)',
-  'dq-job-quote': 'Job page: each new line Needed or Optional, with a photo',
-  'dq-job-sent': 'Quote sent, with Undo',
+  'dq-withdrawn': 'The shop withdrew the quote',
+  'dq-job-quote': 'Job page: each new line Needed or Optional, its reason, a photo, what it goes with',
+  'dq-job-sent': 'Sending the quote, with Undo for a minute',
   'dq-today-no-answer': 'Today: no answer to a quote',
   'dq-record-answer': 'Record their answer, from a phone call',
+  'dq-job-withdraw': 'Withdraw the quote',
+  'dq-job-answered': 'The job page once answered: approved and declined',
+  'dq-job-waiting': 'The job page: waiting for a part (Workshop day)',
   'dq-messages': 'Settings › Front desk › Messages: the quote and its reminder',
 };
 export const ROWS = [
   { label: 'While the bike is in', screens: ['dq-in-shop', 'dq-waiting-part', 'dq-ready'] },
-  { label: 'The quote', screens: ['dq-quote', 'dq-quote-photo', 'dq-quote-untick', 'dq-quote-confirm', 'dq-answered', 'dq-answered-phone', 'dq-quote-newer'] },
-  { label: 'The shop’s side', screens: ['dq-job-quote', 'dq-job-sent', 'dq-today-no-answer', 'dq-record-answer', 'dq-messages'] },
+  { label: 'The quote', screens: ['dq-quote', 'dq-quote-photo', 'dq-quote-untick', 'dq-quote-decline', 'dq-quote-deposit', 'dq-quote-reminded', 'dq-quote-newer', 'dq-withdrawn'] },
+  { label: 'Answered', screens: ['dq-answered', 'dq-answered-declined', 'dq-answered-deposit', 'dq-answered-phone'] },
+  { label: 'The shop’s side', screens: ['dq-job-quote', 'dq-job-sent', 'dq-today-no-answer', 'dq-record-answer', 'dq-job-withdraw', 'dq-job-answered', 'dq-job-waiting', 'dq-messages'] },
 ];
