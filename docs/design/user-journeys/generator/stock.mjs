@@ -31,13 +31,15 @@ const TREK = 'Trek Domane AL 3';
 const searchBox = (value = '') => `<style>.st-search::placeholder { color: ${C.muted}; opacity: 1 }</style><label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input class="st-search" type="search" aria-label="Search stock: name, barcode, supplier code or a measurement" placeholder="Name, barcode, supplier code — or a measurement, like “bearing 30 mm”" value="${esc(value)}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}">${icon('scan', 20)}</label>`;
 const FILTERS = ['All', 'Running low', 'Below zero', '[Category]', '[Category]', '[Category]'];
 const filters = (on = 0) => `<div role="group" aria-label="Show" style="display: flex; gap: 8px; ${isPhone() ? 'overflow-x: auto; padding-bottom: 2px' : 'flex-wrap: wrap'}">${FILTERS.map((t, i) => pillBtn(t, i === on)).join('')}</div>`;
-const COLS = () => (isPhone() ? '1fr auto' : 'minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) 24px');
-const head = () => (isPhone() ? '' : `<div aria-hidden="true" style="display: grid; grid-template-columns: ${COLS()}; gap: 12px; padding: 0 16px 6px; font-size: 13px; font-weight: 700; color: ${C.muted}"><span>Product</span><span>In stock</span><span style="text-align: right">Price</span><span style="text-align: right">Margin</span><span></span></div>`);
+let TICKS = false;
+const COLS = () => (isPhone() ? `${TICKS ? '44px ' : ''}1fr auto` : `${TICKS ? '44px ' : ''}minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) 24px`);
+const tickBox = (label, on) => `<label style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px"><input type="checkbox" ${on ? 'checked ' : ''}aria-label="${esc(label)}" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`;
+const head = () => (isPhone() ? '' : `<div aria-hidden="true" style="display: grid; grid-template-columns: ${COLS()}; gap: 12px; padding: 0 16px 6px; font-size: 13px; font-weight: 700; color: ${C.muted}">${TICKS ? '<span></span>' : ''}<span>Product</span><span>In stock</span><span style="text-align: right">Price</span><span style="text-align: right">Margin</span><span></span></div>`);
 // A row is one link to the product's page; status in words, not colour alone.
-const row = ({ name, sub, stock, state = '', price, margin }) => `<a href="#" role="listitem" style="display: grid; grid-template-columns: ${COLS()}; gap: 12px; align-items: center; min-height: 60px; box-sizing: border-box; padding: 8px 16px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">
-<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}${isPhone() ? ` · ${price}` : ''}</span></span>
+const row = ({ name, sub, stock, state = '', price, margin, ticked = false }) => `<${TICKS ? 'div' : 'a href="#"'} role="listitem" style="display: grid; grid-template-columns: ${COLS()}; gap: 12px; align-items: center; min-height: 60px; box-sizing: border-box; padding: 8px 16px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${TICKS ? tickBox(`Tick ${name}`, ticked) : ''}
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${TICKS ? `<a href="#" style="color: ${C.ink}">${name}</a>` : name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}${isPhone() ? ` · ${price}` : ''}</span></span>
 <span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; ${isPhone() ? 'justify-content: flex-end' : ''}"><span style="${visuallyHidden}">In stock: </span>${mono(stock, 'font-size: 15px')}${state === 'low' ? tag('Running low', 'grey') : state === 'below' ? tag('Below zero', 'warn') : ''}</span>
-${isPhone() ? '' : `<span style="text-align: right; font-size: 15px"><span style="${visuallyHidden}">Price: </span>${mono(price)}</span><span style="text-align: right; font-size: 15px; color: ${C.muted}"><span style="${visuallyHidden}">Margin: </span>${margin}</span><span aria-hidden="true" style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span>`}</a>`;
+${isPhone() ? '' : `<span style="text-align: right; font-size: 15px"><span style="${visuallyHidden}">Price: </span>${mono(price)}</span><span style="text-align: right; font-size: 15px; color: ${C.muted}"><span style="${visuallyHidden}">Margin: </span>${margin}</span><span aria-hidden="true" style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span>`}</${TICKS ? 'div' : 'a'}>`;
 const ROWS_ALL = [
   { name: PADS, sub: 'B05S-RX · [Category] · [Supplier]', stock: '[n]', price: '£28.00', margin: '[n]%' },
   { name: TREK, sub: '[Category] · [n] bikes, each by frame number', stock: '[n]', price: '£[price]', margin: '[n]%' },
@@ -53,10 +55,10 @@ const ROWS_MEASURE = [
   { name: '[Bearing]', sub: `[Supplier code] · <strong style="color: ${C.ink}">Outside diameter 30 mm</strong> · inside [n] mm`, stock: '[n]', price: '£[price]', margin: '[n]%' },
   { name: '[Bearing]', sub: `[Supplier code] · <strong style="color: ${C.ink}">Outside diameter 30 mm</strong> · inside [n] mm`, stock: '[n]', state: 'low', price: '£[price]', margin: '[n]%' },
 ];
-const listBoard = ({ query = '', rows = ROWS_ALL, summary = `${mono('[n]')} products` } = {}) => stockPage('Stock', `<div style="display: flex; flex-direction: column; gap: 12px; flex-shrink: 0">
+const listBoard = ({ query = '', rows = ROWS_ALL, summary = `${mono('[n]')} products`, bar = '' } = {}) => stockPage('Stock', `<div style="display: flex; flex-direction: column; gap: 12px; flex-shrink: 0">
 <div style="display: flex; align-items: center; gap: 10px"><div style="flex-grow: 1; min-width: 0">${searchBox(query)}</div>${isPhone() ? '' : button('+ Add a product', { variant: 'default' })}</div>
 ${filters(0)}
-<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">${summary}</p></div>
+<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">${summary}</p>${bar}</div>
 ${card(`${isPhone() ? '' : `<div style="padding-top: 12px">${head()}</div>`}<div role="list">${rows.map(row).join('')}</div>`, 'overflow: hidden; flex-shrink: 0')}`);
 
 // ---------- Decision 3: a product's page ----------
@@ -135,6 +137,22 @@ ${note('Goes into the stock history with your name. Big changes show on the mana
 const adjustSetting = () => settingsPage('stock', 'Stockroom', STOCK_INTRO, stockFolds({ adjust: `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><label for="adj-over" style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Show on Today when an adjustment is worth more than</span><span style="font-size: 13px; color: ${C.muted}">At cost · for owners and managers</span></label><input id="adj-over" value="£[amount]" style="width: 120px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"></div>
 ${note('Every adjustment is in its product’s stock history, whatever its value.')}` }));
 
+// ---------- Decision 7: change prices in bulk, with a preview ----------
+const SUP_ROWS = [
+  { name: PADS, sub: 'B05S-RX · [Category] · [Supplier]', stock: '[n]', price: '£28.00', margin: '[n]%', ticked: true },
+  { name: '[Product]', sub: '[Supplier code] · [Category] · [Supplier]', stock: '[n]', price: '£[price]', margin: '[n]%', ticked: true },
+  { name: '[Product]', sub: '[Supplier code] · [Category] · [Supplier]', stock: '[n]', state: 'low', price: '£[price]', margin: '[n]%', ticked: true },
+];
+const tickedBoard = () => { TICKS = true; try { return listBoard({ query: '[Supplier]', rows: SUP_ROWS, summary: `${mono('3')} products from [Supplier]`, bar: `<div role="region" aria-label="Ticked products" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 10px; background: ${C.ink}; color: ${C.panel}"><span style="font-size: 15px; font-weight: 700; flex-grow: 1">3 ticked</span><button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.panel}; text-decoration: underline">Untick all</button>${button('Print labels', { variant: 'default' })}${button('Change prices', { variant: 'default' })}</div>` }); } finally { TICKS = false; } };
+const METHODS = [['A new price', false], ['Up or down by a percentage', true], ['A target margin', false]];
+const ENDINGS = [['No rounding', false], ['.99', true], ['.00', false]];
+const pRow = (name, sub, was, now, m1, m2) => `<tr><th scope="row" style="text-align: left; padding: 10px 0; border-top: 1px solid ${C.border}; font-weight: 600; font-size: 15px">${name}<span style="display: block; font-size: 13px; font-weight: 400; color: ${C.muted}">${sub}</span></th><td style="padding: 10px 0; border-top: 1px solid ${C.border}; font-family: ${MONO}; text-align: right; color: ${C.muted}">${was}</td><td style="padding: 10px 0; border-top: 1px solid ${C.border}; font-family: ${MONO}; text-align: right; font-weight: 700">${now}</td><td style="padding: 10px 0; border-top: 1px solid ${C.border}; text-align: right; font-size: 14px; color: ${C.muted}">${m1} → <strong style="color: ${C.ink}">${m2}</strong></td></tr>`;
+const pricesPopup = () => popup('pr-title', 'Change prices', '3 products from [Supplier]', `
+<div role="group" aria-label="How" style="display: flex; flex-wrap: wrap; gap: 8px">${METHODS.map(([t, on]) => pillBtn(t, on)).join('')}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px"><label style="display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">Change by <input value="+[n]" aria-label="Percentage change" style="width: 90px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"> %</label><div role="group" aria-label="Round to" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 600">Round to</span>${ENDINGS.map(([t, on]) => pillBtn(t, on)).join('')}</div></div>
+<table style="width: 100%; border-collapse: collapse"><caption style="${visuallyHidden}">Prices before and after</caption><thead><tr><th scope="col" style="text-align: left; font-size: 13px; color: ${C.muted}; padding-bottom: 6px">Product</th><th scope="col" style="text-align: right; font-size: 13px; color: ${C.muted}">Now</th><th scope="col" style="text-align: right; font-size: 13px; color: ${C.muted}">New</th><th scope="col" style="text-align: right; font-size: 13px; color: ${C.muted}">Margin</th></tr></thead><tbody>${pRow(PADS, 'B05S-RX', '£28.00', '£[price]', '[n]%', '[n]%')}${pRow('[Product]', '[Supplier code]', '£[price]', '£[price]', '[n]%', '[n]%')}${pRow('[Product]', '[Supplier code]', '£[price]', '£[price]', '[n]%', '[n]%')}</tbody></table>
+${note('Nothing changes until you press Change. Each change goes into the product’s history; the till and website use the new price straight away.')}`, `${button('Cancel', { variant: 'default' })}${button('Change 3 prices')}`, 720);
+
 def('st-list', () => listBoard());
 def('st-product', () => productBoard());
 def('st-product-bike', () => bikeBoard());
@@ -147,6 +165,8 @@ def('tk-applied', () => appliedBoard());
 def('st-adjust', () => withSize(SIZE, () => overlay(productBoard(), adjustPopup())));
 def('st-today-adjust', () => today({ adjusted: true }));
 def('st-setting-adjust', () => adjustSetting());
+def('st-list-ticked', () => tickedBoard());
+def('st-prices', () => overlay(tickedBoard(), pricesPopup()));
 def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -163,6 +183,8 @@ export const TITLES = {
   'st-product': 'A product’s page: summary left, stock history right',
   'st-product-bike': 'A bike’s page: each frame number, in stock or sold',
   'st-product-sizes': 'Sizes and colours: one product, a grid of stock',
+  'st-list-ticked': 'Ticking products in the stock list',
+  'st-prices': 'Change prices: by a percentage, rounded, with a preview',
   'st-adjust': 'Adjust stock: the change and a reason',
   'st-today-adjust': 'Today: a big adjustment, for the manager',
   'st-setting-adjust': 'Settings › Stockroom: when an adjustment shows on Today',
@@ -175,6 +197,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Finding stock', screens: ['st-list', 'st-search-measure'] },
   { label: 'A product', screens: ['st-product', 'st-product-bike', 'st-product-sizes'] },
+  { label: 'Changing prices', screens: ['st-list-ticked', 'st-prices'] },
   { label: 'Correcting stock', screens: ['st-adjust', 'st-today-adjust', 'st-setting-adjust'] },
   { label: 'Stock take', screens: ['tk-hub', 'tk-start', 'tk-count', 'tk-diff', 'tk-applied'] },
 ];

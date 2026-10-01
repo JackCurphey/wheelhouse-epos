@@ -64,3 +64,11 @@ A2, A6 — as few clicks as possible).
    the manager's Today with "Seen". Chosen over adjusting only with "Can
    order stock", and staff asking a manager to approve. Boards:
    `st-adjust`, `st-today-adjust`, `st-setting-adjust`.
+7. **Prices change in bulk by picking products, with a preview** (Jack, 1
+   Oct: "1"). In the stock list, tick products (or search or filter, then
+   tick all), then "Change prices": a new price, up or down by a
+   percentage, or a target margin; round to a chosen ending (such as .99);
+   old and new prices side by side before anything changes; every change
+   in each product's history. Chosen over price rules that run by
+   themselves, and one product at a time. Boards: `st-list-ticked`,
+   `st-prices`.
