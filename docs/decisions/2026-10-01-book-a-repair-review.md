@@ -116,3 +116,27 @@ possible).
     service; who can be booked stays on each person (Owner setup 11).
     Gives the settings that had a server but no screen their screen.
     Chosen over deposits under Payments, and a separate page under Website.
+12. **UI audit: every recommendation taken** (Jack, 1 Oct: "yeah go with
+    all of them"). From `design/user-journeys/book-ui-audit.md`: "Free to
+    cancel until [date and time]" as the same row on every answer screen;
+    a request still waiting opens its page as a request, not "Booking
+    confirmed", with "Cancel request"; the cancelled screen says whether
+    the deposit came back or was kept; **an offered time is answered on the
+    booking page — "Accept this time" or "Cancel my request"** (audit H2,
+    option 1); a declined date change says so at the top of the page;
+    boards for a booking with no deposit, a drop-off booking with its
+    mechanic, and the signed-in "Your bookings" list; the payment step says
+    the deposit comes back in full if the shop can't fit them in, and a send
+    that fails after paying says "We're checking whether your payment went
+    through — please don't pay again"; **a "Not sure" booking takes a fixed
+    deposit set in Settings ("If the price isn't known: £[n]")** (H3, option
+    1); the diary's request pop-up shows the deposit, the spending limit and
+    how the customer wants updates, and Decline says the deposit is
+    refunded; every booking text gets its row in Messages; the wording no
+    longer contradicts itself (extra work, "texted", the send button on a
+    shop that confirms automatically); single choices are radio groups,
+    the step is read as "Step 3 of 4", focus moves to the next step's
+    heading; **no terms tick box — "By sending, you agree to our booking
+    terms and privacy notice." by the button** (M4, option 1), 44px boxes
+    and browser fill-in for name, phone and email; "Take it" goes straight
+    to the details step; and the small fixes L1–L7.

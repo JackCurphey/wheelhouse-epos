@@ -124,3 +124,13 @@ four pages, one per room — Front desk (Till, Payments, Messages, End of
 day), Workshop, Stockroom (new) and Office (Shop and sites, Staff and roles,
 Your data). A room with several areas shows them as headings with a "Jump
 to" row of pills; a phone opens on the list of four rooms. Customer groups are now under Settings › Front desk › Payments.
+
+**Later change (1 Oct 2026, Book a repair decision 12):** Settings › Front
+desk › Messages gains a "Booking messages" group below the existing rows —
+Request received, Booking confirmed (moved here from the top of the list),
+New time offered, Request declined, Date change answered and Booking
+cancelled — each sent "Customer's choice" (the channel the customer picked
+when booking). The Automatic messages summary now reads "10 on" wherever it
+shows, including the closed row on the Front desk settings boards. The
+Online booking row's summary adds the deposit: "Exact times · 2 hours'
+notice · deposit [n]% · each booking a request".

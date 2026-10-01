@@ -1753,14 +1753,19 @@ const reqCloseHref = (size) => `diary-${size}.dc.html`;
 // 4. request-new — Sam Reed / Specialized Sirrus / Brake service (stage2 REQ
 // example; no price source yet, so this reads "Price to be confirmed" —
 // H4 (29 Sep audit): was a literal unrendered "[price]" template tag.
-function requestNewBody(size) {
+function requestNewBody(size, deposit = false) {
   return `${eyebrow(`Received today at ${mono('08:15')}`)}
 ${row(`${h2('Sam Reed', 18)}${statusBadge('pending')}`, 10, 'justify-content: space-between')}
 ${txt('Specialized Sirrus · grey', 14, `color: ${C.muted}`)}
 <div style="display: flex; flex-direction: column; gap: 6px">${h2('What the customer told us', 14)}${quote('No message from the customer.')}</div>
 <div style="display: flex; flex-direction: column; gap: 4px">${txt(`<strong>Brake service · Price to be confirmed</strong>`)}${note('45 minutes planned. Requested Friday 18 September.')}</div>
-${mechanicPillGroup(size, 'Shared queue')}`;
+${deposit ? depositLines() : ''}${mechanicPillGroup(size, 'Shared queue')}`;
 }
+// Book a repair decision 12 (audit M1): a request from a shop that takes a
+// deposit shows the deposit held, the customer's spending limit (as the job
+// page's tag, Workshop day 42) and how they want updates. Only the
+// deposit versions below use it; request-new is unchanged.
+const depositLines = () => `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">${badge('Deposit paid £[deposit]', 'green')}${badge('Customer OK up to £[amount]', 'grey')}<span style="font-size: 13px; color: ${C.muted}">Updates by [their choice]</span></div>`;
 const reqNewOpts = {
   id: 'req-new-title', title: 'Sam Reed · Specialized Sirrus', sub: 'Pending request', body: requestNewBody,
   footer: (size) => `${button('Accept', { block: true })}${btnRow(`${button('Offer another time', { variant: 'default' })}${button('Decline', { variant: 'ghost', href: `request-decline-${size}.dc.html` })}`)}`,
@@ -1776,10 +1781,10 @@ keepDesktopSeq('request-new');
 
 // 5. request-decline — message copied from stage2 `reject`
 const DECLINE_MSG = 'Sorry, we can’t fit this service in on Thursday. Please try Friday, or call us and we’ll help find another day.';
-function requestDeclineBody(size) {
+function requestDeclineBody(size, deposit = false) {
   return `${txt('<strong>Explain what the customer can do next</strong>')}
 ${area('Message to Sam', DECLINE_MSG, 'decline-msg-' + size, 4)}
-${note('Declining releases the request’s reservation. The customer is told not to travel for this request.')}`;
+${note(`Declining releases the request’s reservation. The customer is told not to travel for this request.${deposit ? ' Their £[deposit] deposit is refunded automatically.' : ''}`)}`;
 }
 const reqDeclineOpts = {
   id: 'req-decline-title', title: 'Decline booking request', sub: 'Sam Reed · Specialized Sirrus', body: requestDeclineBody,
@@ -1792,6 +1797,20 @@ screens['request-decline'] = {
   phone: dialogPhone('Decline request', reqCloseHref('phone'), stack(requestDeclineBody('phone'), 12), `${button('Decline & notify customer', { variant: 'danger', block: true })}${button('Keep request', { variant: 'default', block: true })}`, 'Sam Reed · Specialized Sirrus'),
 };
 keepDesktopSeq('request-decline');
+
+// Book a repair decision 12 (audit M1): the same two pop-ups for a request
+// that came with a deposit. Drawn on journey 3's canvas.
+export function requestDepositBoard(size, decline = false) {
+  const opts = decline
+    ? { ...reqDeclineOpts, body: (sz) => requestDeclineBody(sz, true) }
+    : { ...reqNewOpts, body: (sz) => requestNewBody(sz, true) };
+  if (size === 'desktop') return requestDialog('desktop', DW, DH, opts);
+  if (size === 'tablet') return requestDialog('tablet', TW, TH, opts);
+  return decline
+    ? dialogPhone('Decline request', reqCloseHref('phone'), stack(requestDeclineBody('phone', true), 12), `${button('Decline & notify customer', { variant: 'danger', block: true })}${button('Keep request', { variant: 'default', block: true })}`, 'Sam Reed · Specialized Sirrus')
+    : dialogPhone('Sam Reed · Specialized Sirrus', reqCloseHref('phone'), stack(requestNewBody('phone', true), 12),
+      `${button('Accept', { block: true })}${grid('1fr 1fr', `${button('Another time', { variant: 'default', block: true })}${button('Decline', { variant: 'ghost', block: true, href: 'request-decline-phone.dc.html' })}`, 8)}`, 'Pending request');
+}
 
 // 6. request-change — Oliver Chen, from/to times; no "Seen"
 function requestChangeBody() {
