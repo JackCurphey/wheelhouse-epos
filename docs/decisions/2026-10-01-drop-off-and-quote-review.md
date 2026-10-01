@@ -97,3 +97,13 @@ clicks as possible).
    row, the reminder as its own line, and "Customer's choice" on "Bike ready"
    and "Bike still waiting"; the job page's "Waiting for a part" step and the
    answered job page drawn.
+8. **Tablet and phone drawn** (Jack, 1 Oct: "looks great, can you do the
+   tablet and phone"). Every board is now at desktop, tablet and phone. The
+   quote is longer than a tablet or phone screen, so there the new total,
+   "Your answers are final once sent." and the Approve (or "Decline the
+   extra work") button sit in a bar pinned along the bottom, as "Your
+   booking" does on the booking page. With the button always in view beside
+   the final-answer line, the phone keeps decision 7's one-click send — no
+   "Send your answers?" pop-up (the re-check decision 7 asked for). The
+   tracker stacks on phone; pop-ups fill the screen; staff boards use the
+   job page's own tablet and phone layouts.

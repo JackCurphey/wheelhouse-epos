@@ -37,14 +37,15 @@ const hidden = (t) => `<span style="${VH}">${t}</span>`;
 let SIZE = 'desktop';
 
 // ---------- The job's page (decision 1) ----------
-const site = (content) => {
-  const body = `<div data-scroll style="flex-grow: 1; min-height: 0; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px">${content}</div>`;
+const site = (content, bar = '') => {
+  const scroll = `<div data-scroll style="flex-grow: 1; min-height: 0; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px">${content}</div>`;
+  const body = bar ? `<div style="flex-grow: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px">${scroll}${bar}</div>` : scroll;
   return SIZE === 'desktop' ? siteDesktop('sand', 'Book a repair', body) : SIZE === 'tablet' ? siteTablet('sand', body, 'Book a repair') : sitePhone('sand', { content: body });
 };
 const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><strong>North Street Cycles, Bolton</strong><span>24 North Street · [shop phone]</span></div>`;
 const cardBox = (inner, extra = '') => card(`<div style="padding: ${isPhone() ? 16 : 22}px; display: flex; flex-direction: column; gap: 12px">${inner}</div>`, extra);
 const h2 = (t, id, focus = false) => `<h2 id="${id}"${focus ? ' tabindex="-1"' : ''} style="margin: 0; font-size: 20px; font-weight: 700">${t}</h2>`;
-const page = (inner, { width = 720 } = {}) => site(`<div style="width: 100%; max-width: ${width}px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 tabindex="-1" style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Trek Domane AL 3 · Standard service</h1></div>${inner}</div>`);
+const page = (inner, { width = 720, bar = '' } = {}) => site(`<div style="width: 100%; max-width: ${width}px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 tabindex="-1" style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Trek Domane AL 3 · Standard service</h1></div>${inner}</div>`, bar);
 const note = (t) => `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
 
 // Decision 6: Booked → In the shop → Being worked on → Ready. Audit L4: the
@@ -84,10 +85,20 @@ const quoteLine = (l, on) => `<li style="display: flex; flex-direction: column; 
 <label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-width: 0; min-height: 44px; cursor: pointer"><input type="checkbox"${on ? ' checked' : ''} style="width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1"><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">${l.work}</span>${badge(l.need, l.need === 'Needed' ? 'amber' : 'grey')}<span style="margin-left: auto">${mono(money(l.price), 'font-size: 16px')}</span></span><span style="font-size: 14px; line-height: 1.45">${l.reason}</span></span></label>
 ${l.photo ? `<span style="display: flex; flex-direction: column; align-items: center; gap: 2px">${photoThumb()}<span style="font-size: 12px; color: ${C.muted}">Tap to enlarge</span></span>` : ''}</div>
 ${!on && l.need === 'Needed' && l.without ? `<p style="margin: 0 0 0 34px; padding: 8px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Alex recommends this.</strong> ${l.without}</p>` : ''}</li>`;
-function quoteCard({ ticks = { pads: true, fit: true, cable: false }, newer = false, deposit = false, reminded = false } = {}) {
+const quoteSums = ({ ticks = { pads: true, fit: true, cable: false }, newer = false } = {}) => {
   const newOnes = NEW_LINES.filter((l) => ticks[l.id]);
   const total = 65 + newOnes.reduce((a, l) => a + l.price, 0);
-  const label = newer ? 'Approve £[total]' : newOnes.length ? `Approve ${money(total)}` : 'Decline the extra work';
+  return { total, totalText: newer ? '£[total]' : money(total), label: newer ? 'Approve £[total]' : newOnes.length ? `Approve ${money(total)}` : 'Decline the extra work' };
+};
+// Decision 8: on tablet and phone the quote is longer than the screen, so the
+// new total, the final-answer line and the button sit in a bar pinned below.
+const quoteBar = (opts = {}) => {
+  const { totalText, label } = quoteSums(opts);
+  return `<div aria-live="polite" style="flex-shrink: 0; box-sizing: border-box; width: 100%; max-width: 720px; margin: 0 auto; padding: 10px 14px; border-radius: 10px; border: 2px solid ${C.ink}; background: ${C.panel}; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">New total <strong>${mono(totalText, 'font-size: 17px')}</strong>${opts.deposit ? ` <span style="font-size: 13px; color: ${C.muted}">· deposit £[deposit] paid</span>` : ''}</span><span style="font-size: 13px; font-weight: 600">Your answers are final once sent.</span></span>${button(label, { block: isPhone() })}</div>`;
+};
+function quoteCard({ ticks = { pads: true, fit: true, cable: false }, newer = false, deposit = false, reminded = false } = {}) {
+  const { total, label } = quoteSums({ ticks, newer });
+  const inCard = SIZE === 'desktop';
   // Audit M3: facts only — when it was sent, and any reminder.
   const sentLine = `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Sent Thu 17 Sep, [time]${reminded ? ' · we sent a reminder at [time]' : ''}</p>`;
   return cardBox(`${badge(newer ? 'The quote has changed' : 'Waiting for your answer', 'purple')}${h2(newer ? 'Alex has added to the quote' : 'Alex recommends more work', 'q')}${sentLine}
@@ -97,11 +108,11 @@ ${newer ? `<div>${kv('Already agreed', `Standard service, brake pads, fitting ·
 <ul aria-labelledby="q" style="list-style: none; margin: 0; padding: 0">${newer ? `<li style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid ${C.border}"><label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-height: 44px"><input type="checkbox" checked style="width: 22px; height: 22px; margin: 2px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">[New line]</span>${badge('Needed', 'amber')}<span style="margin-left: auto">${mono('£[price]', 'font-size: 16px')}</span></span><span style="font-size: 14px">[The mechanic’s reason]</span></span></label></li>` : NEW_LINES.map((l) => quoteLine(l, ticks[l.id])).join('')}</ul>
 ${newer ? '' : `<div>${kv('Already agreed', `Standard service · ${mono('£65.00')}`)}</div>`}
 <div aria-live="polite" style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">${kv(`<strong style="color: ${C.ink}">New total</strong>`, mono(newer ? '£[total]' : money(total), 'font-size: 18px'), 'border-top: 0; padding-top: 0')}${deposit ? depositRows(total) : ''}${ticks.pads === false ? hidden('Fit & adjust brakes unticked too.') : ''}</div>
-<p style="margin: 0; font-size: 14px; font-weight: 600">Your answers are final once sent.</p>
-<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">${note(deposit ? 'Prices include VAT. Nothing to pay today — the rest is due when you collect.' : 'Prices include VAT. Nothing to pay today.')}${button(label)}</div>
+${inCard ? `<p style="margin: 0; font-size: 14px; font-weight: 600">Your answers are final once sent.</p>` : ''}
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">${note(deposit ? 'Prices include VAT. Nothing to pay today — the rest is due when you collect.' : 'Prices include VAT. Nothing to pay today.')}${inCard ? button(label) : ''}</div>
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 14px">Not sure? Call ${mono('[shop phone]')}, or</span>${button('Add a note for the shop', { variant: 'default' })}</div>`, `border: 2px solid ${C.ink}`);
 }
-const quotePage = (opts = {}) => page(`${quoteCard(opts)}${tracker(1, { sub: `The rest of the service is going ahead. ${readyLine}` })}`);
+const quotePage = (opts = {}) => page(`${quoteCard(opts)}${tracker(1, { sub: `The rest of the service is going ahead. ${readyLine}` })}`, { bar: SIZE === 'desktop' ? '' : quoteBar(opts) });
 // Decision 3: a photo, enlarged.
 const photoDialog = () => popup('photo-title', 'Shimano brake pads', 'Rear pads worn — replacing', photoThumb(true), button('Close', { variant: 'default' }), 720);
 // Answered (audit H1: all declined has its own words; L1: "No thanks").
@@ -141,8 +152,8 @@ def('dq-quote-reminded', () => quotePage({ reminded: true }));
 def('dq-answered', () => answered());
 def('dq-answered-declined', () => answered({ declined: true }));
 def('dq-answered-deposit', () => answered({ deposit: true }));
-def('dq-answered-phone', () => answered({ byPhone: true }));
-def('dq-quote-newer', () => page(`${quoteCard({ newer: true })}${tracker(2, { sub: readyLine })}`));
+def('dq-answered-by-phone', () => answered({ byPhone: true }));
+def('dq-quote-newer', () => page(`${quoteCard({ newer: true })}${tracker(2, { sub: readyLine })}`, { bar: SIZE === 'desktop' ? '' : quoteBar({ newer: true }) }));
 def('dq-withdrawn', () => withdrawn());
 def('dq-job-quote', () => quoteJobBoards('build')[SIZE]);
 def('dq-job-sent', () => withToast(quoteJobBoards('sent')[SIZE], DIMS[SIZE]));
@@ -153,8 +164,7 @@ def('dq-job-answered', () => quoteJobBoards('answered')[SIZE]);
 def('dq-job-waiting', () => diaryScreens['job-waiting-parts'][SIZE]);
 def('dq-messages', () => msgPage({ list: msgListOpen() }));
 
-// Desktop first (journey process); tablet and phone drawn after the UI audit.
-const SIZES = ['desktop'];
+const SIZES = ['desktop', 'tablet', 'phone']; // decision 8
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });
@@ -174,7 +184,7 @@ export const TITLES = {
   'dq-answered': 'Answered: the work carries on',
   'dq-answered-declined': 'Answered no thanks to all of it',
   'dq-answered-deposit': 'Answered, with the deposit taken off',
-  'dq-answered-phone': 'Answered by phone, recorded by the shop',
+  'dq-answered-by-phone': 'Answered by phone, recorded by the shop',
   'dq-quote-newer': 'The quote has changed: earlier answers kept',
   'dq-withdrawn': 'The shop withdrew the quote',
   'dq-job-quote': 'Job page: each new line Needed or Optional, its reason, a photo, what it goes with',
@@ -189,6 +199,6 @@ export const TITLES = {
 export const ROWS = [
   { label: 'While the bike is in', screens: ['dq-in-shop', 'dq-waiting-part', 'dq-ready'] },
   { label: 'The quote', screens: ['dq-quote', 'dq-quote-photo', 'dq-quote-untick', 'dq-quote-decline', 'dq-quote-deposit', 'dq-quote-reminded', 'dq-quote-newer', 'dq-withdrawn'] },
-  { label: 'Answered', screens: ['dq-answered', 'dq-answered-declined', 'dq-answered-deposit', 'dq-answered-phone'] },
+  { label: 'Answered', screens: ['dq-answered', 'dq-answered-declined', 'dq-answered-deposit', 'dq-answered-by-phone'] },
   { label: 'The shop’s side', screens: ['dq-job-quote', 'dq-job-sent', 'dq-today-no-answer', 'dq-record-answer', 'dq-job-withdraw', 'dq-job-answered', 'dq-job-waiting', 'dq-messages'] },
 ];
