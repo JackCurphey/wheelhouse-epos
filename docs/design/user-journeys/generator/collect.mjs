@@ -69,7 +69,7 @@ function pay(state, remind = false) {
   if (state === 'inshop') return box('To pay when you collect', `${mono(money(due), 'font-size: 30px')}
 ${note('Pay at the counter by card or cash. When you come in, just give your name.')}${shopLines}`);
   return box('To pay', `${mono(money(due), 'font-size: 30px')}${depositLine}
-${button(`Pay ${money(due)} now`, { block: true })}${note('Or pay when you collect — either is fine.')}${remind ? `<div style="padding-top: 8px; border-top: 1px solid ${C.border}">${remindBox()}</div>` : ''}${shopLines}${button('Add a note for the shop', { variant: 'default' })}`);
+${button(`Pay ${money(due)} now`, { block: true })}${note('Or pay when you collect — either is fine.')}${remind ? `<div style="padding-top: 8px; border-top: 1px solid ${C.border}">${remindBox(false, { collect: true })}</div>` : ''}${shopLines}${button('Add a note for the shop', { variant: 'default' })}`);
 }
 
 // Drop off and approve the quote audit H4: the same page as the booking and

@@ -88,3 +88,32 @@ canvas. Rules for every journey apply (Workshop day
    page. On a phone: the list, then the conversation. Replaces the Release
    1 inbox Workshop day 2 kept "as drawn". Chosen over conversations only on
    job and customer pages, and messages answered from Today.
+8. **UI audit: every recommendation taken** (Jack, 1 Oct: "yes please"). From
+   `design/user-journeys/account-ui-audit.md`: **the reminder tick starts
+   unticked**, and the same tick is the customer's yes to a review request
+   ("And ask me for a review after I collect") — the shop should check that
+   wording with its lawyer (H1, option 1); the On/Off controls in "How we
+   contact you" are named switches, and a change shows a short line ("Service
+   reminders are off") (H2, option 2); **a deletion request shows on the
+   account with "Cancel my request"** until staff confirm (H3, option 1);
+   **"Your details" and "How we contact you" are one card, and "Your data"
+   sits under History** (M2, option 2); **store credit doesn't block
+   deletion** — the pop-up says it will be lost, and staff see it on the
+   request (M12, option 2). Also: hints name the customer's own way of hearing
+   back; job notes and questions get their own history rows, titled by their
+   first line; WH-1042's chip uses the tracker's words and Today shows it as
+   arrived; the stop page links to signing in and has a "turned back on"
+   state; the states after sending a question, emailing a receipt, a shop's
+   first review setup and an empty inbox are drawn; "Needs a reply" in words
+   in the inbox; "Stop these" is a fixed line the shop can't delete, with
+   only the insert buttons that fit; named links and buttons; "sent" lines
+   announced; the staff request says where it came from and what's in the
+   way, and shows on the customer page; and the Lows (plain receipt wording,
+   Account marked in the header, "This can't be undone" on its own line, a
+   "why" line on the reminder's booking page, the collection tick's wording,
+   "Edit" on every Messages row, reply again after replying, one count on
+   Today, the download's file and a failed download, and "Next service due"
+   on the bike). Side effect: the
+   website header now marks "Account" whenever a page opens as Account, so
+   Signing in's customer sign-in and code boards gain the underline too; they
+   are carried over when journey 7 goes into the big canvas.

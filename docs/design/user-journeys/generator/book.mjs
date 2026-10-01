@@ -418,3 +418,6 @@ export const ROWS = [
 
 // Account, history and reminders decision 2: step 4 with the reminder tick.
 export const detailsRemindAt = (size) => withSize(size, () => { const was = SIZE; SIZE = size; FID = 0; try { return layout(steps(4, DONE3, detailsBody({ remind: true })), S({ bike: BIKE, when: DONE_WHEN, limit: true })); } finally { SIZE = was; } });
+// Account, history and reminders audit L4: the reminder's link, saying why
+// the bike and service are already chosen.
+export const whenFromReminderAt = (size, line) => withSize(size, () => { const was = SIZE; SIZE = size; FID = 0; try { return layout(steps(3, [DONE_SERVICE, DONE_BIKE], `${line}${whenAppt()}`), S({ bike: BIKE, when: DONE_WHEN, limit: true })); } finally { SIZE = was; } });

@@ -222,4 +222,7 @@ const AREA_INTROS = { till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO
 
 // Account, history and reminders decision 2: the customer's one yes to
 // service reminders, at booking and at collection.
-export const remindBox = (checked = true) => `<label style="display: flex; gap: 12px; align-items: flex-start; min-height: 44px; cursor: pointer"><input type="checkbox"${checked ? ' checked' : ''} style="width: 22px; height: 22px; margin: 1px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Remind me when my bike is due its next service</span><span style="font-size: 13px; color: ${C.muted}">One message, the way you chose above. Stop any time.</span></span></label>`;
+// Journey 7 audit H1: unticked until the customer ticks it; the same tick
+// is their yes to a review request. L5: at collection it says where the way
+// was chosen.
+export const remindBox = (checked = false, { collect = false } = {}) => `<label style="display: flex; gap: 12px; align-items: flex-start; min-height: 44px; cursor: pointer"><input type="checkbox"${checked ? ' checked' : ''} style="width: 22px; height: 22px; margin: 1px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Remind me when my bike is due its next service</span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.45">And ask me for a review after I collect. One message each, ${collect ? 'the way you chose when you booked' : 'the way you chose above'}. Stop any time.</span></span></label>`;
