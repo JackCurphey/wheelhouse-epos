@@ -17,12 +17,28 @@ cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 Collect the bike and pay (journey 5), Receiving stock and purchase orders
 (journey 13), Stock take and stock control (journey 14), Book a repair
 (journey 3), Drop off and approve the quote (journey 4), Account, history
-and reminders (journey 7), Multiple sites (journey 19) and Reports and
-accounts (journey 17) are approved and in
+and reminders (journey 7), Multiple sites (journey 19), Reports and
+accounts (journey 17) and Buy online / click and collect (journey 2) are
+approved and in
 the big canvas; the next journey is
-Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (478 files of
-the 512 a canvas can hold).
+Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy online
+decision 10): the staff app (A, 8–21) on the shared link and customers and
+the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
+desktop only, each board linking to its journey's own canvas for tablet and
+phone (321 and 204 files of 512 each).
+
+**Journey 2, Buy online / click and collect (1 Oct):** approved at desktop,
+tablet and phone and copied into the big canvas; 10 decisions in
+`docs/decisions/2026-10-01-buy-online-review.md` — pay online and collect
+from a shop, with room left for delivery; each shop chooses what its
+website sells (on the shelf, any of its shops, or also ordered in); the
+website starts with everything or nothing, then switches on categories and
+products; no account needed to buy; card, Apple Pay, Google Pay, gift cards
+and store credit; staff see Online orders in three groups with Mark ready
+and Hand over; not collected works as for bikes; the shop is chosen once.
+UI audit `online-ui-audit.md`, every recommendation taken. 54 screens, 163
+boards. Own canvas: https://claude.ai/artifact/QGRBBPUhHRd5rg94XbgAyS .
+Generator: `online.mjs` + `build-online.mjs --theme sand`.
 
 **Journey 17, Reports and accounts (1 Oct):** approved at desktop, tablet
 and phone and copied into the big canvas; 9 decisions in

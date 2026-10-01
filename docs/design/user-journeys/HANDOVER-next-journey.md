@@ -15,9 +15,19 @@ decide. No flattery.
 
 ## Where things stand
 
-The big user-journeys canvas (every screen, by journey, status-coded; Jack
-has shared it "anyone with the link"):
-https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j
+The big user-journeys canvas is **two canvases** since 1 Oct (Buy online
+decision 10 — a canvas holds at most 512 files). Each has the whole
+overview, desktop only, and links to the other:
+- **The staff app** (journeys A and 8–21), the link Jack has shared
+  "anyone with the link": https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j
+  (`out/`, `live-canvas.json`)
+- **Customers and the website** (journeys B and 1–7), private until Jack
+  shares it: https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh
+  (`out-customers/`, `live-canvas-customers.json`)
+
+`build.mjs`'s `PARTS` says which journeys go where; a new journey must be
+added to one of them (the build stops if it isn't). Publish each half from
+its own folder; `removed.json` in each lists boards to send as null.
 
 Approved and in the big canvas as **Designed**, each with its own canvas
 holding desktop, tablet and phone:
@@ -41,27 +51,31 @@ holding desktop, tablet and phone:
 | 7 Account, history and reminders | https://claude.ai/artifact/Hoz1q28Frh9M7hNgV2bo3b | `docs/decisions/2026-10-01-account-and-reminders-review.md` (9) |
 | 19 Multiple sites | https://claude.ai/artifact/LXYUo9UQymsN2VyNSynAcB | `docs/decisions/2026-10-01-multiple-sites-review.md` (12) |
 | 17 Reports and accounts | https://claude.ai/artifact/NXHvoKd8wY8wpAhBYsPRUt | `docs/decisions/2026-10-01-reports-and-accounts-review.md` (9) |
+| 2 Buy online / click and collect | https://claude.ai/artifact/QGRBBPUhHRd5rg94XbgAyS | `docs/decisions/2026-10-01-buy-online-review.md` (10) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md`,
 `setup-ui-audit.md`, `customer-ui-audit.md`, `opening-ui-audit.md`,
 `moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md`,
 `stock-ui-audit.md`, `book-ui-audit.md`, `quote-ui-audit.md`,
-`account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md` (this folder).
+`account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md`, `online-ui-audit.md` (this folder).
 
-Overview count (each screen once): 476 screens — 442 designed, 0 built, 5
-old app only, 29 not designed yet, 0 for review; 478 files of the 512 a
-canvas can hold (1 Oct: journey 17 in; its 8 placeholders replaced by its 34
-screens, "Returning customers" kept as still to design, and journey 19's
-"Reports and cash-up by site" gap removed — journey 17 draws All shops
-versions. "Can see costs and margin" carried into every person pop-up).
+Overview count (each screen once): 521 screens — 496 designed, 0 built, 5
+old app only, 20 not designed yet, 0 for review; the staff app canvas holds
+321 files and customers and the website 204, of 512 each (1 Oct: journey 2
+in; its six placeholders replaced by its 54 screens; Website management's
+online-orders, click-and-collect and online-refund placeholders removed —
+journey 2 draws them. Carried into other journeys: Settings › Front desk ›
+Online orders, five online-order messages in Messages ("15 on"), "Show on
+website" on a Stock product).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
-placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
-collect, 6 Cycle to Work, 18 Website management,
+placeholders: 1 Find the shop / browse the website, 6 Cycle to Work, 18 Website management,
 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **2 Buy online /
-click and collect** (journey 7's account history lists
+Strong candidates, because finished journeys lean on them: **1 Find the shop
+and browse the website** (journey 2's product page and shop choice sit in
+it), **18 Website management** (journey 2 leaves "Online payments setup" —
+connecting the payment provider — and the website's own settings to it) (journey 7's account history lists
 online orders; customer orders, below, touch it), **20 Management
 oversight**.
 
@@ -229,6 +243,15 @@ big changes (changed boards with `canvas.json` first, removals second).
   show the Xero line — journey 17 draws it; "Show graphs in reports" is in
   Your settings only for people who can see reports, so journey A's board
   (Jo Taylor, Staff) doesn't show it.
+- Journey 2 left for later: the payment provider is still to choose (PAY-05)
+  — the bank's check and "couldn't confirm" states are general card-payment
+  practice, to confirm once it is chosen; delivery by post is not drawn —
+  decision 9 lists the six places that assume collection; ordering in from
+  the supplier (decision 2) starts customer orders, whose purchase order is
+  journey 13; the "Show on website" switch on a single product is a line on
+  Stock's product page, not yet an interactive board; autofill and linked
+  hints on form boxes (`field()`'s `autocomplete`/`linked`) are only used by
+  journey 2's boards.
 - Maya Patel's example email differs: `maya@example.test` (diary.mjs,
   job-page.mjs, customer.mjs) vs `maya@example.com` (till.mjs, signin.mjs).
   Pick one and republish the approved boards that show it.

@@ -131,3 +131,25 @@ and phone. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    the "any of our shops" choice hidden for one-shop businesses (M13). Also
    the accessibility pass (M10), the sidebar count and "orders" in search
    (M11), and L1–L5.
+10. **Tablet and phone drawn; approved; the big canvas split in two** (Jack,
+    1 Oct: "lets get it on the canvas", then "1"). On phone, checkout puts
+    the order at the top and Pay in a bar along the bottom, so the button and
+    its messages stay in view; with two shops, "Collecting from Bolton ·
+    Change" is a line under the header on tablet and phone. 54 screens, 163
+    boards. With journey 2 the big canvas would have needed 523 files (a
+    canvas holds 512), so it is now two canvases, each with the whole
+    overview and a link to the other: **the staff app** (journeys A and
+    8–21) keeps the shared link
+    https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j, and **customers and
+    the website** (journeys B and 1–7) is
+    https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh. Chosen over showing
+    only journey 2's main path, and turning the big canvas into an index.
+    Journey 2 replaces its six placeholders; Website management's "Online
+    orders", "Click and collect queue" and "Refund an online order" are now
+    drawn here (its "Online payments setup" stays to design). Carried into
+    other journeys: the Online orders section in Settings › Front desk; the
+    five online-order messages in Settings › Messages ("15 on"); "Show on
+    website" on a product's page in Stock. Not carried: "orders" in the
+    staff search hint — the longer hint was cut off in the header, so the
+    hint stays "Search jobs, customers, products" and search finds orders
+    all the same.

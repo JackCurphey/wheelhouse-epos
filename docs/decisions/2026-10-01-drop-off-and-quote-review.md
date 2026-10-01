@@ -119,3 +119,5 @@ switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
 state) for screen readers, and on tablet and phone — where the switcher is out
 of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
 under each staff page's title. Nothing else on these boards changed.
+
+**Later change (1 Oct 2026, Buy online decision 10):** the Messages board lists the five online-order messages and reads "15 on". Nothing else changed.

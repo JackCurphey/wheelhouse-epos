@@ -25,7 +25,7 @@ import { page, note, popup, overlay, withSize, isPhone, settingsPage, onlineFold
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { today } from './opening.mjs';
 import { withSite } from './diary.mjs';
-import { msgListOpen, msgRow } from './setup.mjs';
+import { msgListOpen } from './setup.mjs';
 import { screens as tillScreens } from './till.mjs';
 
 export const screens = {};
@@ -217,16 +217,12 @@ ${shopLines()}
 ${button('See your order')}
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">We’ll keep it for you until [date]. Can’t make it? Call us on [shop phone].</p></article></div>`;
 };
-const ONLINE_MSGS = [['Order confirmation', 'When an online order is paid'], ['Order ready to collect', 'When an online order is ready'], ['Order still waiting', 'When an order isn’t collected after [n] days'], ['Item we couldn’t supply', 'When staff refund an item, with their reason'], ['Order cancelled', 'When an order is cancelled, by the customer or the shop']];
-const messagesBoard = () => {
-  const ready = msgRow('Order ready to collect', 'When an online order is ready', false, true);
-  const rows = `<h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Online order messages</h4>${ONLINE_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}`;
-  return scrolled(withOnlineArea(() => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds({ list: msgListOpen().replace(ready, rows) }), { who: OWNER })), 120);
-};
+// The five online-order messages now live in setup.mjs's Messages list.
+const messagesBoard = () => scrolled(settingsPage('messages', 'Messages', MSG_INTRO, msgFolds({ list: msgListOpen() }), { who: OWNER }), 120);
 
 // ---------- The shop's side: Front desk › Online orders (decision 6; audit H4, H5, H6, M1, M2, M10, M11) ----------
 // Audit M11: the sidebar item counts orders to get ready; search finds orders.
-const countIn = (html, count = '3') => html.replace(/(>Online orders<\/span>)(<\/a>)/, `$1<span style="margin-left: auto; padding: 0 7px; border-radius: 999px; background: ${C.highlight}; color: ${C.ink}; font-size: 12px; font-weight: 700">${count}${sr(' to get ready')}</span>$2`).replace(/Search jobs, customers, products/g, 'Search jobs, customers, orders, products');
+const countIn = (html, count = '3') => html.replace(/(>Online orders<\/span>)(<\/a>)/, `$1<span style="margin-left: auto; padding: 0 7px; border-radius: 999px; background: ${C.highlight}; color: ${C.ink}; font-size: 12px; font-weight: 700">${count}${sr(' to get ready')}</span>$2`);
 const staffPage = (title, content, who = STAFF, count = '3') => countIn(page('orders', title, content, who), count);
 const from = (t, tone = 'grey') => badge(t, tone);
 const cols = () => (isPhone() ? '1fr' : '190px minmax(0, 1fr) 130px 190px');

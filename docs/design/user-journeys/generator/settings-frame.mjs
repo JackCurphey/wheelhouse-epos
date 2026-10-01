@@ -57,9 +57,9 @@ export const SETTINGS_ROOMS = [
   ['stockroom', 'Stockroom', '', 'Supplier invoices, stock adjustments, categories', ['stock']],
   ['office', 'Office', 'The shop and its sites, the people who work here, and your data.', 'Shop and sites, staff and roles, your data', ['shop', 'staff', 'data']],
 ];
-// Buy online (journey 2): Front desk gains an "Online orders" area. Opt-in
-// for now (withOnlineArea), so other journeys' boards stay as approved.
-let ONLINE_AREA = false;
+// Buy online (journey 2): Front desk has an "Online orders" area, on every
+// journey's boards since journey 2 went into the big canvas (decision 10).
+let ONLINE_AREA = true;
 export const withOnlineArea = (fn) => { const was = ONLINE_AREA; ONLINE_AREA = true; try { return fn(); } finally { ONLINE_AREA = was; } };
 const roomOf = (area) => {
   const r = SETTINGS_ROOMS.find((x) => x[4].includes(area) || (area === 'online' && x[0] === 'frontdesk'));
@@ -207,7 +207,7 @@ export const shopFolds = (open = {}, sites = 'Bolton') =>
   + fold('Sites', sites, open.sites || '');
 export const MSG_INTRO = 'The texts and emails customers get from the shop.';
 export const msgFolds = (open = {}) =>
-  fold('Automatic messages', '11 on', open.list || '')
+  fold('Automatic messages', '15 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 export const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
 export const dataFolds = (open = {}) => fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '');

@@ -141,3 +141,5 @@ of sight — the shop's name, "North Street Cycles · Bolton", sits in small typ
 under each staff page's title. Nothing else on these boards changed.
 
 **Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** "Staff see no cost or margin" now reads "unless given Can see costs and margin" — a switch on the person (Reports and accounts decision 5). No board here changed.
+
+**Later change (1 Oct 2026, Buy online decision 10):** a product’s page shows "Show on website: On · as [Category]" under Price and cost (Buy online decision 3).

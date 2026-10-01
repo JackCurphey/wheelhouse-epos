@@ -48,6 +48,8 @@ export const sd7 = (id, title, role) => ({ id, status: 'designed', title, role, 
 export const sd19 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'sites' });
 // sd17(id, title, role) = an agreed journey 17 screen (reports.mjs, Soft sand).
 export const sd17 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'reports' });
+// sd2(id, title, role) = an agreed journey 2 screen (online.mjs, Soft sand).
+export const sd2 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'online' });
 
 export const journeys = [
   {
@@ -115,17 +117,73 @@ export const journeys = [
     ],
   },
   {
-    id: 'j02', name: 'Buy online, or click and collect', who: 'Customer',
+    id: 'j02', name: 'Buy online, or click and collect', who: 'Customer, Staff and Owner',
     rows: [
-      { label: 'Checkout', screens: [
-        g('buy-basket', 'Basket', 'Customer', 'Review what is being bought.', ['Lines with size and colour', 'Change quantity or remove', 'Total including VAT', 'Go to checkout'], { today: 'The old website hands the basket to Shopify. Release 2 replaces Shopify.', source: 'Release 2 piece 7' }),
-        g('buy-collect', 'Checkout: collect or deliver', 'Customer', 'Choose how to get the order.', ['Click and collect: choose which shop', 'Delivery: address and options', 'Contact details'], { source: 'ECOM-04 · ACC-09' }),
-        g('buy-pay', 'Checkout: payment', 'Customer', 'Pay online.', ['Card payment', 'Order summary', 'Terms'], { source: 'PAY-05 (payments decision still open)' }),
-        g('buy-confirmed', 'Order confirmed', 'Customer', 'Say what happens next. Also sent by email.', ['Order number', 'What was bought', 'Collect from which shop, or delivery estimate'], { source: 'ECOM-04 · COM-03' }),
+      { label: "Finding it", screens: [
+        sd2("on-product", "A product: ready today at Bolton", "Customer"),
+        sd2("on-product-added", "Added to the basket", "Customer"),
+        sd2("on-product-two-shops", "Two shops: “Collecting from Bolton”, the item at the other shop", "Customer"),
+        sd2("on-product-order-in", "An item the shop orders in", "Customer"),
+        sd2("on-product-out", "Not in stock: ask the shop", "Customer"),
+        sd2("on-product-out-other", "Not here, but in stock at the other shop", "Customer"),
+        sd2("on-product-no-shop", "No shop chosen yet", "Customer"),
+        sd2("on-choose-shop", "Which shop will you collect from? (one tap, asked once)", "Customer"),
+        sd2("on-product-off", "Buying online switched off", "Customer"),
       ] },
-      { label: 'After ordering', screens: [
-        g('buy-ready', 'Ready to collect (message)', 'Customer', 'Tell the customer to come in.', ['Which shop, opening hours', 'What to bring', 'Order number'], { source: 'ECOM-04 · COM-04/05' }),
-        g('buy-status', 'Order status', 'Customer', 'See where an order has got to.', ['Ordered, being picked, ready or sent', 'Contact the shop'], { source: 'ECOM-04' }),
+      { label: "Basket and checkout", screens: [
+        sd2("on-basket", "The basket", "Customer"),
+        sd2("on-basket-changed", "Something in the basket changed", "Customer"),
+        sd2("on-basket-empty", "An empty basket, with Undo", "Customer"),
+        sd2("on-checkout", "Checkout: how you’ll get it, your details, pay — one page", "Customer"),
+        sd2("on-checkout-errors", "Details to check", "Customer"),
+        sd2("on-checkout-credit", "Signed in, store credit used", "Customer"),
+        sd2("on-checkout-covered", "Store credit covers it all: Place order", "Customer"),
+        sd2("on-checkout-gift-code", "A gift card code not recognised", "Customer"),
+        sd2("on-checkout-gift", "A gift card used, and what’s left on it", "Customer"),
+      ] },
+      { label: "Paying", screens: [
+        sd2("on-checkout-paying", "Paying — please don’t close this page", "Customer"),
+        sd2("on-checkout-bank", "Your bank wants to check it’s you", "Customer"),
+        sd2("on-checkout-declined", "Card declined: nothing taken", "Customer"),
+        sd2("on-checkout-unsure", "Couldn’t confirm the payment: don’t pay again", "Customer"),
+        sd2("on-checkout-sold-out", "Sold out just before paying: nothing taken", "Customer"),
+        sd2("on-confirmed", "Order in: order number, what happens next, how you paid", "Customer"),
+        sd2("on-save-details", "Save your details: the emailed code", "Customer"),
+      ] },
+      { label: "Your order", screens: [
+        sd2("on-order", "The order’s page: getting it ready", "Customer"),
+        sd2("on-order-moving", "On its way from the other shop", "Customer"),
+        sd2("on-order-ready", "Ready to collect", "Customer"),
+        sd2("on-order-collected", "Collected, with the receipt", "Customer"),
+        sd2("on-order-cancel", "Cancel this order? (until it’s ready)", "Customer"),
+        sd2("on-order-cancelled", "Cancelled and refunded the way it was paid", "Customer"),
+        sd2("on-order-clash", "Cancel pressed just after it was marked ready", "Customer"),
+        sd2("on-order-shop-cancelled", "Cancelled by the shop: not collected", "Customer"),
+        sd2("on-order-cant-supply", "An item the shop couldn’t supply, refunded", "Customer"),
+        sd2("on-email-ready", "The “ready to collect” email", "Customer"),
+      ] },
+      { label: "The shop’s side", screens: [
+        sd2("on-orders", "Front desk › Online orders: to get ready, ready, collected", "Staff"),
+        sd2("on-orders-ready", "Marked ready: the email waits a few seconds, with Undo", "Staff"),
+        sd2("on-orders-arrived", "The item arrived from the other shop: Mark ready", "Staff"),
+        sd2("on-orders-second", "At [Second site]: an item to send to Bolton", "Staff"),
+        sd2("on-order-staff", "One order: items, how it was paid, the customer", "Staff"),
+        sd2("on-order-staff-ready", "A ready order: Hand over, or not ready after all", "Staff"),
+        sd2("on-not-ready", "Not ready after all: a sorry email", "Staff"),
+        sd2("on-cant-supply", "Can’t supply an item: refund it, with a reason", "Staff"),
+        sd2("on-cancel-refund", "Cancel and refund: the way it was paid, with a reason", "Manager"),
+        sd2("on-hand-over", "Hand over: the till’s hand-over for the order", "Staff"),
+        sd2("on-hand-over-refunded", "Hand over with one item refunded", "Staff"),
+        sd2("on-today", "Today: new online orders", "Manager"),
+        sd2("on-today-uncollected", "Today: an order not collected — Contacted or Open", "Manager"),
+      ] },
+      { label: "Settings", screens: [
+        sd2("on-settings", "Settings › Online orders: buying online, what the website sells", "Owner"),
+        sd2("on-settings-order-in", "Also things we order in: how long it takes", "Owner"),
+        sd2("on-settings-start", "Turning on buying online: start with everything, or nothing", "Owner"),
+        sd2("on-settings-show", "Showing products: switches on each category", "Owner"),
+        sd2("on-settings-pay", "Paying online, and orders not collected", "Owner"),
+        sd2("on-messages", "Settings › Messages: the online order messages", "Owner"),
       ] },
     ],
   },
@@ -756,9 +814,6 @@ export const journeys = [
       ] },
       { label: 'Online orders', screens: [
         g('site-payments', 'Online payments setup', 'Owner', 'Connect a payment provider for online sales.', ['Provider', 'Test payment'], { source: 'PAY-05' }),
-        g('site-orders', 'Online orders', 'Staff', 'Every online order and its status.', ['New, picking, ready, collected or sent'], { source: 'ECOM-04' }),
-        g('site-collect', 'Click and collect queue', 'Staff', 'Pick orders and tell customers they are ready.', ['To pick', 'Ready: notify customer'], { source: 'ECOM-04' }),
-        g('site-refund', 'Refund an online order', 'Manager', 'Give money back for an online order.', ['Items', 'Refund to card'], { source: 'PAY-06' }),
       ] },
     ],
   },
