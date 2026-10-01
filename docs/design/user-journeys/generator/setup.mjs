@@ -202,10 +202,10 @@ const workshopBlock = (on, siteDays = '') => `<div style="display: flex; flex-di
 // pill; the switches as toggle pills; the PIN line (signing in 6).
 // Multiple sites decision 4 (audit M7): Works at, and days per shop.
 // Reports and accounts decision 5: "Can see costs and margin" after "Can see reports".
-function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '', costs = false } = {}) {
+function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '', costs = false, on = [], hints = {} } = {}) {
   // Staff already have the till by their role, so that one says Included.
   const inc = (s) => s === 'Can use the till';
-  const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all ? 'On' : 'Off', all)}</div>`;
+  const sw = (s) => `<div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 6px 0 12px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}">${hints[s] ? `<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 14px; font-weight: 600">${s}</span><span style="font-size: 12px; color: ${C.muted}; line-height: 1.35">${hints[s]}</span></span>` : `<span style="font-size: 14px; font-weight: 600; flex-grow: 1">${s}</span>`}${inc(s) ? `<span style="font-size: 13px; color: ${C.muted}; padding-right: 8px">Included</span>` : offer(all || on.includes(s) ? 'On' : 'Off', all || on.includes(s))}</div>`;
   // Jack (30 Sep): the role runs across the top; both columns start together
 // underneath it.
   return popup('p-title', 'Jo Taylor', 'Staff · [email]', `${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}${worksAt}
@@ -218,7 +218,7 @@ function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '
 }
 const clearPinDialog = () => popup('pin-title', 'Clear Jo Taylor’s till PIN?', 'For when Jo has forgotten it', `${note('Jo won’t be able to check in at the till until they get a new PIN in Your settings. Nobody else sees the new one.')}`, `${button('Keep the PIN', { variant: 'ghost' })}${button('Clear the PIN', { variant: 'danger' })}`);
 
-const staffPage = (open) => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds(open));
+const staffPage = (open, who) => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds(open), who ? { who } : {});
 def('set-staff', () => staffPage({ people: peopleOpen() }));
 def('set-staff-person', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog()));
 def('set-staff-person-all', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ all: true })));

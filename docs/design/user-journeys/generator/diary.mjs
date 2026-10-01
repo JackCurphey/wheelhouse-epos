@@ -110,7 +110,10 @@ export const ROOMS_DIARY = [
   ['Stockroom', [['stock', 'Stock', 'stock', 'OMS'], ['deliveries', 'Deliveries and orders', 'purchasing', 'OMS'], ['stocktake', 'Stock take', 'check', 'OMS']]],
   ['Office', [['today', 'Today', 'reports', 'OMS'], ['reports', 'Reports', 'reports', 'OM'], ['website', 'Website', 'website', 'OM'], ['settings', 'Settings', 'settings', 'OM']]],
 ];
-const roomsFor = (role) => ROOMS_DIARY.map(([room, items]) => [room, items.filter((i) => i[3].includes(role))]).filter(([, items]) => items.length);
+// Reports and accounts (audit H3): Staff with "Can see reports" also get Reports.
+let EXTRA_ROOMS = [];
+export const withRooms = (keys, fn) => { const was = EXTRA_ROOMS; EXTRA_ROOMS = keys; try { return fn(); } finally { EXTRA_ROOMS = was; } };
+const roomsFor = (role) => ROOMS_DIARY.map(([room, items]) => [room, items.filter((i) => i[3].includes(role) || EXTRA_ROOMS.includes(i[0]))]).filter(([, items]) => items.length);
 
 export function sideItem([key, label, ic], active) {
   const on = key === active;

@@ -91,3 +91,31 @@ few clicks as possible).
    figures exist, so the drawn graphs are even placeholder bars marked
    "[£]" — they show where the graph goes, not a real shape. Chosen over a
    Graph / Table switch, and graphs only on a separate Overview page.
+8. **UI audit: every recommendation taken** (Jack, 1 Oct: "yeah go ahead
+   with them all"). From `design/user-journeys/reports-ui-audit.md`: a
+   closed day opens from its row, and a reopened day is called out on every
+   report it leaves out (H1, H2); connection lost, a day waiting for a till,
+   a category with no account and disconnecting are drawn, and the failed-day
+   example is Wednesday, with Thursday "Not closed yet" (H4, H5); **the shop
+   says once which month its VAT quarter starts**, and VAT shows "This VAT
+   quarter" against the quarter before, with no graph — the tables are what
+   the accountant needs (H6, decision 7); Change what's shown and Download
+   sit beside the title (M1); pairings that make no sense are greyed with a
+   reason, and Margin shows only to people who can see costs (M2); a saved
+   report starts "Just me", with messages for a missing or taken name (M5),
+   and a "…" menu renames, shares or stops sharing, and deletes with Undo
+   (M6); an unfinished period says "So far", empty periods and periods with
+   nothing before are drawn (M7); comparisons in words (M9); **Staff with
+   "Can see reports" see discounts without who gave them** (M10); Takings
+   and VAT get "All shops" versions, the others a shop column (M13);
+   switching on "Can see costs and margin" also switches on "Can see
+   reports", each switch with a hint (M14); graphs get a scale and a spoken
+   description naming the busiest day and the change (M15/M16); "Show graphs
+   in reports" moves into Accessibility (L4); Discounts and refunds gets a
+   graph by reason. Also: Reports in the sidebar for Staff with the switch, a
+   picker for "Pick dates", unchanged-looking choices fixed, the changed
+   report's own title and Save banner, stock value as its own block, an
+   "Other" takings tile, "Not closed yet" days, a "Sent to Xero" column,
+   unmapped lines (cash differences, refunds, discounts) — the mapping is for
+   the shop's accountant to confirm (M15) — and the wording and screen-reader
+   fixes.

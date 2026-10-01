@@ -98,7 +98,7 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Account, history and reminders decision 7: customers waiting for a
     // reply; decision 4: a request to delete an account, for staff to confirm.
     // Reports and accounts decision 4: a day that couldn't go to the accounts software.
-    accounts && line('Thursday 17 September didn’t go to Xero', '[Category] has no account chosen · Bolton', button('Choose an account', { variant: 'default' }), warnLead),
+    accounts && line('Wednesday 16 September didn’t go to Xero', 'Bolton · closed at [time] · [Category] has no Xero account chosen', button('Choose an account for [Category]', { variant: 'default' }), warnLead),
     replies && line('2 messages need a reply', 'From customers · oldest from Maya Patel at [time]', button('Open Messages', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('mail', 18)}</span>`),
     deleteRequest && line('[Customer name] asked us to delete their account', 'From their account on the website, [date] · answer by [date]', button('Open', { variant: 'default' }), warnLead),
     uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', `Cannondale Quick · reminder sent [date] · ${mono('[phone]')}`, button('Contacted', { variant: 'default' }), warnLead),
