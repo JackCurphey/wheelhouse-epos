@@ -159,6 +159,8 @@ export function overlay(base, d) {
 // list; decision 12 brings journey 12's diary block and storage settings).
 export const workshopFolds = (open = {}) =>
   fold('Services', 'Full service, Individual service', open.services || '')
+  // Book a repair decision 11: every rule for booking online, in one place.
+  + fold('Online booking', 'Exact times · 2 hours’ notice · each booking a request', open.online || '')
   + fold('Mechanics', 'Alex Morgan, Jo Taylor, Shared queue', open.mechanics || '')
   + fold('Diary blocks', 'Bike, then job title', open.diary || '')
   + fold('Storage slots', 'On · 8 slots', open.storage || '')

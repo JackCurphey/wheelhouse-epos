@@ -372,3 +372,8 @@ four pages, one per room — Front desk (Till, Payments, Messages, End of
 day), Workshop, Stockroom (new) and Office (Shop and sites, Staff and roles,
 Your data). A room with several areas shows them as headings with a "Jump
 to" row of pills; a phone opens on the list of four rooms. Diary and storage settings stay in Settings › Workshop, now with the room's heading above the scrolling part.
+
+**Later change (1 Oct 2026, Book a repair decision 11):** Settings ›
+Workshop gains an "Online booking" section between Services and Mechanics
+(closed on these boards: "Exact times · 2 hours' notice · each booking a
+request"). Nothing else on the Workshop settings boards changed.
