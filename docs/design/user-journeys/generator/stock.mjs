@@ -9,7 +9,8 @@
 // the Trek Domane AL 3. Every other product, price, cost, margin and count
 // is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { page, note, popup, overlay, withSize, isPhone, MANAGER } from './settings-frame.mjs';
+import { page, note, popup, overlay, withSize, isPhone, MANAGER, settingsPage, stockFolds, STOCK_INTRO } from './settings-frame.mjs';
+import { today } from './opening.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -124,6 +125,16 @@ const appliedBoard = () => takePage('Stock take', `${box('Count applied', `<p ro
 ${note('Each change is in its product’s stock history as “Counted”, with who counted and who applied it. Products that were below zero are now corrected.')}
 <div style="display: flex; gap: 8px">${button('Download the count', { variant: 'default' })}${button('Back to Stock take', { variant: 'default' })}</div>`)}`);
 
+// ---------- Decision 6: anyone adjusts, with a reason ----------
+const REASONS = ['Damaged', 'Lost or stolen', 'Found', 'Used in the workshop', 'Returned to supplier', 'Other'];
+const adjustPopup = () => popup('adj-title', 'Adjust stock', `${PADS} · B05S-RX · Bolton`, `
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Change</span><span style="font-size: 13px; color: ${C.muted}">In stock now ${mono('[n]')} · after ${mono('[n]')}</span></span>${qty('−1', 'Change in stock')}</div>
+<div role="group" aria-label="Reason" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${REASONS.map((t, i) => pillBtn(t, i === 0)).join('')}</div></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="adj-note" style="font-size: 14px; font-weight: 600">Note (optional)</label><input id="adj-note" style="min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div>
+${note('Goes into the stock history with your name. Big changes show on the manager’s Today.')}`, `${button('Cancel', { variant: 'default' })}${button('Adjust')}`, 600);
+const adjustSetting = () => settingsPage('stock', 'Stockroom', STOCK_INTRO, stockFolds({ adjust: `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><label for="adj-over" style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Show on Today when an adjustment is worth more than</span><span style="font-size: 13px; color: ${C.muted}">At cost · for owners and managers</span></label><input id="adj-over" value="£[amount]" style="width: 120px; min-height: 44px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"></div>
+${note('Every adjustment is in its product’s stock history, whatever its value.')}` }));
+
 def('st-list', () => listBoard());
 def('st-product', () => productBoard());
 def('st-product-bike', () => bikeBoard());
@@ -133,6 +144,9 @@ def('tk-start', () => overlay(takeHub(), startPopup()));
 def('tk-count', () => countBoard());
 def('tk-diff', () => diffBoard());
 def('tk-applied', () => appliedBoard());
+def('st-adjust', () => withSize(SIZE, () => overlay(productBoard(), adjustPopup())));
+def('st-today-adjust', () => today({ adjusted: true }));
+def('st-setting-adjust', () => adjustSetting());
 def('st-search-measure', () => listBoard({ query: 'bearing 30 mm', rows: ROWS_MEASURE, summary: `${mono('2')} products with an outside diameter of 30 mm` }));
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
@@ -149,6 +163,9 @@ export const TITLES = {
   'st-product': 'A product’s page: summary left, stock history right',
   'st-product-bike': 'A bike’s page: each frame number, in stock or sold',
   'st-product-sizes': 'Sizes and colours: one product, a grid of stock',
+  'st-adjust': 'Adjust stock: the change and a reason',
+  'st-today-adjust': 'Today: a big adjustment, for the manager',
+  'st-setting-adjust': 'Settings › Stockroom: when an adjustment shows on Today',
   'tk-hub': 'Stockroom › Stock take: counts in progress and finished',
   'tk-start': 'Start a count: the whole shop, a category or an area',
   'tk-count': 'Counting, without the expected number',
@@ -158,5 +175,6 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Finding stock', screens: ['st-list', 'st-search-measure'] },
   { label: 'A product', screens: ['st-product', 'st-product-bike', 'st-product-sizes'] },
+  { label: 'Correcting stock', screens: ['st-adjust', 'st-today-adjust', 'st-setting-adjust'] },
   { label: 'Stock take', screens: ['tk-hub', 'tk-start', 'tk-count', 'tk-diff', 'tk-applied'] },
 ];

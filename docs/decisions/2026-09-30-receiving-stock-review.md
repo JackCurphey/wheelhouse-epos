@@ -135,3 +135,8 @@ the supplier integrations above.
     beneath; the diary and Overview "Part arrived" boards use journey 12's
     own tablet and phone diary and Overview, with the badge on the job's
     block and row.
+
+**Later change (1 Oct 2026, Stock take and stock control decision 6):**
+Settings › Stockroom gains a second section, "Stock adjustments" (show an
+adjustment on Today when it is worth more than £[amount]); the
+`rs-invoice-setting` boards show it folded under "Supplier invoices".

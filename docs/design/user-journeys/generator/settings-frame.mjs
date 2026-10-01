@@ -209,7 +209,9 @@ export const rowSwitch = (label, on) => `<button type="button" role="switch" ari
 // Stockroom (journey 13 decision 6): the supplier invoice check, on or off.
 export const STOCK_INTRO = 'Deliveries and what suppliers charge for them.';
 export const stockFolds = (open = {}) =>
-  fold('Supplier invoices', 'Checked against deliveries · on', open.invoices || '');
+  fold('Supplier invoices', 'Checked against deliveries · on', open.invoices || '')
+  // Journey 14 decision 6: big stock adjustments show on Today.
+  + fold('Stock adjustments', 'Show on Today over £[amount]', open.adjust || '');
 
 const AREA_FOLDS = { till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
 const AREA_INTROS = { till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };

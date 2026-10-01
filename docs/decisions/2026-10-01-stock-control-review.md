@@ -55,3 +55,12 @@ A2, A6 — as few clicks as possible).
    over showing the expected number, and whole-shop counts with the shop
    closed. Boards: `tk-hub`, `tk-start`, `tk-count`, `tk-diff`,
    `tk-applied`.
+6. **Anyone can adjust stock, with a reason** (Jack, 1 Oct: "1"). "Adjust
+   stock" on a product takes the change (or the new count) and a reason
+   from a short list — Damaged, Lost or stolen, Found, Used in the
+   workshop, Returned to supplier, Other (with a note); every adjustment
+   goes into the product's stock history with who made it. An adjustment
+   worth more than an amount the owner sets (Settings › Stockroom) shows on
+   the manager's Today with "Seen". Chosen over adjusting only with "Can
+   order stock", and staff asking a manager to approve. Boards:
+   `st-adjust`, `st-today-adjust`, `st-setting-adjust`.
