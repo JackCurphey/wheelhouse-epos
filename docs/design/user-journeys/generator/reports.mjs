@@ -55,14 +55,20 @@ const PERIODS = ['Today', 'This week', 'This month', 'Last month', 'Last 12 mont
 const periodGroup = (on, list = PERIODS) => `<div role="radiogroup" aria-label="Period" style="display: flex; flex-wrap: wrap; gap: 6px">${list.map((p) => chip(p, p === on)).join('')}</div>`;
 // The report's title (an h2 under the page's one h1, audit L1) with Change
 // what's shown and Download beside it (M1), then the period.
-const title = (t, sub, actions) => `<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px"><div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: ${isPhone() ? 22 : 26}px; font-weight: 700">${t}</h2>${note(sub)}</div><div style="flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px">${actions}</div></div>`;
-const head = (t, sub, period, { list = PERIODS, change = true } = {}) => `${back()}${title(t, sub, `${change ? button('Change what’s shown', { variant: 'default' }) : ''}${button('Download as spreadsheet', { variant: 'default' })}`)}${periodGroup(period, list)}`;
+const title = (t, sub, actions) => `<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px"><div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: ${isPhone() ? 22 : 26}px; font-weight: 700">${t}</h2>${note(sub)}</div><div style="${isPhone() ? 'flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr))' : 'flex: 0 0 auto; display: flex; flex-wrap: wrap'}; gap: 8px">${actions}</div></div>`;
+// On a phone the download button says just "Download" so both fit side by side.
+const DL = () => button(isPhone() ? 'Download' : 'Download as spreadsheet', { variant: 'default' });
+const head = (t, sub, period, { list = PERIODS, change = true } = {}) => `${back()}${title(t, sub, `${change ? button('Change what’s shown', { variant: 'default' }) : ''}${DL()}`)}${periodGroup(period, list)}`;
 // A headline figure, with the comparison in words (audit M9).
 const stat = (k, v, cmp) => `<div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">${k}</span><span style="font-size: 22px; font-weight: 700">${v}</span><span style="font-size: 12px; color: ${C.ink}">${cmp}</span></div>`;
 const stats = (items) => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 2 : items.length}, minmax(0, 1fr)); gap: 10px">${items.join('')}</div>`;
 const UP = (what = '£[£]', vs = 'the same days last week') => `[Up or down] ${what} on ${vs}`;
 // A plain table; `text` lists the columns of words, the rest are amounts.
-const table = (label, cols, rows, total = null, text = [0]) => { const n = (i) => !text.includes(i); return `<div style="overflow-x: auto"><table aria-label="${esc(label)}" style="width: 100%; border-collapse: collapse; font-size: 14px"><thead><tr>${cols.map((c, i) => `<th scope="col" style="text-align: ${n(i) ? 'right' : 'left'}; padding: 8px 6px; font-size: 12px; font-weight: 700; color: ${C.muted}; border-bottom: 1px solid ${C.border}; white-space: nowrap">${c}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((v, i) => `<${i ? 'td' : 'th scope="row"'} style="text-align: ${n(i) ? 'right' : 'left'}; padding: 8px 6px; border-bottom: 1px solid ${C.border}; font-weight: ${i ? 400 : 600}; ${n(i) ? `font-family: ${MONO}; ` : ''}white-space: nowrap">${v}</${i ? 'td' : 'th'}>`).join('')}</tr>`).join('')}${total ? `<tr>${total.map((v, i) => `<${i ? 'td' : 'th scope="row"'} style="text-align: ${n(i) ? 'right' : 'left'}; padding: 10px 6px; font-weight: 700; ${n(i) ? `font-family: ${MONO}; ` : ''}white-space: nowrap">${v}</${i ? 'td' : 'th'}>`).join('')}</tr>` : ''}</tbody></table></div>`; };
+const table = (label, cols, rows, total = null, text = [0]) => { const n = (i) => !text.includes(i); return `<div style="overflow-x: auto"><table aria-label="${esc(label)}" style="width: 100%; border-collapse: collapse; font-size: ${isPhone() ? 13 : 14}px"><thead><tr>${cols.map((c, i) => `<th scope="col" style="text-align: ${n(i) ? 'right' : 'left'}; padding: 8px ${isPhone() ? 4 : 6}px; font-size: 12px; font-weight: 700; color: ${C.muted}; border-bottom: 1px solid ${C.border}; white-space: ${isPhone() ? 'normal' : 'nowrap'}; vertical-align: bottom">${c}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((v, i) => `<${i ? 'td' : 'th scope="row"'} style="text-align: ${n(i) ? 'right' : 'left'}; padding: 8px ${isPhone() ? 4 : 6}px; border-bottom: 1px solid ${C.border}; font-weight: ${i ? 400 : 600}; ${n(i) ? `font-family: ${MONO}; ` : ''}white-space: nowrap">${v}</${i ? 'td' : 'th'}>`).join('')}</tr>`).join('')}${total ? `<tr>${total.map((v, i) => `<${i ? 'td' : 'th scope="row"'} style="text-align: ${n(i) ? 'right' : 'left'}; padding: 10px 6px; font-weight: 700; ${n(i) ? `font-family: ${MONO}; ` : ''}white-space: nowrap">${v}</${i ? 'td' : 'th'}>`).join('')}</tr>` : ''}</tbody></table></div>`; };
+
+// A phone board scrolled part-way down (as journey 3's Messages board).
+const scrolled = (html, px) => (px ? `<style>.rp-scrolled > * { position: relative; top: -${px}px }</style>${html.replace(/<div data-scroll style="([^"]*?)overflow-y: auto;?/, '<div data-scroll class="rp-scrolled" style="$1overflow-y: hidden;')}` : html);
+const onPhone = (px) => (isPhone() ? px : 0);
 
 // ---------- Graphs (decision 7; audit M1, M16, L7) ----------
 // Even placeholder bars — they show where the graph sits, not a shape. A
@@ -139,7 +145,7 @@ ${box(`${lineGraph('Takings by month', MONTHS)}${table('Takings by month', ['Mon
 const pickDates = () => popup('pd-title', 'Pick dates', 'Sales · North Street Cycles, Bolton', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('From', { type: 'date', value: '2026-09-01' })}${field('To', { type: 'date', value: '2026-09-17' })}</div>${note('Compared with the same number of days just before.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Show report')}`, 520);
 // Your settings: graphs on or off, in Accessibility (decision 7; audit L4).
 // Scrolled down the Accessibility list so the new row is in view.
-const settingsGraphs = () => overlay(home(), yourSettingsDialog(SIZE, { graphs: true }).replace('Jo Taylor · Staff', 'Jack Lewis · Owner')
+const settingsGraphs = () => overlay(home(), scrolled(yourSettingsDialog(SIZE, { graphs: true }).replace('Jo Taylor · Staff', 'Jack Lewis · Owner'), onPhone(420))
   .replace('padding: 18px 22px 22px; display: grid;', 'padding: 18px 22px 22px; min-height: 0; overflow: hidden; display: grid;')
   .replace(/(grid-template-columns: 250px[^>]*>.*?<\/div>)<div style="display: flex; flex-direction: column; gap: 12px">/s, '$1<div style="display: flex; flex-direction: column; gap: 12px; position: relative; top: -250px">'));
 
@@ -150,7 +156,7 @@ ${choiceGroup('Measure', ['Takings', 'Items sold', 'Margin', 'Jobs', 'Hours'], '
 ${choiceGroup('Split by', ['Day', 'Week', 'Category', 'Product', 'Staff member', 'Shop', 'Payment type'], 'Product', { 'Payment type': 'payments aren’t split by item' })}
 <div role="group" aria-label="Only — pick one or more" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Only <span style="font-weight: 400; color: ${C.muted}">— pick one or more</span></span><div style="display: flex; flex-wrap: wrap; gap: 6px">${CATS.map((c) => chip(c, c === 'Accessories', 'checkbox')).join('')}</div><span style="font-size: 14px; font-weight: 600">Supplier</span><div style="display: flex; flex-wrap: wrap; gap: 6px">${chip('Any supplier', true, 'radio')}${chip('[Supplier]', false, 'radio')}${chip('[Supplier]', false, 'radio')}</div></div>`, `${button('Cancel', { variant: 'ghost' })}${button('Show report')}`, 680);
 const CHANGED_SUB = `Changed from Sales · Accessories only · ${SO_FAR}`;
-const changed = () => wrap(`${back()}${title('Sales: items sold by product', CHANGED_SUB, `${button('Change what’s shown', { variant: 'default' })}${button('Download as spreadsheet', { variant: 'default' })}`)}
+const changed = () => wrap(`${back()}${title('Sales: items sold by product', CHANGED_SUB, `${button('Change what’s shown', { variant: 'default' })}${DL()}`)}
 ${bar('You’ve changed this report. Save it to come back to it.', `<span style="display: inline-flex; gap: 8px; flex-wrap: wrap">${button('Save as my report')}${linkBtn('Back to Sales')}</span>`, 'done')}
 ${periodGroup('This week')}
 ${box(`${graph('Items sold by product', ['[Product]', '[Product]', '[Product]', '[Product]'], { value: '[n]', says: 'most sold [Product]; [up or down] [n] on the same days last week' })}${table('Items sold by product', ['Product', 'Items sold', 'Takings'], [['[Product]', '[n]', '[£]'], ['[Product]', '[n]', '[£]'], ['[Product]', '[n]', '[£]'], ['[Product]', '[n]', '[£]']], ['Total, Accessories only', '[n]', '[£]'])}`)}`);
@@ -246,7 +252,7 @@ const personBoard = () => overlay(staffPage({ people: peopleOpen(false) }, OWNER
 // ---------- The boards ----------
 def('rp-home', () => home());
 def('rp-home-staff', () => home(true));
-def('rp-report-menu', () => homeShared());
+def('rp-report-menu', () => scrolled(homeShared(), onPhone(560)));
 def('rp-report-deleted', () => deletedBar());
 def('rp-your-settings', () => settingsGraphs());
 def('rp-sales', () => sales());
@@ -272,15 +278,15 @@ def('rp-discounts', () => discounts());
 def('rp-discounts-staff', () => discounts(true));
 def('rp-accounts-connect', () => accountsBoard(connectOpen(), 'Not connected'));
 def('rp-accounts-map', () => accountsBoard(mapOpen(), 'Connected to Xero'));
-def('rp-accounts-missing', () => accountsBoard(mapOpen(true), 'Connected to Xero · 1 account to choose'));
+def('rp-accounts-missing', () => scrolled(accountsBoard(mapOpen(true), 'Connected to Xero · 1 account to choose'), onPhone(300)));
 def('rp-accounts-log', () => accountsBoard(logOpen(), 'Connected to Xero · 1 day needs a look'));
 def('rp-accounts-lost', () => accountsBoard(lostOpen(), 'Xero disconnected'));
 def('rp-accounts-disconnect', () => overlay(accountsBoard(mapOpen(), 'Connected to Xero'), disconnectDialog()));
 def('rp-today-accounts', () => today({ accounts: true, as: OWNER }));
 def('rp-person', () => personBoard());
 
-// Desktop first (journey process); tablet and phone drawn after the UI audit.
-const SIZES = ['desktop'];
+// Desktop, tablet and phone (tablet and phone drawn after the UI audit).
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });
