@@ -140,3 +140,11 @@ possible).
     terms and privacy notice." by the button** (M4, option 1), 44px boxes
     and browser fill-in for name, phone and email; "Take it" goes straight
     to the details step; and the small fixes L1–L7.
+13. **Tablet and phone drawn** (Jack, 1 Oct: "Ive looked over the updated
+    screens and the all look good"). Every board is now at desktop, tablet
+    and phone. On phone "Your booking" is a bar along the bottom (decision
+    2) showing the service, time, any deposit and the price; the steps stack
+    in one column; full services, bikes and fields go one to a row; the day
+    strip scrolls sideways; pop-ups fill the screen. The tablet keeps the
+    desktop's two columns. The website's tablet header now marks "Book a
+    repair" as the current page on these boards (it was fixed to "Shop").

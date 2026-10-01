@@ -255,11 +255,11 @@ screens['your-settings'].tablet = `<div style="position: relative; width: ${TW}p
 screens['your-settings'].phone = `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone')}</div>`;
 
 // ---- Customer website ----
-export function siteTablet(themeKey, content = null) {
+export function siteTablet(themeKey, content = null, active = 'Shop') {
   const t = SITE_THEMES[themeKey];
   const dark = t.headerInk === '#ffffff';
   const iconBtn = (ic, label) => `<a href="#" aria-label="${label}" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${t.headerInk}">${icon(ic, 20)}</a>`;
-  const navLink = (label) => `<a href="#"${label === 'Shop' ? ' aria-current="page"' : ''} style="display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: ${label === 'Shop' ? 700 : 500}; color: ${t.headerInk}; text-decoration: ${label === 'Shop' ? 'underline' : 'none'}; text-decoration-thickness: 2px; text-underline-offset: 8px">${label}</a>`;
+  const navLink = (label) => `<a href="#"${label === active ? ' aria-current="page"' : ''} style="display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: ${label === active ? 700 : 500}; color: ${t.headerInk}; text-decoration: ${label === active ? 'underline' : 'none'}; text-decoration-thickness: 2px; text-underline-offset: 8px">${label}</a>`;
   return `<div style="width: ${TW}px; height: ${TH}px; display: flex; flex-direction: column; background: ${t.ground}">
 <header style="height: 68px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 22px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
 <a href="#" style="display: flex; align-items: center; gap: 10px; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 18px; font-weight: 700">${SHOP}</span></a>

@@ -20,7 +20,7 @@
 // Bolton, and Workshop day 41's "up to £200". Anything else is a bracketed
 // placeholder.
 import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
-import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, withSize, isPhone } from './settings-frame.mjs';
+import { settingsPage, rowSwitch, workshopFolds, WORKSHOP_INTRO, note, popup, overlay, withSize, isPhone } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { CUSTOMER_NOTE } from './job-page.mjs';
 import { requestDepositBoard } from './diary.mjs';
@@ -52,8 +52,8 @@ const CUTOFF = '[date and time]';
 
 // ---------- The page frame (decision 2) ----------
 const site = (content) => {
-  const body = `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px">${content}</div>`;
-  return SIZE === 'desktop' ? siteDesktop('sand', 'Book a repair', body) : SIZE === 'tablet' ? siteTablet('sand', body) : sitePhone('sand', { content: body });
+  const body = `<div data-scroll style="flex-grow: 1; min-height: 0; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px">${content}</div>`;
+  return SIZE === 'desktop' ? siteDesktop('sand', 'Book a repair', body) : SIZE === 'tablet' ? siteTablet('sand', body, 'Book a repair') : sitePhone('sand', { content: body });
 };
 const link = (t, extra = '') => `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}; ${extra}">${t}</a>`;
 // Decision 6: signing in is offered at the top, never required.
@@ -92,6 +92,9 @@ function summaryBox({ service = null, price = null, bike = null, when = null, me
     ? `<div style="display: flex; justify-content: space-between; font-size: 14px"><span>Deposit, paid at the last step</span>${mono('£[deposit]')}</div>`
     : deposit === 'now' ? `<div style="display: flex; justify-content: space-between; font-size: 14px"><span>Deposit to pay now</span>${mono('£[deposit]')}</div>` : '';
   const depNote = deposit ? `<p style="margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: ${C.muted}">Free to cancel until ${CUTOFF}. If the shop can’t fit you in, the deposit comes back in full.</p>` : '';
+  // Decision 2: on a phone the summary is a bar along the bottom, opening
+  // to the same box.
+  if (isPhone()) return `<aside aria-label="Your booking" style="flex-shrink: 0"><button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left"><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 700">Your booking</span><span style="font-size: 13px; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${[service, when].filter(Boolean).join(' · ') || 'Not chosen yet'}${deposit ? ' · deposit £[deposit]' : ''}</span></span>${price === 'agree' ? `<span style="font-size: 13px; font-weight: 600">Price agreed first</span>` : price ? mono(price, 'font-size: 17px') : ''}<span style="display: inline-flex; transform: rotate(180deg)">${icon('chevron', 16)}</span></button></aside>`;
   return `<aside aria-label="Your booking" style="flex-shrink: 0">${card(`<div style="padding: 18px; display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0 0 6px; font-size: 18px; font-weight: 700">Your booking</h2>
 ${r('Service', service)}${r('Bike', bike)}${r('When', when)}${mechanic ? r('Mechanic', mechanic) : ''}${limit === 'call' ? r('Extra work', 'We’ll call you first') : limit ? r('Extra work', LIMIT) : ''}
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0 4px; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 700">Price</span>${priceVal}</div>
@@ -102,7 +105,9 @@ ${dep}${depNote}
 // staying in view as the page scrolls. A board past the first step shows
 // the page scrolled to the open step (its bottom in view), as the customer
 // would see it; the answered steps above have scrolled up.
-const layout = (left, right, signedIn = false, { top = false } = {}) => site(`<div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start"><div style="height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: ${top ? 'flex-start' : 'flex-end'}; gap: 12px; min-width: 0">${title(signedIn)}${left}</div><div style="display: flex; flex-direction: column; gap: 12px">${right}</div></div>`);
+const layout = (left, right, signedIn = false, { top = false } = {}) => isPhone()
+  ? site(`<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px"><div style="flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: ${top ? 'flex-start' : 'flex-end'}; gap: 12px">${title(signedIn)}${left}</div>${right}</div>`)
+  : site(`<div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start"><div style="height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: ${top ? 'flex-start' : 'flex-end'}; gap: 12px; min-width: 0">${title(signedIn)}${left}</div><div style="display: flex; flex-direction: column; gap: 12px">${right}</div></div>`);
 
 // ---------- Step 1: every service at once (decision 5) ----------
 const fullCard = (s, chosen) => `<button type="button" role="radio" aria-checked="${chosen}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; box-sizing: border-box; border-radius: 10px; border: ${chosen ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${chosen ? C.hover : C.panel}; color: ${C.ink}; font-family: inherit; text-align: left"><span style="font-size: 16px; font-weight: 700">${s.name}</span><span style="font-size: 13px; line-height: 1.4; color: ${C.muted}">${s.what}</span><span style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 4px"><span style="display: inline-flex; align-items: baseline; gap: 8px">${mono(s.price, 'font-size: 16px')}<span style="font-size: 13px; color: ${C.muted}">${s.time}</span></span>${chosen ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700">${icon('check', 14)}Chosen</span>` : ''}</span></button>`;
@@ -259,8 +264,7 @@ ${note('Your booking stays on Thursday until the shop confirms the new time.')}<
     body = `${bookingLines()}${pageButtons()}`;
   }
   const page = centred(`<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span>${h1(heading, 28)}</div>${answerCard(`${head}${body}${state === 'change' ? '' : shopLines}`)}`, state === 'change' ? 1000 : 640);
-  if (!dialog) return page;
-  return `<div style="position: relative; width: 1280px; height: 800px; overflow: hidden">${page}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${dialog}</div></div>`;
+  return dialog ? overlay(page, dialog) : page;
 };
 // Decision 4: the cancel question says what happens to the deposit.
 const cancelDialog = (late = false) => popup('cancel-title', 'Cancel this booking?', `${DAY}, arrive 09:30 · ${BIKE}`, late
@@ -351,13 +355,12 @@ def('bk-unavailable', () => unavailable());
 def('bk-staff-request', () => requestDepositBoard(SIZE));
 def('bk-staff-decline', () => requestDepositBoard(SIZE, true));
 // Scrolled down to the booking messages, below the shop's other messages.
-def('bk-messages', () => `<style>.bk-scrolled > * { position: relative; top: -330px }</style>${msgPage({ list: msgListOpen() }).replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
+def('bk-messages', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 330, tablet: 330, phone: 600 }[SIZE]}px }</style>${msgPage({ list: msgListOpen() }).replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 def('bk-settings', () => settings());
 // The same page scrolled down to Deposits and Terms (the section is long).
-def('bk-settings-deposits', () => `<style>.bk-scrolled > * { position: relative; top: -420px }</style>${settings().replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
+def('bk-settings-deposits', () => `<style>.bk-scrolled > * { position: relative; top: -${{ desktop: 420, tablet: 420, phone: 720 }[SIZE]}px }</style>${settings().replace('<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto;', '<div data-scroll class="bk-scrolled" style="flex-grow: 1; min-height: 0; overflow-y: hidden;')}`);
 
-// Desktop first (journey process); tablet and phone drawn after the UI audit.
-const SIZES = ['desktop'];
+const SIZES = ['desktop', 'tablet', 'phone']; // decision 13
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; FID = 0; return fn(); });
