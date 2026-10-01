@@ -34,26 +34,27 @@ holding desktop, tablet and phone:
 | 10 Opening the shop | https://claude.ai/artifact/E9XTaKJys2WH3gpgwfPJbq | `docs/decisions/2026-09-30-opening-the-shop-review.md` (8) |
 | 9 Moving from Citrus Lime | https://claude.ai/artifact/Wkp23VuCPRydTjfYmJgKo9 | `docs/decisions/2026-09-30-moving-from-citrus-lime-review.md` (9) |
 | 5 Collect the bike and pay | https://claude.ai/artifact/LdnE9ayZJ1L2qu6suqcC2W | `docs/decisions/2026-09-30-collect-and-pay-review.md` (6) |
+| 13 Receiving stock and purchase orders | https://claude.ai/artifact/RsbUcYNz9QfEF8LAbxSKwo | `docs/decisions/2026-09-30-receiving-stock-review.md` (11) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md`,
 `setup-ui-audit.md`, `customer-ui-audit.md`, `opening-ui-audit.md`,
-`moving-ui-audit.md`, `collect-ui-audit.md` (this folder).
+`moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md` (this folder).
 
-Overview count (each screen once): 317 screens — 238 designed, 6 built, 13
-old app only, 60 not designed yet, 0 for review (30 Sep: journeys 8, 15, 10,
-9 and 5 in; journey 5's summary and pay-online gaps replaced by its 19
-screens, its old "Bike ready" phone screen and the receipt gap kept in a
-row "Also at collection"; journey 10's "Till start-up" stays a gap).
+Overview count (each screen once): 338 screens — 265 designed, 6 built, 9
+old app only, 58 not designed yet, 0 for review (1 Oct: journey 13 in; its
+old order, receive, invoice, labels and reorder screens replaced by its 27
+screens; suppliers, the supplier catalogue and sending an order kept in a
+row "Also in this journey").
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
 placeholders: 1 Find the shop / browse the website, 2 Buy online / click and
-collect, 3 Book a repair, 4 Drop off and approve the quote, 6 Cycle to Work, 7 Account, history and reminders, 13 Receiving stock and purchase orders, 14 Stock take and stock control,
+collect, 3 Book a repair, 4 Drop off and approve the quote, 6 Cycle to Work, 7 Account, history and reminders, 14 Stock take and stock control,
 17 Reports and accounts, 18 Website management, 19
 Multiple sites, 20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **13 Receiving
-stock and purchase orders** (Jack's note on searching parts by measurements
-— Owner setup "Noted for later"), **3 Book a repair** (feeds journey 12's
+Strong candidates, because finished journeys lean on them: **14 Stock take
+and stock control** (the Stockroom's other pages; searching stock by
+measurements, journey 13 Noted for later), **3 Book a repair** (feeds journey 12's
 requests; partly depends on the website, 18).
 
 ## Rules that apply to every journey (Jack's decisions)
@@ -125,7 +126,7 @@ Generator: `docs/design/user-journeys/generator/`.
 **The big canvas is desktop only** (cash-up decision 8): a canvas holds at
 most 512 files, so each screen appears once — desktop, the one large app map,
 or a phone-only screen's only size — with a "Tablet and phone ↗" link to its
-journey's canvas. 320 files now. A publish carries at most 255 files: split
+journey's canvas. 340 files now. A publish carries at most 255 files: split
 big changes (changed boards with `canvas.json` first, removals second).
 
 ## Gotchas that cost time

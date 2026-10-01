@@ -14,10 +14,30 @@ Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11), End-of-day
 cash-up (journey 16), Owner setup (journey 8), Customer service (journey
 15), Opening the shop (journey 10), Moving from Citrus Lime (journey 9) and
-Collect the bike and pay (journey 5) are approved and in the big canvas; the next journey is
+Collect the bike and pay (journey 5) and Receiving stock and purchase orders
+(journey 13) are approved and in the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is now **desktop only**, each
-board linking to its journey's own canvas for tablet and phone (320 files of
+board linking to its journey's own canvas for tablet and phone (340 files of
 the 512 a canvas can hold).
+
+**Journey 13, Receiving stock and purchase orders (30 Sep–1 Oct):**
+approved at desktop, tablet and phone and copied into the big canvas; 11
+decisions in `docs/decisions/2026-09-30-receiving-stock-review.md` —
+deliveries scanned in (everyone can receive; ordering needs "Can order
+stock"); an unknown barcode opens "Add this product" with measurements; a
+bike's frame number at booking in (the till then picks it); purchase orders
+by hand, and a restock list downloading a CSV per supplier's basket; a part
+a job waits for flags the job, diary and Overview; a quick invoice check
+(totals, a switch in Settings); labels only for what needs one; damaged,
+wrong or missing items marked, with a To return list. Decision 7: **Settings
+is four pages, one per room** (Front desk, Workshop, Stockroom, Office) —
+every Settings board redrawn. Knock-ons: journey 11's frame-number step
+picks from stock; Today's restock line. UI audit `receiving-ui-audit.md`.
+27 screens, 81 boards. Own canvas:
+https://claude.ai/artifact/RsbUcYNz9QfEF8LAbxSKwo . Generator:
+`receiving.mjs` + `build-receiving.mjs --theme sand`. Noted for later:
+supplier integrations (Madison order feed), uploading a supplier's delivery
+file, searching stock by measurements.
 
 **Journey 5, Collect the bike and pay (30 Sep):** approved at desktop,
 tablet and phone and copied into the big canvas; 6 decisions in
