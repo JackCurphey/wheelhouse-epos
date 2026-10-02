@@ -134,3 +134,9 @@ desktop first, then tablet and phone. Rules for every journey apply (Workshop da
       smallest text; Settings tidied (no "—" folds, "Check now" greyed
       briefly after use, Disconnect a real button); when "Check Lightspeed
       now" finds the payment, the pop-up turns into "Paid · Hand over".
+11. **While Lightspeed can't be reached, parts can still be quoted from the
+    last copy of its products** (Jack, 2 Oct: "1"; the audit's open
+    question in M12). The part search says "Showing products and stock as
+    of [time]" and warns that prices may have changed; the work order uses
+    Lightspeed's price when it sends. Chosen over blocking part search
+    until Lightspeed answers.
