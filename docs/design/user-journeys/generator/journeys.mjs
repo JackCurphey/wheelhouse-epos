@@ -56,6 +56,8 @@ export const sd1 = (id, title, role) => ({ id, status: 'designed', title, role, 
 export const sd18 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'website' });
 // sd20(id, title, role) = an agreed journey 20 screen (oversight.mjs, Soft sand).
 export const sd20 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'oversight' });
+// sd6(id, title, role) = an agreed journey 6 screen (c2w.mjs, Soft sand).
+export const sd6 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'c2w' });
 
 export const journeys = [
   {
@@ -360,9 +362,54 @@ export const journeys = [
   {
     id: 'j06', name: 'Cycle to Work', who: 'Customer and staff',
     rows: [
-      { label: 'Waiting for Jack’s explanation', screens: [
-        g('c2w-customer', 'Cycle to Work: customer side', 'Customer', 'Jack’s own Cycle to Work design, to be explained before piece 8. No screens can be proposed until then.', [], { source: 'Release 2 spec §7' }),
-        g('c2w-staff', 'Cycle to Work: staff side', 'Staff', 'The staff side of the same design, including any sale at the till.', [], { source: 'Release 2 spec §7' }),
+      { label: "The list and a new order", screens: [
+        sd6("cw-list", "Front desk › Cycle to Work: every order, by stage (staff)", "Staff"),
+        sd6("cw-list-owner", "The list for the owner: what’s owed, and Mark paid", "Owner and Manager"),
+        sd6("cw-first-use", "The first time: no providers yet", "Owner and Manager"),
+        sd6("cw-new", "New Cycle to Work order: a bike in stock, held", "Staff"),
+        sd6("cw-new-not-in-stock", "A bike that isn’t in stock: what the quote will say", "Staff"),
+        sd6("cw-quote", "The quote, to print or email", "Staff"),
+        sd6("cw-quote-deposit", "The quote for a bike ordered with a deposit", "Staff"),
+        sd6("cw-order-held", "The order: quote given, bike held until [date]", "Staff"),
+      ] },
+      { label: "Waiting for the certificate", screens: [
+        sd6("cw-hold-ending", "The hold is ending: hold longer, or release", "Staff"),
+        sd6("cw-applied", "Maya has applied: date and reference", "Staff"),
+        sd6("cw-order-applied", "Not in stock, customer applied: ready to order", "Staff"),
+        sd6("cw-ordered", "Ordered from the supplier, with Undo", "Staff"),
+        sd6("cw-order-deposit", "Not in stock, deposit rule: waiting for a deposit", "Staff"),
+        sd6("cw-order-anyway", "Order now anyway, with a reason", "Owner and Manager"),
+        sd6("cw-order-deposit-paid", "Deposit paid, bike ordered", "Staff"),
+        sd6("cw-certificate", "Add the certificate", "Staff"),
+        sd6("cw-certificate-diff", "A certificate for less than the quote", "Staff"),
+        sd6("cw-certificate-released", "A certificate for a bike already released", "Staff"),
+      ] },
+      { label: "Collection and payment", screens: [
+        sd6("cw-order-on-order", "Certificate received, bike on order", "Staff"),
+        sd6("cw-order-ready", "Ready to collect", "Staff"),
+        sd6("cw-hand-over", "Hand over: the provider’s checks, then the till", "Staff"),
+        sd6("cw-order-owed", "Collected: expected from the provider", "Owner and Manager"),
+        sd6("cw-mark-paid", "Mark paid", "Owner and Manager"),
+        sd6("cw-mark-paid-diff", "Paid less than expected", "Owner and Manager"),
+        sd6("cw-order-part-paid", "Part paid: the rest still owed", "Owner and Manager"),
+        sd6("cw-order-paid", "Paid by the provider", "Owner and Manager"),
+        sd6("cw-owed", "Owed by Cycle to Work providers", "Owner and Manager"),
+      ] },
+      { label: "Changes and cancelling", screens: [
+        sd6("cw-more", "More: change or cancel the order", "Owner and Manager"),
+        sd6("cw-quote-revised", "A revised quote, not sent until Email", "Owner and Manager"),
+        sd6("cw-cancel", "The customer isn’t going ahead: a deposit to refund", "Owner and Manager"),
+        sd6("cw-cancel-ordered", "Cancelling after the bike was ordered", "Owner and Manager"),
+      ] },
+      { label: "Today, the customer, settings and messages", screens: [
+        sd6("cw-today", "Today: no certificate yet, a payment late", "Owner and Manager"),
+        sd6("cw-today-held", "Today: Hold longer, done in one press", "Owner and Manager"),
+        sd6("cw-customer-view", "The customer’s account: their Cycle to Work bike", "Customer"),
+        sd6("cw-email", "“Your bike is put aside” email", "Customer"),
+        sd6("cw-settings", "Settings › Front desk › Cycle to Work: holding and ordering", "Owner and Manager"),
+        sd6("cw-settings-deposit", "Deposits, and how to apply", "Owner and Manager"),
+        sd6("cw-settings-provider", "A provider: commission, payment days, hand-over checks", "Owner and Manager"),
+        sd6("cw-messages", "Settings › Messages: the Cycle to Work messages", "Owner and Manager"),
       ] },
     ],
   },

@@ -145,3 +145,18 @@ as few clicks as possible).
      "waits on Jack's explanation" wording replaced; "Hold longer" on Today
      holds at once with Undo, and "Add the certificate" sits on the list
      row.
+8. **Tablet and phone drawn; approved and copied into the big canvas**
+   (Jack, 2 Oct: "1", then "1"). On a tablet the screens keep the desktop
+   layout with the icon rail; on a phone the order page is one column with
+   "Next" first and the six stages two to a row, pop-ups fill the screen,
+   and the More menu opens from the left. 39 screens, 117 boards. In the big
+   canvas (customers and the website) journey 6 replaces its two
+   placeholders. Carried into other journeys: the Front desk › Cycle to Work
+   sidebar item on every staff screen; Settings › Front desk's Cycle to Work
+   tab; the four messages in Settings › Messages ("19 on"); the Payments
+   wording "Recorded at the till against a Cycle to Work order"; Today's
+   workshop tile "Repairs ready to collect" (audit L4); Reports' "Owed by
+   Cycle to Work providers" card (M6); and on Stock's bike page a frame
+   "Held for [Customer] until [date] · Cycle to Work — not for sale" (M4).
+   Not drawn yet: a held bike in the till's search, and shown as sold out on
+   the website (M4).

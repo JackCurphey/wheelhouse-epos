@@ -136,3 +136,5 @@ few clicks as possible).
    settings (Jo Taylor, Staff) is unchanged.
 
 **Later change (2 Oct 2026, Management oversight decisions 6 and 7):** Reports gains an "Activity log" card beside the ready-made reports, for owners and managers only (hidden from staff with "Can see reports"); every person shows "Sign out everywhere"; Your settings has the Help cards. Nothing else changed.
+
+**Later change (2 Oct 2026, Cycle to Work decision 7, audit M6):** the ready-made reports gain "Owed by Cycle to Work providers", for owners and managers (hidden from staff with "Can see reports", as the Activity log is). The sidebar on every board has the new Front desk › Cycle to Work item.

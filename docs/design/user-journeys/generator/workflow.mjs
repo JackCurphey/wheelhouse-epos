@@ -117,7 +117,7 @@ ${nodes}
 ${labels}
 <div style="position: absolute; left: 44px; top: ${WF_H - 150}px; width: ${WF_W - 88}px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; color: ${C.muted}; line-height: 1.5">
 <span><strong style="color: ${C.ink}">Journey A</strong> is the app map and navigation; <strong style="color: ${C.ink}">Journey B</strong> is signing in. Numbered journeys match the overview table.</span>
-<span>Cycle to Work and Lightspeed shops stand alone for now: Cycle to Work waits on Jack’s explanation, and Lightspeed shops use Release 1 alongside Lightspeed.</span>
+<span>Cycle to Work and Lightspeed shops stand alone for now: Cycle to Work is its own kind of order, from the quote to the provider’s payment, and Lightspeed shops use Release 1 alongside Lightspeed.</span>
 </div>
 </div>`;
 }

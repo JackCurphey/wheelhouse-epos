@@ -1507,25 +1507,321 @@
    "title": "Not designed · Receipt or invoice by email",
    "is_interactive": true
   },
-  "j06-c2w-customer.dc.html": {
+  "j06-cw-list-desktop.dc.html": {
    "x": 0,
    "y": 14162,
-   "w": 390,
-   "h": 900,
-   "title": "Not designed · Cycle to Work: customer side",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Front desk › Cycle to Work: every order, by stage (staff) (desktop)",
    "is_interactive": true
   },
-  "j06-c2w-staff.dc.html": {
-   "x": 470,
+  "j06-cw-list-owner-desktop.dc.html": {
+   "x": 1320,
    "y": 14162,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Cycle to Work: staff side",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The list for the owner: what’s owed, and Mark paid (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-first-use-desktop.dc.html": {
+   "x": 2640,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The first time: no providers yet (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-new-desktop.dc.html": {
+   "x": 3960,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · New Cycle to Work order: a bike in stock, held (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-new-not-in-stock-desktop.dc.html": {
+   "x": 5280,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A bike that isn’t in stock: what the quote will say (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-quote-desktop.dc.html": {
+   "x": 6600,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The quote, to print or email (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-quote-deposit-desktop.dc.html": {
+   "x": 7920,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The quote for a bike ordered with a deposit (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-held-desktop.dc.html": {
+   "x": 9240,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The order: quote given, bike held until [date] (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-hold-ending-desktop.dc.html": {
+   "x": 10720,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The hold is ending: hold longer, or release (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-applied-desktop.dc.html": {
+   "x": 12040,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Maya has applied: date and reference (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-applied-desktop.dc.html": {
+   "x": 13360,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Not in stock, customer applied: ready to order (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-ordered-desktop.dc.html": {
+   "x": 14680,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ordered from the supplier, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-deposit-desktop.dc.html": {
+   "x": 16000,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Not in stock, deposit rule: waiting for a deposit (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-anyway-desktop.dc.html": {
+   "x": 17320,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Order now anyway, with a reason (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-deposit-paid-desktop.dc.html": {
+   "x": 18640,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deposit paid, bike ordered (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-certificate-desktop.dc.html": {
+   "x": 19960,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add the certificate (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-certificate-diff-desktop.dc.html": {
+   "x": 21280,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A certificate for less than the quote (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-certificate-released-desktop.dc.html": {
+   "x": 22600,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A certificate for a bike already released (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-on-order-desktop.dc.html": {
+   "x": 24080,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Certificate received, bike on order (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-ready-desktop.dc.html": {
+   "x": 25400,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ready to collect (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-hand-over-desktop.dc.html": {
+   "x": 26720,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Hand over: the provider’s checks, then the till (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-owed-desktop.dc.html": {
+   "x": 28040,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Collected: expected from the provider (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-mark-paid-desktop.dc.html": {
+   "x": 29360,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Mark paid (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-mark-paid-diff-desktop.dc.html": {
+   "x": 30680,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Paid less than expected (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-part-paid-desktop.dc.html": {
+   "x": 32000,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Part paid: the rest still owed (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-paid-desktop.dc.html": {
+   "x": 33320,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Paid by the provider (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-owed-desktop.dc.html": {
+   "x": 34640,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Owed by Cycle to Work providers (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-more-desktop.dc.html": {
+   "x": 36120,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · More: change or cancel the order (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-quote-revised-desktop.dc.html": {
+   "x": 37440,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A revised quote, not sent until Email (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-cancel-desktop.dc.html": {
+   "x": 38760,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The customer isn’t going ahead: a deposit to refund (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-cancel-ordered-desktop.dc.html": {
+   "x": 40080,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Cancelling after the bike was ordered (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-today-desktop.dc.html": {
+   "x": 41560,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: no certificate yet, a payment late (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-today-held-desktop.dc.html": {
+   "x": 42880,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: Hold longer, done in one press (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-customer-view-desktop.dc.html": {
+   "x": 44200,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The customer’s account: their Cycle to Work bike (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-email-desktop.dc.html": {
+   "x": 45520,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · “Your bike is put aside” email (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-settings-desktop.dc.html": {
+   "x": 46840,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Front desk › Cycle to Work: holding and ordering (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-settings-deposit-desktop.dc.html": {
+   "x": 48160,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deposits, and how to apply (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-settings-provider-desktop.dc.html": {
+   "x": 49480,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A provider: commission, payment days, hand-over checks (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-messages-desktop.dc.html": {
+   "x": 50800,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Messages: the Cycle to Work messages (desktop)",
    "is_interactive": true
   },
   "j07-ac-account-desktop.dc.html": {
    "x": 0,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Your account: bikes, details and how we contact you; one history (desktop)",
@@ -1533,7 +1829,7 @@
   },
   "j07-ac-account-lower-desktop.dc.html": {
    "x": 1320,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Further down: how we contact you, and your data (desktop)",
@@ -1541,7 +1837,7 @@
   },
   "j07-ac-account-repairs-desktop.dc.html": {
    "x": 2640,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · History showing repairs only (desktop)",
@@ -1549,7 +1845,7 @@
   },
   "j07-ac-account-new-desktop.dc.html": {
    "x": 3960,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · A new account, with nothing in it yet (desktop)",
@@ -1557,7 +1853,7 @@
   },
   "j07-ac-receipt-desktop.dc.html": {
    "x": 5280,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · A receipt, from the history (desktop)",
@@ -1565,7 +1861,7 @@
   },
   "j07-ac-receipt-sent-desktop.dc.html": {
    "x": 6600,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The receipt emailed (desktop)",
@@ -1573,7 +1869,7 @@
   },
   "j07-ac-job-note-desktop.dc.html": {
    "x": 8080,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · A job’s page: “Add a note for the shop” (desktop)",
@@ -1581,7 +1877,7 @@
   },
   "j07-ac-job-note-sent-desktop.dc.html": {
    "x": 9400,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The note sent, waiting for a reply (desktop)",
@@ -1589,7 +1885,7 @@
   },
   "j07-ac-job-note-answered-desktop.dc.html": {
    "x": 10720,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The shop’s reply, on the job’s page (desktop)",
@@ -1597,7 +1893,7 @@
   },
   "j07-ac-ask-desktop.dc.html": {
    "x": 12040,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Ask the shop a question, from the account (desktop)",
@@ -1605,7 +1901,7 @@
   },
   "j07-ac-account-question-sent-desktop.dc.html": {
    "x": 13360,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The question sent: in the history, waiting (desktop)",
@@ -1613,7 +1909,7 @@
   },
   "j07-ac-question-desktop.dc.html": {
    "x": 14680,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The question and its answer (desktop)",
@@ -1621,7 +1917,7 @@
   },
   "j07-ac-account-asked-desktop.dc.html": {
    "x": 16000,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The history once answered: the note and the question (desktop)",
@@ -1629,7 +1925,7 @@
   },
   "j07-ac-inbox-list-phone.dc.html": {
    "x": 17480,
-   "y": 16062,
+   "y": 16018,
    "w": 390,
    "h": 900,
    "title": "Designed · On a phone: the list first (phone)",
@@ -1637,7 +1933,7 @@
   },
   "j07-ac-inbox-desktop.dc.html": {
    "x": 17950,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Staff Messages: needs a reply, and the open conversation (desktop)",
@@ -1645,7 +1941,7 @@
   },
   "j07-ac-inbox-sent-desktop.dc.html": {
    "x": 19270,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Reply sent the way Maya chose; reply again (desktop)",
@@ -1653,7 +1949,7 @@
   },
   "j07-ac-inbox-all-desktop.dc.html": {
    "x": 20590,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · All conversations, “Needs a reply” in words (desktop)",
@@ -1661,7 +1957,7 @@
   },
   "j07-ac-inbox-empty-desktop.dc.html": {
    "x": 21910,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Nothing needs a reply (desktop)",
@@ -1669,7 +1965,7 @@
   },
   "j07-ac-reply-text-desktop.dc.html": {
    "x": 23230,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The text Maya gets, linking back (desktop)",
@@ -1677,7 +1973,7 @@
   },
   "j07-ac-today-desktop.dc.html": {
    "x": 24550,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Today: messages needing a reply, and a request to delete an account (desktop)",
@@ -1685,7 +1981,7 @@
   },
   "j07-ac-book-remind-desktop.dc.html": {
    "x": 26030,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Booking: “Remind me…”, unticked, with a review request (desktop)",
@@ -1693,7 +1989,7 @@
   },
   "j07-ac-collect-remind-desktop.dc.html": {
    "x": 27350,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Ready to collect: the same tick (desktop)",
@@ -1701,7 +1997,7 @@
   },
   "j07-ac-services-desktop.dc.html": {
    "x": 28670,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Workshop › Services: each service’s reminder (desktop)",
@@ -1709,7 +2005,7 @@
   },
   "j07-ac-service-edit-desktop.dc.html": {
    "x": 29990,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · A service’s reminder time (desktop)",
@@ -1717,7 +2013,7 @@
   },
   "j07-ac-messages-desktop.dc.html": {
    "x": 31310,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Messages: service reminders and review requests (desktop)",
@@ -1725,7 +2021,7 @@
   },
   "j07-ac-reminder-wording-desktop.dc.html": {
    "x": 32630,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The service reminder’s wording; “Stop these” always added (desktop)",
@@ -1733,7 +2029,7 @@
   },
   "j07-ac-reminder-landing-desktop.dc.html": {
    "x": 33950,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The reminder’s link: booking, bike and service chosen, saying why (desktop)",
@@ -1741,7 +2037,7 @@
   },
   "j07-ac-review-first-desktop.dc.html": {
    "x": 35430,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Review requests the first time: add a review page, then switch on (desktop)",
@@ -1749,7 +2045,7 @@
   },
   "j07-ac-review-setting-desktop.dc.html": {
    "x": 36750,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Review requests: the review page, when, the wording (desktop)",
@@ -1757,7 +2053,7 @@
   },
   "j07-ac-contact-desktop.dc.html": {
    "x": 38070,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · How we contact you (desktop)",
@@ -1765,7 +2061,7 @@
   },
   "j07-ac-contact-changed-desktop.dc.html": {
    "x": 39390,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · A switch changed, and said so (desktop)",
@@ -1773,7 +2069,7 @@
   },
   "j07-ac-stopped-desktop.dc.html": {
    "x": 40710,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · “Stop these”: stopped in one click, no signing in (desktop)",
@@ -1781,7 +2077,7 @@
   },
   "j07-ac-stopped-on-desktop.dc.html": {
    "x": 42030,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Turned back on (desktop)",
@@ -1789,7 +2085,7 @@
   },
   "j07-ac-download-desktop.dc.html": {
    "x": 43510,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Download a copy of your data: straight away (desktop)",
@@ -1797,7 +2093,7 @@
   },
   "j07-ac-download-failed-desktop.dc.html": {
    "x": 44830,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The download didn’t start (desktop)",
@@ -1805,7 +2101,7 @@
   },
   "j07-ac-delete-desktop.dc.html": {
    "x": 46150,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Ask us to delete your account: store credit will be lost (desktop)",
@@ -1813,7 +2109,7 @@
   },
   "j07-ac-delete-blocked-desktop.dc.html": {
    "x": 47470,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Can’t delete yet: the bike is still with us (desktop)",
@@ -1821,7 +2117,7 @@
   },
   "j07-ac-delete-sent-desktop.dc.html": {
    "x": 48790,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Deletion request sent (desktop)",
@@ -1829,7 +2125,7 @@
   },
   "j07-ac-account-delete-pending-desktop.dc.html": {
    "x": 50110,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The request on the account, with Cancel my request (desktop)",
@@ -1837,7 +2133,7 @@
   },
   "j07-ac-account-delete-cancelled-desktop.dc.html": {
    "x": 51430,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · Request cancelled (desktop)",
@@ -1845,7 +2141,7 @@
   },
   "j07-ac-privacy-requests-desktop.dc.html": {
    "x": 52750,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The shop’s Privacy requests: from the website, and what’s in the way (desktop)",
@@ -1853,7 +2149,7 @@
   },
   "j07-ac-customer-delete-desktop.dc.html": {
    "x": 54070,
-   "y": 16062,
+   "y": 16018,
    "w": 1280,
    "h": 856,
    "title": "Designed · The staff customer page: the request, and what’s in the way (desktop)",
@@ -2065,8 +2361,45 @@
   "j05-cp-message-wording-desktop.dc.html",
   "j05-ready.dc.html",
   "j05-done-receipt.dc.html",
-  "j06-c2w-customer.dc.html",
-  "j06-c2w-staff.dc.html",
+  "j06-cw-list-desktop.dc.html",
+  "j06-cw-list-owner-desktop.dc.html",
+  "j06-cw-first-use-desktop.dc.html",
+  "j06-cw-new-desktop.dc.html",
+  "j06-cw-new-not-in-stock-desktop.dc.html",
+  "j06-cw-quote-desktop.dc.html",
+  "j06-cw-quote-deposit-desktop.dc.html",
+  "j06-cw-order-held-desktop.dc.html",
+  "j06-cw-hold-ending-desktop.dc.html",
+  "j06-cw-applied-desktop.dc.html",
+  "j06-cw-order-applied-desktop.dc.html",
+  "j06-cw-ordered-desktop.dc.html",
+  "j06-cw-order-deposit-desktop.dc.html",
+  "j06-cw-order-anyway-desktop.dc.html",
+  "j06-cw-order-deposit-paid-desktop.dc.html",
+  "j06-cw-certificate-desktop.dc.html",
+  "j06-cw-certificate-diff-desktop.dc.html",
+  "j06-cw-certificate-released-desktop.dc.html",
+  "j06-cw-order-on-order-desktop.dc.html",
+  "j06-cw-order-ready-desktop.dc.html",
+  "j06-cw-hand-over-desktop.dc.html",
+  "j06-cw-order-owed-desktop.dc.html",
+  "j06-cw-mark-paid-desktop.dc.html",
+  "j06-cw-mark-paid-diff-desktop.dc.html",
+  "j06-cw-order-part-paid-desktop.dc.html",
+  "j06-cw-order-paid-desktop.dc.html",
+  "j06-cw-owed-desktop.dc.html",
+  "j06-cw-more-desktop.dc.html",
+  "j06-cw-quote-revised-desktop.dc.html",
+  "j06-cw-cancel-desktop.dc.html",
+  "j06-cw-cancel-ordered-desktop.dc.html",
+  "j06-cw-today-desktop.dc.html",
+  "j06-cw-today-held-desktop.dc.html",
+  "j06-cw-customer-view-desktop.dc.html",
+  "j06-cw-email-desktop.dc.html",
+  "j06-cw-settings-desktop.dc.html",
+  "j06-cw-settings-deposit-desktop.dc.html",
+  "j06-cw-settings-provider-desktop.dc.html",
+  "j06-cw-messages-desktop.dc.html",
   "j07-ac-account-desktop.dc.html",
   "j07-ac-account-lower-desktop.dc.html",
   "j07-ac-account-repairs-desktop.dc.html",
@@ -2476,7 +2809,47 @@
   "j06_s38": {
    "x": 0,
    "y": 13922,
-   "text": "Waiting for Jack’s explanation",
+   "text": "The list and a new order",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_s39": {
+   "x": 10720,
+   "y": 13922,
+   "text": "Waiting for the certificate",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_s40": {
+   "x": 24080,
+   "y": 13922,
+   "text": "Collection and payment",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_s41": {
+   "x": 36120,
+   "y": 13922,
+   "text": "Changes and cancelling",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_s42": {
+   "x": 41560,
+   "y": 13922,
+   "text": "Today, the customer, settings and messages",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -2488,11 +2861,11 @@
    "y": 13602,
    "text": "06 · Cycle to Work — Customer and staff",
    "kind": "title1",
-   "maxW": 1600
+   "maxW": 52040
   },
-  "j07_s40": {
+  "j07_s44": {
    "x": 0,
-   "y": 15822,
+   "y": 15778,
    "text": "Your account",
    "w": 520,
    "size": "l",
@@ -2500,9 +2873,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s41": {
+  "j07_s45": {
    "x": 8080,
-   "y": 15822,
+   "y": 15778,
    "text": "Talking to the shop",
    "w": 520,
    "size": "l",
@@ -2510,9 +2883,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s42": {
+  "j07_s46": {
    "x": 17480,
-   "y": 15822,
+   "y": 15778,
    "text": "The shop’s side of messages",
    "w": 520,
    "size": "l",
@@ -2520,9 +2893,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s43": {
+  "j07_s47": {
    "x": 26030,
-   "y": 15822,
+   "y": 15778,
    "text": "Service reminders",
    "w": 520,
    "size": "l",
@@ -2530,9 +2903,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s44": {
+  "j07_s48": {
    "x": 35430,
-   "y": 15822,
+   "y": 15778,
    "text": "Reviews and how we contact you",
    "w": 520,
    "size": "l",
@@ -2540,9 +2913,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s45": {
+  "j07_s49": {
    "x": 43510,
-   "y": 15822,
+   "y": 15778,
    "text": "Your data",
    "w": 520,
    "size": "l",
@@ -2552,7 +2925,7 @@
   },
   "j07_title": {
    "x": 0,
-   "y": 15502,
+   "y": 15458,
    "text": "07 · Account, history and reminders — Customer and Staff",
    "kind": "title1",
    "maxW": 55310

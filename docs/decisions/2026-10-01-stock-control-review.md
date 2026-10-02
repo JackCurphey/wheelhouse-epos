@@ -143,3 +143,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** "Staff see no cost or margin" now reads "unless given Can see costs and margin" — a switch on the person (Reports and accounts decision 5). No board here changed.
 
 **Later change (1 Oct 2026, Buy online decision 10):** a product’s page shows "Show on website: On · as [Category]" under Price and cost (Buy online decision 3).
+
+**Later change (2 Oct 2026, Cycle to Work decision 7, audit M4):** the bike page's "Bikes by frame number" shows one frame "Held for [Customer] until [date] · Cycle to Work — not for sale". The sidebar on every board has the new Front desk › Cycle to Work item.

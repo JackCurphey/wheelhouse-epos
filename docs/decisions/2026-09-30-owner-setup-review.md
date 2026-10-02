@@ -274,3 +274,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Buy online decision 10):** Settings › Front desk has a fifth section, "Online orders" (what the website sells, showing products, paying online, not collected), with its Jump to pill; Settings › Messages lists five online-order messages under "Online order messages", and Automatic messages reads "15 on".
 
 **Later change (2 Oct 2026, Management oversight decisions 6 and 7):** every person shows "Signed in · Sign out everywhere"; Settings › Office › Staff and roles gains "Signed-in devices" and "Alerts on Today" (set by the owner). Nothing else changed.
+
+**Later change (2 Oct 2026, Cycle to Work decisions 2, 6 and 7):** Settings › Front desk has a Cycle to Work tab (holding bikes and quotes, bikes not in stock, how to apply, deposits, scheme providers, On Today); Messages lists four Cycle to Work messages ("19 on"); Payments › Other ways to pay reads "Cycle to Work · Recorded at the till against a Cycle to Work order". The sidebar on every board has the new Front desk › Cycle to Work item.
