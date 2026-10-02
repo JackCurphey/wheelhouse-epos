@@ -86,3 +86,10 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    kept in Lightspeed go unused for jobs. Chosen over linking each service
    to a Lightspeed labour item priced in Lightspeed, and one "Workshop
    labour" line.
+9. **For Lightspeed shops, Wheelhouse takes no money** (Jack, 2 Oct:
+   "1"). Booking deposits (journey 3) and paying online before collection
+   (journey 5) are switched off; "Bike ready" says "Pay when you collect";
+   the account page (journey 7) doesn't show store credit. No money in two
+   places and no payment provider for these shops; they go without
+   deposits and paying ahead. Chosen over taking deposits and online
+   payments and recording them in Lightspeed, and deposits only.
