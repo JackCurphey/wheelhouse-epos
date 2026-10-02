@@ -147,14 +147,16 @@ export const withSite = (name, fn, mode = 'menu') => { const was = [SITE_NOW, SI
 // out of sight, a business with more than one shop names the shop under
 // each page's title. One shop (or a board drawn before journey 19): the
 // title alone, as before.
+// UX walk-through 7 L2: the shop's name under the title is 13px and full
+// strength, not 12px and faded.
 function shopTitle(title, size, dark) {
   const h1 = `<h1 style="margin: 0; ${DISPLAY_FONT_STYLE}font-size: ${size}px; font-weight: 700; ${SITE_MODE === 'menu' || SITE_MODE === 'open' ? 'line-height: 1.2; ' : 'flex-grow: 1; '}overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(title)}</h1>`;
   if (SITE_MODE !== 'menu' && SITE_MODE !== 'open') return h1;
-  return `<div style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0">${h1}<span style="font-size: 12px; font-weight: 600; ${dark ? 'opacity: 0.85' : `color: ${C.muted}`}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${SITE_NOW === 'All shops' ? 'All shops' : `${SHOP} · ${SITE_NOW}`}</span></div>`;
+  return `<div style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0">${h1}<span style="font-size: 13px; font-weight: 600; ${dark ? '' : `color: ${C.ink}`}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${SITE_NOW === 'All shops' ? 'All shops' : `${SHOP} · ${SITE_NOW}`}</span></div>`;
 }
 function siteSwitcher() {
   if (SITE_MODE === 'one') return `<div style="display: flex; flex-direction: column; gap: 2px; min-height: 40px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.08); color: #ffffff"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">${SITE_NOW}</span></div>`;
-  const a11y = SITE_MODE ? `aria-label="Shop: ${SITE_NOW}. Choose a shop" aria-haspopup="menu" aria-expanded="${SITE_MODE === 'open'}"` : 'aria-label="Switch site"';
+  const a11y = SITE_MODE ? `aria-label="Shop: ${SITE_NOW}. Choose a shop" aria-haspopup="menu" aria-expanded="${SITE_MODE === 'open'}"` : 'aria-label="Switch shop"'; // UX walk-through 7 L1
   return `<button type="button" ${a11y} style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #ffffff; font-family: inherit; text-align: left">
 <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">${SITE_NOW}</span></span>${icon('chevron', 16)}</button>`;
 }
@@ -293,10 +295,11 @@ export function diaryFrozenContentMechanic(size) {
   return stack(`${mechToolbar(true, size, { newJob: `new-job-${size}.dc.html` })}${row(weekGrid({ days, size, slotH, mechFilter: 'Alex' }), 16, 'align-items: flex-start')}`, 12);
 }
 // A request pop-up: moderate size, centred over the dimmed diary at desktop/tablet.
-function requestDialog(size, w, h, { id, title, sub, body, footer, highlightJob }) {
+function requestDialog(size, w, h, { id, title, sub, body, footer, highlightJob, shell = {} }) {
+  // UX walk-through 7 H2: shell names who is signed in (someone at the other shop).
   const base = size === 'desktop'
-    ? shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob }))
-    : shellTablet('diary', 'Workshop diary', diaryFrozenContent('tablet', { highlightJob }));
+    ? shellDesktop('diary', 'Workshop diary', diaryFrozenContent('desktop', { highlightJob }), shell)
+    : shellTablet('diary', 'Workshop diary', diaryFrozenContent('tablet', { highlightJob }), shell);
   return dialogOverlay(base, w, h, `${dialogHeader(title, `diary-${size}.dc.html`, sub, id, size)}${dialogBody(body(size))}${footer ? dialogFooter(footer(size)) : ''}`, { pad: 40, maxWidth: DIALOG_W, labelledby: id });
 }
 
@@ -510,15 +513,18 @@ const REQ_LINK = { 'New booking request': 'request-new', 'Change request': 'requ
 // Decision 14: one click highlights the card (jumps the diary to its week) and
 // shows an Open button; a single click's link target is the "selected" state
 // (waiting-open, same size) — the Open button is what goes to the request itself.
+// UX walk-through 7 H2: a card can carry its own label and Open target (a
+// request sent to the other shop, answered: ms-request-answered).
 function waitingCard(w, size, selected = false) {
   if (size !== 'desktop') return touchWaitingCard(w, size, selected);
-  const [bg, ink, label] = ST[w.tone];
+  const [bg, ink, toneLabel] = ST[w.tone];
+  const label = w.label || toneLabel;
   const inner = `<span style="display: inline-flex; align-self: flex-start; padding: 2px 8px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 11px; font-weight: 700">${esc(label)}</span>
 <span style="font-size: 13px; font-weight: 700">${esc(w.customer)}</span>
 <span style="font-size: 12px; color: ${C.muted}">${esc(w.bike)}</span>
 <span style="font-size: 12px; color: ${C.ink}">${esc(w.detail)}</span>`;
   if (selected) {
-    const openHref = `${REQ_LINK[w.kind]}-${size}.dc.html`;
+    const openHref = `${w.open || REQ_LINK[w.kind]}-${size}.dc.html`;
     return `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 2px solid ${C.accent}; box-shadow: 0 0 0 3px rgba(${C.highlightRgb},0.45); background: ${C.panel}">
 <div style="display: flex; flex-direction: column; gap: 5px">${inner}</div>
 <a href="${openHref}" style="align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 12px; font-weight: 700; text-decoration: none">Open</a>
@@ -1037,6 +1043,8 @@ function renderCluster(cluster, size, slotH, { highlightJob = null, faded = fals
   }).join('');
 }
 const DAY_MECHS = [['Alex', 'Alex Morgan'], ['Jo', 'Jo Taylor']];
+// UX walk-through 7 H2: the toolbar's people, swapped for [Second site]'s diary.
+let TOOLBAR_MECHS = ['Everyone', 'Alex', 'Jo'];
 function dayMechGrid({ dayIdx, size, slotH = 29, highlightJob = null }) {
   const T = size !== 'desktop';
   const gridH = GRID_SLOTS * slotH;
@@ -1160,7 +1168,7 @@ ${dateArrow('next', `Next ${unit}`)}
 const CHIP_TEXT = { Everyone: 'Everyone', Alex: 'Alex', Jo: 'Jo', Me: 'Me' };
 const CHIP_INITIAL = { Everyone: 'group', Alex: 'A', Jo: 'J', Me: 'M' };
 function personChip(key, active, size = 'desktop') {
-  const initial = CHIP_INITIAL[key] || key[0];
+  const initial = CHIP_INITIAL[key] || key.replace(/^\[/, '')[0]; // UX walk-through 7 H2: "[Mechanic]" shows M
   const badgeInk = active ? C.accentSoftInk : C.muted;
   const badgeBg = active ? '#ffffff' : C.mutedBg;
   const badge = initial === 'group'
@@ -1230,7 +1238,7 @@ const defaultNewJobHref = (size) => `new-job-pick-${size}.dc.html`;
 // the date group in the middle of the space between the view switch and the
 // people/New job cluster at the right; nowrap (not the old wrap) — the
 // desktop board's width comfortably holds all four groups on one line.
-function diaryToolbar(mechFilter, size, { mechOptions = ['Everyone', 'Alex', 'Jo'], activeView = 'Week', newJob = null } = {}) {
+function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeView = 'Week', newJob = null } = {}) {
   const nj = newJob === 'active' ? newJobButtonActive() : newJob ? newJobButton(newJob) : '';
   return row(`${viewSwitch(activeView, size)}<div style="flex-grow: 1"></div>${dateNav(activeView, size)}<div style="flex-grow: 1"></div>${mechChips(mechFilter, mechOptions, 'Mechanic', size)}${nj ? `<div style="width: 20px; flex-shrink: 0"></div>${nj}` : ''}`, 0, 'flex-wrap: nowrap');
 }
@@ -1416,7 +1424,8 @@ ${footer ? `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 16
 // job in the diary and shows Open; a second tap opens it). Same content as
 // desktop at touch sizes; used in the tablet column and the phone sheet.
 function touchWaitingCard(w, size, selected = false) {
-  const [bg, ink, label] = ST[w.tone];
+  const [bg, ink, toneLabel] = ST[w.tone];
+  const label = w.label || toneLabel; // UX walk-through 7 H2
   const inner = `<span style="display: inline-flex; align-self: flex-start; padding: 2px 8px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700">${esc(label)}</span>
 <span style="font-size: 15px; font-weight: 700">${esc(w.customer)}</span>
 <span style="font-size: 13px; color: ${C.muted}">${esc(w.bike)}</span>
@@ -1424,7 +1433,7 @@ function touchWaitingCard(w, size, selected = false) {
   if (selected) {
     return `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; border: 2px solid ${C.accent}; box-shadow: 0 0 0 3px rgba(${C.highlightRgb},0.45); background: ${C.panel}">
 <div style="display: flex; flex-direction: column; gap: 4px">${inner}</div>
-<a href="${REQ_LINK[w.kind]}-${size}.dc.html" style="align-self: ${size === 'phone' ? 'stretch' : 'flex-start'}; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none">Open</a>
+<a href="${w.open || REQ_LINK[w.kind]}-${size}.dc.html" style="align-self: ${size === 'phone' ? 'stretch' : 'flex-start'}; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.accent}; background: ${C.accent}; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none">Open</a>
 </div>`;
   }
   const selectHref = w.kind === 'Change request' ? `change-selected-${size}.dc.html` : `waiting-open-${size}.dc.html`;
@@ -1974,6 +1983,9 @@ ${link('Search services')}
 </div>
 </div>`;
 }
+// UX walk-through 7 H2: a job booked into the other shop's workshop starts
+// as "Booked" only; the bike isn't at that shop yet, so Bolton's hooks go.
+const otherShopStatus = (shop, size, pillFn, hintSize) => `${pillRadioGroup('Starting status', ['Booked'], 0, 'nj-status-' + size, pillFn)}${note(`The customer brings the bike to ${esc(shop)}.`, hintSize)}`;
 function newJobBody(size, opts = {}) {
   const {
     when = 'Tue 15 Sep · 10:00',
@@ -1987,6 +1999,7 @@ function newJobBody(size, opts = {}) {
     storageDefault = 'Hook 3',
     receiptNote = 'Rear brake squeals and feels weak.',
     staffNotes = [],
+    otherShop = null,
   } = opts;
   const mechOptions = ['Alex Morgan', 'Jo Taylor', 'Shared workshop queue'];
   const ordered = [mechanic, ...mechOptions.filter((m) => m !== mechanic)];
@@ -2036,10 +2049,10 @@ ${note('Printed on their receipt.', 12)}
 ${banner(`${when} · ${mechanic}`, 'info')}
 ${note(mechHint)}
 ${warn ? banner(`Only ${freeMinutes} minutes free at ${esc(timeLabel)} — this job needs ${svcDur}. Choose another time, or save anyway and the diary will show the overlap. ${link('Find the next free ' + svcDur + ' minutes')}`, 'warn') : ''}
-${pillRadioGroup('Starting status', STARTING_STATUS, startingStatusIdx, 'nj-status-' + size, (o, active) => formPill(o, active))}
+${otherShop ? otherShopStatus(otherShop, size, (o, active) => formPill(o, active), 12) : `${pillRadioGroup('Starting status', STARTING_STATUS, startingStatusIdx, 'nj-status-' + size, (o, active) => formPill(o, active))}
 <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap">${togglePill('The bike is here now', bikeHereChecked, 'nj-herenow-' + size)}${note('Books it in straight away, ready to print the bike tag.', 12)}</div>
 ${pillRadioGroup('Where the bike is kept', STORAGE_SLOTS, STORAGE_SLOTS.indexOf(storageDefault), 'nj-storage-' + size, (o, active) => formPill(o, active))}
-${note('Storage slots are on for this shop. Turn them off in Settings.', 12)}
+${note('Storage slots are on for this shop. Turn them off in Settings.', 12)}`}
 ${staffNotesBlock(size, staffNotes)}
 </div>`;
   return `${newBuildCheck(size)}
@@ -2056,7 +2069,7 @@ function newJobBodyTouch(size, opts = {}) {
     when = 'Tue 15 Sep · 10:00', mechanic = 'Alex Morgan',
     mechHint = 'Mechanic chosen automatically: most free time on Tuesday. To change it, drag the job to another mechanic in the Day view.',
     showCustomer = true, freeMinutes = null, service = 'Standard service', startingStatusIdx = 0, bikeHereChecked = false,
-    storageDefault = 'Hook 3', receiptNote = 'Rear brake squeals and feels weak.', staffNotes = [],
+    storageDefault = 'Hook 3', receiptNote = 'Rear brake squeals and feels weak.', staffNotes = [], otherShop = null,
   } = opts;
   const svcDur = serviceDurationOf(service);
   const timeLabel = when.split('· ')[1] || when;
@@ -2089,15 +2102,18 @@ ${staffNotes.length ? `<div>${staffNotes.map((n) => `<div style="display: flex; 
 <div style="display: flex; gap: 8px"><input id="nj-staffnote-${size}" type="text" placeholder="Add a note for other staff" aria-label="Add a note for other staff" style="flex-grow: 1; min-width: 0; box-sizing: border-box; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; padding: 11px 10px; min-height: 44px; font-size: 14px; font-family: inherit; color: ${C.ink}">${button('Add note', { variant: 'default' })}</div>
 ${hint('Internal only — not shown to the customer.')}
 </div>`;
+  // UX walk-through 7 H2: booked into the other shop's workshop, the status
+  // is only "Booked", and there is no "here now" or Bolton hook.
+  const otherStatus = otherShop ? otherShopStatus(otherShop, size, pill, 13) : '';
   if (size === 'phone') {
     // Decision 54: the chosen time and mechanic lead the form.
-    return [whenBlock, newBuild, customer, bike, work, title, receipt, status, hereNow, storage, staff].join('\n');
+    return (otherShop ? [whenBlock, newBuild, customer, bike, work, title, receipt, otherStatus, staff] : [whenBlock, newBuild, customer, bike, work, title, receipt, status, hereNow, storage, staff]).join('\n');
   }
   const col = (label, inner) => `<section aria-label="${esc(label)}" style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${inner}</section>`;
   return `<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; align-items: start">
-${col('When', `${whenBlock}${storage}${staff}`)}
+${col('When', `${whenBlock}${otherShop ? '' : storage}${staff}`)}
 ${col('Customer and bike', `${newBuild}${customer}${bike}${receipt}`)}
-${col('The work', `${work}${title}${status}${hereNow}`)}
+${col('The work', `${work}${title}${otherShop ? otherStatus : `${status}${hereNow}`}`)}
 </div>`;
 }
 // The form itself stays a readable single column at tablet/phone (brief
@@ -2958,12 +2974,62 @@ export const PART_PROBLEM_TITLES = {
 // Multiple sites decision 12: a job booked into another shop's workshop goes
 // there as a request. Booking it: a "Workshop at" choice above the form, and
 // the button says where it goes. Receiving it: the request says who sent it.
+// UX walk-through 7 H2 (option 1): one job, Maya Patel's Standard service,
+// all the way through. With [Second site] chosen the form shows that shop's
+// diary (its next free time and its mechanic, placeholders: it has no real
+// diary), "Booked" only, and no Bolton hooks. The request at [Second site]
+// is the same job, opened by someone working there. Bolton sees the answer
+// in its Waiting for you list (requestAnsweredAt).
 const OTHER = '[Second site]';
-const shopPick = () => `<div role="radiogroup" aria-label="Workshop at" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 14px; font-weight: 700; margin-right: 4px">Workshop at</span>${['Bolton', OTHER].map((n) => `<button type="button" role="radio" aria-checked="${n === OTHER}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${n === OTHER ? C.ink : C.input}; background: ${n === OTHER ? C.ink : C.panel}; color: ${n === OTHER ? '#ffffff' : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${n}</button>`).join('')}<span style="flex-basis: 100%; font-size: 13px; color: ${C.muted}">Goes to ${OTHER} as a request. Their workshop accepts it or offers another time, and you and the customer hear back.</span></div>`;
+const shopPick = () => `<div role="radiogroup" aria-label="Workshop at" aria-describedby="wa-hint" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 14px; font-weight: 700; margin-right: 4px">Workshop at</span>${['Bolton', OTHER].map((n) => `<button type="button" role="radio" aria-checked="${n === OTHER}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${n === OTHER ? C.ink : C.input}; background: ${n === OTHER ? C.ink : C.panel}; color: ${n === OTHER ? '#ffffff' : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${n}</button>`).join('')}<span id="wa-hint" style="flex-basis: 100%; font-size: 13px; color: ${C.muted}">Goes to ${OTHER} as a request. Their workshop accepts it or offers another time, and you and the customer hear back. The answer shows in Waiting for you.</span></div>`;
+const OTHER_JOB_OPTS = { ...NEW_JOB_OPTS, freeMinutes: null, otherShop: OTHER, when: `${OTHER}’s next free 60 minutes: [day] [time]`, mechanic: '[Mechanic]', mechHint: `Asked for — ${OTHER} confirms. The free time and mechanic are from ${OTHER}’s diary, not Bolton’s.` };
 export const newJobOtherShopAt = (size) => withSite('Bolton', () => size === 'phone'
-  ? dialogPhone('New job', 'new-job-pick-phone.dc.html', `${shopPick()}${newJobBody('phone', NEW_JOB_OPTS)}`, button(`Send request to ${OTHER}`, { variant: 'primary', block: true }), '', { scroll: true, backLabel: 'Cancel, back to the diary', bodyGap: 14 })
-  : newJobDialog(size, size === 'desktop' ? DW : TW, size === 'desktop' ? DH : TH, size === 'desktop' ? 6 : 20, { baseFn: (s) => (s === 'desktop' ? diaryFrozenContent(s) : diaryPickContent(s)), bodyOpts: NEW_JOB_OPTS, top: shopPick(), saveLabel: `Send request to ${OTHER}` }));
+  ? dialogPhone('New job', 'new-job-pick-phone.dc.html', `${shopPick()}${newJobBody('phone', OTHER_JOB_OPTS)}`, button(`Send request to ${OTHER}`, { variant: 'primary', block: true }), '', { scroll: true, backLabel: 'Cancel, back to the diary', bodyGap: 14 })
+  : newJobDialog(size, size === 'desktop' ? DW : TW, size === 'desktop' ? DH : TH, size === 'desktop' ? 6 : 20, { baseFn: (s) => (s === 'desktop' ? diaryFrozenContent(s) : diaryPickContent(s)), bodyOpts: OTHER_JOB_OPTS, top: shopPick(), saveLabel: `Send request to ${OTHER}` }));
 const FROM = `From Bolton · booked by Jo Taylor at ${mono('[time]')}`;
-export const requestFromShopAt = (size) => withSite(OTHER, () => size === 'phone'
-  ? dialogPhone('Sam Reed · Specialized Sirrus', reqCloseHref('phone'), stack(requestNewBody('phone', false, FROM), 12), `${button('Accept', { block: true })}${grid('1fr 1fr', `${button('Another time', { variant: 'default', block: true })}${button('Decline', { variant: 'ghost', block: true })}`, 8)}`, 'Request from Bolton')
-  : requestDialog(size, size === 'desktop' ? DW : TW, size === 'desktop' ? DH : TH, { ...reqNewOpts, sub: 'Request from Bolton', body: (sz) => requestNewBody(sz, false, FROM) }));
+// Someone working at [Second site] opens it, not Jo (who sent it).
+const OTHER_SHELL = { role: 'S', person: '[Name]', roleName: 'Staff' };
+const MAYA_ASKED = { kind: 'New booking request', tone: 'pending', customer: 'Maya Patel', bike: 'Trek Domane AL 3', detail: 'Standard service · asked for [day] [time] · from Bolton' };
+// Draws a diary as [Second site]'s: no Bolton jobs, its [Mechanic], and
+// Maya's request as the one pending block and the one card waiting.
+function asOtherShopDiary(fn) {
+  const jobs = JOBS.splice(0, JOBS.length), unsched = UNSCHEDULED.splice(0, UNSCHEDULED.length), waiting = WAITING.splice(0, WAITING.length, MAYA_ASKED);
+  const pend = { ...PENDING_DIARY }, outlineDay = REQUEST_OUTLINE.day, mechs = TOOLBAR_MECHS;
+  Object.assign(PENDING_DIARY, { dur: 60, customer: 'Maya Patel', bike: 'Trek Domane AL 3', jobTitle: 'Standard service', detail: 'Asked for [day] [time] · from Bolton' });
+  REQUEST_OUTLINE.day = -1; TOOLBAR_MECHS = ['Everyone', '[Mechanic]'];
+  try { return fn(); } finally {
+    JOBS.push(...jobs); UNSCHEDULED.push(...unsched); WAITING.splice(0, WAITING.length, ...waiting);
+    Object.assign(PENDING_DIARY, pend); REQUEST_OUTLINE.day = outlineDay; TOOLBAR_MECHS = mechs;
+  }
+}
+function requestOtherShopBody(size) {
+  const id = 'req-other-mech-' + size;
+  return `${eyebrow(FROM)}
+${row(`${h2('Maya Patel', 18)}${statusBadge('pending')}`, 10, 'justify-content: space-between')}
+${txt('Trek Domane AL 3 · green', 14, `color: ${C.muted}`)}
+<div style="display: flex; flex-direction: column; gap: 6px">${h2('What the customer told us', 14)}${quote('Rear brake squeals and feels weak.')}</div>
+<div style="display: flex; flex-direction: column; gap: 4px">${txt('<strong>Standard service</strong>')}${note('60 minutes planned. Asked for [day] at [time]. The customer brings the bike here.')}</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span id="${id}-label" style="font-size: 14px; font-weight: 600; color: ${C.ink}">Mechanic</span><div role="radiogroup" aria-labelledby="${id}-label" style="display: flex; flex-wrap: wrap; gap: 6px">${mechanicPill('[Mechanic]', 'M', true, size)}${mechanicPill('Shared queue', 'group', false, size)}</div></div>`;
+}
+const reqOtherOpts = { ...reqNewOpts, id: 'req-other-title', title: 'Maya Patel · Trek Domane AL 3', sub: 'Request from Bolton', body: requestOtherShopBody };
+export const requestFromShopAt = (size) => withSite(OTHER, () => asOtherShopDiary(() => size === 'phone'
+  ? dialogPhone('Maya Patel · Trek Domane AL 3', reqCloseHref('phone'), stack(requestOtherShopBody('phone'), 12), `${button('Accept', { block: true })}${grid('1fr 1fr', `${button('Another time', { variant: 'default', block: true })}${button('Decline', { variant: 'ghost', block: true })}`, 8)}`, 'Request from Bolton')
+  : requestDialog(size, size === 'desktop' ? DW : TW, size === 'desktop' ? DH : TH, { ...reqOtherOpts, shell: OTHER_SHELL })));
+// UX walk-through 7 H2: back at Bolton, the sent request is in Waiting for
+// you with its answer, selected, with "Open". The other answers read
+// "another time offered" or "declined: [reason]".
+const MAYA_ANSWERED = { kind: 'New booking request', tone: 'scheduled', label: `Answered by ${OTHER}`, customer: 'Maya Patel', bike: 'Trek Domane AL 3', detail: `Sent to ${OTHER} · accepted for [day] [time]`, open: 'job-overview' };
+const ANSWER_NOTE = `Or “another time offered”, or “declined: [reason]”. Maya hears the answer too.`;
+export const requestAnsweredAt = (size) => withSite('Bolton', () => {
+  WAITING.unshift(MAYA_ANSWERED);
+  try {
+    if (size === 'desktop') return shellDesktop('diary', 'Workshop diary', stack(`${diaryToolbar('Everyone', 'desktop', { newJob: 'new-job-pick-desktop.dc.html' })}
+${row(`<div style="display: flex; flex-direction: column; gap: 8px">${waitingColumn('desktop', 0, 224)}<div style="width: 224px">${note(ANSWER_NOTE, 12)}</div></div>${weekGrid({ days: [0, 1, 2, 3, 4, 5, 6], size: 'desktop', mechFilter: 'Everyone' })}`, 16, 'align-items: flex-start')}
+${diaryLegend()}`, 12));
+    if (size === 'tablet') return tabletDiary({ selectedIdx: 0 }).replace(`Waiting for you (${WAITING.length})</h2>`, `Waiting for you (${WAITING.length})</h2>${note(ANSWER_NOTE, 12)}`);
+    return phoneDiary({ day: TODAY }, {
+      overlay: phoneSheet({ id: 'waiting-sheet-title', title: `Waiting for you (${WAITING.length})`, closeHref: 'diary-phone.dc.html', maxH: 560,
+        body: `${WAITING.map((w, i) => touchWaitingCard(w, 'phone', i === 0)).join('')}${note(ANSWER_NOTE, 13)}` }),
+    });
+  } finally { WAITING.shift(); }
+});

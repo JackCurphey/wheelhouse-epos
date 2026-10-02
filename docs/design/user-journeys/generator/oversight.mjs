@@ -68,20 +68,26 @@ ${isP() ? '' : mono(time, 'font-size: 14px')}${isP() ? '' : name}
 <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">${isP() ? `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: ${C.muted}">${mono(time)} · ${name}</span>` : ''}<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 15px"><span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600">${icon(ic, 16)}${kindName}</span><span>${what}</span>${flagHtml}${shop ? badge(shop, 'grey') : ''}</span><span style="font-size: 14px; color: ${C.ink}; line-height: 1.4">${detail}</span></span>
 ${open ? link('Open', `Open ${open}`) : '<span></span>'}</li>`;
 };
+// UX walk-through 7 M4: a one-shop log shows that shop's lines plus
+// business-wide ones, which are always tagged "All shops" — the all-shops
+// price of the brake pads (Multiple sites 2-3) and the website. A line from
+// another shop (Jack's stock take at [Second site]) shows only in that
+// shop's log and in All shops.
 const TODAY_ENTRIES = (shops = false) => {
   const s = (x) => (shops ? { shop: x } : {});
+  const all = { shop: 'All shops' };
   return [
     entry('[time]', 'Jo Taylor', 'discount', '£[£] off Sale [sale number]', '“[reason]” · Till B1, while Jo Taylor was checked in', 'Sale [sale number]', { ...s('Bolton'), flag: 'Seen by Jack Lewis at [time]' }),
-    entry('[time]', 'Jack Lewis', 'price', `Shimano brake pads ${mono('B05S-RX')}`, '£28.00 → £[£] · now below cost (£[£])', 'Shimano brake pads B05S-RX', { ...s('Bolton'), flag: 'today' }),
+    entry('[time]', 'Jack Lewis', 'price', `Shimano brake pads ${mono('B05S-RX')}`, '£28.00 → £[£] for all shops · now below cost (£[£])', 'Shimano brake pads B05S-RX', { ...all, flag: 'today' }), // UX walk-through 7 M4
     // UX walk-through 3 L1: the job status is "Waiting for parts", as on the diary and the job.
     entry('[time]', 'Alex Morgan', 'job', 'WH-1045 · Jamie Brooks', 'Giant Escape 2 · gear adjustment · In progress → Waiting for parts', 'job WH-1045', s('Bolton')),
     entry('[time]', 'Jo Taylor', 'void', 'Sale [sale number] · £[£]', '“[reason]” · Till B1, while Jo Taylor was checked in · [n]th void today', 'the voided sale', { ...s('Bolton'), flag: 'today' }),
     entry('[time]', 'Jo Taylor', 'refund', '£[£] to card · from Sale [sale number]', '“[reason]” · Till B1, while Jo Taylor was checked in', 'the refund', s('Bolton')),
-    entry('[time]', 'Jack Lewis', 'stock', '[Product] · −[n]', '“[reason]” · stock take', '[Product]', s('[Second site]')),
+    shops && entry('[time]', 'Jack Lewis', 'stock', '[Product] · −[n]', '“[reason]” · stock take', '[Product]', s('[Second site]')), // UX walk-through 7 M4
     entry('[time]', 'Jack Lewis', 'signout', '[Computer] · [browser]', 'Signed out from Signed-in devices', '', s('Bolton')),
     entry('[time]', 'Jack Lewis', 'setting', 'Float, Till B1', '£[£] → £[£] · Settings › Front desk › End of day', 'the float setting', s('Bolton')),
-    entry('[time]', 'Jack Lewis', 'website', 'Home page and Theme', '4 changes published', 'the website’s history', s('All shops')),
-  ];
+    entry('[time]', 'Jack Lewis', 'website', 'Home page and Theme', '4 changes published', 'the website’s history', all), // UX walk-through 7 M4
+  ].filter(Boolean);
 };
 const dayGroup = (label, items) => `<section aria-label="${esc(label)}" style="display: flex; flex-direction: column"><h3 style="margin: 0 0 4px; font-size: 15px; font-weight: 700; color: ${C.muted}">${label}</h3><ul style="margin: 0; padding: 0">${items.join('')}</ul></section>`;
 const logHead = (sub, backTo = 'All reports') => `${back(backTo)}<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px"><div style="display: flex; flex-direction: column; gap: 4px">${h2('Activity log')}${note(sub)}</div>${button(isP() ? 'Download' : 'Download as spreadsheet', { variant: 'default' })}</div>${note(`${TILL_NOTE} ${KEPT}`)}`;
@@ -116,9 +122,15 @@ ${alertRow('A price changed to below what it cost', null, 'Changing many prices 
 
 // ---------- Signed-in devices (decision 3; audit H5, M6, M8, L5) ----------
 const devRow = (device, who, where, when, action = 'Sign out') => `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-height: 60px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 220px; min-width: 0"><span style="font-size: 15px; font-weight: 700">${device}</span><span style="font-size: 13px; color: ${C.muted}">${who} · ${where} · ${when}</span></span>${action ? button(action, { variant: 'default' }).replace('<button', `<button aria-label="${esc(action)} — ${esc(device.replace(/<[^>]+>/g, ''))}"`) : ''}</div>`;
+// UX walk-through 7 M4: tills grouped by shop, with the same names as the
+// Tills list (ms-tills: Bolton B1–B3, [Second site] [code]1–[code]2).
+// Tills nobody is checked in to share one line, so both shops fit.
+const tillShop = (t) => `<h4 style="margin: 4px 0 0; font-size: 14px; font-weight: 700">${t}</h4>`;
+const idleTills = (codes) => `<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 700">${codes.map((c) => `Till ${mono(c)}`).join(' · ')}</span><span style="font-size: 13px; color: ${C.muted}">Nobody checked in · last used [date]</span></div>`;
+const tillGroups = () => `${tillShop('Tills at Bolton · 3')}${devRow(`Till ${mono('B1')}`, 'Jo Taylor checked in', 'Bolton', 'in use now', 'Check out Jo Taylor')}${idleTills(['B2', 'B3'])}
+${tillShop('Tills at [Second site] · [n]')}${idleTills(['[code]1', '[code]2'])}`;
 const devicesOpen = (signedOut = false) => `${note('Tills are added by the owner, in <a href="#" style="color: inherit; font-weight: 600">Settings › Front desk › Till</a>. Checking someone out of a till leaves it ready for the next PIN.')}
-<h4 style="margin: 4px 0 0; font-size: 14px; font-weight: 700">Tills</h4>
-${devRow('Till B1', 'Jo Taylor checked in', 'Bolton', 'in use now', 'Check out Jo Taylor')}${devRow('[Till]', 'Nobody checked in', '[Second site]', 'last used [date]', '')}
+${tillGroups()}
 <h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Phones and computers</h4>
 ${devRow('[Phone model] · [browser]', 'Jack Lewis (you)', 'Bolton', 'used just now', '')}${signedOut ? '' : devRow('[Computer] · [browser]', 'Jack Lewis', 'Bolton', 'last used [date]')}${devRow('[Phone model] · [browser]', 'Jo Taylor', 'Bolton', 'last used [date]')}
 ${note('Only the owner can sign out the owner’s own devices.')}`;
@@ -152,7 +164,7 @@ def('ops-log-empty', () => logPage({ empty: true }));
 def('ops-log-refused', () => logRefused());
 def('ops-first-note', () => firstNote());
 def('ops-my-activity', () => myActivity());
-def('ops-today-alerts', () => today({ watch: true }));
+def('ops-today-alerts', () => today({ watch: true, otherShops: true })); // UX walk-through 7 H1: Bolton's Today names [Second site]'s three
 def('ops-alert-settings', () => officeStaff({ alerts: alertsOpen() }));
 def('ops-devices', () => officeStaff({ devices: devicesOpen() }));
 def('ops-till-checkout', () => overlay(officeStaff({ devices: devicesOpen() }), tillCheckout()));

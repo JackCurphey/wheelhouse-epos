@@ -1,15 +1,6 @@
 {
  "v": 3,
- "createdOnFiles": {
-  "at": "2026-09-27T10:58:24Z",
-  "v": 1
- },
- "title": "Wheelhouse user journeys — the staff app",
- "launch": {
-  "view": "canvas"
- },
  "attachments": {},
- "pages": [],
  "boards": {
   "ja-map.dc.html": {
    "x": 0,
@@ -779,8 +770,24 @@
    "title": "Designed · Today, while the tills are in practice: the drawer isn’t counted (desktop)",
    "is_interactive": true
   },
+  "j10-op-today-c2w-desktop.dc.html": {
+   "x": 23920,
+   "y": 8886,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: a Cycle to Work hold that ended with nobody choosing, and a deposit to refund (desktop)",
+   "is_interactive": true
+  },
+  "j10-op-today-staff-lightspeed-desktop.dc.html": {
+   "x": 25240,
+   "y": 8886,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today at a Lightspeed shop, as Staff see it: jobs that need someone to look (desktop)",
+   "is_interactive": true
+  },
   "j10-desk.dc.html": {
-   "x": 24080,
+   "x": 26720,
    "y": 8886,
    "w": 1100,
    "h": 816,
@@ -875,8 +882,16 @@
    "title": "Designed · Record a frame number (desktop)",
    "is_interactive": true
   },
+  "j11-till-serial-held-desktop.dc.html": {
+   "x": 14520,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A frame held for Cycle to Work — warned, not blocked (desktop)",
+   "is_interactive": true
+  },
   "j11-till-pay-desktop.dc.html": {
-   "x": 14680,
+   "x": 16000,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -884,7 +899,7 @@
    "is_interactive": true
   },
   "j11-till-pay-other-desktop.dc.html": {
-   "x": 16000,
+   "x": 17320,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -892,7 +907,7 @@
    "is_interactive": true
   },
   "j11-till-card-desktop.dc.html": {
-   "x": 17320,
+   "x": 18640,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -900,7 +915,7 @@
    "is_interactive": true
   },
   "j11-till-card-discounted-desktop.dc.html": {
-   "x": 18640,
+   "x": 19960,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -908,7 +923,7 @@
    "is_interactive": true
   },
   "j11-till-pay-discounted-desktop.dc.html": {
-   "x": 19960,
+   "x": 21280,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -916,7 +931,7 @@
    "is_interactive": true
   },
   "j11-till-split-discounted-desktop.dc.html": {
-   "x": 21280,
+   "x": 22600,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -924,7 +939,7 @@
    "is_interactive": true
   },
   "j11-till-card-declined-desktop.dc.html": {
-   "x": 22600,
+   "x": 23920,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -932,7 +947,7 @@
    "is_interactive": true
   },
   "j11-till-pay-cash-desktop.dc.html": {
-   "x": 23920,
+   "x": 25240,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -940,7 +955,7 @@
    "is_interactive": true
   },
   "j11-till-pay-split-desktop.dc.html": {
-   "x": 25240,
+   "x": 26560,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -948,7 +963,7 @@
    "is_interactive": true
   },
   "j11-till-receipt-desktop.dc.html": {
-   "x": 26560,
+   "x": 27880,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -956,7 +971,7 @@
    "is_interactive": true
   },
   "j11-till-giftcard-desktop.dc.html": {
-   "x": 28040,
+   "x": 29360,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -964,7 +979,7 @@
    "is_interactive": true
   },
   "j11-till-account-desktop.dc.html": {
-   "x": 29360,
+   "x": 30680,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -972,7 +987,7 @@
    "is_interactive": true
   },
   "j11-till-loyalty-desktop.dc.html": {
-   "x": 30680,
+   "x": 32000,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -980,7 +995,7 @@
    "is_interactive": true
   },
   "j11-till-deposit-desktop.dc.html": {
-   "x": 32000,
+   "x": 33320,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -988,7 +1003,7 @@
    "is_interactive": true
   },
   "j11-till-park-desktop.dc.html": {
-   "x": 33480,
+   "x": 34800,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -996,7 +1011,7 @@
    "is_interactive": true
   },
   "j11-till-find-desktop.dc.html": {
-   "x": 34800,
+   "x": 36120,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1004,7 +1019,7 @@
    "is_interactive": true
   },
   "j11-till-find-customer-desktop.dc.html": {
-   "x": 36120,
+   "x": 37440,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1012,7 +1027,7 @@
    "is_interactive": true
   },
   "j11-till-sale-detail-desktop.dc.html": {
-   "x": 37440,
+   "x": 38760,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1020,7 +1035,7 @@
    "is_interactive": true
   },
   "j11-till-refund-desktop.dc.html": {
-   "x": 38760,
+   "x": 40080,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1028,7 +1043,7 @@
    "is_interactive": true
   },
   "j11-till-refund-older-desktop.dc.html": {
-   "x": 40080,
+   "x": 41400,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1036,7 +1051,7 @@
    "is_interactive": true
   },
   "j11-till-refund-cash-desktop.dc.html": {
-   "x": 41400,
+   "x": 42720,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1044,7 +1059,7 @@
    "is_interactive": true
   },
   "j11-till-refund-noreceipt-desktop.dc.html": {
-   "x": 42720,
+   "x": 44040,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1052,7 +1067,7 @@
    "is_interactive": true
   },
   "j11-till-void-desktop.dc.html": {
-   "x": 44040,
+   "x": 45360,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1060,7 +1075,7 @@
    "is_interactive": true
   },
   "j11-till-job-desktop.dc.html": {
-   "x": 45360,
+   "x": 46680,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1068,7 +1083,7 @@
    "is_interactive": true
   },
   "j11-till-job-deposit-desktop.dc.html": {
-   "x": 46680,
+   "x": 48000,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1076,7 +1091,7 @@
    "is_interactive": true
   },
   "j11-till-job-balance-desktop.dc.html": {
-   "x": 48000,
+   "x": 49320,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1084,15 +1099,63 @@
    "is_interactive": true
   },
   "j11-till-collect-desktop.dc.html": {
-   "x": 49320,
+   "x": 50640,
    "y": 10742,
    "w": 1280,
    "h": 856,
    "title": "Designed · Hand over an online order (desktop)",
    "is_interactive": true
   },
+  "j11-till-c2w-pick-desktop.dc.html": {
+   "x": 52120,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Other ways to pay › Cycle to Work — orders ready to collect (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-c2w-desktop.dc.html": {
+   "x": 53440,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Cycle to Work bike — the order’s lines locked, the held frame picked (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-c2w-pay-desktop.dc.html": {
+   "x": 54760,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Take payment — Cycle to Work · [Provider] is one tap (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-c2w-extra-desktop.dc.html": {
+   "x": 56080,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · An accessory added at the counter — Maya pays for it as a second payment (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-c2w-paid-desktop.dc.html": {
+   "x": 57400,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Cycle to Work paid — both payments, the bike collected (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-c2w-deposit-desktop.dc.html": {
+   "x": 58720,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Cycle to Work deposit — one line, linked to the order (desktop)",
+   "is_interactive": true
+  },
   "j11-till-offline-desktop.dc.html": {
-   "x": 50800,
+   "x": 60200,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1100,7 +1163,7 @@
    "is_interactive": true
   },
   "j11-till-offline-long-desktop.dc.html": {
-   "x": 52120,
+   "x": 61520,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1108,7 +1171,7 @@
    "is_interactive": true
   },
   "j11-till-needs-net-desktop.dc.html": {
-   "x": 53440,
+   "x": 62840,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1116,7 +1179,7 @@
    "is_interactive": true
   },
   "j11-till-noted-desktop.dc.html": {
-   "x": 54760,
+   "x": 64160,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1124,7 +1187,7 @@
    "is_interactive": true
   },
   "j11-till-collect-offline-desktop.dc.html": {
-   "x": 56080,
+   "x": 65480,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1132,7 +1195,7 @@
    "is_interactive": true
   },
   "j11-till-no-signout-desktop.dc.html": {
-   "x": 57400,
+   "x": 66800,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1140,7 +1203,7 @@
    "is_interactive": true
   },
   "j11-till-failed-desktop.dc.html": {
-   "x": 58720,
+   "x": 68120,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1491,8 +1554,32 @@
    "title": "Designed · Print labels: only what needs one (desktop)",
    "is_interactive": true
   },
-  "j13-rs-receive-staff-desktop.dc.html": {
+  "j13-rs-receive-c2w-desktop.dc.html": {
    "x": 19960,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Cycle to Work bike in the delivery: “for Maya Patel · Cycle to Work — put it aside” (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-frame-c2w-desktop.dc.html": {
+   "x": 21280,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The Cycle to Work bike’s frame number becomes her order’s frame (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-booked-c2w-desktop.dc.html": {
+   "x": 22600,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Booked in: the bike put aside for Maya, her order moves on (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-receive-staff-desktop.dc.html": {
+   "x": 24080,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1500,7 +1587,7 @@
    "is_interactive": true
   },
   "j13-rs-receive-staff-left-desktop.dc.html": {
-   "x": 21280,
+   "x": 25400,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1508,7 +1595,7 @@
    "is_interactive": true
   },
   "j13-rs-add-left-desktop.dc.html": {
-   "x": 22600,
+   "x": 26720,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1516,7 +1603,7 @@
    "is_interactive": true
   },
   "j13-rs-today-to-add-desktop.dc.html": {
-   "x": 23920,
+   "x": 28040,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1524,7 +1611,7 @@
    "is_interactive": true
   },
   "j13-rs-job-arrived-desktop.dc.html": {
-   "x": 25400,
+   "x": 29520,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1532,7 +1619,7 @@
    "is_interactive": true
   },
   "j13-rs-part-sold-desktop.dc.html": {
-   "x": 26720,
+   "x": 30840,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1540,7 +1627,7 @@
    "is_interactive": true
   },
   "j13-rs-part-missing-desktop.dc.html": {
-   "x": 28040,
+   "x": 32160,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1548,7 +1635,7 @@
    "is_interactive": true
   },
   "j13-rs-part-damaged-desktop.dc.html": {
-   "x": 29360,
+   "x": 33480,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1556,7 +1643,7 @@
    "is_interactive": true
   },
   "j13-rs-part-order-closed-desktop.dc.html": {
-   "x": 30680,
+   "x": 34800,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1564,7 +1651,7 @@
    "is_interactive": true
   },
   "j13-rs-diary-arrived-desktop.dc.html": {
-   "x": 32000,
+   "x": 36120,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1572,7 +1659,7 @@
    "is_interactive": true
   },
   "j13-rs-overview-arrived-desktop.dc.html": {
-   "x": 33320,
+   "x": 37440,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1580,7 +1667,7 @@
    "is_interactive": true
   },
   "j13-rs-delivery-desktop.dc.html": {
-   "x": 34800,
+   "x": 38920,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1588,7 +1675,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-desktop.dc.html": {
-   "x": 36120,
+   "x": 40240,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1596,7 +1683,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-checked-desktop.dc.html": {
-   "x": 37440,
+   "x": 41560,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1604,7 +1691,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-diff-desktop.dc.html": {
-   "x": 38760,
+   "x": 42880,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1612,7 +1699,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-cost-desktop.dc.html": {
-   "x": 40080,
+   "x": 44200,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1620,7 +1707,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-queried-desktop.dc.html": {
-   "x": 41400,
+   "x": 45520,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1628,7 +1715,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-accepted-desktop.dc.html": {
-   "x": 42720,
+   "x": 46840,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1636,7 +1723,7 @@
    "is_interactive": true
   },
   "j13-rs-delivery-staff-desktop.dc.html": {
-   "x": 44040,
+   "x": 48160,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1644,7 +1731,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-setting-desktop.dc.html": {
-   "x": 45360,
+   "x": 49480,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1652,7 +1739,7 @@
    "is_interactive": true
   },
   "j13-rs-order-desktop.dc.html": {
-   "x": 46840,
+   "x": 50960,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1660,7 +1747,7 @@
    "is_interactive": true
   },
   "j13-rs-order-ordered-desktop.dc.html": {
-   "x": 48160,
+   "x": 52280,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1668,7 +1755,7 @@
    "is_interactive": true
   },
   "j13-rs-order-close-desktop.dc.html": {
-   "x": 49480,
+   "x": 53600,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1676,7 +1763,7 @@
    "is_interactive": true
   },
   "j13-rs-restock-desktop.dc.html": {
-   "x": 50800,
+   "x": 54920,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1684,7 +1771,7 @@
    "is_interactive": true
   },
   "j13-rs-restock-customers-desktop.dc.html": {
-   "x": 52120,
+   "x": 56240,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1692,7 +1779,7 @@
    "is_interactive": true
   },
   "j13-rs-today-restock-desktop.dc.html": {
-   "x": 53440,
+   "x": 57560,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1700,7 +1787,7 @@
    "is_interactive": true
   },
   "j13-po-suppliers.dc.html": {
-   "x": 54920,
+   "x": 59040,
    "y": 14454,
    "w": 1100,
    "h": 816,
@@ -1708,7 +1795,7 @@
    "is_interactive": true
   },
   "j13-po-feed.dc.html": {
-   "x": 56100,
+   "x": 60220,
    "y": 14454,
    "w": 1100,
    "h": 816,
@@ -1716,7 +1803,7 @@
    "is_interactive": true
   },
   "j13-po-send.dc.html": {
-   "x": 57280,
+   "x": 61400,
    "y": 14454,
    "w": 1100,
    "h": 816,
@@ -2099,8 +2186,32 @@
    "title": "Designed · Add a customer: a company or club (desktop)",
    "is_interactive": true
   },
-  "j15-cs-account-desktop.dc.html": {
+  "j15-cs-page-c2w-desktop.dc.html": {
    "x": 13360,
+   "y": 18166,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Her Cycle to Work order in her history, opening the order (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-page-c2w-collected-desktop.dc.html": {
+   "x": 14680,
+   "y": 18166,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · After collection: the bike in her Bikes, with its frame number (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-search-c2w-desktop.dc.html": {
+   "x": 16000,
+   "y": 18166,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The staff search finds a Cycle to Work order by its quote or certificate number (desktop)",
+   "is_interactive": true
+  },
+  "j15-cs-account-desktop.dc.html": {
+   "x": 17480,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2108,7 +2219,7 @@
    "is_interactive": true
   },
   "j15-cs-transfer-desktop.dc.html": {
-   "x": 14680,
+   "x": 18800,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2116,7 +2227,7 @@
    "is_interactive": true
   },
   "j15-cs-groups-desktop.dc.html": {
-   "x": 16160,
+   "x": 20280,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2124,7 +2235,7 @@
    "is_interactive": true
   },
   "j15-cs-privacy-desktop.dc.html": {
-   "x": 17640,
+   "x": 21760,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2132,7 +2243,7 @@
    "is_interactive": true
   },
   "j15-cs-privacy-delete-desktop.dc.html": {
-   "x": 18960,
+   "x": 23080,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2140,7 +2251,7 @@
    "is_interactive": true
   },
   "j15-cs-privacy-blocked-desktop.dc.html": {
-   "x": 20280,
+   "x": 24400,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2148,7 +2259,7 @@
    "is_interactive": true
   },
   "j15-cs-add-match-desktop.dc.html": {
-   "x": 21760,
+   "x": 25880,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2156,7 +2267,7 @@
    "is_interactive": true
   },
   "j15-cs-page-dup-desktop.dc.html": {
-   "x": 23080,
+   "x": 27200,
    "y": 18166,
    "w": 1280,
    "h": 856,
@@ -2164,11 +2275,19 @@
    "is_interactive": true
   },
   "j15-cs-merge-desktop.dc.html": {
-   "x": 24400,
+   "x": 28520,
    "y": 18166,
    "w": 1280,
    "h": 856,
    "title": "Designed · The same person? Keep or merge (desktop)",
+   "is_interactive": true
+  },
+  "j15-ls-customer-page-desktop.dc.html": {
+   "x": 30000,
+   "y": 18166,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Her page at a Lightspeed shop: which Lightspeed customer she’s linked to, and Change (desktop)",
    "is_interactive": true
   },
   "j16-eod-entry-desktop.dc.html": {
@@ -2515,8 +2634,16 @@
    "title": "Designed · Returning customers: who comes back, who hasn’t lately (desktop)",
    "is_interactive": true
   },
+  "j17-rp-c2w-desktop.dc.html": {
+   "x": 37600,
+   "y": 21878,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Cycle to Work: owed and paid, by provider, with the commission (desktop)",
+   "is_interactive": true
+  },
   "j17-rp-accounts-connect-desktop.dc.html": {
-   "x": 37760,
+   "x": 39080,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2524,15 +2651,23 @@
    "is_interactive": true
   },
   "j17-rp-accounts-map-desktop.dc.html": {
-   "x": 39080,
+   "x": 40400,
    "y": 21878,
    "w": 1280,
    "h": 856,
    "title": "Designed · Which Xero account each line goes to (desktop)",
    "is_interactive": true
   },
+  "j17-rp-accounts-c2w-desktop.dc.html": {
+   "x": 41720,
+   "y": 21878,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Xero choices (scrolled down): Cycle to Work, its commission and shortfalls (desktop)",
+   "is_interactive": true
+  },
   "j17-rp-accounts-missing-desktop.dc.html": {
-   "x": 40400,
+   "x": 43040,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2540,7 +2675,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-log-desktop.dc.html": {
-   "x": 41720,
+   "x": 44360,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2548,7 +2683,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-lost-desktop.dc.html": {
-   "x": 43040,
+   "x": 45680,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2556,7 +2691,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-disconnect-desktop.dc.html": {
-   "x": 44360,
+   "x": 47000,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2564,7 +2699,7 @@
    "is_interactive": true
   },
   "j17-rp-today-accounts-desktop.dc.html": {
-   "x": 45680,
+   "x": 48320,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2572,7 +2707,7 @@
    "is_interactive": true
   },
   "j17-rp-person-desktop.dc.html": {
-   "x": 47000,
+   "x": 49640,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -3539,8 +3674,16 @@
    "title": "Designed · Today for a Lightspeed shop (desktop)",
    "is_interactive": true
   },
-  "j21-ls-job-not-connected-desktop.dc.html": {
+  "j21-ls-book-in-desktop.dc.html": {
    "x": 13360,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Book in: choose Maya in Lightspeed while she’s at the desk (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-not-connected-desktop.dc.html": {
+   "x": 14680,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3548,7 +3691,7 @@
    "is_interactive": true
   },
   "j21-ls-part-search-desktop.dc.html": {
-   "x": 14680,
+   "x": 16000,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3556,7 +3699,7 @@
    "is_interactive": true
   },
   "j21-ls-part-search-down-desktop.dc.html": {
-   "x": 16000,
+   "x": 17320,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3564,7 +3707,7 @@
    "is_interactive": true
   },
   "j21-ls-job-sent-desktop.dc.html": {
-   "x": 17320,
+   "x": 18640,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3572,7 +3715,7 @@
    "is_interactive": true
   },
   "j21-ls-job-changed-desktop.dc.html": {
-   "x": 18640,
+   "x": 19960,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3580,15 +3723,23 @@
    "is_interactive": true
   },
   "j21-ls-job-price-changed-desktop.dc.html": {
-   "x": 19960,
+   "x": 21280,
    "y": 29302,
    "w": 1280,
    "h": 856,
    "title": "Designed · A part’s price changed in Lightspeed: keep it or ask again (desktop)",
    "is_interactive": true
   },
+  "j21-ls-job-price-asked-desktop.dc.html": {
+   "x": 22600,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Waiting for Maya’s answer on the new price (desktop)",
+   "is_interactive": true
+  },
   "j21-ls-job-cancelled-desktop.dc.html": {
-   "x": 21280,
+   "x": 23920,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3596,7 +3747,7 @@
    "is_interactive": true
   },
   "j21-ls-job-pick-desktop.dc.html": {
-   "x": 22600,
+   "x": 25240,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3604,7 +3755,7 @@
    "is_interactive": true
   },
   "j21-ls-customer-pick-desktop.dc.html": {
-   "x": 23920,
+   "x": 26560,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3612,7 +3763,7 @@
    "is_interactive": true
   },
   "j21-ls-job-waiting-desktop.dc.html": {
-   "x": 25400,
+   "x": 28040,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3620,7 +3771,7 @@
    "is_interactive": true
   },
   "j21-ls-job-unsure-desktop.dc.html": {
-   "x": 26720,
+   "x": 29360,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3628,7 +3779,7 @@
    "is_interactive": true
   },
   "j21-ls-job-check-desktop.dc.html": {
-   "x": 28040,
+   "x": 30680,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3636,7 +3787,7 @@
    "is_interactive": true
   },
   "j21-ls-today-down-desktop.dc.html": {
-   "x": 29360,
+   "x": 32000,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3644,7 +3795,7 @@
    "is_interactive": true
   },
   "j21-ls-today-person-desktop.dc.html": {
-   "x": 30680,
+   "x": 33320,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3652,15 +3803,23 @@
    "is_interactive": true
   },
   "j21-ls-job-ready-no-wo-desktop.dc.html": {
-   "x": 32160,
+   "x": 34800,
    "y": 29302,
    "w": 1280,
    "h": 856,
    "title": "Designed · Ready, but not in Lightspeed yet (desktop)",
    "is_interactive": true
   },
+  "j21-ls-hand-over-no-wo-desktop.dc.html": {
+   "x": 36120,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Hand over with no work order: pays later, or rung up by hand (desktop)",
+   "is_interactive": true
+  },
   "j21-ls-job-unpaid-desktop.dc.html": {
-   "x": 33480,
+   "x": 37440,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3668,7 +3827,7 @@
    "is_interactive": true
   },
   "j21-ls-hand-over-unpaid-desktop.dc.html": {
-   "x": 34800,
+   "x": 38760,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3676,7 +3835,7 @@
    "is_interactive": true
   },
   "j21-ls-hand-over-found-desktop.dc.html": {
-   "x": 36120,
+   "x": 40080,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3684,7 +3843,7 @@
    "is_interactive": true
   },
   "j21-ls-hand-over-unreachable-desktop.dc.html": {
-   "x": 37440,
+   "x": 41400,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3692,7 +3851,7 @@
    "is_interactive": true
   },
   "j21-ls-job-paid-desktop.dc.html": {
-   "x": 38760,
+   "x": 42720,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3700,7 +3859,7 @@
    "is_interactive": true
   },
   "j21-ls-job-fallback-desktop.dc.html": {
-   "x": 40080,
+   "x": 44040,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3708,7 +3867,7 @@
    "is_interactive": true
   },
   "j21-ls-hand-over-unchecked-desktop.dc.html": {
-   "x": 41400,
+   "x": 45360,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3716,15 +3875,23 @@
    "is_interactive": true
   },
   "j21-ls-job-collected-unpaid-desktop.dc.html": {
-   "x": 42720,
+   "x": 46680,
    "y": 29302,
    "w": 1280,
    "h": 856,
    "title": "Designed · Collected, not shown as paid (desktop)",
    "is_interactive": true
   },
+  "j21-ls-job-sorted-desktop.dc.html": {
+   "x": 48000,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Mark it sorted: why, recorded (desktop)",
+   "is_interactive": true
+  },
   "j21-ls-today-unpaid-desktop.dc.html": {
-   "x": 44040,
+   "x": 49320,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3732,7 +3899,7 @@
    "is_interactive": true
   },
   "j21-ls-messages-desktop.dc.html": {
-   "x": 45520,
+   "x": 50800,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3740,7 +3907,7 @@
    "is_interactive": true
   },
   "j21-ls-office-data-desktop.dc.html": {
-   "x": 46840,
+   "x": 52120,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3748,7 +3915,7 @@
    "is_interactive": true
   },
   "j21-ls-workshop-settings-desktop.dc.html": {
-   "x": 48160,
+   "x": 53440,
    "y": 29302,
    "w": 1280,
    "h": 856,
@@ -3756,11 +3923,11 @@
    "is_interactive": true
   },
   "j21-ls-customer-ready-desktop.dc.html": {
-   "x": 49480,
+   "x": 54760,
    "y": 29302,
    "w": 1280,
    "h": 856,
-   "title": "Designed · The customer’s “Your bike is ready”: agreed price, pay at the till (desktop)",
+   "title": "Designed · Maya’s job page at Ready: agreed price, pay at the till (desktop)",
    "is_interactive": true
   },
   "Main.dc.html": {
@@ -3777,6 +3944,1004 @@
    "w": 3440,
    "h": 1700,
    "title": "Workflow: how the journeys connect"
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-09-27T10:58:24Z",
+  "v": 1
+ },
+ "designSystems": [
+  {
+   "artifact": "https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH",
+   "copiedAt": "2026-09-27T12:13:59Z",
+   "namespace": "wheelhouse",
+   "title": "Wheelhouse",
+   "version": null
+  }
+ ],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "j08_s10": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Shop and sites",
+   "w": 520,
+   "x": 39390,
+   "y": 4890
+  },
+  "j08_s11": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Workshop settings",
+   "w": 520,
+   "x": 42190,
+   "y": 4890
+  },
+  "j08_s12": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Messages",
+   "w": 520,
+   "x": 46310,
+   "y": 4890
+  },
+  "j08_s13": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Your data",
+   "w": 520,
+   "x": 51750,
+   "y": 4890
+  },
+  "j08_s6": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "First-run setup",
+   "w": 520,
+   "x": 0,
+   "y": 4890
+  },
+  "j08_s7": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Till settings",
+   "w": 520,
+   "x": 5440,
+   "y": 4890
+  },
+  "j08_s8": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "End of day and payment settings",
+   "w": 520,
+   "x": 19270,
+   "y": 4890
+  },
+  "j08_s9": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Staff and roles",
+   "w": 520,
+   "x": 27350,
+   "y": 4890
+  },
+  "j08_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "08 · Owner setup and onboarding — Owner and Manager",
+   "w": 240,
+   "x": 0,
+   "y": 4570
+  },
+  "j09_s15": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Bring your data",
+   "w": 520,
+   "x": 0,
+   "y": 6790
+  },
+  "j09_s16": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Run alongside",
+   "w": 520,
+   "x": 8080,
+   "y": 6790
+  },
+  "j09_s17": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Practice: the till and jobs",
+   "w": 520,
+   "x": 16160,
+   "y": 6790
+  },
+  "j09_s18": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Switch over",
+   "w": 520,
+   "x": 21600,
+   "y": 6790
+  },
+  "j09_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "09 · Moving from Citrus Lime — Owner",
+   "w": 240,
+   "x": 0,
+   "y": 6470
+  },
+  "j10_s20": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Opening the till",
+   "w": 520,
+   "x": 0,
+   "y": 8646
+  },
+  "j10_s21": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Office › Today",
+   "w": 520,
+   "x": 9400,
+   "y": 8646
+  },
+  "j10_s22": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Also at the start of the day",
+   "w": 520,
+   "x": 26720,
+   "y": 8646
+  },
+  "j10_title": {
+   "kind": "title1",
+   "maxW": 27820,
+   "text": "10 · Opening the shop and checking in — Staff and Manager",
+   "w": 240,
+   "x": 0,
+   "y": 8326
+  },
+  "j11_s24": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A sale",
+   "w": 520,
+   "x": 0,
+   "y": 10502
+  },
+  "j11_s25": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Taking payment",
+   "w": 520,
+   "x": 16000,
+   "y": 10502
+  },
+  "j11_s26": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Other ways to pay",
+   "w": 520,
+   "x": 29360,
+   "y": 10502
+  },
+  "j11_s27": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Other till jobs",
+   "w": 520,
+   "x": 34800,
+   "y": 10502
+  },
+  "j11_s28": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Cycle to Work",
+   "w": 520,
+   "x": 52120,
+   "y": 10502
+  },
+  "j11_title": {
+   "kind": "title1",
+   "maxW": 69360,
+   "text": "11 · Selling at the till — Staff",
+   "w": 240,
+   "x": 0,
+   "y": 10182
+  },
+  "j12_s31": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The diary",
+   "w": 520,
+   "x": 0,
+   "y": 12358
+  },
+  "j12_s32": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Requests, as a pop-up",
+   "w": 520,
+   "x": 14680,
+   "y": 12358
+  },
+  "j12_s33": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "New job from an empty slot",
+   "w": 520,
+   "x": 20120,
+   "y": 12358
+  },
+  "j12_s34": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The job — one page, no tabs",
+   "w": 520,
+   "x": 24240,
+   "y": 12358
+  },
+  "j12_s35": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Customer account",
+   "w": 520,
+   "x": 34960,
+   "y": 12358
+  },
+  "j12_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "12 · Workshop day — Staff and Mechanic",
+   "w": 240,
+   "x": 0,
+   "y": 12038
+  },
+  "j13_s38": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Receiving a delivery",
+   "w": 520,
+   "x": 0,
+   "y": 14214
+  },
+  "j13_s39": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A Cycle to Work bike, booked in",
+   "w": 520,
+   "x": 19960,
+   "y": 14214
+  },
+  "j13_s40": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A new product, received by Staff",
+   "w": 520,
+   "x": 24080,
+   "y": 14214
+  },
+  "j13_s41": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The waiting job",
+   "w": 520,
+   "x": 29520,
+   "y": 14214
+  },
+  "j13_s42": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Checking the invoice",
+   "w": 520,
+   "x": 38920,
+   "y": 14214
+  },
+  "j13_title": {
+   "kind": "title1",
+   "maxW": 62500,
+   "text": "13 · Receiving stock and purchase orders — Staff and Manager",
+   "w": 240,
+   "x": 0,
+   "y": 13894
+  },
+  "j14_s46": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Finding stock",
+   "w": 520,
+   "x": 0,
+   "y": 16070
+  },
+  "j14_s47": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Categories and their details",
+   "w": 520,
+   "x": 12040,
+   "y": 16070
+  },
+  "j14_s48": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A product",
+   "w": 520,
+   "x": 14840,
+   "y": 16070
+  },
+  "j14_s49": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Changing prices",
+   "w": 520,
+   "x": 20280,
+   "y": 16070
+  },
+  "j14_s50": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Correcting stock",
+   "w": 520,
+   "x": 24400,
+   "y": 16070
+  },
+  "j14_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "14 · Stock take and stock control — Staff and Manager",
+   "w": 240,
+   "x": 0,
+   "y": 15750
+  },
+  "j15_s54": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Customers and the customer page",
+   "w": 520,
+   "x": 0,
+   "y": 17926
+  },
+  "j15_s55": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A Cycle to Work order on her page",
+   "w": 520,
+   "x": 13360,
+   "y": 17926
+  },
+  "j15_s56": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Accounts (pay later)",
+   "w": 520,
+   "x": 17480,
+   "y": 17926
+  },
+  "j15_title": {
+   "kind": "title1",
+   "maxW": 31240,
+   "text": "15 · Customer service — Staff and Manager",
+   "w": 240,
+   "x": 0,
+   "y": 17606
+  },
+  "j16_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "16 · End-of-day cash-up — Staff and Manager",
+   "w": 240,
+   "x": 0,
+   "y": 19462
+  },
+  "j17_s64": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Reports",
+   "w": 520,
+   "x": 0,
+   "y": 21638
+  },
+  "j17_s65": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Sales",
+   "w": 520,
+   "x": 6760,
+   "y": 21638
+  },
+  "j17_title": {
+   "kind": "title1",
+   "maxW": 50880,
+   "text": "17 · Reports and accounts — Owner, Manager and Staff",
+   "w": 240,
+   "x": 0,
+   "y": 21318
+  },
+  "j18_s71": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Setting it up",
+   "w": 520,
+   "x": 0,
+   "y": 23494
+  },
+  "j18_s72": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The Website page",
+   "w": 520,
+   "x": 6760,
+   "y": 23494
+  },
+  "j18_s73": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "While moving from Citrus Lime",
+   "w": 520,
+   "x": 13520,
+   "y": 23494
+  },
+  "j18_s74": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Editing the home page",
+   "w": 520,
+   "x": 20280,
+   "y": 23494
+  },
+  "j18_s75": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Theme",
+   "w": 520,
+   "x": 36280,
+   "y": 23494
+  },
+  "j18_s76": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Publishing",
+   "w": 520,
+   "x": 43040,
+   "y": 23494
+  },
+  "j18_s77": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Pages",
+   "w": 520,
+   "x": 48480,
+   "y": 23494
+  },
+  "j18_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "18 · Website management — Manager",
+   "w": 240,
+   "x": 0,
+   "y": 23174
+  },
+  "j19_s83": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Choosing a shop",
+   "w": 520,
+   "x": 0,
+   "y": 25350
+  },
+  "j19_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "19 · Multiple sites — Owner, Manager and Staff",
+   "w": 240,
+   "x": 0,
+   "y": 25030
+  },
+  "j20_s89": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The activity log",
+   "w": 520,
+   "x": 0,
+   "y": 27206
+  },
+  "j20_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "20 · Management oversight — Owner",
+   "w": 240,
+   "x": 0,
+   "y": 26886
+  },
+  "j21_s95": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Connecting Lightspeed",
+   "w": 520,
+   "x": 0,
+   "y": 29062
+  },
+  "j21_title": {
+   "kind": "title1",
+   "maxW": 56000,
+   "text": "21 · Lightspeed shops (Release 1) — Owner, Manager and Staff",
+   "w": 240,
+   "x": 0,
+   "y": 28742
+  },
+  "ja_s0": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "App map",
+   "w": 520,
+   "x": 0,
+   "y": 2654
+  },
+  "ja_s1": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Staff app",
+   "w": 520,
+   "x": 2000,
+   "y": 2654
+  },
+  "ja_s2": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Till mode",
+   "w": 520,
+   "x": 5270,
+   "y": 2654
+  },
+  "ja_s3": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Your settings",
+   "w": 520,
+   "x": 9390,
+   "y": 2654
+  },
+  "ja_s4": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Customer website",
+   "w": 520,
+   "x": 12190,
+   "y": 2654
+  },
+  "ja_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "A · App map and navigation — Everyone",
+   "w": 240,
+   "x": 0,
+   "y": 2334
+  },
+  "j11_s29": {
+   "x": 60200,
+   "y": 10502,
+   "text": "When the internet drops",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j12_s36": {
+   "x": 36440,
+   "y": 12358,
+   "text": "Overview page",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s43": {
+   "x": 50960,
+   "y": 14214,
+   "text": "Ordering",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s44": {
+   "x": 59040,
+   "y": 14214,
+   "text": "Also in this journey",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s51": {
+   "x": 32480,
+   "y": 16070,
+   "text": "Between shops",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s52": {
+   "x": 40560,
+   "y": 16070,
+   "text": "Stock take",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s57": {
+   "x": 20280,
+   "y": 17926,
+   "text": "Customer groups",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s58": {
+   "x": 21760,
+   "y": 17926,
+   "text": "Privacy requests",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s59": {
+   "x": 25880,
+   "y": 17926,
+   "text": "Possible duplicates",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j15_s60": {
+   "x": 30000,
+   "y": 17926,
+   "text": "At a Lightspeed shop",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j16_s62": {
+   "x": 0,
+   "y": 19782,
+   "text": "Close the day",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s66": {
+   "x": 13520,
+   "y": 21638,
+   "text": "Your own reports",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s67": {
+   "x": 18960,
+   "y": 21638,
+   "text": "Takings and cash-ups",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s68": {
+   "x": 25720,
+   "y": 21638,
+   "text": "VAT, margin, workshop and discounts",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s69": {
+   "x": 39080,
+   "y": 21638,
+   "text": "Accounts software and who sees what",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s78": {
+   "x": 53920,
+   "y": 23494,
+   "text": "Tracking tools",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s79": {
+   "x": 58040,
+   "y": 23494,
+   "text": "Web address (waiting on the business plan decision)",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s80": {
+   "x": 64800,
+   "y": 23494,
+   "text": "Online payments setup",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s81": {
+   "x": 72880,
+   "y": 23494,
+   "text": "Shopify",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s84": {
+   "x": 8080,
+   "y": 25350,
+   "text": "Prices and services by shop",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s85": {
+   "x": 13520,
+   "y": 25350,
+   "text": "People and booking",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s86": {
+   "x": 18960,
+   "y": 25350,
+   "text": "Jobs between shops",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s87": {
+   "x": 21760,
+   "y": 25350,
+   "text": "Adding a shop, and its tills",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s90": {
+   "x": 10720,
+   "y": 27206,
+   "text": "What staff are told",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s91": {
+   "x": 14840,
+   "y": 27206,
+   "text": "Alerts on Today",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s92": {
+   "x": 17640,
+   "y": 27206,
+   "text": "Signed-in devices",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s93": {
+   "x": 25720,
+   "y": 27206,
+   "text": "Send feedback",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s96": {
+   "x": 12040,
+   "y": 29062,
+   "text": "Quote and approval",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s97": {
+   "x": 28040,
+   "y": 29062,
+   "text": "When Lightspeed can’t be reached",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s98": {
+   "x": 34800,
+   "y": 29062,
+   "text": "Payment and collection",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s99": {
+   "x": 50800,
+   "y": 29062,
+   "text": "Settings and the customer",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
   }
  },
  "order": [
@@ -3878,6 +5043,8 @@
   "j10-op-today-staff-desktop.dc.html",
   "j10-op-today-late-desktop.dc.html",
   "j10-op-today-practice-desktop.dc.html",
+  "j10-op-today-c2w-desktop.dc.html",
+  "j10-op-today-staff-lightspeed-desktop.dc.html",
   "j10-desk.dc.html",
   "j11-till-sale-desktop.dc.html",
   "j11-till-empty-desktop.dc.html",
@@ -3890,6 +5057,7 @@
   "j11-till-customer-desktop.dc.html",
   "j11-till-variant-desktop.dc.html",
   "j11-till-serial-desktop.dc.html",
+  "j11-till-serial-held-desktop.dc.html",
   "j11-till-pay-desktop.dc.html",
   "j11-till-pay-other-desktop.dc.html",
   "j11-till-card-desktop.dc.html",
@@ -3917,6 +5085,12 @@
   "j11-till-job-deposit-desktop.dc.html",
   "j11-till-job-balance-desktop.dc.html",
   "j11-till-collect-desktop.dc.html",
+  "j11-till-c2w-pick-desktop.dc.html",
+  "j11-till-c2w-desktop.dc.html",
+  "j11-till-c2w-pay-desktop.dc.html",
+  "j11-till-c2w-extra-desktop.dc.html",
+  "j11-till-c2w-paid-desktop.dc.html",
+  "j11-till-c2w-deposit-desktop.dc.html",
   "j11-till-offline-desktop.dc.html",
   "j11-till-offline-long-desktop.dc.html",
   "j11-till-needs-net-desktop.dc.html",
@@ -3967,6 +5141,9 @@
   "j13-rs-booked-staff-desktop.dc.html",
   "j13-rs-booked-job-waiting-desktop.dc.html",
   "j13-rs-labels-desktop.dc.html",
+  "j13-rs-receive-c2w-desktop.dc.html",
+  "j13-rs-frame-c2w-desktop.dc.html",
+  "j13-rs-booked-c2w-desktop.dc.html",
   "j13-rs-receive-staff-desktop.dc.html",
   "j13-rs-receive-staff-left-desktop.dc.html",
   "j13-rs-add-left-desktop.dc.html",
@@ -4043,6 +5220,9 @@
   "j15-cs-edit-desktop.dc.html",
   "j15-cs-add-desktop.dc.html",
   "j15-cs-add-company-desktop.dc.html",
+  "j15-cs-page-c2w-desktop.dc.html",
+  "j15-cs-page-c2w-collected-desktop.dc.html",
+  "j15-cs-search-c2w-desktop.dc.html",
   "j15-cs-account-desktop.dc.html",
   "j15-cs-transfer-desktop.dc.html",
   "j15-cs-groups-desktop.dc.html",
@@ -4052,6 +5232,7 @@
   "j15-cs-add-match-desktop.dc.html",
   "j15-cs-page-dup-desktop.dc.html",
   "j15-cs-merge-desktop.dc.html",
+  "j15-ls-customer-page-desktop.dc.html",
   "j16-eod-entry-desktop.dc.html",
   "j16-eod-waiting-desktop.dc.html",
   "j16-eod-waiting-banked-desktop.dc.html",
@@ -4095,8 +5276,10 @@
   "j17-rp-discounts-desktop.dc.html",
   "j17-rp-discounts-staff-desktop.dc.html",
   "j17-rp-returning-desktop.dc.html",
+  "j17-rp-c2w-desktop.dc.html",
   "j17-rp-accounts-connect-desktop.dc.html",
   "j17-rp-accounts-map-desktop.dc.html",
+  "j17-rp-accounts-c2w-desktop.dc.html",
   "j17-rp-accounts-missing-desktop.dc.html",
   "j17-rp-accounts-log-desktop.dc.html",
   "j17-rp-accounts-lost-desktop.dc.html",
@@ -4223,12 +5406,14 @@
   "j21-ls-disconnect-desktop.dc.html",
   "j21-ls-reconnect-desktop.dc.html",
   "j21-ls-today-desktop.dc.html",
+  "j21-ls-book-in-desktop.dc.html",
   "j21-ls-job-not-connected-desktop.dc.html",
   "j21-ls-part-search-desktop.dc.html",
   "j21-ls-part-search-down-desktop.dc.html",
   "j21-ls-job-sent-desktop.dc.html",
   "j21-ls-job-changed-desktop.dc.html",
   "j21-ls-job-price-changed-desktop.dc.html",
+  "j21-ls-job-price-asked-desktop.dc.html",
   "j21-ls-job-cancelled-desktop.dc.html",
   "j21-ls-job-pick-desktop.dc.html",
   "j21-ls-customer-pick-desktop.dc.html",
@@ -4238,6 +5423,7 @@
   "j21-ls-today-down-desktop.dc.html",
   "j21-ls-today-person-desktop.dc.html",
   "j21-ls-job-ready-no-wo-desktop.dc.html",
+  "j21-ls-hand-over-no-wo-desktop.dc.html",
   "j21-ls-job-unpaid-desktop.dc.html",
   "j21-ls-hand-over-unpaid-desktop.dc.html",
   "j21-ls-hand-over-found-desktop.dc.html",
@@ -4246,946 +5432,13 @@
   "j21-ls-job-fallback-desktop.dc.html",
   "j21-ls-hand-over-unchecked-desktop.dc.html",
   "j21-ls-job-collected-unpaid-desktop.dc.html",
+  "j21-ls-job-sorted-desktop.dc.html",
   "j21-ls-today-unpaid-desktop.dc.html",
   "j21-ls-messages-desktop.dc.html",
   "j21-ls-office-data-desktop.dc.html",
   "j21-ls-workshop-settings-desktop.dc.html",
   "j21-ls-customer-ready-desktop.dc.html"
  ],
- "notes": {
-  "ja_s0": {
-   "x": 0,
-   "y": 2654,
-   "text": "App map",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "ja_s1": {
-   "x": 2000,
-   "y": 2654,
-   "text": "Staff app",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "ja_s2": {
-   "x": 5270,
-   "y": 2654,
-   "text": "Till mode",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "ja_s3": {
-   "x": 9390,
-   "y": 2654,
-   "text": "Your settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "ja_s4": {
-   "x": 12190,
-   "y": 2654,
-   "text": "Customer website",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "ja_title": {
-   "x": 0,
-   "y": 2334,
-   "text": "A · App map and navigation — Everyone",
-   "kind": "title1",
-   "maxW": 15690
-  },
-  "j08_s6": {
-   "x": 0,
-   "y": 4890,
-   "text": "First-run setup",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_s7": {
-   "x": 5440,
-   "y": 4890,
-   "text": "Till settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_s8": {
-   "x": 19270,
-   "y": 4890,
-   "text": "End of day and payment settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_s9": {
-   "x": 27350,
-   "y": 4890,
-   "text": "Staff and roles",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_s10": {
-   "x": 39390,
-   "y": 4890,
-   "text": "Shop and sites",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_s11": {
-   "x": 42190,
-   "y": 4890,
-   "text": "Workshop settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_s12": {
-   "x": 46310,
-   "y": 4890,
-   "text": "Messages",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_s13": {
-   "x": 51750,
-   "y": 4890,
-   "text": "Your data",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j08_title": {
-   "x": 0,
-   "y": 4570,
-   "text": "08 · Owner setup and onboarding — Owner and Manager",
-   "kind": "title1",
-   "maxW": 54310
-  },
-  "j09_s15": {
-   "x": 0,
-   "y": 6790,
-   "text": "Bring your data",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j09_s16": {
-   "x": 8080,
-   "y": 6790,
-   "text": "Run alongside",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j09_s17": {
-   "x": 16160,
-   "y": 6790,
-   "text": "Practice: the till and jobs",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j09_s18": {
-   "x": 21600,
-   "y": 6790,
-   "text": "Switch over",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j09_title": {
-   "x": 0,
-   "y": 6470,
-   "text": "09 · Moving from Citrus Lime — Owner",
-   "kind": "title1",
-   "maxW": 32080
-  },
-  "j10_s20": {
-   "x": 0,
-   "y": 8646,
-   "text": "Opening the till",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j10_s21": {
-   "x": 9400,
-   "y": 8646,
-   "text": "Office › Today",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j10_s22": {
-   "x": 24080,
-   "y": 8646,
-   "text": "Also at the start of the day",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j10_title": {
-   "x": 0,
-   "y": 8326,
-   "text": "10 · Opening the shop and checking in — Staff and Manager",
-   "kind": "title1",
-   "maxW": 25180
-  },
-  "j11_s24": {
-   "x": 0,
-   "y": 10502,
-   "text": "A sale",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j11_s25": {
-   "x": 14680,
-   "y": 10502,
-   "text": "Taking payment",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j11_s26": {
-   "x": 28040,
-   "y": 10502,
-   "text": "Other ways to pay",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j11_s27": {
-   "x": 33480,
-   "y": 10502,
-   "text": "Other till jobs",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j11_s28": {
-   "x": 50800,
-   "y": 10502,
-   "text": "When the internet drops",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j11_title": {
-   "x": 0,
-   "y": 10182,
-   "text": "11 · Selling at the till — Staff",
-   "kind": "title1",
-   "maxW": 59960
-  },
-  "j12_s30": {
-   "x": 0,
-   "y": 12358,
-   "text": "The diary",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j12_s31": {
-   "x": 14680,
-   "y": 12358,
-   "text": "Requests, as a pop-up",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j12_s32": {
-   "x": 20120,
-   "y": 12358,
-   "text": "New job from an empty slot",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j12_s33": {
-   "x": 24240,
-   "y": 12358,
-   "text": "The job — one page, no tabs",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j12_s34": {
-   "x": 34960,
-   "y": 12358,
-   "text": "Customer account",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j12_s35": {
-   "x": 36440,
-   "y": 12358,
-   "text": "Overview page",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j12_title": {
-   "x": 0,
-   "y": 12038,
-   "text": "12 · Workshop day — Staff and Mechanic",
-   "kind": "title1",
-   "maxW": 37680
-  },
-  "j13_s37": {
-   "x": 0,
-   "y": 14214,
-   "text": "Receiving a delivery",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j13_s38": {
-   "x": 19960,
-   "y": 14214,
-   "text": "A new product, received by Staff",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j13_s39": {
-   "x": 25400,
-   "y": 14214,
-   "text": "The waiting job",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j13_s40": {
-   "x": 34800,
-   "y": 14214,
-   "text": "Checking the invoice",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j13_s41": {
-   "x": 46840,
-   "y": 14214,
-   "text": "Ordering",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j13_s42": {
-   "x": 54920,
-   "y": 14214,
-   "text": "Also in this journey",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j13_title": {
-   "x": 0,
-   "y": 13894,
-   "text": "13 · Receiving stock and purchase orders — Staff and Manager",
-   "kind": "title1",
-   "maxW": 58380
-  },
-  "j14_s44": {
-   "x": 0,
-   "y": 16070,
-   "text": "Finding stock",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j14_s45": {
-   "x": 12040,
-   "y": 16070,
-   "text": "Categories and their details",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j14_s46": {
-   "x": 14840,
-   "y": 16070,
-   "text": "A product",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j14_s47": {
-   "x": 20280,
-   "y": 16070,
-   "text": "Changing prices",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j14_s48": {
-   "x": 24400,
-   "y": 16070,
-   "text": "Correcting stock",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j14_s49": {
-   "x": 32480,
-   "y": 16070,
-   "text": "Between shops",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j14_s50": {
-   "x": 40560,
-   "y": 16070,
-   "text": "Stock take",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j14_title": {
-   "x": 0,
-   "y": 15750,
-   "text": "14 · Stock take and stock control — Staff and Manager",
-   "kind": "title1",
-   "maxW": 49720
-  },
-  "j15_s52": {
-   "x": 0,
-   "y": 17926,
-   "text": "Customers and the customer page",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j15_s53": {
-   "x": 13360,
-   "y": 17926,
-   "text": "Accounts (pay later)",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j15_s54": {
-   "x": 16160,
-   "y": 17926,
-   "text": "Customer groups",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j15_s55": {
-   "x": 17640,
-   "y": 17926,
-   "text": "Privacy requests",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j15_s56": {
-   "x": 21760,
-   "y": 17926,
-   "text": "Possible duplicates",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j15_title": {
-   "x": 0,
-   "y": 17606,
-   "text": "15 · Customer service — Staff and Manager",
-   "kind": "title1",
-   "maxW": 25640
-  },
-  "j16_s58": {
-   "x": 0,
-   "y": 19782,
-   "text": "Close the day",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j16_title": {
-   "x": 0,
-   "y": 19462,
-   "text": "16 · End-of-day cash-up — Staff and Manager",
-   "kind": "title1",
-   "maxW": 19720
-  },
-  "j17_s60": {
-   "x": 0,
-   "y": 21638,
-   "text": "Reports",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j17_s61": {
-   "x": 6760,
-   "y": 21638,
-   "text": "Sales",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j17_s62": {
-   "x": 13520,
-   "y": 21638,
-   "text": "Your own reports",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j17_s63": {
-   "x": 18960,
-   "y": 21638,
-   "text": "Takings and cash-ups",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j17_s64": {
-   "x": 25720,
-   "y": 21638,
-   "text": "VAT, margin, workshop and discounts",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j17_s65": {
-   "x": 37760,
-   "y": 21638,
-   "text": "Accounts software and who sees what",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j17_title": {
-   "x": 0,
-   "y": 21318,
-   "text": "17 · Reports and accounts — Owner, Manager and Staff",
-   "kind": "title1",
-   "maxW": 48240
-  },
-  "j18_s67": {
-   "x": 0,
-   "y": 23494,
-   "text": "Setting it up",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s68": {
-   "x": 6760,
-   "y": 23494,
-   "text": "The Website page",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s69": {
-   "x": 13520,
-   "y": 23494,
-   "text": "While moving from Citrus Lime",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s70": {
-   "x": 20280,
-   "y": 23494,
-   "text": "Editing the home page",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s71": {
-   "x": 36280,
-   "y": 23494,
-   "text": "Theme",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s72": {
-   "x": 43040,
-   "y": 23494,
-   "text": "Publishing",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s73": {
-   "x": 48480,
-   "y": 23494,
-   "text": "Pages",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s74": {
-   "x": 53920,
-   "y": 23494,
-   "text": "Tracking tools",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s75": {
-   "x": 58040,
-   "y": 23494,
-   "text": "Web address (waiting on the business plan decision)",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s76": {
-   "x": 64800,
-   "y": 23494,
-   "text": "Online payments setup",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_s77": {
-   "x": 72880,
-   "y": 23494,
-   "text": "Shopify",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j18_title": {
-   "x": 0,
-   "y": 23174,
-   "text": "18 · Website management — Manager",
-   "kind": "title1",
-   "maxW": 86000
-  },
-  "j19_s79": {
-   "x": 0,
-   "y": 25350,
-   "text": "Choosing a shop",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j19_s80": {
-   "x": 8080,
-   "y": 25350,
-   "text": "Prices and services by shop",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j19_s81": {
-   "x": 13520,
-   "y": 25350,
-   "text": "People and booking",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j19_s82": {
-   "x": 18960,
-   "y": 25350,
-   "text": "Jobs between shops",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j19_s83": {
-   "x": 21760,
-   "y": 25350,
-   "text": "Adding a shop, and its tills",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j19_title": {
-   "x": 0,
-   "y": 25030,
-   "text": "19 · Multiple sites — Owner, Manager and Staff",
-   "kind": "title1",
-   "maxW": 29600
-  },
-  "j20_s85": {
-   "x": 0,
-   "y": 27206,
-   "text": "The activity log",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j20_s86": {
-   "x": 10720,
-   "y": 27206,
-   "text": "What staff are told",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j20_s87": {
-   "x": 14840,
-   "y": 27206,
-   "text": "Alerts on Today",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j20_s88": {
-   "x": 17640,
-   "y": 27206,
-   "text": "Signed-in devices",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j20_s89": {
-   "x": 25720,
-   "y": 27206,
-   "text": "Send feedback",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j20_title": {
-   "x": 0,
-   "y": 26886,
-   "text": "20 · Management oversight — Owner",
-   "kind": "title1",
-   "maxW": 32240
-  },
-  "j21_s91": {
-   "x": 0,
-   "y": 29062,
-   "text": "Connecting Lightspeed",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j21_s92": {
-   "x": 12040,
-   "y": 29062,
-   "text": "Quote and approval",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j21_s93": {
-   "x": 25400,
-   "y": 29062,
-   "text": "When Lightspeed can’t be reached",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j21_s94": {
-   "x": 32160,
-   "y": 29062,
-   "text": "Payment and collection",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j21_s95": {
-   "x": 45520,
-   "y": 29062,
-   "text": "Settings and the customer",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j21_title": {
-   "x": 0,
-   "y": 28742,
-   "text": "21 · Lightspeed shops (Release 1) — Owner, Manager and Staff",
-   "kind": "title1",
-   "maxW": 50720
-  }
- },
- "designSystems": [
-  {
-   "artifact": "https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH",
-   "copiedAt": "2026-09-27T12:13:59Z",
-   "namespace": "wheelhouse",
-   "title": "Wheelhouse",
-   "version": null
-  }
- ]
+ "pages": [],
+ "title": "Wheelhouse user journeys — the staff app"
 }

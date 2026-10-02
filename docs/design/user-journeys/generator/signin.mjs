@@ -53,10 +53,14 @@ ${button('Continue', { block: true })}
 // ---------- Staff: Wheelhouse's own pages ----------
 // Where are you working today? — only for people with more than one site
 // (decision 9); tapping a site goes straight in (journey A decision 6).
-const siteCard = (name, sub, last) => `<a href="#" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; box-sizing: border-box; padding: 14px 16px; border-radius: 10px; border: 1px solid ${last ? C.ink : C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="display: inline-flex; align-items: center; gap: 8px">${last ? `<span style="font-size: 12px; font-weight: 600; color: ${C.muted}">Last time</span>` : ''}<span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 18)}</span></span></a>`;
-screens['auth-site'] = each((size) => centred(size, stack(`${h1('Where are you working today?')}${p(`You work at more than one ${SHOP} site. Switch any time from the ${size === 'phone' ? 'menu' : 'sidebar'}.`)}
+// UX walk-through 7 H1: a shop with something waiting says "[n] need
+// attention", and the owner (or a manager at two or more shops) also gets
+// "All shops". L1: "shop", not "site", where staff read it.
+const siteCard = (name, sub, last, alert = '') => `<a href="#" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; box-sizing: border-box; padding: 14px 16px; border-radius: 10px; border: 1px solid ${last ? C.ink : C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 16px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span>${alert ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: ${C.warnInk}">${icon('alert', 14)}${alert}</span>` : ''}</span><span style="display: inline-flex; align-items: center; gap: 8px">${last ? `<span style="font-size: 12px; font-weight: 600; color: ${C.muted}">Last time</span>` : ''}<span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 18)}</span></span></a>`;
+screens['auth-site'] = each((size) => centred(size, stack(`${h1('Where are you working today?')}${p(`You work at more than one ${SHOP} shop. Switch any time from the ${size === 'phone' ? 'menu' : 'sidebar'}.`)}
 ${siteCard('Bolton', `${SHOP} · Till B1`, true)}
-${siteCard('[Second site]', SHOP, false)}`, 14)));
+${siteCard('[Second site]', SHOP, false, '3 need attention')}
+${siteCard('All shops', 'Owners, and managers at two or more shops', false)}`, 14)));
 screens['auth-signedout'] = each((size) => centred(size, stack(`${h1('You’ve signed out')}${p('Close this window, or sign in again.')}${button('Sign in again', { block: true })}`, 16)));
 screens['auth-expired'] = each((size) => centred(size, stack(`${roundIcon('lock', C.warnBg, C.warnInk)}${h1('Please sign in again')}${p('You were signed out after a while without activity. Sign in and you’ll be back where you were.')}${button('Sign in again', { block: true })}`, 16)));
 const noAccess = (size) => card(`<div style="padding: ${size === 'phone' ? 22 : 28}px; display: flex; flex-direction: column; gap: 14px">${roundIcon('lock', C.mutedBg, C.muted)}${h1('Reports aren’t part of your role', size === 'phone' ? 20 : 22)}${p('Your role is Staff. Reports are for owners and managers. Ask one of them if you need access.')}<div>${button('Go to Today', { variant: 'default', block: size === 'phone' })}</div></div>`);
@@ -77,14 +81,22 @@ function tillFrame(size, content, offline = false) {
 
 // Set up this till — a manager, signed in, turns this computer into a till.
 // Site and till number as pills (Workshop day decisions 62, 66).
+// UX walk-through 7 M2: the numbers are the chosen shop's, and taken ones
+// say "In use" — drawn with [Second site] chosen ([code]1–[code]2 are its
+// tills on ms-tills, so [code]3 is next). L1: "Shop", not "Site".
+const inUse = (t) => `<button type="button" disabled aria-label="${esc(t)}, in use" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px dashed ${C.border}; background: transparent; color: ${C.muted}; font-family: inherit; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px">${t}<span style="font-size: 12px; font-weight: 500">In use</span></button>`;
 const pill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
 const pillGroup = (label, items) => `<div role="group" aria-label="${esc(label)}" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">${esc(label)}</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${items}</div></div>`;
 // UX walk-through 2 (decision 6): Jack Lewis signs in as the Owner.
-screens['till-setup'] = each((size) => centred(size, stack(`${h1('Set up this till')}${p(`Signed in as Jack Lewis (Owner). This ${size === 'desktop' ? 'computer' : 'device'} becomes a till: it stays signed in, works offline, and staff check in with their PIN.`)}
-${pillGroup('Site', pill('Bolton', true) + pill('[Second site]', false))}
-${pillGroup('Till number', pill('B1', true) + pill('B2', false) + pill('B3', false))}
-${field('Name (optional)', { value: 'Front counter', hint: 'Receipts from this till are numbered B1-0001, B1-0002 and so on.' })}
-${button(`Make this ${size === 'desktop' ? 'computer' : 'device'} Till B1`, { block: true })}`, 16), { w: 480 }));
+// UX walk-through 7 M2: journey B's first till is Bolton's B1; the
+// multiple-sites journey draws the same screen with [Second site] chosen and
+// its taken numbers marked "In use" (tillSetupAt(size, { second: true })).
+export const tillSetupAt = (size, { second = false } = {}) => centred(size, stack(`${h1('Set up this till')}${p(`Signed in as Jack Lewis (Owner). This ${size === 'desktop' ? 'computer' : 'device'} becomes a till: it stays signed in, works offline, and staff check in with their PIN.`)}
+${pillGroup('Shop', pill('Bolton', !second) + pill('[Second site]', second))}
+${second ? pillGroup('Till number', inUse('[code]1') + inUse('[code]2') + pill('[code]3', true)) : pillGroup('Till number', pill('B1', true) + pill('B2', false) + pill('B3', false))}
+${second ? field('Name (optional)', { hint: 'Receipts from this till are numbered [code]3-0001, [code]3-0002 and so on.' }) : field('Name (optional)', { value: 'Front counter', hint: 'Receipts from this till are numbered B1-0001, B1-0002 and so on.' })}
+${button(`Make this ${size === 'desktop' ? 'computer' : 'device'} Till ${second ? '[code]3' : 'B1'}`, { block: true })}`, 16), { w: 480 });
+screens['till-setup'] = each((size) => tillSetupAt(size));
 
 // Decision 4: PIN only — it says who you are. It checks the 4th digit at
 // once (no OK button), and works without the internet (decision 3). A wrong
@@ -207,7 +219,7 @@ screens['cust-code-expired'] = each((size) => codePage(size, { expired: true }))
 
 export const TITLES = {
   'workos-signin': 'Sign in — WorkOS’s page, approximate look',
-  'auth-site': 'Where are you working today? (more than one site; tap to go straight in)',
+  'auth-site': 'Where are you working today? (more than one shop; tap to go straight in)',
   'auth-signedout': 'Signed out',
   'auth-expired': 'Signed out after a while — sign in again',
   'auth-noaccess': 'Not part of your role',

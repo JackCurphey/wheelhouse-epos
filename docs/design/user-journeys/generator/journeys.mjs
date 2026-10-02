@@ -1013,6 +1013,7 @@ export const journeys = [
         sd17("rp-vat-check-off", "VAT with the invoice check off: stock purchases from your accounts software", "Owner"),
         sd17("rp-margin", "Margin and stock value", "Owner"),
         sd17("rp-workshop", "Workshop: jobs, takings, how full, turnaround, quotes", "Owner"),
+        sd17("rp-workshop-all", "Workshop for all shops: shop by shop, and how full at each", "Owner"),
         sd17("rp-discounts", "Discounts and refunds, with reasons and who gave them", "Owner"),
         sd17("rp-discounts-staff", "Discounts and refunds as Staff see them (without who)", "Staff"),
         sd17("rp-returning", "Returning customers: who comes back, who hasn’t lately", "Owner and Manager"),
@@ -1148,6 +1149,7 @@ export const journeys = [
       { label: "Jobs between shops", screens: [
         sd19("ms-job-other-shop", "Booking a job into the other shop’s workshop: it goes as a request", "Staff"),
         sd19("ms-request-from-shop", "At [Second site]: the request, from Bolton, to accept", "Mechanic"),
+        sd19("ms-request-answered", "Back at Bolton: the answer in Waiting for you", "Staff"),
       ] },
       { label: "Adding a shop, and its tills", screens: [
         sd19("ms-sites", "Settings › Shop and sites: each shop (owner)", "Owner"),
@@ -1156,6 +1158,8 @@ export const journeys = [
         sd19("ms-add-shop-error", "A code another shop already uses", "Owner"),
         sd19("ms-today-new", "Today at a new shop: what to do next", "Owner"),
         sd19("ms-tills", "Settings › Till › Tills: every till, by shop", "Owner"),
+        sd19("ms-till-move", "Moving a till to the other shop: its day, its sales waiting, its receipts", "Owner"),
+        sd19("ms-till-setup", "Set up a till at [Second site]: its numbers, taken ones In use", "Owner"),
       ] },
     ],
   },

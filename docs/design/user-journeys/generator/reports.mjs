@@ -147,10 +147,13 @@ ${box(`${h3('Your reports')}${mine('[Report name]', 'Sales: items sold by produc
 const SO_FAR = 'So far: Mon 14 – Thu 17 September, against the same days last week';
 const shopName = (site) => (site === 'All shops' ? 'All shops' : `North Street Cycles, ${site}`);
 const salesRows = () => DAYS.map(([d, n], i) => (i < 4 ? [`${d} ${n} Sep`, '[£]', '[n]', '[£]'] : [`${d} ${n} Sep`, '—', '—', '—']));
+// UX walk-through 7 M1: a shop added part-way through has nothing to compare
+// before it opened; its row in an All shops table says so.
+const opened = (shop = SECOND) => `<span style="display: flex; flex-direction: column; gap: 2px">${shop}<span style="font-size: 12px; font-weight: 400; color: ${C.ink}; white-space: normal">Opened [date] — nothing to compare before then</span></span>`;
 const sales = (site = 'Bolton') => wrap(`${head('Sales', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Number of sales', '[n]', UP('[n]')), stat('Average sale', '£[£]', UP()), stat('Refunds', '£[£]', UP())])}
 ${box(`${site === 'All shops'
-  ? `${graph('Takings by shop', ['Bolton', SECOND], { says: 'Bolton £[£], [Second site] £[£]' })}${table('Sales by shop', ['Shop', 'Takings', 'Sales', 'Average'], [['Bolton', '[£]', '[n]', '[£]'], [SECOND, '[£]', '[n]', '[£]']], ['All shops', '[£]', '[n]', '[£]'])}`
+  ? `${graph('Takings by shop', ['Bolton', SECOND], { says: 'Bolton £[£], [Second site] £[£]' })}${table('Sales by shop', ['Shop', 'Takings', 'Sales', 'Average'], [['Bolton', '[£]', '[n]', '[£]'], [opened(), '[£]', '[n]', '[£]'] /* UX walk-through 7 M1 */], ['All shops', '[£]', '[n]', '[£]'])}`
   : `${graph('Takings by day', DAY_LABELS, { upto: 4 })}${table('Sales by day', ['Day', 'Takings', 'Sales', 'Average'], salesRows(), ['So far', '[£]', '[n]', '[£]'])}`}`)}
 ${note('Takings include VAT and take refunds off. Practice sales from moving across are never counted.')}`, OWNER, site);
 // Nothing sold yet, and no period before to compare with (audit M7).
@@ -258,12 +261,14 @@ const WRITTEN_OFF = [
   ['Adjusted · Found', '[n]', '+[£]', 'See the products', 'See the products adjusted as found'],
   ['Adjusted · Other', '[n]', '[£]', 'See the products', 'See the products adjusted for another reason'],
 ];
-const margin = () => wrap(`${head('Margin and stock value', `North Street Cycles, Bolton · ${SO_FAR}`, 'This week')}
+// UX walk-through 7 M1: takes a shop, so its All shops version exists for the
+// canvas to link (Reports and accounts 8: a shop column); not drawn as a board.
+const margin = (site = 'Bolton') => wrap(`${head('Margin and stock value', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${stats([stat('Sales before VAT', '£[£]', UP()), stat('What it cost you', '£[£]', UP()), stat('Margin (sales less cost)', '£[£] · [n]%', UP('[n] points'))])}
 <p role="note" style="margin: 0; font-size: 14px; line-height: 1.45"><strong>[n] products sold without a cost</strong> — their margin can’t be worked out, so they’re left out below. ${linkBtn('See them and add a cost')}</p>
 ${box(`${graph('Margin by category', MARGIN_ROWS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], MARGIN_ROWS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}`)}
 ${box(`${h3('On the shelves today')}<p style="margin: 0; font-size: 15px">Stock value, at what it cost you: ${mono('£[£]', 'font-weight: 700')}</p>${note(`Includes stock held for customers (${mono('£[£]')}). Stock on its way between shops counts at the shop it’s going to (${mono('£[£]')}).`)}${table('Stock value by category', ['Category', 'Items', 'What it cost you'], STOCK_CATS.map((c) => [c, '[n]', '[£]']), ['All', '[n]', '[£]'])}`)}
-${box(`${h3('Stock written off')}${note('Stock takes and adjustments this week, at what it cost you.')}${table('Stock written off', ['Why', 'Items', 'At cost', ''], WRITTEN_OFF.map(([why, n, v, link, label]) => [why, n, v, linkBtn(link, label)]), ['All', '[n]', '[£]', ''], [0, 3])}`)}`);
+${box(`${h3('Stock written off')}${note('Stock takes and adjustments this week, at what it cost you.')}${table('Stock written off', ['Why', 'Items', 'At cost', ''], WRITTEN_OFF.map(([why, n, v, link, label]) => [why, n, v, linkBtn(link, label)]), ['All', '[n]', '[£]', ''], [0, 3])}`)}`, OWNER, site);
 
 // ---------- Returning customers (leftover screens decision 5, 2 Oct) ----------
 // New and returning customers each month, the share back within 12 months,
@@ -283,6 +288,18 @@ ${box(`<div style="display: flex; flex-wrap: wrap; align-items: center; justify-
 
 // ---------- Workshop (decision 6; audit L2) ----------
 const full = (name, booked, avail) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid ${C.border}"><div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span style="font-weight: 700">${name}</span><span>${avail ? `${mono(booked)} of ${mono(avail)} hours booked · <strong>[n]% full</strong>` : `${mono(booked)} hours booked · no set hours`}</span></div>${avail ? `<div aria-hidden="true" style="height: 10px; border-radius: 999px; border: 1px dashed ${C.input}; background: ${C.mutedBg}"></div>` : ''}</div>`;
+// UX walk-through 7 M1: the Workshop report for All shops — a Shop column in
+// each table, [Second site]'s row saying when it opened, and "How full"
+// split by shop for someone who works at both (Jo Taylor, ms-person). A job
+// counts at the shop whose workshop did it, wherever it was booked.
+const fullSplit = (name, parts) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 700">${name}</span>${parts.map(([shop, avail]) => `<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span>${shop}</span><span>${avail ? `${mono('[n]')} of ${mono('[n]')} hours booked · <strong>[n]% full</strong>` : `${mono('[n]')} hours booked · no set hours`}</span></div>`).join('')}</div>`;
+const workshopAll = () => wrap(`${head('Workshop', `All shops · ${SO_FAR}`, 'This week')}
+${stats([stat('Jobs booked in', '[n]', UP('[n]')), stat('Finished', '[n]', UP('[n]')), stat('Collected', '[n]', UP('[n]')), stat('Booked in to ready', '[n] days', `Average · ${UP('[n] days')}`)])}
+${box(`${graph('Jobs finished by shop', ['Bolton', SECOND], { value: '[n]', key: ['This week so far', 'Same days last week'], says: 'Bolton [n], [Second site] [n]' })}${table('Jobs by shop', ['Shop', 'Booked in', 'Finished', 'Collected', 'Booked in to ready'], [['Bolton', '[n]', '[n]', '[n]', '[n] days'], [opened(), '[n]', '[n]', '[n]', '[n] days']], ['All shops', '[n]', '[n]', '[n]', '[n] days'])}${note('A job counts at the shop whose workshop did it, wherever it was booked.')}`)}
+<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'repeat(2, minmax(0, 1fr))'}; gap: 14px; align-items: start">
+${box(`${h3('Workshop takings')}${table('Workshop takings by shop', ['Shop', 'Labour', 'Parts', 'Total'], [['Bolton', '[£]', '[£]', '[£]'], [SECOND, '[£]', '[£]', '[£]']], ['All shops', '[£]', '[£]', '[£]'])}${h3('Quotes')}${table('Quotes by shop', ['Shop', 'Approved', 'Declined', 'No answer'], [['Bolton', '[n]', '[n]', '[n]'], [SECOND, '[n]', '[n]', '[n]']], ['All shops', '[n]', '[n]', '[n]'])}`)}
+${box(`${h3('How full each mechanic was')}${full('Alex Morgan · Bolton', '[n]', '[n]')}${fullSplit('Jo Taylor · works at both', [['Bolton', true], [SECOND, true]])}${full(`[Mechanic] · ${SECOND}`, '[n]', '[n]')}${fullSplit('Shared queue', [['Bolton', false], [SECOND, false]])}${note('Hours booked in each shop’s diary against the hours each mechanic is in there, from their working days.')}`)}
+</div>`, OWNER, 'All shops');
 const workshop = () => wrap(`${head('Workshop', `North Street Cycles, Bolton · ${SO_FAR}`, 'This week')}
 ${stats([stat('Jobs booked in', '[n]', UP('[n]')), stat('Finished', '[n]', UP('[n]')), stat('Collected', '[n]', UP('[n]')), stat('Booked in to ready', '[n] days', `Average · ${UP('[n] days')}`)])}
 ${box(graph('Jobs finished by day', DAY_LABELS, { value: '[n]', upto: 4, says: 'busiest day [day]; [up or down] [n] on the same days last week' }))}
@@ -293,12 +310,13 @@ ${box(`${h3('How full each mechanic was')}${full('Alex Morgan', '[n]', '[n]')}${
 
 // ---------- Discounts and refunds (Selling at the till 4; audit M10) ----------
 // Staff with "Can see reports" see every discount and reason, not who gave it.
-const discounts = (staff = false) => wrap(`${head('Discounts and refunds', `North Street Cycles, Bolton · ${SO_FAR}`, 'This week')}
+// UX walk-through 7 M1: takes a shop, as Margin does (not drawn for All shops).
+const discounts = (staff = false, site = 'Bolton') => wrap(`${head('Discounts and refunds', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${stats([stat('Discounts given', '[n] · £[£]', UP()), stat('Refunds', '[n] · £[£]', UP())])}
 ${box(`${graph('Discounts and refunds by reason', ['[Club name] members', '[Reason]', '[Reason]'], { says: 'most given [reason]; [up or down] £[£] on the same days last week' })}${staff
   ? table('Discounts and refunds', ['Sale', 'What', 'Reason', 'Amount'], [[mono('B1-[0000]'), 'Discount', '[Club name] members', '−[£]'], [mono('B1-[0000]'), 'Discount', '“[their reason]”', '−[£]'], [mono('B2-[0000]'), 'Refund', '[Reason]', '−[£]']], null, [0, 1, 2])
   : table('Discounts and refunds', ['Sale', 'What', 'Reason', 'By', 'Amount'], [[mono('B1-[0000]'), 'Discount', '[Club name] members', 'Jo Taylor', '−[£]'], [mono('B1-[0000]'), 'Discount', '“[their reason]”', 'Jack Lewis', '−[£]'], [mono('B2-[0000]'), 'Refund', '[Reason]', 'Jo Taylor', '−[£]']], null, [0, 1, 2, 3])}`)}
-${staff ? '' : note('Split by reason or by staff member with “Change what’s shown”.')}`, staff ? STAFF : OWNER);
+${staff ? '' : note('Split by reason or by staff member with “Change what’s shown”.')}`, staff ? STAFF : OWNER, site);
 
 // ---------- Accounts software (decision 4; audit H4, H5, M15) ----------
 const dataPage = (extra) => withSite('Bolton', () => settingsPage('data', 'Your data', DATA_INTRO, dataFolds() + extra, { who: OWNER }));
@@ -363,6 +381,7 @@ def('rp-vat-all', () => vat('All shops'));
 def('rp-vat-check-off', () => vat('Bolton', { checkOff: true })); // UX walk-through 3 M8
 def('rp-margin', () => margin());
 def('rp-workshop', () => workshop());
+def('rp-workshop-all', () => scrolled(workshopAll(), { desktop: 300, tablet: 300, phone: 640 }[SIZE])); // UX walk-through 7 M1: scrolled to the shop rows and How full
 def('rp-returning', () => returning());
 def('rp-discounts', () => discounts());
 def('rp-discounts-staff', () => discounts(true));
@@ -413,6 +432,7 @@ export const TITLES = {
   'rp-vat-check-off': 'VAT with the invoice check off: stock purchases from your accounts software',
   'rp-margin': 'Margin and stock value',
   'rp-workshop': 'Workshop: jobs, takings, how full, turnaround, quotes',
+  'rp-workshop-all': 'Workshop for all shops: shop by shop, and how full at each', // UX walk-through 7 M1
   'rp-discounts': 'Discounts and refunds, with reasons and who gave them',
   'rp-discounts-staff': 'Discounts and refunds as Staff see them (without who)',
   'rp-accounts-connect': 'Settings › Your data › Accounts software: connect',
@@ -431,6 +451,6 @@ export const ROWS = [
   { label: 'Sales', screens: ['rp-sales', 'rp-sales-all', 'rp-sales-year', 'rp-sales-empty', 'rp-pick-dates'] },
   { label: 'Your own reports', screens: ['rp-change', 'rp-changed', 'rp-save', 'rp-save-taken'] },
   { label: 'Takings and cash-ups', screens: ['rp-takings', 'rp-takings-all', 'rp-day', 'rp-reopen', 'rp-takings-reopened'] },
-  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-vat-check-off', 'rp-margin', 'rp-workshop', 'rp-discounts', 'rp-discounts-staff', 'rp-returning', 'rp-c2w'] }, // UX walk-through 5 H3: rp-c2w
+  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-vat-check-off', 'rp-margin', 'rp-workshop', 'rp-workshop-all', 'rp-discounts', 'rp-discounts-staff', 'rp-returning', 'rp-c2w'] }, // UX walk-through 5 H3: rp-c2w; walk-through 7 M1: rp-workshop-all
   { label: 'Accounts software and who sees what', screens: ['rp-accounts-connect', 'rp-accounts-map', 'rp-accounts-c2w', 'rp-accounts-missing', 'rp-accounts-log', 'rp-accounts-lost', 'rp-accounts-disconnect', 'rp-today-accounts', 'rp-person'] },
 ];

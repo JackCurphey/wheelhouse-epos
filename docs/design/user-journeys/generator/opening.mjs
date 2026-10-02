@@ -96,7 +96,7 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
 // UX walk-through 4 M4: `practice` — while the shop runs alongside Citrus
 // Lime, the till is in practice: no float check, no Close the day.
-export function today({ practice = false, banked = false, short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, c2wHoldEnded = false, c2wDeposit = false, lightspeed = false, lsDown = false, lsPerson = false, lsUnpaid = false, productToAdd = false, as = null } = {}) {
+export function today({ practice = false, banked = false, short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, c2wHoldEnded = false, c2wDeposit = false, lightspeed = false, lsDown = false, lsPerson = false, lsUnpaid = false, productToAdd = false, otherShops = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   // UX walk-through 2 H1(a): Wednesday counted and banked at night while its
   // sales were still waiting; it closes by itself once they've sent.
@@ -133,7 +133,10 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // whoever's PIN was last typed (H1); buttons say what they open (M8).
     watch && line('£[£] discount on Sale [sale number] — Till B1, while Jo Taylor was checked in', '“[reason]” · over £[amount] · [n] of today’s [n] sales on Till B1 had a discount', `<span style="display: inline-flex; flex-direction: column; gap: 6px; white-space: nowrap">${button('Seen', { variant: 'default' }).replace('<button', '<button aria-label="Seen: discount on Sale [sale number]"')}${button('Open the sale', { variant: 'default' })}</span>`, warnLead),
     watch && line('[n] voids on Till B1 today — while Jo Taylor was checked in', 'More than [n] · last: “[reason]” at [time] · [n] sales on Till B1 today', `<span style="display: inline-flex; flex-direction: column; gap: 6px; white-space: nowrap">${button('Seen', { variant: 'default' }).replace('<button', '<button aria-label="Seen: voids on Till B1"')}${button('See the voids', { variant: 'default' })}</span>`, warnLead),
-    watch && line('Shimano brake pads B05S-RX now sell below cost', 'Jack Lewis changed the price at [time] · £28.00 → £[£] · cost £[£]', `<span style="display: inline-flex; flex-direction: column; gap: 6px; white-space: nowrap">${button('Seen', { variant: 'default' }).replace('<button', '<button aria-label="Seen: Shimano brake pads below cost"')}${button('Open the product', { variant: 'default' })}</span>`, warnLead),
+    // UX walk-through 7 M4: £28.00 is the price at every shop (Multiple sites
+    // 2-3), so the change is tagged "All shops", this alert shows once on each
+    // shop's Today, and one "Seen" clears it everywhere.
+    watch && line(`Shimano brake pads B05S-RX now sell below cost ${tag('All shops', 'grey')}`, `Jack Lewis changed it at [time] · <span style="white-space: nowrap">£28.00 → £[£]</span> · <span style="white-space: nowrap">cost £[£]</span> · Seen clears it at every shop`, `<span style="display: inline-flex; flex-direction: column; gap: 6px; white-space: nowrap">${button('Seen', { variant: 'default' }).replace('<button', '<button aria-label="Seen: Shimano brake pads below cost, at every shop"')}${button('Open the product', { variant: 'default' })}</span>`, warnLead),
     // Cycle to Work decisions 1, 3 and 5: what needs chasing. c2w: 'held' is
     // after "Hold longer" (audit L7), with only the late payment left.
     c2w === true && line('Maya Patel · Cycle to Work quote, no certificate yet', '[Bike] · quoted [n] days ago · held until [date]', `<span style="display: inline-flex; flex-direction: column; gap: 6px; white-space: nowrap">${button('Hold longer', { variant: 'default' }).replace('<button', '<button aria-label="Hold Maya Patel’s bike longer"')}${button('Open the order', { variant: 'default' }).replace('<button', '<button aria-label="Open Maya Patel’s order"')}</span>`, warnLead),
@@ -170,7 +173,8 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     adjusted && line(`Stock adjusted: <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; color: ${C.ink}">[Product]</a> −[n] · £[value]`, 'Damaged · by Jo Taylor at [time]', button('Seen', { variant: 'default' }), warnLead),
     // Journey 14 decision 8 (audit M13): a transfer that arrived short.
     // UX walk-through 3 L1: "1 missing", the delivery's word.
-    transferShort && line('Transfer T-[0000] from [Site 2] arrived with 1 missing', 'Booked in by Jack Lewis at [time] · [Site 2] has been told', button('Open', { variant: 'default' }), warnLead),
+    // UX walk-through 7 M5: the other shop is "[Second site]", as everywhere.
+    transferShort && line('Transfer T-[0000] from [Second site] arrived with 1 missing', 'Booked in by Jack Lewis at [time] · [Second site] has been told', button('Open', { variant: 'default' }), warnLead),
     refresh && line('Time to refresh from Citrus Lime', 'Every [day] · last refreshed [date]', button('Refresh now', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('inbox', 18)}</span>`),
     // Lightspeed shops (journey 21) decision 6: Lightspeed out of reach for
     // longer than the shop's [n] minutes; sends wait and retry by themselves.
@@ -182,6 +186,20 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // UX walk-through 2 L2: Today only knows what the till said when it was
     // last in touch; "Check again" refreshes this line.
     waiting && line('Till B1 last in touch at [time] · [n] sales waiting then', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Check again', { variant: 'default' }).replace('style="', 'style="white-space: nowrap; '), warnLead),
+    // UX walk-through 7 H1: for anyone who can see more than one shop, Needs
+    // attention ends with one line for each other shop with something
+    // waiting; "See them" switches to that shop. While a new shop's checklist
+    // is unfinished the line counts its steps instead, so the checklist
+    // reaches the owner from either shop. `otherShops`: true (things need
+    // attention), 'setup' (steps left), or { shop, count, setup }.
+    otherShops && (() => {
+      const o = otherShops === true ? {} : otherShops === 'setup' ? { setup: true } : otherShops;
+      // Four steps left: walk-through 7 M3 (option 1) adds "Show it to customers" to the checklist.
+      const { shop = '[Second site]', setup = false, count = setup ? 4 : 3 } = o;
+      const what = setup ? `${count} steps to get it ready` : `${count} things need attention`;
+      const act = `<a href="#" aria-label="${setup ? `See the steps to get ${shop} ready` : `See the ${count} things that need attention at ${shop}`}" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 14px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${setup ? 'See the steps' : 'See them'}</a>`;
+      return line(`${shop} · ${what}`, setup ? `Its checklist · “See the steps” switches to ${shop}` : `Not this shop · “See them” switches to ${shop}`, act, `<span style="display: inline-flex; color: ${setup ? C.ink : C.warnInk}" aria-hidden="true">${icon('store', 18)}</span>`);
+    })(),
   ].filter(Boolean);
   const attention = section('Needs attention', items.length ? list(items)
     : `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid ${C.border}; font-size: 15px; color: ${C.muted}">${icon('check', 16)}Nothing needs you right now</div>`, '', items.length);

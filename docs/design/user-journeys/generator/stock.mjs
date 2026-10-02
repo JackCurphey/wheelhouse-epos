@@ -151,7 +151,7 @@ const heldLine = `<div style="display: flex; justify-content: space-between; ali
 const valueLine = note('Stock value includes stock held for customers. Stock on its way between shops counts at the shop it’s going to.');
 const summary = ({ codes, kind = 'part' }) => `<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
 ${card(`<div style="padding: 16px 18px; display: flex; gap: 14px; align-items: center"><div role="img" aria-label="Photo" style="width: 72px; height: 72px; flex-shrink: 0; border-radius: 8px; border: 1px dashed ${C.border}; background: ${C.mutedBg}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: ${C.muted}">[Photo]</div><div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">${codes}</span>${STAFF ? '' : `<div>${button('Edit', { variant: 'default' })}</div>`}</div></div>`, 'flex-shrink: 0')}
-${box('In stock', `${SITES ? `${kv('Bolton', mono('[n]'))}${kv('[Site 2]', mono('[n]'))}${kv('On its way to [Site 2]', mono('[n]'))}` : kv('Bolton', mono('[n]'))}${kind === 'part' ? heldLine : ''}${kv('Low-stock level', mono(SITES ? '[n] each' : '[n]'))}${SITES ? valueLine : ''}
+${box('In stock', `${SITES ? `${kv('Bolton', mono('[n]'))}${kv('[Second site]', mono('[n]'))}${kv('On its way to [Second site]', mono('[n]'))}` : kv('Bolton', mono('[n]'))}${kind === 'part' ? heldLine : ''}${kv('Low-stock level', mono(SITES ? '[n] each' : '[n]'))}${SITES ? valueLine : ''}
 <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">${button('Adjust stock', { variant: 'default' })}${button('Send to another shop', { variant: 'default' })}</div>`)}
 ${box('Details · [Category]', `${kv('[Detail]', '[value] [unit]')}${kv('[Detail]', '[value] [unit]')}`, STAFF ? '' : linkBtn('Edit', 'Edit details'))}
 ${box(STAFF ? 'Price' : 'Price and cost', STAFF ? `${kv('Price', mono(kind === 'part' ? '£28.00' : '£[price]'))}${kv('VAT', '[VAT rate]')}` : `${kv('Price', mono(kind === 'part' ? '£28.00' : '£[price]'))}${kv('Cost', mono('£[cost]'))}${kv('Margin', '[n]%')}${kv('VAT', '[VAT rate]')}${kv('Show on website', 'On · as [Category]')}`)}
@@ -222,15 +222,20 @@ const adjustSetting = () => settingsPage('stock', 'Stockroom', STOCK_INTRO, stoc
 ${note('Every adjustment is in its product’s stock history, whatever its value.')}` }));
 
 // ---------- Decision 8: send, then receive (audit M13) ----------
-const sitesBoard = () => { SITES = true; try { return productPage(PADS, `${summary({ codes: 'B05S-RX · [Category] · [Supplier] · barcode [barcode]' })}<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${history([histRow(hLink('Sent to [Site 2] · transfer T-[0000]', 'Open transfer T-[0000]'), 'On its way', '−[n]', 'Jack Lewis'), ...PADS_HIST.slice(0, 2)])}</div>`); } finally { SITES = false; } };
-const sendPopup = () => popup('tr-title', 'Send to another shop', 'From Bolton', `
-${radios('To', ['[Site 2]', '[Site 3]'], 0)}
-<div role="list">${line(PADS, 'B05S-RX · Bolton has [n]', qty('[n]', `How many ${PADS} to send`))}</div>${linkBtn('+ Add another product')}
-${note('The stock leaves Bolton now and shows as on its way. You can cancel while it’s on its way; [Site 2] scans it in when it arrives, and anything missing is flagged to both shops.')}`, `${button('Cancel', { variant: 'default' })}${button('Send')}`, 600);
+const sitesBoard = () => { SITES = true; try { return productPage(PADS, `${summary({ codes: 'B05S-RX · [Category] · [Supplier] · barcode [barcode]' })}<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">${history([histRow(hLink('Sent to [Second site] · transfer T-[0000]', 'Open transfer T-[0000]'), 'On its way', '−[n]', 'Jack Lewis'), ...PADS_HIST.slice(0, 2)])}</div>`); } finally { SITES = false; } };
+// UX walk-through 7 M5: with two shops the To choice is a line, not a
+// choice; a scan box, as on a delivery, adds products quickly (a new shop's
+// first stock is many lines). The same pop-up opens from Deliveries and
+// orders, and from the new shop's checklist, with [Second site] chosen.
+const sendPopup = () => popup('tr-title', 'Send to [Second site]', 'From Bolton', `
+<p style="margin: 0; font-size: 15px"><span style="font-weight: 600">To</span> [Second site]</p>
+${PH}<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input class="st-ph" type="search" aria-label="Scan or search to add" placeholder="Scan or search to add" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+<div role="list">${line(PADS, 'B05S-RX · Bolton has [n]', qty('[n]', `How many ${PADS} to send`))}</div>
+${note('The stock leaves Bolton now and shows as on its way. You can cancel while it’s on its way; [Second site] scans it in when it arrives, and anything missing is flagged to both shops.')}`, `${button('Cancel', { variant: 'default' })}${button('Send')}`, 600);
 const deliveriesPage = (content) => pageIn('deliveries', 'Deliveries and orders', content);
 const incomingBoard = () => deliveriesPage(`${box('A delivery arrived?', `${note('Scan each item as it comes out of the box. Works with or without an order.')}<div>${button('Receive a delivery', { variant: 'default' })}</div>`)}
-${box('On its way from another shop', `<div role="list">${line('From [Site 2] · [n] items', 'Transfer T-[0000] · sent [date] by [name]', `${tag('On its way', 'grey')}${button('Receive it').replace('<button', '<button aria-label="Receive transfer T-[0000] from [Site 2]"')}`)}</div>`)}
-${box('On its way to other shops', `<div role="list">${line('To [Site 2] · [n] items', 'Transfer T-[0000] · sent [date] by Jack Lewis', `${tag('On its way', 'grey')}${linkBtn('Cancel this send', 'Cancel transfer T-[0000] to [Site 2]')}`)}</div>${note('Cancelling brings the stock back to Bolton; both histories say so.')}`)}`);
+${box('On its way from another shop', `<div role="list">${line('From [Second site] · [n] items', 'Transfer T-[0000] · sent [date] by [name]', `${tag('On its way', 'grey')}${button('Receive it').replace('<button', '<button aria-label="Receive transfer T-[0000] from [Second site]"')}`)}</div>`)}
+${box('On its way to other shops', `<div role="list">${line('To [Second site] · [n] items', 'Transfer T-[0000] · sent [date] by Jack Lewis', `${tag('On its way', 'grey')}${linkBtn('Cancel this send', 'Cancel transfer T-[0000] to [Second site]')}`)}</div>${note('Cancelling brings the stock back to Bolton; both histories say so.')}`, button('Send to [Second site]', { variant: 'default' }) /* UX walk-through 7 M5: the send opens from here too */)}`);
 // UX walk-through 3 M9: receiving a transfer uses the delivery's list — a
 // typed count between − and +, "Problem?" (Damaged, Missing), the scan
 // announced, and the job flag, which sets "Part arrived" when booked in.
@@ -238,10 +243,10 @@ ${box('On its way to other shops', `<div role="list">${line('To [Site 2] · [n] 
 const waitingLead = `<span style="display: inline-flex; color: ${C.warnInk}" aria-hidden="true">${icon('workshop', 18)}</span>`;
 const alertLead = `<span style="display: inline-flex; color: ${C.warnInk}" aria-hidden="true">${icon('alert', 18)}</span>`;
 const withProblem = (name, right) => `<span style="display: inline-flex; align-items: center; gap: 8px">${right}${linkBtn('Problem?', `Problem with ${name}`)}</span>`;
-const receiveTransfer = () => pageIn('deliveries', 'Receive transfer T-[0000]', box('From [Site 2] · sent [date]', `${PH}<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input class="st-ph" type="search" aria-label="Scan each item" placeholder="Scan each item" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+const receiveTransfer = () => pageIn('deliveries', 'Receive transfer T-[0000]', box('From [Second site] · sent [date]', `${PH}<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input class="st-ph" type="search" aria-label="Scan each item" placeholder="Scan each item" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
 <p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added ${PADS} · 1 — job WH-1042 is waiting for 1</p>
 <div role="list">${line(PADS, `B05S-RX · sent [n] · <strong style="color: ${C.warnInk}">Job WH-1042 is waiting for 1</strong>`, withProblem(PADS, qty('[n]', PADS)), waitingLead)}${line('[Product]', `[Supplier code] · sent [n] · <strong style="color: ${C.warnInk}">Missing · 1</strong>`, withProblem('[Product]', qty('[n]', '[Product]')), alertLead)}</div>
-<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px"><span style="font-size: 14px; color: ${C.muted}">${mono('[n]')} items to book in · 1 missing — [Site 2] will be told</span>${button('Book in [n] items')}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px"><span style="font-size: 14px; color: ${C.muted}">${mono('[n]')} items to book in · 1 missing — [Second site] will be told</span>${button('Book in [n] items')}</div>
 ${note('Booking in tells job WH-1042 its part has arrived.')}`), JO, backTo('Deliveries and orders', 'tr-incoming-desktop.dc.html'));
 // UX walk-through 3 M9: "Problem?" on a transfer line — Damaged or Missing.
 const TR_PROBLEM = {
@@ -360,7 +365,7 @@ export const TITLES = {
   'st-today-below': 'Today: products below zero, with Count them',
   'tk-count-below': 'Counting the products below zero: still to find',
   'tr-sites': 'A product’s stock at each shop, and on its way',
-  'tr-send': 'Send to another shop',
+  'tr-send': 'Send to [Second site]: scan or search to add', // UX walk-through 7 M5
   'tr-incoming': 'Deliveries and orders: on its way, in and out',
   'tr-receive': 'Receiving a transfer, as Staff: typed counts, Problem?, the job flag', // UX walk-through 3 M9
   'tr-problem': 'A transfer line marked missing', // UX walk-through 3 M9

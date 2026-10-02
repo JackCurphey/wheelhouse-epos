@@ -39,8 +39,13 @@ const header = ({ owes = true, over = false } = {}) => `<div style="display: fle
 <span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><span style="font-size: 22px; font-weight: 700">${MAYA.name}</span>${owes ? owesChip(over) : ''}</span><span style="font-size: 14px; color: ${C.muted}">${mono(MAYA.phone)} · ${MAYA.email}</span></span>
 ${button('New job')}</div>`;
 
-const jobRow = (j) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono(j.job, 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${cap(j.svc)}</span><span style="font-size: 13px; color: ${C.muted}">${when(j)} · ${j.mech === 'Alex' ? 'Alex Morgan' : 'Jo Taylor'}</span></span>${status(j.key)}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
-const saleRow = () => `<a href="cs-sale-desktop.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono('B1-[0000]', 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Sale · Till B1</span><span style="font-size: 13px; color: ${C.muted}">[date] · [what was bought]</span></span>${mono('[£ total]', 'font-size: 15px')}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
+// UX walk-through 7 L3: customers are shared by every shop (Multiple sites
+// 2), so at a business with more than one shop each job and sale row ends
+// with its shop. `SHOP` is set while such a page is drawn.
+let SHOP = '';
+const atShop = () => (SHOP ? ` · ${SHOP}` : '');
+const jobRow = (j) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono(j.job, 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${cap(j.svc)}</span><span style="font-size: 13px; color: ${C.muted}">${when(j)} · ${j.mech === 'Alex' ? 'Alex Morgan' : 'Jo Taylor'}${atShop()}</span></span>${status(j.key)}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
+const saleRow = () => `<a href="cs-sale-desktop.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono('B1-[0000]', 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Sale · Till B1</span><span style="font-size: 13px; color: ${C.muted}">[date] · [what was bought]${atShop()}</span></span>${mono('[£ total]', 'font-size: 15px')}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
 
 // ---------- Option 1: one page, everything in folding sections ----------
 function optionFolds() {
@@ -112,7 +117,7 @@ function history(filter = 'Everything', empty = false, c2w = '') {
   const open = mj().filter((j) => j.key !== 'ready');
   const past = mj().filter((j) => j.key === 'ready');
   const rows = `${subHead('Open now')}${open.slice(0, 3).map(jobRow).join('')}${c2w === 'open' ? c2wRow('open') : ''}
-${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${past.slice(0, 1).map(jobRow).join('')}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', '[date] · [what came back]', mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
+${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${past.slice(0, 1).map(jobRow).join('')}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', `[date] · [what came back]${atShop()}`, mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
 <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ([n])</a>`;
   return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 17px; font-weight: 700">History</span>${pills}</div>
@@ -165,7 +170,9 @@ ${field('Note (optional)', { placeholder: 'e.g. prefers texts, not calls' })}
 }
 
 def('cs-list', customerList);
-def('cs-page', () => customerPage());
+// UX walk-through 7 L3: drawn for a business with two shops; all of Maya's
+// rows here were at Bolton.
+def('cs-page', () => { SHOP = 'Bolton'; try { return customerPage(); } finally { SHOP = ''; } });
 def('cs-page-off', () => customerPage({ accounts: false }));
 def('cs-page-over', () => customerPage({ over: true }));
 def('cs-page-new', () => customerPage({ empty: true }));

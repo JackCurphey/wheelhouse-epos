@@ -290,8 +290,16 @@
    "title": "Designed · Photos, larger (desktop)",
    "is_interactive": true
   },
+  "j01-wb-product-held-desktop.dc.html": {
+   "x": 21440,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A bike held for a Cycle to Work order: counted out, so sold out (desktop)",
+   "is_interactive": true
+  },
   "j01-wb-search-typing-desktop.dc.html": {
-   "x": 21600,
+   "x": 22920,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -299,7 +307,7 @@
    "is_interactive": true
   },
   "j01-wb-search-no-suggestions-desktop.dc.html": {
-   "x": 22920,
+   "x": 24240,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -307,7 +315,7 @@
    "is_interactive": true
   },
   "j01-wb-search-results-desktop.dc.html": {
-   "x": 24240,
+   "x": 25560,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -315,7 +323,7 @@
    "is_interactive": true
   },
   "j01-wb-search-measure-desktop.dc.html": {
-   "x": 25560,
+   "x": 26880,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -323,7 +331,7 @@
    "is_interactive": true
   },
   "j01-wb-search-none-desktop.dc.html": {
-   "x": 26880,
+   "x": 28200,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -331,7 +339,7 @@
    "is_interactive": true
   },
   "j01-wb-shops-desktop.dc.html": {
-   "x": 28360,
+   "x": 29680,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -339,7 +347,7 @@
    "is_interactive": true
   },
   "j01-wb-shop-page-desktop.dc.html": {
-   "x": 29680,
+   "x": 31000,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -347,7 +355,7 @@
    "is_interactive": true
   },
   "j01-wb-shop-collect-desktop.dc.html": {
-   "x": 31000,
+   "x": 32320,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -355,7 +363,7 @@
    "is_interactive": true
   },
   "j01-wb-find-us-desktop.dc.html": {
-   "x": 32320,
+   "x": 33640,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -363,7 +371,7 @@
    "is_interactive": true
   },
   "j01-wb-not-found-desktop.dc.html": {
-   "x": 33800,
+   "x": 35120,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -371,7 +379,7 @@
    "is_interactive": true
   },
   "j01-wb-off-desktop.dc.html": {
-   "x": 35120,
+   "x": 36440,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -379,7 +387,7 @@
    "is_interactive": true
   },
   "j01-wb-off-preview-desktop.dc.html": {
-   "x": 36440,
+   "x": 37760,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -387,7 +395,7 @@
    "is_interactive": true
   },
   "j01-wb-off-preview-product-desktop.dc.html": {
-   "x": 37760,
+   "x": 39080,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -395,7 +403,7 @@
    "is_interactive": true
   },
   "j01-wb-off-preview-ask-desktop.dc.html": {
-   "x": 39080,
+   "x": 40400,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -403,7 +411,7 @@
    "is_interactive": true
   },
   "j01-wb-turned-on-desktop.dc.html": {
-   "x": 40400,
+   "x": 41720,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -411,7 +419,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-banner-desktop.dc.html": {
-   "x": 41880,
+   "x": 43200,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -419,7 +427,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-choose-desktop.dc.html": {
-   "x": 43200,
+   "x": 44520,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -427,7 +435,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-saved-desktop.dc.html": {
-   "x": 44520,
+   "x": 45840,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -435,7 +443,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-page-desktop.dc.html": {
-   "x": 45840,
+   "x": 47160,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -443,7 +451,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-page-plain-desktop.dc.html": {
-   "x": 47160,
+   "x": 48480,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -1178,8 +1186,24 @@
    "title": "Designed · Online booking unavailable (desktop)",
    "is_interactive": true
   },
-  "j03-bk-staff-request-desktop.dc.html": {
+  "j03-bk-page-ls-desktop.dc.html": {
    "x": 45520,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Lightspeed shop: the booking’s page, no deposit (desktop)",
+   "is_interactive": true
+  },
+  "j03-bk-cancel-ls-desktop.dc.html": {
+   "x": 46840,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Lightspeed shop: cancel, nothing to pay or refund (desktop)",
+   "is_interactive": true
+  },
+  "j03-bk-staff-request-desktop.dc.html": {
+   "x": 48320,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1187,7 +1211,7 @@
    "is_interactive": true
   },
   "j03-bk-staff-decline-desktop.dc.html": {
-   "x": 46840,
+   "x": 49640,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1195,7 +1219,7 @@
    "is_interactive": true
   },
   "j03-bk-messages-desktop.dc.html": {
-   "x": 48160,
+   "x": 50960,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1203,7 +1227,7 @@
    "is_interactive": true
   },
   "j03-bk-settings-desktop.dc.html": {
-   "x": 49480,
+   "x": 52280,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1211,7 +1235,7 @@
    "is_interactive": true
   },
   "j03-bk-settings-deposits-desktop.dc.html": {
-   "x": 50800,
+   "x": 53600,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1346,8 +1370,32 @@
    "title": "Designed · Answered by phone, recorded by the shop (desktop)",
    "is_interactive": true
   },
-  "j04-dq-job-quote-desktop.dc.html": {
+  "j04-dq-quote-ls-desktop.dc.html": {
    "x": 21600,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Lightspeed shop: the quote, no deposit, no Basket (desktop)",
+   "is_interactive": true
+  },
+  "j04-dq-quote-price-ls-desktop.dc.html": {
+   "x": 22920,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Lightspeed shop: a price has gone up since you agreed (desktop)",
+   "is_interactive": true
+  },
+  "j04-dq-answered-price-no-ls-desktop.dc.html": {
+   "x": 24240,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Lightspeed shop: no thanks to the new price (desktop)",
+   "is_interactive": true
+  },
+  "j04-dq-job-quote-desktop.dc.html": {
+   "x": 25720,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1355,7 +1403,7 @@
    "is_interactive": true
   },
   "j04-dq-job-sent-desktop.dc.html": {
-   "x": 22920,
+   "x": 27040,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1363,7 +1411,7 @@
    "is_interactive": true
   },
   "j04-dq-diary-waiting-desktop.dc.html": {
-   "x": 24240,
+   "x": 28360,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1371,7 +1419,7 @@
    "is_interactive": true
   },
   "j04-dq-today-no-answer-desktop.dc.html": {
-   "x": 25560,
+   "x": 29680,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1379,7 +1427,7 @@
    "is_interactive": true
   },
   "j04-dq-record-answer-desktop.dc.html": {
-   "x": 26880,
+   "x": 31000,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1387,7 +1435,7 @@
    "is_interactive": true
   },
   "j04-dq-job-withdraw-desktop.dc.html": {
-   "x": 28200,
+   "x": 32320,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1395,7 +1443,7 @@
    "is_interactive": true
   },
   "j04-dq-job-answered-desktop.dc.html": {
-   "x": 29520,
+   "x": 33640,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1403,7 +1451,7 @@
    "is_interactive": true
   },
   "j04-dq-job-within-desktop.dc.html": {
-   "x": 30840,
+   "x": 34960,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1411,7 +1459,7 @@
    "is_interactive": true
   },
   "j04-dq-job-waiting-desktop.dc.html": {
-   "x": 32160,
+   "x": 36280,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1419,7 +1467,7 @@
    "is_interactive": true
   },
   "j04-dq-messages-desktop.dc.html": {
-   "x": 33480,
+   "x": 37600,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1427,7 +1475,7 @@
    "is_interactive": true
   },
   "j04-customer-message.dc.html": {
-   "x": 34960,
+   "x": 39080,
    "y": 10362,
    "w": 390,
    "h": 900,
@@ -1435,7 +1483,7 @@
    "is_interactive": true
   },
   "j04-preferences.dc.html": {
-   "x": 35430,
+   "x": 39550,
    "y": 10362,
    "w": 390,
    "h": 900,
@@ -1538,8 +1586,24 @@
    "title": "Designed · The link, [n] days after collection (desktop)",
    "is_interactive": true
   },
-  "j05-cp-ready-unpaid-desktop.dc.html": {
+  "j05-cp-summary-ls-desktop.dc.html": {
    "x": 16000,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Lightspeed shop: the agreed price, pay at the till (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-summary-ls-paid-desktop.dc.html": {
+   "x": 17320,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Lightspeed shop: paid at the till (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-ready-unpaid-desktop.dc.html": {
+   "x": 18800,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1547,7 +1611,7 @@
    "is_interactive": true
   },
   "j05-cp-ready-deposit-desktop.dc.html": {
-   "x": 17320,
+   "x": 20120,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1555,7 +1619,7 @@
    "is_interactive": true
   },
   "j05-cp-till-desktop.dc.html": {
-   "x": 18640,
+   "x": 21440,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1563,7 +1627,7 @@
    "is_interactive": true
   },
   "j05-cp-ready-paid-desktop.dc.html": {
-   "x": 19960,
+   "x": 22760,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1571,7 +1635,7 @@
    "is_interactive": true
   },
   "j05-cp-ready-ticks-desktop.dc.html": {
-   "x": 21280,
+   "x": 24080,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1579,7 +1643,7 @@
    "is_interactive": true
   },
   "j05-cp-collected-desktop.dc.html": {
-   "x": 22600,
+   "x": 25400,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1587,7 +1651,7 @@
    "is_interactive": true
   },
   "j05-cp-today-uncollected-desktop.dc.html": {
-   "x": 24080,
+   "x": 26880,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1595,7 +1659,7 @@
    "is_interactive": true
   },
   "j05-cp-setting-desktop.dc.html": {
-   "x": 25560,
+   "x": 28360,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1603,7 +1667,7 @@
    "is_interactive": true
   },
   "j05-cp-messages-desktop.dc.html": {
-   "x": 26880,
+   "x": 29680,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1611,7 +1675,7 @@
    "is_interactive": true
   },
   "j05-cp-message-wording-desktop.dc.html": {
-   "x": 28200,
+   "x": 31000,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1619,7 +1683,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-email-desktop.dc.html": {
-   "x": 29680,
+   "x": 32480,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1627,7 +1691,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-email-guest-desktop.dc.html": {
-   "x": 31000,
+   "x": 33800,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1635,7 +1699,7 @@
    "is_interactive": true
   },
   "j05-cp-invoice-email-desktop.dc.html": {
-   "x": 32320,
+   "x": 35120,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1643,7 +1707,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-email-till-desktop.dc.html": {
-   "x": 33640,
+   "x": 36440,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1651,7 +1715,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-email-deposit-desktop.dc.html": {
-   "x": 34960,
+   "x": 37760,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1659,7 +1723,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-text-desktop.dc.html": {
-   "x": 36280,
+   "x": 39080,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1667,7 +1731,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-text-email-desktop.dc.html": {
-   "x": 37600,
+   "x": 40400,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1675,7 +1739,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-desktop.dc.html": {
-   "x": 38920,
+   "x": 41720,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1683,7 +1747,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-error-desktop.dc.html": {
-   "x": 40240,
+   "x": 43040,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1691,7 +1755,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-save-desktop.dc.html": {
-   "x": 41560,
+   "x": 44360,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1699,7 +1763,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-text-desktop.dc.html": {
-   "x": 42880,
+   "x": 45680,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1707,7 +1771,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-customer-desktop.dc.html": {
-   "x": 44200,
+   "x": 47000,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1715,7 +1779,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-offline-desktop.dc.html": {
-   "x": 45520,
+   "x": 48320,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1723,7 +1787,7 @@
    "is_interactive": true
   },
   "j05-ready.dc.html": {
-   "x": 47000,
+   "x": 49800,
    "y": 12262,
    "w": 390,
    "h": 900,
@@ -1850,8 +1914,24 @@
    "title": "Designed · Deposit paid, bike ordered (desktop)",
    "is_interactive": true
   },
-  "j06-cw-certificate-desktop.dc.html": {
+  "j06-cw-order-deposit-counted-desktop.dc.html": {
    "x": 19960,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deposit paid, counted toward the price (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-list-hold-ended-desktop.dc.html": {
+   "x": 21280,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The list: a hold ended, nobody chose (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-certificate-desktop.dc.html": {
+   "x": 22600,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1859,15 +1939,39 @@
    "is_interactive": true
   },
   "j06-cw-certificate-diff-desktop.dc.html": {
-   "x": 21280,
+   "x": 23920,
    "y": 14162,
    "w": 1280,
    "h": 856,
    "title": "Designed · A certificate for less than the quote (desktop)",
    "is_interactive": true
   },
+  "j06-cw-certificate-match-desktop.dc.html": {
+   "x": 25240,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Change the order to match: tick what comes off (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-certificate-more-desktop.dc.html": {
+   "x": 26560,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A certificate for more than the quote (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-certificate-late-desktop.dc.html": {
+   "x": 27880,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A certificate after the quote ran out (desktop)",
+   "is_interactive": true
+  },
   "j06-cw-certificate-released-desktop.dc.html": {
-   "x": 22600,
+   "x": 29200,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1875,15 +1979,47 @@
    "is_interactive": true
   },
   "j06-cw-order-on-order-desktop.dc.html": {
-   "x": 24080,
+   "x": 30680,
    "y": 14162,
    "w": 1280,
    "h": 856,
    "title": "Designed · Certificate received, bike on order (desktop)",
    "is_interactive": true
   },
+  "j06-cw-order-deposit-refund-desktop.dc.html": {
+   "x": 32000,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Certificate in: refund the deposit next (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-list-deposit-refund-desktop.dc.html": {
+   "x": 33320,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The list: a deposit to refund (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-order-get-ready-desktop.dc.html": {
+   "x": 34640,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Certificate in, the bike needs work: get it ready (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-marked-ready-desktop.dc.html": {
+   "x": 35960,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Marked ready to collect, with Undo (desktop)",
+   "is_interactive": true
+  },
   "j06-cw-order-ready-desktop.dc.html": {
-   "x": 25400,
+   "x": 37280,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1891,7 +2027,7 @@
    "is_interactive": true
   },
   "j06-cw-hand-over-desktop.dc.html": {
-   "x": 26720,
+   "x": 38600,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1899,7 +2035,7 @@
    "is_interactive": true
   },
   "j06-cw-order-owed-desktop.dc.html": {
-   "x": 28040,
+   "x": 39920,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1907,7 +2043,7 @@
    "is_interactive": true
   },
   "j06-cw-mark-paid-desktop.dc.html": {
-   "x": 29360,
+   "x": 41240,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1915,7 +2051,7 @@
    "is_interactive": true
   },
   "j06-cw-mark-paid-diff-desktop.dc.html": {
-   "x": 30680,
+   "x": 42560,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1923,7 +2059,7 @@
    "is_interactive": true
   },
   "j06-cw-order-part-paid-desktop.dc.html": {
-   "x": 32000,
+   "x": 43880,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1931,7 +2067,7 @@
    "is_interactive": true
   },
   "j06-cw-order-paid-desktop.dc.html": {
-   "x": 33320,
+   "x": 45200,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1939,15 +2075,47 @@
    "is_interactive": true
   },
   "j06-cw-owed-desktop.dc.html": {
-   "x": 34640,
+   "x": 46520,
    "y": 14162,
    "w": 1280,
    "h": 856,
    "title": "Designed · Owed by Cycle to Work providers (desktop)",
    "is_interactive": true
   },
+  "j06-cw-owed-reports-desktop.dc.html": {
+   "x": 47840,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Owed by providers, opened from Reports (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-owed-provider-desktop.dc.html": {
+   "x": 49160,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · One provider’s bikes owed (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-record-payment-desktop.dc.html": {
+   "x": 50480,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Record a payment for several bikes (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-record-payment-more-desktop.dc.html": {
+   "x": 51800,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A payment for more than expected (desktop)",
+   "is_interactive": true
+  },
   "j06-cw-more-desktop.dc.html": {
-   "x": 36120,
+   "x": 53280,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1955,7 +2123,7 @@
    "is_interactive": true
   },
   "j06-cw-quote-revised-desktop.dc.html": {
-   "x": 37440,
+   "x": 54600,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1963,7 +2131,7 @@
    "is_interactive": true
   },
   "j06-cw-cancel-desktop.dc.html": {
-   "x": 38760,
+   "x": 55920,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1971,15 +2139,23 @@
    "is_interactive": true
   },
   "j06-cw-cancel-ordered-desktop.dc.html": {
-   "x": 40080,
+   "x": 57240,
    "y": 14162,
    "w": 1280,
    "h": 856,
    "title": "Designed · Cancelling after the bike was ordered (desktop)",
    "is_interactive": true
   },
+  "j06-cw-cancel-ordered-deposit-desktop.dc.html": {
+   "x": 58560,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Cancelling after ordering: the deposit kept (desktop)",
+   "is_interactive": true
+  },
   "j06-cw-today-desktop.dc.html": {
-   "x": 41560,
+   "x": 60040,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -1987,31 +2163,87 @@
    "is_interactive": true
   },
   "j06-cw-today-held-desktop.dc.html": {
-   "x": 42880,
+   "x": 61360,
    "y": 14162,
    "w": 1280,
    "h": 856,
    "title": "Designed · Today: Hold longer, done in one press (desktop)",
    "is_interactive": true
   },
+  "j06-cw-today-choose-desktop.dc.html": {
+   "x": 62680,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: a hold ended with no choice, a deposit to refund (desktop)",
+   "is_interactive": true
+  },
   "j06-cw-customer-view-desktop.dc.html": {
-   "x": 44200,
+   "x": 64000,
    "y": 14162,
    "w": 1280,
    "h": 856,
    "title": "Designed · The customer’s account: their Cycle to Work bike (desktop)",
    "is_interactive": true
   },
-  "j06-cw-email-desktop.dc.html": {
-   "x": 45520,
+  "j06-cw-customer-released-desktop.dc.html": {
+   "x": 65320,
    "y": 14162,
    "w": 1280,
    "h": 856,
-   "title": "Designed · “Your bike is put aside” email (desktop)",
+   "title": "Designed · The customer’s view: no longer put aside (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-customer-cancelled-desktop.dc.html": {
+   "x": 66640,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The customer’s view: the order cancelled (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-email-desktop.dc.html": {
+   "x": 67960,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The quote email: the bike put aside, both dates (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-email-certificate-revised-desktop.dc.html": {
+   "x": 69280,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · “Certificate received” email, with the revised quote (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-texts-certificate-desktop.dc.html": {
+   "x": 70600,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · “Certificate received” and “Ready to collect” texts (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-texts-hold-desktop.dc.html": {
+   "x": 71920,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · “Put aside” again, or “no longer put aside” texts (desktop)",
+   "is_interactive": true
+  },
+  "j06-cw-texts-cancelled-desktop.dc.html": {
+   "x": 73240,
+   "y": 14162,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · “Your order is cancelled” texts (desktop)",
    "is_interactive": true
   },
   "j06-cw-settings-desktop.dc.html": {
-   "x": 46840,
+   "x": 74560,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -2019,7 +2251,7 @@
    "is_interactive": true
   },
   "j06-cw-settings-deposit-desktop.dc.html": {
-   "x": 48160,
+   "x": 75880,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -2027,7 +2259,7 @@
    "is_interactive": true
   },
   "j06-cw-settings-provider-desktop.dc.html": {
-   "x": 49480,
+   "x": 77200,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -2035,7 +2267,7 @@
    "is_interactive": true
   },
   "j06-cw-messages-desktop.dc.html": {
-   "x": 50800,
+   "x": 78520,
    "y": 14162,
    "w": 1280,
    "h": 856,
@@ -2090,8 +2322,24 @@
    "title": "Designed · The receipt emailed (desktop)",
    "is_interactive": true
   },
-  "j07-ac-job-note-desktop.dc.html": {
+  "j07-ac-account-c2w-desktop.dc.html": {
    "x": 8080,
+   "y": 16018,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Her Cycle to Work order in her history, with what she pays at collection (desktop)",
+   "is_interactive": true
+  },
+  "j07-ac-account-c2w-collected-desktop.dc.html": {
+   "x": 9400,
+   "y": 16018,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · After collection: the Cycle to Work bike in her bikes, with its frame number (desktop)",
+   "is_interactive": true
+  },
+  "j07-ac-job-note-desktop.dc.html": {
+   "x": 10880,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2099,7 +2347,7 @@
    "is_interactive": true
   },
   "j07-ac-job-note-sent-desktop.dc.html": {
-   "x": 9400,
+   "x": 12200,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2107,7 +2355,7 @@
    "is_interactive": true
   },
   "j07-ac-job-note-answered-desktop.dc.html": {
-   "x": 10720,
+   "x": 13520,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2115,7 +2363,7 @@
    "is_interactive": true
   },
   "j07-ac-ask-desktop.dc.html": {
-   "x": 12040,
+   "x": 14840,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2123,7 +2371,7 @@
    "is_interactive": true
   },
   "j07-ac-account-question-sent-desktop.dc.html": {
-   "x": 13360,
+   "x": 16160,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2131,7 +2379,7 @@
    "is_interactive": true
   },
   "j07-ac-question-desktop.dc.html": {
-   "x": 14680,
+   "x": 17480,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2139,7 +2387,7 @@
    "is_interactive": true
   },
   "j07-ac-account-asked-desktop.dc.html": {
-   "x": 16000,
+   "x": 18800,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2147,7 +2395,7 @@
    "is_interactive": true
   },
   "j07-ac-inbox-list-phone.dc.html": {
-   "x": 17480,
+   "x": 20280,
    "y": 16018,
    "w": 390,
    "h": 900,
@@ -2155,7 +2403,7 @@
    "is_interactive": true
   },
   "j07-ac-inbox-desktop.dc.html": {
-   "x": 17950,
+   "x": 20750,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2163,7 +2411,7 @@
    "is_interactive": true
   },
   "j07-ac-inbox-sent-desktop.dc.html": {
-   "x": 19270,
+   "x": 22070,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2171,7 +2419,7 @@
    "is_interactive": true
   },
   "j07-ac-inbox-all-desktop.dc.html": {
-   "x": 20590,
+   "x": 23390,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2179,7 +2427,7 @@
    "is_interactive": true
   },
   "j07-ac-inbox-empty-desktop.dc.html": {
-   "x": 21910,
+   "x": 24710,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2187,7 +2435,7 @@
    "is_interactive": true
   },
   "j07-ac-reply-text-desktop.dc.html": {
-   "x": 23230,
+   "x": 26030,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2195,7 +2443,7 @@
    "is_interactive": true
   },
   "j07-ac-today-desktop.dc.html": {
-   "x": 24550,
+   "x": 27350,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2203,7 +2451,7 @@
    "is_interactive": true
   },
   "j07-ac-book-remind-desktop.dc.html": {
-   "x": 26030,
+   "x": 28830,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2211,7 +2459,7 @@
    "is_interactive": true
   },
   "j07-ac-collect-remind-desktop.dc.html": {
-   "x": 27350,
+   "x": 30150,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2219,7 +2467,7 @@
    "is_interactive": true
   },
   "j07-ac-services-desktop.dc.html": {
-   "x": 28670,
+   "x": 31470,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2227,7 +2475,7 @@
    "is_interactive": true
   },
   "j07-ac-service-edit-desktop.dc.html": {
-   "x": 29990,
+   "x": 32790,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2235,7 +2483,7 @@
    "is_interactive": true
   },
   "j07-ac-messages-desktop.dc.html": {
-   "x": 31310,
+   "x": 34110,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2243,7 +2491,7 @@
    "is_interactive": true
   },
   "j07-ac-reminder-wording-desktop.dc.html": {
-   "x": 32630,
+   "x": 35430,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2251,7 +2499,7 @@
    "is_interactive": true
   },
   "j07-ac-reminder-landing-desktop.dc.html": {
-   "x": 33950,
+   "x": 36750,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2259,7 +2507,7 @@
    "is_interactive": true
   },
   "j07-ac-review-first-desktop.dc.html": {
-   "x": 35430,
+   "x": 38230,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2267,7 +2515,7 @@
    "is_interactive": true
   },
   "j07-ac-review-setting-desktop.dc.html": {
-   "x": 36750,
+   "x": 39550,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2275,7 +2523,7 @@
    "is_interactive": true
   },
   "j07-ac-contact-desktop.dc.html": {
-   "x": 38070,
+   "x": 40870,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2283,7 +2531,7 @@
    "is_interactive": true
   },
   "j07-ac-contact-changed-desktop.dc.html": {
-   "x": 39390,
+   "x": 42190,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2291,7 +2539,7 @@
    "is_interactive": true
   },
   "j07-ac-stopped-desktop.dc.html": {
-   "x": 40710,
+   "x": 43510,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2299,7 +2547,7 @@
    "is_interactive": true
   },
   "j07-ac-stopped-on-desktop.dc.html": {
-   "x": 42030,
+   "x": 44830,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2307,7 +2555,7 @@
    "is_interactive": true
   },
   "j07-ac-download-desktop.dc.html": {
-   "x": 43510,
+   "x": 46310,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2315,7 +2563,7 @@
    "is_interactive": true
   },
   "j07-ac-download-failed-desktop.dc.html": {
-   "x": 44830,
+   "x": 47630,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2323,7 +2571,7 @@
    "is_interactive": true
   },
   "j07-ac-delete-desktop.dc.html": {
-   "x": 46150,
+   "x": 48950,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2331,7 +2579,7 @@
    "is_interactive": true
   },
   "j07-ac-delete-blocked-desktop.dc.html": {
-   "x": 47470,
+   "x": 50270,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2339,7 +2587,7 @@
    "is_interactive": true
   },
   "j07-ac-delete-sent-desktop.dc.html": {
-   "x": 48790,
+   "x": 51590,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2347,7 +2595,7 @@
    "is_interactive": true
   },
   "j07-ac-account-delete-pending-desktop.dc.html": {
-   "x": 50110,
+   "x": 52910,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2355,7 +2603,7 @@
    "is_interactive": true
   },
   "j07-ac-account-delete-cancelled-desktop.dc.html": {
-   "x": 51430,
+   "x": 54230,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2363,7 +2611,7 @@
    "is_interactive": true
   },
   "j07-ac-privacy-requests-desktop.dc.html": {
-   "x": 52750,
+   "x": 55550,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2371,7 +2619,7 @@
    "is_interactive": true
   },
   "j07-ac-customer-delete-desktop.dc.html": {
-   "x": 54070,
+   "x": 56870,
    "y": 16018,
    "w": 1280,
    "h": 856,
@@ -2418,7 +2666,7 @@
    "size": 40,
    "text": "Our shops",
    "w": 520,
-   "x": 28360,
+   "x": 29680,
    "y": 4554
   },
   "j01_s11": {
@@ -2428,7 +2676,17 @@
    "size": 40,
    "text": "When things go wrong",
    "w": 520,
-   "x": 33800,
+   "x": 35120,
+   "y": 4554
+  },
+  "j01_s12": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Cookies",
+   "w": 520,
+   "x": 43200,
    "y": 4554
   },
   "j01_s6": {
@@ -2468,12 +2726,12 @@
    "size": 40,
    "text": "Search",
    "w": 520,
-   "x": 21600,
+   "x": 22920,
    "y": 4554
   },
   "j01_title": {
    "kind": "title1",
-   "maxW": 8000,
+   "maxW": 49720,
    "text": "01 · Find the shop and browse the website — Customer",
    "w": 240,
    "x": 0,
@@ -2529,6 +2787,16 @@
    "x": 46840,
    "y": 6410
   },
+  "j02_s19": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Settings",
+   "w": 520,
+   "x": 65480,
+   "y": 6410
+  },
   "j02_title": {
    "kind": "title1",
    "maxW": 8000,
@@ -2577,15 +2845,25 @@
    "x": 36120,
    "y": 8266
   },
+  "j03_s25": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A Lightspeed shop",
+   "w": 520,
+   "x": 45520,
+   "y": 8266
+  },
   "j03_title": {
    "kind": "title1",
-   "maxW": 8000,
+   "maxW": 54840,
    "text": "03 · Book a repair — Customer, Staff and Manager",
    "w": 240,
    "x": 0,
    "y": 7946
   },
-  "j04_s27": {
+  "j04_s28": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2595,7 +2873,7 @@
    "x": 0,
    "y": 10122
   },
-  "j04_s28": {
+  "j04_s29": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2605,7 +2883,7 @@
    "x": 4120,
    "y": 10122
   },
-  "j04_s29": {
+  "j04_s30": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2615,25 +2893,25 @@
    "x": 16160,
    "y": 10122
   },
-  "j04_s30": {
+  "j04_s31": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
    "size": 40,
-   "text": "The shop’s side",
+   "text": "A Lightspeed shop",
    "w": 520,
    "x": 21600,
    "y": 10122
   },
   "j04_title": {
    "kind": "title1",
-   "maxW": 8000,
+   "maxW": 39940,
    "text": "04 · Drop off and approve the quote — Customer and Staff",
    "w": 240,
    "x": 0,
    "y": 9802
   },
-  "j05_s33": {
+  "j05_s35": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2643,34 +2921,14 @@
    "x": 0,
    "y": 12022
   },
-  "j05_s34": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "At the counter",
-   "w": 520,
-   "x": 16000,
-   "y": 12022
-  },
-  "j05_s35": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Not collected",
-   "w": 520,
-   "x": 24080,
-   "y": 12022
-  },
   "j05_s36": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
    "size": 40,
-   "text": "Settings",
+   "text": "A Lightspeed shop",
    "w": 520,
-   "x": 25560,
+   "x": 16000,
    "y": 12022
   },
   "j05_s37": {
@@ -2678,20 +2936,30 @@
    "fill": "gray",
    "maxH": 150,
    "size": 40,
-   "text": "The receipt",
+   "text": "At the counter",
    "w": 520,
-   "x": 29680,
+   "x": 18800,
+   "y": 12022
+  },
+  "j05_s38": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Not collected",
+   "w": 520,
+   "x": 26880,
    "y": 12022
   },
   "j05_title": {
    "kind": "title1",
-   "maxW": 8000,
+   "maxW": 50190,
    "text": "05 · Collect the bike and pay — Customer",
    "w": 240,
    "x": 0,
    "y": 11702
   },
-  "j06_s40": {
+  "j06_s43": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2701,7 +2969,7 @@
    "x": 0,
    "y": 13922
   },
-  "j06_s41": {
+  "j06_s44": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2711,35 +2979,15 @@
    "x": 10720,
    "y": 13922
   },
-  "j06_s42": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Collection and payment",
-   "w": 520,
-   "x": 24080,
-   "y": 13922
-  },
-  "j06_s43": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Changes and cancelling",
-   "w": 520,
-   "x": 36120,
-   "y": 13922
-  },
   "j06_title": {
    "kind": "title1",
-   "maxW": 8000,
+   "maxW": 79760,
    "text": "06 · Cycle to Work — Customer and staff",
    "w": 240,
    "x": 0,
    "y": 13602
   },
-  "j07_s46": {
+  "j07_s49": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2749,49 +2997,29 @@
    "x": 0,
    "y": 15778
   },
-  "j07_s47": {
+  "j07_s50": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A Cycle to Work bike on her account",
+   "w": 520,
+   "x": 8080,
+   "y": 15778
+  },
+  "j07_s51": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
    "size": 40,
    "text": "Talking to the shop",
    "w": 520,
-   "x": 8080,
-   "y": 15778
-  },
-  "j07_s48": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "The shop’s side of messages",
-   "w": 520,
-   "x": 17480,
-   "y": 15778
-  },
-  "j07_s49": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Service reminders",
-   "w": 520,
-   "x": 26030,
-   "y": 15778
-  },
-  "j07_s50": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Reviews and how we contact you",
-   "w": 520,
-   "x": 35430,
+   "x": 10880,
    "y": 15778
   },
   "j07_title": {
    "kind": "title1",
-   "maxW": 8000,
+   "maxW": 58110,
    "text": "07 · Account, history and reminders — Customer and Staff",
    "w": 240,
    "x": 0,
@@ -2837,6 +3065,16 @@
    "x": 15000,
    "y": 2654
   },
+  "jb_s4": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Customers",
+   "w": 520,
+   "x": 20440,
+   "y": 2654
+  },
   "jb_title": {
    "kind": "title1",
    "maxW": 8000,
@@ -2845,38 +3083,8 @@
    "x": 0,
    "y": 2334
   },
-  "jb_s4": {
-   "x": 20440,
-   "y": 2654,
-   "text": "Customers",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_s12": {
-   "x": 41880,
-   "y": 4554,
-   "text": "Cookies",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j02_s19": {
-   "x": 65480,
-   "y": 6410,
-   "text": "Settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j03_s25": {
-   "x": 45520,
+  "j03_s26": {
+   "x": 48320,
    "y": 8266,
    "text": "The shop’s side",
    "w": 520,
@@ -2885,8 +3093,18 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j04_s31": {
-   "x": 34960,
+  "j04_s32": {
+   "x": 25720,
+   "y": 10122,
+   "text": "The shop’s side",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j04_s33": {
+   "x": 39080,
    "y": 10122,
    "text": "Also in this journey",
    "w": 520,
@@ -2895,8 +3113,28 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j05_s38": {
-   "x": 47000,
+  "j05_s39": {
+   "x": 28360,
+   "y": 12022,
+   "text": "Settings",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j05_s40": {
+   "x": 32480,
+   "y": 12022,
+   "text": "The receipt",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j05_s41": {
+   "x": 49800,
    "y": 12022,
    "text": "Also at collection",
    "w": 520,
@@ -2905,8 +3143,28 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j06_s44": {
-   "x": 41560,
+  "j06_s45": {
+   "x": 30680,
+   "y": 13922,
+   "text": "Collection and payment",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_s46": {
+   "x": 53280,
+   "y": 13922,
+   "text": "Changes and cancelling",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_s47": {
+   "x": 60040,
    "y": 13922,
    "text": "Today, the customer, settings and messages",
    "w": 520,
@@ -2915,8 +3173,38 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s51": {
-   "x": 43510,
+  "j07_s52": {
+   "x": 20280,
+   "y": 15778,
+   "text": "The shop’s side of messages",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j07_s53": {
+   "x": 28830,
+   "y": 15778,
+   "text": "Service reminders",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j07_s54": {
+   "x": 38230,
+   "y": 15778,
+   "text": "Reviews and how we contact you",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j07_s55": {
+   "x": 46310,
    "y": 15778,
    "text": "Your data",
    "w": 520,
@@ -2965,6 +3253,7 @@
   "j01-wb-product-sizes-desktop.dc.html",
   "j01-wb-product-size-other-desktop.dc.html",
   "j01-wb-product-photos-desktop.dc.html",
+  "j01-wb-product-held-desktop.dc.html",
   "j01-wb-search-typing-desktop.dc.html",
   "j01-wb-search-no-suggestions-desktop.dc.html",
   "j01-wb-search-results-desktop.dc.html",
@@ -3076,6 +3365,8 @@
   "j03-bk-declined-desktop.dc.html",
   "j03-bk-expired-desktop.dc.html",
   "j03-bk-unavailable-desktop.dc.html",
+  "j03-bk-page-ls-desktop.dc.html",
+  "j03-bk-cancel-ls-desktop.dc.html",
   "j03-bk-staff-request-desktop.dc.html",
   "j03-bk-staff-decline-desktop.dc.html",
   "j03-bk-messages-desktop.dc.html",
@@ -3097,6 +3388,9 @@
   "j04-dq-answered-declined-desktop.dc.html",
   "j04-dq-answered-deposit-desktop.dc.html",
   "j04-dq-answered-by-phone-desktop.dc.html",
+  "j04-dq-quote-ls-desktop.dc.html",
+  "j04-dq-quote-price-ls-desktop.dc.html",
+  "j04-dq-answered-price-no-ls-desktop.dc.html",
   "j04-dq-job-quote-desktop.dc.html",
   "j04-dq-job-sent-desktop.dc.html",
   "j04-dq-diary-waiting-desktop.dc.html",
@@ -3121,6 +3415,8 @@
   "j05-cp-summary-counter-desktop.dc.html",
   "j05-cp-summary-inshop-desktop.dc.html",
   "j05-cp-expired-desktop.dc.html",
+  "j05-cp-summary-ls-desktop.dc.html",
+  "j05-cp-summary-ls-paid-desktop.dc.html",
   "j05-cp-ready-unpaid-desktop.dc.html",
   "j05-cp-ready-deposit-desktop.dc.html",
   "j05-cp-till-desktop.dc.html",
@@ -3160,10 +3456,19 @@
   "j06-cw-order-deposit-desktop.dc.html",
   "j06-cw-order-anyway-desktop.dc.html",
   "j06-cw-order-deposit-paid-desktop.dc.html",
+  "j06-cw-order-deposit-counted-desktop.dc.html",
+  "j06-cw-list-hold-ended-desktop.dc.html",
   "j06-cw-certificate-desktop.dc.html",
   "j06-cw-certificate-diff-desktop.dc.html",
+  "j06-cw-certificate-match-desktop.dc.html",
+  "j06-cw-certificate-more-desktop.dc.html",
+  "j06-cw-certificate-late-desktop.dc.html",
   "j06-cw-certificate-released-desktop.dc.html",
   "j06-cw-order-on-order-desktop.dc.html",
+  "j06-cw-order-deposit-refund-desktop.dc.html",
+  "j06-cw-list-deposit-refund-desktop.dc.html",
+  "j06-cw-order-get-ready-desktop.dc.html",
+  "j06-cw-marked-ready-desktop.dc.html",
   "j06-cw-order-ready-desktop.dc.html",
   "j06-cw-hand-over-desktop.dc.html",
   "j06-cw-order-owed-desktop.dc.html",
@@ -3172,14 +3477,26 @@
   "j06-cw-order-part-paid-desktop.dc.html",
   "j06-cw-order-paid-desktop.dc.html",
   "j06-cw-owed-desktop.dc.html",
+  "j06-cw-owed-reports-desktop.dc.html",
+  "j06-cw-owed-provider-desktop.dc.html",
+  "j06-cw-record-payment-desktop.dc.html",
+  "j06-cw-record-payment-more-desktop.dc.html",
   "j06-cw-more-desktop.dc.html",
   "j06-cw-quote-revised-desktop.dc.html",
   "j06-cw-cancel-desktop.dc.html",
   "j06-cw-cancel-ordered-desktop.dc.html",
+  "j06-cw-cancel-ordered-deposit-desktop.dc.html",
   "j06-cw-today-desktop.dc.html",
   "j06-cw-today-held-desktop.dc.html",
+  "j06-cw-today-choose-desktop.dc.html",
   "j06-cw-customer-view-desktop.dc.html",
+  "j06-cw-customer-released-desktop.dc.html",
+  "j06-cw-customer-cancelled-desktop.dc.html",
   "j06-cw-email-desktop.dc.html",
+  "j06-cw-email-certificate-revised-desktop.dc.html",
+  "j06-cw-texts-certificate-desktop.dc.html",
+  "j06-cw-texts-hold-desktop.dc.html",
+  "j06-cw-texts-cancelled-desktop.dc.html",
   "j06-cw-settings-desktop.dc.html",
   "j06-cw-settings-deposit-desktop.dc.html",
   "j06-cw-settings-provider-desktop.dc.html",
@@ -3190,6 +3507,8 @@
   "j07-ac-account-new-desktop.dc.html",
   "j07-ac-receipt-desktop.dc.html",
   "j07-ac-receipt-sent-desktop.dc.html",
+  "j07-ac-account-c2w-desktop.dc.html",
+  "j07-ac-account-c2w-collected-desktop.dc.html",
   "j07-ac-job-note-desktop.dc.html",
   "j07-ac-job-note-sent-desktop.dc.html",
   "j07-ac-job-note-answered-desktop.dc.html",

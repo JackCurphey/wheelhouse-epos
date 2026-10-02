@@ -254,3 +254,23 @@ Every recommendation taken (decision 6).
   recorded reason (`ls-job-sorted`); and the word fixes ("Agreed £111.00" on
   Lightspeed jobs). This changes *when* the Lightspeed look-up runs
   (Lightspeed shops decisions 3–4), not the rule.
+
+## Walk-through 7 (an owner with two shops): as built (2 Oct)
+
+Every recommendation taken (decision 6; `ux-walkthrough-7-two-shops.md`,
+2 High, 6 Medium, 4 Low): Bolton's Today carries "[Second site] · 3 things
+need attention", the shop menu and the sign-in shop choice show it, and the
+owner gets an "All shops" card; a job booked into the other shop's workshop
+is drawn as Maya's one job in [Second site]'s diary, and Bolton sees the
+answer (`ms-request-answered`); a till can be moved to the other shop
+(`ms-till-move`) and set up there with its own numbers (`ms-till-setup`;
+journey B's "Set up this till" stays Bolton's B1); a new shop stays hidden
+from customers until "Show [Second site] to customers"; the Workshop report
+compares shops (`rp-workshop-all`); the activity log, alerts and devices
+keep to their shop; transfers always say "[Second site]" and have a scan
+box; messages name the shop ("North Street Cycles, Bolton"); the other
+shop's buttons name their shop and line, and the shop name under a title is
+no longer small and faded; a customer's history says which shop.
+
+All seven stories in `ux-walkthrough-script.md` are walked. The staff canvas
+holds 497 of its 512 files.

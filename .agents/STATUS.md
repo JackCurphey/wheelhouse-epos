@@ -27,7 +27,21 @@ Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy on
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (493 and 330 files of 512 each).
+phone (497 and 330 files of 512 each).
+
+**UX walk-through 7 (an owner with two shops) (2 Oct):** the last story;
+every recommendation taken and drawn. All seven walk-throughs are done.
+Overview: 823 screens, 820 designed. The staff canvas holds 497 of 512 files
+— any more screens there need the canvas split (ask Jack). Next: Jack's
+walk-throughs with Mark, then a clickable prototype.
+**Not yet published (2 Oct, the day's 200-publish limit was reached):**
+walk-through 7 is on 10 journey canvases; still to publish are opening,
+oversight, quote, receiving, reports, setup, signin, sites, stock and
+website, and both big canvases. To finish: rebuild every canvas, diff
+against the live canvases, publish the changed boards (with canvas.json
+for reports, signin, sites and stock, and for the staff big canvas, merged
+onto its live copy). `live-canvas*.json` still describe the big canvases as
+they are live, without walk-through 7.
 
 **UX walk-throughs 5 (Cycle to Work) and 6 (a Lightspeed repair) (2 Oct):**
 every recommendation taken and drawn: the Cycle to Work sale at the till,
