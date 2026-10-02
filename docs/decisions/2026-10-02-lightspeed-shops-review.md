@@ -29,3 +29,12 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    Chosen over the workshop plus the extras Lightspeed lacks (Cycle to Work,
    the website), and everything Wheelhouse does with Lightspeed only taking
    payment.
+2. **Wheelhouse checks the linked work order and shows when it's paid**
+   (Jack, 2 Oct: "1"). The job reads "Waiting to be paid in Lightspeed",
+   then "Paid in Lightspeed · [time]" once Lightspeed shows the work order
+   settled. Staff still record the collection in Wheelhouse. Depends on
+   Lightspeed letting Wheelhouse see that a work order has been paid —
+   unchecked until there is a test account (add to proof steps LS-01–09);
+   if it can't, this falls back to staff ticking "Paid in Lightspeed" at
+   hand-over. Chosen over staff ticking it every time, and Wheelhouse never
+   showing payment.
