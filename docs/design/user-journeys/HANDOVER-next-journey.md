@@ -98,6 +98,14 @@ Supplier catalogue (browsing Madison, ZyroFisher and Raleigh) and Send the
 order stay in journey 13's "not designed" cards until a later release — see
 the later change at the end of the receiving-stock decisions.
 
+**Name idea: "WIZ" for integrations** (Jack, 2 Oct: "calling all the
+integration stuff with suppliers and whatnot 'WIZ' which is a play on having
+things called wizards in software and 'Wheelhouse Integration Zone'. Not
+something we have to do now"). A possible name for the area that connects
+Wheelhouse to suppliers and other systems (supplier feeds, Lightspeed,
+Shopify, accounts software). Not adopted yet; raise it when integrations are
+designed.
+
 **Remind Jack before we ship: a Doom mod easter egg** (Jack, 2 Oct: "i
 want a doom mod. we dont need to build this at all now, but its an easter
 egg i want you to remind me of before we ship"). Not designed or built;
