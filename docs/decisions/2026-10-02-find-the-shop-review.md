@@ -74,3 +74,32 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    switched off" look the same to the public, each with a search box and a
    link home. Chosen over only necessary cookies with no tracking, and a
    pop-up always.
+7. **UI audit: every recommendation taken** (Jack, 2 Oct: "yeah go ahead
+   with them all"). From `design/user-journeys/browse-ui-audit.md`: with
+   two or more shops the header shows journey 2's "Collecting from Bolton ·
+   Change", and a first visit has nothing chosen (H1); **no filter is ticked
+   for the customer** — each card says when it's ready, ticks always match
+   the chips, and an empty list says which filter is the cause (H2); a shop
+   with a tracking tool has "Cookies" and "Cookie choices" in the footer, a
+   "saved" line after choosing, and the Cookies page shows the choice (H3);
+   search suggestions work by keyboard and say how many there are (H4);
+   "Ask the shop" shows the shop's phone and email in place, and "we may be
+   able to order it in" appears only when the shop orders in (H5); the home
+   page with one shop has a "Find us" section, with two the shop cards'
+   buttons are outlined, with three or more the first few and "All shops"
+   (M1); "Collect from here" is a button that sets the shop (M2); one main
+   heading on every page (M3); **a parent category offers only filters all
+   its products share** — Derailleurs has "Number of gears" (M4); sort by
+   price, newest or A to Z, and "Best match" for search (M5); **sizes and
+   colours start unchosen** (M6); out here but in stock at the other shop
+   says so (M7); a product with no photo gets a plain tile with its name
+   (M8); search also finds the shop's pages and keeps what was typed (M9);
+   long lists have "Show more" and Back returns to the same place (M10);
+   photos open by keyboard (M11); targets 44px (M12); **the switched-off
+   page stays plain** — decision 6's search box and link home is for "page
+   not found" inside a live website, since a switched-off page may not show
+   or search anything of the shop (M13); "Turn it on" is one press, then
+   "Your website is on · Turn off", and the staff banner shows on every page
+   while it's off, with "Back to Wheelhouse" (M14); names, a skip link and
+   keyboard order (M15); and L1–L6 (wording "Ready today at Bolton" on
+   cards, "Collection and returns" in the footer, page titles).
