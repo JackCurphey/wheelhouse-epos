@@ -51,3 +51,12 @@ addresses are bracketed placeholders.
    separate start-up screen, and showing it only when something's wrong.
 
 ## Returning customers
+
+5. **Returning customers: the numbers, plus a "not seen lately" list**
+   (Jack, 2 Oct: "1"). A ready-made report beside the others (owners,
+   managers, and staff with "Can see reports"): new and returning customers
+   each month, the share who came back within 12 months, then the customers
+   not seen for [n] months, each opening their customer page. It follows the
+   Reports rules on who sees what, and suggests contact only for customers
+   who said yes to messages. Chosen over just the numbers, and a "Returning"
+   column in the Sales report.
