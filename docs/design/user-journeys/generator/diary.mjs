@@ -294,7 +294,7 @@ function requestDialog(size, w, h, { id, title, sub, body, footer, highlightJob 
 }
 
 // ---------- Bike tag barcode (real-looking Code 128 style bars) ----------
-function barcode128(value, w = 220, h = 46) {
+export function barcode128(value, w = 220, h = 46) {
   const bits = [];
   for (const ch of String(value)) { const code = ch.codePointAt(0); for (let i = 0; i < 8; i++) bits.push((code >> i) & 1); }
   while (bits.length < 88) bits.push((bits.length * 7) % 2);

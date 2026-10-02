@@ -683,16 +683,8 @@
    "title": "Designed · Today, when someone due in is late (desktop)",
    "is_interactive": true
   },
-  "j10-open-start.dc.html": {
-   "x": 18800,
-   "y": 8886,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Till start-up",
-   "is_interactive": true
-  },
   "j10-desk.dc.html": {
-   "x": 19980,
+   "x": 18800,
    "y": 8886,
    "w": 1100,
    "h": 816,
@@ -2195,8 +2187,16 @@
    "title": "Designed · Discounts and refunds as Staff see them (without who) (desktop)",
    "is_interactive": true
   },
+  "j17-rp-returning-desktop.dc.html": {
+   "x": 34960,
+   "y": 21878,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Returning customers: who comes back, who hasn’t lately (desktop)",
+   "is_interactive": true
+  },
   "j17-rp-accounts-connect-desktop.dc.html": {
-   "x": 35120,
+   "x": 36440,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2204,7 +2204,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-map-desktop.dc.html": {
-   "x": 36440,
+   "x": 37760,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2212,7 +2212,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-missing-desktop.dc.html": {
-   "x": 37760,
+   "x": 39080,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2220,7 +2220,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-log-desktop.dc.html": {
-   "x": 39080,
+   "x": 40400,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2228,7 +2228,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-lost-desktop.dc.html": {
-   "x": 40400,
+   "x": 41720,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2236,7 +2236,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-disconnect-desktop.dc.html": {
-   "x": 41720,
+   "x": 43040,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2244,7 +2244,7 @@
    "is_interactive": true
   },
   "j17-rp-today-accounts-desktop.dc.html": {
-   "x": 43040,
+   "x": 44360,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2252,19 +2252,11 @@
    "is_interactive": true
   },
   "j17-rp-person-desktop.dc.html": {
-   "x": 44360,
+   "x": 45680,
    "y": 21878,
    "w": 1280,
    "h": 856,
    "title": "Designed · A person: “Can see reports” on, “Can see costs and margin” off (desktop)",
-   "is_interactive": true
-  },
-  "j17-rep-customers.dc.html": {
-   "x": 45840,
-   "y": 21878,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Returning customers",
    "is_interactive": true
   },
   "j18-ws-start-which-desktop.dc.html": {
@@ -3506,7 +3498,6 @@
   "j10-op-today-two-desktop.dc.html",
   "j10-op-today-staff-desktop.dc.html",
   "j10-op-today-late-desktop.dc.html",
-  "j10-open-start.dc.html",
   "j10-desk.dc.html",
   "j11-till-sale-desktop.dc.html",
   "j11-till-empty-desktop.dc.html",
@@ -3695,6 +3686,7 @@
   "j17-rp-workshop-desktop.dc.html",
   "j17-rp-discounts-desktop.dc.html",
   "j17-rp-discounts-staff-desktop.dc.html",
+  "j17-rp-returning-desktop.dc.html",
   "j17-rp-accounts-connect-desktop.dc.html",
   "j17-rp-accounts-map-desktop.dc.html",
   "j17-rp-accounts-missing-desktop.dc.html",
@@ -3703,7 +3695,6 @@
   "j17-rp-accounts-disconnect-desktop.dc.html",
   "j17-rp-today-accounts-desktop.dc.html",
   "j17-rp-person-desktop.dc.html",
-  "j17-rep-customers.dc.html",
   "j18-ws-start-which-desktop.dc.html",
   "j18-ws-start-look-desktop.dc.html",
   "j18-ws-start-products-desktop.dc.html",
@@ -4074,7 +4065,7 @@
    "y": 8326,
    "text": "10 · Opening the shop and checking in — Staff and Manager",
    "kind": "title1",
-   "maxW": 21080
+   "maxW": 19900
   },
   "j11_s24": {
    "x": 0,
@@ -4459,19 +4450,9 @@
    "maxH": 150
   },
   "j17_s64": {
-   "x": 35120,
+   "x": 36440,
    "y": 21638,
    "text": "Accounts software and who sees what",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j17_s65": {
-   "x": 45840,
-   "y": 21638,
-   "text": "Still to design",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -4483,9 +4464,9 @@
    "y": 21318,
    "text": "17 · Reports and accounts — Owner, Manager and Staff",
    "kind": "title1",
-   "maxW": 46940
+   "maxW": 46920
   },
-  "j18_s67": {
+  "j18_s66": {
    "x": 0,
    "y": 23494,
    "text": "Setting it up",
@@ -4495,7 +4476,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s68": {
+  "j18_s67": {
    "x": 5440,
    "y": 23494,
    "text": "The Website page",
@@ -4505,7 +4486,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s69": {
+  "j18_s68": {
    "x": 12200,
    "y": 23494,
    "text": "Editing the home page",
@@ -4515,7 +4496,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s70": {
+  "j18_s69": {
    "x": 28200,
    "y": 23494,
    "text": "Theme",
@@ -4525,7 +4506,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s71": {
+  "j18_s70": {
    "x": 34960,
    "y": 23494,
    "text": "Publishing",
@@ -4535,7 +4516,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s72": {
+  "j18_s71": {
    "x": 40400,
    "y": 23494,
    "text": "Pages",
@@ -4545,7 +4526,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s73": {
+  "j18_s72": {
    "x": 45840,
    "y": 23494,
    "text": "Tracking tools",
@@ -4555,7 +4536,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s74": {
+  "j18_s73": {
    "x": 49960,
    "y": 23494,
    "text": "Web address (waiting on the business plan decision)",
@@ -4565,7 +4546,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s75": {
+  "j18_s74": {
    "x": 56720,
    "y": 23494,
    "text": "Online payments setup",
@@ -4575,7 +4556,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s76": {
+  "j18_s75": {
    "x": 64800,
    "y": 23494,
    "text": "Shopify",
@@ -4592,7 +4573,7 @@
    "kind": "title1",
    "maxW": 77920
   },
-  "j19_s78": {
+  "j19_s77": {
    "x": 0,
    "y": 25350,
    "text": "Choosing a shop",
@@ -4602,7 +4583,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s79": {
+  "j19_s78": {
    "x": 8080,
    "y": 25350,
    "text": "Prices and services by shop",
@@ -4612,7 +4593,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s80": {
+  "j19_s79": {
    "x": 13520,
    "y": 25350,
    "text": "People and booking",
@@ -4622,7 +4603,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s81": {
+  "j19_s80": {
    "x": 18960,
    "y": 25350,
    "text": "Jobs between shops",
@@ -4632,7 +4613,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s82": {
+  "j19_s81": {
    "x": 21760,
    "y": 25350,
    "text": "Adding a shop, and its tills",
@@ -4649,7 +4630,7 @@
    "kind": "title1",
    "maxW": 29600
   },
-  "j20_s84": {
+  "j20_s83": {
    "x": 0,
    "y": 27206,
    "text": "The activity log",
@@ -4659,7 +4640,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s85": {
+  "j20_s84": {
    "x": 10720,
    "y": 27206,
    "text": "What staff are told",
@@ -4669,7 +4650,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s86": {
+  "j20_s85": {
    "x": 14840,
    "y": 27206,
    "text": "Alerts on Today",
@@ -4679,7 +4660,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s87": {
+  "j20_s86": {
    "x": 17640,
    "y": 27206,
    "text": "Signed-in devices",
@@ -4689,7 +4670,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s88": {
+  "j20_s87": {
    "x": 25720,
    "y": 27206,
    "text": "Send feedback",
@@ -4706,7 +4687,7 @@
    "kind": "title1",
    "maxW": 32240
   },
-  "j21_s90": {
+  "j21_s89": {
    "x": 0,
    "y": 29062,
    "text": "Connecting Lightspeed",
@@ -4716,7 +4697,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s91": {
+  "j21_s90": {
    "x": 12040,
    "y": 29062,
    "text": "Quote and approval",
@@ -4726,7 +4707,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s92": {
+  "j21_s91": {
    "x": 25400,
    "y": 29062,
    "text": "When Lightspeed can’t be reached",
@@ -4736,7 +4717,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s93": {
+  "j21_s92": {
    "x": 32160,
    "y": 29062,
    "text": "Payment and collection",
@@ -4746,7 +4727,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s94": {
+  "j21_s93": {
    "x": 45520,
    "y": 29062,
    "text": "Settings and the customer",

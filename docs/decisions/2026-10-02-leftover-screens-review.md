@@ -60,3 +60,18 @@ addresses are bracketed placeholders.
    Reports rules on who sees what, and suggests contact only for customers
    who said yes to messages. Chosen over just the numbers, and a "Returning"
    column in the Sales report.
+
+## Drawn
+
+Drawn at desktop, tablet and phone on each journey's own canvas and copied
+into the big canvas (2 Oct). Journey 5 gains a row, "The receipt": the
+receipt email, the VAT invoice email, the text receipt and the till's "Email
+the receipt" pop-up; its old "done-receipt" placeholder is gone. Journey B's
+Till row gains the offline start-up screen; on it the till's top bar says
+"Offline · 3 sales waiting to send" as well, so the bar and the start-up line
+agree. Journey 17 gains Returning customers after the staff discounts
+report, with a card on Reports home (so journey 20's Reports screens
+change too); its "Still to design" row is gone, and so is journey 10's
+start-up placeholder. No UI audit has been run on these screens yet. The
+three screens still not designed are journey 13's supplier screens, left
+for a later release.

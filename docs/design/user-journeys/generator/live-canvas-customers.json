@@ -67,8 +67,16 @@
    "title": "Designed · Till check-in: PIN only (desktop)",
    "is_interactive": true
   },
-  "jb-till-pin-wrong-desktop.dc.html": {
+  "jb-till-checkin-offline-desktop.dc.html": {
    "x": 9560,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till start-up: offline, sales waiting to send (the start-up line on the PIN screen) (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-pin-wrong-desktop.dc.html": {
+   "x": 10880,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -76,7 +84,7 @@
    "is_interactive": true
   },
   "jb-pin-change-desktop.dc.html": {
-   "x": 10880,
+   "x": 12200,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -84,7 +92,7 @@
    "is_interactive": true
   },
   "jb-cust-signin-desktop.dc.html": {
-   "x": 12360,
+   "x": 13680,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -92,7 +100,7 @@
    "is_interactive": true
   },
   "jb-cust-code-desktop.dc.html": {
-   "x": 13680,
+   "x": 15000,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -100,7 +108,7 @@
    "is_interactive": true
   },
   "jb-cust-code-expired-desktop.dc.html": {
-   "x": 15000,
+   "x": 16320,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -108,7 +116,7 @@
    "is_interactive": true
   },
   "jb-pending.dc.html": {
-   "x": 16320,
+   "x": 17640,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -116,7 +124,7 @@
    "is_interactive": true
   },
   "jb-expired.dc.html": {
-   "x": 16790,
+   "x": 18110,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -1491,20 +1499,44 @@
    "title": "Designed · “Bike still waiting”: the wording (desktop)",
    "is_interactive": true
   },
-  "j05-ready.dc.html": {
+  "j05-cp-receipt-email-desktop.dc.html": {
    "x": 25720,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The receipt email (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-invoice-email-desktop.dc.html": {
+   "x": 27040,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · For a business: headed “VAT invoice” (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-receipt-text-desktop.dc.html": {
+   "x": 28360,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A text receipt: a link to the same receipt (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-receipt-address-desktop.dc.html": {
+   "x": 29680,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · No customer on the sale: this receipt only (desktop)",
+   "is_interactive": true
+  },
+  "j05-ready.dc.html": {
+   "x": 31160,
    "y": 12262,
    "w": 390,
    "h": 900,
    "title": "Designed · Customer is invited to collect",
-   "is_interactive": true
-  },
-  "j05-done-receipt.dc.html": {
-   "x": 26190,
-   "y": 12262,
-   "w": 390,
-   "h": 900,
-   "title": "Not designed · Receipt or invoice by email",
    "is_interactive": true
   },
   "j06-cw-list-desktop.dc.html": {
@@ -2181,6 +2213,7 @@
   "jb-auth-noaccess-desktop.dc.html",
   "jb-till-setup-desktop.dc.html",
   "jb-till-checkin-desktop.dc.html",
+  "jb-till-checkin-offline-desktop.dc.html",
   "jb-till-pin-wrong-desktop.dc.html",
   "jb-pin-change-desktop.dc.html",
   "jb-cust-signin-desktop.dc.html",
@@ -2359,8 +2392,11 @@
   "j05-cp-setting-desktop.dc.html",
   "j05-cp-messages-desktop.dc.html",
   "j05-cp-message-wording-desktop.dc.html",
+  "j05-cp-receipt-email-desktop.dc.html",
+  "j05-cp-invoice-email-desktop.dc.html",
+  "j05-cp-receipt-text-desktop.dc.html",
+  "j05-cp-receipt-address-desktop.dc.html",
   "j05-ready.dc.html",
-  "j05-done-receipt.dc.html",
   "j06-cw-list-desktop.dc.html",
   "j06-cw-list-owner-desktop.dc.html",
   "j06-cw-first-use-desktop.dc.html",
@@ -2475,7 +2511,7 @@
    "maxH": 150
   },
   "jb_s3": {
-   "x": 12360,
+   "x": 13680,
    "y": 2654,
    "text": "Customers",
    "w": 520,
@@ -2489,7 +2525,7 @@
    "y": 2334,
    "text": "B · Signing in and access — Staff and customers",
    "kind": "title1",
-   "maxW": 17180
+   "maxW": 18500
   },
   "j01_s5": {
    "x": 0,
@@ -2792,6 +2828,16 @@
   "j05_s36": {
    "x": 25720,
    "y": 12022,
+   "text": "The receipt",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j05_s37": {
+   "x": 31160,
+   "y": 12022,
    "text": "Also at collection",
    "w": 520,
    "size": "l",
@@ -2804,9 +2850,9 @@
    "y": 11702,
    "text": "05 · Collect the bike and pay — Customer",
    "kind": "title1",
-   "maxW": 26580
+   "maxW": 31550
   },
-  "j06_s38": {
+  "j06_s39": {
    "x": 0,
    "y": 13922,
    "text": "The list and a new order",
@@ -2816,7 +2862,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j06_s39": {
+  "j06_s40": {
    "x": 10720,
    "y": 13922,
    "text": "Waiting for the certificate",
@@ -2826,7 +2872,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j06_s40": {
+  "j06_s41": {
    "x": 24080,
    "y": 13922,
    "text": "Collection and payment",
@@ -2836,7 +2882,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j06_s41": {
+  "j06_s42": {
    "x": 36120,
    "y": 13922,
    "text": "Changes and cancelling",
@@ -2846,7 +2892,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j06_s42": {
+  "j06_s43": {
    "x": 41560,
    "y": 13922,
    "text": "Today, the customer, settings and messages",
@@ -2863,7 +2909,7 @@
    "kind": "title1",
    "maxW": 52040
   },
-  "j07_s44": {
+  "j07_s45": {
    "x": 0,
    "y": 15778,
    "text": "Your account",
@@ -2873,7 +2919,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s45": {
+  "j07_s46": {
    "x": 8080,
    "y": 15778,
    "text": "Talking to the shop",
@@ -2883,7 +2929,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s46": {
+  "j07_s47": {
    "x": 17480,
    "y": 15778,
    "text": "The shop’s side of messages",
@@ -2893,7 +2939,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s47": {
+  "j07_s48": {
    "x": 26030,
    "y": 15778,
    "text": "Service reminders",
@@ -2903,7 +2949,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s48": {
+  "j07_s49": {
    "x": 35430,
    "y": 15778,
    "text": "Reviews and how we contact you",
@@ -2913,7 +2959,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j07_s49": {
+  "j07_s50": {
    "x": 43510,
    "y": 15778,
    "text": "Your data",

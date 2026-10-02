@@ -101,6 +101,8 @@ const REPORTS = [
   ['Takings and cash-ups', 'Each closed day and till, and any cash difference', false],
   ['Workshop', 'Jobs, labour and parts, how full each mechanic was', false],
   ['Discounts and refunds', 'Every discount and refund, with its reason', false],
+  // Leftover screens decision 5 (2 Oct): REP-10.
+  ['Returning customers', 'Who comes back, and who hasn’t been in for a while', false],
   ['Margin and stock value', 'What you made on what you sold, and what’s on the shelves', true],
   ['VAT', 'VAT by rate for your VAT quarter, for your accountant', true],
   // Management oversight (journey 20) decisions 1 and 5: owners and
@@ -214,6 +216,16 @@ ${stats([stat('Sales before VAT', '£[£]', UP()), stat('What it cost you', '£[
 ${box(`${graph('Margin by category', CATS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], CATS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}`)}
 ${box(`${h3('On the shelves today')}<p style="margin: 0; font-size: 15px">Stock value, at what it cost you: ${mono('£[£]', 'font-weight: 700')}</p>${table('Stock value by category', ['Category', 'Items', 'What it cost you'], CATS.map((c) => [c, '[n]', '[£]']), ['All', '[n]', '[£]'])}`)}`);
 
+// ---------- Returning customers (leftover screens decision 5, 2 Oct) ----------
+// New and returning customers each month, the share back within 12 months,
+// then the customers not seen for [n] months. Contact is suggested only for
+// customers who said yes to messages.
+const lapsed = (name, last, yes) => [`<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; color: ${C.ink}">${name}</a>`, last, '[£]', yes ? 'Yes' : 'No'];
+const returning = () => wrap(`${head('Returning customers', 'North Street Cycles, Bolton · the last 12 months', 'Last 12 months', { list: ['This month', 'Last 12 months', 'Pick dates'] })}
+${stats([stat('Customers', '[n]', UP('[n]', 'the 12 months before')), stat('New', '[n]', UP('[n]', 'the 12 months before')), stat('Came back within 12 months', '[n]%', UP('[n] points', 'the 12 months before'))])}
+${box(`${graph('New and returning customers by month', MONTHS, { value: '[n]', key: ['Returning', 'New'], says: 'most returning in [month]; [up or down] [n] on the 12 months before' })}${note('A customer counts when they buy something or a repair is collected — in the shop or online.')}`)}
+${box(`${h3('Not seen for [n] months')}${note('Customers who used to come in. “OK to message” is what they said yes or no to.')}${table('Not seen lately', ['Customer', 'Last in', 'Spent in the last 2 years', 'OK to message'], [lapsed('Maya Patel', '[date]', true), lapsed('[Customer]', '[date]', false), lapsed('[Customer]', '[date]', true)])}`)}`);
+
 // ---------- Workshop (decision 6; audit L2) ----------
 const full = (name, booked, avail) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid ${C.border}"><div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span style="font-weight: 700">${name}</span><span>${avail ? `${mono(booked)} of ${mono(avail)} hours booked · <strong>[n]% full</strong>` : `${mono(booked)} hours booked · no set hours`}</span></div>${avail ? `<div aria-hidden="true" style="height: 10px; border-radius: 999px; border: 1px dashed ${C.input}; background: ${C.mutedBg}"></div>` : ''}</div>`;
 const workshop = () => wrap(`${head('Workshop', `North Street Cycles, Bolton · ${SO_FAR}`, 'This week')}
@@ -279,6 +291,7 @@ def('rp-vat-first', () => vatFirst());
 def('rp-vat-all', () => vat('All shops'));
 def('rp-margin', () => margin());
 def('rp-workshop', () => workshop());
+def('rp-returning', () => returning());
 def('rp-discounts', () => discounts());
 def('rp-discounts-staff', () => discounts(true));
 def('rp-accounts-connect', () => accountsBoard(connectOpen(), 'Not connected'));
@@ -299,6 +312,7 @@ for (const [id, fn] of recipes) {
 SIZE = 'desktop';
 
 export const TITLES = {
+  'rp-returning': 'Returning customers: who comes back, who hasn’t lately',
   'rp-home': 'Reports: the ready-made reports, and your own',
   'rp-home-staff': 'Reports for Staff with “Can see reports” (one shop, no costs)',
   'rp-report-menu': 'A saved report’s menu: rename, share, delete',
@@ -339,6 +353,6 @@ export const ROWS = [
   { label: 'Sales', screens: ['rp-sales', 'rp-sales-all', 'rp-sales-year', 'rp-sales-empty', 'rp-pick-dates'] },
   { label: 'Your own reports', screens: ['rp-change', 'rp-changed', 'rp-save', 'rp-save-taken'] },
   { label: 'Takings and cash-ups', screens: ['rp-takings', 'rp-takings-all', 'rp-day', 'rp-reopen', 'rp-takings-reopened'] },
-  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-margin', 'rp-workshop', 'rp-discounts', 'rp-discounts-staff'] },
+  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-margin', 'rp-workshop', 'rp-discounts', 'rp-discounts-staff', 'rp-returning'] },
   { label: 'Accounts software and who sees what', screens: ['rp-accounts-connect', 'rp-accounts-map', 'rp-accounts-missing', 'rp-accounts-log', 'rp-accounts-lost', 'rp-accounts-disconnect', 'rp-today-accounts', 'rp-person'] },
 ];

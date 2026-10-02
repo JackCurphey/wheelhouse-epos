@@ -66,11 +66,15 @@ UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md`, `online-ui-audit.md`,
 `browse-ui-audit.md`, `website-ui-audit.md`, `oversight-ui-audit.md`, `c2w-ui-audit.md`, `lightspeed-ui-audit.md` (this folder).
 
-Overview count (each screen once): 692 screens — 686 designed, 0 built, 2
-old app only, 4 not designed yet, 0 for review; the staff app canvas holds
-426 files and customers and the website 270, of 512 each (2 Oct: journey 21
-in; its five Release 1 screens replaced by its 38 Soft sand screens. Every
-journey is now drawn. A "Lightspeed shop" switch (`shop-mode.mjs`,
+Overview count (each screen once): 695 screens — 692 designed, 0 built, 2
+old app only, 1 not designed yet, 0 for review; the staff app canvas holds
+425 files and customers and the website 274, of 512 each (2 Oct: the
+leftover screens drawn — the receipt email, a text receipt and the till's
+"email the receipt" pop-up in journey 5, the till start-up line on the PIN
+screen in journey B, and the Returning customers report in journey 17; see
+`docs/decisions/2026-10-02-leftover-screens-review.md`. The 3 screens left
+are journey 13's supplier screens, deferred to a later release (below).
+Earlier, journey 21: a "Lightspeed shop" switch (`shop-mode.mjs`,
 `withLightspeedShop`) draws the sidebar, Settings, Today, Messages and the
 website header for a shop that keeps Lightspeed as its till; it changes no
 other journey's boards. Open from journey 21: what Lightspeed's account

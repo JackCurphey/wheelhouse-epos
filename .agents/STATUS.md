@@ -27,7 +27,17 @@ Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy on
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (426 and 270 files of 512 each).
+phone (425 and 274 files of 512 each).
+
+**Leftover screens (2 Oct):** Jack chose to draw the screens still marked
+"not designed" except journey 13's supplier screens, which wait for a later
+release. Five decisions in `docs/decisions/2026-10-02-leftover-screens-review.md`:
+one receipt email (headed "VAT invoice" for company customers), a text
+receipt as a link, a receipt-only address when no customer is on the sale,
+the till's start-up status as one line on the PIN screen, and a Returning
+customers report. Drawn at all three sizes and copied into the big canvas;
+no UI audit yet. Overview: 695 screens, 692 designed, 3 left (the supplier
+screens).
 
 **Journey 21, Lightspeed shops (2 Oct):** approved at desktop, tablet and
 phone and copied into the big canvas; 13 decisions in

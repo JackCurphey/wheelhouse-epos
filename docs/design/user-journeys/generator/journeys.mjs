@@ -98,6 +98,7 @@ export const journeys = [
       { label: 'Till', screens: [
         sb('till-setup', 'Set up this till', 'Manager'),
         sb('till-checkin', 'Till check-in: PIN only', 'Staff'),
+        sb('till-checkin-offline', 'Till start-up: offline, sales waiting to send (the start-up line on the PIN screen)', 'Staff'),
         sb('till-pin-wrong', 'Till check-in: wrong PIN', 'Staff'),
         sb('pin-change', 'Your new till PIN', 'Staff'),
       ] },
@@ -355,9 +356,14 @@ export const journeys = [
         sd5("cp-messages", "Settings › Front desk › Messages: “Bike still waiting”", "Manager"),
         sd5("cp-message-wording", "“Bike still waiting”: the wording", "Manager"),
       ] },
+      { label: "The receipt", screens: [
+        sd5("cp-receipt-email", "The receipt email", "Customer"),
+        sd5("cp-invoice-email", "For a business: headed “VAT invoice”", "Customer"),
+        sd5("cp-receipt-text", "A text receipt: a link to the same receipt", "Customer"),
+        sd5("cp-receipt-address", "No customer on the sale: this receipt only", "Staff"),
+      ] },
       { label: 'Also at collection', screens: [
         d('ready'),
-        g('done-receipt', 'Receipt or invoice by email', 'Customer', 'A copy for the customer’s records.', ['Shop details and VAT number', 'Lines, VAT, total, how paid'], { source: 'TILL-13 · DONE-04' }),
       ] },
     ],
   },
@@ -588,7 +594,6 @@ export const journeys = [
         sd10("op-today-late", "Today, when someone due in is late", "Manager"),
       ] },
       { label: 'Also at the start of the day', screens: [
-        g('open-start', 'Till start-up', 'Staff', 'What a registered till shows when it opens.', ['Site and till code', 'Connected, or offline with sales waiting', 'Last updated'], { source: 'Offline spec §5' }),
         d('desk'),
       ] },
     ],
@@ -879,6 +884,7 @@ export const journeys = [
         sd17("rp-workshop", "Workshop: jobs, takings, how full, turnaround, quotes", "Owner"),
         sd17("rp-discounts", "Discounts and refunds, with reasons and who gave them", "Owner"),
         sd17("rp-discounts-staff", "Discounts and refunds as Staff see them (without who)", "Staff"),
+        sd17("rp-returning", "Returning customers: who comes back, who hasn’t lately", "Owner and Manager"),
       ] },
       { label: "Accounts software and who sees what", screens: [
         sd17("rp-accounts-connect", "Settings › Your data › Accounts software: connect", "Owner"),
@@ -889,9 +895,6 @@ export const journeys = [
         sd17("rp-accounts-disconnect", "Disconnect Xero", "Owner"),
         sd17("rp-today-accounts", "Today: Wednesday didn’t go to Xero", "Owner"),
         sd17("rp-person", "A person: “Can see reports” on, “Can see costs and margin” off", "Owner"),
-      ] },
-      { label: 'Still to design', screens: [
-        g('rep-customers', 'Returning customers', 'Manager', 'How many customers come back.', ['Retention over time'], { source: 'REP-10' }),
       ] },
     ],
   },
