@@ -22,3 +22,51 @@ Lightspeed shop (21); 7 an owner with two shops (19, 20, 17).
    "1"). The pilot settles the report's format and the reusable script
    before Mark uses them. Chosen over all seven at once, and only the repair
    story with the rest left for Jack and Mark.
+2. **Walk-through 1 (the repair story): every recommendation taken** (Jack,
+   2 Oct: "1"). From `design/user-journeys/ux-walkthrough-1-repair.md`
+   (2 High, 9 Medium, 9 Low). Where the report gave no recommendation, the
+   one Claude gave was taken: booking at a two-shop business reuses the shop
+   the website remembered (M1), and "waiting for the customer" gets a diary
+   state and colour of its own (M3). The fixes are listed with the work as
+   it's done, below.
+3. **The staff canvas link goes in the script** (Jack, 2 Oct: "yes put the
+   link in"): https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j, which is
+   shared with anyone who has the link.
+
+## Walk-through 1 fixes (decision 2), as planned
+
+- **H1 spending limit:** the story's example changes so Maya picks "Call me
+  before any extra work" at booking, so her quote is sent legitimately and
+  every board shows the same limit. The within-limit path is drawn: a line
+  by "Send quote" ("Within the customer's £200 limit — no quote needed"), a
+  "Work added within your limit" message row, and the line on her page.
+- **H2 one press:** "Mark ready for collection" marks the job ready and sends
+  "Bike ready" with a short Undo; "Work finished" goes; Messages reads "When
+  a job is marked ready"; straight after approval the main button is "Start
+  work".
+- **M1:** booking starts with the shop the website remembered, as a closed
+  line with Change (touches Multiple sites decision 5 and its audit M8).
+- **M2:** the arrival time is the diary slot's start: WH-1042 sits at 09:30
+  and Today and the overview say "09:30 appointment".
+- **M3:** a diary state of its own, "Waiting for the customer", with its own
+  colour and a legend entry; purple stays "booking request" only.
+- **M4:** two message rows, "New ready date" and "Your answers"; the
+  waiting-for-parts strip says when it was sent.
+- **M5:** one expiry rule: the link lives until [n] days after collection;
+  for a booking that never arrives, [n] days after the booked date.
+- **M6:** a percentage deposit is worked out on the price known at booking,
+  then fixed; the pay, paid and receipt pages are drawn for the balance with
+  the deposit as its own row; "Request received" is drawn without a deposit.
+- **M7:** the reminder link fills in Maya's details part-hidden, no sign-in.
+- **M8:** "Bike still waiting" fills in "Paid — nothing more to pay" for a
+  paid job.
+- **M9:** the website's repairs use booking's list, and a repair chosen on
+  the website opens booking with it ticked.
+- **L1–L8:** customer words "Book a repair", staff "Book in"; one approval
+  word; the shop address a placeholder everywhere; a glossary in the script;
+  the reminder tick shown as already chosen; the account opens the same
+  receipt; a line telling a guest they can sign in; the ready page names
+  the checks not done (L5, touching Collect and pay M1); "Don't close things
+  by themselves" in Your settings › Accessibility; the ✕ on every pop-up a
+  real button (app-wide); the diary time follows a moved job. L9's edge
+  cases stay listed, not drawn.
