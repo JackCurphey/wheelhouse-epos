@@ -151,9 +151,19 @@ test('POST /api/sales for a Shopify-mapped product returns 201 immediately and t
   assert.ok(body.id, 'the sale must still be created and returned to the client');
 
   // The deferred push runs fire-and-forget, in a fresh runWithShop scope,
-  // after the response above already went out. Give it a moment to fail
-  // against the unreachable fake Shopify domain.
-  await new Promise((r) => setTimeout(r, 1000));
+  // after the response above already went out. Wait until it has visibly
+  // finished - its failure line, the "no scope" error, or the process
+  // exiting - rather than a fixed delay: the DNS lookup for the fake domain
+  // can take well over a second when the full suite is loading the machine,
+  // and a fixed 1s wait made this test flaky (checked before the push ran).
+  const deadline = Date.now() + 15000;
+  while (
+    Date.now() < deadline &&
+    child.exitCode === null &&
+    !/Shopify inventory push failed|No database client in scope/.test(stderr.slice(stderrBefore))
+  ) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
 
   assert.equal(child.exitCode, null, 'the process must not have crashed handling the deferred push');
   const newStderr = stderr.slice(stderrBefore);
