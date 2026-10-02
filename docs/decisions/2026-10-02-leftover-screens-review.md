@@ -35,3 +35,11 @@ addresses are bracketed placeholders.
    the same receipt as the email, with no sign-in needed, as "Bike ready"
    does; anyone with the link can see that receipt. Chosen over the whole
    receipt in the text, and taking "Text" off the till.
+3. **With no customer on the sale, the address or number is for this
+   receipt only** (Jack, 2 Oct: "1"). Staff type it; a tick, "Save to a
+   customer record", starts unticked and, if ticked, opens a quick "Add
+   customer" with it filled in. Nobody joins the customer list without
+   agreeing. Chosen over always creating or finding a customer, and Email
+   and Text only working with a customer on the sale.
+
+## Till start-up
