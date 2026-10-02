@@ -211,7 +211,10 @@ export const eodFolds = (open = {}) =>
 export const STAFF_INTRO = 'Who works here, and what each person can do.';
 // Management oversight (journey 20) decisions 2 and 3: where people are
 // signed in, and the alerts that reach Today.
-export const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] tills · [n] phones and computers', open.devices || '') + fold('Alerts on Today', 'Discounts, refunds, voids, prices below cost · set by the owner', open.alerts || '');
+export const staffFolds = (open = {}) => (lightspeedShop()
+  // Lightspeed shops (journey 21 audit M2): no tills, no till alerts.
+  ? fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] phones and computers', open.devices || '')
+  : fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] tills · [n] phones and computers', open.devices || '') + fold('Alerts on Today', 'Discounts, refunds, voids, prices below cost · set by the owner', open.alerts || ''));
 export const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
 export const shopFolds = (open = {}, sites = 'Bolton') =>
   fold('Shop details', 'North Street Cycles', open.details || '')
@@ -219,10 +222,14 @@ export const shopFolds = (open = {}, sites = 'Bolton') =>
   + fold('Sites', sites, open.sites || '');
 export const MSG_INTRO = 'The texts and emails customers get from the shop.';
 export const msgFolds = (open = {}) =>
-  fold('Automatic messages', '19 on', open.list || '')
+  fold('Automatic messages', lightspeedShop() ? '10 on' : '19 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 export const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
-export const dataFolds = (open = {}) => fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '');
+export const dataFolds = (open = {}) => (lightspeedShop()
+  // Lightspeed shops (journey 21 audit M2): no sales or stock here, and the
+  // activity log's way in, since Reports is hidden.
+  ? fold('Download everything', 'Customers, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '') + fold('Activity', 'What was done, when and by whom · owners and managers', open.activity || '')
+  : fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || ''));
 
 // An on/off switch on its own row (journey 5's hand-back reminders).
 export const rowSwitch = (label, on) => `<button type="button" role="switch" aria-checked="${on}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}"><span style="font-size: 15px; font-weight: 700">${label}</span><span style="display: inline-flex; align-items: center; gap: 10px"><span style="font-size: 14px; font-weight: 600; color: ${on ? C.ink : C.muted}">${on ? 'On' : 'Off'}</span><span aria-hidden="true" style="position: relative; display: inline-block; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}"><span style="position: absolute; top: 3px; left: ${on ? 21 : 3}px; width: 20px; height: 20px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 2px rgba(28,30,25,0.35)"></span></span></span></button>`;
@@ -259,11 +266,13 @@ export const c2wFolds = (open = {}) =>
 // Lightspeed shops (journey 21) decision 7: the connection, which shop is
 // which, staff matched for work orders, and what the connection can do.
 export const LS_INTRO = 'The Lightspeed till this shop uses for products, stock and payment.';
-export const lsFolds = (open = {}) =>
-  fold('Connection', open.off ? 'Not connected' : 'Connected · checked [n] seconds ago', open.connection || '')
-  + fold('Shops', open.off ? '—' : 'Bolton is [Lightspeed shop]', open.shops || '')
-  + fold('Staff on work orders', open.off ? '—' : '3 matched', open.staff || '')
-  + fold('What Wheelhouse can do', open.off ? '—' : '4 of 5 working', open.checks || '');
+// Audit L3: before connecting there's only the Connection section.
+export const lsFolds = (open = {}) => (open.off
+  ? fold('Connection', 'Not connected', open.connection || '')
+  : fold('Connection', open.signedOut ? 'Signed out · reconnect' : 'Connected', open.connection || '')
+    + fold('Shops', 'Bolton is [Lightspeed shop]', open.shops || '')
+    + fold('Staff on work orders', '2 matched · 1 doesn’t use Lightspeed', open.staff || '')
+    + fold('What Wheelhouse can do', '2 working · 3 show on first use', open.checks || ''));
 const AREA_FOLDS = { lightspeed: lsFolds, c2w: c2wFolds, online: onlineFolds, till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
 const AREA_INTROS = { lightspeed: LS_INTRO, c2w: C2W_INTRO, online: ONLINE_INTRO, till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
 

@@ -7,6 +7,11 @@
 // approved lines (£111.00).
 import { C, MONO, esc, icon, button, card, badge, logoSlot } from './ui.mjs';
 import { DW, DH, PW as _PW } from './stage1.mjs';
+import { lightspeedShop } from './shop-mode.mjs';
+// Lightspeed shops (journey 21 audit H1): their website doesn't sell — no
+// Shop and no Basket in the header.
+const siteNav = (list) => (lightspeedShop() ? list.filter((l) => l !== 'Shop') : list);
+const noBasket = (html) => (lightspeedShop() ? '' : html);
 import { shellDesktop, headerSearch, ROOMS_DIARY, LINES_APPROVED, WORK_TOTAL_APPROVED, screens as diaryScreens, a11ySettingRow, symbolsPreview, largerTextPreview, avatarWithCog, searchIconBtn, shellTablet, shellPhone, TW, TH } from './diary.mjs';
 
 const SHOP = 'North Street Cycles';
@@ -191,10 +196,10 @@ export function siteDesktop(themeKey, active = 'Shop', content = null) {
   return `${dark ? '<style>.site-search-dark::placeholder{color: rgba(255,255,255,0.85); opacity: 1}</style>' : ''}<div style="width: ${DW}px; height: ${DH}px; display: flex; flex-direction: column; background: ${t.ground}">
 <a href="#main-content" style="position: absolute; left: -9999px; top: 0">Skip to the main content</a><header style="height: 72px; flex-shrink: 0; box-sizing: border-box; padding: 0 40px; display: flex; align-items: center; gap: 28px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
 <a href="#" style="display: flex; align-items: center; gap: 10px; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 18px; font-weight: 700">${SHOP}</span></a>
-<nav aria-label="Website" style="display: flex; gap: 24px; flex-grow: 1">${['Shop', 'Book a repair', 'Our shops'].filter((l) => l !== t.highlight).map(navLink).join('')}</nav>
+<nav aria-label="Website" style="display: flex; gap: 24px; flex-grow: 1">${siteNav(['Shop', 'Book a repair', 'Our shops']).filter((l) => l !== t.highlight).map(navLink).join('')}</nav>
 <label style="display: flex; align-items: center; gap: 8px; width: 240px; min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; border: 1px solid ${dark ? 'rgba(255,255,255,0.4)' : C.input}; background: ${dark ? 'rgba(255,255,255,0.1)' : '#ffffff'}; color: ${dark ? 'rgba(255,255,255,0.85)' : C.muted}">${icon('search', 16)}<input class="${dark ? 'site-search-dark' : ''}" type="search" aria-label="Search the shop" placeholder="Search the shop" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: inherit"></label>
 ${headerBtn('user', 'Your account', 'Account')}
-${headerBtn('basket', 'Basket, 0 items', 'Basket')}
+${noBasket(headerBtn('basket', 'Basket, 0 items', 'Basket'))}
 ${t.highlight ? `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 8px; background: #ffffff; color: ${t.headerBg}; font-size: 15px; font-weight: 700; text-decoration: none">${t.highlight}</a>` : ''}
 </header>
 <main id="main-content" style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 20px">
@@ -269,8 +274,8 @@ export function siteTablet(themeKey, content = null, active = 'Shop') {
   return `<div style="width: ${TW}px; height: ${TH}px; display: flex; flex-direction: column; background: ${t.ground}">
 <a href="#main-content" style="position: absolute; left: -9999px; top: 0">Skip to the main content</a><header style="height: 68px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 22px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
 <a href="#" style="display: flex; align-items: center; gap: 10px; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 18px; font-weight: 700">${SHOP}</span></a>
-<nav aria-label="Website" style="display: flex; gap: 22px; flex-grow: 1">${['Shop', 'Book a repair', 'Our shops'].filter((l) => l !== t.highlight).map(navLink).join('')}</nav>
-${iconBtn('search', 'Search the shop')}${iconBtn('user', 'Your account')}${iconBtn('basket', 'Basket, 0 items')}
+<nav aria-label="Website" style="display: flex; gap: 22px; flex-grow: 1">${siteNav(['Shop', 'Book a repair', 'Our shops']).filter((l) => l !== t.highlight).map(navLink).join('')}</nav>
+${iconBtn('search', 'Search the shop')}${iconBtn('user', 'Your account')}${noBasket(iconBtn('basket', 'Basket, 0 items'))}
 ${t.highlight ? `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; background: #ffffff; color: ${t.headerBg}; font-size: 15px; font-weight: 700; text-decoration: none">${t.highlight}</a>` : ''}
 </header>
 <main id="main-content" style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 28px; display: flex">${content ?? `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: ${t.mutedInk}; font-size: 15px; line-height: 1.5">Page content — the shop’s pages, laid out in its theme<br>(designed with Find the shop and browse the website, journey 1)</div>`}</main>
@@ -283,12 +288,12 @@ export function sitePhone(themeKey, { menuOpen = false, content = null } = {}) {
   const iconBtn = (ic, label, extra = '') => `<a href="#" aria-label="${label}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${t.headerInk}; ${extra}">${icon(ic, 20)}</a>`;
   const menu = menuOpen ? `<nav aria-label="Website" style="position: absolute; top: 60px; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; background: ${t.ground === '#ffffff' ? '#ffffff' : C.panel}">
 ${t.highlight ? `<a href="#" style="display: flex; align-items: center; justify-content: center; min-height: 52px; margin-bottom: 8px; border-radius: 8px; background: ${t.headerBg}; color: #ffffff; font-size: 17px; font-weight: 700; text-decoration: none">${t.highlight}</a>` : ''}
-${['Shop', 'Book a repair', 'Our shops', 'Account'].filter((l) => l !== t.highlight).map((l) => `<a href="#" style="display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid ${C.border}; font-size: 17px; font-weight: 600; color: ${C.ink}; text-decoration: none">${l}</a>`).join('')}
+${siteNav(['Shop', 'Book a repair', 'Our shops', 'Account']).filter((l) => l !== t.highlight).map((l) => `<a href="#" style="display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid ${C.border}; font-size: 17px; font-weight: 600; color: ${C.ink}; text-decoration: none">${l}</a>`).join('')}
 </nav>` : '';
   return `<div style="position: relative; width: ${_PW}px; height: 844px; display: flex; flex-direction: column; background: ${t.ground}; overflow: hidden">
 <a href="#main-content" style="position: absolute; left: -9999px; top: 0">Skip to the main content</a><header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 4px 0 14px; display: flex; align-items: center; gap: 2px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
 <a href="#" style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${SHOP}</span></a>
-${iconBtn('search', 'Search the shop')}${iconBtn('basket', 'Basket, 0 items')}
+${iconBtn('search', 'Search the shop')}${noBasket(iconBtn('basket', 'Basket, 0 items'))}
 <button type="button" aria-label="${menuOpen ? 'Close menu' : 'Open menu'}" aria-expanded="${menuOpen}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${t.headerInk}">${icon(menuOpen ? 'close' : 'menu', 22)}</button>
 </header>
 <main id="main-content" style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 16px; display: flex">${content ?? `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: ${t.mutedInk}; font-size: 14px; line-height: 1.5">Page content<br>(journey 1)</div>`}</main>

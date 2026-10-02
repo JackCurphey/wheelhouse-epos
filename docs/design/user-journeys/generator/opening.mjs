@@ -78,7 +78,7 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // H3: "Seen" clears a short float in one click.
 // Journey 9 decision 3 (refresh): while a shop runs alongside Citrus Lime,
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
-export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, lightspeed = false, lsDown = false, as = null } = {}) {
+export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, lightspeed = false, lsDown = false, lsPerson = false, lsUnpaid = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
@@ -136,14 +136,20 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Lightspeed shops (journey 21) decision 6: Lightspeed out of reach for
     // longer than the shop's [n] minutes; sends wait and retry by themselves.
     lsDown && line('Can’t reach Lightspeed since [time]', '2 jobs waiting to send · Wheelhouse keeps trying by itself', button('See the jobs', { variant: 'default' }), warnLead),
+    // Lightspeed shops audit H2 and H3: jobs waiting on a person, and bikes
+    // that left before payment showed in Lightspeed.
+    lsPerson && line('2 jobs need someone to look at Lightspeed', 'WH-1042 · Maya Patel — choose the customer · [Job] — check the work order arrived', button('See the jobs', { variant: 'default' }).replace('<button', '<button aria-label="See the jobs that need someone to look at Lightspeed"'), warnLead),
+    lsUnpaid && line('Handed over, not paid in Lightspeed · Maya Patel · WH-1042', 'Collected [n] days ago by Jo Taylor · agreed £111.00', button('Open the job', { variant: 'default' }).replace('<button', '<button aria-label="Open WH-1042"'), warnLead),
     waiting && line('Till B1 has [n] sales waiting to send', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Try again', { variant: 'default' }), warnLead),
   ].filter(Boolean);
   const attention = section('Needs attention', items.length ? list(items)
     : `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid ${C.border}; font-size: 15px; color: ${C.muted}">${icon('check', 16)}Nothing needs you right now</div>`, '', items.length);
   // Lightspeed shops: no Wheelhouse tills; the Lightspeed line says how
   // fresh its figures are (decisions 1 and 5).
-  const lsLine = section('Lightspeed', list([line('Connected', lsDown ? 'Last reached at [time]' : 'Products, stock and payments checked [n] seconds ago', tag(lsDown ? 'Can’t reach' : 'Up to date', lsDown ? 'warn' : 'ok'))]));
-  const left = staff ? who : `${attention}${lightspeed ? lsLine : tills}${who}`;
+  // Audit M4: the line says what's true now; "payments" only when payment
+  // is being checked. M3: no Who's in — there's no till check-in.
+  const lsLine = section('Lightspeed', `<div role="status">${list([line(lsDown ? 'Can’t reach Lightspeed' : 'Up to date', lsDown ? 'Last reached at [time] · jobs wait and send by themselves' : 'Products, stock and payments checked [n] seconds ago', tag(lsDown ? 'Can’t reach' : 'Up to date', lsDown ? 'warn' : 'ok'))])}</div>`);
+  const left = staff ? who : lightspeed ? `${attention}${lsLine}` : `${attention}${tills}${who}`;
   const cols = isPhone() ? `${left}${work}` : `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start"><div style="display: flex; flex-direction: column; gap: 14px">${left}</div><div style="display: flex; flex-direction: column; gap: 14px">${work}</div></div>`;
   return page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton · open [opens]–[closes]')}${cols}</div>`, as || (staff ? STAFF : MANAGER));
 }

@@ -11,6 +11,7 @@
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO, payFolds, PAY_INTRO, TILL_INTRO, tillFolds, EOD_INTRO, eodFolds, STAFF_INTRO, staffFolds, SHOP_INTRO, shopFolds, MSG_INTRO, msgFolds, DATA_INTRO, dataFolds } from './settings-frame.mjs';
 import { screens as diaryScreens } from './diary.mjs';
+import { lightspeedShop } from './shop-mode.mjs';
 
 export const screens = {};
 // The shop's owner — no owner name exists in the example data (decision 16).
@@ -295,10 +296,10 @@ const msgListOpen = ({ bringBack = true, hoverReview = false } = {}) => `<div st
 ${msgRowChoice('Quote to approve', 'When a job needs the customer’s OK', { reminder: true })}
 ${msgRowChoice('Bike ready', 'When a job is finished', { hover: !isPhone() })}
 ${msgRowChoice('Bike still waiting', 'When a ready bike isn’t collected after [n] days')}
-<h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Online order messages</h4>
+${lightspeedShop() ? '' : `<h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Online order messages</h4>
 ${ONLINE_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}
 <h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Cycle to Work messages</h4>
-${C2W_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}
+${C2W_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}`}
 <h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Booking messages</h4>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
 ${BOOKING_MSGS.map(([n, w]) => msgRowChoice(n, w)).join('')}${bringBack ? bringBackRows(hoverReview) : ''}</div>
