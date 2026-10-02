@@ -157,14 +157,17 @@ export function yourSettingsDialog(size = 'desktop', { graphs = false } = {}) {
   // Journey B decision 6: each person sets their own till PIN here.
   const label = (t) => `<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${t}</div>`;
   const pinBlock = `${label('Till')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Till PIN</span><span aria-label="PIN is set" style="font-family: ${MONO}; font-size: 18px; letter-spacing: 3px">••••</span></div><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Checks you in at the till and puts your name on sales. Only you know it.</span>${button('Change PIN', { variant: 'default', block: true, href: `pin-change-${size}.dc.html` })}</div>`)}`;
+  // Management oversight (journey 20) decision 4: feedback to the
+  // Wheelhouse team, for everyone.
+  const helpBlock = `${label('Help')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 15px; font-weight: 700">Something wrong or missing?</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Tell the Wheelhouse team. We see which screen you were on.</span>${button('Send feedback', { variant: 'default', block: true, href: `send-feedback-${size}.dc.html` })}</div>`)}`;
   const accBlock = `${label('Accessibility')}${rows.join('')}<p style="margin: 0; font-size: 13px; color: ${C.muted}">Changes apply straight away.</p>`;
   return `<div role="dialog" aria-modal="true" aria-labelledby="ys-title-${size}" style="${P ? 'width: 100%; height: 100%;' : 'width: 900px; max-height: 100%; border: 1px solid ' + C.border + '; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28);'} box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">
 <div style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
 <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="ys-title-${size}" style="margin: 0; font-size: 20px; font-weight: 700">Your settings</h2><span style="font-size: 13px; color: ${C.muted}">${STAFF.person} · ${STAFF.roleName} · ${P ? 'just for you' : 'just for you, they don’t change what others see'}</span></div>
 <a href="diary-${size}.dc.html" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>
 </div>
-${P ? `<div data-scroll style="padding: 14px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 0; overflow-y: auto">${pinBlock}${accBlock}</div>`
-  : `<div style="padding: 18px 22px 22px; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start"><div style="display: flex; flex-direction: column; gap: 12px">${pinBlock}</div><div style="display: flex; flex-direction: column; gap: 12px">${accBlock}</div></div>`}
+${P ? `<div data-scroll style="padding: 14px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 0; overflow-y: auto">${pinBlock}${accBlock}${helpBlock}</div>`
+  : `<div style="padding: 18px 22px 22px; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; align-items: start"><div style="display: flex; flex-direction: column; gap: 12px">${pinBlock}${helpBlock}</div><div style="display: flex; flex-direction: column; gap: 12px">${accBlock}</div></div>`}
 </div>`;
 }
 screens['your-settings'] = {

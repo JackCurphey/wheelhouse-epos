@@ -199,7 +199,9 @@ export const eodFolds = (open = {}) =>
   + fold('Close the day', '1 hour before closing', open.close || '')
   + fold('Counting the cash', 'Count first', open.count || '');
 export const STAFF_INTRO = 'Who works here, and what each person can do.';
-export const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '');
+// Management oversight (journey 20) decisions 2 and 3: where people are
+// signed in, and the alerts that reach Today.
+export const staffFolds = (open = {}) => fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] tills · [n] phones and computers', open.devices || '') + fold('Alerts on Today', 'Big discounts and refunds, voids, prices below cost', open.alerts || '');
 export const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
 export const shopFolds = (open = {}, sites = 'Bolton') =>
   fold('Shop details', 'North Street Cycles', open.details || '')

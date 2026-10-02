@@ -78,7 +78,7 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // H3: "Seen" clears a short float in one click.
 // Journey 9 decision 3 (refresh): while a shop runs alongside Citrus Lime,
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
-export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, as = null } = {}) {
+export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
@@ -100,6 +100,11 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Reports and accounts decision 4: a day that couldn't go to the accounts software.
     // Website management (journey 18, audit H5): the payment provider needs
     // more details from the shop, or online payments stop.
+    // Management oversight (journey 20) decision 2: alerts above amounts the
+    // shop sets; "Seen" clears them, and each opens the activity log.
+    watch && line('Jo Taylor gave a £[£] discount', 'Over £[amount] · Sale [sale number] at [time] · “[reason]”', `<span style="display: inline-flex; gap: 6px">${button('Seen', { variant: 'default' })}${button('Open', { variant: 'default' })}</span>`, warnLead),
+    watch && line('Jo Taylor voided [n] sales today', 'More than [n] · Till B1 · the last at [time]', `<span style="display: inline-flex; gap: 6px">${button('Seen', { variant: 'default' })}${button('Open', { variant: 'default' })}</span>`, warnLead),
+    watch && line('Shimano brake pads B05S-RX now sell below cost', 'Price changed by [name] at [time] · £28.00 → £[£] · cost £[£]', `<span style="display: inline-flex; gap: 6px">${button('Seen', { variant: 'default' })}${button('Open', { variant: 'default' })}</span>`, warnLead),
     payMore && line('[payment provider] needs more details by [date]', 'Or online payments and “Pay now” for repairs stop · usually [what they need]', button('Add the details', { variant: 'default' }), warnLead),
     accounts && line('Wednesday 16 September didn’t go to Xero', 'Bolton · closed at [time] · [Category] has no Xero account chosen', button('Choose an account for [Category]', { variant: 'default' }), warnLead),
     // Buy online decisions 6 and 7: new online orders, and one left uncollected.
