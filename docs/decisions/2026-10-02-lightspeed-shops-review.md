@@ -70,3 +70,12 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    Release 1 "unknown is different from failed" screen). If it lasts longer
    than [n] minutes, a line goes on Today. Chosen over staff retrying every
    failed send, and staff making the work order by hand.
+7. **The owner connects Lightspeed in Settings, with a short guided
+   start** (Jack, 2 Oct: "1"). Settings › Office gains a Lightspeed
+   section: "Connect Lightspeed" signs in on Lightspeed's own page; with more
+   than one shop, the owner says which Lightspeed shop is which Wheelhouse
+   shop; Wheelhouse matches staff by name so work orders show who did the
+   job, and the owner fixes any it can't; then a short checklist shows what
+   works — read products and stock, find customers, make work orders, see
+   payment — each ticked or flagged. Chosen over the Wheelhouse team
+   connecting it for the shop, and a plain "Connected" with no checklist.
