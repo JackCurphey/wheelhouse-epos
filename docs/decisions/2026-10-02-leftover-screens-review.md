@@ -122,3 +122,10 @@ build rather than drawn: the email's barcode as a picture file (some email
 programs don't show drawn ones, from memory), and the shared pop-up's ✕
 being a link rather than a button — that is the same on every pop-up in
 the app, so it's for the end-of-project audit, not this batch.
+
+**Later change (Jack, 2 Oct: "lets just have a generic vat invoice for now,
+im sure they all vary").** The VAT invoice stays the general one drawn: the
+shop's details and VAT number, the company's "Invoice to" block from its
+record, the lines, the total, one "VAT at [rate]" row and how it was paid,
+numbered like the receipt. No accountant check before the design moves on;
+what a particular shop or accountant needs is for later.

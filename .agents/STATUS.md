@@ -39,7 +39,7 @@ customers report. Drawn at all three sizes and copied into the big canvas.
 UI audit (`leftover-ui-audit.md`): every recommendation taken (decision 6) —
 an email for a sale with no customer, a till-sale receipt, the pop-up's
 states, a company's VAT number and "Send invoices to", the PIN line saying
-what is up to date. Open: what a VAT invoice must carry (accountant).
+what is up to date. The VAT invoice stays a general one for now (Jack).
 Overview: 704 screens, 701 designed, 3 left (the supplier screens).
 
 **Journey 21, Lightspeed shops (2 Oct):** approved at desktop, tablet and
