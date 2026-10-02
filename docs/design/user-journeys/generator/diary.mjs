@@ -10,6 +10,7 @@ import { C, MONO, FONT_DISPLAY, THEME, esc, icon, button, field, card, badge, lo
 import { DW, DH, PW, PH, h1, p, link, stack } from './stage1.mjs';
 import { settingsPage, workshopFolds, WORKSHOP_INTRO, withSize } from './settings-frame.mjs';
 import { customerPageAt } from './customer.mjs';
+import { lightspeedShop, LS_HIDDEN } from './shop-mode.mjs';
 // The settled job page (decision 40, 28 Sep 2026 round) — board job-final-2
 // in job-options.mjs. Shared with that file via job-page.mjs so neither file
 // depends on the other's internals (see that module's header comment).
@@ -113,7 +114,7 @@ export const ROOMS_DIARY = [
 // Reports and accounts (audit H3): Staff with "Can see reports" also get Reports.
 let EXTRA_ROOMS = [];
 export const withRooms = (keys, fn) => { const was = EXTRA_ROOMS; EXTRA_ROOMS = keys; try { return fn(); } finally { EXTRA_ROOMS = was; } };
-const roomsFor = (role) => ROOMS_DIARY.map(([room, items]) => [room, items.filter((i) => i[3].includes(role) || EXTRA_ROOMS.includes(i[0]))]).filter(([, items]) => items.length);
+const roomsFor = (role) => ROOMS_DIARY.map(([room, items]) => [room, items.filter((i) => (i[3].includes(role) || EXTRA_ROOMS.includes(i[0])) && !(lightspeedShop() && LS_HIDDEN.includes(i[0])))]).filter(([, items]) => items.length);
 
 export function sideItem([key, label, ic], active) {
   const on = key === active;
@@ -2249,8 +2250,8 @@ function collectionStripCompact() {
 // default, so they are not drawn here.
 // Audit M3: the note sits in a fixed-width slot so the main button is the
 // same width whichever it is.
-const footNote = (t, size) => size === 'phone' ? note(t, 13) : `<div style="flex: 0 0 240px">${note(t, 12)}</div>`;
-const handOverFooter = (size) => `${button('Hand over', { variant: 'primary', block: true })}${footNote('Records that the bike has gone.', size)}`;
+export const footNote = (t, size) => size === 'phone' ? note(t, 13) : `<div style="flex: 0 0 240px">${note(t, 12)}</div>`;
+export const handOverFooter = (size) => `${button('Hand over', { variant: 'primary', block: true })}${footNote('Records that the bike has gone.', size)}`;
 // Not paid yet — "Take payment" opens the till with the job loaded and
 // "Bike collected when paid" on (Selling at the till 10); paying records
 // collection.
@@ -2293,7 +2294,7 @@ export function buildJobPageDesktop({
 
 // Phone versions of the stage-only strips (same texts as the desktop compact
 // strips above, stacked for a narrow screen).
-const phoneStagePanel = (inner, extra = '') => `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; ${extra}">${inner}</div>`;
+export const phoneStagePanel = (inner, extra = '') => `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; ${extra}">${inner}</div>`;
 const PHONE_STAGE_TOP = {
   bookIn: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 15)}${badge('Acknowledged', 'green')}</div>${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span>`),
   waiting: () => phoneStagePanel(`<div>${badge('Waiting for parts', 'amber')}</div><span style="font-size: 15px; font-weight: 600">Replacement rear brake pads delayed</span><span style="font-size: 14px">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.35">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span>`, `border-color: ${ST.waiting[1]}`),
@@ -2759,7 +2760,7 @@ screens['job-ready-unpaid'] = buildJobPage({
 // Journey 5 audit (30 Sep). H2: a deposit was taken — only the balance is
 // to pay (Selling at the till 11's example: 25% of £111.00).
 const J5_DEPOSIT = WORK_TOTAL_APPROVED * 0.25;
-const jobVariant = (status, tone, strip, phoneTop, footer) => buildJobPage({
+export const jobVariant = (status, tone, strip, phoneTop, footer) => buildJobPage({
   status, tone,
   touch: { footer: (size) => footer(size), stageTop: () => strip(), phoneTop },
   desktop: {

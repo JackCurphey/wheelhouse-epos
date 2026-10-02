@@ -18,7 +18,8 @@ account yet (proof steps LS-01–09 pending). Real example data only: North
 Street Cycles, Bolton, Jack Lewis (Owner), Jo Taylor (Staff), Alex Morgan
 (Mechanic), Maya Patel with WH-1042 (Trek Domane AL 3, Standard service,
 approved total £111); Lightspeed's own references are bracketed
-placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
+placeholders. Own canvas: https://claude.ai/artifact/2qnzyGx8enhxbVN17Brpnf ,
+desktop first, then tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
 62, 65–67; A2, A6 — as few clicks as possible).
 
 1. **Workshop only, with Lightspeed doing the money** (Jack, 2 Oct: "1").

@@ -13,6 +13,7 @@
 import { C, esc, icon, card } from './ui.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { shellDesktop, shellTablet, shellPhone, TW, TH } from './diary.mjs';
+import { lightspeedShop } from './shop-mode.mjs';
 
 let SIZE = 'desktop';
 export const setSize = (s) => { SIZE = s; };
@@ -62,11 +63,19 @@ export const SETTINGS_ROOMS = [
 let ONLINE_AREA = true;
 export const withOnlineArea = (fn) => { const was = ONLINE_AREA; ONLINE_AREA = true; try { return fn(); } finally { ONLINE_AREA = was; } };
 // Cycle to Work (journey 6) adds its own area after Online orders.
+// Lightspeed shops (journey 21) decisions 1 and 7: Front desk keeps only
+// Messages, there's no Stockroom, and Office gains a Lightspeed area.
 const roomOf = (area) => {
-  const r = SETTINGS_ROOMS.find((x) => x[4].includes(area) || ((area === 'online' || area === 'c2w') && x[0] === 'frontdesk'));
+  const r = SETTINGS_ROOMS.find((x) => x[4].includes(area) || ((area === 'online' || area === 'c2w') && x[0] === 'frontdesk') || (area === 'lightspeed' && x[0] === 'office'));
+  if (lightspeedShop()) {
+    if (r[0] === 'frontdesk') return [r[0], r[1], 'Messages to customers.', r[3], ['messages']];
+    if (r[0] === 'office') return [r[0], r[1], 'The shop, the people who work here, Lightspeed and your data.', r[3], ['shop', 'staff', 'lightspeed', 'data']];
+    return r;
+  }
   return ONLINE_AREA && r[0] === 'frontdesk' ? [...r.slice(0, 4), [...r[4], 'online', 'c2w']] : r;
 };
-const areaTitle = (k) => (k === 'online' ? 'Online orders' : k === 'c2w' ? 'Cycle to Work' : (AREAS.find((a) => a[0] === k) || [k, k])[1]);
+const settingsRooms = () => (lightspeedShop() ? SETTINGS_ROOMS.filter((x) => x[0] !== 'stockroom') : SETTINGS_ROOMS);
+const areaTitle = (k) => (k === 'online' ? 'Online orders' : k === 'c2w' ? 'Cycle to Work' : k === 'lightspeed' ? 'Lightspeed' : (AREAS.find((a) => a[0] === k) || [k, k])[1]);
 
 // A folding section: title, a one-line summary, a chevron. On a phone the
 // summary sits under the title rather than beside it.
@@ -129,7 +138,7 @@ export function settingsPage(active, title, intro, sections, { toast = '', banne
     const body = `<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 10px">${back}${top}</div><div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${shown}</div>`;
     return shellPhone('Settings', `<div style="position: relative; display: flex; flex-direction: column; gap: 12px; height: 100%">${body}${toastHtml(toast)}</div>`, { ...who, active: 'settings' });
   }
-  const list = `<nav aria-label="Settings" style="width: ${SIZE === 'tablet' ? 190 : 220}px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">${SETTINGS_ROOMS.map(([k, t]) => {
+  const list = `<nav aria-label="Settings" style="width: ${SIZE === 'tablet' ? 190 : 220}px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px">${settingsRooms().map(([k, t]) => {
     const on = k === room;
     return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: ${on ? 700 : 500}; color: ${C.ink}; background: ${on ? C.mutedBg : 'transparent'}">${on ? `<span style="width: 6px; height: 6px; border-radius: 999px; background: ${C.accent}"></span>` : `<span style="width: 6px"></span>`}${esc(t)}</a>`;
   }).join('')}</nav>`;
@@ -143,7 +152,7 @@ export function settingsPage(active, title, intro, sections, { toast = '', banne
 // decision 7).
 export function settingsList(who = MANAGER) {
   const row = ([, t, , sub]) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${esc(t)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(sub)}</span></span><span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
-  return shellPhone('Settings', `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto">${card(SETTINGS_ROOMS.map(row).join('').replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden')}</div>`, { ...who, active: 'settings' });
+  return shellPhone('Settings', `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto">${card(settingsRooms().map(row).join('').replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden')}</div>`, { ...who, active: 'settings' });
 }
 
 // Pop-ups: in the middle on desktop and tablet (Workshop day 15, 16), the
@@ -168,7 +177,7 @@ export function overlay(base, d) {
 export const workshopFolds = (open = {}) =>
   fold('Services', 'Full service, Individual service', open.services || '')
   // Book a repair decision 11: every rule for booking online, in one place.
-  + fold('Online booking', 'Exact times · 2 hours’ notice · deposit [n]% · each booking a request', open.online || '')
+  + fold('Online booking', lightspeedShop() ? 'Exact times · 2 hours’ notice · no deposit · each booking a request' : 'Exact times · 2 hours’ notice · deposit [n]% · each booking a request', open.online || '')
   + fold('Mechanics', 'Alex Morgan, Jo Taylor, Shared queue', open.mechanics || '')
   + fold('Diary blocks', 'Bike, then job title', open.diary || '')
   + fold('Storage slots', 'On · 8 slots', open.storage || '')
@@ -247,8 +256,16 @@ export const c2wFolds = (open = {}) =>
   + fold('Scheme providers', '[n] providers', open.providers || '')
   + fold('On Today', 'No certificate after [n] days · payment [n] days late', open.today || '');
 
-const AREA_FOLDS = { c2w: c2wFolds, online: onlineFolds, till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
-const AREA_INTROS = { c2w: C2W_INTRO, online: ONLINE_INTRO, till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
+// Lightspeed shops (journey 21) decision 7: the connection, which shop is
+// which, staff matched for work orders, and what the connection can do.
+export const LS_INTRO = 'The Lightspeed till this shop uses for products, stock and payment.';
+export const lsFolds = (open = {}) =>
+  fold('Connection', open.off ? 'Not connected' : 'Connected · checked [n] seconds ago', open.connection || '')
+  + fold('Shops', open.off ? '—' : 'Bolton is [Lightspeed shop]', open.shops || '')
+  + fold('Staff on work orders', open.off ? '—' : '3 matched', open.staff || '')
+  + fold('What Wheelhouse can do', open.off ? '—' : '4 of 5 working', open.checks || '');
+const AREA_FOLDS = { lightspeed: lsFolds, c2w: c2wFolds, online: onlineFolds, till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
+const AREA_INTROS = { lightspeed: LS_INTRO, c2w: C2W_INTRO, online: ONLINE_INTRO, till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
 
 // Account, history and reminders decision 2: the customer's one yes to
 // service reminders, at booking and at collection.
