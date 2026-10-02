@@ -60,3 +60,13 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    the part goes on the work order as that product, and Lightspeed takes it
    off stock when the job is paid. Chosen over parts typed freely and
    matched in Lightspeed by staff, and quoting labour only.
+6. **When Lightspeed can't be reached, the workshop carries on and
+   Wheelhouse catches up by itself** (Jack, 2 Oct: "1"). Jobs, quotes and
+   the diary keep working; anything to send waits ("Waiting to reach
+   Lightspeed") and is retried automatically. A send that may or may not
+   have arrived is never repeated blindly: Wheelhouse first looks in
+   Lightspeed for the work order and links it if it's there; only when it
+   still can't tell do staff get a "Check this in Lightspeed" step (the
+   Release 1 "unknown is different from failed" screen). If it lasts longer
+   than [n] minutes, a line goes on Today. Chosen over staff retrying every
+   failed send, and staff making the work order by hand.
