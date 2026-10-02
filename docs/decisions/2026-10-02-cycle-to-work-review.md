@@ -89,3 +89,59 @@ as few clicks as possible).
    for a quote, is noted for later** (Jack, 2 Oct: "but i would also like to
    remember 2 for the future") — kept in the handover's "Noted for later". Chosen over adding that page now, and the
    quote only.
+7. **UI audit: every recommendation taken** (Jack, 2 Oct: "go ahead with
+   them all"). From `design/user-journeys/c2w-ui-audit.md`:
+   - **No provider's process is stated as fact** (H1). The hand-over
+     checklist is one box per line of the provider's own note in Settings,
+     none ticked to start, and the history records which were ticked. The
+     certificate shows "Certificate £[£] · quote £[£]" and flags a
+     difference without saying why. The quote and email say "Quote number
+     [quote number]", plus a "How to apply" line the shop writes once.
+     Settings › Payments no longer says "the scheme pays the shop".
+   - **A "Who pays what" block** on the order and the hand-over (H2): the
+     total, any deposit already paid, what the provider pays, and what the
+     customer pays at collection, worked out from those; anything over
+     £0.00 opens the till with a second payment line. A certificate for
+     less offers "Change the order to match" or "Keep the order; Maya pays
+     the difference". Each provider says whether accessories are inside
+     what it pays.
+   - **Staff without "Can see costs and margin" don't see the bike's cost
+     or the commission** (H3); they still see what's expected.
+   - **Money steps are for owners, managers and Staff with "Can close the
+     day", and each is logged** (H4): Mark paid, Save as part paid, Close
+     with a reason, cancelling an order that holds a deposit, and Order now
+     anyway. These are new kinds of line in the activity log, approved
+     here. The customer steps (quote, hold, release, certificate, hand
+     over) are for everyone at the front desk.
+   - **The quote's closing paragraph is built from the order** (H5): the
+     hold, or what makes the shop order the bike, and the shop's deposit
+     rule. Staff see the sentence in the New order pop-up first.
+   - A tick in New order, "Email the quote to maya@example.test now" (M1).
+     The list has a top line, "[n] holds ending soon · [n] payments late";
+     Today stays for owners and managers, and the setting reads "Remind the
+     shop" (M2). The sidebar count is what's due or late: holds ending,
+     bikes ready to order, quotes with no certificate after [n] days,
+     payments late (M3).
+   - A held bike shows "Held for [name] until [date]" in Stock and the
+     till's search, and as sold out on the website; New order won't hold
+     it twice (M4). "Order from [supplier]" stays one press, with "Undo"
+     (M5). The owed page opens from a line at the top of the list, for
+     people who may see the money, and from a Reports card (M6). A
+     customer's view of the order in their website account, with no
+     commission, provider payment or staff names (M7).
+   - The missing steps drawn: Applied and the application reference, the
+     deposit taken, a bike on order arriving, a released bike when the
+     certificate comes, part paid (M8). The More menu, a revised quote, the
+     first time with no providers, and cancelling an ordered bike; "Quotes
+     are valid for [n] days" is its own setting (M9). "What's happened" is
+     one list that only grows (M10). Buttons named for their customer,
+     labels tied to their boxes, headings in order, the hold choices
+     grouped (M11).
+   - L1–L7: one reminder number everywhere, and the message keeps its
+     decision 6 name, "Your hold ends on [date]"; 44px-wide links and
+     outlined buttons; a £ / % switch on commission and deposit, and new
+     terms apply only to new orders; Today's workshop tile reads "Repairs
+     ready to collect"; Jack drawn as the Owner throughout; the overview's
+     "waits on Jack's explanation" wording replaced; "Hold longer" on Today
+     holds at once with Undo, and "Add the certificate" sits on the list
+     row.
