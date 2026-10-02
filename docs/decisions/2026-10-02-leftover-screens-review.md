@@ -43,3 +43,11 @@ addresses are bracketed placeholders.
    and Text only working with a customer on the sale.
 
 ## Till start-up
+
+4. **The till's start-up status is one line on the PIN screen** (Jack, 2
+   Oct: "1"): "Till B1 · Bolton · Online · up to date"; amber when
+   something's wrong — "Offline · [n] sales waiting to send" or "Last
+   updated [time]". No extra screen or step in the morning. Chosen over a
+   separate start-up screen, and showing it only when something's wrong.
+
+## Returning customers
