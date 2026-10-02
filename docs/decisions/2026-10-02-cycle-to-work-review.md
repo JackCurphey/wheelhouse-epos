@@ -23,7 +23,9 @@ shop 3, 4); the activity log records what staff do (Management oversight
 1). Real example data only: North Street Cycles, Bolton, "[Second site]",
 Jack Lewis (Owner), Jo Taylor (Staff), Maya Patel (customer); scheme
 providers, bikes, prices, dates and reference numbers are bracketed
-placeholders — no provider's name or process is drawn as fact. Rules for
+placeholders — no provider's name or process is drawn as fact. Own canvas:
+https://claude.ai/artifact/6NR9hm3Gnc3kX1i57xcRgt, desktop first, then
+tablet and phone. Rules for
 every journey apply (Workshop day 45, 48, 50, 53, 57, 62, 65–67; A2, A6 —
 as few clicks as possible).
 

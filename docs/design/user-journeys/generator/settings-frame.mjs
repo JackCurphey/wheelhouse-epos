@@ -61,11 +61,12 @@ export const SETTINGS_ROOMS = [
 // journey's boards since journey 2 went into the big canvas (decision 10).
 let ONLINE_AREA = true;
 export const withOnlineArea = (fn) => { const was = ONLINE_AREA; ONLINE_AREA = true; try { return fn(); } finally { ONLINE_AREA = was; } };
+// Cycle to Work (journey 6) adds its own area after Online orders.
 const roomOf = (area) => {
-  const r = SETTINGS_ROOMS.find((x) => x[4].includes(area) || (area === 'online' && x[0] === 'frontdesk'));
-  return ONLINE_AREA && r[0] === 'frontdesk' ? [...r.slice(0, 4), [...r[4], 'online']] : r;
+  const r = SETTINGS_ROOMS.find((x) => x[4].includes(area) || ((area === 'online' || area === 'c2w') && x[0] === 'frontdesk'));
+  return ONLINE_AREA && r[0] === 'frontdesk' ? [...r.slice(0, 4), [...r[4], 'online', 'c2w']] : r;
 };
-const areaTitle = (k) => (k === 'online' ? 'Online orders' : (AREAS.find((a) => a[0] === k) || [k, k])[1]);
+const areaTitle = (k) => (k === 'online' ? 'Online orders' : k === 'c2w' ? 'Cycle to Work' : (AREAS.find((a) => a[0] === k) || [k, k])[1]);
 
 // A folding section: title, a one-line summary, a chevron. On a phone the
 // summary sits under the title rather than beside it.
@@ -209,7 +210,7 @@ export const shopFolds = (open = {}, sites = 'Bolton') =>
   + fold('Sites', sites, open.sites || '');
 export const MSG_INTRO = 'The texts and emails customers get from the shop.';
 export const msgFolds = (open = {}) =>
-  fold('Automatic messages', '15 on', open.list || '')
+  fold('Automatic messages', '19 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 export const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
 export const dataFolds = (open = {}) => fold('Download everything', 'Customers, sales, stock, jobs', open.export || '') + fold('Settings changes', 'Who changed what, and when', open.history || '');
@@ -235,8 +236,18 @@ export const onlineFolds = (open = {}) =>
   + fold('Paying online', '[Payment provider] · gift cards and store credit', open.pay || '')
   + fold('Not collected', 'Reminder after [n] days · on Today after [n] days', open.collect || '');
 
-const AREA_FOLDS = { online: onlineFolds, till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
-const AREA_INTROS = { online: ONLINE_INTRO, till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
+// Cycle to Work decisions 3, 4 and 5: holding bikes, ordering ones not in
+// stock, deposits, the providers, and what goes on Today.
+export const C2W_INTRO = 'Holding and ordering bikes, deposits, and the scheme providers you work with.';
+export const c2wFolds = (open = {}) =>
+  fold('Holding bikes', 'From the quote for [n] days', open.hold || '')
+  + fold('Bikes not in stock', 'Ordered once the certificate arrives', open.order || '')
+  + fold('Deposits', 'Refunded when the certificate arrives', open.deposit || '')
+  + fold('Scheme providers', '[n] providers', open.providers || '')
+  + fold('On Today', 'No certificate after [n] days · payment [n] days late', open.today || '');
+
+const AREA_FOLDS = { c2w: c2wFolds, online: onlineFolds, till: tillFolds, payments: payFolds, messages: msgFolds, eod: eodFolds, workshop: workshopFolds, stock: stockFolds, shop: shopFolds, staff: staffFolds, data: dataFolds };
+const AREA_INTROS = { c2w: C2W_INTRO, online: ONLINE_INTRO, till: TILL_INTRO, payments: PAY_INTRO, messages: MSG_INTRO, eod: EOD_INTRO, workshop: WORKSHOP_INTRO, stock: STOCK_INTRO, shop: SHOP_INTRO, staff: STAFF_INTRO, data: DATA_INTRO };
 
 // Account, history and reminders decision 2: the customer's one yes to
 // service reminders, at booking and at collection.
