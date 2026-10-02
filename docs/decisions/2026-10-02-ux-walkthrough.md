@@ -220,3 +220,37 @@ High, 7 Medium, 4 Low):
 - **Not drawn:** where "Fix" on the import leads and where the two
   "Change" links on the starting answer lead (the report left both open);
   where "Give [name] their PIN" sits in the till's Serving menu.
+
+## Walk-throughs 5 (Cycle to Work) and 6 (a Lightspeed repair): as built (2 Oct)
+
+Every recommendation taken (decision 6).
+- **Walk-through 5** (`ux-walkthrough-5-cycle-to-work.md`, 4 High, 8 Medium,
+  4 Low): the till sale at hand-over is drawn (`till-c2w-pick`, `till-c2w`,
+  `till-c2w-pay`, `till-c2w-extra`, `till-c2w-paid`), and a deposit taken at
+  the till (`till-c2w-deposit`); "Who pays what" follows the deposit rule and
+  the refund is the order's next step; Cycle to Work has its own takings
+  line, Xero rows for it, its commission and shortfalls, and a Reports card
+  "Cycle to Work: owed and paid" (`rp-c2w`, `rp-accounts-c2w`); Maya is told
+  when the certificate is for less or more, with a revised quote; a "the
+  bike is ready" tick in the certificate pop-up; holds are never released
+  silently and Maya is told either way; a held frame warns at the till and
+  shows sold out online; the order is on Maya's customer page and account,
+  findable by quote or certificate number, and the bike joins her Bikes;
+  messages go the way she chose (the quote stays an email); providers' bulk
+  payments; cancellation messages. 25 automatic messages on.
+- **Walk-through 6** (`ux-walkthrough-6-lightspeed.md`, 2 High, 6 Medium,
+  6 Low): Maya's own pages drawn as a Lightspeed shop — no deposit, no Pay
+  now, no Basket, "Pay when you collect · Agreed price £111.00 — pay at the
+  till", "give your name or job number WH-1042" (`bk-page-ls`,
+  `bk-cancel-ls`, `dq-quote-ls`, `cp-summary-ls`, `cp-summary-ls-paid`;
+  `ls-customer-ready` now shows the same page); a bike with no work order
+  can be handed over as "pays later" or linked to one rung up by hand
+  (`ls-hand-over-no-wo`); the Lightspeed customer is chosen at book-in while
+  Maya is at the desk (`ls-book-in`), and Staff see the Lightspeed lines on
+  Today (`op-today-staff-lightspeed`); a wrong Lightspeed customer can be
+  changed from her page (`ls-customer-page`); "a price has gone up since you
+  agreed" for Maya and for the job (`dq-quote-price-ls`,
+  `dq-answered-price-no-ls`, `ls-job-price-asked`); "Mark it sorted…" with a
+  recorded reason (`ls-job-sorted`); and the word fixes ("Agreed £111.00" on
+  Lightspeed jobs). This changes *when* the Lightspeed look-up runs
+  (Lightspeed shops decisions 3–4), not the rule.

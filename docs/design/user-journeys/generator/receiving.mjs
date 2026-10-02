@@ -102,7 +102,13 @@ const withProblem = (name, right) => `<span style="display: inline-flex; align-i
 // manager]". The rest books in; the item stays on the delivery as "1 product
 // to add" until someone who can add products adds it.
 const LEAVE = 'Leave it for [Owner or manager]';
+// UX walk-through 5 M2: a bike ordered in for a Cycle to Work order says
+// whose it is, the same pattern as the part held for WH-1042.
+const C2W_FOR = 'for Maya Patel · Cycle to Work — put it aside';
+const c2wLead = `<span style="display: inline-flex; color: ${C.warnInk}" aria-hidden="true">${icon('bike', 18)}</span>`;
+const c2wBikeLine = () => line('[Bike] · [Size]', `[Supplier code] · <strong style="color: ${C.warnInk}">${C2W_FOR}</strong>`, withProblem('[Bike]', qty('1', '[Bike]')), c2wLead);
 const scannedRows = (state) => list([
+  ...(state === 'c2w' ? [c2wBikeLine()] : []),
   line(PADS, `B05S-RX · <strong style="color: ${C.warnInk}">Job WH-1042 is waiting for 1</strong>`, withProblem(PADS, qty('[n]', PADS)), waitingLead),
   state === 'marked'
     ? line('[Product]', `[Supplier code] · on your order: [n] · <strong style="color: ${C.warnInk}">Damaged · 1, set aside</strong>`, withProblem('[Product]', qty('[n]', '[Product]')), alertLead)
@@ -116,7 +122,9 @@ const scannedRows = (state) => list([
 // Each scan is announced, and shown briefly (audit L1). UX walk-through 3
 // L4: the announcement says when a job is waiting for what was scanned.
 const scanned = `<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added ${PADS} · 1 — job WH-1042 is waiting for 1</p>`;
-const receiveBoard = (state = 'scan', who = MANAGER) => stockPage('Receive a delivery', `${section('Scan the box', `${supplierPills('From', 'Shows what’s still to come on its orders')}${scanBox()}${scanned}
+// UX walk-through 5 M2: scanning the Cycle to Work bike says whose it is.
+const scannedC2w = `<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added [Bike] · [Size] · 1 — ${C2W_FOR}</p>`;
+const receiveBoard = (state = 'scan', who = MANAGER) => stockPage('Receive a delivery', `${section('Scan the box', `${supplierPills('From', 'Shows what’s still to come on its orders')}${scanBox()}${state === 'c2w' ? scannedC2w : scanned}
 ${scannedRows(state)}
 ${state === 'noOrder' ? '' : `${subhead('Still to come on the order')}
 ${list([line('[Product]', '[Supplier code] · ordered [n], arrived [n]', tag('[n] to come', 'grey'))])}`}
@@ -142,10 +150,12 @@ const addProduct = (left = false) => popup('add-title', 'Add this product', left
 // Decision 5: a bike asks for its frame number before it counts. Audit M4:
 // scanning the sticker counts it straight away; a number already in stock is
 // caught. The warranty sentence stands on Customer service decision 4.
-const framePopup = (dup = false) => popup('frame-title', 'Frame number', '[Bike name] · bike [n] in this delivery', `
+// UX walk-through 5 M2: `c2w` — the bike is Maya's, and the frame number
+// given here becomes her order's frame.
+const framePopup = (dup = false, c2w = false) => popup('frame-title', 'Frame number', c2w ? `[Bike] · [Size] · ${C2W_FOR}` : '[Bike name] · bike [n] in this delivery', `
 <label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${dup ? C.warnInk : C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 18)}<input class="rs-scan" aria-label="Frame number" placeholder="Scan the sticker on the frame, or type it" value="${dup ? '[frame number]' : ''}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
 ${dup ? `<div role="alert" style="display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px">${icon('alert', 18)}<span><strong>This frame number is already in stock</strong> — booked in [date]. Check the sticker, or scan the next bike.</span></div>` : note('Scanning the sticker counts the bike straight away. A typed number needs “Count this bike”.')}
-${note('Each bike is then known by its frame number — the till picks it at the sale, and its warranty starts from the right bike.')}`, `${button('Cancel', { variant: 'default' })}${button('Count this bike')}`, 560);
+${c2w ? note('This frame becomes the frame on Maya Patel’s Cycle to Work order. It’s held for her — not for sale — and the till picks it when she collects.') : note('Each bike is then known by its frame number — the till picks it at the sale, and its warranty starts from the right bike.')}`, `${button('Cancel', { variant: 'default' })}${button('Count this bike')}`, 560);
 
 // After Book in (audit M10): what happened, then the next steps — labels
 // first when any are due, and the invoice for people who can order stock.
@@ -158,9 +168,13 @@ ${note('Each bike is then known by its frame number — the till picks it at the
 const jobLine = (jobShort) => jobShort
   ? line('Job WH-1042 · still waiting — the pads were damaged', 'Trek Domane AL 3 · Maya Patel · the job stays waiting for parts', link('Open the job', 'Open job WH-1042'), alertLead)
   : line('Job WH-1042 · Maya Patel', `Trek Domane AL 3 · <strong style="color: ${C.ink}">1 held for WH-1042 — put it with the bike on Hook 3</strong> · flagged on the job, the diary and the Overview`, link('Open the job', 'Open job WH-1042'), waitingLead);
-const bookedBoard = ({ staff = false, jobShort = false } = {}) => stockPage('Delivery booked in', `${section('Booked in', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${mono('[n]')} items booked in · stock updated</p>
+// UX walk-through 5 M2: `c2w` — the Cycle to Work bike, put aside for Maya
+// with its frame number; her order moves on by itself (cw-order-on-order).
+const c2wBookedLine = () => line('Maya Patel · Cycle to Work', `[Bike] · [Size] · frame ${mono('[frame number]')} · <strong style="color: ${C.ink}">put it aside for Maya Patel — not for sale</strong> · her order moves to Ready to collect`, link('Open the order', 'Open Maya Patel’s Cycle to Work order'), c2wLead);
+const bookedBoard = ({ staff = false, jobShort = false, c2w = false } = {}) => stockPage('Delivery booked in', `${section('Booked in', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${mono('[n]')} items booked in · stock updated</p>
 ${staff ? `<div>${button('Print labels')}</div>` : ''}
 ${list([
+  ...(c2w ? [c2wBookedLine()] : []),
   jobLine(jobShort),
   staff
     ? line('1 set aside as damaged — [Owner] will return it', 'It isn’t in stock')
@@ -316,6 +330,10 @@ def('rs-booked', () => bookedBoard());
 def('rs-booked-staff', () => bookedBoard({ staff: true })); // UX walk-through 3 M4
 def('rs-booked-job-waiting', () => bookedBoard({ jobShort: true })); // UX walk-through 3 M2
 def('rs-labels', () => overlay(bookedBoard(), labelsPopup()));
+// UX walk-through 5 M2: a bike ordered in for Maya's Cycle to Work order.
+def('rs-receive-c2w', () => receiveBoard('c2w', JO));
+def('rs-frame-c2w', () => overlay(receiveBoard('c2w', JO), framePopup(false, true)));
+def('rs-booked-c2w', () => bookedBoard({ staff: true, c2w: true }));
 def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
 // UX walk-through 3 H1, M2: the job when its part doesn't arrive as planned.
 for (const id of ['job-part-sold', 'job-part-missing', 'job-part-damaged', 'job-part-order-closed']) def('rs-' + id.slice(4), () => diaryScreens[id][SIZE]);
@@ -366,6 +384,10 @@ export const TITLES = {
   'rs-booked-staff': 'Delivery booked in, as Staff see it: labels first, no invoice',
   'rs-booked-job-waiting': 'Booked in without the job’s part: the job is still waiting',
   'rs-labels': 'Print labels: only what needs one',
+  // UX walk-through 5 M2.
+  'rs-receive-c2w': 'A Cycle to Work bike in the delivery: “for Maya Patel · Cycle to Work — put it aside”',
+  'rs-frame-c2w': 'The Cycle to Work bike’s frame number becomes her order’s frame',
+  'rs-booked-c2w': 'Booked in: the bike put aside for Maya, her order moves on',
   'rs-job-arrived': 'The job: its part has arrived',
   'rs-part-sold': PART_PROBLEM_TITLES['job-part-sold'],
   'rs-part-missing': PART_PROBLEM_TITLES['job-part-missing'],
@@ -392,6 +414,8 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-empty', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-problem', 'rs-frame', 'rs-frame-dup', 'rs-receive-marked', 'rs-book-blocked', 'rs-problem-missing', 'rs-booked', 'rs-booked-staff', 'rs-booked-job-waiting', 'rs-labels'] },
   // UX walk-through 3 M3.
+  // UX walk-through 5 M2.
+  { label: 'A Cycle to Work bike, booked in', screens: ['rs-receive-c2w', 'rs-frame-c2w', 'rs-booked-c2w'] },
   { label: 'A new product, received by Staff', screens: ['rs-receive-staff', 'rs-receive-staff-left', 'rs-add-left', 'rs-today-to-add'] },
   { label: 'The waiting job', screens: ['rs-job-arrived', 'rs-part-sold', 'rs-part-missing', 'rs-part-damaged', 'rs-part-order-closed', 'rs-diary-arrived', 'rs-overview-arrived'] },
   { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-checked', 'rs-invoice-diff', 'rs-invoice-cost', 'rs-invoice-queried', 'rs-invoice-accepted', 'rs-delivery-staff', 'rs-invoice-setting'] },

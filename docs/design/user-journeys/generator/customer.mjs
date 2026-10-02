@@ -7,9 +7,10 @@
 // (diary.mjs JOBS — nothing hand-picked), the till sale B1-[0000] and the
 // approved £111 on WH-1042. Anything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { JOBS, DAYS, ST, customerBikeOf } from './diary.mjs';
-import { page, fold, pill, offer, choice, note, popup, overlay, setSize, withSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
+import { JOBS, DAYS, ST, customerBikeOf, headerSearch } from './diary.mjs';
+import { page, fold, pill, offer, choice, note, popup, overlay, setSize, size, withSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
 import { field } from './ui.mjs';
+import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs'; // UX walk-through 6 M3
 
 export const screens = {};
 const recipes = [];
@@ -81,28 +82,37 @@ const smallLink = (t) => `<a href="#" style="display: inline-flex; align-items: 
 const warranty = (inWarranty) => inWarranty
   ? `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: ${C.successInk}">${icon('check', 14)}Under warranty · [n] months left</span>`
   : `<span style="font-size: 13px; color: ${C.muted}">Warranty ended [date]</span>`;
-function summary({ accounts = true, credit = true } = {}) {
+// UX walk-through 5 M5: after collection, the Cycle to Work bike joins her
+// Bikes with its frame number.
+const c2wBike = () => `<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">[Bike] · [Size]</span><span style="font-size: 13px; color: ${C.muted}">Frame ${mono('[frame number]')} · bought here on Cycle to Work [date]</span>${warranty(true)}</span><span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
+function summary({ accounts = true, credit = true, c2w = '' } = {}) {
   const details = `${secHead('Details', smallLink('Edit'))}
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; color: ${C.muted}">Address</span><span style="font-size: 15px; line-height: 1.45">[address]<br>[postcode]</span></div>
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; color: ${C.muted}">Group</span><span style="font-size: 15px; font-weight: 600; text-align: right">[Club name] members · [n]% off</span></div>
 <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 13px; font-weight: 700">Note</span><span style="font-size: 14px; line-height: 1.45">[A note everyone in the shop should know]</span></div>`;
   const bikes = `${secHead('Bikes', smallLink('+ Add'))}
-<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Trek Domane AL 3</span><span style="font-size: 13px; color: ${C.muted}">Green · black mudguards · bought here [date]</span>${warranty(true)}</span><span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Trek Domane AL 3</span><span style="font-size: 13px; color: ${C.muted}">Green · black mudguards · bought here [date]</span>${warranty(true)}</span><span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>${c2w === 'collected' ? c2wBike() : ''}`;
+  // UX walk-through 6 M3: at a Lightspeed shop, which Lightspeed customer
+  // she's linked to, with "Change" opening the Lightspeed customer picker.
+  const ls = lightspeedShop() ? `${secHead('Lightspeed')}<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">In Lightspeed: Maya Patel · ${mono(MAYA.phone)}</span><span style="font-size: 13px; color: ${C.muted}">Her work orders go to this Lightspeed customer · linked [date]</span></span><a href="ls-customer-pick-${size()}.dc.html" aria-label="Change Maya Patel’s Lightspeed customer" style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 4px; font-size: 14px; font-weight: 600; color: ${C.ink}">Change</a></div>` : '';
   // Decision 6: only what the shop has switched on in Payments › Ways to pay.
   const glance = `${secHead('At a glance')}${accounts ? factLink('cs-account-desktop.dc.html', 'Owes on account', mono('[£ owed]')) : ''}${credit ? factLink('cs-credit-desktop.dc.html', 'Store credit', mono('[£]')) : ''}<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 600">Happy to hear about offers</span>${offer('On', true)}</div>`;
-  return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${bikes}${glance}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
+  return card(`<div style="padding: 4px 18px 14px; display: flex; flex-direction: column">${details}${ls}${bikes}${glance}</div>`, `width: ${isPhone() ? 'auto' : '320px'}; flex-shrink: 0; align-self: ${isPhone() ? 'stretch' : 'flex-start'}`);
 }
 // Decision 12: what's open now sits at the top; then everything else,
 // newest first, with refunds, messages and store credit changes; "Show all".
 const otherRow = (tag, title, sub, right = '') => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}; width: 76px; flex-shrink: 0">${tag}</span><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${title}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${right}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
 const subHead = (t) => `<span style="font-size: 13px; font-weight: 700; color: ${C.muted}; padding: 10px 0 4px">${t}</span>`;
-function history(filter = 'Everything', empty = false) {
-  const pills = `<div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${['Everything', 'Jobs', 'Sales', 'Messages'].map((t) => pill(t, t === filter)).join('')}</div>`;
+// UX walk-through 5 M5: her Cycle to Work order has a row in the history,
+// opening the order — "Open now" while it's open, "Earlier" once collected.
+const c2wRow = (stage) => otherRow('Order', `Cycle to Work · [Bike] · ${stage === 'collected' ? 'Collected' : 'Waiting for the certificate'}`, stage === 'collected' ? `Quote ${mono('[quote number]')} · certificate ${mono('[certificate number]')} · collected [date] · Sale ${mono('B1-[0000]')}` : `Quote ${mono('[quote number]')} · [Provider] · held until [date]`);
+function history(filter = 'Everything', empty = false, c2w = '') {
+  const pills = `<div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${(lightspeedShop() ? ['Everything', 'Jobs', 'Messages'] : ['Everything', 'Jobs', 'Sales', 'Messages']).map((t) => pill(t, t === filter)).join('')}</div>`;
   if (empty) return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 17px; font-weight: 700">History</span><div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 16px; border: 2px dashed ${C.border}; border-radius: 10px; text-align: center"><span style="font-size: 16px; font-weight: 700">Nothing yet</span>${note('Jobs, sales and messages show here, newest first.')}${button('New job', { variant: 'default' })}</div></div>`, 'flex-grow: 1; min-width: 0');
   const open = mj().filter((j) => j.key !== 'ready');
   const past = mj().filter((j) => j.key === 'ready');
-  const rows = `${subHead('Open now')}${open.slice(0, 3).map(jobRow).join('')}
-${subHead('Earlier, newest first')}${past.slice(0, 1).map(jobRow).join('')}${otherRow('Refund', 'Refund · Till B1', '[date] · [what came back]', mono('−[£]', 'font-size: 15px'))}${saleRow()}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
+  const rows = `${subHead('Open now')}${open.slice(0, 3).map(jobRow).join('')}${c2w === 'open' ? c2wRow('open') : ''}
+${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${past.slice(0, 1).map(jobRow).join('')}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', '[date] · [what came back]', mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
 <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ([n])</a>`;
   return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 17px; font-weight: 700">History</span>${pills}</div>
@@ -111,7 +121,7 @@ ${subHead('Earlier, newest first')}${past.slice(0, 1).map(jobRow).join('')}${oth
 // Account, history and reminders audit M11: a request to delete, made from
 // the customer's own account, shows on their page with what's in the way.
 const deleteLine = () => `<p role="note" style="margin: 0; display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span><strong>Asked to delete their account on [date]</strong> · from their account on the website · answer by [date]. Still in the way: bike in the workshop, ${mono('WH-1042')}. Store credit ${mono('£[credit]')} will be lost.</span></p>`;
-const customerPage = (on = {}) => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${backLink()}${header({ owes: on.accounts !== false, over: !!on.over })}${on.deleteRequest ? deleteLine() : ''}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary(on)}${history('Everything', !!on.empty)}</div></div>`, STAFF);
+const customerPage = (on = {}) => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${backLink()}${header({ owes: on.accounts !== false, over: !!on.over })}${on.deleteRequest ? deleteLine() : ''}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary(on)}${history('Everything', !!on.empty, on.c2w || '')}</div></div>`, STAFF);
 
 // ---------- Customers: find someone, or add them ----------
 const CUSTOMERS = [['Maya Patel', 'Trek Domane AL 3', MAYA.phone], ['Oliver Chen', 'Brompton C Line', '[phone]'], ['Sam Reed', 'Specialized Sirrus', '[phone]'], ['Jamie Brooks', 'Giant Escape 2', '[phone]'], ['Aisha Khan', 'Cannondale Quick', '[phone]']];
@@ -120,6 +130,22 @@ const customerList = () => page('customers', 'Customers', `<div data-scroll styl
 <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap"><div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Recent customers</h2>${note('To find anyone else, use the search at the top — by name, phone, email or postcode.')}</div>${button('+ Add a customer')}</div>
 ${card(CUSTOMERS.map(custRow).join('').replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden')}
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span></span><a href="cs-privacy-desktop.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Privacy requests · [n] open</a></div></div>`, STAFF);
+// UX walk-through 5 M5: the staff search finds a Cycle to Work order by the
+// customer's name, its quote number or its certificate number. On a desktop
+// the header box drops its results down; on tablet and phone the search
+// button opens the box across the top, with the results under it.
+const resGroup = (title, inner) => `<div role="group" aria-label="${esc(title)}" style="display: flex; flex-direction: column; gap: 4px"><div aria-hidden="true" style="padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${title}</div>${inner}</div>`;
+const resRow = (main, sub, action, first = false) => `<a href="#" role="option" aria-selected="${first}" style="display: flex; align-items: center; gap: 12px; min-height: 52px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; text-decoration: none; color: ${C.ink}; ${first ? `background: ${C.mutedBg}; outline: 2px solid ${C.ink}; outline-offset: -2px` : ''}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${main}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="font-size: 13px; font-weight: 600; white-space: nowrap">${action}</span></a>`;
+const c2wResults = () => `${resGroup('Cycle to Work orders', resRow('Maya Patel · Cycle to Work · [Bike]', `Quote ${mono('[quote number]')} · Waiting for the certificate · held until [date]`, 'Open the order', true))}
+${resGroup('Customers', resRow('Maya Patel', `Customer · ${mono(MAYA.phone)} · 1 Cycle to Work order`, 'Open'))}
+<p style="margin: 0; padding: 4px 12px 0; font-size: 13px; color: ${C.muted}">Cycle to Work orders are found by name, quote number or certificate number.</p>`;
+const typedBox = (w) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 2px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" role="combobox" aria-expanded="true" aria-controls="cs-c2w-results" aria-label="Search jobs, customers, products" value="[quote number]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 14px; color: ${C.ink}"></label>`;
+const resPanel = (style) => `<div id="cs-c2w-results" role="listbox" aria-label="Search results" style="${style} box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)">${c2wResults()}</div>`;
+const searchC2w = () => {
+  if (size() === 'desktop') return customerList().replace(headerSearch(), `<div style="position: relative; flex-shrink: 0">${typedBox('320px')}${resPanel('position: absolute; top: 52px; right: 0; width: 480px; z-index: 5;')}</div>`);
+  return customerList().replace('<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 980px">', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 980px"><div role="search" style="display: flex; flex-direction: column; gap: 8px">${typedBox('100%')}${resPanel('')}</div>`);
+};
+
 // Add a customer (decision 3): a person or a company or club; address and
 // a note are optional; marketing permission starts off (booking spec).
 // A company also has an optional VAT number and "Send invoices to", for the
@@ -232,6 +258,14 @@ ${choice('Group', [['None', false], ['[Club name] members', true]])}
 ${field('Note', { value: '[A note everyone in the shop should know]' })}
 <div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Happy to hear about offers</span><span style="font-size: 13px; color: ${C.muted}">Agreed [date]</span></span>${offer('On', true)}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Save changes')}`, 640);
 def('cs-sale', () => overlay(customerPage(), saleDialog()));
+// UX walk-through 5 M5: Maya's Cycle to Work order on her page, and found by
+// the staff search.
+// UX walk-through 6 M3: her page at a Lightspeed shop — no till, so no
+// account, store credit or till sales (Lightspeed shops decision 1).
+def('ls-customer-page', () => withLightspeedShop(() => customerPage({ accounts: false, credit: false })));
+def('cs-page-c2w', () => customerPage({ c2w: 'open' }));
+def('cs-page-c2w-collected', () => customerPage({ c2w: 'collected' }));
+def('cs-search-c2w', () => searchC2w());
 def('cs-credit', () => overlay(customerPage(), creditDialog()));
 def('cs-edit', () => overlay(customerPage(), editDialog()));
 
@@ -257,6 +291,10 @@ export const TITLES = {
   'cs-page-over': 'Over her account limit',
   'cs-page-new': 'A new customer: nothing in the history yet',
   'cs-sale': 'A sale from her history: refunds start here',
+  // UX walk-through 5 M5.
+  'cs-page-c2w': 'Her Cycle to Work order in her history, opening the order',
+  'cs-page-c2w-collected': 'After collection: the bike in her Bikes, with its frame number',
+  'cs-search-c2w': 'The staff search finds a Cycle to Work order by its quote or certificate number',
   'cs-credit': 'Add or take away store credit, with a reason',
   'cs-edit': 'Edit her details',
   'cs-add': 'Add a customer: a person',
@@ -269,16 +307,21 @@ export const TITLES = {
   'cs-privacy-delete': 'Deleting someone’s details: sales stay, without their name',
   'cs-add-match': 'Adding someone who’s already here',
   'cs-page-dup': 'A possible duplicate, flagged on the page',
+  'ls-customer-page': 'Her page at a Lightspeed shop: which Lightspeed customer she’s linked to, and Change', // UX walk-through 6 M3
   'cs-merge': 'The same person? Keep or merge',
   'cs-opt-folds': 'Option 1: one page, everything in folding sections',
   'cs-opt-timeline': 'Option 2: a summary on the left, one history on the right',
 };
 export const ROWS = [
   { label: 'Customers and the customer page', screens: ['cs-list', 'cs-page', 'cs-page-over', 'cs-page-new', 'cs-page-off', 'cs-sale', 'cs-credit', 'cs-edit', 'cs-add', 'cs-add-company'] },
+  // UX walk-through 5 M5.
+  { label: 'A Cycle to Work order on her page', screens: ['cs-page-c2w', 'cs-page-c2w-collected', 'cs-search-c2w'] },
   { label: 'Accounts (pay later)', screens: ['cs-account', 'cs-transfer'] },
   { label: 'Customer groups', screens: ['cs-groups'] },
   { label: 'Privacy requests', screens: ['cs-privacy', 'cs-privacy-delete', 'cs-privacy-blocked'] },
   { label: 'Possible duplicates', screens: ['cs-add-match', 'cs-page-dup', 'cs-merge'] },
+  // UX walk-through 6 M3.
+  { label: 'At a Lightspeed shop', screens: ['ls-customer-page'] },
   { label: 'Options: the shape of the customer page (decision 2: option 2)', screens: ['cs-opt-folds', 'cs-opt-timeline'] },
 ];
 // Account, history and reminders (journey 7) audit M11.

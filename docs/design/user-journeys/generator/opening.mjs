@@ -15,6 +15,7 @@ import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone } from './settings-frame.mjs';
 import { screens as tillScreens } from './till.mjs';
 import { closeUncounted } from './cashup.mjs';
+import { withLightspeedShop } from './shop-mode.mjs'; // UX walk-through 6 M1
 
 export const screens = {};
 const recipes = [];
@@ -95,7 +96,7 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
 // UX walk-through 4 M4: `practice` — while the shop runs alongside Citrus
 // Lime, the till is in practice: no float check, no Close the day.
-export function today({ practice = false, banked = false, short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, lightspeed = false, lsDown = false, lsPerson = false, lsUnpaid = false, productToAdd = false, as = null } = {}) {
+export function today({ practice = false, banked = false, short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, c2wHoldEnded = false, c2wDeposit = false, lightspeed = false, lsDown = false, lsPerson = false, lsUnpaid = false, productToAdd = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
   // UX walk-through 2 H1(a): Wednesday counted and banked at night while its
   // sales were still waiting; it closes by itself once they've sent.
@@ -104,9 +105,11 @@ export function today({ practice = false, banked = false, short = false, seen = 
   // as a Mechanic he wasn't asked about the float. `late` keeps the example
   // of someone due in who hasn't come.
   const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), late ? line('Alex Morgan', 'Due in at [start time] · Mechanic', tag('Late', 'grey')) : line('Alex Morgan', 'Checked in at [time] · Mechanic', tag('In')), line('Jack Lewis', 'Checked in at [time] · Owner', /* UX walk-through 2 (decision 6) */ tag('In'))]));
-  const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', noAnswer || arrived ? '2 still to arrive' : '3 still to arrive')}${stat('Repairs ready to collect', '4', 'In the workshop now')}</div>
+  // UX walk-through 6 L5: on Lightspeed boards WH-1042 is past book-in (it
+  // needs its customer chosen), so it isn't in "Still to arrive".
+  const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', noAnswer || arrived || lightspeed ? '2 still to arrive' : '3 still to arrive')}${stat('Repairs ready to collect', '4', 'In the workshop now')}</div>
 <h3 style="margin: 6px 0 0; font-size: 14px; font-weight: 700">Still to arrive</h3>
-${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span style="font-size: 14px">${mono('10:30')} appointment</span>`), line('WH-1047 · Aisha Khan', 'Cannondale Quick · Safety check', '<span style="font-size: 14px">Drop-off</span>'), ...(noAnswer || arrived ? [] : [line('WH-1042 · Maya Patel', 'Trek Domane AL 3 · Standard service', `<span style="display: inline-flex; align-items: center; gap: 10px; white-space: nowrap"><span style="font-size: 14px">${mono('11:30')} appointment</span>${button('Book in', { variant: 'default' })}</span>`)])])}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Open the diary</a>`);
+${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span style="font-size: 14px">${mono('10:30')} appointment</span>`), line('WH-1047 · Aisha Khan', 'Cannondale Quick · Safety check', '<span style="font-size: 14px">Drop-off</span>'), ...(noAnswer || arrived || lightspeed /* UX walk-through 6 L5 */ ? [] : [line('WH-1042 · Maya Patel', 'Trek Domane AL 3 · Standard service', `<span style="display: inline-flex; align-items: center; gap: 10px; white-space: nowrap"><span style="font-size: 14px">${mono('11:30')} appointment</span>${button('Book in', { variant: 'default' })}</span>`)])])}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Open the diary</a>`);
   const items = [
     short && !seen && line('Till B1’s float was [£] short this morning', 'Counted by Jo Taylor at [time] · “[their reason]”', button('Seen', { variant: 'default' }), warnLead),
     // UX walk-through 2 H1(b): the morning's float check counted Wednesday's
@@ -134,6 +137,12 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // Cycle to Work decisions 1, 3 and 5: what needs chasing. c2w: 'held' is
     // after "Hold longer" (audit L7), with only the late payment left.
     c2w === true && line('Maya Patel · Cycle to Work quote, no certificate yet', '[Bike] · quoted [n] days ago · held until [date]', `<span style="display: inline-flex; flex-direction: column; gap: 6px; white-space: nowrap">${button('Hold longer', { variant: 'default' }).replace('<button', '<button aria-label="Hold Maya Patel’s bike longer"')}${button('Open the order', { variant: 'default' }).replace('<button', '<button aria-label="Open Maya Patel’s order"')}</span>`, warnLead),
+    // UX walk-through 5 M3: a hold that reaches its date with nobody choosing
+    // stays held, and asks someone to choose; it's never released silently.
+    c2wHoldEnded && line('Maya Patel · Cycle to Work hold ended [date] — choose', '[Bike] · still held · no certificate yet', `<span style="display: inline-flex; flex-direction: column; gap: 6px; white-space: nowrap">${button('Hold longer', { variant: 'default' }).replace('<button', '<button aria-label="Hold Maya Patel’s bike longer"')}${button('Release the bike', { variant: 'default' }).replace('<button', '<button aria-label="Release Maya Patel’s bike"')}</span>`, warnLead),
+    // UX walk-through 5 H2 (option 1): with the "Refund the deposit" rule, the
+    // deposit waits on Today until it's refunded at the till.
+    c2wDeposit && line('Deposit to refund · Maya Patel', 'Cycle to Work · certificate added [date] · £[£] back the way it was paid', button('Refund the deposit', { variant: 'default' }).replace('<button', '<button aria-label="Refund Maya Patel’s deposit"').replace('style="', 'style="white-space: nowrap; '), warnLead),
     c2w && line('[Provider] payment is [n] days late', '[Customer] · collected [date] · expected £[£] by [date]', button('Open the order', { variant: 'default' }).replace('<button', '<button aria-label="Open [Provider]’s late payment"'), warnLead),
     payMore && line('[payment provider] needs more details by [date]', 'Or online payments and “Pay now” for repairs stop · usually [what they need]', button('Add the details', { variant: 'default' }), warnLead),
     accounts && line('Wednesday 16 September didn’t go to Xero', 'Bolton · closed at [time] · [Category] has no Xero account chosen', button('Choose an account for [Category]', { variant: 'default' }), warnLead),
@@ -181,7 +190,9 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
   // Audit M4: the line says what's true now; "payments" only when payment
   // is being checked. M3: no Who's in — there's no till check-in.
   const lsLine = section('Lightspeed', `<div role="status">${list([line(lsDown ? 'Can’t reach Lightspeed' : 'Up to date', lsDown ? 'Last reached at [time] · jobs wait and send by themselves' : 'Products, stock and payments checked [n] seconds ago', tag(lsDown ? 'Can’t reach' : 'Up to date', lsDown ? 'warn' : 'ok'))])}</div>`);
-  const left = staff ? who : lightspeed ? `${attention}${lsLine}` : `${attention}${tills}${who}`;
+  // UX walk-through 6 M1 (option 1): at a Lightspeed shop Staff see Needs
+  // attention (the pick and check lines) and the Lightspeed line, not Who's in.
+  const left = lightspeed ? `${attention}${lsLine}` : staff ? who : `${attention}${tills}${who}`;
   const cols = isPhone() ? `${left}${work}` : `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start"><div style="display: flex; flex-direction: column; gap: 14px">${left}</div><div style="display: flex; flex-direction: column; gap: 14px">${work}</div></div>`;
   return page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton · open [opens]–[closes]')}${cols}</div>`, as || (staff ? STAFF : MANAGER));
 }
@@ -209,6 +220,8 @@ def('op-today-two', () => today({ short: true, unclosed: true }));
 def('op-today-staff', () => today({ staff: true }));
 def('op-today-late', () => today({ late: true }));
 def('op-today-practice', () => today({ practice: true })); // UX walk-through 4 M4
+def('op-today-c2w', () => today({ c2wHoldEnded: true, c2wDeposit: true })); // UX walk-through 5 M3, H2
+def('op-today-staff-lightspeed', () => withLightspeedShop(() => today({ lightspeed: true, lsPerson: true, staff: true }))); // UX walk-through 6 M1 (option 1)
 
 // Desktop first (journey process); tablet and phone drawn after the UI audit.
 const SIZES = ['desktop', 'tablet', 'phone'];
@@ -237,10 +250,12 @@ export const TITLES = {
   'op-today-staff': 'Today, as Staff see it',
   'op-today-late': 'Today, when someone due in is late',
   'op-today-practice': 'Today, while the tills are in practice: the drawer isn’t counted', // UX walk-through 4 M4
+  'op-today-c2w': 'Today: a Cycle to Work hold that ended with nobody choosing, and a deposit to refund', // UX walk-through 5 M3, H2
+  'op-today-staff-lightspeed': 'Today at a Lightspeed shop, as Staff see it: jobs that need someone to look', // UX walk-through 6 M1
 };
 export const ROWS = [
   { label: 'Opening the till', screens: ['op-float-check', 'op-float-check-unclosed', 'op-float-check-first', 'op-float-count', 'op-float-matched', 'op-float-short', 'op-float-over'] },
-  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-seen', 'op-today-waiting', 'op-today-banked', 'op-today-unclosed', 'op-close-yesterday', 'op-today-two', 'op-today-staff', 'op-today-late', 'op-today-practice'] },
+  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-seen', 'op-today-waiting', 'op-today-banked', 'op-today-unclosed', 'op-close-yesterday', 'op-today-two', 'op-today-staff', 'op-today-late', 'op-today-practice', 'op-today-c2w', 'op-today-staff-lightspeed'] },
 ];
 
 // Multiple sites (journey 19): Today's parts, for the "All shops" Today.

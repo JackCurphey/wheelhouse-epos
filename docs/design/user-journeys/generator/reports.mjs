@@ -120,7 +120,8 @@ const REPORTS = [
   // managers only.
   ['Activity log', 'What was done, when and by whom: prices, voids, refunds, discounts, jobs, stock', true],
   // Cycle to Work (journey 6) audit M6: what scheme providers still owe.
-  ['Owed by Cycle to Work providers', 'Bikes collected and not yet paid for, by provider', true],
+  // UX walk-through 5 H3 (option 1): owed and paid, with the commission.
+  ['Cycle to Work: owed and paid', 'What each provider owes, has paid, and kept as commission', true],
 ];
 const reportCard = ([name, sub]) => `<a href="#" style="display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}; min-height: 76px; box-sizing: border-box"><span style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 16px; font-weight: 700">${name}</span><span aria-hidden="true" style="color: ${C.muted}">›</span></span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.4">${sub}</span></a>`;
 const menuBtn = (name) => `<button type="button" aria-label="More for ${esc(name)}" aria-haspopup="menu" style="flex-shrink: 0; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; font-family: inherit; font-size: 20px; font-weight: 700; color: ${C.ink}">…</button>`;
@@ -207,7 +208,7 @@ const ONLINE_NOTE = 'Online is what customers paid on the website, from [payment
 const reopenedBar = () => bar('<strong>Wed 16 Sep, Till B2 is reopened</strong> — its figures are left out until it’s closed again.', button('Close the day', { variant: 'default' }));
 const takings = ({ reopened = false, site = 'Bolton' } = {}) => wrap(`${head('Takings and cash-ups', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${reopened ? reopenedBar() : ''}
-${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Online', '£[£]', 'Paid on the website · separate from the tills'), stat('Cash differences', '£[£]', UP())])}
+${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Cycle to Work', '£[£]', 'Owed by providers, not in the drawer') /* UX walk-through 5 H3 */, stat('Online', '£[£]', 'Paid on the website · separate from the tills'), stat('Cash differences', '£[£]', UP())])}
 ${box(`${graph('Takings by closed day', DAY_LABELS, { upto: 3, key: ['Closed days this week', 'Same days last week'] })}${site === 'All shops'
   ? table('Closed days by shop', ['Shop', 'Takings at the tills', 'Online', 'Cash banked', 'Cash difference', 'Sent to Xero'], [['Bolton', '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`], [SECOND, '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`]], ['All shops', '[£]', '[£]', '[£]', '£[£]', ''], [0, 5])
   : table('Closed days', ['Day and till', 'Takings', 'Cash banked', 'Cash difference', 'Closed by', 'Sent to Xero'], dayRows(reopened), null, [0, 4, 5])}`)}
@@ -216,7 +217,7 @@ ${note('Open a closed day for its end-of-day report. A manager can reopen it fro
 // A row's third part is a line under its name.
 // UX walk-through 2 M2: the morning's float, and any difference, stays on the
 // day's report after "Seen" is pressed.
-const ZROWS = [['Sales', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Float at the start', '£[£]', '£[£] short, counted by Jo Taylor at [time]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
+const ZROWS = [['Sales', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Cycle to Work', '£[£]', 'Owed by providers, not in the drawer'] /* UX walk-through 5 H3 */, ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Float at the start', '£[£]', '£[£] short, counted by Jo Taylor at [time]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
 const zRow = ([k, v, sub]) => `<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px"><dt style="display: flex; flex-direction: column; gap: 2px">${k}${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</dt><dd style="margin: 0; font-family: ${MONO}; white-space: nowrap">${v}</dd></div>`;
 // UX walk-through 2 M5: the day's online payments, said apart from this till.
 const zOnline = () => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 700"><span>Online that day</span>${mono('£[£]')}</div><span style="font-size: 13px; line-height: 1.45">Paid on the website, from [payment provider]. Separate from the tills — it isn’t in this till’s figures above.</span></div>`;
@@ -301,20 +302,34 @@ ${staff ? '' : note('Split by reason or by staff member with “Change what’s 
 
 // ---------- Accounts software (decision 4; audit H4, H5, M15) ----------
 const dataPage = (extra) => withSite('Bolton', () => settingsPage('data', 'Your data', DATA_INTRO, dataFolds() + extra, { who: OWNER }));
-const connectOpen = () => `<div style="display: flex; flex-direction: column; gap: 10px">${note('Each closed day goes across as one summary per shop: sales by account, the VAT, and the money taken by how it was paid. Only the owner can connect.')}<div style="display: flex; flex-wrap: wrap; gap: 10px">${button('Connect Xero', { variant: 'default' })}${button('Connect QuickBooks', { variant: 'default' })}</div>${note('Not using either? “Download everything” above has the same daily figures to import.')}</div>`;
+const connectOpen = () => `<div style="display: flex; flex-direction: column; gap: 10px">${note('Each closed day goes across as one summary per shop: sales by account, the VAT, the money taken by how it was paid, and any Cycle to Work payments marked paid that day, with their commission. Only the owner can connect.')}<div style="display: flex; flex-wrap: wrap; gap: 10px">${button('Connect Xero', { variant: 'default' })}${button('Connect QuickBooks', { variant: 'default' })}</div>${note('Not using either? “Download everything” above has the same daily figures to import.')}</div>`;
 const mapRow = (from, missing = false) => `<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 6px 0; min-height: 52px; box-sizing: border-box; border-top: 1px solid ${C.border}"><label for="m-${esc(from)}" style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; font-size: 15px; font-weight: 600">${from}${missing ? `<span style="font-size: 13px; font-weight: 700; color: ${C.danger}">No Xero account chosen — days with ${from} sales can’t be sent</span>` : ''}</label><select id="m-${esc(from)}" style="min-width: 240px; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: ${missing ? 2 : 1}px solid ${missing ? C.danger : C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"><option>${missing ? 'Choose a Xero account' : '[Xero account]'}</option></select></div>`;
 const group = (t, rows) => `<h4 style="margin: 12px 0 0; font-size: 14px; font-weight: 700">${t}</h4>${rows}`;
 const mapOpen = (missing = false) => `<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">${badge('Connected to Xero', 'green')}<span style="font-size: 13px; color: ${C.muted}">by Jack Lewis on [date]</span><span style="flex-grow: 1"></span>${linkBtn('Disconnect Xero')}</div>
 ${group('Sales go to', CATS.map((c, i) => mapRow(c, missing && i === 2)).join(''))}
-${group('Money taken goes to', ['Cash', 'Card', 'Customer accounts', 'Gift cards'].map((p) => mapRow(p)).join(''))}
-${group('Everything else goes to', ['Cash differences', 'Refunds', 'Discounts given', 'VAT on sales'].map((p) => mapRow(p)).join(''))}
+${group('Money taken goes to', ['Cash', 'Card', 'Customer accounts', 'Gift cards', 'Cycle to Work (owed by providers)'].map((p) => mapRow(p)).join(''))}
+${group('Everything else goes to', ['Cash differences', 'Refunds', 'Discounts given', 'VAT on sales', 'Cycle to Work commission', 'Cycle to Work shortfalls'].map((p) => mapRow(p)).join(''))}
 ${note('VAT on sales goes to one Xero account for every rate. Check these choices with your accountant before the first day is sent.')}`;
-const LOG = { sent: ['Sent at [time] · £[£]', badge('Sent', 'green')], failed: ['Closed at [time] · [Category] has no Xero account chosen', button('Choose an account for [Category]', { variant: 'default' })], waiting: ['Waiting for Till B3 to close', badge('Waiting', 'grey')], open: ['Not closed yet', badge('Not closed yet', 'grey')], held: ['Closed at [time] · sends when Xero is reconnected', badge('Waiting', 'grey')] };
+// UX walk-through 5 H3: "Mark paid" on a Cycle to Work order goes with that
+// day's summary, its commission beside it.
+const LOG = { sent: ['Sent at [time] · £[£]', badge('Sent', 'green')], sentC2w: ['Sent at [time] · £[£] · with [Provider] paid £[£] · commission £[£]', badge('Sent', 'green')], failed: ['Closed at [time] · [Category] has no Xero account chosen', button('Choose an account for [Category]', { variant: 'default' })], waiting: ['Waiting for Till B3 to close', badge('Waiting', 'grey')], open: ['Not closed yet', badge('Not closed yet', 'grey')], held: ['Closed at [time] · sends when Xero is reconnected', badge('Waiting', 'grey')] };
 const logRow = (day, shop, s) => `<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 6px 0; min-height: 52px; box-sizing: border-box; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 240px"><span style="font-size: 15px; font-weight: 600">${day} · ${shop}</span><span style="font-size: 13px; color: ${s === 'failed' ? C.warnInk : C.muted}">${LOG[s][0]}</span></span>${LOG[s][1]}</div>`;
-const logOpen = () => `${logRow('Thu 17 Sep', 'Bolton', 'open')}${logRow('Wed 16 Sep', 'Bolton', 'failed')}${logRow('Wed 16 Sep', SECOND, 'waiting')}${logRow('Tue 15 Sep', 'Bolton', 'sent')}${logRow('Tue 15 Sep', SECOND, 'sent')}${note('Each day goes once all that shop’s tills are closed. A day that’s reopened is corrected when it closes again.')}`;
+const logOpen = () => `${logRow('Thu 17 Sep', 'Bolton', 'open')}${logRow('Wed 16 Sep', 'Bolton', 'failed')}${logRow('Wed 16 Sep', SECOND, 'waiting')}${logRow('Tue 15 Sep', 'Bolton', 'sentC2w')}${logRow('Tue 15 Sep', SECOND, 'sent')}${note('Each day goes once all that shop’s tills are closed. A day that’s reopened is corrected when it closes again.')}`;
 const lostOpen = () => `${bar('<strong>Xero disconnected on [date].</strong> Nothing has been sent since. Reconnect and the waiting days go across.', button('Reconnect Xero', { variant: 'default' }))}${logRow('Wed 16 Sep', 'Bolton', 'held')}${logRow('Tue 15 Sep', 'Bolton', 'sent')}`;
 const accountsBoard = (open, summary) => dataPage(fold('Accounts software', summary, open));
 const disconnectDialog = () => popup('dc-title', 'Disconnect Xero?', 'North Street Cycles, every shop', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Days already sent stay in Xero. Nothing more is sent until you connect again — the daily figures are still in “Download everything”.</p>${note('Your account choices are kept in case you reconnect.')}`, `${button('Keep connected', { variant: 'ghost' })}${button('Disconnect', { variant: 'danger' })}`, 520);
+
+// ---------- Cycle to Work: owed and paid (UX walk-through 5 H3, option 1) ----------
+// Opens on a period, by provider: bikes, owed, paid, commission, late. Owners
+// and anyone with "Can see costs and margin" (commission is a cost). What's
+// owed right now stays on Cycle to Work's own Owed page (cw-owed).
+const C2W_COLS = ['Provider', 'Bikes collected', 'Owed now', 'Paid', 'Commission', 'Late'];
+const c2wRow = () => ['[Provider]', '[n]', '[£]', '[£]', '[£]', '[n]'];
+const c2wReport = () => wrap(`${head('Cycle to Work: owed and paid', 'North Street Cycles, Bolton · 1 – 17 September, against the same days in August', 'This month')}
+${stats([stat('Owed now', '£[£]', '[n] bikes · [n] late'), stat('Paid', '£[£]', UP('£[£]', 'the same days in August')), stat('Commission', '£[£]', UP('£[£]', 'the same days in August')), stat('Shortfalls closed', '£[£]', '[n] orders closed with a reason')])}
+${box(`${graph('Paid by provider', ['[Provider]', '[Provider]'], { key: ['Paid this month so far', 'Same days in August'], says: 'most paid by [Provider]; [up or down] £[£] on the same days in August' })}${table('Cycle to Work by provider', C2W_COLS, [c2wRow(), c2wRow()], ['All providers', '[n]', '[£]', '[£]', '[£]', '[n]'])}`)}
+<p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; line-height: 1.45"><span>Each bike, and what’s owed on it right now, is on Cycle to Work’s Owed page.</span>${linkBtn('See what’s owed now', 'See what Cycle to Work providers owe now')}</p>
+${note('Paid and commission are counted on the day each order is marked paid. They go to Xero with that day’s summary.')}`);
 
 // ---------- Who sees what (decision 5; audit M14, L6) ----------
 const HINTS = { 'Can see reports': 'Sales, takings, workshop, and discounts without who gave them', 'Can see costs and margin': 'Adds margin, stock value, cost columns and VAT. Turns on “Can see reports” too.' };
@@ -359,6 +374,9 @@ def('rp-accounts-lost', () => accountsBoard(lostOpen(), 'Xero disconnected'));
 def('rp-accounts-disconnect', () => overlay(accountsBoard(mapOpen(), 'Connected to Xero'), disconnectDialog()));
 def('rp-today-accounts', () => today({ accounts: true, as: OWNER }));
 def('rp-person', () => personBoard());
+def('rp-c2w', () => c2wReport()); // UX walk-through 5 H3
+// UX walk-through 5 H3: the Xero choices scrolled down to the Cycle to Work rows.
+def('rp-accounts-c2w', () => scrolled(accountsBoard(mapOpen(), 'Connected to Xero'), { desktop: 800, tablet: 800, phone: 1060 }[SIZE]));
 
 // Desktop, tablet and phone (tablet and phone drawn after the UI audit).
 const SIZES = ['desktop', 'tablet', 'phone'];
@@ -405,12 +423,14 @@ export const TITLES = {
   'rp-accounts-disconnect': 'Disconnect Xero',
   'rp-today-accounts': 'Today: Wednesday didn’t go to Xero',
   'rp-person': 'A person: “Can see reports” on, “Can see costs and margin” off',
+  'rp-c2w': 'Cycle to Work: owed and paid, by provider, with the commission', // UX walk-through 5 H3
+  'rp-accounts-c2w': 'Xero choices (scrolled down): Cycle to Work, its commission and shortfalls', // UX walk-through 5 H3
 };
 export const ROWS = [
   { label: 'Reports', screens: ['rp-home', 'rp-home-staff', 'rp-report-menu', 'rp-report-deleted', 'rp-your-settings'] },
   { label: 'Sales', screens: ['rp-sales', 'rp-sales-all', 'rp-sales-year', 'rp-sales-empty', 'rp-pick-dates'] },
   { label: 'Your own reports', screens: ['rp-change', 'rp-changed', 'rp-save', 'rp-save-taken'] },
   { label: 'Takings and cash-ups', screens: ['rp-takings', 'rp-takings-all', 'rp-day', 'rp-reopen', 'rp-takings-reopened'] },
-  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-vat-check-off', 'rp-margin', 'rp-workshop', 'rp-discounts', 'rp-discounts-staff', 'rp-returning'] },
-  { label: 'Accounts software and who sees what', screens: ['rp-accounts-connect', 'rp-accounts-map', 'rp-accounts-missing', 'rp-accounts-log', 'rp-accounts-lost', 'rp-accounts-disconnect', 'rp-today-accounts', 'rp-person'] },
+  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-vat-check-off', 'rp-margin', 'rp-workshop', 'rp-discounts', 'rp-discounts-staff', 'rp-returning', 'rp-c2w'] }, // UX walk-through 5 H3: rp-c2w
+  { label: 'Accounts software and who sees what', screens: ['rp-accounts-connect', 'rp-accounts-map', 'rp-accounts-c2w', 'rp-accounts-missing', 'rp-accounts-log', 'rp-accounts-lost', 'rp-accounts-disconnect', 'rp-today-accounts', 'rp-person'] },
 ];

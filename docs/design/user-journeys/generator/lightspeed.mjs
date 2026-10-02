@@ -19,26 +19,34 @@
 // products are bracketed placeholders; Lightspeed's sign-in page is not
 // drawn (it is Lightspeed's). What Lightspeed allows is unverified until
 // there is a test account (proof steps LS-01–09).
-import { C, MONO, esc, icon, button, card, badge, field } from './ui.mjs';
+import { C, MONO, esc, icon, button, badge, field } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone, settingsPage, lsFolds, LS_INTRO, workshopFolds, WORKSHOP_INTRO, msgFolds, MSG_INTRO, dataFolds, DATA_INTRO, MANAGER_VIEW } from './settings-frame.mjs';
 import { today } from './opening.mjs';
 import { jobVariant, quoteJobBoards, phoneStagePanel, footNote, handOverFooter } from './diary.mjs';
 import { panel as jpPanel, row as jpRow, mono as jpMono } from './job-page.mjs';
-import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { msgListOpen } from './setup.mjs';
 import { withLightspeedShop } from './shop-mode.mjs';
+import { summaryLsAt } from './collect.mjs';
 
 export const screens = {};
 const recipes = [];
 const def = (id, fn) => recipes.push([id, fn]);
 let SIZE = 'desktop';
 const OWNER = { role: 'O', person: 'Jack Lewis', roleName: 'Owner' };
+const STAFF_JO = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
 const tall = 'display: inline-flex; align-items: center; min-height: 44px';
 const WO = 'work order [number]';
 // Audit M7: no promised timings — when it last checked, and a "Why?".
-const WHY = `<a href="#" aria-label="Why it can take a moment to show" style="${tall}; min-width: 44px; justify-content: center; font-weight: 600; color: ${C.ink}">Why?</a>`;
-const checked = (when = '[n] seconds ago') => `Last checked ${when} · ${WHY}`;
+// UX walk-through 6 L3: "Why?" is a button, not a link that goes nowhere. It
+// shows its one sentence below the strip (the R-Series sign-off's sentence,
+// docs/decisions/2026-09-02-r-series-sync-and-rate-limits.md §5, with the
+// interval left as [n]), tied to the button with aria-describedby. Drawn
+// closed, so the sentence is hidden until pressed.
+let whyN = 0;
+const WHY_TEXT = 'Lightspeed doesn’t tell Wheelhouse when something changes, so Wheelhouse checks it every [n] seconds. Jobs made in Wheelhouse update straight away.';
+const whyBtn = () => { const id = `ls-why-${++whyN}`; return `<button type="button" aria-expanded="false" aria-controls="${id}" aria-describedby="${id}" aria-label="Why it can take a moment to show" style="${tall}; min-width: 44px; justify-content: center; padding: 0 6px; border: 0; background: transparent; font-family: inherit; font-size: inherit; font-weight: 600; color: ${C.ink}; text-decoration: underline; cursor: pointer">Why?</button><span id="${id}" hidden>${WHY_TEXT}</span>`; };
+const checked = (when = '[n] seconds ago') => `Last checked ${when} · ${whyBtn()}`;
 // Audit H4: exactly what Wheelhouse writes.
 const PROMISE = 'Wheelhouse never takes a payment, gives a refund or closes a sale in Lightspeed. It does put the prices the customer approved on the work order, so the till shows what they agreed.';
 const msg = (t, tone = 'ok', live = false) => `<p${live ? ' role="status"' : ''} style="margin: 0; display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${tone === 'ok' ? C.okBg : tone === 'warn' ? C.warnBg : C.mutedBg}; color: ${tone === 'ok' ? C.successInk : tone === 'warn' ? C.warnInk : C.ink}; font-size: 15px; line-height: 1.45">${icon(tone === 'warn' ? 'alert' : tone === 'ok' ? 'check' : 'store', 18)}<span>${t}</span></p>`;
@@ -52,7 +60,7 @@ const steps = (at) => `<ol aria-label="Steps" style="margin: 0; padding: 0; disp
 // ---------- Settings › Office › Lightspeed (decision 7; audit H4, L3, M5) ----------
 const lsSettings = (open, opts = {}) => settingsPage('lightspeed', 'Lightspeed', LS_INTRO, lsFolds(open), { who: OWNER, ...opts });
 const offOpen = () => `<p style="margin: 0; font-size: 15px; line-height: 1.5">Connect the Lightspeed till this shop uses. Wheelhouse then reads your products and stock, finds and adds customers, makes a work order for each approved job — a work order is Lightspeed's name for a job — and sees when it's paid.</p>${msg(PROMISE, 'grey')}<div>${button('Connect Lightspeed')}</div>`;
-const connOpen = (readOnly = false) => `${kv('Lightspeed account', '[Lightspeed account name]')}${kv('Connected by', 'Jack Lewis · [date]')}${kv('Last checked', `[n] seconds ago · ${WHY}`)}${readOnly ? note('Only the owner can connect, disconnect or check Lightspeed.') : `<div style="display: flex; flex-wrap: wrap; gap: 10px">${greyBtn('Check now', 'Checked just now — again in [n] seconds')}${button('Disconnect…', { variant: 'default' })}</div>`}`;
+const connOpen = (readOnly = false) => `${kv('Lightspeed account', '[Lightspeed account name]')}${kv('Connected by', 'Jack Lewis · [date]')}${kv('Last checked', `[n] seconds ago · ${whyBtn()}`)}${readOnly ? note('Only the owner can connect, disconnect or check Lightspeed.') : `<div style="display: flex; flex-wrap: wrap; gap: 10px">${greyBtn('Check now', 'Checked just now — again in [n] seconds')}${button('Disconnect…', { variant: 'default' })}</div>`}`;
 // Audit M5: three states — working, not working, not proven yet.
 const CHECKS = [
   ['Read products and stock', 'ok', '[n] products read'],
@@ -79,31 +87,51 @@ const strip = (b, main, side = '', act = '') => () => `<div role="status">${jpPa
 const phoneTop = (b, main, side = '', act = '') => () => phoneStagePanel(`<div role="status" style="display: flex; flex-direction: column; gap: 6px"><div style="display: flex; align-items: center; gap: 8px">${b}</div><span style="font-size: 15px; font-weight: 700">${main}</span>${side ? `<span style="font-size: 13px; color: ${C.muted}">${side}</span>` : ''}${act}</div>`);
 const sbtn = (t, label) => button(t, { variant: 'default' }).replace('<button', `<button aria-label="${esc(label)}"`);
 const AGREED = `Agreed ${jpMono('£111.00')}`;
+// UX walk-through 6 M2: the strip names the Lightspeed customer the job is
+// linked to, so a wrong link shows before the till search finds nobody.
+const LINKED = 'Linked to [Lightspeed customer]';
 const JOBS = {
   notConnected: [badge('Not in Lightspeed', 'grey'), 'Lightspeed isn’t connected', 'The work order is made once the owner connects it'],
-  sent: [badge('In Lightspeed', 'blue'), `${WO} · ${AGREED}`, 'Made when Maya approved · updated [time]'],
+  sent: [badge('In Lightspeed', 'blue'), `${WO} · ${AGREED}`, `Made when Maya approved · ${LINKED}`],
   changed: [badge('In Lightspeed', 'blue'), `${WO} updated · now ${jpMono('£[£]')}`, 'Maya approved the new price at [time]'],
   // Decision 12: a part's price changed in Lightspeed after Maya approved.
   priceChanged: [badge('Price changed in Lightspeed', 'amber'), `Shimano brake pads ${jpMono('£28.00')} → ${jpMono('£[£]')} since Maya approved`, '', `<span style="display: inline-flex; gap: 8px">${sbtn('Keep £28.00', 'Keep the agreed price of £28.00 for Shimano brake pads')}${sbtn('Ask Maya again', 'Ask Maya to approve the new price')}</span>`],
+  // UX walk-through 6 M4: after "Ask Maya again", while she hasn't answered.
+  // If she says no, the strip goes back to priceChanged with "Maya said no
+  // to £[£]" and the same two buttons.
+  priceAsked: [badge('Waiting for Maya’s answer', 'amber'), `New price asked · Shimano brake pads ${jpMono('£28.00')} → ${jpMono('£[£]')}`, 'The work order keeps £28.00 until she answers · asked at [time]'],
   cancelled: [badge('Cancelled', 'grey'), `${WO} marked cancelled in Lightspeed`, 'By Jo Taylor at [time]'],
   pick: [badge('Not sent yet', 'amber'), 'Choose Maya in Lightspeed to send the work order', '', sbtn('Choose the customer', 'Choose the customer in Lightspeed for WH-1042')],
   waitReach: [badge('Waiting to reach Lightspeed', 'amber'), 'Not sent yet — Wheelhouse keeps trying by itself', 'Since [time]'],
   unsure: [badge('Not sure it arrived', 'amber'), 'Wheelhouse won’t send it again until someone has looked', '', sbtn('Check this in Lightspeed', 'Check WH-1042’s work order in Lightspeed')],
-  readyNoWo: [badge('Not in Lightspeed yet', 'amber'), 'Maya can’t pay at the Lightspeed till yet — the work order isn’t there', 'Waiting to reach Lightspeed since [time]'],
-  unpaid: [badge('Waiting to be paid in Lightspeed', 'amber'), `Maya pays at the Lightspeed till · ${AGREED}`, `${WO} · ${checked()}`],
-  paid: [badge('Paid in Lightspeed', 'green'), `[time] · ${AGREED}`, WO],
+  // UX walk-through 6 H2 (option 1): in the ready state the strip keeps the
+  // button for whatever blocks the work order — "Choose the customer" (pick)
+  // or "Check this in Lightspeed" (unsure). Drawn here for Lightspeed out of
+  // reach, which has no button until it answers. "Hand over" opens
+  // ls-hand-over-no-wo.
+  readyNoWo: [badge('Not in Lightspeed yet', 'amber'), 'Maya can’t pay at the Lightspeed till yet — the work order isn’t there', 'Can’t reach Lightspeed since [time] · it sends by itself when Lightspeed answers'],
+  unpaid: [badge('Waiting to be paid in Lightspeed', 'amber'), `Maya pays at the Lightspeed till · ${WO} · ${AGREED}`, `${LINKED} · ${checked()}`],
+  paid: [badge('Paid in Lightspeed', 'green'), `[time] · ${WO} · ${AGREED}`, LINKED],
   fallback: [badge('In Lightspeed', 'blue'), `Take payment at the Lightspeed till · ${AGREED}`, `${WO} · payment isn’t checked for this shop`],
-  collectedUnpaid: [badge('Collected · not shown as paid in Lightspeed', 'amber'), `Handed over by Jo Taylor at [time] before payment showed · ${AGREED}`, `${WO} · ${checked()}`],
+  collectedUnpaid: [badge('Collected · not shown as paid in Lightspeed', 'amber'), `Handed over by Jo Taylor at [time] before payment showed · ${WO} · ${AGREED}`, checked()],
 };
-const job = (status, tone, k, footer) => { const [b, m, s, a] = JOBS[k]; return jobVariant(status, tone, strip(b, m, s, a), phoneTop(b, m, s, a), footer); };
+// UX walk-through 6 L1: on a Lightspeed job the header tag reads "Agreed
+// £111.00", the strip's word; the table keeps "Approved", the customer-
+// approval column's word. jobVariant (diary.mjs) draws "Approved", so the
+// tag's text is swapped here, and only the tag.
+const TAG_FROM = '>Approved £111.00</span>', TAG_TO = '>Agreed £111.00</span>';
+const agreedTag = (boards) => Object.fromEntries(Object.entries(boards).map(([sz, html]) => [sz, html.split(TAG_FROM).join(TAG_TO)]));
+const job = (status, tone, k, footer) => { const [b, m, s, a] = JOBS[k]; return agreedTag(jobVariant(status, tone, strip(b, m, s, a), phoneTop(b, m, s, a), footer)); };
 const plainFooter = (t, sub) => (size) => `${button(t, { variant: 'primary', block: true })}${footNote(sub, size)}`;
 const readyFooter = plainFooter('Mark ready for collection', 'Tells Maya her bike is ready to collect and pay for.');
+const sortedFooter = (size) => `${button('Done', { variant: 'primary', block: true })}${button('Mark it sorted…', { variant: 'default', block: true })}${footNote('Owners and managers only: for a bike settled another way.', size)}`;
 const fallbackFooter = (size) => `<label style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; flex-shrink: 0"><input type="checkbox" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"><span style="font-size: 14px; font-weight: 600">Paid in Lightspeed</span></label>${handOverFooter(size)}`;
 const JOB_AT = {
   notConnected: () => job('In the workshop', 'blue', 'notConnected', readyFooter),
   sent: () => job('In the workshop', 'blue', 'sent', readyFooter),
   changed: () => job('In the workshop', 'blue', 'changed', readyFooter),
   priceChanged: () => job('In the workshop', 'blue', 'priceChanged', readyFooter),
+  priceAsked: () => job('In the workshop', 'blue', 'priceAsked', readyFooter), // UX walk-through 6 M4
   cancelled: () => job('Cancelled', 'grey', 'cancelled', plainFooter('Done', 'Closes the job.')),
   pick: () => job('In the workshop', 'blue', 'pick', readyFooter),
   waitReach: () => job('In the workshop', 'blue', 'waitReach', readyFooter),
@@ -112,7 +140,9 @@ const JOB_AT = {
   unpaid: () => job('Ready for collection', 'green', 'unpaid', (size) => handOverFooter(size)),
   paid: () => job('Ready for collection', 'green', 'paid', (size) => handOverFooter(size)),
   fallback: () => job('Ready for collection', 'green', 'fallback', fallbackFooter),
-  collectedUnpaid: () => job('Collected', 'grey', 'collectedUnpaid', plainFooter('Done', 'The job stays marked until payment shows.')),
+  // UX walk-through 6 M5: owners and managers can close the mark when the
+  // bike was settled another way ("Mark it sorted…" opens ls-job-sorted).
+  collectedUnpaid: () => job('Collected', 'grey', 'collectedUnpaid', sortedFooter),
 };
 const jobAt = (k) => withLightspeedShop(() => JOB_AT[k]())[SIZE];
 
@@ -125,7 +155,16 @@ const PRODUCTS = [
 const partSearch = (down = false) => popup('ps-title', 'Add a part', down ? 'Lightspeed can’t be reached' : `From Lightspeed’s products · ${checked('40 seconds ago')}`, `${down ? msg('<strong>Showing products and stock as of [time].</strong> Prices may have changed since. If one has when Lightspeed answers, you choose: keep the agreed price, or ask Maya again.', 'warn', true) : ''}<div style="display: flex; flex-direction: column; gap: 6px"><label for="ps-q" style="font-size: 14px; font-weight: 600">Search products</label><input id="ps-q" value="brake pads" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div><ul aria-label="Products" style="margin: 0; padding: 0">${PRODUCTS.map(([n, p, s]) => `<li style="list-style: none"><button type="button" aria-label="Add ${esc(n)} to the quote" style="display: grid; grid-template-columns: ${isPhone() ? 'auto minmax(0, 1fr) auto' : 'minmax(0, 1fr) auto auto auto'}; gap: ${isPhone() ? '4px 10px' : '12px'}; align-items: center; width: 100%; min-height: 52px; padding: 6px 4px; border: 0; border-top: 1px solid ${C.border}; background: transparent; text-align: left; font-family: inherit; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600${isPhone() ? '; grid-column: 1 / -1' : ''}">${n}</span>${mono(p, 'font-size: 14px')}<span style="font-size: 13px; color: ${C.muted}; white-space: nowrap">${down ? `${s} as of [time]` : s}</span><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700">${icon('plus', 14)}Add</span></button></li>`).join('')}</ul>${note('Prices and stock come from Lightspeed. Labour is priced here, in Settings › Workshop.')}`, button('Done', { variant: 'default' }), 640);
 
 // Decision 4; audit M9: nothing chosen to start; each row says what matched.
-const customerPick = () => popup('cp-title', 'Which Maya Patel in Lightspeed?', 'WH-1042 is ready to go to Lightspeed', `${note('Wheelhouse found more than one possible match. Pick once — the link stays for Maya’s next jobs, and can be changed on her customer page.')}${group('Lightspeed customers', `${radio('Maya Patel', false, `${mono('07700 900 142')} · maya@example.test — same phone and email as Maya`, 'cp')}${radio('M. Patel', false, `${mono('[phone]')} — no phone or email to compare`, 'cp')}${radio('None of these — add Maya to Lightspeed', false, '', 'cp')}`)}`, `${button('Not now', { variant: 'ghost' })}${greyBtn('Link and send', 'Choose one')}`, 580);
+// UX walk-through 6 L4: the example rows each match only partly — a match on
+// both phone and email is linked without asking, so it never appears here.
+// UX walk-through 6 M1 (option 1): the look-up runs at book-in, while Maya is
+// at the desk to say which is her. It only reads; nothing is written to
+// Lightspeed yet. The work order is still made when she approves the quote
+// (decision 3); a job with nothing to approve gets its work order at book-in.
+const PICK_ROWS = () => `${radio('Maya Patel', false, `${mono('07700 900 142')} · [email] — same phone, different email`, 'cp')}${radio('M. Patel', false, 'Same name, no phone or email to compare', 'cp')}${radio('None of these — add Maya to Lightspeed', false, '', 'cp')}`;
+const PICK_NOTE = 'A match on both phone and email is linked without asking. Pick once — the link stays for Maya’s next jobs, and can be changed on her customer page.';
+const customerPick = () => popup('cp-title', 'Which Maya Patel in Lightspeed?', 'WH-1042 is ready to go to Lightspeed', `${note(`Wheelhouse found more than one possible match. ${PICK_NOTE}`)}${group('Lightspeed customers', PICK_ROWS())}`, `${button('Not now', { variant: 'ghost' })}${greyBtn('Link and send', 'Choose one')}`, 580);
+const bookInPick = () => popup('cp-title', 'Which Maya Patel in Lightspeed?', 'Booking in WH-1042 · Maya is at the desk', `${note(`Wheelhouse looked Maya up in Lightspeed as you booked her in, and found more than one possible match. Ask her which is her. ${PICK_NOTE}`)}${group('Lightspeed customers', PICK_ROWS())}${msg('Nothing is sent to Lightspeed yet. The work order is made when Maya approves her quote — or now, if there’s nothing to approve.', 'grey')}`, `${button('Not now', { variant: 'ghost' })}${greyBtn('Link and book in', 'Choose one')}`, 600);
 
 // Decision 6: a send that may or may not have arrived.
 const checkInLs = () => popup('ck-title', 'Check this in Lightspeed', 'WH-1042 · Maya Patel', `${msg('<strong>Not sure the work order arrived.</strong> Lightspeed stopped answering while it was being sent, and Wheelhouse couldn’t find it afterwards. It won’t send it again until you’ve looked.', 'warn', true)}${field('Work order number in Lightspeed', { value: '', placeholder: 'If you find it', hint: 'Look for WH-1042 · Maya Patel · agreed £111.00 in Lightspeed’s work orders', linked: true, id: 'ck-wo' })}`, `${button('It isn’t there — send it', { variant: 'ghost' })}${button('Link this work order')}`, 560);
@@ -137,6 +176,14 @@ const HANDOVER = {
   unchecked: ['Has Maya paid?', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Payment isn’t checked for this shop. Check the Lightspeed till for ${WO} · ${AGREED}.</p>${note('Your answer is recorded on the job.')}`, 'Yes, she paid'],
 };
 const handOverPop = (k) => { const [t, body, go] = HANDOVER[k]; return popup('hu-title', t, 'WH-1042 · Maya Patel', body, `${button('Not yet', { variant: 'default' })}${button(go)}`, 540); };
+// UX walk-through 6 H2 (option 1): ready, no work order in Lightspeed, Maya at
+// the counter. "Maya pays later" is chosen to start. "Rung up in Lightspeed
+// by hand" links that sale's work order (the box from ls-job-check), so
+// Wheelhouse never sends a second one for the same bike.
+const handOverNoWo = () => popup('hn-title', 'The work order isn’t in Lightspeed yet', 'WH-1042 · Maya Patel', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Maya can’t pay against it at the Lightspeed till. Wheelhouse can’t reach Lightspeed since [time].</p>${group('How is Maya paying?', `${radio('Maya pays later', true, 'Wheelhouse sends the work order when Lightspeed answers. Handing over is recorded on the job, and the job stays marked until payment shows.', 'hn')}${radio('Rung up in Lightspeed by hand — link it', false, 'Wheelhouse links this work order and never sends its own.', 'hn')}`)}${field('Work order number in Lightspeed', { value: '', placeholder: 'If you rang it up by hand', hint: 'The number on the sale you rang up for WH-1042 · agreed £111.00', linked: true, id: 'hn-wo' })}`, `${button('Not yet', { variant: 'default' })}${button('Hand over')}`, 560);
+// UX walk-through 6 M5: owners and managers close the mark on a bike that was
+// settled another way, with a reason. Recorded with who and when.
+const sortedPop = () => popup('so-title', 'Mark it sorted?', 'WH-1042 · Maya Patel · Jack Lewis, Owner', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Work order [number] still isn’t shown as paid in Lightspeed. Marking it sorted clears the mark on the job and the line on Today.</p>${group('Why is it sorted?', `${radio('Paid in Lightspeed another way', false, 'For example, rung up as a plain sale', 'so')}${radio('Won’t be paid', false, 'Written off by the shop', 'so')}${radio('Something else', false, 'Say what in the note', 'so')}`)}${field('Note', { value: '', placeholder: 'Optional, unless it’s something else', id: 'so-note' })}${note('Recorded with your name and the time in the job’s history and the Activity log.')}`, `${button('Cancel', { variant: 'ghost' })}${greyBtn('Mark it sorted', 'Choose why')}`, 560);
 const handOverFound = () => popup('hf-title', 'Paid in Lightspeed', 'WH-1042 · Maya Patel', msg(`<strong>Found it — ${WO} was paid at [time].</strong>`, 'ok', true), `${button('Cancel', { variant: 'ghost' })}${button('Hand over')}`, 520);
 
 // ---------- Settings and messages (audit M1, M2) ----------
@@ -146,11 +193,11 @@ const activityOpen = () => `${note('Everything recorded about jobs, settings and
 const dataPage = () => settingsPage('data', 'Your data', DATA_INTRO, dataFolds({ activity: activityOpen() }), { who: OWNER });
 
 // ---------- What the customer sees (decision 9; audit H1, M8) ----------
-const back = (t) => `<a href="#" style="${tall}; align-self: flex-start; gap: 4px; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: none">${icon('back', 16)}${t}</a>`;
-const customerReady = () => {
-  const body = `<div data-scroll style="flex-grow: 1; min-height: 0; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px"><div style="width: 100%; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">${back('Your account')}<h1 style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Your bike is ready</h1>${note('WH-1042 · Trek Domane AL 3 · North Street Cycles, Bolton')}${card(`<div style="padding: 18px; display: flex; flex-direction: column; gap: 10px">${kv('Standard service, brake pads, brake fitting', '')}${kv('<strong>Agreed price</strong>', `<strong>${mono('£111.00')}</strong>`)}<p style="margin: 0; font-size: 15px; line-height: 1.5">You pay at the till when you collect. Open [opening hours].</p><div style="display: flex; flex-wrap: wrap; gap: 10px">${button('See what we did', { variant: 'default' })}${button('Ask the shop a question', { variant: 'default' })}</div></div>`)}</div></div>`;
-  return SIZE === 'desktop' ? siteDesktop('sand', 'Account', body) : SIZE === 'tablet' ? siteTablet('sand', body, 'Account') : sitePhone('sand', { content: body });
-};
+// UX walk-through 6 H1: one ready page. ls-customer-ready is collect.mjs's
+// job page at Ready drawn as a Lightspeed shop (summaryLsAt): "Pay at the
+// till", no Pay now, no Basket — the same page the booking started. It
+// replaces the separate "Your bike is ready" page under "Your account" (and
+// so L1's two sets of words, and L3's buttons that went to other pages).
 
 // ---------- The boards ----------
 const ls = (id, fn) => def(id, () => withLightspeedShop(fn));
@@ -165,12 +212,14 @@ ls('ls-settings-manager', () => settingsPage('lightspeed', 'Lightspeed', LS_INTR
 ls('ls-disconnect', () => overlay(lsSettings({ connection: connOpen() }), disconnect()));
 ls('ls-reconnect', () => lsSettings({ signedOut: true, connection: `${kv('Lightspeed account', '[Lightspeed account name]')}<div>${button('Reconnect Lightspeed')}</div>` }, { banner: reconnectBanner() }));
 ls('ls-today', () => today({ lightspeed: true, as: OWNER }));
+ls('ls-book-in', () => overlay(today({ lightspeed: true, as: STAFF_JO }), bookInPick())); // UX walk-through 6 M1
 ls('ls-job-not-connected', () => jobAt('notConnected'));
 ls('ls-part-search', () => overlay(quoteJobBoards('build')[SIZE], partSearch()));
 ls('ls-part-search-down', () => overlay(quoteJobBoards('build')[SIZE], partSearch(true)));
 ls('ls-job-sent', () => jobAt('sent'));
 ls('ls-job-changed', () => jobAt('changed'));
 ls('ls-job-price-changed', () => jobAt('priceChanged'));
+ls('ls-job-price-asked', () => jobAt('priceAsked')); // UX walk-through 6 M4
 ls('ls-job-cancelled', () => jobAt('cancelled'));
 ls('ls-job-pick', () => jobAt('pick'));
 ls('ls-customer-pick', () => overlay(jobAt('pick'), customerPick()));
@@ -180,6 +229,7 @@ ls('ls-job-check', () => overlay(jobAt('unsure'), checkInLs()));
 ls('ls-today-down', () => today({ lightspeed: true, lsDown: true, as: OWNER }));
 ls('ls-today-person', () => today({ lightspeed: true, lsPerson: true, as: OWNER }));
 ls('ls-job-ready-no-wo', () => jobAt('readyNoWo'));
+ls('ls-hand-over-no-wo', () => overlay(jobAt('readyNoWo'), handOverNoWo())); // UX walk-through 6 H2
 ls('ls-job-unpaid', () => jobAt('unpaid'));
 ls('ls-hand-over-unpaid', () => overlay(jobAt('unpaid'), handOverPop('notShown')));
 ls('ls-hand-over-found', () => overlay(jobAt('unpaid'), handOverFound()));
@@ -188,11 +238,12 @@ ls('ls-job-paid', () => jobAt('paid'));
 ls('ls-job-fallback', () => jobAt('fallback'));
 ls('ls-hand-over-unchecked', () => overlay(jobAt('fallback'), handOverPop('unchecked')));
 ls('ls-job-collected-unpaid', () => jobAt('collectedUnpaid'));
+ls('ls-job-sorted', () => overlay(jobAt('collectedUnpaid'), sortedPop())); // UX walk-through 6 M5
 ls('ls-today-unpaid', () => today({ lightspeed: true, lsUnpaid: true, as: OWNER }));
 ls('ls-messages', () => messagesPage());
 ls('ls-office-data', () => dataPage());
 ls('ls-workshop-settings', () => workshopNoMoney());
-ls('ls-customer-ready', () => customerReady());
+ls('ls-customer-ready', () => summaryLsAt(SIZE)); // UX walk-through 6 H1
 
 const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
@@ -212,12 +263,14 @@ export const TITLES = {
   'ls-disconnect': 'Disconnect Lightspeed?',
   'ls-reconnect': 'Lightspeed signed Wheelhouse out: reconnect',
   'ls-today': 'Today for a Lightspeed shop',
+  'ls-book-in': 'Book in: choose Maya in Lightspeed while she’s at the desk',
   'ls-job-not-connected': 'A job before Lightspeed is connected',
   'ls-part-search': 'Add a part: Lightspeed’s products, one press',
   'ls-part-search-down': 'Add a part while Lightspeed can’t be reached',
   'ls-job-sent': 'Approved: the work order made in Lightspeed',
   'ls-job-changed': 'A new price approved: the work order updated',
   'ls-job-price-changed': 'A part’s price changed in Lightspeed: keep it or ask again',
+  'ls-job-price-asked': 'Waiting for Maya’s answer on the new price',
   'ls-job-cancelled': 'Cancelled: the work order marked cancelled',
   'ls-job-pick': 'Not sent yet: choose the customer',
   'ls-customer-pick': 'Which customer in Lightspeed? Nothing chosen to start',
@@ -227,6 +280,7 @@ export const TITLES = {
   'ls-today-down': 'Today: can’t reach Lightspeed',
   'ls-today-person': 'Today: jobs that need someone to look',
   'ls-job-ready-no-wo': 'Ready, but not in Lightspeed yet',
+  'ls-hand-over-no-wo': 'Hand over with no work order: pays later, or rung up by hand',
   'ls-job-unpaid': 'Ready: waiting to be paid in Lightspeed',
   'ls-hand-over-unpaid': 'Hand over before it shows as paid',
   'ls-hand-over-found': '“Check Lightspeed now” finds the payment',
@@ -235,16 +289,17 @@ export const TITLES = {
   'ls-job-fallback': 'Payment not checked: tick “Paid in Lightspeed”',
   'ls-hand-over-unchecked': 'Payment not checked: “Has Maya paid?”',
   'ls-job-collected-unpaid': 'Collected, not shown as paid',
+  'ls-job-sorted': 'Mark it sorted: why, recorded',
   'ls-today-unpaid': 'Today: handed over, not paid after [n] days',
   'ls-messages': 'Settings › Front desk › Messages for a Lightspeed shop',
   'ls-office-data': 'Settings › Office › Your data: the Activity log',
   'ls-workshop-settings': 'Settings › Workshop: no deposits or paying online',
-  'ls-customer-ready': 'The customer’s “Your bike is ready”: agreed price, pay at the till',
+  'ls-customer-ready': 'Maya’s job page at Ready: agreed price, pay at the till',
 };
 export const ROWS = [
   { label: 'Connecting Lightspeed', screens: ['ls-settings-off', 'ls-connect-signin', 'ls-connect-shops', 'ls-connect-shops-two', 'ls-connect-checks', 'ls-settings-on', 'ls-settings-manager', 'ls-disconnect', 'ls-reconnect'] },
-  { label: 'Quote and approval', screens: ['ls-today', 'ls-job-not-connected', 'ls-part-search', 'ls-part-search-down', 'ls-job-sent', 'ls-job-changed', 'ls-job-price-changed', 'ls-job-cancelled', 'ls-job-pick', 'ls-customer-pick'] },
+  { label: 'Quote and approval', screens: ['ls-today', 'ls-book-in', 'ls-job-not-connected', 'ls-part-search', 'ls-part-search-down', 'ls-job-sent', 'ls-job-changed', 'ls-job-price-changed', 'ls-job-price-asked', 'ls-job-cancelled', 'ls-job-pick', 'ls-customer-pick'] },
   { label: 'When Lightspeed can’t be reached', screens: ['ls-job-waiting', 'ls-job-unsure', 'ls-job-check', 'ls-today-down', 'ls-today-person'] },
-  { label: 'Payment and collection', screens: ['ls-job-ready-no-wo', 'ls-job-unpaid', 'ls-hand-over-unpaid', 'ls-hand-over-found', 'ls-hand-over-unreachable', 'ls-job-paid', 'ls-job-fallback', 'ls-hand-over-unchecked', 'ls-job-collected-unpaid', 'ls-today-unpaid'] },
+  { label: 'Payment and collection', screens: ['ls-job-ready-no-wo', 'ls-hand-over-no-wo', 'ls-job-unpaid', 'ls-hand-over-unpaid', 'ls-hand-over-found', 'ls-hand-over-unreachable', 'ls-job-paid', 'ls-job-fallback', 'ls-hand-over-unchecked', 'ls-job-collected-unpaid', 'ls-job-sorted', 'ls-today-unpaid'] },
   { label: 'Settings and the customer', screens: ['ls-messages', 'ls-office-data', 'ls-workshop-settings', 'ls-customer-ready'] },
 ];

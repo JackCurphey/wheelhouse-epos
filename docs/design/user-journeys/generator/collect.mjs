@@ -21,6 +21,7 @@ import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { CHECKLIST_10, CUSTOMER_NOTE } from './job-page.mjs';
 import { today } from './opening.mjs';
 import { chan, wordingBox, bubble, msgPage, msgListOpen } from './setup.mjs';
+import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -68,6 +69,17 @@ function pay(state, remind = false) {
   const dueText = state === 'deposit' ? '£[rest]' : money(due);
   const depositLine = state === 'deposit' ? `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Deposit paid ${mono('£[deposit]')} · [date], when you booked</p>` : '';
   const remindHtml = remind === 'yes' ? `<p style="margin: 0; padding-top: 8px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5">You’ll get a reminder when the next service is due. <a href="#" style="color: ${C.ink}; font-weight: 600">Change</a></p>` : remind ? `<div style="padding-top: 8px; border-top: 1px solid ${C.border}">${remindBox(false, { collect: true })}</div>` : '';
+  // UX walk-through 6 H1, M2, M6: a Lightspeed shop takes no money in
+  // Wheelhouse (Lightspeed shops decision 9), so the one ready page has no
+  // Pay now: it states the agreed price and tells Maya how the Lightspeed
+  // till finds her job. Once Wheelhouse sees the work order paid, it says
+  // so and nothing about a receipt — the receipt is the Lightspeed till's.
+  if (lightspeedShop()) {
+    if (state === 'paid') return box('Paid', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}Paid at the till · [date], [time]</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing more to pay.</p>${shopLines}`);
+    return box('Pay when you collect', `<p style="margin: 0; font-size: 17px; line-height: 1.5">Agreed price ${mono(money(WORK_TOTAL_APPROVED), 'font-size: 22px; font-weight: 700')} — pay at the till</p>
+${note(`When you come in, give your name or job number ${mono('WH-1042')}.`)}${remindHtml}${shopLines}${button('Add a note for the shop', { variant: 'default' })}`);
+  }
   if (state === 'paid') return box('Paid', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${money(WORK_TOTAL_APPROVED)} paid on [date]</p>
 <p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing more to pay. When you come in, just give your name.</p>${shopLines}`);
   if (state === 'counter') return box('To pay', `${mono(money(WORK_TOTAL_APPROVED), 'font-size: 30px')}
@@ -139,6 +151,10 @@ def('cp-summary-paid', () => summary('paid'));
 def('cp-summary-counter', () => summary('counter'));
 def('cp-summary-inshop', () => summary('inshop'));
 def('cp-expired', () => expired());
+// UX walk-through 6 H1: the same page at a Lightspeed shop — no Pay now, no
+// Basket in the header — before and after Maya pays at the Lightspeed till.
+def('cp-summary-ls', () => withLightspeedShop(() => summary('pay')));
+def('cp-summary-ls-paid', () => withLightspeedShop(() => summary('paid')));
 def('cp-ready-unpaid', () => diaryScreens['job-ready-unpaid'][SIZE]);
 def('cp-ready-deposit', () => diaryScreens['job-ready-deposit'][SIZE]);
 def('cp-till', () => tillScreens['till-job'][SIZE]);
@@ -248,6 +264,8 @@ export const TITLES = {
   'cp-summary-counter': 'The link while it’s being paid at the counter',
   'cp-summary-inshop': 'The same link, for a shop without online payments',
   'cp-expired': 'The link, [n] days after collection',
+  'cp-summary-ls': 'A Lightspeed shop: the agreed price, pay at the till',
+  'cp-summary-ls-paid': 'A Lightspeed shop: paid at the till',
   'cp-ready-unpaid': 'At the counter, not paid: Take payment',
   'cp-ready-deposit': 'At the counter, deposit paid: the rest to pay',
   'cp-till': 'The till: the job’s lines locked, collected when paid',
@@ -274,6 +292,8 @@ export const TITLES = {
 };
 export const ROWS = [
   { label: 'The customer’s link', screens: ['cp-summary', 'cp-summary-said-yes', 'cp-summary-deposit', 'cp-pay', 'cp-pay-failed', 'cp-pay-balance', 'cp-paid', 'cp-paid-balance', 'cp-summary-paid', 'cp-summary-counter', 'cp-summary-inshop', 'cp-expired'] },
+  // UX walk-through 6 H1.
+  { label: 'A Lightspeed shop', screens: ['cp-summary-ls', 'cp-summary-ls-paid'] },
   { label: 'At the counter', screens: ['cp-ready-unpaid', 'cp-ready-deposit', 'cp-till', 'cp-ready-paid', 'cp-ready-ticks', 'cp-collected'] },
   { label: 'Not collected', screens: ['cp-today-uncollected'] },
   { label: 'Settings', screens: ['cp-setting', 'cp-messages', 'cp-message-wording'] },
@@ -285,3 +305,6 @@ export const ROWS = [
 // the text link.
 export const receiptBodyAt = (size, opts = {}) => withSize(size, () => { const was = SIZE; SIZE = size; try { return receiptBody(opts); } finally { SIZE = was; } });
 export const summaryRemindAt = (size) => withSize(size, () => { const was = SIZE; SIZE = size; try { return summary('pay', true); } finally { SIZE = was; } });
+// UX walk-through 6 H1: the one ready page at a Lightspeed shop, for
+// journey 21's ls-customer-ready.
+export const summaryLsAt = (size, { paid = false } = {}) => withSize(size, () => { const was = SIZE; SIZE = size; try { return withLightspeedShop(() => summary(paid ? 'paid' : 'pay')); } finally { SIZE = was; } });

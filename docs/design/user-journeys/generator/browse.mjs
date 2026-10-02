@@ -149,18 +149,22 @@ const readyBox = (t, tone = 'ok') => `<p style="margin: 0; display: flex; align-
 const swatch = (t, on) => `<button type="button" role="radio" aria-checked="${on}" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 8px; border: ${on ? 2 : 1}px solid ${on ? C.ink : C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}"><span aria-hidden="true" style="width: 18px; height: 18px; border-radius: 999px; border: 1px dashed ${C.input}; background: ${C.mutedBg}"></span>${t}</button>`;
 const sizeBtn = (t, on, out) => `<button type="button" role="radio" aria-checked="${on}"${out ? ' aria-describedby="sz-out"' : ''} style="min-width: 56px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: ${on ? 2 : 1}px solid ${on ? C.ink : out ? C.border : C.input}; background: ${out ? C.mutedBg : C.panel}; font-family: inherit; font-size: 15px; font-weight: 600; color: ${out ? C.muted : C.ink}; ${out && !on ? 'text-decoration: line-through; ' : ''}">${t}${out ? sr(' — not in stock at Bolton') : ''}</button>`;
 // sizes: 'none' (nothing chosen yet) or 'other' (M chosen: not here, at the other shop).
-const productPage = ({ sizes = '' } = {}) => {
-  const name = sizes ? '[Product with sizes]' : `${PADS.name} ${mono(PADS.code)}`;
-  const plain = sizes ? '[Product with sizes]' : `${PADS.name} ${PADS.code}`;
+// UX walk-through 5 M4: `held` — a bike whose only frame at Bolton is held
+// for a Cycle to Work order. The website counts it out, so it shows as sold
+// out; nothing public says who it's held for.
+const productPage = ({ sizes = '', held = false } = {}) => {
+  const name = held ? '[Bike]' : sizes ? '[Product with sizes]' : `${PADS.name} ${mono(PADS.code)}`;
+  const plain = held ? '[Bike]' : sizes ? '[Product with sizes]' : `${PADS.name} ${PADS.code}`;
   const picked = sizes === 'other';
   const choose = sizes ? `<div role="radiogroup" aria-label="Colour" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Colour: ${picked ? '[Colour 1]' : 'choose one'}</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${swatch('[Colour 1]', picked)}${swatch('[Colour 2]', false)}</div></div>
 <div role="radiogroup" aria-label="Size" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Size: ${picked ? 'M' : 'choose one'}</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${sizeBtn('S', false, false)}${sizeBtn('M', picked, true)}${sizeBtn('L', false, false)}${sizeBtn('XL', false, false)}</div>${picked ? `<span id="sz-out" style="font-size: 13px; color: ${C.ink}">M isn’t in stock at Bolton in [Colour 1].</span>` : ''}</div>` : '';
-  const line = !sizes ? readyBox('<strong>Ready today at Bolton</strong> · [n] in stock')
+  const line = held ? readyBox('<strong>Sold out at Bolton</strong>', 'grey')
+    : !sizes ? readyBox('<strong>Ready today at Bolton</strong> · [n] in stock')
     : picked ? `${readyBox('<strong>M isn’t in stock at Bolton</strong> in [Colour 1] — it’s in stock at our [Second site] shop', 'warn')}${button('Collect from [Second site] instead', { variant: 'default' })}`
       : readyBox('Choose a colour and size to see when it’s ready', 'grey');
-  const buy = picked ? link('Ask the shop about this') : `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">${qty(plain)}${button('Add to basket')}</div>${link('Ask the shop about this')}`;
-  const info = `<div style="display: flex; flex-direction: column; gap: 16px; min-width: 0">${crumbs('Shop', '[Category]', plain)}<div style="display: flex; flex-direction: column; gap: 6px">${h1(name)}<span style="font-size: 24px; font-weight: 700">${mono(sizes ? '£[price]' : PADS.price)}</span><span style="font-size: 13px; color: ${C.muted}">Includes VAT · [Brand]</span></div>${choose}${line}${buy}</div>`;
-  const lower = `<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)'}; gap: 28px; align-items: start"><section aria-labelledby="p-about" style="display: flex; flex-direction: column; gap: 10px">${h2('About it', 'p-about')}<p style="margin: 0; font-size: 15px; line-height: 1.6">[The shop’s description]</p></section>${specs(sizes ? [['Sizes', 'S, M, L, XL'], ['Colours', '[Colour 1], [Colour 2]'], ['[Detail]', '[value]'], ['Brand', '[Brand]']] : [['Part code', mono(PADS.code)], ['[Detail]', '[value] [unit]'], ['[Detail]', '[value] [unit]'], ['Brand', '[Brand]']])}</div>`;
+  const buy = picked || held ? link('Ask the shop about this') : `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">${qty(plain)}${button('Add to basket')}</div>${link('Ask the shop about this')}`;
+  const info = `<div style="display: flex; flex-direction: column; gap: 16px; min-width: 0">${crumbs('Shop', '[Category]', plain)}<div style="display: flex; flex-direction: column; gap: 6px">${h1(name)}<span style="font-size: 24px; font-weight: 700">${mono(sizes || held ? '£[price]' : PADS.price)}</span><span style="font-size: 13px; color: ${C.muted}">Includes VAT · [Brand]</span></div>${choose}${line}${buy}</div>`;
+  const lower = `<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)'}; gap: 28px; align-items: start"><section aria-labelledby="p-about" style="display: flex; flex-direction: column; gap: 10px">${h2('About it', 'p-about')}<p style="margin: 0; font-size: 15px; line-height: 1.6">[The shop’s description]</p></section>${specs(held ? [['Size', '[Size]'], ['[Detail]', '[value]'], ['Brand', '[Brand]']] : sizes ? [['Sizes', 'S, M, L, XL'], ['Colours', '[Colour 1], [Colour 2]'], ['[Detail]', '[value]'], ['Brand', '[Brand]']] : [['Part code', mono(PADS.code)], ['[Detail]', '[value] [unit]'], ['[Detail]', '[value] [unit]'], ['Brand', '[Brand]']])}</div>`;
   return site(`${isPhone() ? `${gallery(plain)}${info}` : `<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start">${gallery(plain)}${info}</div>`}${lower}`);
 };
 const photoOpen = () => overlay(productPage(), `<div role="dialog" aria-modal="true" aria-labelledby="ph-title" style="width: ${isPhone() ? '100%' : '900px'}; height: ${isPhone() ? '100%' : '640px'}; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 12px; border-radius: ${isPhone() ? 0 : 12}px; background: ${C.panel}"><div style="display: flex; justify-content: space-between; align-items: center"><h2 id="ph-title" style="margin: 0; font-size: 16px; font-weight: 700">Photo 2 of 4</h2><button type="button" aria-label="Close photos" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: ${C.ink}">${icon('close', 20)}</button></div><div style="flex-grow: 1; display: flex; align-items: center; gap: 12px"><button type="button" aria-label="Previous photo" style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}">${icon('back', 18)}</button><div style="flex-grow: 1; height: 100%">${photo(`Photo 2 of 4 — ${PADS.name} ${PADS.code}`, isPhone() ? 520 : 520)}</div><button type="button" aria-label="Next photo" style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; transform: rotate(180deg)">${icon('back', 18)}</button></div><p style="margin: 0; font-size: 13px; color: ${C.muted}">Left and right arrows change photo · Esc closes</p></div>`);
@@ -246,6 +250,7 @@ def('wb-product', () => productPage());
 def('wb-product-sizes', () => productPage({ sizes: 'none' }));
 def('wb-product-size-other', () => productPage({ sizes: 'other' }));
 def('wb-product-photos', () => photoOpen());
+def('wb-product-held', () => productPage({ held: true })); // UX walk-through 5 M4
 def('wb-search-typing', () => searching('brake'));
 def('wb-search-no-suggestions', () => searchingNone());
 def('wb-search-results', () => results());
@@ -292,6 +297,7 @@ export const TITLES = {
   'wb-product-sizes': 'Sizes and colours: nothing chosen yet',
   'wb-product-size-other': 'A size not here, but at the other shop',
   'wb-product-photos': 'Photos, larger',
+  'wb-product-held': 'A bike held for a Cycle to Work order: counted out, so sold out', // UX walk-through 5 M4
   'wb-search-typing': 'Search as you type: products, repairs, categories, pages',
   'wb-search-no-suggestions': 'No suggestions: press Enter to search',
   'wb-search-results': 'Search results: products, with repairs and pages above',
@@ -316,7 +322,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'The home page, and choosing a shop', screens: ['wb-home', 'wb-home-lower', 'wb-home-one-shop', 'wb-first-visit', 'wb-choose-shop'] },
   { label: 'Categories', screens: ['wb-shop', 'wb-category', 'wb-category-filtered', 'wb-category-empty', 'wb-category-parent', 'wb-category-child', 'wb-category-no-shop'] },
-  { label: 'A product', screens: ['wb-product', 'wb-product-sizes', 'wb-product-size-other', 'wb-product-photos'] },
+  { label: 'A product', screens: ['wb-product', 'wb-product-sizes', 'wb-product-size-other', 'wb-product-photos', 'wb-product-held'] },
   { label: 'Search', screens: ['wb-search-typing', 'wb-search-no-suggestions', 'wb-search-results', 'wb-search-measure', 'wb-search-none'] },
   { label: 'Our shops', screens: ['wb-shops', 'wb-shop-page', 'wb-shop-collect', 'wb-find-us'] },
   { label: 'When things go wrong', screens: ['wb-not-found', 'wb-off', 'wb-off-preview', 'wb-off-preview-product', 'wb-off-preview-ask', 'wb-turned-on'] },

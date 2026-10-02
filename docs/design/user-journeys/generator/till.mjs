@@ -79,7 +79,7 @@ ${CUR === 'phone' ? searchBox.replace('placeholder="Search or scan: products, cu
 const stepper = (qty, name) => `<div role="group" aria-label="Quantity of ${esc(name)}" style="display: inline-flex; align-items: center; border: 1px solid ${C.border}; border-radius: 8px; overflow: hidden"><button type="button" aria-label="One fewer" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">−</button><span style="min-width: 28px; text-align: center; font-family: ${MONO}; font-size: 15px">${qty}</span><button type="button" aria-label="One more" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">+</button></div>`;
 const signed = (n) => (n < 0 ? `−${money(-n)}` : money(n));
 const line = (l) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 9px 0; border-top: 1px solid ${C.border}">
-<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(signed(l.price * l.qty), 'font-size: 16px')}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(l.priceText ?? signed(l.price * l.qty), 'font-size: 16px; white-space: nowrap')}</div>
 ${l.fixed ? '' : `<div style="display: flex; align-items: center; justify-content: space-between">${stepper(l.qty, l.name)}<span style="font-size: 13px; color: ${C.muted}">${l.qty > 1 ? `${money(l.price)} each` : ''}</span></div>`}
 ${l.warn ? `<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 13px; font-weight: 600">${icon('alert', 14)}${esc(l.warn)}</span>` : ''}
 </div>`;
@@ -87,16 +87,19 @@ ${l.warn ? `<span style="align-self: flex-start; display: inline-flex; align-ite
 // sale, like "Stock says 0 — sold anyway" (decision 5).
 // UX walk-through 2 M11: `discount` ({ reason, amount }) draws the whole-sale
 // discount as a row above the total, and the total and Take payment drop.
-function basket(lines, { customer = null, points = false, full = false, discount = null } = {}) {
+// UX walk-through 5 H1: a line's `priceText` and the basket's `totalText`
+// draw bracketed placeholder prices (a Cycle to Work bike has no real price).
+function basket(lines, { customer = null, points = false, full = false, discount = null, totalText = null } = {}) {
   const total = lines.reduce((s, l) => s + l.price * l.qty, 0) - (discount ? discount.amount : 0);
+  const shown = (n) => totalText ?? money(n); // the total and its VAT, or placeholders
   const vat = total / 6; // UK prices include 20% VAT: VAT is one sixth of the price
   // Phone: the basket is a bar along the bottom (journey A) unless it is the
   // point of the screen, when it fills the screen.
   if (CUR === 'phone' && !full) {
     const items = lines.reduce((n, l) => n + (l.fixed ? 0 : l.qty), 0);
     return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}; display: flex; flex-direction: column; gap: 8px">
-${lines.length ? `<a href="#" aria-label="Open the sale" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; color: ${C.ink}; text-decoration: none"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Sale · ${items} items</span><span style="font-size: 13px; color: ${C.muted}">${customer ? esc(customer) : 'No customer'}</span></span><span style="display: inline-flex; align-items: center; gap: 6px">${mono(money(total), 'font-size: 20px')}<span style="display: inline-flex; transform: rotate(180deg)">${icon('chevron', 16)}</span></span></a>
-${button(`Take payment · ${money(total)}`, { block: true })}` : `<span style="font-size: 14px; color: ${C.muted}">Nothing in the sale yet.</span><button type="button" disabled style="display: flex; width: 100%; align-items: center; justify-content: center; min-height: 48px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 15px; font-weight: 600">Take payment</button>`}
+${lines.length ? `<a href="#" aria-label="Open the sale" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; color: ${C.ink}; text-decoration: none"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 700">Sale · ${items} items</span><span style="font-size: 13px; color: ${C.muted}">${customer ? esc(customer) : 'No customer'}</span></span><span style="display: inline-flex; align-items: center; gap: 6px">${mono(shown(total), 'font-size: 20px')}<span style="display: inline-flex; transform: rotate(180deg)">${icon('chevron', 16)}</span></span></a>
+${button(`Take payment · ${shown(total)}`, { block: true })}` : `<span style="font-size: 14px; color: ${C.muted}">Nothing in the sale yet.</span><button type="button" disabled style="display: flex; width: 100%; align-items: center; justify-content: center; min-height: 48px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 15px; font-weight: 600">Take payment</button>`}
 </div>`;
   }
   return card(`<div style="height: 100%; box-sizing: border-box; padding: 18px; display: flex; flex-direction: column; gap: 12px">
@@ -106,10 +109,10 @@ ${lines.length ? `<div style="display: flex; flex-direction: column">${lines.map
 <div style="flex-grow: 1"></div>
 ${discount ? `<a href="#" aria-label="Discount · ${esc(discount.reason)} · minus ${money(discount.amount)} — change or remove" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">Discount · ${esc(discount.reason)}</span>${mono(`−${money(discount.amount)}`, 'font-size: 16px')}</a>` : `<a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Add a discount</a>`}
 <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">
-<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 16px; font-weight: 700">Total</span>${mono(money(total), 'font-size: 26px')}</div>
-<div style="display: flex; justify-content: space-between; font-size: 13px; color: ${C.muted}"><span>Includes VAT</span>${mono(money(vat))}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 16px; font-weight: 700">Total</span>${mono(shown(total), 'font-size: 26px')}</div>
+<div style="display: flex; justify-content: space-between; font-size: 13px; color: ${C.muted}"><span>Includes VAT</span>${mono(shown(vat))}</div>
 </div>
-${lines.length ? button(`Take payment · ${money(total)}`, { block: true }) : `<button type="button" disabled style="display: flex; width: 100%; align-items: center; justify-content: center; min-height: 44px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 15px; font-weight: 600">Take payment</button>`}
+${lines.length ? button(`Take payment · ${shown(total)}`, { block: true }) : `<button type="button" disabled style="display: flex; width: 100%; align-items: center; justify-content: center; min-height: 44px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 15px; font-weight: 600">Take payment</button>`}
 </div>`, `${CUR === 'phone' ? 'width: 100%;' : `width: ${CUR === 'tablet' ? 340 : 380}px;`} flex-shrink: 0; height: 100%`).replace('<div style="box-sizing: border-box;', CUR === 'phone' ? '<div data-basket-full style="box-sizing: border-box;' : '<div style="box-sizing: border-box;');
 }
 
@@ -187,10 +190,16 @@ def('till-variant', () => overTill(dialog('var-title', '[Product with sizes and 
 // Receiving stock decision 5 (30 Sep): frame numbers are recorded when bikes
 // are booked in, so the till picks which one is being sold — or scans it.
 const frameOption = (on, i) => `<label style="display: flex; align-items: center; gap: 12px; min-height: 48px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${on ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}; cursor: pointer"><input type="radio" name="frame" ${on ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"><span style="font-family: ${MONO}; font-size: 15px; flex-grow: 1">[frame number]</span><span style="font-size: 13px; color: ${C.muted}">Booked in [date]</span></label>`;
-def('till-serial', () => overTill(dialog('serial-title', 'Which one?', '[Bike name] · [n] in stock, each with its frame number', `
-<div role="radiogroup" aria-label="Frame number" style="display: flex; flex-direction: column; gap: 8px">${[true, false, false].map(frameOption).join('')}</div>
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 18)}<input aria-label="Or scan the frame" placeholder="Or scan the frame on the bike" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>
-<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">It goes on the receipt and the customer’s bike record, so the bike can be traced for warranty or if it’s stolen.</p>`, `${button('Skip for now', { variant: 'ghost' })}${button('Add to sale')}`)));
+// UX walk-through 5 M4: a frame held for a Cycle to Work order is listed
+// last and says whose it is. Picking it warns before selling, and selling it
+// goes in the order's history — warned, never blocked (walk-through 2 M6).
+const heldFrameOption = (on) => `<label style="display: flex; align-items: center; gap: 12px; min-height: 56px; box-sizing: border-box; padding: 6px 14px; border: 1px solid ${on ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}; cursor: pointer"><input type="radio" name="frame" ${on ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: ${C.accent}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-family: ${MONO}; font-size: 15px">[frame number]</span><span style="font-size: 13px; color: ${C.warnInk}; font-weight: 600">Held for Maya Patel · Cycle to Work until [date]</span></span>${badge('Held', 'amber')}</label>`;
+const serialDialog = (held = false) => dialog('serial-title', 'Which one?', '[Bike name] · [n] free · 1 held, each with its frame number', `
+<div role="radiogroup" aria-label="Frame number" style="display: flex; flex-direction: column; gap: 8px">${[!held, false, false].map(frameOption).join('')}${heldFrameOption(held)}</div>
+${held ? `<div role="alert" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span><strong>Sell anyway? Maya’s order loses its bike.</strong> Selling it goes in her Cycle to Work order’s history. Or pick a free one above.</span></div>` : `<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 18)}<input aria-label="Or scan the frame" placeholder="Or scan the frame on the bike" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 16px; color: ${C.ink}"></label>`}
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">It goes on the receipt and the customer’s bike record, so the bike can be traced for warranty or if it’s stolen.</p>`, held ? `${button('Skip for now', { variant: 'ghost' })}${button('Sell anyway · add to sale')}` : `${button('Skip for now', { variant: 'ghost' })}${button('Add to sale')}`);
+def('till-serial', () => overTill(serialDialog()));
+def('till-serial-held', () => overTill(serialDialog(true))); // UX walk-through 5 M4
 
 // A discount on the whole sale — "Add a discount" in the basket. Same
 // controls as a line (decision 3); anyone can give it (decision 4).
@@ -216,7 +225,7 @@ const otherRow = (t, sub) => `<button type="button" style="display: flex; align-
 function payDialog(open = false, TOTAL = 74) { // UX walk-through 2 (decision 6): any total
   const small = (t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`;
   const other = `<button type="button" aria-expanded="${open}" style="display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: ${open ? '10px 10px 0 0' : '10px'}; border: 1px solid ${open ? C.ink : C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}"><span>Other ways to pay</span><span style="display: inline-flex; transform: rotate(${open ? 180 : 0}deg)">${icon('chevron', 16)}</span></button>`;
-  const list = open ? `<div style="margin-top: -14px; border: 1px solid ${C.ink}; border-top: 0; border-radius: 0 0 10px 10px; background: ${C.panel}; overflow: hidden">${otherRow('Finance', '[Finance provider] — the customer applies, the shop is paid by the lender')}${otherRow('Cycle to Work scheme', '[Scheme name] — paid by the scheme against a certificate')}${otherRow('Payment link', 'Text or email the customer a link to pay — once set up')}${otherRow('[Shop’s own]', 'Added by the shop in till settings')}</div>` : '';
+  const list = open ? `<div style="margin-top: -14px; border: 1px solid ${C.ink}; border-top: 0; border-radius: 0 0 10px 10px; background: ${C.panel}; overflow: hidden">${otherRow('Finance', '[Finance provider] — the customer applies, the shop is paid by the lender')}${otherRow('Cycle to Work', 'For a bike on a Cycle to Work order')/* UX walk-through 5 L1, H1 */}${otherRow('Payment link', 'Text or email the customer a link to pay — once set up')}${otherRow('[Shop’s own]', 'Added by the shop in till settings')}</div>` : '';
   return dialog('pay-title', `Take payment · ${money(TOTAL)}`, 'Jo Taylor serving · 3 items', `
 ${bigMethod(`Card · ${money(TOTAL)}`, `Sends ${money(TOTAL)} to the card machine`, 'card', true)}
 ${bigMethod('Cash', 'Enter what the customer hands you; the till works out the change', 'cash')}
@@ -353,15 +362,74 @@ def('till-void', () => overTill(dialog('void-title', 'Void this sale', `${'B1-[0
 // Collect the bike and pay audit M2 (30 Sep): a job's agreed lines are
 // locked at the till — no − / +; anything extra is added separately.
 const jobLines = LINES_APPROVED.filter((l) => l.approval === 'Approved').map((l) => ({ name: l.work, sub: `${l.sub} · agreed on the job`, price: l.price, qty: 1, fixed: true }));
-function jobBasket(collected = true, extra = []) {
-  const b = basket([...jobLines, ...extra], { customer: 'Maya Patel · workshop job WH-1042', full: true });
-  const pill = `<button type="button" aria-pressed="${collected}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${collected ? C.ink : C.border}; background: ${collected ? C.ink : 'transparent'}; color: ${collected ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${collected ? icon('check', 15, C.panel) : ''}Bike collected when paid</button>`;
-  const discount = /<a href="#" style="align-self: flex-start;[^>]*>Add a discount<\/a>/;
-  const m = b.match(discount);
+// UX walk-through 5 H1: the pill and the swap of the "Add a discount" link
+// are shared with the Cycle to Work sale.
+const collectedPill = (collected) => `<button type="button" aria-pressed="${collected}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${collected ? C.ink : C.border}; background: ${collected ? C.ink : 'transparent'}; color: ${collected ? C.panel : C.muted}; font-family: inherit; font-size: 14px; font-weight: 600">${collected ? icon('check', 15, C.panel) : ''}Bike collected when paid</button>`;
+const swapDiscount = (b, fn) => {
+  const m = b.match(/<a href="#" style="align-self: flex-start;[^>]*>Add a discount<\/a>/);
   if (!m) throw new Error('basket discount link not found');
-  return b.replace(m[0], `<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">${m[0].replace('align-self: flex-start; ', '')}${pill}</div>`);
+  return b.replace(m[0], fn(m[0]));
+};
+const besideDiscount = (b, html) => swapDiscount(b, (a) => `<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">${a.replace('align-self: flex-start; ', '')}${html}</div>`);
+function jobBasket(collected = true, extra = []) {
+  return besideDiscount(basket([...jobLines, ...extra], { customer: 'Maya Patel · workshop job WH-1042', full: true }), collectedPill(collected));
 }
 def('till-job', () => tillPage(leftSide(), jobBasket()));
+
+// ---------- A Cycle to Work bike (UX walk-through 5 H1, H2) ----------
+// Cycle to Work decision 5: the bike goes through the till, paid by "Cycle to
+// Work · [Provider]", the order's provider. Modelled on till-job: "Hand over
+// at the till" loads the order, its lines locked ("on the order") and the
+// held frame already picked. Only Maya Patel and Jo Taylor are real example
+// data; the bike, provider, prices and numbers are placeholders (Cycle to
+// Work decision 1).
+const C2W_WHO = 'Maya Patel · Cycle to Work · quote [quote number]';
+const c2wLine = (name, sub, extra = {}) => ({ name, sub, priceText: '£[£]', price: 0, qty: 1, fixed: true, ...extra });
+const C2W_LINES = [
+  c2wLine('[Bike] · [Size]', 'Frame [frame number] · the one held · on the order'),
+  c2wLine('[Accessory]', 'Accessory · on the order'),
+  c2wLine('[Accessory]', 'Accessory · on the order'),
+];
+// An accessory Maya adds at the counter: an ordinary line under the order's.
+const C2W_EXTRA = c2wLine('[Accessory]', 'Accessory · added at the counter', { fixed: false });
+const c2wBasket = (extra = []) => besideDiscount(basket([...C2W_LINES, ...extra], { customer: C2W_WHO, full: true, totalText: '£[£]' }), collectedPill(true));
+const overC2w = (d, extra = []) => overlay(() => tillPage(leftSide(), c2wBasket(extra)), d);
+def('till-c2w', () => tillPage(leftSide(), c2wBasket()));
+// Take payment: the order's provider is the first, one-tap method.
+const C2W_SUB = 'The certificate · owed by [Provider], not in the drawer';
+def('till-c2w-pay', () => overC2w(dialog('c2wpay-title', 'Take payment · £[£]', 'Jo Taylor serving · Maya Patel’s Cycle to Work order', `
+${bigMethod('Cycle to Work · [Provider] · £[£]', `${C2W_SUB} · certificate [certificate number]`, 'bike', true)}
+<div style="display: grid; grid-template-columns: repeat(${CUR === 'phone' ? 2 : 3}, minmax(0, 1fr)); gap: 10px">${['Card', 'Cash', 'Split'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Anything the certificate doesn’t cover is taken from Maya as a second payment.</p>`, '', 560)));
+// Two payments: the provider's part, then what Maya owes, Card first. The
+// same second line comes up when the certificate leaves her something to pay
+// (Cycle to Work audit H2).
+def('till-c2w-extra', () => overC2w(dialog('c2wextra-title', 'Take payment · £[£]', 'Jo Taylor serving · Maya Patel’s Cycle to Work order', `
+<div style="display: flex; flex-direction: column">${paidRow('Cycle to Work · [Provider]', '£[£]')}<span style="padding: 0 0 8px 24px; font-size: 13px; color: ${C.muted}">${C2W_SUB}</span></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 700">Maya pays</span><span style="font-size: 13px; color: ${C.muted}">[Accessory], added at the counter</span></span>${mono('£[£]', 'font-size: 34px')}</div>
+${bigMethod('Card · £[£]', 'Sends £[£] to the card machine', 'card', true)}
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Cash', 'Gift card or credit', 'Another amount'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560), [C2W_EXTRA]));
+// Paid: both payments on the receipt; the bike collected with its frame; the
+// order moves to Collected with the sale number in its history.
+def('till-c2w-paid', () => overC2w(dialog('c2wpaid-title', 'Paid', `Cycle to Work · [Provider] and card · receipt ${mono('B1-[0000]')}`, `
+<div style="display: flex; flex-direction: column">${paidRow('Cycle to Work · [Provider]', '£[£]')}${paidRow('Card · Maya Patel', '£[£]')}</div>
+<div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 14px; line-height: 1.45">${icon('bike', 18)}<span><strong>[Bike] · [Size] collected</strong>, frame ${mono('[frame number]')}, on Maya’s bike record. Her order is now Collected, with sale ${mono('B1-[0000]')} in its history.</span></div>
+<div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('mail', 'Email')}${rcptBtn('phone', 'Text')}${rcptBtn('close', 'No receipt', true)}</div>
+<p style="margin: 0; text-align: center; font-size: 13px; color: ${C.muted}">The receipt shows both payments.</p>
+<p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560), [C2W_EXTRA]));
+// "Cycle to Work" under Other ways to pay, over a basket with no order:
+// the orders ready to collect. Opening one parks what's in the basket, as
+// resuming a parked sale does.
+const c2wOpen = (who) => button('Open', { variant: 'default' }).replace('<button type="button"', `<button type="button" aria-label="Open ${who}’s order at the till"`);
+def('till-c2w-pick', () => overTill(dialog('c2wpick-title', 'Cycle to Work', 'Orders ready to collect at Bolton', `
+<div>${listRow('Maya Patel · [Bike] · [Size]', 'Quote [quote number] · [Provider] · ready since [date]', '£[£]', c2wOpen('Maya Patel'))}${listRow('[Customer] · [Bike] · [Size]', 'Quote [quote number] · [Provider] · ready since [date]', '£[£]', c2wOpen('[Customer]'))}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Opening one loads its order into the basket and parks what’s there now. With no orders ready, this says “Start from Front desk › Cycle to Work”.</p>`, '', 620)));
+// UX walk-through 5 H2 (option 1): "Take the deposit at the till" opens the
+// till with one line, linked to the order. With the refund rule, the order's
+// Next step opens the till's refund of this sale (till-refund), back the way
+// it was paid.
+const C2W_DEPOSIT = c2wLine('Deposit · Maya Patel’s Cycle to Work order', 'Quote [quote number] · goes on the order when paid');
+def('till-c2w-deposit', () => tillPage(leftSide(), swapDiscount(basket([C2W_DEPOSIT], { customer: C2W_WHO, full: true, totalText: '£[£]' }), () => `<p style="margin: 0; font-size: 13px; line-height: 1.45; color: ${C.muted}">Your rule: refunded when the certificate arrives. The order’s Next step then opens the refund of this sale, back the way it was paid.</p>`)));
 
 // Hand over an online order.
 // UX walk-through 2 L1: called "Online order" and "Hand over", as on the
@@ -479,6 +547,13 @@ export const TITLES = {
   'till-refund-noreceipt': 'No receipt — store credit only',
   'till-void': 'Void a sale — with a reason',
   'till-job': 'Pay for a workshop job — bike collected when paid',
+  'till-c2w': 'A Cycle to Work bike — the order’s lines locked, the held frame picked', // UX walk-through 5 H1
+  'till-c2w-pay': 'Take payment — Cycle to Work · [Provider] is one tap', // UX walk-through 5 H1
+  'till-c2w-extra': 'An accessory added at the counter — Maya pays for it as a second payment', // UX walk-through 5 H1
+  'till-c2w-paid': 'Cycle to Work paid — both payments, the bike collected', // UX walk-through 5 H1
+  'till-c2w-pick': 'Other ways to pay › Cycle to Work — orders ready to collect', // UX walk-through 5 H1
+  'till-c2w-deposit': 'A Cycle to Work deposit — one line, linked to the order', // UX walk-through 5 H2
+  'till-serial-held': 'A frame held for Cycle to Work — warned, not blocked', // UX walk-through 5 M4
   'till-collect': 'Hand over an online order', // UX walk-through 2 L1
   'till-empty': 'Empty basket',
   'till-noresults': 'Search with no results',
@@ -494,9 +569,11 @@ export const TITLES = {
 };
 // UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
-  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial'] },
+  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect'] },
+  // UX walk-through 5 H1, H2: a Cycle to Work bike at the till.
+  { label: 'Cycle to Work', screens: ['till-c2w-pick', 'till-c2w', 'till-c2w-pay', 'till-c2w-extra', 'till-c2w-paid', 'till-c2w-deposit'] },
   { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-noted', 'till-collect-offline', 'till-no-signout', 'till-failed'] },
 ];

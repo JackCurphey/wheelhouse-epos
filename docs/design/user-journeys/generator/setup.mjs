@@ -337,7 +337,11 @@ const BOOKING_MSGS = [['Request received', 'When a booking request is sent'], ['
 const msgRowChoice = (name, when, { hover = false, reminder = false } = {}) => `<div style="display: flex; flex-wrap: ${isPhone() ? 'wrap' : 'nowrap'}; align-items: center; gap: 10px; min-height: 60px; padding: ${isPhone() ? '10px 10px 10px 14px' : '0 8px 0 14px'}; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0; flex-basis: ${isPhone() ? '100%' : 'auto'}"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${when}</span></span>${editBtn(name, hover)}<span style="font-size: 13px; color: ${C.muted}; white-space: nowrap">Customer’s choice</span>${offer('On', true)}</div>${reminder ? `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 52px; margin: -4px 0 0 24px; padding: 0 8px 0 14px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><label for="rem-hours" style="font-size: 14px; font-weight: 600; flex-grow: 1">Reminder if there’s no answer, after</label><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px"><input id="rem-hours" inputmode="numeric" value="[n]" style="width: 56px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">hours</span>${editBtn('Quote reminder', false)}</div>` : ''}`;
 // Buy online audit M5: every message an online order sends.
 // Cycle to Work decision 6: a message at each step, each switchable off.
-const C2W_MSGS = [['Your bike is put aside', 'When a Cycle to Work bike is held for the customer'], ['Certificate received', 'When the scheme certificate arrives'], ['Ready to collect', 'When the Cycle to Work bike is ready'], ['Your hold ends on [date]', '[n] days before a held bike is released']];
+// UX walk-through 5 M3: "Hold longer" sends "Your bike is put aside" again
+// with the new date; "Release the bike" sends "no longer put aside"; a hold
+// is never released by itself. UX walk-through 5 M8: "Your order is
+// cancelled", saying what happens to any deposit.
+const C2W_MSGS = [['Your bike is put aside', 'When a Cycle to Work bike is held for the customer, and again when the hold is made longer'], ['Certificate received', 'When the scheme certificate arrives'], ['Ready to collect', 'When the Cycle to Work bike is ready'], ['Your hold ends on [date]', '[n] days before a hold ends'], ['Your bike is no longer put aside', 'When a held bike is released — the order stays open'], ['Your order is cancelled', 'When a Cycle to Work order is cancelled, with what happens to any deposit']];
 const ONLINE_MSGS = [['Order confirmation', 'When an online order is paid'], ['Order ready to collect', 'When an online order is ready'], ['Order still waiting', 'When an order isn’t collected after [n] days'], ['Item we couldn’t supply', 'When staff refund an item, with their reason'], ['Order cancelled', 'When an order is cancelled, by the customer or the shop'],
   // UX walk-through 2 M9: the sorry email from "Not ready after all".
   ['Order not ready after all', 'When an order marked ready is moved back']];
@@ -346,18 +350,28 @@ const ONLINE_MSGS = [['Order confirmation', 'When an online order is paid'], ['O
 // UX walk-through 4 H3 (option 1): while the shop runs alongside its old
 // system, no automatic message goes to a customer; the list says so first.
 const ALONGSIDE = `<div role="status" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 8px; background: ${C.blueBg}; color: ${C.blueInk}">${icon('alert', 20)}<span style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 15px; font-weight: 700">Running alongside Citrus Lime: no messages go to customers until switch-over day</span><span style="font-size: 13px; line-height: 1.45">Where one would have gone, the job or booking says “Not sent — practice”. Staff can still send a message by hand. On switch-over morning these start, and nothing is sent for what happened before.</span></span></div>`;
+// UX walk-through 6 M6: at a Lightspeed shop Wheelhouse may not know what
+// was taken at the Lightspeed till (a deposit, a part payment, a discount), so
+// [Amount to pay] and [What's left to pay] state the agreed price and where to
+// pay; "Paid — nothing more to pay" only once the work order shows as paid.
+const LS_PAY = 'Agreed price £111.00 — pay at the till';
+const LS_PAY_WORDS = `<p style="margin: 0; font-size: 13px; line-height: 1.45; color: ${C.muted}">With Lightspeed, [Amount to pay] and [What’s left to pay] read “Agreed price [£] — pay at the till”. “Paid — nothing more to pay” is used only once the work order shows as paid in Lightspeed.</p>`;
+// UX walk-through 5 M6: the Cycle to Work messages go the way the customer
+// chose, like the repair messages; only the quote stays an email.
 const msgListOpen = ({ bringBack = true, hoverReview = false, alongside = false } = {}) => `<div style="display: flex; flex-direction: column; gap: 8px">
 ${alongside ? ALONGSIDE : ''}
 ${msgRowChoice('Quote to approve', 'When a job needs the customer’s OK', { reminder: true })}
 ${msgRowChoice('Work added within your limit', 'When extra work fits the limit the customer set')}
 ${msgRowChoice('Your answers', 'When staff record the customer’s answer from a call')}
 ${msgRowChoice('New ready date', 'When a job waits for parts, or its ready day moves')}
-${msgRowChoice('Bike ready', 'When a job is marked ready', { hover: !isPhone() })}
-${msgRowChoice('Bike still waiting', 'When a ready bike isn’t collected after [n] days')}
+${msgRowChoice('Bike ready', lightspeedShop() ? 'When a job is marked ready · says “Agreed price £111.00 — pay at the till”' : 'When a job is marked ready', { hover: !isPhone() })}
+${msgRowChoice('Bike still waiting', lightspeedShop() ? 'When a ready bike isn’t collected after [n] days · says “Agreed price £111.00 — pay at the till”' : 'When a ready bike isn’t collected after [n] days')}
+${lightspeedShop() ? LS_PAY_WORDS : ''}
 ${lightspeedShop() ? '' : `<h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Online order messages</h4>
 ${ONLINE_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}
 <h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Cycle to Work messages</h4>
-${C2W_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}`}
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Sent the way each customer chose: text, WhatsApp or email. The quote itself is always emailed, because it’s a document.</p>
+${C2W_MSGS.map(([n, w]) => msgRowChoice(n, w)).join('')}`}
 <h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Booking messages</h4>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
 ${BOOKING_MSGS.map(([n, w]) => msgRowChoice(n, w)).join('')}${bringBack ? bringBackRows(hoverReview, alongside) : ''}</div>
@@ -377,8 +391,9 @@ const wordingBox = (id, value, rows = 4, chips = null, fixed = '') => `<div styl
 const bubble = (t) => `<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">PREVIEW · TEXT TO MAYA PATEL</span><div style="align-self: flex-start; max-width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.5">${t}</div></div>`;
 const editMsgDialog = () => popup('msg-title', 'Bike ready', 'Sent when a job is marked ready', `
 <p style="margin: 0; font-size: 15px">Sent the way each customer chose: text, WhatsApp or email.</p>
-${wordingBox('msg-words', 'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].')}
-${bubble('Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Job WH-1042. We’re open [opening hours].')}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
+${wordingBox('msg-words', `Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay]${lightspeedShop() ? '' : ' to pay on collection'}. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].`)}
+${lightspeedShop() ? LS_PAY_WORDS : ''}
+${bubble(`Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles. ${lightspeedShop() ? `${LS_PAY}.` : '£111.00 to pay on collection.'} See what we did: [link]. Job WH-1042. We’re open [opening hours].`)}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
 // Decision 14: the shop's own automatic messages, with a "send when…".
 // Marketing only reaches customers who allow it (journey 7, acct-unsubscribe).
 const newMsgDialog = () => popup('new-msg-title', 'Your own message', 'Sent automatically', `
@@ -392,7 +407,9 @@ def('set-msg-list', () => msgPage({ list: msgListOpen() }));
 def('set-msg-edit', () => overlay(msgPage({ list: msgListOpen() }), editMsgDialog()));
 def('set-msg-new', () => overlay(msgPage({ list: msgListOpen() }), newMsgDialog()));
 // UX walk-through 4 H3: Messages while the shop runs alongside Citrus Lime.
-def('set-msg-alongside', () => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds({ list: msgListOpen({ alongside: true }) }).replace(lightspeedShop() ? '13 on' : '23 on', `${lightspeedShop() ? '13' : '23'} on · none sent until switch-over`), { who: OWNER }));
+// UX walk-through 5 M3, M8: two more Cycle to Work messages change the
+// count, so the note follows whatever count the fold shows.
+def('set-msg-alongside', () => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds({ list: msgListOpen({ alongside: true }) }).replace(/>(\d+) on</, '>$1 on · none sent until switch-over<'), { who: OWNER }));
 
 // ---------- Your data (Release 2 rule 5: everything can be exported;
 // decision 4: every settings change is recorded) ----------
@@ -565,4 +582,4 @@ export const ROWS = [
 ];
 
 // For journey 5's "Bike still waiting" wording board.
-export { chan, wordingBox, bubble, msgPage, msgListOpen, servicesOpen, editBtn, personDialog, staffPage, peopleOpen, msgRow };
+export { chan, wordingBox, bubble, msgPage, msgListOpen, editMsgDialog, servicesOpen, editBtn, personDialog, staffPage, peopleOpen, msgRow };

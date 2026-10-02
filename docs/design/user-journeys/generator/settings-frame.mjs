@@ -235,7 +235,7 @@ export const MSG_INTRO = 'The texts and emails customers get from the shop.';
 // UX walk-through 2 M9: one more online order message (Lightspeed shops have
 // no online orders, so theirs stays 13).
 export const msgFolds = (open = {}) =>
-  fold('Automatic messages', lightspeedShop() ? '13 on' : '23 on', open.list || '')
+  fold('Automatic messages', lightspeedShop() ? '13 on' : '25 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 export const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
 export const dataFolds = (open = {}) => (lightspeedShop()

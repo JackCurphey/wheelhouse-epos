@@ -11,8 +11,8 @@ For Jack and Mark, to walk Wheelhouse's stories by hand. A UI audit checks one s
 | 3 | Stock | 13 Receiving stock, 11 Selling at the till, 14 Stock take, 17 Reports | Jo Taylor receiving and selling, Jack Lewis ordering and reading reports; follow the Shimano brake pads B05S-RX that WH-1042 waits for — **done 2 Oct 2026** |
 | 4 | A new shop | 9 Moving from Citrus Lime, 8 Owner setup, B Signing in, 18 Website management | Jack Lewis (owner) setting up; Jo Taylor signing in for the first time — **done 2 Oct 2026** |
 | 5 | A Cycle to Work bike | 6 Cycle to Work, 11 Selling at the till, 17 Reports | Maya (customer), Jo Taylor, Jack Lewis — **done 2 Oct 2026** |
-| 6 | A repair at a Lightspeed shop | 21 Lightspeed shops (with the customer pages of 3, 4 and 5 it uses) | Maya, Jo Taylor, Alex Morgan, Jack Lewis |
-| 7 | An owner with two shops | 19 Multiple sites, 20 Management oversight, 17 Reports | Jack Lewis, and staff at Bolton and [Second site] |
+| 6 | A repair at a Lightspeed shop | 21 Lightspeed shops (with the customer pages of 3, 4 and 5 it uses) | Maya, Jo Taylor, Alex Morgan, Jack Lewis — **done 2 Oct 2026** |
+| 7 | An owner with two shops | 19 Multiple sites, 20 Management oversight, 17 Reports | Jack Lewis, and staff at Bolton and [Second site] — **done 2 Oct 2026** |
 
 In every story, also walk it as: **someone using a screen reader**, **someone using only a keyboard**, and **someone with low vision** (large text or zoom).
 
@@ -104,9 +104,24 @@ For the "same thing, same name" question. If a screen uses another word for one 
 | Wheelhouse before switch-over | — | "Practice: not real money" (till band); "Run alongside", "Still running" (the move's stages); "Clear and go real" (switch-over morning) |
 | Bringing data from Citrus Lime | — | "Bring your data" the first time; "Weekly refresh" and "Refresh now" after; "Changed in both — Citrus Lime's kept" |
 | The website showing to customers | (the website) | "Turn it on" / "Turn off"; "Your website is on" / "off"; changes go live with "Publish"; the move's checklist says "The website is ready" (it said "The website is moved", walk-through 4 H2) |
-| Making a computer a till | — | "Make this computer a till" (Getting started); "Set up this till"; "Make this computer Till B1" |
+| Making a computer a till | — | "Make this computer a till" (Getting started); "Set up this till"; "Make this computer Till B1"; on a new shop's checklist "Make a computer a till there" (it said "Register its tills" / "Register a till", walk-through 7 L1); the tills list keeps "+ Add a till" |
 | A Cycle to Work sale | (Your Cycle to Work bike) | "Cycle to Work order"; "+ New Cycle to Work order"; Front desk › Cycle to Work |
 | The scheme's paperwork | "your certificate"; the "Certificate received" email | "Add the certificate"; "Certificate received" (a stage) |
 | Who pays for a Cycle to Work bike | [Provider] (on the quote and emails) | "Scheme provider" where one is chosen, "Provider" elsewhere; the till's Other ways to pay said "Cycle to Work scheme · [Scheme name]" (walk-through 5 L1) |
 | Giving a Cycle to Work bike over | Ready to collect; Collected | "Hand over", then "Hand over at the till" |
 | The provider's money | — | "Expected £[£] by [date]"; "Mark paid", "Save as part paid", "Close with a reason"; "Owed by Cycle to Work providers" |
+| A job's record in Lightspeed | (Job WH-1042; the customer never sees the Lightspeed record) | "work order [number]" — "a work order is Lightspeed's name for a job"; "In Lightspeed · work order [number]" |
+| Paying at a Lightspeed shop | "Pay at the till when you collect" (the ready page said "You pay at the till", and the shop-without-online-payments page "Pay at the counter", walk-through 6 L1) | "Waiting to be paid in Lightspeed"; "Maya pays at the Lightspeed till"; "Paid in Lightspeed · [time]"; with payment unchecked, "Has Maya paid?" and "Yes, she paid" |
+| The price agreed, at a Lightspeed shop | "Agreed price" | "Agreed £111.00" on the Lightspeed strip (Lightspeed shops 10, M8); the header tag said "Approved £111.00" beside it (walk-through 6 L1); the table keeps "Approved" |
+| Linking the customer to Lightspeed | — | "Choose the customer"; "Which Maya Patel in Lightspeed?"; "Link and send"; "None of these — add Maya to Lightspeed" |
+| Lightspeed out of reach | — | "Waiting to reach Lightspeed"; "Can't reach Lightspeed"; "Not sure it arrived"; "Check this in Lightspeed"; "Not in Lightspeed yet" |
+| A price that moved in Lightspeed | (The quote has changed; the page said "Alex has added to the quote", walk-through 6 M4) | "Price changed in Lightspeed: £28.00 → £[£]"; "Keep £28.00"; "Ask Maya again" |
+| A bike that left before payment showed | — | "Hand over anyway"; "Collected · not shown as paid in Lightspeed"; Today: "Handed over, not paid in Lightspeed" |
+| One of the business's shops | (the shop's name on the website; "Which shop?") | "shop" everywhere staff read it ("Switch shop", "Choose a shop", "Works at"); "Sites" only in Settings › Shop and sites (Multiple sites 9, M12). Sign-in and "Set up this till" said "site" (walk-through 7 L1) |
+| The second shop in examples | [Second site] | "[Second site]" on every board (journey 14's transfer boards and Today's transfer line said "[Site 2]" and offered "[Site 3]", walk-through 7 M5, L1) |
+| Every shop at once | — | "All shops" (switcher, Today, Reports, the activity log); the owner always; a manager only with two or more shops |
+| Changing which shop you're looking at | — | The switcher "Shop: Bolton. Choose a shop"; "Now working in [Second site]"; on Today's All shops rows "Work in Bolton" |
+| A job for the other shop's workshop | (the booking messages name the shop: "North Street Cycles, [Second site]", walk-through 7 M6) | "Workshop at"; "Send request to [Second site]"; "Request from Bolton · booked by [name]"; Bolton sees "Sent to [Second site] · accepted for [day] [time]" (walk-through 7 H2) |
+| Stock moved between shops | (online: "Coming from [Second site]") | "Send to another shop"; "On its way"; "Receive it"; transfer T-[0000]; the new shop's checklist "Send from Bolton" |
+| A new shop being set up | — | "+ Add a shop"; "Add the shop"; "Getting [Second site] ready"; on Bolton's Today "[Second site] · [n] steps to get it ready"; "Show [Second site] to customers" (walk-through 7 H1, M3) |
+| Something wrong at the other shop | — | On the chosen shop's Today, "[Second site] · [n] things need attention" with "See them" (walk-through 7 H1) |

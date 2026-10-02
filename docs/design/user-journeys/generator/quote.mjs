@@ -27,6 +27,7 @@ import { quoteJobBoards, screens as diaryScreens, diaryWithJobState } from './di
 import { today } from './opening.mjs';
 import { msgPage, msgListOpen } from './setup.mjs';
 import { screens as collectScreens } from './collect.mjs';
+import { withLightspeedShop } from './shop-mode.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -95,13 +96,27 @@ const quoteSums = ({ ticks = { pads: true, fit: true, cable: false }, newer = fa
 // new total, the final-answer line and the button sit in a bar pinned below.
 const quoteBar = (opts = {}) => {
   const { totalText, label } = quoteSums(opts);
+  // UX walk-through 6 M4: a price that went up has two answers, both in the bar.
+  if (opts.priceUp) return `<div aria-live="polite" style="flex-shrink: 0; box-sizing: border-box; width: 100%; max-width: 720px; margin: 0 auto; padding: 10px 14px; border-radius: 10px; border: 2px solid ${C.ink}; background: ${C.panel}; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">New total <strong>${mono('£[new total]', 'font-size: 17px')}</strong></span><span style="font-size: 13px; font-weight: 600">Your answer is final once sent.</span></span><span style="display: flex; flex-wrap: wrap; gap: 8px; ${isPhone() ? 'width: 100%' : ''}">${button('Approve £[new total]', { block: isPhone() })}${button('No thanks — keep to £111.00', { variant: 'default', block: isPhone() })}</span></div>`;
   return `<div aria-live="polite" style="flex-shrink: 0; box-sizing: border-box; width: 100%; max-width: 720px; margin: 0 auto; padding: 10px 14px; border-radius: 10px; border: 2px solid ${C.ink}; background: ${C.panel}; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">New total <strong>${mono(totalText, 'font-size: 17px')}</strong>${opts.deposit ? ` <span style="font-size: 13px; color: ${C.muted}">· deposit £[deposit] paid</span>` : ''}</span><span style="font-size: 13px; font-weight: 600">Your answers are final once sent.</span></span>${button(label, { block: isPhone() })}</div>`;
 };
-function quoteCard({ ticks = { pads: true, fit: true, cable: false }, newer = false, deposit = false, reminded = false } = {}) {
+function quoteCard({ ticks = { pads: true, fit: true, cable: false }, newer = false, deposit = false, reminded = false, priceUp = false } = {}) {
   const { total, label } = quoteSums({ ticks, newer });
   const inCard = SIZE === 'desktop';
   // Audit M3: facts only — when it was sent, and any reminder.
   const sentLine = `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Sent Thu 17 Sep, [time]${reminded ? ' · we sent a reminder at [time]' : ''}</p>`;
+  // UX walk-through 6 M4: at a Lightspeed shop a part's price changed after
+  // Maya approved it ("Ask Maya again", journey 21). The page says what went
+  // up and by how much, and her two answers: the new total, or keep to the
+  // price she agreed. Nothing was added.
+  if (priceUp) return cardBox(`${badge('A price has changed', 'purple')}${h2('A price has gone up since you agreed', 'q')}${sentLine}
+<p style="margin: 0; font-size: 15px; line-height: 1.5">You agreed to new brake pads at ${mono('£28.00')}. That price has gone up, so we’re asking before we charge you more.</p>
+<div aria-labelledby="q">${kv('Shimano brake pads', `${hidden('was ')}${mono('£28.00', `text-decoration: line-through; color: ${C.muted}`)}<span aria-hidden="true"> → </span>${hidden(', now ')}${mono('£[new price]')}`)}${kv('You agreed', mono('£111.00'))}</div>
+<div aria-live="polite" style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">${kv(`<strong style="color: ${C.ink}">New total</strong>`, mono('£[new total]', 'font-size: 18px'), 'border-top: 0; padding-top: 0')}</div>
+${inCard ? `<p style="margin: 0; font-size: 14px; font-weight: 600">Your answer is final once sent.</p>` : ''}
+${note('Prices include VAT. Nothing to pay today.')}
+${inCard ? `<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end">${button('No thanks — keep to £111.00', { variant: 'default' })}${button('Approve £[new total]')}</div>` : ''}
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 14px">Not sure? Call ${mono('[shop phone]')}, or</span>${button('Add a note for the shop', { variant: 'default' })}</div>`, `border: 2px solid ${C.ink}`);
   return cardBox(`${badge(newer ? 'The quote has changed' : 'Waiting for your answer', 'purple')}${h2(newer ? 'Alex has added to the quote' : 'Alex recommends more work', 'q')}${sentLine}
 <p style="margin: 0; font-size: 15px; line-height: 1.5">${newer ? 'Your earlier answers are kept. Please answer the new line below.' : `“${STAFF_NOTE_BRAKES}” — Alex Morgan, your mechanic`}</p>
 ${newer ? `<div>${kv('Already agreed', `Standard service, brake pads, fitting · ${mono('£111.00')}`)}${kv('You said no thanks', 'Replace gear cable')}</div>` : ''}
@@ -120,6 +135,9 @@ const photoDialog = () => popup('photo-title', 'Shimano brake pads', 'Rear pads 
 const noThanks = (work, price) => kv(`<span style="color: ${C.muted}">${work} · no thanks</span>`, mono(price, `text-decoration: line-through; color: ${C.muted}`));
 const DONE_ROWS = `${SERVICE_ROW}${kv('Shimano brake pads', mono('£28.00'))}${kv('Fit & adjust brakes', mono('£18.00'))}${noThanks('Replace gear cable', '£12.00')}`;
 const DECLINED_ROWS = `${SERVICE_ROW}${noThanks('Shimano brake pads', '£28.00')}${noThanks('Fit & adjust brakes', '£18.00')}${noThanks('Replace gear cable', '£12.00')}`;
+// UX walk-through 6 M4: Maya said no to the higher price; the price she
+// agreed stands while the shop decides what to do next.
+const priceNo = () => page(`<div role="status">${badge('Answered', 'green')}</div>${cardBox(`${h2('Thanks, Maya — you said no to the new price', 'ans', true)}<p style="margin: 0; font-size: 15px; line-height: 1.5">You said no to ${mono('£[new price]')} for the Shimano brake pads. Your agreed price stays ${mono('£111.00')}. The shop will let you know what happens next. Call ${mono('[shop phone]')} if you have a question.</p>`)}${tracker(2, { sub: readyLine })}${agreed(DONE_ROWS, '£111.00')}`);
 const answered = ({ byPhone = false, declined = false, deposit = false } = {}) => page(`<div role="status">${badge('Answered', 'green')}</div>${cardBox(`${h2(byPhone ? 'Your answers, from your call' : declined ? 'Thanks, Maya — Alex will carry on with the service' : 'Thanks, Maya — Alex is carrying on', 'ans', true)}<p style="margin: 0; font-size: 15px; line-height: 1.5">${byPhone ? 'You answered by phone with Jo Taylor at [time]. Here’s what was agreed.' : declined ? 'You didn’t add any extra work. We’ve saved your answers.' : 'We’ve saved your answers. The work you agreed is going ahead.'}</p>`)}${tracker(2, { sub: readyLine })}${agreed(declined ? DECLINED_ROWS : DONE_ROWS, declined ? '£65.00' : '£111.00', { deposit })}`);
 // Decision 6: the tracker on its own, at each stage.
 const inShop = (extra = '') => page(`${tracker(1, { sub: `We’ve got your bike — booked in Thu 17 Sep at ${mono('09:12')}. ${readyLine}` })}${extra}${agreed(SERVICE_ROW, '£65.00')}`);
@@ -158,6 +176,12 @@ def('dq-answered-deposit', () => answered({ deposit: true }));
 def('dq-answered-by-phone', () => answered({ byPhone: true }));
 def('dq-quote-newer', () => page(`${quoteCard({ newer: true })}${tracker(2, { sub: readyLine })}`, { bar: SIZE === 'desktop' ? '' : quoteBar({ newer: true }) }));
 def('dq-withdrawn', () => withdrawn());
+// UX walk-through 6 H1: Maya's quote at a Lightspeed shop — the same words
+// ("Nothing to pay today" is already true), no Basket in the header.
+def('dq-quote-ls', () => withLightspeedShop(() => quotePage()));
+// UX walk-through 6 M4: a price went up after Maya agreed, and her "no".
+def('dq-quote-price-ls', () => withLightspeedShop(() => page(`${quoteCard({ priceUp: true })}${tracker(2, { sub: readyLine })}`, { bar: SIZE === 'desktop' ? '' : quoteBar({ priceUp: true }) })));
+def('dq-answered-price-no-ls', () => withLightspeedShop(() => priceNo()));
 def('dq-job-quote', () => quoteJobBoards('build')[SIZE]);
 def('dq-job-sent', () => withToast(quoteJobBoards('sent')[SIZE], DIMS[SIZE]));
 def('dq-today-no-answer', () => today({ noAnswer: true }));
@@ -196,6 +220,9 @@ export const TITLES = {
   'dq-answered-by-phone': 'Answered by phone, recorded by the shop',
   'dq-quote-newer': 'The quote has changed: earlier answers kept',
   'dq-withdrawn': 'The shop withdrew the quote',
+  'dq-quote-ls': 'A Lightspeed shop: the quote, no deposit, no Basket',
+  'dq-quote-price-ls': 'A Lightspeed shop: a price has gone up since you agreed',
+  'dq-answered-price-no-ls': 'A Lightspeed shop: no thanks to the new price',
   'dq-job-quote': 'Job page: each new line Needed or Optional, its reason, a photo, what it goes with',
   'dq-job-sent': 'Sending the quote, with Undo for a minute',
   'dq-today-no-answer': 'Today: no answer to a quote',
@@ -212,5 +239,7 @@ export const ROWS = [
   { label: 'While the bike is in', screens: ['dq-in-shop', 'dq-waiting-part', 'dq-ready'] },
   { label: 'The quote', screens: ['dq-quote', 'dq-quote-photo', 'dq-quote-untick', 'dq-quote-decline', 'dq-quote-deposit', 'dq-quote-reminded', 'dq-quote-newer', 'dq-withdrawn', 'dq-within-limit'] },
   { label: 'Answered', screens: ['dq-answered', 'dq-answered-declined', 'dq-answered-deposit', 'dq-answered-by-phone'] },
+  // UX walk-through 6 H1 and M4.
+  { label: 'A Lightspeed shop', screens: ['dq-quote-ls', 'dq-quote-price-ls', 'dq-answered-price-no-ls'] },
   { label: 'The shop’s side', screens: ['dq-job-quote', 'dq-job-sent', 'dq-diary-waiting', 'dq-today-no-answer', 'dq-record-answer', 'dq-job-withdraw', 'dq-job-answered', 'dq-job-within', 'dq-job-waiting', 'dq-messages'] },
 ];

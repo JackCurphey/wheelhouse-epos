@@ -27,7 +27,15 @@ Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy on
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (471 and 299 files of 512 each).
+phone (493 and 330 files of 512 each).
+
+**UX walk-throughs 5 (Cycle to Work) and 6 (a Lightspeed repair) (2 Oct):**
+every recommendation taken and drawn: the Cycle to Work sale at the till,
+its own takings line and Reports card, Maya told about certificate
+differences and holds; Maya's own pages drawn as a Lightspeed shop, the
+Lightspeed customer chosen at book-in, hand-over with no work order.
+Overview: 819 screens, 816 designed. The staff canvas holds 493 of 512
+files. Next: walk-through 7.
 
 **UX walk-throughs 3 (stock) and 4 (a new shop) (2 Oct):** every
 recommendation taken without asking (decision 6) and drawn: held stock for

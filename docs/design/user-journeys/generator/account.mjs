@@ -61,12 +61,16 @@ const warnBar = (t, action = '') => `<div role="status" style="display: flex; al
 // card for details and how we contact you. Right: one history, newest first,
 // then Your data.
 const warranty = `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: ${C.successInk}">${icon('check', 14)}Bought here · under warranty, [n] months left</span>`;
-function bikes(empty, reminders) {
+// UX walk-through 5 M5: after collection, the Cycle to Work bike joins her
+// bikes, with its frame number.
+const c2wBike = () => `<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">[Bike] · [Size]</span><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: ${C.successInk}">${icon('check', 14)}Bought here on Cycle to Work · under warranty, [n] months left</span><span style="font-size: 13px; color: ${C.muted}">Frame ${mono('[frame number]')}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">${button('Book a repair', { variant: 'default' }).replace('<button', '<button aria-label="Book a repair for your [Bike]"')}</div></div>`;
+function bikes(empty, reminders, c2w = '') {
   if (empty) return cardBox(`${h2('Your bikes', 'a-bikes')}${p('No bikes yet. Add one to book it in faster.', `color: ${C.muted}`)}<div>${button('+ Add a bike', { variant: 'default' })}</div>`);
   // Audit L10: when the reminder is due — only while reminders are on.
   return cardBox(`${h2('Your bikes', 'a-bikes')}
 <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">${MAYA.bikeLong}</span>${warranty}<span style="font-size: 13px; color: ${C.muted}">In the shop now · ${mono('WH-1042')}${reminders ? ' · next service due [date]' : ''}</span>
-<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">${button('Book a repair', { variant: 'default' })}</div></div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">${button('Book a repair', { variant: 'default' })}</div></div>${c2w === 'collected' ? c2wBike() : ''}
 <div>${link('+ Add a bike')}</div>`);
 }
 const credit = () => cardBox(`${h2('Store credit', 'a-credit')}<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">${mono('£[credit]', 'font-size: 24px')}<span style="font-size: 13px; color: ${C.muted}">Use it in the shop or online</span></div>`);
@@ -94,23 +98,28 @@ const questionRow = (sent) => hRow('Message', '[The first line of Maya’s quest
 const pastRepair = () => hRow('Repair', `${mono('WH-[0000]')} · ${MAYA.bike} · [Work done]`, '[date] · collected · receipt', mono('£[total]', 'font-size: 15px'));
 const purchase = () => hRow('Purchase', `${mono('B1-[0000]')} · [Items bought]`, '[date] · in the shop · receipt', mono('£[total]', 'font-size: 15px'));
 const onlineOrder = () => hRow('Purchase', `Order ${mono('[order number]')} · [Items bought]`, '[date] · online · receipt', mono('£[total]', 'font-size: 15px'));
-function history(filter = 'Everything', { empty = false, talk = '' } = {}) {
+// UX walk-through 5 M5: her Cycle to Work order has a row, opening the
+// order's page (cw-customer-view). UX walk-through 5 H4: while it's open,
+// the row says what she pays at collection, from the order's "Who pays what".
+const c2wNow = () => `<a href="cw-customer-view-${SIZE}.dc.html" style="display: flex; align-items: center; gap: ${isPhone() ? 8 : 12}px; min-height: 60px; padding: 6px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${isPhone() ? '' : kind('Cycle to Work')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600; line-height: 1.35">[Bike] · Waiting for the certificate</span><span style="font-size: 13px; color: ${C.muted}">${isPhone() ? 'Cycle to Work · ' : ''}Quote ${mono('[quote number]')} · put aside until [date]</span><span style="font-size: 14px">What you pay at collection: <strong>${mono('£[£]')}</strong></span></span>${badge('Put aside', 'blue')}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
+const c2wPast = () => hRow('Cycle to Work', '[Bike] · Collected', `Quote ${mono('[quote number]')} · collected [date] · receipt`);
+function history(filter = 'Everything', { empty = false, talk = '', c2w = '' } = {}) {
   const pills = `<div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${['Everything', 'Repairs', 'Purchases'].map((t) => pill(t, t === filter)).join('')}</div>`;
   const top = `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">${h2('History', 'a-history')}${pills}</div>`;
   if (empty) return cardBox(`${top}<div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 12px; text-align: center">${p('Nothing here yet. Your repairs and purchases with North Street Cycles show here.', `color: ${C.muted}; max-width: 360px`)}${button('Book a repair')}</div>`);
   const all = filter === 'Everything', repairs = filter !== 'Purchases', buys = filter !== 'Repairs';
   // "Now" holds what's open or waiting; answered messages move to "Earlier".
-  const now = [repairs && repairNow(), all && talk === 'answered' && noteRow(), all && talk === 'sent' && questionRow(true)].filter(Boolean).join('');
-  const earlier = [all && talk === 'answered' && questionRow(false), buys && purchase(), repairs && pastRepair(), buys && onlineOrder(), repairs && pastRepair()].filter(Boolean).join('');
+  const now = [all && c2w === 'open' && c2wNow(), repairs && repairNow(), all && talk === 'answered' && noteRow(), all && talk === 'sent' && questionRow(true)].filter(Boolean).join('');
+  const earlier = [buys && c2w === 'collected' && c2wPast(), all && talk === 'answered' && questionRow(false), buys && purchase(), repairs && pastRepair(), buys && onlineOrder(), repairs && pastRepair()].filter(Boolean).join('');
   return cardBox(`${top}<div style="display: flex; flex-direction: column">${now ? `${subHead('Now')}${now}` : ''}${subHead('Earlier, newest first')}${earlier}</div>${link('Show more')}`);
 }
-function accountPage({ filter = 'Everything', empty = false, talk = '', contact = CONTACT_ON, banner = '', pending = false } = {}) {
+function accountPage({ filter = 'Everything', empty = false, talk = '', contact = CONTACT_ON, banner = '', pending = false, c2w = '' } = {}) {
   const c = empty ? CONTACT_NEW : contact;
   const head = `<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap"><div style="display: flex; flex-direction: column; gap: 4px"><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Your account</h1><span style="font-size: 14px; color: ${C.muted}">${MAYA.name} · ${MAYA.email} · <a href="#" style="color: ${C.ink}; font-weight: 600">Sign out</a></span></div>
 <div style="display: flex; flex-wrap: wrap; gap: 8px">${button('Ask the shop a question', { variant: 'default' })}${button('Book a repair')}</div></div>`;
-  const left = `<div style="display: flex; flex-direction: column; gap: 16px; width: ${isPhone() ? 'auto' : '360px'}; flex-shrink: 0">${bikes(empty, c.reminders)}${empty ? '' : credit()}${aboutYou(c)}</div>`;
-  const right = `<div style="display: flex; flex-direction: column; gap: 16px; flex-grow: 1; min-width: 0">${history(filter, { empty, talk })}${yourData(pending)}</div>`;
-  const body = isPhone() ? `${bikes(empty, c.reminders)}${history(filter, { empty, talk })}${empty ? '' : credit()}${aboutYou(c)}${yourData(pending)}` : `<div style="display: flex; gap: 16px; align-items: flex-start">${left}${right}</div>`;
+  const left = `<div style="display: flex; flex-direction: column; gap: 16px; width: ${isPhone() ? 'auto' : '360px'}; flex-shrink: 0">${bikes(empty, c.reminders, c2w)}${empty ? '' : credit()}${aboutYou(c)}</div>`;
+  const right = `<div style="display: flex; flex-direction: column; gap: 16px; flex-grow: 1; min-width: 0">${history(filter, { empty, talk, c2w })}${yourData(pending)}</div>`;
+  const body = isPhone() ? `${bikes(empty, c.reminders, c2w)}${history(filter, { empty, talk, c2w })}${empty ? '' : credit()}${aboutYou(c)}${yourData(pending)}` : `<div style="display: flex; gap: 16px; align-items: flex-start">${left}${right}</div>`;
   return site(`<div style="width: 100%; max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">${banner}${head}${body}</div>`);
 }
 
@@ -259,6 +268,10 @@ def('ac-account', () => accountPage());
 def('ac-account-lower', () => scrolled(accountPage(), { desktop: 380, tablet: 380, phone: 1150 }[SIZE]));
 def('ac-account-repairs', () => accountPage({ filter: 'Repairs' }));
 def('ac-account-new', () => accountPage({ empty: true }));
+// UX walk-through 5 M5, H4: her Cycle to Work order in her history, with what
+// she pays at collection; after collection the bike joins her bikes.
+def('ac-account-c2w', () => accountPage({ c2w: 'open' }));
+def('ac-account-c2w-collected', () => accountPage({ c2w: 'collected' }));
 def('ac-receipt', () => overlay(accountPage({ filter: 'Repairs' }), receiptDialog()));
 def('ac-receipt-sent', () => overlay(accountPage({ filter: 'Repairs' }), receiptDialog(true)));
 def('ac-job-note', () => inShopAt(SIZE, () => jobThread('writing')));
@@ -312,6 +325,9 @@ export const TITLES = {
   'ac-account-lower': 'Further down: how we contact you, and your data',
   'ac-account-repairs': 'History showing repairs only',
   'ac-account-new': 'A new account, with nothing in it yet',
+  // UX walk-through 5 M5, H4.
+  'ac-account-c2w': 'Her Cycle to Work order in her history, with what she pays at collection',
+  'ac-account-c2w-collected': 'After collection: the Cycle to Work bike in her bikes, with its frame number',
   'ac-receipt': 'A receipt, from the history',
   'ac-receipt-sent': 'The receipt emailed',
   'ac-job-note': 'A job’s page: “Add a note for the shop”',
@@ -353,6 +369,8 @@ export const TITLES = {
 };
 export const ROWS = [
   { label: 'Your account', screens: ['ac-account', 'ac-account-lower', 'ac-account-repairs', 'ac-account-new', 'ac-receipt', 'ac-receipt-sent'] },
+  // UX walk-through 5 M5, H4.
+  { label: 'A Cycle to Work bike on her account', screens: ['ac-account-c2w', 'ac-account-c2w-collected'] },
   { label: 'Talking to the shop', screens: ['ac-job-note', 'ac-job-note-sent', 'ac-job-note-answered', 'ac-ask', 'ac-account-question-sent', 'ac-question', 'ac-account-asked'] },
   { label: 'The shop’s side of messages', screens: ['ac-inbox-list', 'ac-inbox', 'ac-inbox-sent', 'ac-inbox-all', 'ac-inbox-empty', 'ac-reply-text', 'ac-today'] },
   { label: 'Service reminders', screens: ['ac-book-remind', 'ac-collect-remind', 'ac-services', 'ac-service-edit', 'ac-messages', 'ac-reminder-wording', 'ac-reminder-landing'] },

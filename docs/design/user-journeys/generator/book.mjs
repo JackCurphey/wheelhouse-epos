@@ -25,6 +25,7 @@ import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { CUSTOMER_NOTE } from './job-page.mjs';
 import { requestDepositBoard } from './diary.mjs';
 import { msgPage, msgListOpen } from './setup.mjs';
+import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -221,7 +222,9 @@ const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; 
 const kv = (k, v) => `<div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px"><span style="color: ${C.muted}">${k}</span><span style="text-align: right; font-weight: 600">${v}</span></div>`;
 // Audit H1: "Free to cancel until" is the same row on every answer screen.
 const WHEN_APPT = `${DAY}, arrive ${mono('11:30')}`;
-const bookingLines = ({ deposit = true, when = WHEN_APPT, mechanic = null } = {}) => `<div>${kv('Service', DONE_SERVICE)}${kv('Bike', `${BIKE} · green`)}${kv('When', when)}${mechanic ? kv('Mechanic', mechanic) : ''}${kv('Extra work', LIMIT)}${deposit ? kv('Deposit paid', mono('£[deposit]')) : ''}${deposit ? kv('Free to cancel until', CUTOFF) : ''}${kv('Reference', mono('WH-1042'))}</div>`;
+// UX walk-through 6 H1: a Lightspeed shop takes no deposit (Lightspeed shops
+// decision 9), so its booking leaves the deposit rows out.
+const bookingLines = ({ deposit = !lightspeedShop(), when = WHEN_APPT, mechanic = null } = {}) => `<div>${kv('Service', DONE_SERVICE)}${kv('Bike', `${BIKE} · green`)}${kv('When', when)}${mechanic ? kv('Mechanic', mechanic) : ''}${kv('Extra work', LIMIT)}${deposit ? kv('Deposit paid', mono('£[deposit]')) : ''}${deposit ? kv('Free to cancel until', CUTOFF) : ''}${kv('Reference', mono('WH-1042'))}</div>`;
 const bigIcon = (tone, ic) => `<span style="display: inline-flex; width: 48px; height: 48px; border-radius: 999px; align-items: center; justify-content: center; background: ${tone === 'ok' ? C.okBg : tone === 'purple' ? C.purpleBg : C.mutedBg}; color: ${tone === 'ok' ? C.successInk : tone === 'purple' ? C.purpleInk : C.muted}">${icon(ic, 24)}</span>`;
 const answerCard = (inner) => card(`<div style="padding: ${isPhone() ? 18 : 24}px; display: flex; flex-direction: column; gap: 12px">${inner}</div>`);
 // Audit M3: only the one-line outcome is announced; focus goes to the heading.
@@ -279,17 +282,21 @@ ${note('Your booking stays on Thursday until the shop confirms the new time.')}<
   return dialog ? overlay(page, dialog) : page;
 };
 // Decision 4: the cancel question says what happens to the deposit.
-const cancelDialog = (late = false) => popup('cancel-title', 'Cancel this booking?', `${DAY}, arrive 11:30 · ${BIKE}`, late
+// UX walk-through 6 H1: a Lightspeed shop took no deposit, so there's
+// nothing to pay or refund.
+const cancelDialog = (late = false) => popup('cancel-title', 'Cancel this booking?', `${DAY}, arrive 11:30 · ${BIKE}`, lightspeedShop()
+  ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">There’s nothing to pay or refund. We’ll send you a text to confirm it’s cancelled.</p>`
+  : late
   ? `<p style="margin: 0; display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span>It’s past ${CUTOFF}, so <strong>your £[deposit] deposit isn’t refundable</strong>. If something’s gone wrong, call the shop on [shop phone] — they can still refund it.</span></p>`
   : `<p style="margin: 0; display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 15px; line-height: 1.45">${icon('check', 18)}<span><strong>Your £[deposit] deposit will be refunded</strong> to the card you paid with, within [n] working days.</span></p>`,
-  `${button('Keep my booking', { variant: 'ghost' })}${button(late ? 'Cancel and lose the deposit' : 'Cancel booking', { variant: 'danger' })}`, 520);
+  `${button('Keep my booking', { variant: 'ghost' })}${button(late && !lightspeedShop() ? 'Cancel and lose the deposit' : 'Cancel booking', { variant: 'danger' })}`, 520);
 // Audit H2: the cancelled screen says whether the deposit came back.
 const cancelled = (late = false) => centred(answerCard(`${bigIcon('grey', 'close')}${announce(`<span style="font-size: 14px; font-weight: 600; color: ${C.muted}">Cancelled</span>`)}${h1('Your booking is cancelled')}
-<p style="margin: 0; font-size: 15px; line-height: 1.5">${DAY}, Standard service for your ${BIKE}. ${late ? `Your £[deposit] deposit was kept, because it was after ${CUTOFF}.` : 'Your £[deposit] deposit comes back to your card within [n] working days.'} We’ve sent you a text to confirm.</p>${button('Book another time', { variant: 'default' })}${shopLines}`));
+<p style="margin: 0; font-size: 15px; line-height: 1.5">${DAY}, Standard service for your ${BIKE}. ${lightspeedShop() ? 'There’s nothing to pay or refund.' : late ? `Your £[deposit] deposit was kept, because it was after ${CUTOFF}.` : 'Your £[deposit] deposit comes back to your card within [n] working days.'} We’ve sent you a text to confirm.</p>${button('Book another time', { variant: 'default' })}${shopLines}`));
 // Workshop day 15: the shop can decline with a message; the deposit comes back.
 const declined = () => centred(answerCard(`${bigIcon('grey', 'alert')}${announce(`<span style="font-size: 14px; font-weight: 600; color: ${C.muted}">Not booked</span>`)}${h1('Sorry, we can’t fit this booking in')}
 <p style="margin: 0; font-size: 15px; line-height: 1.5">A message from North Street Cycles:</p><blockquote style="margin: 0; padding: 12px 16px; border-left: 3px solid ${C.border}; font-size: 15px; line-height: 1.5">“[The shop’s message]”</blockquote>
-<p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing is booked. Your £[deposit] deposit comes back to your card within [n] working days.</p>${button('Choose another date — we’ve kept your details', { variant: 'default' })}${shopLines}`));
+<p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing is booked${lightspeedShop() ? ', and there’s nothing to pay or refund' : `. Your £[deposit] deposit comes back to your card within [n] working days`}.</p>${button('Choose another date — we’ve kept your details', { variant: 'default' })}${shopLines}`));
 const expired = () => centred(answerCard(`${h1('This booking link has expired', 24)}<p style="margin: 0; font-size: 15px; line-height: 1.5">It was for ${mono('WH-1042')}, booked for ${DAY} and cancelled. A booking’s link stops working [n] days after collection — or, if the bike never came in, [n] days after the booked date.</p>${button('Book a repair', { variant: 'default' })}${shopLines}`));
 const unavailable = () => centred(answerCard(`${h1('Online booking is unavailable just now', 24)}<p style="margin: 0; font-size: 15px; line-height: 1.5">Please try again in a little while, or call the shop to book.</p>${shopLines}`));
 // Signed in: Your bookings (decision 10; audit H2). The second booking is a
@@ -368,6 +375,10 @@ def('bk-cancelled-late', () => cancelled(true));
 def('bk-declined', () => declined());
 def('bk-expired', () => expired());
 def('bk-unavailable', () => unavailable());
+// UX walk-through 6 H1: Maya's booking at a Lightspeed shop — no deposit, no
+// Basket in the header (Lightspeed shops decisions 9 and 10).
+def('bk-page-ls', () => withLightspeedShop(() => bookingPage()));
+def('bk-cancel-ls', () => withLightspeedShop(() => bookingPage({ dialog: cancelDialog() })));
 def('bk-staff-request', () => requestDepositBoard(SIZE));
 def('bk-staff-decline', () => requestDepositBoard(SIZE, true));
 // Scrolled down to the booking messages, below the shop's other messages.
@@ -418,6 +429,8 @@ export const TITLES = {
   'bk-declined': 'The shop couldn’t fit it in',
   'bk-expired': 'The link, [n] days after a booking that never came in',
   'bk-unavailable': 'Online booking unavailable',
+  'bk-page-ls': 'A Lightspeed shop: the booking’s page, no deposit',
+  'bk-cancel-ls': 'A Lightspeed shop: cancel, nothing to pay or refund',
   'bk-staff-request': 'The diary: a request with a deposit',
   'bk-staff-decline': 'Declining it refunds the deposit',
   'bk-messages': 'Settings › Front desk › Messages: the booking messages',
@@ -429,6 +442,8 @@ export const ROWS = [
   { label: 'Sending', screens: ['bk-sending', 'bk-card-failed', 'bk-not-sent', 'bk-checking-payment', 'bk-resume', 'bk-request', 'bk-request-deposit', 'bk-confirmed'] },
   { label: 'Your booking', screens: ['bk-bookings', 'bk-page-request', 'bk-offered', 'bk-page', 'bk-page-dropoff', 'bk-change', 'bk-change-pending', 'bk-change-declined'] },
   { label: 'Cancelling', screens: ['bk-cancel', 'bk-cancel-late', 'bk-cancelled', 'bk-cancelled-late', 'bk-declined', 'bk-expired', 'bk-unavailable'] },
+  // UX walk-through 6 H1.
+  { label: 'A Lightspeed shop', screens: ['bk-page-ls', 'bk-cancel-ls'] },
   { label: 'The shop’s side', screens: ['bk-staff-request', 'bk-staff-decline', 'bk-messages', 'bk-settings', 'bk-settings-deposits'] },
 ];
 

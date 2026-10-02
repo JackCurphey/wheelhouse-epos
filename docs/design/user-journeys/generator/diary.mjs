@@ -2530,7 +2530,7 @@ keepDesktopSeq('job-waiting-parts');
 screens['job-finished'] = buildJobPage({
   status: 'Ready for collection', tone: 'green',
   touch: {
-    footer: (size) => `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', size === 'phone' ? 13 : 12)}`,
+    footer: (size) => `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Opens the till with this job’s lines.' /* UX walk-through 6 L2: a Lightspeed shop's job has Hand over, not Take payment */, size === 'phone' ? 13 : 12)}`,
     stageTop: () => finishedStripCompact(), phoneTop: PHONE_STAGE_TOP.finished,
   },
   desktop: {
@@ -2540,7 +2540,7 @@ screens['job-finished'] = buildJobPage({
     leftStatus: 'Ready for collection', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
-    footer: `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-desktop.dc.html' })}${note('Goes to this shop’s till — the Wheelhouse till or Lightspeed — as set in Settings.', 12)}`,
+    footer: `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-desktop.dc.html' })}${note('Opens the till with this job’s lines.' /* UX walk-through 6 L2: a Lightspeed shop's job has Hand over, not Take payment */, 12)}`,
   },
 });
 keepDesktopSeq('job-finished');
@@ -2863,7 +2863,9 @@ export const jobVariant = (status, tone, strip, phoneTop, footer) => buildJobPag
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
     leftStatus: status, bikeHere: status !== 'Collected',
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
-    totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+    // UX walk-through 6 L1: on a Lightspeed job the header tag says "Agreed",
+    // matching the strip; the table keeps "Approved" (the customer's answer).
+    totalBadge: badge(`${lightspeedShop() ? 'Agreed' : 'Approved'} £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: footer('desktop'),
   },
 });
