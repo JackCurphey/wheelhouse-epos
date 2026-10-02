@@ -95,6 +95,11 @@ collect and pay) and different kinds of people, looking for gaps at the
 hand-offs. Testing with real customers on a clickable prototype is the step
 after that.
 
+**Remind Jack before we ship: a Doom mod easter egg** (Jack, 2 Oct: "i
+want a doom mod. we dont need to build this at all now, but its an easter
+egg i want you to remind me of before we ship"). Not designed or built;
+raise it in any pre-launch checklist.
+
 **Noted for later: a Cycle to Work page on the website** (Jack, 2 Oct:
 "but i would also like to remember 2 for the future", journey 6 decision 6).
 Customers ask for a Cycle to Work quote online — pick a bike and their scheme
