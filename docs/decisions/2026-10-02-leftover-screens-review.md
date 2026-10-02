@@ -30,3 +30,8 @@ addresses are bracketed placeholders.
    the heading reads "VAT invoice" and adds their company details. Chosen
    over a plain receipt with VAT invoices on request, and a short email
    with the receipt only in the account.
+2. **A text receipt is a short text with a link** (Jack, 2 Oct: "1"):
+   "North Street Cycles: your receipt for £[total] — [link]". The link opens
+   the same receipt as the email, with no sign-in needed, as "Bike ready"
+   does; anyone with the link can see that receipt. Chosen over the whole
+   receipt in the text, and taking "Text" off the till.
