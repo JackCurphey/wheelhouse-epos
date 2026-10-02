@@ -101,3 +101,15 @@ as few clicks as possible).
      "Back to Today" when opened from an alert; "Activity log" as the name;
      "Send" greyed until something is typed, and the failed send drawn;
      "Type of action" rather than "Kind".
+7. **Tablet and phone drawn; approved and copied into the big canvas**
+   (Jack, 2 Oct: "yeah go ahead"). On a tablet the screens keep the
+   desktop layout with the icon rail; on a phone the log's lines stack —
+   time and name on one line, what happened under it — and the filters
+   sit two to a row. 24 screens, 72 boards. In the big canvas (the staff
+   app) journey 20 replaces its three placeholders. Carried into other
+   journeys: Reports' "Activity log" card (journey 17, hidden from staff
+   with "Can see reports"); "Signed-in devices" and "Alerts on Today" in
+   Settings › Office › Staff and roles (journeys 8 and 19); "Signed in ·
+   Sign out everywhere" on every person (journeys 8, 17, 19); the Help
+   cards in Your settings — "Send feedback" and "What Wheelhouse records
+   about you" (journeys A and 17).

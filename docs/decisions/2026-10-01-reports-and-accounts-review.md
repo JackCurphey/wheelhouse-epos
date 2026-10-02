@@ -134,3 +134,5 @@ few clicks as possible).
    pop-up (Owner setup, Multiple sites). "Show graphs in reports" shows in
    Your settings only for people who can see reports, so Journey A's Your
    settings (Jo Taylor, Staff) is unchanged.
+
+**Later change (2 Oct 2026, Management oversight decisions 6 and 7):** Reports gains an "Activity log" card beside the ready-made reports, for owners and managers only (hidden from staff with "Can see reports"); every person shows "Sign out everywhere"; Your settings has the Help cards. Nothing else changed.

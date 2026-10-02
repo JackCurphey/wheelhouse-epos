@@ -2907,33 +2907,201 @@
    "title": "Designed · Settings › Till › Tills: every till, by shop (desktop)",
    "is_interactive": true
   },
-  "j20-ops-audit.dc.html": {
+  "j20-ops-reports-home-desktop.dc.html": {
    "x": 0,
    "y": 27446,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Activity log",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Reports: “Activity log” beside the ready-made reports (desktop)",
    "is_interactive": true
   },
-  "j20-ops-devices.dc.html": {
-   "x": 1180,
+  "j20-ops-reports-staff-desktop.dc.html": {
+   "x": 1320,
    "y": 27446,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Signed-in devices",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff with “Can see reports”: no activity log (desktop)",
    "is_interactive": true
   },
-  "j20-ops-feedback.dc.html": {
-   "x": 2360,
+  "j20-ops-log-desktop.dc.html": {
+   "x": 2640,
    "y": 27446,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Send feedback",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Reports › Activity log: what was done today, by whom (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-manager-desktop.dc.html": {
+   "x": 3960,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A manager’s activity log: everyone’s lines (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-all-desktop.dc.html": {
+   "x": 5280,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · All shops: every line shows its shop (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-filtered-desktop.dc.html": {
+   "x": 6600,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Opened from a Today alert, with Back to Today (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-empty-desktop.dc.html": {
+   "x": 7920,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Nothing matches the filters (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-refused-desktop.dc.html": {
+   "x": 9240,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff following a link to the log (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-first-note-desktop.dc.html": {
+   "x": 10720,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The first sign-in: what Wheelhouse records (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-your-settings-desktop.dc.html": {
+   "x": 12040,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your settings: Send feedback, and what’s recorded about you (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-my-activity-desktop.dc.html": {
+   "x": 13360,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your activity: a person’s own lines (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-today-alerts-desktop.dc.html": {
+   "x": 14840,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today, owners and managers: a discount, voids, a price below cost (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-alert-settings-desktop.dc.html": {
+   "x": 16160,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Office › Alerts on Today: set by the owner (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-devices-desktop.dc.html": {
+   "x": 17640,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Office › Signed-in devices (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-till-checkout-desktop.dc.html": {
+   "x": 18960,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Check Jo Taylor out of Till B1: after this sale, or now (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-devices-signout-desktop.dc.html": {
+   "x": 20280,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sign a computer out (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-devices-signed-out-desktop.dc.html": {
+   "x": 21600,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Signed out (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-person-desktop.dc.html": {
+   "x": 22920,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A person: “Sign out everywhere” (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-person-everywhere-desktop.dc.html": {
+   "x": 24240,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sign Jo Taylor out everywhere? (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-empty-desktop.dc.html": {
+   "x": 25720,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Send feedback: Send waits until something is written (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-desktop.dc.html": {
+   "x": 27040,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Send feedback: what happened, and which screen (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-shot-desktop.dc.html": {
+   "x": 28360,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · With a picture of the screen, customer details hidden (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-failed-desktop.dc.html": {
+   "x": 29680,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Couldn’t send: kept, try again (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-sent-desktop.dc.html": {
+   "x": 31000,
+   "y": 27446,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Thanks — we’ve got it (desktop)",
    "is_interactive": true
   },
   "j21-connect.dc.html": {
    "x": 0,
-   "y": 29262,
+   "y": 29302,
    "w": 1100,
    "h": 816,
    "title": "Designed · Connect the one chosen Lightspeed",
@@ -2941,7 +3109,7 @@
   },
   "j21-connect-proof.dc.html": {
    "x": 1180,
-   "y": 29262,
+   "y": 29302,
    "w": 1100,
    "h": 816,
    "title": "Designed · Verify connector capabilities",
@@ -2949,7 +3117,7 @@
   },
   "j21-pos.dc.html": {
    "x": 2360,
-   "y": 29262,
+   "y": 29302,
    "w": 1100,
    "h": 816,
    "title": "Designed · Handoff agreed work to Lightspeed",
@@ -2957,7 +3125,7 @@
   },
   "j21-pos-done.dc.html": {
    "x": 3540,
-   "y": 29262,
+   "y": 29302,
    "w": 1100,
    "h": 816,
    "title": "Designed · See the linked work order",
@@ -2965,7 +3133,7 @@
   },
   "j21-pos-unknown.dc.html": {
    "x": 4720,
-   "y": 29262,
+   "y": 29302,
    "w": 1100,
    "h": 816,
    "title": "Designed · Uncertain Lightspeed handoff",
@@ -3352,9 +3520,30 @@
   "j19-ms-add-shop-error-desktop.dc.html",
   "j19-ms-today-new-desktop.dc.html",
   "j19-ms-tills-desktop.dc.html",
-  "j20-ops-audit.dc.html",
-  "j20-ops-devices.dc.html",
-  "j20-ops-feedback.dc.html",
+  "j20-ops-reports-home-desktop.dc.html",
+  "j20-ops-reports-staff-desktop.dc.html",
+  "j20-ops-log-desktop.dc.html",
+  "j20-ops-log-manager-desktop.dc.html",
+  "j20-ops-log-all-desktop.dc.html",
+  "j20-ops-log-filtered-desktop.dc.html",
+  "j20-ops-log-empty-desktop.dc.html",
+  "j20-ops-log-refused-desktop.dc.html",
+  "j20-ops-first-note-desktop.dc.html",
+  "j20-ops-your-settings-desktop.dc.html",
+  "j20-ops-my-activity-desktop.dc.html",
+  "j20-ops-today-alerts-desktop.dc.html",
+  "j20-ops-alert-settings-desktop.dc.html",
+  "j20-ops-devices-desktop.dc.html",
+  "j20-ops-till-checkout-desktop.dc.html",
+  "j20-ops-devices-signout-desktop.dc.html",
+  "j20-ops-devices-signed-out-desktop.dc.html",
+  "j20-ops-person-desktop.dc.html",
+  "j20-ops-person-everywhere-desktop.dc.html",
+  "j20-ops-feedback-empty-desktop.dc.html",
+  "j20-ops-feedback-desktop.dc.html",
+  "j20-ops-feedback-shot-desktop.dc.html",
+  "j20-ops-feedback-failed-desktop.dc.html",
+  "j20-ops-feedback-sent-desktop.dc.html",
   "j21-connect.dc.html",
   "j21-connect-proof.dc.html",
   "j21-pos.dc.html",
@@ -4166,7 +4355,47 @@
   "j20_s84": {
    "x": 0,
    "y": 27206,
-   "text": "Oversight",
+   "text": "The activity log",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s85": {
+   "x": 10720,
+   "y": 27206,
+   "text": "What staff are told",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s86": {
+   "x": 14840,
+   "y": 27206,
+   "text": "Alerts on Today",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s87": {
+   "x": 17640,
+   "y": 27206,
+   "text": "Signed-in devices",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s88": {
+   "x": 25720,
+   "y": 27206,
+   "text": "Send feedback",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -4178,11 +4407,11 @@
    "y": 26886,
    "text": "20 · Management oversight — Owner",
    "kind": "title1",
-   "maxW": 3460
+   "maxW": 32240
   },
-  "j21_s86": {
+  "j21_s90": {
    "x": 0,
-   "y": 29022,
+   "y": 29062,
    "text": "Connection and handoff",
    "w": 520,
    "size": "l",
@@ -4192,7 +4421,7 @@
   },
   "j21_title": {
    "x": 0,
-   "y": 28702,
+   "y": 28742,
    "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
    "kind": "title1",
    "maxW": 5820

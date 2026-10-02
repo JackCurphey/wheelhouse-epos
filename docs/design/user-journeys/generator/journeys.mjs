@@ -54,6 +54,8 @@ export const sd2 = (id, title, role) => ({ id, status: 'designed', title, role, 
 export const sd1 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'browse' });
 // sd18(id, title, role) = an agreed journey 18 screen (website.mjs, Soft sand).
 export const sd18 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'website' });
+// sd20(id, title, role) = an agreed journey 20 screen (oversight.mjs, Soft sand).
+export const sd20 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'oversight' });
 
 export const journeys = [
   {
@@ -967,10 +969,39 @@ export const journeys = [
   {
     id: 'j20', name: 'Management oversight', who: 'Owner',
     rows: [
-      { label: 'Oversight', screens: [
-        g('ops-audit', 'Activity log', 'Owner', 'Who changed a price, voided a sale or edited a job.', ['Who, what, when', 'Filter by person or kind'], { source: 'ACC-08' }),
-        g('ops-devices', 'Signed-in devices', 'Owner', 'See where people are signed in and sign a device out.', ['Devices and tills', 'Sign out'], { source: 'ACC-07' }),
-        g('ops-feedback', 'Send feedback', 'Staff', 'Tell us what is wrong or missing, from inside Wheelhouse.', ['Message', 'Screenshot'], { source: 'FD-06' }),
+      { label: "The activity log", screens: [
+        sd20("ops-reports-home", "Reports: “Activity log” beside the ready-made reports", "Owner and Manager"),
+        sd20("ops-reports-staff", "Staff with “Can see reports”: no activity log", "Staff"),
+        sd20("ops-log", "Reports › Activity log: what was done today, by whom", "Owner and Manager"),
+        sd20("ops-log-manager", "A manager’s activity log: everyone’s lines", "Owner and Manager"),
+        sd20("ops-log-all", "All shops: every line shows its shop", "Owner and Manager"),
+        sd20("ops-log-filtered", "Opened from a Today alert, with Back to Today", "Owner and Manager"),
+        sd20("ops-log-empty", "Nothing matches the filters", "Owner and Manager"),
+        sd20("ops-log-refused", "Staff following a link to the log", "Staff"),
+      ] },
+      { label: "What staff are told", screens: [
+        sd20("ops-first-note", "The first sign-in: what Wheelhouse records", "Staff"),
+        sd20("ops-your-settings", "Your settings: Send feedback, and what’s recorded about you", "Staff"),
+        sd20("ops-my-activity", "Your activity: a person’s own lines", "Staff"),
+      ] },
+      { label: "Alerts on Today", screens: [
+        sd20("ops-today-alerts", "Today, owners and managers: a discount, voids, a price below cost", "Owner and Manager"),
+        sd20("ops-alert-settings", "Settings › Office › Alerts on Today: set by the owner", "Owner"),
+      ] },
+      { label: "Signed-in devices", screens: [
+        sd20("ops-devices", "Settings › Office › Signed-in devices", "Owner"),
+        sd20("ops-till-checkout", "Check Jo Taylor out of Till B1: after this sale, or now", "Owner"),
+        sd20("ops-devices-signout", "Sign a computer out", "Owner"),
+        sd20("ops-devices-signed-out", "Signed out", "Owner"),
+        sd20("ops-person", "A person: “Sign out everywhere”", "Owner"),
+        sd20("ops-person-everywhere", "Sign Jo Taylor out everywhere?", "Owner"),
+      ] },
+      { label: "Send feedback", screens: [
+        sd20("ops-feedback-empty", "Send feedback: Send waits until something is written", "Staff"),
+        sd20("ops-feedback", "Send feedback: what happened, and which screen", "Staff"),
+        sd20("ops-feedback-shot", "With a picture of the screen, customer details hidden", "Staff"),
+        sd20("ops-feedback-failed", "Couldn’t send: kept, try again", "Staff"),
+        sd20("ops-feedback-sent", "Thanks — we’ve got it", "Staff"),
       ] },
     ],
   },

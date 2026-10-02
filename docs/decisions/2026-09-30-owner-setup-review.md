@@ -272,3 +272,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** the person pop-up in Staff and roles has a new switch, "Can see costs and margin", after "Can see reports" (Off for Jo Taylor; On with "Give everything a Manager can do"). Turning it on also turns on "Can see reports". Nothing else on these boards changed.
 
 **Later change (1 Oct 2026, Buy online decision 10):** Settings › Front desk has a fifth section, "Online orders" (what the website sells, showing products, paying online, not collected), with its Jump to pill; Settings › Messages lists five online-order messages under "Online order messages", and Automatic messages reads "15 on".
+
+**Later change (2 Oct 2026, Management oversight decisions 6 and 7):** every person shows "Signed in · Sign out everywhere"; Settings › Office › Staff and roles gains "Signed-in devices" and "Alerts on Today" (set by the owner). Nothing else changed.

@@ -19,14 +19,28 @@ Collect the bike and pay (journey 5), Receiving stock and purchase orders
 (journey 3), Drop off and approve the quote (journey 4), Account, history
 and reminders (journey 7), Multiple sites (journey 19), Reports and
 accounts (journey 17), Buy online / click and collect (journey 2), Find
-the shop and browse the website (journey 1) and Website management
-(journey 18) are approved and in
+the shop and browse the website (journey 1), Website management
+(journey 18) and Management oversight (journey 20) are approved and in
 the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy online
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (372 and 233 files of 512 each).
+phone (393 and 233 files of 512 each).
+
+**Journey 20, Management oversight (2 Oct):** approved at desktop, tablet and
+phone and copied into the big canvas; 7 decisions in
+`docs/decisions/2026-10-02-management-oversight-review.md` — one activity log
+in Reports for owners and managers (managers see the owner's lines too); a few
+alerts on Today above amounts the owner sets, cleared with "Seen"; signed-in
+devices in Settings › Office with "Sign out everywhere" on each person and
+"Check out" for a till that waits for the sale; "Send feedback" for everyone
+with the screen picture's customer details hidden; staff told what's recorded
+and able to see their own lines. UI audit `oversight-ui-audit.md`, every
+recommendation taken. 24 screens, 72 boards. Own canvas:
+https://claude.ai/artifact/XLYiuhFS1WVjS9ohF7G7gf . Generator: `oversight.mjs` +
+`build-oversight.mjs --theme sand`. Open: how long records are kept (LEG-05,
+shown as [period]).
 
 **Journey 18, Website management (2 Oct):** approved at desktop, tablet and
 phone and copied into the big canvas; 13 decisions in

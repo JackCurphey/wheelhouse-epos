@@ -100,3 +100,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** Your settings gains "Show graphs in reports" under Accessibility, for people who can see reports (Reports and accounts decision 7, audit L4). Jo Taylor's Your settings here is unchanged, as she can't see reports.
 
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
+
+**Later change (2 Oct 2026, Management oversight decisions 6 and 7):** Your settings gains a Help column: "Send feedback", and "What Wheelhouse records about you" with "See my own activity". Nothing else changed.
