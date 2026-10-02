@@ -79,3 +79,10 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    works — read products and stock, find customers, make work orders, see
    payment — each ticked or flagged. Chosen over the Wheelhouse team
    connecting it for the shop, and a plain "Connected" with no checklist.
+8. **Services and labour prices are set in Wheelhouse and sent to the work
+   order as labour** (Jack, 2 Oct: "1"). Each service goes on the work order
+   as a labour line at the Wheelhouse price, so the approved quote is what
+   Lightspeed charges; Settings › Workshop stays as drawn. Any labour prices
+   kept in Lightspeed go unused for jobs. Chosen over linking each service
+   to a Lightspeed labour item priced in Lightspeed, and one "Workshop
+   labour" line.
