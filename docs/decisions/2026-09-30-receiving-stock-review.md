@@ -154,3 +154,14 @@ switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
 state) for screen readers, and on tablet and phone — where the switcher is out
 of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
 under each staff page's title. Nothing else on these boards changed.
+
+**Later change (2 Oct 2026, the overview's undrawn screens): the three
+supplier screens wait for a later release** (Jack: "I dont want to build in
+browsing things from the suppliers at the moment, but maybe we can add it in
+a later release"). "Suppliers" (PUR-01), "Supplier catalogue" (INV-10 —
+browsing Madison, ZyroFisher and Raleigh with live price and stock) and
+"Send the order" (PUR-05) stay undrawn. Send the order would also go against
+decision 2 (orders are placed on the supplier's website or by phone, then
+marked as ordered), and the catalogue needs real supplier feeds — only a
+pretend Madison list exists, and the Madison trade account isn't recorded as
+opened.

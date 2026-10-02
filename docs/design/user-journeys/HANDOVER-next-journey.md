@@ -93,6 +93,11 @@ collect and pay) and different kinds of people, looking for gaps at the
 hand-offs. Testing with real customers on a clickable prototype is the step
 after that.
 
+**Later release: the supplier screens** (Jack, 2 Oct): Suppliers,
+Supplier catalogue (browsing Madison, ZyroFisher and Raleigh) and Send the
+order stay in journey 13's "not designed" cards until a later release — see
+the later change at the end of the receiving-stock decisions.
+
 **Remind Jack before we ship: a Doom mod easter egg** (Jack, 2 Oct: "i
 want a doom mod. we dont need to build this at all now, but its an easter
 egg i want you to remind me of before we ship"). Not designed or built;
