@@ -38,3 +38,10 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    if it can't, this falls back to staff ticking "Paid in Lightspeed" at
    hand-over. Chosen over staff ticking it every time, and Wheelhouse never
    showing payment.
+3. **The work order is made automatically when the quote is approved**
+   (Jack, 2 Oct: "1"). The job shows "In Lightspeed · work order [number]";
+   later changes to the job (an extra part, a new price) update the work
+   order, and a cancelled job marks it cancelled in Lightspeed. Staff do
+   nothing, and the work order is ready long before collection. Chosen over
+   staff pressing "Send to Lightspeed" when the job is finished, and staff
+   pressing it at approval (the Release 1 drawing).
