@@ -101,3 +101,10 @@ big canvases). Checked against the plan above:
 - **Not drawn (as planned):** L9's edge cases. The ✕ on pop-ups that go back
   to another board in the prototype stays a link so the canvas can follow
   it; every other ✕ is now a button.
+
+## Walk-through 2
+
+4. **Walk-through 2 is a shop day** (Jack, 2 Oct: "1"): opening up (journey
+   10), sales at the till (11), an online order to pick (2), cash-up (16).
+   Chosen over another of the remaining stories, and stopping the
+   walk-throughs to leave the rest for Jack and Mark.

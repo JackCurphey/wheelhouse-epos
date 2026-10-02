@@ -7,7 +7,7 @@ For Jack and Mark, to walk Wheelhouse's stories by hand. A UI audit checks one s
 | # | Story | Journeys, in order | People to walk it as |
 |---|---|---|---|
 | 1 | A repair, start to finish | 1 Find the shop, 3 Book a repair, 4 Drop off and approve the quote, 12 Workshop day, 5 Collect and pay, 7 Account and reminders | Maya Patel (customer, phone and computer), Jo Taylor (front desk), Alex Morgan (mechanic, tablet), Jack Lewis (owner) — **done 2 Oct 2026** |
-| 2 | A shop day | 10 Opening the shop, 11 Selling at the till, 2 Buy online / click and collect, 16 End-of-day cash-up | Jo Taylor at the till, Maya collecting an online order, Jack Lewis cashing up |
+| 2 | A shop day | 10 Opening the shop, 11 Selling at the till, 2 Buy online / click and collect, 16 End-of-day cash-up | Jo Taylor at the till, Maya collecting an online order, Jack Lewis cashing up — **done 2 Oct 2026** |
 | 3 | Stock | 13 Receiving stock, 11 Selling at the till, 14 Stock take, 17 Reports | Jo Taylor receiving and selling, Jack Lewis ordering and reading reports; follow the Shimano brake pads B05S-RX that WH-1042 waits for |
 | 4 | A new shop | 9 Moving from Citrus Lime, 8 Owner setup, B Signing in, 18 Website management | Jack Lewis (owner) setting up; Jo Taylor signing in for the first time |
 | 5 | A Cycle to Work bike | 6 Cycle to Work, 11 Selling at the till, 17 Reports | Maya (customer), Jo Taylor, Jack Lewis |
@@ -82,3 +82,10 @@ For the "same thing, same name" question. If a screen uses another word for one 
 | A job that's done | Ready to collect; the "Bike ready" message | Ready for collection; marking it is "Mark ready for collection" |
 | Waiting on the customer's answer | Waiting for your answer | Waiting for the customer |
 | The shop's address | [Shop address] (a placeholder until a real one is given) | [Shop address] |
+| Something bought on the website | Your order; order [order number] | Online order (the till's hand-over says "Click and collect", walk-through 2 L1) |
+| Giving it to the customer | Collect it; Collected | Hand over (the till's hand-over button says "Mark collected", walk-through 2 L1) |
+| An order that's waiting | Ready to collect; the "Your order is ready to collect" email | Ready to collect; marking it is "Mark ready" |
+| Checking in at the till | — | Enter your PIN; "Checked in today"; "Serving: [name]" (the app map says "Pick your name", walk-through 2 L1) |
+| The money left in the drawer overnight | — | The shop's float; "Leave in the drawer" |
+| Counting up at the end of the day | — | Close the day (till bar and page); "Takings and cash-ups" in Reports; "Close it" on Today |
+| Finding an earlier sale | Receipt number; "give your name in the shop" | Past sales; "Scan or type the receipt number" |
