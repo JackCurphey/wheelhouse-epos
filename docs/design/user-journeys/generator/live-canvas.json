@@ -75,8 +75,16 @@
    "title": "Designed · Your settings (desktop)",
    "is_interactive": true
   },
+  "ja-your-settings-no-pin-desktop.dc.html": {
+   "x": 10710,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your settings — no PIN yet, Get your PIN (desktop)",
+   "is_interactive": true
+  },
   "ja-site-desktop.dc.html": {
-   "x": 10870,
+   "x": 12190,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -84,7 +92,7 @@
    "is_interactive": true
   },
   "ja-site-menu-phone.dc.html": {
-   "x": 12190,
+   "x": 13510,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -92,7 +100,7 @@
    "is_interactive": true
   },
   "ja-site-ocean-desktop.dc.html": {
-   "x": 12660,
+   "x": 13980,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -100,7 +108,7 @@
    "is_interactive": true
   },
   "ja-site-ocean-menu-phone.dc.html": {
-   "x": 13980,
+   "x": 15300,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -115,8 +123,16 @@
    "title": "Designed · Getting started: the owner’s checklist on Today (desktop)",
    "is_interactive": true
   },
-  "j08-fr-step-desktop.dc.html": {
+  "j08-fr-today-moving-desktop.dc.html": {
    "x": 1320,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Getting started while moving from Citrus Lime — tills in practice, the move’s stage, shared steps (desktop)",
+   "is_interactive": true
+  },
+  "j08-fr-step-desktop.dc.html": {
+   "x": 2640,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -124,7 +140,7 @@
    "is_interactive": true
   },
   "j08-fr-done-desktop.dc.html": {
-   "x": 2640,
+   "x": 3960,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -132,7 +148,7 @@
    "is_interactive": true
   },
   "j08-set-list-phone.dc.html": {
-   "x": 4120,
+   "x": 5440,
    "y": 5130,
    "w": 390,
    "h": 900,
@@ -140,7 +156,7 @@
    "is_interactive": true
   },
   "j08-set-till-quick-desktop.dc.html": {
-   "x": 4590,
+   "x": 5910,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -148,7 +164,7 @@
    "is_interactive": true
   },
   "j08-set-till-quick-add-desktop.dc.html": {
-   "x": 5910,
+   "x": 7230,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -156,7 +172,7 @@
    "is_interactive": true
   },
   "j08-set-till-quick-saved-desktop.dc.html": {
-   "x": 7230,
+   "x": 8550,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -164,7 +180,7 @@
    "is_interactive": true
   },
   "j08-set-till-reasons-desktop.dc.html": {
-   "x": 8550,
+   "x": 9870,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -172,7 +188,7 @@
    "is_interactive": true
   },
   "j08-set-till-receipts-desktop.dc.html": {
-   "x": 9870,
+   "x": 11190,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -180,7 +196,7 @@
    "is_interactive": true
   },
   "j08-set-till-printer-desktop.dc.html": {
-   "x": 11190,
+   "x": 12510,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -188,7 +204,7 @@
    "is_interactive": true
   },
   "j08-set-till-tills-desktop.dc.html": {
-   "x": 12510,
+   "x": 13830,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -196,7 +212,7 @@
    "is_interactive": true
   },
   "j08-set-till-tills-owner-desktop.dc.html": {
-   "x": 13830,
+   "x": 15150,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -204,7 +220,7 @@
    "is_interactive": true
   },
   "j08-set-till-remove-desktop.dc.html": {
-   "x": 15150,
+   "x": 16470,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -212,7 +228,7 @@
    "is_interactive": true
   },
   "j08-set-till-empty-desktop.dc.html": {
-   "x": 16470,
+   "x": 17790,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -220,7 +236,7 @@
    "is_interactive": true
   },
   "j08-set-eod-desktop.dc.html": {
-   "x": 17950,
+   "x": 19270,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -228,7 +244,7 @@
    "is_interactive": true
   },
   "j08-set-eod-close-desktop.dc.html": {
-   "x": 19270,
+   "x": 20590,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -236,7 +252,7 @@
    "is_interactive": true
   },
   "j08-set-save-failed-desktop.dc.html": {
-   "x": 20590,
+   "x": 21910,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -244,7 +260,7 @@
    "is_interactive": true
   },
   "j08-set-pay-ways-desktop.dc.html": {
-   "x": 21910,
+   "x": 23230,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -252,7 +268,7 @@
    "is_interactive": true
   },
   "j08-set-pay-other-desktop.dc.html": {
-   "x": 23230,
+   "x": 24550,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -260,7 +276,7 @@
    "is_interactive": true
   },
   "j08-set-pay-card-desktop.dc.html": {
-   "x": 24550,
+   "x": 25870,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -268,7 +284,7 @@
    "is_interactive": true
   },
   "j08-set-staff-desktop.dc.html": {
-   "x": 26030,
+   "x": 27350,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -276,7 +292,7 @@
    "is_interactive": true
   },
   "j08-set-staff-person-desktop.dc.html": {
-   "x": 27350,
+   "x": 28670,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -284,7 +300,7 @@
    "is_interactive": true
   },
   "j08-set-staff-person-all-desktop.dc.html": {
-   "x": 28670,
+   "x": 29990,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -292,7 +308,7 @@
    "is_interactive": true
   },
   "j08-set-staff-clear-pin-desktop.dc.html": {
-   "x": 29990,
+   "x": 31310,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -300,7 +316,7 @@
    "is_interactive": true
   },
   "j08-set-staff-roles-desktop.dc.html": {
-   "x": 31310,
+   "x": 32630,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -308,15 +324,39 @@
    "is_interactive": true
   },
   "j08-set-staff-invite-desktop.dc.html": {
-   "x": 32630,
+   "x": 33950,
    "y": 5130,
    "w": 1280,
    "h": 856,
    "title": "Designed · The owner invites someone (desktop)",
    "is_interactive": true
   },
+  "j08-set-staff-invited-desktop.dc.html": {
+   "x": 35270,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · People — Jo invited, not joined yet (Send again, Cancel the invite), and a till-only person (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-invite-expired-desktop.dc.html": {
+   "x": 36590,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · People — an invite that expired (Send again) (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-invite-till-only-desktop.dc.html": {
+   "x": 37910,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add someone with no email — till only (desktop)",
+   "is_interactive": true
+  },
   "j08-set-shop-details-desktop.dc.html": {
-   "x": 34110,
+   "x": 39390,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -324,7 +364,7 @@
    "is_interactive": true
   },
   "j08-set-shop-hours-desktop.dc.html": {
-   "x": 35430,
+   "x": 40710,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -332,7 +372,7 @@
    "is_interactive": true
   },
   "j08-set-workshop-services-desktop.dc.html": {
-   "x": 36910,
+   "x": 42190,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -340,7 +380,7 @@
    "is_interactive": true
   },
   "j08-set-workshop-mechanics-desktop.dc.html": {
-   "x": 38230,
+   "x": 43510,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -348,7 +388,7 @@
    "is_interactive": true
   },
   "j08-set-workshop-diary-desktop.dc.html": {
-   "x": 39550,
+   "x": 44830,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -356,7 +396,7 @@
    "is_interactive": true
   },
   "j08-set-msg-list-desktop.dc.html": {
-   "x": 41030,
+   "x": 46310,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -364,7 +404,7 @@
    "is_interactive": true
   },
   "j08-set-msg-edit-desktop.dc.html": {
-   "x": 42350,
+   "x": 47630,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -372,15 +412,23 @@
    "is_interactive": true
   },
   "j08-set-msg-new-desktop.dc.html": {
-   "x": 43670,
+   "x": 48950,
    "y": 5130,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add your own automatic message (desktop)",
    "is_interactive": true
   },
+  "j08-set-msg-alongside-desktop.dc.html": {
+   "x": 50270,
+   "y": 5130,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Messages while running alongside — none go to customers until switch-over day (desktop)",
+   "is_interactive": true
+  },
   "j08-set-data-export-desktop.dc.html": {
-   "x": 45150,
+   "x": 51750,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -388,7 +436,7 @@
    "is_interactive": true
   },
   "j08-set-data-history-desktop.dc.html": {
-   "x": 46470,
+   "x": 53070,
    "y": 5130,
    "w": 1280,
    "h": 856,
@@ -491,8 +539,16 @@
    "title": "Designed · The weekly check: three match, one doesn’t (desktop)",
    "is_interactive": true
   },
-  "j09-mv-practice-sale-desktop.dc.html": {
+  "j09-mv-practice-checkin-desktop.dc.html": {
    "x": 16160,
+   "y": 7030,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Checked in during practice: no float check (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-practice-sale-desktop.dc.html": {
+   "x": 17480,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -500,15 +556,23 @@
    "is_interactive": true
   },
   "j09-mv-practice-card-desktop.dc.html": {
-   "x": 17480,
+   "x": 18800,
    "y": 7030,
    "w": 1280,
    "h": 856,
    "title": "Designed · A practice card payment: try either outcome (desktop)",
    "is_interactive": true
   },
+  "j09-mv-practice-job-desktop.dc.html": {
+   "x": 20120,
+   "y": 7030,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A job marked ready in practice: “Not sent — practice” (desktop)",
+   "is_interactive": true
+  },
   "j09-mv-ready-desktop.dc.html": {
-   "x": 18960,
+   "x": 21600,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -516,7 +580,7 @@
    "is_interactive": true
   },
   "j09-mv-weeks-desktop.dc.html": {
-   "x": 20280,
+   "x": 22920,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -524,7 +588,7 @@
    "is_interactive": true
   },
   "j09-mv-ready-all-desktop.dc.html": {
-   "x": 21600,
+   "x": 24240,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -532,7 +596,7 @@
    "is_interactive": true
   },
   "j09-mv-pick-day-desktop.dc.html": {
-   "x": 22920,
+   "x": 25560,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -540,15 +604,15 @@
    "is_interactive": true
   },
   "j09-mv-morning-desktop.dc.html": {
-   "x": 24240,
+   "x": 26880,
    "y": 7030,
    "w": 1280,
    "h": 856,
-   "title": "Designed · Switch-over morning: last refresh, then clear practice and go real (desktop)",
+   "title": "Designed · Switch-over morning: last refresh, go real, then turn the website on (desktop)",
    "is_interactive": true
   },
   "j09-mv-go-real-desktop.dc.html": {
-   "x": 25560,
+   "x": 28200,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -556,7 +620,7 @@
    "is_interactive": true
   },
   "j09-mv-week-desktop.dc.html": {
-   "x": 26880,
+   "x": 29520,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -564,7 +628,7 @@
    "is_interactive": true
   },
   "j09-mv-week-done-desktop.dc.html": {
-   "x": 28200,
+   "x": 30840,
    "y": 7030,
    "w": 1280,
    "h": 856,
@@ -587,8 +651,16 @@
    "title": "Designed · First in, when yesterday wasn’t counted: the float plus Wednesday’s cash (desktop)",
    "is_interactive": true
   },
-  "j10-op-float-count-desktop.dc.html": {
+  "j10-op-float-check-first-desktop.dc.html": {
    "x": 2640,
+   "y": 8886,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · First in on the first real day: count the float (desktop)",
+   "is_interactive": true
+  },
+  "j10-op-float-count-desktop.dc.html": {
+   "x": 3960,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -596,7 +668,7 @@
    "is_interactive": true
   },
   "j10-op-float-matched-desktop.dc.html": {
-   "x": 3960,
+   "x": 5280,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -604,7 +676,7 @@
    "is_interactive": true
   },
   "j10-op-float-short-desktop.dc.html": {
-   "x": 5280,
+   "x": 6600,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -612,7 +684,7 @@
    "is_interactive": true
   },
   "j10-op-float-over-desktop.dc.html": {
-   "x": 6600,
+   "x": 7920,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -620,7 +692,7 @@
    "is_interactive": true
   },
   "j10-op-today-desktop.dc.html": {
-   "x": 8080,
+   "x": 9400,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -628,7 +700,7 @@
    "is_interactive": true
   },
   "j10-op-today-short-desktop.dc.html": {
-   "x": 9400,
+   "x": 10720,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -636,7 +708,7 @@
    "is_interactive": true
   },
   "j10-op-today-seen-desktop.dc.html": {
-   "x": 10720,
+   "x": 12040,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -644,7 +716,7 @@
    "is_interactive": true
   },
   "j10-op-today-waiting-desktop.dc.html": {
-   "x": 12040,
+   "x": 13360,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -652,7 +724,7 @@
    "is_interactive": true
   },
   "j10-op-today-banked-desktop.dc.html": {
-   "x": 13360,
+   "x": 14680,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -660,7 +732,7 @@
    "is_interactive": true
   },
   "j10-op-today-unclosed-desktop.dc.html": {
-   "x": 14680,
+   "x": 16000,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -668,7 +740,7 @@
    "is_interactive": true
   },
   "j10-op-close-yesterday-desktop.dc.html": {
-   "x": 16000,
+   "x": 17320,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -676,7 +748,7 @@
    "is_interactive": true
   },
   "j10-op-today-two-desktop.dc.html": {
-   "x": 17320,
+   "x": 18640,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -684,7 +756,7 @@
    "is_interactive": true
   },
   "j10-op-today-staff-desktop.dc.html": {
-   "x": 18640,
+   "x": 19960,
    "y": 8886,
    "w": 1280,
    "h": 856,
@@ -692,15 +764,23 @@
    "is_interactive": true
   },
   "j10-op-today-late-desktop.dc.html": {
-   "x": 19960,
+   "x": 21280,
    "y": 8886,
    "w": 1280,
    "h": 856,
    "title": "Designed · Today, when someone due in is late (desktop)",
    "is_interactive": true
   },
+  "j10-op-today-practice-desktop.dc.html": {
+   "x": 22600,
+   "y": 8886,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today, while the tills are in practice: the drawer isn’t counted (desktop)",
+   "is_interactive": true
+  },
   "j10-desk.dc.html": {
-   "x": 21440,
+   "x": 24080,
    "y": 8886,
    "w": 1100,
    "h": 816,
@@ -739,8 +819,16 @@
    "title": "Designed · Selling pads held for an online order — warned, not blocked (desktop)",
    "is_interactive": true
   },
-  "j11-till-line-desktop.dc.html": {
+  "j11-till-held-job-desktop.dc.html": {
    "x": 5280,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Selling pads held for job WH-1042 — warned, not blocked (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-line-desktop.dc.html": {
+   "x": 6600,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -748,7 +836,7 @@
    "is_interactive": true
   },
   "j11-till-discount-desktop.dc.html": {
-   "x": 6600,
+   "x": 7920,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -756,7 +844,7 @@
    "is_interactive": true
   },
   "j11-till-discounted-desktop.dc.html": {
-   "x": 7920,
+   "x": 9240,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -764,7 +852,7 @@
    "is_interactive": true
   },
   "j11-till-customer-desktop.dc.html": {
-   "x": 9240,
+   "x": 10560,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -772,7 +860,7 @@
    "is_interactive": true
   },
   "j11-till-variant-desktop.dc.html": {
-   "x": 10560,
+   "x": 11880,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -780,7 +868,7 @@
    "is_interactive": true
   },
   "j11-till-serial-desktop.dc.html": {
-   "x": 11880,
+   "x": 13200,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -788,7 +876,7 @@
    "is_interactive": true
   },
   "j11-till-pay-desktop.dc.html": {
-   "x": 13360,
+   "x": 14680,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -796,7 +884,7 @@
    "is_interactive": true
   },
   "j11-till-pay-other-desktop.dc.html": {
-   "x": 14680,
+   "x": 16000,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -804,7 +892,7 @@
    "is_interactive": true
   },
   "j11-till-card-desktop.dc.html": {
-   "x": 16000,
+   "x": 17320,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -812,15 +900,31 @@
    "is_interactive": true
   },
   "j11-till-card-discounted-desktop.dc.html": {
-   "x": 17320,
+   "x": 18640,
    "y": 10742,
    "w": 1280,
    "h": 856,
    "title": "Designed · Card — from the discounted total (desktop)",
    "is_interactive": true
   },
+  "j11-till-pay-discounted-desktop.dc.html": {
+   "x": 19960,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Take payment — from the discounted total (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-split-discounted-desktop.dc.html": {
+   "x": 21280,
+   "y": 10742,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Split payment — from the discounted total (desktop)",
+   "is_interactive": true
+  },
   "j11-till-card-declined-desktop.dc.html": {
-   "x": 18640,
+   "x": 22600,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -828,7 +932,7 @@
    "is_interactive": true
   },
   "j11-till-pay-cash-desktop.dc.html": {
-   "x": 19960,
+   "x": 23920,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -836,7 +940,7 @@
    "is_interactive": true
   },
   "j11-till-pay-split-desktop.dc.html": {
-   "x": 21280,
+   "x": 25240,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -844,7 +948,7 @@
    "is_interactive": true
   },
   "j11-till-receipt-desktop.dc.html": {
-   "x": 22600,
+   "x": 26560,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -852,7 +956,7 @@
    "is_interactive": true
   },
   "j11-till-giftcard-desktop.dc.html": {
-   "x": 24080,
+   "x": 28040,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -860,7 +964,7 @@
    "is_interactive": true
   },
   "j11-till-account-desktop.dc.html": {
-   "x": 25400,
+   "x": 29360,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -868,7 +972,7 @@
    "is_interactive": true
   },
   "j11-till-loyalty-desktop.dc.html": {
-   "x": 26720,
+   "x": 30680,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -876,7 +980,7 @@
    "is_interactive": true
   },
   "j11-till-deposit-desktop.dc.html": {
-   "x": 28040,
+   "x": 32000,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -884,7 +988,7 @@
    "is_interactive": true
   },
   "j11-till-park-desktop.dc.html": {
-   "x": 29520,
+   "x": 33480,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -892,7 +996,7 @@
    "is_interactive": true
   },
   "j11-till-find-desktop.dc.html": {
-   "x": 30840,
+   "x": 34800,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -900,7 +1004,7 @@
    "is_interactive": true
   },
   "j11-till-find-customer-desktop.dc.html": {
-   "x": 32160,
+   "x": 36120,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -908,7 +1012,7 @@
    "is_interactive": true
   },
   "j11-till-sale-detail-desktop.dc.html": {
-   "x": 33480,
+   "x": 37440,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -916,7 +1020,7 @@
    "is_interactive": true
   },
   "j11-till-refund-desktop.dc.html": {
-   "x": 34800,
+   "x": 38760,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -924,7 +1028,7 @@
    "is_interactive": true
   },
   "j11-till-refund-older-desktop.dc.html": {
-   "x": 36120,
+   "x": 40080,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -932,7 +1036,7 @@
    "is_interactive": true
   },
   "j11-till-refund-cash-desktop.dc.html": {
-   "x": 37440,
+   "x": 41400,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -940,7 +1044,7 @@
    "is_interactive": true
   },
   "j11-till-refund-noreceipt-desktop.dc.html": {
-   "x": 38760,
+   "x": 42720,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -948,7 +1052,7 @@
    "is_interactive": true
   },
   "j11-till-void-desktop.dc.html": {
-   "x": 40080,
+   "x": 44040,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -956,7 +1060,7 @@
    "is_interactive": true
   },
   "j11-till-job-desktop.dc.html": {
-   "x": 41400,
+   "x": 45360,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -964,7 +1068,7 @@
    "is_interactive": true
   },
   "j11-till-job-deposit-desktop.dc.html": {
-   "x": 42720,
+   "x": 46680,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -972,7 +1076,7 @@
    "is_interactive": true
   },
   "j11-till-job-balance-desktop.dc.html": {
-   "x": 44040,
+   "x": 48000,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -980,7 +1084,7 @@
    "is_interactive": true
   },
   "j11-till-collect-desktop.dc.html": {
-   "x": 45360,
+   "x": 49320,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -988,7 +1092,7 @@
    "is_interactive": true
   },
   "j11-till-offline-desktop.dc.html": {
-   "x": 46840,
+   "x": 50800,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -996,7 +1100,7 @@
    "is_interactive": true
   },
   "j11-till-offline-long-desktop.dc.html": {
-   "x": 48160,
+   "x": 52120,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1004,7 +1108,7 @@
    "is_interactive": true
   },
   "j11-till-needs-net-desktop.dc.html": {
-   "x": 49480,
+   "x": 53440,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1012,7 +1116,7 @@
    "is_interactive": true
   },
   "j11-till-noted-desktop.dc.html": {
-   "x": 50800,
+   "x": 54760,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1020,7 +1124,7 @@
    "is_interactive": true
   },
   "j11-till-collect-offline-desktop.dc.html": {
-   "x": 52120,
+   "x": 56080,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1028,7 +1132,7 @@
    "is_interactive": true
   },
   "j11-till-no-signout-desktop.dc.html": {
-   "x": 53440,
+   "x": 57400,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1036,7 +1140,7 @@
    "is_interactive": true
   },
   "j11-till-failed-desktop.dc.html": {
-   "x": 54760,
+   "x": 58720,
    "y": 10742,
    "w": 1280,
    "h": 856,
@@ -1347,32 +1451,120 @@
    "title": "Designed · Book in with an unknown barcode still on the list (desktop)",
    "is_interactive": true
   },
-  "j13-rs-booked-desktop.dc.html": {
+  "j13-rs-problem-missing-desktop.dc.html": {
    "x": 13200,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Missing, with no order: the part a job is waiting for (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-booked-desktop.dc.html": {
+   "x": 14520,
    "y": 14454,
    "w": 1280,
    "h": 856,
    "title": "Designed · Delivery booked in: the waiting job flagged, what’s next (desktop)",
    "is_interactive": true
   },
+  "j13-rs-booked-staff-desktop.dc.html": {
+   "x": 15840,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Delivery booked in, as Staff see it: labels first, no invoice (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-booked-job-waiting-desktop.dc.html": {
+   "x": 17160,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Booked in without the job’s part: the job is still waiting (desktop)",
+   "is_interactive": true
+  },
   "j13-rs-labels-desktop.dc.html": {
-   "x": 14520,
+   "x": 18480,
    "y": 14454,
    "w": 1280,
    "h": 856,
    "title": "Designed · Print labels: only what needs one (desktop)",
    "is_interactive": true
   },
+  "j13-rs-receive-staff-desktop.dc.html": {
+   "x": 19960,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff meet a barcode Wheelhouse doesn’t know: Leave it for [Owner or manager] (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-receive-staff-left-desktop.dc.html": {
+   "x": 21280,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Left for [Owner or manager]: the rest books in (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-add-left-desktop.dc.html": {
+   "x": 22600,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Adding the product Jo left: it counts into stock, then its label (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-today-to-add-desktop.dc.html": {
+   "x": 23920,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: a product left on a delivery, to add (desktop)",
+   "is_interactive": true
+  },
   "j13-rs-job-arrived-desktop.dc.html": {
-   "x": 16000,
+   "x": 25400,
    "y": 14454,
    "w": 1280,
    "h": 856,
    "title": "Designed · The job: its part has arrived (desktop)",
    "is_interactive": true
   },
+  "j13-rs-part-sold-desktop.dc.html": {
+   "x": 26720,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: its held pads were sold at the till — reorder (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-part-missing-desktop.dc.html": {
+   "x": 28040,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: its pads weren’t in the delivery — still on order (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-part-damaged-desktop.dc.html": {
+   "x": 29360,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: its pads came damaged — reorder (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-part-order-closed-desktop.dc.html": {
+   "x": 30680,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: the order was closed before its pads came (desktop)",
+   "is_interactive": true
+  },
   "j13-rs-diary-arrived-desktop.dc.html": {
-   "x": 17320,
+   "x": 32000,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1380,7 +1572,7 @@
    "is_interactive": true
   },
   "j13-rs-overview-arrived-desktop.dc.html": {
-   "x": 18640,
+   "x": 33320,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1388,7 +1580,7 @@
    "is_interactive": true
   },
   "j13-rs-delivery-desktop.dc.html": {
-   "x": 20120,
+   "x": 34800,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1396,7 +1588,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-desktop.dc.html": {
-   "x": 21440,
+   "x": 36120,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1404,7 +1596,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-checked-desktop.dc.html": {
-   "x": 22760,
+   "x": 37440,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1412,15 +1604,23 @@
    "is_interactive": true
   },
   "j13-rs-invoice-diff-desktop.dc.html": {
-   "x": 24080,
+   "x": 38760,
    "y": 14454,
    "w": 1280,
    "h": 856,
    "title": "Designed · The invoice doesn’t match: the difference, to query (desktop)",
    "is_interactive": true
   },
+  "j13-rs-invoice-cost-desktop.dc.html": {
+   "x": 40080,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Accept the difference: did a cost go up? (desktop)",
+   "is_interactive": true
+  },
   "j13-rs-invoice-queried-desktop.dc.html": {
-   "x": 25400,
+   "x": 41400,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1428,7 +1628,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-accepted-desktop.dc.html": {
-   "x": 26720,
+   "x": 42720,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1436,7 +1636,7 @@
    "is_interactive": true
   },
   "j13-rs-delivery-staff-desktop.dc.html": {
-   "x": 28040,
+   "x": 44040,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1444,7 +1644,7 @@
    "is_interactive": true
   },
   "j13-rs-invoice-setting-desktop.dc.html": {
-   "x": 29360,
+   "x": 45360,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1452,7 +1652,7 @@
    "is_interactive": true
   },
   "j13-rs-order-desktop.dc.html": {
-   "x": 30840,
+   "x": 46840,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1460,23 +1660,39 @@
    "is_interactive": true
   },
   "j13-rs-order-ordered-desktop.dc.html": {
-   "x": 32160,
+   "x": 48160,
    "y": 14454,
    "w": 1280,
    "h": 856,
    "title": "Designed · An order, partly delivered: receive against it, or close it (desktop)",
    "is_interactive": true
   },
+  "j13-rs-order-close-desktop.dc.html": {
+   "x": 49480,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Close the order? A job’s part is still to come (desktop)",
+   "is_interactive": true
+  },
   "j13-rs-restock-desktop.dc.html": {
-   "x": 33480,
+   "x": 50800,
    "y": 14454,
    "w": 1280,
    "h": 856,
    "title": "Designed · Restock list: by supplier, a download for each basket (desktop)",
    "is_interactive": true
   },
+  "j13-rs-restock-customers-desktop.dc.html": {
+   "x": 52120,
+   "y": 14454,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Restock list, for customers: what jobs and online orders wait for (desktop)",
+   "is_interactive": true
+  },
   "j13-rs-today-restock-desktop.dc.html": {
-   "x": 34800,
+   "x": 53440,
    "y": 14454,
    "w": 1280,
    "h": 856,
@@ -1484,7 +1700,7 @@
    "is_interactive": true
   },
   "j13-po-suppliers.dc.html": {
-   "x": 36280,
+   "x": 54920,
    "y": 14454,
    "w": 1100,
    "h": 816,
@@ -1492,7 +1708,7 @@
    "is_interactive": true
   },
   "j13-po-feed.dc.html": {
-   "x": 37460,
+   "x": 56100,
    "y": 14454,
    "w": 1100,
    "h": 816,
@@ -1500,7 +1716,7 @@
    "is_interactive": true
   },
   "j13-po-send.dc.html": {
-   "x": 38640,
+   "x": 57280,
    "y": 14454,
    "w": 1100,
    "h": 816,
@@ -1659,8 +1875,16 @@
    "title": "Designed · Adjust stock: the change or the count after it, and a reason (desktop)",
    "is_interactive": true
   },
-  "j14-st-today-adjust-desktop.dc.html": {
+  "j14-st-adjust-faulty-desktop.dc.html": {
    "x": 25720,
+   "y": 16310,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Adjust stock: faulty, onto the supplier’s To return list (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-today-adjust-desktop.dc.html": {
+   "x": 27040,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1668,7 +1892,7 @@
    "is_interactive": true
   },
   "j14-st-setting-adjust-desktop.dc.html": {
-   "x": 27040,
+   "x": 28360,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1676,7 +1900,7 @@
    "is_interactive": true
   },
   "j14-st-today-below-desktop.dc.html": {
-   "x": 28360,
+   "x": 29680,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1684,7 +1908,7 @@
    "is_interactive": true
   },
   "j14-tk-count-below-desktop.dc.html": {
-   "x": 29680,
+   "x": 31000,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1692,7 +1916,7 @@
    "is_interactive": true
   },
   "j14-tr-sites-desktop.dc.html": {
-   "x": 31160,
+   "x": 32480,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1700,7 +1924,7 @@
    "is_interactive": true
   },
   "j14-tr-send-desktop.dc.html": {
-   "x": 32480,
+   "x": 33800,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1708,7 +1932,7 @@
    "is_interactive": true
   },
   "j14-tr-incoming-desktop.dc.html": {
-   "x": 33800,
+   "x": 35120,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1716,15 +1940,23 @@
    "is_interactive": true
   },
   "j14-tr-receive-desktop.dc.html": {
-   "x": 35120,
+   "x": 36440,
    "y": 16310,
    "w": 1280,
    "h": 856,
    "title": "Designed · Receiving a transfer: one short (desktop)",
    "is_interactive": true
   },
+  "j14-tr-problem-desktop.dc.html": {
+   "x": 37760,
+   "y": 16310,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A transfer line marked missing (desktop)",
+   "is_interactive": true
+  },
   "j14-tr-today-short-desktop.dc.html": {
-   "x": 36440,
+   "x": 39080,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1732,7 +1964,7 @@
    "is_interactive": true
   },
   "j14-tk-hub-desktop.dc.html": {
-   "x": 37920,
+   "x": 40560,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1740,7 +1972,7 @@
    "is_interactive": true
   },
   "j14-tk-hub-staff-desktop.dc.html": {
-   "x": 39240,
+   "x": 41880,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1748,7 +1980,7 @@
    "is_interactive": true
   },
   "j14-tk-start-desktop.dc.html": {
-   "x": 40560,
+   "x": 43200,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1756,7 +1988,7 @@
    "is_interactive": true
   },
   "j14-tk-start-category-desktop.dc.html": {
-   "x": 41880,
+   "x": 44520,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1764,7 +1996,7 @@
    "is_interactive": true
   },
   "j14-tk-count-desktop.dc.html": {
-   "x": 43200,
+   "x": 45840,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1772,7 +2004,7 @@
    "is_interactive": true
   },
   "j14-tk-diff-desktop.dc.html": {
-   "x": 44520,
+   "x": 47160,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -1780,7 +2012,7 @@
    "is_interactive": true
   },
   "j14-tk-applied-desktop.dc.html": {
-   "x": 45840,
+   "x": 48480,
    "y": 16310,
    "w": 1280,
    "h": 856,
@@ -2235,8 +2467,16 @@
    "title": "Designed · VAT for all shops (desktop)",
    "is_interactive": true
   },
-  "j17-rp-margin-desktop.dc.html": {
+  "j17-rp-vat-check-off-desktop.dc.html": {
    "x": 29680,
+   "y": 21878,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · VAT with the invoice check off: stock purchases from your accounts software (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-margin-desktop.dc.html": {
+   "x": 31000,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2244,7 +2484,7 @@
    "is_interactive": true
   },
   "j17-rp-workshop-desktop.dc.html": {
-   "x": 31000,
+   "x": 32320,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2252,7 +2492,7 @@
    "is_interactive": true
   },
   "j17-rp-discounts-desktop.dc.html": {
-   "x": 32320,
+   "x": 33640,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2260,7 +2500,7 @@
    "is_interactive": true
   },
   "j17-rp-discounts-staff-desktop.dc.html": {
-   "x": 33640,
+   "x": 34960,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2268,7 +2508,7 @@
    "is_interactive": true
   },
   "j17-rp-returning-desktop.dc.html": {
-   "x": 34960,
+   "x": 36280,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2276,7 +2516,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-connect-desktop.dc.html": {
-   "x": 36440,
+   "x": 37760,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2284,7 +2524,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-map-desktop.dc.html": {
-   "x": 37760,
+   "x": 39080,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2292,7 +2532,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-missing-desktop.dc.html": {
-   "x": 39080,
+   "x": 40400,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2300,7 +2540,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-log-desktop.dc.html": {
-   "x": 40400,
+   "x": 41720,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2308,7 +2548,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-lost-desktop.dc.html": {
-   "x": 41720,
+   "x": 43040,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2316,7 +2556,7 @@
    "is_interactive": true
   },
   "j17-rp-accounts-disconnect-desktop.dc.html": {
-   "x": 43040,
+   "x": 44360,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2324,7 +2564,7 @@
    "is_interactive": true
   },
   "j17-rp-today-accounts-desktop.dc.html": {
-   "x": 44360,
+   "x": 45680,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2332,7 +2572,7 @@
    "is_interactive": true
   },
   "j17-rp-person-desktop.dc.html": {
-   "x": 45680,
+   "x": 47000,
    "y": 21878,
    "w": 1280,
    "h": 856,
@@ -2363,8 +2603,16 @@
    "title": "Designed · Step 3: start with every product online, or nothing (desktop)",
    "is_interactive": true
   },
-  "j18-ws-editor-first-desktop.dc.html": {
+  "j18-ws-start-products-answered-desktop.dc.html": {
    "x": 3960,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Step 3 when buying online asked first: the answer, with Change (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-first-desktop.dc.html": {
+   "x": 5280,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2372,7 +2620,7 @@
    "is_interactive": true
   },
   "j18-ws-page-desktop.dc.html": {
-   "x": 5440,
+   "x": 6760,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2380,7 +2628,7 @@
    "is_interactive": true
   },
   "j18-ws-page-on-desktop.dc.html": {
-   "x": 6760,
+   "x": 8080,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2388,7 +2636,7 @@
    "is_interactive": true
   },
   "j18-ws-page-changes-desktop.dc.html": {
-   "x": 8080,
+   "x": 9400,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2396,7 +2644,7 @@
    "is_interactive": true
   },
   "j18-ws-no-access-desktop.dc.html": {
-   "x": 9400,
+   "x": 10720,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2404,15 +2652,55 @@
    "is_interactive": true
   },
   "j18-ws-no-settings-desktop.dc.html": {
-   "x": 10720,
+   "x": 12040,
    "y": 23734,
    "w": 1280,
    "h": 856,
    "title": "Designed · Can edit the website, but not change settings (desktop)",
    "is_interactive": true
   },
+  "j18-ws-page-moving-desktop.dc.html": {
+   "x": 13520,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Moving from Citrus Lime: ready for switch-over, Turn it on waits (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-moving-desktop.dc.html": {
+   "x": 14840,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The editor while moving: off until switch-over morning (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-tested-moving-desktop.dc.html": {
+   "x": 16160,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The test payment worked, while moving from Citrus Lime (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-moving-desktop.dc.html": {
+   "x": 17480,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · While moving: point your address here on switch-over morning (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-switch-over-desktop.dc.html": {
+   "x": 18800,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switch-over morning: the website is ready — Turn it on (desktop)",
+   "is_interactive": true
+  },
   "j18-ws-editor-desktop.dc.html": {
-   "x": 12200,
+   "x": 20280,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2420,7 +2708,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-section-desktop.dc.html": {
-   "x": 13520,
+   "x": 21600,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2428,7 +2716,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-add-desktop.dc.html": {
-   "x": 14840,
+   "x": 22920,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2436,7 +2724,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-drag-desktop.dc.html": {
-   "x": 16160,
+   "x": 24240,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2444,7 +2732,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-moved-desktop.dc.html": {
-   "x": 17480,
+   "x": 25560,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2452,7 +2740,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-removed-desktop.dc.html": {
-   "x": 18800,
+   "x": 26880,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2460,7 +2748,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-header-desktop.dc.html": {
-   "x": 20120,
+   "x": 28200,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2468,7 +2756,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-on-phone-desktop.dc.html": {
-   "x": 21440,
+   "x": 29520,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2476,7 +2764,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-bigger-desktop.dc.html": {
-   "x": 22760,
+   "x": 30840,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2484,7 +2772,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-pages-menu-desktop.dc.html": {
-   "x": 24080,
+   "x": 32160,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2492,7 +2780,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-saving-desktop.dc.html": {
-   "x": 25400,
+   "x": 33480,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2500,7 +2788,7 @@
    "is_interactive": true
   },
   "j18-ws-editor-taken-desktop.dc.html": {
-   "x": 26720,
+   "x": 34800,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2508,7 +2796,7 @@
    "is_interactive": true
   },
   "j18-ws-theme-desktop.dc.html": {
-   "x": 28200,
+   "x": 36280,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2516,7 +2804,7 @@
    "is_interactive": true
   },
   "j18-ws-theme-contrast-desktop.dc.html": {
-   "x": 29520,
+   "x": 37600,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2524,7 +2812,7 @@
    "is_interactive": true
   },
   "j18-ws-theme-publish-desktop.dc.html": {
-   "x": 30840,
+   "x": 38920,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2532,7 +2820,7 @@
    "is_interactive": true
   },
   "j18-ws-theme-product-desktop.dc.html": {
-   "x": 32160,
+   "x": 40240,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2540,7 +2828,7 @@
    "is_interactive": true
   },
   "j18-ws-theme-fonts-desktop.dc.html": {
-   "x": 33480,
+   "x": 41560,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2548,7 +2836,7 @@
    "is_interactive": true
   },
   "j18-ws-published-desktop.dc.html": {
-   "x": 34960,
+   "x": 43040,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2556,7 +2844,7 @@
    "is_interactive": true
   },
   "j18-ws-published-off-desktop.dc.html": {
-   "x": 36280,
+   "x": 44360,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2564,7 +2852,7 @@
    "is_interactive": true
   },
   "j18-ws-discard-desktop.dc.html": {
-   "x": 37600,
+   "x": 45680,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2572,7 +2860,7 @@
    "is_interactive": true
   },
   "j18-ws-history-desktop.dc.html": {
-   "x": 38920,
+   "x": 47000,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2580,7 +2868,7 @@
    "is_interactive": true
   },
   "j18-ws-pages-desktop.dc.html": {
-   "x": 40400,
+   "x": 48480,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2588,7 +2876,7 @@
    "is_interactive": true
   },
   "j18-ws-pages-new-desktop.dc.html": {
-   "x": 41720,
+   "x": 49800,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2596,7 +2884,7 @@
    "is_interactive": true
   },
   "j18-ws-page-settings-desktop.dc.html": {
-   "x": 43040,
+   "x": 51120,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2604,7 +2892,7 @@
    "is_interactive": true
   },
   "j18-ws-page-returns-desktop.dc.html": {
-   "x": 44360,
+   "x": 52440,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2612,7 +2900,7 @@
    "is_interactive": true
   },
   "j18-ws-tracking-desktop.dc.html": {
-   "x": 45840,
+   "x": 53920,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2620,7 +2908,7 @@
    "is_interactive": true
   },
   "j18-ws-tracking-on-desktop.dc.html": {
-   "x": 47160,
+   "x": 55240,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2628,7 +2916,7 @@
    "is_interactive": true
   },
   "j18-ws-tracking-error-desktop.dc.html": {
-   "x": 48480,
+   "x": 56560,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2636,7 +2924,7 @@
    "is_interactive": true
   },
   "j18-ws-address-desktop.dc.html": {
-   "x": 49960,
+   "x": 58040,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2644,7 +2932,7 @@
    "is_interactive": true
   },
   "j18-ws-address-typo-desktop.dc.html": {
-   "x": 51280,
+   "x": 59360,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2652,7 +2940,7 @@
    "is_interactive": true
   },
   "j18-ws-address-steps-desktop.dc.html": {
-   "x": 52600,
+   "x": 60680,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2660,7 +2948,7 @@
    "is_interactive": true
   },
   "j18-ws-address-waiting-desktop.dc.html": {
-   "x": 53920,
+   "x": 62000,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2668,7 +2956,7 @@
    "is_interactive": true
   },
   "j18-ws-address-done-desktop.dc.html": {
-   "x": 55240,
+   "x": 63320,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2676,7 +2964,7 @@
    "is_interactive": true
   },
   "j18-ws-pay-none-desktop.dc.html": {
-   "x": 56720,
+   "x": 64800,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2684,7 +2972,7 @@
    "is_interactive": true
   },
   "j18-ws-pay-connected-desktop.dc.html": {
-   "x": 58040,
+   "x": 66120,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2692,7 +2980,7 @@
    "is_interactive": true
   },
   "j18-ws-pay-tested-desktop.dc.html": {
-   "x": 59360,
+   "x": 67440,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2700,7 +2988,7 @@
    "is_interactive": true
   },
   "j18-ws-pay-failed-desktop.dc.html": {
-   "x": 60680,
+   "x": 68760,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2708,7 +2996,7 @@
    "is_interactive": true
   },
   "j18-ws-pay-more-desktop.dc.html": {
-   "x": 62000,
+   "x": 70080,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2716,7 +3004,7 @@
    "is_interactive": true
   },
   "j18-ws-today-pay-more-desktop.dc.html": {
-   "x": 63320,
+   "x": 71400,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2724,7 +3012,7 @@
    "is_interactive": true
   },
   "j18-ws-start-shopify-desktop.dc.html": {
-   "x": 64800,
+   "x": 72880,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2732,7 +3020,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-connect-desktop.dc.html": {
-   "x": 66120,
+   "x": 74200,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2740,7 +3028,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-failed-desktop.dc.html": {
-   "x": 67440,
+   "x": 75520,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2748,7 +3036,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-check-desktop.dc.html": {
-   "x": 68760,
+   "x": 76840,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2756,7 +3044,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-sending-desktop.dc.html": {
-   "x": 70080,
+   "x": 78160,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2764,7 +3052,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-on-desktop.dc.html": {
-   "x": 71400,
+   "x": 79480,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2772,7 +3060,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-problem-desktop.dc.html": {
-   "x": 72720,
+   "x": 80800,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2780,7 +3068,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-switch-desktop.dc.html": {
-   "x": 74040,
+   "x": 82120,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2788,7 +3076,7 @@
    "is_interactive": true
   },
   "j18-ws-pay-shopify-desktop.dc.html": {
-   "x": 75360,
+   "x": 83440,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -2796,7 +3084,7 @@
    "is_interactive": true
   },
   "j18-ws-shopify-order-desktop.dc.html": {
-   "x": 76680,
+   "x": 84760,
    "y": 23734,
    "w": 1280,
    "h": 856,
@@ -3502,11 +3790,13 @@
   "ja-till-rail-open-desktop.dc.html",
   "ja-till-search-desktop.dc.html",
   "ja-your-settings-desktop.dc.html",
+  "ja-your-settings-no-pin-desktop.dc.html",
   "ja-site-desktop.dc.html",
   "ja-site-menu-phone.dc.html",
   "ja-site-ocean-desktop.dc.html",
   "ja-site-ocean-menu-phone.dc.html",
   "j08-fr-today-desktop.dc.html",
+  "j08-fr-today-moving-desktop.dc.html",
   "j08-fr-step-desktop.dc.html",
   "j08-fr-done-desktop.dc.html",
   "j08-set-list-phone.dc.html",
@@ -3532,6 +3822,9 @@
   "j08-set-staff-clear-pin-desktop.dc.html",
   "j08-set-staff-roles-desktop.dc.html",
   "j08-set-staff-invite-desktop.dc.html",
+  "j08-set-staff-invited-desktop.dc.html",
+  "j08-set-staff-invite-expired-desktop.dc.html",
+  "j08-set-staff-invite-till-only-desktop.dc.html",
   "j08-set-shop-details-desktop.dc.html",
   "j08-set-shop-hours-desktop.dc.html",
   "j08-set-workshop-services-desktop.dc.html",
@@ -3540,6 +3833,7 @@
   "j08-set-msg-list-desktop.dc.html",
   "j08-set-msg-edit-desktop.dc.html",
   "j08-set-msg-new-desktop.dc.html",
+  "j08-set-msg-alongside-desktop.dc.html",
   "j08-set-data-export-desktop.dc.html",
   "j08-set-data-history-desktop.dc.html",
   "j09-mv-start-desktop.dc.html",
@@ -3554,8 +3848,10 @@
   "j09-mv-both-desktop.dc.html",
   "j09-mv-check-desktop.dc.html",
   "j09-mv-check-result-desktop.dc.html",
+  "j09-mv-practice-checkin-desktop.dc.html",
   "j09-mv-practice-sale-desktop.dc.html",
   "j09-mv-practice-card-desktop.dc.html",
+  "j09-mv-practice-job-desktop.dc.html",
   "j09-mv-ready-desktop.dc.html",
   "j09-mv-weeks-desktop.dc.html",
   "j09-mv-ready-all-desktop.dc.html",
@@ -3566,6 +3862,7 @@
   "j09-mv-week-done-desktop.dc.html",
   "j10-op-float-check-desktop.dc.html",
   "j10-op-float-check-unclosed-desktop.dc.html",
+  "j10-op-float-check-first-desktop.dc.html",
   "j10-op-float-count-desktop.dc.html",
   "j10-op-float-matched-desktop.dc.html",
   "j10-op-float-short-desktop.dc.html",
@@ -3580,11 +3877,13 @@
   "j10-op-today-two-desktop.dc.html",
   "j10-op-today-staff-desktop.dc.html",
   "j10-op-today-late-desktop.dc.html",
+  "j10-op-today-practice-desktop.dc.html",
   "j10-desk.dc.html",
   "j11-till-sale-desktop.dc.html",
   "j11-till-empty-desktop.dc.html",
   "j11-till-noresults-desktop.dc.html",
   "j11-till-held-desktop.dc.html",
+  "j11-till-held-job-desktop.dc.html",
   "j11-till-line-desktop.dc.html",
   "j11-till-discount-desktop.dc.html",
   "j11-till-discounted-desktop.dc.html",
@@ -3595,6 +3894,8 @@
   "j11-till-pay-other-desktop.dc.html",
   "j11-till-card-desktop.dc.html",
   "j11-till-card-discounted-desktop.dc.html",
+  "j11-till-pay-discounted-desktop.dc.html",
+  "j11-till-split-discounted-desktop.dc.html",
   "j11-till-card-declined-desktop.dc.html",
   "j11-till-pay-cash-desktop.dc.html",
   "j11-till-pay-split-desktop.dc.html",
@@ -3661,22 +3962,36 @@
   "j13-rs-frame-dup-desktop.dc.html",
   "j13-rs-receive-marked-desktop.dc.html",
   "j13-rs-book-blocked-desktop.dc.html",
+  "j13-rs-problem-missing-desktop.dc.html",
   "j13-rs-booked-desktop.dc.html",
+  "j13-rs-booked-staff-desktop.dc.html",
+  "j13-rs-booked-job-waiting-desktop.dc.html",
   "j13-rs-labels-desktop.dc.html",
+  "j13-rs-receive-staff-desktop.dc.html",
+  "j13-rs-receive-staff-left-desktop.dc.html",
+  "j13-rs-add-left-desktop.dc.html",
+  "j13-rs-today-to-add-desktop.dc.html",
   "j13-rs-job-arrived-desktop.dc.html",
+  "j13-rs-part-sold-desktop.dc.html",
+  "j13-rs-part-missing-desktop.dc.html",
+  "j13-rs-part-damaged-desktop.dc.html",
+  "j13-rs-part-order-closed-desktop.dc.html",
   "j13-rs-diary-arrived-desktop.dc.html",
   "j13-rs-overview-arrived-desktop.dc.html",
   "j13-rs-delivery-desktop.dc.html",
   "j13-rs-invoice-desktop.dc.html",
   "j13-rs-invoice-checked-desktop.dc.html",
   "j13-rs-invoice-diff-desktop.dc.html",
+  "j13-rs-invoice-cost-desktop.dc.html",
   "j13-rs-invoice-queried-desktop.dc.html",
   "j13-rs-invoice-accepted-desktop.dc.html",
   "j13-rs-delivery-staff-desktop.dc.html",
   "j13-rs-invoice-setting-desktop.dc.html",
   "j13-rs-order-desktop.dc.html",
   "j13-rs-order-ordered-desktop.dc.html",
+  "j13-rs-order-close-desktop.dc.html",
   "j13-rs-restock-desktop.dc.html",
+  "j13-rs-restock-customers-desktop.dc.html",
   "j13-rs-today-restock-desktop.dc.html",
   "j13-po-suppliers.dc.html",
   "j13-po-feed.dc.html",
@@ -3700,6 +4015,7 @@
   "j14-st-prices-desktop.dc.html",
   "j14-st-prices-done-desktop.dc.html",
   "j14-st-adjust-desktop.dc.html",
+  "j14-st-adjust-faulty-desktop.dc.html",
   "j14-st-today-adjust-desktop.dc.html",
   "j14-st-setting-adjust-desktop.dc.html",
   "j14-st-today-below-desktop.dc.html",
@@ -3708,6 +4024,7 @@
   "j14-tr-send-desktop.dc.html",
   "j14-tr-incoming-desktop.dc.html",
   "j14-tr-receive-desktop.dc.html",
+  "j14-tr-problem-desktop.dc.html",
   "j14-tr-today-short-desktop.dc.html",
   "j14-tk-hub-desktop.dc.html",
   "j14-tk-hub-staff-desktop.dc.html",
@@ -3772,6 +4089,7 @@
   "j17-rp-vat-desktop.dc.html",
   "j17-rp-vat-first-desktop.dc.html",
   "j17-rp-vat-all-desktop.dc.html",
+  "j17-rp-vat-check-off-desktop.dc.html",
   "j17-rp-margin-desktop.dc.html",
   "j17-rp-workshop-desktop.dc.html",
   "j17-rp-discounts-desktop.dc.html",
@@ -3788,12 +4106,18 @@
   "j18-ws-start-which-desktop.dc.html",
   "j18-ws-start-look-desktop.dc.html",
   "j18-ws-start-products-desktop.dc.html",
+  "j18-ws-start-products-answered-desktop.dc.html",
   "j18-ws-editor-first-desktop.dc.html",
   "j18-ws-page-desktop.dc.html",
   "j18-ws-page-on-desktop.dc.html",
   "j18-ws-page-changes-desktop.dc.html",
   "j18-ws-no-access-desktop.dc.html",
   "j18-ws-no-settings-desktop.dc.html",
+  "j18-ws-page-moving-desktop.dc.html",
+  "j18-ws-editor-moving-desktop.dc.html",
+  "j18-ws-pay-tested-moving-desktop.dc.html",
+  "j18-ws-address-moving-desktop.dc.html",
+  "j18-ws-page-switch-over-desktop.dc.html",
   "j18-ws-editor-desktop.dc.html",
   "j18-ws-editor-section-desktop.dc.html",
   "j18-ws-editor-add-desktop.dc.html",
@@ -3970,7 +4294,7 @@
    "maxH": 150
   },
   "ja_s4": {
-   "x": 10870,
+   "x": 12190,
    "y": 2654,
    "text": "Customer website",
    "w": 520,
@@ -3984,7 +4308,7 @@
    "y": 2334,
    "text": "A · App map and navigation — Everyone",
    "kind": "title1",
-   "maxW": 14370
+   "maxW": 15690
   },
   "j08_s6": {
    "x": 0,
@@ -3997,7 +4321,7 @@
    "maxH": 150
   },
   "j08_s7": {
-   "x": 4120,
+   "x": 5440,
    "y": 4890,
    "text": "Till settings",
    "w": 520,
@@ -4007,7 +4331,7 @@
    "maxH": 150
   },
   "j08_s8": {
-   "x": 17950,
+   "x": 19270,
    "y": 4890,
    "text": "End of day and payment settings",
    "w": 520,
@@ -4017,7 +4341,7 @@
    "maxH": 150
   },
   "j08_s9": {
-   "x": 26030,
+   "x": 27350,
    "y": 4890,
    "text": "Staff and roles",
    "w": 520,
@@ -4027,7 +4351,7 @@
    "maxH": 150
   },
   "j08_s10": {
-   "x": 34110,
+   "x": 39390,
    "y": 4890,
    "text": "Shop and sites",
    "w": 520,
@@ -4037,7 +4361,7 @@
    "maxH": 150
   },
   "j08_s11": {
-   "x": 36910,
+   "x": 42190,
    "y": 4890,
    "text": "Workshop settings",
    "w": 520,
@@ -4047,7 +4371,7 @@
    "maxH": 150
   },
   "j08_s12": {
-   "x": 41030,
+   "x": 46310,
    "y": 4890,
    "text": "Messages",
    "w": 520,
@@ -4057,7 +4381,7 @@
    "maxH": 150
   },
   "j08_s13": {
-   "x": 45150,
+   "x": 51750,
    "y": 4890,
    "text": "Your data",
    "w": 520,
@@ -4071,7 +4395,7 @@
    "y": 4570,
    "text": "08 · Owner setup and onboarding — Owner and Manager",
    "kind": "title1",
-   "maxW": 47710
+   "maxW": 54310
   },
   "j09_s15": {
    "x": 0,
@@ -4096,7 +4420,7 @@
   "j09_s17": {
    "x": 16160,
    "y": 6790,
-   "text": "Practice at the till",
+   "text": "Practice: the till and jobs",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -4104,7 +4428,7 @@
    "maxH": 150
   },
   "j09_s18": {
-   "x": 18960,
+   "x": 21600,
    "y": 6790,
    "text": "Switch over",
    "w": 520,
@@ -4118,7 +4442,7 @@
    "y": 6470,
    "text": "09 · Moving from Citrus Lime — Owner",
    "kind": "title1",
-   "maxW": 29440
+   "maxW": 32080
   },
   "j10_s20": {
    "x": 0,
@@ -4131,7 +4455,7 @@
    "maxH": 150
   },
   "j10_s21": {
-   "x": 8080,
+   "x": 9400,
    "y": 8646,
    "text": "Office › Today",
    "w": 520,
@@ -4141,7 +4465,7 @@
    "maxH": 150
   },
   "j10_s22": {
-   "x": 21440,
+   "x": 24080,
    "y": 8646,
    "text": "Also at the start of the day",
    "w": 520,
@@ -4155,7 +4479,7 @@
    "y": 8326,
    "text": "10 · Opening the shop and checking in — Staff and Manager",
    "kind": "title1",
-   "maxW": 22540
+   "maxW": 25180
   },
   "j11_s24": {
    "x": 0,
@@ -4168,7 +4492,7 @@
    "maxH": 150
   },
   "j11_s25": {
-   "x": 13360,
+   "x": 14680,
    "y": 10502,
    "text": "Taking payment",
    "w": 520,
@@ -4178,7 +4502,7 @@
    "maxH": 150
   },
   "j11_s26": {
-   "x": 24080,
+   "x": 28040,
    "y": 10502,
    "text": "Other ways to pay",
    "w": 520,
@@ -4188,7 +4512,7 @@
    "maxH": 150
   },
   "j11_s27": {
-   "x": 29520,
+   "x": 33480,
    "y": 10502,
    "text": "Other till jobs",
    "w": 520,
@@ -4198,7 +4522,7 @@
    "maxH": 150
   },
   "j11_s28": {
-   "x": 46840,
+   "x": 50800,
    "y": 10502,
    "text": "When the internet drops",
    "w": 520,
@@ -4212,7 +4536,7 @@
    "y": 10182,
    "text": "11 · Selling at the till — Staff",
    "kind": "title1",
-   "maxW": 56000
+   "maxW": 59960
   },
   "j12_s30": {
    "x": 0,
@@ -4292,7 +4616,17 @@
    "maxH": 150
   },
   "j13_s38": {
-   "x": 16000,
+   "x": 19960,
+   "y": 14214,
+   "text": "A new product, received by Staff",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s39": {
+   "x": 25400,
    "y": 14214,
    "text": "The waiting job",
    "w": 520,
@@ -4301,8 +4635,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s39": {
-   "x": 20120,
+  "j13_s40": {
+   "x": 34800,
    "y": 14214,
    "text": "Checking the invoice",
    "w": 520,
@@ -4311,8 +4645,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s40": {
-   "x": 30840,
+  "j13_s41": {
+   "x": 46840,
    "y": 14214,
    "text": "Ordering",
    "w": 520,
@@ -4321,8 +4655,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j13_s41": {
-   "x": 36280,
+  "j13_s42": {
+   "x": 54920,
    "y": 14214,
    "text": "Also in this journey",
    "w": 520,
@@ -4336,9 +4670,9 @@
    "y": 13894,
    "text": "13 · Receiving stock and purchase orders — Staff and Manager",
    "kind": "title1",
-   "maxW": 39740
+   "maxW": 58380
   },
-  "j14_s43": {
+  "j14_s44": {
    "x": 0,
    "y": 16070,
    "text": "Finding stock",
@@ -4348,7 +4682,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s44": {
+  "j14_s45": {
    "x": 12040,
    "y": 16070,
    "text": "Categories and their details",
@@ -4358,7 +4692,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s45": {
+  "j14_s46": {
    "x": 14840,
    "y": 16070,
    "text": "A product",
@@ -4368,7 +4702,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s46": {
+  "j14_s47": {
    "x": 20280,
    "y": 16070,
    "text": "Changing prices",
@@ -4378,7 +4712,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s47": {
+  "j14_s48": {
    "x": 24400,
    "y": 16070,
    "text": "Correcting stock",
@@ -4388,8 +4722,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s48": {
-   "x": 31160,
+  "j14_s49": {
+   "x": 32480,
    "y": 16070,
    "text": "Between shops",
    "w": 520,
@@ -4398,8 +4732,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j14_s49": {
-   "x": 37920,
+  "j14_s50": {
+   "x": 40560,
    "y": 16070,
    "text": "Stock take",
    "w": 520,
@@ -4413,9 +4747,9 @@
    "y": 15750,
    "text": "14 · Stock take and stock control — Staff and Manager",
    "kind": "title1",
-   "maxW": 47080
+   "maxW": 49720
   },
-  "j15_s51": {
+  "j15_s52": {
    "x": 0,
    "y": 17926,
    "text": "Customers and the customer page",
@@ -4425,7 +4759,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j15_s52": {
+  "j15_s53": {
    "x": 13360,
    "y": 17926,
    "text": "Accounts (pay later)",
@@ -4435,7 +4769,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j15_s53": {
+  "j15_s54": {
    "x": 16160,
    "y": 17926,
    "text": "Customer groups",
@@ -4445,7 +4779,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j15_s54": {
+  "j15_s55": {
    "x": 17640,
    "y": 17926,
    "text": "Privacy requests",
@@ -4455,7 +4789,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j15_s55": {
+  "j15_s56": {
    "x": 21760,
    "y": 17926,
    "text": "Possible duplicates",
@@ -4472,7 +4806,7 @@
    "kind": "title1",
    "maxW": 25640
   },
-  "j16_s57": {
+  "j16_s58": {
    "x": 0,
    "y": 19782,
    "text": "Close the day",
@@ -4489,7 +4823,7 @@
    "kind": "title1",
    "maxW": 19720
   },
-  "j17_s59": {
+  "j17_s60": {
    "x": 0,
    "y": 21638,
    "text": "Reports",
@@ -4499,7 +4833,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s60": {
+  "j17_s61": {
    "x": 6760,
    "y": 21638,
    "text": "Sales",
@@ -4509,7 +4843,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s61": {
+  "j17_s62": {
    "x": 13520,
    "y": 21638,
    "text": "Your own reports",
@@ -4519,7 +4853,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s62": {
+  "j17_s63": {
    "x": 18960,
    "y": 21638,
    "text": "Takings and cash-ups",
@@ -4529,7 +4863,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s63": {
+  "j17_s64": {
    "x": 25720,
    "y": 21638,
    "text": "VAT, margin, workshop and discounts",
@@ -4539,8 +4873,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j17_s64": {
-   "x": 36440,
+  "j17_s65": {
+   "x": 37760,
    "y": 21638,
    "text": "Accounts software and who sees what",
    "w": 520,
@@ -4554,9 +4888,9 @@
    "y": 21318,
    "text": "17 · Reports and accounts — Owner, Manager and Staff",
    "kind": "title1",
-   "maxW": 46920
+   "maxW": 48240
   },
-  "j18_s66": {
+  "j18_s67": {
    "x": 0,
    "y": 23494,
    "text": "Setting it up",
@@ -4566,8 +4900,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s67": {
-   "x": 5440,
+  "j18_s68": {
+   "x": 6760,
    "y": 23494,
    "text": "The Website page",
    "w": 520,
@@ -4576,8 +4910,18 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s68": {
-   "x": 12200,
+  "j18_s69": {
+   "x": 13520,
+   "y": 23494,
+   "text": "While moving from Citrus Lime",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s70": {
+   "x": 20280,
    "y": 23494,
    "text": "Editing the home page",
    "w": 520,
@@ -4586,8 +4930,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s69": {
-   "x": 28200,
+  "j18_s71": {
+   "x": 36280,
    "y": 23494,
    "text": "Theme",
    "w": 520,
@@ -4596,8 +4940,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s70": {
-   "x": 34960,
+  "j18_s72": {
+   "x": 43040,
    "y": 23494,
    "text": "Publishing",
    "w": 520,
@@ -4606,8 +4950,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s71": {
-   "x": 40400,
+  "j18_s73": {
+   "x": 48480,
    "y": 23494,
    "text": "Pages",
    "w": 520,
@@ -4616,8 +4960,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s72": {
-   "x": 45840,
+  "j18_s74": {
+   "x": 53920,
    "y": 23494,
    "text": "Tracking tools",
    "w": 520,
@@ -4626,8 +4970,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s73": {
-   "x": 49960,
+  "j18_s75": {
+   "x": 58040,
    "y": 23494,
    "text": "Web address (waiting on the business plan decision)",
    "w": 520,
@@ -4636,8 +4980,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s74": {
-   "x": 56720,
+  "j18_s76": {
+   "x": 64800,
    "y": 23494,
    "text": "Online payments setup",
    "w": 520,
@@ -4646,8 +4990,8 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j18_s75": {
-   "x": 64800,
+  "j18_s77": {
+   "x": 72880,
    "y": 23494,
    "text": "Shopify",
    "w": 520,
@@ -4661,9 +5005,9 @@
    "y": 23174,
    "text": "18 · Website management — Manager",
    "kind": "title1",
-   "maxW": 77920
+   "maxW": 86000
   },
-  "j19_s77": {
+  "j19_s79": {
    "x": 0,
    "y": 25350,
    "text": "Choosing a shop",
@@ -4673,7 +5017,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s78": {
+  "j19_s80": {
    "x": 8080,
    "y": 25350,
    "text": "Prices and services by shop",
@@ -4683,7 +5027,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s79": {
+  "j19_s81": {
    "x": 13520,
    "y": 25350,
    "text": "People and booking",
@@ -4693,7 +5037,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s80": {
+  "j19_s82": {
    "x": 18960,
    "y": 25350,
    "text": "Jobs between shops",
@@ -4703,7 +5047,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s81": {
+  "j19_s83": {
    "x": 21760,
    "y": 25350,
    "text": "Adding a shop, and its tills",
@@ -4720,7 +5064,7 @@
    "kind": "title1",
    "maxW": 29600
   },
-  "j20_s83": {
+  "j20_s85": {
    "x": 0,
    "y": 27206,
    "text": "The activity log",
@@ -4730,7 +5074,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s84": {
+  "j20_s86": {
    "x": 10720,
    "y": 27206,
    "text": "What staff are told",
@@ -4740,7 +5084,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s85": {
+  "j20_s87": {
    "x": 14840,
    "y": 27206,
    "text": "Alerts on Today",
@@ -4750,7 +5094,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s86": {
+  "j20_s88": {
    "x": 17640,
    "y": 27206,
    "text": "Signed-in devices",
@@ -4760,7 +5104,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j20_s87": {
+  "j20_s89": {
    "x": 25720,
    "y": 27206,
    "text": "Send feedback",
@@ -4777,7 +5121,7 @@
    "kind": "title1",
    "maxW": 32240
   },
-  "j21_s89": {
+  "j21_s91": {
    "x": 0,
    "y": 29062,
    "text": "Connecting Lightspeed",
@@ -4787,7 +5131,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s90": {
+  "j21_s92": {
    "x": 12040,
    "y": 29062,
    "text": "Quote and approval",
@@ -4797,7 +5141,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s91": {
+  "j21_s93": {
    "x": 25400,
    "y": 29062,
    "text": "When Lightspeed can’t be reached",
@@ -4807,7 +5151,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s92": {
+  "j21_s94": {
    "x": 32160,
    "y": 29062,
    "text": "Payment and collection",
@@ -4817,7 +5161,7 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j21_s93": {
+  "j21_s95": {
    "x": 45520,
    "y": 29062,
    "text": "Settings and the customer",

@@ -34,8 +34,8 @@ const def = (id, fn) => recipes.push([id, fn]);
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
 const sr = (t) => `<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">${t}</span>`;
 let SIZE = 'desktop';
-// UX walk-through 2 L1: Jack Lewis is the Manager here too, as on the till,
-// Today, cash-up and the staff list. Nothing on these settings is owner-only.
+// UX walk-through 2 L1, UX walk-through 2 (decision 6): Jack Lewis is the Owner
+// here too, as in every example. Nothing on these settings is owner-only.
 const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 const PADS = { name: 'Shimano brake pads', code: 'B05S-RX', price: '£28.00' };
 const ORDER = 'Order [order number]';
@@ -295,13 +295,17 @@ const handOverTill = (refunded = false) => {
 };
 
 // ---------- Settings › Front desk › Online orders (decisions 2, 3, 5, 7; audit M13) ----------
+// UX walk-through 3 M1: an item to order in also goes on the restock list's
+// "For customers", so it reaches whoever orders stock.
 const sellsOpen = (pick = 0) => `<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="font-size: 15px; font-weight: 700; padding: 0 0 4px">Customers can buy</legend>
 ${shopOption('Only what’s on the shelf', pick === 0, 'At the shop they collect from. Ready the same day.')}
 ${shopOption('Anything in stock at any of our shops', pick === 1, 'We move it across with a stock transfer. The website says “Ready at Bolton in [n] days”. Only shown when you have more than one shop.')}
-${shopOption('Also things we can order in', pick === 2, 'From the supplier. The website says “Ready in about [n] days”. The order arrives as “To order from [supplier]”.')}</fieldset>
+${shopOption('Also things we can order in', pick === 2, 'From the supplier. The website says “Ready in about [n] days”. The order arrives as “To order from [supplier]”, and the item goes on the restock list under “For customers” for whoever orders stock.')}</fieldset>
 ${pick > 0 ? `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('Moving between shops takes', { value: '[n] days' })}${pick === 2 ? field('Ordering in takes about', { value: '[n] days', hint: 'Or each supplier’s own time, from their details in Stockroom.' }) : ''}</div>` : ''}
 ${note('Stock is held for the customer as soon as they’ve paid, and checked again just before they pay.')}`;
-const showOpen = () => `<p style="margin: 0; font-size: 15px">Started with every product online on [date].</p>
+// UX walk-through 4 M7: the start question is asked once, wherever Jack meets
+// it first; the other place shows the answer with Change.
+const showOpen = (where = '') => `<p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; font-size: 15px"><span>Started with every product online on [date]${where}.</span>${linkBtn('Change', 'Change what your website started with')}</p>
 ${['Bearings', 'Drivetrain › Derailleurs', '[Category]'].map((c, i) => rowSwitch(c, i < 2)).join('')}
 <p style="margin: 0; font-size: 14px">[n] products are set differently from their category. ${linkBtn('See them')}</p>
 ${note('New products follow their category. Each product’s page in Stock has its own “Show on website” switch.')}`;
@@ -319,7 +323,12 @@ const master = (on) => card(`<div style="padding: 4px 18px">${rowSwitch('Buying 
 // setting, and "Where ready orders wait" gets its own fold.
 const onlineFoldsWh2 = (open) => onlineFolds(open); // the folds now live in settings-frame.mjs
 const onlineSettings = (open, { on = true } = {}) => withOnlineArea(() => settingsPage('online', 'Online orders', ONLINE_INTRO, onlineFoldsWh2(open), { who: MANAGER })).replace(/(<section aria-labelledby="set-online"[^>]*><div[^>]*>[\s\S]*?<\/div>)/, `$1${master(on)}`);
-const startQuestion = () => popup('st-title', 'How should your website start?', 'You’re turning on buying online', `<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="font-size: 15px; font-weight: 700; padding: 0 0 4px">Start with</legend>${shopOption('Every product online', true, 'Everything with a price shows. Switch off what you don’t want to sell online.')}${shopOption('Nothing online', false, 'Add categories and products as you go.')}</fieldset>${note('Either way, every category and product has its own “Show on website” switch afterwards.')}`, `${button('Not now', { variant: 'ghost' })}${button('Turn on buying online')}`, 560);
+// UX walk-through 4 M7: asked here only when the website's set-up hasn't
+// asked it yet. M6: the same counts as the website's step 3, each with
+// "See them" (Stock, filtered to those products).
+const seeThem = (what) => `<a href="#" aria-label="See the products with ${what}, in Stock" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">See them</a>`;
+const startCounts = () => `<ul aria-label="With every product online" style="margin: 0; padding: 0; display: flex; flex-direction: column">${[['[n] products go online', ''], ['[n] have no photo (shown with their name)', 'no photo'], ['[n] have no price (stay off until priced)', 'no price']].map(([t, what]) => `<li style="list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; min-height: ${what ? 44 : 32}px; font-size: 15px">${t}${what ? seeThem(what) : ''}</li>`).join('')}</ul>`;
+const startQuestion = () => popup('st-title', 'How should your website start?', 'You’re turning on buying online', `<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="font-size: 15px; font-weight: 700; padding: 0 0 4px">Start with</legend>${shopOption('Every product online', true, 'Everything with a price shows. Switch off what you don’t want to sell online.')}${shopOption('Nothing online', false, 'Add categories and products as you go.')}</fieldset>${startCounts()}${note('Either way, every category and product has its own “Show on website” switch afterwards.')}`, `${button('Not now', { variant: 'ghost' })}${button('Turn on buying online')}`, 560);
 
 // ---------- The boards ----------
 def('on-product', () => product('shelf'));
@@ -377,6 +386,9 @@ def('on-settings', () => onlineSettings({ sells: sellsOpen(0) }));
 def('on-settings-order-in', () => onlineSettings({ sells: sellsOpen(2) }));
 def('on-settings-start', () => overlay(onlineSettings({}, { on: false }), startQuestion()));
 def('on-settings-show', () => onlineSettings({ show: showOpen() }));
+// UX walk-through 4 M7: buying online turned on after the website's step 3
+// asked — no second question; the answer shows, with Change.
+def('on-settings-start-answered', () => onlineSettings({ show: showOpen(', in your website’s set-up') }));
 def('on-settings-pay', () => onlineSettings({ pay: payOpen(), collect: collectOpen() }));
 // UX walk-through 2 M8, L4: the two new settings in view.
 def('on-settings-keep', () => scrolled(onlineSettings({ collect: collectOpen(), shelf: shelfOpen() }), isPhone() ? 338 : 260));
@@ -442,7 +454,8 @@ export const TITLES = {
   'on-today-uncollected': 'Today: an order not collected — Contacted or Open',
   'on-settings': 'Settings › Online orders: buying online, what the website sells',
   'on-settings-order-in': 'Also things we order in: how long it takes',
-  'on-settings-start': 'Turning on buying online: start with everything, or nothing',
+  'on-settings-start': 'Turning on buying online before the website is set up: start with everything, or nothing (asked once)',
+  'on-settings-start-answered': 'Turning on buying online after the website’s set-up: the answer shown, with Change',
   'on-settings-show': 'Showing products: switches on each category',
   'on-settings-pay': 'Paying online, and orders not collected',
   'on-settings-keep': 'Keep orders for [n] days, and where ready orders wait',
@@ -454,5 +467,5 @@ export const ROWS = [
   { label: 'Paying', screens: ['on-checkout-paying', 'on-checkout-bank', 'on-checkout-declined', 'on-checkout-unsure', 'on-checkout-sold-out', 'on-confirmed', 'on-save-details'] },
   { label: 'Your order', screens: ['on-order', 'on-order-moving', 'on-order-ready', 'on-order-collected', 'on-order-cancel', 'on-order-cancelled', 'on-order-clash', 'on-order-shop-cancelled', 'on-order-cant-supply', 'on-email-ready'] },
   { label: 'The shop’s side', screens: ['on-orders', 'on-orders-ready', 'on-orders-arrived', 'on-orders-sold-at-till', 'on-orders-second', 'on-order-staff', 'on-order-staff-ready', 'on-not-ready', 'on-cant-supply', 'on-cancel-refund', 'on-hand-over', 'on-hand-over-refunded', 'on-today', 'on-today-uncollected'] },
-  { label: 'Settings', screens: ['on-settings', 'on-settings-order-in', 'on-settings-start', 'on-settings-show', 'on-settings-pay', 'on-settings-keep', 'on-messages'] },
+  { label: 'Settings', screens: ['on-settings', 'on-settings-order-in', 'on-settings-start', 'on-settings-start-answered', 'on-settings-show', 'on-settings-pay', 'on-settings-keep', 'on-messages'] },
 ];

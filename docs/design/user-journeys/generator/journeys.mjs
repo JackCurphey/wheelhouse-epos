@@ -76,7 +76,7 @@ export const journeys = [
         sa('till-rail-open', 'Till: rail unfolded', 'Staff'),
         sa('till-search', 'Till: one search finds products, customers, jobs and orders', 'Staff'),
       ] },
-      { label: 'Your settings', screens: [sa('your-settings', 'Your settings', 'Everyone')] },
+      { label: 'Your settings', screens: [sa('your-settings', 'Your settings', 'Everyone'), sa('your-settings-no-pin', "Your settings — no PIN yet, Get your PIN", 'Everyone')] },
       { label: 'Customer website', screens: [
         sa('site', 'Customer website: default theme', 'Customer'),
         sa('site-menu', 'Customer website: phone menu open', 'Customer'),
@@ -102,6 +102,12 @@ export const journeys = [
         sb('till-checkin-stale', 'Till start-up: online, but not up to date', 'Staff'),
         sb('till-pin-wrong', 'Till check-in: wrong PIN', 'Staff'),
         sb('pin-change', 'Your new till PIN', 'Staff'),
+      ] },
+      { label: 'A new person’s first PIN', screens: [
+        sb('pin-first', "First sign-in — Your till PIN opens straight away (Skip for now if you never use the till)", 'Staff'),
+        sb('pin-cleared', "First sign-in after a PIN was cleared — a new PIN, the same way", 'Staff'),
+        sb('till-give-pin', "Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person", 'Owner'),
+        sb('till-checkin-practice', "Till check-in while running alongside — the practice band before anyone checks in", 'Staff'),
       ] },
       { label: 'Customers', screens: [
         sb('cust-signin', 'Sign in to your account', 'Customer'),
@@ -232,7 +238,8 @@ export const journeys = [
       { label: "Settings", screens: [
         sd2("on-settings", "Settings › Online orders: buying online, what the website sells", "Owner"),
         sd2("on-settings-order-in", "Also things we order in: how long it takes", "Owner"),
-        sd2("on-settings-start", "Turning on buying online: start with everything, or nothing", "Owner"),
+        sd2("on-settings-start", "Turning on buying online before the website is set up: start with everything, or nothing (asked once)", "Owner"),
+        sd2("on-settings-start-answered", "Turning on buying online after the website’s set-up: the answer shown, with Change", "Owner"),
         sd2("on-settings-show", "Showing products: switches on each category", "Owner"),
         sd2("on-settings-pay", "Paying online, and orders not collected", "Owner"),
         sd2("on-settings-keep", "Keep orders for [n] days, and where ready orders wait", "Manager"),
@@ -505,6 +512,7 @@ export const journeys = [
     rows: [
       { label: "First-run setup", screens: [
         sd8("fr-today", "Getting started: the owner’s checklist on Today", "Owner"),
+        sd8("fr-today-moving", "Getting started while moving from Citrus Lime — tills in practice, the move’s stage, shared steps", "Owner"),
         sd8("fr-step", "A step opened from the checklist", "Owner"),
         sd8("fr-done", "All set up: the checklist goes", "Owner"),
       ] },
@@ -536,6 +544,9 @@ export const journeys = [
         sd8("set-staff-clear-pin", "Clear a forgotten PIN", "Manager"),
         sd8("set-staff-roles", "Staff and roles › What each role can do", "Manager"),
         sd8("set-staff-invite", "The owner invites someone", "Owner"),
+        sd8("set-staff-invited", "People — Jo invited, not joined yet (Send again, Cancel the invite), and a till-only person", "Owner"),
+        sd8("set-staff-invite-expired", "People — an invite that expired (Send again)", "Owner"),
+        sd8("set-staff-invite-till-only", "Add someone with no email — till only", "Owner"),
       ] },
       { label: "Shop and sites", screens: [
         sd8("set-shop-details", "Shop and sites › Shop details", "Manager"),
@@ -550,6 +561,7 @@ export const journeys = [
         sd8("set-msg-list", "Messages › Automatic messages: text, email or both", "Manager"),
         sd8("set-msg-edit", "Change a message’s wording, with a preview", "Manager"),
         sd8("set-msg-new", "Add your own automatic message", "Manager"),
+        sd8("set-msg-alongside", "Messages while running alongside — none go to customers until switch-over day", "Owner"),
       ] },
       { label: "Your data", screens: [
         sd8("set-data-export", "Your data › Download everything", "Manager"),
@@ -576,16 +588,18 @@ export const journeys = [
         sd9("mv-check", "The weekly check: each figure checks itself", "Owner"),
         sd9("mv-check-result", "The weekly check: three match, one doesn’t", "Owner"),
       ] },
-      { label: "Practice at the till", screens: [
+      { label: "Practice: the till and jobs", screens: [
+        sd9("mv-practice-checkin", "Checked in during practice: no float check", "Staff"),
         sd9("mv-practice-sale", "The till before switch-over: practice, not real money", "Staff"),
         sd9("mv-practice-card", "A practice card payment: try either outcome", "Staff"),
+        sd9("mv-practice-job", "A job marked ready in practice: “Not sent — practice”", "Staff"),
       ] },
       { label: "Switch over", screens: [
         sd9("mv-ready", "Switch over: the checklist, two still to do", "Owner"),
         sd9("mv-weeks", "Change how many weeks must match (2 by default)", "Owner"),
         sd9("mv-ready-all", "Switch over: everything ticked", "Owner"),
         sd9("mv-pick-day", "Pick switch-over day", "Owner"),
-        sd9("mv-morning", "Switch-over morning: last refresh, then clear practice and go real", "Owner"),
+        sd9("mv-morning", "Switch-over morning: last refresh, go real, then turn the website on", "Owner"),
         sd9("mv-go-real", "Clear practice sales and go real?", "Owner"),
         sd9("mv-week", "The first full week on Wheelhouse", "Owner"),
         sd9("mv-week-done", "A full week done: Citrus Lime can go", "Owner"),
@@ -598,6 +612,7 @@ export const journeys = [
       { label: "Opening the till", screens: [
         sd10("op-float-check", "First in: a one-tap float check", "Staff"),
         sd10("op-float-check-unclosed", "First in, when yesterday wasn’t counted: the float plus Wednesday’s cash", "Staff"),
+        sd10("op-float-check-first", "First in on the first real day: count the float", "Staff"),
         sd10("op-float-count", "Count it: note by note", "Staff"),
         sd10("op-float-matched", "The count matches: the till is ready", "Staff"),
         sd10("op-float-short", "The float is short", "Staff"),
@@ -614,6 +629,7 @@ export const journeys = [
         sd10("op-today-two", "Today, with two things to deal with", "Manager"),
         sd10("op-today-staff", "Today, as Staff see it", "Staff"),
         sd10("op-today-late", "Today, when someone due in is late", "Manager"),
+        sd10("op-today-practice", "Today, while the tills are in practice: the drawer isn’t counted", "Owner"),
       ] },
       { label: 'Also at the start of the day', screens: [
         d('desk'),
@@ -628,6 +644,7 @@ export const journeys = [
         sc("till-empty", "Empty basket", "Staff"),
         sc("till-noresults", "Search with no results", "Staff"),
         sc("till-held", "Selling pads held for an online order — warned, not blocked", "Staff"),
+        sc("till-held-job", "Selling pads held for job WH-1042 — warned, not blocked", "Staff"),
         sc("till-line", "Change a line: price, discount with a reason, note, remove", "Staff"),
         sc("till-discount", "Discount the whole sale", "Staff"),
         sc("till-discounted", "Basket with a discount — the new total", "Staff"),
@@ -640,6 +657,8 @@ export const journeys = [
         sc("till-pay-other", "Take payment: Other ways to pay opened", "Staff"),
         sc("till-card", "Card: the amount is on the card machine, waiting for the card", "Staff"),
         sc("till-card-discounted", "Card — from the discounted total", "Staff"),
+        sc("till-pay-discounted", "Take payment — from the discounted total", "Staff"),
+        sc("till-split-discounted", "Split payment — from the discounted total", "Staff"),
         sc("till-card-declined", "Card declined", "Staff"),
         sc("till-pay-cash", "Cash: notes to tap, change worked out", "Staff"),
         sc("till-pay-split", "Split payment: part paid, the rest by card", "Staff"),
@@ -735,11 +754,24 @@ export const journeys = [
         sd13("rs-frame-dup", "A frame number already in stock", "Staff"),
         sd13("rs-receive-marked", "Ready to book in: one item set aside, a bike with its frame numbers", "Staff"),
         sd13("rs-book-blocked", "Book in with an unknown barcode still on the list", "Staff"),
+        sd13("rs-problem-missing", "Missing, with no order: the part a job is waiting for", "Staff"),
         sd13("rs-booked", "Delivery booked in: the waiting job flagged, what’s next", "Manager"),
+        sd13("rs-booked-staff", "Delivery booked in, as Staff see it: labels first, no invoice", "Staff"),
+        sd13("rs-booked-job-waiting", "Booked in without the job’s part: the job is still waiting", "Owner"),
         sd13("rs-labels", "Print labels: only what needs one", "Manager"),
+      ] },
+      { label: "A new product, received by Staff", screens: [
+        sd13("rs-receive-staff", "Staff meet a barcode Wheelhouse doesn’t know: Leave it for [Owner or manager]", "Staff"),
+        sd13("rs-receive-staff-left", "Left for [Owner or manager]: the rest books in", "Staff"),
+        sd13("rs-add-left", "Adding the product Jo left: it counts into stock, then its label", "Owner"),
+        sd13("rs-today-to-add", "Today: a product left on a delivery, to add", "Owner"),
       ] },
       { label: "The waiting job", screens: [
         sd13("rs-job-arrived", "The job: its part has arrived", "Staff"),
+        sd13("rs-part-sold", "The job: its held pads were sold at the till — reorder", "Staff"),
+        sd13("rs-part-missing", "The job: its pads weren’t in the delivery — still on order", "Staff"),
+        sd13("rs-part-damaged", "The job: its pads came damaged — reorder", "Staff"),
+        sd13("rs-part-order-closed", "The job: the order was closed before its pads came", "Staff"),
         sd13("rs-diary-arrived", "The diary: “Part arrived” on the job’s block", "Staff"),
         sd13("rs-overview-arrived", "Workshop Overview: “Part arrived” on the job’s row", "Staff"),
       ] },
@@ -748,6 +780,7 @@ export const journeys = [
         sd13("rs-invoice", "Add the invoice: its total against what was booked in", "Manager"),
         sd13("rs-invoice-checked", "The invoice matches: checked", "Manager"),
         sd13("rs-invoice-diff", "The invoice doesn’t match: the difference, to query", "Manager"),
+        sd13("rs-invoice-cost", "Accept the difference: did a cost go up?", "Owner"),
         sd13("rs-invoice-queried", "Queried with the supplier", "Manager"),
         sd13("rs-invoice-accepted", "The difference accepted, with Undo", "Manager"),
         sd13("rs-delivery-staff", "A delivery, as Staff see it: no costs, no invoice", "Staff"),
@@ -756,7 +789,9 @@ export const journeys = [
       { label: "Ordering", screens: [
         sd13("rs-order", "A purchase order, built by hand", "Manager"),
         sd13("rs-order-ordered", "An order, partly delivered: receive against it, or close it", "Manager"),
+        sd13("rs-order-close", "Close the order? A job’s part is still to come", "Owner"),
         sd13("rs-restock", "Restock list: by supplier, a download for each basket", "Manager"),
+        sd13("rs-restock-customers", "Restock list, for customers: what jobs and online orders wait for", "Owner"),
         sd13("rs-today-restock", "Today: new on the restock list", "Manager"),
       ] },
       { label: 'Also in this journey', screens: [
@@ -797,6 +832,7 @@ export const journeys = [
       ] },
       { label: "Correcting stock", screens: [
         sd14("st-adjust", "Adjust stock: the change or the count after it, and a reason", "Staff"),
+        sd14("st-adjust-faulty", "Adjust stock: faulty, onto the supplier’s To return list", "Owner"),
         sd14("st-today-adjust", "Today: a big adjustment, for the manager", "Manager"),
         sd14("st-setting-adjust", "Settings › Stockroom: when an adjustment shows on Today", "Manager"),
         sd14("st-today-below", "Today: products below zero, with Count them", "Manager"),
@@ -807,6 +843,7 @@ export const journeys = [
         sd14("tr-send", "Send to another shop", "Staff"),
         sd14("tr-incoming", "Deliveries and orders: on its way, in and out", "Staff"),
         sd14("tr-receive", "Receiving a transfer: one short", "Staff"),
+        sd14("tr-problem", "A transfer line marked missing", "Staff"),
         sd14("tr-today-short", "Today: a transfer arrived short", "Manager"),
       ] },
       { label: "Stock take", screens: [
@@ -910,6 +947,7 @@ export const journeys = [
         sd17("rp-vat", "VAT for your VAT quarter, against the quarter before", "Owner"),
         sd17("rp-vat-first", "When does your VAT quarter start? (asked once)", "Owner"),
         sd17("rp-vat-all", "VAT for all shops", "Owner"),
+        sd17("rp-vat-check-off", "VAT with the invoice check off: stock purchases from your accounts software", "Owner"),
         sd17("rp-margin", "Margin and stock value", "Owner"),
         sd17("rp-workshop", "Workshop: jobs, takings, how full, turnaround, quotes", "Owner"),
         sd17("rp-discounts", "Discounts and refunds, with reasons and who gave them", "Owner"),
@@ -924,7 +962,7 @@ export const journeys = [
         sd17("rp-accounts-lost", "Xero disconnected: days wait to be sent", "Owner"),
         sd17("rp-accounts-disconnect", "Disconnect Xero", "Owner"),
         sd17("rp-today-accounts", "Today: Wednesday didn’t go to Xero", "Owner"),
-        sd17("rp-person", "A person: “Can see reports” on, “Can see costs and margin” off", "Owner"),
+        sd17("rp-person", "A person: “Can see reports” on, “Can see costs and margin” off", "Manager"),
       ] },
     ],
   },
@@ -935,6 +973,7 @@ export const journeys = [
         sd18("ws-start-which", "Set up, step 1: Wheelhouse’s website or your Shopify shop?", "Owner"),
         sd18("ws-start-look", "Step 2: logo and main colour, suggested from the logo", "Owner"),
         sd18("ws-start-products", "Step 3: start with every product online, or nothing", "Owner"),
+        sd18("ws-start-products-answered", "Step 3 when buying online asked first: the answer, with Change", "Owner"),
         sd18("ws-editor-first", "The editor opens on a ready-made home page, still off", "Manager"),
       ] },
       { label: "The Website page", screens: [
@@ -943,6 +982,13 @@ export const journeys = [
         sd18("ws-page-changes", "The unpublished changes, with Publish and Discard", "Manager"),
         sd18("ws-no-access", "Without “Can edit the website”: who to ask", "Staff"),
         sd18("ws-no-settings", "Can edit the website, but not change settings", "Staff"),
+      ] },
+      { label: "While moving from Citrus Lime", screens: [
+        sd18("ws-page-moving", "Moving from Citrus Lime: ready for switch-over, Turn it on waits", "Owner"),
+        sd18("ws-editor-moving", "The editor while moving: off until switch-over morning", "Owner"),
+        sd18("ws-pay-tested-moving", "The test payment worked, while moving from Citrus Lime", "Owner"),
+        sd18("ws-address-moving", "While moving: point your address here on switch-over morning", "Owner"),
+        sd18("ws-page-switch-over", "Switch-over morning: the website is ready — Turn it on", "Owner"),
       ] },
       { label: "Editing the home page", screens: [
         sd18("ws-editor", "The editor: sections down the side; pointing at a part of the page", "Manager"),
@@ -1029,7 +1075,7 @@ export const journeys = [
         sd19("ms-product-price", "A product’s price, different at one shop", "Owner"),
       ] },
       { label: "People and booking", screens: [
-        sd19("ms-person", "A person: where they work, and workshop days at each shop", "Owner"),
+        sd19("ms-person", "A person: where they work, and workshop days at each shop", "Manager"),
         sd19("ms-book-shop", "No shop chosen yet on the website: “Which shop?” first", "Customer"),
         sd19("ms-book-shop-chosen", "The website already has Bolton: the shop chosen, straight to the service", "Customer"),
         sd19("ms-book-shop-change", "Changing the shop: what it resets", "Customer"),
@@ -1075,8 +1121,8 @@ export const journeys = [
         sd20("ops-till-checkout", "Check Jo Taylor out of Till B1: after this sale, or now", "Owner"),
         sd20("ops-devices-signout", "Sign a computer out", "Owner"),
         sd20("ops-devices-signed-out", "Signed out", "Owner"),
-        sd20("ops-person", "A person: “Sign out everywhere”", "Owner"),
-        sd20("ops-person-everywhere", "Sign Jo Taylor out everywhere?", "Owner"),
+        sd20("ops-person", "A person: “Sign out everywhere”", "Manager"),
+        sd20("ops-person-everywhere", "Sign Jo Taylor out everywhere?", "Manager"),
       ] },
       { label: "Send feedback", screens: [
         sd20("ops-feedback-empty", "Send feedback: Send waits until something is written", "Staff"),

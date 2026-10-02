@@ -13,16 +13,16 @@
 // audit, every recommendation.
 //
 // Real example data only: North Street Cycles, Bolton, "[Second site]",
-// Jack Lewis (Owner; Manager on the manager's boards, as in other journeys),
+// Jack Lewis (Owner, on the manager's boards too — UX walk-through 2 (decision 6)),
 // Jo Taylor (Staff), Alex Morgan (Mechanic), Till B1, Shimano brake pads
 // B05S-RX (£28.00), WH-1045 Jamie Brooks (Giant Escape 2, gear
 // adjustment), Thursday 17 September. Times, amounts, sale numbers, reasons,
 // devices and the keeping period are bracketed placeholders.
 import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
-import { page, note, popup, overlay, withSize, settingsPage, staffFolds, STAFF_INTRO, rowSwitch, MANAGER } from './settings-frame.mjs';
+import { page, note, popup, overlay, withSize, settingsPage, staffFolds, STAFF_INTRO, rowSwitch, MANAGER_VIEW } from './settings-frame.mjs';
 import { withSite } from './diary.mjs';
 import { today } from './opening.mjs';
-import { personDialog, staffPage, peopleOpen } from './setup.mjs';
+import { personDialog, staffPage, peopleOpen, managerStaffPage, MGR } from './setup.mjs';
 import { yourSettingsDialog } from './app-map.mjs';
 import { screens as reportScreens } from './reports.mjs';
 import { screens as diaryScreens } from './diary.mjs';
@@ -73,7 +73,8 @@ const TODAY_ENTRIES = (shops = false) => {
   return [
     entry('[time]', 'Jo Taylor', 'discount', '£[£] off Sale [sale number]', '“[reason]” · Till B1, while Jo Taylor was checked in', 'Sale [sale number]', { ...s('Bolton'), flag: 'Seen by Jack Lewis at [time]' }),
     entry('[time]', 'Jack Lewis', 'price', `Shimano brake pads ${mono('B05S-RX')}`, '£28.00 → £[£] · now below cost (£[£])', 'Shimano brake pads B05S-RX', { ...s('Bolton'), flag: 'today' }),
-    entry('[time]', 'Alex Morgan', 'job', 'WH-1045 · Jamie Brooks', 'Giant Escape 2 · gear adjustment · In progress → Waiting for a part', 'job WH-1045', s('Bolton')),
+    // UX walk-through 3 L1: the job status is "Waiting for parts", as on the diary and the job.
+    entry('[time]', 'Alex Morgan', 'job', 'WH-1045 · Jamie Brooks', 'Giant Escape 2 · gear adjustment · In progress → Waiting for parts', 'job WH-1045', s('Bolton')),
     entry('[time]', 'Jo Taylor', 'void', 'Sale [sale number] · £[£]', '“[reason]” · Till B1, while Jo Taylor was checked in · [n]th void today', 'the voided sale', { ...s('Bolton'), flag: 'today' }),
     entry('[time]', 'Jo Taylor', 'refund', '£[£] to card · from Sale [sale number]', '“[reason]” · Till B1, while Jo Taylor was checked in', 'the refund', s('Bolton')),
     entry('[time]', 'Jack Lewis', 'stock', '[Product] · −[n]', '“[reason]” · stock take', '[Product]', s('[Second site]')),
@@ -144,7 +145,7 @@ const board = (inner) => `<div style="position: relative; width: ${DIMS[SIZE][0]
 def('ops-reports-home', () => reportScreens['rp-home'][SIZE]);
 def('ops-reports-staff', () => reportScreens['rp-home-staff'][SIZE]);
 def('ops-log', () => logPage());
-def('ops-log-manager', () => logPage({ who: MANAGER }));
+def('ops-log-manager', () => logPage({ who: MANAGER_VIEW })); // UX walk-through 2 (decision 6): a placeholder manager
 def('ops-log-all', () => logPage({ site: 'All shops' }));
 def('ops-log-filtered', () => logPage({ filtered: true }));
 def('ops-log-empty', () => logPage({ empty: true }));
@@ -157,8 +158,10 @@ def('ops-devices', () => officeStaff({ devices: devicesOpen() }));
 def('ops-till-checkout', () => overlay(officeStaff({ devices: devicesOpen() }), tillCheckout()));
 def('ops-devices-signout', () => overlay(officeStaff({ devices: devicesOpen() }), signOutAsk()));
 def('ops-devices-signed-out', () => withToast(officeStaff({ devices: devicesOpen(true) }), toast('Signed out [Computer] · [browser]')));
-def('ops-person', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog()));
-def('ops-person-everywhere', () => overlay(staffPage({ people: peopleOpen(false) }), everywhereAsk()));
+// UX walk-through 3 (decision 6 leftover): a manager's view, as on set-staff —
+// signed in as [Manager], with Jack Lewis listed as the Owner.
+def('ops-person', () => overlay(managerStaffPage({ people: peopleOpen(false, false, MGR) }), personDialog()));
+def('ops-person-everywhere', () => overlay(managerStaffPage({ people: peopleOpen(false, false, MGR) }), everywhereAsk()));
 // On a phone the Help cards come after Accessibility, so the board is
 // scrolled down to them.
 const scrolledPhoneSettings = (px) => { const h = yourSettingsDialog('phone'); const out = h.replace('<div data-scroll style="padding: 14px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 0; overflow-y: auto">', `<style>.ys-sc > * { position: relative; top: -${px}px }</style><div data-scroll class="ys-sc" style="padding: 14px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 0; overflow-y: hidden">`); if (out === h) throw new Error('oversight.mjs: Your settings layout changed'); return out; };

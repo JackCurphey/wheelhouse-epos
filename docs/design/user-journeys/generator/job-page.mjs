@@ -183,7 +183,8 @@ ${header}
 }
 
 // ---------- work and parts table (decision 33: full table, small toolbar) ----------
-// lines: [{ code, work, sub, note, qty, price, approval: 'Approved'|'Declined'|'Awaiting approval'|'On order' }]
+// lines: [{ code, work, sub, note, qty, price, approval: 'Approved'|'Declined'|'Awaiting approval', stock?, stockTone? }]
+// (UX walk-through 3 L1: "On order" is an In stock word, not an approval.)
 // toolbar: default Add item/Scan barcode/Print; quoteAction adds "Send
 // quote" for the quoting stage (task: quote stage needs a "Send quote" action
 // here as well as in the footer).
@@ -206,6 +207,10 @@ const photoBtn = (l, h = 44) => (l.photos === undefined ? '' : `<button type="bu
 const reasonCell = (l) => `<span style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; white-space: nowrap">${l.note ? esc(l.note) : l.pairWith ? '' : `<span style="font-style: italic">Reason for the customer</span>`}${l.pairWith ? `<label style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: ${C.ink}">Goes with<select style="min-height: 44px; box-sizing: border-box; padding: 0 6px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 12px; color: ${C.ink}"><option>${esc(l.pairWith)}</option><option>Nothing</option></select></label>` : ''}${photoBtn(l)}</span>`;
 // Audit L6 (journey 4): once sent, Needed or Optional stays as grey text.
 const approvalCell = (l, tone) => (l.need ? needToggle(l) : l.needText ? `<span style="display: inline-flex; align-items: center; gap: 6px">${badge(l.approval, tone)}<span style="font-size: 12px; color: ${C.muted}">${esc(l.needText)}</span></span>` : badge(l.approval, tone));
+// The line's In stock cell. UX walk-through 3 L1, H1, M2: a part not here
+// yet ("On order"), or one that needs ordering again ("Sold at the till —
+// reorder"), is amber (stockTone: 'amber'); "Arrived" stays green.
+const stockText = (l, fallback = '—') => (l.stock ? `<span style="font-weight: 600; color: ${l.stockTone === 'amber' ? C.warnInk : C.successInk}">${esc(l.stock)}</span>` : fallback);
 // UX walk-through 1 H1: the hint says when a quote goes, or that none is needed.
 const quoteHintText = (q) => (q === 'within' ? 'Within Maya’s £200 limit — no quote needed. She’ll be told what was added.' : 'Quotes are sent when the customer asked to be called first, or the total is over their limit.');
 export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', totalValue, footerNote = '', quoteAction = false, doneH = 34 } = {}) {
@@ -258,7 +263,7 @@ ${tdF(`<span><span style="font-weight: 600">${esc(l.work)}</span><span style="fo
 ${tdF(`<label aria-label="${esc(l.work)} done" style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: ${doneH}px; cursor: pointer"><input type="checkbox" ${(l.done ?? l.approval === 'Approved') ? 'checked' : ''} style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}"></label>`, 'text-align: center; padding-top: 0; padding-bottom: 0')}
 ${tdF(l.photos !== undefined ? reasonCell(l) : l.note ? esc(l.note) : '—', `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(l.qty))}
-${tdF(l.stock ? `<span style="font-weight: 600; color: ${C.successInk}">${esc(l.stock)}</span>` : '—', `color: ${C.muted}; font-size: 12px`)}
+${tdF(stockText(l), `color: ${C.muted}; font-size: 12px`)}
 ${tdF(mono(`£${l.price.toFixed(2)}`))}
 ${tdF(mono(`£${l.price.toFixed(2)}`, `font-weight: 600; ${totalStrike}`))}
 ${tdF(approvalCell(l, approvalTone(l.approval)))}
@@ -351,6 +356,7 @@ ${detailedNotesButton(checkedCount, totalCount, notedCount, checklistHref)}
 <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-top: 3px">
 <span style="font-size: 15px; font-weight: 600; color: ${C.ink}">${esc(l.work)}</span>
 <span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)} · Qty ${esc(l.qty)}</span>
+${l.stock ? `<span style="font-size: 13px">In stock: ${stockText(l)}</span>` : ''}
 ${l.note ? `<span style="font-size: 13px; color: ${C.ink}">${esc(l.note)}</span>` : ''}
 ${l.need || l.photos !== undefined ? `<div style="padding-top: 2px; display: flex; flex-wrap: wrap; gap: 6px">${approvalCell(l, approvalTone(l.approval))}${photoBtn(l)}${l.pairWith ? `<span style="font-size: 13px; color: ${C.muted}; align-self: center">Goes with ${esc(l.pairWith)}</span>` : ''}</div>` : `<div style="padding-top: 2px">${badge(l.approval, approvalTone(l.approval))}</div>`}
 </div>

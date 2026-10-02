@@ -2,8 +2,8 @@
 // left (decision 3), each area's settings as folding sections, saved as you
 // go with a "Saved · Undo" note (decision 4). Shared by setup.mjs and by
 // diary.mjs, whose Diary & storage settings now sit in Settings › Workshop
-// (journey 8 decision 12). Drawn for Jack Lewis (Manager) unless a board
-// passes `who`.
+// (journey 8 decision 12). Drawn for Jack Lewis (Owner — UX walk-through 2 (decision 6)) unless a
+// board passes `who`.
 //
 // Size-aware (decision 21): setSize() picks desktop, tablet or phone before a
 // board is drawn. Tablet keeps the desktop layout with a narrower area list;
@@ -24,7 +24,13 @@ export const isPhone = () => SIZE === 'phone';
 export function withSize(s, fn) { const was = SIZE; SIZE = s; try { return fn(); } finally { SIZE = was; } }
 const dims = () => ({ desktop: [DW, DH], tablet: [TW, TH], phone: [PW, PH] })[SIZE];
 
-export const MANAGER = { role: 'M', person: 'Jack Lewis', roleName: 'Manager' };
+// UX walk-through 2 (decision 6): Jack Lewis is the Owner in every example. The
+// name MANAGER is kept so the modules that import it are unchanged; boards
+// drawn "as a manager sees it" keep their content.
+export const MANAGER = { role: 'O', person: 'Jack Lewis', roleName: 'Owner' };
+// UX walk-through 2 (decision 6): boards drawn as a manager's view are signed in
+// as a placeholder manager; Jack Lewis stays the Owner wherever he appears.
+export const MANAGER_VIEW = { role: 'M', person: '[Manager]', roleName: 'Manager' };
 export const note = (t) => `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
 
 // The staff frame at the current size, with `active` lit in the sidebar.
@@ -214,10 +220,12 @@ export const eodFolds = (open = {}) =>
 export const STAFF_INTRO = 'Who works here, and what each person can do.';
 // Management oversight (journey 20) decisions 2 and 3: where people are
 // signed in, and the alerts that reach Today.
-export const staffFolds = (open = {}) => (lightspeedShop()
+// UX walk-through 2 (decision 6): `people` is the People summary — a manager's view adds
+// the [Manager] placeholder.
+export const staffFolds = (open = {}, people = 'Jack Lewis, Jo Taylor, Alex Morgan') => (lightspeedShop()
   // Lightspeed shops (journey 21 audit M2): no tills, no till alerts.
-  ? fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] phones and computers', open.devices || '')
-  : fold('People', 'Jack Lewis, Jo Taylor, Alex Morgan', open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] tills · [n] phones and computers', open.devices || '') + fold('Alerts on Today', 'Discounts, refunds, voids, prices below cost · set by the owner', open.alerts || ''));
+  ? fold('People', people, open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] phones and computers', open.devices || '')
+  : fold('People', people, open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] tills · [n] phones and computers', open.devices || '') + fold('Alerts on Today', 'Discounts, refunds, voids, prices below cost · set by the owner', open.alerts || ''));
 export const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
 export const shopFolds = (open = {}, sites = 'Bolton') =>
   fold('Shop details', 'North Street Cycles', open.details || '')

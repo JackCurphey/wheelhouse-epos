@@ -155,7 +155,10 @@ screens['till-search'] = { desktop: tillRail(false, 'maya') };
 // Holds the Accessibility settings (Workshop day decision 57 plus decision 7's
 // folded sidebar). Decision 6: each switch applies at once — no Save button.
 // Reports and accounts decision 7: a "Show graphs in reports" switch (opt-in here).
-export function yourSettingsDialog(size = 'desktop', { graphs = false } = {}) {
+// UX walk-through 4 H1 (option 1): `pin: false` is someone with no PIN yet
+// (skipped it at first sign-in, or it was cleared) — "No PIN yet" and
+// "Get your PIN", which opens the first-time "Your till PIN" pop-up.
+export function yourSettingsDialog(size = 'desktop', { graphs = false, pin = true } = {}) {
   const P = size === 'phone';
   const rows = [
     a11ySettingRow('ys-symbols', 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview(size)),
@@ -170,7 +173,9 @@ export function yourSettingsDialog(size = 'desktop', { graphs = false } = {}) {
   if (graphs) rows.push(a11ySettingRow('ys-graphs', 'Show graphs in reports', 'A graph above each report. The figures are always in the table below it, for screen readers too.', true));
   // Journey B decision 6: each person sets their own till PIN here.
   const label = (t) => `<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${t}</div>`;
-  const pinBlock = `${label('Till')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Till PIN</span><span aria-label="PIN is set" style="font-family: ${MONO}; font-size: 18px; letter-spacing: 3px">••••</span></div><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Checks you in at the till and puts your name on sales. Only you know it.</span>${button('Change PIN', { variant: 'default', block: true, href: `pin-change-${size}.dc.html` })}</div>`)}`;
+  const pinBlock = pin
+    ? `${label('Till')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Till PIN</span><span aria-label="PIN is set" style="font-family: ${MONO}; font-size: 18px; letter-spacing: 3px">••••</span></div><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Checks you in at the till and puts your name on sales. Only you know it.</span>${button('Change PIN', { variant: 'default', block: true, href: `pin-change-${size}.dc.html` })}</div>`)}`
+    : `${label('Till')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Till PIN</span><span style="font-size: 14px; font-weight: 600; color: ${C.warnInk}">No PIN yet</span></div><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">You need one to check in at the till. Wheelhouse picks it, and only you see it.</span>${button('Get your PIN', { block: true, href: `pin-first-${size}.dc.html` })}</div>`)}`;
   // Management oversight (journey 20) decision 4: feedback to the
   // Wheelhouse team, for everyone.
   const helpBlock = `${label('Help')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 15px; font-weight: 700">Something wrong or missing?</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Tell the Wheelhouse team. We see which screen you were on.</span>${button('Send feedback', { variant: 'default', block: true, href: `send-feedback-${size}.dc.html` })}</div>`)}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 15px; font-weight: 700">What Wheelhouse records about you</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Sales, discounts, refunds, voids, price and job changes are kept with your name, for [period]. Owners and managers can see them.</span>${button('See my own activity', { variant: 'default', block: true, href: `my-activity-${size}.dc.html` })}</div>`)}`;
@@ -273,6 +278,12 @@ screens['till-search'].phone = tillPhone('maya');
 // ---- Your settings ----
 screens['your-settings'].tablet = `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${yourSettingsDialog('tablet')}</div></div>`;
 screens['your-settings'].phone = `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone')}</div>`;
+// UX walk-through 4 H1: Your settings for someone with no PIN yet.
+screens['your-settings-no-pin'] = {
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 28px; box-sizing: border-box">${yourSettingsDialog('desktop', { pin: false })}</div></div>`,
+  tablet: `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${yourSettingsDialog('tablet', { pin: false })}</div></div>`,
+  phone: `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone', { pin: false })}</div>`,
+};
 
 // ---- Customer website ----
 export function siteTablet(themeKey, content = null, active = 'Shop') {
@@ -361,6 +372,7 @@ export const TITLES = {
   'site': 'Customer website — default theme (Soft sand)',
   'site-ocean': 'Customer website — a shop’s own theme (example: Ocean Blue, Book a repair as its button)',
   'your-settings': 'Your settings — opened from your name',
+  'your-settings-no-pin': 'Your settings — no PIN yet, Get your PIN', // UX walk-through 4 H1
   'till-rail': 'Till — sidebar folded to the rail (rest on it to unfold)',
   'till-rail-open': 'Till — rail unfolded',
   'till-search': 'Till — one search finds products, customers, jobs and online orders', // UX walk-through 2 M4
@@ -370,6 +382,6 @@ export const ROWS = [
   { label: 'App map', screens: ['map'] },
   { label: 'Staff app', screens: ['staff-app', 'staff-app-mechanic', 'staff-app-menu'] },
   { label: 'Till mode', screens: ['till-rail', 'till-rail-open', 'till-search'] },
-  { label: 'Your settings', screens: ['your-settings'] },
+  { label: 'Your settings', screens: ['your-settings', 'your-settings-no-pin'] }, // UX walk-through 4 H1
   { label: 'Customer website', screens: ['site', 'site-menu', 'site-ocean', 'site-ocean-menu'] },
 ];

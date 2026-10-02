@@ -4,7 +4,7 @@
 // recommendation, decision 11).
 //
 // Real example data: Shimano brake pads B05S-RX £28.00; the Trek Domane AL 3;
-// job WH-1042 (Maya Patel); Jack Lewis (Manager), Jo Taylor (Staff), Alex
+// job WH-1042 (Maya Patel); Jack Lewis (Owner — UX walk-through 2 (decision 6)), Jo Taylor (Staff), Alex
 // Morgan (Mechanic); Bolton; Till B1; Jack's examples — bearings (inner
 // diameter, outer diameter, height), derailleurs (number of gears), "bearing
 // 30 mm". Every other product, price, cost, margin and count is a bracketed
@@ -143,9 +143,15 @@ ${note('Every derailleur — already in stock or added later — gets these deta
 // The page is titled with the product. Left: stock first, then details, then
 // price and cost (no cost for Staff, M5). Right: history, each line a link.
 let SITES = false;
+// UX walk-through 3 H1 (option 1): booking in holds what a job is waiting
+// for, shown beside In stock until the pad is used on the job or the job is
+// cancelled.
+const heldLine = `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; font-size: 15px"><span style="display: inline-flex; align-items: center; gap: 6px; color: ${C.warnInk}; font-weight: 600">${icon('workshop', 16)}1 held for job WH-1042</span><a href="#" aria-label="Open job WH-1042" style="${linkStyle}">Open the job</a></div>`;
+// UX walk-through 3 L3: one line saying what the shop's stock value includes.
+const valueLine = note('Stock value includes stock held for customers. Stock on its way between shops counts at the shop it’s going to.');
 const summary = ({ codes, kind = 'part' }) => `<div style="display: flex; flex-direction: column; gap: 12px; min-width: 0">
 ${card(`<div style="padding: 16px 18px; display: flex; gap: 14px; align-items: center"><div role="img" aria-label="Photo" style="width: 72px; height: 72px; flex-shrink: 0; border-radius: 8px; border: 1px dashed ${C.border}; background: ${C.mutedBg}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: ${C.muted}">[Photo]</div><div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">${codes}</span>${STAFF ? '' : `<div>${button('Edit', { variant: 'default' })}</div>`}</div></div>`, 'flex-shrink: 0')}
-${box('In stock', `${SITES ? `${kv('Bolton', mono('[n]'))}${kv('[Site 2]', mono('[n]'))}${kv('On its way to [Site 2]', mono('[n]'))}` : kv('Bolton', mono('[n]'))}${kv('Low-stock level', mono(SITES ? '[n] each' : '[n]'))}
+${box('In stock', `${SITES ? `${kv('Bolton', mono('[n]'))}${kv('[Site 2]', mono('[n]'))}${kv('On its way to [Site 2]', mono('[n]'))}` : kv('Bolton', mono('[n]'))}${kind === 'part' ? heldLine : ''}${kv('Low-stock level', mono(SITES ? '[n] each' : '[n]'))}${SITES ? valueLine : ''}
 <div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">${button('Adjust stock', { variant: 'default' })}${button('Send to another shop', { variant: 'default' })}</div>`)}
 ${box('Details · [Category]', `${kv('[Detail]', '[value] [unit]')}${kv('[Detail]', '[value] [unit]')}`, STAFF ? '' : linkBtn('Edit', 'Edit details'))}
 ${box(STAFF ? 'Price' : 'Price and cost', STAFF ? `${kv('Price', mono(kind === 'part' ? '£28.00' : '£[price]'))}${kv('VAT', '[VAT rate]')}` : `${kv('Price', mono(kind === 'part' ? '£28.00' : '£[price]'))}${kv('Cost', mono('£[cost]'))}${kv('Margin', '[n]%')}${kv('VAT', '[VAT rate]')}${kv('Show on website', 'On · as [Category]')}`)}
@@ -200,11 +206,18 @@ const pricesDone = () => listBoard({ query: '[Supplier]', rows: SUP_ROWS.map((r)
 // ---------- Decision 6: anyone adjusts, with a reason (audit H2, M4) ----------
 // The change and the count after it are joined: type either. No reason is
 // picked until someone picks one; the reasons follow the sign.
-const adjustPopup = () => popup('adj-title', 'Adjust stock', `${PADS} · B05S-RX · at Bolton · ${mono('[n]')} in stock now`, `
+// UX walk-through 3 L2: "Returned to supplier" becomes "Faulty — to return
+// to supplier", which puts the item on the delivery's To return list.
+const ADJ_REASONS = ['Damaged', 'Lost or stolen', 'Used in the workshop', 'Faulty — to return to supplier', 'Other'];
+const FAULTY = 3;
+// UX walk-through 3 L4: the greyed Adjust says why, linked to the button.
+const adjustBtn = (on) => on ? button('Adjust') : `<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">${button('Adjust').replace('<button', '<button aria-disabled="true" aria-describedby="adj-why"').replace('style="', 'style="opacity: 0.45; ')}<span id="adj-why" style="font-size: 13px; color: ${C.muted}">Pick a reason to adjust</span></span>`;
+const adjustPopup = (reason = -1) => popup('adj-title', 'Adjust stock', `${PADS} · B05S-RX · at Bolton · ${mono('[n]')} in stock now`, `
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'auto auto'}; gap: 16px; align-items: end; justify-content: start"><div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">Change</span>${qty('−1', 'Change in stock')}</div><div style="display: flex; flex-direction: column; gap: 6px"><label for="adj-after" style="font-size: 14px; font-weight: 600">In stock after</label>${input('In stock after', '[n]', { id: 'adj-after', w: '100px', monoFont: true })}</div></div>
-${radios('Reason', ['Damaged', 'Lost or stolen', 'Used in the workshop', 'Returned to supplier', 'Other'], -1)}
+${radios('Reason', ADJ_REASONS, reason)}
 <div style="display: flex; flex-direction: column; gap: 6px"><label for="adj-note" style="font-size: 14px; font-weight: 600">Note (needed for Other)</label>${input('Note', '', { id: 'adj-note' })}</div>
-${note('Going up instead? The reasons become Found and Other. It goes into the stock history with your name; big changes show on the manager’s Today.')}`, `${button('Cancel', { variant: 'default' })}${button('Adjust').replace('<button', '<button aria-disabled="true"').replace('style="', 'style="opacity: 0.45; ')}`, 620);
+${reason === FAULTY ? `<p style="margin: 0; display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.5">${icon('inbox', 16)}<span>Takes it out of stock and puts it on <strong>To return to [Supplier]</strong> in Deliveries and orders. Pressing “Returned” there records it as sent back.</span></p>` : note('“Faulty — to return to supplier” puts it on that supplier’s To return list in Deliveries and orders.')}
+${note('Going up instead? The reasons become Found and Other. It goes into the stock history with your name; big changes show on the manager’s Today.')}`, `<span style="align-self: flex-start">${button('Cancel', { variant: 'default' })}</span>${adjustBtn(reason >= 0)}`, 620);
 const adjustSetting = () => settingsPage('stock', 'Stockroom', STOCK_INTRO, stockFolds({ adjust: `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><label for="adj-over" style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Show on Today when an adjustment is worth more than</span><span style="font-size: 13px; color: ${C.muted}">At cost · for owners and managers</span></label>${input('Amount', '£[amount]', { id: 'adj-over', w: '120px', monoFont: true })}</div>
 ${note('Every adjustment is in its product’s stock history, whatever its value.')}` }));
 
@@ -218,31 +231,55 @@ const deliveriesPage = (content) => pageIn('deliveries', 'Deliveries and orders'
 const incomingBoard = () => deliveriesPage(`${box('A delivery arrived?', `${note('Scan each item as it comes out of the box. Works with or without an order.')}<div>${button('Receive a delivery', { variant: 'default' })}</div>`)}
 ${box('On its way from another shop', `<div role="list">${line('From [Site 2] · [n] items', 'Transfer T-[0000] · sent [date] by [name]', `${tag('On its way', 'grey')}${button('Receive it').replace('<button', '<button aria-label="Receive transfer T-[0000] from [Site 2]"')}`)}</div>`)}
 ${box('On its way to other shops', `<div role="list">${line('To [Site 2] · [n] items', 'Transfer T-[0000] · sent [date] by Jack Lewis', `${tag('On its way', 'grey')}${linkBtn('Cancel this send', 'Cancel transfer T-[0000] to [Site 2]')}`)}</div>${note('Cancelling brings the stock back to Bolton; both histories say so.')}`)}`);
+// UX walk-through 3 M9: receiving a transfer uses the delivery's list — a
+// typed count between − and +, "Problem?" (Damaged, Missing), the scan
+// announced, and the job flag, which sets "Part arrived" when booked in.
+// Drawn as Staff, since everyone can receive. L1: "1 missing", as a delivery.
+const waitingLead = `<span style="display: inline-flex; color: ${C.warnInk}" aria-hidden="true">${icon('workshop', 18)}</span>`;
+const alertLead = `<span style="display: inline-flex; color: ${C.warnInk}" aria-hidden="true">${icon('alert', 18)}</span>`;
+const withProblem = (name, right) => `<span style="display: inline-flex; align-items: center; gap: 8px">${right}${linkBtn('Problem?', `Problem with ${name}`)}</span>`;
 const receiveTransfer = () => pageIn('deliveries', 'Receive transfer T-[0000]', box('From [Site 2] · sent [date]', `${PH}<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input class="st-ph" type="search" aria-label="Scan each item" placeholder="Scan each item" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
-<div role="list">${line(PADS, 'B05S-RX · sent [n]', `${mono('[n]', 'font-size: 15px')} ${tag('All here')}`)}${line('[Product]', '[Supplier code] · sent [n]', `${mono('[n]', 'font-size: 15px')} ${tag('1 short', 'warn')}`)}</div>
-<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px"><span style="font-size: 14px; color: ${C.muted}">1 short — [Site 2] will be told</span>${button('Book in [n] items')}</div>`), MANAGER, backTo('Deliveries and orders', 'tr-incoming-desktop.dc.html'));
+<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added ${PADS} · 1 — job WH-1042 is waiting for 1</p>
+<div role="list">${line(PADS, `B05S-RX · sent [n] · <strong style="color: ${C.warnInk}">Job WH-1042 is waiting for 1</strong>`, withProblem(PADS, qty('[n]', PADS)), waitingLead)}${line('[Product]', `[Supplier code] · sent [n] · <strong style="color: ${C.warnInk}">Missing · 1</strong>`, withProblem('[Product]', qty('[n]', '[Product]')), alertLead)}</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px"><span style="font-size: 14px; color: ${C.muted}">${mono('[n]')} items to book in · 1 missing — [Site 2] will be told</span>${button('Book in [n] items')}</div>
+${note('Booking in tells job WH-1042 its part has arrived.')}`), JO, backTo('Deliveries and orders', 'tr-incoming-desktop.dc.html'));
+// UX walk-through 3 M9: "Problem?" on a transfer line — Damaged or Missing.
+const TR_PROBLEM = {
+  Damaged: 'Damaged items aren’t added to stock.',
+  Missing: 'Missing items are flagged to both shops.',
+};
+const transferProblem = (kind = 'Damaged') => popup('tp-title', 'Something wrong?', `[Product] · [Supplier code] · sent [n]`, `
+<div role="group" aria-label="What’s wrong" style="display: flex; flex-wrap: wrap; gap: 8px">${Object.keys(TR_PROBLEM).map((t) => pillBtn(t, t === kind)).join('')}</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 15px; font-weight: 600">How many</span>${qty('1', `How many ${kind.toLowerCase()}`)}</div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="tp-note" style="font-size: 14px; font-weight: 600">Note (optional)</label>${input('Note', '', { id: 'tp-note' })}</div>
+${note(TR_PROBLEM[kind])}`, `${button('Cancel', { variant: 'default' })}${button(`Mark as ${kind.toLowerCase()}`)}`, 560);
 
 // ---------- Decision 5: a stock take, counted blind (audit H1, M2, M3, M16) ----------
 const takePage = (title, content, who = MANAGER, back = '') => page('stocktake', title, `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-width: 960px">${back}${content}</div>`, who);
 const takeHub = (staff = false) => takePage('Stock take', `${staff ? '' : box('Count stock', `${note('Count the whole shop, a category or an area. Staff join on their phones; the shop stays open.')}<div>${button('Start a count')}</div>`)}
 ${box('Counts in progress', `<div role="list">${line('[Area]', `Started [time] by Jack Lewis · ${mono('[n]')} items counted · Jo Taylor and Alex Morgan counting`, `${tag('Counting', 'grey')}${staff ? button('Join', { variant: 'default' }).replace('<button', '<button aria-label="Join the count of [Area]"') : link('Open', 'Open the count of [Area]')}`)}${staff ? '' : line('[Category]', 'Started [time] by Jack Lewis · everyone has finished', `${tag('Ready to check', 'grey')}${link('Check it', 'Check the count of [Category]')}`)}</div>`)}
 ${staff ? note('Starting a count, and checking and applying it, are for managers.') : box('Finished counts', `<div role="list">${line('Whole shop', `Applied [date] by Jack Lewis · ${mono('[n]')} products changed · £[value] under`, link('Open', 'Open the whole-shop count from [date]'))}</div>`)}`, staff ? JO : MANAGER);
+// UX walk-through 3 H2 (option 1): every movement during the count is allowed
+// for, not just sales, and held stock is left out of "Expected".
 const startPopup = (kind = 'area') => popup('tk-title', 'Start a count', 'Staff can join it from Stock take on any device', `
 ${radios('What to count', ['Whole shop', 'A category', 'An area', 'Below zero'], kind === 'category' ? 1 : 2, false)}
 ${kind === 'category' ? `${comboBox('tk-cat', 'Which category', 'Drivetrain › Derailleurs')}${note('Everything in this category — and nothing else — is compared.')}` : `<div style="display: flex; flex-direction: column; gap: 6px"><label for="tk-area" style="font-size: 14px; font-weight: 600">Which area</label>${input('Which area', '[Area]', { id: 'tk-area' })}<div role="listbox" aria-label="Areas used before" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span style="font-size: 13px; color: ${C.muted}">Used before:</span>${['[Area]', '[Area]'].map((t) => `<span role="option" aria-selected="false" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 14px; font-weight: 600">${t}</span>`).join('')}</div></div>${note('Only what’s scanned in this area is compared — products nobody scans are left as they are.')}`}
-${note('Counters don’t see what Wheelhouse expects, so they count what’s really there. Sales during the count are allowed for.')}`, `${button('Cancel', { variant: 'default' })}${button('Start the count')}`, 600);
+${note('Counters don’t see what Wheelhouse expects, so they count what’s really there. Anything sold, booked in, used on a job, sent or adjusted during the count is allowed for, and stock held for online orders or jobs isn’t expected on the shelf.')}`, `${button('Cancel', { variant: 'default' })}${button('Start the count')}`, 600);
 const countBoard = (below = false) => takePage(below ? 'Counting: below zero' : 'Counting [Area]', box(below ? 'Find and scan these' : 'Scan what’s here', `${PH}<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 2px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('scan', 20)}<input class="st-ph" type="search" aria-label="Scan each item, or type to find it" placeholder="Scan each item, or type to find it" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
 ${below ? `<h3 style="margin: 4px 0 0; font-size: 15px; font-weight: 700">Still to find · ${mono('[n]')}</h3><div role="list">${line('[Product with sizes]', 'Size M · [Colour 1]', tag('Not found yet', 'grey'))}${line('[Product]', '[Supplier code]', tag('Not found yet', 'grey'))}</div><h3 style="margin: 4px 0 0; font-size: 15px; font-weight: 700">Counted</h3>` : `<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added ${PADS} · 1</p>`}
 <div role="list">${below ? line('[Product]', '[Supplier code]', qty('[n]', 'Count of [Product]')) : `${line('[Product]', `[Supplier code] · <strong style="color: ${C.ink}">Recount asked by Jack Lewis</strong>`, qty('', 'Count of [Product]'))}${line(PADS, 'B05S-RX', qty('[n]', `Count of ${PADS}`))}${line('[Product with sizes]', 'Size M · [Colour 1]', qty('[n]', 'Count of [Product with sizes], size M'))}`}</div>
 <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px"><span style="font-size: 14px; color: ${C.muted}">${mono('[n]')} items counted by you${below ? '' : ' · Alex Morgan is counting too'}</span>${button('I’ve finished my part')}</div>
-${note(below ? 'Started from Today by Jack Lewis. Staff can join from Stock take. Numbers aren’t shown — count what you find.' : 'Count what’s on the shelf. Anything sold while you count is allowed for.')}`), below ? MANAGER : JO, backTo('Stock take', 'tk-hub-desktop.dc.html'));
+${note(below ? 'Started from Today by Jack Lewis. Staff can join from Stock take. Numbers aren’t shown — count what you find.' : 'Count what’s on the shelf. Anything sold, booked in, used or sent while you count is allowed for.')}`), below ? MANAGER : JO, backTo('Stock take', 'tk-hub-desktop.dc.html'));
 const DIFF_COLS = () => (isPhone() ? '1fr auto' : 'minmax(0, 2fr) 90px minmax(0, 1.2fr) minmax(0, 1.1fr) auto');
 const diffRow = (name, sub, expected, counted, diff, value, tone, by = '', recount = false) => `<div role="row" style="display: grid; grid-template-columns: ${DIFF_COLS()}; gap: 12px; align-items: center; min-height: 56px; box-sizing: border-box; padding: 8px 0; border-top: 1px solid ${C.border}"><span role="cell" style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${isPhone() ? '' : `<span role="cell" style="font-family: ${MONO}; font-size: 15px">${expected}</span><span role="cell" style="display: flex; flex-direction: column; gap: 2px"><span style="font-family: ${MONO}; font-size: 15px">${counted}</span>${by ? `<span style="font-size: 12px; color: ${C.muted}">${by}</span>` : ''}</span>`}<span role="cell">${recount ? tag('Recount asked', 'grey') : tag(`${diff} · ${value}`, tone)}</span>${isPhone() ? '' : `<span role="cell">${recount ? '' : linkBtn('Recount', `Ask for ${name} to be recounted`)}</span>`}</div>`;
+// UX walk-through 3 H2: held stock is named under the product and left out
+// of Expected; each kind of movement during the count gets its own line.
 const diffBoard = () => takePage('Check the count of [Category]', `${box('[Category] · counted [date]', `<p style="margin: 0; font-size: 15px">${mono('[n]')} products counted · ${mono('[n]')} match · ${mono('[n]')} differ · <strong>£[value] under</strong> in all</p>
 <div role="table" aria-label="Differences, largest value first">${isPhone() ? '' : `<div role="row" style="display: grid; grid-template-columns: ${DIFF_COLS()}; gap: 12px; font-size: 13px; font-weight: 700; color: ${C.muted}"><span role="columnheader">Product</span><span role="columnheader">Expected</span><span role="columnheader">Counted</span><span role="columnheader" aria-sort="descending">Difference</span><span style="width: 76px"></span></div>`}
-${diffRow('[Product with sizes]', 'Size M · [Colour 1] · was below zero', '−1', '[n]', '[n] over', '£[value]', 'grey')}${diffRow(PADS, 'B05S-RX · [n] sold during the count, allowed for', '[n]', '[n]', '[n] under', '£[value]', 'warn', 'Jo Taylor [n] + Alex Morgan [n]')}${diffRow('[Product]', '[Supplier code]', '[n]', '', '', '', 'grey', '', true)}</div>
+${diffRow('[Product with sizes]', 'Size M · [Colour 1] · was below zero', '−1', '[n]', '[n] over', '£[value]', 'grey')}${diffRow(PADS, `B05S-RX<br>[n] held: order [order number] at [Shelf name] · job WH-1042 — not expected on the shelf<br>[n] sold during the count, allowed for<br>[n] booked in during the count, allowed for`, '[n]', '[n]', '[n] under', '£[value]', 'warn', 'Jo Taylor [n] + Alex Morgan [n]')}${diffRow('[Product]', '[Supplier code]', '[n]', '', '', '', 'grey', '', true)}</div>
 <details style="border-top: 1px solid ${C.border}; padding-top: 8px"><summary style="display: flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: 600; cursor: pointer">Not counted · ${mono('[n]')} products · expected ${mono('[n]')} in all</summary></details>
 <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">${note('Products nobody scanned are left as they are.')}${button('Count them as none', { variant: 'default' })}</div>
+${note('Expected leaves out stock held for online orders and jobs. Anything sold, booked in, used on a job, sent or adjusted during the count is allowed for.')}
 <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px; border-top: 1px solid ${C.border}"><span style="font-size: 14px; color: ${C.muted}">Products that match aren’t listed. Recount sends a line back to the counters.</span>${button('Apply to [n] products')}</div>`)}`, MANAGER, backTo('Stock take', 'tk-hub-desktop.dc.html'));
 const appliedBoard = () => takePage('Stock take', `${toast('Count applied · [Category] · [n] products corrected')}
 ${box('Count applied', `<p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}[Category] · stock corrected for ${mono('[n]')} products</p>
@@ -268,6 +305,7 @@ def('st-list-ticked', () => tickedBoard());
 def('st-prices', () => overlay(tickedBoard(), pricesPopup()));
 def('st-prices-done', () => pricesDone());
 def('st-adjust', () => overlay(productBoard(), adjustPopup()));
+def('st-adjust-faulty', () => overlay(productBoard(), adjustPopup(FAULTY))); // UX walk-through 3 L2
 def('st-today-adjust', () => today({ adjusted: true }));
 def('st-setting-adjust', () => adjustSetting());
 def('st-today-below', () => today({ below: true }));
@@ -276,6 +314,7 @@ def('tr-sites', () => sitesBoard());
 def('tr-send', () => overlay(sitesBoard(), sendPopup()));
 def('tr-incoming', () => incomingBoard());
 def('tr-receive', () => receiveTransfer());
+def('tr-problem', () => overlay(receiveTransfer(), transferProblem('Missing'))); // UX walk-through 3 M9
 def('tr-today-short', () => today({ transferShort: true }));
 def('tk-hub', () => takeHub());
 def('tk-hub-staff', () => takeHub(true));
@@ -313,6 +352,7 @@ export const TITLES = {
   'st-prices': 'Change prices: by a percentage, rounded, with a preview',
   'st-prices-done': 'Prices changed, with Undo',
   'st-adjust': 'Adjust stock: the change or the count after it, and a reason',
+  'st-adjust-faulty': 'Adjust stock: faulty, onto the supplier’s To return list', // UX walk-through 3 L2
   'st-today-adjust': 'Today: a big adjustment, for the manager',
   'st-setting-adjust': 'Settings › Stockroom: when an adjustment shows on Today',
   'st-today-below': 'Today: products below zero, with Count them',
@@ -320,22 +360,24 @@ export const TITLES = {
   'tr-sites': 'A product’s stock at each shop, and on its way',
   'tr-send': 'Send to another shop',
   'tr-incoming': 'Deliveries and orders: on its way, in and out',
-  'tr-receive': 'Receiving a transfer: one short',
+  'tr-receive': 'Receiving a transfer, as Staff: typed counts, Problem?, the job flag', // UX walk-through 3 M9
+  'tr-problem': 'A transfer line marked missing', // UX walk-through 3 M9
   'tr-today-short': 'Today: a transfer arrived short',
   'tk-hub': 'Stockroom › Stock take: counts in progress and finished',
   'tk-hub-staff': 'Stock take as Staff see it: join a count',
   'tk-start': 'Start a count: an area, with areas used before',
   'tk-start-category': 'Start a count: a category',
   'tk-count': 'Counting, without the expected number; a recount asked',
-  'tk-diff': 'Check the count: largest first, recount, not counted',
+  'tk-diff': 'Check the count: held stock left out, every movement allowed for', // UX walk-through 3 H2
   'tk-applied': 'Count applied, with Undo',
 };
+// UX walk-through 3: new boards slotted beside the ones they follow.
 export const ROWS = [
   { label: 'Finding stock', screens: ['st-list', 'st-list-staff', 'st-search-measure', 'st-filter-bearings', 'st-filter-derailleurs', 'st-search-size', 'st-list-none', 'st-list-unknown', 'st-list-new'] },
   { label: 'Categories and their details', screens: ['st-categories', 'st-category-edit'] },
   { label: 'A product', screens: ['st-product', 'st-product-staff', 'st-product-bike', 'st-product-sizes'] },
   { label: 'Changing prices', screens: ['st-list-ticked', 'st-prices', 'st-prices-done'] },
-  { label: 'Correcting stock', screens: ['st-adjust', 'st-today-adjust', 'st-setting-adjust', 'st-today-below', 'tk-count-below'] },
-  { label: 'Between shops', screens: ['tr-sites', 'tr-send', 'tr-incoming', 'tr-receive', 'tr-today-short'] },
+  { label: 'Correcting stock', screens: ['st-adjust', 'st-adjust-faulty', 'st-today-adjust', 'st-setting-adjust', 'st-today-below', 'tk-count-below'] },
+  { label: 'Between shops', screens: ['tr-sites', 'tr-send', 'tr-incoming', 'tr-receive', 'tr-problem', 'tr-today-short'] },
   { label: 'Stock take', screens: ['tk-hub', 'tk-hub-staff', 'tk-start', 'tk-start-category', 'tk-count', 'tk-diff', 'tk-applied'] },
 ];

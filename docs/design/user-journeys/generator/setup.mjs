@@ -5,17 +5,20 @@
 // for the overall shape of Settings (Office › Settings, Owners and Managers —
 // app map decision 8), desktop only, each with the Till area open as the
 // example. Real example data only: North Street Cycles, Bolton, Till B1, Jack
-// Lewis (Manager), the till's quick-button groups (Workshop, Parts,
+// Lewis (Owner — UX walk-through 2 (decision 6)), the till's quick-button groups (Workshop, Parts,
 // Accessories) and buttons (Standard service £65, Fit & adjust brakes £18,
 // Replace gear cable £12). Everything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
-import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO, payFolds, PAY_INTRO, TILL_INTRO, tillFolds, EOD_INTRO, eodFolds, STAFF_INTRO, staffFolds, SHOP_INTRO, shopFolds, MSG_INTRO, msgFolds, DATA_INTRO, dataFolds } from './settings-frame.mjs';
+import { AREAS, fold, pill, offer, choice, note, shell, page, settingsPage, settingsList, popup, overlay, setSize, size, isPhone, workshopFolds, WORKSHOP_INTRO, payFolds, PAY_INTRO, TILL_INTRO, tillFolds, EOD_INTRO, eodFolds, STAFF_INTRO, staffFolds, SHOP_INTRO, shopFolds, MSG_INTRO, msgFolds, DATA_INTRO, dataFolds, MANAGER, MANAGER_VIEW } from './settings-frame.mjs';
 import { screens as diaryScreens } from './diary.mjs';
 import { lightspeedShop } from './shop-mode.mjs';
 
 export const screens = {};
-// The shop's owner — no owner name exists in the example data (decision 16).
-const OWNER = { role: 'O', person: 'Shop owner', roleName: 'Owner' };
+// The shop's owner.
+// UX walk-through 3 (decision 6 leftover): the Owner boards are signed in as
+// Jack Lewis · Owner, not a "Shop owner" placeholder. settings-frame's MANAGER
+// is already Jack Lewis · Owner.
+const OWNER = MANAGER;
 const recipes = [];
 const def = (id, fn) => recipes.push([id, fn]);
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
@@ -136,7 +139,7 @@ def('set-till-quick-saved', () => settingsPage('till', 'Till', TILL_INTRO, tillF
 def('set-till-reasons', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ reasons: reasonsOpen() })));
 def('set-till-receipts', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ receipts: receiptsOpen() })));
 def('set-till-printer', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ printer: printerOpen() })));
-def('set-till-tills', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsOpen() })));
+def('set-till-tills', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsOpen() }), { who: MANAGER_VIEW })); // UX walk-through 2 (decision 6)
 def('set-till-tills-owner', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsOpen(true) }), { who: OWNER }));
 def('set-till-remove', () => overlay(settingsPage('till', 'Till', TILL_INTRO, tillFolds({ tills: tillsOpen(true) }), { who: OWNER }), removeTillDialog()));
 def('set-till-empty', () => settingsPage('till', 'Till', TILL_INTRO, tillFolds({ quick: quickEmpty() }).replace('Workshop, Parts, Accessories', 'None yet'), { who: OWNER }));
@@ -179,14 +182,31 @@ def('set-pay-other', () => settingsPage('payments', 'Payments', PAY_INTRO, payFo
 def('set-pay-card', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ card: payCard() })));
 
 // ---------- Staff and roles (decisions 8–10; signing in 6–7) ----------
-// Seen by Jack Lewis (Manager). Only the Owner adds or removes people.
+// Seen by Jack Lewis (Owner — UX walk-through 2 (decision 6)). Only the Owner adds or removes people.
 const SWITCHES = ['Can use the till', 'Can see reports', 'Can close the day', 'Can order stock', 'Can edit the website', 'Can change settings'];
+// UX walk-through 2 (decision 6): initials skip a placeholder's brackets.
 const personRow = (name, role, extras, { you = false, hover: hv = false } = {}, hover = hv && !isPhone()) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}">
-<span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: ${C.mutedBg}; font-size: 13px; font-weight: 700; flex-shrink: 0">${name.split(' ').map((x) => x[0]).join('')}</span>
+<span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; background: ${C.mutedBg}; font-size: 13px; font-weight: 700; flex-shrink: 0">${name.replace(/[\[\]]/g, '').split(' ').map((x) => x[0]).join('')}</span>
 <span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${esc(name)}${you ? `<span style="font-weight: 400; color: ${C.muted}"> · you</span>` : ''}</span><span style="font-size: 13px; color: ${C.muted}">${esc(role)}${extras ? ` · ${esc(extras)}` : ''}</span></span>
 ${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Open</button>` : `<span style="display: inline-flex; color: ${C.muted}; padding: 0 12px; transform: rotate(-90deg)">${icon('chevron', 16)}</span>`}</div>`;
-const peopleOpen = (hover = true, owner = false) => `<div style="display: flex; flex-direction: column; gap: 8px">${personRow('Jack Lewis', 'Manager', '', { you: !owner })}${personRow('Jo Taylor', 'Staff', 'works in the workshop', { hover })}${personRow('Alex Morgan', 'Mechanic', 'can use the till')}</div>
-${owner ? `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Invite someone', { variant: 'default' })}${note('Everyone sets their own till PIN in Your settings.')}</div>` : note('Only the owner can add or remove people. Everyone sets their own till PIN in Your settings.')}`;
+// UX walk-through 2 (decision 6): on a manager's view (`manager`), the signed-in
+// [Manager] is "you" and Jack Lewis is listed as the shop's Owner; anywhere
+// else Jack is "you", including the Owner's own boards.
+// UX walk-through 4 M3: `jo` is 'member', 'invited' (waiting to join, with
+// Send again and Cancel the invite) or 'expired' (Send again). M2: `tillOnly`
+// adds a person with no email, who uses the till only.
+// UX walk-through 4 L1: Wheelhouse gives each person their PIN (Signing in 7).
+const pendingRow = (name, role, state) => {
+  const P = isPhone();
+  const expired = state === 'expired';
+  const acts = `<span style="display: flex; flex-wrap: wrap; gap: 8px; ${P ? 'padding-left: 46px' : ''}">${button('Send again', { variant: 'default' })}${expired ? '' : button('Cancel the invite', { variant: 'ghost' })}</span>`;
+  return `<div style="display: flex; flex-direction: ${P ? 'column' : 'row'}; align-items: ${P ? 'stretch' : 'center'}; gap: ${P ? 8 : 12}px; min-height: 60px; padding: ${P ? '10px 8px 10px 12px' : '0 8px 0 12px'}; border: 1px dashed ${expired ? C.warnInk : C.input}; border-radius: 8px; background: ${C.panel}">
+<span style="display: flex; align-items: center; gap: 12px; flex-grow: 1; min-width: 0"><span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; border: 1px dashed ${C.input}; font-size: 13px; font-weight: 700; color: ${C.muted}; flex-shrink: 0">${name.split(' ').map((x) => x[0]).join('')}</span>
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 700">${esc(name)}</span><span style="font-size: 13px; color: ${expired ? C.warnInk : C.muted}; ${expired ? 'font-weight: 600' : ''}">${esc(role)} · ${expired ? 'Invite expired' : 'Invited [date] · not joined yet'}</span></span></span>${acts}</div>`;
+};
+const PIN_LINE = 'Wheelhouse gives each person a till PIN — only they see it.';
+const peopleOpen = (hover = true, owner = false, { manager = false, jo = 'member', tillOnly = false } = {}) => `<div style="display: flex; flex-direction: column; gap: 8px">${manager ? personRow('[Manager]', 'Manager', '', { you: true }) : ''}${personRow('Jack Lewis', 'Owner', '', { you: !manager })}${jo === 'member' ? personRow('Jo Taylor', 'Staff', 'works in the workshop', { hover }) : ''}${personRow('Alex Morgan', 'Mechanic', 'can use the till')}${tillOnly ? personRow('[Name]', 'Staff', 'Till only · no PIN yet, given at the till') : ''}${jo === 'member' ? '' : pendingRow('Jo Taylor', 'Staff', jo)}</div>
+${owner ? `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Invite someone', { variant: 'default' })}${note(PIN_LINE)}</div>` : note(`Only the owner can add or remove people. ${PIN_LINE}`)}`;
 const roleLine = (r, d) => `<div style="display: flex; gap: 16px; padding: 12px 0; border-top: 1px solid ${C.border}"><span style="width: 110px; flex-shrink: 0; font-size: 15px; font-weight: 700">${r}</span><span style="font-size: 15px; line-height: 1.5">${d}</span></div>`;
 const rolesOpen = () => `${roleLine('Owner', 'Everything, including adding and removing people and tills.')}${roleLine('Manager', 'Everything except adding and removing people and tills.')}${roleLine('Staff', 'The till, customers, messages, stock and the workshop diary.')}${roleLine('Mechanic', 'The workshop diary and jobs.')}
 ${note('Switches on a person add to their role — up to everything a Manager can do.')}`;
@@ -218,22 +238,49 @@ function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '
 <div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div>
 <div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Signed in</span><span style="font-size: 13px; color: ${C.muted}">Till B1 now · [n] phone or computer</span></span>${button('Sign out everywhere', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
 }
-const clearPinDialog = () => popup('pin-title', 'Clear Jo Taylor’s till PIN?', 'For when Jo has forgotten it', `${note('Jo won’t be able to check in at the till until they get a new PIN in Your settings. Nobody else sees the new one.')}`, `${button('Keep the PIN', { variant: 'ghost' })}${button('Clear the PIN', { variant: 'danger' })}`);
+// UX walk-through 4 H1: a cleared PIN works like a first one — the next
+// sign-in opens "Your till PIN" (signin.mjs pin-cleared).
+const clearPinDialog = () => popup('pin-title', 'Clear Jo Taylor’s till PIN?', 'For when Jo has forgotten it', `${note('Jo can’t check in at the till until they get a new PIN. Wheelhouse gives Jo one the next time they sign in, or from Your settings. Nobody else sees it.')}`, `${button('Keep the PIN', { variant: 'ghost' })}${button('Clear the PIN', { variant: 'danger' })}`);
 
 const staffPage = (open, who) => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds(open), who ? { who } : {});
-def('set-staff', () => staffPage({ people: peopleOpen() }));
-def('set-staff-person', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog()));
-def('set-staff-person-all', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ all: true })));
-def('set-staff-clear-pin', () => overlay(staffPage({ people: peopleOpen(false) }), clearPinDialog()));
+// UX walk-through 2 (decision 6): these four are a manager's view — signed in as the
+// [Manager] placeholder, with Jack Lewis in the list as the Owner.
+const managerStaffPage = (open) => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds(open, '[Manager], Jack Lewis, Jo Taylor, Alex Morgan'), { who: MANAGER_VIEW });
+const MGR = { manager: true };
+// UX walk-through 3 (decision 6 leftover): other journeys' person boards reuse
+// this manager's view (ops-person, ops-person-everywhere, ms-person, rp-person).
+export { managerStaffPage, MGR };
+def('set-staff', () => managerStaffPage({ people: peopleOpen(true, false, MGR) }));
+def('set-staff-person', () => overlay(managerStaffPage({ people: peopleOpen(false, false, MGR) }), personDialog()));
+def('set-staff-person-all', () => overlay(managerStaffPage({ people: peopleOpen(false, false, MGR) }), personDialog({ all: true })));
+def('set-staff-clear-pin', () => overlay(managerStaffPage({ people: peopleOpen(false, false, MGR) }), clearPinDialog()));
 def('set-staff-roles', () => staffPage({ roles: rolesOpen() }));
 // Decision 17 (H2): the owner invites people by email (a WorkOS invitation,
-// auth spec l.537); they choose their own till PIN once they're in.
+// auth spec l.537).
+// UX walk-through 4 H1: Wheelhouse gives them a till PIN at their first
+// sign-in (Signing in 7) — nobody chooses one. M3: the pop-up says how long
+// the link lasts. M2 (option 1): "No email — till only" adds a person who
+// doesn't sign in; their PIN is given at the till (signin.mjs till-give-pin).
+const howPills = (tillOnly) => choice('How they’ll use Wheelhouse', [['With an email invite', !tillOnly], ['No email — till only', tillOnly]]);
 const inviteDialog = () => popup('inv-title', 'Invite someone', 'They get an email to sign in', `
+${howPills(false)}
 ${field('Email', { placeholder: 'name@example.com', type: 'email' })}
 ${choice('Role', [['Manager', false], ['Staff', true], ['Mechanic', false]])}
 ${toggleLine('Works in the workshop', 'Gets a column in the diary', false)}
-${note('You can add switches once they’ve joined. They choose their own till PIN.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Send the invite')}`);
-def('set-staff-invite', () => overlay(settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds({ people: peopleOpen(false, true) }), { who: OWNER }), inviteDialog()));
+${note('The link in the email lasts [n] days. You can add switches once they’ve joined. Wheelhouse gives them a till PIN when they first sign in.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Send the invite')}`);
+const tillOnlyDialog = () => popup('inv-title', 'Add someone', 'No email — they use the till only', `
+${howPills(true)}
+${field('Name', { placeholder: 'Their name, as it shows on sales' })}
+${choice('Role', [['Staff', true], ['Mechanic', false]])}
+${note('A Mechanic added this way gets “Can use the till” switched on. They don’t sign in to Wheelhouse, so they can’t open anything away from the till.')}
+${note('Their PIN is given at the till: you or a manager checks in, opens “Give [name] their PIN” and turns the screen to them. A forgotten PIN is cleared and given again the same way.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add them')}`);
+def('set-staff-invite', () => overlay(settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds({ people: peopleOpen(false, true) }), { who: MANAGER /* UX walk-through 2 (decision 6): Jack Lewis, Owner */ }), inviteDialog()));
+// UX walk-through 4 M2, M3: the Owner's list after inviting Jo and adding a
+// till-only person; the same invite once it has expired; the till-only form.
+const ownerStaffPage = (open, people) => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds(open, people), { who: OWNER });
+def('set-staff-invited', () => ownerStaffPage({ people: peopleOpen(false, true, { jo: 'invited', tillOnly: true }) }, 'Jack Lewis, Alex Morgan, [Name] · Jo Taylor invited'));
+def('set-staff-invite-expired', () => ownerStaffPage({ people: peopleOpen(false, true, { jo: 'expired' }) }, 'Jack Lewis, Alex Morgan · Jo Taylor’s invite expired'));
+def('set-staff-invite-till-only', () => overlay(ownerStaffPage({ people: peopleOpen(false, true) }), tillOnlyDialog()));
 
 // ---------- Shop and sites (decision 13) ----------
 const inputRow = (id, label, value) => `<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'stretch' : 'center'}; gap: ${isPhone() ? 6 : 12}px; min-height: 52px; padding: ${isPhone() ? '8px 0' : '0'}; border-top: 1px solid ${C.border}"><label for="${id}" style="width: ${isPhone() ? 'auto' : '160px'}; flex-shrink: 0; font-size: 15px; font-weight: 600">${label}</label><input id="${id}" value="${esc(value)}" style="flex-grow: 1; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>`;
@@ -296,7 +343,11 @@ const ONLINE_MSGS = [['Order confirmation', 'When an online order is paid'], ['O
   ['Order not ready after all', 'When an order marked ready is moved back']];
 // UX walk-through 1 H1, H2, M4: every message the repair story promises has
 // a row, and "Bike ready" goes when the job is marked ready.
-const msgListOpen = ({ bringBack = true, hoverReview = false } = {}) => `<div style="display: flex; flex-direction: column; gap: 8px">
+// UX walk-through 4 H3 (option 1): while the shop runs alongside its old
+// system, no automatic message goes to a customer; the list says so first.
+const ALONGSIDE = `<div role="status" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 8px; background: ${C.blueBg}; color: ${C.blueInk}">${icon('alert', 20)}<span style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 15px; font-weight: 700">Running alongside Citrus Lime: no messages go to customers until switch-over day</span><span style="font-size: 13px; line-height: 1.45">Where one would have gone, the job or booking says “Not sent — practice”. Staff can still send a message by hand. On switch-over morning these start, and nothing is sent for what happened before.</span></span></div>`;
+const msgListOpen = ({ bringBack = true, hoverReview = false, alongside = false } = {}) => `<div style="display: flex; flex-direction: column; gap: 8px">
+${alongside ? ALONGSIDE : ''}
 ${msgRowChoice('Quote to approve', 'When a job needs the customer’s OK', { reminder: true })}
 ${msgRowChoice('Work added within your limit', 'When extra work fits the limit the customer set')}
 ${msgRowChoice('Your answers', 'When staff record the customer’s answer from a call')}
@@ -309,13 +360,15 @@ ${ONLINE_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}
 ${C2W_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}`}
 <h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Booking messages</h4>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Sent the way each customer chose when booking: text, WhatsApp or email.</p>
-${BOOKING_MSGS.map(([n, w]) => msgRowChoice(n, w)).join('')}${bringBack ? bringBackRows(hoverReview) : ''}</div>
+${BOOKING_MSGS.map(([n, w]) => msgRowChoice(n, w)).join('')}${bringBack ? bringBackRows(hoverReview, alongside) : ''}</div>
 <div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Add your own message', { variant: 'default' })}${note('For “Order ready to collect”, tap Text or Email to choose how it’s sent — or both.')}</div>`;
 // Account, history and reminders decisions 2, 5, 6: messages that bring
 // customers back. Each ends with a link that stops that kind; a review
 // request is off until the shop switches it on.
-const bringBackRows = (hoverReview) => `<h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Bringing customers back</h4>
-<p style="margin: 0; font-size: 13px; color: ${C.muted}">Only to customers who said yes. Each ends “Stop these: [link]”.</p>
+// UX walk-through 4 H3: while running alongside, reminders count from the
+// imported history, but the first go out after switch-over.
+const bringBackRows = (hoverReview, alongside = false) => `<h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Bringing customers back</h4>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Only to customers who said yes. Each ends “Stop these: [link]”.${alongside ? ' Service reminders count from the history brought across from Citrus Lime. The first go out after switch-over, only to customers whose yes came across or who say yes again.' : ''}</p>
 ${msgRowChoice('Service reminder', 'When a bike is due its next service — set on each service')}
 ${msgRowChoice('Review request', 'After a bike is collected', { hover: hoverReview }).replace(offer('On', true), offer('Off', false))}`;
 const msgPage = (open) => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds(open));
@@ -338,6 +391,8 @@ ${note('Only customers who’ve agreed to hear from the shop get messages like t
 def('set-msg-list', () => msgPage({ list: msgListOpen() }));
 def('set-msg-edit', () => overlay(msgPage({ list: msgListOpen() }), editMsgDialog()));
 def('set-msg-new', () => overlay(msgPage({ list: msgListOpen() }), newMsgDialog()));
+// UX walk-through 4 H3: Messages while the shop runs alongside Citrus Lime.
+def('set-msg-alongside', () => settingsPage('messages', 'Messages', MSG_INTRO, msgFolds({ list: msgListOpen({ alongside: true }) }).replace(lightspeedShop() ? '13 on' : '23 on', `${lightspeedShop() ? '13' : '23'} on · none sent until switch-over`), { who: OWNER }));
 
 // ---------- Your data (Release 2 rule 5: everything can be exported;
 // decision 4: every settings change is recorded) ----------
@@ -351,42 +406,67 @@ def('set-data-export', () => dataPage({ export: exportOpen() }));
 def('set-data-history', () => dataPage({ history: historyOpen() }));
 
 // ---------- First-run setup (decision 16): a Getting started checklist ----------
-// Shown to the shop's owner at the top of Office › Today. No owner name
-// exists in the example data, so the owner is labelled by role only.
+// Shown to the shop's owner, Jack Lewis, at the top of Office › Today.
+// UX walk-through 4 M1: each step names where it lives in full (the website
+// isn't in Settings), and Getting started gains "Set up your website".
+// L1: the staff step reads "Invite your staff", as Staff and roles does.
+// Each step: [name, where, done, what ticks it, shared with the move's
+// switch-over checklist].
 const STEPS = [
-  ['Shop details and opening hours', 'Shop and sites', true, 'the address and hours are in'],
-  ['Make this computer a till', 'Till › Tills', true, 'a till is set up'],
-  ['Connect the card machine', 'Payments', false, 'a card machine answers'],
-  ['Add your staff', 'Staff and roles', false, 'someone accepts an invite'],
-  ['Workshop services and prices', 'Workshop', false, 'a service has a price'],
-  ['Quick buttons for the till', 'Till', false, 'the first button is added'],
-  ['Float and closing up', 'End of day', false, 'a float is set'],
-  ['Check the messages customers get', 'Messages', false, 'you’ve looked at Messages'],
+  ['Shop details and opening hours', 'Settings › Shop and sites', true, 'the address and hours are in'],
+  ['Make this computer a till', 'Settings › Till › Tills', true, 'a till is set up'],
+  ['Connect the card machine', 'Settings › Front desk › Payments', false, 'a card machine answers', true],
+  ['Invite your staff', 'Settings › Staff and roles', false, 'someone accepts an invite'],
+  ['Workshop services and prices', 'Settings › Workshop', false, 'a service has a price'],
+  ['Quick buttons for the till', 'Settings › Till', false, 'the first button is added'],
+  ['Float and closing up', 'Settings › Front desk › End of day', false, 'a float is set', true],
+  ['Check the messages customers get', 'Settings › Messages', false, 'you’ve looked at Messages'],
+  ['Set up your website', 'Office › Website', false, 'the website’s three-step start is done', true],
 ];
-const doneCount = STEPS.filter((x) => x[2]).length;
+// UX walk-through 4 M1: while a move is on, the card machine and the float
+// are already done for the move, as mv-ready draws them (shared items tick together, from the same
+// setting); Jo's invite is waiting (M3); messages wait for switch-over (H3).
+const MOVING_STEPS = STEPS.map((x) => (['Connect the card machine', 'Float and closing up'].includes(x[0]) ? [x[0], x[1], true, x[3], x[4]] : x));
+const MOVING_EXTRA = {
+  'Invite your staff': '[n] invited, waiting to join',
+  'Check the messages customers get': 'none go to customers until switch-over',
+};
 // Decision 17 (H2, M12): each step says what ticks it; finished steps fold
 // into one line so the card stays short.
-const stepRow = ([t, where, done, tick], i, next) => isPhone()
+// UX walk-through 4 L3: each button is named after its step for a screen
+// reader ("Set up: Invite your staff"); the visible word stays short.
+const named = (html, name) => html.replace('<button type="button"', `<button type="button" aria-label="${esc(name)}"`);
+const stepRow = ([t, where, done, tick, shared], i, next, moving = false) => {
+  const extra = [moving && MOVING_EXTRA[t], moving && shared && 'also on the switch-over checklist'].filter(Boolean);
+  const sub = (lead) => `${lead}${tick}${extra.length ? ` · ${extra.join(' · ')}` : ''}`;
+  return isPhone()
   // Phone: the whole row is the link; the next step has a dark outline.
   ? `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 60px; margin-top: 6px; padding: 8px 10px; border-radius: 10px; border: 1px solid ${next ? C.ink : C.border}; text-decoration: none; color: ${C.ink}">
 <span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-size: 13px; font-weight: 700">${i + 1}</span>
-<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${t}</span><span style="font-size: 13px; color: ${C.muted}">Ticks when ${tick}</span></span>
+<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub('Ticks when ')}</span></span>
 <span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`
   : `<div style="display: flex; align-items: center; gap: 14px; min-height: 56px; border-top: 1px solid ${C.border}">
 <span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; color: ${C.ink}; font-size: 13px; font-weight: 700">${i + 1}</span>
-<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${t}</span><span style="font-size: 13px; color: ${C.muted}">Settings › ${where} · ticks when ${tick}</span></span>
-${button(next ? 'Start' : 'Set up', { variant: next ? 'accent' : 'default' })}</div>`;
+<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub(`${where} · ticks when `)}</span></span>
+${named(button(next ? 'Start' : 'Set up', { variant: next ? 'accent' : 'default' }), `${next ? 'Start' : 'Set up'}: ${t}`)}</div>`;
+};
 const moveLink = `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Moving from another system?</a>`;
-function gettingStarted() {
-  const firstTodo = STEPS.findIndex((x) => !x[2]);
-  const done = STEPS.filter((x) => x[2]).map((x) => x[0]);
+// UX walk-through 4 M1: while a move is on, the link becomes a line with the
+// move's stage: 3 of the switch-over checklist's 5 items, as moving.mjs's
+// mv-ready draws them.
+const moveLine = () => `<a href="#" aria-label="Moving from Citrus Lime: Run alongside, ready to switch over 3 of 5. Open the move" style="display: flex; flex-wrap: wrap; align-items: center; gap: ${isPhone() ? '4px 10px' : '6px 12px'}; min-height: 48px; box-sizing: border-box; padding: 8px 12px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.mutedBg}; text-decoration: none; color: ${C.ink}"><span style="font-size: 14px; font-weight: 700">Moving from Citrus Lime</span><span style="font-size: 14px">Run alongside</span><span style="font-size: 14px; color: ${C.muted}">ready to switch over: 3 of 5</span><span style="flex-grow: 1"></span><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700">Open<span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 14)}</span></span></a>`;
+function gettingStarted({ moving = false } = {}) {
+  const steps = moving ? MOVING_STEPS : STEPS;
+  const firstTodo = steps.findIndex((x) => !x[2]);
+  const done = steps.filter((x) => x[2]).map((x) => x[0]);
   return card(`<div style="padding: ${isPhone() ? '16px 14px' : '20px 22px'}; display: flex; flex-direction: column; gap: 12px">
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Getting started</h2>${isPhone() ? '' : moveLink}</div>
-<div aria-hidden="true" style="height: 6px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${Math.round((doneCount / STEPS.length) * 100)}%; height: 100%; background: ${C.ink}"></div></div>
-${note('Your till is ready, so you can sell now — do the rest in any order.')}
-<button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0; border: 0; border-top: 1px solid ${C.border}; background: transparent; font-family: inherit; text-align: left; color: ${C.muted}"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 15)}</span><span style="font-size: 14px; flex-grow: 1">${doneCount} done: ${done.join(', ')}</span>${icon('chevron', 16)}</button>
-<div style="display: flex; flex-direction: column">${STEPS.map((st, i) => (st[2] ? '' : stepRow(st, i, i === firstTodo))).join('')}</div>
-${isPhone() ? moveLink : ''}
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Getting started</h2>${isPhone() || moving ? '' : moveLink}</div>
+${moving ? moveLine() : ''}
+<div aria-hidden="true" style="height: 6px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${Math.round((done.length / steps.length) * 100)}%; height: 100%; background: ${C.ink}"></div></div>
+${note(moving ? 'Your tills are in practice until switch-over — do these in any order.' : 'Your till is ready, so you can sell now — do the rest in any order.')}
+<button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0; border: 0; border-top: 1px solid ${C.border}; background: transparent; font-family: inherit; text-align: left; color: ${C.muted}"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 15)}</span><span style="font-size: 14px; flex-grow: 1">${done.length} done: ${done.join(', ')}</span>${icon('chevron', 16)}</button>
+<div style="display: flex; flex-direction: column">${steps.map((st, i) => (st[2] ? '' : stepRow(st, i, i === firstTodo, moving))).join('')}</div>
+${isPhone() && !moving ? moveLink : ''}
 </div>`);
 }
 const todayRest = `<div style="min-height: 120px; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: ${C.muted}">[The rest of Today]</div>`;
@@ -401,8 +481,10 @@ const payCardNone = () => `${kv('Till B1', `<span style="color: ${C.muted}">No c
 ${note('The till sends the amount to the machine, so nobody keys it in twice.')}`;
 const allSet = card(`<div style="padding: 18px 12px 18px 22px; display: flex; align-items: center; gap: 14px"><span style="display: inline-flex; width: 32px; height: 32px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 18)}</span><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 16px; font-weight: 700">You’re all set up</span><span style="font-size: 14px; color: ${C.muted}">You can change any of it in Settings.</span></span><button type="button" aria-label="Close" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.ink}; display: inline-flex; align-items: center; justify-content: center">${icon('close', 18)}</button></div>`);
 def('fr-today', () => todayPage(gettingStarted()));
-def('fr-step', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ card: payCardNone() }).replace('[Card machine] · Till B1', 'Not connected'), { banner: stepBanner('Connect the card machine', 'Add your staff'), who: OWNER }));
+def('fr-step', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ card: payCardNone() }).replace('[Card machine] · Till B1', 'Not connected'), { banner: stepBanner('Connect the card machine', 'Invite your staff' /* UX walk-through 4 L1 */), who: OWNER }));
 def('fr-done', () => todayPage(allSet));
+// UX walk-through 4 M1: Getting started while the shop runs alongside Citrus Lime.
+def('fr-today-moving', () => todayPage(gettingStarted({ moving: true })));
 
 def('so-list', optionList);
 def('so-onepage', optionOnePage);
@@ -459,19 +541,25 @@ Object.assign(TITLES, {
   'set-data-export': 'Your data › Download everything',
   'set-data-history': 'Your data › Settings changes',
   'fr-today': 'Getting started — the owner’s checklist on Today',
+  // UX walk-through 4 H3, M1, M2, M3
+  'fr-today-moving': 'Getting started while moving from Citrus Lime — tills in practice, the move’s stage, shared steps',
+  'set-msg-alongside': 'Messages while running alongside — none go to customers until switch-over day',
+  'set-staff-invited': 'People — Jo invited, not joined yet (Send again, Cancel the invite), and a till-only person',
+  'set-staff-invite-expired': 'People — an invite that expired (Send again)',
+  'set-staff-invite-till-only': 'Add someone with no email — till only',
   'fr-step': 'A step opened from the checklist',
   'fr-done': 'All set up — the checklist goes',
   'set-workshop-mechanics': 'Workshop › Mechanics',
   'set-workshop-diary': 'Workshop › Diary blocks and storage slots (journey 12’s settings, moved here)',
 });
 export const ROWS = [
-  { label: 'First-run setup', screens: ['fr-today', 'fr-step', 'fr-done'] },
+  { label: 'First-run setup', screens: ['fr-today', 'fr-today-moving', 'fr-step', 'fr-done'] }, // UX walk-through 4 M1
   { label: 'Till settings', screens: ['set-list', 'set-till-quick', 'set-till-quick-add', 'set-till-quick-saved', 'set-till-reasons', 'set-till-receipts', 'set-till-printer', 'set-till-tills', 'set-till-tills-owner', 'set-till-remove', 'set-till-empty'] },
   { label: 'End of day and payment settings', screens: ['set-eod', 'set-eod-close', 'set-save-failed', 'set-pay-ways', 'set-pay-other', 'set-pay-card'] },
-  { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles', 'set-staff-invite'] },
+  { label: 'Staff and roles', screens: ['set-staff', 'set-staff-person', 'set-staff-person-all', 'set-staff-clear-pin', 'set-staff-roles', 'set-staff-invite', 'set-staff-invited', 'set-staff-invite-expired', 'set-staff-invite-till-only'] }, // UX walk-through 4 M2, M3
   { label: 'Shop and sites', screens: ['set-shop-details', 'set-shop-hours'] },
   { label: 'Workshop settings', screens: ['set-workshop-services', 'set-workshop-mechanics', 'set-workshop-diary'] },
-  { label: 'Messages', screens: ['set-msg-list', 'set-msg-edit', 'set-msg-new'] },
+  { label: 'Messages', screens: ['set-msg-list', 'set-msg-edit', 'set-msg-new', 'set-msg-alongside'] }, // UX walk-through 4 H3
   { label: 'Your data', screens: ['set-data-export', 'set-data-history'] },
   { label: 'Options — the shape of Settings (decision 3: option 1)', screens: ['so-list', 'so-onepage', 'so-hub', 'so-hub-area'] },
 ];

@@ -149,3 +149,74 @@ copied into every canvas they touch. Against decision 5:
 - **Raised by the work, for Jack:** on the uncounted-day float check, "Looks
   right" is kept beside "Count it"; pressing it makes Wednesday's figure
   what the till expected, not a count.
+
+## Standing instruction for walk-throughs 3–7
+
+6. **Walk every remaining story and take every recommendation, without
+   asking each time** (Jack, 2 Oct: "if you can just keep going through all
+   the stories and implement all the suggestions each time, they have all
+   been good so far"). Each walk-through's report is still written, its
+   claims checked, its fixes drawn, published and committed, and its
+   choices recorded here with the recommendation taken. This also settles
+   the three things left from walk-through 2, by the recommendation:
+   only "Count it" on the float check for a day nobody counted; Jack Lewis
+   is the Owner in every example; "Take payment" and "Split payment" drawn
+   from the discounted £70.00.
+
+## Walk-through 2 leftovers and walk-through 3 (stock): as built (2 Oct)
+
+- **Walk-through 2 leftovers (decision 6):** the float check for an
+  uncounted day offers only "Count it"; "Take payment" and "Split payment"
+  are drawn from £70.00 (`till-pay-discounted`, `till-split-discounted`);
+  Jack Lewis is the Owner in every example. Boards drawn as a manager's
+  view (People lists that say "Only the owner can add or remove people",
+  manager-only Settings, the manager's activity log) now show a "[Manager]"
+  placeholder signed in, with Jack listed separately as Owner; the "Shop
+  owner" placeholder on owner boards is now Jack Lewis.
+- **Walk-through 3 (stock), every recommendation taken** (decision 6;
+  `ux-walkthrough-3-stock.md`, 2 High, 10 Medium, 6 Low): booking in holds
+  the job's pads and the till warns without blocking (`till-held-job`); a
+  job whose part is sold, missing, damaged or whose order closed says so
+  (`rs-part-*`); stock take "Expected" leaves out held stock and allows for
+  every movement during the count; Staff can leave an unknown product for
+  the owner or manager and book the rest in (`rs-receive-staff`,
+  `rs-receive-staff-left`, `rs-add-left`, `rs-today-to-add`); a Staff
+  version of "booked in"; the restock list has "For customers"; "Did a cost
+  go up?" when accepting an invoice difference; stock written off is
+  reported at cost; the VAT report's stock-purchase wording; Reports use
+  the Stockroom's categories; transfers use the delivery's list; "Faulty —
+  to return to supplier"; and the word and accessibility fixes. The
+  Overview lists a job waiting for parts under "Needs attention" (the
+  report left the tab open; this is the drawing's choice).
+
+## Walk-through 4 (a new shop): as built (2 Oct)
+
+Every recommendation taken (decision 6; `ux-walkthrough-4-new-shop.md`, 3
+High, 7 Medium, 4 Low):
+- **H1:** a first-time "Your till PIN" (`pin-first`, `pin-cleared`); Your
+  settings shows "No PIN yet · Get your PIN"; the PIN screen says what to do
+  with no PIN (and with no email: ask the owner or a manager); the invite
+  says Wheelhouse gives the PIN.
+- **H2:** the switch-over checklist's website item is "The website is
+  ready", and the website goes on as a step on switch-over morning
+  (`ws-page-moving`, `ws-page-switch-over`, `ws-editor-moving`,
+  `ws-pay-tested-moving`, `ws-address-moving`). This changes what one item
+  of Moving from Citrus Lime decision 7 means, as the report said.
+- **H3:** no automatic messages go to customers until switch-over day; jobs
+  show "Not sent — practice" (`mv-practice-job`, `set-msg-alongside`).
+- **M1–M7, L1–L3:** Getting started while moving (`fr-today-moving`; the
+  checklist is now 5 items, "3 of 5"); a till-only person with no email
+  (`set-staff-invite-till-only`, `till-give-pin`); invited and expired
+  invites (`set-staff-invited`, `set-staff-invite-expired`); no float check
+  or Close the day in practice, and the first real morning counts the float
+  (`mv-practice-checkin`, `till-checkin-practice`, `op-today-practice`,
+  `op-float-check-first`); the refresh remembers import decisions; product
+  photo and price counts before the website goes on; "every product online
+  or nothing" asked once (`ws-start-products-answered`,
+  `on-settings-start-answered`); the editor shows waiting orders only when
+  there are some; Jack Lewis as Owner on the move's boards; named "Set up"
+  buttons and stage words on a phone. Getting started uses the same
+  Settings paths as the switch-over checklist.
+- **Not drawn:** where "Fix" on the import leads and where the two
+  "Change" links on the starting answer lead (the report left both open);
+  where "Give [name] their PIN" sits in the till's Serving menu.

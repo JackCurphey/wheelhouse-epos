@@ -90,8 +90,40 @@
    "title": "Designed · Your new till PIN (desktop)",
    "is_interactive": true
   },
-  "jb-cust-signin-desktop.dc.html": {
+  "jb-pin-first-desktop.dc.html": {
    "x": 15000,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · First sign-in — Your till PIN opens straight away (Skip for now if you never use the till) (desktop)",
+   "is_interactive": true
+  },
+  "jb-pin-cleared-desktop.dc.html": {
+   "x": 16320,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · First sign-in after a PIN was cleared — a new PIN, the same way (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-give-pin-desktop.dc.html": {
+   "x": 17640,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-checkin-practice-desktop.dc.html": {
+   "x": 18960,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till check-in while running alongside — the practice band before anyone checks in (desktop)",
+   "is_interactive": true
+  },
+  "jb-cust-signin-desktop.dc.html": {
+   "x": 20440,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -99,7 +131,7 @@
    "is_interactive": true
   },
   "jb-cust-code-desktop.dc.html": {
-   "x": 16320,
+   "x": 21760,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -107,7 +139,7 @@
    "is_interactive": true
   },
   "jb-cust-code-expired-desktop.dc.html": {
-   "x": 17640,
+   "x": 23080,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -115,7 +147,7 @@
    "is_interactive": true
   },
   "jb-pending.dc.html": {
-   "x": 18960,
+   "x": 24400,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -123,7 +155,7 @@
    "is_interactive": true
   },
   "jb-expired.dc.html": {
-   "x": 19430,
+   "x": 24870,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -831,11 +863,19 @@
    "y": 6650,
    "w": 1280,
    "h": 856,
-   "title": "Designed · Turning on buying online: start with everything, or nothing (desktop)",
+   "title": "Designed · Turning on buying online before the website is set up: start with everything, or nothing (asked once) (desktop)",
+   "is_interactive": true
+  },
+  "j02-on-settings-start-answered-desktop.dc.html": {
+   "x": 69440,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Turning on buying online after the website’s set-up: the answer shown, with Change (desktop)",
    "is_interactive": true
   },
   "j02-on-settings-show-desktop.dc.html": {
-   "x": 69440,
+   "x": 70760,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -843,7 +883,7 @@
    "is_interactive": true
   },
   "j02-on-settings-pay-desktop.dc.html": {
-   "x": 70760,
+   "x": 72080,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -851,7 +891,7 @@
    "is_interactive": true
   },
   "j02-on-settings-keep-desktop.dc.html": {
-   "x": 72080,
+   "x": 73400,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -859,7 +899,7 @@
    "is_interactive": true
   },
   "j02-on-messages-desktop.dc.html": {
-   "x": 73400,
+   "x": 74720,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -2376,9 +2416,9 @@
    "fill": "gray",
    "maxH": 150,
    "size": 40,
-   "text": "When things go wrong",
+   "text": "Our shops",
    "w": 520,
-   "x": 33800,
+   "x": 28360,
    "y": 4554
   },
   "j01_s11": {
@@ -2386,12 +2426,12 @@
    "fill": "gray",
    "maxH": 150,
    "size": 40,
-   "text": "Cookies",
+   "text": "When things go wrong",
    "w": 520,
-   "x": 41880,
+   "x": 33800,
    "y": 4554
   },
-  "j01_s5": {
+  "j01_s6": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2401,7 +2441,7 @@
    "x": 0,
    "y": 4554
   },
-  "j01_s6": {
+  "j01_s7": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2411,7 +2451,7 @@
    "x": 6760,
    "y": 4554
   },
-  "j01_s7": {
+  "j01_s8": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2421,7 +2461,7 @@
    "x": 16160,
    "y": 4554
   },
-  "j01_s8": {
+  "j01_s9": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2429,16 +2469,6 @@
    "text": "Search",
    "w": 520,
    "x": 21600,
-   "y": 4554
-  },
-  "j01_s9": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Our shops",
-   "w": 520,
-   "x": 28360,
    "y": 4554
   },
   "j01_title": {
@@ -2449,7 +2479,7 @@
    "x": 0,
    "y": 4234
   },
-  "j02_s13": {
+  "j02_s14": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2459,7 +2489,7 @@
    "x": 0,
    "y": 6410
   },
-  "j02_s14": {
+  "j02_s15": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2469,7 +2499,7 @@
    "x": 12040,
    "y": 6410
   },
-  "j02_s15": {
+  "j02_s16": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2479,7 +2509,7 @@
    "x": 24080,
    "y": 6410
   },
-  "j02_s16": {
+  "j02_s17": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2489,7 +2519,7 @@
    "x": 33480,
    "y": 6410
   },
-  "j02_s17": {
+  "j02_s18": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2497,16 +2527,6 @@
    "text": "The shop’s side",
    "w": 520,
    "x": 46840,
-   "y": 6410
-  },
-  "j02_s18": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Settings",
-   "w": 520,
-   "x": 65480,
    "y": 6410
   },
   "j02_title": {
@@ -2517,7 +2537,7 @@
    "x": 0,
    "y": 6090
   },
-  "j03_s20": {
+  "j03_s21": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2527,7 +2547,7 @@
    "x": 0,
    "y": 8266
   },
-  "j03_s21": {
+  "j03_s22": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2537,7 +2557,7 @@
    "x": 14680,
    "y": 8266
   },
-  "j03_s22": {
+  "j03_s23": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2547,7 +2567,7 @@
    "x": 25400,
    "y": 8266
   },
-  "j03_s23": {
+  "j03_s24": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2555,16 +2575,6 @@
    "text": "Cancelling",
    "w": 520,
    "x": 36120,
-   "y": 8266
-  },
-  "j03_s24": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "The shop’s side",
-   "w": 520,
-   "x": 45520,
    "y": 8266
   },
   "j03_title": {
@@ -2575,7 +2585,7 @@
    "x": 0,
    "y": 7946
   },
-  "j04_s26": {
+  "j04_s27": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2585,7 +2595,7 @@
    "x": 0,
    "y": 10122
   },
-  "j04_s27": {
+  "j04_s28": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2595,7 +2605,7 @@
    "x": 4120,
    "y": 10122
   },
-  "j04_s28": {
+  "j04_s29": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2605,7 +2615,7 @@
    "x": 16160,
    "y": 10122
   },
-  "j04_s29": {
+  "j04_s30": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2613,16 +2623,6 @@
    "text": "The shop’s side",
    "w": 520,
    "x": 21600,
-   "y": 10122
-  },
-  "j04_s30": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Also in this journey",
-   "w": 520,
-   "x": 34960,
    "y": 10122
   },
   "j04_title": {
@@ -2633,7 +2633,7 @@
    "x": 0,
    "y": 9802
   },
-  "j05_s32": {
+  "j05_s33": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2643,7 +2643,7 @@
    "x": 0,
    "y": 12022
   },
-  "j05_s33": {
+  "j05_s34": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2653,7 +2653,7 @@
    "x": 16000,
    "y": 12022
   },
-  "j05_s34": {
+  "j05_s35": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2663,7 +2663,7 @@
    "x": 24080,
    "y": 12022
   },
-  "j05_s35": {
+  "j05_s36": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2673,7 +2673,7 @@
    "x": 25560,
    "y": 12022
   },
-  "j05_s36": {
+  "j05_s37": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2681,16 +2681,6 @@
    "text": "The receipt",
    "w": 520,
    "x": 29680,
-   "y": 12022
-  },
-  "j05_s37": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Also at collection",
-   "w": 520,
-   "x": 47000,
    "y": 12022
   },
   "j05_title": {
@@ -2701,7 +2691,7 @@
    "x": 0,
    "y": 11702
   },
-  "j06_s39": {
+  "j06_s40": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2711,7 +2701,7 @@
    "x": 0,
    "y": 13922
   },
-  "j06_s40": {
+  "j06_s41": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2721,7 +2711,7 @@
    "x": 10720,
    "y": 13922
   },
-  "j06_s41": {
+  "j06_s42": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2731,7 +2721,7 @@
    "x": 24080,
    "y": 13922
   },
-  "j06_s42": {
+  "j06_s43": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2739,16 +2729,6 @@
    "text": "Changes and cancelling",
    "w": 520,
    "x": 36120,
-   "y": 13922
-  },
-  "j06_s43": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Today, the customer, settings and messages",
-   "w": 520,
-   "x": 41560,
    "y": 13922
   },
   "j06_title": {
@@ -2759,7 +2739,7 @@
    "x": 0,
    "y": 13602
   },
-  "j07_s45": {
+  "j07_s46": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2769,7 +2749,7 @@
    "x": 0,
    "y": 15778
   },
-  "j07_s46": {
+  "j07_s47": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2779,7 +2759,7 @@
    "x": 8080,
    "y": 15778
   },
-  "j07_s47": {
+  "j07_s48": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2789,7 +2769,7 @@
    "x": 17480,
    "y": 15778
   },
-  "j07_s48": {
+  "j07_s49": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2799,7 +2779,7 @@
    "x": 26030,
    "y": 15778
   },
-  "j07_s49": {
+  "j07_s50": {
    "bold": true,
    "fill": "gray",
    "maxH": 150,
@@ -2807,16 +2787,6 @@
    "text": "Reviews and how we contact you",
    "w": 520,
    "x": 35430,
-   "y": 15778
-  },
-  "j07_s50": {
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150,
-   "size": 40,
-   "text": "Your data",
-   "w": 520,
-   "x": 43510,
    "y": 15778
   },
   "j07_title": {
@@ -2862,7 +2832,7 @@
    "fill": "gray",
    "maxH": 150,
    "size": 40,
-   "text": "Customers",
+   "text": "A new person’s first PIN",
    "w": 520,
    "x": 15000,
    "y": 2654
@@ -2874,6 +2844,86 @@
    "w": 240,
    "x": 0,
    "y": 2334
+  },
+  "jb_s4": {
+   "x": 20440,
+   "y": 2654,
+   "text": "Customers",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j01_s12": {
+   "x": 41880,
+   "y": 4554,
+   "text": "Cookies",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j02_s19": {
+   "x": 65480,
+   "y": 6410,
+   "text": "Settings",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j03_s25": {
+   "x": 45520,
+   "y": 8266,
+   "text": "The shop’s side",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j04_s31": {
+   "x": 34960,
+   "y": 10122,
+   "text": "Also in this journey",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j05_s38": {
+   "x": 47000,
+   "y": 12022,
+   "text": "Also at collection",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j06_s44": {
+   "x": 41560,
+   "y": 13922,
+   "text": "Today, the customer, settings and messages",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j07_s51": {
+   "x": 43510,
+   "y": 15778,
+   "text": "Your data",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
   }
  },
  "order": [
@@ -2890,6 +2940,10 @@
   "jb-till-checkin-stale-desktop.dc.html",
   "jb-till-pin-wrong-desktop.dc.html",
   "jb-pin-change-desktop.dc.html",
+  "jb-pin-first-desktop.dc.html",
+  "jb-pin-cleared-desktop.dc.html",
+  "jb-till-give-pin-desktop.dc.html",
+  "jb-till-checkin-practice-desktop.dc.html",
   "jb-cust-signin-desktop.dc.html",
   "jb-cust-code-desktop.dc.html",
   "jb-cust-code-expired-desktop.dc.html",
@@ -2983,6 +3037,7 @@
   "j02-on-settings-desktop.dc.html",
   "j02-on-settings-order-in-desktop.dc.html",
   "j02-on-settings-start-desktop.dc.html",
+  "j02-on-settings-start-answered-desktop.dc.html",
   "j02-on-settings-show-desktop.dc.html",
   "j02-on-settings-pay-desktop.dc.html",
   "j02-on-settings-keep-desktop.dc.html",

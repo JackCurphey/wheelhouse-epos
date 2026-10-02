@@ -5,13 +5,14 @@
 // board shows roughly how they will look, labelled as an approximation.
 // Everything else here is Wheelhouse's own. Example data is only what the
 // generator already has: North Street Cycles, Bolton, Till B1, Jack Lewis
-// (Manager), Jo Taylor (Staff), Alex Morgan (Mechanic); unknown facts are
+// (Owner — UX walk-through 2 (decision 6)), Jo Taylor (Staff), Alex Morgan (Mechanic); unknown facts are
 // bracketed placeholders. Every screen is drawn at desktop, tablet and phone
 // (1280×800, 1180×820, 390×844).
 import { C, MONO, esc, icon, button, field, card, logoSlot } from './ui.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { shellDesktop, shellTablet, shellPhone, screens as diaryScreens, TW, TH } from './diary.mjs';
 import { tillBar, tillPhoneBar, siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
+import { practiceBandFor } from './till.mjs';
 
 const SHOP = 'North Street Cycles';
 const SIZE = { desktop: [DW, DH], tablet: [TW, TH], phone: [PW, PH] };
@@ -78,7 +79,8 @@ function tillFrame(size, content, offline = false) {
 // Site and till number as pills (Workshop day decisions 62, 66).
 const pill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : 'transparent'}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
 const pillGroup = (label, items) => `<div role="group" aria-label="${esc(label)}" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">${esc(label)}</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${items}</div></div>`;
-screens['till-setup'] = each((size) => centred(size, stack(`${h1('Set up this till')}${p(`Signed in as Jack Lewis (Manager). This ${size === 'desktop' ? 'computer' : 'device'} becomes a till: it stays signed in, works offline, and staff check in with their PIN.`)}
+// UX walk-through 2 (decision 6): Jack Lewis signs in as the Owner.
+screens['till-setup'] = each((size) => centred(size, stack(`${h1('Set up this till')}${p(`Signed in as Jack Lewis (Owner). This ${size === 'desktop' ? 'computer' : 'device'} becomes a till: it stays signed in, works offline, and staff check in with their PIN.`)}
 ${pillGroup('Site', pill('Bolton', true) + pill('[Second site]', false))}
 ${pillGroup('Till number', pill('B1', true) + pill('B2', false) + pill('B3', false))}
 ${field('Name (optional)', { value: 'Front counter', hint: 'Receipts from this till are numbered B1-0001, B1-0002 and so on.' })}
@@ -102,41 +104,76 @@ const STATUS = {
   stale: [true, 'alert', 'Online · prices and stock last updated [time] · [n] sales still sending'],
 };
 const tillStatus = (size, state) => { const [warn, ic, t] = STATUS[state]; return `<p role="status" style="margin: 0; display: inline-flex; align-self: center; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 10px; background: ${warn ? C.warnBg : C.okBg}; color: ${warn ? C.warnInk : C.successInk}; font-size: ${size === 'phone' ? 13 : 14}px; font-weight: 600; text-align: left">${icon(ic, 15)}<span>${t}</span></p>`; };
-function checkin(size, { wrong = false, state = 'online' } = {}) {
+// UX walk-through 4 H1: one line under the pad for someone who has no PIN
+// yet — the till can't give one, it stays signed in as the till.
+const noPinLine = (size) => `<p style="margin: 0; font-size: ${size === 'phone' ? 13 : 14}px; line-height: 1.45; color: ${C.muted}"><strong style="color: ${C.ink}">No PIN yet?</strong> Sign in to Wheelhouse on a phone or computer — it gives you one. No email? Ask the owner or a manager.</p>`;
+// UX walk-through 4 M4: while the shop runs alongside its old system, the
+// PIN screen already shows the practice band, before anyone checks in — the
+// till's own band (till.mjs, journey 9 decision 6).
+function checkin(size, { wrong = false, state = 'online', practice = false } = {}) {
   const offline = state === 'offline';
   const P = size === 'phone';
   const w = P ? 'auto' : '360px';
-  return tillFrame(size, `<div style="height: 100%; display: flex; flex-direction: column; align-items: ${P ? 'stretch' : 'center'}; justify-content: center; gap: ${P ? 18 : 22}px">
-<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 16 : 20}px; text-align: center">${tillStatus(size, state)}${h1('Enter your PIN', P ? 24 : 28)}${p('Your PIN checks you in and puts your name on sales. It works even when the internet is down.', P ? 14 : 15)}${dots(wrong ? 0 : 2)}${wrong ? errorLine('That PIN isn’t anyone’s — try again') : ''}${pinPad(P ? 60 : 68)}</div>
+  const html = tillFrame(size, `<div style="height: 100%; display: flex; flex-direction: column; align-items: ${P ? 'stretch' : 'center'}; justify-content: center; gap: ${P ? 14 : 18}px">
+<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 14 : 18}px; text-align: center">${tillStatus(size, state)}${h1('Enter your PIN', P ? 24 : 28)}${p('Your PIN checks you in and puts your name on sales. It works even when the internet is down.', P ? 14 : 15)}${dots(wrong ? 0 : 2)}${wrong ? errorLine('That PIN isn’t anyone’s — try again') : ''}${pinPad(P ? 56 : 64)}${noPinLine(size)}</div>
 <div style="width: ${w}">${checkedIn(['Alex Morgan'])}</div>
 </div>`, offline);
+  // The band sits straight under the till bar.
+  return practice ? html.replace('</header>', `</header>${practiceBandFor(size)}`) : html;
 }
 screens['till-checkin'] = each((size) => checkin(size));
 screens['till-pin-wrong'] = each((size) => checkin(size, { wrong: true }));
 screens['till-checkin-offline'] = each((size) => checkin(size, { state: 'offline' }));
 screens['till-checkin-stale'] = each((size) => checkin(size, { state: 'stale' }));
+screens['till-checkin-practice'] = each((size) => checkin(size, { practice: true })); // UX walk-through 4 M4
 
 // Decisions 6 and 7: change your PIN from Your settings. Wheelhouse picks a
 // new random PIN nobody else has (so choosing can't reveal a colleague's);
 // "Give me a different one" rolls another. The digits shown are an example.
 const pinDigit = (d) => `<span style="display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 72px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: ${MONO}; font-size: 34px; color: ${C.ink}">${d}</span>`;
-function pinDialog(size) {
+// UX walk-through 4 H1 (option 1): the same pop-up in a first-time version —
+// on a person's first sign-in (after WorkOS's page) and on the first sign-in
+// after their PIN was cleared (Owner setup audit M20's rule, now drawn).
+// No "old PIN" line; "Skip for now" for someone who never uses the till.
+// Then they land in their room.
+// UX walk-through 4 M2 (option 1): `give` is the till's version for someone
+// with no email ("Till only"): the Owner or a manager opens it after checking
+// in and turns the screen to the person; it goes back to the PIN screen.
+const PIN_TEXT = {
+  change: ['Your new till PIN', 'Wheelhouse picked this for you — nobody else at the shop has it. Learn it before you close this.', 'Your old PIN stops working when you keep this one.'],
+  first: ['Your till PIN', 'Welcome to North Street Cycles, Jo. This PIN checks you in at the till and puts your name on sales. Wheelhouse picked it — nobody else at the shop has it, and only you see it. Learn it before you close this.', 'Not using the till? Skip it — you can get a PIN later in Your settings.'],
+  cleared: ['Your till PIN', 'Your old PIN was cleared, so here’s a new one. Wheelhouse picked it — nobody else at the shop has it, and only you see it. Learn it before you close this.', 'Not using the till? Skip it — you can get a PIN later in Your settings.'],
+  give: ['[Name]’s till PIN', 'Turn the screen to [Name]. Wheelhouse picked this PIN — nobody else at the shop has it. [Name] learns it now; only they should see it.', 'Then the till goes back to the PIN screen, ready for [Name] to check in.'],
+};
+function pinDialog(size, mode = 'change') {
   const P = size === 'phone';
+  const [title, intro, foot] = PIN_TEXT[mode];
+  const later = mode === 'first' || mode === 'cleared';
+  const close = mode === 'give'
+    ? `<button type="button" aria-label="Close without giving a PIN" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${C.ink}">${icon('close', 20)}</button>`
+    : later ? '' : `<a href="your-settings-${size}.dc.html" aria-label="Close without changing your PIN" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a>`;
   return `<div role="dialog" aria-modal="true" aria-labelledby="pin-title-${size}" style="${P ? 'width: 100%; height: 100%;' : `width: 440px; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28);`} box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">
-<div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><h2 id="pin-title-${size}" style="margin: 0; font-size: 20px; font-weight: 700; flex-grow: 1">Your new till PIN</h2><a href="your-settings-${size}.dc.html" aria-label="Close without changing your PIN" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</a></div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 72px; box-sizing: border-box; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><h2 id="pin-title-${size}" style="margin: 0; font-size: 20px; font-weight: 700; flex-grow: 1">${title}</h2>${close}</div>
 <div style="padding: 24px ${P ? 20 : 28}px 28px; display: flex; flex-direction: column; gap: 20px; align-items: center; text-align: center">
-${p('Wheelhouse picked this for you — nobody else at the shop has it. Learn it before you close this.', 14)}
-<div aria-label="New PIN 7 3 0 5" style="display: flex; gap: 10px">${['7', '3', '0', '5'].map(pinDigit).join('')}</div>
-<div style="width: 100%; display: flex; flex-direction: column; gap: 10px">${button('Keep this PIN', { block: true })}${button('Give me a different one', { variant: 'default', block: true })}</div>
-<span style="font-size: 13px; color: ${C.muted}">Your old PIN stops working when you keep this one.</span>
+${p(intro, 14)}
+<div aria-label="${mode === 'give' ? '[Name]’s' : 'New'} PIN 7 3 0 5" style="display: flex; gap: 10px">${['7', '3', '0', '5'].map(pinDigit).join('')}</div>
+<div style="width: 100%; display: flex; flex-direction: column; gap: 10px">${button('Keep this PIN', { block: true })}${button('Give me a different one', { variant: 'default', block: true })}${later ? button('Skip for now', { variant: 'ghost', block: true }) : ''}</div>
+<span style="font-size: 13px; color: ${C.muted}">${foot}</span>
 </div>
 </div>`;
 }
-screens['pin-change'] = each((size) => {
+const pinBoard = (mode, behind) => each((size) => {
   const [W, H] = SIZE[size];
-  if (size === 'phone') return `<div style="width: ${W}px; height: ${H}px; display: flex">${pinDialog(size)}</div>`;
-  return `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${diaryScreens.diary[size]}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center">${pinDialog(size)}</div></div>`;
+  if (size === 'phone') return `<div style="width: ${W}px; height: ${H}px; display: flex">${pinDialog(size, mode)}</div>`;
+  return `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${behind(size)}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center">${pinDialog(size, mode)}</div></div>`;
 });
+screens['pin-change'] = pinBoard('change', (size) => diaryScreens.diary[size]);
+// UX walk-through 4 H1: Jo's first sign-in, over the staff app she lands in.
+screens['pin-first'] = pinBoard('first', (size) => diaryScreens.diary[size]);
+screens['pin-cleared'] = pinBoard('cleared', (size) => diaryScreens.diary[size]);
+// UX walk-through 4 M2: given at the till by the Owner, Jack Lewis, who has
+// checked in (the till behind is his; the sale screen itself isn't redrawn).
+screens['till-give-pin'] = pinBoard('give', (size) => { const [W, H] = SIZE[size]; return `<div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}">${tillBar({ serving: 'Jack Lewis' })}<main style="flex-grow: 1"></main></div>`; });
 
 // ---------- Customers (decision 5) ----------
 // On the shop's own website, in its theme: Wheelhouse's own "email me a
@@ -180,6 +217,11 @@ export const TITLES = {
   'till-checkin-stale': 'Till start-up: online, but not up to date',
   'till-pin-wrong': 'Till check-in — wrong PIN',
   'pin-change': 'Your new till PIN — Wheelhouse picks it',
+  // UX walk-through 4 H1, M2, M4
+  'pin-first': 'First sign-in — Your till PIN opens straight away (Skip for now if you never use the till)',
+  'pin-cleared': 'First sign-in after a PIN was cleared — a new PIN, the same way',
+  'till-give-pin': 'Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person',
+  'till-checkin-practice': 'Till check-in while running alongside — the practice band before anyone checks in',
   'cust-signin': 'Customer sign-in on the shop’s website — email me a code',
   'cust-code': 'Customer sign-in — enter the code (checks itself on the 6th digit)',
   'cust-code-expired': 'Customer sign-in — code expired',
@@ -189,5 +231,7 @@ export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
   { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-pin-wrong', 'pin-change'] },
+  // UX walk-through 4 H1, M2, M4: a new person's first PIN, and the till in practice.
+  { label: 'A new person’s first PIN', screens: ['pin-first', 'pin-cleared', 'till-give-pin', 'till-checkin-practice'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code', 'cust-code-expired'] },
 ];

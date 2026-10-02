@@ -25,8 +25,13 @@ const WH = () => ({ desktop: [DW, DH], tablet: [TW, TH], phone: [PW, PH] })[CUR]
 // a bar along the bottom — or the whole basket when it is the point.
 // Journey 9 decision 6: until switch-over every till is in practice, with a
 // band across the top. Off for every till board of this journey.
+// UX walk-through 4 M4: in practice there's no float check and no Close the
+// day — the drawer holds Citrus Lime's money — and the band says so.
 let PRACTICE = false;
-const practiceBand = () => `<div role="status" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: ${CUR === 'phone' ? '8px 14px' : '10px 20px'}; background: ${C.blueBg}; color: ${C.blueInk}; border-bottom: 1px solid ${C.border}">${icon('alert', 20)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">Practice: not real money</span>${CUR === 'phone' ? '' : '<span style="font-size: 13px">Sales here don’t use the card machine or count in the drawer, and are cleared on switch-over day.</span>'}</span></div>`;
+const practiceBand = () => `<div role="status" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: ${CUR === 'phone' ? '8px 14px' : '10px 20px'}; background: ${C.blueBg}; color: ${C.blueInk}; border-bottom: 1px solid ${C.border}">${icon('alert', 20)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">Practice: not real money</span>${CUR === 'phone' ? '' : '<span style="font-size: 13px">Sales here don’t use the card machine or count in the drawer, and are cleared on switch-over day. No float check or Close the day until then.</span>'}</span></div>`;
+// UX walk-through 4 M4: the same band for the PIN screen (signin.mjs), so
+// staff see they're in practice before they check in.
+export const practiceBandFor = (size) => { const was = CUR; CUR = size; try { return practiceBand(); } finally { CUR = was; } };
 // Draw one of this journey's till boards in practice (journey 9).
 export function practiceScreen(id, size) {
   const fn = recipes.find(([k]) => k === id)[1];
@@ -120,6 +125,10 @@ def('till-sale', () => tillPage(leftSide(), basket([PADS, BRAKES])));
 // UX walk-through 2 M6 (option 1): two of the pads are held for online
 // orders. The line says so and the sale carries on — never blocked.
 def('till-held', () => tillPage(leftSide(), basket([{ ...PADS, warn: '[n] held for online orders — sold anyway' }, BRAKES], { full: true })));
+// UX walk-through 3 H1 (option 1): one of the pads is held for job WH-1042,
+// since it was booked in for it. Same rule as online orders: warned, never
+// blocked (decision 5).
+def('till-held-job', () => tillPage(leftSide(), basket([{ ...PADS, warn: '1 held for job WH-1042 — sold anyway' }, BRAKES], { full: true })));
 
 // Decision 3: tap a basket line → a pop-up in the middle with price,
 // discount (amount or percent, with a reason), a note, and Remove.
@@ -204,7 +213,7 @@ const bigMethod = (title, sub, ic, primary = false) => `<button type="button" st
 const payHead = (title, sub) => [`${title}`, sub];
 // Decision 15: "Other" opens a list of less-used ways to pay, in place.
 const otherRow = (t, sub) => `<button type="button" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; box-sizing: border-box; padding: 8px 14px; border: 0; border-top: 1px solid ${C.border}; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 16)}</span></button>`;
-function payDialog(open = false) {
+function payDialog(open = false, TOTAL = 74) { // UX walk-through 2 (decision 6): any total
   const small = (t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`;
   const other = `<button type="button" aria-expanded="${open}" style="display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: ${open ? '10px 10px 0 0' : '10px'}; border: 1px solid ${open ? C.ink : C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}"><span>Other ways to pay</span><span style="display: inline-flex; transform: rotate(${open ? 180 : 0}deg)">${icon('chevron', 16)}</span></button>`;
   const list = open ? `<div style="margin-top: -14px; border: 1px solid ${C.ink}; border-top: 0; border-radius: 0 0 10px 10px; background: ${C.panel}; overflow: hidden">${otherRow('Finance', '[Finance provider] — the customer applies, the shop is paid by the lender')}${otherRow('Cycle to Work scheme', '[Scheme name] — paid by the scheme against a certificate')}${otherRow('Payment link', 'Text or email the customer a link to pay — once set up')}${otherRow('[Shop’s own]', 'Added by the shop in till settings')}</div>` : '';
@@ -216,6 +225,9 @@ ${other}${list}`, '', 560);
 }
 def('till-pay', () => overTill(payDialog(false)));
 def('till-pay-other', () => overTill(payDialog(true)));
+// UX walk-through 2 (decision 6): "Take payment" from the discounted total.
+const overDiscounted = (d) => overlay(() => tillPage(leftSide(), basket([PADS, BRAKES], { discount: DISC })), d);
+def('till-pay-discounted', () => overDiscounted(payDialog(false, 70)));
 // The card machine at work (decision 6): waiting for the card, then
 // approved (straight on to the receipt) or declined. If the machine doesn't
 // answer, staff can key the amount in on it by hand and say so here.
@@ -239,11 +251,15 @@ def('till-pay-cash', () => overTill(dialog('cash-title', `Cash · ${money(TOTAL)
 ${field('Or type the amount', { value: '£80.00' })}
 <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}"><span style="font-size: 18px; font-weight: 700">Change to give</span>${mono('£6.00', 'font-size: 34px')}</div>`, `${button('Back', { variant: 'ghost' })}${button('Cash taken · open the drawer')}`, 560)));
 const paidRow = (method, amount) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">${icon('check', 16, C.successInk)}${method}</span>${mono(amount, 'font-size: 16px')}</div>`;
-def('till-pay-split', () => overTill(dialog('split-title', `Split payment · ${money(TOTAL)}`, 'Take it in parts — each part is recorded as it goes', `
-<div style="display: flex; flex-direction: column">${paidRow('Cash', '£20.00')}</div>
-<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="font-size: 18px; font-weight: 700">Still to pay</span>${mono('£54.00', 'font-size: 34px')}</div>
-${bigMethod('Card · £54.00', 'Sends £54.00 to the card machine', 'card', true)}
-<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Cash', 'Gift card or credit', 'Another amount'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560)));
+// UX walk-through 2 (decision 6): split payment from any total — £20.00 cash
+// taken, the rest still to pay.
+const splitDialog = (TOTAL = 74, cash = 20) => dialog('split-title', `Split payment · ${money(TOTAL)}`, 'Take it in parts — each part is recorded as it goes', `
+<div style="display: flex; flex-direction: column">${paidRow('Cash', money(cash))}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="font-size: 18px; font-weight: 700">Still to pay</span>${mono(money(TOTAL - cash), 'font-size: 34px')}</div>
+${bigMethod(`Card · ${money(TOTAL - cash)}`, `Sends ${money(TOTAL - cash)} to the card machine`, 'card', true)}
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Cash', 'Gift card or credit', 'Another amount'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560);
+def('till-pay-split', () => overTill(splitDialog()));
+def('till-split-discounted', () => overDiscounted(splitDialog(70))); // UX walk-through 2 (decision 6)
 
 // Decision 7: "Paid" — Print, Email, Text or No receipt; it closes by
 // itself after a few seconds and the next sale starts. The receipt number
@@ -431,8 +447,11 @@ CUR = 'desktop';
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
   'till-held': 'Selling pads held for an online order — warned, not blocked', // UX walk-through 2 M6
+  'till-held-job': 'Selling pads held for job WH-1042 — warned, not blocked', // UX walk-through 3 H1
   'till-discounted': 'Basket with a discount — the new total', // UX walk-through 2 M11
   'till-card-discounted': 'Card — from the discounted total', // UX walk-through 2 M11
+  'till-pay-discounted': 'Take payment — from the discounted total', // UX walk-through 2 (decision 6)
+  'till-split-discounted': 'Split payment — from the discounted total', // UX walk-through 2 (decision 6)
   'till-find-customer': 'Past sales — find the customer, then their sales', // UX walk-through 2 M10
   'till-refund-older': 'Refund an older sale, found through the customer', // UX walk-through 2 M10
   'till-noted': 'Offline refund noted for later', // UX walk-through 2 M7
@@ -475,8 +494,8 @@ export const TITLES = {
 };
 // UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
-  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial'] },
-  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
+  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect'] },
   { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-noted', 'till-collect-offline', 'till-no-signout', 'till-failed'] },

@@ -50,6 +50,13 @@ const FREE = '[shop-name].wheelhouseepos.com';
 const OWN = '[your-shop].co.uk';
 const OCEAN = '#1A3F66';
 const tall = 'display: inline-flex; align-items: center; min-height: 44px';
+// UX walk-through 4 M6: what goes online is counted before it does. A product
+// with no photo shows as a tile with its name; one with no price stays off.
+// "See them" opens Stock filtered to those products.
+const COUNTS = [['[n] products go online', ''], ['[n] have no photo (shown with their name)', 'no photo'], ['[n] have no price (stay off until priced)', 'no price']];
+const seeThem = (what, px = 14) => `<a href="#" aria-label="See the products with ${what}, in Stock" style="${tall}; font-size: ${px}px; font-weight: 600; color: ${C.ink}">See them</a>`;
+const productCounts = (px = 15) => `<ul aria-label="Your products online" style="margin: 0; padding: 0; display: flex; flex-direction: column">${COUNTS.map(([t, what]) => `<li style="list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; min-height: ${what ? 44 : 32}px; font-size: ${px}px">${t}${what ? seeThem(what, px === 15 ? 14 : px) : ''}</li>`).join('')}</ul>`;
+const countsBox = (bg = C.panel) => `<div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 16px; border-radius: 10px; border: 1px solid ${C.border}; background: ${bg}"><span style="font-size: 14px; font-weight: 700; padding-top: 4px">With every product online</span>${productCounts()}</div>`;
 
 const h2 = (t, id = '') => `<h2${id ? ` id="${id}"` : ''} style="margin: 0; font-size: 20px; font-weight: 700">${t}</h2>`;
 const h3 = (t, id = '') => `<h3${id ? ` id="${id}"` : ''} style="margin: 0; font-size: 16px; font-weight: 700">${t}</h3>`;
@@ -85,14 +92,26 @@ const PAY_ROW = {
   more: ['Taking payments', '[payment provider] needs more details by [date], or online payments stop', badge('Needs details', 'amber')],
 };
 const payRow = (k) => { const [t, s, end] = PAY_ROW[k]; return row(t, `${s} · in Settings › Online orders`, end); };
-const overview = ({ on = false, published = true, changes = false, open = false, pay = 'none', tracking = false } = {}) => {
+// UX walk-through 4 H2: during a move from Citrus Lime the website is made
+// ready while running alongside and turned on during switch-over morning, so
+// it never takes orders or bookings that Citrus Lime doesn't see. moving:
+// 'ready' (running alongside) or 'morning' (switch-over morning).
+const READY_ITEMS = (done) => [['Set up: the three steps', true], ['Payments connected, and the test payment worked', true], [done ? 'Starting wording checked' : '2 pages still have starting wording: <a href="#" style="color: inherit; font-weight: 700">Collection and returns</a>, <a href="#" style="color: inherit; font-weight: 700">Privacy</a>', done]];
+const readyList = (done) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.bg}"><span style="font-size: 15px; font-weight: 700">Ready for switch-over · ${done ? '3' : '2'} of 3 <span style="font-weight: 500; color: ${C.muted}">· also on the switch-over checklist</span></span><ul style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px">${READY_ITEMS(done).map(([t, ok]) => `<li style="list-style: none; display: flex; align-items: flex-start; gap: 8px; font-size: 15px; line-height: 1.45"><span style="display: inline-flex; padding-top: 2px; color: ${ok ? C.successInk : C.warnInk}">${icon(ok ? 'check' : 'alert', 16)}</span>${sr(ok ? 'Done: ' : 'To do: ')}<span>${t}</span></li>`).join('')}</ul></div>`;
+const overview = ({ on = false, published = true, changes = false, open = false, pay = 'none', tracking = false, moving = '' } = {}) => {
   // Audit L2: while the website has never been on, turning it on is the main job.
   const first = !on && !published;
-  const turn = on ? button('Turn off', { variant: 'default' }) : button('Turn it on', { variant: first ? 'accent' : 'default' });
-  const turnLines = on ? '' : `<div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: ${C.muted}; text-align: ${isP() ? 'left' : 'right'}">${first ? '<span>This also publishes your website as it is now.</span>' : ''}${pay === 'none' ? '<span>Customers can look but not buy until you connect payments.</span>' : ''}<span>2 pages still have starting wording: <a href="#" style="color: ${C.ink}">Collection and returns</a>, <a href="#" style="color: ${C.ink}">Privacy</a></span></div>`;
+  const waits = moving === 'ready';
+  const turn = on ? button('Turn off', { variant: 'default' }) : waits ? off(button('Turn it on', { variant: 'default' }), 'It goes on during switch-over morning') : button('Turn it on', { variant: first ? 'accent' : 'default' });
+  // UX walk-through 4 M6: the counts sit beside "Turn it on".
+  const turnLines = on ? '' : moving
+    ? `<div style="display: flex; flex-direction: column; gap: 10px">${waits
+      ? msg('<strong>You’re moving from Citrus Lime.</strong> Your website goes on during switch-over morning, from the switch-over checklist. Until then Citrus Lime’s website keeps selling, so no order or booking reaches a shop that’s still running on Citrus Lime. <a href="#" style="color: inherit; font-weight: 700">Open the switch-over checklist</a>', 'grey')
+      : msg(`<strong>Switch-over morning: turn your website on now.</strong> This also publishes it as it is now. If you use your own address, point it here next — this can take up to a day. <a href="#" style="color: inherit; font-weight: 700">Web address</a>`, 'ok')}${readyList(!waits)}${countsBox(C.bg)}</div>`
+    : `<div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: ${C.muted}; text-align: ${isP() ? 'left' : 'right'}">${first ? '<span>This also publishes your website as it is now.</span>' : ''}${pay === 'none' ? '<span>Customers can look but not buy until you connect payments.</span>' : ''}<span>2 pages still have starting wording: <a href="#" style="color: ${C.ink}">Collection and returns</a>, <a href="#" style="color: ${C.ink}">Privacy</a></span>${first ? COUNTS.map(([t, what]) => `<span style="display: flex; justify-content: ${isP() ? 'flex-start' : 'flex-end'}; align-items: center; gap: 10px; min-height: ${what ? 36 : 24}px">${t}${what ? seeThem(what, 13) : ''}</span>`).join('') : ''}</div>`;
   const status = box(`<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
 <span style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background: ${on ? C.okBg : C.mutedBg}; color: ${on ? C.successInk : C.ink}">${icon(on ? 'check' : 'lock', 22)}</span>
-<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0">${h2(on ? 'Your website is on' : 'Your website is off', 'ws-status')}<span style="font-size: 15px; color: ${C.muted}">${on ? 'Customers can see it at' : 'Only your staff can see it. Customers will find it at'} <a href="#" style="color: ${C.ink}; font-weight: 600">${FREE}</a></span></div>
+<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0">${h2(on ? 'Your website is on' : moving === 'morning' ? 'Your website is ready' : 'Your website is off', 'ws-status')}<span style="font-size: 15px; color: ${C.muted}">${on ? 'Customers can see it at' : 'Only your staff can see it. Customers will find it at'} <a href="#" style="color: ${C.ink}; font-weight: 600">${FREE}</a></span></div>
 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px">${turn}</div>
 </div>${turnLines}
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid ${C.border}">${button('Edit website', { iconName: 'website', variant: first ? 'default' : 'accent' })}${changes
@@ -100,7 +119,8 @@ const overview = ({ on = false, published = true, changes = false, open = false,
     : `<span style="font-size: 14px; color: ${C.muted}">${published ? 'Last published by Jack Lewis on [date]' : 'Not published yet'}</span>`}</div>${open ? changeList() : ''}`);
   return websitePage(`${status}${rows(
     payRow(pay),
-    row('Pages', 'Home, About us, Contact us, Collection and returns, Privacy, Cookies', badge('2 to check', 'amber')),
+    // UX walk-through 4 H2: on switch-over morning the wording has been checked.
+    row('Pages', 'Home, About us, Contact us, Collection and returns, Privacy, Cookies', moving === 'morning' ? '' : badge('2 to check', 'amber')),
     row('Tracking tools', tracking ? 'Google Analytics · cookie choice on' : 'None — so there’s no cookie choice'),
     row('Web address', FREE),
     row('Wheelhouse’s website or Shopify', 'Wheelhouse’s website'),
@@ -128,9 +148,14 @@ ${option('Connect your Shopify shop', shopify, 'Keep your Shopify look and check
 const startLook = () => steps(2, 'Your logo and colour', 'Wheelhouse suggests colours from your logo. You can change anything later under Theme.', `<div style="display: grid; grid-template-columns: ${isP() ? 'minmax(0, 1fr)' : '220px minmax(0, 1fr)'}; gap: 24px; align-items: start">
 <div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Logo</span><div role="img" aria-label="Your logo, uploaded" style="height: 140px; display: flex; align-items: center; justify-content: center; border-radius: 10px; border: 2px dashed ${C.border}; background: ${C.panel}; color: ${C.muted}; font-size: 14px">[Your logo]</div>${linkBtn('Change logo')}<span style="font-size: 13px; color: ${C.muted}; line-height: 1.4">No logo yet? Skip it — your shop’s name is shown instead, and you can add one later.</span></div>
 <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 12px"><legend style="font-size: 15px; font-weight: 700; padding: 0 0 8px">Main colour — for buttons and links</legend><div style="display: flex; flex-wrap: wrap; gap: ${isP() ? 12 : 24}px; align-items: flex-start"><div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; color: ${C.muted}">From your logo</span><div style="display: flex; gap: 8px">${swatch(OCEAN, true, 'Dark blue')}${swatch('#2F6B4F', false, 'Green')}</div></div><div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; color: ${C.muted}">Wheelhouse’s own</span>${swatch('#2A2822', false, 'Soft sand charcoal')}</div></div>${linkBtn('Choose another colour')}${note('Every colour is checked so text on it stays easy to read.')}</fieldset></div>`, button('Next'));
-const startProducts = () => steps(3, 'Start with every product online, or nothing?', 'Either way, every category and product has its own “Show on website” switch afterwards.', `<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Start with</legend>
+// UX walk-through 4 M6: the counts under the choice. M7: the question is
+// asked once, wherever Jack meets it first. If turning on buying online
+// asked it already, step 3 shows the answer with Change.
+const startProducts = (answered = false) => (answered
+  ? steps(3, 'Your products online', 'You chose this when you turned on buying online. Every category and product has its own “Show on website” switch.', `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; padding: 6px 16px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 15px"><span>Started with every product online on [date]</span>${linkBtn('Change', 'Change what your website started with')}</div>${countsBox()}${note('Your website stays off until you turn it on.')}`, button('Make my website'))
+  : steps(3, 'Start with every product online, or nothing?', 'Either way, every category and product has its own “Show on website” switch afterwards.', `<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Start with</legend>
 ${option('Every product online', true, 'Everything with a price shows. Switch off what you don’t want online.', 'start')}
-${option('Nothing online', false, 'Add categories and products as you go.', 'start')}</fieldset>${note('Your website stays off until you turn it on.')}`, button('Make my website'));
+${option('Nothing online', false, 'Add categories and products as you go.', 'start')}</fieldset>${countsBox()}${note('Your website stays off until you turn it on.')}`, button('Make my website')));
 
 // ---------- The preview (decision 1; audit H1, M5, M12) ----------
 // Journey 1's home page, cut into its six sections so the editor can
@@ -196,19 +221,23 @@ const pubBtn = (state) => (state === 'view' ? '' : ['changes', 'first', 'saving'
 const histBtn = (state) => (state === 'first' || state === 'view' ? off(button('History', { variant: 'ghost' }), 'Nothing published yet') : button('History', { variant: 'ghost' }));
 const chipLink = () => `<a href="#" style="${tall}; padding: 0 10px; border-radius: 999px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap">${icon('alert', 14)}&nbsp;Hard to read colour · Fix</a>`;
 const pagePicker = (pageName, menu) => `<button type="button" aria-haspopup="listbox" aria-expanded="${menu}" aria-label="Page you’re editing: ${esc(pageName)}" style="display: inline-flex; align-items: center; gap: 8px; min-width: 0; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}; white-space: nowrap; overflow: hidden"><span style="color: ${C.muted}">Page:</span><strong style="overflow: hidden; text-overflow: ellipsis">${pageName}</strong>${icon('chevron', 14)}</button>`;
-const topBar = ({ state = 'changes', pageName = 'Home', size = 'Computer', menu = false, chip = false, big = false }) => `<header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; gap: 10px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
+// UX walk-through 4 L2: the orders link shows only when orders are waiting —
+// never on a website that has never been on.
+const topBar = ({ state = 'changes', pageName = 'Home', size = 'Computer', menu = false, chip = false, big = false, orders = true }) => `<header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; gap: 10px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
 ${back('Website')}<span aria-hidden="true" style="width: 1px; height: 28px; background: ${C.border}"></span>
 ${pagePicker(pageName, menu)}
 ${seg(SIZE_BTNS(size))}
 ${button(big ? 'Show the panel' : 'Bigger', { variant: 'ghost' })}
 <span style="flex-grow: 1"></span>
-<a href="#" style="${tall}; font-size: 13px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${isT() ? '3 orders waiting' : '3 online orders waiting'}</a>
+${orders ? `<a href="#" style="${tall}; font-size: 13px; font-weight: 600; color: ${C.ink}; white-space: nowrap">${isT() ? '3 orders waiting' : '3 online orders waiting'}</a>` : ''}
 ${STATES[state]}${chip ? chipLink() : ''}
 ${histBtn(state)}${pubBtn(state)}
 </header>`;
 // Audit H2: with the website off, "Turn it on" the first time also
 // publishes. Not a spoken status: it never changes (L2).
-const offStrip = (first = true) => `<div style="flex-shrink: 0; display: flex; flex-wrap: ${isP() ? 'wrap' : 'nowrap'}; align-items: center; gap: ${isP() ? 6 : 12}px ${isP() ? 10 : 12}px; padding: ${isP() ? '8px 12px' : '4px 16px'}; background: ${C.warnBg}; color: ${C.warnInk}; font-size: ${isP() ? 13 : 14}px; line-height: 1.4">${icon('lock', 16)}<span style="flex: 1 1 ${isP() ? '260px' : 'auto'}"><strong>Your website is off.</strong> Only your staff can see it.${first ? ' Turning it on also publishes it as it is now.' : ''} 2 pages still have starting wording: <a href="#" style="color: inherit; font-weight: 700">check them</a>.</span>${button('Turn it on', { variant: 'default' })}</div>`;
+// UX walk-through 4 H2: during a move the strip says when it goes on, and
+// Turn it on waits for switch-over morning.
+const offStrip = (first = true, moving = false) => moving ? `<div style="flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: ${isP() ? '8px 12px' : '10px 16px'}; background: ${C.warnBg}; color: ${C.warnInk}; font-size: ${isP() ? 13 : 14}px; line-height: 1.4">${icon('lock', 16)}<span style="flex: 1 1 260px"><strong>Your website is off until switch-over morning.</strong> Only your staff can see it. It goes on from the switch-over checklist. 2 pages still have starting wording: <a href="#" style="color: inherit; font-weight: 700">check them</a>.</span></div>` : `<div style="flex-shrink: 0; display: flex; flex-wrap: ${isP() ? 'wrap' : 'nowrap'}; align-items: center; gap: ${isP() ? 6 : 12}px ${isP() ? 10 : 12}px; padding: ${isP() ? '8px 12px' : '4px 16px'}; background: ${C.warnBg}; color: ${C.warnInk}; font-size: ${isP() ? 13 : 14}px; line-height: 1.4">${icon('lock', 16)}<span style="flex: 1 1 ${isP() ? '260px' : 'auto'}"><strong>Your website is off.</strong> Only your staff can see it.${first ? ' Turning it on also publishes it as it is now.' : ''} 2 pages still have starting wording: <a href="#" style="color: inherit; font-weight: 700">check them</a>.</span>${button('Turn it on', { variant: 'default' })}</div>`;
 const TAB_SET = () => (isP() ? [['Sections', 'sections'], ['Theme', 'theme'], ['Preview', 'preview']] : [['Sections', 'sections'], ['Theme', 'theme']]);
 const tabs = (on) => `<div role="tablist" aria-label="Edit" style="flex-shrink: 0; display: grid; grid-template-columns: repeat(${TAB_SET().length}, 1fr); border-bottom: 1px solid ${C.border}; background: ${C.panel}">${TAB_SET().map(([t, k]) => `<button type="button" role="tab" id="tab-${k}" aria-controls="panel-${k}" aria-selected="${k === on}" style="min-height: 48px; border: 0; border-bottom: 3px solid ${k === on ? C.ink : 'transparent'}; background: transparent; font-family: inherit; font-size: 15px; font-weight: ${k === on ? 700 : 500}; color: ${C.ink}">${t}</button>`).join('')}</div>`;
 // Audit H2: the caption says whether this is the draft or what customers see.
@@ -222,7 +251,7 @@ const CAPTIONS = {
 const sizeWords = (size) => (size === 'Computer' ? ' on a computer' : size === 'Phone' ? ' on a phone' : ' on a tablet');
 // On a phone (decision 1): edit, then preview. Sections, Theme and Preview
 // are tabs; Publish stays at the top; the save state sits under it.
-const phoneEditor = ({ panel, tab, state, siteOff, pageName, extra, chip, phonePreview, caption }) => {
+const phoneEditor = ({ panel, tab, state, siteOff, pageName, extra, chip, phonePreview, caption, moving }) => {
   const [PWd, PHt] = DIMS.phone;
   const body = tab === 'preview'
     ? `<div role="tabpanel" id="panel-preview" aria-labelledby="tab-preview" style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 12px; background: ${C.mutedBg}; overflow: hidden">${seg(SIZE_BTNS('Phone'))}<span style="align-self: flex-start; font-size: 13px; color: ${C.muted}">${caption || CAPTIONS[state](pageName)} on a phone</span>${phonePreview || scaled(recolour(browseScreens['wb-home'].phone, OCEAN), 390, 844, 0.7, 'Preview of Home on a phone. It can’t be used', { px: 0, total: 2600, view: 844 })}</div>`
@@ -230,16 +259,16 @@ const phoneEditor = ({ panel, tab, state, siteOff, pageName, extra, chip, phoneP
   return `<div style="position: relative; width: ${PWd}px; height: ${PHt}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">
 <header style="flex-shrink: 0; display: flex; flex-direction: column; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="height: 56px; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 6px"><a href="#" aria-label="Back to Website" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('back', 20)}</a>${pagePicker(pageName, false).replace('display: inline-flex; align-items: center; gap: 8px; min-width: 0;', 'display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex-grow: 1;')}${pubBtn(state)}</div>
 <div style="display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; min-height: 44px; border-top: 1px solid ${C.border}">${STATES[state]}<span style="flex-grow: 1"></span>${chip ? chipLink().replace('Hard to read colour · Fix', 'Colour · Fix') : ''}${histBtn(state)}</div></header>
-${siteOff ? offStrip(state === 'first') : ''}
+${siteOff ? offStrip(state === 'first', moving) : ''}
 <main style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column">${sr(`<h1>Editing ${esc(pageName)} · website for North Street Cycles</h1>`)}${tabs(tab)}${body}</main>${extra}</div>`;
 };
 const editor = (o) => {
-  const { panel, tab = 'sections', preview, state = 'changes', siteOff = false, pageName = 'Home', size = 'Computer', extra = '', caption = '', menu = false, chip = false, big = false, banner = '', phoneTab = '', phonePreview = '' } = o;
-  if (isP()) return phoneEditor({ panel, tab: phoneTab || tab, state, siteOff, pageName, extra, chip, phonePreview, caption });
+  const { panel, tab = 'sections', preview, state = 'changes', siteOff = false, pageName = 'Home', size = 'Computer', extra = '', caption = '', menu = false, chip = false, big = false, banner = '', phoneTab = '', phonePreview = '', moving = false, orders = !siteOff } = o;
+  if (isP()) return phoneEditor({ panel, tab: phoneTab || tab, state, siteOff, pageName, extra, chip, phonePreview, caption, moving });
   const [EW, EH] = DIMS[SIZE];
   return `<div style="position: relative; width: ${EW}px; height: ${EH}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">
 <a href="#ws-panel" style="position: absolute; left: -9999px">Skip to the sections list</a>
-${topBar({ state, pageName, size, menu, chip, big })}${siteOff ? offStrip(state === 'first') : ''}${banner}
+${topBar({ state, pageName, size, menu, chip, big, orders })}${siteOff ? offStrip(state === 'first', moving) : ''}${banner}
 <main style="flex-grow: 1; min-height: 0; display: flex">${sr(`<h1>Editing ${esc(pageName)} · website for North Street Cycles</h1>`)}
 ${big ? '' : `<aside id="ws-panel" aria-label="Edit ${esc(pageName)}" style="width: ${panelW()}px; flex-shrink: 0; display: flex; flex-direction: column; background: ${C.panel}; border-right: 1px solid ${C.border}">${tabs(tab)}<div role="tabpanel" id="panel-${tab}" aria-labelledby="tab-${tab}" data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">${panel}</div></aside>`}
 <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 20px; background: ${C.mutedBg}; overflow: hidden"><span style="align-self: flex-start; font-size: 13px; color: ${C.muted}">${caption || CAPTIONS[state](pageName)}${sizeWords(size)}</span>${preview}</div>
@@ -271,7 +300,8 @@ ${saved()}${sectionEnd()}`;
 const KINDS = [
   ['Big photo and headline', 'A wide photo with your words and up to two buttons'],
   ['Shop by category', 'Categories you choose, with photos'],
-  ['Featured products', 'Up to 8 products you pick, or your newest'],
+  // UX walk-through 4 M6: Featured products picks only products with a photo.
+  ['Featured products', 'Up to 8 products with a photo — you pick, or your newest'],
   ['Book a repair', 'Your words, your main services and prices'],
   ['Our shops', 'Each shop’s address, hours and phone'],
   ['Words and a picture', 'Anything — the team, a club ride, a sale'],
@@ -368,9 +398,13 @@ ${note('Each tool is marked Statistics or Marketing, so the cookie choice asks c
 // ---------- Web address (decision 7; audit M9) — waiting on the business plan ----------
 const RECORDS = [['[Record type]', '[Name]', '[Value]'], ['[Record type]', '[Name]', '[Value]']];
 const copyBtn = (label, done = false) => `<button type="button" aria-label="${esc(label)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; font-weight: 600; color: ${C.ink}">${done ? `${icon('check', 14)}Copied` : 'Copy'}</button>`;
-const address = (stage = 'start') => {
+const address = (stage = 'start', moving = false) => {
   const free = box(`${h3(stage === 'done' ? 'Your address' : 'Your free address')}<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px"><a href="#" style="font-size: 17px; font-weight: 700; color: ${C.ink}">${stage === 'done' ? OWN : FREE}</a>${copyBtn('Copy your address')}</div>${stage === 'done' ? note(`${FREE} still works, and sends people to ${OWN}.`) : ''}`);
-  const warning = msg(`Once connected, ${OWN} shows your Wheelhouse website, and your old website stops showing on it. Turn your website on first. Leave any email records as they are.`, 'grey');
+  // UX walk-through 4 H2: while moving from Citrus Lime, the address is
+  // pointed here on switch-over morning, after the website goes on.
+  const warning = moving
+    ? msg(`<strong>You’re moving from Citrus Lime.</strong> Once connected, ${OWN} shows your Wheelhouse website, and your Citrus Lime website stops showing on it. So add these records during switch-over morning, after you turn your website on — it can take up to a day. Leave any email records as they are.`, 'warn')
+    : msg(`Once connected, ${OWN} shows your Wheelhouse website, and your old website stops showing on it. Turn your website on first. Leave any email records as they are.`, 'grey');
   const own = {
     start: box(`${h3('Use your own address')}${note('If you already have one — for example from your old website — customers can keep using it.')}<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 12px; max-width: 560px"><div style="flex: 1 1 220px">${field('Your address', { placeholder: OWN, linked: true })}</div><div style="padding-top: 26px">${button('Next')}</div></div>`),
     typo: box(`${h3('Use your own address')}${note('If you already have one — for example from your old website — customers can keep using it.')}<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 12px; max-width: 560px"><div style="flex: 1 1 220px">${field('Your address', { value: 'your-shop', error: 'Check the address — it needs an ending, like .co.uk or .com', linked: true })}</div><div style="padding-top: 26px">${button('Next')}</div></div>`),
@@ -407,8 +441,13 @@ ${wallets(true)}`],
 ${msg('Connected to [payment provider] by Jack Lewis on [date] · for “Pay now” on repairs', 'ok')}
 ${rowSwitch('Gift cards and store credit on repairs', true)}`],
 };
-const paySettings = (k) => {
-  const [on, body] = PAY[k];
+// UX walk-through 4 H2: during a move, a working test payment counts towards
+// "The website is ready"; customers can buy once the website goes on.
+const PAY_MOVING = msg('<strong>You’re moving from Citrus Lime.</strong> Customers can buy once your website goes on, during switch-over morning. This counts towards “The website is ready” on the switch-over checklist.', 'grey');
+const paySettings = (k, moving = false) => {
+  const [on, body0] = PAY[k];
+  const at = body0.lastIndexOf('</p>') + 4;
+  const body = moving ? `${body0.slice(0, at)}\n${PAY_MOVING}${body0.slice(at)}` : body0;
   const summary = k === 'none' || k === 'failed' ? 'Not connected' : k === 'shopify' ? 'Shopify for website orders · [Payment provider] for repairs' : '[Payment provider] · gift cards and store credit';
   return withOnlineArea(() => settingsPage('online', 'Online orders', ONLINE_INTRO, onlineFolds({ pay: body }), { who: OWNER }))
     .replace(/(<section aria-labelledby="set-online"[^>]*><div[^>]*>[\s\S]*?<\/div>)/, `$1${master(on)}`)
@@ -442,9 +481,15 @@ const ed = (o) => editor({ preview: desktopPreview(o.view || {}), panel: section
 def('ws-start-which', () => startWhich());
 def('ws-start-look', () => startLook());
 def('ws-start-products', () => startProducts());
+// UX walk-through 4 M7.
+def('ws-start-products-answered', () => startProducts(true));
 def('ws-editor-first', () => ed({ state: 'first', siteOff: true, panel: `${msg('<strong>Here’s your website</strong>, made from your shop’s details. Click any part to change it.', 'ok')}${sectionList()}` }));
 def('ws-page', () => overview({ published: false }));
 def('ws-page-on', () => overview({ on: true, changes: true, pay: 'ok' }));
+// UX walk-through 4 H2.
+def('ws-page-moving', () => overview({ published: false, pay: 'ok', moving: 'ready' }));
+def('ws-page-switch-over', () => overview({ published: false, pay: 'ok', moving: 'morning' }));
+def('ws-editor-moving', () => ed({ state: 'first', siteOff: true, moving: true }));
 def('ws-page-changes', () => overview({ on: true, changes: true, open: true, pay: 'ok' }));
 def('ws-no-access', () => noAccess());
 def('ws-no-settings', () => noSettings());
@@ -480,11 +525,15 @@ def('ws-tracking-error', () => tracking({ on: true, error: true }));
 def('ws-address', () => address('start'));
 def('ws-address-typo', () => address('typo'));
 def('ws-address-steps', () => address('steps'));
+// UX walk-through 4 H2.
+def('ws-address-moving', () => address('steps', true));
 def('ws-address-waiting', () => address('waiting'));
 def('ws-address-done', () => address('done'));
 def('ws-pay-none', () => paySettings('none'));
 def('ws-pay-connected', () => paySettings('connected'));
 def('ws-pay-tested', () => paySettings('tested'));
+// UX walk-through 4 H2.
+def('ws-pay-tested-moving', () => paySettings('tested', true));
 def('ws-pay-failed', () => paySettings('failed'));
 def('ws-pay-more', () => paySettings('more'));
 def('ws-today-pay-more', () => today({ payMore: true }));
@@ -510,10 +559,14 @@ SIZE = 'desktop';
 export const TITLES = {
   'ws-start-which': 'Set up, step 1: Wheelhouse’s website or your Shopify shop?',
   'ws-start-look': 'Step 2: logo and main colour, suggested from the logo',
-  'ws-start-products': 'Step 3: start with every product online, or nothing',
+  'ws-start-products': 'Step 3: start with every product online, or nothing — with how many have no photo or price',
+  'ws-start-products-answered': 'Step 3 when buying online asked first: the answer, with Change',
   'ws-editor-first': 'The editor opens on a ready-made home page, still off',
   'ws-page': 'Office › Website: off and never published — Turn it on also publishes',
   'ws-page-on': 'On, with unpublished changes and payments connected',
+  'ws-page-moving': 'Moving from Citrus Lime: ready for switch-over, Turn it on waits',
+  'ws-page-switch-over': 'Switch-over morning: the website is ready — Turn it on',
+  'ws-editor-moving': 'The editor while moving: off until switch-over morning',
   'ws-page-changes': 'The unpublished changes, with Publish and Discard',
   'ws-no-access': 'Without “Can edit the website”: who to ask',
   'ws-no-settings': 'Can edit the website, but not change settings',
@@ -548,11 +601,13 @@ export const TITLES = {
   'ws-address': 'Web address: the free one, or use your own',
   'ws-address-typo': 'An address that needs an ending',
   'ws-address-steps': 'Your own address: the 2 records, and what it changes',
+  'ws-address-moving': 'While moving: point your address here on switch-over morning',
   'ws-address-waiting': 'Not connected yet — up to a day',
   'ws-address-done': 'Your own address connected',
   'ws-pay-none': 'Online orders › Paying online: not connected, Buying online off',
   'ws-pay-connected': 'Back from [payment provider]: make a test payment',
   'ws-pay-tested': 'The test payment worked',
+  'ws-pay-tested-moving': 'The test payment worked, while moving from Citrus Lime',
   'ws-pay-failed': 'Connecting didn’t finish: nothing changed',
   'ws-pay-more': '[payment provider] needs more details',
   'ws-today-pay-more': 'The same warning on Today',
@@ -568,8 +623,10 @@ export const TITLES = {
   'ws-shopify-order': 'A Shopify order in Online orders',
 };
 export const ROWS = [
-  { label: 'Setting it up', screens: ['ws-start-which', 'ws-start-look', 'ws-start-products', 'ws-editor-first'] },
+  { label: 'Setting it up', screens: ['ws-start-which', 'ws-start-look', 'ws-start-products', 'ws-start-products-answered', 'ws-editor-first'] },
   { label: 'The Website page', screens: ['ws-page', 'ws-page-on', 'ws-page-changes', 'ws-no-access', 'ws-no-settings'] },
+  // UX walk-through 4 H2.
+  { label: 'While moving from Citrus Lime', screens: ['ws-page-moving', 'ws-editor-moving', 'ws-pay-tested-moving', 'ws-address-moving', 'ws-page-switch-over'] },
   { label: 'Editing the home page', screens: ['ws-editor', 'ws-editor-section', 'ws-editor-add', 'ws-editor-drag', 'ws-editor-moved', 'ws-editor-removed', 'ws-editor-header', 'ws-editor-on-phone', 'ws-editor-bigger', 'ws-editor-pages-menu', 'ws-editor-saving', 'ws-editor-taken'] },
   { label: 'Theme', screens: ['ws-theme', 'ws-theme-contrast', 'ws-theme-publish', 'ws-theme-product', 'ws-theme-fonts'] },
   { label: 'Publishing', screens: ['ws-published', 'ws-published-off', 'ws-discard', 'ws-history'] },

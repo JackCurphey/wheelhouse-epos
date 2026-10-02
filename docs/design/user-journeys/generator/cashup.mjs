@@ -6,7 +6,7 @@
 // till frame (app-map.mjs: foldedRail, tillBar, tillPhoneBar). Drawn at
 // desktop, tablet and phone from one recipe per screen (the journey 11
 // pattern: def() + CUR). Real example data: North Street Cycles, Bolton,
-// Till B1, Jack Lewis (Manager), Maya Patel's card sale of £74.00. Every
+// Till B1, Jack Lewis (Owner — UX walk-through 2 (decision 6)), Maya Patel's card sale of £74.00. Every
 // takings figure is a bracketed placeholder — there is no real day's data.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
@@ -208,7 +208,7 @@ def('eod-z', () => overlay(page(`${stepTills(false)}${stepAttention(false)}${ste
 
 // Decision 5: after the shop's closing time, owners and managers see "Close
 // the day" in the till bar (on a phone, a strip under the bar). Drawn on the
-// sale screen from journey 11 with Jack Lewis (Manager) serving.
+// sale screen from journey 11 with Jack Lewis (Owner — UX walk-through 2 (decision 6)) serving.
 function entry() {
   const base = tillScreens['till-sale'][CUR].replaceAll('Serving: Jo Taylor', 'Serving: Jack Lewis').replace('>Jo</button>', '>Jack</button>');
   const btn = `<a href="eod-count-${CUR}.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 8px; background: #ffffff; color: ${C.ink}; text-decoration: none; font-size: 14px; font-weight: 700">${icon('cash', 16)}Close the day</a>`;

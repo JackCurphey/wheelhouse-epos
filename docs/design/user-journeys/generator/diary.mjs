@@ -162,6 +162,8 @@ function siteSwitcher() {
 // ---------- Shells (copied/adapted from stage1.mjs staffDesktop/staffPhone: same look, new rooms) ----------
 // Journey A decision 2 (29 Sep): one search box in the staff header on every page.
 export const headerSearch = (w = 320) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}px; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" aria-label="Search jobs, customers, products" placeholder="Search jobs, customers, products" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: ${C.ink}"></label>`;
+// UX walk-through 2 (decision 6): initials skip a placeholder's brackets, so
+// "[Manager]" shows M rather than "[".
 export function shellDesktop(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '', height = DH, search = true } = {}) {
   return `<div style="width: ${DW}px; height: ${height}px; display: flex; background: ${C.bg}">
 <nav aria-label="Main" style="width: 248px; flex-shrink: 0; box-sizing: border-box; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; background: ${C.accentDark}; color: #ffffff">
@@ -171,7 +173,7 @@ ${siteSwitcher()}
 <div style="flex-grow: 1"></div>
 <div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)">
 <a href="your-settings-desktop.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" title="Your settings" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none">
-<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${esc(person.split(' ').map((x) => x[0]).join(''))}</span>
+<span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${esc(person.replace(/[\[\]]/g, '').split(' ').map((x) => x[0]).join(''))}</span>
 <span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${esc(person)}</span><span style="font-size: 12px; opacity: 0.8">${esc(roleName)}</span></span>
 <span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span>
 </a>
@@ -200,7 +202,7 @@ export function shellTablet(active, title, content, { role = 'S', person = 'Jo T
 <nav aria-label="Main" style="width: ${RAIL_W}px; flex-shrink: 0; min-height: 0; box-sizing: border-box; padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; background: ${C.accentDark}; color: #ffffff; align-items: stretch">
 <div style="display: flex; justify-content: center; padding: 0 0 2px; flex-shrink: 0">${logoSlot('Wheelhouse logo', true)}</div>
 <div style="flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 3px">${railList(role, active)}</div>
-<a href="your-settings-tablet.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; color: #ffffff; text-decoration: none">${avatarWithCog(esc(person.split(' ').map((x) => x[0]).join('')))}</a>
+<a href="your-settings-tablet.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; color: #ffffff; text-decoration: none">${avatarWithCog(esc(person.replace(/[\[\]]/g, '').split(' ').map((x) => x[0]).join('')))}</a>
 </nav>
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 22px; display: flex; align-items: center; gap: 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
@@ -227,7 +229,7 @@ ${search ? searchIconBtn(true) : ''}${actions}
 ${siteSwitcher()}
 <div style="display: flex; flex-direction: column; gap: 8px">${navList(role, active)}</div>
 <div style="flex-grow: 1"></div>
-<div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)"><a href="your-settings-phone.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${esc(person.split(' ').map((x) => x[0]).join(''))}</span><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${esc(person)}</span><span style="font-size: 12px; opacity: 0.8">${esc(roleName)}</span></span><span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span></a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-size: 13px; color: #ffffff">Sign out</a></div>
+<div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)"><a href="your-settings-phone.dc.html" aria-label="Your settings — ${esc(person)}, ${esc(roleName)}" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${esc(person.replace(/[\[\]]/g, '').split(' ').map((x) => x[0]).join(''))}</span><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${esc(person)}</span><span style="font-size: 12px; opacity: 0.8">${esc(roleName)}</span></span><span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span></a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-size: 13px; color: #ffffff">Sign out</a></div>
 </nav>` : '';
   return `<div style="position: relative; width: ${PW}px; height: ${PH}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${bar}<main style="flex-grow: 1; box-sizing: border-box; padding: ${pad}px; overflow: hidden; min-height: 0; display: flex; flex-direction: column">${content}</main>${sheet}${overlay}</div>`;
 }
@@ -645,7 +647,19 @@ function laneHoverCSS(cls) {
 // job's diary block and its Overview row say "Part arrived" until the work
 // carries on. Off everywhere unless a board is drawn inside withPartArrived().
 let PART_ARRIVED = null;
-export function withPartArrived(job, fn) { const was = PART_ARRIVED; PART_ARRIVED = job; try { return fn(); } finally { PART_ARRIVED = was; } }
+// UX walk-through 3 M5: the "part arrived" boards draw the job where the job
+// page has it — WH-1042 is Waiting for parts, moved to Sat 19 Sep 16:00–17:30
+// (job-waiting-parts, job-part-arrived), Alex's column — not journey 12's
+// Thursday 11:30 Scheduled example. Moved only while such a board is drawn,
+// as diaryWithJobState does.
+const PART_ARRIVED_AT = { 'WH-1042': { day: 5, start: 16 * 60, dur: 90, mech: 'Alex', key: 'waiting', detail: '16:00–17:30 · waiting for parts' } };
+export function withPartArrived(job, fn) {
+  const was = PART_ARRIVED; PART_ARRIVED = job;
+  const j = JOBS.find((x) => x.job === job);
+  const saved = j && PART_ARRIVED_AT[job] ? { ...j } : null;
+  if (saved) Object.assign(j, PART_ARRIVED_AT[job]);
+  try { return fn(); } finally { PART_ARRIVED = was; if (saved) Object.assign(j, saved); }
+}
 function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null) {
   if (size !== 'desktop') return touchJobBlock(j, size, slotH, { highlighted, lightMarked, faded, narrow, rect });
   const [bg, ink] = ST[j.key];
@@ -675,6 +689,9 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   // Wide (Day view): unchanged — there's room to write the status out.
   const line2 = narrow ? jobTitle : tiny ? jobTitle : roomy ? jobTitle : [jobTitle, blockLabel].filter(Boolean).join(' · ');
   const line3 = narrow ? (roomy ? slot || '' : '') : roomy ? [blockLabel, slot].filter(Boolean).join(' · ') : '';
+  // UX walk-through 3 L4: "Part arrived" was 10px, the smallest text on the
+  // board; it's now 12px, the size the tablet block uses for its job title,
+  // and like the rest of the block it grows with "Larger text".
   const arrived = PART_ARRIVED === j.job;
   // Audit H1: bike names ("Trek Domane AL 3", "Brompton C Line") were
   // truncating mid-word on their own, even before status text was added to
@@ -700,7 +717,7 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
 ${showSymbol ? statusDot(j.key) : ''}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; ${strike} ${bikeWrap ? 'white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
-${arrived ? `<span style="display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: ${ST.ready[1]}; white-space: nowrap">${icon('check', 11)}Part arrived</span>` : line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
+${arrived ? `<span style="display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: ${ST.ready[1]}; white-space: nowrap">${icon('check', 12)}Part arrived</span>` : line3 ? `<span style="font-size: 10px; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; ${strike}">${esc(line3)}</span>` : ''}
 </a>${isSummaryJob ? jobHoverSummaryMarkup(j, size, summaryCls, FORCE_HOVER_SUMMARY_JOB === j.job, top) : ''}`;
 }
 // Decision 65: resting on WH-1042's block for ~0.6s shows a small quick-look
@@ -1519,6 +1536,10 @@ const NO_TIME_ROW = (size) => `<div style="display: flex; align-items: center; g
 // A phone diary page. mode: 'everyone' (one merged column), 'byMech' (the Day
 // view — one column per mechanic), 'mechanic' (Alex's own diary, Me/Everyone).
 function phoneDiaryContent({ day = TODAY, mode = 'everyone', highlightJob = null, pickMode = false, selectSlot = null, forceExpandStack = null, overlayFor = null, bar = '' } = {}) {
+  // UX walk-through 3 M5: a "part arrived" phone diary opens on the job's
+  // own day (Sat 19 Sep), where its block is.
+  const arrivedJob = PART_ARRIVED && JOBS.find((x) => x.job === PART_ARRIVED);
+  if (arrivedJob && PART_ARRIVED_AT[PART_ARRIVED]) day = arrivedJob.day;
   const columns = mode === 'byMech' ? DAY_MECHS.map(([m, name]) => ({ mech: m, label: name })) : mode === 'mechanic' ? [{ mech: 'Alex', label: 'Alex Morgan' }] : [{ mech: null, label: 'Everyone' }];
   const people = mode === 'mechanic' ? mechChips('Me', ['Me', 'Everyone'], 'Whose diary', 'phone') : phonePeopleChip(mode === 'byMech' ? 'By mechanic' : 'Everyone');
   const controls = `<div style="flex-shrink: 0; box-sizing: border-box; padding: 10px 14px 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid ${C.border}; background: ${C.bg}">
@@ -1531,7 +1552,10 @@ ${mode === 'byMech' ? '' : NO_TIME_ROW('phone')}
   const tl = phoneTimeline({ day, columns, highlightJob, pickMode, selectSlot, forceExpandStack, overlayFor, merged: mode === 'everyone' });
   // position/z-index: its own stacking context, so the sticky mechanic header
   // and a fanned stack stay inside it, under any sheet drawn over the page.
-  return `${controls}<div data-scroll="page" style="position: relative; z-index: 0; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; box-sizing: border-box; padding: 0 14px 14px">${tl}</div>${bar}`;
+  // UX walk-through 3 M5: ...and is drawn scrolled so the block is in view
+  // (three hours above it showing), as the time line would be after scrolling.
+  const lift = arrivedJob && PART_ARRIVED_AT[PART_ARRIVED] ? Math.max(0, ((arrivedJob.start - GRID_START - 180) / 30) * P_SLOT) : 0;
+  return `${controls}<div data-scroll="page" style="position: relative; z-index: 0; flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: ${lift ? 'hidden' : 'auto'}; box-sizing: border-box; padding: 0 14px 14px">${lift ? `<div style="position: relative; top: -${lift}px">${tl}</div>` : tl}</div>${bar}`;
 }
 export const phoneDiary = (opts = {}, shellOpts = {}) => shellPhone('Diary', phoneDiaryContent(opts), {
   active: 'diary', pad: 0,
@@ -2222,7 +2246,9 @@ export const LINES_APPROVED = [
   { ...WORK_LINE_BRAKES, approval: 'Approved' },
   { ...WORK_LINE_CABLE, approval: 'Declined' },
 ];
-const LINES_WAITING = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads' ? { ...l, approval: 'On order' } : l));
+// UX walk-through 3 L1: approval stays "Approved" throughout; "On order" is
+// what the line's In stock column says.
+const LINES_WAITING = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads' ? { ...l, done: false, stock: 'On order', stockTone: 'amber' } : l));
 // Checklist counts (decision 40's rollout): 0 of 10 before work starts, 8 of
 // 10 once in the workshop — CHECKLIST_10's own fixed data (8 checked, 1
 // noted), kept the same at every later stage per the brief ("if the data
@@ -2615,7 +2641,39 @@ const ARRIVALS = [
 // has a ratio shape ("Nh / Nh") to parse; the other two stat cards are plain
 // counts and stay as they are.
 const statFill = (pct) => `<div role="img" aria-label="${pct}% of planned effort used today" style="width: 100%; height: 4px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${pct}%; height: 100%; background: ${C.accent}"></div></div>`;
+// UX walk-through 3 M5: on a "part arrived" Overview, WH-1042 isn't an
+// arrival — the bike is here, Kept on Hook 3, Waiting for parts — so it is a
+// row among the jobs in the workshop, not under Arrivals. Which tab lists
+// jobs waiting for parts was never decided; it's drawn under Needs attention,
+// with the tab's other job a placeholder.
+const ARRIVED_TABS = ['Arrivals · 2', 'Shared queue · 4', 'Needs attention · 2', 'Ready · 4'];
+const ATTENTION_ROWS = (size) => [
+  ['WH-1042', 'Maya Patel', 'Trek Domane AL 3', 'Standard service · waiting for parts · Sat 19 Sep 16:00', `Kept on ${STORAGE['WH-1042']}`, button('Open job', { size: size === 'desktop' ? 'sm' : 'default', href: `job-part-arrived-${size}.dc.html` })],
+  ['[Job number]', '[Customer]', '[Bike]', '[Work]', '[Where it’s kept]', button('Open job', { size: size === 'desktop' ? 'sm' : 'default', variant: 'default' })],
+];
+const arrivedStats = () => STATS_DESK.map(([k, v, s]) => (k === 'Expected today' ? [k, '7 bikes', '2 still to arrive'] : [k, v, s]));
+function overviewArrivedContent(size) {
+  return stack(`${txt('Thursday 17 September · one shop, one view of the work', 15, `color: ${C.muted}`)}
+${grid('repeat(3, minmax(0, 1fr))', arrivedStats().map(([k, v, s]) => {
+    const m = /^(\d+(?:\.\d+)?)h\s*\/\s*(\d+(?:\.\d+)?)h$/.exec(v);
+    const fill = m ? statFill(Math.min(100, Math.round((Number(m[1]) / Number(m[2])) * 100))) : '';
+    return panel(`${eyebrow(k)}<div style="font-size: 24px; font-weight: 700">${esc(v)}</div>${fill}${note(s)}`, '', 16, 4);
+  }).join(''))}
+${size === 'desktop' ? segmented(ARRIVED_TABS, 2, 'Show jobs') : segmented(ARRIVED_TABS, 2, 'Show jobs', 44, 14)}
+${card(table([['Job / customer'], ['Bike'], ['Work'], ['Custody'], ['', 'right']], ATTENTION_ROWS(size).map(([j, n, b, w, k, a]) => [`${mono(j)} · ${esc(n)}`, esc(b), j === PART_ARRIVED ? `${esc(w)} ${badge('Part arrived', 'green')}` : esc(w), j === PART_ARRIVED ? badge(k, 'grey') : esc(k), a]), size === 'desktop' ? {} : { size: 15, pad: '8px 12px' }), 'overflow: hidden')}`, 14);
+}
+function overviewArrivedPhoneContent() {
+  return stack(`${txt('Thursday 17 September · one shop, one view of the work', 14, `color: ${C.muted}`)}
+${arrivedStats().map(([k, v, s]) => {
+    const m = /^(\d+(?:\.\d+)?)h\s*\/\s*(\d+(?:\.\d+)?)h$/.exec(v);
+    const fill = m ? statFill(Math.min(100, Math.round((Number(m[1]) / Number(m[2])) * 100))) : '';
+    return card(`<div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 4px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">${eyebrow(k)}<span style="font-size: 20px; font-weight: 700">${esc(v)}</span></div>${fill}<span style="font-size: 13px; color: ${C.muted}">${esc(s)}</span></div>`);
+  }).join('')}
+${segmented(ARRIVED_TABS, 2, 'Show jobs', 44, 14)}
+${card(ATTENTION_ROWS('phone').map(([j, n, b, w, k, a], i) => `<div style="padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${i ? `border-top: 1px solid ${C.border};` : ''}"><div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${mono(j)} · ${esc(n)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(b)} · ${esc(w)}</span><span>${j === PART_ARRIVED ? `${badge(k, 'grey')} ${badge('Part arrived', 'green')}` : `<span style="font-size: 13px; color: ${C.muted}">${esc(k)}</span>`}</span></div><div style="flex-shrink: 0">${a}</div></div>`).join(''))}`, 10);
+}
 function overviewContent(size) {
+  if (PART_ARRIVED === 'WH-1042') return overviewArrivedContent(size); // UX walk-through 3 M5
   return stack(`${txt('Thursday 17 September · one shop, one view of the work', 15, `color: ${C.muted}`)}
 ${grid('repeat(3, minmax(0, 1fr))', STATS_DESK.map(([k, v, s]) => {
     const m = /^(\d+(?:\.\d+)?)h\s*\/\s*(\d+(?:\.\d+)?)h$/.exec(v);
@@ -2628,6 +2686,7 @@ ${card(table([['Job / customer'], ['Bike'], ['Work'], ['Custody'], ['', 'right']
 // Phone overview (decision 68): the same three figures, the same four
 // filters (wrapping, 44px), and the arrivals as rows with their action.
 function overviewPhoneContent(size) {
+  if (PART_ARRIVED === 'WH-1042') return overviewArrivedPhoneContent(); // UX walk-through 3 M5
   return stack(`${txt('Thursday 17 September · one shop, one view of the work', 14, `color: ${C.muted}`)}
 ${STATS_DESK.map(([k, v, s]) => {
     const m = /^(\d+(?:\.\d+)?)h\s*\/\s*(\d+(?:\.\d+)?)h$/.exec(v);
@@ -2824,8 +2883,12 @@ screens['job-collected'] = jobVariant('Collected', 'grey', collectedStripCompact
 // Journey 13 decision 2 (30 Sep): a part a job is waiting for gets flagged
 // when it's booked in. The job stays "Waiting for parts" until someone
 // carries on; the strip says the part is here, and the line's In stock says Arrived.
-function partArrivedStrip() {
-  return jpPanel(`${jpRow(`${badge('Part arrived', 'green')}<a href="rs-delivery-desktop.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; font-weight: 600; color: ${C.ink}">Shimano brake pads B05S-RX booked in</a><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Delivery booked in at [time] by Jack Lewis</span>`, 10)}`, `border-color: ${ST.ready[1]}`, 6, 3);
+// UX walk-through 3 L5: "booked in" opens the delivery as the person looking
+// may see it. The job is drawn for Jo Taylor (Staff), so it opens
+// rs-delivery-staff (no costs, no invoice) — mechanics get the same; someone
+// who can order stock gets rs-delivery.
+function partArrivedStrip(size = 'desktop') {
+  return jpPanel(`${jpRow(`${badge('Part arrived', 'green')}<a href="rs-delivery-staff-${size}.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; font-weight: 600; color: ${C.ink}">Shimano brake pads B05S-RX booked in</a><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">Delivery booked in at [time] by Jack Lewis</span>`, 10)}`, `border-color: ${ST.ready[1]}`, 6, 3);
 }
 // The line stays approved and not done; its In stock cell says it arrived.
 const LINES_ARRIVED = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads' ? { ...l, done: false, stock: 'Arrived' } : l));
@@ -2833,7 +2896,7 @@ screens['job-part-arrived'] = buildJobPage({
   status: 'Waiting for parts', tone: 'amber',
   touch: {
     footer: (size) => `${button('Carry on with the work', { block: true })}${footNote('Moves the job back to In the workshop.', size)}`,
-    stageTop: () => partArrivedStrip(), phoneTop: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Part arrived', 'green')}<span style="font-size: 15px; font-weight: 700">Shimano brake pads</span></div><span style="font-size: 13px; color: ${C.muted}">Booked in at [time] by Jack Lewis</span>`),
+    stageTop: (size) => partArrivedStrip(size), phoneTop: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Part arrived', 'green')}<a href="rs-delivery-staff-phone.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: 700; color: ${C.ink}">Shimano brake pads</a></div><span style="font-size: 13px; color: ${C.muted}">Booked in at [time] by Jack Lewis</span>`),
   },
   desktop: {
     stageTop: partArrivedStrip(),
@@ -2845,6 +2908,50 @@ screens['job-part-arrived'] = buildJobPage({
     footer: `${button('Carry on with the work', { block: true })}${footNote('Moves the job back to In the workshop.', 'desktop')}`,
   },
 });
+
+// UX walk-through 3 H1 (option 1) and M2: what the job says when its part
+// doesn't reach it. Drawn here for journey 13's canvas, as job-part-arrived
+// is; not rows of journey 12's. Each is "Waiting for parts" with an amber
+// strip and the pads line's In stock word in amber; approval stays
+// "Approved" (L1).
+//   job-part-sold          H1: the pads held for the job were sold at the
+//                          till anyway ("1 held for job WH-1042 — sold anyway").
+//   job-part-missing       M2: not in the delivery; still on order.
+//   job-part-damaged       M2: came damaged; set aside, not added to stock.
+//   job-part-order-closed  M2: the order was closed before they came.
+const partProblemStrip = (head, line, side) => (size = 'desktop') => jpPanel(`${jpRow(`${badge(head, 'amber')}<span style="font-size: 13px; font-weight: 600">${line}</span><span style="flex-grow: 1"></span><span style="font-size: 12px; color: ${C.muted}">${side}</span>`, 10)}`, `border-color: ${ST.waiting[1]}`, 6, 3);
+const partProblemPhone = (head, line, side) => () => phoneStagePanel(`<div>${badge(head, 'amber')}</div><span style="font-size: 15px; font-weight: 600">${line}</span><span style="font-size: 13px; color: ${C.muted}">${side}</span>`, `border-color: ${ST.waiting[1]}`);
+const PART_PROBLEMS = {
+  'job-part-sold': ['Sold at the till', 'The Shimano brake pads B05S-RX held for this job were sold at the till · reorder them, or tell Maya', 'Sold anyway at [time] by [person]', 'Sold at the till — reorder'],
+  'job-part-missing': ['Not in the delivery', `Not in the delivery on [date] · still on order`, 'Shimano brake pads B05S-RX · booked in at [time] by Jo Taylor', 'On order'],
+  'job-part-damaged': ['Came damaged', 'Shimano brake pads B05S-RX came damaged in the delivery on [date] · set aside, not added to stock · reorder them, or tell Maya', 'Booked in at [time] by Jo Taylor', 'Came damaged — reorder'],
+  'job-part-order-closed': ['Order closed', 'The order was closed on [date] before the Shimano brake pads B05S-RX came · reorder them, or tell Maya', 'Closed at [time] by Jack Lewis', 'Order closed — reorder'],
+};
+const WAITING_FOOTER = (size) => `${button('Mark ready for collection', { variant: 'default', block: true })}${note('Target dates are estimates. This update does not mark the bike ready.', size === 'phone' ? 13 : 12)}`;
+for (const [id, [head, line, side, stock]] of Object.entries(PART_PROBLEMS)) {
+  const strip = partProblemStrip(head, line, side);
+  const lines = LINES_APPROVED.map((l) => (l.work === 'Shimano brake pads' ? { ...l, done: false, stock, stockTone: 'amber' } : l));
+  screens[id] = buildJobPage({
+    status: 'Waiting for parts', tone: 'amber',
+    touch: { footer: WAITING_FOOTER, stageTop: (size) => strip(size), phoneTop: partProblemPhone(head, line, side) },
+    desktop: {
+      stageTop: strip(),
+      customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
+      checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
+      leftStatus: 'Waiting for parts', bikeHere: true, readyBy: WAITING_READY_BY, diaryTime: 'Sat 19 Sep · 16:00–17:30',
+      lines, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
+      totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
+      footer: WAITING_FOOTER('desktop'),
+    },
+  });
+}
+// Suggested canvas titles (journey 13's module owns TITLES and ROWS):
+export const PART_PROBLEM_TITLES = {
+  'job-part-sold': 'The job: its held pads were sold at the till — reorder',
+  'job-part-missing': 'The job: its pads weren’t in the delivery — still on order',
+  'job-part-damaged': 'The job: its pads came damaged — reorder',
+  'job-part-order-closed': 'The job: the order was closed before its pads came',
+};
 
 // Multiple sites decision 12: a job booked into another shop's workshop goes
 // there as a request. Booking it: a "Workshop at" choice above the form, and

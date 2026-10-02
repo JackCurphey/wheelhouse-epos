@@ -14,7 +14,7 @@
 // supplier, cost, count and date is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone, MANAGER, settingsPage, rowSwitch, stockFolds, STOCK_INTRO } from './settings-frame.mjs';
-import { screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, tabletDiary, phoneDiary, TODAY, overviewAt } from './diary.mjs';
+import { PART_PROBLEM_TITLES, screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, tabletDiary, phoneDiary, TODAY, overviewAt } from './diary.mjs';
 import { today } from './opening.mjs';
 
 export const screens = {};
@@ -67,9 +67,14 @@ ${staff || empty ? '' : section('To return to [Supplier]', list([
   line('[Product]', 'Damaged · [n] · from the delivery on [date]', button('Returned', { variant: 'default' }).replace('<button', '<button aria-label="Returned: [Product], damaged"')),
   line('[Product]', 'Wrong item · [n] · from the delivery on [date]', button('Returned', { variant: 'default' }).replace('<button', '<button aria-label="Returned: [Product], wrong item"')),
 ]))}
+${staff || empty ? '' : /* UX walk-through 3 M3: a new product Staff left on a delivery, for people who can add products — shown only when something's on it */ section('Products to add', list([
+  line(mono('[barcode]'), 'Left by Jo Taylor · 1 on the delivery from [Supplier], [date] · not in stock until it’s added', button('Add this product', { variant: 'default' }).replace('<button', '<button aria-label="Add this product: barcode [barcode]"')),
+]))}
 ${staff ? '' : `${section('Restock list', list([
   line('Running low', `${mono('[n]')} products at or under their low-stock level`, link('See the list', 'See the list of products running low')),
   line('Selling fast', `${mono('[n]')} products sold more than usual in the last [n] days`, link('See the list', 'See the list of products selling fast')),
+  // UX walk-through 3 M1: what jobs and online orders are waiting for.
+  line('For customers', `${mono('[n]')} products a job is waiting for, or an online order is ordering in`, link('See the list', 'See the list of products for customers')),
 ]))}
 ${section('Orders', empty
     ? note('No orders. Shops that order on the supplier’s website can ignore this — deliveries are received the same way.')
@@ -92,36 +97,47 @@ const alertLead = `<span style="display: inline-flex; color: ${C.warnInk}" aria-
 const withProblem = (name, right) => `<span style="display: inline-flex; align-items: center; gap: 8px">${right}${linkBtn('Problem?', `Problem with ${name}`)}</span>`;
 // Audit M3: the list shows what was set aside, and a bike with its frame
 // numbers. A line stepped down past 1 is removed, with Undo.
+// UX walk-through 3 M3 (option 1): Staff can't add products (Stock control
+// 11), so for them an unknown barcode offers "Leave it for [Owner or
+// manager]". The rest books in; the item stays on the delivery as "1 product
+// to add" until someone who can add products adds it.
+const LEAVE = 'Leave it for [Owner or manager]';
 const scannedRows = (state) => list([
   line(PADS, `B05S-RX · <strong style="color: ${C.warnInk}">Job WH-1042 is waiting for 1</strong>`, withProblem(PADS, qty('[n]', PADS)), waitingLead),
   state === 'marked'
     ? line('[Product]', `[Supplier code] · on your order: [n] · <strong style="color: ${C.warnInk}">Damaged · 1, set aside</strong>`, withProblem('[Product]', qty('[n]', '[Product]')), alertLead)
-    : line('[Product]', '[Supplier code] · on your order: [n]', withProblem('[Product]', qty('[n]', '[Product]'))),
+    : line('[Product]', state === 'noOrder' ? '[Supplier code] · not on an order' : '[Supplier code] · on your order: [n]', withProblem('[Product]', qty('[n]', '[Product]'))),
   line('[Product]', '[Supplier code] · not on an order', withProblem('[Product]', qty('[n]', '[Product]'))),
   ...(state === 'marked' ? [line('[Bike name]', `[Supplier code] · Frame ${mono('[frame number]')} · Frame ${mono('[frame number]')}`, withProblem('[Bike name]', qty('[n]', '[Bike name]')))] : []),
   ...(state === 'scan' || state === 'blocked' ? [line(mono('[barcode]'), 'Not in Wheelhouse yet', button('Add this product', { variant: 'default' }), alertLead)] : []),
+  ...(state === 'staffNew' ? [line(mono('[barcode]'), 'Not in Wheelhouse yet · only people who can add products can add it', button(LEAVE, { variant: 'default' }).replace('<button', `<button aria-label="${LEAVE}: barcode [barcode]"`), alertLead)] : []),
+  ...(state === 'staffLeft' ? [line(mono('[barcode]'), `<strong style="color: ${C.ink}">Left for [Owner or manager]</strong> · stays on the delivery as 1 product to add`, linkBtn('Undo', 'Undo leaving barcode [barcode]'))] : []),
 ]);
-// Each scan is announced, and shown briefly (audit L1).
-const scanned = `<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added ${PADS} · 1</p>`;
-const receiveBoard = (state = 'scan') => stockPage('Receive a delivery', `${section('Scan the box', `${supplierPills('From', 'Shows what’s still to come on its orders')}${scanBox()}${scanned}
+// Each scan is announced, and shown briefly (audit L1). UX walk-through 3
+// L4: the announcement says when a job is waiting for what was scanned.
+const scanned = `<p role="status" style="margin: 0; font-size: 14px; color: ${C.muted}">Added ${PADS} · 1 — job WH-1042 is waiting for 1</p>`;
+const receiveBoard = (state = 'scan', who = MANAGER) => stockPage('Receive a delivery', `${section('Scan the box', `${supplierPills('From', 'Shows what’s still to come on its orders')}${scanBox()}${scanned}
 ${scannedRows(state)}
-${subhead('Still to come on the order')}
-${list([line('[Product]', '[Supplier code] · ordered [n], arrived [n]', tag('[n] to come', 'grey'))])}
+${state === 'noOrder' ? '' : `${subhead('Still to come on the order')}
+${list([line('[Product]', '[Supplier code] · ordered [n], arrived [n]', tag('[n] to come', 'grey'))])}`}
 ${state === 'blocked' ? `<div role="alert" style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; font-weight: 700">${icon('alert', 18)}Add ${mono('[barcode]')} first, or remove it — then book in</div>` : ''}
-${actions(`<span style="font-size: 14px; color: ${C.muted}">${mono('[n]')} items to book in${state === 'marked' ? ' · 1 set aside' : ''}${state === 'scan' || state === 'blocked' ? ' · 1 to add first' : ''}</span>`, button(`Book in ${'[n]'} items`))}`)}`);
+${state === 'staffLeft' ? note('[Owner or manager] sees it on Deliveries and orders and on Today. Adding it counts it into stock and offers its label.') : ''}
+${actions(`<span style="font-size: 14px; color: ${C.muted}">${mono('[n]')} items to book in${state === 'marked' ? ' · 1 set aside' : ''}${state === 'scan' || state === 'blocked' ? ' · 1 to add first' : ''}${state === 'staffNew' ? ' · 1 to leave or remove first' : ''}${state === 'staffLeft' ? ' · 1 left to add' : ''}</span>`, button(`Book in ${'[n]'} items`))}`)}`, who);
 
 // "Add this product": the barcode is filled in. Journey 14 decision 10:
 // picking the category brings up that category's own details to fill in
 // (Jack's example: bearings — inner diameter, outer diameter, height), so
 // they are named the same way every time and Stock can filter by them.
 const detailField = (id, label, value, unit = '') => `<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><label for="${id}" style="font-size: 14px; font-weight: 600">${label}</label><span style="display: flex; align-items: center; gap: 6px"><input id="${id}" inputmode="decimal" value="${value}" style="width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">${unit ? `<span style="font-size: 14px; color: ${C.muted}">${unit}</span>` : ''}</span></div>`;
-const addProduct = () => popup('add-title', 'Add this product', `Barcode ${'[barcode]'} · not in Wheelhouse yet`, `
+// UX walk-through 3 M3: opened from "Products to add", for one Staff left on a
+// delivery — adding it counts it into stock and offers its label.
+const addProduct = (left = false) => popup('add-title', 'Add this product', left ? `Barcode ${'[barcode]'} · left by Jo Taylor on the delivery from [Supplier 2]` : `Barcode ${'[barcode]'} · not in Wheelhouse yet`, `
 <div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px">${icon('search', 16)}<span style="flex-grow: 1">Look it up in a supplier’s catalogue to fill this in</span>${linkBtn('Find it', 'Find it in a supplier’s catalogue')}</div>
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 2fr) minmax(0, 1fr)'}; gap: 12px">${fieldRow('ap-name', 'Name', '[Bearing]')}${fieldRow('ap-code', 'Supplier code', '[code]')}</div>
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr 1fr' : 'repeat(3, minmax(0, 1fr))'}; gap: 12px">${fieldRow('ap-cost', 'Cost', '£[cost]')}${fieldRow('ap-price', 'Price', '£[price]')}${fieldRow('ap-low', 'Low-stock level', '[n]')}</div>
 <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 6px"><label for="ap-cat" style="font-size: 14px; font-weight: 600">Category</label><select id="ap-cat" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>Bearings</option></select></div>
 <span style="font-size: 15px; font-weight: 700">Bearings details</span><span style="font-size: 13px; color: ${C.muted}">Set for every bearing in Settings › Stockroom › Categories. Staff can find it by these — for example, a 30 mm outer diameter.</span>
-<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'repeat(3, minmax(0, 1fr))'}; gap: 12px">${detailField('ap-inner', 'Inner diameter', '[n]', 'mm')}${detailField('ap-outer', 'Outer diameter', '30', 'mm')}${detailField('ap-height', 'Height', '[n]', 'mm')}</div></div>`, `${button('Cancel', { variant: 'default' })}${button('Add and count 1')}`, 680);
+<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'repeat(3, minmax(0, 1fr))'}; gap: 12px">${detailField('ap-inner', 'Inner diameter', '[n]', 'mm')}${detailField('ap-outer', 'Outer diameter', '30', 'mm')}${detailField('ap-height', 'Height', '[n]', 'mm')}</div></div>${left ? note('Adding it counts the 1 on the delivery into stock, then offers its label.') : ''}`, `${button('Cancel', { variant: 'default' })}${button('Add and count 1')}`, 680);
 
 // Decision 5: a bike asks for its frame number before it counts. Audit M4:
 // scanning the sticker counts it straight away; a number already in stock is
@@ -133,21 +149,36 @@ ${note('Each bike is then known by its frame number — the till picks it at the
 
 // After Book in (audit M10): what happened, then the next steps — labels
 // first when any are due, and the invoice for people who can order stock.
-const bookedBoard = () => stockPage('Delivery booked in', `${section('Booked in', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${mono('[n]')} items booked in · stock updated</p>
+// UX walk-through 3 H1 (option 1): booking in holds what the job is waiting
+// for, until it's used on the job or the job is cancelled.
+// UX walk-through 3 M2: `jobShort` — the job's pads came damaged, so the job
+// is told it's still waiting.
+// UX walk-through 3 M4: `staff` — the board Jo lands on. "Print labels" first,
+// then the job; nothing she can't do (no invoice, no To return link, no order).
+const jobLine = (jobShort) => jobShort
+  ? line('Job WH-1042 · still waiting — the pads were damaged', 'Trek Domane AL 3 · Maya Patel · the job stays waiting for parts', link('Open the job', 'Open job WH-1042'), alertLead)
+  : line('Job WH-1042 · Maya Patel', `Trek Domane AL 3 · <strong style="color: ${C.ink}">1 held for WH-1042 — put it with the bike on Hook 3</strong> · flagged on the job, the diary and the Overview`, link('Open the job', 'Open job WH-1042'), waitingLead);
+const bookedBoard = ({ staff = false, jobShort = false } = {}) => stockPage('Delivery booked in', `${section('Booked in', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${mono('[n]')} items booked in · stock updated</p>
+${staff ? `<div>${button('Print labels')}</div>` : ''}
 ${list([
-  line('Job WH-1042 · Maya Patel', `Trek Domane AL 3 · was waiting for ${PADS} — flagged on the job, the diary and the Overview`, link('Open the job', 'Open job WH-1042'), waitingLead),
-  line('1 set aside as damaged', 'On To return to [Supplier]', link('See the list', 'See what’s to return to [Supplier]')),
-  line(`${mono('[n]')} still to come on the order`, '[Supplier] · ordered [date]', link('Open the order', 'Open the order from [Supplier]')),
+  jobLine(jobShort),
+  staff
+    ? line('1 set aside as damaged — [Owner] will return it', 'It isn’t in stock')
+    : line(jobShort ? `1 set aside as damaged · ${PADS}` : '1 set aside as damaged', 'On To return to [Supplier]', link('See the list', 'See what’s to return to [Supplier]')),
+  staff
+    ? line(`${mono('[n]')} still to come on the order`, '[Supplier] · ordered [date]')
+    : line(`${mono('[n]')} still to come on the order`, '[Supplier] · ordered [date]', link('Open the order', 'Open the order from [Supplier]')),
 ])}
-<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px">${button('Print labels')}${button('Add the invoice', { variant: 'default' })}${button('Receive another delivery', { variant: 'default' })}</div>`)}`);
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px">${staff ? button('Receive another delivery', { variant: 'default' }) : `${button('Print labels')}${button('Add the invoice', { variant: 'default' })}${button('Receive another delivery', { variant: 'default' })}`}</div>`)}`, staff ? JO : MANAGER);
 
 // ---------- Decision 6: a quick invoice check (a settings switch) ----------
 // The invoice total before VAT is compared with the cost of what was booked
 // in — totals only. The invoice and costs are for people who can order stock
 // (audit M12). Audit H4: items set aside as problems are listed, and a
 // difference says how much of it they explain.
+// UX walk-through 3 H1: the pads' line says one is held for the job.
 const deliveryLines = (staff) => list([
-  line(PADS, `B05S-RX · ${mono('[n]')}${staff ? '' : ` × £[cost]`}`, staff ? '' : mono('£[cost]')),
+  line(PADS, `B05S-RX · ${mono('[n]')}${staff ? '' : ` × £[cost]`} · <strong style="color: ${C.ink}">Held for job WH-1042 · 1</strong>`, staff ? '' : mono('£[cost]')),
   line('[Product]', `[Supplier code] · ${mono('[n]')}${staff ? '' : ` × £[cost]`}`, staff ? '' : mono('£[cost]')),
 ]);
 const setAside = (staff) => `${subhead('Set aside as problems')}${list([line('[Product]', `Damaged · 1${staff ? '' : ' · £[cost]'}`, tag('On To return', 'grey'))])}`;
@@ -169,6 +200,14 @@ const deliveryBoard = (state = 'waiting', { staff = false, problems = false } = 
 ${staff ? '' : `<div style="display: flex; justify-content: space-between; gap: 10px; padding-top: 6px; font-size: 15px"><span>Booked-in cost, before VAT</span>${mono('£[y]', 'font-size: 16px; font-weight: 700')}</div>`}
 ${problems ? setAside(staff) : ''}`)}
 ${staff ? note('Costs and the invoice are for people who can order stock.') : section('Invoice', INVOICE[state][1](), INVOICE[state][0])}`, staff ? JO : MANAGER);
+// UX walk-through 3 M6 (option 1): "Accept the difference" asks one optional
+// question, so a cost the supplier put up reaches the product (and margin and
+// stock value). The check itself stays totals only (decision 6).
+const selectBox = (id, label, value) => `<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0"><label for="${id}" style="font-size: 14px; font-weight: 600">${label}</label><select id="${id}" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>${value}</option><option>[Product]</option></select></div>`;
+const costPopup = () => popup('cost-title', 'Accept the difference?', `Invoice [number] · ${'£[z]'} more than you booked in`, `
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="font-size: 16px; font-weight: 700; padding: 0 0 4px">Did a cost go up? <span style="font-weight: 400; color: ${C.muted}">(optional)</span></legend>
+<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 2fr) minmax(0, 1fr)'}; gap: 12px">${selectBox('cost-product', 'Product from this delivery', `${PADS} B05S-RX`)}${fieldRow('cost-new', 'New cost', '£[cost]')}</div></fieldset>
+${note(`Was ${mono('£[cost]')}. It changes from now on — margins and stock value use it. The product’s history says “Cost changed · invoice [number]”. Leave it blank if no cost went up.`)}`, `${button('Cancel', { variant: 'default' })}${button('Accept the difference')}`, 600);
 const invoicePopup = () => popup('inv-title', 'Add the invoice', '[Supplier] · delivery booked in [date]', `
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 1fr) minmax(0, 1fr)'}; gap: 12px">${fieldRow('inv-no', 'Invoice number', '[number]')}${fieldRow('inv-total', 'Total before VAT', '£[x]')}</div>
 <div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px">${icon('plus', 16)}<span style="flex-grow: 1">Attach the PDF (optional)</span>${linkBtn('Choose a file', 'Choose the invoice PDF')}</div>
@@ -194,16 +233,18 @@ ${list([
 // Decision 9: "Problem?" on a scanned line. Damaged and wrong items aren't
 // added to stock and go on the supplier's "To return" list; missing ones
 // stay "to come" on the order (offered only when there's an order).
+// UX walk-through 3 M2: "Missing" is also offered on a line a job is waiting
+// for when there's no order (`jobNoOrder`), so the job hears.
 const PROBLEM_NOTE = {
   Damaged: 'Damaged items aren’t added to stock. They go on “To return to [Supplier]” in Deliveries and orders until they’re sent back.',
   'Wrong item': 'Wrong items aren’t added to stock. They go on “To return to [Supplier]” in Deliveries and orders until they’re sent back.',
   Missing: 'Missing items stay “to come” on the order.',
 };
-const problemPopup = (kind = 'Damaged') => popup('pb-title', 'Something wrong?', `[Product] · [Supplier code] · [n] scanned`, `
+const problemPopup = (kind = 'Damaged', jobNoOrder = false) => popup('pb-title', 'Something wrong?', jobNoOrder ? `${PADS} · B05S-RX · job WH-1042 is waiting for 1 · not on an order` : `[Product] · [Supplier code] · [n] scanned`, `
 <div role="group" aria-label="What’s wrong" style="display: flex; flex-wrap: wrap; gap: 8px">${Object.keys(PROBLEM_NOTE).map((t) => pillBtn(t, t === kind)).join('')}</div>
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><span style="font-size: 15px; font-weight: 600">How many</span>${qty('[n]', `How many ${kind.toLowerCase()}`)}</div>
 ${fieldRow('pb-note', 'Note (optional)', '')}
-${note(PROBLEM_NOTE[kind])}`, `${button('Cancel', { variant: 'default' })}${button(`Mark as ${kind.toLowerCase()}`)}`, 560);
+${note(jobNoOrder ? 'There’s no order to keep it “to come” on. Job WH-1042 stays waiting for parts and shows it wasn’t in this delivery.' : PROBLEM_NOTE[kind])}`, `${button('Cancel', { variant: 'default' })}${button(`Mark as ${kind.toLowerCase()}`)}`, 560);
 
 // ---------- Decision 2: a purchase order, built by hand ----------
 const poLine = (name, code, n, cost) => `<div role="listitem" style="display: grid; grid-template-columns: ${isPhone() ? '1fr auto' : 'minmax(0, 2fr) auto minmax(0, 0.8fr) 44px'}; gap: 12px; align-items: center; min-height: 56px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${code}</span></span>${qty(n, name)}${isPhone() ? '' : `<span style="font-family: ${MONO}; font-size: 15px; text-align: right">${cost}</span><button type="button" aria-label="Remove ${esc(name)}" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}">${icon('close', 18)}</button>`}</div>`;
@@ -214,13 +255,18 @@ ${actions(`<span style="font-size: 15px">Total cost ${mono('£[total]', 'font-si
 ${note('Order it however you usually do — on the supplier’s website or by phone — then mark it as ordered so deliveries can be checked against it.')}`)}`);
 // Audit M2: an ordered order, part delivered — receive against it, or close
 // it when the rest isn't coming.
-const orderedBoard = () => stockPage('Order', `${section('[Supplier] · ordered [date]', `<div>${tag('Partly delivered', 'grey')}</div>
+// UX walk-through 3 M2: `padsToCome` — the job's pads are the line still to
+// come, so "Close the order" asks first.
+const orderedBoard = ({ padsToCome = false } = {}) => stockPage('Order', `${section('[Supplier] · ordered [date]', `<div>${tag('Partly delivered', 'grey')}</div>
 ${list([
-  line(PADS, 'B05S-RX · for job WH-1042 · ordered [n] · arrived [n]', tag('All arrived')),
+  padsToCome ? line(PADS, 'B05S-RX · for job WH-1042 · ordered 1 · arrived 0', tag('1 to come', 'grey'), waitingLead) : line(PADS, 'B05S-RX · for job WH-1042 · ordered [n] · arrived [n]', tag('All arrived')),
   line('[Product]', '[Supplier code] · ordered [n] · arrived [n]', tag('[n] to come', 'grey')),
 ])}
 ${actions(`<span style="font-size: 15px">Total cost ${mono('£[total]', 'font-size: 16px; font-weight: 700')}</span>`, `${button('Close the order', { variant: 'default' })}${button('Receive against this order')}`)}
-${note('Closing the order drops anything still to come.')}`)}`);
+${note('Closing the order drops anything still to come. If a job is waiting for any of it, you’re asked first.')}`)}`);
+const closeOrderPopup = () => popup('close-title', 'Close the order?', '[Supplier] · ordered [date] · [n] still to come', `
+${amberBox(`${PADS} for job WH-1042 are still to come.`, 'The job stays waiting for parts — reorder them, or tell Maya.')}
+${note('Closing drops everything still to come on this order.')}`, `${button('Keep it open', { variant: 'default' })}${button('Close the order')}`, 560);
 
 // ---------- Decision 2: the restock list and its CSV ----------
 // Audit M6: grouped by supplier, as a basket file is per supplier; the whole
@@ -232,11 +278,20 @@ const supplierGroup = (sup, rows, n) => `<section aria-labelledby="g-${slug(sup)
 <div style="display: flex; align-items: center; gap: 12px">${tick(`Include everything from ${sup}`)}<h3 id="g-${slug(sup)}" style="margin: 0; font-size: 16px; font-weight: 700">${sup}</h3></div>
 <div role="list">${rows}</div>
 ${actions(`<span style="font-size: 14px; color: ${C.muted}">${n} ticked</span>`, `${button('Add to an order', { variant: 'default' })}${button(`Download for ${sup}’s basket`, { variant: 'default' })}`)}</section>`;
-const restockBoard = () => stockPage('Restock list', `${section('Tick what to reorder', `${note('Running low, or selling faster than usual. Tick what to reorder, then download it for that supplier’s website basket — or add it to an order.')}
-<div role="group" aria-label="Show" style="display: flex; flex-wrap: wrap; gap: 8px">${['Both', 'Running low', 'Selling fast'].map((t, i) => pillBtn(t, i === 0)).join('')}</div>
+// UX walk-through 3 M1 (option 1): a third pill, "For customers" — every job
+// line "On order" and every online item to order in, with who it's for,
+// grouped by supplier like the rest. "Add to an order" sets the order line's
+// "for job"; the basket download works as before.
+const PILLS = ['All', 'Running low', 'Selling fast', 'For customers'];
+const restockBoard = (customers = false) => stockPage('Restock list', `${section('Tick what to reorder', `${note('Running low, selling faster than usual, or waited for by a job or an online order. Tick what to reorder, then download it for that supplier’s website basket — or add it to an order.')}
+<div role="group" aria-label="Show" style="display: flex; flex-wrap: wrap; gap: 8px">${PILLS.map((t, i) => pillBtn(t, customers ? i === 3 : i === 0)).join('')}</div>
 ${isPhone() ? '' : `<div aria-hidden="true" style="display: grid; grid-template-columns: ${cols()}; gap: 12px; font-size: 13px; font-weight: 700; color: ${C.muted}"><span></span><span>Product</span><span>In stock</span><span>Sold, last [n] days</span><span style="width: 140px">Reorder</span></div>`}
-${supplierGroup('[Supplier]', `${restockRow(PADS, 'B05S-RX', '[n] · low', '[n]', '[n]')}${restockRow('[Product]', '[Supplier code]', '[n]', '[n] · fast', '[n]')}`, 2)}
-${supplierGroup('[Supplier 2]', restockRow('[Product]', '[Supplier code]', '[n] · low', '[n]', '[n]'), 1)}
+${customers
+    ? `${supplierGroup('[Supplier]', restockRow(PADS, `B05S-RX · <strong style="color: ${C.ink}">for job WH-1042 · Maya Patel · promised Sat 19 Sep</strong>`, '[n]', '[n]', '1'), 1)}
+${supplierGroup('[Supplier 2]', restockRow('[Product]', `[Supplier code] · <strong style="color: ${C.ink}">for online order [order number] · [Customer] · promised [date]</strong>`, '[n]', '[n]', '1'), 1)}
+${note('“Add to an order” keeps who each line is for on the order line — “for job WH-1042”.')}`
+    : `${supplierGroup('[Supplier]', `${restockRow(PADS, 'B05S-RX · for job WH-1042', '[n] · low', '[n]', '[n]')}${restockRow('[Product]', '[Supplier code]', '[n]', '[n] · fast', '[n]')}`, 2)}
+${supplierGroup('[Supplier 2]', restockRow('[Product]', '[Supplier code]', '[n] · low', '[n]', '[n]'), 1)}`}
 ${note('Downloads a CSV file in [the supplier’s basket-upload format] — to be checked for each supplier.')}`)}`);
 
 def('rs-hub', () => hubBoard());
@@ -249,9 +304,21 @@ def('rs-frame', () => overlay(receiveBoard('marked'), framePopup()));
 def('rs-frame-dup', () => overlay(receiveBoard('marked'), framePopup(true)));
 def('rs-receive-marked', () => receiveBoard('marked'));
 def('rs-book-blocked', () => receiveBoard('blocked'));
+// UX walk-through 3 M2: Missing on the job's line with no order (a shop that
+// orders on the supplier's website).
+def('rs-problem-missing', () => overlay(receiveBoard('noOrder', JO), problemPopup('Missing', true)));
+// UX walk-through 3 M3 (option 1): Jo meets a barcode Wheelhouse doesn't know.
+def('rs-receive-staff', () => receiveBoard('staffNew', JO));
+def('rs-receive-staff-left', () => receiveBoard('staffLeft', JO));
+def('rs-add-left', () => overlay(hubBoard(), addProduct(true)));
+def('rs-today-to-add', () => today({ productToAdd: true }));
 def('rs-booked', () => bookedBoard());
+def('rs-booked-staff', () => bookedBoard({ staff: true })); // UX walk-through 3 M4
+def('rs-booked-job-waiting', () => bookedBoard({ jobShort: true })); // UX walk-through 3 M2
 def('rs-labels', () => overlay(bookedBoard(), labelsPopup()));
 def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
+// UX walk-through 3 H1, M2: the job when its part doesn't arrive as planned.
+for (const id of ['job-part-sold', 'job-part-missing', 'job-part-damaged', 'job-part-order-closed']) def('rs-' + id.slice(4), () => diaryScreens[id][SIZE]);
 // Audit H1: the badge on the diary block and the Overview row too.
 def('rs-diary-arrived', () => withPartArrived('WH-1042', () => (SIZE === 'desktop' ? buildDiaryDesktopBoard() : SIZE === 'tablet' ? tabletDiary() : phoneDiary({ day: TODAY, mode: 'everyone' }))));
 def('rs-overview-arrived', () => withPartArrived('WH-1042', () => overviewAt(SIZE)));
@@ -259,13 +326,16 @@ def('rs-delivery', () => deliveryBoard('waiting', { problems: true }));
 def('rs-invoice', () => overlay(deliveryBoard('waiting', { problems: true }), invoicePopup()));
 def('rs-invoice-checked', () => deliveryBoard('checked'));
 def('rs-invoice-diff', () => deliveryBoard('diff', { problems: true }));
+def('rs-invoice-cost', () => overlay(deliveryBoard('diff', { problems: true }), costPopup())); // UX walk-through 3 M6
 def('rs-invoice-queried', () => deliveryBoard('queried', { problems: true }));
 def('rs-invoice-accepted', () => deliveryBoard('accepted', { problems: true }));
 def('rs-delivery-staff', () => deliveryBoard('waiting', { staff: true, problems: true }));
 def('rs-invoice-setting', () => invoiceSetting());
 def('rs-order', () => orderBoard());
 def('rs-order-ordered', () => orderedBoard());
+def('rs-order-close', () => overlay(orderedBoard({ padsToCome: true }), closeOrderPopup())); // UX walk-through 3 M2
 def('rs-restock', () => restockBoard());
+def('rs-restock-customers', () => restockBoard(true)); // UX walk-through 3 M1
 def('rs-today-restock', () => today({ restock: true }));
 
 // All three sizes (desktop approved after the UI audit, decision 10).
@@ -287,27 +357,43 @@ export const TITLES = {
   'rs-frame-dup': 'A frame number already in stock',
   'rs-receive-marked': 'Ready to book in: one item set aside, a bike with its frame numbers',
   'rs-book-blocked': 'Book in with an unknown barcode still on the list',
-  'rs-booked': 'Delivery booked in: the waiting job flagged, what’s next',
+  'rs-problem-missing': 'Missing, with no order: the part a job is waiting for',
+  'rs-receive-staff': 'Staff meet a barcode Wheelhouse doesn’t know: Leave it for [Owner or manager]',
+  'rs-receive-staff-left': 'Left for [Owner or manager]: the rest books in',
+  'rs-add-left': 'Adding the product Jo left: it counts into stock, then its label',
+  'rs-today-to-add': 'Today: a product left on a delivery, to add',
+  'rs-booked': 'Delivery booked in: one held for the waiting job, what’s next',
+  'rs-booked-staff': 'Delivery booked in, as Staff see it: labels first, no invoice',
+  'rs-booked-job-waiting': 'Booked in without the job’s part: the job is still waiting',
   'rs-labels': 'Print labels: only what needs one',
   'rs-job-arrived': 'The job: its part has arrived',
+  'rs-part-sold': PART_PROBLEM_TITLES['job-part-sold'],
+  'rs-part-missing': PART_PROBLEM_TITLES['job-part-missing'],
+  'rs-part-damaged': PART_PROBLEM_TITLES['job-part-damaged'],
+  'rs-part-order-closed': PART_PROBLEM_TITLES['job-part-order-closed'],
   'rs-diary-arrived': 'The diary: “Part arrived” on the job’s block',
   'rs-overview-arrived': 'Workshop Overview: “Part arrived” on the job’s row',
   'rs-delivery': 'A booked-in delivery, waiting for its invoice',
   'rs-invoice': 'Add the invoice: its total against what was booked in',
   'rs-invoice-checked': 'The invoice matches: checked',
   'rs-invoice-diff': 'The invoice doesn’t match: the difference, to query',
+  'rs-invoice-cost': 'Accept the difference: did a cost go up?',
   'rs-invoice-queried': 'Queried with the supplier',
   'rs-invoice-accepted': 'The difference accepted, with Undo',
-  'rs-delivery-staff': 'A delivery, as Staff see it: no costs, no invoice',
+  'rs-delivery-staff': 'A delivery, as Staff and mechanics see it: no costs, no invoice — where the job’s “booked in” link goes for them',
   'rs-invoice-setting': 'Settings › Stockroom: the invoice check, on or off',
   'rs-order': 'A purchase order, built by hand',
   'rs-order-ordered': 'An order, partly delivered: receive against it, or close it',
+  'rs-order-close': 'Close the order? A job’s part is still to come',
   'rs-restock': 'Restock list: by supplier, a download for each basket',
-  'rs-today-restock': 'Today: new on the restock list',
+  'rs-restock-customers': 'Restock list, for customers: what jobs and online orders wait for',
+  'rs-today-restock': 'Today: new on the restock list, including for customers',
 };
 export const ROWS = [
-  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-empty', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-problem', 'rs-frame', 'rs-frame-dup', 'rs-receive-marked', 'rs-book-blocked', 'rs-booked', 'rs-labels'] },
-  { label: 'The waiting job', screens: ['rs-job-arrived', 'rs-diary-arrived', 'rs-overview-arrived'] },
-  { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-checked', 'rs-invoice-diff', 'rs-invoice-queried', 'rs-invoice-accepted', 'rs-delivery-staff', 'rs-invoice-setting'] },
-  { label: 'Ordering', screens: ['rs-order', 'rs-order-ordered', 'rs-restock', 'rs-today-restock'] },
+  { label: 'Receiving a delivery', screens: ['rs-hub', 'rs-hub-empty', 'rs-hub-staff', 'rs-receive', 'rs-add-product', 'rs-problem', 'rs-frame', 'rs-frame-dup', 'rs-receive-marked', 'rs-book-blocked', 'rs-problem-missing', 'rs-booked', 'rs-booked-staff', 'rs-booked-job-waiting', 'rs-labels'] },
+  // UX walk-through 3 M3.
+  { label: 'A new product, received by Staff', screens: ['rs-receive-staff', 'rs-receive-staff-left', 'rs-add-left', 'rs-today-to-add'] },
+  { label: 'The waiting job', screens: ['rs-job-arrived', 'rs-part-sold', 'rs-part-missing', 'rs-part-damaged', 'rs-part-order-closed', 'rs-diary-arrived', 'rs-overview-arrived'] },
+  { label: 'Checking the invoice', screens: ['rs-delivery', 'rs-invoice', 'rs-invoice-checked', 'rs-invoice-diff', 'rs-invoice-cost', 'rs-invoice-queried', 'rs-invoice-accepted', 'rs-delivery-staff', 'rs-invoice-setting'] },
+  { label: 'Ordering', screens: ['rs-order', 'rs-order-ordered', 'rs-order-close', 'rs-restock', 'rs-restock-customers', 'rs-today-restock'] },
 ];

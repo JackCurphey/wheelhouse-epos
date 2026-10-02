@@ -14,14 +14,15 @@
 // Real example data only: North Street Cycles, Bolton (tills B1–B3), Jack
 // Lewis, Jo Taylor, Alex Morgan, the diary's example week (Mon 14 – Sun 20
 // September 2026, today Thursday 17), the till's quick-button categories
-// (Workshop, Parts, Accessories) and UK VAT rates (20%, 5%, 0%). No real day's
+// (Workshop, Parts, Accessories), the Stockroom's categories (Bearings,
+// Drivetrain — Stock control 10) and UK VAT rates (20%, 5%, 0%). No real day's
 // or period's figures exist, so every amount and count is a bracketed
 // placeholder, and graphs are even placeholder bars and a flat line.
 import { C, MONO, esc, icon, button, card, badge, field } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone, settingsPage, dataFolds, DATA_INTRO, fold } from './settings-frame.mjs';
 import { withSite, withRooms } from './diary.mjs';
 import { today } from './opening.mjs';
-import { personDialog, staffPage, peopleOpen } from './setup.mjs';
+import { personDialog, staffPage, peopleOpen, managerStaffPage, MGR } from './setup.mjs';
 import { yourSettingsDialog } from './app-map.mjs';
 
 export const screens = {};
@@ -33,6 +34,12 @@ const OWNER = { role: 'O', person: 'Jack Lewis', roleName: 'Owner' };
 const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 const DAYS = [['Mon', '14'], ['Tue', '15'], ['Wed', '16'], ['Thu', '17'], ['Fri', '18'], ['Sat', '19'], ['Sun', '20']];
 const CATS = ['Workshop', 'Parts', 'Accessories'];
+// UX walk-through 3 M10: Margin and stock value use the Stockroom's
+// categories (Settings › Stockroom › Categories: Bearings, Drivetrain and the
+// shop's own), not the till's quick-button groups. Margin adds labour as its
+// own row; stock value has no labour row, since labour holds no stock.
+const STOCK_CATS = ['Bearings', 'Drivetrain', '[Category]'];
+const MARGIN_ROWS = [...STOCK_CATS, 'Labour'];
 const SECOND = '[Second site]';
 
 // The page: Owner by default. Staff with "Can see reports" get Reports in
@@ -107,7 +114,7 @@ const REPORTS = [
   ['Discounts and refunds', 'Every discount and refund, with its reason', false],
   // Leftover screens decision 5 (2 Oct): REP-10.
   ['Returning customers', 'Who comes back, and who hasn’t been in for a while', false],
-  ['Margin and stock value', 'What you made on what you sold, and what’s on the shelves', true],
+  ['Margin and stock value', 'What you made on what you sold, what’s on the shelves, and stock written off', true], // UX walk-through 3 M7
   ['VAT', 'VAT by rate for your VAT quarter, for your accountant', true],
   // Management oversight (journey 20) decisions 1 and 5: owners and
   // managers only.
@@ -221,20 +228,41 @@ ${note('Saved with your name and the time. The day goes back to Needs attention,
 // The shop's VAT quarter (asked once). No graph — the tables are what the
 // accountant needs — and no "Change what's shown".
 const VATP = ['This VAT quarter', 'Last VAT quarter', 'Pick dates'];
-const vat = (site = 'Bolton') => wrap(`${head('VAT', `${shopName(site)} · this VAT quarter, [start] – [end], against the quarter before`, 'This VAT quarter', { list: VATP, change: false })}
+// UX walk-through 3 M8 (option 1): the Stock purchases box never shows a
+// figure that's short. With the invoice check off it says to take the figure
+// from the accounts software; with it on it says how many deliveries are
+// still waiting for their invoice, and links to them.
+const vat = (site = 'Bolton', { checkOff = false } = {}) => wrap(`${head('VAT', `${shopName(site)} · this VAT quarter, [start] – [end], against the quarter before`, 'This VAT quarter', { list: VATP, change: false })}
 ${box(`${h3('Sales')}${site === 'All shops'
   ? table('VAT on sales by shop', ['Shop', 'Sales before VAT', 'VAT charged', 'Quarter before'], [['Bolton', '[£]', '[£]', '[£]'], [SECOND, '[£]', '[£]', '[£]']], ['All shops', '[£]', '[£]', '[£]'])
   : table('VAT on sales by rate', ['Rate', 'Sales before VAT', 'VAT charged', 'Quarter before'], [['Standard 20%', '[£]', '[£]', '[£]'], ['Reduced rate 5%', '[£]', '[£]', '[£]'], ['Zero rate 0%', '[£]', '[£]', '[£]'], ['Refunds', '−[£]', '−[£]', '−[£]']], ['Total', '[£]', '[£]', '[£]'])}`)}
-${box(`${h3('Stock purchases')}<p role="note" style="margin: 0; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Stock purchases only — not your full VAT reclaim.</strong> Rent, bills and other costs don’t go through Wheelhouse.</p>${table('VAT on stock invoices', ['From', 'Before VAT', 'VAT', 'Quarter before'], [['Supplier invoices booked in · [n]', '[£]', '[£]', '[£]']])}`)}
+${box(`${h3('Stock purchases')}<p role="note" style="margin: 0; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Stock purchases only — not your full VAT reclaim.</strong> Rent, bills and other costs don’t go through Wheelhouse.</p>${checkOff
+  ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">Supplier invoices are checked in your accounts software — take this figure from there.</p>${note('The invoice check is off in Settings › Stockroom, so Wheelhouse has no supplier invoices to add up.')}`
+  : `${table('VAT on stock invoices', ['From', 'Before VAT', 'VAT', 'Quarter before'], [['Supplier invoices booked in · [n]', '[£]', '[£]', '[£]']])}<p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; line-height: 1.45"><span>${mono('[n]')} deliveries are still waiting for their invoice and aren’t in this.</span>${linkBtn('See them', 'See the deliveries waiting for their invoice')}</p>`}`)}
 ${note('No graph here: these are the exact figures your accountant needs. Wheelhouse doesn’t file your VAT return — file it from your accounts software, or send this to your accountant.')}`, OWNER, site);
 const vatFirst = () => overlay(vat(), popup('vq-title', 'When does your VAT quarter start?', 'Asked once. Change it later in Settings › Shop and sites.', `<div role="radiogroup" aria-label="Months your VAT quarters start" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px">${['January, April, July, October', 'February, May, August, November', 'March, June, September, December'].map((t, i) => chip(t, i === 0)).join('')}</div>${note('It’s on your VAT registration, or ask your accountant.')}`, `${button('Not now', { variant: 'ghost' })}${button('Save')}`, 560));
 
 // ---------- Margin and stock value (decision 5; audit M11) ----------
+// UX walk-through 3 M7: "Stock written off" — a stock take's counted under
+// and over, and each adjustment reason (Stock control 6's reasons), at cost,
+// for the period; each row opens its counts or products.
+// UX walk-through 3 L3: one line under the stock value says what it includes.
+const WRITTEN_OFF = [
+  ['Stock takes · counted under', '[n]', '−[£]', 'See the counts', 'See the stock takes counted under'],
+  ['Stock takes · counted over', '[n]', '+[£]', 'See the counts', 'See the stock takes counted over'],
+  ['Adjusted · Damaged', '[n]', '−[£]', 'See the products', 'See the products adjusted as damaged'],
+  ['Adjusted · Lost or stolen', '[n]', '−[£]', 'See the products', 'See the products adjusted as lost or stolen'],
+  ['Adjusted · Used in the workshop', '[n]', '−[£]', 'See the products', 'See the products adjusted as used in the workshop'],
+  ['Adjusted · Faulty — to return to supplier', '[n]', '−[£]', 'See the products', 'See the products adjusted as faulty, to return to the supplier'],
+  ['Adjusted · Found', '[n]', '+[£]', 'See the products', 'See the products adjusted as found'],
+  ['Adjusted · Other', '[n]', '[£]', 'See the products', 'See the products adjusted for another reason'],
+];
 const margin = () => wrap(`${head('Margin and stock value', `North Street Cycles, Bolton · ${SO_FAR}`, 'This week')}
 ${stats([stat('Sales before VAT', '£[£]', UP()), stat('What it cost you', '£[£]', UP()), stat('Margin (sales less cost)', '£[£] · [n]%', UP('[n] points'))])}
 <p role="note" style="margin: 0; font-size: 14px; line-height: 1.45"><strong>[n] products sold without a cost</strong> — their margin can’t be worked out, so they’re left out below. ${linkBtn('See them and add a cost')}</p>
-${box(`${graph('Margin by category', CATS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], CATS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}`)}
-${box(`${h3('On the shelves today')}<p style="margin: 0; font-size: 15px">Stock value, at what it cost you: ${mono('£[£]', 'font-weight: 700')}</p>${table('Stock value by category', ['Category', 'Items', 'What it cost you'], CATS.map((c) => [c, '[n]', '[£]']), ['All', '[n]', '[£]'])}`)}`);
+${box(`${graph('Margin by category', MARGIN_ROWS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], MARGIN_ROWS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}`)}
+${box(`${h3('On the shelves today')}<p style="margin: 0; font-size: 15px">Stock value, at what it cost you: ${mono('£[£]', 'font-weight: 700')}</p>${note(`Includes stock held for customers (${mono('£[£]')}). Stock on its way between shops counts at the shop it’s going to (${mono('£[£]')}).`)}${table('Stock value by category', ['Category', 'Items', 'What it cost you'], STOCK_CATS.map((c) => [c, '[n]', '[£]']), ['All', '[n]', '[£]'])}`)}
+${box(`${h3('Stock written off')}${note('Stock takes and adjustments this week, at what it cost you.')}${table('Stock written off', ['Why', 'Items', 'At cost', ''], WRITTEN_OFF.map(([why, n, v, link, label]) => [why, n, v, linkBtn(link, label)]), ['All', '[n]', '[£]', ''], [0, 3])}`)}`);
 
 // ---------- Returning customers (leftover screens decision 5, 2 Oct) ----------
 // New and returning customers each month, the share back within 12 months,
@@ -290,7 +318,9 @@ const disconnectDialog = () => popup('dc-title', 'Disconnect Xero?', 'North Stre
 
 // ---------- Who sees what (decision 5; audit M14, L6) ----------
 const HINTS = { 'Can see reports': 'Sales, takings, workshop, and discounts without who gave them', 'Can see costs and margin': 'Adds margin, stock value, cost columns and VAT. Turns on “Can see reports” too.' };
-const personBoard = () => overlay(staffPage({ people: peopleOpen(false) }, OWNER), personDialog({ costs: true, on: ['Can see reports'], hints: HINTS }));
+// UX walk-through 3 (decision 6 leftover): a manager's view, as on set-staff —
+// signed in as [Manager], with Jack Lewis listed as the Owner.
+const personBoard = () => overlay(managerStaffPage({ people: peopleOpen(false, false, MGR) }), personDialog({ costs: true, on: ['Can see reports'], hints: HINTS }));
 
 // ---------- The boards ----------
 def('rp-home', () => home());
@@ -315,6 +345,7 @@ def('rp-takings-reopened', () => takings({ reopened: true }));
 def('rp-vat', () => vat());
 def('rp-vat-first', () => vatFirst());
 def('rp-vat-all', () => vat('All shops'));
+def('rp-vat-check-off', () => vat('Bolton', { checkOff: true })); // UX walk-through 3 M8
 def('rp-margin', () => margin());
 def('rp-workshop', () => workshop());
 def('rp-returning', () => returning());
@@ -361,6 +392,7 @@ export const TITLES = {
   'rp-vat': 'VAT for your VAT quarter, against the quarter before',
   'rp-vat-first': 'When does your VAT quarter start? (asked once)',
   'rp-vat-all': 'VAT for all shops',
+  'rp-vat-check-off': 'VAT with the invoice check off: stock purchases from your accounts software',
   'rp-margin': 'Margin and stock value',
   'rp-workshop': 'Workshop: jobs, takings, how full, turnaround, quotes',
   'rp-discounts': 'Discounts and refunds, with reasons and who gave them',
@@ -379,6 +411,6 @@ export const ROWS = [
   { label: 'Sales', screens: ['rp-sales', 'rp-sales-all', 'rp-sales-year', 'rp-sales-empty', 'rp-pick-dates'] },
   { label: 'Your own reports', screens: ['rp-change', 'rp-changed', 'rp-save', 'rp-save-taken'] },
   { label: 'Takings and cash-ups', screens: ['rp-takings', 'rp-takings-all', 'rp-day', 'rp-reopen', 'rp-takings-reopened'] },
-  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-margin', 'rp-workshop', 'rp-discounts', 'rp-discounts-staff', 'rp-returning'] },
+  { label: 'VAT, margin, workshop and discounts', screens: ['rp-vat', 'rp-vat-first', 'rp-vat-all', 'rp-vat-check-off', 'rp-margin', 'rp-workshop', 'rp-discounts', 'rp-discounts-staff', 'rp-returning'] },
   { label: 'Accounts software and who sees what', screens: ['rp-accounts-connect', 'rp-accounts-map', 'rp-accounts-missing', 'rp-accounts-log', 'rp-accounts-lost', 'rp-accounts-disconnect', 'rp-today-accounts', 'rp-person'] },
 ];

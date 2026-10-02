@@ -184,12 +184,12 @@ def('cs-transfer', () => overlay(customerPage(), transferDialog()));
 const groupRow = (name, off, count) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px 0 14px; border: 1px solid ${C.border}; border-radius: 8px; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${count}</span></span>${mono(off, 'font-size: 15px')}<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button></div>`;
 const groupsOpen = () => `${groupRow('[Club name] members', '[n]% off', '[n] customers')}
 <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 10px">${note('The till gives the discount by itself when a group member is added to a sale, with the group as the reason.')}${button('+ Add a group', { variant: 'default' })}</div>`;
-def('cs-groups', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ groups: groupsOpen() }), { who: { role: 'M', person: 'Jack Lewis', roleName: 'Manager' } }));
+def('cs-groups', () => settingsPage('payments', 'Payments', PAY_INTRO, payFolds({ groups: groupsOpen() }), { who: { role: 'O', person: 'Jack Lewis', roleName: 'Owner' } })); // UX walk-through 2 (decision 6): Jack Lewis is the Owner
 
 // ---------- Privacy requests (decision 9) ----------
 // Reached from Customers; each request is dated, with the answer due within
 // one month (UK data protection). Deleting keeps sales without the name.
-const MANAGER_WHO = { role: 'M', person: 'Jack Lewis', roleName: 'Manager' };
+const MANAGER_WHO = { role: 'O', person: 'Jack Lewis', roleName: 'Owner' }; // UX walk-through 2 (decision 6): Jack Lewis is the Owner
 const reqRow = (who, what, asked, due, open, overdue = false) => `<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 60px; padding: 8px 14px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 200px"><span style="font-size: 15px; font-weight: 700">${who} · ${what}</span><span style="font-size: 13px; color: ${overdue ? C.warnInk : C.muted}; ${overdue ? 'font-weight: 700' : ''}">${overdue ? 'Overdue · ' : ''}Asked ${asked} · ${open ? `answer by ${due}` : `done ${due}`}</span></span>${open ? button(what.startsWith('Delete') ? 'Delete their details' : 'Send the copy', { variant: what.startsWith('Delete') ? 'danger' : 'default' }) : `<span style="font-size: 14px; color: ${C.muted}">Done</span>`}</div>`;
 // Account, history and reminders audit M11: where it came from, what's in
 // the way, and the delete button held back until it's clear.

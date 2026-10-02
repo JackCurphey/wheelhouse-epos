@@ -20,7 +20,7 @@
 // drawn (it is Lightspeed's). What Lightspeed allows is unverified until
 // there is a test account (proof steps LS-01–09).
 import { C, MONO, esc, icon, button, card, badge, field } from './ui.mjs';
-import { page, note, popup, overlay, withSize, isPhone, settingsPage, lsFolds, LS_INTRO, workshopFolds, WORKSHOP_INTRO, msgFolds, MSG_INTRO, dataFolds, DATA_INTRO } from './settings-frame.mjs';
+import { page, note, popup, overlay, withSize, isPhone, settingsPage, lsFolds, LS_INTRO, workshopFolds, WORKSHOP_INTRO, msgFolds, MSG_INTRO, dataFolds, DATA_INTRO, MANAGER_VIEW } from './settings-frame.mjs';
 import { today } from './opening.mjs';
 import { jobVariant, quoteJobBoards, phoneStagePanel, footNote, handOverFooter } from './diary.mjs';
 import { panel as jpPanel, row as jpRow, mono as jpMono } from './job-page.mjs';
@@ -33,7 +33,6 @@ const recipes = [];
 const def = (id, fn) => recipes.push([id, fn]);
 let SIZE = 'desktop';
 const OWNER = { role: 'O', person: 'Jack Lewis', roleName: 'Owner' };
-const MANAGER = { role: 'M', person: 'Jack Lewis', roleName: 'Manager' };
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
 const tall = 'display: inline-flex; align-items: center; min-height: 44px';
 const WO = 'work order [number]';
@@ -162,7 +161,7 @@ ls('ls-connect-shops', () => overlay(off(), startShops()));
 ls('ls-connect-shops-two', () => overlay(off(), startShops(true)));
 ls('ls-connect-checks', () => overlay(off(), startChecks()));
 ls('ls-settings-on', () => lsSettings({ connection: connOpen(), checks: checkList() }));
-ls('ls-settings-manager', () => settingsPage('lightspeed', 'Lightspeed', LS_INTRO, lsFolds({ connection: connOpen(true) }), { who: MANAGER }));
+ls('ls-settings-manager', () => settingsPage('lightspeed', 'Lightspeed', LS_INTRO, lsFolds({ connection: connOpen(true) }), { who: MANAGER_VIEW })); // UX walk-through 2 (decision 6): a placeholder manager
 ls('ls-disconnect', () => overlay(lsSettings({ connection: connOpen() }), disconnect()));
 ls('ls-reconnect', () => lsSettings({ signedOut: true, connection: `${kv('Lightspeed account', '[Lightspeed account name]')}<div>${button('Reconnect Lightspeed')}</div>` }, { banner: reconnectBanner() }));
 ls('ls-today', () => today({ lightspeed: true, as: OWNER }));

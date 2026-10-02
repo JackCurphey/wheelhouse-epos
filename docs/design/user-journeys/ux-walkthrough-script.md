@@ -8,9 +8,9 @@ For Jack and Mark, to walk Wheelhouse's stories by hand. A UI audit checks one s
 |---|---|---|---|
 | 1 | A repair, start to finish | 1 Find the shop, 3 Book a repair, 4 Drop off and approve the quote, 12 Workshop day, 5 Collect and pay, 7 Account and reminders | Maya Patel (customer, phone and computer), Jo Taylor (front desk), Alex Morgan (mechanic, tablet), Jack Lewis (owner) — **done 2 Oct 2026** |
 | 2 | A shop day | 10 Opening the shop, 11 Selling at the till, 2 Buy online / click and collect, 16 End-of-day cash-up | Jo Taylor at the till, Maya collecting an online order, Jack Lewis cashing up — **done 2 Oct 2026** |
-| 3 | Stock | 13 Receiving stock, 11 Selling at the till, 14 Stock take, 17 Reports | Jo Taylor receiving and selling, Jack Lewis ordering and reading reports; follow the Shimano brake pads B05S-RX that WH-1042 waits for |
-| 4 | A new shop | 9 Moving from Citrus Lime, 8 Owner setup, B Signing in, 18 Website management | Jack Lewis (owner) setting up; Jo Taylor signing in for the first time |
-| 5 | A Cycle to Work bike | 6 Cycle to Work, 11 Selling at the till, 17 Reports | Maya (customer), Jo Taylor, Jack Lewis |
+| 3 | Stock | 13 Receiving stock, 11 Selling at the till, 14 Stock take, 17 Reports | Jo Taylor receiving and selling, Jack Lewis ordering and reading reports; follow the Shimano brake pads B05S-RX that WH-1042 waits for — **done 2 Oct 2026** |
+| 4 | A new shop | 9 Moving from Citrus Lime, 8 Owner setup, B Signing in, 18 Website management | Jack Lewis (owner) setting up; Jo Taylor signing in for the first time — **done 2 Oct 2026** |
+| 5 | A Cycle to Work bike | 6 Cycle to Work, 11 Selling at the till, 17 Reports | Maya (customer), Jo Taylor, Jack Lewis — **done 2 Oct 2026** |
 | 6 | A repair at a Lightspeed shop | 21 Lightspeed shops (with the customer pages of 3, 4 and 5 it uses) | Maya, Jo Taylor, Alex Morgan, Jack Lewis |
 | 7 | An owner with two shops | 19 Multiple sites, 20 Management oversight, 17 Reports | Jack Lewis, and staff at Bolton and [Second site] |
 
@@ -89,3 +89,24 @@ For the "same thing, same name" question. If a screen uses another word for one 
 | The money left in the drawer overnight | — | The shop's float; "Leave in the drawer" |
 | Counting up at the end of the day | — | Close the day (till bar and page); "Takings and cash-ups" in Reports; "Close it" on Today |
 | Finding an earlier sale | Receipt number; "give your name in the shop" | Past sales; "Scan or type the receipt number" |
+| A part a job needs, once ordered | (The brake pads are arriving later than expected) | "On order" on the job's line (walk-through 3 L1: in the In stock column, not Customer approval); "for job WH-1042" on the order line |
+| The part has come in | — | "Part arrived" (job, diary, Overview); "Arrived" in the job's In stock column; "All arrived" on the order |
+| Adding a delivery to stock | — | "Book in [n] items" — the same word as receiving a bike, kept for both (walk-through 3 L1) |
+| Items that didn't come | — | "Missing", then "[n] to come", on a delivery; a transfer says "1 missing" (it said "1 short", walk-through 3 L1) |
+| Stock kept for a customer | — | "[n] held for online orders" at the till; "Held" for a bike (Cycle to Work); "held for job WH-1042" (walk-through 3 H1) |
+| A job waiting for a part | (Waiting for parts strip and "New ready date" text) | "Waiting for parts" (the Activity log said "Waiting for a part", walk-through 3 L1) |
+| Counting stock | — | Stock take (sidebar); "Start a count", "Join", "I've finished my part", "Check the count", "Apply to [n] products" |
+| Stock lost or found | — | "Adjust stock" with a reason; "under" and "over" on a count; "Stock written off" in Reports (walk-through 3 M7) |
+| What stock cost the shop | — | "Cost" (product page); "What it cost you" (Reports); "At cost" (Settings › Stockroom) |
+| A group of products | — | "Category" (Settings › Stockroom › Categories, and Reports, walk-through 3 M10); the till's quick buttons are "groups" (Workshop, Parts, Accessories) |
+| Bringing someone onto the staff | (the invite email) | "Invite someone" (Staff and roles); Getting started's step says "Invite your staff" (it said "Add your staff", walk-through 4 L1); a waiting invite is "Invited [date] · not joined yet" (walk-through 4 M3) |
+| A person's till PIN | — | "Till PIN"; Wheelhouse picks it: "Your till PIN" the first time, "Your new till PIN" after; "No PIN yet · Get your PIN"; "Clear a forgotten PIN" (the invite said "They choose their own till PIN", walk-through 4 L1) |
+| Wheelhouse before switch-over | — | "Practice: not real money" (till band); "Run alongside", "Still running" (the move's stages); "Clear and go real" (switch-over morning) |
+| Bringing data from Citrus Lime | — | "Bring your data" the first time; "Weekly refresh" and "Refresh now" after; "Changed in both — Citrus Lime's kept" |
+| The website showing to customers | (the website) | "Turn it on" / "Turn off"; "Your website is on" / "off"; changes go live with "Publish"; the move's checklist says "The website is ready" (it said "The website is moved", walk-through 4 H2) |
+| Making a computer a till | — | "Make this computer a till" (Getting started); "Set up this till"; "Make this computer Till B1" |
+| A Cycle to Work sale | (Your Cycle to Work bike) | "Cycle to Work order"; "+ New Cycle to Work order"; Front desk › Cycle to Work |
+| The scheme's paperwork | "your certificate"; the "Certificate received" email | "Add the certificate"; "Certificate received" (a stage) |
+| Who pays for a Cycle to Work bike | [Provider] (on the quote and emails) | "Scheme provider" where one is chosen, "Provider" elsewhere; the till's Other ways to pay said "Cycle to Work scheme · [Scheme name]" (walk-through 5 L1) |
+| Giving a Cycle to Work bike over | Ready to collect; Collected | "Hand over", then "Hand over at the till" |
+| The provider's money | — | "Expected £[£] by [date]"; "Mark paid", "Save as part paid", "Close with a reason"; "Owed by Cycle to Work providers" |

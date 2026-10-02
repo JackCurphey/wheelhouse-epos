@@ -27,7 +27,16 @@ Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy on
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (435 and 294 files of 512 each).
+phone (471 and 299 files of 512 each).
+
+**UX walk-throughs 3 (stock) and 4 (a new shop) (2 Oct):** every
+recommendation taken without asking (decision 6) and drawn: held stock for
+jobs, stock take allows for held stock and movements, Staff can leave an
+unknown product for the owner, a first-time till PIN, the website going on
+on switch-over morning, no customer messages during practice. Jack Lewis is
+the Owner in every example; manager-view boards show "[Manager]". Overview:
+766 screens, 763 designed. The staff canvas holds 471 of 512 files. Next:
+walk-throughs 5–7.
 
 **UX walk-through 2, a shop day (2 Oct):** 18 findings, every recommendation
 taken and drawn (opening, till, online orders, cash-up, reports): an unclosed

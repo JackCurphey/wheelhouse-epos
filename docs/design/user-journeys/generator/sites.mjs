@@ -22,10 +22,10 @@
 // address or code anywhere, so it is "[Second site]"; its figures are
 // placeholders.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
-import { page, offer, note, popup, overlay, withSize, isPhone, settingsPage, shopFolds, SHOP_INTRO, tillFolds, TILL_INTRO, workshopFolds, WORKSHOP_INTRO, MANAGER } from './settings-frame.mjs';
+import { page, offer, note, popup, overlay, withSize, isPhone, settingsPage, shopFolds, SHOP_INTRO, tillFolds, TILL_INTRO, workshopFolds, WORKSHOP_INTRO, MANAGER_VIEW } from './settings-frame.mjs';
 import { withSite, newJobOtherShopAt, requestFromShopAt } from './diary.mjs';
 import { today, section, list, line, tag, warnLead } from './opening.mjs';
-import { servicesOpen, personDialog, staffPage, peopleOpen } from './setup.mjs';
+import { servicesOpen, personDialog, staffPage, peopleOpen, managerStaffPage, MGR } from './setup.mjs';
 import { screens as stockScreens } from './stock.mjs';
 import { screens as mapScreens } from './app-map.mjs';
 import { shopStepAt, serviceAfterShopAt } from './book.mjs';
@@ -123,7 +123,9 @@ const secondDays = () => `<div role="group" aria-label="Works in the workshop on
   ? `<button type="button" disabled aria-label="${d}: Jo is at Bolton" style="min-width: 44px; min-height: 44px; padding: 0 6px; border-radius: 8px; border: 1px dashed ${C.border}; background: transparent; color: ${C.muted}; font-family: inherit; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2">${d}<span style="font-size: 10px; font-weight: 500">Bolton</span></button>`
   : `<button type="button" aria-pressed="false" style="min-width: 44px; min-height: 44px; padding: 0 6px; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 13px; font-weight: 600">${d}</button>`).join('')}</div><span style="font-size: 13px; color: ${C.muted}; line-height: 1.45">A day can only be at one shop. To move one here, untick it at Bolton first.</span></div>`;
 const worksAt = () => `<div role="group" aria-labelledby="wa-h" style="display: flex; flex-direction: column; gap: 8px; padding-top: 14px"><span id="wa-h" style="font-size: 15px; font-weight: 600">Works at</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${offer('Bolton', true)}${offer(SECOND, true)}</div><span style="font-size: 13px; color: ${C.muted}; line-height: 1.45">Jo can switch between these shops. Someone with one shop never sees the switcher. Owners see every shop; a manager at two or more shops also gets “All shops”, for just those. Unticking a shop with jobs booked for Jo there says so first.</span></div>`;
-const personBoard = () => withSite('Bolton', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ worksAt: worksAt(), siteDays: secondDays() })));
+// UX walk-through 3 (decision 6 leftover): a manager's view, as on set-staff —
+// signed in as [Manager], with Jack Lewis listed as the Owner.
+const personBoard = () => withSite('Bolton', () => overlay(managerStaffPage({ people: peopleOpen(false, false, MGR) }), personDialog({ worksAt: worksAt(), siteDays: secondDays() })));
 
 // ---------- Booking (decision 5; audit M8, M9) ----------
 // UX walk-through 1 M1: booking starts with the shop the website already
@@ -140,7 +142,10 @@ const footerPlain = (html) => html.replace('North Street Cycles · Bolton</span>
 const siteCard = (name, code, addr, tills, hours, edit) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: inline-flex; min-width: 40px; height: 40px; padding: 0 6px; box-sizing: border-box; flex-shrink: 0; border-radius: 8px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-family: ${MONO}; font-size: 15px; font-weight: 700">${code}</span><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${addr} · ${tills} · ${hours}</span></span>${edit ? `<button type="button" aria-label="Edit ${esc(name)}" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: underline">Edit</button>` : ''}</div>`;
 const sitesOpen = (owner = true) => `${siteCard('Bolton', 'B', '[Shop address] · [shop phone]', 'tills B1–B3', '[opening hours]', owner)}${siteCard(SECOND, '[code]', '[Address] · [phone]', '[n] tills', '[opening hours]', owner)}
 <div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px; padding-top: 6px">${owner ? button('+ Add a shop', { variant: 'default' }) : note('Only the owner can add or change shops.')}${note('Customers, products, staff and messages are shared by every shop.')}</div>`;
-const sitesBoard = (owner = true) => withSite('Bolton', () => settingsPage('shop', 'Shop and sites', SHOP_INTRO, shopFolds({ sites: sitesOpen(owner) }, `Bolton, ${SECOND}`), { who: owner ? OWNER : MANAGER }));
+// UX walk-through 3 (decision 6 leftover): on the manager's view the folded
+// Staff and roles summary below lists the signed-in [Manager] too.
+const managerPeople = (html) => html.replace('>Jack Lewis, Jo Taylor, Alex Morgan</span>', '>[Manager], Jack Lewis, Jo Taylor, Alex Morgan</span>');
+const sitesBoard = (owner = true) => withSite('Bolton', () => { const b = settingsPage('shop', 'Shop and sites', SHOP_INTRO, shopFolds({ sites: sitesOpen(owner) }, `Bolton, ${SECOND}`), { who: owner ? OWNER : MANAGER_VIEW /* UX walk-through 2 (decision 6) */ }); return owner ? b : managerPeople(b); });
 const req = (t) => `${t} (required)`;
 const addShopDialog = (error = false) => popup('add-title', 'Add a shop', 'It joins North Street Cycles', `
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 1fr) 160px'}; gap: 12px">${field(req('Shop name'), { value: '[Shop name]' })}${field(req('Code'), error ? { value: 'B', error: 'B is Bolton’s code. Choose another letter.' } : { value: '[letter]', hint: 'Suggested from the name. On its tills and receipts, like B1-1042' })}</div>
