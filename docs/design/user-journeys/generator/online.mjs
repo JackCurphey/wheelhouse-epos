@@ -58,7 +58,7 @@ const site = (content, { basket = 0, twoShops = false, shopChosen = true, toast 
     const where = `<a href="#" aria-label="${shopChosen ? 'Collecting from North Street Cycles, Bolton — change the shop' : 'Choose a shop to collect from'}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; max-width: 230px; padding: 0 10px; border-radius: 8px; border: 1px solid ${C.border}; font-size: 14px; color: ${C.ink}; text-decoration: none; white-space: nowrap; overflow: hidden">${icon('store', 16)}<span style="overflow: hidden; text-overflow: ellipsis">${shopChosen ? 'Collecting from <strong>Bolton</strong> · Change' : '<strong>Choose a shop</strong>'}</span></a>`;
     html = html.replace(/(<label style="display: flex; align-items: center; gap: 8px; width: 240px;)/, `${where}$1`).replace('width: 240px;', 'width: 150px;').replace('placeholder="Search the shop"', 'placeholder="Search"').replace('display: flex; align-items: center; gap: 28px;', 'display: flex; align-items: center; gap: 20px; white-space: nowrap;');
   }
-  if (toast) html = html.replace(/<main style="/, '<main style="position: relative; ').replace('</main>', `${toast}</main>`);
+  if (toast) html = html.replace(/<main id="main-content" style="/, '<main id="main-content" style="position: relative; ').replace('</main>', `${toast}</main>`);
   return html;
 };
 const h1 = (t) => `<h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">${t}</h1>`;

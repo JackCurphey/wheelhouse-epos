@@ -74,3 +74,5 @@ switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
 state) for screen readers, and on tablet and phone — where the switcher is out
 of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
 under each staff page's title. Nothing else on these boards changed.
+
+**Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.

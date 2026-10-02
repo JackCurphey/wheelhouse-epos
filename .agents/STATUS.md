@@ -5,7 +5,7 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-10-01. **Merged to `main`:** #90, #91, #92 (names), #93
+**Updated:** 2026-10-02. **Merged to `main`:** #90, #91, #92 (names), #93
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
@@ -18,14 +18,31 @@ Collect the bike and pay (journey 5), Receiving stock and purchase orders
 (journey 13), Stock take and stock control (journey 14), Book a repair
 (journey 3), Drop off and approve the quote (journey 4), Account, history
 and reminders (journey 7), Multiple sites (journey 19), Reports and
-accounts (journey 17) and Buy online / click and collect (journey 2) are
-approved and in
+accounts (journey 17), Buy online / click and collect (journey 2) and Find
+the shop and browse the website (journey 1) are approved and in
 the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy online
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (321 and 204 files of 512 each).
+phone (321 and 232 files of 512 each).
+
+**Journey 1, Find the shop and browse the website (2 Oct):** approved at
+desktop, tablet and phone and copied into the big canvas; 8 decisions in
+`docs/decisions/2026-10-02-find-the-shop-review.md` — a home page of sections
+the shop arranges; category pages with filters made from each category's own
+details, nothing ticked for the customer; a product page with photos, size
+and colour, specifications and "Ask the shop"; one search box for products,
+categories, repairs and the shop's pages; Our shops and a page per shop;
+no cookie pop-up unless the shop adds a tracking tool. UI audit
+`browse-ui-audit.md`, every recommendation taken. 35 screens, 106 boards.
+Own canvas: https://claude.ai/artifact/7g2TbX8jMauaaTqSkvj5CQ . Generator:
+`browse.mjs` + `build-browse.mjs --theme sand`. Carried into every
+journey's website pages: a skip link, and the footer's "Collection and
+returns" and "Cookies". Left open: filter values are placeholders; the
+Contact us, Collection and returns and Privacy pages are not drawn; the
+tracking-tool setting belongs to Website management (journey 18); each
+page's browser-tab title (audit L5) is for the build.
 
 **Journey 2, Buy online / click and collect (1 Oct):** approved at desktop,
 tablet and phone and copied into the big canvas; 10 decisions in

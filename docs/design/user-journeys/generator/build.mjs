@@ -24,7 +24,7 @@ const PARTS = [
 // Workshop day; decision 15 of journey A). ui.mjs picks its theme when it
 // loads, and this process is Fjell, so each Soft sand canvas is built in its
 // own process and its boards read back from its project/ folder.
-// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs; journey 8 = setup.mjs; journey 15 = customer.mjs; journey 10 = opening.mjs; journey 9 = moving.mjs; journey 5 = collect.mjs; journey 13 = receiving.mjs; journey 14 = stock.mjs; journey 3 = book.mjs; journey 4 = quote.mjs; journey 7 = account.mjs; journey 19 = sites.mjs; journey 17 = reports.mjs; journey 2 = online.mjs.
+// Journey 12 = diary.mjs; journey A = app-map.mjs; journey B = signin.mjs; journey 11 = till.mjs; journey 16 = cashup.mjs; journey 8 = setup.mjs; journey 15 = customer.mjs; journey 10 = opening.mjs; journey 9 = moving.mjs; journey 5 = collect.mjs; journey 13 = receiving.mjs; journey 14 = stock.mjs; journey 3 = book.mjs; journey 4 = quote.mjs; journey 7 = account.mjs; journey 19 = sites.mjs; journey 17 = reports.mjs; journey 2 = online.mjs; journey 1 = browse.mjs.
 const SAND_SOURCES = {
   diary: { script: 'build-diary.mjs', dir: here + 'out-diary-sand/project/' },
   'app-map': { script: 'build-app-map.mjs', dir: here + 'out-app-map-sand/project/' },
@@ -46,6 +46,7 @@ const SAND_SOURCES = {
   sites: { script: 'build-sites.mjs', dir: here + 'out-sites-sand/project/' },
   reports: { script: 'build-reports.mjs', dir: here + 'out-reports-sand/project/' },
   online: { script: 'build-online.mjs', dir: here + 'out-online-sand/project/' },
+  browse: { script: 'build-browse.mjs', dir: here + 'out-browse-sand/project/' },
 };
 for (const s of Object.values(SAND_SOURCES)) execFileSync(process.execPath, [s.script, '--theme', 'sand'], { cwd: here, stdio: ['ignore', 'ignore', 'inherit'] });
 const SAND_SIZES = ['single', 'desktop', 'tablet', 'phone'];
@@ -69,6 +70,7 @@ const SAND_CANVAS = {
   sites: 'https://claude.ai/artifact/LXYUo9UQymsN2VyNSynAcB',
   reports: 'https://claude.ai/artifact/NXHvoKd8wY8wpAhBYsPRUt',
   online: 'https://claude.ai/artifact/QGRBBPUhHRd5rg94XbgAyS',
+  browse: 'https://claude.ai/artifact/7g2TbX8jMauaaTqSkvj5CQ',
 };
 const sandFile = (id, size) => (size === 'single' ? `${id}.dc.html` : `${id}-${size}.dc.html`);
 // The sizes a Soft sand screen was drawn at: whichever boards its own canvas has.

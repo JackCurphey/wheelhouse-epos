@@ -153,3 +153,5 @@ and phone. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
     staff search hint — the longer hint was cut off in the header, so the
     hint stays "Search jobs, customers, products" and search finds orders
     all the same.
+
+**Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.

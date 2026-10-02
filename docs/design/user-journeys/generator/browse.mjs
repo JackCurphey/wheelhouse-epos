@@ -39,9 +39,8 @@ const tall = 'display: inline-flex; align-items: center; min-height: 44px';
 // both shops (L4); "Cookie choices" joins "Cookies" when the shop has added
 // a tracking tool (audit H3).
 const site = (content, { active = 'Shop', oneShop = false, chosen = true, overlayHtml = '', first = '', scroll = 0, tracking = false, query = '', staffBar = '' } = {}) => {
-  const body = `<div data-scroll id="main-content" style="flex-grow: 1; min-height: 0; overflow-y: ${scroll ? 'hidden' : 'auto'}; display: flex; flex-direction: column; gap: 22px"><div style="display: flex; flex-direction: column; gap: 22px${scroll ? `; position: relative; top: -${scroll}px` : ''}">${staffBar}${!oneShop && SIZE !== 'desktop' ? chipLine(chosen) : ''}${content}</div></div>`;
+  const body = `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: ${scroll ? 'hidden' : 'auto'}; display: flex; flex-direction: column; gap: 22px"><div style="display: flex; flex-direction: column; gap: 22px${scroll ? `; position: relative; top: -${scroll}px` : ''}">${staffBar}${!oneShop && SIZE !== 'desktop' ? chipLine(chosen) : ''}${content}</div></div>`;
   let html = SIZE === 'desktop' ? siteDesktop('sand', active, body) : SIZE === 'tablet' ? siteTablet('sand', body, active) : sitePhone('sand', { content: body });
-  html = html.replace(/<header /, `<a href="#main-content" style="position: absolute; left: -9999px; top: 0">Skip to the main content</a><header `);
   if (oneShop) html = html.replace(/>Our shops</g, '>Find us<');
   else if (SIZE === 'desktop') {
     const chip = `<a href="#" aria-label="${chosen ? 'Collecting from North Street Cycles, Bolton — change the shop' : 'Choose a shop to collect from'}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; max-width: 230px; padding: 0 10px; border-radius: 8px; border: 1px solid ${C.border}; font-size: 14px; color: ${C.ink}; text-decoration: none; white-space: nowrap; overflow: hidden">${icon('store', 16)}<span style="overflow: hidden; text-overflow: ellipsis">${chosen ? 'Collecting from <strong>Bolton</strong> · Change' : '<strong>Choose a shop</strong>'}</span></a>`;
@@ -50,12 +49,12 @@ const site = (content, { active = 'Shop', oneShop = false, chosen = true, overla
   // The header search is a search area (audit H4); results keep the words (M9).
   html = html.replace(/<label style="display: flex; align-items: center; gap: 8px; width: (\d+)px;/, '<label role="search" style="display: flex; align-items: center; gap: 8px; width: $1px;');
   if (query) html = html.replace(/placeholder="Search(?: the shop)?"/, (m) => `${m} value="${esc(query)}"`);
-  html = html.replace(/<a href="#" style="color: inherit">Delivery and returns<\/a>/, '<a href="#" style="color: inherit">Collection and returns</a>')
-    .replace('<a href="#" style="color: inherit">Privacy</a>', `<a href="#" style="color: inherit">Privacy</a><a href="#" style="color: inherit">Cookies</a>${tracking ? '<button type="button" style="min-height: 44px; padding: 0; border: 0; background: transparent; font-family: inherit; font-size: inherit; color: inherit; text-decoration: underline">Cookie choices</button>' : ''}`)
-    .replace(/<a href="#" style="color: inherit">/g, `<a href="#" style="color: inherit; ${tall}">`);
+  // The footer's Cookies link and skip link come from the shared frame
+  // (app-map.mjs, decision 8); "Cookie choices" joins it with a tracking tool.
+  if (tracking) html = html.replace(/(>Cookies<\/a>)(<\/span><\/footer>)/, '$1<button type="button" style="min-height: 44px; padding: 0; border: 0; background: transparent; font-family: inherit; font-size: inherit; color: inherit; text-decoration: underline">Cookie choices</button>$2');
   if (!oneShop) html = html.replace(/<span>North Street Cycles · Bolton<\/span>/, '<span>North Street Cycles · Bolton and [Second site]</span>');
-  if (first) html = html.replace(/<main style="([^"]*)">/, `<main style="position: relative; $1">${first}`);
-  if (overlayHtml) html = html.replace(/<main style="(?!position: relative)/, '<main style="position: relative; ').replace('</main>', `${overlayHtml}</main>`);
+  if (first) html = html.replace(/<main id="main-content" style="([^"]*)">/, `<main id="main-content" style="position: relative; $1">${first}`);
+  if (overlayHtml) html = html.replace(/<main id="main-content" style="(?!position: relative)/, '<main id="main-content" style="position: relative; ').replace('</main>', `${overlayHtml}</main>`);
   return html;
 };
 const chipLine = (chosen) => `<a href="#" style="flex-shrink: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 15px; color: ${C.ink}; text-decoration: none">${icon('store', 16)}<span style="flex-grow: 1">${chosen ? 'Collecting from <strong>Bolton</strong>' : '<strong>Choose a shop to collect from</strong>'}</span>${chosen ? '<span style="font-weight: 600; text-decoration: underline">Change</span>' : ''}</a>`;

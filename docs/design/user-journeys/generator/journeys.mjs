@@ -50,6 +50,8 @@ export const sd19 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd17 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'reports' });
 // sd2(id, title, role) = an agreed journey 2 screen (online.mjs, Soft sand).
 export const sd2 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'online' });
+// sd1(id, title, role) = an agreed journey 1 screen (browse.mjs, Soft sand).
+export const sd1 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'browse' });
 
 export const journeys = [
   {
@@ -103,16 +105,54 @@ export const journeys = [
   {
     id: 'j01', name: 'Find the shop and browse the website', who: 'Customer',
     rows: [
-      { label: 'Browse', screens: [
-        o('web-home', 'Website home page', 'Customer', 'The shop’s own website: who they are, what they sell, how to book a repair.', ['Shop branding laid out with the theme system (layout, sections, colours, fonts, images)', 'Links to shop products and to book a repair', 'Opening hours and address'], { today: 'The old website page is one fixed layout: logo, hero image, description, product grid, five colour choices. Add to basket goes to Shopify.', source: 'Release 2 piece 7 · rule 6' }),
-        g('web-category', 'Category and product list', 'Customer', 'Browse what the shop sells.', ['Categories and filters', 'Price and whether it is in stock', 'Sizes and colours shown on the card'], { source: 'Release 2 piece 7 · INV-06, INV-12' }),
-        g('web-product', 'Product page', 'Customer', 'Everything needed to decide and buy.', ['Photos', 'Choose size and colour', 'Price, and stock at each shop', 'Add to basket, or reserve for click and collect'], { source: 'Release 2 piece 7 · INV-04, INV-06' }),
-        g('web-search', 'Search results', 'Customer', 'Find a product by name or type.', ['Search box', 'Results with price and stock', 'Nothing found'], { source: 'ECOM-01' }),
-        g('web-shops', 'Our shops', 'Customer', 'Where each shop is and when it is open.', ['One card per shop: address, hours, phone', 'Map link', 'Book a repair at this shop'], { source: 'Release 2 multiple sites · ACC-09' }),
+      { label: "The home page, and choosing a shop", screens: [
+        sd1("wb-home", "Home page: the sections a new shop starts with", "Customer"),
+        sd1("wb-home-lower", "Home page, further down: repairs, our shops, the shop’s own words", "Customer"),
+        sd1("wb-home-one-shop", "Home page for a shop with one site: “Find us”", "Customer"),
+        sd1("wb-first-visit", "First visit, two shops: nothing chosen yet", "Customer"),
+        sd1("wb-choose-shop", "Choosing the shop: one tap", "Customer"),
       ] },
-      { label: 'When things go wrong', screens: [
-        g('web-missing', 'Page not found / website switched off', 'Customer', 'A plain page that never reveals whether a shop exists.', ['Friendly message', 'Link back to the home page'], { source: 'Shop websites spec, error handling' }),
-        g('web-cookies', 'Cookie choices', 'Customer', 'Only needed if the website sets cookies that are not essential.', ['Accept or decline non-essential cookies', 'Link to the privacy notice'], { source: 'LEG-04' }),
+      { label: "Categories", screens: [
+        sd1("wb-shop", "Shop: every category", "Customer"),
+        sd1("wb-category", "A category: Bearings, with filters from its details", "Customer"),
+        sd1("wb-category-filtered", "Filtered: ready today, and an inner diameter (on a phone, the Filter panel open)", "Customer"),
+        sd1("wb-category-empty", "Nothing matches: which filter is the cause", "Customer"),
+        sd1("wb-category-parent", "A parent category: Drivetrain, with its types", "Customer"),
+        sd1("wb-category-child", "Derailleurs: number of gears", "Customer"),
+        sd1("wb-category-no-shop", "A category before a shop is chosen", "Customer"),
+      ] },
+      { label: "A product", screens: [
+        sd1("wb-product", "A product: photos, specifications, description, buying", "Customer"),
+        sd1("wb-product-sizes", "Sizes and colours: nothing chosen yet", "Customer"),
+        sd1("wb-product-size-other", "A size not here, but at the other shop", "Customer"),
+        sd1("wb-product-photos", "Photos, larger", "Customer"),
+      ] },
+      { label: "Search", screens: [
+        sd1("wb-search-typing", "Search as you type: products, repairs, categories, pages", "Customer"),
+        sd1("wb-search-no-suggestions", "No suggestions: press Enter to search", "Customer"),
+        sd1("wb-search-results", "Search results: products, with repairs and pages above", "Customer"),
+        sd1("wb-search-measure", "Searching by a measurement: “bearing 30mm”", "Customer"),
+        sd1("wb-search-none", "No results: ask the shop", "Customer"),
+      ] },
+      { label: "Our shops", screens: [
+        sd1("wb-shops", "Our shops: a card for each shop", "Customer"),
+        sd1("wb-shop-page", "A shop’s own page: hours, closures, collect from here", "Customer"),
+        sd1("wb-shop-collect", "Collect from here: the shop chosen", "Customer"),
+        sd1("wb-find-us", "One shop: “Find us”", "Customer"),
+      ] },
+      { label: "When things go wrong", screens: [
+        sd1("wb-not-found", "Page not found", "Customer"),
+        sd1("wb-off", "Switched off, or no such shop: what the public sees", "Customer"),
+        sd1("wb-off-preview", "Switched off: what the shop’s own staff see", "Staff"),
+        sd1("wb-off-preview-product", "Switched off: the staff banner on every page", "Staff"),
+        sd1("wb-turned-on", "Turned on: “Your website is on · Turn off”", "Staff"),
+      ] },
+      { label: "Cookies", screens: [
+        sd1("wb-cookies-banner", "A shop that added a tracking tool: the cookie choice", "Customer"),
+        sd1("wb-cookies-choose", "Choose cookies", "Customer"),
+        sd1("wb-cookies-saved", "Choices saved; “Cookie choices” in the footer", "Customer"),
+        sd1("wb-cookies-page", "The Cookies page, with the visitor’s choice", "Customer"),
+        sd1("wb-cookies-page-plain", "The Cookies page for a shop with no tracking tool", "Customer"),
       ] },
     ],
   },

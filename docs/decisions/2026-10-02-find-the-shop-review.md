@@ -103,3 +103,13 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    while it's off, with "Back to Wheelhouse" (M14); names, a skip link and
    keyboard order (M15); and L1–L6 (wording "Ready today at Bolton" on
    cards, "Collection and returns" in the footer, page titles).
+8. **Tablet and phone drawn; approved and copied into the big canvas**
+   (Jack, 2 Oct: "lets get it on the canvas"). On tablet and phone the
+   header's search button opens a search box across the top with the
+   suggestions under it; on a phone "Filter" opens a full-screen panel with
+   "Show [n] products"; shop cards go one to a row; "Collecting from Bolton
+   · Change" is a line at the top of the page. 35 screens, 106 boards. In
+   the big canvas (customers and the website) journey 1 replaces its seven
+   placeholders. Carried into every journey's website pages: a "Skip to the
+   main content" link, the footer's "Collection and returns" (was "Delivery
+   and returns") and "Cookies" links, footer links 44px tall.

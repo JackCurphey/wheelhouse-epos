@@ -145,3 +145,5 @@ clicks as possible).
 **Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** the person pop-up has the new "Can see costs and margin" switch, as in Owner setup. The big canvas's "Reports and cash-up by site" placeholder is gone: Reports and accounts draws Sales, Takings and cash-ups and VAT for "All shops".
 
 **Later change (1 Oct 2026, Buy online decision 10):** the product-price and tills boards show the new Front desk "Online orders" pill and "Show on website" on a product. Nothing else changed.
+
+**Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.

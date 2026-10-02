@@ -133,3 +133,5 @@ of sight — the shop's name, "North Street Cycles · Bolton", sits in small typ
 under each staff page's title. Nothing else on these boards changed.
 
 **Later change (1 Oct 2026, Buy online decision 10):** the Messages boards list the five online-order messages and read "15 on". Nothing else changed.
+
+**Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
