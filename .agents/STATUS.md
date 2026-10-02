@@ -20,13 +20,31 @@ Collect the bike and pay (journey 5), Receiving stock and purchase orders
 and reminders (journey 7), Multiple sites (journey 19), Reports and
 accounts (journey 17), Buy online / click and collect (journey 2), Find
 the shop and browse the website (journey 1), Website management
-(journey 18), Management oversight (journey 20) and Cycle to Work
-(journey 6) are approved and in the big canvas; the next journey is
+(journey 18), Management oversight (journey 20), Cycle to Work
+(journey 6) and Lightspeed shops (journey 21) are approved and in the big
+canvas — every journey is now drawn; the next journey is
 Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy online
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (393 and 270 files of 512 each).
+phone (426 and 270 files of 512 each).
+
+**Journey 21, Lightspeed shops (2 Oct):** approved at desktop, tablet and
+phone and copied into the big canvas; 13 decisions in
+`docs/decisions/2026-10-02-lightspeed-shops-review.md` — the workshop only,
+Lightspeed doing the money; an approved job becomes a Lightspeed work order
+by itself; customers linked where Wheelhouse is sure; parts from Lightspeed's
+products (quotable from the last copy when it's down, the approved price
+winning if it changed); labour priced in Wheelhouse; Wheelhouse shows when
+the work order is paid, with a pop-up and a trace when a bike leaves before
+payment shows; the owner connects it in Settings › Office with a checklist
+(working / not proven yet); no money through Wheelhouse. UI audit
+`lightspeed-ui-audit.md`, every recommendation taken. 38 screens, 114
+boards. Own canvas: https://claude.ai/artifact/2qnzyGx8enhxbVN17Brpnf .
+Generator: `lightspeed.mjs` + `build-lightspeed.mjs --theme sand`; the
+switch is `shop-mode.mjs`. Open: Lightspeed's real capabilities unverified
+(no test account); website editor without selling, the Customers page's
+Lightspeed link and a Diary marker not drawn.
 
 **Journey 6, Cycle to Work (2 Oct):** approved at desktop, tablet and phone
 and copied into the big canvas; 8 decisions in

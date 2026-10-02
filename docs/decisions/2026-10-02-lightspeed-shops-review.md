@@ -140,3 +140,19 @@ desktop first, then tablet and phone. Rules for every journey apply (Workshop da
     of [time]" and warns that prices may have changed; the work order uses
     Lightspeed's price when it sends. Chosen over blocking part search
     until Lightspeed answers.
+12. **The approved price wins** (Jack, 2 Oct: "1"). If a part's price has
+    changed in Lightspeed since the customer approved — most likely after
+    quoting from the last copy (decision 11) — the job shows "Price changed
+    in Lightspeed: £[old] → £[new]" and staff choose "Keep £[old]" or "Ask
+    Maya again". The customer is never charged more than they agreed
+    without someone deciding, which keeps decision 10's promise. Chosen
+    over the work order quietly taking Lightspeed's new price.
+13. **Tablet and phone drawn; approved and copied into the big canvas**
+    (Jack, 2 Oct: "1", going ahead once decision 12 was settled). On a
+    tablet the screens keep the desktop layout with a shorter icon rail; on
+    a phone the Lightspeed strip sits at the top of the job with its button
+    full width, pop-ups fill the screen, and part-search rows put the name
+    on its own line. 38 screens, 114 boards. In the big canvas (the staff
+    app) journey 21 replaces its five Release 1 screens. No other journey's
+    boards change: the Lightspeed-shop switch only applies to boards drawn
+    as a Lightspeed shop.

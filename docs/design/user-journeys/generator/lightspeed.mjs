@@ -84,6 +84,8 @@ const JOBS = {
   notConnected: [badge('Not in Lightspeed', 'grey'), 'Lightspeed isn’t connected', 'The work order is made once the owner connects it'],
   sent: [badge('In Lightspeed', 'blue'), `${WO} · ${AGREED}`, 'Made when Maya approved · updated [time]'],
   changed: [badge('In Lightspeed', 'blue'), `${WO} updated · now ${jpMono('£[£]')}`, 'Maya approved the new price at [time]'],
+  // Decision 12: a part's price changed in Lightspeed after Maya approved.
+  priceChanged: [badge('Price changed in Lightspeed', 'amber'), `Shimano brake pads ${jpMono('£28.00')} → ${jpMono('£[£]')} since Maya approved`, '', `<span style="display: inline-flex; gap: 8px">${sbtn('Keep £28.00', 'Keep the agreed price of £28.00 for Shimano brake pads')}${sbtn('Ask Maya again', 'Ask Maya to approve the new price')}</span>`],
   cancelled: [badge('Cancelled', 'grey'), `${WO} marked cancelled in Lightspeed`, 'By Jo Taylor at [time]'],
   pick: [badge('Not sent yet', 'amber'), 'Choose Maya in Lightspeed to send the work order', '', sbtn('Choose the customer', 'Choose the customer in Lightspeed for WH-1042')],
   waitReach: [badge('Waiting to reach Lightspeed', 'amber'), 'Not sent yet — Wheelhouse keeps trying by itself', 'Since [time]'],
@@ -102,6 +104,7 @@ const JOB_AT = {
   notConnected: () => job('In the workshop', 'blue', 'notConnected', readyFooter),
   sent: () => job('In the workshop', 'blue', 'sent', readyFooter),
   changed: () => job('In the workshop', 'blue', 'changed', readyFooter),
+  priceChanged: () => job('In the workshop', 'blue', 'priceChanged', readyFooter),
   cancelled: () => job('Cancelled', 'grey', 'cancelled', plainFooter('Done', 'Closes the job.')),
   pick: () => job('In the workshop', 'blue', 'pick', readyFooter),
   waitReach: () => job('In the workshop', 'blue', 'waitReach', readyFooter),
@@ -120,7 +123,7 @@ const PRODUCTS = [
   ['[Product]', '£[£]', '0 in stock · [n] on order'],
   ['[Product]', '£[£]', '[n] in stock'],
 ];
-const partSearch = (down = false) => popup('ps-title', 'Add a part', down ? 'Lightspeed can’t be reached' : `From Lightspeed’s products · ${checked('40 seconds ago')}`, `${down ? msg('<strong>Showing products and stock as of [time].</strong> Prices may have changed since — the work order uses Lightspeed’s price when it sends.', 'warn', true) : ''}<div style="display: flex; flex-direction: column; gap: 6px"><label for="ps-q" style="font-size: 14px; font-weight: 600">Search products</label><input id="ps-q" value="brake pads" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div><ul aria-label="Products" style="margin: 0; padding: 0">${PRODUCTS.map(([n, p, s]) => `<li style="list-style: none"><button type="button" aria-label="Add ${esc(n)} to the quote" style="display: grid; grid-template-columns: ${isPhone() ? 'auto minmax(0, 1fr) auto' : 'minmax(0, 1fr) auto auto auto'}; gap: ${isPhone() ? '4px 10px' : '12px'}; align-items: center; width: 100%; min-height: 52px; padding: 6px 4px; border: 0; border-top: 1px solid ${C.border}; background: transparent; text-align: left; font-family: inherit; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600${isPhone() ? '; grid-column: 1 / -1' : ''}">${n}</span>${mono(p, 'font-size: 14px')}<span style="font-size: 13px; color: ${C.muted}; white-space: nowrap">${down ? `${s} as of [time]` : s}</span><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700">${icon('plus', 14)}Add</span></button></li>`).join('')}</ul>${note('Prices and stock come from Lightspeed. Labour is priced here, in Settings › Workshop.')}`, button('Done', { variant: 'default' }), 640);
+const partSearch = (down = false) => popup('ps-title', 'Add a part', down ? 'Lightspeed can’t be reached' : `From Lightspeed’s products · ${checked('40 seconds ago')}`, `${down ? msg('<strong>Showing products and stock as of [time].</strong> Prices may have changed since. If one has when Lightspeed answers, you choose: keep the agreed price, or ask Maya again.', 'warn', true) : ''}<div style="display: flex; flex-direction: column; gap: 6px"><label for="ps-q" style="font-size: 14px; font-weight: 600">Search products</label><input id="ps-q" value="brake pads" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div><ul aria-label="Products" style="margin: 0; padding: 0">${PRODUCTS.map(([n, p, s]) => `<li style="list-style: none"><button type="button" aria-label="Add ${esc(n)} to the quote" style="display: grid; grid-template-columns: ${isPhone() ? 'auto minmax(0, 1fr) auto' : 'minmax(0, 1fr) auto auto auto'}; gap: ${isPhone() ? '4px 10px' : '12px'}; align-items: center; width: 100%; min-height: 52px; padding: 6px 4px; border: 0; border-top: 1px solid ${C.border}; background: transparent; text-align: left; font-family: inherit; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600${isPhone() ? '; grid-column: 1 / -1' : ''}">${n}</span>${mono(p, 'font-size: 14px')}<span style="font-size: 13px; color: ${C.muted}; white-space: nowrap">${down ? `${s} as of [time]` : s}</span><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700">${icon('plus', 14)}Add</span></button></li>`).join('')}</ul>${note('Prices and stock come from Lightspeed. Labour is priced here, in Settings › Workshop.')}`, button('Done', { variant: 'default' }), 640);
 
 // Decision 4; audit M9: nothing chosen to start; each row says what matched.
 const customerPick = () => popup('cp-title', 'Which Maya Patel in Lightspeed?', 'WH-1042 is ready to go to Lightspeed', `${note('Wheelhouse found more than one possible match. Pick once — the link stays for Maya’s next jobs, and can be changed on her customer page.')}${group('Lightspeed customers', `${radio('Maya Patel', false, `${mono('07700 900 142')} · maya@example.test — same phone and email as Maya`, 'cp')}${radio('M. Patel', false, `${mono('[phone]')} — no phone or email to compare`, 'cp')}${radio('None of these — add Maya to Lightspeed', false, '', 'cp')}`)}`, `${button('Not now', { variant: 'ghost' })}${greyBtn('Link and send', 'Choose one')}`, 580);
@@ -168,6 +171,7 @@ ls('ls-part-search', () => overlay(quoteJobBoards('build')[SIZE], partSearch()))
 ls('ls-part-search-down', () => overlay(quoteJobBoards('build')[SIZE], partSearch(true)));
 ls('ls-job-sent', () => jobAt('sent'));
 ls('ls-job-changed', () => jobAt('changed'));
+ls('ls-job-price-changed', () => jobAt('priceChanged'));
 ls('ls-job-cancelled', () => jobAt('cancelled'));
 ls('ls-job-pick', () => jobAt('pick'));
 ls('ls-customer-pick', () => overlay(jobAt('pick'), customerPick()));
@@ -214,6 +218,7 @@ export const TITLES = {
   'ls-part-search-down': 'Add a part while Lightspeed can’t be reached',
   'ls-job-sent': 'Approved: the work order made in Lightspeed',
   'ls-job-changed': 'A new price approved: the work order updated',
+  'ls-job-price-changed': 'A part’s price changed in Lightspeed: keep it or ask again',
   'ls-job-cancelled': 'Cancelled: the work order marked cancelled',
   'ls-job-pick': 'Not sent yet: choose the customer',
   'ls-customer-pick': 'Which customer in Lightspeed? Nothing chosen to start',
@@ -239,7 +244,7 @@ export const TITLES = {
 };
 export const ROWS = [
   { label: 'Connecting Lightspeed', screens: ['ls-settings-off', 'ls-connect-signin', 'ls-connect-shops', 'ls-connect-shops-two', 'ls-connect-checks', 'ls-settings-on', 'ls-settings-manager', 'ls-disconnect', 'ls-reconnect'] },
-  { label: 'Quote and approval', screens: ['ls-today', 'ls-job-not-connected', 'ls-part-search', 'ls-part-search-down', 'ls-job-sent', 'ls-job-changed', 'ls-job-cancelled', 'ls-job-pick', 'ls-customer-pick'] },
+  { label: 'Quote and approval', screens: ['ls-today', 'ls-job-not-connected', 'ls-part-search', 'ls-part-search-down', 'ls-job-sent', 'ls-job-changed', 'ls-job-price-changed', 'ls-job-cancelled', 'ls-job-pick', 'ls-customer-pick'] },
   { label: 'When Lightspeed can’t be reached', screens: ['ls-job-waiting', 'ls-job-unsure', 'ls-job-check', 'ls-today-down', 'ls-today-person'] },
   { label: 'Payment and collection', screens: ['ls-job-ready-no-wo', 'ls-job-unpaid', 'ls-hand-over-unpaid', 'ls-hand-over-found', 'ls-hand-over-unreachable', 'ls-job-paid', 'ls-job-fallback', 'ls-hand-over-unchecked', 'ls-job-collected-unpaid', 'ls-today-unpaid'] },
   { label: 'Settings and the customer', screens: ['ls-messages', 'ls-office-data', 'ls-workshop-settings', 'ls-customer-ready'] },

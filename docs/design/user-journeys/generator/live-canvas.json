@@ -3099,44 +3099,308 @@
    "title": "Designed · Thanks — we’ve got it (desktop)",
    "is_interactive": true
   },
-  "j21-connect.dc.html": {
+  "j21-ls-settings-off-desktop.dc.html": {
    "x": 0,
    "y": 29302,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · Connect the one chosen Lightspeed",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Office › Lightspeed: not connected (desktop)",
    "is_interactive": true
   },
-  "j21-connect-proof.dc.html": {
-   "x": 1180,
+  "j21-ls-connect-signin-desktop.dc.html": {
+   "x": 1320,
    "y": 29302,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · Verify connector capabilities",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connect Lightspeed: sign in on Lightspeed’s page (desktop)",
    "is_interactive": true
   },
-  "j21-pos.dc.html": {
-   "x": 2360,
+  "j21-ls-connect-shops-desktop.dc.html": {
+   "x": 2640,
    "y": 29302,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · Handoff agreed work to Lightspeed",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connect Lightspeed: staff on work orders (desktop)",
    "is_interactive": true
   },
-  "j21-pos-done.dc.html": {
-   "x": 3540,
+  "j21-ls-connect-shops-two-desktop.dc.html": {
+   "x": 3960,
    "y": 29302,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · See the linked work order",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Two shops: which Lightspeed shop is which (desktop)",
    "is_interactive": true
   },
-  "j21-pos-unknown.dc.html": {
-   "x": 4720,
+  "j21-ls-connect-checks-desktop.dc.html": {
+   "x": 5280,
    "y": 29302,
-   "w": 1100,
-   "h": 816,
-   "title": "Designed · Uncertain Lightspeed handoff",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connect Lightspeed: working, not proven yet (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-settings-on-desktop.dc.html": {
+   "x": 6600,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Office › Lightspeed: connected (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-settings-manager-desktop.dc.html": {
+   "x": 7920,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A manager sees the connection, read only (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-disconnect-desktop.dc.html": {
+   "x": 9240,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Disconnect Lightspeed? (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-reconnect-desktop.dc.html": {
+   "x": 10560,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Lightspeed signed Wheelhouse out: reconnect (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-today-desktop.dc.html": {
+   "x": 12040,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today for a Lightspeed shop (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-not-connected-desktop.dc.html": {
+   "x": 13360,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A job before Lightspeed is connected (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-part-search-desktop.dc.html": {
+   "x": 14680,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a part: Lightspeed’s products, one press (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-part-search-down-desktop.dc.html": {
+   "x": 16000,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a part while Lightspeed can’t be reached (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-sent-desktop.dc.html": {
+   "x": 17320,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Approved: the work order made in Lightspeed (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-changed-desktop.dc.html": {
+   "x": 18640,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A new price approved: the work order updated (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-price-changed-desktop.dc.html": {
+   "x": 19960,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A part’s price changed in Lightspeed: keep it or ask again (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-cancelled-desktop.dc.html": {
+   "x": 21280,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Cancelled: the work order marked cancelled (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-pick-desktop.dc.html": {
+   "x": 22600,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Not sent yet: choose the customer (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-customer-pick-desktop.dc.html": {
+   "x": 23920,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Which customer in Lightspeed? Nothing chosen to start (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-waiting-desktop.dc.html": {
+   "x": 25400,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Waiting to reach Lightspeed (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-unsure-desktop.dc.html": {
+   "x": 26720,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Not sure the work order arrived (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-check-desktop.dc.html": {
+   "x": 28040,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Check this in Lightspeed (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-today-down-desktop.dc.html": {
+   "x": 29360,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: can’t reach Lightspeed (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-today-person-desktop.dc.html": {
+   "x": 30680,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: jobs that need someone to look (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-ready-no-wo-desktop.dc.html": {
+   "x": 32160,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ready, but not in Lightspeed yet (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-unpaid-desktop.dc.html": {
+   "x": 33480,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ready: waiting to be paid in Lightspeed (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-hand-over-unpaid-desktop.dc.html": {
+   "x": 34800,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Hand over before it shows as paid (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-hand-over-found-desktop.dc.html": {
+   "x": 36120,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · “Check Lightspeed now” finds the payment (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-hand-over-unreachable-desktop.dc.html": {
+   "x": 37440,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Hand over while Lightspeed can’t be reached (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-paid-desktop.dc.html": {
+   "x": 38760,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Paid in Lightspeed (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-fallback-desktop.dc.html": {
+   "x": 40080,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Payment not checked: tick “Paid in Lightspeed” (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-hand-over-unchecked-desktop.dc.html": {
+   "x": 41400,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Payment not checked: “Has Maya paid?” (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-job-collected-unpaid-desktop.dc.html": {
+   "x": 42720,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Collected, not shown as paid (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-today-unpaid-desktop.dc.html": {
+   "x": 44040,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: handed over, not paid after [n] days (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-messages-desktop.dc.html": {
+   "x": 45520,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Front desk › Messages for a Lightspeed shop (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-office-data-desktop.dc.html": {
+   "x": 46840,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Office › Your data: the Activity log (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-workshop-settings-desktop.dc.html": {
+   "x": 48160,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Workshop: no deposits or paying online (desktop)",
+   "is_interactive": true
+  },
+  "j21-ls-customer-ready-desktop.dc.html": {
+   "x": 49480,
+   "y": 29302,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The customer’s “Your bike is ready”: agreed price, pay at the till (desktop)",
    "is_interactive": true
   },
   "Main.dc.html": {
@@ -3544,11 +3808,44 @@
   "j20-ops-feedback-shot-desktop.dc.html",
   "j20-ops-feedback-failed-desktop.dc.html",
   "j20-ops-feedback-sent-desktop.dc.html",
-  "j21-connect.dc.html",
-  "j21-connect-proof.dc.html",
-  "j21-pos.dc.html",
-  "j21-pos-done.dc.html",
-  "j21-pos-unknown.dc.html"
+  "j21-ls-settings-off-desktop.dc.html",
+  "j21-ls-connect-signin-desktop.dc.html",
+  "j21-ls-connect-shops-desktop.dc.html",
+  "j21-ls-connect-shops-two-desktop.dc.html",
+  "j21-ls-connect-checks-desktop.dc.html",
+  "j21-ls-settings-on-desktop.dc.html",
+  "j21-ls-settings-manager-desktop.dc.html",
+  "j21-ls-disconnect-desktop.dc.html",
+  "j21-ls-reconnect-desktop.dc.html",
+  "j21-ls-today-desktop.dc.html",
+  "j21-ls-job-not-connected-desktop.dc.html",
+  "j21-ls-part-search-desktop.dc.html",
+  "j21-ls-part-search-down-desktop.dc.html",
+  "j21-ls-job-sent-desktop.dc.html",
+  "j21-ls-job-changed-desktop.dc.html",
+  "j21-ls-job-price-changed-desktop.dc.html",
+  "j21-ls-job-cancelled-desktop.dc.html",
+  "j21-ls-job-pick-desktop.dc.html",
+  "j21-ls-customer-pick-desktop.dc.html",
+  "j21-ls-job-waiting-desktop.dc.html",
+  "j21-ls-job-unsure-desktop.dc.html",
+  "j21-ls-job-check-desktop.dc.html",
+  "j21-ls-today-down-desktop.dc.html",
+  "j21-ls-today-person-desktop.dc.html",
+  "j21-ls-job-ready-no-wo-desktop.dc.html",
+  "j21-ls-job-unpaid-desktop.dc.html",
+  "j21-ls-hand-over-unpaid-desktop.dc.html",
+  "j21-ls-hand-over-found-desktop.dc.html",
+  "j21-ls-hand-over-unreachable-desktop.dc.html",
+  "j21-ls-job-paid-desktop.dc.html",
+  "j21-ls-job-fallback-desktop.dc.html",
+  "j21-ls-hand-over-unchecked-desktop.dc.html",
+  "j21-ls-job-collected-unpaid-desktop.dc.html",
+  "j21-ls-today-unpaid-desktop.dc.html",
+  "j21-ls-messages-desktop.dc.html",
+  "j21-ls-office-data-desktop.dc.html",
+  "j21-ls-workshop-settings-desktop.dc.html",
+  "j21-ls-customer-ready-desktop.dc.html"
  ],
  "notes": {
   "ja_s0": {
@@ -4412,7 +4709,47 @@
   "j21_s90": {
    "x": 0,
    "y": 29062,
-   "text": "Connection and handoff",
+   "text": "Connecting Lightspeed",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s91": {
+   "x": 12040,
+   "y": 29062,
+   "text": "Quote and approval",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s92": {
+   "x": 25400,
+   "y": 29062,
+   "text": "When Lightspeed can’t be reached",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s93": {
+   "x": 32160,
+   "y": 29062,
+   "text": "Payment and collection",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j21_s94": {
+   "x": 45520,
+   "y": 29062,
+   "text": "Settings and the customer",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -4422,9 +4759,9 @@
   "j21_title": {
    "x": 0,
    "y": 28742,
-   "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
+   "text": "21 · Lightspeed shops (Release 1) — Owner, Manager and Staff",
    "kind": "title1",
-   "maxW": 5820
+   "maxW": 50720
   }
  },
  "designSystems": [

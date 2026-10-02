@@ -58,6 +58,8 @@ export const sd18 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd20 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'oversight' });
 // sd6(id, title, role) = an agreed journey 6 screen (c2w.mjs, Soft sand).
 export const sd6 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'c2w' });
+// sd21(id, title, role) = an agreed journey 21 screen (lightspeed.mjs, Soft sand).
+export const sd21 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'lightspeed' });
 
 export const journeys = [
   {
@@ -1053,9 +1055,56 @@ export const journeys = [
     ],
   },
   {
-    id: 'j21', name: 'Lightspeed shops (Release 1)', who: 'Manager and Staff',
+    id: 'j21', name: 'Lightspeed shops (Release 1)', who: 'Owner, Manager and Staff',
     rows: [
-      { label: 'Connection and handoff', screens: [d('connect'), d('connect-proof'), d('pos'), d('pos-done'), d('pos-unknown')] },
+      { label: "Connecting Lightspeed", screens: [
+        sd21("ls-settings-off", "Settings › Office › Lightspeed: not connected", "Owner"),
+        sd21("ls-connect-signin", "Connect Lightspeed: sign in on Lightspeed’s page", "Owner"),
+        sd21("ls-connect-shops", "Connect Lightspeed: staff on work orders", "Owner"),
+        sd21("ls-connect-shops-two", "Two shops: which Lightspeed shop is which", "Owner"),
+        sd21("ls-connect-checks", "Connect Lightspeed: working, not proven yet", "Owner"),
+        sd21("ls-settings-on", "Settings › Office › Lightspeed: connected", "Owner"),
+        sd21("ls-settings-manager", "A manager sees the connection, read only", "Owner and Manager"),
+        sd21("ls-disconnect", "Disconnect Lightspeed?", "Owner"),
+        sd21("ls-reconnect", "Lightspeed signed Wheelhouse out: reconnect", "Owner"),
+      ] },
+      { label: "Quote and approval", screens: [
+        sd21("ls-today", "Today for a Lightspeed shop", "Owner and Manager"),
+        sd21("ls-job-not-connected", "A job before Lightspeed is connected", "Staff"),
+        sd21("ls-part-search", "Add a part: Lightspeed’s products, one press", "Staff"),
+        sd21("ls-part-search-down", "Add a part while Lightspeed can’t be reached", "Staff"),
+        sd21("ls-job-sent", "Approved: the work order made in Lightspeed", "Staff"),
+        sd21("ls-job-changed", "A new price approved: the work order updated", "Staff"),
+        sd21("ls-job-price-changed", "A part’s price changed in Lightspeed: keep it or ask again", "Staff"),
+        sd21("ls-job-cancelled", "Cancelled: the work order marked cancelled", "Staff"),
+        sd21("ls-job-pick", "Not sent yet: choose the customer", "Staff"),
+        sd21("ls-customer-pick", "Which customer in Lightspeed? Nothing chosen to start", "Staff"),
+      ] },
+      { label: "When Lightspeed can’t be reached", screens: [
+        sd21("ls-job-waiting", "Waiting to reach Lightspeed", "Staff"),
+        sd21("ls-job-unsure", "Not sure the work order arrived", "Staff"),
+        sd21("ls-job-check", "Check this in Lightspeed", "Staff"),
+        sd21("ls-today-down", "Today: can’t reach Lightspeed", "Owner and Manager"),
+        sd21("ls-today-person", "Today: jobs that need someone to look", "Owner and Manager"),
+      ] },
+      { label: "Payment and collection", screens: [
+        sd21("ls-job-ready-no-wo", "Ready, but not in Lightspeed yet", "Staff"),
+        sd21("ls-job-unpaid", "Ready: waiting to be paid in Lightspeed", "Staff"),
+        sd21("ls-hand-over-unpaid", "Hand over before it shows as paid", "Staff"),
+        sd21("ls-hand-over-found", "“Check Lightspeed now” finds the payment", "Staff"),
+        sd21("ls-hand-over-unreachable", "Hand over while Lightspeed can’t be reached", "Staff"),
+        sd21("ls-job-paid", "Paid in Lightspeed", "Staff"),
+        sd21("ls-job-fallback", "Payment not checked: tick “Paid in Lightspeed”", "Staff"),
+        sd21("ls-hand-over-unchecked", "Payment not checked: “Has Maya paid?”", "Staff"),
+        sd21("ls-job-collected-unpaid", "Collected, not shown as paid", "Staff"),
+        sd21("ls-today-unpaid", "Today: handed over, not paid after [n] days", "Owner and Manager"),
+      ] },
+      { label: "Settings and the customer", screens: [
+        sd21("ls-messages", "Settings › Front desk › Messages for a Lightspeed shop", "Owner and Manager"),
+        sd21("ls-office-data", "Settings › Office › Your data: the Activity log", "Owner and Manager"),
+        sd21("ls-workshop-settings", "Settings › Workshop: no deposits or paying online", "Owner and Manager"),
+        sd21("ls-customer-ready", "The customer’s “Your bike is ready”: agreed price, pay at the till", "Customer"),
+      ] },
     ],
   },
 ];

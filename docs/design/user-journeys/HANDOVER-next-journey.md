@@ -56,6 +56,7 @@ holding desktop, tablet and phone:
 | 18 Website management | https://claude.ai/artifact/RkyxcQZBCaVYfUa8bqixZM | `docs/decisions/2026-10-02-website-management-review.md` (13) |
 | 20 Management oversight | https://claude.ai/artifact/XLYiuhFS1WVjS9ohF7G7gf | `docs/decisions/2026-10-02-management-oversight-review.md` (7) |
 | 6 Cycle to Work | https://claude.ai/artifact/6NR9hm3Gnc3kX1i57xcRgt | `docs/decisions/2026-10-02-cycle-to-work-review.md` (8) |
+| 21 Lightspeed shops | https://claude.ai/artifact/2qnzyGx8enhxbVN17Brpnf | `docs/decisions/2026-10-02-lightspeed-shops-review.md` (13) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md`,
@@ -63,29 +64,26 @@ UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md`,
 `stock-ui-audit.md`, `book-ui-audit.md`, `quote-ui-audit.md`,
 `account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md`, `online-ui-audit.md`,
-`browse-ui-audit.md`, `website-ui-audit.md`, `oversight-ui-audit.md`, `c2w-ui-audit.md` (this folder).
+`browse-ui-audit.md`, `website-ui-audit.md`, `oversight-ui-audit.md`, `c2w-ui-audit.md`, `lightspeed-ui-audit.md` (this folder).
 
-Overview count (each screen once): 659 screens — 653 designed, 0 built, 2
+Overview count (each screen once): 692 screens — 686 designed, 0 built, 2
 old app only, 4 not designed yet, 0 for review; the staff app canvas holds
-393 files and customers and the website 270, of 512 each (2 Oct: journey 6
-in; its two placeholders replaced by its 39 screens. Carried into every
-staff screen: the Front desk › Cycle to Work sidebar item; into Settings:
-the Cycle to Work tab under Front desk, four messages ("19 on"), and the
-Payments wording "Recorded at the till against a Cycle to Work order";
-Today's workshop tile now reads "Repairs ready to collect"; Reports has an
-"Owed by Cycle to Work providers" card (owners and managers); Stock's bike
-page shows a frame "Held for [Customer] until [date] · Cycle to Work". The
-owner's tablet rail is now full — "Settings" sits just above the person
-button, so a further sidebar item needs a rethink. Not drawn yet, from
-journey 6 audit M4: a held bike in the till's search and as sold out on the
-website. Earlier: how long records are kept (LEG-05); journey 18 left for
-Jack and Mark products only in Shopify, and custom web addresses (ECOM-03,
-frozen)).
+426 files and customers and the website 270, of 512 each (2 Oct: journey 21
+in; its five Release 1 screens replaced by its 38 Soft sand screens. Every
+journey is now drawn. A "Lightspeed shop" switch (`shop-mode.mjs`,
+`withLightspeedShop`) draws the sidebar, Settings, Today, Messages and the
+website header for a shop that keeps Lightspeed as its till; it changes no
+other journey's boards. Open from journey 21: what Lightspeed's account
+actually allows is unverified until there's a test account (LS-01–09, plus
+seeing payment); the website editor without selling pages, the Customers
+page's Lightspeed link and a Diary marker for jobs waiting on Lightspeed are
+not drawn. Earlier, from journey 6: a held bike in the till's search and as
+sold out online not drawn; the owner's tablet rail is full. Earlier still:
+how long records are kept (LEG-05); Shopify-only products and custom web
+addresses (ECOM-03, frozen)).
 
-**Next: ask Jack which journey.** Still a placeholder: 21 Lightspeed shops
-(Release 1; it touches how payments work in the other version — see the two
-payment versions). Smaller gaps left in finished journeys are listed in
-STATUS.
+**Next: every journey is drawn.** The planned end-of-project UX audit is
+next (below), and the smaller gaps listed in STATUS. Ask Jack.
 
 **Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
 ux audit at the end when all the pages are done?"). Each journey keeps its own
