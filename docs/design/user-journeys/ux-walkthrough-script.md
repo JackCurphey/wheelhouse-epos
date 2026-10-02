@@ -69,3 +69,16 @@ Only write down what you saw. If you couldn't check something, write "not checke
 2. A numbered list of the choices for Jack.
 3. **Verification:** which screens you looked at, at which sizes, which decision files you read, and what you couldn't check.
 4. Save it as `docs/design/user-journeys/ux-walkthrough-<number>-<story>.md`, and tick the story off in the table above.
+
+## Word list: customer words and staff words
+
+For the "same thing, same name" question. If a screen uses another word for one of these, write it down as a finding. Started from walk-through 1 (L1); add to it as you go.
+
+| The thing | What the customer reads | What staff read |
+|---|---|---|
+| Making a booking | Book a repair | New job, or Accept (a request) |
+| Receiving the bike | (We've got your bike) | Book in |
+| Work the customer said yes to | Work agreed | Approved |
+| A job that's done | Ready to collect; the "Bike ready" message | Ready for collection; marking it is "Mark ready for collection" |
+| Waiting on the customer's answer | Waiting for your answer | Waiting for the customer |
+| The shop's address | [Shop address] (a placeholder until a real one is given) | [Shop address] |

@@ -15,14 +15,15 @@
 // £12, cable still serviceable; £111.00 approved, £123.00 if all), the
 // mechanic's note, Alex Morgan, Jo Taylor, booked in Thu 17 Sep at 09:12,
 // ready by Thu 17 Sep, the delayed pads moved to Sat 19 Sep 16:00, North
-// Street Cycles, Bolton. Anything else is a bracketed placeholder. As on the
-// diary's own quote board, this example has no spending limit set (Workshop
-// day 43: under a limit, no quote is sent).
+// Street Cycles, Bolton. Anything else is a bracketed placeholder. UX
+// walk-through 1 H1: Maya asked at booking to be called before any extra
+// work, so her quote is sent (Workshop day 43: under a limit, no quote is
+// sent). The within-limit path is drawn for a customer with a £200 limit.
 import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
 import { popup, overlay, withSize, isPhone } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { STAFF_NOTE_BRAKES } from './job-page.mjs';
-import { quoteJobBoards, screens as diaryScreens } from './diary.mjs';
+import { quoteJobBoards, screens as diaryScreens, diaryWithJobState } from './diary.mjs';
 import { today } from './opening.mjs';
 import { msgPage, msgListOpen } from './setup.mjs';
 import { screens as collectScreens } from './collect.mjs';
@@ -42,7 +43,7 @@ const site = (content, bar = '') => {
   const body = bar ? `<div style="flex-grow: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px">${scroll}${bar}</div>` : scroll;
   return SIZE === 'desktop' ? siteDesktop('sand', 'Book a repair', body) : SIZE === 'tablet' ? siteTablet('sand', body, 'Book a repair') : sitePhone('sand', { content: body });
 };
-const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><strong>North Street Cycles, Bolton</strong><span>24 North Street · [shop phone]</span></div>`;
+const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><strong>North Street Cycles, Bolton</strong><span>[Shop address] · [shop phone]</span></div>`;
 const cardBox = (inner, extra = '') => card(`<div style="padding: ${isPhone() ? 16 : 22}px; display: flex; flex-direction: column; gap: 12px">${inner}</div>`, extra);
 const h2 = (t, id, focus = false) => `<h2 id="${id}"${focus ? ' tabindex="-1"' : ''} style="margin: 0; font-size: 20px; font-weight: 700">${t}</h2>`;
 const page = (inner, { width = 720, bar = '' } = {}) => site(`<div style="width: 100%; max-width: ${width}px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 tabindex="-1" style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Trek Domane AL 3 · Standard service</h1></div>${inner}</div>`, bar);
@@ -163,6 +164,12 @@ def('dq-today-no-answer', () => today({ noAnswer: true }));
 def('dq-record-answer', () => overlay(quoteJobBoards('sent')[SIZE], recordDialog()));
 def('dq-job-withdraw', () => overlay(quoteJobBoards('sent')[SIZE], withdrawDialog()));
 def('dq-job-answered', () => quoteJobBoards('answered')[SIZE]);
+// UX walk-through 1 M3: the diary shows the job waiting for Maya's answer.
+def('dq-diary-waiting', () => diaryWithJobState('WH-1042', 'answer')[SIZE]);
+// H1: a £200 limit and work within it — no quote; the customer is told.
+def('dq-job-within', () => quoteJobBoards('within')[SIZE]);
+const WITHIN_ROWS = `${SERVICE_ROW}${kv('Shimano brake pads', mono('£28.00'))}${kv('Fit & adjust brakes', mono('£18.00'))}${kv('Replace gear cable', mono('£12.00'))}`;
+def('dq-within-limit', () => page(`${cardBox(`<div role="status">${badge('Work added', 'green')}</div>${h2('Alex added some work, within your limit', 'wl', true)}<p style="margin: 0; font-size: 15px; line-height: 1.5">Brake pads, fitting and a gear cable, ${mono('£58.00')} — within your ${mono('£200')} limit, so we’ve gone ahead. Nothing to pay today.</p><p style="margin: 0; font-size: 15px; line-height: 1.5">Not what you wanted? Call ${mono('[shop phone]')}.</p>`)}${agreed(WITHIN_ROWS, money(123))}${tracker(2, { sub: readyLine })}`));
 def('dq-job-waiting', () => diaryScreens['job-waiting-parts'][SIZE]);
 def('dq-messages', () => msgPage({ list: msgListOpen() }));
 
@@ -195,12 +202,15 @@ export const TITLES = {
   'dq-record-answer': 'Record their answer, from a phone call',
   'dq-job-withdraw': 'Withdraw the quote',
   'dq-job-answered': 'The job page once answered: approved and declined',
+  'dq-diary-waiting': 'The diary: the job waiting for the customer’s answer',
+  'dq-job-within': 'A £200 limit, and the work within it: no quote',
+  'dq-within-limit': 'Within the limit: told what was added',
   'dq-job-waiting': 'The job page: waiting for a part (Workshop day)',
   'dq-messages': 'Settings › Front desk › Messages: the quote and its reminder',
 };
 export const ROWS = [
   { label: 'While the bike is in', screens: ['dq-in-shop', 'dq-waiting-part', 'dq-ready'] },
-  { label: 'The quote', screens: ['dq-quote', 'dq-quote-photo', 'dq-quote-untick', 'dq-quote-decline', 'dq-quote-deposit', 'dq-quote-reminded', 'dq-quote-newer', 'dq-withdrawn'] },
+  { label: 'The quote', screens: ['dq-quote', 'dq-quote-photo', 'dq-quote-untick', 'dq-quote-decline', 'dq-quote-deposit', 'dq-quote-reminded', 'dq-quote-newer', 'dq-withdrawn', 'dq-within-limit'] },
   { label: 'Answered', screens: ['dq-answered', 'dq-answered-declined', 'dq-answered-deposit', 'dq-answered-by-phone'] },
-  { label: 'The shop’s side', screens: ['dq-job-quote', 'dq-job-sent', 'dq-today-no-answer', 'dq-record-answer', 'dq-job-withdraw', 'dq-job-answered', 'dq-job-waiting', 'dq-messages'] },
+  { label: 'The shop’s side', screens: ['dq-job-quote', 'dq-job-sent', 'dq-diary-waiting', 'dq-today-no-answer', 'dq-record-answer', 'dq-job-withdraw', 'dq-job-answered', 'dq-job-within', 'dq-job-waiting', 'dq-messages'] },
 ];

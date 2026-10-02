@@ -16,7 +16,7 @@
 // Shimano brake pads B05S-RX (£28.00), the stockroom's categories (Bearings
 // with inner diameter, outer diameter and height; Drivetrain › Derailleurs
 // with number of gears), the diary's services (Standard service £65.00,
-// Fit & adjust brakes £18.00, Brake service), sizes S, M, L, XL. Everything
+// and booking's Brake service and Gear adjustment), sizes S, M, L, XL. Everything
 // else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
 import { note, popup, overlay, withSize, isPhone } from './settings-frame.mjs';
@@ -74,7 +74,10 @@ const productCard = (name, price, stock = ready(), sub = '', pic = true) => `<a 
 const catCard = (name, sub) => `<a href="#" style="display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: ${C.ink}">${photo(`Photo for ${name}`, isPhone() ? 100 : 140)}<span style="font-size: 16px; font-weight: 700">${name}</span>${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</a>`;
 // Audit L5: a one-step trail repeats the heading, so pages at the top have none.
 const crumbs = (...parts) => `<nav aria-label="You are here" style="font-size: 14px; color: ${C.muted}">${parts.map((p, i) => (i < parts.length - 1 ? `<a href="#" style="color: inherit; ${tall}">${p}</a> › ` : `<span aria-current="page">${p}</span>`)).join('')}</nav>`;
-const SERVICES = [['Standard service', '£65.00'], ['Fit &amp; adjust brakes', '£18.00'], ['Brake service', '[£ price]']];
+// UX walk-through 1 M9: the website's repairs are booking's own list (the
+// services bookable online, Book a repair decision 11), so a repair picked
+// here opens booking with it ticked.
+const SERVICES = [['Standard service', '£65.00'], ['Brake service', '[£ price]'], ['Gear adjustment', '[£ price]']];
 
 // ---------- "Ask the shop" (audit H5): the shop's phone and email in place ----------
 const askOpen = (both = false) => `<div role="region" aria-label="Ask the shop" style="display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 15px; line-height: 1.5"><strong>Ask the shop</strong>${(both ? ['Bolton', '[Second site]'] : ['Bolton']).map((s) => `<span>${both ? `${s}: ` : ''}Call <a href="tel:[shop phone]" style="color: ${C.ink}">[shop phone]</a> or email <a href="mailto:[shop email]" style="color: ${C.ink}">[shop email]</a></span>`).join('')}</div>`;
@@ -174,7 +177,7 @@ const sugBox = (inner, q = '', active = '') => (SIZE === 'desktop'
   ? `<div id="search-suggest" role="listbox" aria-label="Suggestions" style="position: absolute; right: 252px; top: -8px; width: 440px; z-index: 5; ${listStyle}">${inner}</div>`
   : `<div role="search" style="position: absolute; left: 0; right: 0; top: 0; z-index: 5; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: ${C.bg}; box-shadow: 0 8px 20px rgba(28,30,25,0.12)"><div style="display: flex; gap: 8px; align-items: center"><label style="flex-grow: 1; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; border-radius: 8px; border: 2px solid ${C.ink}; background: ${C.panel}">${icon('search', 18)}<input type="search" aria-label="Search the shop" value="${esc(q)}" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="search-suggest"${active ? ` aria-activedescendant="${active}"` : ''} style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label><button type="button" style="min-height: 48px; padding: 0 8px; border: 0; background: transparent; font-family: inherit; font-size: 15px; font-weight: 600; color: ${C.ink}">Cancel</button></div><div id="search-suggest" role="listbox" aria-label="Suggestions" style="${listStyle}">${inner}</div></div>`);
 const suggestions = (q) => sugBox(`${grp('Products', [opt('s1', `${PADS.name} ${mono(PADS.code)}`, 'Ready today at Bolton', mono(PADS.price), true), opt('s2', '[Product]', 'Ready today at Bolton', mono('£[price]'))])}
-${grp('Repairs', [opt('s3', 'Fit &amp; adjust brakes', 'Book a repair', mono('£18.00')), opt('s4', 'Brake service', 'Book a repair', mono('[£ price]'))])}
+${grp('Repairs', [opt('s4', 'Brake service', 'Book a repair', mono('[£ price]'))])}
 ${grp('Categories', [opt('s5', '[Category]', '[n] products')])}
 ${grp('Pages', [opt('s6', 'Collection and returns', 'Page')])}
 <a href="#" id="s7" role="option" aria-selected="false" style="display: flex; align-items: center; min-height: 48px; padding: 0 12px; border-top: 1px solid ${C.border}; font-size: 15px; font-weight: 700; color: ${C.ink}">See all results for “${esc(q)}”</a>
@@ -183,7 +186,7 @@ const noSuggestions = () => sugBox(`<p style="margin: 0; padding: 14px 12px; fon
 const combo = (html, q, active) => html.replace(/placeholder="Search(?: the shop)?"/, (m) => `${m} value="${esc(q)}" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="search-suggest"${active ? ` aria-activedescendant="${active}"` : ''}`);
 const searching = (q) => combo(home({ overlayHtml: suggestions(q) }), q, 's1');
 const searchingNone = () => combo(home({ overlayHtml: noSuggestions() }), '[what they typed]', '');
-const repairStrip = () => box(`<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px"><span style="font-size: 16px; font-weight: 700; flex-grow: 1">Repairs for “brake”</span>${SERVICES.slice(1).map(([n, p]) => `<a href="#" style="${tall}; gap: 10px; padding: 0 14px; border-radius: 8px; border: 1px solid ${C.border}; font-size: 15px; font-weight: 600; color: ${C.ink}; text-decoration: none">${n} ${mono(p)}</a>`).join('')}<a href="#" style="${tall}; font-size: 15px; font-weight: 600; color: ${C.ink}">Page: Collection and returns</a></div>`);
+const repairStrip = () => box(`<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px"><span style="font-size: 16px; font-weight: 700; flex-grow: 1">Repairs for “brake”</span>${SERVICES.filter(([n]) => /brake/i.test(n)).map(([n, p]) => `<a href="#" style="${tall}; gap: 10px; padding: 0 14px; border-radius: 8px; border: 1px solid ${C.border}; font-size: 15px; font-weight: 600; color: ${C.ink}; text-decoration: none">${n} ${mono(p)}</a>`).join('')}<a href="#" style="${tall}; font-size: 15px; font-weight: 600; color: ${C.ink}">Page: Collection and returns</a></div>`);
 const results = () => listing({ title: 'Results for “brake”', count: '[n] products', below: repairStrip(), search: true, groups: [filterGroup('Availability', [check('Ready today at Bolton')]), filterGroup('Category', [check('[Category]'), check('[Category]')]), priceGroup()], cards: [productCard(`${PADS.name} ${PADS.code}`, PADS.price), productCard('[Product]', '£[price]'), productCard('[Product]', '£[price]', inDays())], opts: { query: 'brake' } });
 const measure = () => listing({ title: 'Results for “bearing 30mm”', count: 'Bearings with an inner diameter of 30 mm · [n] products', search: true, groups: BEARING_FILTERS(['30']), cards: [B(), B(inDays()), B()], chipList: ['Category: Bearings', 'Inner diameter: 30 mm'], opts: { query: 'bearing 30mm' } });
 const noResults = () => site(`${h1('No results for “[what they typed]”')}${box(`<p style="margin: 0; font-size: 15px; line-height: 1.6">Check the spelling, try a shorter word, or look through the categories.</p><div style="display: flex; flex-wrap: wrap; gap: 10px">${button('Book a repair', { variant: 'default' })}</div>${askOpen(true)}`)}${featuredCats()}`, { query: '[what they typed]' });

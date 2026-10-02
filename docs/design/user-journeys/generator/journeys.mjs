@@ -243,6 +243,7 @@ export const journeys = [
     rows: [
       { label: "Booking", screens: [
         sd3("bk-service", "Book a repair: every service at once", "Customer"),
+        sd3("bk-service-chosen", "From the website: the repair already chosen", "Customer"),
         sd3("bk-service-many", "A shop with many single jobs: search them", "Customer"),
         sd3("bk-bike", "Your bike, and what to look at", "Customer"),
         sd3("bk-bike-signed-in", "Signed in, in a shop that takes a deposit", "Customer"),
@@ -260,6 +261,7 @@ export const journeys = [
         sd3("bk-checking-payment", "The connection dropped after paying: checking, not paying again", "Customer"),
         sd3("bk-resume", "Coming back: carry on where you left off", "Customer"),
         sd3("bk-request", "Request received: waiting for the shop", "Customer"),
+        sd3("bk-request-deposit", "Request received, after paying a deposit", "Customer"),
         sd3("bk-confirmed", "Confirmed straight away (the shop’s setting)", "Customer"),
       ] },
       { label: "Your booking", screens: [
@@ -278,7 +280,7 @@ export const journeys = [
         sd3("bk-cancelled", "Cancelled, deposit refunded", "Customer"),
         sd3("bk-cancelled-late", "Cancelled after the cut-off, deposit kept", "Customer"),
         sd3("bk-declined", "The shop couldn’t fit it in", "Customer"),
-        sd3("bk-expired", "The link, 30 days after the booked date", "Customer"),
+        sd3("bk-expired", "The link, [n] days after a booking that never came in", "Customer"),
         sd3("bk-unavailable", "Online booking unavailable", "Customer"),
       ] },
       { label: "The shop’s side", screens: [
@@ -307,6 +309,7 @@ export const journeys = [
         sd4("dq-quote-reminded", "After the reminder: when it was sent, and reminded", "Customer"),
         sd4("dq-quote-newer", "The quote has changed: earlier answers kept", "Customer"),
         sd4("dq-withdrawn", "The shop withdrew the quote", "Customer"),
+        sd4("dq-within-limit", "Within the limit: told what was added", "Customer"),
       ] },
       { label: "Answered", screens: [
         sd4("dq-answered", "Answered: the work carries on", "Customer"),
@@ -317,10 +320,12 @@ export const journeys = [
       { label: "The shop’s side", screens: [
         sd4("dq-job-quote", "Job page: each new line Needed or Optional, its reason, a photo, what it goes with", "Staff"),
         sd4("dq-job-sent", "Sending the quote, with Undo for a minute", "Staff"),
+        sd4("dq-diary-waiting", "The diary: the job waiting for the customer’s answer", "Staff"),
         sd4("dq-today-no-answer", "Today: no answer to a quote", "Staff"),
         sd4("dq-record-answer", "Record their answer, from a phone call", "Staff"),
         sd4("dq-job-withdraw", "Withdraw the quote", "Staff"),
         sd4("dq-job-answered", "The job page once answered: approved and declined", "Staff"),
+        sd4("dq-job-within", "A £200 limit, and the work within it: no quote", "Staff"),
         sd4("dq-job-waiting", "The job page: waiting for a part (Workshop day)", "Staff"),
         sd4("dq-messages", "Settings › Front desk › Messages: the quote and its reminder", "Manager"),
       ] },
@@ -332,10 +337,13 @@ export const journeys = [
     rows: [
       { label: "The customer’s link", screens: [
         sd5("cp-summary", "The “Bike ready” link: what we did, and Pay now", "Customer"),
+        sd5("cp-summary-said-yes", "Said yes to reminders when booking: not asked again", "Customer"),
         sd5("cp-summary-deposit", "The same link, after a deposit: only the rest to pay", "Customer"),
         sd5("cp-pay", "Pay online", "Customer"),
         sd5("cp-pay-failed", "Pay online: the card didn’t go through", "Customer"),
+        sd5("cp-pay-balance", "Pay online after a deposit: only the rest", "Customer"),
         sd5("cp-paid", "Paid — see you soon", "Customer"),
+        sd5("cp-paid-balance", "Paid after a deposit", "Customer"),
         sd5("cp-summary-paid", "The link opened again after paying", "Customer"),
         sd5("cp-summary-counter", "The link while it’s being paid at the counter", "Customer"),
         sd5("cp-summary-inshop", "The same link, for a shop without online payments", "Customer"),
@@ -362,6 +370,7 @@ export const journeys = [
         sd5("cp-receipt-email-guest", "No customer on the sale: the email without an account", "Customer"),
         sd5("cp-invoice-email", "For a business: headed “VAT invoice”", "Customer"),
         sd5("cp-receipt-email-till", "A till sale: quantities, a discount, a split payment", "Customer"),
+        sd5("cp-receipt-email-deposit", "After a deposit: the deposit and the rest as two payments", "Customer"),
         sd5("cp-receipt-text", "A text receipt: a link to the same receipt", "Customer"),
         sd5("cp-receipt-text-email", "The receipt page: Email it to me", "Customer"),
         sd5("cp-receipt-address", "No customer on the sale: this receipt only", "Staff"),
@@ -1009,8 +1018,8 @@ export const journeys = [
       ] },
       { label: "People and booking", screens: [
         sd19("ms-person", "A person: where they work, and workshop days at each shop", "Owner"),
-        sd19("ms-book-shop", "Book a repair: “Which shop?” first, nothing chosen", "Customer"),
-        sd19("ms-book-shop-chosen", "Came from Bolton’s page: the shop chosen, straight to the service", "Customer"),
+        sd19("ms-book-shop", "No shop chosen yet on the website: “Which shop?” first", "Customer"),
+        sd19("ms-book-shop-chosen", "The website already has Bolton: the shop chosen, straight to the service", "Customer"),
         sd19("ms-book-shop-change", "Changing the shop: what it resets", "Customer"),
       ] },
       { label: "Jobs between shops", screens: [

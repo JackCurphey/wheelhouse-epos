@@ -109,7 +109,8 @@ export function finalCustStripTwoRow(customer, mechanicName, custHref = '#', tag
 // ---------- job details strip (job number, created, badges + status/time/ticks) ----------
 // Decision 42: the customer's spending limit from their booking (decision 41),
 // shown as a tag so a mechanic sees how far extra work can go before a call.
-export const SPEND_LIMIT = 'Customer OK up to £200';
+// UX walk-through 1 H1: in the story Maya asked to be called first.
+export const SPEND_LIMIT = 'Call before any extra work';
 // M2 (29 Sep audit): this is the one chip meant to stop a mechanic doing
 // unapproved work, but the plain "blue" badge() sat at the same quiet visual
 // weight as the "Ready by" chip next to it — nothing marked it as the one
@@ -205,8 +206,10 @@ const photoBtn = (l, h = 44) => (l.photos === undefined ? '' : `<button type="bu
 const reasonCell = (l) => `<span style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; white-space: nowrap">${l.note ? esc(l.note) : l.pairWith ? '' : `<span style="font-style: italic">Reason for the customer</span>`}${l.pairWith ? `<label style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: ${C.ink}">Goes with<select style="min-height: 44px; box-sizing: border-box; padding: 0 6px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 12px; color: ${C.ink}"><option>${esc(l.pairWith)}</option><option>Nothing</option></select></label>` : ''}${photoBtn(l)}</span>`;
 // Audit L6 (journey 4): once sent, Needed or Optional stays as grey text.
 const approvalCell = (l, tone) => (l.need ? needToggle(l) : l.needText ? `<span style="display: inline-flex; align-items: center; gap: 6px">${badge(l.approval, tone)}<span style="font-size: 12px; color: ${C.muted}">${esc(l.needText)}</span></span>` : badge(l.approval, tone));
+// UX walk-through 1 H1: the hint says when a quote goes, or that none is needed.
+const quoteHintText = (q) => (q === 'within' ? 'Within Maya’s £200 limit — no quote needed. She’ll be told what was added.' : 'Quotes are sent when the customer asked to be called first, or the total is over their limit.');
 export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', totalValue, footerNote = '', quoteAction = false, doneH = 34 } = {}) {
-  const toolbarBtns = quoteAction
+  const toolbarBtns = quoteAction === true
     ? `${ghostBtn('Send quote', 'mail')}${ghostBtn('Add item', 'plus')}${ghostBtn('Print', 'reports')}`
     : `${ghostBtn('Add item', 'plus')}${ghostBtn('Scan barcode', 'search')}${ghostBtn('Print', 'reports')}`;
   const toolbar = row(toolbarBtns, 8);
@@ -214,7 +217,7 @@ export function finalWorkAndPartsBody(lines, { totalLabel = 'Approved total', to
   // customer's limit, or they set none — shown once, near the "Send quote"
   // toolbar button, on whichever stage passes quoteAction (currently the
   // quote stage only).
-  const quoteHint = quoteAction ? `<p style="margin: 0; font-size: 12px; line-height: 1.3; color: ${C.muted}">${esc("Quotes are sent when the total is over the customer's limit, or they set none.")}</p>` : '';
+  const quoteHint = quoteAction ? `<p style="margin: 0; font-size: 12px; line-height: 1.3; color: ${C.muted}">${esc(quoteHintText(quoteAction))}</p>` : '';
   const thF = (t, extra = '') => `<th style="text-align: left; font-size: 12px; font-weight: 700; color: ${C.muted}; padding: 1px 10px; border-bottom: 1px solid ${C.border}; line-height: 1.05; ${extra}">${esc(t)}</th>`;
   const tdF = (inner, extra = '') => `<td style="padding: 1px 10px; font-size: 14px; color: ${C.ink}; border-bottom: 1px solid ${C.border}; vertical-align: middle; line-height: 1.05; ${extra}">${inner}</td>`;
   const approvalTone = (a) => ({ Approved: 'green', Declined: 'red', 'Awaiting approval': 'purple', 'On order': 'amber' })[a] || 'grey';
@@ -339,7 +342,7 @@ ${h2('Notes', 15)}
 ${detailedNotesButton(checkedCount, totalCount, notedCount, checklistHref)}
 </div>`;
   const tb = (text, iconName) => `<button type="button" style="flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 8px; border-radius: 6px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 14px; font-weight: 600; white-space: nowrap">${icon(iconName, 16)}${esc(text)}</button>`;
-  const toolbar = `<div style="display: flex; gap: 6px">${quoteAction ? `${tb('Send quote', 'mail')}${tb('Add item', 'plus')}${tb('Print', 'reports')}` : `${tb('Add item', 'plus')}${tb('Scan barcode', 'search')}${tb('Print', 'reports')}`}</div>`;
+  const toolbar = `<div style="display: flex; gap: 6px">${quoteAction === true ? `${tb('Send quote', 'mail')}${tb('Add item', 'plus')}${tb('Print', 'reports')}` : `${tb('Add item', 'plus')}${tb('Scan barcode', 'search')}${tb('Print', 'reports')}`}</div>`;
   const rowHtml = (l, i) => {
     const declined = l.approval === 'Declined';
     const done = l.done ?? l.approval === 'Approved';
@@ -356,7 +359,7 @@ ${mono(`£${l.price.toFixed(2)}`, `flex-shrink: 0; padding-top: 4px; font-size: 
   };
   const work = `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px">
 ${toolbar}
-${quoteAction ? `<p style="margin: 0; font-size: 13px; line-height: 1.35; color: ${C.muted}">${esc("Quotes are sent when the total is over the customer's limit, or they set none.")}</p>` : ''}
+${quoteAction ? `<p style="margin: 0; font-size: 13px; line-height: 1.35; color: ${C.muted}">${esc(quoteHintText(quoteAction))}</p>` : ''}
 <div>${sortLines(lines).map(rowHtml).join('')}
 <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 700">${esc(totalLabel)}</span>${mono(`£${totalValue.toFixed(2)}`, 'font-size: 17px; font-weight: 700')}</div></div>
 ${footerNote ? `<p style="margin: 0; font-size: 13px; line-height: 1.35; color: ${C.muted}">${esc(footerNote)}</p>` : ''}

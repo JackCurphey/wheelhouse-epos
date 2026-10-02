@@ -2816,7 +2816,7 @@
    "y": 25590,
    "w": 1280,
    "h": 856,
-   "title": "Designed · Book a repair: “Which shop?” first, nothing chosen (desktop)",
+   "title": "Designed · No shop chosen yet on the website: “Which shop?” first (desktop)",
    "is_interactive": true
   },
   "j19-ms-book-shop-chosen-desktop.dc.html": {
@@ -2824,7 +2824,7 @@
    "y": 25590,
    "w": 1280,
    "h": 856,
-   "title": "Designed · Came from Bolton’s page: the shop chosen, straight to the service (desktop)",
+   "title": "Designed · The website already has Bolton: the shop chosen, straight to the service (desktop)",
    "is_interactive": true
   },
   "j19-ms-book-shop-change-desktop.dc.html": {

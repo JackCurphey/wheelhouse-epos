@@ -1,15 +1,6 @@
 {
  "v": 3,
- "createdOnFiles": {
-  "v": 1,
-  "at": "2026-10-01T19:30:00Z"
- },
- "title": "Wheelhouse user journeys — customers and the website",
- "launch": {
-  "view": "canvas"
- },
  "attachments": {},
- "pages": [],
  "boards": {
   "jb-workos-signin-desktop.dc.html": {
    "x": 0,
@@ -867,8 +858,16 @@
    "title": "Designed · Book a repair: every service at once (desktop)",
    "is_interactive": true
   },
-  "j03-bk-service-many-desktop.dc.html": {
+  "j03-bk-service-chosen-desktop.dc.html": {
    "x": 1320,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · From the website: the repair already chosen (desktop)",
+   "is_interactive": true
+  },
+  "j03-bk-service-many-desktop.dc.html": {
+   "x": 2640,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -876,7 +875,7 @@
    "is_interactive": true
   },
   "j03-bk-bike-desktop.dc.html": {
-   "x": 2640,
+   "x": 3960,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -884,7 +883,7 @@
    "is_interactive": true
   },
   "j03-bk-bike-signed-in-desktop.dc.html": {
-   "x": 3960,
+   "x": 5280,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -892,7 +891,7 @@
    "is_interactive": true
   },
   "j03-bk-not-sure-desktop.dc.html": {
-   "x": 5280,
+   "x": 6600,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -900,7 +899,7 @@
    "is_interactive": true
   },
   "j03-bk-when-desktop.dc.html": {
-   "x": 6600,
+   "x": 7920,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -908,7 +907,7 @@
    "is_interactive": true
   },
   "j03-bk-when-full-desktop.dc.html": {
-   "x": 7920,
+   "x": 9240,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -916,7 +915,7 @@
    "is_interactive": true
   },
   "j03-bk-when-dropoff-desktop.dc.html": {
-   "x": 9240,
+   "x": 10560,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -924,7 +923,7 @@
    "is_interactive": true
   },
   "j03-bk-details-desktop.dc.html": {
-   "x": 10560,
+   "x": 11880,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -932,7 +931,7 @@
    "is_interactive": true
   },
   "j03-bk-details-deposit-desktop.dc.html": {
-   "x": 11880,
+   "x": 13200,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -940,7 +939,7 @@
    "is_interactive": true
   },
   "j03-bk-sending-desktop.dc.html": {
-   "x": 13360,
+   "x": 14680,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -948,7 +947,7 @@
    "is_interactive": true
   },
   "j03-bk-card-failed-desktop.dc.html": {
-   "x": 14680,
+   "x": 16000,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -956,7 +955,7 @@
    "is_interactive": true
   },
   "j03-bk-not-sent-desktop.dc.html": {
-   "x": 16000,
+   "x": 17320,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -964,7 +963,7 @@
    "is_interactive": true
   },
   "j03-bk-checking-payment-desktop.dc.html": {
-   "x": 17320,
+   "x": 18640,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -972,7 +971,7 @@
    "is_interactive": true
   },
   "j03-bk-resume-desktop.dc.html": {
-   "x": 18640,
+   "x": 19960,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -980,15 +979,23 @@
    "is_interactive": true
   },
   "j03-bk-request-desktop.dc.html": {
-   "x": 19960,
+   "x": 21280,
    "y": 8506,
    "w": 1280,
    "h": 856,
    "title": "Designed · Request received: waiting for the shop (desktop)",
    "is_interactive": true
   },
+  "j03-bk-request-deposit-desktop.dc.html": {
+   "x": 22600,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Request received, after paying a deposit (desktop)",
+   "is_interactive": true
+  },
   "j03-bk-confirmed-desktop.dc.html": {
-   "x": 21280,
+   "x": 23920,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -996,7 +1003,7 @@
    "is_interactive": true
   },
   "j03-bk-bookings-desktop.dc.html": {
-   "x": 22760,
+   "x": 25400,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1004,7 +1011,7 @@
    "is_interactive": true
   },
   "j03-bk-page-request-desktop.dc.html": {
-   "x": 24080,
+   "x": 26720,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1012,7 +1019,7 @@
    "is_interactive": true
   },
   "j03-bk-offered-desktop.dc.html": {
-   "x": 25400,
+   "x": 28040,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1020,7 +1027,7 @@
    "is_interactive": true
   },
   "j03-bk-page-desktop.dc.html": {
-   "x": 26720,
+   "x": 29360,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1028,7 +1035,7 @@
    "is_interactive": true
   },
   "j03-bk-page-dropoff-desktop.dc.html": {
-   "x": 28040,
+   "x": 30680,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1036,7 +1043,7 @@
    "is_interactive": true
   },
   "j03-bk-change-desktop.dc.html": {
-   "x": 29360,
+   "x": 32000,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1044,7 +1051,7 @@
    "is_interactive": true
   },
   "j03-bk-change-pending-desktop.dc.html": {
-   "x": 30680,
+   "x": 33320,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1052,7 +1059,7 @@
    "is_interactive": true
   },
   "j03-bk-change-declined-desktop.dc.html": {
-   "x": 32000,
+   "x": 34640,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1060,7 +1067,7 @@
    "is_interactive": true
   },
   "j03-bk-cancel-desktop.dc.html": {
-   "x": 33480,
+   "x": 36120,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1068,7 +1075,7 @@
    "is_interactive": true
   },
   "j03-bk-cancel-late-desktop.dc.html": {
-   "x": 34800,
+   "x": 37440,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1076,7 +1083,7 @@
    "is_interactive": true
   },
   "j03-bk-cancelled-desktop.dc.html": {
-   "x": 36120,
+   "x": 38760,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1084,7 +1091,7 @@
    "is_interactive": true
   },
   "j03-bk-cancelled-late-desktop.dc.html": {
-   "x": 37440,
+   "x": 40080,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1092,7 +1099,7 @@
    "is_interactive": true
   },
   "j03-bk-declined-desktop.dc.html": {
-   "x": 38760,
+   "x": 41400,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1100,15 +1107,15 @@
    "is_interactive": true
   },
   "j03-bk-expired-desktop.dc.html": {
-   "x": 40080,
+   "x": 42720,
    "y": 8506,
    "w": 1280,
    "h": 856,
-   "title": "Designed · The link, 30 days after the booked date (desktop)",
+   "title": "Designed · The link, [n] days after a booking that never came in (desktop)",
    "is_interactive": true
   },
   "j03-bk-unavailable-desktop.dc.html": {
-   "x": 41400,
+   "x": 44040,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1116,7 +1123,7 @@
    "is_interactive": true
   },
   "j03-bk-staff-request-desktop.dc.html": {
-   "x": 42880,
+   "x": 45520,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1124,7 +1131,7 @@
    "is_interactive": true
   },
   "j03-bk-staff-decline-desktop.dc.html": {
-   "x": 44200,
+   "x": 46840,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1132,7 +1139,7 @@
    "is_interactive": true
   },
   "j03-bk-messages-desktop.dc.html": {
-   "x": 45520,
+   "x": 48160,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1140,7 +1147,7 @@
    "is_interactive": true
   },
   "j03-bk-settings-desktop.dc.html": {
-   "x": 46840,
+   "x": 49480,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1148,7 +1155,7 @@
    "is_interactive": true
   },
   "j03-bk-settings-deposits-desktop.dc.html": {
-   "x": 48160,
+   "x": 50800,
    "y": 8506,
    "w": 1280,
    "h": 856,
@@ -1243,8 +1250,16 @@
    "title": "Designed · The shop withdrew the quote (desktop)",
    "is_interactive": true
   },
+  "j04-dq-within-limit-desktop.dc.html": {
+   "x": 14680,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Within the limit: told what was added (desktop)",
+   "is_interactive": true
+  },
   "j04-dq-answered-desktop.dc.html": {
-   "x": 14840,
+   "x": 16160,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1252,7 +1267,7 @@
    "is_interactive": true
   },
   "j04-dq-answered-declined-desktop.dc.html": {
-   "x": 16160,
+   "x": 17480,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1260,7 +1275,7 @@
    "is_interactive": true
   },
   "j04-dq-answered-deposit-desktop.dc.html": {
-   "x": 17480,
+   "x": 18800,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1268,7 +1283,7 @@
    "is_interactive": true
   },
   "j04-dq-answered-by-phone-desktop.dc.html": {
-   "x": 18800,
+   "x": 20120,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1276,7 +1291,7 @@
    "is_interactive": true
   },
   "j04-dq-job-quote-desktop.dc.html": {
-   "x": 20280,
+   "x": 21600,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1284,15 +1299,23 @@
    "is_interactive": true
   },
   "j04-dq-job-sent-desktop.dc.html": {
-   "x": 21600,
+   "x": 22920,
    "y": 10362,
    "w": 1280,
    "h": 856,
    "title": "Designed · Sending the quote, with Undo for a minute (desktop)",
    "is_interactive": true
   },
+  "j04-dq-diary-waiting-desktop.dc.html": {
+   "x": 24240,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The diary: the job waiting for the customer’s answer (desktop)",
+   "is_interactive": true
+  },
   "j04-dq-today-no-answer-desktop.dc.html": {
-   "x": 22920,
+   "x": 25560,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1300,7 +1323,7 @@
    "is_interactive": true
   },
   "j04-dq-record-answer-desktop.dc.html": {
-   "x": 24240,
+   "x": 26880,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1308,7 +1331,7 @@
    "is_interactive": true
   },
   "j04-dq-job-withdraw-desktop.dc.html": {
-   "x": 25560,
+   "x": 28200,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1316,15 +1339,23 @@
    "is_interactive": true
   },
   "j04-dq-job-answered-desktop.dc.html": {
-   "x": 26880,
+   "x": 29520,
    "y": 10362,
    "w": 1280,
    "h": 856,
    "title": "Designed · The job page once answered: approved and declined (desktop)",
    "is_interactive": true
   },
+  "j04-dq-job-within-desktop.dc.html": {
+   "x": 30840,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A £200 limit, and the work within it: no quote (desktop)",
+   "is_interactive": true
+  },
   "j04-dq-job-waiting-desktop.dc.html": {
-   "x": 28200,
+   "x": 32160,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1332,7 +1363,7 @@
    "is_interactive": true
   },
   "j04-dq-messages-desktop.dc.html": {
-   "x": 29520,
+   "x": 33480,
    "y": 10362,
    "w": 1280,
    "h": 856,
@@ -1340,7 +1371,7 @@
    "is_interactive": true
   },
   "j04-customer-message.dc.html": {
-   "x": 31000,
+   "x": 34960,
    "y": 10362,
    "w": 390,
    "h": 900,
@@ -1348,7 +1379,7 @@
    "is_interactive": true
   },
   "j04-preferences.dc.html": {
-   "x": 31470,
+   "x": 35430,
    "y": 10362,
    "w": 390,
    "h": 900,
@@ -1363,8 +1394,16 @@
    "title": "Designed · The “Bike ready” link: what we did, and Pay now (desktop)",
    "is_interactive": true
   },
-  "j05-cp-summary-deposit-desktop.dc.html": {
+  "j05-cp-summary-said-yes-desktop.dc.html": {
    "x": 1320,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Said yes to reminders when booking: not asked again (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-summary-deposit-desktop.dc.html": {
+   "x": 2640,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1372,7 +1411,7 @@
    "is_interactive": true
   },
   "j05-cp-pay-desktop.dc.html": {
-   "x": 2640,
+   "x": 3960,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1380,23 +1419,39 @@
    "is_interactive": true
   },
   "j05-cp-pay-failed-desktop.dc.html": {
-   "x": 3960,
+   "x": 5280,
    "y": 12262,
    "w": 1280,
    "h": 856,
    "title": "Designed · Pay online: the card didn’t go through (desktop)",
    "is_interactive": true
   },
+  "j05-cp-pay-balance-desktop.dc.html": {
+   "x": 6600,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Pay online after a deposit: only the rest (desktop)",
+   "is_interactive": true
+  },
   "j05-cp-paid-desktop.dc.html": {
-   "x": 5280,
+   "x": 7920,
    "y": 12262,
    "w": 1280,
    "h": 856,
    "title": "Designed · Paid — see you soon (desktop)",
    "is_interactive": true
   },
+  "j05-cp-paid-balance-desktop.dc.html": {
+   "x": 9240,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Paid after a deposit (desktop)",
+   "is_interactive": true
+  },
   "j05-cp-summary-paid-desktop.dc.html": {
-   "x": 6600,
+   "x": 10560,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1404,7 +1459,7 @@
    "is_interactive": true
   },
   "j05-cp-summary-counter-desktop.dc.html": {
-   "x": 7920,
+   "x": 11880,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1412,7 +1467,7 @@
    "is_interactive": true
   },
   "j05-cp-summary-inshop-desktop.dc.html": {
-   "x": 9240,
+   "x": 13200,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1420,7 +1475,7 @@
    "is_interactive": true
   },
   "j05-cp-expired-desktop.dc.html": {
-   "x": 10560,
+   "x": 14520,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1428,7 +1483,7 @@
    "is_interactive": true
   },
   "j05-cp-ready-unpaid-desktop.dc.html": {
-   "x": 12040,
+   "x": 16000,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1436,7 +1491,7 @@
    "is_interactive": true
   },
   "j05-cp-ready-deposit-desktop.dc.html": {
-   "x": 13360,
+   "x": 17320,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1444,7 +1499,7 @@
    "is_interactive": true
   },
   "j05-cp-till-desktop.dc.html": {
-   "x": 14680,
+   "x": 18640,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1452,7 +1507,7 @@
    "is_interactive": true
   },
   "j05-cp-ready-paid-desktop.dc.html": {
-   "x": 16000,
+   "x": 19960,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1460,7 +1515,7 @@
    "is_interactive": true
   },
   "j05-cp-ready-ticks-desktop.dc.html": {
-   "x": 17320,
+   "x": 21280,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1468,7 +1523,7 @@
    "is_interactive": true
   },
   "j05-cp-collected-desktop.dc.html": {
-   "x": 18640,
+   "x": 22600,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1476,7 +1531,7 @@
    "is_interactive": true
   },
   "j05-cp-today-uncollected-desktop.dc.html": {
-   "x": 20120,
+   "x": 24080,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1484,7 +1539,7 @@
    "is_interactive": true
   },
   "j05-cp-setting-desktop.dc.html": {
-   "x": 21600,
+   "x": 25560,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1492,7 +1547,7 @@
    "is_interactive": true
   },
   "j05-cp-messages-desktop.dc.html": {
-   "x": 22920,
+   "x": 26880,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1500,7 +1555,7 @@
    "is_interactive": true
   },
   "j05-cp-message-wording-desktop.dc.html": {
-   "x": 24240,
+   "x": 28200,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1508,7 +1563,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-email-desktop.dc.html": {
-   "x": 25720,
+   "x": 29680,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1516,7 +1571,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-email-guest-desktop.dc.html": {
-   "x": 27040,
+   "x": 31000,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1524,7 +1579,7 @@
    "is_interactive": true
   },
   "j05-cp-invoice-email-desktop.dc.html": {
-   "x": 28360,
+   "x": 32320,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1532,15 +1587,23 @@
    "is_interactive": true
   },
   "j05-cp-receipt-email-till-desktop.dc.html": {
-   "x": 29680,
+   "x": 33640,
    "y": 12262,
    "w": 1280,
    "h": 856,
    "title": "Designed · A till sale: quantities, a discount, a split payment (desktop)",
    "is_interactive": true
   },
+  "j05-cp-receipt-email-deposit-desktop.dc.html": {
+   "x": 34960,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · After a deposit: the deposit and the rest as two payments (desktop)",
+   "is_interactive": true
+  },
   "j05-cp-receipt-text-desktop.dc.html": {
-   "x": 31000,
+   "x": 36280,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1548,7 +1611,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-text-email-desktop.dc.html": {
-   "x": 32320,
+   "x": 37600,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1556,7 +1619,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-desktop.dc.html": {
-   "x": 33640,
+   "x": 38920,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1564,7 +1627,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-error-desktop.dc.html": {
-   "x": 34960,
+   "x": 40240,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1572,7 +1635,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-save-desktop.dc.html": {
-   "x": 36280,
+   "x": 41560,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1580,7 +1643,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-text-desktop.dc.html": {
-   "x": 37600,
+   "x": 42880,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1588,7 +1651,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-customer-desktop.dc.html": {
-   "x": 38920,
+   "x": 44200,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1596,7 +1659,7 @@
    "is_interactive": true
   },
   "j05-cp-receipt-address-offline-desktop.dc.html": {
-   "x": 40240,
+   "x": 45520,
    "y": 12262,
    "w": 1280,
    "h": 856,
@@ -1604,7 +1667,7 @@
    "is_interactive": true
   },
   "j05-ready.dc.html": {
-   "x": 41720,
+   "x": 47000,
    "y": 12262,
    "w": 390,
    "h": 900,
@@ -2275,6 +2338,528 @@
    "title": "Workflow: how the journeys connect"
   }
  },
+ "createdOnFiles": {
+  "at": "2026-10-01T19:30:00Z",
+  "v": 1
+ },
+ "designSystems": [
+  {
+   "artifact": "https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH",
+   "copiedAt": "2026-09-27T12:13:59Z",
+   "namespace": "wheelhouse",
+   "title": "Wheelhouse",
+   "version": null
+  }
+ ],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "j01_s10": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "When things go wrong",
+   "w": 520,
+   "x": 33800,
+   "y": 4554
+  },
+  "j01_s11": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Cookies",
+   "w": 520,
+   "x": 41880,
+   "y": 4554
+  },
+  "j01_s5": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The home page, and choosing a shop",
+   "w": 520,
+   "x": 0,
+   "y": 4554
+  },
+  "j01_s6": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Categories",
+   "w": 520,
+   "x": 6760,
+   "y": 4554
+  },
+  "j01_s7": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "A product",
+   "w": 520,
+   "x": 16160,
+   "y": 4554
+  },
+  "j01_s8": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Search",
+   "w": 520,
+   "x": 21600,
+   "y": 4554
+  },
+  "j01_s9": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Our shops",
+   "w": 520,
+   "x": 28360,
+   "y": 4554
+  },
+  "j01_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "01 · Find the shop and browse the website — Customer",
+   "w": 240,
+   "x": 0,
+   "y": 4234
+  },
+  "j02_s13": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Finding it",
+   "w": 520,
+   "x": 0,
+   "y": 6410
+  },
+  "j02_s14": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Basket and checkout",
+   "w": 520,
+   "x": 12040,
+   "y": 6410
+  },
+  "j02_s15": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Paying",
+   "w": 520,
+   "x": 24080,
+   "y": 6410
+  },
+  "j02_s16": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Your order",
+   "w": 520,
+   "x": 33480,
+   "y": 6410
+  },
+  "j02_s17": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The shop’s side",
+   "w": 520,
+   "x": 46840,
+   "y": 6410
+  },
+  "j02_s18": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Settings",
+   "w": 520,
+   "x": 64160,
+   "y": 6410
+  },
+  "j02_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "02 · Buy online, or click and collect — Customer, Staff and Owner",
+   "w": 240,
+   "x": 0,
+   "y": 6090
+  },
+  "j03_s20": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Booking",
+   "w": 520,
+   "x": 0,
+   "y": 8266
+  },
+  "j03_s21": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Sending",
+   "w": 520,
+   "x": 14680,
+   "y": 8266
+  },
+  "j03_s22": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Your booking",
+   "w": 520,
+   "x": 25400,
+   "y": 8266
+  },
+  "j03_s23": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Cancelling",
+   "w": 520,
+   "x": 36120,
+   "y": 8266
+  },
+  "j03_s24": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The shop’s side",
+   "w": 520,
+   "x": 45520,
+   "y": 8266
+  },
+  "j03_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "03 · Book a repair — Customer, Staff and Manager",
+   "w": 240,
+   "x": 0,
+   "y": 7946
+  },
+  "j04_s26": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "While the bike is in",
+   "w": 520,
+   "x": 0,
+   "y": 10122
+  },
+  "j04_s27": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The quote",
+   "w": 520,
+   "x": 4120,
+   "y": 10122
+  },
+  "j04_s28": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Answered",
+   "w": 520,
+   "x": 16160,
+   "y": 10122
+  },
+  "j04_s29": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The shop’s side",
+   "w": 520,
+   "x": 21600,
+   "y": 10122
+  },
+  "j04_s30": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Also in this journey",
+   "w": 520,
+   "x": 34960,
+   "y": 10122
+  },
+  "j04_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "04 · Drop off and approve the quote — Customer and Staff",
+   "w": 240,
+   "x": 0,
+   "y": 9802
+  },
+  "j05_s32": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The customer’s link",
+   "w": 520,
+   "x": 0,
+   "y": 12022
+  },
+  "j05_s33": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "At the counter",
+   "w": 520,
+   "x": 16000,
+   "y": 12022
+  },
+  "j05_s34": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Not collected",
+   "w": 520,
+   "x": 24080,
+   "y": 12022
+  },
+  "j05_s35": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Settings",
+   "w": 520,
+   "x": 25560,
+   "y": 12022
+  },
+  "j05_s36": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The receipt",
+   "w": 520,
+   "x": 29680,
+   "y": 12022
+  },
+  "j05_s37": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Also at collection",
+   "w": 520,
+   "x": 47000,
+   "y": 12022
+  },
+  "j05_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "05 · Collect the bike and pay — Customer",
+   "w": 240,
+   "x": 0,
+   "y": 11702
+  },
+  "j06_s39": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The list and a new order",
+   "w": 520,
+   "x": 0,
+   "y": 13922
+  },
+  "j06_s40": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Waiting for the certificate",
+   "w": 520,
+   "x": 10720,
+   "y": 13922
+  },
+  "j06_s41": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Collection and payment",
+   "w": 520,
+   "x": 24080,
+   "y": 13922
+  },
+  "j06_s42": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Changes and cancelling",
+   "w": 520,
+   "x": 36120,
+   "y": 13922
+  },
+  "j06_s43": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Today, the customer, settings and messages",
+   "w": 520,
+   "x": 41560,
+   "y": 13922
+  },
+  "j06_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "06 · Cycle to Work — Customer and staff",
+   "w": 240,
+   "x": 0,
+   "y": 13602
+  },
+  "j07_s45": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Your account",
+   "w": 520,
+   "x": 0,
+   "y": 15778
+  },
+  "j07_s46": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Talking to the shop",
+   "w": 520,
+   "x": 8080,
+   "y": 15778
+  },
+  "j07_s47": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The shop’s side of messages",
+   "w": 520,
+   "x": 17480,
+   "y": 15778
+  },
+  "j07_s48": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Service reminders",
+   "w": 520,
+   "x": 26030,
+   "y": 15778
+  },
+  "j07_s49": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Reviews and how we contact you",
+   "w": 520,
+   "x": 35430,
+   "y": 15778
+  },
+  "j07_s50": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Your data",
+   "w": 520,
+   "x": 43510,
+   "y": 15778
+  },
+  "j07_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "07 · Account, history and reminders — Customer and Staff",
+   "w": 240,
+   "x": 0,
+   "y": 15458
+  },
+  "jb_s0": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Staff sign-in (WorkOS)",
+   "w": 520,
+   "x": 0,
+   "y": 2654
+  },
+  "jb_s1": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Staff access",
+   "w": 520,
+   "x": 1480,
+   "y": 2654
+  },
+  "jb_s2": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Till",
+   "w": 520,
+   "x": 6920,
+   "y": 2654
+  },
+  "jb_s3": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Customers",
+   "w": 520,
+   "x": 15000,
+   "y": 2654
+  },
+  "jb_title": {
+   "kind": "title1",
+   "maxW": 8000,
+   "text": "B · Signing in and access — Staff and customers",
+   "w": 240,
+   "x": 0,
+   "y": 2334
+  }
+ },
  "order": [
   "Main.dc.html",
   "Workflow.dc.html",
@@ -2385,6 +2970,7 @@
   "j02-on-settings-pay-desktop.dc.html",
   "j02-on-messages-desktop.dc.html",
   "j03-bk-service-desktop.dc.html",
+  "j03-bk-service-chosen-desktop.dc.html",
   "j03-bk-service-many-desktop.dc.html",
   "j03-bk-bike-desktop.dc.html",
   "j03-bk-bike-signed-in-desktop.dc.html",
@@ -2400,6 +2986,7 @@
   "j03-bk-checking-payment-desktop.dc.html",
   "j03-bk-resume-desktop.dc.html",
   "j03-bk-request-desktop.dc.html",
+  "j03-bk-request-deposit-desktop.dc.html",
   "j03-bk-confirmed-desktop.dc.html",
   "j03-bk-bookings-desktop.dc.html",
   "j03-bk-page-request-desktop.dc.html",
@@ -2432,25 +3019,31 @@
   "j04-dq-quote-reminded-desktop.dc.html",
   "j04-dq-quote-newer-desktop.dc.html",
   "j04-dq-withdrawn-desktop.dc.html",
+  "j04-dq-within-limit-desktop.dc.html",
   "j04-dq-answered-desktop.dc.html",
   "j04-dq-answered-declined-desktop.dc.html",
   "j04-dq-answered-deposit-desktop.dc.html",
   "j04-dq-answered-by-phone-desktop.dc.html",
   "j04-dq-job-quote-desktop.dc.html",
   "j04-dq-job-sent-desktop.dc.html",
+  "j04-dq-diary-waiting-desktop.dc.html",
   "j04-dq-today-no-answer-desktop.dc.html",
   "j04-dq-record-answer-desktop.dc.html",
   "j04-dq-job-withdraw-desktop.dc.html",
   "j04-dq-job-answered-desktop.dc.html",
+  "j04-dq-job-within-desktop.dc.html",
   "j04-dq-job-waiting-desktop.dc.html",
   "j04-dq-messages-desktop.dc.html",
   "j04-customer-message.dc.html",
   "j04-preferences.dc.html",
   "j05-cp-summary-desktop.dc.html",
+  "j05-cp-summary-said-yes-desktop.dc.html",
   "j05-cp-summary-deposit-desktop.dc.html",
   "j05-cp-pay-desktop.dc.html",
   "j05-cp-pay-failed-desktop.dc.html",
+  "j05-cp-pay-balance-desktop.dc.html",
   "j05-cp-paid-desktop.dc.html",
+  "j05-cp-paid-balance-desktop.dc.html",
   "j05-cp-summary-paid-desktop.dc.html",
   "j05-cp-summary-counter-desktop.dc.html",
   "j05-cp-summary-inshop-desktop.dc.html",
@@ -2469,6 +3062,7 @@
   "j05-cp-receipt-email-guest-desktop.dc.html",
   "j05-cp-invoice-email-desktop.dc.html",
   "j05-cp-receipt-email-till-desktop.dc.html",
+  "j05-cp-receipt-email-deposit-desktop.dc.html",
   "j05-cp-receipt-text-desktop.dc.html",
   "j05-cp-receipt-text-email-desktop.dc.html",
   "j05-cp-receipt-address-desktop.dc.html",
@@ -2560,511 +3154,6 @@
   "j07-ac-privacy-requests-desktop.dc.html",
   "j07-ac-customer-delete-desktop.dc.html"
  ],
- "notes": {
-  "jb_s0": {
-   "x": 0,
-   "y": 2654,
-   "text": "Staff sign-in (WorkOS)",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "jb_s1": {
-   "x": 1480,
-   "y": 2654,
-   "text": "Staff access",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "jb_s2": {
-   "x": 6920,
-   "y": 2654,
-   "text": "Till",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "jb_s3": {
-   "x": 15000,
-   "y": 2654,
-   "text": "Customers",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "jb_title": {
-   "x": 0,
-   "y": 2334,
-   "text": "B · Signing in and access — Staff and customers",
-   "kind": "title1",
-   "maxW": 19820
-  },
-  "j01_s5": {
-   "x": 0,
-   "y": 4554,
-   "text": "The home page, and choosing a shop",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_s6": {
-   "x": 6760,
-   "y": 4554,
-   "text": "Categories",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_s7": {
-   "x": 16160,
-   "y": 4554,
-   "text": "A product",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_s8": {
-   "x": 21600,
-   "y": 4554,
-   "text": "Search",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_s9": {
-   "x": 28360,
-   "y": 4554,
-   "text": "Our shops",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_s10": {
-   "x": 33800,
-   "y": 4554,
-   "text": "When things go wrong",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_s11": {
-   "x": 41880,
-   "y": 4554,
-   "text": "Cookies",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j01_title": {
-   "x": 0,
-   "y": 4234,
-   "text": "01 · Find the shop and browse the website — Customer",
-   "kind": "title1",
-   "maxW": 48400
-  },
-  "j02_s13": {
-   "x": 0,
-   "y": 6410,
-   "text": "Finding it",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j02_s14": {
-   "x": 12040,
-   "y": 6410,
-   "text": "Basket and checkout",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j02_s15": {
-   "x": 24080,
-   "y": 6410,
-   "text": "Paying",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j02_s16": {
-   "x": 33480,
-   "y": 6410,
-   "text": "Your order",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j02_s17": {
-   "x": 46840,
-   "y": 6410,
-   "text": "The shop’s side",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j02_s18": {
-   "x": 64160,
-   "y": 6410,
-   "text": "Settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j02_title": {
-   "x": 0,
-   "y": 6090,
-   "text": "02 · Buy online, or click and collect — Customer, Staff and Owner",
-   "kind": "title1",
-   "maxW": 72000
-  },
-  "j03_s20": {
-   "x": 0,
-   "y": 8266,
-   "text": "Booking",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j03_s21": {
-   "x": 13360,
-   "y": 8266,
-   "text": "Sending",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j03_s22": {
-   "x": 22760,
-   "y": 8266,
-   "text": "Your booking",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j03_s23": {
-   "x": 33480,
-   "y": 8266,
-   "text": "Cancelling",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j03_s24": {
-   "x": 42880,
-   "y": 8266,
-   "text": "The shop’s side",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j03_title": {
-   "x": 0,
-   "y": 7946,
-   "text": "03 · Book a repair — Customer, Staff and Manager",
-   "kind": "title1",
-   "maxW": 49400
-  },
-  "j04_s26": {
-   "x": 0,
-   "y": 10122,
-   "text": "While the bike is in",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j04_s27": {
-   "x": 4120,
-   "y": 10122,
-   "text": "The quote",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j04_s28": {
-   "x": 14840,
-   "y": 10122,
-   "text": "Answered",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j04_s29": {
-   "x": 20280,
-   "y": 10122,
-   "text": "The shop’s side",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j04_s30": {
-   "x": 31000,
-   "y": 10122,
-   "text": "Also in this journey",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j04_title": {
-   "x": 0,
-   "y": 9802,
-   "text": "04 · Drop off and approve the quote — Customer and Staff",
-   "kind": "title1",
-   "maxW": 31860
-  },
-  "j05_s32": {
-   "x": 0,
-   "y": 12022,
-   "text": "The customer’s link",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s33": {
-   "x": 12040,
-   "y": 12022,
-   "text": "At the counter",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s34": {
-   "x": 20120,
-   "y": 12022,
-   "text": "Not collected",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s35": {
-   "x": 21600,
-   "y": 12022,
-   "text": "Settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s36": {
-   "x": 25720,
-   "y": 12022,
-   "text": "The receipt",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s37": {
-   "x": 41720,
-   "y": 12022,
-   "text": "Also at collection",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_title": {
-   "x": 0,
-   "y": 11702,
-   "text": "05 · Collect the bike and pay — Customer",
-   "kind": "title1",
-   "maxW": 42110
-  },
-  "j06_s39": {
-   "x": 0,
-   "y": 13922,
-   "text": "The list and a new order",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_s40": {
-   "x": 10720,
-   "y": 13922,
-   "text": "Waiting for the certificate",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_s41": {
-   "x": 24080,
-   "y": 13922,
-   "text": "Collection and payment",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_s42": {
-   "x": 36120,
-   "y": 13922,
-   "text": "Changes and cancelling",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_s43": {
-   "x": 41560,
-   "y": 13922,
-   "text": "Today, the customer, settings and messages",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_title": {
-   "x": 0,
-   "y": 13602,
-   "text": "06 · Cycle to Work — Customer and staff",
-   "kind": "title1",
-   "maxW": 52040
-  },
-  "j07_s45": {
-   "x": 0,
-   "y": 15778,
-   "text": "Your account",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s46": {
-   "x": 8080,
-   "y": 15778,
-   "text": "Talking to the shop",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s47": {
-   "x": 17480,
-   "y": 15778,
-   "text": "The shop’s side of messages",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s48": {
-   "x": 26030,
-   "y": 15778,
-   "text": "Service reminders",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s49": {
-   "x": 35430,
-   "y": 15778,
-   "text": "Reviews and how we contact you",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s50": {
-   "x": 43510,
-   "y": 15778,
-   "text": "Your data",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_title": {
-   "x": 0,
-   "y": 15458,
-   "text": "07 · Account, history and reminders — Customer and Staff",
-   "kind": "title1",
-   "maxW": 55310
-  }
- },
- "designSystems": [
-  {
-   "artifact": "https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH",
-   "copiedAt": "2026-09-27T12:13:59Z",
-   "namespace": "wheelhouse",
-   "title": "Wheelhouse",
-   "version": null
-  }
- ]
+ "pages": [],
+ "title": "Wheelhouse user journeys — customers and the website"
 }

@@ -292,9 +292,14 @@ const msgRowChoice = (name, when, { hover = false, reminder = false } = {}) => `
 // Cycle to Work decision 6: a message at each step, each switchable off.
 const C2W_MSGS = [['Your bike is put aside', 'When a Cycle to Work bike is held for the customer'], ['Certificate received', 'When the scheme certificate arrives'], ['Ready to collect', 'When the Cycle to Work bike is ready'], ['Your hold ends on [date]', '[n] days before a held bike is released']];
 const ONLINE_MSGS = [['Order confirmation', 'When an online order is paid'], ['Order ready to collect', 'When an online order is ready'], ['Order still waiting', 'When an order isn’t collected after [n] days'], ['Item we couldn’t supply', 'When staff refund an item, with their reason'], ['Order cancelled', 'When an order is cancelled, by the customer or the shop']];
+// UX walk-through 1 H1, H2, M4: every message the repair story promises has
+// a row, and "Bike ready" goes when the job is marked ready.
 const msgListOpen = ({ bringBack = true, hoverReview = false } = {}) => `<div style="display: flex; flex-direction: column; gap: 8px">
 ${msgRowChoice('Quote to approve', 'When a job needs the customer’s OK', { reminder: true })}
-${msgRowChoice('Bike ready', 'When a job is finished', { hover: !isPhone() })}
+${msgRowChoice('Work added within your limit', 'When extra work fits the limit the customer set')}
+${msgRowChoice('Your answers', 'When staff record the customer’s answer from a call')}
+${msgRowChoice('New ready date', 'When a job waits for parts, or its ready day moves')}
+${msgRowChoice('Bike ready', 'When a job is marked ready', { hover: !isPhone() })}
 ${msgRowChoice('Bike still waiting', 'When a ready bike isn’t collected after [n] days')}
 ${lightspeedShop() ? '' : `<h4 style="margin: 8px 0 0; font-size: 14px; font-weight: 700">Online order messages</h4>
 ${ONLINE_MSGS.map(([n, w]) => msgRow(n, w, false, true)).join('')}
@@ -315,7 +320,7 @@ const msgPage = (open) => settingsPage('messages', 'Messages', MSG_INTRO, msgFol
 const chip = (t) => `<button type="button" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px dashed ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 13px; font-weight: 600; color: ${C.ink}">+ ${t}</button>`;
 const wordingBox = (id, value, rows = 4, chips = null, fixed = '') => `<div style="display: flex; flex-direction: column; gap: 8px"><label for="${id}" style="font-size: 15px; font-weight: 600">Wording</label><textarea id="${id}" rows="${rows}" style="box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; line-height: 1.5; color: ${C.ink}; resize: none">${value}</textarea><div role="group" aria-label="Put in" style="display: flex; flex-wrap: wrap; gap: 6px">${(chips || ['Customer’s first name', 'Bike', 'Job number', 'Amount to pay', 'Link to the job', 'Shop name', 'Opening hours']).map(chip).join('')}</div>${fixed}</div>`;
 const bubble = (t) => `<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">PREVIEW · TEXT TO MAYA PATEL</span><div style="align-self: flex-start; max-width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.5">${t}</div></div>`;
-const editMsgDialog = () => popup('msg-title', 'Bike ready', 'Sent when a job is finished', `
+const editMsgDialog = () => popup('msg-title', 'Bike ready', 'Sent when a job is marked ready', `
 <p style="margin: 0; font-size: 15px">Sent the way each customer chose: text, WhatsApp or email.</p>
 ${wordingBox('msg-words', 'Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay] to pay on collection. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].')}
 ${bubble('Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Job WH-1042. We’re open [opening hours].')}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);

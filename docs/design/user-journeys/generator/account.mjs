@@ -24,7 +24,7 @@ import { today } from './opening.mjs';
 import { msgPage, msgListOpen, servicesOpen, wordingBox, bubble } from './setup.mjs';
 import { inShopAt } from './quote.mjs';
 import { detailsRemindAt, whenFromReminderAt } from './book.mjs';
-import { summaryRemindAt } from './collect.mjs';
+import { summaryRemindAt, receiptBodyAt } from './collect.mjs';
 import { privacyPageAt, customerPageWith } from './customer.mjs';
 
 export const screens = {};
@@ -57,7 +57,7 @@ const statusBar = (t) => `<p role="status" style="margin: 0; display: flex; alig
 const warnBar = (t, action = '') => `<div role="status" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span style="flex-grow: 1">${t}</span>${action}</div>`;
 
 // ---------- The account page (decision 1; audit M2) ----------
-// Left: bikes (warranty, next service, Book a service), store credit, and one
+// Left: bikes (warranty, next service, Book a repair — UX walk-through 1 L1), store credit, and one
 // card for details and how we contact you. Right: one history, newest first,
 // then Your data.
 const warranty = `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: ${C.successInk}">${icon('check', 14)}Bought here · under warranty, [n] months left</span>`;
@@ -66,7 +66,7 @@ function bikes(empty, reminders) {
   // Audit L10: when the reminder is due — only while reminders are on.
   return cardBox(`${h2('Your bikes', 'a-bikes')}
 <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">${MAYA.bikeLong}</span>${warranty}<span style="font-size: 13px; color: ${C.muted}">In the shop now · ${mono('WH-1042')}${reminders ? ' · next service due [date]' : ''}</span>
-<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">${button('Book a service', { variant: 'default' })}</div></div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px">${button('Book a repair', { variant: 'default' })}</div></div>
 <div>${link('+ Add a bike')}</div>`);
 }
 const credit = () => cardBox(`${h2('Store credit', 'a-credit')}<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">${mono('£[credit]', 'font-size: 24px')}<span style="font-size: 13px; color: ${C.muted}">Use it in the shop or online</span></div>`);
@@ -115,9 +115,10 @@ function accountPage({ filter = 'Everything', empty = false, talk = '', contact 
 }
 
 // A receipt from the history (decision 1; audit L1, M6).
-const receiptDialog = (sent = false) => popup('rc-title', 'Receipt', `${mono('B1-[0000]')} · [date] · North Street Cycles, Bolton`, `<div>${kv('[Item]', mono('£[price]'))}${kv('[Item]', mono('£[price]'))}${kv(`<strong style="color: ${C.ink}">Total</strong>`, mono('£[total]', 'font-size: 17px'))}${kv('Paid by', '[card or cash]')}${kv('Includes VAT', mono('£[VAT]'))}</div>
-${note('VAT number [VAT number]. Bring this, or just give your name, if you need to return something.')}
-${sent ? statusBar(`Sent to ${MAYA.email}`) : note(`“Email me this receipt” sends it to ${MAYA.email}.`)}`, `${button('Email me this receipt', { variant: 'default' })}${button('Download receipt')}`, 520);
+// UX walk-through 1 L3: the same receipt as the email and the text link
+// (barcode, VAT, how it was paid), here for Maya's repair.
+const receiptDialog = (sent = false) => popup('rc-title', 'Your receipt', `${mono('B1-[0000]')} · [date] · North Street Cycles, Bolton`, `${receiptBodyAt(isPhone() ? 'phone' : 'desktop')}
+${sent ? statusBar(`Sent to ${MAYA.email}`) : note(`“Email it to me” sends it to ${MAYA.email}.`)}`, `${button('Email it to me', { variant: 'default' })}${button('Download receipt (PDF)')}`, 560);
 
 // ---------- Conversations (decisions 3 and 7) ----------
 // A message in a thread: who, when, what — the shop's on the left, the
@@ -191,14 +192,15 @@ const servicesBoard = () => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO,
 // Audit M8: "Stop these" is a fixed line, not part of the editable wording,
 // and the insert buttons are only the ones this message can use.
 const stopFixed = `<p style="margin: 0; padding: 8px 10px; border-radius: 6px; background: ${C.mutedBg}; font-size: 14px; color: ${C.ink}">Always added at the end: “Stop these: [link]”. It can’t be taken off.</p>`;
-const REMINDER_WORDS = 'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book in here — it’s ready to go: [Link to book].';
-const REMINDER_PREVIEW = 'Hi Maya, your Trek Domane AL 3 is due its Standard service at North Street Cycles. Book in here — it’s ready to go: [link]. Stop these: [link].';
+const REMINDER_WORDS = 'Hi [Customer’s first name], your [Bike] is due its [Service] at [Shop name]. Book a repair here — it’s ready to go: [Link to book].';
+const REMINDER_PREVIEW = 'Hi Maya, your Trek Domane AL 3 is due its Standard service at North Street Cycles. Book a repair here — it’s ready to go: [link]. Stop these: [link].';
 const reminderDialog = () => popup('srem-title', 'Service reminder', 'Sent when a bike is due its next service — set on each service in Settings › Workshop', `
 <p style="margin: 0; font-size: 15px">Sent the way each customer chose: text, WhatsApp or email.</p>
 ${wordingBox('srem-words', REMINDER_WORDS, 3, ['Customer’s first name', 'Bike', 'Service', 'Shop name', 'Link to book'], stopFixed)}${bubble(REMINDER_PREVIEW)}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Cancel', { variant: 'default' })}${button('Save')}`, 640);
 // The reminder's link: booking with the bike and service already chosen
-// (audit L4: and saying why).
-const reminderLanding = () => whenFromReminderAt(SIZE, `<p style="margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 15px; line-height: 1.5">From your reminder: booking the next <strong>Standard service</strong> for your <strong>${MAYA.bikeLong}</strong>. Change either above.</p>`);
+// (audit L4: and saying why). UX walk-through 1 M7: and Maya's details,
+// part-hidden, with no sign-in.
+const reminderLanding = () => whenFromReminderAt(SIZE, `<p style="margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 15px; line-height: 1.5">From your reminder: booking the next <strong>Standard service</strong> for your <strong>${MAYA.bikeLong}</strong>. Change either above.<br>Your details are filled in from your reminder: <strong>Maya P.</strong> · ${mono('07700 ••• 142')} · <a href="#" style="color: ${C.ink}; font-weight: 600">Change</a></p>`);
 
 // ---------- Review requests (decision 5) ----------
 const REVIEW_WORDS = 'Thanks for coming to [Shop name], [Customer’s first name]. If you have a minute, we’d love a review: [Link to review].';
@@ -257,8 +259,8 @@ def('ac-account', () => accountPage());
 def('ac-account-lower', () => scrolled(accountPage(), { desktop: 380, tablet: 380, phone: 1150 }[SIZE]));
 def('ac-account-repairs', () => accountPage({ filter: 'Repairs' }));
 def('ac-account-new', () => accountPage({ empty: true }));
-def('ac-receipt', () => overlay(accountPage({ filter: 'Purchases' }), receiptDialog()));
-def('ac-receipt-sent', () => overlay(accountPage({ filter: 'Purchases' }), receiptDialog(true)));
+def('ac-receipt', () => overlay(accountPage({ filter: 'Repairs' }), receiptDialog()));
+def('ac-receipt-sent', () => overlay(accountPage({ filter: 'Repairs' }), receiptDialog(true)));
 def('ac-job-note', () => inShopAt(SIZE, () => jobThread('writing')));
 def('ac-job-note-sent', () => inShopAt(SIZE, () => jobThread('sent')));
 def('ac-job-note-answered', () => inShopAt(SIZE, () => jobThread('answered')));

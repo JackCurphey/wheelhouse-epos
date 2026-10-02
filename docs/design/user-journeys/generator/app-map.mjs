@@ -153,6 +153,8 @@ export function yourSettingsDialog(size = 'desktop', { graphs = false } = {}) {
   const rows = [
     a11ySettingRow('ys-symbols', 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview(size)),
     a11ySettingRow('ys-motion', 'Reduce motion', 'Turns off animations, such as the arrow that shows where a customer wants to move a job. Also switches on automatically when your computer is set to reduce motion.', false),
+    // UX walk-through 1 L6: things on a timer wait for a key press instead.
+    a11ySettingRow('ys-wait', 'Don’t close things by themselves', 'Things that close or send after a few seconds — the till’s receipt choice, Undo — wait until you press a key or button.', false),
     a11ySettingRow('ys-text', 'Larger text', 'Makes text across Wheelhouse a step larger.', false, largerTextPreview(size)),
     a11ySettingRow('ys-rail', 'Folded sidebar', P ? 'Not used on a phone, where the menu button opens the rooms.' : size === 'tablet' ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.' : 'Folds the sidebar down to icons on every page, for more room. Rest the pointer on it to unfold it. The Till always has it folded.', false),
   ];

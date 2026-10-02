@@ -70,3 +70,34 @@ Lightspeed shop (21); 7 an owner with two shops (19, 20, 17).
   by themselves" in Your settings › Accessibility; the ✕ on every pop-up a
   real button (app-wide); the diary time follows a moved job. L9's edge
   cases stay listed, not drawn.
+
+## Walk-through 1 fixes: as built (2 Oct)
+
+Drawn and copied into every canvas they touch (22 journey canvases and both
+big canvases). Checked against the plan above:
+
+- **Met as planned:** H1 (Maya's example asks to be called first; the
+  within-limit path drawn as `dq-job-within` and `dq-within-limit`, with a
+  "Work added within your limit" message), H2 ("Mark ready for collection"
+  marks it ready and sends "Bike ready" with Undo; `job-finished` now shows
+  that, with Take payment; "Start work" after approval), M1, M3 (a teal
+  "Waiting for the customer" state with its own symbol and legend entry;
+  `dq-diary-waiting`), M4 ("Your answers" and "New ready date" rows; the
+  count is now 22 messages on, 13 for a Lightspeed shop), M5, M6 (balance
+  pay and paid pages, a receipt with the deposit as its own row, and the
+  request page without a deposit plus `bk-request-deposit`), M7, M8, M9
+  (`bk-service-chosen`), L1–L8.
+- **Changed in the doing — M2:** the plan said to move Maya's diary block to
+  09:30. That slot sits under the diary's "two jobs at once" example at
+  09:00, which the move would break, so instead Maya books 11:30 — the start
+  of her diary block — and Today and the overview say "11:30 appointment".
+  The rule is the same: the arrival time is the diary slot's start.
+- **Changed in the doing — L1:** "24 North Street" turned out to come from an
+  early mock-up, not a recorded address, so it became [Shop address]
+  everywhere, matching the receipt.
+- **Left as it was:** the staff collection boards for a deposit taken at the
+  till (journey 11's £27.75) — a different kind of deposit from one paid
+  when booking; the customer's pages now use £[deposit].
+- **Not drawn (as planned):** L9's edge cases. The ✕ on pop-ups that go back
+  to another board in the prototype stays a link so the canvas can follow
+  it; every other ✕ is now a button.

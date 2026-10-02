@@ -13,7 +13,8 @@
 // 9 (audit): who sees "All shops", a till sells for its own shop, a day can
 // only be at one shop, booking goes straight on, "shop" for staff.
 //
-// Real example data only: North Street Cycles, Bolton (24 North Street, code
+// Real example data only: North Street Cycles, Bolton ([Shop address] — UX
+// walk-through 1 L1: the old "24 North Street" came from an early mock-up, code
 // B, tills B1–B3 — offline foundations §2, §5), Jack Lewis (Owner), Jo
 // Taylor (in the workshop Tue, Wed, Sat — Owner setup), the Standard service
 // at £65.00, Shimano brake pads B05S-RX at £28.00, Bolton's Today (8 bikes
@@ -48,13 +49,13 @@ const second = (html) => html.replaceAll('[Site 2]', SECOND).replaceAll('[Site 3
 // who may see it (H1). Arrows move, Escape closes and returns focus.
 const shopOption = (name, sub, on) => `<button type="button" role="menuitemradio" aria-checked="${on}"${on ? ' data-focus' : ''} style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 6px 12px; border: 0; border-radius: 8px; background: ${on ? C.mutedBg : 'transparent'}; ${on ? `outline: 2px solid ${C.ink}; outline-offset: -2px; ` : ''}font-family: inherit; text-align: left; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 12px; color: ${C.muted}">${sub}</span></span>${on ? icon('check', 16) : ''}</button>`;
 const switchMenu = () => `<div role="menu" aria-label="Choose a shop" style="position: absolute; left: 12px; top: 122px; z-index: 5; width: 300px; box-sizing: border-box; padding: 6px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(28,30,25,0.28); display: flex; flex-direction: column; gap: 2px">
-${shopOption('Bolton', '24 North Street · tills B1–B3', true)}${shopOption(SECOND, '[Address] · [n] tills', false)}
+${shopOption('Bolton', '[Shop address] · tills B1–B3', true)}${shopOption(SECOND, '[Address] · [n] tills', false)}
 <div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>
 ${shopOption('All shops', 'Today, reports and stock for every shop', false)}</div>`;
 // On tablet and phone the switcher is in the unfolded sidebar and the menu
 // sheet; choosing opens the same list as a pop-up.
 const withMenu = (base) => SIZE === 'desktop' ? `<div style="position: relative; width: ${DIMS[SIZE][0]}px; height: ${DIMS[SIZE][1]}px; overflow: hidden">${base}${switchMenu()}</div>`
-  : overlay(base, popup('shop-title', 'Choose a shop', 'You’re working in Bolton', `<div role="menu" aria-labelledby="shop-title" style="display: flex; flex-direction: column; gap: 2px">${shopOption('Bolton', '24 North Street · tills B1–B3', true)}${shopOption(SECOND, '[Address] · [n] tills', false)}<div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>${shopOption('All shops', 'Today, reports and stock for every shop', false)}</div>`, '', 420));
+  : overlay(base, popup('shop-title', 'Choose a shop', 'You’re working in Bolton', `<div role="menu" aria-labelledby="shop-title" style="display: flex; flex-direction: column; gap: 2px">${shopOption('Bolton', '[Shop address] · tills B1–B3', true)}${shopOption(SECOND, '[Address] · [n] tills', false)}<div role="separator" style="height: 1px; margin: 4px 6px; background: ${C.border}"></div>${shopOption('All shops', 'Today, reports and stock for every shop', false)}</div>`, '', 420));
 
 // Today at [Second site]: its own lines, the ones the "All shops" list
 // carries (audit M13). After a switch it says so (M3).
@@ -125,17 +126,19 @@ const worksAt = () => `<div role="group" aria-labelledby="wa-h" style="display: 
 const personBoard = () => withSite('Bolton', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog({ worksAt: worksAt(), siteDays: secondDays() })));
 
 // ---------- Booking (decision 5; audit M8, M9) ----------
-// Nothing chosen unless the customer came from a shop's page; tapping a shop
-// goes straight on to "What does your bike need?".
+// UX walk-through 1 M1: booking starts with the shop the website already
+// remembers (Buy online 8) or the shop's page the customer came from; only
+// with neither is "Which shop?" asked, nothing chosen. Tapping a shop goes
+// straight on to "What does your bike need?".
 const shopChoice = (name, sub, on) => `<button type="button" role="radio" aria-checked="${on}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; box-sizing: border-box; border-radius: 10px; border: ${on ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${on ? C.hover : C.panel}; font-family: inherit; text-align: left; color: ${C.ink}"><span style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%"><span style="font-size: 16px; font-weight: 700">${name}</span>${on ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600">${icon('check', 14)}Chosen</span>` : ''}</span><span style="font-size: 14px; color: ${C.muted}; line-height: 1.45">${sub}</span></button>`;
-const shopStepBody = (chosen = false, changing = false) => `${changing ? warnLine(`Changing shop clears your time. Your service stays if ${SECOND} offers it, at ${SECOND}’s price.`) : ''}<div role="radiogroup" aria-label="Which shop?" style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 10px">${shopChoice('Bolton', '24 North Street · open [opening hours]', chosen)}${shopChoice(SECOND, '[Address] · open [opening hours]', false)}</div>
+const shopStepBody = (chosen = false, changing = false) => `${changing ? warnLine(`Changing shop clears your time. Your service stays if ${SECOND} offers it, at ${SECOND}’s price.`) : ''}<div role="radiogroup" aria-label="Which shop?" style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 10px">${shopChoice('Bolton', '[Shop address] · open [opening hours]', chosen)}${shopChoice(SECOND, '[Address] · open [opening hours]', false)}</div>
 ${note('Choose a shop to carry on. Services, prices and free times are for the shop you choose.')}`;
 // The page footer names the business until a shop is chosen.
 const footerPlain = (html) => html.replace('North Street Cycles · Bolton</span>', 'North Street Cycles</span>');
 
 // ---------- Adding a shop (decision 7; audit M1, M2, M4, L6) ----------
 const siteCard = (name, code, addr, tills, hours, edit) => `<div style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: inline-flex; min-width: 40px; height: 40px; padding: 0 6px; box-sizing: border-box; flex-shrink: 0; border-radius: 8px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-family: ${MONO}; font-size: 15px; font-weight: 700">${code}</span><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 700">${name}</span><span style="font-size: 13px; color: ${C.muted}">${addr} · ${tills} · ${hours}</span></span>${edit ? `<button type="button" aria-label="Edit ${esc(name)}" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}; text-decoration: underline">Edit</button>` : ''}</div>`;
-const sitesOpen = (owner = true) => `${siteCard('Bolton', 'B', '24 North Street · [shop phone]', 'tills B1–B3', '[opening hours]', owner)}${siteCard(SECOND, '[code]', '[Address] · [phone]', '[n] tills', '[opening hours]', owner)}
+const sitesOpen = (owner = true) => `${siteCard('Bolton', 'B', '[Shop address] · [shop phone]', 'tills B1–B3', '[opening hours]', owner)}${siteCard(SECOND, '[code]', '[Address] · [phone]', '[n] tills', '[opening hours]', owner)}
 <div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px; padding-top: 6px">${owner ? button('+ Add a shop', { variant: 'default' }) : note('Only the owner can add or change shops.')}${note('Customers, products, staff and messages are shared by every shop.')}</div>`;
 const sitesBoard = (owner = true) => withSite('Bolton', () => settingsPage('shop', 'Shop and sites', SHOP_INTRO, shopFolds({ sites: sitesOpen(owner) }, `Bolton, ${SECOND}`), { who: owner ? OWNER : MANAGER }));
 const req = (t) => `${t} (required)`;
@@ -178,7 +181,7 @@ def('ms-services-differs', () => servicesBoard(true));
 def('ms-product-price', () => overlay(second(stockScreens['tr-sites'][SIZE]), productDialog()));
 def('ms-person', () => personBoard());
 def('ms-book-shop', () => footerPlain(shopStepAt(SIZE, shopStepBody())));
-def('ms-book-shop-chosen', () => serviceAfterShopAt(SIZE, 'North Street Cycles, Bolton', 'from Bolton’s page'));
+def('ms-book-shop-chosen', () => serviceAfterShopAt(SIZE, 'North Street Cycles, Bolton', 'the shop you chose on the website'));
 def('ms-book-shop-change', () => shopStepAt(SIZE, shopStepBody(true, true), 'Bolton'));
 def('ms-sites', () => sitesBoard());
 def('ms-sites-manager', () => sitesBoard(false));
@@ -210,8 +213,8 @@ export const TITLES = {
   'ms-services-differs': 'Services list at [Second site]: its price beside the all-shops one',
   'ms-product-price': 'A product’s price, different at one shop',
   'ms-person': 'A person: where they work, and workshop days at each shop',
-  'ms-book-shop': 'Book a repair: “Which shop?” first, nothing chosen',
-  'ms-book-shop-chosen': 'Came from Bolton’s page: the shop chosen, straight to the service',
+  'ms-book-shop': 'No shop chosen yet on the website: “Which shop?” first',
+  'ms-book-shop-chosen': 'The website already has Bolton: the shop chosen, straight to the service',
   'ms-book-shop-change': 'Changing the shop: what it resets',
   'ms-sites': 'Settings › Shop and sites: each shop (owner)',
   'ms-sites-manager': 'The same, as a manager sees it',

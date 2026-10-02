@@ -27,7 +27,16 @@ Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy on
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (425 and 283 files of 512 each).
+phone (425 and 292 files of 512 each).
+
+**UX walk-through 1, the repair story (2 Oct):** the first end-of-project
+walk-through, a pilot; 20 findings, every recommendation taken and drawn
+across journeys 1, 3, 4, 5, 7, 10, 12 and 19 (and app-wide: the ✕ on
+pop-ups, a "Don't close things by themselves" setting, two new message
+rows). Report `docs/design/user-journeys/ux-walkthrough-1-repair.md`,
+decisions `docs/decisions/2026-10-02-ux-walkthrough.md`, and a reusable
+script `ux-walkthrough-script.md` for Jack and Mark. Overview: 713 screens,
+710 designed. Next: walk-throughs 2–7.
 
 **Leftover screens (2 Oct):** Jack chose to draw the screens still marked
 "not designed" except journey 13's supplier screens, which wait for a later
