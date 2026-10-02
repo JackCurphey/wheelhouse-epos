@@ -63,3 +63,41 @@ as few clicks as possible).
    the log filtered to it, so that route is one click. The sidebar is
    unchanged. Chosen over its own sidebar item, Office › Activity, and a
    link from Today only.
+6. **UI audit: every recommendation taken** (Jack, 2 Oct: "go with all of
+   them i think"). From `design/user-journeys/oversight-ui-audit.md`:
+   - **At a till, the name is whoever's PIN was last typed**, so the log and
+     the alerts say "while Jo Taylor was checked in on Till B1", and the
+     log says so in one line (H1).
+   - **Staff are told what's recorded and can see their own lines.** Your
+     settings has "What Wheelhouse records about you" with "See my own
+     activity"; a short note shows the first time someone signs in (H2).
+   - How long records are kept is one period set by Wheelhouse, shown on the
+     log ([period] until decided, LEG-05). A deleted customer's name is
+     removed from log lines (H3).
+   - The three alerts show only to owners and managers, not to everyone
+     with "Can close the day". Their buttons say what they open (H4).
+   - Checking someone out of a till first shows what the till is doing.
+     "After this sale" is the default; "Now" puts the basket on hold, and
+     it can't happen during a card payment. On tills the button is "Check
+     out Jo Taylor" (H5).
+   - The feedback picture hides customer details before the preview, with
+     "View larger", a written description, and who at Wheelhouse sees it
+     and for how long (H6).
+   - Every log line shows its shop, with a Shop filter (M1). A manager's
+     log, the Reports page without the log for staff, and the log refused
+     to staff are drawn. Managers see everyone's lines, the owner's too —
+     the audit asked for this to be confirmed, and Jack took the
+     recommendations as a whole (M2).
+   - An alert is off until an amount is set; each shows how many it would
+     have raised in the last 30 days; discounts and refunds have their own
+     amounts; a bulk price change raises one alert (M3).
+   - "Seen by Jack Lewis at [time]" shows on the log line (M4). Clearer
+     alert wording with the reason and the number of sales (M5).
+   - Only the owner can sign out the owner's devices; each device shows its
+     shop (M6). Signing out and downloading the log are recorded too; only
+     the owner changes the alert amounts, managers see them read-only (M7).
+   - Buttons named for their item (M8); 44px targets (M9).
+   - L1–L6: larger detail text; names in the log filter by that person;
+     "Back to Today" when opened from an alert; "Activity log" as the name;
+     "Send" greyed until something is typed, and the failed send drawn;
+     "Type of action" rather than "Kind".

@@ -105,7 +105,7 @@ const REPORTS = [
   ['VAT', 'VAT by rate for your VAT quarter, for your accountant', true],
   // Management oversight (journey 20) decisions 1 and 5: owners and
   // managers only.
-  ['Activity', 'Who changed a price, voided a sale or changed a job — everything, by person', true],
+  ['Activity log', 'What was done, when and by whom: prices, voids, refunds, discounts, jobs, stock', true],
 ];
 const reportCard = ([name, sub]) => `<a href="#" style="display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}; min-height: 76px; box-sizing: border-box"><span style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 16px; font-weight: 700">${name}</span><span aria-hidden="true" style="color: ${C.muted}">›</span></span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.4">${sub}</span></a>`;
 const menuBtn = (name) => `<button type="button" aria-label="More for ${esc(name)}" aria-haspopup="menu" style="flex-shrink: 0; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; font-family: inherit; font-size: 20px; font-weight: 700; color: ${C.ink}">…</button>`;
