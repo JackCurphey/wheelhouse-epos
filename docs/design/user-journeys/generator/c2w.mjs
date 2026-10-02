@@ -143,7 +143,7 @@ ${stages(stage)}
 ${isPhone() ? `${left}${right}` : `<div style="display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 14px; align-items: start"><div style="display: flex; flex-direction: column; gap: 14px">${left}</div><div style="display: flex; flex-direction: column; gap: 14px">${right}</div></div>`}`);
 };
 // Audit M9: the More menu.
-const moreMenu = () => `<div role="menu" aria-label="More for Maya Patel’s order" style="position: absolute; right: 0; top: 50px; z-index: 5; width: 280px; padding: 6px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(38,36,32,0.18); display: flex; flex-direction: column">${['Change the bike or size', 'Change the accessories', 'Change the provider', 'Release the bike'].map((t) => `<button type="button" role="menuitem" style="min-height: 44px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-family: inherit; font-size: 15px; color: ${C.ink}">${t}</button>`).join('')}<span style="height: 1px; margin: 4px 6px; background: ${C.border}"></span><button type="button" role="menuitem" style="min-height: 44px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-family: inherit; font-size: 15px; color: ${C.danger}">Cancel the order…</button><p style="margin: 6px 12px 8px; font-size: 13px; color: ${C.muted}; line-height: 1.45">A change after the quote is sent makes a revised quote; nothing is sent until you press Email.</p></div>`;
+const moreMenu = () => `<div role="menu" aria-label="More for Maya Patel’s order" style="position: absolute; ${isPhone() ? 'left: 0' : 'right: 0'}; top: 50px; z-index: 5; width: ${isPhone() ? 300 : 280}px; padding: 6px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; box-shadow: 0 12px 32px rgba(38,36,32,0.18); display: flex; flex-direction: column">${['Change the bike or size', 'Change the accessories', 'Change the provider', 'Release the bike'].map((t) => `<button type="button" role="menuitem" style="min-height: 44px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-family: inherit; font-size: 15px; color: ${C.ink}">${t}</button>`).join('')}<span style="height: 1px; margin: 4px 6px; background: ${C.border}"></span><button type="button" role="menuitem" style="min-height: 44px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-family: inherit; font-size: 15px; color: ${C.danger}">Cancel the order…</button><p style="margin: 6px 12px 8px; font-size: 13px; color: ${C.muted}; line-height: 1.45">A change after the quote is sent makes a revised quote; nothing is sent until you press Email.</p></div>`;
 
 // ---------- Starting one (decisions 1, 3, 4, 6; audit H5, M1, M4, M11) ----------
 const select = (id, label, value, sub = '') => `<div style="display: flex; flex-direction: column; gap: 6px"><label id="${id}-l" for="${id}" style="font-size: 14px; font-weight: 600">${label}</label><button id="${id}" type="button" aria-haspopup="listbox" aria-labelledby="${id}-l ${id}"${sub ? ` aria-describedby="${id}-s"` : ''} style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}">${value}${icon('chevron', 14)}</button>${sub ? `<span id="${id}-s" style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</div>`;
@@ -265,11 +265,11 @@ owner('cw-today-held', () => todayBoard(true));
 owner('cw-settings', () => c2wSettings({ hold: holdOpen(), order: orderOpen() }));
 owner('cw-settings-deposit', () => c2wSettings({ deposit: depositOpen(), apply: applyOpen() }));
 owner('cw-settings-provider', () => overlay(c2wSettings({ providers: providersOpen() }), providerEdit()));
-owner('cw-messages', () => scrolledMsgs(isPhone() ? 900 : 470));
+owner('cw-messages', () => scrolledMsgs(isPhone() ? 1240 : 470));
 def('cw-email', () => email());
 def('cw-customer-view', () => customerView());
 
-const SIZES = ['desktop'];
+const SIZES = ['desktop', 'tablet', 'phone'];
 const NO_SIDEBAR = new Set(['cw-email', 'cw-customer-view']);
 for (const [id, fn] of recipes) {
   screens[id] = {};
