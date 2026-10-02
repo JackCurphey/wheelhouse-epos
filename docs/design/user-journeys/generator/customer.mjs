@@ -122,6 +122,8 @@ ${card(CUSTOMERS.map(custRow).join('').replace('border-top: 1px solid', 'border-
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span></span><a href="cs-privacy-desktop.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Privacy requests · [n] open</a></div></div>`, STAFF);
 // Add a customer (decision 3): a person or a company or club; address and
 // a note are optional; marketing permission starts off (booking spec).
+// A company also has an optional VAT number and "Send invoices to", for the
+// VAT invoice email (leftover screens audit H2).
 function addDialog(company = false, match = false) {
   const who = choice('This is', [['A person', !company], ['A company or club', company]]);
   const names = company ? `${field('Company or club name', { placeholder: 'e.g. the club’s name' })}${field('Contact name', { placeholder: 'Who we deal with' })}` : field('Name', { placeholder: 'First and last name', value: match ? 'Maya P.' : '' });
@@ -130,7 +132,7 @@ function addDialog(company = false, match = false) {
   const two = (a, b) => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${a}${b}</div>`;
   return popup('add-title', 'Add a customer', 'Only a name and one way to reach them are needed', `${who}${names}
 ${two(field('Phone', { type: 'tel', value: match ? MAYA.phone : '' }), field('Email', { type: 'email' }))}${note('A phone number or an email — at least one.')}${found}
-${two(field('Address (optional)'), field('Postcode (optional)'))}
+${two(field('Address (optional)'), field('Postcode (optional)'))}${company ? `\n${two(field('VAT number (optional)', { placeholder: 'For VAT invoices' }), field('Send invoices to (optional)', { type: 'email', placeholder: 'The contact’s email if blank' }))}` : ''}
 ${choice('Group (optional)', [['None', true], ['[Club name] members', false]])}
 ${field('Note (optional)', { placeholder: 'e.g. prefers texts, not calls' })}
 <div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Happy to hear about offers</span><span style="font-size: 13px; color: ${C.muted}">Only if they say yes. Job updates always go.</span></span>${offer('Off', false)}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Add the customer')}`, 640);

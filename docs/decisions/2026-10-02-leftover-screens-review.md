@@ -61,6 +61,42 @@ addresses are bracketed placeholders.
    who said yes to messages. Chosen over just the numbers, and a "Returning"
    column in the Sales report.
 
+## UI audit
+
+6. **UI audit: every recommendation taken** (Jack, 2 Oct: "1"). From
+   `design/user-journeys/leftover-ui-audit.md` (4 High, 11 Medium, 8 Low):
+   - **The receipt email comes in two versions** (H1): with a customer, as
+     drawn; with no customer, no account button, "Questions? Call [shop
+     phone]", and "Keep this for returns. Show this email or give the
+     receipt number."
+   - **A company customer gets two optional boxes, "VAT number" and "Send
+     invoices to"** (H2), which default to the contact's email; the invoice
+     prints its "Invoice to" block from the record and leaves out a line
+     that is blank. What a VAT invoice must carry, and whether it needs its
+     own number series, is unchecked: Jack to ask the accountant.
+   - **A till-sale receipt is drawn too** (M3): quantities, a discount, a
+     split payment. VAT stays one "VAT at [rate]" row until the accountant
+     says whether lines can have different rates.
+   - **The PIN-screen line says what is up to date** (M4): "Online · prices
+     and stock updated [time]"; amber when offline with sales waiting, or
+     online but not updated for [n] minutes, or online with sales still
+     sending. "Till B1 · Bolton" leaves the line (it's already in the bar).
+   - **Returning customers** (M5, M7, M9): new and returning as two parts of
+     one bar, so dashed still means "the period before" everywhere; "Last
+     12 months / Last 24 months / Pick dates", the spend column following
+     the period, a box to set the [n] months; a Message button on each
+     customer happy to hear from the shop.
+   - **The text receipt page stays as drawn, barcode included, and its link
+     doesn't expire** (M10, the audit's option 1). Open: whether customers
+     are expected to show their phone at the counter.
+   - No choice needed: [n] for the invented "3 sales" (H4); a table of the
+     monthly figures under the chart (H3); the till's next-sale countdown
+     stops while the receipt pop-up is open, the cursor starts in the box
+     and Enter sends (M1); the pop-up's missing states drawn (M2); phone
+     month labels (M6); "Sales with no customer on them are not counted"
+     (M8); "Email it to me" and "Download receipt (PDF)" drawn, the page
+     taking the invoice version (M11); and L1–L8.
+
 ## Drawn
 
 Drawn at desktop, tablet and phone on each journey's own canvas and copied
@@ -68,10 +104,21 @@ into the big canvas (2 Oct). Journey 5 gains a row, "The receipt": the
 receipt email, the VAT invoice email, the text receipt and the till's "Email
 the receipt" pop-up; its old "done-receipt" placeholder is gone. Journey B's
 Till row gains the offline start-up screen; on it the till's top bar says
-"Offline · 3 sales waiting to send" as well, so the bar and the start-up line
-agree. Journey 17 gains Returning customers after the staff discounts
+"Offline · [n] sales waiting to send" as well (on a phone the bar has room
+only for "Offline"). Journey 17 gains Returning customers after the staff discounts
 report, with a card on Reports home (so journey 20's Reports screens
 change too); its "Still to design" row is gone, and so is journey 10's
 start-up placeholder. No UI audit has been run on these screens yet. The
 three screens still not designed are journey 13's supplier screens, left
 for a later release.
+
+After the UI audit (decision 6), 2 Oct: journey 5's receipt row grows to 12
+screens (the email with no customer, a till sale, "Email it to me" on the
+receipt page, and the pop-up's error, save, text, customer-on-sale and
+offline states); journey B gains "online, but not up to date"; Returning
+customers gains the monthly table, stacked bars and Message buttons;
+journey 15's company form gains its two boxes. Two points are left for the
+build rather than drawn: the email's barcode as a picture file (some email
+programs don't show drawn ones, from memory), and the shared pop-up's ✕
+being a link rather than a button — that is the same on every pop-up in
+the app, so it's for the end-of-project audit, not this batch.

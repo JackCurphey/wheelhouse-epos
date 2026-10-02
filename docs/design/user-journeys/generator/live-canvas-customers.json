@@ -75,8 +75,16 @@
    "title": "Designed · Till start-up: offline, sales waiting to send (the start-up line on the PIN screen) (desktop)",
    "is_interactive": true
   },
-  "jb-till-pin-wrong-desktop.dc.html": {
+  "jb-till-checkin-stale-desktop.dc.html": {
    "x": 10880,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till start-up: online, but not up to date (desktop)",
+   "is_interactive": true
+  },
+  "jb-till-pin-wrong-desktop.dc.html": {
+   "x": 12200,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -84,7 +92,7 @@
    "is_interactive": true
   },
   "jb-pin-change-desktop.dc.html": {
-   "x": 12200,
+   "x": 13520,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -92,7 +100,7 @@
    "is_interactive": true
   },
   "jb-cust-signin-desktop.dc.html": {
-   "x": 13680,
+   "x": 15000,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -100,7 +108,7 @@
    "is_interactive": true
   },
   "jb-cust-code-desktop.dc.html": {
-   "x": 15000,
+   "x": 16320,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -108,7 +116,7 @@
    "is_interactive": true
   },
   "jb-cust-code-expired-desktop.dc.html": {
-   "x": 16320,
+   "x": 17640,
    "y": 2894,
    "w": 1280,
    "h": 856,
@@ -116,7 +124,7 @@
    "is_interactive": true
   },
   "jb-pending.dc.html": {
-   "x": 17640,
+   "x": 18960,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -124,7 +132,7 @@
    "is_interactive": true
   },
   "jb-expired.dc.html": {
-   "x": 18110,
+   "x": 19430,
    "y": 2894,
    "w": 390,
    "h": 900,
@@ -1507,32 +1515,96 @@
    "title": "Designed · The receipt email (desktop)",
    "is_interactive": true
   },
-  "j05-cp-invoice-email-desktop.dc.html": {
+  "j05-cp-receipt-email-guest-desktop.dc.html": {
    "x": 27040,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · No customer on the sale: the email without an account (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-invoice-email-desktop.dc.html": {
+   "x": 28360,
    "y": 12262,
    "w": 1280,
    "h": 856,
    "title": "Designed · For a business: headed “VAT invoice” (desktop)",
    "is_interactive": true
   },
+  "j05-cp-receipt-email-till-desktop.dc.html": {
+   "x": 29680,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A till sale: quantities, a discount, a split payment (desktop)",
+   "is_interactive": true
+  },
   "j05-cp-receipt-text-desktop.dc.html": {
-   "x": 28360,
+   "x": 31000,
    "y": 12262,
    "w": 1280,
    "h": 856,
    "title": "Designed · A text receipt: a link to the same receipt (desktop)",
    "is_interactive": true
   },
+  "j05-cp-receipt-text-email-desktop.dc.html": {
+   "x": 32320,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The receipt page: Email it to me (desktop)",
+   "is_interactive": true
+  },
   "j05-cp-receipt-address-desktop.dc.html": {
-   "x": 29680,
+   "x": 33640,
    "y": 12262,
    "w": 1280,
    "h": 856,
    "title": "Designed · No customer on the sale: this receipt only (desktop)",
    "is_interactive": true
   },
+  "j05-cp-receipt-address-error-desktop.dc.html": {
+   "x": 34960,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The address doesn’t look right (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-receipt-address-save-desktop.dc.html": {
+   "x": 36280,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ticked: the receipt goes, then Add a customer (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-receipt-address-text-desktop.dc.html": {
+   "x": 37600,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Text the receipt: a mobile number (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-receipt-address-customer-desktop.dc.html": {
+   "x": 38920,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A customer on the sale: their address filled in (desktop)",
+   "is_interactive": true
+  },
+  "j05-cp-receipt-address-offline-desktop.dc.html": {
+   "x": 40240,
+   "y": 12262,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The till is offline: it sends when back online (desktop)",
+   "is_interactive": true
+  },
   "j05-ready.dc.html": {
-   "x": 31160,
+   "x": 41720,
    "y": 12262,
    "w": 390,
    "h": 900,
@@ -2214,6 +2286,7 @@
   "jb-till-setup-desktop.dc.html",
   "jb-till-checkin-desktop.dc.html",
   "jb-till-checkin-offline-desktop.dc.html",
+  "jb-till-checkin-stale-desktop.dc.html",
   "jb-till-pin-wrong-desktop.dc.html",
   "jb-pin-change-desktop.dc.html",
   "jb-cust-signin-desktop.dc.html",
@@ -2393,9 +2466,17 @@
   "j05-cp-messages-desktop.dc.html",
   "j05-cp-message-wording-desktop.dc.html",
   "j05-cp-receipt-email-desktop.dc.html",
+  "j05-cp-receipt-email-guest-desktop.dc.html",
   "j05-cp-invoice-email-desktop.dc.html",
+  "j05-cp-receipt-email-till-desktop.dc.html",
   "j05-cp-receipt-text-desktop.dc.html",
+  "j05-cp-receipt-text-email-desktop.dc.html",
   "j05-cp-receipt-address-desktop.dc.html",
+  "j05-cp-receipt-address-error-desktop.dc.html",
+  "j05-cp-receipt-address-save-desktop.dc.html",
+  "j05-cp-receipt-address-text-desktop.dc.html",
+  "j05-cp-receipt-address-customer-desktop.dc.html",
+  "j05-cp-receipt-address-offline-desktop.dc.html",
   "j05-ready.dc.html",
   "j06-cw-list-desktop.dc.html",
   "j06-cw-list-owner-desktop.dc.html",
@@ -2511,7 +2592,7 @@
    "maxH": 150
   },
   "jb_s3": {
-   "x": 13680,
+   "x": 15000,
    "y": 2654,
    "text": "Customers",
    "w": 520,
@@ -2525,7 +2606,7 @@
    "y": 2334,
    "text": "B · Signing in and access — Staff and customers",
    "kind": "title1",
-   "maxW": 18500
+   "maxW": 19820
   },
   "j01_s5": {
    "x": 0,
@@ -2836,7 +2917,7 @@
    "maxH": 150
   },
   "j05_s37": {
-   "x": 31160,
+   "x": 41720,
    "y": 12022,
    "text": "Also at collection",
    "w": 520,
@@ -2850,7 +2931,7 @@
    "y": 11702,
    "text": "05 · Collect the bike and pay — Customer",
    "kind": "title1",
-   "maxW": 31550
+   "maxW": 42110
   },
   "j06_s39": {
    "x": 0,

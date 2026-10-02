@@ -70,7 +70,7 @@ screens['auth-noaccess'] = {
 // Till screens before anyone is serving: the till bar says so (decision 9).
 function tillFrame(size, content, offline = false) {
   const [W, H] = SIZE[size];
-  const bar = size === 'phone' ? tillPhoneBar(null, offline) : tillBar({ serving: null, offline: offline ? '3 sales' : null });
+  const bar = size === 'phone' ? tillPhoneBar(null, offline) : tillBar({ serving: null, offline: offline ? '[n] sales' : null });
   return `<div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}">${bar}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: ${size === 'phone' ? '16px' : '28px'}">${content}</main></div>`;
 }
 
@@ -93,18 +93,28 @@ const dots = (n) => `<div role="status" aria-label="${n} of 4 digits entered" st
 const checkedIn = (names) => `<div style="display: flex; flex-direction: column; gap: 10px"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">Checked in today</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${names.map((n) => `<span style="display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 14px; font-weight: 600"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}; font-size: 12px; font-weight: 700">${n.split(' ').map((x) => x[0]).join('')}</span>${n}</span>`).join('')}</div></div>`;
 // Leftover screens decision 4 (2 Oct): the till's start-up status is one
 // line on the PIN screen — amber when something's wrong.
-const tillStatus = (size, offline) => `<p role="status" style="margin: 0; display: inline-flex; align-self: center; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: ${offline ? C.warnBg : C.okBg}; color: ${offline ? C.warnInk : C.successInk}; font-size: ${size === 'phone' ? 13 : 14}px; font-weight: 600">${icon(offline ? 'wifi' : 'check', 15)}${offline ? 'Till B1 · Bolton · Offline · 3 sales waiting to send · last updated [time]' : 'Till B1 · Bolton · Online · up to date'}</p>`;
-function checkin(size, { wrong = false, offline = false } = {}) {
+// Leftover audit M4: the line says what is up to date (prices and stock,
+// and sales sent) and leaves the till's name to the bar. Amber when offline
+// with sales waiting, or online but not updated for [n] minutes.
+const STATUS = {
+  online: [false, 'check', 'Online · prices and stock updated [time]'],
+  offline: [true, 'wifi', 'Offline · [n] sales waiting to send · prices and stock last updated [time]'],
+  stale: [true, 'alert', 'Online · prices and stock last updated [time] · [n] sales still sending'],
+};
+const tillStatus = (size, state) => { const [warn, ic, t] = STATUS[state]; return `<p role="status" style="margin: 0; display: inline-flex; align-self: center; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 10px; background: ${warn ? C.warnBg : C.okBg}; color: ${warn ? C.warnInk : C.successInk}; font-size: ${size === 'phone' ? 13 : 14}px; font-weight: 600; text-align: left">${icon(ic, 15)}<span>${t}</span></p>`; };
+function checkin(size, { wrong = false, state = 'online' } = {}) {
+  const offline = state === 'offline';
   const P = size === 'phone';
   const w = P ? 'auto' : '360px';
   return tillFrame(size, `<div style="height: 100%; display: flex; flex-direction: column; align-items: ${P ? 'stretch' : 'center'}; justify-content: center; gap: ${P ? 18 : 22}px">
-<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 16 : 20}px; text-align: center">${tillStatus(size, offline)}${h1('Enter your PIN', P ? 24 : 28)}${p('Your PIN checks you in and puts your name on sales. It works even when the internet is down.', P ? 14 : 15)}${dots(wrong ? 0 : 2)}${wrong ? errorLine('That PIN isn’t anyone’s — try again') : ''}${pinPad(P ? 60 : 68)}</div>
+<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 16 : 20}px; text-align: center">${tillStatus(size, state)}${h1('Enter your PIN', P ? 24 : 28)}${p('Your PIN checks you in and puts your name on sales. It works even when the internet is down.', P ? 14 : 15)}${dots(wrong ? 0 : 2)}${wrong ? errorLine('That PIN isn’t anyone’s — try again') : ''}${pinPad(P ? 60 : 68)}</div>
 <div style="width: ${w}">${checkedIn(['Alex Morgan'])}</div>
 </div>`, offline);
 }
 screens['till-checkin'] = each((size) => checkin(size));
 screens['till-pin-wrong'] = each((size) => checkin(size, { wrong: true }));
-screens['till-checkin-offline'] = each((size) => checkin(size, { offline: true }));
+screens['till-checkin-offline'] = each((size) => checkin(size, { state: 'offline' }));
+screens['till-checkin-stale'] = each((size) => checkin(size, { state: 'stale' }));
 
 // Decisions 6 and 7: change your PIN from Your settings. Wheelhouse picks a
 // new random PIN nobody else has (so choosing can't reveal a colleague's);
@@ -167,6 +177,7 @@ export const TITLES = {
   'till-setup': 'Set up this till (manager)',
   'till-checkin': 'Till check-in — PIN only',
   'till-checkin-offline': 'Till start-up: offline, sales waiting to send',
+  'till-checkin-stale': 'Till start-up: online, but not up to date',
   'till-pin-wrong': 'Till check-in — wrong PIN',
   'pin-change': 'Your new till PIN — Wheelhouse picks it',
   'cust-signin': 'Customer sign-in on the shop’s website — email me a code',
@@ -177,6 +188,6 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-pin-wrong', 'pin-change'] },
+  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-pin-wrong', 'pin-change'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code', 'cust-code-expired'] },
 ];

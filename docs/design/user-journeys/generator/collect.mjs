@@ -32,9 +32,9 @@ let SIZE = 'desktop';
 
 // ---------- The customer's page: the job summary (decision 2) ----------
 // The shop's website frame, as journey B's customer pages use it.
-const site = (content) => {
+const site = (content, active = 'Book a repair') => {
   const body = `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px">${content}</div>`;
-  return SIZE === 'desktop' ? siteDesktop('sand', 'Book a repair', body) : SIZE === 'tablet' ? siteTablet('sand', body, 'Book a repair') : sitePhone('sand', { content: body });
+  return SIZE === 'desktop' ? siteDesktop('sand', active, body) : SIZE === 'tablet' ? siteTablet('sand', body, active) : sitePhone('sand', { content: body });
 };
 // Audit L1: each card is a labelled section.
 const slug = (t) => t.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
@@ -147,22 +147,73 @@ def('cp-message-wording', () => overlay(msgPage({ list: msgListOpen() }), waitin
 // sale, the address is for this receipt only unless "Save to a customer
 // record" is ticked.
 const DIMS = { desktop: [1280, 800], tablet: [1180, 820], phone: [390, 844] };
-const rkv = (k, v, strong = false) => `<tr style="border-top: 1px solid ${C.border}"><td style="padding: 7px 0${strong ? '; font-weight: 700' : ''}">${k}</td><td style="padding: 7px 0; text-align: right${strong ? '; font-weight: 700' : ''}">${v}</td></tr>`;
-const receiptBody = (invoice = false) => `<div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap"><div style="display: flex; flex-direction: column; gap: 3px; font-size: 14px"><strong style="font-size: 16px">North Street Cycles</strong><span>[Shop address] · [shop phone]</span><span>VAT number [VAT number]</span></div><div style="display: flex; flex-direction: column; gap: 3px; align-items: flex-end; font-size: 14px"><span>${invoice ? 'Invoice' : 'Receipt'} ${mono('B1-[0000]')}</span><span>[date] · [time]</span>${barcode128('B1-[0000]', 150, 30)}</div></div>
+// Leftover audit L2: the first column is row headings, and the table is named.
+const rkv = (k, v, strong = false) => `<tr style="border-top: 1px solid ${C.border}"><th scope="row" style="padding: 7px 0; text-align: left; font-weight: ${strong ? 700 : 400}">${k}</th><td style="padding: 7px 0; text-align: right${strong ? '; font-weight: 700' : ''}">${v}</td></tr>`;
+const hidden = 'position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap';
+const qty = (n, each) => `<span style="display: block; font-size: 13px; color: ${C.muted}">${n} × ${mono(money(each))}</span>`;
+// Audit M3: a till sale as well as a repair — the till's own example lines
+// (journey 11: 2 × brake pads, fitting, a split of £20.00 cash); the
+// discount and what follows from it are placeholders. One VAT row until the
+// accountant says whether lines can have different rates.
+const tillLines = () => `${rkv(`Shimano brake pads${qty(2, 28)}`, mono(money(56)))}${rkv('Fit &amp; adjust brakes', mono(money(18)))}${rkv('Discount · [reason]', mono('−£[amount]'))}${rkv('Total (includes VAT)', mono('£[total]'), true)}${rkv('VAT at [rate]', mono('£[VAT]'))}${rkv('Paid by cash', mono(money(20)))}${rkv('Paid by card · [card ending]', mono('£[rest]'))}`;
+const repairLines = () => `${approved.map((l) => rkv(esc(l.work), mono(money(l.price)))).join('')}${rkv('Total (includes VAT)', mono(money(WORK_TOTAL_APPROVED)), true)}${rkv('VAT at [rate]', mono('£[VAT]'))}${rkv('Paid by', 'Card · [card ending]')}`;
+// Audit H2: the "Invoice to" block comes from the company's record (Add a
+// customer gains "VAT number" and "Send invoices to"); a blank line is left out.
+const receiptBody = ({ invoice = false, till = false } = {}) => `<div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap"><div style="display: flex; flex-direction: column; gap: 3px; font-size: 14px"><strong style="font-size: 16px">North Street Cycles</strong><span>[Shop address] · [shop phone]</span><span>VAT number [VAT number]</span></div><div style="display: flex; flex-direction: column; gap: 3px; align-items: ${isPhone() ? 'flex-start' : 'flex-end'}; font-size: 14px"><span>${invoice ? 'Invoice' : 'Receipt'} ${mono('B1-[0000]')}</span><span>[date] · [time]</span>${barcode128('B1-[0000]', 150, 30)}</div></div>
 ${invoice ? `<div style="padding: 10px 12px; border-radius: 6px; background: ${C.bg}; font-size: 14px; line-height: 1.5"><strong>Invoice to</strong><br>[Company name] · [Company address]<br>VAT number [Company VAT number]</div>` : ''}
-<table style="width: 100%; border-collapse: collapse; font-size: 14px"><thead><tr style="text-align: left; font-size: 12px; color: ${C.muted}"><th style="padding: 6px 0; font-weight: 600">${mono('WH-1042')} · Trek Domane AL 3</th><th style="padding: 6px 0; text-align: right; font-weight: 600">Price</th></tr></thead><tbody>${approved.map((l) => rkv(esc(l.work), mono(money(l.price)))).join('')}${rkv('Total (includes VAT)', mono(money(WORK_TOTAL_APPROVED)), true)}${rkv('VAT at [rate]', mono('£[VAT]'))}${rkv('Paid by', 'Card · [card ending]')}</tbody></table>`;
-const receiptEmail = (invoice = false) => {
+<table style="width: 100%; border-collapse: collapse; font-size: 14px"><caption style="${hidden}">${invoice ? 'Items on this invoice' : 'Items on this receipt'}</caption><thead><tr style="text-align: left; font-size: 12px; color: ${C.muted}"><th scope="col" style="padding: 6px 0; font-weight: 600">${till ? 'Till sale' : `${mono('WH-1042')} · Trek Domane AL 3`}</th><th scope="col" style="padding: 6px 0; text-align: right; font-weight: 600">Price</th></tr></thead><tbody>${till ? tillLines() : repairLines()}</tbody></table>`;
+// Audit H1: with no customer on the sale there's no account to see, so that
+// email has no account button and its returns line uses the receipt itself.
+// L1: in an email the button is a real link.
+const receiptEmail = ({ invoice = false, guest = false, till = false } = {}) => {
   const [W, H] = DIMS[SIZE];
   const P = isPhone();
-  return `<div style="width: ${W}px; height: ${H}px; box-sizing: border-box; padding: ${P ? 12 : 40}px; display: flex; justify-content: center; align-items: flex-start; background: ${C.bg}; overflow: hidden"><article aria-label="Email to Maya Patel" style="width: ${P ? '100%' : '620px'}; box-sizing: border-box; padding: ${P ? 18 : 28}px; background: #ffffff; border: 1px solid ${C.border}; border-radius: 10px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; line-height: 1.5; color: ${C.ink}"><span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to ${invoice ? '[accounts email]' : 'maya@example.test'}</span><h1 style="margin: 0; font-size: 22px">${invoice ? 'VAT invoice' : 'Your receipt'}</h1>${receiptBody(invoice)}${button('See it in your account', { variant: 'default' })}<p style="margin: 0; font-size: 13px; color: ${C.muted}">Keep this for returns — or just give your name in the shop.</p></article></div>`;
+  const to = invoice ? '[accounts email]' : guest ? '[email address]' : 'maya@example.test';
+  const foot = guest
+    ? `<p style="margin: 0; font-size: 14px">Questions? Call [shop phone].</p><p style="margin: 0; font-size: 13px; color: ${C.muted}">Keep this for returns. Show this email or give the receipt number.</p>`
+    : `${button('See it in your account', { variant: 'default', href: '#' })}<p style="margin: 0; font-size: 13px; color: ${C.muted}">Keep this for returns — or just give your name in the shop.</p>`;
+  return `<div style="width: ${W}px; height: ${H}px; box-sizing: border-box; padding: ${P ? 12 : 40}px; display: flex; justify-content: center; align-items: flex-start; background: ${C.bg}; overflow: hidden"><article aria-label="${guest ? 'Email to [email address]' : invoice ? 'Email to [Company name]' : 'Email to Maya Patel'}" style="width: ${P ? '100%' : '620px'}; box-sizing: border-box; padding: ${P ? 18 : 28}px; background: #ffffff; border: 1px solid ${C.border}; border-radius: 10px; display: flex; flex-direction: column; gap: 14px; font-size: 15px; line-height: 1.5; color: ${C.ink}"><span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to ${to}</span><h1 style="margin: 0; font-size: 22px">${invoice ? 'VAT invoice' : 'Your receipt'}</h1>${receiptBody({ invoice, till })}${foot}</article></div>`;
 };
-const receiptText = () => site(`<div style="width: 100%; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">${bubble(`North Street Cycles: your receipt for ${money(WORK_TOTAL_APPROVED)} — [link]`).replace('PREVIEW · TEXT TO MAYA PATEL', 'THE TEXT MAYA GETS')}<h1 style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Your receipt</h1>${note('Opened from the link in the text — nothing to sign in to.')}${card(`<div style="padding: ${isPhone() ? 16 : 20}px; display: flex; flex-direction: column; gap: 12px">${receiptBody()}</div>`)}<div style="display: flex; flex-wrap: wrap; gap: 10px">${button('Download receipt', { variant: 'default' })}${button('Email it to me', { variant: 'default' })}</div></div>`);
-const tick = (t, on = false) => `<label style="display: flex; align-items: flex-start; gap: 10px; min-height: 44px; cursor: pointer"><input type="checkbox"${on ? ' checked' : ''} style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">Off: the address is used for this receipt only.</span></span></label>`;
-const receiptAddress = () => overlay(tillScreens['till-receipt'][SIZE], popup('ra-title', 'Email the receipt', `Receipt ${mono('B1-[0000]')} · no customer on this sale`, `<div style="display: flex; flex-direction: column; gap: 6px"><label for="ra-email" style="font-size: 14px; font-weight: 600">Email address</label><input id="ra-email" type="email" value="[email address]" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"></div>${tick('Save to a customer record')}`, `${button('Cancel', { variant: 'ghost' })}${button('Send receipt')}`, 520));
+// Audit L3, M11: no website tab is marked, the buttons sit by the heading so
+// nothing is cut off, the download says what the file is, and the heading
+// follows the email (a company's link opens its VAT invoice).
+const receiptText = ({ invoice = false } = {}) => site(`<div style="width: 100%; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">${bubble(`North Street Cycles: your receipt for ${money(WORK_TOTAL_APPROVED)} — [link]`).replace('PREVIEW · TEXT TO MAYA PATEL', 'THE TEXT MAYA GETS')}<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px"><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">${invoice ? 'VAT invoice' : 'Your receipt'}</h1><div style="display: flex; flex-wrap: wrap; gap: 10px">${button('Download receipt (PDF)', { variant: 'default' })}${button('Email it to me', { variant: 'default' })}</div></div>${card(`<div style="padding: ${isPhone() ? 16 : 20}px; display: flex; flex-direction: column; gap: 12px">${receiptBody({ invoice })}</div>`)}</div>`, null);
+// "Email it to me" on the receipt page: one box, like the till's.
+const emailBox = (id, label, { type = 'email', value = '', error = '' } = {}) => {
+  const tel = type === 'tel';
+  return `<div style="display: flex; flex-direction: column; gap: 6px"><label for="${id}" style="font-size: 14px; font-weight: 600">${label}</label><input id="${id}" type="${type}" autocomplete="${tel ? 'tel' : 'email'}" inputmode="${tel ? 'tel' : 'email'}" enterkeyhint="send" autofocus${value ? ` value="${value}"` : ''}${tel ? '' : ' placeholder="name@example.com"'}${error ? ` aria-invalid="true" aria-describedby="${id}-err"` : ''} style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: ${error ? 2 : 1}px solid ${error ? C.dangerInk : C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}">${error ? `<p id="${id}-err" style="margin: 0; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: ${C.dangerInk}">${icon('alert', 16)}${error}</p>` : ''}</div>`;
+};
+const receiptTextEmail = () => overlay(receiptText(), popup('rte-title', 'Email the receipt', 'We’ll send this receipt to your email', `${emailBox('rte-email', 'Email address')}${note('Used for this receipt only.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Send')}`, 480));
+// Audit L6: the tick's line says what leaving it unticked does.
+const tick = (t, what = 'address') => `<label style="display: flex; align-items: flex-start; gap: 10px; min-height: 44px; cursor: pointer"><input type="checkbox" style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">Leave this unticked and we’ll use the ${what} for this receipt only.</span></span></label>`;
+// Audit M1: pressing Email or Text pauses the till's next-sale countdown;
+// the cursor starts in the box and Enter sends. M2: the states around it.
+const paidPaused = () => tillScreens['till-receipt'][SIZE].replace('<p role="timer"', '<p role="status"').replace('Next sale starts in 5 seconds', 'Next sale waits until the receipt is sent');
+const offlineBar = `<p role="status" style="margin: 0; display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; font-weight: 600; line-height: 1.45">${icon('wifi', 16)}The till is offline. The receipt will send when the till is back online.</p>`;
+const receiptAddress = ({ mode = 'email', error = false, customer = false, offline = false } = {}) => {
+  const text = mode === 'text';
+  const sub = `Receipt ${mono('B1-[0000]')} · ${customer ? 'Maya Patel' : 'no customer on this sale'}`;
+  const box = text
+    ? emailBox('ra-phone', 'Mobile number', { type: 'tel' })
+    : emailBox('ra-email', 'Email address', customer ? { value: 'maya@example.test' } : error ? { value: '[typed address]', error: 'That doesn’t look like an email address — check it' } : {});
+  const after = customer ? note('From Maya’s customer record. A change here is used for this receipt only.') : tick('Save to a customer record', text ? 'number' : 'address');
+  return overlay(paidPaused(), popup('ra-title', text ? 'Text the receipt' : 'Email the receipt', sub, `${offline ? offlineBar : ''}${box}${after}`, `${button('Cancel', { variant: 'ghost' })}${button(offline ? 'Send when back online' : 'Send receipt')}`, 520));
+};
+// Ticked: the receipt goes first, then a quick Add a customer with the
+// address filled in; "Not now" keeps the receipt sent and adds no one.
+const receiptSave = () => overlay(paidPaused(), popup('rs-title', 'Add a customer', `Receipt sent to [email address]`, `${emailBox('rs-name', 'Name').replace('type="email" autocomplete="email" inputmode="email" enterkeyhint="send"', 'type="text" autocomplete="name"').replace(' placeholder="name@example.com"', ' placeholder="First and last name"')}${emailBox('rs-email', 'Email', { value: '[email address]' }).replace(' autofocus', '')}${emailBox('rs-phone', 'Phone (optional)', { type: 'tel' }).replace(' autofocus', '')}<div style="display: flex; align-items: center; gap: 12px"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Happy to hear about offers</span><span style="font-size: 13px; color: ${C.muted}">Only if they say yes. Off to start.</span></span><input type="checkbox" aria-label="Happy to hear about offers" style="width: 20px; height: 20px; accent-color: ${C.ink}"></div>${note('“Not now” keeps the receipt sent and adds no one.')}`, `${button('Not now', { variant: 'ghost' })}${button('Add the customer')}`, 560));
 def('cp-receipt-email', () => receiptEmail());
-def('cp-invoice-email', () => receiptEmail(true));
+def('cp-receipt-email-guest', () => receiptEmail({ guest: true }));
+def('cp-invoice-email', () => receiptEmail({ invoice: true }));
+def('cp-receipt-email-till', () => receiptEmail({ guest: true, till: true }));
 def('cp-receipt-text', () => receiptText());
+def('cp-receipt-text-email', () => receiptTextEmail());
 def('cp-receipt-address', () => receiptAddress());
+def('cp-receipt-address-error', () => receiptAddress({ error: true }));
+def('cp-receipt-address-save', () => receiptSave());
+def('cp-receipt-address-text', () => receiptAddress({ mode: 'text' }));
+def('cp-receipt-address-customer', () => receiptAddress({ customer: true }));
+def('cp-receipt-address-offline', () => receiptAddress({ offline: true }));
 
 const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
@@ -194,14 +245,22 @@ export const TITLES = {
   'cp-receipt-email': 'The receipt email',
   'cp-invoice-email': 'For a business: headed “VAT invoice”',
   'cp-receipt-text': 'A text receipt: a link to the same receipt',
+  'cp-receipt-email-guest': 'No customer on the sale: the email without an account',
+  'cp-receipt-email-till': 'A till sale: quantities, a discount, a split payment',
+  'cp-receipt-text-email': 'The receipt page: Email it to me',
   'cp-receipt-address': 'No customer on the sale: this receipt only',
+  'cp-receipt-address-error': 'The address doesn’t look right',
+  'cp-receipt-address-save': 'Ticked: the receipt goes, then Add a customer',
+  'cp-receipt-address-text': 'Text the receipt: a mobile number',
+  'cp-receipt-address-customer': 'A customer on the sale: their address filled in',
+  'cp-receipt-address-offline': 'The till is offline: it sends when back online',
 };
 export const ROWS = [
   { label: 'The customer’s link', screens: ['cp-summary', 'cp-summary-deposit', 'cp-pay', 'cp-pay-failed', 'cp-paid', 'cp-summary-paid', 'cp-summary-counter', 'cp-summary-inshop', 'cp-expired'] },
   { label: 'At the counter', screens: ['cp-ready-unpaid', 'cp-ready-deposit', 'cp-till', 'cp-ready-paid', 'cp-ready-ticks', 'cp-collected'] },
   { label: 'Not collected', screens: ['cp-today-uncollected'] },
   { label: 'Settings', screens: ['cp-setting', 'cp-messages', 'cp-message-wording'] },
-  { label: 'The receipt', screens: ['cp-receipt-email', 'cp-invoice-email', 'cp-receipt-text', 'cp-receipt-address'] },
+  { label: 'The receipt', screens: ['cp-receipt-email', 'cp-receipt-email-guest', 'cp-invoice-email', 'cp-receipt-email-till', 'cp-receipt-text', 'cp-receipt-text-email', 'cp-receipt-address', 'cp-receipt-address-error', 'cp-receipt-address-save', 'cp-receipt-address-text', 'cp-receipt-address-customer', 'cp-receipt-address-offline'] },
 ];
 
 // Account, history and reminders decision 2: the reminder tick, at collection.

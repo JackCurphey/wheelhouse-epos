@@ -64,15 +64,19 @@ UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md`,
 `stock-ui-audit.md`, `book-ui-audit.md`, `quote-ui-audit.md`,
 `account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md`, `online-ui-audit.md`,
-`browse-ui-audit.md`, `website-ui-audit.md`, `oversight-ui-audit.md`, `c2w-ui-audit.md`, `lightspeed-ui-audit.md` (this folder).
+`browse-ui-audit.md`, `website-ui-audit.md`, `oversight-ui-audit.md`, `c2w-ui-audit.md`, `lightspeed-ui-audit.md`, `leftover-ui-audit.md` (this folder).
 
-Overview count (each screen once): 695 screens — 692 designed, 0 built, 2
+Overview count (each screen once): 704 screens — 701 designed, 0 built, 2
 old app only, 1 not designed yet, 0 for review; the staff app canvas holds
-425 files and customers and the website 274, of 512 each (2 Oct: the
-leftover screens drawn — the receipt email, a text receipt and the till's
-"email the receipt" pop-up in journey 5, the till start-up line on the PIN
-screen in journey B, and the Returning customers report in journey 17; see
-`docs/decisions/2026-10-02-leftover-screens-review.md`. The 3 screens left
+425 files and customers and the website 283, of 512 each (2 Oct: the
+leftover screens drawn and their UI audit's fixes made — the receipt email
+(with and without a customer, a VAT invoice, a till sale), a text receipt
+and the till's "email the receipt" pop-up with its states in journey 5, the
+till start-up line on the PIN screen in journey B, the Returning customers
+report in journey 17, and a company's VAT number and "Send invoices to" in
+journey 15; see `docs/decisions/2026-10-02-leftover-screens-review.md` and
+`leftover-ui-audit.md`. Open from it: what a VAT invoice must carry (Jack
+to ask the accountant); whether customers show their phone at the counter. The 3 screens left
 are journey 13's supplier screens, deferred to a later release (below).
 Earlier, journey 21: a "Lightspeed shop" switch (`shop-mode.mjs`,
 `withLightspeedShop`) draws the sidebar, Settings, Today, Messages and the
