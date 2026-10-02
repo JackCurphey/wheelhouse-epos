@@ -45,3 +45,12 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    nothing, and the work order is ready long before collection. Chosen over
    staff pressing "Send to Lightspeed" when the job is finished, and staff
    pressing it at approval (the Release 1 drawing).
+4. **Customers are linked by Wheelhouse where it's sure, and by staff
+   when it isn't** (Jack, 2 Oct: "1"). The first time a customer's job goes
+   to Lightspeed, Wheelhouse looks them up by phone number and email: one
+   clear match is linked, no match is added to Lightspeed, several possible
+   matches are picked once by staff. The link then stays. Goes beyond the
+   Release 1 plan, which only looked customers up (adding a customer is a
+   write to Lightspeed; still no money is written). Chosen over staff
+   confirming every new customer, and one shared "Wheelhouse" customer in
+   Lightspeed.
