@@ -129,3 +129,9 @@ shop's details and VAT number, the company's "Invoice to" block from its
 record, the lines, the total, one "VAT at [rate]" row and how it was paid,
 numbered like the receipt. No accountant check before the design moves on;
 what a particular shop or accountant needs is for later.
+
+**Later change (Jack, 2 Oct, on whether customers show their phone at the
+counter: "yeah that could be good").** The text receipt page keeps its
+barcode so a customer can show it on their phone at the counter, for a
+return or a question; the link doesn't expire. This settles the open
+question in decision 6 (audit M10, option 1).

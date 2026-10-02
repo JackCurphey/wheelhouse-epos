@@ -75,9 +75,9 @@ and the till's "email the receipt" pop-up with its states in journey 5, the
 till start-up line on the PIN screen in journey B, the Returning customers
 report in journey 17, and a company's VAT number and "Send invoices to" in
 journey 15; see `docs/decisions/2026-10-02-leftover-screens-review.md` and
-`leftover-ui-audit.md`. The VAT invoice stays a general one for now
-(Jack, 2 Oct). Open from it: whether customers show their phone at the
-counter. The 3 screens left
+`leftover-ui-audit.md`. The VAT invoice stays a general one for now,
+and the text receipt page keeps its barcode for showing at the counter
+(Jack, 2 Oct). The 3 screens left
 are journey 13's supplier screens, deferred to a later release (below).
 Earlier, journey 21: a "Lightspeed shop" switch (`shop-mode.mjs`,
 `withLightspeedShop`) draws the sidebar, Settings, Today, Messages and the
