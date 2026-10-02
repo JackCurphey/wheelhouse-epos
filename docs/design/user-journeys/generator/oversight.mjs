@@ -159,14 +159,18 @@ def('ops-devices-signout', () => overlay(officeStaff({ devices: devicesOpen() })
 def('ops-devices-signed-out', () => withToast(officeStaff({ devices: devicesOpen(true) }), toast('Signed out [Computer] · [browser]')));
 def('ops-person', () => overlay(staffPage({ people: peopleOpen(false) }), personDialog()));
 def('ops-person-everywhere', () => overlay(staffPage({ people: peopleOpen(false) }), everywhereAsk()));
-def('ops-your-settings', () => (isP() ? yourSettingsDialog('phone') : overlay(behind(), yourSettingsDialog(SIZE))));
+// On a phone the Help cards come after Accessibility, so the board is
+// scrolled down to them.
+const scrolledPhoneSettings = (px) => { const h = yourSettingsDialog('phone'); const out = h.replace('<div data-scroll style="padding: 14px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 0; overflow-y: auto">', `<style>.ys-sc > * { position: relative; top: -${px}px }</style><div data-scroll class="ys-sc" style="padding: 14px; display: flex; flex-direction: column; gap: 10px; flex-grow: 1; min-height: 0; overflow-y: hidden">`); if (out === h) throw new Error('oversight.mjs: Your settings layout changed'); return out; };
+def('ops-your-settings', () => (isP() ? board(scrolledPhoneSettings(400)) : overlay(behind(), yourSettingsDialog(SIZE))));
 def('ops-feedback-empty', () => overlay(behind(), feedback({ typed: false })));
 def('ops-feedback', () => overlay(behind(), feedback()));
 def('ops-feedback-shot', () => overlay(behind(), feedback({ shot: true })));
 def('ops-feedback-failed', () => overlay(behind(), feedback({ failed: true })));
 def('ops-feedback-sent', () => board(`${behind()}${sentToast()}`));
 
-const SIZES = ['desktop'];
+// Desktop, tablet and phone (tablet and phone drawn after the UI audit).
+const SIZES = ['desktop', 'tablet', 'phone'];
 for (const [id, fn] of recipes) {
   screens[id] = {};
   for (const sz of SIZES) screens[id][sz] = withSize(sz, () => { SIZE = sz; return fn(); });
