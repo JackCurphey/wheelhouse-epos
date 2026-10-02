@@ -86,8 +86,8 @@ as few clicks as possible).
    - Every log line shows its shop, with a Shop filter (M1). A manager's
      log, the Reports page without the log for staff, and the log refused
      to staff are drawn. Managers see everyone's lines, the owner's too —
-     the audit asked for this to be confirmed, and Jack took the
-     recommendations as a whole (M2).
+     confirmed by Jack, 2 Oct ("1"), over hiding the owner's own actions
+     from managers (M2).
    - An alert is off until an amount is set; each shows how many it would
      have raised in the last 30 days; discounts and refunds have their own
      amounts; a bulk price change raises one alert (M3).
