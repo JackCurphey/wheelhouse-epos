@@ -94,3 +94,43 @@ desktop first, then tablet and phone. Rules for every journey apply (Workshop da
    places and no payment provider for these shops; they go without
    deposits and paying ahead. Chosen over taking deposits and online
    payments and recording them in Lightspeed, and deposits only.
+10. **UI audit: every recommendation taken** (Jack, 2 Oct: "lets do them
+    all"). From `design/user-journeys/lightspeed-ui-audit.md`:
+    - **Website stays, without selling** (H1, the first of my three open
+      choices): the site's header drops Shop and Basket for a Lightspeed
+      shop; booking, Our shops, the account pages and Contact us stay.
+    - **The "Not paid in Lightspeed yet" pop-up stays, and leaves a trace**
+      (H2, my second choice): its words follow the cause (not shown as
+      paid; can't reach Lightspeed; payment isn't checked for this shop —
+      "Has Maya paid?" with "Yes, she paid"); the fallback's empty tick
+      opens it too; "Hand over anyway" writes a history line and the job
+      keeps "Collected · not shown as paid in Lightspeed" until payment
+      appears; owners and managers get a Today line after [n] days. These
+      are new kinds of record, approved here.
+    - **Each Lightspeed state on a job has its own wording and button**
+      (H3): "Choose the customer", "Check this in Lightspeed"; a Today line
+      for jobs waiting on a person; a ready job not yet in Lightspeed says
+      Maya can't pay at the till yet. "Mark ready for collection" stays on.
+    - **Exactly what Wheelhouse writes** (H4): "Wheelhouse never takes a
+      payment, gives a refund or closes a sale in Lightspeed. It does put
+      the prices the customer approved on the work order, so the till
+      shows what they agreed."
+    - **Front desk keeps Messages, filtered to what these shops send** (M1,
+      my third choice), with the count to match. Shared Settings lose till,
+      sales and stock wording for these shops, and an "Activity" row sits
+      under Office › Your data for owners and managers (M2). Today leaves
+      out Who's in (no till check-in) (M3); its Lightspeed card wording
+      fixed and "payments" said only when payment is checked (M4).
+    - The setup checklist gets a third state, "Not proven yet — shows on
+      first use" (M5); staff matching can say someone doesn't use
+      Lightspeed (M6); fixed timings replaced by "Last checked [n] seconds
+      ago · Why?" (M7); amounts shown as "Agreed £111.00" (M8); the
+      customer picker starts with nothing chosen and says what matched
+      (M9); a part is added in one press (M10); strips and Today lines
+      announce changes, notes tied to their boxes (M11); the missing
+      states drawn in one pass (M12).
+    - L1–L5: plainer wording ("Which Lightspeed shop is Bolton?", "a work
+      order is Lightspeed's name for a job"); instructions out of the
+      smallest text; Settings tidied (no "—" folds, "Check now" greyed
+      briefly after use, Disconnect a real button); when "Check Lightspeed
+      now" finds the payment, the pop-up turns into "Paid · Hand over".
