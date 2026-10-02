@@ -240,8 +240,9 @@ export const onlineFolds = (open = {}) =>
 // stock, deposits, the providers, and what goes on Today.
 export const C2W_INTRO = 'Holding and ordering bikes, deposits, and the scheme providers you work with.';
 export const c2wFolds = (open = {}) =>
-  fold('Holding bikes', 'From the quote for [n] days', open.hold || '')
+  fold('Holding bikes and quotes', 'Held from the quote for [n] days · quotes valid for [n] days', open.hold || '')
   + fold('Bikes not in stock', 'Ordered once the certificate arrives', open.order || '')
+  + fold('How to apply', 'A line on every quote and email', open.apply || '')
   + fold('Deposits', 'Refunded when the certificate arrives', open.deposit || '')
   + fold('Scheme providers', '[n] providers', open.providers || '')
   + fold('On Today', 'No certificate after [n] days · payment [n] days late', open.today || '');
