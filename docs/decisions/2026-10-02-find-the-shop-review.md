@@ -113,3 +113,5 @@ tablet and phone. Rules for every journey apply (Workshop day 45, 48, 50,
    placeholders. Carried into every journey's website pages: a "Skip to the
    main content" link, the footer's "Collection and returns" (was "Delivery
    and returns") and "Cookies" links, footer links 44px tall.
+
+**Later change (2 Oct 2026, Website management decisions 12 and 13):** the staff banner on the switched-off website says the first "Turn it on" also publishes, and adds "Edit this page"; staff without "Can edit the website" see "Ask Jack Lewis to turn it on" with no button (a new screen, Switched off: staff without the switch). The product page under the banner had lost its banner when the skip link was added (decision 8) and has it again.

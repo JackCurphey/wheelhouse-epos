@@ -53,6 +53,7 @@ holding desktop, tablet and phone:
 | 17 Reports and accounts | https://claude.ai/artifact/NXHvoKd8wY8wpAhBYsPRUt | `docs/decisions/2026-10-01-reports-and-accounts-review.md` (9) |
 | 2 Buy online / click and collect | https://claude.ai/artifact/QGRBBPUhHRd5rg94XbgAyS | `docs/decisions/2026-10-01-buy-online-review.md` (10) |
 | 1 Find the shop and browse the website | https://claude.ai/artifact/7g2TbX8jMauaaTqSkvj5CQ | `docs/decisions/2026-10-02-find-the-shop-review.md` (8) |
+| 18 Website management | https://claude.ai/artifact/RkyxcQZBCaVYfUa8bqixZM | `docs/decisions/2026-10-02-website-management-review.md` (13) |
 
 UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `signin-ui-audit.md`, `till-ui-audit.md`, `cashup-ui-audit.md`,
@@ -60,27 +61,29 @@ UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `moving-ui-audit.md`, `collect-ui-audit.md`, `receiving-ui-audit.md`,
 `stock-ui-audit.md`, `book-ui-audit.md`, `quote-ui-audit.md`,
 `account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md`, `online-ui-audit.md`,
-`browse-ui-audit.md` (this folder).
+`browse-ui-audit.md`, `website-ui-audit.md` (this folder).
 
-Overview count (each screen once): 549 screens — 531 designed, 0 built, 4
-old app only, 14 not designed yet, 0 for review; the staff app canvas holds
-321 files and customers and the website 232, of 512 each (2 Oct: journey 1
-in; its seven placeholders replaced by its 35 screens. Carried into every
-journey's website pages: a "Skip to the main content" link, the footer's
-"Collection and returns" (was "Delivery and returns") and "Cookies", footer
-links 44px tall. Journey 1 leaves open: filter values are placeholders; the
-Contact us, Collection and returns and Privacy pages are not drawn; the
-tracking-tool setting is Website management's (journey 18); browser-tab
-titles (audit L5) are for the build).
+Overview count (each screen once): 601 screens — 590 designed, 0 built, 2
+old app only, 9 not designed yet, 0 for review; the staff app canvas holds
+372 files and customers and the website 233, of 512 each (2 Oct: journey 18
+in; its seven placeholders replaced by its 58 screens. Carried into
+journey 1: the staff banner — the first "Turn it on" also publishes, "Edit
+this page", and a new screen for staff without "Can edit the website";
+journey 2: "Not taking online orders right now" on a product page with
+buying online off. Journey 18 leaves open, for Jack and Mark: what happens
+to products only in Shopify when a shop connects it, and custom web
+addresses (ECOM-03, frozen). Earlier, journey 1 left: filter values are
+placeholders; browser-tab titles (audit L5) are for the build).
 
 **Next: ask Jack which journey.** Still drawn in the old Fjell look or as
-placeholders: 6 Cycle to Work, 18 Website management,
-20 Management oversight, 21 Lightspeed shops (Release 1).
-Strong candidates, because finished journeys lean on them: **18 Website
-management** (journey 1's home-page sections, theme and tracking tools) (journey 2 leaves "Online payments setup" —
-connecting the payment provider — and the website's own settings to it) (journey 7's account history lists
-online orders; customer orders, below, touch it), **20 Management
-oversight**.
+placeholders: 6 Cycle to Work, 20 Management oversight, 21 Lightspeed shops
+(Release 1).
+Candidates: **20 Management oversight** (the owner's view across shops and
+staff; three screens still placeholders), **6 Cycle to Work** (two screens,
+waiting on Jack's explanation of how the scheme works) and **21 Lightspeed
+shops** (Release 1; it touches how payments work in the other version —
+see the two payment versions). Smaller gaps left in finished journeys are
+listed in STATUS.
 
 **Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
 ux audit at the end when all the pages are done?"). Each journey keeps its own

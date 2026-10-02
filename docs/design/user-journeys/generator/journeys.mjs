@@ -52,6 +52,8 @@ export const sd17 = (id, title, role) => ({ id, status: 'designed', title, role,
 export const sd2 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'online' });
 // sd1(id, title, role) = an agreed journey 1 screen (browse.mjs, Soft sand).
 export const sd1 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'browse' });
+// sd18(id, title, role) = an agreed journey 18 screen (website.mjs, Soft sand).
+export const sd18 = (id, title, role) => ({ id, status: 'designed', title, role, sand: 'website' });
 
 export const journeys = [
   {
@@ -145,6 +147,7 @@ export const journeys = [
         sd1("wb-off", "Switched off, or no such shop: what the public sees", "Customer"),
         sd1("wb-off-preview", "Switched off: what the shop’s own staff see", "Staff"),
         sd1("wb-off-preview-product", "Switched off: the staff banner on every page", "Staff"),
+        sd1("wb-off-preview-ask", "Switched off: staff without “Can edit the website” are told who to ask", "Staff"),
         sd1("wb-turned-on", "Turned on: “Your website is on · Turn off”", "Staff"),
       ] },
       { label: "Cookies", screens: [
@@ -844,16 +847,83 @@ export const journeys = [
   {
     id: 'j18', name: 'Website management', who: 'Manager',
     rows: [
-      { label: 'Design the website', screens: [
-        o('site-settings', 'Website settings', 'Manager', 'Turn the website on, and set its name, logo and pictures.', ['On or off', 'Logo, hero image, tagline'], { today: 'The old settings panel has five colour choices, logo and hero image.', source: 'Release 2 piece 7' }),
-        g('site-theme', 'Theme editor', 'Manager', 'Deep customisation within the theme system: layout, sections, colours, fonts, images.', ['Sections to add and reorder', 'Colours and fonts', 'Live preview'], { source: 'Release 2 rule 6 · Jack’s main complaint about Citrus Lime' }),
-        g('site-pages', 'Pages', 'Manager', 'About, contact and other pages.', ['Page list', 'Edit a page'], { source: 'Implied by Release 2 piece 7' }),
-        g('site-publish', 'Preview and publish', 'Manager', 'See changes before customers do.', ['Preview', 'Publish'], { source: 'Implied by Release 2 piece 7' }),
-        g('site-domain', 'Own web address', 'Owner', 'Use the shop’s own domain name.', ['Domain', 'Connection check'], { source: 'ECOM-03' }),
-        o('site-shopify', 'Shopify connection (to retire)', 'Manager', 'Release 2 replaces Shopify with Wheelhouse’s own website.', [], { today: 'The old app connects to Shopify for the website basket.', source: 'Release 2 decision: website built into Wheelhouse' }),
+      { label: "Setting it up", screens: [
+        sd18("ws-start-which", "Set up, step 1: Wheelhouse’s website or your Shopify shop?", "Owner"),
+        sd18("ws-start-look", "Step 2: logo and main colour, suggested from the logo", "Owner"),
+        sd18("ws-start-products", "Step 3: start with every product online, or nothing", "Owner"),
+        sd18("ws-editor-first", "The editor opens on a ready-made home page, still off", "Manager"),
       ] },
-      { label: 'Online orders', screens: [
-        g('site-payments', 'Online payments setup', 'Owner', 'Connect a payment provider for online sales.', ['Provider', 'Test payment'], { source: 'PAY-05' }),
+      { label: "The Website page", screens: [
+        sd18("ws-page", "Office › Website: off and never published — Turn it on also publishes", "Manager"),
+        sd18("ws-page-on", "On, with unpublished changes and payments connected", "Manager"),
+        sd18("ws-page-changes", "The unpublished changes, with Publish and Discard", "Manager"),
+        sd18("ws-no-access", "Without “Can edit the website”: who to ask", "Staff"),
+        sd18("ws-no-settings", "Can edit the website, but not change settings", "Staff"),
+      ] },
+      { label: "Editing the home page", screens: [
+        sd18("ws-editor", "The editor: sections down the side; pointing at a part of the page", "Manager"),
+        sd18("ws-editor-section", "A section chosen: its settings, and the photo’s description", "Manager"),
+        sd18("ws-editor-add", "+ Add section: below the chosen section", "Manager"),
+        sd18("ws-editor-drag", "Dragging a section (or its arrows, or Alt + arrow keys)", "Manager"),
+        sd18("ws-editor-moved", "Moved: the page shows the new order, with Undo", "Manager"),
+        sd18("ws-editor-removed", "A section removed, with Undo", "Manager"),
+        sd18("ws-editor-header", "The header: logo, and one link as a button", "Manager"),
+        sd18("ws-editor-on-phone", "Preview on a phone", "Manager"),
+        sd18("ws-editor-bigger", "Bigger: the preview without the panel", "Manager"),
+        sd18("ws-editor-pages-menu", "The Page menu: your pages, and Wheelhouse’s shop pages", "Manager"),
+        sd18("ws-editor-saving", "Couldn’t save — trying again", "Manager"),
+        sd18("ws-editor-taken", "Someone else is editing: view only, or take over", "Manager"),
+      ] },
+      { label: "Theme", screens: [
+        sd18("ws-theme", "Theme: main colour, background, fonts, corners, buttons", "Manager"),
+        sd18("ws-theme-contrast", "A colour that’s hard to read: where, and two fixes", "Manager"),
+        sd18("ws-theme-publish", "Publishing with a hard-to-read colour asks once", "Manager"),
+        sd18("ws-theme-product", "The theme on a product page (preview only)", "Manager"),
+        sd18("ws-theme-fonts", "Fonts: a chosen list of tested pairs", "Manager"),
+      ] },
+      { label: "Publishing", screens: [
+        sd18("ws-published", "Published, with View website", "Manager"),
+        sd18("ws-published-off", "Published while the website is off", "Manager"),
+        sd18("ws-discard", "Discard unpublished changes? Kept in History", "Manager"),
+        sd18("ws-history", "Earlier versions and discarded drafts", "Manager"),
+      ] },
+      { label: "Pages", screens: [
+        sd18("ws-pages", "Pages: ready-made, two with wording to check", "Manager"),
+        sd18("ws-pages-new", "Add a page: linked from the footer by default", "Manager"),
+        sd18("ws-page-settings", "Page settings: a page that always stays in the footer", "Manager"),
+        sd18("ws-page-returns", "Editing Collection and returns: starting wording to check", "Manager"),
+      ] },
+      { label: "Tracking tools", screens: [
+        sd18("ws-tracking", "Tracking tools: none on, so no cookie choice", "Manager"),
+        sd18("ws-tracking-on", "Google Analytics on: goes live when you publish", "Manager"),
+        sd18("ws-tracking-error", "An ID that doesn’t look right: no cookie choice yet", "Manager"),
+      ] },
+      { label: "Web address (waiting on the business plan decision)", screens: [
+        sd18("ws-address", "Web address: the free one, or use your own", "Owner"),
+        sd18("ws-address-typo", "An address that needs an ending", "Owner"),
+        sd18("ws-address-steps", "Your own address: the 2 records, and what it changes", "Owner"),
+        sd18("ws-address-waiting", "Not connected yet — up to a day", "Owner"),
+        sd18("ws-address-done", "Your own address connected", "Owner"),
+      ] },
+      { label: "Online payments setup", screens: [
+        sd18("ws-pay-none", "Online orders › Paying online: not connected, Buying online off", "Owner"),
+        sd18("ws-pay-connected", "Back from [payment provider]: make a test payment", "Owner"),
+        sd18("ws-pay-tested", "The test payment worked", "Owner"),
+        sd18("ws-pay-failed", "Connecting didn’t finish: nothing changed", "Owner"),
+        sd18("ws-pay-more", "[payment provider] needs more details", "Owner"),
+        sd18("ws-today-pay-more", "The same warning on Today", "Owner"),
+      ] },
+      { label: "Shopify", screens: [
+        sd18("ws-start-shopify", "Set up with Shopify, step 2: connect", "Owner"),
+        sd18("ws-shopify-connect", "Connect your Shopify shop: what happens first", "Owner"),
+        sd18("ws-shopify-failed", "Couldn’t connect to Shopify", "Owner"),
+        sd18("ws-shopify-check", "Before sending: how many products will change", "Owner"),
+        sd18("ws-shopify-sending", "Sending to Shopify", "Owner"),
+        sd18("ws-shopify-on", "Connected to Shopify: the Website page", "Owner"),
+        sd18("ws-shopify-problem", "Products that couldn’t be sent to Shopify", "Owner"),
+        sd18("ws-shopify-switch", "Switching to Wheelhouse’s website: what changes", "Owner"),
+        sd18("ws-pay-shopify", "Online orders with Shopify: Shopify takes website payments", "Owner"),
+        sd18("ws-shopify-order", "A Shopify order in Online orders", "Owner"),
       ] },
     ],
   },

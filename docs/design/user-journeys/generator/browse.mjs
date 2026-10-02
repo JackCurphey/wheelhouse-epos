@@ -205,10 +205,16 @@ const offPage = () => {
 };
 // The shop's own staff still see their switched-off website, with the
 // banner on every page (audit M14).
-const staffBanner = (on = false) => `<div${on ? ' role="status"' : ''} style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; background: ${on ? C.okBg : C.warnBg}; color: ${on ? C.successInk : C.warnInk}; font-size: 15px">${icon(on ? 'check' : 'lock', 18)}<span style="flex-grow: 1">${on ? '<strong>Your website is on.</strong> Customers can see it now.' : '<strong>Only your staff can see this.</strong> Your website is switched off — customers see “This website isn’t available”.'}</span>${button(on ? 'Turn off' : 'Turn it on', { variant: 'default' })}<a href="#" style="${tall}; font-weight: 600; color: inherit">Back to Wheelhouse</a></div>`;
+// Website management (journey 18, audit H2, H6, L3): the first "Turn it on"
+// also publishes; people with "Can edit the website" get "Edit this page";
+// people without it are told who to ask, with no button.
+const staffBanner = (on = false, ask = false) => `<div${on ? ' role="status"' : ''} style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; background: ${on ? C.okBg : C.warnBg}; color: ${on ? C.successInk : C.warnInk}; font-size: 15px">${icon(on ? 'check' : 'lock', 18)}<span style="flex: 1 1 260px">${on ? '<strong>Your website is on.</strong> Customers can see it now.' : `<strong>Only your staff can see this.</strong> Your website is switched off — customers see “This website isn’t available”.${ask ? ' Ask Jack Lewis to turn it on.' : ' Turning it on the first time also publishes it.'}`}</span>${ask ? '' : `${button(on ? 'Turn off' : 'Turn it on', { variant: 'default' })}<a href="#" style="${tall}; font-weight: 600; color: inherit">Edit this page</a>`}<a href="#" style="${tall}; font-weight: 600; color: inherit">Back to Wheelhouse</a></div>`;
 const preview = () => home({ staffBar: staffBanner() });
-const productPreview = () => { const p = productPage(); return p.replace(/(<div data-scroll id="main-content"[^>]*><div[^>]*>)/, `$1${staffBanner()}`); };
+// The banner goes at the top of the page's scrolling content (it had
+// stopped showing when <main> took the skip link's target).
+const productPreview = () => { const p = productPage(); const out = p.replace(/(<div data-scroll [^>]*><div[^>]*>)/, `$1${staffBanner()}`); if (out === p) throw new Error('browse.mjs: no place for the staff banner'); return out; };
 const nowOn = () => home({ staffBar: staffBanner(true) });
+const previewAsk = () => home({ staffBar: staffBanner(false, true) });
 
 // ---------- Cookies (decision 6; audit H3, L1) ----------
 // First in keyboard order (M15), drawn at the bottom; buttons don't wrap.
@@ -250,6 +256,7 @@ def('wb-not-found', () => notFound());
 def('wb-off', () => offPage());
 def('wb-off-preview', () => preview());
 def('wb-off-preview-product', () => productPreview());
+def('wb-off-preview-ask', () => previewAsk());
 def('wb-turned-on', () => nowOn());
 def('wb-cookies-banner', () => home({ first: banner(), tracking: true }));
 def('wb-cookies-choose', () => overlay(home({ tracking: true }), chooseCookies()));
@@ -295,6 +302,7 @@ export const TITLES = {
   'wb-off': 'Switched off, or no such shop: what the public sees',
   'wb-off-preview': 'Switched off: what the shop’s own staff see',
   'wb-off-preview-product': 'Switched off: the staff banner on every page',
+  'wb-off-preview-ask': 'Switched off: staff without “Can edit the website” are told who to ask',
   'wb-turned-on': 'Turned on: “Your website is on · Turn off”',
   'wb-cookies-banner': 'A shop that added a tracking tool: the cookie choice',
   'wb-cookies-choose': 'Choose cookies',
@@ -308,6 +316,6 @@ export const ROWS = [
   { label: 'A product', screens: ['wb-product', 'wb-product-sizes', 'wb-product-size-other', 'wb-product-photos'] },
   { label: 'Search', screens: ['wb-search-typing', 'wb-search-no-suggestions', 'wb-search-results', 'wb-search-measure', 'wb-search-none'] },
   { label: 'Our shops', screens: ['wb-shops', 'wb-shop-page', 'wb-shop-collect', 'wb-find-us'] },
-  { label: 'When things go wrong', screens: ['wb-not-found', 'wb-off', 'wb-off-preview', 'wb-off-preview-product', 'wb-turned-on'] },
+  { label: 'When things go wrong', screens: ['wb-not-found', 'wb-off', 'wb-off-preview', 'wb-off-preview-product', 'wb-off-preview-ask', 'wb-turned-on'] },
   { label: 'Cookies', screens: ['wb-cookies-banner', 'wb-cookies-choose', 'wb-cookies-saved', 'wb-cookies-page', 'wb-cookies-page-plain'] },
 ];

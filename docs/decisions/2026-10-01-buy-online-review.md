@@ -155,3 +155,5 @@ and phone. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
     all the same.
 
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
+
+**Later change (2 Oct 2026, Website management decisions 12 and 13):** a product page with buying online off now reads "Not taking online orders right now. Ask in the shop, or call us, to buy this" — the same words while online payments are not connected. Online payments setup itself is drawn in journey 18 (decision 8 there).

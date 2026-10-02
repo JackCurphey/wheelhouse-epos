@@ -24,6 +24,7 @@
 import { C, MONO, esc, icon, button, card, badge, field } from './ui.mjs';
 import { page, note, popup, overlay, withSize, settingsPage, onlineFolds, ONLINE_INTRO, withOnlineArea, rowSwitch } from './settings-frame.mjs';
 import { withRooms } from './diary.mjs';
+import { today } from './opening.mjs';
 import { screens as browseScreens } from './browse.mjs';
 import { screens as onlineScreens } from './online.mjs';
 
@@ -384,7 +385,7 @@ ${isP() ? RECORDS.map(([t, n, v], i) => `<div style="display: flex; flex-directi
 };
 
 // ---------- Online payments setup (decision 8; audit H5, M10, M11) ----------
-const master = (on = true, why = '') => card(`<div style="padding: 4px 18px">${on ? rowSwitch('Buying online', true) : `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px"><span style="font-size: 15px; font-weight: 700">Buying online</span><span style="font-size: 14px; font-weight: 600; color: ${C.muted}">Off until you connect [payment provider]</span></div>`}<p style="margin: 0 0 12px; font-size: 14px; color: ${C.muted}">${on ? 'Customers can buy from your website and collect from the shop.' : why || 'Customers can look at products, but the website says “Not taking online orders yet”.'}</p></div>`, 'flex-shrink: 0');
+const master = (on = true, why = '') => card(`<div style="padding: 4px 18px">${on ? rowSwitch('Buying online', true) : `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px"><span style="font-size: 15px; font-weight: 700">Buying online</span><span style="font-size: 14px; font-weight: 600; color: ${C.muted}">Off until you connect [payment provider]</span></div>`}<p style="margin: 0 0 12px; font-size: 14px; color: ${C.muted}">${on ? 'Customers can buy from your website and collect from the shop.' : why || 'Customers can look at products, but the website says “Not taking online orders right now”.'}</p></div>`, 'flex-shrink: 0');
 const wallets = (on) => `${rowSwitch('Apple Pay and Google Pay', on)}${rowSwitch('Gift cards', on)}${rowSwitch('Store credit (for signed-in customers)', on)}`;
 const PAY = {
   none: [false, `${msg('<strong>Not connected.</strong> Customers can’t buy online, and “Pay now” for repairs is hidden, until you connect [payment provider].', 'warn')}
@@ -455,7 +456,7 @@ const MOVED = ['Big photo and headline', 'Shop by category', 'Book a repair', 'F
 def('ws-editor-moved', () => ed({ list: { on: 'Book a repair', order: MOVED }, view: { order: MOVED, part: 'Book a repair' }, extra: `${sr('<span role="status">Book a repair moved to position 3 of 6</span>')}${toast('Book a repair moved above Featured products', ['Undo · Ctrl+Z'])}` }));
 def('ws-editor-removed', () => ed({ list: { order: HOME_SECTIONS.filter((n) => n !== 'Words and a picture') }, view: { order: HOME_SECTIONS.filter((n) => n !== 'Words and a picture'), scroll: PAGE_H - VIEW_H - 246 } , extra: toast('Removed Words and a picture', ['Undo']) }));
 def('ws-editor-header', () => ed({ phoneTab: 'sections', view: { scroll: 0 }, panel: headerPanel(), preview: scaled(recolour(browseScreens['wb-home'].desktop, OCEAN).replace('<header style="', `<header style="outline: 4px solid ${C.ink}; outline-offset: -4px; `), W, H, pScale(), 'Preview of Home. It can’t be used; pick a part from the list or click it', { px: 0 }) }));
-def('ws-editor-phone', () => ed({ size: 'Phone', phoneTab: 'preview', preview: scaled(recolour(browseScreens['wb-home'].phone, OCEAN), 390, 844, 0.78, 'Preview of Home on a phone. It can’t be used', { px: 0, total: 2600, view: 844 }) }));
+def('ws-editor-on-phone', () => ed({ size: 'Phone', phoneTab: 'preview', preview: scaled(recolour(browseScreens['wb-home'].phone, OCEAN), 390, 844, 0.78, 'Preview of Home on a phone. It can’t be used', { px: 0, total: 2600, view: 844 }) }));
 def('ws-editor-bigger', () => ed({ big: true, phoneTab: 'preview', view: { big: true } }));
 def('ws-editor-pages-menu', () => (isP() ? overlay(ed({}), pageMenuPhone()) : ed({ menu: true })));
 def('ws-editor-saving', () => ed({ state: 'saving', view: { part: 'Big photo and headline' }, panel: heroPanel() }));
@@ -486,6 +487,7 @@ def('ws-pay-connected', () => paySettings('connected'));
 def('ws-pay-tested', () => paySettings('tested'));
 def('ws-pay-failed', () => paySettings('failed'));
 def('ws-pay-more', () => paySettings('more'));
+def('ws-today-pay-more', () => today({ payMore: true }));
 def('ws-start-shopify', () => startShopify());
 def('ws-shopify-connect', () => shopifyConnect());
 def('ws-shopify-failed', () => shopifyConnect('Couldn’t connect. Shopify didn’t find [your-shop].myshopify.com, or the approval was cancelled. Nothing has changed.'));
@@ -522,7 +524,7 @@ export const TITLES = {
   'ws-editor-moved': 'Moved: the page shows the new order, with Undo',
   'ws-editor-removed': 'A section removed, with Undo',
   'ws-editor-header': 'The header: logo, and one link as a button',
-  'ws-editor-phone': 'Preview on a phone',
+  'ws-editor-on-phone': 'Preview on a phone',
   'ws-editor-bigger': 'Bigger: the preview without the panel',
   'ws-editor-pages-menu': 'The Page menu: your pages, and Wheelhouse’s shop pages',
   'ws-editor-saving': 'Couldn’t save — trying again',
@@ -553,6 +555,7 @@ export const TITLES = {
   'ws-pay-tested': 'The test payment worked',
   'ws-pay-failed': 'Connecting didn’t finish: nothing changed',
   'ws-pay-more': '[payment provider] needs more details',
+  'ws-today-pay-more': 'The same warning on Today',
   'ws-start-shopify': 'Set up with Shopify, step 2: connect',
   'ws-shopify-connect': 'Connect your Shopify shop: what happens first',
   'ws-shopify-failed': 'Couldn’t connect to Shopify',
@@ -567,12 +570,12 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Setting it up', screens: ['ws-start-which', 'ws-start-look', 'ws-start-products', 'ws-editor-first'] },
   { label: 'The Website page', screens: ['ws-page', 'ws-page-on', 'ws-page-changes', 'ws-no-access', 'ws-no-settings'] },
-  { label: 'Editing the home page', screens: ['ws-editor', 'ws-editor-section', 'ws-editor-add', 'ws-editor-drag', 'ws-editor-moved', 'ws-editor-removed', 'ws-editor-header', 'ws-editor-phone', 'ws-editor-bigger', 'ws-editor-pages-menu', 'ws-editor-saving', 'ws-editor-taken'] },
+  { label: 'Editing the home page', screens: ['ws-editor', 'ws-editor-section', 'ws-editor-add', 'ws-editor-drag', 'ws-editor-moved', 'ws-editor-removed', 'ws-editor-header', 'ws-editor-on-phone', 'ws-editor-bigger', 'ws-editor-pages-menu', 'ws-editor-saving', 'ws-editor-taken'] },
   { label: 'Theme', screens: ['ws-theme', 'ws-theme-contrast', 'ws-theme-publish', 'ws-theme-product', 'ws-theme-fonts'] },
   { label: 'Publishing', screens: ['ws-published', 'ws-published-off', 'ws-discard', 'ws-history'] },
   { label: 'Pages', screens: ['ws-pages', 'ws-pages-new', 'ws-page-settings', 'ws-page-returns'] },
   { label: 'Tracking tools', screens: ['ws-tracking', 'ws-tracking-on', 'ws-tracking-error'] },
   { label: 'Web address (waiting on the business plan decision)', screens: ['ws-address', 'ws-address-typo', 'ws-address-steps', 'ws-address-waiting', 'ws-address-done'] },
-  { label: 'Online payments setup', screens: ['ws-pay-none', 'ws-pay-connected', 'ws-pay-tested', 'ws-pay-failed', 'ws-pay-more'] },
+  { label: 'Online payments setup', screens: ['ws-pay-none', 'ws-pay-connected', 'ws-pay-tested', 'ws-pay-failed', 'ws-pay-more', 'ws-today-pay-more'] },
   { label: 'Shopify', screens: ['ws-start-shopify', 'ws-shopify-connect', 'ws-shopify-failed', 'ws-shopify-check', 'ws-shopify-sending', 'ws-shopify-on', 'ws-shopify-problem', 'ws-shopify-switch', 'ws-pay-shopify', 'ws-shopify-order'] },
 ];

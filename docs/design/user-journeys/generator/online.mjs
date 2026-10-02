@@ -85,7 +85,9 @@ const AVAIL = {
   out: [msg('<strong>Not in stock at Bolton</strong>', 'warn'), false],
   outOther: [`<div style="display: flex; flex-direction: column; gap: 8px">${msg('<strong>Not in stock at Bolton</strong> — in stock at our [Second site] shop', 'warn')}${button('Collect from [Second site] instead', { variant: 'default' })}</div>`, false],
   noshop: [msg('Choose a shop to see when it’s ready', 'grey'), true],
-  offline: [msg('Ask in the shop, or call us, to buy this', 'grey'), false],
+  // Website management (journey 18, audit H5): the same words while
+  // payments aren't connected.
+  offline: [msg('<strong>Not taking online orders right now.</strong> Ask in the shop, or call us, to buy this', 'grey'), false],
 };
 const qty = (name, n = 1, max = false) => `<div role="group" aria-label="Quantity of ${esc(name)}" style="display: inline-flex; align-items: center; border: 1px solid ${C.input}; border-radius: 8px; overflow: hidden"><button type="button" aria-label="One fewer ${esc(name)}" style="width: 44px; height: 44px; border: 0; background: ${C.panel}; font-family: inherit; font-size: 20px; color: ${C.ink}">−</button><span aria-live="polite" style="min-width: 40px; text-align: center; font-size: 16px; font-weight: 700">${n}</span><button type="button" aria-label="One more ${esc(name)}"${max ? ' aria-disabled="true"' : ''} style="width: 44px; height: 44px; border: 0; background: ${C.panel}; color: ${max ? C.muted : C.ink}; ${max ? 'opacity: 0.45; ' : ''}">${icon('plus', 16)}</button></div>`;
 const askShop = `<div style="display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 8px; border: 1px solid ${C.border}; font-size: 15px; line-height: 1.5"><strong>Ask the shop about it</strong><span>Call <a href="tel:[shop phone]" style="color: ${C.ink}">[shop phone]</a> or email <a href="mailto:[shop email]" style="color: ${C.ink}">[shop email]</a></span></div>`;

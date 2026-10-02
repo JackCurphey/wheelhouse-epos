@@ -18,14 +18,33 @@ Collect the bike and pay (journey 5), Receiving stock and purchase orders
 (journey 13), Stock take and stock control (journey 14), Book a repair
 (journey 3), Drop off and approve the quote (journey 4), Account, history
 and reminders (journey 7), Multiple sites (journey 19), Reports and
-accounts (journey 17), Buy online / click and collect (journey 2) and Find
-the shop and browse the website (journey 1) are approved and in
+accounts (journey 17), Buy online / click and collect (journey 2), Find
+the shop and browse the website (journey 1) and Website management
+(journey 18) are approved and in
 the big canvas; the next journey is
 Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy online
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (321 and 232 files of 512 each).
+phone (372 and 233 files of 512 each).
+
+**Journey 18, Website management (2 Oct):** approved at desktop, tablet and
+phone and copied into the big canvas; 13 decisions in
+`docs/decisions/2026-10-02-website-management-review.md` — edited on a live
+preview with sections and a Theme tab; changes wait for Publish, nothing is
+lost (History keeps discarded drafts); any colour with a readability guard
+and a chosen list of fonts; ready-made pages built from sections; Office ›
+Website for the website, selling rules and payments staying in Online
+orders; tracking tools picked from a list; the shop's own web address drawn
+but waiting on the business plan's freeze (ECOM-03, for Jack and Mark);
+online payments setup for any provider with a £1 test payment; Shopify kept
+as a choice, Wheelhouse in charge and Shopify orders in Online orders; a
+three-step start. UI audit `website-ui-audit.md`, every recommendation
+taken. 58 screens, 174 boards. Own canvas:
+https://claude.ai/artifact/RkyxcQZBCaVYfUa8bqixZM . Generator: `website.mjs` +
+`build-website.mjs --theme sand`. Open for Jack and Mark: what happens to
+products that are only in Shopify when a shop connects; custom web
+addresses (ECOM-03). The website is drawn as one for the whole business.
 
 **Journey 1, Find the shop and browse the website (2 Oct):** approved at
 desktop, tablet and phone and copied into the big canvas; 8 decisions in

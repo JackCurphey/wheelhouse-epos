@@ -186,3 +186,21 @@ possible).
     the switch; "Edit this page"), and journey 2's website saying "Not
     taking online orders yet" while payments aren't connected, with the
     provider's "needs more details" warning on Today.
+13. **Tablet and phone drawn; approved and copied into the big canvas**
+    (Jack, 2 Oct: "lets get it on the canvas"). On a tablet the editor
+    keeps its side panel, narrower, with the size buttons as icons; on a
+    phone it is edit, then preview — Sections, Theme and Preview are tabs,
+    with Publish at the top and the save state under it; lists that were
+    tables become one card per item. Added at this step: Today carries
+    "[payment provider] needs more details" (audit H5). 58 screens, 174
+    boards. In the big canvas (the staff app) journey 18 replaces its seven
+    placeholders; the old app's Shopify connection is now decision 9's
+    Shopify choice. Carried into other journeys: journey 1's staff banner
+    on the switched-off website (the first "Turn it on" also publishes;
+    "Edit this page"; staff without "Can edit the website" are told who to
+    ask, a new screen), and journey 2's "Ask in the shop" line, which now
+    reads "Not taking online orders right now" — "right now" rather than
+    the audit's "yet", so the same words fit a shop that has switched
+    buying online off on purpose. Found and fixed on the way: journey 1's
+    product page under the staff banner had lost its banner when the skip
+    link was added (Find the shop decision 8).

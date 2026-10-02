@@ -2267,65 +2267,473 @@
    "title": "Not designed · Returning customers",
    "is_interactive": true
   },
-  "j18-site-settings.dc.html": {
+  "j18-ws-start-which-desktop.dc.html": {
    "x": 0,
    "y": 23734,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Website settings",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Set up, step 1: Wheelhouse’s website or your Shopify shop? (desktop)",
    "is_interactive": true
   },
-  "j18-site-theme.dc.html": {
-   "x": 1180,
+  "j18-ws-start-look-desktop.dc.html": {
+   "x": 1320,
    "y": 23734,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Theme editor",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Step 2: logo and main colour, suggested from the logo (desktop)",
    "is_interactive": true
   },
-  "j18-site-pages.dc.html": {
-   "x": 2360,
+  "j18-ws-start-products-desktop.dc.html": {
+   "x": 2640,
    "y": 23734,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Pages",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Step 3: start with every product online, or nothing (desktop)",
    "is_interactive": true
   },
-  "j18-site-publish.dc.html": {
-   "x": 3540,
+  "j18-ws-editor-first-desktop.dc.html": {
+   "x": 3960,
    "y": 23734,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Preview and publish",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The editor opens on a ready-made home page, still off (desktop)",
    "is_interactive": true
   },
-  "j18-site-domain.dc.html": {
-   "x": 4720,
+  "j18-ws-page-desktop.dc.html": {
+   "x": 5440,
    "y": 23734,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Own web address",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Office › Website: off and never published — Turn it on also publishes (desktop)",
    "is_interactive": true
   },
-  "j18-site-shopify.dc.html": {
-   "x": 5900,
+  "j18-ws-page-on-desktop.dc.html": {
+   "x": 6760,
    "y": 23734,
-   "w": 1100,
-   "h": 816,
-   "title": "Old app · Shopify connection (to retire)",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · On, with unpublished changes and payments connected (desktop)",
    "is_interactive": true
   },
-  "j18-site-payments.dc.html": {
-   "x": 7240,
+  "j18-ws-page-changes-desktop.dc.html": {
+   "x": 8080,
    "y": 23734,
-   "w": 1100,
-   "h": 816,
-   "title": "Not designed · Online payments setup",
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The unpublished changes, with Publish and Discard (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-no-access-desktop.dc.html": {
+   "x": 9400,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Without “Can edit the website”: who to ask (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-no-settings-desktop.dc.html": {
+   "x": 10720,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Can edit the website, but not change settings (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-desktop.dc.html": {
+   "x": 12200,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The editor: sections down the side; pointing at a part of the page (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-section-desktop.dc.html": {
+   "x": 13520,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A section chosen: its settings, and the photo’s description (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-add-desktop.dc.html": {
+   "x": 14840,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · + Add section: below the chosen section (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-drag-desktop.dc.html": {
+   "x": 16160,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Dragging a section (or its arrows, or Alt + arrow keys) (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-moved-desktop.dc.html": {
+   "x": 17480,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Moved: the page shows the new order, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-removed-desktop.dc.html": {
+   "x": 18800,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A section removed, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-header-desktop.dc.html": {
+   "x": 20120,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The header: logo, and one link as a button (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-on-phone-desktop.dc.html": {
+   "x": 21440,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Preview on a phone (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-bigger-desktop.dc.html": {
+   "x": 22760,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Bigger: the preview without the panel (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-pages-menu-desktop.dc.html": {
+   "x": 24080,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The Page menu: your pages, and Wheelhouse’s shop pages (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-saving-desktop.dc.html": {
+   "x": 25400,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Couldn’t save — trying again (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-taken-desktop.dc.html": {
+   "x": 26720,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Someone else is editing: view only, or take over (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-desktop.dc.html": {
+   "x": 28200,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Theme: main colour, background, fonts, corners, buttons (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-contrast-desktop.dc.html": {
+   "x": 29520,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A colour that’s hard to read: where, and two fixes (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-publish-desktop.dc.html": {
+   "x": 30840,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Publishing with a hard-to-read colour asks once (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-product-desktop.dc.html": {
+   "x": 32160,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The theme on a product page (preview only) (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-fonts-desktop.dc.html": {
+   "x": 33480,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Fonts: a chosen list of tested pairs (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-published-desktop.dc.html": {
+   "x": 34960,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Published, with View website (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-published-off-desktop.dc.html": {
+   "x": 36280,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Published while the website is off (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-discard-desktop.dc.html": {
+   "x": 37600,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Discard unpublished changes? Kept in History (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-history-desktop.dc.html": {
+   "x": 38920,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Earlier versions and discarded drafts (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pages-desktop.dc.html": {
+   "x": 40400,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Pages: ready-made, two with wording to check (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pages-new-desktop.dc.html": {
+   "x": 41720,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a page: linked from the footer by default (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-settings-desktop.dc.html": {
+   "x": 43040,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Page settings: a page that always stays in the footer (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-returns-desktop.dc.html": {
+   "x": 44360,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Editing Collection and returns: starting wording to check (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-tracking-desktop.dc.html": {
+   "x": 45840,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Tracking tools: none on, so no cookie choice (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-tracking-on-desktop.dc.html": {
+   "x": 47160,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Google Analytics on: goes live when you publish (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-tracking-error-desktop.dc.html": {
+   "x": 48480,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · An ID that doesn’t look right: no cookie choice yet (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-desktop.dc.html": {
+   "x": 49960,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Web address: the free one, or use your own (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-typo-desktop.dc.html": {
+   "x": 51280,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · An address that needs an ending (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-steps-desktop.dc.html": {
+   "x": 52600,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your own address: the 2 records, and what it changes (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-waiting-desktop.dc.html": {
+   "x": 53920,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Not connected yet — up to a day (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-done-desktop.dc.html": {
+   "x": 55240,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your own address connected (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-none-desktop.dc.html": {
+   "x": 56720,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Online orders › Paying online: not connected, Buying online off (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-connected-desktop.dc.html": {
+   "x": 58040,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Back from [payment provider]: make a test payment (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-tested-desktop.dc.html": {
+   "x": 59360,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The test payment worked (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-failed-desktop.dc.html": {
+   "x": 60680,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connecting didn’t finish: nothing changed (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-more-desktop.dc.html": {
+   "x": 62000,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · [payment provider] needs more details (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-today-pay-more-desktop.dc.html": {
+   "x": 63320,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The same warning on Today (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-start-shopify-desktop.dc.html": {
+   "x": 64800,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Set up with Shopify, step 2: connect (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-connect-desktop.dc.html": {
+   "x": 66120,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connect your Shopify shop: what happens first (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-failed-desktop.dc.html": {
+   "x": 67440,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Couldn’t connect to Shopify (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-check-desktop.dc.html": {
+   "x": 68760,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Before sending: how many products will change (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-sending-desktop.dc.html": {
+   "x": 70080,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sending to Shopify (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-on-desktop.dc.html": {
+   "x": 71400,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connected to Shopify: the Website page (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-problem-desktop.dc.html": {
+   "x": 72720,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Products that couldn’t be sent to Shopify (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-switch-desktop.dc.html": {
+   "x": 74040,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switching to Wheelhouse’s website: what changes (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-shopify-desktop.dc.html": {
+   "x": 75360,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Online orders with Shopify: Shopify takes website payments (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-order-desktop.dc.html": {
+   "x": 76680,
+   "y": 23734,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Shopify order in Online orders (desktop)",
    "is_interactive": true
   },
   "j19-ms-switch-open-desktop.dc.html": {
    "x": 0,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · The shop switcher open: your shops, and “All shops” (owner) (desktop)",
@@ -2333,7 +2741,7 @@
   },
   "j19-ms-switched-desktop.dc.html": {
    "x": 1320,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · After switching: “Now working in [Second site]” (desktop)",
@@ -2341,7 +2749,7 @@
   },
   "j19-ms-today-all-desktop.dc.html": {
    "x": 2640,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Today, all shops: a row per shop, one list of what needs you (desktop)",
@@ -2349,7 +2757,7 @@
   },
   "j19-ms-pick-shop-desktop.dc.html": {
    "x": 3960,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · “All shops” on the diary: choose one (desktop)",
@@ -2357,7 +2765,7 @@
   },
   "j19-ms-till-other-desktop.dc.html": {
    "x": 5280,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · A till sells for its own shop, whatever the menu says (desktop)",
@@ -2365,7 +2773,7 @@
   },
   "j19-ms-one-shop-desktop.dc.html": {
    "x": 6600,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Someone with one shop: its name, no switcher (staff with two shops get their shops, no “All shops”) (desktop)",
@@ -2373,7 +2781,7 @@
   },
   "j19-ms-service-price-desktop.dc.html": {
    "x": 8080,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · A service: price for all shops, different at one, where it’s offered (desktop)",
@@ -2381,7 +2789,7 @@
   },
   "j19-ms-service-not-offered-desktop.dc.html": {
    "x": 9400,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Not offered at one shop (desktop)",
@@ -2389,7 +2797,7 @@
   },
   "j19-ms-services-differs-desktop.dc.html": {
    "x": 10720,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Services list at [Second site]: its price beside the all-shops one (desktop)",
@@ -2397,7 +2805,7 @@
   },
   "j19-ms-product-price-desktop.dc.html": {
    "x": 12040,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · A product’s price, different at one shop (desktop)",
@@ -2405,7 +2813,7 @@
   },
   "j19-ms-person-desktop.dc.html": {
    "x": 13520,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · A person: where they work, and workshop days at each shop (desktop)",
@@ -2413,7 +2821,7 @@
   },
   "j19-ms-book-shop-desktop.dc.html": {
    "x": 14840,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Book a repair: “Which shop?” first, nothing chosen (desktop)",
@@ -2421,7 +2829,7 @@
   },
   "j19-ms-book-shop-chosen-desktop.dc.html": {
    "x": 16160,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Came from Bolton’s page: the shop chosen, straight to the service (desktop)",
@@ -2429,7 +2837,7 @@
   },
   "j19-ms-book-shop-change-desktop.dc.html": {
    "x": 17480,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Changing the shop: what it resets (desktop)",
@@ -2437,7 +2845,7 @@
   },
   "j19-ms-job-other-shop-desktop.dc.html": {
    "x": 18960,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Booking a job into the other shop’s workshop: it goes as a request (desktop)",
@@ -2445,7 +2853,7 @@
   },
   "j19-ms-request-from-shop-desktop.dc.html": {
    "x": 20280,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · At [Second site]: the request, from Bolton, to accept (desktop)",
@@ -2453,7 +2861,7 @@
   },
   "j19-ms-sites-desktop.dc.html": {
    "x": 21760,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Shop and sites: each shop (owner) (desktop)",
@@ -2461,7 +2869,7 @@
   },
   "j19-ms-sites-manager-desktop.dc.html": {
    "x": 23080,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · The same, as a manager sees it (desktop)",
@@ -2469,7 +2877,7 @@
   },
   "j19-ms-add-shop-desktop.dc.html": {
    "x": 24400,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a shop: code suggested, hours copied (desktop)",
@@ -2477,7 +2885,7 @@
   },
   "j19-ms-add-shop-error-desktop.dc.html": {
    "x": 25720,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · A code another shop already uses (desktop)",
@@ -2485,7 +2893,7 @@
   },
   "j19-ms-today-new-desktop.dc.html": {
    "x": 27040,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Today at a new shop: what to do next (desktop)",
@@ -2493,7 +2901,7 @@
   },
   "j19-ms-tills-desktop.dc.html": {
    "x": 28360,
-   "y": 25550,
+   "y": 25590,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Till › Tills: every till, by shop (desktop)",
@@ -2501,7 +2909,7 @@
   },
   "j20-ops-audit.dc.html": {
    "x": 0,
-   "y": 27406,
+   "y": 27446,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Activity log",
@@ -2509,7 +2917,7 @@
   },
   "j20-ops-devices.dc.html": {
    "x": 1180,
-   "y": 27406,
+   "y": 27446,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Signed-in devices",
@@ -2517,7 +2925,7 @@
   },
   "j20-ops-feedback.dc.html": {
    "x": 2360,
-   "y": 27406,
+   "y": 27446,
    "w": 1100,
    "h": 816,
    "title": "Not designed · Send feedback",
@@ -2525,7 +2933,7 @@
   },
   "j21-connect.dc.html": {
    "x": 0,
-   "y": 29222,
+   "y": 29262,
    "w": 1100,
    "h": 816,
    "title": "Designed · Connect the one chosen Lightspeed",
@@ -2533,7 +2941,7 @@
   },
   "j21-connect-proof.dc.html": {
    "x": 1180,
-   "y": 29222,
+   "y": 29262,
    "w": 1100,
    "h": 816,
    "title": "Designed · Verify connector capabilities",
@@ -2541,7 +2949,7 @@
   },
   "j21-pos.dc.html": {
    "x": 2360,
-   "y": 29222,
+   "y": 29262,
    "w": 1100,
    "h": 816,
    "title": "Designed · Handoff agreed work to Lightspeed",
@@ -2549,7 +2957,7 @@
   },
   "j21-pos-done.dc.html": {
    "x": 3540,
-   "y": 29222,
+   "y": 29262,
    "w": 1100,
    "h": 816,
    "title": "Designed · See the linked work order",
@@ -2557,7 +2965,7 @@
   },
   "j21-pos-unknown.dc.html": {
    "x": 4720,
-   "y": 29222,
+   "y": 29262,
    "w": 1100,
    "h": 816,
    "title": "Designed · Uncertain Lightspeed handoff",
@@ -2864,13 +3272,64 @@
   "j17-rp-today-accounts-desktop.dc.html",
   "j17-rp-person-desktop.dc.html",
   "j17-rep-customers.dc.html",
-  "j18-site-settings.dc.html",
-  "j18-site-theme.dc.html",
-  "j18-site-pages.dc.html",
-  "j18-site-publish.dc.html",
-  "j18-site-domain.dc.html",
-  "j18-site-shopify.dc.html",
-  "j18-site-payments.dc.html",
+  "j18-ws-start-which-desktop.dc.html",
+  "j18-ws-start-look-desktop.dc.html",
+  "j18-ws-start-products-desktop.dc.html",
+  "j18-ws-editor-first-desktop.dc.html",
+  "j18-ws-page-desktop.dc.html",
+  "j18-ws-page-on-desktop.dc.html",
+  "j18-ws-page-changes-desktop.dc.html",
+  "j18-ws-no-access-desktop.dc.html",
+  "j18-ws-no-settings-desktop.dc.html",
+  "j18-ws-editor-desktop.dc.html",
+  "j18-ws-editor-section-desktop.dc.html",
+  "j18-ws-editor-add-desktop.dc.html",
+  "j18-ws-editor-drag-desktop.dc.html",
+  "j18-ws-editor-moved-desktop.dc.html",
+  "j18-ws-editor-removed-desktop.dc.html",
+  "j18-ws-editor-header-desktop.dc.html",
+  "j18-ws-editor-on-phone-desktop.dc.html",
+  "j18-ws-editor-bigger-desktop.dc.html",
+  "j18-ws-editor-pages-menu-desktop.dc.html",
+  "j18-ws-editor-saving-desktop.dc.html",
+  "j18-ws-editor-taken-desktop.dc.html",
+  "j18-ws-theme-desktop.dc.html",
+  "j18-ws-theme-contrast-desktop.dc.html",
+  "j18-ws-theme-publish-desktop.dc.html",
+  "j18-ws-theme-product-desktop.dc.html",
+  "j18-ws-theme-fonts-desktop.dc.html",
+  "j18-ws-published-desktop.dc.html",
+  "j18-ws-published-off-desktop.dc.html",
+  "j18-ws-discard-desktop.dc.html",
+  "j18-ws-history-desktop.dc.html",
+  "j18-ws-pages-desktop.dc.html",
+  "j18-ws-pages-new-desktop.dc.html",
+  "j18-ws-page-settings-desktop.dc.html",
+  "j18-ws-page-returns-desktop.dc.html",
+  "j18-ws-tracking-desktop.dc.html",
+  "j18-ws-tracking-on-desktop.dc.html",
+  "j18-ws-tracking-error-desktop.dc.html",
+  "j18-ws-address-desktop.dc.html",
+  "j18-ws-address-typo-desktop.dc.html",
+  "j18-ws-address-steps-desktop.dc.html",
+  "j18-ws-address-waiting-desktop.dc.html",
+  "j18-ws-address-done-desktop.dc.html",
+  "j18-ws-pay-none-desktop.dc.html",
+  "j18-ws-pay-connected-desktop.dc.html",
+  "j18-ws-pay-tested-desktop.dc.html",
+  "j18-ws-pay-failed-desktop.dc.html",
+  "j18-ws-pay-more-desktop.dc.html",
+  "j18-ws-today-pay-more-desktop.dc.html",
+  "j18-ws-start-shopify-desktop.dc.html",
+  "j18-ws-shopify-connect-desktop.dc.html",
+  "j18-ws-shopify-failed-desktop.dc.html",
+  "j18-ws-shopify-check-desktop.dc.html",
+  "j18-ws-shopify-sending-desktop.dc.html",
+  "j18-ws-shopify-on-desktop.dc.html",
+  "j18-ws-shopify-problem-desktop.dc.html",
+  "j18-ws-shopify-switch-desktop.dc.html",
+  "j18-ws-pay-shopify-desktop.dc.html",
+  "j18-ws-shopify-order-desktop.dc.html",
   "j19-ms-switch-open-desktop.dc.html",
   "j19-ms-switched-desktop.dc.html",
   "j19-ms-today-all-desktop.dc.html",
@@ -3543,7 +4002,7 @@
   "j18_s67": {
    "x": 0,
    "y": 23494,
-   "text": "Design the website",
+   "text": "Setting it up",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -3551,9 +4010,89 @@
    "maxH": 150
   },
   "j18_s68": {
-   "x": 7240,
+   "x": 5440,
    "y": 23494,
-   "text": "Online orders",
+   "text": "The Website page",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s69": {
+   "x": 12200,
+   "y": 23494,
+   "text": "Editing the home page",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s70": {
+   "x": 28200,
+   "y": 23494,
+   "text": "Theme",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s71": {
+   "x": 34960,
+   "y": 23494,
+   "text": "Publishing",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s72": {
+   "x": 40400,
+   "y": 23494,
+   "text": "Pages",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s73": {
+   "x": 45840,
+   "y": 23494,
+   "text": "Tracking tools",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s74": {
+   "x": 49960,
+   "y": 23494,
+   "text": "Web address (waiting on the business plan decision)",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s75": {
+   "x": 56720,
+   "y": 23494,
+   "text": "Online payments setup",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s76": {
+   "x": 64800,
+   "y": 23494,
+   "text": "Shopify",
    "w": 520,
    "size": "l",
    "bold": true,
@@ -3565,11 +4104,11 @@
    "y": 23174,
    "text": "18 · Website management — Manager",
    "kind": "title1",
-   "maxW": 8340
+   "maxW": 77920
   },
-  "j19_s70": {
+  "j19_s78": {
    "x": 0,
-   "y": 25310,
+   "y": 25350,
    "text": "Choosing a shop",
    "w": 520,
    "size": "l",
@@ -3577,9 +4116,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s71": {
+  "j19_s79": {
    "x": 8080,
-   "y": 25310,
+   "y": 25350,
    "text": "Prices and services by shop",
    "w": 520,
    "size": "l",
@@ -3587,9 +4126,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s72": {
+  "j19_s80": {
    "x": 13520,
-   "y": 25310,
+   "y": 25350,
    "text": "People and booking",
    "w": 520,
    "size": "l",
@@ -3597,9 +4136,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s73": {
+  "j19_s81": {
    "x": 18960,
-   "y": 25310,
+   "y": 25350,
    "text": "Jobs between shops",
    "w": 520,
    "size": "l",
@@ -3607,9 +4146,9 @@
    "fill": "gray",
    "maxH": 150
   },
-  "j19_s74": {
+  "j19_s82": {
    "x": 21760,
-   "y": 25310,
+   "y": 25350,
    "text": "Adding a shop, and its tills",
    "w": 520,
    "size": "l",
@@ -3619,14 +4158,14 @@
   },
   "j19_title": {
    "x": 0,
-   "y": 24990,
+   "y": 25030,
    "text": "19 · Multiple sites — Owner, Manager and Staff",
    "kind": "title1",
    "maxW": 29600
   },
-  "j20_s76": {
+  "j20_s84": {
    "x": 0,
-   "y": 27166,
+   "y": 27206,
    "text": "Oversight",
    "w": 520,
    "size": "l",
@@ -3636,14 +4175,14 @@
   },
   "j20_title": {
    "x": 0,
-   "y": 26846,
+   "y": 26886,
    "text": "20 · Management oversight — Owner",
    "kind": "title1",
    "maxW": 3460
   },
-  "j21_s78": {
+  "j21_s86": {
    "x": 0,
-   "y": 28982,
+   "y": 29022,
    "text": "Connection and handoff",
    "w": 520,
    "size": "l",
@@ -3653,7 +4192,7 @@
   },
   "j21_title": {
    "x": 0,
-   "y": 28662,
+   "y": 28702,
    "text": "21 · Lightspeed shops (Release 1) — Manager and Staff",
    "kind": "title1",
    "maxW": 5820

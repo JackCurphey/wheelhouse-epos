@@ -355,8 +355,16 @@
    "title": "Designed · Switched off: the staff banner on every page (desktop)",
    "is_interactive": true
   },
-  "j01-wb-turned-on-desktop.dc.html": {
+  "j01-wb-off-preview-ask-desktop.dc.html": {
    "x": 39080,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switched off: staff without “Can edit the website” are told who to ask (desktop)",
+   "is_interactive": true
+  },
+  "j01-wb-turned-on-desktop.dc.html": {
+   "x": 40400,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -364,7 +372,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-banner-desktop.dc.html": {
-   "x": 40560,
+   "x": 41880,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -372,7 +380,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-choose-desktop.dc.html": {
-   "x": 41880,
+   "x": 43200,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -380,7 +388,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-saved-desktop.dc.html": {
-   "x": 43200,
+   "x": 44520,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -388,7 +396,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-page-desktop.dc.html": {
-   "x": 44520,
+   "x": 45840,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -396,7 +404,7 @@
    "is_interactive": true
   },
   "j01-wb-cookies-page-plain-desktop.dc.html": {
-   "x": 45840,
+   "x": 47160,
    "y": 4794,
    "w": 1280,
    "h": 856,
@@ -1913,6 +1921,7 @@
   "j01-wb-off-desktop.dc.html",
   "j01-wb-off-preview-desktop.dc.html",
   "j01-wb-off-preview-product-desktop.dc.html",
+  "j01-wb-off-preview-ask-desktop.dc.html",
   "j01-wb-turned-on-desktop.dc.html",
   "j01-wb-cookies-banner-desktop.dc.html",
   "j01-wb-cookies-choose-desktop.dc.html",
@@ -2210,7 +2219,7 @@
    "maxH": 150
   },
   "j01_s11": {
-   "x": 40560,
+   "x": 41880,
    "y": 4554,
    "text": "Cookies",
    "w": 520,
@@ -2224,7 +2233,7 @@
    "y": 4234,
    "text": "01 · Find the shop and browse the website — Customer",
    "kind": "title1",
-   "maxW": 47080
+   "maxW": 48400
   },
   "j02_s13": {
    "x": 0,
