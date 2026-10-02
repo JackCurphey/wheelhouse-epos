@@ -54,3 +54,9 @@ placeholders. Rules for every journey apply (Workshop day 45, 48, 50, 53, 57,
    write to Lightspeed; still no money is written). Chosen over staff
    confirming every new customer, and one shared "Wheelhouse" customer in
    Lightspeed.
+5. **Parts on a quote come from Lightspeed's products** (Jack, 2 Oct:
+   "1"). The quote's part search shows Lightspeed's products with price and
+   stock and when it last checked ("3 in stock · checked 40 seconds ago");
+   the part goes on the work order as that product, and Lightspeed takes it
+   off stock when the job is paid. Chosen over parts typed freely and
+   matched in Lightspeed by staff, and quoting labour only.
