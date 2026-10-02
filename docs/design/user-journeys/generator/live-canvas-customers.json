@@ -722,8 +722,16 @@
    "title": "Designed · The item arrived from the other shop: Mark ready (desktop)",
    "is_interactive": true
   },
-  "j02-on-orders-second-desktop.dc.html": {
+  "j02-on-orders-sold-at-till-desktop.dc.html": {
    "x": 50800,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Held stock sold at the till anyway: not on the shelf any more (desktop)",
+   "is_interactive": true
+  },
+  "j02-on-orders-second-desktop.dc.html": {
+   "x": 52120,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -731,7 +739,7 @@
    "is_interactive": true
   },
   "j02-on-order-staff-desktop.dc.html": {
-   "x": 52120,
+   "x": 53440,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -739,7 +747,7 @@
    "is_interactive": true
   },
   "j02-on-order-staff-ready-desktop.dc.html": {
-   "x": 53440,
+   "x": 54760,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -747,7 +755,7 @@
    "is_interactive": true
   },
   "j02-on-not-ready-desktop.dc.html": {
-   "x": 54760,
+   "x": 56080,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -755,7 +763,7 @@
    "is_interactive": true
   },
   "j02-on-cant-supply-desktop.dc.html": {
-   "x": 56080,
+   "x": 57400,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -763,7 +771,7 @@
    "is_interactive": true
   },
   "j02-on-cancel-refund-desktop.dc.html": {
-   "x": 57400,
+   "x": 58720,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -771,7 +779,7 @@
    "is_interactive": true
   },
   "j02-on-hand-over-desktop.dc.html": {
-   "x": 58720,
+   "x": 60040,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -779,7 +787,7 @@
    "is_interactive": true
   },
   "j02-on-hand-over-refunded-desktop.dc.html": {
-   "x": 60040,
+   "x": 61360,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -787,7 +795,7 @@
    "is_interactive": true
   },
   "j02-on-today-desktop.dc.html": {
-   "x": 61360,
+   "x": 62680,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -795,7 +803,7 @@
    "is_interactive": true
   },
   "j02-on-today-uncollected-desktop.dc.html": {
-   "x": 62680,
+   "x": 64000,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -803,7 +811,7 @@
    "is_interactive": true
   },
   "j02-on-settings-desktop.dc.html": {
-   "x": 64160,
+   "x": 65480,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -811,7 +819,7 @@
    "is_interactive": true
   },
   "j02-on-settings-order-in-desktop.dc.html": {
-   "x": 65480,
+   "x": 66800,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -819,7 +827,7 @@
    "is_interactive": true
   },
   "j02-on-settings-start-desktop.dc.html": {
-   "x": 66800,
+   "x": 68120,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -827,7 +835,7 @@
    "is_interactive": true
   },
   "j02-on-settings-show-desktop.dc.html": {
-   "x": 68120,
+   "x": 69440,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -835,15 +843,23 @@
    "is_interactive": true
   },
   "j02-on-settings-pay-desktop.dc.html": {
-   "x": 69440,
+   "x": 70760,
    "y": 6650,
    "w": 1280,
    "h": 856,
    "title": "Designed · Paying online, and orders not collected (desktop)",
    "is_interactive": true
   },
+  "j02-on-settings-keep-desktop.dc.html": {
+   "x": 72080,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Keep orders for [n] days, and where ready orders wait (desktop)",
+   "is_interactive": true
+  },
   "j02-on-messages-desktop.dc.html": {
-   "x": 70760,
+   "x": 73400,
    "y": 6650,
    "w": 1280,
    "h": 856,
@@ -2490,7 +2506,7 @@
    "size": 40,
    "text": "Settings",
    "w": 520,
-   "x": 64160,
+   "x": 65480,
    "y": 6410
   },
   "j02_title": {
@@ -2953,6 +2969,7 @@
   "j02-on-orders-desktop.dc.html",
   "j02-on-orders-ready-desktop.dc.html",
   "j02-on-orders-arrived-desktop.dc.html",
+  "j02-on-orders-sold-at-till-desktop.dc.html",
   "j02-on-orders-second-desktop.dc.html",
   "j02-on-order-staff-desktop.dc.html",
   "j02-on-order-staff-ready-desktop.dc.html",
@@ -2968,6 +2985,7 @@
   "j02-on-settings-start-desktop.dc.html",
   "j02-on-settings-show-desktop.dc.html",
   "j02-on-settings-pay-desktop.dc.html",
+  "j02-on-settings-keep-desktop.dc.html",
   "j02-on-messages-desktop.dc.html",
   "j03-bk-service-desktop.dc.html",
   "j03-bk-service-chosen-desktop.dc.html",

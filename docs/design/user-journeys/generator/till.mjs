@@ -7,7 +7,7 @@
 // (Standard service £65, Shimano brake pads B05S-RX £28, Fit & adjust brakes
 // £18, Replace gear cable £12). Every other product is a bracketed
 // placeholder until Jack supplies real items.
-import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
+import { C, MONO, esc, icon, button, card, field, badge } from './ui.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { foldedRail, tillBar, tillPhoneBar } from './app-map.mjs';
 import { LINES_APPROVED, WORK_TOTAL_APPROVED, TW, TH } from './diary.mjs';
@@ -51,7 +51,7 @@ const overlay = (baseFn, d) => {
 };
 
 // ---------- Left side (decision 2): search, group pills, quick buttons ----------
-const searchBox = `<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs" placeholder="Search or scan: products, customers, jobs" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>`;
+const searchBox = `<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs, orders" placeholder="Search or scan: products, customers, jobs, orders" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>`;
 const groupPill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`;
 const quick = (name, sub, price) => `<button type="button" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 104px; box-sizing: border-box; padding: 14px; border-radius: 12px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; text-align: left; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 700; line-height: 1.25">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${esc(sub)}</span></span>${mono(price, 'font-size: 16px')}</button>`;
 const quickPlaceholder = (t) => `<div style="min-height: 104px; box-sizing: border-box; padding: 14px; border-radius: 12px; border: 2px dashed ${C.border}; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; color: ${C.muted}">${esc(t)}</div>`;
@@ -64,7 +64,7 @@ function leftSide({ group = 'Workshop' } = {}) {
     ...Array.from({ length: { desktop: 9, tablet: 6, phone: 3 }[CUR] }, () => quickPlaceholder('[Quick button · £ price]')),
   ];
   return `<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-${CUR === 'phone' ? searchBox.replace('placeholder="Search or scan: products, customers, jobs"', 'placeholder="Search or scan"') : searchBox}
+${CUR === 'phone' ? searchBox.replace('placeholder="Search or scan: products, customers, jobs, orders"', 'placeholder="Search or scan"') : searchBox}
 <div role="group" aria-label="Quick button groups" style="display: flex; flex-wrap: wrap; gap: 8px">${groups.map((g) => groupPill(g, g === group)).join('')}</div>
 <div style="display: grid; grid-template-columns: repeat(${{ desktop: 4, tablet: 3, phone: 2 }[CUR]}, minmax(0, 1fr)); gap: ${CUR === 'phone' ? 10 : 12}px">${buttons.join('')}</div>
 </div>`;
@@ -76,9 +76,14 @@ const signed = (n) => (n < 0 ? `−${money(-n)}` : money(n));
 const line = (l) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 9px 0; border-top: 1px solid ${C.border}">
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(signed(l.price * l.qty), 'font-size: 16px')}</div>
 ${l.fixed ? '' : `<div style="display: flex; align-items: center; justify-content: space-between">${stepper(l.qty, l.name)}<span style="font-size: 13px; color: ${C.muted}">${l.qty > 1 ? `${money(l.price)} each` : ''}</span></div>`}
+${l.warn ? `<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 13px; font-weight: 600">${icon('alert', 14)}${esc(l.warn)}</span>` : ''}
 </div>`;
-function basket(lines, { customer = null, points = false, full = false } = {}) {
-  const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
+// UX walk-through 2 M6: a line can carry a warning that doesn't block the
+// sale, like "Stock says 0 — sold anyway" (decision 5).
+// UX walk-through 2 M11: `discount` ({ reason, amount }) draws the whole-sale
+// discount as a row above the total, and the total and Take payment drop.
+function basket(lines, { customer = null, points = false, full = false, discount = null } = {}) {
+  const total = lines.reduce((s, l) => s + l.price * l.qty, 0) - (discount ? discount.amount : 0);
   const vat = total / 6; // UK prices include 20% VAT: VAT is one sixth of the price
   // Phone: the basket is a bar along the bottom (journey A) unless it is the
   // point of the screen, when it fills the screen.
@@ -94,7 +99,7 @@ ${button(`Take payment · ${money(total)}`, { block: true })}` : `<span style="f
 ${customer ? `<div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid ${C.border}; border-radius: 8px"><a href="#" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: ${C.ink}">${icon('user', 16)}<span style="font-size: 14px; font-weight: 600">${esc(customer)}</span></a>${points ? `<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600">[£ amount] store credit</span><span style="font-size: 13px; color: ${C.muted}">Earned on past purchases</span></span>${button('Use it', { variant: 'default' })}</div>` : ''}</div>` : `<button type="button" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px dashed ${C.input}; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${icon('user', 16)}Add a customer <span style="font-weight: 400; color: ${C.muted}">(optional)</span></button>`}
 ${lines.length ? `<div style="display: flex; flex-direction: column">${lines.map(line).join('')}</div>` : `<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; color: ${C.muted}"><span style="font-size: 15px; font-weight: 600; color: ${C.ink}">Nothing in the sale yet</span><span style="font-size: 14px">Tap a quick button, search, or scan a barcode.</span></div>`}
 <div style="flex-grow: 1"></div>
-<a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Add a discount</a>
+${discount ? `<a href="#" aria-label="Discount · ${esc(discount.reason)} · minus ${money(discount.amount)} — change or remove" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">Discount · ${esc(discount.reason)}</span>${mono(`−${money(discount.amount)}`, 'font-size: 16px')}</a>` : `<a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Add a discount</a>`}
 <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">
 <div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 16px; font-weight: 700">Total</span>${mono(money(total), 'font-size: 26px')}</div>
 <div style="display: flex; justify-content: space-between; font-size: 13px; color: ${C.muted}"><span>Includes VAT</span>${mono(money(vat))}</div>
@@ -112,6 +117,9 @@ export const screens = {};
 const recipes = [];
 const def = (id, fn) => recipes.push([id, fn]);
 def('till-sale', () => tillPage(leftSide(), basket([PADS, BRAKES])));
+// UX walk-through 2 M6 (option 1): two of the pads are held for online
+// orders. The line says so and the sale carries on — never blocked.
+def('till-held', () => tillPage(leftSide(), basket([{ ...PADS, warn: '[n] held for online orders — sold anyway' }, BRAKES], { full: true })));
 
 // Decision 3: tap a basket line → a pop-up in the middle with price,
 // discount (amount or percent, with a reason), a note, and Remove.
@@ -182,6 +190,10 @@ def('till-discount', () => overTill(dialog('disc-title', 'Discount the whole sal
 <div role="group" aria-label="Reason for the discount" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">The reason is kept with the sale and shows in the discounts report.</p>
 <div>${button('Remove discount', { variant: 'danger' })}</div>`, `${button('Cancel', { variant: 'ghost' })}${button('Done')}`)));
+// UX walk-through 2 M11: after Done, the basket shows the discount and the
+// new total, and payment starts from it.
+const DISC = { reason: '[reason]', amount: 4 };
+def('till-discounted', () => tillPage(leftSide(), basket([PADS, BRAKES], { discount: DISC, full: true })));
 
 // ---------- Taking payment ----------
 // Decision 6: the card machine is connected — choosing Card sends the amount
@@ -207,7 +219,7 @@ def('till-pay-other', () => overTill(payDialog(true)));
 // The card machine at work (decision 6): waiting for the card, then
 // approved (straight on to the receipt) or declined. If the machine doesn't
 // answer, staff can key the amount in on it by hand and say so here.
-function cardDialog(state) {
+function cardDialog(state, TOTAL = 74) { // UX walk-through 2 M11: any total
   const body = {
     waiting: `<div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 12px 0; text-align: center"><span style="display: inline-flex; width: 72px; height: 72px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; color: ${C.ink}">${icon('card', 34)}</span><span style="font-size: 22px; font-weight: 700">Waiting for the card</span>${mono(money(TOTAL), 'font-size: 34px')}<span style="font-size: 15px; color: ${C.muted}">On the card machine now — the customer taps, inserts or swipes.</span></div>`,
     declined: `<div style="display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 12px 0; text-align: center"><span style="display: inline-flex; width: 72px; height: 72px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.dangerBg}; color: ${C.dangerInk}">${icon('alert', 34)}</span><span style="font-size: 22px; font-weight: 700">Card declined</span><span style="font-size: 15px; color: ${C.muted}">The card machine said no — nothing was taken. Try the card again, another card, or another way to pay.</span></div>`,
@@ -219,6 +231,8 @@ function cardDialog(state) {
 }
 def('till-card', () => overTill(cardDialog('waiting')));
 def('till-card-declined', () => overTill(cardDialog('declined')));
+// UX walk-through 2 M11: the card payment from the discounted total.
+def('till-card-discounted', () => overlay(() => tillPage(leftSide(), basket([PADS, BRAKES], { discount: DISC })), cardDialog('waiting', 70)));
 const noteBtn = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 60px; border-radius: 10px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: ${MONO}; font-size: 18px">${t}</button>`;
 def('till-pay-cash', () => overTill(dialog('cash-title', `Cash · ${money(TOTAL)} to pay`, 'Tap what the customer handed you, or type it', `
 <div role="group" aria-label="Amount handed over" style="display: grid; grid-template-columns: repeat(${CUR === 'phone' ? 2 : 4}, minmax(0, 1fr)); gap: 10px">${noteBtn('£74.00')}${noteBtn('£75.00')}${noteBtn('£80.00', true)}${noteBtn('£100.00')}</div>
@@ -284,7 +298,23 @@ def('till-find', () => overTill(dialog('find-title', 'Past sales', 'Scan the rec
 <div style="display: flex; flex-direction: column"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}; padding-bottom: 6px">Today on Till B1</div>
 ${listRow(`${mono('B1-[0000]')} · Maya Patel`, '[time] · 3 items · card · Jo Taylor', money(TOTAL), button('Open', { variant: 'default' }))}
 ${listRow(`${mono('B1-[0000]')} · [No customer]`, '[time] · [n] items · cash · [name]', '[£ total]', button('Open', { variant: 'default' }))}</div>
-<p style="margin: 0; font-size: 13px; color: ${C.muted}">Older sale? Find the customer — their page shows every sale. No receipt and no customer: store credit only.</p>`, '', 640)));
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px">${button('Older sale? Find the customer', { variant: 'default', iconName: 'user' })}<span style="font-size: 13px; color: ${C.muted}">No receipt and no customer: store credit only.</span></div>`, '', 640)));
+// UX walk-through 2 M10 (option 1): "Older sale? Find the customer" is a
+// button. It searches customers in this pop-up, then lists the one picked's
+// sales here too; Refund opens the till's refund. Past sales' own box stays
+// receipt numbers only (decision 13).
+def('till-find-customer', () => overTill(dialog('findc-title', 'Past sales · find the customer', 'Pick the customer, then the sale', `
+<a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}"><span style="display: inline-flex; transform: rotate(90deg)">${icon('chevron', 16)}</span>Back to today’s sales</a>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search customers by name, phone or email" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}">${icon('user', 18)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">maya@example.com · Trek Domane AL 3</span></span><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Change</a></div>
+<div style="display: flex; flex-direction: column"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}; padding-bottom: 6px">Maya Patel’s sales</div>
+${listRow(`${mono('B1-[0000]')} · 3 items`, '[date] · card · Jo Taylor', money(TOTAL), button('Refund', { variant: 'default' }))}
+${listRow(`${mono('[Till]-[0000]')} · [n] items`, '[date] · [way paid] · [name]', '[£ total]', button('Refund', { variant: 'default' }))}</div>`, '', 640)));
+// …ending on the till's refund, for a sale from an earlier day.
+def('till-refund-older', () => overTill(dialog('refundold-title', `Refund from ${'B1-[0000]'}`, 'Maya Patel · [date] · paid by card', `
+<div>${tickRow('Shimano brake pads', 'Part · B05S-RX · 1 of 2', '£28.00', true)}${tickRow('Shimano brake pads', 'Part · B05S-RX · 2 of 2', '£28.00', false)}${tickRow('Fit & adjust brakes', 'Labour · 30 min', '£18.00', false)}</div>
+<div role="group" aria-label="Reason" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">Reason</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${reasonPill('[Shop’s reason]', true)}${reasonPill('[Shop’s reason]')}${reasonPill('Other…')}</div></div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 14px 16px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700">Refund to the card</span><span style="font-size: 13px; color: ${C.muted}">Sent to the card machine — the customer taps the same card</span></span>${mono('£28.00', 'font-size: 26px')}</div>`, `${button('Back', { variant: 'ghost' })}${button('Refund £28.00 to the card')}`, 600)));
 
 // Refund (decision 9): from the original sale; money back the way it was paid.
 def('till-refund', () => overTill(dialog('refund-title', `Refund from ${'B1-[0000]'}`, 'Maya Patel · today · paid by card', `
@@ -317,10 +347,15 @@ function jobBasket(collected = true, extra = []) {
 }
 def('till-job', () => tillPage(leftSide(), jobBasket()));
 
-// Hand over a click and collect order.
-def('till-collect', () => overTill(dialog('collect-title', 'Click and collect · order [number]', '[Customer] · paid online [date]', `
-<div>${tickRow('[Item]', '[Size or colour] · from [shelf or storage spot]', '[£ price]', false)}${tickRow('[Item]', '[Size or colour]', '[£ price]', false)}</div>
-<p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Mark collected')}`, 600)));
+// Hand over an online order.
+// UX walk-through 2 L1: called "Online order" and "Hand over", as on the
+// Online orders page. L4: items come from the one shelf set in Settings ›
+// Front desk › Online orders ("Where ready orders wait"). M4: drawn over an
+// empty basket, so it isn't mixed up with another customer's sale.
+const handOver = (sub, extra = '') => dialog('collect-title', 'Online order · [order number]', sub, `${extra}
+<div>${tickRow('[Item]', '[Size or colour] · from [Shelf name]', '[£ price]', false)}${tickRow('[Item]', '[Size or colour] · from [Shelf name]', '[£ price]', false)}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Hand over')}`, 600);
+def('till-collect', () => overTill(handOver('[Customer] · paid online [date]'), []));
 
 // ---------- When the internet drops (offline spec §3) ----------
 // Selling carries on: sales are saved on this till and send themselves, in
@@ -331,9 +366,26 @@ const notice = (strong) => `<div role="status" style="flex-shrink: 0; display: f
 def('till-offline', () => tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(false) }));
 def('till-offline-long', () => tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', offlineLong: true, notice: notice(true) }));
 const overTillOffline = (d) => overlay(() => tillPage(leftSide(), basket([PADS, BRAKES]), { offline: '[n]', notice: notice(false) }), d);
+// UX walk-through 2 M7 (option 1): "Note it for later" keeps the sale, the
+// items and the customer on a short list; back online, each refund is one
+// press, and Today shows "[n] refunds to finish". Handing over a paid online
+// order carries on, from the till's own copy.
 def('till-needs-net', () => overTillOffline(dialog('net-title', 'Refunds need the internet', 'The till is offline', `
 <p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">A refund has to find the original sale, so it waits for the connection. The same goes for paying for a workshop job, changing products or prices, and reports.</p>
-<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Sales, parking, customers, accounts and store credit all carry on as normal.</p>`, `<span></span>${button('OK')}`, 520)));
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Note it for later, and the sale, the items and the customer go on a short list. When the till is back online, the refund is one press.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Sales, parking, customers, accounts, store credit and handing over paid online orders all carry on as normal.</p>`, `${button('OK', { variant: 'ghost' })}${button('Note it for later')}`, 520)));
+// The noted state: what's on the list, and what to tell the customer.
+const notedRow = (k, v) => `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px">${k}</span><span style="font-size: 15px; font-weight: 600">${v}</span></div>`;
+def('till-noted', () => overTillOffline(dialog('noted-title', 'Noted for later', `Refund from ${'B1-[0000]'} · Maya Patel`, `
+<div role="status" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 15px; font-weight: 600">${icon('check', 18)}On the list of refunds to finish</div>
+<div style="display: flex; flex-direction: column; padding: 4px 16px 8px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">
+${infoRow('Sale', 'B1-[0000]')}${notedRow('Coming back', 'Shimano brake pads × 1')}${notedRow('Customer', 'Maya Patel')}${infoRow('To refund', '£28.00', true)}
+</div>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">When the till is back online, Today shows “[n] refunds to finish”. Finishing one is a single press — the money goes back the way it was paid.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5">Tell Maya: “We’ll refund it as soon as we’re back online — we’ve kept your details.”</p>`, `<span></span>${button('Done')}`, 560)));
+// Handing over a paid online order while offline: from the copy the till
+// last downloaded, marked to send when the internet is back.
+def('till-collect-offline', () => overlay(() => tillPage(leftSide(), basket([]), { offline: '[n]', notice: notice(false) }), handOver('[Customer] · paid online [date]', `<div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.45">${icon('wifi', 18)}<span style="flex-grow: 1">The till is offline, so this is its own copy of the order, from [time]. Handing it over is saved here and sends itself when the internet is back.</span>${badge('To send', 'blue')}</div>`)));
 def('till-no-signout', () => overTillOffline(dialog('signout-title', 'Can’t sign this till out yet', '[n] sales are still waiting to send', `
 <p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Signing out would wipe sales that only exist on this till. It works as soon as they’ve sent — they go by themselves when the internet is back.</p>`, `<span></span>${button('OK')}`, 520)));
 def('till-failed', () => overTill(dialog('failed-title', 'Sales that didn’t send', 'Kept safely on this till — a manager checks each one', `
@@ -344,7 +396,7 @@ def('till-failed', () => overTill(dialog('failed-title', 'Sales that didn’t se
 def('till-empty', () => tillPage(leftSide(), basket([])));
 function noResults() {
   return `<div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs" value="[what was typed]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs, orders" value="[what was typed]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
 <div role="status" style="position: absolute; top: 60px; left: 0; right: 0; z-index: 3; box-sizing: border-box; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)"><span style="font-size: 16px; font-weight: 700">Nothing matches “[what was typed]”</span><span style="font-size: 14px; color: ${C.muted}">Try part of the name, a part number, a phone number or a job number — or scan the barcode.</span></div>
 </div>`;
 }
@@ -378,6 +430,13 @@ CUR = 'desktop';
 
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
+  'till-held': 'Selling pads held for an online order — warned, not blocked', // UX walk-through 2 M6
+  'till-discounted': 'Basket with a discount — the new total', // UX walk-through 2 M11
+  'till-card-discounted': 'Card — from the discounted total', // UX walk-through 2 M11
+  'till-find-customer': 'Past sales — find the customer, then their sales', // UX walk-through 2 M10
+  'till-refund-older': 'Refund an older sale, found through the customer', // UX walk-through 2 M10
+  'till-noted': 'Offline refund noted for later', // UX walk-through 2 M7
+  'till-collect-offline': 'Hand over an online order while offline — marked to send', // UX walk-through 2 M7
   'till-line': 'Change a line — price, discount with a reason, note, remove',
   'till-discount': 'Discount the whole sale',
   'till-customer': 'Add a customer — search, or add someone new',
@@ -396,12 +455,12 @@ export const TITLES = {
   'till-loyalty': 'Store credit, earned by buying — shown with the customer in the basket',
   'till-deposit': 'Take a deposit — part now, the rest later',
   'till-park': 'Parked sales — resume',
-  'till-find': 'Past sales — scan the receipt, or today’s list',
+  'till-find': 'Past sales — scan the receipt, today’s list, or find the customer', // UX walk-through 2 M10
   'till-refund': 'Refund from the original sale — back to the card',
   'till-refund-noreceipt': 'No receipt — store credit only',
   'till-void': 'Void a sale — with a reason',
   'till-job': 'Pay for a workshop job — bike collected when paid',
-  'till-collect': 'Hand over a click and collect order',
+  'till-collect': 'Hand over an online order', // UX walk-through 2 L1
   'till-empty': 'Empty basket',
   'till-noresults': 'Search with no results',
   'till-sale-detail': 'A past sale — refund, reprint, void',
@@ -410,14 +469,15 @@ export const TITLES = {
   'till-job-balance': 'Workshop job back for collection — deposit taken off, pay the rest',
   'till-offline': 'Offline — keep selling, sales wait to send',
   'till-offline-long': 'Offline for over four hours — the notice grows',
-  'till-needs-net': 'Needs the internet — refunds and a few others wait',
+  'till-needs-net': 'Needs the internet — refunds wait, or note one for later', // UX walk-through 2 M7
   'till-no-signout': 'Can’t sign out while sales are waiting',
   'till-failed': 'Sales that didn’t send — for a manager',
 };
+// UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
-  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-line', 'till-discount', 'till-customer', 'till-variant', 'till-serial'] },
-  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
+  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
-  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-sale-detail', 'till-refund', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect'] },
-  { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-no-signout', 'till-failed'] },
+  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect'] },
+  { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-noted', 'till-collect-offline', 'till-no-signout', 'till-failed'] },
 ];

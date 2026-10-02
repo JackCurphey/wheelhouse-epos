@@ -179,25 +179,41 @@ ${note('It opens on the latest period each time, under “Your reports”.')}`, 
 // Each closed day opens from its row (H1).
 const dayLink = (day, till) => `<a href="#" style="display: inline-flex; align-items: center; gap: 6px; min-height: 40px; color: ${C.ink}; font-weight: 600">${day} · ${mono(till)}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
 const sent = (s) => ({ sent: badge('Sent', 'green'), open: badge('Not closed yet', 'grey'), reopened: badge('Reopened', 'amber'), failed: badge('Not sent', 'amber') }[s]);
+// UX walk-through 2 M5: each day's online payments are a line of their own,
+// from [payment provider], kept out of every till's close. Nothing to count or
+// bank, so those columns are empty; it goes to Xero with that day's summary.
+const onlineRow = (day, s, soFar = false) => [`${day} · Online`, soFar ? '[£] so far' : '[£]', '—', '—', 'Not a till', sent(s)];
 const dayRows = (reopened) => [
   [`Thu 17 Sep · ${mono('B1')}`, '—', '—', '—', 'Not closed yet', sent('open')],
+  onlineRow('Thu 17 Sep', 'open', true),
   [dayLink('Wed 16 Sep', 'B2'), '[£]', '[£]', `<span style="color: ${C.warnInk}; font-weight: 700">−£[£]</span>`, 'Jo Taylor', reopened ? sent('reopened') : sent('failed')],
   [dayLink('Wed 16 Sep', 'B1'), '[£]', '[£]', '£[£]', 'Jo Taylor', reopened ? sent('reopened') : sent('failed')],
+  onlineRow('Wed 16 Sep', reopened ? 'reopened' : 'failed'),
   [dayLink('Tue 15 Sep', 'B1'), '[£]', '[£]', '£[£]', 'Jack Lewis', sent('sent')],
+  onlineRow('Tue 15 Sep', 'sent'),
   [dayLink('Mon 14 Sep', 'B1'), '[£]', '[£]', '£[£]', 'Jo Taylor', sent('sent')],
+  onlineRow('Mon 14 Sep', 'sent'),
 ];
+const ONLINE_NOTE = 'Online is what customers paid on the website, from [payment provider]. It’s separate from the tills: no till counts it, and it’s in no till’s close.';
 // A reopened day is left out of every report until it closes again, and
 // each report says so (H2).
 const reopenedBar = () => bar('<strong>Wed 16 Sep, Till B2 is reopened</strong> — its figures are left out until it’s closed again.', button('Close the day', { variant: 'default' }));
 const takings = ({ reopened = false, site = 'Bolton' } = {}) => wrap(`${head('Takings and cash-ups', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${reopened ? reopenedBar() : ''}
-${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Cash differences', '£[£]', UP())])}
+${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Online', '£[£]', 'Paid on the website · separate from the tills'), stat('Cash differences', '£[£]', UP())])}
 ${box(`${graph('Takings by closed day', DAY_LABELS, { upto: 3, key: ['Closed days this week', 'Same days last week'] })}${site === 'All shops'
-  ? table('Closed days by shop', ['Shop', 'Takings', 'Cash banked', 'Cash difference', 'Sent to Xero'], [['Bolton', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`], [SECOND, '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`]], ['All shops', '[£]', '[£]', '£[£]', ''], [0, 4])
+  ? table('Closed days by shop', ['Shop', 'Takings at the tills', 'Online', 'Cash banked', 'Cash difference', 'Sent to Xero'], [['Bolton', '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`], [SECOND, '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`]], ['All shops', '[£]', '[£]', '[£]', '£[£]', ''], [0, 5])
   : table('Closed days', ['Day and till', 'Takings', 'Cash banked', 'Cash difference', 'Closed by', 'Sent to Xero'], dayRows(reopened), null, [0, 4, 5])}`)}
+${note(ONLINE_NOTE)}
 ${note('Open a closed day for its end-of-day report. A manager can reopen it from there, with a reason.')}`, OWNER, site);
-const ZROWS = [['Sales', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
-const dayReport = () => popup('z-title', 'Wed 16 September · Till B2', 'Closed by Jo Taylor at [time]', `<dl style="margin: 0">${ZROWS.map(([k, v]) => `<div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px"><dt>${k}</dt><dd style="margin: 0; font-family: ${MONO}">${v}</dd></div>`).join('')}</dl>`, `${button('Reopen this day', { variant: 'default' })}${button('Print', { variant: 'default' })}${button('Download as spreadsheet')}`, 560);
+// A row's third part is a line under its name.
+// UX walk-through 2 M2: the morning's float, and any difference, stays on the
+// day's report after "Seen" is pressed.
+const ZROWS = [['Sales', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Float at the start', '£[£]', '£[£] short, counted by Jo Taylor at [time]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
+const zRow = ([k, v, sub]) => `<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px"><dt style="display: flex; flex-direction: column; gap: 2px">${k}${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</dt><dd style="margin: 0; font-family: ${MONO}; white-space: nowrap">${v}</dd></div>`;
+// UX walk-through 2 M5: the day's online payments, said apart from this till.
+const zOnline = () => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 700"><span>Online that day</span>${mono('£[£]')}</div><span style="font-size: 13px; line-height: 1.45">Paid on the website, from [payment provider]. Separate from the tills — it isn’t in this till’s figures above.</span></div>`;
+const dayReport = () => popup('z-title', 'Wed 16 September · Till B2', 'Closed by Jo Taylor at [time]', `<dl style="margin: 0">${ZROWS.map(zRow).join('')}</dl>${zOnline()}`, `${button('Reopen this day', { variant: 'default' })}${button('Print', { variant: 'default' })}${button('Download as spreadsheet')}`, 560);
 const reopenDialog = () => popup('re-title', 'Reopen Wed 16 September, Till B2?', 'Its figures come out of the reports until it’s closed again', `${field('Why are you reopening it? (needed)', { placeholder: 'e.g. a card payment was counted as cash' })}
 ${note('Saved with your name and the time. The day goes back to Needs attention, and what was sent to Xero is corrected when it’s closed again.')}`, `${button('Keep it closed', { variant: 'ghost' })}${button('Reopen the day').replace('<button', '<button aria-disabled="true"').replace('style="', 'style="opacity: 0.45; ')}`, 560);
 

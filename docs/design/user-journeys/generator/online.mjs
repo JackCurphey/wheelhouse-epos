@@ -21,7 +21,7 @@
 // (Bearings, Drivetrain › Derailleurs). Other products, order numbers,
 // totals and times are bracketed placeholders.
 import { C, MONO, esc, icon, button, card, badge, field } from './ui.mjs';
-import { page, note, popup, overlay, withSize, isPhone, settingsPage, onlineFolds, ONLINE_INTRO, withOnlineArea, rowSwitch, msgFolds, MSG_INTRO } from './settings-frame.mjs';
+import { page, note, popup, overlay, withSize, isPhone, settingsPage, onlineFolds, ONLINE_INTRO, withOnlineArea, rowSwitch, msgFolds, MSG_INTRO, MANAGER, fold } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { today } from './opening.mjs';
 import { withSite } from './diary.mjs';
@@ -34,10 +34,13 @@ const def = (id, fn) => recipes.push([id, fn]);
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
 const sr = (t) => `<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">${t}</span>`;
 let SIZE = 'desktop';
-const OWNER = { role: 'O', person: 'Jack Lewis', roleName: 'Owner' };
+// UX walk-through 2 L1: Jack Lewis is the Manager here too, as on the till,
+// Today, cash-up and the staff list. Nothing on these settings is owner-only.
 const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 const PADS = { name: 'Shimano brake pads', code: 'B05S-RX', price: '£28.00' };
 const ORDER = 'Order [order number]';
+// UX walk-through 2 L4: where ready orders wait, set once in Settings.
+const SHELF = '[Shelf name]';
 // Audit H3: Maya's example order was paid partly with store credit, so every
 // refund line is built from how it was paid.
 const PAID_BY = [['Store credit', '£[£]'], ['Card', '£[£]']];
@@ -201,6 +204,7 @@ const orderPage = (state = 'getting') => {
     clash: section('Collect it', `${msg('<strong>Sorry — your order has just been marked ready, so it can’t be cancelled here.</strong> To cancel, call <a href="tel:[shop phone]" style="color: inherit">[shop phone]</a>.', 'bad', true)}${shopLines()}`, 'or-collect'),
     collected: section('Collected', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Collected on [date] from Bolton.</p>${receipt}`, 'or-collect'),
     cancelled: section('Your refund', `${msg(`${refundWords()}. Done on [date].`, 'ok')}<p style="margin: 0; font-size: 15px; line-height: 1.5">A card refund can take [n] working days to show on your statement.</p>`, 'or-refund'),
+    // UX walk-through 2 M8: [date] is the keep-until date the ready email gave.
     shopCancelled: section('Your refund', `<p style="margin: 0; font-size: 15px; line-height: 1.5">We cancelled this order because it wasn’t collected by [date], after we reminded you on [date].</p>${msg(`${refundWords()}.`, 'ok')}`, 'or-refund'),
   }[state] || section('Collect from', `${shopLines()}<p style="margin: 0; font-size: 15px">We’ll tell you when it’s ready — about [n] days.</p><div style="padding-top: 10px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 6px">${button('Cancel this order', { variant: 'default' })}${note('Full refund, the way you paid, until it’s ready.')}</div>`, 'or-collect');
   const cant = state === 'cantSupply' ? msg('<strong>Sorry — we couldn’t supply [Product].</strong> “[their reason]” [£ price] has gone back the way you paid: to your card. The rest of your order is on its way.', 'warn') : '';
@@ -210,6 +214,8 @@ const orderPage = (state = 'getting') => {
 const cancelOrder = () => popup('co-cancel', 'Cancel this order?', `${ORDER} · £[total]`, `<p style="margin: 0; font-size: 15px; line-height: 1.5">${refundWords()}. A card refund can take [n] working days to show. We’ll put the items back on sale.</p>`, `${button('Keep my order', { variant: 'ghost' })}${button('Cancel the order', { variant: 'danger' })}`, 480);
 
 // ---------- The emails (audit M5) ----------
+// UX walk-through 2 M8: the email's "until [date]" is the day it was marked
+// ready plus Settings' "Keep orders for [n] days" (said on the settings, not here).
 const email = () => {
   const [W, H] = SIZE === 'phone' ? [390, 844] : SIZE === 'tablet' ? [1180, 820] : [1280, 800];
   return `<div style="width: ${W}px; height: ${H}px; box-sizing: border-box; padding: ${isPhone() ? 12 : 40}px; display: flex; justify-content: center; background: ${C.mutedBg}"><article aria-label="Email" style="width: 100%; max-width: 620px; align-self: flex-start; box-sizing: border-box; padding: ${isPhone() ? 18 : 28}px; border-radius: 12px; background: ${C.panel}; border: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 14px; font-size: 15px; line-height: 1.55">
@@ -220,7 +226,8 @@ ${button('See your order')}
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">We’ll keep it for you until [date]. Can’t make it? Call us on [shop phone].</p></article></div>`;
 };
 // The five online-order messages now live in setup.mjs's Messages list.
-const messagesBoard = () => scrolled(settingsPage('messages', 'Messages', MSG_INTRO, msgFolds({ list: msgListOpen() }), { who: OWNER }), 120);
+// UX walk-through 2 M9: scrolled to the online order messages, now six.
+const messagesBoard = () => scrolled(settingsPage('messages', 'Messages', MSG_INTRO, msgFolds({ list: msgListOpen() }), { who: MANAGER }), isPhone() ? 1240 : 560);
 
 // ---------- The shop's side: Front desk › Online orders (decision 6; audit H4, H5, H6, M1, M2, M10, M11) ----------
 // Audit M11: the sidebar item counts orders to get ready; search finds orders.
@@ -231,9 +238,14 @@ const cols = () => (isPhone() ? '1fr' : '190px minmax(0, 1fr) 130px 190px');
 const orderRow = ({ who, items: its, how = 'Collect · Bolton', when, action, flag = '' }) => `<div role="listitem" style="display: grid; grid-template-columns: ${cols()}; gap: ${isPhone() ? 6 : 16}px; align-items: center; padding: 12px 0; border-top: 1px solid ${C.border}"><a href="#" style="display: flex; flex-direction: column; gap: 2px; min-height: 44px; justify-content: center; color: ${C.ink}; text-decoration: none"><span style="font-size: 15px; font-weight: 700; text-decoration: underline">${who}</span><span style="font-size: 13px; color: ${C.muted}">${ORDER} · ${when}</span>${flag ? `<span style="margin-top: 2px">${flag}</span>` : ''}</a><div style="display: flex; flex-direction: column; gap: 4px">${sr('Items: ')}${its}</div><span style="font-size: 14px">${sr('How: ')}${how}</span><span style="justify-self: ${isPhone() ? 'start' : 'end'}">${action}</span></div>`;
 const it = (name, tag = '') => `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px">${name}${tag}</span>`;
 const group = (title, count, rows, sub = '') => section(`${title} · ${count}`, `${sub ? note(sub) : ''}${isPhone() || !rows.length ? '' : `<div aria-hidden="true" style="display: grid; grid-template-columns: ${cols()}; gap: 16px; font-size: 12px; font-weight: 700; color: ${C.muted}"><span>Customer</span><span>Items</span><span>How</span><span></span></div>`}<div role="list">${rows.join('')}</div>`, `g-${title.toLowerCase().replace(/[^a-z]+/g, '-')}`);
+const waiting = from(`Waiting at ${SHELF}`);
 const handOver = (who) => button('Hand over', { variant: 'default' }).replace('<button', `<button aria-label="Hand over ${esc(who)}’s order"`);
-const ordersPage = ({ toast = false, arrived = false } = {}) => {
-  const maya = arrived
+// UX walk-through 2 M6: held stock sold at the till anyway (the till warns,
+// doesn't block). Maya's order then says the pads aren't on the shelf any
+// more, and Mark ready is off until staff sort it.
+const soldRow = () => orderRow({ who: 'Maya Patel', when: 'paid [time]', items: `${it(`${PADS.name} ${mono(PADS.code)}`, from('Not on the shelf any more', 'amber'))}${it('[Product]', from('Arrived from [Second site]', 'green'))}`, action: `<span style="display: flex; flex-direction: column; align-items: ${isPhone() ? 'flex-start' : 'flex-end'}; gap: 4px; text-align: ${isPhone() ? 'left' : 'right'}">${off(button('Mark ready'), 'Sold at the till. Open the order to sort it.')}</span>` });
+const ordersPage = ({ toast = false, arrived = false, sold = false } = {}) => {
+  const maya = sold ? soldRow() : arrived
     ? orderRow({ who: 'Maya Patel', when: 'paid [time]', items: `${it(`${PADS.name} ${mono(PADS.code)}`, from('On the shelf'))}${it('[Product]', from('Arrived from [Second site]', 'green'))}`, action: button('Mark ready') })
     : orderRow({ who: 'Maya Patel', when: 'paid [time]', items: `${it(`${PADS.name} ${mono(PADS.code)}`, from('On the shelf'))}${it('[Product]', from('On its way from [Second site]'))}`, action: badge('Waiting for 1 item', 'amber') });
   const content = `<div style="position: relative; height: 100%"><div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton')}
@@ -243,9 +255,10 @@ ${group('To get ready', toast ? 2 : 3, [
   orderRow({ who: '[Customer]', when: 'paid [time]', items: it('[Product]', from('Ordered from [supplier] · due [date]')), action: badge('Due [date]', 'grey') }),
 ], 'Mark ready when everything’s on the shelf for collection — the customer is told straight away.')}
 ${group('Ready to collect', toast ? 3 : 2, [
-  ...(toast ? [orderRow({ who: '[Customer]', when: 'ready just now', items: it('[Product] × 2'), action: handOver('[Customer]') })] : []),
-  orderRow({ who: '[Customer]', when: 'ready since [time]', items: it('[Product]'), action: handOver('[Customer]'), flag: from('Email didn’t arrive · [phone]', 'amber') }),
-  orderRow({ who: '[Customer]', when: 'ready since [date]', items: it('[Product]'), action: handOver('[Customer]'), flag: from('Not collected · [n] days', 'amber') }),
+  // UX walk-through 2 L4: each ready order says where it's waiting.
+  ...(toast ? [orderRow({ who: '[Customer]', when: 'ready just now', items: it('[Product] × 2', waiting), action: handOver('[Customer]') })] : []),
+  orderRow({ who: '[Customer]', when: 'ready since [time]', items: it('[Product]', waiting), action: handOver('[Customer]'), flag: from('Email didn’t arrive · [phone]', 'amber') }),
+  orderRow({ who: '[Customer]', when: 'ready since [date]', items: it('[Product]', waiting), action: handOver('[Customer]'), flag: from('Not collected · [n] days', 'amber') }),
 ], 'Hand over opens the till’s hand-over for that order — it’s already paid.')}
 ${group('Collected', '[n]', [orderRow({ who: '[Customer]', when: 'collected [time]', items: it('[Product]'), action: `<span style="font-size: 14px; color: ${C.muted}">by Jo Taylor</span>` })], 'The last 7 days. Older orders are on each customer’s page.')}
 </div>${toast ? `<div role="status" style="position: absolute; ${isPhone() ? 'left: 0; right: 0; bottom: 12px; white-space: normal' : 'left: 50%; bottom: 20px; transform: translateX(-50%); white-space: nowrap'}; display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)">${icon('check', 16)}<span style="flex-grow: 1">Ready. The email goes to [Customer] in [n] seconds</span><button type="button" style="flex-shrink: 0; min-height: 44px; padding: 0 14px; border: 0; border-radius: 6px; background: rgba(255,255,255,0.16); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">Undo</button></div>` : ''}</div>`;
@@ -260,7 +273,7 @@ ${group('To get ready', 0, [], 'Nothing to get ready here.')}</div>`, STAFF, '0'
 const staffItem = (name, sub, price, tag) => `<div role="listitem" style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: ${C.muted}">${sub}${tag}</span></span>${mono(price, 'font-size: 15px')}</div>`;
 const orderFacts = () => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 3}, minmax(0, 1fr)); gap: 12px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><span><strong>How</strong><br>Collect from Bolton</span><span><strong>Paid [time]</strong><br>${PAID_BY.map(([k, v]) => `${k} ${mono(v)}`).join('<br>')}</span><span><strong>Customer</strong><br>maya@example.test<br><a href="tel:07700900142" style="color: ${C.ink}">${mono('07700 900 142')}</a></span></div>`;
 const redBtn = (t) => `<button type="button" style="min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px solid ${C.danger}; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.danger}">${t}</button>`;
-const orderDialog = (ready = false) => popup('od-title', `${ORDER} · Maya Patel`, ready ? 'Ready since [time] · emailed' : '1 item still on its way', `<div role="list">${staffItem(PADS.name, `${mono(PADS.code)} · [shelf]`, PADS.price, from('On the shelf'))}${staffItem('[Product]', '[Size or colour]', '[£ price]', ready ? from('Here', 'green') : from('On its way from [Second site] · arrives [day]'))}</div>
+const orderDialog = (ready = false) => popup('od-title', `${ORDER} · Maya Patel`, ready ? `Ready since [time] · emailed · waiting at ${SHELF}` : '1 item still on its way', `<div role="list">${staffItem(PADS.name, `${mono(PADS.code)} · [shelf]`, PADS.price, from('On the shelf'))}${staffItem('[Product]', '[Size or colour]', '[£ price]', ready ? from('Here', 'green') : from('On its way from [Second site] · arrives [day]'))}</div>
 ${orderFacts()}
 <div style="display: flex; flex-wrap: wrap; gap: 10px; padding-top: 10px; border-top: 1px solid ${C.border}">${ready ? button('Not ready after all', { variant: 'default' }) : button('Can’t supply an item', { variant: 'default' })}${redBtn('Cancel and refund')}</div>
 ${ready ? '' : `<p style="margin: 0; font-size: 14px">Mark ready isn’t available yet: 1 item is still on its way from [Second site].</p>`}`, `${button('Close', { variant: 'ghost' })}${ready ? button('Hand over') : off(button('Mark ready'))}`, 640);
@@ -271,8 +284,9 @@ const cantSupply = () => popup('cs2-title', 'Can’t supply an item', `${ORDER} 
 ${field('Tell Maya why (needed)', { placeholder: 'e.g. it arrived damaged from [Second site]', linked: true })}
 ${note('[£ price] goes back to Maya’s card, the way it was paid, and she’s emailed your reason. The rest of the order carries on.')}`, `${button('Keep it', { variant: 'ghost' })}${button('Refund this item')}`, 560);
 // Audit H4: after the email has gone, putting it back offers a sorry email.
+// UX walk-through 2 M9: it has its own Messages row, "Order not ready after all".
 const notReady = () => popup('nr-title', 'Not ready after all?', `${ORDER} · Maya Patel was told it’s ready at [time]`, `<p style="margin: 0; font-size: 15px; line-height: 1.5">It goes back to “To get ready”.</p>
-<label style="display: flex; gap: 12px; align-items: flex-start; min-height: 44px; cursor: pointer"><input type="checkbox" checked style="width: 22px; height: 22px; margin: 1px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Send Maya “Sorry, not ready yet”</span><span style="font-size: 13px; color: ${C.muted}">The wording is in Settings › Messages</span></span></label>`, `${button('Keep it ready', { variant: 'ghost' })}${button('Move it back')}`, 520);
+<label style="display: flex; gap: 12px; align-items: flex-start; min-height: 44px; cursor: pointer"><input type="checkbox" checked style="width: 22px; height: 22px; margin: 1px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">Send Maya “Sorry, not ready yet”</span><span style="font-size: 13px; color: ${C.muted}">The wording is in Settings › Messages › Order not ready after all</span></span></label>`, `${button('Keep it ready', { variant: 'ghost' })}${button('Move it back')}`, 520);
 // Audit H5: Hand over opens the till's hand-over for the order (Selling at
 // the till); an item that was refunded is said, not ticked.
 const handOverTill = (refunded = false) => {
@@ -293,9 +307,18 @@ ${['Bearings', 'Drivetrain › Derailleurs', '[Category]'].map((c, i) => rowSwit
 ${note('New products follow their category. Each product’s page in Stock has its own “Show on website” switch.')}`;
 const payOpen = () => `${msg('Connected to [payment provider] by Jack Lewis on [date]')}
 ${rowSwitch('Apple Pay and Google Pay', true)}${rowSwitch('Gift cards', true)}${rowSwitch('Store credit (for signed-in customers)', true)}`;
-const collectOpen = () => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('Remind the customer after', { value: '[n] days' })}${field('Show on Today after', { value: '[n] days' })}</div>${note('Staff then contact the customer, or cancel it — a refund the way it was paid, and the items back on sale.')}`;
+// UX walk-through 2 M8: "Keep orders for" replaces "Show on Today after". It
+// sets the ready email's "We'll keep it for you until [date]", and the order
+// shows on Today as not collected on that date.
+const collectOpen = () => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('Remind the customer after', { value: '[n] days' })}${field('Keep orders for', { value: '[n] days' })}</div>${note('The “ready” email tells the customer we’ll keep it until that date. If it isn’t collected by then, it shows on Today. Staff then contact the customer, or cancel it — a refund the way it was paid, and the items back on sale.')}`;
+// UX walk-through 2 L4: one named spot for ready orders, set once. The staff
+// list and the till's hand-over show it.
+const shelfOpen = () => `${field('Shelf or spot', { value: SHELF })}${note('Set once. Ready orders show “Waiting at [Shelf name]” on Online orders, and the till’s hand-over says where to fetch them from.')}`;
 const master = (on) => card(`<div style="padding: 4px 18px">${rowSwitch('Buying online', on)}<p style="margin: 0 0 12px; font-size: 14px; color: ${C.muted}">${on ? 'Customers can buy from your website and collect from the shop.' : 'Off: product pages show prices and “Ask in the shop, or call us, to buy this”.'}</p></div>`, 'flex-shrink: 0');
-const onlineSettings = (open, { on = true } = {}) => withOnlineArea(() => settingsPage('online', 'Online orders', ONLINE_INTRO, onlineFolds(open), { who: OWNER })).replace(/(<section aria-labelledby="set-online"[^>]*><div[^>]*>[\s\S]*?<\/div>)/, `$1${master(on)}`);
+// UX walk-through 2 M8, L4: the "Not collected" summary follows the new
+// setting, and "Where ready orders wait" gets its own fold.
+const onlineFoldsWh2 = (open) => onlineFolds(open); // the folds now live in settings-frame.mjs
+const onlineSettings = (open, { on = true } = {}) => withOnlineArea(() => settingsPage('online', 'Online orders', ONLINE_INTRO, onlineFoldsWh2(open), { who: MANAGER })).replace(/(<section aria-labelledby="set-online"[^>]*><div[^>]*>[\s\S]*?<\/div>)/, `$1${master(on)}`);
 const startQuestion = () => popup('st-title', 'How should your website start?', 'You’re turning on buying online', `<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px"><legend style="font-size: 15px; font-weight: 700; padding: 0 0 4px">Start with</legend>${shopOption('Every product online', true, 'Everything with a price shows. Switch off what you don’t want to sell online.')}${shopOption('Nothing online', false, 'Add categories and products as you go.')}</fieldset>${note('Either way, every category and product has its own “Show on website” switch afterwards.')}`, `${button('Not now', { variant: 'ghost' })}${button('Turn on buying online')}`, 560);
 
 // ---------- The boards ----------
@@ -337,6 +360,8 @@ def('on-email-ready', () => email());
 def('on-orders', () => ordersPage());
 def('on-orders-ready', () => ordersPage({ toast: true }));
 def('on-orders-arrived', () => ordersPage({ arrived: true }));
+// UX walk-through 2 M6.
+def('on-orders-sold-at-till', () => ordersPage({ sold: true }));
 def('on-orders-second', () => secondSite());
 def('on-order-staff', () => overlay(ordersPage(), orderDialog()));
 def('on-order-staff-ready', () => overlay(ordersPage(), orderDialog(true)));
@@ -346,12 +371,15 @@ def('on-cancel-refund', () => overlay(ordersPage(), cancelRefund()));
 def('on-hand-over', () => handOverTill());
 def('on-hand-over-refunded', () => handOverTill(true));
 def('on-today', () => countIn(today({ onlineNew: true })));
-def('on-today-uncollected', () => countIn(today({ onlineUncollected: true })));
+// UX walk-through 2 M8: the line appears on the keep-until date.
+def('on-today-uncollected', () => countIn(today({ onlineUncollected: true }).replace('Ready since [date] · reminder sent [date]', 'Ready since [date] · kept until today · reminder sent [date]')));
 def('on-settings', () => onlineSettings({ sells: sellsOpen(0) }));
 def('on-settings-order-in', () => onlineSettings({ sells: sellsOpen(2) }));
 def('on-settings-start', () => overlay(onlineSettings({}, { on: false }), startQuestion()));
 def('on-settings-show', () => onlineSettings({ show: showOpen() }));
 def('on-settings-pay', () => onlineSettings({ pay: payOpen(), collect: collectOpen() }));
+// UX walk-through 2 M8, L4: the two new settings in view.
+def('on-settings-keep', () => scrolled(onlineSettings({ collect: collectOpen(), shelf: shelfOpen() }), isPhone() ? 338 : 260));
 def('on-messages', () => messagesBoard());
 
 // Desktop, tablet and phone (tablet and phone drawn after the UI audit).
@@ -401,6 +429,7 @@ export const TITLES = {
   'on-orders': 'Front desk › Online orders: to get ready, ready, collected',
   'on-orders-ready': 'Marked ready: the email waits a few seconds, with Undo',
   'on-orders-arrived': 'The item arrived from the other shop: Mark ready',
+  'on-orders-sold-at-till': 'Held stock sold at the till anyway: not on the shelf any more',
   'on-orders-second': 'At [Second site]: an item to send to Bolton',
   'on-order-staff': 'One order: items, how it was paid, the customer',
   'on-order-staff-ready': 'A ready order: Hand over, or not ready after all',
@@ -416,6 +445,7 @@ export const TITLES = {
   'on-settings-start': 'Turning on buying online: start with everything, or nothing',
   'on-settings-show': 'Showing products: switches on each category',
   'on-settings-pay': 'Paying online, and orders not collected',
+  'on-settings-keep': 'Keep orders for [n] days, and where ready orders wait',
   'on-messages': 'Settings › Messages: the online order messages',
 };
 export const ROWS = [
@@ -423,6 +453,6 @@ export const ROWS = [
   { label: 'Basket and checkout', screens: ['on-basket', 'on-basket-changed', 'on-basket-empty', 'on-checkout', 'on-checkout-errors', 'on-checkout-credit', 'on-checkout-covered', 'on-checkout-gift-code', 'on-checkout-gift'] },
   { label: 'Paying', screens: ['on-checkout-paying', 'on-checkout-bank', 'on-checkout-declined', 'on-checkout-unsure', 'on-checkout-sold-out', 'on-confirmed', 'on-save-details'] },
   { label: 'Your order', screens: ['on-order', 'on-order-moving', 'on-order-ready', 'on-order-collected', 'on-order-cancel', 'on-order-cancelled', 'on-order-clash', 'on-order-shop-cancelled', 'on-order-cant-supply', 'on-email-ready'] },
-  { label: 'The shop’s side', screens: ['on-orders', 'on-orders-ready', 'on-orders-arrived', 'on-orders-second', 'on-order-staff', 'on-order-staff-ready', 'on-not-ready', 'on-cant-supply', 'on-cancel-refund', 'on-hand-over', 'on-hand-over-refunded', 'on-today', 'on-today-uncollected'] },
-  { label: 'Settings', screens: ['on-settings', 'on-settings-order-in', 'on-settings-start', 'on-settings-show', 'on-settings-pay', 'on-messages'] },
+  { label: 'The shop’s side', screens: ['on-orders', 'on-orders-ready', 'on-orders-arrived', 'on-orders-sold-at-till', 'on-orders-second', 'on-order-staff', 'on-order-staff-ready', 'on-not-ready', 'on-cant-supply', 'on-cancel-refund', 'on-hand-over', 'on-hand-over-refunded', 'on-today', 'on-today-uncollected'] },
+  { label: 'Settings', screens: ['on-settings', 'on-settings-order-in', 'on-settings-start', 'on-settings-show', 'on-settings-pay', 'on-settings-keep', 'on-messages'] },
 ];

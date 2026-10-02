@@ -66,13 +66,13 @@ UI audits: `workshop-day-ui-audit.md`, `app-map-ui-audit.md`,
 `account-ui-audit.md`, `sites-ui-audit.md`, `reports-ui-audit.md`, `online-ui-audit.md`,
 `browse-ui-audit.md`, `website-ui-audit.md`, `oversight-ui-audit.md`, `c2w-ui-audit.md`, `lightspeed-ui-audit.md`, `leftover-ui-audit.md` (this folder).
 
-Overview count (each screen once): 713 screens — 710 designed, 0 built, 2
+Overview count (each screen once): 725 screens — 722 designed, 0 built, 2
 old app only, 1 not designed yet, 0 for review; the staff app canvas holds
-425 files and customers and the website 292, of 512 each (2 Oct: UX
-walk-through 1, the repair story, done and every fix drawn — see
+435 files and customers and the website 294, of 512 each (2 Oct: UX
+walk-throughs 1 (the repair) and 2 (a shop day) done and every fix drawn — see
 `ux-walkthrough-1-repair.md`, `docs/decisions/2026-10-02-ux-walkthrough.md`
 and the reusable `ux-walkthrough-script.md` for Jack and Mark. Next: the
-other six stories) (2 Oct: the
+other five stories) (2 Oct: the
 leftover screens drawn and their UI audit's fixes made — the receipt email
 (with and without a customer, a VAT invoice, a till sale), a text receipt
 and the till's "email the receipt" pop-up with its states in journey 5, the
@@ -95,9 +95,9 @@ sold out online not drawn; the owner's tablet rail is full. Earlier still:
 how long records are kept (LEG-05); Shopify-only products and custom web
 addresses (ECOM-03, frozen)).
 
-**Next: UX walk-throughs 2–7** (a shop day; stock; a new shop; a Cycle to
+**Next: UX walk-throughs 3–7** (stock; a new shop; a Cycle to
 Work bike; a repair at a Lightspeed shop; an owner with two shops), using
-`ux-walkthrough-script.md`. Walk-through 1 (the repair) is done. Ask Jack.
+`ux-walkthrough-script.md`. Walk-throughs 1 (the repair) and 2 (a shop day) are done. Ask Jack.
 
 **Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
 ux audit at the end when all the pages are done?"). Each journey keeps its own

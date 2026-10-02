@@ -27,7 +27,14 @@ Jack's choice (ask him first). The big canvas is **two canvases** (1 Oct, Buy on
 decision 10): the staff app (A, 8–21) on the shared link and customers and
 the website (B, 1–7) at https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh —
 desktop only, each board linking to its journey's own canvas for tablet and
-phone (425 and 292 files of 512 each).
+phone (435 and 294 files of 512 each).
+
+**UX walk-through 2, a shop day (2 Oct):** 18 findings, every recommendation
+taken and drawn (opening, till, online orders, cash-up, reports): an unclosed
+day's cash is counted once, online money has its own line, held stock warns
+at the till, offline refunds can be noted for later. Report
+`docs/design/user-journeys/ux-walkthrough-2-shop-day.md`. Overview: 725
+screens, 722 designed. Next: walk-throughs 3–7.
 
 **UX walk-through 1, the repair story (2 Oct):** the first end-of-project
 walk-through, a pilot; 20 findings, every recommendation taken and drawn

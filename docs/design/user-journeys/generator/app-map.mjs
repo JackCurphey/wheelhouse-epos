@@ -47,13 +47,14 @@ const resultRow = (main, sub, action, first = false) => `<a href="#" style="disp
 function searchResults() {
   return `<div role="listbox" aria-label="Search results" style="position: absolute; top: 58px; left: 0; right: 0; z-index: 3; box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)">
 ${resultGroup('Jobs', resultRow(`${mono('WH-1042')} · Maya Patel`, `Trek Domane AL 3 · Standard service · approved ${mono(money(WORK_TOTAL_APPROVED))}`, 'Add to basket ↵', true))}
+${resultGroup('Orders', resultRow('Order [order number] · Maya Patel', 'Online order · ready', 'Hand over'))}
 ${resultGroup('Customers', resultRow('Maya Patel', 'Customer · Trek Domane AL 3', 'Add to sale'))}
 ${resultGroup('Products', `<div style="padding: 6px 12px; font-size: 14px; color: ${C.muted}">No products match “maya”.</div>`)}
 </div>`;
 }
 function productArea({ query = '', compact = false } = {}) {
   return `<div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${query ? C.ink : C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs" placeholder="${compact ? 'Search or scan' : 'Search or scan: products, customers, jobs'}" value="${esc(query)}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${query ? C.ink : C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs, orders" placeholder="${compact ? 'Search or scan' : 'Search or scan: products, customers, jobs, orders'}" value="${esc(query)}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
 ${query ? searchResults() : ''}
 <div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: ${C.muted}; font-size: 14px; line-height: 1.5">Product buttons and search results${compact ? '' : '<br>(designed with Selling at the till, journey 11)'}</div>
 </div>`;
@@ -90,6 +91,11 @@ const railItemStyle = (on) => `display: flex; flex-direction: column; align-item
 const sideItemStyle = (on) => `display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: ${on ? 700 : 500}; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}`;
 const staffRooms = () => ROOMS_DIARY.map(([room, items]) => [room, items.filter((i) => i[3].includes(STAFF.role))]).filter(([, items]) => items.length);
 const initials = (n) => n.split(' ').map((x) => x[0]).join('');
+// UX walk-through 2 M3: the till's rail counts online orders to get ready,
+// the same pill as the staff pages (online.mjs countIn), folded and unfolded.
+const sr = (t) => `<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">${t}</span>`;
+const ORDERS_COUNT = '[n]';
+const ordersPill = (extra = '') => `<span style="padding: 0 7px; border-radius: 999px; background: ${C.highlight}; color: ${C.ink}; font-size: 12px; font-weight: 700; line-height: 18px; ${extra}">${ORDERS_COUNT}${sr(' to get ready')}</span>`;
 
 // Decision 8: your name opens "Your settings" — same block as the full sidebar in diary.mjs.
 const personBlock = () => `<div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)"><a href="your-settings-desktop.dc.html" aria-label="Your settings — ${STAFF.person}, ${STAFF.roleName}" title="Your settings" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${initials(STAFF.person)}</span><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${STAFF.person}</span><span style="font-size: 12px; opacity: 0.8">${STAFF.roleName}</span></span><span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span></a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-size: 13px; color: #ffffff">Sign out</a></div>`;
@@ -98,7 +104,7 @@ function unfoldedPanel(active, forced) {
   return `<nav aria-label="Main" class="wh-rail-full" style="position: absolute; top: 0; left: 0; bottom: 0; width: 248px; box-sizing: border-box; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; background: ${C.accentDark}; color: #ffffff; box-shadow: 8px 0 24px rgba(38,36,32,0.28); z-index: 5; ${forced ? '' : 'visibility: hidden; opacity: 0;'}">
 <div style="display: flex; align-items: center; gap: 10px; padding: 0 0 0 6px">${logoSlot('Wheelhouse logo', true)}<span style="font-size: 17px; font-weight: 700; flex-grow: 1">Wheelhouse</span><button type="button" aria-label="Fold the menu" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff"><span style="display: inline-flex; transform: rotate(90deg)">${icon('chevron', 16)}</span></button></div>
 <button type="button" aria-label="Switch site" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #ffffff; font-family: inherit; text-align: left"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">Bolton</span></span>${icon('chevron', 16)}</button>
-<div style="display: flex; flex-direction: column; gap: 8px">${staffRooms().map(([room, items]) => `<div style="display: flex; flex-direction: column; gap: 2px"><div style="padding: 2px 12px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(243,242,238,0.75)">${room}</div>${items.map(([key, label, ic]) => `<a href="#" aria-current="${key === active ? 'page' : 'false'}" style="${sideItemStyle(key === active)}">${icon(ic, 18)}<span>${esc(label)}</span></a>`).join('')}</div>`).join('')}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">${staffRooms().map(([room, items]) => `<div style="display: flex; flex-direction: column; gap: 2px"><div style="padding: 2px 12px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(243,242,238,0.75)">${room}</div>${items.map(([key, label, ic]) => `<a href="#" aria-current="${key === active ? 'page' : 'false'}" style="${sideItemStyle(key === active)}">${icon(ic, 18)}<span>${esc(label)}</span>${key === 'orders' ? ordersPill('margin-left: auto;') : ''}</a>`).join('')}</div>`).join('')}</div>
 <div style="flex-grow: 1"></div>
 ${personBlock()}
 </nav>`;
@@ -122,7 +128,7 @@ export function foldedRail(active, { forced = false } = {}) {
 <nav aria-label="Main, folded" style="width: 84px; box-sizing: border-box; padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; background: ${C.accentDark}; color: #ffffff">
 <div style="display: flex; justify-content: center; padding-bottom: 2px">${logoSlot('Wheelhouse logo', true)}</div>
 <button type="button" aria-label="Unfold the menu" aria-expanded="${forced}" style="display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; justify-content: center; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 12px; font-weight: 600"><span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 16)}</span>Unfold</button>
-${groups.map((g, i) => `<div style="display: flex; flex-direction: column; gap: 1px; ${i ? 'padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.18)' : ''}">${g.map(([key, label, ic]) => `<a href="#" aria-current="${key === active ? 'page' : 'false'}" style="${railItemStyle(key === active)}">${icon(ic, 19)}<span style="font-size: 12px; font-weight: ${key === active ? 700 : 500}; line-height: 1.12; text-align: center">${esc(label)}</span></a>`).join('')}</div>`).join('')}
+${groups.map((g, i) => `<div style="display: flex; flex-direction: column; gap: 1px; ${i ? 'padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.18)' : ''}">${g.map(([key, label, ic]) => `<a href="#" aria-current="${key === active ? 'page' : 'false'}" style="${railItemStyle(key === active)}${key === 'orders' ? '; position: relative' : ''}">${icon(ic, 19)}<span style="font-size: 12px; font-weight: ${key === active ? 700 : 500}; line-height: 1.12; text-align: center">${esc(label)}</span>${key === 'orders' ? ordersPill('position: absolute; top: 2px; right: 0; padding: 0 4px; font-size: 11px; line-height: 16px;') : ''}</a>`).join('')}</div>`).join('')}
 <div style="flex-grow: 1"></div>
 <a href="your-settings-desktop.dc.html" aria-label="Your settings — ${STAFF.person}, ${STAFF.roleName}" title="Your settings" style="display: flex; justify-content: center; align-items: center; min-height: 44px; color: #ffffff; text-decoration: none">${avatarWithCog(initials(STAFF.person))}</a>
 </nav>
@@ -142,6 +148,7 @@ screens['till-rail'] = { desktop: tillRail(false) };
 screens['till-rail-open'] = { desktop: tillRail(true) };
 // Decision 12: one box finds products, customers and jobs — typing "maya"
 // before anything is in the basket.
+// UX walk-through 2 M4: it finds her online order too, with Hand over.
 screens['till-search'] = { desktop: tillRail(false, 'maya') };
 
 // Decision 8: "Your settings" pop-up, opened from your name, for every role.
@@ -156,7 +163,7 @@ export function yourSettingsDialog(size = 'desktop', { graphs = false } = {}) {
     // UX walk-through 1 L6: things on a timer wait for a key press instead.
     a11ySettingRow('ys-wait', 'Don’t close things by themselves', 'Things that close or send after a few seconds — the till’s receipt choice, Undo — wait until you press a key or button.', false),
     a11ySettingRow('ys-text', 'Larger text', 'Makes text across Wheelhouse a step larger.', false, largerTextPreview(size)),
-    a11ySettingRow('ys-rail', 'Folded sidebar', P ? 'Not used on a phone, where the menu button opens the rooms.' : size === 'tablet' ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.' : 'Folds the sidebar down to icons on every page, for more room. Rest the pointer on it to unfold it. The Till always has it folded.', false),
+    a11ySettingRow('ys-rail', 'Folded sidebar', P ? 'Not used on a phone, where the menu button opens the rooms.' : size === 'tablet' ? 'On a tablet the sidebar is always the icon rail; tap Unfold to open it.' : 'Folds the sidebar down to icons on every page, for more room. Rest the pointer on it, or press Unfold, to open it. The Till always has it folded.', false),
   ];
   if (P) rows.pop(); // the folded sidebar doesn't apply on a phone
   // Reports and accounts audit L4: graphs on or off sits with the other ways of seeing.
@@ -317,6 +324,8 @@ const roleChips = (r) => Object.keys(ROLE_NAMES).map((k) => r.includes(k) ? badg
 const mapBox = (title, sub, inner) => card(`<div style="padding: 24px; display: flex; flex-direction: column; gap: 14px"><div style="display: flex; flex-direction: column; gap: 4px"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: ${C.muted}">${esc(sub)}</div><h2 style="margin: 0; font-size: 22px; font-weight: 700">${esc(title)}</h2></div>${inner}</div>`, 'flex: 1; min-width: 0');
 const mapLine = (a, b) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 14px"><span style="font-weight: 600">${a}</span><span style="text-align: right">${b}</span></div>`;
 const mapP = (t) => `<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
+// UX walk-through 2 L1: check-in is the PIN alone (Signing in 4), and the
+// rail's Unfold button is named beside resting on it.
 screens['map'] = {
   single: `<div style="width: ${MAP_W}px; height: ${MAP_H}px; box-sizing: border-box; padding: 48px; display: flex; flex-direction: column; gap: 28px; background: ${C.bg}">
 <div style="display: flex; flex-direction: column; gap: 8px"><h1 style="margin: 0; font-size: 38px; line-height: 1.2; font-weight: 700; letter-spacing: -0.3px">How Wheelhouse fits together</h1>${mapP('Three places people use Wheelhouse, and how they move between them.')}</div>
@@ -329,11 +338,11 @@ ${mapLine('Booking link', 'Opened from a text or email; no sign-in needed')}
 ${mapLine('Account (optional)', 'Sign in with an emailed code → bookings, bikes, history')}</div>`)}
 ${mapBox('Staff app', 'ONE APP, ORGANISED BY ROOMS OF THE SHOP', `<div style="display: flex; flex-direction: column; gap: 4px">${mapP('Signed in with email and password. The sidebar groups pages by room and shows only what each role may use. Search sits at the top of every page (on the till it finds products too); your name opens Your settings.')}
 ${ROOMS_DIARY.map(([room, items]) => `<div style="padding-top: 8px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: ${C.muted}">${room}</div>` + items.map(([, label, , r]) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid ${C.border}"><span style="font-size: 14px; font-weight: 600">${label}</span><span style="display: flex; gap: 4px">${roleChips(r)}</span></div>`).join('')).join('')}</div>`)}
-${mapBox('Till mode', 'ON A REGISTERED TILL', `<div style="display: flex; flex-direction: column; gap: 10px">${mapP('A till computer is set up once by a manager. It stays signed in, works offline, and staff check in with a PIN. The sidebar is folded to the rail and unfolds when you rest on it.')}
+${mapBox('Till mode', 'ON A REGISTERED TILL', `<div style="display: flex; flex-direction: column; gap: 10px">${mapP('A till computer is set up once by a manager. It stays signed in, works offline, and staff check in with a PIN. The sidebar is folded to the rail and unfolds when you rest on it, or press its Unfold button.')}
 ${mapLine('Start-up', `${mono('Till B1')} · Bolton · online or offline`)}
-${mapLine('Check in', 'Pick your name → enter PIN')}
+${mapLine('Check in', 'Enter your PIN')}
 ${mapLine('Sell', 'Sale → Take payment → Receipt')}
-${mapLine('Rest of the shop', 'Rest on the rail → pick a page')}</div>`)}
+${mapLine('Rest of the shop', 'Rest on the rail or press Unfold → pick a page')}</div>`)}
 </div>
 ${card(`<div style="padding: 24px; display: flex; flex-direction: column; gap: 14px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">After signing in, each role lands here</h2>
 <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
@@ -354,7 +363,7 @@ export const TITLES = {
   'your-settings': 'Your settings — opened from your name',
   'till-rail': 'Till — sidebar folded to the rail (rest on it to unfold)',
   'till-rail-open': 'Till — rail unfolded',
-  'till-search': 'Till — one search finds products, customers and jobs',
+  'till-search': 'Till — one search finds products, customers, jobs and online orders', // UX walk-through 2 M4
 };
 
 export const ROWS = [

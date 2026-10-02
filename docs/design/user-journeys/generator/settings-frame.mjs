@@ -224,8 +224,10 @@ export const shopFolds = (open = {}, sites = 'Bolton') =>
   + fold('Opening hours · Bolton', 'Closed Sundays', open.hours || '')
   + fold('Sites', sites, open.sites || '');
 export const MSG_INTRO = 'The texts and emails customers get from the shop.';
+// UX walk-through 2 M9: one more online order message (Lightspeed shops have
+// no online orders, so theirs stays 13).
 export const msgFolds = (open = {}) =>
-  fold('Automatic messages', lightspeedShop() ? '13 on' : '22 on', open.list || '')
+  fold('Automatic messages', lightspeedShop() ? '13 on' : '23 on', open.list || '')
   + fold('How messages are sent', 'Texts from [sender name] · emails from [email address]', open.sending || '');
 export const DATA_INTRO = 'Take a copy of everything, and see who changed what in Settings.';
 export const dataFolds = (open = {}) => (lightspeedShop()
@@ -253,7 +255,10 @@ export const onlineFolds = (open = {}) =>
   fold('What the website sells', 'Only what’s on the shelf', open.sells || '')
   + fold('Showing products', 'Set on each category and product', open.show || '')
   + fold('Paying online', '[Payment provider] · gift cards and store credit', open.pay || '')
-  + fold('Not collected', 'Reminder after [n] days · on Today after [n] days', open.collect || '');
+  // UX walk-through 2 M8, L4: orders are kept for [n] days, and ready orders
+  // wait at one named spot — on every canvas that shows these settings.
+  + fold('Not collected', 'Reminder after [n] days · kept for [n] days', open.collect || '')
+  + fold('Where ready orders wait', '[Shelf name]', open.shelf || '');
 
 // Cycle to Work decisions 3, 4 and 5: holding bikes, ordering ones not in
 // stock, deposits, the providers, and what goes on Today.

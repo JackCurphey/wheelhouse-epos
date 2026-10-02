@@ -14,7 +14,7 @@
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone } from './settings-frame.mjs';
 import { screens as tillScreens } from './till.mjs';
-import { screens as cashScreens } from './cashup.mjs';
+import { closeUncounted } from './cashup.mjs';
 
 export const screens = {};
 const recipes = [];
@@ -30,7 +30,14 @@ const tillBase = () => tillScreens['till-empty'][SIZE];
 // ---------- Decision 2: the one-tap float check ----------
 // No ✕ (audit M1): both ways out are answers, so Today's "float checked by"
 // is always true.
-const floatCheck = () => popup('fc-title', 'Hello, Jo', 'Till B1 · first in today', `
+// UX walk-through 2 M1: it goes to the first person to check in whose role
+// takes payments (Staff, Manager, Owner) — a mechanic checking in only
+// records his time. H1(b): `unclosed` — nobody counted Wednesday, so the
+// drawer should hold the float plus Wednesday's cash, and this count becomes
+// Wednesday's count.
+const floatCheck = (unclosed = false) => popup('fc-title', 'Hello, Jo', 'Till B1 · first in today to take payments', unclosed ? `
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; text-align: center"><span style="font-size: 15px; color: ${C.muted}">The drawer should have</span>${mono('[£ float]', 'font-size: 30px')}<span style="font-size: 15px; color: ${C.muted}">plus Wednesday’s cash</span>${mono('[£]', 'font-size: 30px')}</div>
+${note('Wednesday 16 September wasn’t counted, so its cash is still in the drawer. Have a quick look, or count it — your count becomes Wednesday’s count.')}` : `
 <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; text-align: center"><span style="font-size: 15px; color: ${C.muted}">The drawer should have</span>${mono('[£ float]', 'font-size: 30px')}<span style="font-size: 14px; color: ${C.muted}">The shop’s float</span></div>
 ${note('Have a quick look. If it doesn’t look right, count it — it only takes a minute.')}`, `${button('Count it', { variant: 'default' })}${button('Looks right')}`, 480, { close: false });
 
@@ -55,7 +62,7 @@ const matched = () => `<div style="position: relative">${tillBase()}<div role="s
 const floatDiff = (over = false) => popup('diff-title', `The float is ${over ? 'over' : 'short'}`, 'Till B1 · counted by Jo Taylor', `
 <div>${totalRow('Should have', '[£ float]', { first: true })}${totalRow('Counted', '[£ counted]')}${totalRow('Difference', `[£] ${over ? 'over' : 'short'}`, { strong: true, warn: true })}</div>
 <div style="display: flex; flex-direction: column; gap: 6px"><label for="diff-why" style="font-size: 14px; font-weight: 600">Any idea why? <span style="font-weight: 400; color: ${C.muted}">(optional)</span></label><input id="diff-why" placeholder="[reason]" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>
-${note('A manager sees this on Today. The till starts with what you counted.')}`, `${button('Count again', { variant: 'default' })}${button('Start the day')}`, 520);
+${note('A manager sees this on Today. The till starts with what you counted.')}`, `${button('Count again', { variant: 'default' })}${button('Start the day')}`, 520, { close: false }); // UX walk-through 2 L3: no ✕ — both ways out are answers
 
 // ---------- Decision 3: Office › Today ----------
 // Each card is a labelled section and its rows a list, so a screen reader
@@ -78,16 +85,23 @@ const STAFF = { role: 'S', person: 'Jo Taylor', roleName: 'Staff' };
 // H3: "Seen" clears a short float in one click.
 // Journey 9 decision 3 (refresh): while a shop runs alongside Citrus Lime,
 // the weekly "Time to refresh" reminder joins Needs attention for the owner.
-export function today({ short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, lightspeed = false, lsDown = false, lsPerson = false, lsUnpaid = false, as = null } = {}) {
+export function today({ banked = false, short = false, seen = false, waiting = false, staff = false, late = false, unclosed = false, refresh = false, uncollected = false, restock = false, adjusted = false, below = false, transferShort = false, noAnswer = false, replies = false, deleteRequest = false, arrived = false, accounts = false, onlineNew = false, onlineUncollected = false, payMore = false, watch = false, c2w = false, lightspeed = false, lsDown = false, lsPerson = false, lsUnpaid = false, as = null } = {}) {
   const tillTag = waiting ? tag('[n] sales waiting to send', 'warn') : seen ? tag('Float short · seen by Jack Lewis', 'grey') : short ? tag('Float short', 'warn') : tag('All sales sent');
-  const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, tillTag)]));
-  const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), line('Alex Morgan', 'Due in at [start time] · Mechanic', tag(late ? 'Late' : 'Not in yet', 'grey')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
+  // UX walk-through 2 H1(a): Wednesday counted and banked at night while its
+  // sales were still waiting; it closes by itself once they've sent.
+  const tills = section('Tills', list([line('Till B1', `Open · float checked by Jo Taylor at [time]`, banked ? tag('[n] sales waiting to send', 'warn') : tillTag), ...(banked ? [line('Wednesday counted and banked · waiting for [n] sales to send', 'Till B1 · Wednesday 16 September closes by itself once they’ve sent', tag('Closes by itself', 'grey'))] : [])]));
+  // UX walk-through 2 M1: Alex checked in first (the PIN screen shows him);
+  // as a Mechanic he wasn't asked about the float. `late` keeps the example
+  // of someone due in who hasn't come.
+  const who = section('Who’s in', list([line('Jo Taylor', 'Checked in at [time] · Staff', tag('In')), late ? line('Alex Morgan', 'Due in at [start time] · Mechanic', tag('Late', 'grey')) : line('Alex Morgan', 'Checked in at [time] · Mechanic', tag('In')), line('Jack Lewis', 'Checked in at [time] · Manager', tag('In'))]));
   const work = section('Workshop today', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 8px">${stat('Expected today', '8 bikes', noAnswer || arrived ? '2 still to arrive' : '3 still to arrive')}${stat('Repairs ready to collect', '4', 'In the workshop now')}</div>
 <h3 style="margin: 6px 0 0; font-size: 14px; font-weight: 700">Still to arrive</h3>
 ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<span style="font-size: 14px">${mono('10:30')} appointment</span>`), line('WH-1047 · Aisha Khan', 'Cannondale Quick · Safety check', '<span style="font-size: 14px">Drop-off</span>'), ...(noAnswer || arrived ? [] : [line('WH-1042 · Maya Patel', 'Trek Domane AL 3 · Standard service', `<span style="display: inline-flex; align-items: center; gap: 10px; white-space: nowrap"><span style="font-size: 14px">${mono('11:30')} appointment</span>${button('Book in', { variant: 'default' })}</span>`)])])}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Open the diary</a>`);
   const items = [
     short && !seen && line('Till B1’s float was [£] short this morning', 'Counted by Jo Taylor at [time] · “[their reason]”', button('Seen', { variant: 'default' }), warnLead),
-    unclosed && line('Wednesday 16 September wasn’t closed', 'Till B1 · yesterday’s takings still to count', button('Close it', { variant: 'default' }), warnLead),
+    // UX walk-through 2 H1(b): the morning's float check counted Wednesday's
+    // cash with the float, so what's left is banking.
+    unclosed && line('Wednesday 16 September wasn’t closed', 'Till B1 · counted with this morning’s float by Jo Taylor · still to bank', button('Close it', { variant: 'default' }).replace('style="', 'style="white-space: nowrap; '), warnLead),
     // Journey 5 decision 4: a ready bike left too long.
     // WH-1050 is the diary's oldest ready job (Mon 14 Sep).
     // Journey 5 audit H4: the number is on the line; "Contacted" records it.
@@ -140,7 +154,9 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     // that left before payment showed in Lightspeed.
     lsPerson && line('2 jobs need someone to look at Lightspeed', 'WH-1042 · Maya Patel — choose the customer · [Job] — check the work order arrived', button('See the jobs', { variant: 'default' }).replace('<button', '<button aria-label="See the jobs that need someone to look at Lightspeed"'), warnLead),
     lsUnpaid && line('Handed over, not paid in Lightspeed · Maya Patel · WH-1042', 'Collected [n] days ago by Jo Taylor · agreed £111.00', button('Open the job', { variant: 'default' }).replace('<button', '<button aria-label="Open WH-1042"'), warnLead),
-    waiting && line('Till B1 has [n] sales waiting to send', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Try again', { variant: 'default' }), warnLead),
+    // UX walk-through 2 L2: Today only knows what the till said when it was
+    // last in touch; "Check again" refreshes this line.
+    waiting && line('Till B1 last in touch at [time] · [n] sales waiting then', 'Waiting more than [n] minutes · they send by themselves when the internet is back', button('Check again', { variant: 'default' }).replace('style="', 'style="white-space: nowrap; '), warnLead),
   ].filter(Boolean);
   const attention = section('Needs attention', items.length ? list(items)
     : `<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid ${C.border}; font-size: 15px; color: ${C.muted}">${icon('check', 16)}Nothing needs you right now</div>`, '', items.length);
@@ -155,9 +171,12 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
 }
 
 // "Close it" lands on journey 16's close-the-day page, for yesterday (audit H3).
-const closeYesterday = () => cashScreens['eod-count'][SIZE].replace('[today’s date]', 'Wednesday 16 September');
+// UX walk-through 2 H1(b): it opens at banking — the morning's float check
+// was Wednesday's count.
+const closeYesterday = () => closeUncounted(SIZE);
 
 def('op-float-check', () => overlay(tillBase(), floatCheck()));
+def('op-float-check-unclosed', () => overlay(tillBase(), floatCheck(true))); // UX walk-through 2 H1(b)
 def('op-float-count', () => overlay(tillBase(), floatCount()));
 def('op-float-matched', () => matched());
 def('op-float-short', () => overlay(tillBase(), floatDiff()));
@@ -166,6 +185,7 @@ def('op-today', () => today());
 def('op-today-short', () => today({ short: true }));
 def('op-today-seen', () => today({ short: true, seen: true }));
 def('op-today-waiting', () => today({ waiting: true }));
+def('op-today-banked', () => today({ banked: true })); // UX walk-through 2 H1(a)
 def('op-today-unclosed', () => today({ unclosed: true }));
 def('op-close-yesterday', () => closeYesterday());
 def('op-today-two', () => today({ short: true, unclosed: true }));
@@ -182,6 +202,7 @@ SIZE = 'desktop';
 
 export const TITLES = {
   'op-float-check': 'First in: a one-tap float check',
+  'op-float-check-unclosed': 'First in, when yesterday wasn’t counted: the float plus Wednesday’s cash',
   'op-float-count': 'Count it: note by note',
   'op-float-matched': 'The count matches: the till is ready',
   'op-float-short': 'The float is short',
@@ -190,15 +211,16 @@ export const TITLES = {
   'op-today-short': 'Today, with a short float to check',
   'op-today-seen': 'Today, after the short float is marked Seen',
   'op-today-waiting': 'Today, with sales waiting to send',
+  'op-today-banked': 'Today, when yesterday was counted and banked but sales are still to send',
   'op-today-unclosed': 'Today, when yesterday wasn’t closed',
-  'op-close-yesterday': '“Close it”: yesterday’s close the day',
+  'op-close-yesterday': '“Close it”: yesterday’s close the day, at banking',
   'op-today-two': 'Today, with two things to deal with',
   'op-today-staff': 'Today, as Staff see it',
   'op-today-late': 'Today, when someone due in is late',
 };
 export const ROWS = [
-  { label: 'Opening the till', screens: ['op-float-check', 'op-float-count', 'op-float-matched', 'op-float-short', 'op-float-over'] },
-  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-seen', 'op-today-waiting', 'op-today-unclosed', 'op-close-yesterday', 'op-today-two', 'op-today-staff', 'op-today-late'] },
+  { label: 'Opening the till', screens: ['op-float-check', 'op-float-check-unclosed', 'op-float-count', 'op-float-matched', 'op-float-short', 'op-float-over'] },
+  { label: 'Office › Today', screens: ['op-today', 'op-today-short', 'op-today-seen', 'op-today-waiting', 'op-today-banked', 'op-today-unclosed', 'op-close-yesterday', 'op-today-two', 'op-today-staff', 'op-today-late'] },
 ];
 
 // Multiple sites (journey 19): Today's parts, for the "All shops" Today.

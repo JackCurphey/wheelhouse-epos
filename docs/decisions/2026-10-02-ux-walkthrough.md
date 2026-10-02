@@ -108,3 +108,44 @@ big canvases). Checked against the plan above:
    10), sales at the till (11), an online order to pick (2), cash-up (16).
    Chosen over another of the remaining stories, and stopping the
    walk-throughs to leave the rest for Jack and Mark.
+5. **Walk-through 2 (a shop day): every recommendation taken** (Jack, 2 Oct:
+   "1"). From `design/user-journeys/ux-walkthrough-2-shop-day.md` (1 High,
+   11 Medium, 6 Low): an unclosed day can be counted and banked at night and
+   finishes closing once its sales have sent, and a day nobody counted is
+   expected in the next morning's float (H1); the float check goes to the
+   first person in who takes payments (M1); online money has its own line,
+   kept out of each till's close (M5); stock held for an online order warns
+   at the till but doesn't block (M6); a "Note it for later" list offline,
+   and paid orders handed over from the till's copy (M7); "Keep orders for
+   [n] days" (M8); the till's older-sale hint becomes a customer search in
+   Past sales (M10); one named shelf for ready orders (L4); and every fix
+   with no choice. The work is listed below as it's done.
+
+## Walk-through 2 fixes: as built (2 Oct)
+
+Drawn by three helpers working on separate modules, checked by rendering, and
+copied into every canvas they touch. Against decision 5:
+
+- **Met:** H1 (`eod-waiting` lets Jack count and bank while sales wait, the
+  till bar shows offline and the card check waits; `eod-waiting-banked`;
+  `op-today-banked`; `op-float-check-unclosed` expects the float plus
+  Wednesday's cash, and "Close it" opens at banking), M1 (the float check
+  goes to the first in who takes payments; Alex shows "In"), M2 (the day's
+  report and the saved day show the float at the start; the count result
+  shows how the expected figure was made), M3 (a count on the till's
+  Online orders), M4 (an Orders group in the till's search; the hand-over
+  over an empty basket), M5 (card-machine payments only in the card check;
+  an "Online" line in Reports, kept out of the tills), M6 (`till-held`,
+  `on-orders-sold-at-till`), M7 (`till-noted`, `till-collect-offline`), M8
+  ("Keep orders for [n] days"), M9 (a sixth online message; 23 on), M10
+  (`till-find-customer`, `till-refund-older`), M11 (`till-discounted`,
+  `till-card-discounted`), L1–L5. "Where ready orders wait" and "kept for
+  [n] days" live in the shared settings, so the website canvas shows them
+  too.
+- **Partly:** M11 — the card pop-up is drawn from £70.00; "Take payment"
+  and "Split payment" are still drawn from £74.00. L1 — Jack is Manager on
+  Online orders now, but stays Owner in Reports, where connecting Xero is
+  owner-only: one role for Jack across every example is still open.
+- **Raised by the work, for Jack:** on the uncounted-day float check, "Looks
+  right" is kept beside "Count it"; pressing it makes Wednesday's figure
+  what the till expected, not a count.

@@ -291,7 +291,9 @@ const msgRowChoice = (name, when, { hover = false, reminder = false } = {}) => `
 // Buy online audit M5: every message an online order sends.
 // Cycle to Work decision 6: a message at each step, each switchable off.
 const C2W_MSGS = [['Your bike is put aside', 'When a Cycle to Work bike is held for the customer'], ['Certificate received', 'When the scheme certificate arrives'], ['Ready to collect', 'When the Cycle to Work bike is ready'], ['Your hold ends on [date]', '[n] days before a held bike is released']];
-const ONLINE_MSGS = [['Order confirmation', 'When an online order is paid'], ['Order ready to collect', 'When an online order is ready'], ['Order still waiting', 'When an order isn’t collected after [n] days'], ['Item we couldn’t supply', 'When staff refund an item, with their reason'], ['Order cancelled', 'When an order is cancelled, by the customer or the shop']];
+const ONLINE_MSGS = [['Order confirmation', 'When an online order is paid'], ['Order ready to collect', 'When an online order is ready'], ['Order still waiting', 'When an order isn’t collected after [n] days'], ['Item we couldn’t supply', 'When staff refund an item, with their reason'], ['Order cancelled', 'When an order is cancelled, by the customer or the shop'],
+  // UX walk-through 2 M9: the sorry email from "Not ready after all".
+  ['Order not ready after all', 'When an order marked ready is moved back']];
 // UX walk-through 1 H1, H2, M4: every message the repair story promises has
 // a row, and "Bike ready" goes when the job is marked ready.
 const msgListOpen = ({ bringBack = true, hoverReview = false } = {}) => `<div style="display: flex; flex-direction: column; gap: 8px">
