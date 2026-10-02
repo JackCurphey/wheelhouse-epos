@@ -89,6 +89,13 @@ collect and pay) and different kinds of people, looking for gaps at the
 hand-offs. Testing with real customers on a clickable prototype is the step
 after that.
 
+**Noted for later: a Cycle to Work page on the website** (Jack, 2 Oct:
+"but i would also like to remember 2 for the future", journey 6 decision 6).
+Customers ask for a Cycle to Work quote online — pick a bike and their scheme
+provider — and the request starts the Cycle to Work order for staff to check
+the bike and size before the quote goes. Touches journeys 1 (the website) and
+6.
+
 **Noted for later: customer orders** (Jack, 1 Oct: "one thing as well i dont
 think we have solved is how to do customer orders, say we just order in a part
 for a customer for them to collect, not something we have to figure out now,
