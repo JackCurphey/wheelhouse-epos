@@ -129,3 +129,60 @@ possible).
     still switched off, with "Turn it on" when ready. Pages, tracking tools,
     web address and payments are left to the Website page. Chosen over going
     straight into the editor, and a full set-up guide.
+12. **UI audit: every recommendation taken** (Jack, 2 Oct: "yeah go ahead
+    with them all"). From `design/user-journeys/website-ui-audit.md`:
+    - The preview scrolls but can't be clicked through. Clicking a part
+      selects it; choosing, adding or moving a section scrolls to it; a
+      "Bigger" button hides the panel (H1).
+    - **The first "Turn it on" also publishes**; after that, Turn on and Turn
+      off only change who sees the last published version. Captions and
+      messages say whether customers see the draft or the published version.
+      Starting wording is mentioned beside "Turn it on" without blocking it
+      (H2).
+    - **Nothing is lost.** A discarded or replaced draft is kept in History
+      for [n] days, and removing a section shows Undo (H3).
+    - The hard-to-read guard stays in view with a chip by Publish, and
+      Publish asks once. It checks button text, links and text on the
+      background, and offers "Darken to #946F0F" or "Keep your yellow, use
+      dark text" — the second adds to decision 3 (H4).
+    - The Website page shows whether payments are connected, and "Buying
+      online" can't be On until they are (H5).
+    - Without "Can edit the website", Website isn't in the sidebar; a link to
+      it says who to ask. Connecting payments follows "Can change settings";
+      connecting Shopify needs both (H6).
+    - Connecting Shopify shows a plain summary first, then "[n] products will
+      change" and "Send [n] products". What happens to products only in
+      Shopify is a rule for Jack and Mark to state (H7).
+    - The editor has its own heading, main area, skip link and tab panels
+      (M1). Keyboard reordering: Alt + arrow keys, greyed end arrows, the new
+      position spoken, Ctrl + Z to undo (M2).
+    - A save state shows ("Saved just now", "Couldn't save — trying again").
+      **One person edits at a time**; a second sees "View only" or "Take
+      over" (M3).
+    - The Website page opens the list of unpublished changes, with Publish
+      and Discard (M4). The Page menu adds Wheelhouse's shop pages
+      (category, product, basket, checkout, sign in, cookie choice) to
+      preview the theme, and a Tablet size (M5).
+    - A visible photo description box with "This photo is only decoration"
+      (M6). **Tracking tools wait for Publish** like everything else; a wrong
+      ID shows no cookie choice; the shop is pointed to its Cookies and
+      Privacy pages (M7).
+    - Page settings for every page; Collection and returns, Privacy and
+      Cookies (with a tool) can't leave the footer; new pages default to the
+      footer (M8).
+    - Plain web-address steps, a warning that the old website stops showing,
+      named Copy buttons (M9). The test payment's refund wording waits for
+      the provider, with "not tested" reminders (M10).
+    - The Shopify start, the switch question and Online orders in Shopify
+      mode are drawn (M11). Page previews share journey 1's header and footer
+      (M12). Targets 44px (M13).
+    - L1–L8: wording; Turn it on dark until the site is first on; "View
+      website" after Publish; "Edit this page" for staff on the website;
+      History summaries and View; an online-orders link in the editor; the
+      editor names the business, as the website is one for all its shops.
+
+    To carry into other journeys at the big-canvas step: journey 1's staff
+    banner (the first Turn on publishes; "Ask [name] to turn it on" without
+    the switch; "Edit this page"), and journey 2's website saying "Not
+    taking online orders yet" while payments aren't connected, with the
+    provider's "needs more details" warning on Today.
