@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router';
 import { apiGet } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
+import { RequestDialog } from './request-dialog.tsx';
 import {
   LEGEND, STATE_LABEL, addDays, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
@@ -216,6 +217,7 @@ export function DiaryPage() {
   const view = params.get('view') === 'day' ? 'day' : 'week';
   const who = params.get('who');
   const [chosen, setChosen] = useState<number | null>(null);
+  const [openItem, setOpenItem] = useState<WaitingItem | null>(null);
 
   const set = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
@@ -368,21 +370,38 @@ export function DiaryPage() {
           {items.map((item) => {
             const card = waitingCard(item);
             const on = chosen === item.jobId;
+            const choose = () => {
+              setChosen(item.jobId ?? null);
+              if (item.jobDate) set({ date: item.jobDate, who: null });
+            };
             return (
-              <button
+              <div
                 key={`${item.kind}-${item.jobId}`}
-                type="button"
-                aria-pressed={on}
-                onClick={() => {
-                  setChosen(item.jobId ?? null);
-                  if (item.jobDate) set({ date: item.jobDate, who: null });
-                }}
-                className={`flex flex-col gap-[5px] rounded-lg bg-[var(--wh-panel)] px-3 py-2.5 text-left ${on ? 'border-2 border-[var(--accent)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'border border-[var(--wh-border)]'}`}
+                className={`flex flex-col gap-2 rounded-lg bg-[var(--wh-panel)] ${on ? 'border-2 border-[var(--accent)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'border border-[var(--wh-border)]'}`}
               >
-                <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-[11px] font-bold ${CHIP[card.tone]}`}>{card.label}</span>
-                <span className="text-[13px] font-bold">{card.customer}</span>
-                <span className="text-xs">{card.detail}</span>
-              </button>
+                {/* One click chooses the card; double-click, or Open, opens it (decision 14). */}
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={choose}
+                  onDoubleClick={() => { choose(); setOpenItem(item); }}
+                  className="flex flex-col gap-[5px] rounded-lg px-3 pt-2.5 pb-2.5 text-left"
+                >
+                  <span className={`inline-flex self-start rounded-full px-2 py-0.5 text-[11px] font-bold ${CHIP[card.tone]}`}>{card.label}</span>
+                  <span className="text-[13px] font-bold">{card.customer}</span>
+                  <span className="text-xs">{card.detail}</span>
+                </button>
+                {on ? (
+                  <button
+                    type="button"
+                    aria-label={`Open ${card.customer}'s request`}
+                    onClick={() => setOpenItem(item)}
+                    className="mx-3 mb-2.5 inline-flex min-h-8 self-start items-center rounded-md border border-[var(--accent)] bg-[var(--accent)] px-3 text-xs font-bold text-[var(--wh-on-brand)]"
+                  >
+                    Open
+                  </button>
+                ) : null}
+              </div>
             );
           })}
         </section>
@@ -400,6 +419,7 @@ export function DiaryPage() {
           </ul>
         </div>
       </div>
+      {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
     </div>
   );
 }

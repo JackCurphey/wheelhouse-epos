@@ -82,3 +82,23 @@ Status colour tokens pinned and contrast-checked. Each watched failing first.
 
 `npm test`, typecheck, lint, build and the browser tests pass, and the diary
 is checked in a browser with real jobs at computer and tablet widths.
+
+## Piece 2: answering what's waiting (built 3 Oct)
+
+- A chosen waiting card shows **Open**; double-clicking a card opens it
+  straight away (decision 14). It opens as a centred pop-up (decision 15).
+- **New booking request** (request-new): the customer, bike, what they told
+  us, the service and the time asked for. **Accept**, or **Decline**, which
+  asks first ("Decline Sam Reed's booking for Fri 9 Oct? This can't be
+  undone.") with **Keep booking** to back out.
+- **Change request** (request-change): from and to. **Accept** or **Decline**.
+- **Cancelled booking** (request-cancel): one answer, **Seen**.
+- Every answer goes to the existing route with the version the pop-up saw.
+  A job someone else changed first says so ("This job changed while you
+  were looking at it.") and shows it afresh; a time that has gone says "The
+  requested time is no longer free."; a job that no longer exists says so.
+
+Left out because the server can't do them yet: choosing the mechanic as you
+accept (decision 62), "Offer another time", and a written message with a
+decline (the server sends none, so the button says "Decline booking", not
+"Decline & notify customer"). "Open full job" waits for the job page.
