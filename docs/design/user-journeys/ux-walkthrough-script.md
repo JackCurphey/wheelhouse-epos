@@ -13,6 +13,7 @@ For Jack and Mark, to walk Wheelhouse's stories by hand. A UI audit checks one s
 | 5 | A Cycle to Work bike | 6 Cycle to Work, 11 Selling at the till, 17 Reports | Maya (customer), Jo Taylor, Jack Lewis — **done 2 Oct 2026** |
 | 6 | A repair at a Lightspeed shop | 21 Lightspeed shops (with the customer pages of 3, 4 and 5 it uses) | Maya, Jo Taylor, Alex Morgan, Jack Lewis — **done 2 Oct 2026** |
 | 7 | An owner with two shops | 19 Multiple sites, 20 Management oversight, 17 Reports | Jack Lewis, and staff at Bolton and [Second site] — **done 2 Oct 2026** |
+| 8 | The workshop on a shared computer, and several mechanics at once | B Signing in, 12 Workshop day, 4 Drop off and approve the quote, 5 Collect and pay | Alex Morgan and Jo Taylor on one shared desktop and on their own tablets, the Saturday worker at the till — **done 3 Oct 2026** |
 
 Who each person is, what they need and the checks to run as them are in `personas.md`. Read it before you start. Walk every story as the Saturday worker too, wherever they could be on the till or front desk.
 
