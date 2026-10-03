@@ -249,6 +249,10 @@ answers, in the order given.
     that simply isn't finished in its day without having been planned that
     way (it has to carry over). Options discussed: split into parts per day
     (recommended), one bar across the days, or both. To revisit later.
+    **Settled 3 Oct 2026 (Jack: "1"): one block per day.** A job worked
+    over several days shows as its own part on each day it is worked
+    ("Day 1 of 2"), in that day's column; a job that isn't finished carries
+    over as a new part on the next working day.
 53. **Sans-serif throughout** (Jack, 28 Sep): the Soft sand look uses
     Public Sans for headings as well as body (the serif headings of Look 4
     are dropped). **Destructive buttons such as Unschedule are outlined**

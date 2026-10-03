@@ -472,7 +472,7 @@ Fjell until switched.
    `feat/staff-shell`, spec `docs/superpowers/specs/2026-10-03-staff-shell-design.md`;
    Owner sees every room, everyone else the Staff rooms, until roles exist) and the diary with its
    Waiting column. Open design items to settle first or on the way: multi-day
-   jobs (52), payment + collection as one step (63), mechanic sign-off (64),
+   jobs (52: settled 3 Oct, one block per day), payment + collection as one step (63), mechanic sign-off (64),
    customer spending limit on /book (41), accessibility settings (57).
 4. **After Workshop day**, work through the other journeys the same way
    (design on the canvas → Jack approves → spec → plan → build).
