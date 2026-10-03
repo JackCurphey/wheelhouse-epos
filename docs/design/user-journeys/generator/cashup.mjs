@@ -1,0 +1,260 @@
+// Journey 16 — End-of-day cash-up, designed in Soft sand on its own canvas.
+// Decisions: docs/decisions/2026-09-29-cash-up-review.md
+//
+// One "Close the day" page for the till, its six steps as sections that fold
+// (Workshop day decision 30: one page, sections may fold). Built inside the
+// till frame (app-map.mjs: foldedRail, tillBar, tillPhoneBar). Drawn at
+// desktop, tablet and phone from one recipe per screen (the journey 11
+// pattern: def() + CUR). Real example data: North Street Cycles, Bolton,
+// Till B1, Jack Lewis (Owner — UX walk-through 2 (decision 6)), Maya Patel's card sale of £74.00. Every
+// takings figure is a bracketed placeholder — there is no real day's data.
+import { C, MONO, esc, icon, button, card, field } from './ui.mjs';
+import { DW, DH, PW, PH } from './stage1.mjs';
+import { TW, TH } from './diary.mjs';
+import { foldedRail, tillBar, tillPhoneBar } from './app-map.mjs';
+import { screens as tillScreens } from './till.mjs';
+
+let CUR = 'desktop';
+const WH = () => ({ desktop: [DW, DH], tablet: [TW, TH], phone: [PW, PH] })[CUR];
+const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
+const P = () => CUR === 'phone';
+
+// ---------- The page ----------
+// UX walk-through 2 H1: `offline` draws the till bar offline while sales wait
+// to send; `date` closes a day other than today ("Close it" on Today).
+function page(content, { offline = false, date = '[today’s date]' } = {}) {
+  const [W, H] = WH();
+  const head = `<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap"><h1 style="margin: 0; font-size: ${P() ? 22 : 26}px; font-weight: 700">Close the day</h1><span style="font-size: 14px; color: ${C.muted}">Till B1 · Bolton · ${date}</span></div>`;
+  const body = `<div data-scroll style="flex-grow: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: ${P() ? '14px' : '22px 28px'}; display: flex; flex-direction: column; gap: 12px"><div style="width: 100%; max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px">${head}${content}</div></div>`;
+  if (P()) return `<div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${tillPhoneBar('Jack Lewis', offline)}${body}</div>`;
+  return `<div style="position: relative; width: ${W}px; height: ${H}px; display: flex; background: ${C.bg}">${foldedRail('till')}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar(offline ? { serving: 'Jack Lewis', offline: '[n] sales' } : { serving: 'Jack Lewis' })}${body}</div></div>`;
+}
+
+// A step: number, title, a status on the right; open steps show their content.
+const STATUS = {
+  done: [C.okBg, C.successInk, 'check'],
+  todo: [C.mutedBg, C.ink, null],
+  wait: [C.warnBg, C.warnInk, 'alert'],
+};
+function step(n, title, status, statusText, content = '') {
+  const [bg, ink, ic] = STATUS[status];
+  const open = !!content;
+  return card(`<div style="display: flex; flex-direction: column">
+<button type="button" aria-expanded="${open}" style="display: flex; align-items: center; gap: 14px; width: 100%; min-height: 60px; box-sizing: border-box; padding: 10px 18px; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}">
+<span style="display: inline-flex; width: 30px; height: 30px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; background: ${bg}; color: ${ink}; font-size: 14px; font-weight: 700">${ic ? icon(ic, 16) : n}</span>
+<span style="font-size: 17px; font-weight: 700; flex-grow: 1">${title}</span>
+<span style="font-size: 13px; font-weight: 600; color: ${status === 'todo' ? C.muted : ink}; text-align: right">${statusText}</span>
+<span style="display: inline-flex; transform: rotate(${open ? 180 : 0}deg); color: ${C.muted}">${icon('chevron', 16)}</span>
+</button>
+${open ? `<div style="padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 14px; border-top: 1px solid ${C.border}"><div style="height: 10px"></div>${content}</div>` : ''}
+</div>`);
+}
+const note = (t) => `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
+const row = (k, v, strong = false) => `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid ${C.border}"><span style="font-size: 15px; ${strong ? 'font-weight: 700' : ''}">${k}</span>${mono(v, `font-size: ${strong ? 20 : 15}px`)}</div>`;
+
+// ---------- Step content ----------
+// 1. This till has sent its sales (offline spec §8). UX walk-through 2 L1:
+// the page closes one till, so the step names it. H1: waiting sales hold up
+// only the last step — count and bank now; the day closes by itself.
+const stepTills = (waiting, folded = false) => step(1, 'Till B1 has sent its sales', waiting ? 'wait' : 'done', waiting ? '[n] sales waiting' : 'All sent',
+  waiting && !folded ? `${note('Till B1 still has [n] sales waiting to send. They send by themselves when the internet is back. You can count the cash and bank it now as usual — once the sales have sent, the day closes by itself.')}<div>${button('Check again', { variant: 'default' })}</div>` : '');
+// 2. Anything flagged. UX walk-through 2 L5: a sale still in the basket and
+// any parked sale are listed too, with Resume or Clear (journey 11's park:
+// "Kept on this till until someone resumes or clears them").
+const attnRow = (t, sub, acts, amount = '') => `<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 180px"><span style="font-size: 15px; font-weight: 600">${t}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${amount ? mono(amount, 'font-size: 15px') : ''}<span style="display: inline-flex; gap: 6px">${acts}</span></div>`;
+const resumeClear = (who) => `${button('Resume', { variant: 'default' }).replace('<button', `<button aria-label="Resume ${who}"`)}${button('Clear', { variant: 'ghost' }).replace('<button', `<button aria-label="Clear ${who}"`)}`;
+const stepAttention = (open) => step(2, 'Needs attention', open ? 'wait' : 'done', open ? '[n] to check' : 'Nothing flagged', open ? `
+${['[Unknown product on a sale]', '[A payment that doesn’t add up]'].map((t) => attnRow(t, `${mono('B1-[0000]')} · [time]`, button('Check', { variant: 'default' }))).join('')}
+${attnRow('Sale still in the basket · Maya Patel · 3 items', 'On Till B1 now · not paid yet', resumeClear('the sale in the basket'), '£74.00')}
+${attnRow('Parked sale · [No customer] · [n] items', 'Parked by [name] · [time]', resumeClear('the parked sale'), '[£ total]')}` : '');
+
+// 3. Cash count (decisions 2, 3): a box for every note and coin, adding up to
+// a total that can be typed over. Blind: the expected amount is shown only
+// after counting — unless the shop turns blind counting off.
+const DENOMS = [['£50', 50], ['£20', 20], ['£10', 10], ['£5', 5], ['£2', 2], ['£1', 1], ['50p', 0.5], ['20p', 0.2], ['10p', 0.1], ['5p', 0.05], ['2p', 0.02], ['1p', 0.01]];
+const EXAMPLE_COUNT = { '£20': 6, '£10': 5, '£5': 4, '£2': 3, '£1': 8, '50p': 6, '20p': 5, '10p': 7 }; // example counts typed by staff
+const countTotal = DENOMS.reduce((s, [d, v]) => s + (EXAMPLE_COUNT[d] || 0) * v, 0);
+function denomGrid(filled) {
+  const cols = P() ? 2 : CUR === 'tablet' ? 3 : 4;
+  return `<div role="group" aria-label="Count each note and coin" style="display: grid; grid-template-columns: repeat(${cols}, minmax(0, 1fr)); gap: 10px">${DENOMS.map(([d, v]) => {
+    const n = filled ? EXAMPLE_COUNT[d] || 0 : '';
+    return `<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 6px 10px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}"><span style="min-width: 36px; font-size: 15px; font-weight: 700">${d}</span><span style="font-size: 13px; color: ${C.muted}">×</span><input inputmode="numeric" aria-label="Number of ${d}" value="${n}" style="width: 52px; min-height: 40px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}">${P() ? '' : `<span style="flex-grow: 1; text-align: right; font-family: ${MONO}; font-size: 13px; color: ${C.muted}">${filled && n ? `£${(n * v).toFixed(2)}` : ''}</span>`}</label>`;
+  }).join('')}</div>`;
+}
+const totalBox = (value) => `<label style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 700">Cash counted</span><span style="font-size: 13px; color: ${C.muted}">Adds up from the boxes — or type the total</span></span><input aria-label="Cash counted, total" value="${value}" style="width: 140px; min-height: 48px; box-sizing: border-box; text-align: right; padding: 0 12px; border-radius: 8px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 22px; color: ${C.ink}"></label>`;
+// UX walk-through 2 M2: once counted (never before — blind counting stays
+// blind), the result shows how the till's expected figure was made, starting
+// from the float counted this morning.
+const subRow = (k, v, sign = '') => `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 4px 0"><span style="font-size: 14px; color: ${C.muted}">${sign ? `${sign} ` : ''}${k}</span>${mono(v, `font-size: 14px; color: ${C.muted}`)}</div>`;
+const expectedFrom = () => `<div role="group" aria-label="How the till worked out what it expected" style="display: flex; flex-direction: column; padding: 8px 14px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 14px; font-weight: 700; padding-bottom: 4px">How the till worked it out</span>${subRow('Float counted this morning · Jo Taylor at [time]', '[£]')}${subRow('cash sales', '[£]', 'plus')}${subRow('cash refunds', '[£]', 'minus')}${subRow('cash taken out (paid-outs)', '[£]', 'minus')}</div>`;
+function stepCount(mode) {
+  const total = `£${countTotal.toFixed(2)}`;
+  if (mode === 'exact') return step(3, 'Count the cash', 'done', 'Spot on', `${row('Counted', total)}${row('The till expected', total)}${expectedFrom()}<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: ${C.okBg}; color: ${C.successInk}"><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700">${icon('check', 18)}Spot on</span>${mono('£0.00', 'font-size: 18px')}</div><div style="display: flex; justify-content: space-between; gap: 10px">${button('Count again', { variant: 'ghost' })}${button('Keep this count and go on')}</div>`);
+  if (mode === 'blind') return step(3, 'Count the cash', 'todo', 'To do', `${note('Count the drawer and fill in how many of each. The till shows what it expected once you’ve finished.')}${denomGrid(true)}${totalBox(total)}<div style="display: flex; justify-content: flex-end">${button('Done counting — show the difference')}</div>`);
+  if (mode === 'shown') return step(3, 'Count the cash', 'todo', 'To do', `${note('Count the drawer and fill in how many of each.')}<div style="display: flex; justify-content: space-between; align-items: baseline; padding: 10px 14px; border-radius: 8px; background: ${C.mutedBg}"><span style="font-size: 15px">The till expects</span>${mono('[£ expected]', 'font-size: 18px')}</div>${denomGrid(true)}${totalBox(total)}<div style="display: flex; justify-content: flex-end">${button('Done counting')}</div>`);
+  // result
+  return step(3, 'Count the cash', 'done', 'Counted', `${row('Counted', total)}${row('The till expected', '[£ expected]')}${expectedFrom()}${row('Difference', '[£ over or short]', true)}
+<div role="group" aria-label="Reason for a difference" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">If there’s a difference, why? <span style="font-weight: 400; color: ${C.muted}">(optional)</span></span><input aria-label="Reason for the difference" placeholder="e.g. change given wrongly" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}"></div>
+<div style="display: flex; justify-content: space-between; gap: 10px">${button('Count again', { variant: 'ghost' })}${button('Keep this count and go on')}</div>`);
+}
+
+// 4. Paid-outs and banking (decision 4): leave the standard float, bank the rest.
+// UX walk-through 2 H1: `uncounted` — a day nobody counted at night. The
+// morning's float check counted it (the float plus that day's cash), so the
+// bank bag is that day's cash and today's sales stay in the drawer.
+function stepBanking(open, none = false, uncounted = false) {
+  if (!open) return step(4, 'Paid-outs and banking', 'todo', 'To do');
+  if (uncounted) return step(4, 'Paid-outs and banking', 'todo', 'To do', `
+<div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700; padding-bottom: 6px">Cash taken out on Wednesday</span>
+<div style="padding: 10px 0; border-top: 1px solid ${C.border}; font-size: 14px; color: ${C.muted}">[Paid-outs recorded on Wednesday, if any]</div>
+<div style="padding-top: 6px">${button('Add a paid-out', { variant: 'default' })}</div></div>
+<div style="display: flex; flex-direction: column; padding: 6px 16px 10px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0"><span style="font-size: 16px; font-weight: 700">Bank Wednesday’s cash</span>${mono('[£]', 'font-size: 20px')}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">Leave in the drawer</span><span style="font-size: 15px; text-align: right">The float and today’s sales</span></div>
+</div>
+${note('Jo Taylor counted the drawer this morning: the float plus Wednesday’s cash. That count is Wednesday’s count, so there’s nothing to count again. Take Wednesday’s cash out and bag it for the bank.')}
+<div style="display: flex; justify-content: flex-end">${button('Banking bagged — next step')}</div>`);
+  const paidOuts = none ? `<div style="padding: 10px 0; border-top: 1px solid ${C.border}; font-size: 14px; color: ${C.muted}">No cash taken out today.</div>` : `<div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">[What it was for]</span><span style="font-size: 13px; color: ${C.muted}">[time] · [name]</span></span>${mono('[£ amount]', 'font-size: 15px')}</div>`;
+  return step(4, 'Paid-outs and banking', 'todo', 'To do', `
+<div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700; padding-bottom: 6px">Cash taken out today</span>
+${paidOuts}
+<div style="padding-top: 6px">${button('Add a paid-out', { variant: 'default' })}</div></div>
+<div style="display: flex; flex-direction: column; padding: 6px 16px 10px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0"><span style="font-size: 16px; font-weight: 700">Leave in the drawer</span>${mono('[£ float]', 'font-size: 20px')}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">Bank</span>${mono('[£ counted − float]', 'font-size: 20px')}</div>
+</div>
+${note('The float is the shop’s standard amount, so tomorrow starts the same. Bag the rest for the bank.')}
+<div style="display: flex; justify-content: flex-end">${button('Banking bagged — next step')}</div>`);
+}
+
+// 5. Card check: the connected card machine (journey 11 decision 6) sends its
+// own total, so matching is usually automatic.
+// UX walk-through 2 M5: only payments taken on the card machine — online
+// payments aren't on it, and have their own line in Reports.
+// H1: while sales wait to send, the check can't be made yet ('waiting').
+function stepCard(state) {
+  const title = 'Card payments match the card machine';
+  if (state === 'matched') return step(5, title, 'done', 'Matched');
+  if (state === 'waiting') return step(5, title, 'todo', 'Checked once the sales have sent');
+  return step(5, title, 'wait', 'Doesn’t match', `${row('Card machine payments in Wheelhouse', '[£ Wheelhouse total]')}${row('Card machine’s own total', '[£ machine total]')}${row('Difference', '[£ difference]', true)}
+${note('Usually a payment keyed in on the machine by hand and not recorded on the till, or one recorded twice. The list below shows payments that don’t pair up. Online payments aren’t on the card machine, so they’re not part of this check.')}
+<div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">On the card machine only</span><span style="font-size: 13px; color: ${C.muted}">[time] · [£ amount] · card ending [0000]</span></span>${button('Match to a sale', { variant: 'default' })}</div>`);
+}
+
+// 6. Finish: the end-of-day report.
+// UX walk-through 2 H1: 'waiting' — only this step waits for the sales.
+const stepFinish = (open) => open === 'waiting'
+  ? step(6, 'End-of-day report', 'todo', 'Closes by itself once the sales have sent')
+  : open === 'banked'
+    ? step(6, 'End-of-day report', 'wait', 'Waiting for [n] sales to send', `${note('The cash is counted and banked. Till B1 closes the day by itself once its [n] sales have sent, and saves the report to Reports. Nothing more to do — Today shows it until then.')}<div>${button('Check again', { variant: 'default' })}</div>`)
+    : step(6, 'End-of-day report', 'todo', open ? 'Ready' : 'After the steps above', open ? `${note('Everything above is done. Closing the day saves the report and starts tomorrow with the float.')}<div style="display: flex; justify-content: flex-end">${button('Close the day and show the report')}</div>` : '');
+
+// The report itself (a pop-up over the page on desktop and tablet).
+function reportDialog() {
+  // UX walk-through 2 M2: the morning's float and its difference; M5: the
+  // card row is the card machine only, and online money points to Reports.
+  const floatRow = `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">Float at the start</span><span style="font-size: 13px; color: ${C.muted}">[£] short, counted by Jo Taylor at [time]</span></span>${mono('[£]', 'font-size: 15px')}</div>`;
+  const online = `<p style="margin: 0; padding: 12px 0 0; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5">Online payments today: ${mono('£[£]')} — <a href="#" style="color: ${C.ink}; font-weight: 600">see Reports</a></p>`;
+  const body = `${row('Sales', '[£ total]', true)}${row('Card machine', '[£]')}${row('Cash', '[£]')}${row('Gift cards, credit, accounts, other', '[£]')}${row('Cycle to Work · owed by providers, not in the drawer', '[£]') /* UX walk-through 5 H3 */}${row('Refunds', '[£]')}${row('Voids', '[n] · [£]')}${row('Discounts given', '[n] · [£]')}${row('VAT in today’s sales', '[£]')}${floatRow}${row('Cash difference', '[£ over or short]')}${row('Banked', '[£]')}${online}`;
+  if (P()) return `<div role="dialog" aria-modal="true" aria-labelledby="z-title" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: ${C.bg}"><div style="display: flex; align-items: center; gap: 10px; padding: 12px 8px 12px 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="z-title" style="margin: 0; font-size: 18px; font-weight: 700">Day closed · Till B1</h2><span style="font-size: 13px; color: ${C.muted}">[today’s date] · closed by Jack Lewis</span></div><button type="button" aria-label="Close" style="border: 0; background: transparent; padding: 0; cursor: pointer; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('close', 20)}</button></div><div data-scroll style="flex-grow: 1; overflow-y: auto; padding: 8px 16px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Email', { variant: 'default' })}${button('Print')}</div></div>`;
+  return `<div role="dialog" aria-modal="true" aria-labelledby="z-title" style="width: 560px; max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="z-title" style="margin: 0; font-size: 20px; font-weight: 700">Day closed · Till B1</h2><span style="font-size: 13px; color: ${C.muted}">[today’s date] · closed by Jack Lewis · saved to Reports</span></div><button type="button" aria-label="Close" style="border: 0; background: transparent; padding: 0; cursor: pointer; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</button></div>
+<div style="padding: 8px 22px 16px">${body}</div>
+<div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${button('Email it', { variant: 'ghost' })}${button('Print')}</div>
+</div>`;
+}
+export function overlay(base, d) {
+  const [W, H] = WH();
+  if (P()) return `<div style="width: ${W}px; height: ${H}px; display: flex">${d}</div>`;
+  return `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${base}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${d}</div></div>`;
+}
+
+// Small pop-ups over the page (desktop, tablet); full screen on a phone.
+export function popup(id, title, sub, body, footer, width = 520) {
+  if (P()) return `<div role="dialog" aria-modal="true" aria-labelledby="${id}" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: ${C.bg}"><div style="display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="${id}" style="margin: 0; font-size: 18px; font-weight: 700">${title}</h2><span style="font-size: 13px; color: ${C.muted}">${sub}</span></div><button type="button" aria-label="Close" style="border: 0; background: transparent; padding: 0; cursor: pointer; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: ${C.ink}">${icon('close', 20)}</button></div><div data-scroll style="flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footer}</div></div>`;
+  return `<div role="dialog" aria-modal="true" aria-labelledby="${id}" style="width: ${width}px; max-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; border: 1px solid ${C.border}; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28); overflow: hidden"><div style="display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><h2 id="${id}" style="margin: 0; font-size: 20px; font-weight: 700">${title}</h2><span style="font-size: 13px; color: ${C.muted}">${sub}</span></div><button type="button" aria-label="Close" style="border: 0; background: transparent; padding: 0; cursor: pointer; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: ${C.ink}">${icon('close', 20)}</button></div><div style="padding: 20px 22px; display: flex; flex-direction: column; gap: 16px">${body}</div><div style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 22px; border-top: 1px solid ${C.border}; background: ${C.panel}">${footer}</div></div>`;
+}
+const pill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
+const paidOutDialog = () => popup('po-title', 'Cash taken out', 'From Till B1’s drawer · the drawer opens when you confirm', `
+${field('Amount', { placeholder: '£0.00' })}
+<div role="group" aria-label="What it was for" style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 14px; font-weight: 600">What it was for</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${pill('[Shop’s reason]', true)}${pill('[Shop’s reason]')}${pill('Other…')}</div></div>
+${field('Note (optional)', { placeholder: 'e.g. a receipt number' })}
+${note('Taken out by Jack Lewis. It comes off the cash the till expects.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Take it out · open the drawer')}`);
+const checkDialog = () => popup('check-title', `Sale ${'B1-[0000]'}`, '[time] · [name] serving · flagged: [unknown product on a sale]', `
+${row('[Line the till didn’t recognise]', '[£ price]')}
+${note('The till sold something Wheelhouse doesn’t know — usually a product added on another till while this one was offline. Pick the product it should be.')}
+<label style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input aria-label="Find the product" placeholder="Find the product" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>`, `${button('Leave for now', { variant: 'ghost' })}${button('Save and mark checked')}`);
+
+// ---------- Screens ----------
+export const screens = {};
+const recipes = [];
+const def = (id, fn) => recipes.push([id, fn]);
+// UX walk-through 2 H1: sales waiting to send hold up only the last step —
+// count and bank now; the day closes by itself once they've sent.
+def('eod-waiting', () => page(`${stepTills(true)}${stepAttention(false)}${step(3, 'Count the cash', 'todo', 'To do · you can count now')}${stepBanking(false)}${stepCard('waiting')}${stepFinish('waiting')}`, { offline: true }));
+def('eod-waiting-banked', () => page(`${stepTills(true, true)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('waiting')}${stepFinish('banked')}`, { offline: true }));
+def('eod-attention', () => page(`${stepTills(false)}${stepAttention(true)}${step(3, 'Count the cash', 'todo', 'To do')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-count', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('blind')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-count-shown', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('shown')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-count-result', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('result')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-count-exact', () => page(`${stepTills(false)}${stepAttention(false)}${stepCount('exact')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-check', () => overlay(page(`${stepTills(false)}${stepAttention(true)}${step(3, 'Count the cash', 'todo', 'To do')}${stepBanking(false)}${stepCard('matched')}${stepFinish(false)}`), checkDialog()));
+def('eod-banking-none', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${stepBanking(true, true)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-paidout', () => overlay(page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${stepBanking(true)}${stepCard('matched')}${stepFinish(false)}`), paidOutDialog()));
+def('eod-banking', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${stepBanking(true)}${stepCard('matched')}${stepFinish(false)}`));
+def('eod-card', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('mismatch')}${stepFinish(false)}`));
+def('eod-finish', () => page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('matched')}${stepFinish(true)}`));
+def('eod-z', () => overlay(page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted')}${step(4, 'Paid-outs and banking', 'done', 'Bagged')}${stepCard('matched')}${step(6, 'End-of-day report', 'done', 'Closed')}`), reportDialog()));
+
+// Decision 5: after the shop's closing time, owners and managers see "Close
+// the day" in the till bar (on a phone, a strip under the bar). Drawn on the
+// sale screen from journey 11 with Jack Lewis (Owner — UX walk-through 2 (decision 6)) serving.
+function entry() {
+  const base = tillScreens['till-sale'][CUR].replaceAll('Serving: Jo Taylor', 'Serving: Jack Lewis').replace('>Jo</button>', '>Jack</button>');
+  const btn = `<a href="eod-count-${CUR}.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 8px; background: #ffffff; color: ${C.ink}; text-decoration: none; font-size: 14px; font-weight: 700">${icon('cash', 16)}Close the day</a>`;
+  if (P()) {
+    const i = base.indexOf('</header>') + '</header>'.length;
+    return base.slice(0, i) + `<div style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}"><span style="font-size: 14px">It’s after [closing time]</span>${btn.replace('background: #ffffff; color: ' + C.ink, 'background: ' + C.ink + '; color: #ffffff')}</div>` + base.slice(i);
+  }
+  const marker = base.indexOf('aria-label="Past sales');
+  const at = base.lastIndexOf('<button', marker);
+  return base.slice(0, at) + btn + '\n' + base.slice(at);
+}
+def('eod-entry', () => entry());
+
+// UX walk-through 2 H1(b): "Close it" on Today for a day nobody counted
+// opens at banking — the morning's float check was that day's count.
+export function closeUncounted(size) {
+  const was = CUR;
+  CUR = size;
+  const html = page(`${stepTills(false)}${stepAttention(false)}${step(3, 'Count the cash', 'done', 'Counted this morning by Jo Taylor')}${stepBanking(true, false, true)}${stepCard('matched')}${stepFinish(false)}`, { date: 'Wednesday 16 September' });
+  CUR = was;
+  return html;
+}
+
+for (const size of ['desktop', 'tablet', 'phone']) {
+  CUR = size;
+  for (const [id, fn] of recipes) (screens[id] ??= {})[size] = fn();
+}
+CUR = 'desktop';
+
+export const TITLES = {
+  'eod-entry': 'Close the day appears in the till bar after closing time',
+  'eod-waiting': 'Close the day — sales still waiting: count and bank now',
+  'eod-waiting-banked': 'Counted and banked — the day closes once the sales have sent',
+  'eod-attention': 'Close the day — sales that need checking',
+  'eod-count': 'Count the cash — note by note (blind)',
+  'eod-count-shown': 'Count the cash — with the expected amount shown (shop setting)',
+  'eod-count-result': 'Count the cash — the difference',
+  'eod-count-exact': 'Count the cash — spot on',
+  'eod-check': 'Checking a flagged sale',
+  'eod-banking': 'Paid-outs and banking — leave the float, bank the rest',
+  'eod-banking-none': 'Paid-outs and banking — nothing taken out today',
+  'eod-paidout': 'Add a paid-out',
+  'eod-card': 'Card sales don’t match the card machine',
+  'eod-finish': 'Ready to close the day',
+  'eod-z': 'Day closed — the end-of-day report',
+};
+export const ROWS = [
+  { label: 'Close the day', screens: ['eod-entry', 'eod-waiting', 'eod-waiting-banked', 'eod-attention', 'eod-check', 'eod-count', 'eod-count-shown', 'eod-count-result', 'eod-count-exact', 'eod-banking', 'eod-banking-none', 'eod-paidout', 'eod-card', 'eod-finish', 'eod-z'] },
+];

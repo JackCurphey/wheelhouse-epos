@@ -20,7 +20,7 @@ const navList = (role, active) => roomsFor(role).map(([room, items]) => `<div st
 
 function sideItem([key, label, ic], active) {
   const on = key === active;
-  return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: ${on ? 700 : 500}; color: #f3f2ee; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.lime}` : 'none'}">${icon(ic, 18)}<span>${esc(label)}</span></a>`;
+  return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: ${on ? 700 : 500}; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}">${icon(ic, 18)}<span>${esc(label)}</span></a>`;
 }
 
 function siteSwitcher(dark = true) {
@@ -28,7 +28,8 @@ function siteSwitcher(dark = true) {
 <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">Bolton</span></span>${icon('chevron', 16)}</button>`;
 }
 
-export function staffDesktop(active, title, content, { role = 'M', person = 'Jack Lewis', roleName = 'Manager', actions = '' } = {}) {
+// UX walk-through 2 (decision 6): Jack Lewis is the Owner in every example.
+export function staffDesktop(active, title, content, { role = 'O', person = 'Jack Lewis', roleName = 'Owner', actions = '' } = {}) {
   return `<div style="width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">
 <nav aria-label="Main" style="width: 248px; flex-shrink: 0; box-sizing: border-box; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; background: ${C.accentDark}; color: #ffffff">
 <div style="display: flex; align-items: center; gap: 10px; padding: 4px 6px">${logoSlot('Wheelhouse logo', true)}<span style="font-size: 17px; font-weight: 700">Wheelhouse</span></div>
@@ -52,7 +53,7 @@ ${actions}
 </div>`;
 }
 
-export function staffPhone(title, content, { menuOpen = false, role = 'M', active = 'today' } = {}) {
+export function staffPhone(title, content, { menuOpen = false, role = 'O', active = 'today' } = {}) { // UX walk-through 2 (decision 6): Jack Lewis, Owner
   const bar = `<header style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 8px; display: flex; align-items: center; gap: 8px; background: ${C.accentDark}; color: #ffffff">
 <button type="button" aria-label="Open menu" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #ffffff">${icon('menu', 22)}</button>
 <h1 style="margin: 0; font-size: 17px; font-weight: 700; flex-grow: 1">${esc(title)}</h1>
@@ -64,7 +65,7 @@ export function staffPhone(title, content, { menuOpen = false, role = 'M', activ
 ${siteSwitcher(true)}
 <div style="display: flex; flex-direction: column; gap: 8px">${navList(role, active)}</div>
 <div style="flex-grow: 1"></div>
-<div style="padding: 10px 8px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; font-size: 14px"><span>Jack Lewis · Manager</span><a href="#" style="color: #ffffff">Sign out</a></div>
+<div style="padding: 10px 8px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; font-size: 14px"><span>Jack Lewis · Owner</span><a href="#" style="color: #ffffff">Sign out</a></div>
 </nav>` : '';
   return `<div style="position: relative; width: ${PW}px; height: ${PH}px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${bar}<main style="flex-grow: 1; box-sizing: border-box; padding: 16px; overflow: hidden">${content}</main>${sheet}</div>`;
 }
@@ -236,13 +237,14 @@ screens['auth-noaccess'] = {
 };
 
 // Till sign-in
+// UX walk-through 2 (decision 6): Jack Lewis signs in as the Owner.
 screens['till-setup'] = {
-  desktop: authDesktop(stack(`${h1('Set up this till')}${p('Signed in as Jack Lewis (Manager). This computer will become a till and stay signed in.')}
+  desktop: authDesktop(stack(`${h1('Set up this till')}${p('Signed in as Jack Lewis (Owner). This computer will become a till and stay signed in.')}
 ${field('Site', { value: 'Bolton' })}
 ${field('Till number', { value: '1', hint: 'This till will be called B1. Receipts are numbered B1-0001, B1-0002 and so on.' })}
 ${field('Name', { value: 'Front counter' })}
 ${button('Set up this till', { block: true })}`)),
-  phone: authPhone(stack(`${h1('Set up this till')}${p('Signed in as Jack Lewis (Manager). This device will become a till and stay signed in.')}
+  phone: authPhone(stack(`${h1('Set up this till')}${p('Signed in as Jack Lewis (Owner). This device will become a till and stay signed in.')}
 ${field('Site', { value: 'Bolton' })}
 ${field('Till number', { value: '1', hint: 'This till will be called B1.' })}
 ${field('Name', { value: 'Front counter' })}

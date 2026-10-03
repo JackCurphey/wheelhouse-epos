@@ -46,3 +46,18 @@ uploads/
 # Playwright output (npm run test:browser)
 test-results/
 playwright-report/
+out-moving-sand/
+out-collect-sand/
+out-receiving-sand/
+out-stock-sand/
+out-book-sand/
+out-quote-sand/
+out-account-sand/
+out-sites-sand/
+out-reports-sand/
+out-online-sand/
+out-browse-sand/
+out-website-sand/
+out-oversight-sand/
+out-c2w-sand/
+out-lightspeed-sand/

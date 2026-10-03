@@ -1511,3 +1511,26 @@ coverage; screen trace; registry validate; registry drift; browser tests
    (`docs/decisions/2026-09-23-book-journey-routing-and-modes.md`): customer
    screens under `/book`, two modes, deposits out, all four J2 gaps in.
 
+
+
+# Moved from STATUS on 2026-09-29
+
+## Where things stood (27 Sep): the customer booking journey and staff diary
+
+The customer booking journey at `/book` is built end to end (d1–d5: service →
+service list → problem → date → details → pending/booking link; PRs #75,
+#78–#80, #82, #84, #85, #87, #88) on top of server pieces 1–12 (piece 7 #76,
+8 #77, 9 #81, 10 #83, 11 #86, 12 #89). Piece 12 (27 Sep) is the server side of
+customer change/cancel via the booking link, plus staff accept/decline-change
+and `GET /api/workshop-waiting` with "Seen". Its spec is
+`docs/superpowers/specs/2026-09-27-book-server-12-change-cancel-design.md`.
+
+**The staff diary piece is merged (#91, 27 Sep).** Spec `docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md`;
+plan, decision log and spec walk in
+`docs/superpowers/plans/2026-09-27-staff-diary-waiting.md`. In the legacy diary
+(`public/app.js`) there is now a "Waiting for you" column, a review pop-up
+(Accept / Decline / Seen), grid markings, and version-checked diary saves. The
+rule scripts are `public/diary-waiting.js`, `diary-marks.js` and
+`diary-review.js`, and the first browser tests for the legacy diary are in
+`tests/browser/diary-waiting.spec.ts`. Local checks and CI pass (PR #91).
+

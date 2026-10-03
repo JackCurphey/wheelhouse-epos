@@ -1,0 +1,147 @@
+# Journey 14, Stock take and stock control — Jack's decisions (1 Oct 2026)
+
+Journey 14 is the rest of the Stockroom: the stock list and a product's
+page, sizes and colours, bikes by frame number, price changes, stock across
+sites and transfers, counting stock (a stock take), and correcting stock.
+Background, not reopened here: stock never blocks a sale and every stock
+record belongs to a site (Release 2 rule 3 and the foundations spec);
+products sold below zero are flagged for checking (offline spec §5);
+Settings › Stockroom exists (journey 13 decision 7); a product carries its
+measurements and specifications, added when it is booked in (journey 13
+decision 3), and Jack wants staff to search by them — "bearings with a
+30 mm outside diameter" (Owner setup, Noted for later); each bike is known
+by its frame number from booking in (journey 13 decision 5); the restock
+list and low-stock levels (journey 13 decision 2). Real example data:
+Shimano brake pads B05S-RX £28.00; the Trek Domane AL 3; every other
+product, price, cost and stock level is a bracketed placeholder. Designed in
+the Soft sand look on its own canvas
+(https://claude.ai/artifact/7oZPudk8GGxqY9L1iXBvbV), desktop first, then
+tablet and phone. Generator: `stock.mjs` + `build-stock.mjs --theme sand`.
+Rules for every journey apply (Workshop day 45, 48, 50, 53, 57, 62, 65–67;
+A2, A6 — as few clicks as possible).
+
+1. **Journey 14 is next** (Jack, 1 Oct: "1"), chosen over Book a repair.
+2. **Stock opens on a searchable list with filters** (Jack, 1 Oct: "1"):
+   one search box finds products by name, barcode, supplier code or
+   measurement ("bearing 30 mm" finds bearings with a 30 mm outside
+   diameter — Owner setup, Noted for later); filter pills (All, Running
+   low, Below zero, then categories); each row shows the product, stock,
+   price and margin, and opens the product's page. Chosen over categories
+   first, and search only. Boards: `st-list`, `st-search-measure`.
+3. **A product's page: a summary on the left, one history on the right**
+   (Jack, 1 Oct: "1"), the same shape as the customer page (Customer
+   service decision 2). Left: photo, name and codes, price, cost, margin
+   and VAT, measurements and specifications, stock at each site, with Edit
+   and Adjust stock. Right: one history of everything that changed its
+   stock, newest first — sold, used on a job, received, counted, adjusted —
+   each with who and why. A bike's page lists its frame numbers first: in
+   stock, or sold and to whom. Chosen over folding sections, and tabs.
+   Boards: `st-product`, `st-product-bike`.
+4. **Sizes and colours: one product, with a grid on its page** (Jack, 1
+   Oct: "1"). The stock list keeps one row per product, with its total and
+   "[n] sizes · [n] colours"; the product page shows sizes across and
+   colours down, each cell its own stock (each size and colour keeps its
+   own barcode, Release 2 rule 3). Scanning a barcode or searching "jersey
+   M" opens that size and colour; the till sells it as one. Chosen over
+   each size as its own product, and rows that open out. Board:
+   `st-product-sizes`; `st-list` gains a product with sizes.
+5. **A stock take is counted a section at a time, blind** (Jack, 1 Oct:
+   "1"). A manager starts a count of the whole shop, a category or an area
+   ("Wall 3"); staff join it, ideally on a phone; each scan adds one, or a
+   number is typed; the expected number is not shown while counting. Sales
+   carry on and are allowed for. When it's finished the manager sees the
+   differences, over and under with their value, can ask for a line to be
+   recounted, and applies the count, which records every change. Chosen
+   over showing the expected number, and whole-shop counts with the shop
+   closed. Boards: `tk-hub`, `tk-start`, `tk-count`, `tk-diff`,
+   `tk-applied`.
+6. **Anyone can adjust stock, with a reason** (Jack, 1 Oct: "1"). "Adjust
+   stock" on a product takes the change (or the new count) and a reason
+   from a short list — Damaged, Lost or stolen, Found, Used in the
+   workshop, Returned to supplier, Other (with a note); every adjustment
+   goes into the product's stock history with who made it. An adjustment
+   worth more than an amount the owner sets (Settings › Stockroom) shows on
+   the manager's Today with "Seen". Chosen over adjusting only with "Can
+   order stock", and staff asking a manager to approve. Boards:
+   `st-adjust`, `st-today-adjust`, `st-setting-adjust`.
+7. **Prices change in bulk by picking products, with a preview** (Jack, 1
+   Oct: "1"). In the stock list, tick products (or search or filter, then
+   tick all), then "Change prices": a new price, up or down by a
+   percentage, or a target margin; round to a chosen ending (such as .99);
+   old and new prices side by side before anything changes; every change
+   in each product's history. Chosen over price rules that run by
+   themselves, and one product at a time. Boards: `st-list-ticked`,
+   `st-prices`.
+8. **Stock moves between shops by send, then receive** (Jack, 1 Oct:
+   "1"). "Send to another shop" (on a product, or from ticked products)
+   takes the shop and the counts; the stock leaves straight away and shows
+   as on its way. The other shop sees "On its way from [Site]" in
+   Deliveries and orders and scans it in like a delivery (journey 13);
+   anything missing is flagged to both shops. A product's page shows its
+   stock at each shop and on its way. Chosen over one-step moves, and
+   leaving transfers to journey 19. Boards: `tr-sites`, `tr-send`,
+   `tr-incoming`.
+9. **Products below zero go on the manager's Today, with a quick count**
+   (Jack, 1 Oct: "1"). "[n] products below zero" shows on Today with
+   "Count them", which starts a stock take of just those products (decision
+   5's screens); the "Below zero" filter on Stock lists them too. The line
+   goes when none are below zero. Chosen over the filter only, and folding
+   them into the next stock take. Boards: `st-today-below`,
+   `tk-start-below`.
+10. **Each category has its own details, set in Settings › Stockroom ›
+    Categories** (Jack, 1 Oct: "for each different product category can we
+    have some identifiers sub categories that we can make, like all
+    derailleurs will have a "amount of gears" option and all bearings will
+    have inner, outer and height categories? these are just examples and
+    are not the only ones i want"; then "1"). The owner gives each category
+    a list of details — a name, the kind of answer (a number with a unit, a
+    choice from a list, or text). Categories can sit inside others
+    (Drivetrain › Derailleurs) and inherit the parent's details. Adding a
+    product, or editing one, shows its category's details to fill in; on
+    Stock, picking a category adds filters for its details ("Outer
+    diameter 30 mm"); typing "bearing 30 mm" still works. Jack's examples
+    are drawn: Bearings (inner diameter, outer diameter, height) and
+    Derailleurs (number of gears). Replaces journey 13's free-typed
+    measurements (decision 3; audit M9's suggested names). Chosen over
+    details made up as products are added, and a fixed list. Boards:
+    `st-categories`, `st-category-edit`, `st-filter-bearings`; `rs-add-product`
+    redrawn.
+11. **UI audit: every recommendation taken** (Jack, 1 Oct: "lets do all the
+    recommendations"). From `design/user-journeys/stock-ui-audit.md`:
+    products nobody scanned are left as they are unless the manager presses
+    "Count them as none", and the below-zero count shows a "still to find"
+    list; Adjust stock takes the change or the count after it, with no
+    reason picked until one is (the reasons follow the sign; Other needs a
+    note); tick boxes always on the stock list, with tick-all and "Send to
+    another shop" on the ticked bar; a detail's unit or choices are entered
+    as it's added, and a removed detail can be undone until Save; bulk price
+    changes and applied counts have Undo, and "Apply to [n] products";
+    recounts and two people counting the same product are shown; **Staff
+    see no cost or margin, and can't change prices, edit or add products or
+    categories — they can adjust, count and send**; a product's page leads
+    with stock, then details, then price and cost, and its history lines
+    link to the job, sale, delivery, count or transfer (price changes
+    included); "Count them" on Today starts the count at once; the header
+    search finds products by measurement too; a category is picked by
+    searching, and its details become columns; a wrong send can be
+    cancelled while on its way, a short transfer shows on Today; areas
+    used before are suggested; and the list's missing states (no results,
+    an unknown barcode, a size search, a new shop) are drawn.
+12. **Tablet and phone drawn** (Jack, 1 Oct: "yeah this looks all good, lets
+    do the phone and tablet"). Every board is now at desktop, tablet and
+    phone. Two phone-only layouts: the Change prices preview stacks each
+    product (Now → New, then Margin) instead of a four-column table, and on
+    Today the below-zero line puts "See them" and "Count them" under its
+    words. The tablet layouts follow the desktop ones.
+
+**Later change (1 Oct 2026, Multiple sites decisions 9 and 11):** the shop
+switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
+state) for screen readers, and on tablet and phone — where the switcher is out
+of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
+under each staff page's title. Nothing else on these boards changed.
+
+**Later change (1 Oct 2026, Reports and accounts decisions 5 and 9):** "Staff see no cost or margin" now reads "unless given Can see costs and margin" — a switch on the person (Reports and accounts decision 5). No board here changed.
+
+**Later change (1 Oct 2026, Buy online decision 10):** a product’s page shows "Show on website: On · as [Category]" under Price and cost (Buy online decision 3).
+
+**Later change (2 Oct 2026, Cycle to Work decision 7, audit M4):** the bike page's "Bikes by frame number" shows one frame "Held for [Customer] until [date] · Cycle to Work — not for sale". The sidebar on every board has the new Front desk › Cycle to Work item.

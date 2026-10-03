@@ -1,4 +1,17 @@
 out/
+out-diary/
+out-diary-sand/
+out-job-options/
+out-looks/
 checks/
 shots/*.png
 shots-fjell/
+out-app-map-sand/
+out-signin-sand/
+out-till-sand/
+out-cashup-sand/
+out-setup-sand/
+out-customer-sand/
+out-opening-sand/
+out-customers/
+out-backoffice/
