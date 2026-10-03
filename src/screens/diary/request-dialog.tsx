@@ -21,6 +21,7 @@ import { STATE_LABEL, shortDay, todayIso, type DiaryState, type WaitingItem } fr
 const CHIP: Record<DiaryState, string> = {
   scheduled: 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   pending: 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
+  answer: 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
   hold: 'bg-[var(--wh-state-hold-bg)] text-[var(--wh-state-hold-ink)]',
   waiting: 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
   ready: 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]',

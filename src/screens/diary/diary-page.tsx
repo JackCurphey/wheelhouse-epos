@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { createPortal } from 'react-dom';
@@ -10,8 +10,9 @@ import { RequestDialog } from './request-dialog.tsx';
 import { NewJobDialog } from './new-job-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
+import { HoverSummary, JobMenu, OverviewDialog, StackChooser, tileClass, type MenuAt } from './job-extras.tsx';
 import {
-  LEGEND, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
+  LEGEND, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, stackGroups, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
 } from './rules.ts';
 
@@ -38,6 +39,7 @@ const SlotContext = createContext(SLOT_H);
 const BLOCK: Record<DiaryState, string> = {
   scheduled: 'bg-[var(--wh-state-scheduled-bg)] border-[var(--wh-state-scheduled-ink)] text-[var(--wh-state-scheduled-ink)]',
   pending: 'bg-[var(--wh-state-pending-bg)] border-[var(--wh-state-pending-ink)] text-[var(--wh-state-pending-ink)]',
+  answer: 'bg-[var(--wh-state-answer-bg)] border-[var(--wh-state-answer-ink)] text-[var(--wh-state-answer-ink)]',
   hold: 'bg-[var(--wh-state-hold-bg)] border-[var(--wh-state-hold-ink)] text-[var(--wh-state-hold-ink)]',
   waiting: 'bg-[var(--wh-state-waiting-bg)] border-[var(--wh-state-waiting-ink)] text-[var(--wh-state-waiting-ink)]',
   ready: 'bg-[var(--wh-state-ready-bg)] border-[var(--wh-state-ready-ink)] text-[var(--wh-state-ready-ink)]',
@@ -46,6 +48,7 @@ const BLOCK: Record<DiaryState, string> = {
 const CHIP: Record<DiaryState, string> = {
   scheduled: 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   pending: 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
+  answer: 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
   hold: 'bg-[var(--wh-state-hold-bg)] text-[var(--wh-state-hold-ink)]',
   waiting: 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
   ready: 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]',
@@ -108,6 +111,42 @@ const MoveContext = createContext<MoveApi | null>(null);
 type PickApi = { onPick: (colIndex: number, y: number) => void } | null;
 const PickContext = createContext<PickApi>(null);
 
+/**
+ * Piece 5b: the hover summary, the right-click menu (and holding the right
+ * button, or a long press on touch), and a stack's chooser. Shared through a
+ * context, like moving.
+ */
+type ExtrasApi = {
+  enter: (job: Shown, el: HTMLElement) => void;
+  leave: () => void;
+  menu: (job: Shown, at: { x: number; y: number; touch: boolean }, opener: HTMLElement | null) => void;
+  press: (job: Shown, e: PointerEvent<HTMLElement>) => void;
+  stack: (jobs: Shown[]) => void;
+};
+const ExtrasContext = createContext<ExtrasApi | null>(null);
+
+/** Handlers every job block and fanned tile shares: hover, right-click, hold, Menu key. */
+function useExtrasHandlers(job: Shown) {
+  const extras = useContext(ExtrasContext);
+  if (!extras) return {};
+  return {
+    onPointerEnter: (e: PointerEvent<HTMLElement>) => { if (e.pointerType === 'mouse') extras.enter(job, e.currentTarget); },
+    onPointerLeave: () => extras.leave(),
+    onContextMenu: (e: ReactMouseEvent<HTMLElement>) => {
+      e.preventDefault();
+      extras.menu(job, { x: e.clientX, y: e.clientY, touch: false }, e.currentTarget);
+    },
+    onMenuKey: (e: KeyboardEvent<HTMLElement>) => {
+      if (e.key !== 'ContextMenu' && !(e.shiftKey && e.key === 'F10')) return false;
+      e.preventDefault();
+      const r = e.currentTarget.getBoundingClientRect();
+      extras.menu(job, { x: r.left, y: r.bottom + 4, touch: false }, e.currentTarget);
+      return true;
+    },
+    onPress: (e: PointerEvent<HTMLElement>) => extras.press(job, e),
+  };
+}
+
 /** A booking request is answered before it is moved; a cancellation isn't moved at all. */
 const movable = (j: Shown) => Boolean(j.startTime) && j.state !== 'pending' && j.state !== 'cancelled';
 
@@ -118,6 +157,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
   const move = useContext(MoveContext);
   const picking = useContext(PickContext);
   const moving = move?.preview?.partId === job.partId ? move.preview : null;
+  const { onMenuKey, onPress, ...hover } = useExtrasHandlers(job);
   const start = moving ? moving.startMin : toMinutes(job.startTime as string);
   const end = moving ? moving.startMin + moving.durationMin : job.endTime ? toMinutes(job.endTime) : start + 30;
   const top = ((start - range.start) / 30) * SLOT_H + 2;
@@ -129,13 +169,19 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
     style.left = `calc(3px + ${moving.colIndex - colIndex} * 100%)`;
     style.width = 'calc(100% - 6px)';
   } else if (lane && lane.total > 1) {
-    style.left = `calc(3px + (100% - 6px) * ${lane.lane} / ${lane.total})`;
-    style.width = `calc((100% - 6px) / ${lane.total} - 4px)`;
+    // Decision 59: a narrow lane widens to the whole column on a 0.3s hover.
+    Object.assign(style, {
+      '--lane-left': `calc(3px + (100% - 6px) * ${lane.lane} / ${lane.total})`,
+      '--lane-width': `calc((100% - 6px) / ${lane.total} - 4px)`,
+    });
   } else {
     style.left = 3;
     style.right = 3;
   }
-  const className = `absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
+  const laned = !moving && lane && lane.total > 1
+    ? 'left-[var(--lane-left)] w-[var(--lane-width)] hover:left-[3px] hover:z-[3] hover:w-[calc(100%-6px)] hover:delay-300 motion-safe:transition-[left,width] motion-reduce:hover:delay-0'
+    : '';
+  const className = `${laned} absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
@@ -149,7 +195,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
   );
   if (!move || !movable(job) || picking) {
     return (
-      <div title={describe(job, false)} className={className} style={style}>
+      <div title={describe(job, false)} className={className} style={style} {...hover} onPointerDown={onPress}>
         {inner}
       </div>
     );
@@ -159,14 +205,100 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
       type="button"
       title={describe(job, false)}
       aria-describedby="diary-move-hint"
-      onKeyDown={(e) => move.onKeyDown(job, colIndex, e)}
+      onKeyDown={(e) => { if (!moving && onMenuKey?.(e)) return; move.onKeyDown(job, colIndex, e); }}
       onKeyUp={(e) => { if (moving && e.key === ' ') e.preventDefault(); }}
-      onPointerDown={(e) => move.onPointerDown(job, colIndex, e)}
+      onPointerDown={(e) => { onPress?.(e); move.onPointerDown(job, colIndex, e); }}
       onClick={() => move.onOpen(job)}
       className={`${className} cursor-grab touch-none`}
       style={style}
+      {...hover}
     >
       {inner}
+    </button>
+  );
+}
+
+/**
+ * Decisions 58 and 61: jobs that start together, as one stack. A click (or
+ * Enter) opens the chooser; resting the mouse on it for 0.3s fans the jobs
+ * out as diary blocks, two to a row, which open, move and summarise like any
+ * job. The fan is for the mouse; the chooser is the way for everyone else.
+ */
+function StackBlock({ jobs, start, end, range, lane, colIndex }: {
+  jobs: Shown[]; start: number; end: number; range: { start: number }; lane?: { lane: number; total: number }; colIndex: number;
+}) {
+  const SLOT_H = useContext(SlotContext);
+  const extras = useContext(ExtrasContext);
+  const picking = useContext(PickContext);
+  const top = ((start - range.start) / 30) * SLOT_H + 2;
+  const height = Math.max(((end - start) / 30) * SLOT_H - 4, SLOT_H - 6);
+  const style: CSSProperties = { top, height };
+  if (lane && lane.total > 1) {
+    style.left = `calc(3px + (100% - 6px) * ${lane.lane} / ${lane.total})`;
+    style.width = `calc((100% - 6px) / ${lane.total} - 4px)`;
+  } else {
+    style.left = 3;
+    style.right = 3;
+  }
+  const front = jobs[0];
+  const names = jobs.map((j) => `${j.bikeLabel || 'Bike'} · ${j.title} (${j.reference})`).join(', ');
+  const edge = (offset: number, opacity: number) => (
+    <div aria-hidden="true" className="absolute bottom-0 rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)]" style={{ left: offset, right: -offset, top: -offset, opacity }} />
+  );
+  const cols = Math.min(jobs.length, 2);
+  return (
+    <div className={`group/stack absolute hover:z-[9] ${picking ? 'pointer-events-none opacity-50' : ''}`} style={style}>
+      {edge(6, 0.45)}
+      {edge(3, 0.7)}
+      <button
+        type="button"
+        aria-label={`${jobs.length} jobs booked ${hhmm(start)} to ${hhmm(end)}, click to choose which one to open: ${names}`}
+        title={names}
+        onClick={() => extras?.stack(jobs)}
+        className="absolute inset-0 flex flex-col overflow-hidden rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)] py-[3px] pr-[22px] pl-1.5 text-left"
+      >
+        <span aria-hidden="true" className="absolute top-[3px] right-[3px] inline-flex items-center gap-px rounded-full bg-[var(--wh-ink)] px-[5px] py-px text-[9px] font-bold text-[var(--wh-panel)]">
+          {jobs.length}
+          <Chevron dir="prev" small />
+        </span>
+        <span aria-hidden="true" className="truncate text-[11px] font-bold text-[var(--wh-ink)]">{front.bikeLabel || 'Bike'}</span>
+        <span aria-hidden="true" className="truncate text-[10px] font-semibold text-[var(--wh-muted)]">{`${front.title} · ${hhmm(start)}`}</span>
+      </button>
+      {/* Hidden (not just see-through) until the 0.3s is up, so a quick
+          click lands on the stack, not on a job that hasn't appeared. */}
+      <div
+        aria-hidden="true"
+        data-fan
+        className="invisible absolute top-0 left-1/2 grid -translate-x-1/2 gap-1.5 opacity-0 drop-shadow-[0_10px_26px_var(--wh-backdrop)] transition-[opacity,visibility] group-hover/stack:visible group-hover/stack:opacity-100 group-hover/stack:delay-300 motion-reduce:transition-none"
+        style={{ gridTemplateColumns: `repeat(${cols}, 128px)` }}
+      >
+        {jobs.map((j) => <FanTile key={j.partId} job={j} colIndex={colIndex} />)}
+      </div>
+    </div>
+  );
+}
+
+/** One job in a fanned-out stack: its true length, and it opens, moves and summarises. */
+function FanTile({ job, colIndex }: { job: Shown; colIndex: number }) {
+  const SLOT_H = useContext(SlotContext);
+  const move = useContext(MoveContext);
+  const { onMenuKey: _menuKey, onPress, ...hover } = useExtrasHandlers(job);
+  void _menuKey;
+  const s0 = toMinutes(job.startTime as string);
+  const dur = job.endTime ? toMinutes(job.endTime) - s0 : 30;
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      onPointerDown={(e) => { onPress?.(e); if (move && movable(job)) move.onPointerDown(job, colIndex, e); }}
+      onClick={() => move?.onOpen(job)}
+      className={`flex w-32 touch-none flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${tileClass(job.state)}`}
+      style={{ height: Math.max((dur / 30) * SLOT_H - 4, SLOT_H - 6) }}
+      {...hover}
+    >
+      <span className="truncate text-[11px] font-bold text-[var(--wh-ink)]">{job.bikeLabel || 'Bike'}</span>
+      <span className="truncate text-[10px] font-bold">{job.title}</span>
+      <span className="truncate text-[9px] text-[var(--wh-muted)]">{job.reference}</span>
     </button>
   );
 }
@@ -196,10 +328,19 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
 }) {
   const SLOT_H = useContext(SlotContext);
   const timed = jobs.filter((j) => j.startTime);
-  const lanes = layoutLanes(timed.map((j) => {
+  // Decision 58: jobs starting together are one stack, which takes one lane.
+  // A job being moved leaves its stack and shows as itself while it moves.
+  const movingId = useContext(MoveContext)?.preview?.partId ?? null;
+  const span = (j: Shown) => {
     const s = toMinutes(j.startTime as string);
     return { id: j.partId, start: s, end: j.endTime ? toMinutes(j.endTime) : s + 30 };
-  }));
+  };
+  const groups = [
+    ...stackGroups(timed.filter((j) => j.partId !== movingId).map(span)),
+    ...timed.filter((j) => j.partId === movingId).map((j) => ({ ...span(j), ids: [j.partId] })),
+  ];
+  const lanes = layoutLanes(groups);
+  const byId = new Map(timed.map((j) => [j.partId, j]));
   const height = ((range.end - range.start) / 30) * SLOT_H;
   const pick = useContext(PickContext);
   return (
@@ -216,9 +357,11 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
         backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${SLOT_H * 2 - 1}px, var(--wh-border) ${SLOT_H * 2 - 1}px, var(--wh-border) ${SLOT_H * 2}px)`,
       }}
     >
-      {timed.map((j) => (
-        <JobBlock key={j.partId} job={j} range={range} wide={wide} chosen={j.id === chosenId} lane={lanes.get(j.partId)} colIndex={index} />
-      ))}
+      {groups.map((g) => (g.ids.length === 1 ? (
+        <JobBlock key={g.id} job={byId.get(g.id) as Shown} range={range} wide={wide} chosen={byId.get(g.id)?.id === chosenId} lane={lanes.get(g.id)} colIndex={index} />
+      ) : (
+        <StackBlock key={`stack-${g.id}`} jobs={g.ids.map((id) => byId.get(id) as Shown)} start={g.start} end={g.end} range={range} lane={lanes.get(g.id)} colIndex={index} />
+      )))}
       {outlines.map((j) => (
         <RequestedOutline key={`req-${j.id}`} job={j} range={range} />
       ))}
@@ -285,9 +428,9 @@ function Grid({ heads, columns, noTime, range, ariaLabel }: {
   );
 }
 
-function Chevron({ dir }: { dir: 'prev' | 'next' }) {
+function Chevron({ dir, small = false }: { dir: 'prev' | 'next'; small?: boolean }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: `rotate(${dir === 'prev' ? 90 : -90}deg)` }}>
+    <svg width={small ? 9 : 18} height={small ? 9 : 18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: `rotate(${dir === 'prev' ? 90 : -90}deg)` }}>
       <path d="M6 9l6 6 6-6" />
     </svg>
   );
@@ -552,6 +695,117 @@ export function DiaryPage() {
   // ---- New job (piece 5) ----
   const [picking, setPicking] = useState(false);
   const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean } | null>(null);
+
+  // ---- The extras (piece 5b) ----
+  const [hovered, setHovered] = useState<{ job: Shown; rect: DOMRect } | null>(null);
+  const [menuFor, setMenuFor] = useState<{ job: Shown; at: MenuAt; opener: HTMLElement | null } | null>(null);
+  const [overview, setOverview] = useState<Shown | null>(null);
+  const [stackJobs, setStackJobs] = useState<Shown[] | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const touchPress = useRef(false);
+  const busy = Boolean(preview || picking || menuFor || overview || stackJobs || openJobId !== null || newJob);
+  const stopHover = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+    setHovered(null);
+  };
+  const stopPress = () => {
+    for (const t of pressTimers.current) clearTimeout(t);
+    pressTimers.current = [];
+    touchPress.current = false;
+  };
+  const showOverview = (job: Shown) => {
+    stopHover();
+    setMenuFor(null);
+    setOverview(job);
+  };
+  const extrasApi: ExtrasApi = {
+    enter(job, el) {
+      if (busy) return;
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
+      // Decision 65: about 0.6s, or at once when motion is reduced.
+      const reduced = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      hoverTimer.current = setTimeout(() => setHovered({ job, rect: el.getBoundingClientRect() }), reduced ? 0 : 600);
+    },
+    leave: stopHover,
+    menu(job, at, opener) {
+      // A long press on touch opens the menu itself; the browser's own
+      // context menu for that press is ignored.
+      if (touchPress.current) return;
+      stopHover();
+      setMenuFor({ job, at: { ...at, phone: isPhone }, opener });
+    },
+    press(job, e) {
+      const right = e.pointerType === 'mouse' && e.button === 2;
+      const touch = e.pointerType === 'touch' && e.button === 0;
+      if (!right && !touch) return;
+      stopPress();
+      const x0 = e.clientX;
+      const y0 = e.clientY;
+      const opener = e.currentTarget;
+      let longPressed = false;
+      const end = () => {
+        if (longPressed) {
+          // The click that ends a long press must not open the job.
+          justDragged.current = true;
+          setTimeout(() => { justDragged.current = false; }, 0);
+        }
+        stopPress();
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', end);
+        window.removeEventListener('pointermove', moved);
+      };
+      const moved = (ev: globalThis.PointerEvent) => {
+        if (Math.abs(ev.clientX - x0) > 6 || Math.abs(ev.clientY - y0) > 6) end();
+      };
+      window.addEventListener('pointerup', end);
+      window.addEventListener('pointercancel', end);
+      window.addEventListener('pointermove', moved);
+      if (right) {
+        // Holding the right button opens the overview straight away.
+        pressTimers.current.push(setTimeout(() => showOverview(job), 500));
+        return;
+      }
+      touchPress.current = true;
+      pressTimers.current.push(setTimeout(() => {
+        longPressed = true;
+        stopHover();
+        setMenuFor({ job, at: { x: x0, y: y0, touch: true, phone: isPhone }, opener });
+      }, 500));
+      pressTimers.current.push(setTimeout(() => showOverview(job), 1100));
+    },
+    stack(list) {
+      stopHover();
+      setStackJobs(list);
+    },
+  };
+  const extrasUi = (
+    <>
+      {hovered && !busy ? <HoverSummary job={hovered.job} rect={hovered.rect} /> : null}
+      {menuFor ? (
+        <JobMenu
+          job={menuFor.job}
+          at={menuFor.at}
+          onClose={(back) => { const el = menuFor.opener; setMenuFor(null); if (back) el?.focus(); }}
+          onOpenJob={() => { setMenuFor(null); setOpenJobId(menuFor.job.id); }}
+          onOverview={() => showOverview(menuFor.job)}
+        />
+      ) : null}
+      {overview ? (
+        <OverviewDialog job={overview} onClose={() => setOverview(null)} onOpenJob={() => { setOverview(null); setOpenJobId(overview.id); }} />
+      ) : null}
+      {stackJobs ? (
+        <StackChooser
+          jobs={stackJobs}
+          time={stackJobs[0].startTime ?? ''}
+          onClose={() => setStackJobs(null)}
+          onPick={(j) => { setStackJobs(null); setOpenJobId(j.id); }}
+        />
+      ) : null}
+    </>
+  );
+
   /** Decision 18: the mechanic working that day with the most free time (fewest booked minutes). */
   const freest = (day: string): number | null => {
     const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
@@ -760,7 +1014,7 @@ export function DiaryPage() {
           ) : null}
           <SlotContext.Provider value={PHONE_SLOT_H}>
             <PickContext.Provider value={pickApi}>
-            <MoveContext.Provider value={moveApi}>
+            <MoveContext.Provider value={moveApi}><ExtrasContext.Provider value={extrasApi}>
               <div className="grid pt-2" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(0, 1fr))` }}>
                 <div aria-hidden="true" className="relative" style={{ height: ((range.end - range.start) / 30) * PHONE_SLOT_H }}>
                   {hours.map((m) => (
@@ -773,7 +1027,7 @@ export function DiaryPage() {
                   <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={false} chosenId={chosen} />
                 ))}
               </div>
-            </MoveContext.Provider>
+            </ExtrasContext.Provider></MoveContext.Provider>
             </PickContext.Provider>
           </SlotContext.Provider>
         </section>
@@ -831,6 +1085,7 @@ export function DiaryPage() {
         {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
         {newJobDialog}
         {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
+        {extrasUi}
       </div>
     );
   }
@@ -933,7 +1188,7 @@ export function DiaryPage() {
           <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
           <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
           {moveError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
-          <div className="overflow-x-auto"><PickContext.Provider value={pickApi}><MoveContext.Provider value={moveApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</MoveContext.Provider></PickContext.Provider></div>
+          <div className="overflow-x-auto"><PickContext.Provider value={pickApi}><MoveContext.Provider value={moveApi}><ExtrasContext.Provider value={extrasApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</ExtrasContext.Provider></MoveContext.Provider></PickContext.Provider></div>
           {jobs.isError ? <p role="alert">Wheelhouse couldn&apos;t load the diary. Try again in a moment.</p> : null}
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
             {LEGEND.map((s) => (
@@ -948,6 +1203,7 @@ export function DiaryPage() {
       {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
       {newJobDialog}
       {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
+      {extrasUi}
     </div>
   );
 }

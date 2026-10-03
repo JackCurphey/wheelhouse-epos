@@ -149,3 +149,10 @@ On their booking-link page, above the booking summary:
 The browser test `quote-staff.spec.ts` runs the whole story: staff send a
 quote, the customer opens the link in a browser with no sign-in and
 approves, and the part is on the job's order with the quote approved.
+
+## Piece 4: the diary's teal (built 3 Oct)
+
+A job whose quote is waiting for the customer is "Waiting for the customer"
+in the diary: its own teal block, and a row in the legend (UX walk-through
+M3), so purple only ever means a booking request. A finished job stays
+Ready, and an answered quote goes back to the job's own colour.
