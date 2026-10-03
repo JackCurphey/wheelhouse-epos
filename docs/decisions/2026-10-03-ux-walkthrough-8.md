@@ -70,3 +70,11 @@ Jack, 3 Oct: "all recommended, saturday workers do work the front desk".
 
 The drawings and the build are not changed yet. These decisions are recorded
 for when the workshop and signing-in pieces are drawn and built.
+
+**Later change (3 Oct 2026, walk-through 8 second walk H3, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". With Signed-in devices put off (issue #116 answer 5), decision 1's workshop computers are seen and stopped beside the tills, in Settings › Front desk › Till: "Workshop computers: [name] · … › Stop using as a workshop computer", and "Check Jo Taylor out" in a till's "…". Chosen over bringing Signed-in devices back for tills and workshop computers, and leaving it. Not drawn yet.
+
+**Later change (3 Oct 2026, walk-through 10 M1):** Jack, 3 Oct: "1". "Till only" also opens Front desk › Online orders, so a till-only worker can mark online orders ready; every other room stays hidden. This widens what decision 8 kept as "till only". Chosen over the till page alone, with "A colleague gets these ready". Not drawn yet.
+
+**Later change (3 Oct 2026, walk-through 1 second walk L3):** Jack, 3 Oct: "1". Maya's book-in time is "[time]" everywhere (job note, tag, quote page), since her appointment is 11:30. Replaces fix L1's 09:12. Not drawn yet.
+
+**Later change (3 Oct 2026, third walk, answers 1, 7 and 8, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** Jack, 3 Oct: "1" to each. Two of this walk-through's moments are drawn as situations: a workshop computer's "Enter your PIN", with no till number, whose keys open the diary as that person ("Now working: Alex Morgan"); and the till search with WH-1042 "Paid online · [date] · Hand over", leading to the till's hand-over (decision 8). The clickable mockup lists each screen's situation lines under the drawing, the same lines as the canvas, so the decisions kept as lines can be read while clicking. Decisions 1–8 are unchanged. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.

@@ -5,7 +5,7 @@
 // "over" = elements past the board's edge; "clipped" = elements whose
 // content is cut off. Phone pages with a data-scroll area scroll on purpose.
 // Font downloads can stall: each page waits at most 6 s for fonts.
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
+import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 const [mod, out] = process.argv.slice(2);

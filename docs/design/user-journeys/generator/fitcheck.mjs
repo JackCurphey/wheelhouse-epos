@@ -1,4 +1,4 @@
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
+import { chromium } from '@playwright/test';
 import * as s1 from './stage1.mjs'; import * as s2 from './stage2.mjs'; import { FONT_LINK } from './ui.mjs';
 const all = { ...s1.screens, ...s2.screens };
 const b = await chromium.launch(); let bad = [];

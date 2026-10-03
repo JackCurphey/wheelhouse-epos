@@ -44,7 +44,10 @@ const SHELF = '[Shelf name]';
 // Audit H3: Maya's example order was paid partly with store credit, so every
 // refund line is built from how it was paid.
 const PAID_BY = [['Store credit', '£[£]'], ['Card', '£[£]']];
-const paidLines = () => PAID_BY.map(([k, v]) => `<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span>${k}</span>${mono(v)}</div>`).join('');
+// Walk-through 12 L4 (second walk): a guest paid by card only; store credit is
+// for signed-in customers, so on-confirmed draws Card alone.
+const GUEST_PAID_BY = [['Card', '£[total]']];
+const paidLines = (by = PAID_BY) => by.map(([k, v]) => `<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span>${k}</span>${mono(v)}</div>`).join('');
 const refundWords = (what = '£[total]') => `${what} goes back the way you paid: £[£] to your store credit and £[£] to your card`;
 
 // ---------- The website frame (App map 15) ----------
@@ -97,7 +100,7 @@ const askShop = `<div style="display: flex; flex-direction: column; gap: 4px; pa
 const product = (avail = 'shelf', opts = {}) => {
   const [line, canBuy] = AVAIL[avail];
   const photo = `<div role="img" aria-label="Photo of the product" style="aspect-ratio: 4 / 3; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 2px dashed ${C.border}; background: ${C.panel}; color: ${C.muted}; font-size: 15px">[Photo of the product]</div>`;
-  const buy = canBuy ? `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">${qty(PADS.name)}${button('Add to basket')}</div>${avail === 'noshop' ? note('Add to basket asks which shop first, then adds it.') : ''}` : askShop;
+  const buy = canBuy ? `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">${qty(PADS.name, opts.qty || 1)}${button('Add to basket')}</div>${avail === 'noshop' ? note('Add to basket asks which shop first, then adds it.') : ''}` : askShop;
   const info = stack(
     `<nav aria-label="You are here" style="font-size: 14px; color: ${C.muted}"><a href="#" style="color: inherit">Shop</a> › <a href="#" style="color: inherit">[Category]</a></nav>`,
     `<div style="display: flex; flex-direction: column; gap: 6px">${h1(`${PADS.name} ${mono(PADS.code)}`)}<span style="font-size: 24px; font-weight: 700">${mono(PADS.price)}</span><span style="font-size: 13px; color: ${C.muted}">Includes VAT</span></div>`,
@@ -142,7 +145,9 @@ const pay = ({ signedIn = false, credit = false, gift = '', error = '', covered 
   : `${signedIn ? creditBox(credit) : ''}${giftPart(gift)}${wallets}<div style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: ${C.muted}"><span style="flex-grow: 1; height: 1px; background: ${C.border}"></span>or pay by card<span style="flex-grow: 1; height: 1px; background: ${C.border}"></span></div>${cardForm(error)}`, 'co-pay');
 const checkout = (opts = {}) => {
   const { credit, gift, covered, state = '', scroll = 0 } = opts;
-  const rows = [sumRow(PADS.name, PADS.price), sumRow('[Product]', '[£ price]'), sumRow('Collect from Bolton', 'Free'), sumRow('Total (includes VAT)', '£[total]', true)];
+  // Walk-through 12 L4 (second walk): the same basket as on-basket, the pads
+  // at 2 and 3 items in all.
+  const rows = [sumRow(`${PADS.name} × 2`, '£[£]'), sumRow('[Product]', '[£ price]'), sumRow('Collect from Bolton', 'Free'), sumRow('Total (includes VAT)', '£[total]', true)];
   if (credit || covered) rows.push(sumRow('Store credit', covered ? '−£[total]' : '−£[credit]'));
   if (gift === 'applied') rows.push(sumRow('Gift card', '−£[£]'));
   if (credit || gift === 'applied' || covered) rows.push(sumRow('Left to pay', covered ? '£0.00' : '£[£]', true));
@@ -162,7 +167,7 @@ const checkout = (opts = {}) => {
   // bottom, so the button and its messages are always in view.
   const left = (isPhone() ? stack(h1('Checkout'), summary(rows, terms), how(), details(opts.signedIn, opts.errors), pay(opts), '<div style="height: 150px"></div>') : stack(h1('Checkout'), how(), details(opts.signedIn, opts.errors), pay(opts))).replace('min-width: 0">', `min-width: 0${sc ? `; position: relative; top: -${sc}px` : ''}">`);
   const bar = `<div style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 8px; background: ${C.panel}; border-top: 1px solid ${C.border}">${cta}${keep}</div>`;
-  const html = isPhone() ? site(left, { basket: 2, toast: bar }) : site(`${two(left, `<div style="position: sticky; top: 0">${summary(rows, `${cta}${keep}${terms}`)}</div>`)}`, { basket: 2 });
+  const html = isPhone() ? site(left, { basket: 3, toast: bar }) : site(`${two(left, `<div style="position: sticky; top: 0">${summary(rows, `${cta}${keep}${terms}`)}</div>`)}`, { basket: 3 });
   return sc ? html.replace(/<div data-scroll style="([^"]*?)overflow-y: auto;?/, '<div data-scroll style="$1overflow-y: hidden;') : html;
 };
 // The bank's own check opens over checkout (the provider's window; audit H2).
@@ -173,7 +178,7 @@ const bigOrder = () => `<span style="display: flex; flex-direction: column; gap:
 const confirmed = (saving = false) => site(`${two(stack(
   `<div style="display: flex; flex-direction: column; gap: 10px">${msg('Paid · £[total]', 'ok', true)}${h1('Thanks, Maya — your order is in')}${bigOrder()}<span style="font-size: 15px">We’ve emailed a copy to maya@example.test · <a href="#" style="color: ${C.ink}">Not right? Change email</a></span></div>`,
   section('What happens next', `<ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5"><li>We get it ready — about [n] days, as one item comes from our [Second site] shop.</li><li>We tell you when it’s ready to collect.</li><li>Come in and give your name or order number. Nothing more to pay.</li></ol>${shopLines()}`, 'cf-next'),
-  section('How you paid', paidLines(), 'cf-paid'),
+  section('How you paid', paidLines(GUEST_PAID_BY), 'cf-paid'),
 ), stack(
   saving
     ? section('Save your details for next time', `<p style="margin: 0; font-size: 15px; line-height: 1.5">We’ve sent a code to maya@example.test.</p>${field('Code from the email', { placeholder: '6 digits', autocomplete: 'one-time-code', linked: true })}${button('Save my details', { block: true })}${linkBtn('Send a new code')}`, 'cf-save')
@@ -208,7 +213,8 @@ const orderPage = (state = 'getting') => {
     shopCancelled: section('Your refund', `<p style="margin: 0; font-size: 15px; line-height: 1.5">We cancelled this order because it wasn’t collected by [date], after we reminded you on [date].</p>${msg(`${refundWords()}.`, 'ok')}`, 'or-refund'),
   }[state] || section('Collect from', `${shopLines()}<p style="margin: 0; font-size: 15px">We’ll tell you when it’s ready — about [n] days.</p><div style="padding-top: 10px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 6px">${button('Cancel this order', { variant: 'default' })}${note('Full refund, the way you paid, until it’s ready.')}</div>`, 'or-collect');
   const cant = state === 'cantSupply' ? msg('<strong>Sorry — we couldn’t supply [Product].</strong> “[their reason]” [£ price] has gone back the way you paid: to your card. The rest of your order is on its way.', 'warn') : '';
-  const where = state === 'moving' ? ['On the shelf at Bolton', 'Coming from [Second site] · arrives [day]'] : state === 'cantSupply' ? ['On the shelf at Bolton', 'Couldn’t supply · refunded'] : ['cancelled', 'shopCancelled', 'collected'].includes(state) ? ['', ''] : undefined;
+  // Walk-through 2 M1 (third walk): ready means everything is on the shelf at Bolton.
+  const where = state === 'ready' ? ['On the shelf at Bolton', 'On the shelf at Bolton'] : state === 'moving' ? ['On the shelf at Bolton', 'Coming from [Second site] · arrives [day]'] : state === 'cantSupply' ? ['On the shelf at Bolton', 'Couldn’t supply · refunded'] : ['cancelled', 'shopCancelled', 'collected'].includes(state) ? ['', ''] : undefined;
   return site(`${head}${cant}${two(items(where), side)}`);
 };
 const cancelOrder = () => popup('co-cancel', 'Cancel this order?', `${ORDER} · £[total]`, `<p style="margin: 0; font-size: 15px; line-height: 1.5">${refundWords()}. A card refund can take [n] working days to show. We’ll put the items back on sale.</p>`, `${button('Keep my order', { variant: 'ghost' })}${button('Cancel the order', { variant: 'danger' })}`, 480);
@@ -250,8 +256,10 @@ const ordersPage = ({ toast = false, arrived = false, sold = false } = {}) => {
     : orderRow({ who: 'Maya Patel', when: 'paid [time]', items: `${it(`${PADS.name} ${mono(PADS.code)}`, from('On the shelf'))}${it('[Product]', from('On its way from [Second site]'))}`, action: badge('Waiting for 1 item', 'amber') });
   const content = `<div style="position: relative; height: 100%"><div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton')}
 ${group('To get ready', toast ? 2 : 3, [
-  ...(toast ? [] : [maya]),
-  orderRow({ who: '[Customer]', when: 'paid [time]', items: it('[Product] × 2', from('On the shelf')), action: button('Mark ready') }),
+  // Walk-through 2 M1 (third walk): Mark ready is pressed on the order that's
+  // all on the shelf, so that row (not Maya's, still waiting) moves to Ready.
+  maya,
+  ...(toast ? [] : [orderRow({ who: '[Customer]', when: 'paid [time]', items: it('[Product] × 2', from('On the shelf')), action: button('Mark ready') })]),
   orderRow({ who: '[Customer]', when: 'paid [time]', items: it('[Product]', from('Ordered from [supplier] · due [date]')), action: badge('Due [date]', 'grey') }),
 ], 'Mark ready when everything’s on the shelf for collection — the customer is told straight away.')}
 ${group('Ready to collect', toast ? 3 : 2, [
@@ -332,7 +340,8 @@ const startQuestion = () => popup('st-title', 'How should your website start?', 
 
 // ---------- The boards ----------
 def('on-product', () => product('shelf'));
-def('on-product-added', () => product('shelf', { basket: 1, toast: siteToast(`Added ${PADS.name}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 6px; background: rgba(255,255,255,0.16); color: #ffffff; font-weight: 600; text-decoration: none">View basket</a>`) }));
+// Walk-through 12 L1 (third walk): agrees with on-basket — [Product] is already in it, and Maya adds 2 pads, so the basket reads 3.
+def('on-product-added', () => product('shelf', { basket: 3, qty: 2, toast: siteToast(`Added 2 × ${PADS.name}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 6px; background: rgba(255,255,255,0.16); color: #ffffff; font-weight: 600; text-decoration: none">View basket</a>`) }));
 def('on-product-two-shops', () => product('other', { twoShops: true }));
 def('on-product-order-in', () => product('orderin', { twoShops: true }));
 def('on-product-out', () => product('out'));

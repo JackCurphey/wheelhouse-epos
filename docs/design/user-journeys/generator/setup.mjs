@@ -235,8 +235,7 @@ function personDialog({ all = false, workshop = true, worksAt = '', siteDays = '
 <div style="display: flex; flex-direction: column; gap: 8px">${(costs ? SWITCHES.flatMap((s) => (s === 'Can see reports' ? [s, 'Can see costs and margin'] : [s])) : SWITCHES).map(sw).join('')}</div>
 </div>
 </div><div style="display: flex; flex-direction: column; gap: 16px">${workshopBlock(workshop, siteDays)}
-<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div>
-<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Signed in</span><span style="font-size: 13px; color: ${C.muted}">Till B1 now · [n] phone or computer</span></span>${button('Sign out everywhere', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
+<div style="display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Till PIN</span><span style="font-size: 13px; color: ${C.muted}">Set · only Jo knows it</span></span>${button('Clear a forgotten PIN', { variant: 'default' })}</div></div></div>`, `<span></span>${button('Done')}`, 860);
 }
 // UX walk-through 4 H1: a cleared PIN works like a first one — the next
 // sign-in opens "Your till PIN" (signin.mjs pin-cleared).
@@ -272,13 +271,15 @@ const tillOnlyDialog = () => popup('inv-title', 'Add someone', 'No email — the
 ${howPills(true)}
 ${field('Name', { placeholder: 'Their name, as it shows on sales' })}
 ${choice('Role', [['Staff', true], ['Mechanic', false]])}
-${note('A Mechanic added this way gets “Can use the till” switched on. They don’t sign in to Wheelhouse, so they can’t open anything away from the till.')}
-${note('Their PIN is given at the till: you or a manager checks in, opens “Give [name] their PIN” and turns the screen to them. A forgotten PIN is cleared and given again the same way.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add them')}`);
+${note('A Mechanic added this way gets “Can use the till” switched on. They don’t sign in to Wheelhouse, so they can’t open anything away from the till except Front desk › Online orders.')}
+${note('Their PIN is given at the till: you or a manager checks in, opens “Give [name] their PIN” and turns the screen to them. A forgotten PIN is cleared and given again the same way. Or use Give a new PIN on their page, from your phone: it shows a one-time PIN to read out over a call, and they change it at check-in.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add them')}`);
 def('set-staff-invite', () => overlay(settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds({ people: peopleOpen(false, true) }), { who: MANAGER /* UX walk-through 2 (decision 6): Jack Lewis, Owner */ }), inviteDialog()));
 // UX walk-through 4 M2, M3: the Owner's list after inviting Jo and adding a
 // till-only person; the same invite once it has expired; the till-only form.
 const ownerStaffPage = (open, people) => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds(open, people), { who: OWNER });
-def('set-staff-invited', () => ownerStaffPage({ people: peopleOpen(false, true, { jo: 'invited', tillOnly: true }) }, 'Jack Lewis, Alex Morgan, [Name] · Jo Taylor invited'));
+// Third walk, walk-through 4 M3 (Owner setup 17): opened from Getting
+// started, the page under the sent invite keeps the bar and its Next.
+def('set-staff-invited', () => settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds({ people: peopleOpen(false, true, { jo: 'invited', tillOnly: true }) }, 'Jack Lewis, Alex Morgan, [Name] · Jo Taylor invited'), { banner: stepBanner('Invite your staff', 'Workshop services and prices'), who: OWNER }));
 def('set-staff-invite-expired', () => ownerStaffPage({ people: peopleOpen(false, true, { jo: 'expired' }) }, 'Jack Lewis, Alex Morgan · Jo Taylor’s invite expired'));
 def('set-staff-invite-till-only', () => overlay(ownerStaffPage({ people: peopleOpen(false, true) }), tillOnlyDialog()));
 
@@ -300,11 +301,16 @@ def('set-shop-hours', () => shopPage({ hours: hoursOpen() }));
 // Services by group (Workshop day 66: shops group their own services) —
 // names and times from the diary's services; only Standard service has a
 // real price, the rest are placeholders.
-const serviceRow = (name, mins, price, hv = false, hover = hv && !isPhone(), remind = '') => `<div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 8px 0 12px; border: 1px solid ${hover ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)} — drag, or use the arrow keys" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${mins} min in the diary${remind ? ` · ${remind}` : ''}</span></span>${mono(price, 'font-size: 15px')}${hover ? `<button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button>${button('Remove', { variant: 'danger' })}` : ''}</div>`;
+// Third walk, walk-through 4 M2: on tablet and phone (no hover) every row
+// shows Edit and Remove, as the desktop row shows them on hover (touch = true);
+// on a phone they wrap to a second line under the service.
+const serviceRow = (name, mins, price, hv = false, hover = hv && !isPhone(), remind = '', touch = false) => `<div style="display: flex; ${touch && isPhone() ? 'flex-wrap: wrap; padding: 4px 8px 8px 12px' : 'padding: 0 8px 0 12px'}; align-items: center; gap: ${touch && isPhone() ? '4px 12px' : '12px'}; min-height: 52px; border: 1px solid ${hover && !touch ? C.ink : C.border}; border-radius: 8px; background: ${C.panel}"><button type="button" aria-label="Move ${esc(name)} — drag, or use the arrow keys" style="width: 44px; height: 44px; border: 0; background: transparent; color: ${C.muted}; font-size: 16px">⋮⋮</button><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${mins} min in the diary${remind ? ` · ${remind}` : ''}</span></span>${mono(price, 'font-size: 15px')}${hover || touch ? `<span style="display: inline-flex; align-items: center; gap: 8px${touch && isPhone() ? '; width: 100%; justify-content: flex-end' : ''}"><button type="button" style="min-height: 44px; padding: 0 12px; border: 0; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">Edit</button>${button('Remove', { variant: 'danger' })}</span>` : ''}</div>`;
 // Account, history and reminders decision 2: each service says when its
 // reminder goes, set on the service.
 const servicesOpen = ({ reminders = false } = {}) => `<div role="group" aria-label="Service groups" style="display: flex; flex-wrap: wrap; gap: 8px">${pill('Full service', reminders)}${pill('Individual service', !reminders)}${pill('+ Add a group')}</div>
-<div style="display: flex; flex-direction: column; gap: 8px">${reminders ? serviceRow('Standard service', 60, '£65.00', true, !isPhone(), 'reminder after [n] months') : `${serviceRow('Safety check', 60, '[£ price]')}${serviceRow('Gear adjustment', 60, '[£ price]', true)}${serviceRow('Brake service', 45, '[£ price]')}`}</div>
+<div style="display: flex; flex-direction: column; gap: 8px">${reminders ? serviceRow('Standard service', 60, '£65.00', true, !isPhone(), 'reminder after [n] months') : (size() === 'desktop'
+  ? `${serviceRow('Safety check', 60, '[£ price]')}${serviceRow('Gear adjustment', 60, '[£ price]', true)}${serviceRow('Brake service', 45, '[£ price]')}`
+  : ['Safety check', 'Gear adjustment', 'Brake service'].map((n) => serviceRow(n, n === 'Brake service' ? 45 : 60, '[£ price]', false, false, '', true)).join(''))}</div>
 <div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; align-items: ${isPhone() ? 'flex-start' : 'center'}; justify-content: space-between; gap: 12px">${button('+ Add a service', { variant: 'default' })}${note('Groups and services show as pills, in this order, when a job is booked.')}</div>`;
 // Mechanics: everyone with "Works in the workshop" on (decision 11), set in
 // Staff and roles — listed here so it can be found from either place.
@@ -396,7 +402,7 @@ const editMsgDialog = () => popup('msg-title', 'Bike ready', 'Sent when a job is
 <p style="margin: 0; font-size: 15px">Sent the way each customer chose: text, WhatsApp or email.</p>
 ${wordingBox('msg-words', `Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay]${lightspeedShop() ? '' : ' to pay on collection'}. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].`, 4, null, SHOP_NAME_NOTE())}
 ${lightspeedShop() ? LS_PAY_WORDS : ''}
-${bubble(`Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles, Bolton. ${lightspeedShop() ? `${LS_PAY}.` : '£111.00 to pay on collection.'} See what we did: [link]. Job WH-1042. We’re open [opening hours].`)}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
+${bubble(`Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles, Bolton. ${lightspeedShop() ? `${LS_PAY}.` : '£111.00 to pay on collection.'} See what we did: [link]. Your repair · WH-1042. We’re open [opening hours].`)}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
 // Decision 14: the shop's own automatic messages, with a "send when…".
 // Marketing only reaches customers who allow it (journey 7, acct-unsubscribe).
 const newMsgDialog = () => popup('new-msg-title', 'Your own message', 'Sent automatically', `
@@ -441,11 +447,16 @@ const STEPS = [
   ['Quick buttons for the till', 'Settings › Till', false, 'the first button is added'],
   ['Float and closing up', 'Settings › Front desk › End of day', false, 'a float is set', true],
   ['Check the messages customers get', 'Settings › Messages', false, 'you’ve looked at Messages'],
-  ['Set up your website', 'Office › Website', false, 'the website’s three-step start is done', true],
+  ['Set up your website', 'Office › Website', false, 'no Words and photos row says Check this', true],
 ];
 // UX walk-through 4 M1: while a move is on, the card machine and the float
 // are already done for the move, as mv-ready draws them (shared items tick together, from the same
 // setting); Jo's invite is waiting (M3); messages wait for switch-over (H3).
+// Third walk, answer 10 (consolidation-back-office.md finding 5): while a
+// move is on there is one checklist: Getting started's own steps, the three
+// shared ones (card machine, float, website) shown once, each saying it is
+// needed to switch over. The move's own checks stay with the move (its line
+// above the list); no step is added that a decision doesn't name.
 const MOVING_STEPS = STEPS.map((x) => (['Connect the card machine', 'Float and closing up'].includes(x[0]) ? [x[0], x[1], true, x[3], x[4]] : x));
 const MOVING_EXTRA = {
   'Invite your staff': '[n] invited, waiting to join',
@@ -457,7 +468,7 @@ const MOVING_EXTRA = {
 // reader ("Set up: Invite your staff"); the visible word stays short.
 const named = (html, name) => html.replace('<button type="button"', `<button type="button" aria-label="${esc(name)}"`);
 const stepRow = ([t, where, done, tick, shared], i, next, moving = false) => {
-  const extra = [moving && MOVING_EXTRA[t], moving && shared && 'also on the switch-over checklist'].filter(Boolean);
+  const extra = [moving && MOVING_EXTRA[t], moving && shared && 'needed to switch over'].filter(Boolean);
   const sub = (lead) => `${lead}${tick}${extra.length ? ` · ${extra.join(' · ')}` : ''}`;
   return isPhone()
   // Phone: the whole row is the link; the next step has a dark outline.
@@ -472,9 +483,9 @@ ${named(button(next ? 'Start' : 'Set up', { variant: next ? 'accent' : 'default'
 };
 const moveLink = `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Moving from another system?</a>`;
 // UX walk-through 4 M1: while a move is on, the link becomes a line with the
-// move's stage: 3 of the switch-over checklist's 5 items, as moving.mjs's
+// move's stage: 3 of the switch-over checklist's 4 items, as moving.mjs's
 // mv-ready draws them.
-const moveLine = () => `<a href="#" aria-label="Moving from Citrus Lime: Run alongside, ready to switch over 3 of 5. Open the move" style="display: flex; flex-wrap: wrap; align-items: center; gap: ${isPhone() ? '4px 10px' : '6px 12px'}; min-height: 48px; box-sizing: border-box; padding: 8px 12px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.mutedBg}; text-decoration: none; color: ${C.ink}"><span style="font-size: 14px; font-weight: 700">Moving from Citrus Lime</span><span style="font-size: 14px">Run alongside</span><span style="font-size: 14px; color: ${C.muted}">ready to switch over: 3 of 5</span><span style="flex-grow: 1"></span><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700">Open<span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 14)}</span></span></a>`;
+const moveLine = () => `<a href="#" aria-label="Moving from Citrus Lime: Run alongside, ready to switch over 3 of 4. Open the move" style="display: flex; flex-wrap: wrap; align-items: center; gap: ${isPhone() ? '4px 10px' : '6px 12px'}; min-height: 48px; box-sizing: border-box; padding: 8px 12px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.mutedBg}; text-decoration: none; color: ${C.ink}"><span style="font-size: 14px; font-weight: 700">Moving from Citrus Lime</span><span style="font-size: 14px">Run alongside</span><span style="font-size: 14px; color: ${C.muted}">ready to switch over: 3 of 4</span><span style="flex-grow: 1"></span><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700">Open<span style="display: inline-flex; transform: rotate(-90deg)">${icon('chevron', 14)}</span></span></a>`;
 function gettingStarted({ moving = false } = {}) {
   const steps = moving ? MOVING_STEPS : STEPS;
   const firstTodo = steps.findIndex((x) => !x[2]);
@@ -483,7 +494,7 @@ function gettingStarted({ moving = false } = {}) {
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Getting started</h2>${isPhone() || moving ? '' : moveLink}</div>
 ${moving ? moveLine() : ''}
 <div aria-hidden="true" style="height: 6px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${Math.round((done.length / steps.length) * 100)}%; height: 100%; background: ${C.ink}"></div></div>
-${note(moving ? 'Your tills are in practice until switch-over — do these in any order.' : 'Your till is ready, so you can sell now — do the rest in any order.')}
+${note(moving ? 'Running alongside Citrus Lime: the tills start on switch-over day.' : 'Your till is ready, so you can sell now — do the rest in any order.')}
 <button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0; border: 0; border-top: 1px solid ${C.border}; background: transparent; font-family: inherit; text-align: left; color: ${C.muted}"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 15)}</span><span style="font-size: 14px; flex-grow: 1">${done.length} done: ${done.join(', ')}</span>${icon('chevron', 16)}</button>
 <div style="display: flex; flex-direction: column">${steps.map((st, i) => (st[2] ? '' : stepRow(st, i, i === firstTodo, moving))).join('')}</div>
 ${isPhone() && !moving ? moveLink : ''}
@@ -562,7 +573,7 @@ Object.assign(TITLES, {
   'set-data-history': 'Your data › Settings changes',
   'fr-today': 'Getting started — the owner’s checklist on Today',
   // UX walk-through 4 H3, M1, M2, M3
-  'fr-today-moving': 'Getting started while moving from Citrus Lime — tills in practice, the move’s stage, shared steps',
+  'fr-today-moving': 'Getting started while moving from Citrus Lime — one checklist, the move’s stage, the tills start on switch-over day',
   'set-msg-alongside': 'Messages while running alongside — none go to customers until switch-over day',
   'set-staff-invited': 'People — Jo invited, not joined yet (Send again, Cancel the invite), and a till-only person',
   'set-staff-invite-expired': 'People — an invite that expired (Send again)',

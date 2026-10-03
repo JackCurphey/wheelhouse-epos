@@ -7,7 +7,7 @@
 // (diary.mjs JOBS — nothing hand-picked), the till sale B1-[0000] and the
 // approved £111 on WH-1042. Anything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { JOBS, DAYS, ST, customerBikeOf, headerSearch } from './diary.mjs';
+import { JOBS, DAYS, TODAY, ST, customerBikeOf, headerSearch, stageOf } from './diary.mjs';
 import { page, fold, pill, offer, choice, note, popup, overlay, setSize, size, withSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
 import { field } from './ui.mjs';
 import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs'; // UX walk-through 6 M3
@@ -22,9 +22,24 @@ const MAYA = { name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.
 // Built on first use, not at load: diary.mjs imports this file (journey 15
 // decision 11) and JOBS isn't ready while that import is starting up.
 let _mj;
-const mj = () => (_mj ??= JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => b.day - a.day || b.start - a.start));
+// Maya's other jobs, as this page drew them before the diary's other blocks
+// stopped using her name (third walk, walk-through 1 M3): held here so the
+// diary's filler jobs don't change her history. WH-1042 is the diary's own.
+const MAYA_OTHER_JOBS = [
+  { day: 0, start: 16 * 60, dur: 60, mech: 'Alex', key: 'waiting', job: 'WH-1051', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '16:00–17:00 · standard service' },
+  { day: 0, start: 15 * 60, dur: 60, mech: 'Jo', key: 'ready', job: 'WH-1054', svc: 'Gear adjustment', title: 'Maya Patel · Trek Domane AL 3', detail: '15:00–16:00 · gear adjustment' },
+  { day: 1, start: 13 * 60, dur: 60, mech: 'Alex', key: 'ready', job: 'WH-1056', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '13:00–14:00 · standard service' },
+  { day: 1, start: 12 * 60, dur: 60, mech: 'Jo', key: 'scheduled', job: 'WH-1059', svc: 'Gear adjustment', title: 'Maya Patel · Trek Domane AL 3', detail: '12:00–13:00 · gear adjustment' },
+  { day: 2, start: 11 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1062', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '11:00–12:00 · standard service' },
+  { day: 4, start: 12 * 60 + 30, dur: 60, mech: 'Alex', key: 'ready', job: 'WH-1071', svc: 'Gear adjustment', title: 'Maya Patel · Trek Domane AL 3', detail: '12:30–13:30 · gear adjustment' },
+  { day: 4, start: 16 * 60 + 15, dur: 60, mech: 'Jo', key: 'ready', job: 'WH-1074', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '16:15–17:15 · standard service' },
+  { day: 5, start: 13 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1077', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '13:00–14:00 · standard service' },
+];
+const mj = () => (_mj ??= [...JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel'), ...MAYA_OTHER_JOBS].sort((a, b) => b.day - a.day || b.start - a.start));
+const jobsWord = (n) => `${n} job${n === 1 ? '' : 's'}`;
 const when = (j) => { const [d, n] = DAYS[j.day]; return `${d} ${n} Sep · ${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`; };
-const status = (key) => { const [bg, ink, word] = ST[key]; return `<span style="display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${word}</span>`; };
+// Second walk Q11: a job's chip shows its own stage (diary.mjs stageOf).
+const status = (key, label) => { const [bg, ink, w0] = ST[key]; const word = label ?? w0; return `<span style="display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${word}</span>`; };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // The top of the page, the same in both options: who, how to reach them,
@@ -44,14 +59,14 @@ ${button('New job')}</div>`;
 // with its shop. `SHOP` is set while such a page is drawn.
 let SHOP = '';
 const atShop = () => (SHOP ? ` · ${SHOP}` : '');
-const jobRow = (j) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono(j.job, 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${cap(j.svc)}</span><span style="font-size: 13px; color: ${C.muted}">${when(j)} · ${j.mech === 'Alex' ? 'Alex Morgan' : 'Jo Taylor'}${atShop()}</span></span>${status(j.key)}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
+const jobRow = (j) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono(j.job, 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${cap(j.svc)}</span><span style="font-size: 13px; color: ${C.muted}">${when(j)} · ${j.mech === 'Alex' ? 'Alex Morgan' : 'Jo Taylor'}${atShop()}</span></span>${status(j.key, stageOf(j))}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
 const saleRow = () => `<a href="cs-sale-desktop.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono('B1-[0000]', 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Sale · Till B1</span><span style="font-size: 13px; color: ${C.muted}">[date] · [what was bought]${atShop()}</span></span>${mono('[£ total]', 'font-size: 15px')}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
 
 // ---------- Option 1: one page, everything in folding sections ----------
 function optionFolds() {
-  const jobs = `${mj().slice(0, 4).map(jobRow).join('')}<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ${mj().length} jobs</a>`;
+  const jobs = `${mj().slice(0, 4).map(jobRow).join('')}<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ${jobsWord(mj().length)}</a>`;
   const sections = fold('Bikes', 'Trek Domane AL 3')
-    + fold('Workshop jobs', `${mj().length} jobs`, jobs)
+    + fold('Workshop jobs', jobsWord(mj().length), jobs)
     + fold('Sales and refunds', 'B1-[0000] and [n] more')
     + fold('Account and loyalty', 'Owes [£] · [n] points')
     + fold('Messages', 'Texts and emails sent')
@@ -114,10 +129,14 @@ const c2wRow = (stage) => otherRow('Order', `Cycle to Work · [Bike] · ${stage 
 function history(filter = 'Everything', empty = false, c2w = '') {
   const pills = `<div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${(lightspeedShop() ? ['Everything', 'Jobs', 'Messages'] : ['Everything', 'Jobs', 'Sales', 'Messages']).map((t) => pill(t, t === filter)).join('')}</div>`;
   if (empty) return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 17px; font-weight: 700">History</span><div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 16px; border: 2px dashed ${C.border}; border-radius: 10px; text-align: center"><span style="font-size: 16px; font-weight: 700">Nothing yet</span>${note('Jobs, sales and messages show here, newest first.')}${button('New job', { variant: 'default' })}</div></div>`, 'flex-grow: 1; min-width: 0');
-  const open = mj().filter((j) => j.key !== 'ready');
-  const past = mj().filter((j) => j.key === 'ready');
-  const rows = `${subHead('Open now')}${open.slice(0, 3).map(jobRow).join('')}${c2w === 'open' ? c2wRow('open') : ''}
-${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${past.slice(0, 1).map(jobRow).join('')}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', `[date] · [what came back]${atShop()}`, mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
+  // UX walk-through 9 L5 (Customer service 12): a Ready job is still open —
+  // the bike is waiting to be collected — so it sits under "Open now",
+  // newest first with the others, not under "Earlier". The Ready job shown
+  // is the newest on or before today (walk-through 9 L5, second walk).
+  const shownJobs = new Set([...mj().filter((j) => j.key !== 'ready').slice(0, 3), ...mj().filter((j) => j.key === 'ready' && j.day <= TODAY).slice(0, 1)]);
+  const open = mj().filter((j) => shownJobs.has(j));
+  const rows = `${subHead('Open now')}${open.map(jobRow).join('')}${c2w === 'open' ? c2wRow('open') : ''}
+${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', `[date] · [what came back]${atShop()}`, mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
 <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ([n])</a>`;
   return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 17px; font-weight: 700">History</span>${pills}</div>
@@ -144,7 +163,7 @@ const resRow = (main, sub, action, first = false) => `<a href="#" role="option" 
 const c2wResults = () => `${resGroup('Cycle to Work orders', resRow('Maya Patel · Cycle to Work · [Bike]', `Quote ${mono('[quote number]')} · Waiting for the certificate · held until [date]`, 'Open the order', true))}
 ${resGroup('Customers', resRow('Maya Patel', `Customer · ${mono(MAYA.phone)} · 1 Cycle to Work order`, 'Open'))}
 <p style="margin: 0; padding: 4px 12px 0; font-size: 13px; color: ${C.muted}">Cycle to Work orders are found by name, quote number or certificate number.</p>`;
-const typedBox = (w) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 2px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" role="combobox" aria-expanded="true" aria-controls="cs-c2w-results" aria-label="Search jobs, customers, products" value="[quote number]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 14px; color: ${C.ink}"></label>`;
+const typedBox = (w) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 2px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" role="combobox" aria-expanded="true" aria-controls="cs-c2w-results" aria-label="Search jobs, customers, orders, products" value="[quote number]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 14px; color: ${C.ink}"></label>`;
 const resPanel = (style) => `<div id="cs-c2w-results" role="listbox" aria-label="Search results" style="${style} box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)">${c2wResults()}</div>`;
 const searchC2w = () => {
   if (size() === 'desktop') return customerList().replace(headerSearch(), `<div style="position: relative; flex-shrink: 0">${typedBox('320px')}${resPanel('position: absolute; top: 52px; right: 0; width: 480px; z-index: 5;')}</div>`);
@@ -185,7 +204,7 @@ const dupNotice = () => `<div role="status" style="display: flex; align-items: c
 const customerPageDup = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${backLink()}${header()}${dupNotice()}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary()}${history()}</div></div>`, STAFF);
 function mergeDialog() {
   const cmpRow = (label, a, b, keepA = true) => `<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : '120px 1fr 1fr'}; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">${label}</span>${[[a, keepA], [b, !keepA]].map(([v, on]) => `<button type="button" aria-pressed="${on}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${on ? C.ink : C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; text-align: left; color: ${C.ink}">${on ? icon('check', 15) : '<span style="width: 15px"></span>'}${v}</button>`).join('')}</div>`;
-  const heads = isPhone() ? '' : `<div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 10px"><span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">${mj().length} jobs · [n] sales</span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya P.</span><span style="font-size: 13px; color: ${C.muted}">[n] jobs · [n] sales</span></span></div>`;
+  const heads = isPhone() ? '' : `<div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 10px"><span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">${jobsWord(mj().length)} · [n] sales</span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya P.</span><span style="font-size: 13px; color: ${C.muted}">[n] jobs · [n] sales</span></span></div>`;
   return popup('merge-title', 'The same person?', 'Pick what to keep. Jobs, sales and bikes from both are kept together.', `${heads}
 ${note('Only what’s different is shown. Both have ' + MAYA.phone + '.')}${cmpRow('Name', 'Maya Patel', 'Maya P.')}${cmpRow('Email', MAYA.email, '[none]')}${cmpRow('Address', '[address]', '[none]')}
 ${note('Added on [date] and [date], on different tills. Merging can be undone from the customer’s page for [n] days.')}`, `${button('They’re different people', { variant: 'ghost' })}${button('Merge into one')}`, 760);

@@ -18,7 +18,7 @@
 // each other, past jobs and purchases, dates and amounts are bracketed
 // placeholders — nothing here is invented as if real.
 import { C, MONO, esc, icon, button, card, badge, field } from './ui.mjs';
-import { page, pill, note, popup, overlay, withSize, isPhone, settingsPage, workshopFolds, WORKSHOP_INTRO, rowSwitch } from './settings-frame.mjs';
+import { page, pill, note, popup, overlay, withSize, isPhone, settingsPage, workshopFolds, WORKSHOP_INTRO, rowSwitch, choice } from './settings-frame.mjs';
 import { siteDesktop, siteTablet, sitePhone } from './app-map.mjs';
 import { today } from './opening.mjs';
 import { msgPage, msgListOpen, servicesOpen, wordingBox, bubble } from './setup.mjs';
@@ -85,9 +85,10 @@ const yourData = (pending) => cardBox(`${h2('Your data', 'a-data')}
 <div style="display: flex; flex-direction: column; align-items: flex-start">${actBtn('Download a copy of your data')}${pending ? `<p style="margin: 6px 0; font-size: 15px; line-height: 1.5">You asked us to delete your account on [date]. We’ll finish by [date].</p>${button('Cancel my request', { variant: 'default' })}` : actBtn('Ask us to delete your account')}${link('Privacy notice')}</div>`);
 
 // History rows: a kind, what it was, when, and what's on the right.
+// Walk-through 12 M5: the line under each title at body size (15px).
 const kind = (t) => `<span style="flex-shrink: 0; width: 76px; font-size: 13px; font-weight: 700; color: ${C.muted}">${t}</span>`;
 // On a phone the kind joins the line under the title, so the title has room.
-const hRow = (k, title, sub, right = '') => `<a href="#" style="display: flex; align-items: center; gap: ${isPhone() ? 8 : 12}px; min-height: 60px; padding: 6px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${isPhone() ? '' : kind(k)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600; ${isPhone() ? 'line-height: 1.35' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${title}</span><span style="font-size: 13px; color: ${C.muted}">${isPhone() ? `${k} · ` : ''}${sub}</span></span>${right}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
+const hRow = (k, title, sub, right = '') => `<a href="#" style="display: flex; align-items: center; gap: ${isPhone() ? 8 : 12}px; min-height: 60px; padding: 6px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${isPhone() ? '' : kind(k)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600; ${isPhone() ? 'line-height: 1.35' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${title}</span><span style="font-size: 15px; color: ${C.muted}">${isPhone() ? `${k} · ` : ''}${sub}</span></span>${right}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
 const subHead = (t) => `<h3 style="margin: 0; padding: 12px 0 4px; font-size: 13px; font-weight: 700; color: ${C.muted}">${t}</h3>`;
 // Audit M4: the chip is the tracker's current step.
 const repairNow = () => hRow('Repair', `${mono('WH-1042')} · ${MAYA.bike} · Standard service`, 'Booked in Thu 17 Sep · expected ready Thu 17 Sep', badge('In the shop', 'blue'));
@@ -101,7 +102,7 @@ const onlineOrder = () => hRow('Purchase', `Order ${mono('[order number]')} · [
 // UX walk-through 5 M5: her Cycle to Work order has a row, opening the
 // order's page (cw-customer-view). UX walk-through 5 H4: while it's open,
 // the row says what she pays at collection, from the order's "Who pays what".
-const c2wNow = () => `<a href="cw-customer-view-${SIZE}.dc.html" style="display: flex; align-items: center; gap: ${isPhone() ? 8 : 12}px; min-height: 60px; padding: 6px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${isPhone() ? '' : kind('Cycle to Work')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600; line-height: 1.35">[Bike] · Waiting for the certificate</span><span style="font-size: 13px; color: ${C.muted}">${isPhone() ? 'Cycle to Work · ' : ''}Quote ${mono('[quote number]')} · put aside until [date]</span><span style="font-size: 14px">What you pay at collection: <strong>${mono('£[£]')}</strong></span></span>${badge('Put aside', 'blue')}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
+const c2wNow = () => `<a href="cw-customer-view-${SIZE}.dc.html" style="display: flex; align-items: center; gap: ${isPhone() ? 8 : 12}px; min-height: 60px; padding: 6px 0; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${isPhone() ? '' : kind('Cycle to Work')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600; line-height: 1.35">[Bike] · Waiting for the certificate</span><span style="font-size: 15px; color: ${C.muted}">${isPhone() ? 'Cycle to Work · ' : ''}Quote ${mono('[quote number]')} · put aside until [date]</span><span style="font-size: 14px">What you pay at collection: <strong>${mono('£[£]')}</strong></span></span>${badge('Put aside', 'blue')}<span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
 const c2wPast = () => hRow('Cycle to Work', '[Bike] · Collected', `Quote ${mono('[quote number]')} · collected [date] · receipt`);
 function history(filter = 'Everything', { empty = false, talk = '', c2w = '' } = {}) {
   const pills = `<div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${['Everything', 'Repairs', 'Purchases'].map((t) => pill(t, t === filter)).join('')}</div>`;
@@ -193,11 +194,23 @@ ${thread(items, 'Conversation with Maya Patel')}${after}</div>`, 'flex-grow: 1; 
 }
 
 // ---------- Service reminders (decision 2) ----------
-const serviceDialog = () => popup('svc-title', 'Standard service', 'Full service · 60 min in the diary · £65.00', `
+// Third walk (walk-through 4 M2; Owner setup 16; Account 2): Edit on the
+// "Gear adjustment" row of Settings › Workshop › services opens the service
+// box, headed with the service clicked: its name, group, time in the diary
+// and price (unset, so "[£ price]", as the list shows), and the reminder.
+// Group, time and price are the set-workshop-services row's (setup.mjs).
+const svcInput = (id, value, w, mono = false) => `<input id="${id}"${w ? ' inputmode="numeric"' : ''} value="${esc(value)}" style="width: ${w ? `${w}px` : '100%'}; min-height: 44px; box-sizing: border-box; ${w ? 'text-align: center; ' : 'padding: 0 10px; '}border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: ${mono ? MONO : 'inherit'}; font-size: 15px; color: ${C.ink}">`;
+const svcLabel = (id, t) => `<label for="${id}" style="font-size: 15px; font-weight: 600">${t}</label>`;
+const svcRow = (inner) => `<div style="display: flex; flex-direction: column; gap: 8px">${inner}</div>`;
+const serviceDialog = () => popup('svc-title', 'Gear adjustment', 'Individual service · 60 min in the diary · [£ price]', `
+${svcRow(`${svcLabel('svc-name', 'Name')}${svcInput('svc-name', 'Gear adjustment')}`)}
+${choice('Group', [['Full service', false], ['Individual service', true]])}
+${svcRow(`${svcLabel('svc-time', 'Time in the diary')}<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 15px">${svcInput('svc-time', '60', 72)}min</span>`)}
+${svcRow(`${svcLabel('svc-price', 'Price')}<span style="display: inline-flex; align-items: center; gap: 8px; font-size: 15px">${svcInput('svc-price', '[£ price]', 120, true)}</span>`)}
 <div style="display: flex; flex-direction: column; gap: 8px"><label for="svc-rem" style="font-size: 15px; font-weight: 600">Remind customers it’s due after</label><span style="display: inline-flex; align-items: center; gap: 8px; font-size: 15px"><input id="svc-rem" inputmode="numeric" value="[n]" style="width: 64px; min-height: 44px; box-sizing: border-box; text-align: center; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}">months</span>
 ${note('Counted from when the bike is collected. Only customers who said yes get it. Leave empty for no reminder — for a puncture, say.')}</div>
 ${note('The wording is in Settings › Messages › Service reminder.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Save')}`, 520);
-const servicesBoard = () => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ services: servicesOpen({ reminders: true }) }));
+const servicesBoard = ({ reminders = true } = {}) => settingsPage('workshop', 'Workshop', WORKSHOP_INTRO, workshopFolds({ services: servicesOpen({ reminders }) }));
 // Audit M8: "Stop these" is a fixed line, not part of the editable wording,
 // and the insert buttons are only the ones this message can use.
 const stopFixed = `<p style="margin: 0; padding: 8px 10px; border-radius: 6px; background: ${C.mutedBg}; font-size: 14px; color: ${C.ink}">Always added at the end: “Stop these: [link]”. It can’t be taken off.</p>`;
@@ -264,7 +277,10 @@ const downloaded = (failed = false) => accountPage({ banner: failed
 const scrolled = (html, px) => `<style>.ac-scrolled > * { position: relative; top: -${px}px }</style>${html.replace(/<div data-scroll style="([^"]*?)overflow-y: auto;/, '<div data-scroll class="ac-scrolled" style="$1overflow-y: hidden;')}`;
 
 // ---------- The boards ----------
-def('ac-account', () => accountPage());
+// Walk-through 12 L3 (third walk, 3 Oct): at phone size the "In the shop"
+// tag is body size (15px). The build fails if the tag's words move.
+const bigTag = (html, t, tone) => { const from = badge(t, tone); if (!html.includes(from)) throw new Error(`account.mjs: tag "${t}" not found`); return html.split(from).join(from.replace('font-size: 12px', 'font-size: 15px')); };
+def('ac-account', () => (isPhone() ? bigTag(accountPage(), 'In the shop', 'blue') : accountPage()));
 def('ac-account-lower', () => scrolled(accountPage(), { desktop: 380, tablet: 380, phone: 1150 }[SIZE]));
 def('ac-account-repairs', () => accountPage({ filter: 'Repairs' }));
 def('ac-account-new', () => accountPage({ empty: true }));
@@ -291,7 +307,8 @@ def('ac-today', () => today({ replies: true, deleteRequest: true, arrived: true 
 def('ac-book-remind', () => detailsRemindAt(SIZE));
 def('ac-collect-remind', () => summaryRemindAt(SIZE));
 def('ac-services', () => servicesBoard());
-def('ac-service-edit', () => overlay(servicesBoard(), serviceDialog()));
+// Behind the box: the Individual service list it was opened from.
+def('ac-service-edit', () => overlay(servicesBoard({ reminders: false }), serviceDialog()));
 def('ac-messages', () => scrolled(msgPage({ list: msgListOpen({ bringBack: true }) }), { desktop: 760, tablet: 760, phone: 1300 }[SIZE]));
 def('ac-reminder-wording', () => overlay(msgPage({ list: msgListOpen({ bringBack: true }) }), reminderDialog()));
 def('ac-reminder-landing', () => reminderLanding());

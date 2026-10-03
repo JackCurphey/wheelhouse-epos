@@ -214,7 +214,7 @@ Generator: `docs/design/user-journeys/generator/`.
 
 **The big canvas is desktop only** (cash-up decision 8): a canvas holds at
 most 512 files, so each screen appears once — desktop, the one large app map,
-or a phone-only screen's only size — with a "Tablet and phone ↗" link to its
+or a phone-only screen's only size — with an "Other sizes, on its own canvas ↗" link to its
 journey's canvas. 452 files now. A publish carries at most 255 files: split
 big changes (changed boards with `canvas.json` first, removals second).
 
