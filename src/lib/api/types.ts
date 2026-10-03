@@ -29,7 +29,10 @@ export type WorkshopJob = {
   /** A customer's change request: the time they asked for, or null. */
   requested?: { jobDate: string; startTime: string | null; endTime: string | null; mechanicId: number | null } | null;
   cancelledBy?: string | null;
+  cancelledAt?: string | null;
   cancellationSeenAt?: string | null;
+  /** What the customer wrote when booking online, if anything. */
+  customerDescription?: string | null;
   notes: string | null;
   orderId: number | null;
   orderStatus: string | null;
