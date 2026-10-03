@@ -19,7 +19,7 @@ In every story, also walk it as: **someone using a screen reader**, **someone us
 ## Before you start
 
 1. Read the story's decision files in `docs/decisions/` (one per journey, named after it). They say what has already been decided. Don't reopen those; note when a problem touches one.
-2. Open the canvases: customers and the website on https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh, the staff app on https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j. Each journey's board links to its own canvas for tablet and phone.
+2. Open the canvases: customers and the website on https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh, the staff app's shop floor (workshop, till, opening, cash-up, customers, Lightspeed) on https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j and its back office (setup, moving over, stock, reports, website, multiple shops, oversight) on https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4. Each journey's board links to its own canvas for tablet and phone.
 3. Write down the story in five or six lines: who does what, in what order. Use the example data the drawings use (Maya Patel, WH-1042, £111.00 and so on). Don't make up new facts; a bracketed value like `[time]` is unknown, not wrong.
 4. Pick the size each person really uses: Maya on a phone (a computer for her account), Jo on a desktop, Alex on a tablet.
 

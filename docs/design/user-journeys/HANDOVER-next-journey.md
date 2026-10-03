@@ -15,18 +15,22 @@ decide. No flattery.
 
 ## Where things stand
 
-The big user-journeys canvas is **two canvases** since 1 Oct (Buy online
-decision 10 — a canvas holds at most 512 files). Each has the whole
-overview, desktop only, and links to the other:
-- **The staff app** (journeys A and 8–21), the link Jack has shared
-  "anyone with the link": https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j
-  (`out/`, `live-canvas.json`)
+The big user-journeys canvas is **three canvases** (a canvas holds at most
+512 files): customers split off on 1 Oct (Buy online decision 10), and the
+staff app split into shop floor and back office on 3 Oct (Jack: "1"). Each
+has the whole overview, desktop only, and links to the others:
+- **The staff app: shop floor** (journeys A, 10, 11, 12, 15, 16, 21), the
+  link Jack has shared "anyone with the link":
+  https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j (`out/`, `live-canvas.json`)
+- **The staff app: back office** (journeys 8, 9, 13, 14, 17, 18, 19, 20),
+  private until Jack shares it: https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4
+  (`out-backoffice/`, `live-canvas-backoffice.json`)
 - **Customers and the website** (journeys B and 1–7), private until Jack
   shares it: https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh
   (`out-customers/`, `live-canvas-customers.json`)
 
 `build.mjs`'s `PARTS` says which journeys go where; a new journey must be
-added to one of them (the build stops if it isn't). Publish each half from
+added to one of them (the build stops if it isn't). Publish each part from
 its own folder; `removed.json` in each lists boards to send as null.
 
 Approved and in the big canvas as **Designed**, each with its own canvas
@@ -98,8 +102,8 @@ addresses (ECOM-03, frozen)).
 drawn (`docs/decisions/2026-10-02-ux-walkthrough.md`). Jack will run more
 walk-throughs with Mark using `ux-walkthrough-script.md`. The step after
 that is a clickable prototype to test with real customers. Before shipping:
-remind Jack about the Doom easter egg. Everything is published except 4 new screens
-on the staff big canvas, which is at its 512-file limit (see STATUS).
+remind Jack about the Doom easter egg. Everything is published, on three big canvases
+(198, 305 and 332 files of 512).
 
 **Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
 ux audit at the end when all the pages are done?"). Each journey keeps its own

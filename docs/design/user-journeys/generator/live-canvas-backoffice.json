@@ -1,0 +1,3340 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-03T12:00:00Z"
+ },
+ "title": "Wheelhouse user journeys — the staff app: back office",
+ "launch": {
+  "view": "canvas"
+ },
+ "attachments": {},
+ "pages": [],
+ "boards": {
+  "j08-fr-today-desktop.dc.html": {
+   "x": 0,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Getting started: the owner’s checklist on Today (desktop)",
+   "is_interactive": true
+  },
+  "j08-fr-today-moving-desktop.dc.html": {
+   "x": 1320,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Getting started while moving from Citrus Lime — tills in practice, the move’s stage, shared steps (desktop)",
+   "is_interactive": true
+  },
+  "j08-fr-step-desktop.dc.html": {
+   "x": 2640,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A step opened from the checklist (desktop)",
+   "is_interactive": true
+  },
+  "j08-fr-done-desktop.dc.html": {
+   "x": 3960,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · All set up: the checklist goes (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-list-phone.dc.html": {
+   "x": 5440,
+   "y": 2894,
+   "w": 390,
+   "h": 900,
+   "title": "Designed · Settings on a phone: the list of rooms (phone)",
+   "is_interactive": true
+  },
+  "j08-set-till-quick-desktop.dc.html": {
+   "x": 5910,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till › Quick buttons: hover a button to edit or remove it (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-quick-add-desktop.dc.html": {
+   "x": 7230,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a quick button (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-quick-saved-desktop.dc.html": {
+   "x": 8550,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Saved as you go, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-reasons-desktop.dc.html": {
+   "x": 9870,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till › Reasons: a list for each kind (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-receipts-desktop.dc.html": {
+   "x": 11190,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till › Receipts (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-printer-desktop.dc.html": {
+   "x": 12510,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till › Printer and cash drawer (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-tills-desktop.dc.html": {
+   "x": 13830,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till › Tills: as a Manager sees it (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-tills-owner-desktop.dc.html": {
+   "x": 15150,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Till › Tills: as the owner sees it (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-remove-desktop.dc.html": {
+   "x": 16470,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Removing a till asks first (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-till-empty-desktop.dc.html": {
+   "x": 17790,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A new shop: no quick buttons yet (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-eod-desktop.dc.html": {
+   "x": 19270,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · End of day: float (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-eod-close-desktop.dc.html": {
+   "x": 20590,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · End of day: Close the day at, or before, closing time (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-save-failed-desktop.dc.html": {
+   "x": 21910,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A change that couldn’t be saved (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-pay-ways-desktop.dc.html": {
+   "x": 23230,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Payments › Ways to pay: each on or off (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-pay-other-desktop.dc.html": {
+   "x": 24550,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Payments › Other ways to pay (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-pay-card-desktop.dc.html": {
+   "x": 25870,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Payments › Card machine (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-desktop.dc.html": {
+   "x": 27350,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff and roles › People (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-person-desktop.dc.html": {
+   "x": 28670,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · One person: role, switches, till PIN (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-person-all-desktop.dc.html": {
+   "x": 29990,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Give everything a Manager can do (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-clear-pin-desktop.dc.html": {
+   "x": 31310,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Clear a forgotten PIN (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-roles-desktop.dc.html": {
+   "x": 32630,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff and roles › What each role can do (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-invite-desktop.dc.html": {
+   "x": 33950,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The owner invites someone (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-invited-desktop.dc.html": {
+   "x": 35270,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · People — Jo invited, not joined yet (Send again, Cancel the invite), and a till-only person (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-invite-expired-desktop.dc.html": {
+   "x": 36590,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · People — an invite that expired (Send again) (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-staff-invite-till-only-desktop.dc.html": {
+   "x": 37910,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add someone with no email — till only (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-shop-details-desktop.dc.html": {
+   "x": 39390,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Shop and sites › Shop details (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-shop-hours-desktop.dc.html": {
+   "x": 40710,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Shop and sites › Opening hours (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-workshop-services-desktop.dc.html": {
+   "x": 42190,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Workshop › Services, by group (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-workshop-mechanics-desktop.dc.html": {
+   "x": 43510,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Workshop › Mechanics (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-workshop-diary-desktop.dc.html": {
+   "x": 44830,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Workshop › Diary blocks and storage slots (journey 12’s settings, moved here) (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-msg-list-desktop.dc.html": {
+   "x": 46310,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Messages › Automatic messages: text, email or both (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-msg-edit-desktop.dc.html": {
+   "x": 47630,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Change a message’s wording, with a preview (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-msg-new-desktop.dc.html": {
+   "x": 48950,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add your own automatic message (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-msg-alongside-desktop.dc.html": {
+   "x": 50270,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Messages while running alongside — none go to customers until switch-over day (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-data-export-desktop.dc.html": {
+   "x": 51750,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your data › Download everything (desktop)",
+   "is_interactive": true
+  },
+  "j08-set-data-history-desktop.dc.html": {
+   "x": 53070,
+   "y": 2894,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your data › Settings changes (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-start-desktop.dc.html": {
+   "x": 0,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Bring your data: the files to drop in (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-progress-desktop.dc.html": {
+   "x": 1320,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Bringing it across (starts by itself) (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-progress-failed-desktop.dc.html": {
+   "x": 2640,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A file Wheelhouse couldn’t read (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-summary-desktop.dc.html": {
+   "x": 3960,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Here’s what came across (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-fix-desktop.dc.html": {
+   "x": 5280,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The few that need a look (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-sorted-desktop.dc.html": {
+   "x": 6600,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Everything’s sorted (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-today-refresh-desktop.dc.html": {
+   "x": 8080,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: time to refresh from Citrus Lime (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-alongside-desktop.dc.html": {
+   "x": 9400,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Run alongside: the weekly refresh (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-change-day-desktop.dc.html": {
+   "x": 10720,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Change the refresh day (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-both-desktop.dc.html": {
+   "x": 12040,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Changed in both: Citrus Lime’s kept (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-check-desktop.dc.html": {
+   "x": 13360,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The weekly check: each figure checks itself (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-check-result-desktop.dc.html": {
+   "x": 14680,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The weekly check: three match, one doesn’t (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-practice-checkin-desktop.dc.html": {
+   "x": 16160,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Checked in during practice: no float check (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-practice-sale-desktop.dc.html": {
+   "x": 17480,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The till before switch-over: practice, not real money (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-practice-card-desktop.dc.html": {
+   "x": 18800,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A practice card payment: try either outcome (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-practice-job-desktop.dc.html": {
+   "x": 20120,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A job marked ready in practice: “Not sent — practice” (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-ready-desktop.dc.html": {
+   "x": 21600,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switch over: the checklist, two still to do (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-weeks-desktop.dc.html": {
+   "x": 22920,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Change how many weeks must match (2 by default) (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-ready-all-desktop.dc.html": {
+   "x": 24240,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switch over: everything ticked (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-pick-day-desktop.dc.html": {
+   "x": 25560,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Pick switch-over day (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-morning-desktop.dc.html": {
+   "x": 26880,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switch-over morning: last refresh, go real, then turn the website on (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-go-real-desktop.dc.html": {
+   "x": 28200,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Clear practice sales and go real? (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-week-desktop.dc.html": {
+   "x": 29520,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The first full week on Wheelhouse (desktop)",
+   "is_interactive": true
+  },
+  "j09-mv-week-done-desktop.dc.html": {
+   "x": 30840,
+   "y": 4794,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A full week done: Citrus Lime can go (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-hub-desktop.dc.html": {
+   "x": 0,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Stockroom › Deliveries and orders (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-hub-empty-desktop.dc.html": {
+   "x": 1320,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deliveries and orders, for a shop that orders on supplier websites (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-hub-staff-desktop.dc.html": {
+   "x": 2640,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deliveries and orders, as Staff see it (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-receive-desktop.dc.html": {
+   "x": 3960,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Receive a delivery: scan each item (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-add-product-desktop.dc.html": {
+   "x": 5280,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A barcode Wheelhouse doesn’t know: Add this product, with its measurements (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-problem-desktop.dc.html": {
+   "x": 6600,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Something wrong with an item: damaged, wrong or missing (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-frame-desktop.dc.html": {
+   "x": 7920,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A bike in the delivery: its frame number first (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-frame-dup-desktop.dc.html": {
+   "x": 9240,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A frame number already in stock (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-receive-marked-desktop.dc.html": {
+   "x": 10560,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ready to book in: one item set aside, a bike with its frame numbers (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-book-blocked-desktop.dc.html": {
+   "x": 11880,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Book in with an unknown barcode still on the list (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-problem-missing-desktop.dc.html": {
+   "x": 13200,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Missing, with no order: the part a job is waiting for (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-booked-desktop.dc.html": {
+   "x": 14520,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Delivery booked in: the waiting job flagged, what’s next (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-booked-staff-desktop.dc.html": {
+   "x": 15840,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Delivery booked in, as Staff see it: labels first, no invoice (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-booked-job-waiting-desktop.dc.html": {
+   "x": 17160,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Booked in without the job’s part: the job is still waiting (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-labels-desktop.dc.html": {
+   "x": 18480,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Print labels: only what needs one (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-receive-c2w-desktop.dc.html": {
+   "x": 19960,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Cycle to Work bike in the delivery: “for Maya Patel · Cycle to Work — put it aside” (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-frame-c2w-desktop.dc.html": {
+   "x": 21280,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The Cycle to Work bike’s frame number becomes her order’s frame (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-booked-c2w-desktop.dc.html": {
+   "x": 22600,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Booked in: the bike put aside for Maya, her order moves on (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-receive-staff-desktop.dc.html": {
+   "x": 24080,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff meet a barcode Wheelhouse doesn’t know: Leave it for [Owner or manager] (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-receive-staff-left-desktop.dc.html": {
+   "x": 25400,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Left for [Owner or manager]: the rest books in (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-add-left-desktop.dc.html": {
+   "x": 26720,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Adding the product Jo left: it counts into stock, then its label (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-today-to-add-desktop.dc.html": {
+   "x": 28040,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: a product left on a delivery, to add (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-job-arrived-desktop.dc.html": {
+   "x": 29520,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: its part has arrived (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-part-sold-desktop.dc.html": {
+   "x": 30840,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: its held pads were sold at the till — reorder (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-part-missing-desktop.dc.html": {
+   "x": 32160,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: its pads weren’t in the delivery — still on order (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-part-damaged-desktop.dc.html": {
+   "x": 33480,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: its pads came damaged — reorder (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-part-order-closed-desktop.dc.html": {
+   "x": 34800,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The job: the order was closed before its pads came (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-diary-arrived-desktop.dc.html": {
+   "x": 36120,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The diary: “Part arrived” on the job’s block (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-overview-arrived-desktop.dc.html": {
+   "x": 37440,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Workshop Overview: “Part arrived” on the job’s row (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-delivery-desktop.dc.html": {
+   "x": 38920,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A booked-in delivery, waiting for its invoice (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-invoice-desktop.dc.html": {
+   "x": 40240,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add the invoice: its total against what was booked in (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-invoice-checked-desktop.dc.html": {
+   "x": 41560,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The invoice matches: checked (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-invoice-diff-desktop.dc.html": {
+   "x": 42880,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The invoice doesn’t match: the difference, to query (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-invoice-cost-desktop.dc.html": {
+   "x": 44200,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Accept the difference: did a cost go up? (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-invoice-queried-desktop.dc.html": {
+   "x": 45520,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Queried with the supplier (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-invoice-accepted-desktop.dc.html": {
+   "x": 46840,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The difference accepted, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-delivery-staff-desktop.dc.html": {
+   "x": 48160,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A delivery, as Staff see it: no costs, no invoice (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-invoice-setting-desktop.dc.html": {
+   "x": 49480,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Stockroom: the invoice check, on or off (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-order-desktop.dc.html": {
+   "x": 50960,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A purchase order, built by hand (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-order-ordered-desktop.dc.html": {
+   "x": 52280,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · An order, partly delivered: receive against it, or close it (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-order-close-desktop.dc.html": {
+   "x": 53600,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Close the order? A job’s part is still to come (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-restock-desktop.dc.html": {
+   "x": 54920,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Restock list: by supplier, a download for each basket (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-restock-customers-desktop.dc.html": {
+   "x": 56240,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Restock list, for customers: what jobs and online orders wait for (desktop)",
+   "is_interactive": true
+  },
+  "j13-rs-today-restock-desktop.dc.html": {
+   "x": 57560,
+   "y": 6650,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: new on the restock list (desktop)",
+   "is_interactive": true
+  },
+  "j13-po-suppliers.dc.html": {
+   "x": 59040,
+   "y": 6650,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Suppliers",
+   "is_interactive": true
+  },
+  "j13-po-feed.dc.html": {
+   "x": 60220,
+   "y": 6650,
+   "w": 1100,
+   "h": 816,
+   "title": "Old app · Supplier catalogue",
+   "is_interactive": true
+  },
+  "j13-po-send.dc.html": {
+   "x": 61400,
+   "y": 6650,
+   "w": 1100,
+   "h": 816,
+   "title": "Not designed · Send the order",
+   "is_interactive": true
+  },
+  "j14-st-list-desktop.dc.html": {
+   "x": 0,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Stockroom › Stock: search, filters, tick boxes, every product (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-list-staff-desktop.dc.html": {
+   "x": 1320,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Stock as Staff see it: no cost or margin (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-search-measure-desktop.dc.html": {
+   "x": 2640,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Searching by a measurement: “bearing 30 mm” (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-filter-bearings-desktop.dc.html": {
+   "x": 3960,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A category picked: bearings, its details as columns (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-filter-derailleurs-desktop.dc.html": {
+   "x": 5280,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A category picked: derailleurs, number of gears (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-search-size-desktop.dc.html": {
+   "x": 6600,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Searching a size: that size and colour (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-list-none-desktop.dc.html": {
+   "x": 7920,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Nothing matches the search (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-list-unknown-desktop.dc.html": {
+   "x": 9240,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A barcode Wheelhouse doesn’t know (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-list-new-desktop.dc.html": {
+   "x": 10560,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A new shop: no products yet (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-categories-desktop.dc.html": {
+   "x": 12040,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Stockroom › Categories: each with its own details (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-category-edit-desktop.dc.html": {
+   "x": 13360,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Editing a category: Derailleurs, its choices and units (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-product-desktop.dc.html": {
+   "x": 14840,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A product’s page: stock first, history with links (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-product-staff-desktop.dc.html": {
+   "x": 16160,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A product’s page as Staff see it (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-product-bike-desktop.dc.html": {
+   "x": 17480,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A bike’s page: each frame number, in stock or sold (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-product-sizes-desktop.dc.html": {
+   "x": 18800,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sizes and colours: one product, a grid of stock (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-list-ticked-desktop.dc.html": {
+   "x": 20280,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Ticked products: labels, send, change prices (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-prices-desktop.dc.html": {
+   "x": 21600,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Change prices: by a percentage, rounded, with a preview (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-prices-done-desktop.dc.html": {
+   "x": 22920,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Prices changed, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-adjust-desktop.dc.html": {
+   "x": 24400,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Adjust stock: the change or the count after it, and a reason (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-adjust-faulty-desktop.dc.html": {
+   "x": 25720,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Adjust stock: faulty, onto the supplier’s To return list (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-today-adjust-desktop.dc.html": {
+   "x": 27040,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: a big adjustment, for the manager (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-setting-adjust-desktop.dc.html": {
+   "x": 28360,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Stockroom: when an adjustment shows on Today (desktop)",
+   "is_interactive": true
+  },
+  "j14-st-today-below-desktop.dc.html": {
+   "x": 29680,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: products below zero, with Count them (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-count-below-desktop.dc.html": {
+   "x": 31000,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Counting the products below zero: still to find (desktop)",
+   "is_interactive": true
+  },
+  "j14-tr-sites-desktop.dc.html": {
+   "x": 32480,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A product’s stock at each shop, and on its way (desktop)",
+   "is_interactive": true
+  },
+  "j14-tr-send-desktop.dc.html": {
+   "x": 33800,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Send to another shop (desktop)",
+   "is_interactive": true
+  },
+  "j14-tr-incoming-desktop.dc.html": {
+   "x": 35120,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Deliveries and orders: on its way, in and out (desktop)",
+   "is_interactive": true
+  },
+  "j14-tr-receive-desktop.dc.html": {
+   "x": 36440,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Receiving a transfer: one short (desktop)",
+   "is_interactive": true
+  },
+  "j14-tr-problem-desktop.dc.html": {
+   "x": 37760,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A transfer line marked missing (desktop)",
+   "is_interactive": true
+  },
+  "j14-tr-today-short-desktop.dc.html": {
+   "x": 39080,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: a transfer arrived short (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-hub-desktop.dc.html": {
+   "x": 40560,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Stockroom › Stock take: counts in progress and finished (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-hub-staff-desktop.dc.html": {
+   "x": 41880,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Stock take as Staff see it: join a count (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-start-desktop.dc.html": {
+   "x": 43200,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Start a count: an area, with areas used before (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-start-category-desktop.dc.html": {
+   "x": 44520,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Start a count: a category (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-count-desktop.dc.html": {
+   "x": 45840,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Counting, without the expected number; a recount asked (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-diff-desktop.dc.html": {
+   "x": 47160,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Check the count: largest first, recount, not counted (desktop)",
+   "is_interactive": true
+  },
+  "j14-tk-applied-desktop.dc.html": {
+   "x": 48480,
+   "y": 8506,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Count applied, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-home-desktop.dc.html": {
+   "x": 0,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Reports: the ready-made reports, and your own (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-home-staff-desktop.dc.html": {
+   "x": 1320,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Reports for Staff with “Can see reports” (one shop, no costs) (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-report-menu-desktop.dc.html": {
+   "x": 2640,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A saved report’s menu: rename, share, delete (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-report-deleted-desktop.dc.html": {
+   "x": 3960,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A saved report deleted, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-your-settings-desktop.dc.html": {
+   "x": 5280,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your settings › Accessibility (scrolled down): show graphs in reports (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-sales-desktop.dc.html": {
+   "x": 6760,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sales: this week so far, against the same days last week (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-sales-all-desktop.dc.html": {
+   "x": 8080,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sales for all shops: shop by shop (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-sales-year-desktop.dc.html": {
+   "x": 9400,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sales over 12 months: a line, against the year before (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-sales-empty-desktop.dc.html": {
+   "x": 10720,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Nothing sold yet, and nothing to compare with (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-pick-dates-desktop.dc.html": {
+   "x": 12040,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Pick dates (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-change-desktop.dc.html": {
+   "x": 13520,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Change what’s shown: choices that don’t fit are greyed, with why (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-changed-desktop.dc.html": {
+   "x": 14840,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The changed report, with Save as my report (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-save-desktop.dc.html": {
+   "x": 16160,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Save as my report: Just me to start (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-save-taken-desktop.dc.html": {
+   "x": 17480,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A name you’ve already used (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-takings-desktop.dc.html": {
+   "x": 18960,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Takings and cash-ups: each closed day opens from its row (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-takings-all-desktop.dc.html": {
+   "x": 20280,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Takings and cash-ups for all shops (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-day-desktop.dc.html": {
+   "x": 21600,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A closed day’s end-of-day report (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-reopen-desktop.dc.html": {
+   "x": 22920,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Reopen a closed day: a reason first (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-takings-reopened-desktop.dc.html": {
+   "x": 24240,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A reopened day, left out and said so (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-vat-desktop.dc.html": {
+   "x": 25720,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · VAT for your VAT quarter, against the quarter before (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-vat-first-desktop.dc.html": {
+   "x": 27040,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · When does your VAT quarter start? (asked once) (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-vat-all-desktop.dc.html": {
+   "x": 28360,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · VAT for all shops (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-vat-check-off-desktop.dc.html": {
+   "x": 29680,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · VAT with the invoice check off: stock purchases from your accounts software (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-margin-desktop.dc.html": {
+   "x": 31000,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Margin and stock value (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-workshop-desktop.dc.html": {
+   "x": 32320,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Workshop: jobs, takings, how full, turnaround, quotes (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-workshop-all-desktop.dc.html": {
+   "x": 33640,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Workshop for all shops: shop by shop, and how full at each (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-discounts-desktop.dc.html": {
+   "x": 34960,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Discounts and refunds, with reasons and who gave them (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-discounts-staff-desktop.dc.html": {
+   "x": 36280,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Discounts and refunds as Staff see them (without who) (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-returning-desktop.dc.html": {
+   "x": 37600,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Returning customers: who comes back, who hasn’t lately (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-c2w-desktop.dc.html": {
+   "x": 38920,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Cycle to Work: owed and paid, by provider, with the commission (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-accounts-connect-desktop.dc.html": {
+   "x": 40400,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Your data › Accounts software: connect (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-accounts-map-desktop.dc.html": {
+   "x": 41720,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Which Xero account each line goes to (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-accounts-c2w-desktop.dc.html": {
+   "x": 43040,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Xero choices (scrolled down): Cycle to Work, its commission and shortfalls (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-accounts-missing-desktop.dc.html": {
+   "x": 44360,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A category with no Xero account (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-accounts-log-desktop.dc.html": {
+   "x": 45680,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · What was sent: sent, not sent, waiting, not closed yet (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-accounts-lost-desktop.dc.html": {
+   "x": 47000,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Xero disconnected: days wait to be sent (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-accounts-disconnect-desktop.dc.html": {
+   "x": 48320,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Disconnect Xero (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-today-accounts-desktop.dc.html": {
+   "x": 49640,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today: Wednesday didn’t go to Xero (desktop)",
+   "is_interactive": true
+  },
+  "j17-rp-person-desktop.dc.html": {
+   "x": 50960,
+   "y": 10362,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A person: “Can see reports” on, “Can see costs and margin” off (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-start-which-desktop.dc.html": {
+   "x": 0,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Set up, step 1: Wheelhouse’s website or your Shopify shop? (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-start-look-desktop.dc.html": {
+   "x": 1320,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Step 2: logo and main colour, suggested from the logo (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-start-products-desktop.dc.html": {
+   "x": 2640,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Step 3: start with every product online, or nothing (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-start-products-answered-desktop.dc.html": {
+   "x": 3960,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Step 3 when buying online asked first: the answer, with Change (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-first-desktop.dc.html": {
+   "x": 5280,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The editor opens on a ready-made home page, still off (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-desktop.dc.html": {
+   "x": 6760,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Office › Website: off and never published — Turn it on also publishes (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-on-desktop.dc.html": {
+   "x": 8080,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · On, with unpublished changes and payments connected (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-changes-desktop.dc.html": {
+   "x": 9400,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The unpublished changes, with Publish and Discard (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-no-access-desktop.dc.html": {
+   "x": 10720,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Without “Can edit the website”: who to ask (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-no-settings-desktop.dc.html": {
+   "x": 12040,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Can edit the website, but not change settings (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-moving-desktop.dc.html": {
+   "x": 13520,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Moving from Citrus Lime: ready for switch-over, Turn it on waits (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-moving-desktop.dc.html": {
+   "x": 14840,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The editor while moving: off until switch-over morning (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-tested-moving-desktop.dc.html": {
+   "x": 16160,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The test payment worked, while moving from Citrus Lime (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-moving-desktop.dc.html": {
+   "x": 17480,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · While moving: point your address here on switch-over morning (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-switch-over-desktop.dc.html": {
+   "x": 18800,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switch-over morning: the website is ready — Turn it on (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-desktop.dc.html": {
+   "x": 20280,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The editor: sections down the side; pointing at a part of the page (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-section-desktop.dc.html": {
+   "x": 21600,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A section chosen: its settings, and the photo’s description (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-add-desktop.dc.html": {
+   "x": 22920,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · + Add section: below the chosen section (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-drag-desktop.dc.html": {
+   "x": 24240,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Dragging a section (or its arrows, or Alt + arrow keys) (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-moved-desktop.dc.html": {
+   "x": 25560,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Moved: the page shows the new order, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-removed-desktop.dc.html": {
+   "x": 26880,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A section removed, with Undo (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-header-desktop.dc.html": {
+   "x": 28200,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The header: logo, and one link as a button (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-on-phone-desktop.dc.html": {
+   "x": 29520,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Preview on a phone (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-bigger-desktop.dc.html": {
+   "x": 30840,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Bigger: the preview without the panel (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-pages-menu-desktop.dc.html": {
+   "x": 32160,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The Page menu: your pages, and Wheelhouse’s shop pages (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-saving-desktop.dc.html": {
+   "x": 33480,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Couldn’t save — trying again (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-editor-taken-desktop.dc.html": {
+   "x": 34800,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Someone else is editing: view only, or take over (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-desktop.dc.html": {
+   "x": 36280,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Theme: main colour, background, fonts, corners, buttons (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-contrast-desktop.dc.html": {
+   "x": 37600,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A colour that’s hard to read: where, and two fixes (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-publish-desktop.dc.html": {
+   "x": 38920,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Publishing with a hard-to-read colour asks once (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-product-desktop.dc.html": {
+   "x": 40240,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The theme on a product page (preview only) (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-theme-fonts-desktop.dc.html": {
+   "x": 41560,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Fonts: a chosen list of tested pairs (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-published-desktop.dc.html": {
+   "x": 43040,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Published, with View website (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-published-off-desktop.dc.html": {
+   "x": 44360,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Published while the website is off (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-discard-desktop.dc.html": {
+   "x": 45680,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Discard unpublished changes? Kept in History (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-history-desktop.dc.html": {
+   "x": 47000,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Earlier versions and discarded drafts (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pages-desktop.dc.html": {
+   "x": 48480,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Pages: ready-made, two with wording to check (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pages-new-desktop.dc.html": {
+   "x": 49800,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a page: linked from the footer by default (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-settings-desktop.dc.html": {
+   "x": 51120,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Page settings: a page that always stays in the footer (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-page-returns-desktop.dc.html": {
+   "x": 52440,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Editing Collection and returns: starting wording to check (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-tracking-desktop.dc.html": {
+   "x": 53920,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Tracking tools: none on, so no cookie choice (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-tracking-on-desktop.dc.html": {
+   "x": 55240,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Google Analytics on: goes live when you publish (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-tracking-error-desktop.dc.html": {
+   "x": 56560,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · An ID that doesn’t look right: no cookie choice yet (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-desktop.dc.html": {
+   "x": 58040,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Web address: the free one, or use your own (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-typo-desktop.dc.html": {
+   "x": 59360,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · An address that needs an ending (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-steps-desktop.dc.html": {
+   "x": 60680,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your own address: the 2 records, and what it changes (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-waiting-desktop.dc.html": {
+   "x": 62000,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Not connected yet — up to a day (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-address-done-desktop.dc.html": {
+   "x": 63320,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your own address connected (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-none-desktop.dc.html": {
+   "x": 64800,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Online orders › Paying online: not connected, Buying online off (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-connected-desktop.dc.html": {
+   "x": 66120,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Back from [payment provider]: make a test payment (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-tested-desktop.dc.html": {
+   "x": 67440,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The test payment worked (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-failed-desktop.dc.html": {
+   "x": 68760,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connecting didn’t finish: nothing changed (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-more-desktop.dc.html": {
+   "x": 70080,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · [payment provider] needs more details (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-today-pay-more-desktop.dc.html": {
+   "x": 71400,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The same warning on Today (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-start-shopify-desktop.dc.html": {
+   "x": 72880,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Set up with Shopify, step 2: connect (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-connect-desktop.dc.html": {
+   "x": 74200,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connect your Shopify shop: what happens first (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-failed-desktop.dc.html": {
+   "x": 75520,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Couldn’t connect to Shopify (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-check-desktop.dc.html": {
+   "x": 76840,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Before sending: how many products will change (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-sending-desktop.dc.html": {
+   "x": 78160,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sending to Shopify (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-on-desktop.dc.html": {
+   "x": 79480,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Connected to Shopify: the Website page (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-problem-desktop.dc.html": {
+   "x": 80800,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Products that couldn’t be sent to Shopify (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-switch-desktop.dc.html": {
+   "x": 82120,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Switching to Wheelhouse’s website: what changes (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-pay-shopify-desktop.dc.html": {
+   "x": 83440,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Online orders with Shopify: Shopify takes website payments (desktop)",
+   "is_interactive": true
+  },
+  "j18-ws-shopify-order-desktop.dc.html": {
+   "x": 84760,
+   "y": 12218,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A Shopify order in Online orders (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-switch-open-desktop.dc.html": {
+   "x": 0,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The shop switcher open: your shops, and “All shops” (owner) (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-switched-desktop.dc.html": {
+   "x": 1320,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · After switching: “Now working in [Second site]” (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-today-all-desktop.dc.html": {
+   "x": 2640,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today, all shops: a row per shop, one list of what needs you (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-pick-shop-desktop.dc.html": {
+   "x": 3960,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · “All shops” on the diary: choose one (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-till-other-desktop.dc.html": {
+   "x": 5280,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A till sells for its own shop, whatever the menu says (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-one-shop-desktop.dc.html": {
+   "x": 6600,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Someone with one shop: its name, no switcher (staff with two shops get their shops, no “All shops”) (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-service-price-desktop.dc.html": {
+   "x": 8080,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A service: price for all shops, different at one, where it’s offered (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-service-not-offered-desktop.dc.html": {
+   "x": 9400,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Not offered at one shop (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-services-differs-desktop.dc.html": {
+   "x": 10720,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Services list at [Second site]: its price beside the all-shops one (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-product-price-desktop.dc.html": {
+   "x": 12040,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A product’s price, different at one shop (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-person-desktop.dc.html": {
+   "x": 13520,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A person: where they work, and workshop days at each shop (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-book-shop-desktop.dc.html": {
+   "x": 14840,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · No shop chosen yet on the website: “Which shop?” first (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-book-shop-chosen-desktop.dc.html": {
+   "x": 16160,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The website already has Bolton: the shop chosen, straight to the service (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-book-shop-change-desktop.dc.html": {
+   "x": 17480,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Changing the shop: what it resets (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-job-other-shop-desktop.dc.html": {
+   "x": 18960,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Booking a job into the other shop’s workshop: it goes as a request (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-request-from-shop-desktop.dc.html": {
+   "x": 20280,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · At [Second site]: the request, from Bolton, to accept (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-request-answered-desktop.dc.html": {
+   "x": 21600,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Back at Bolton: the answer in Waiting for you (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-sites-desktop.dc.html": {
+   "x": 23080,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Shop and sites: each shop (owner) (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-sites-manager-desktop.dc.html": {
+   "x": 24400,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The same, as a manager sees it (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-add-shop-desktop.dc.html": {
+   "x": 25720,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Add a shop: code suggested, hours copied (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-add-shop-error-desktop.dc.html": {
+   "x": 27040,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A code another shop already uses (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-today-new-desktop.dc.html": {
+   "x": 28360,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today at a new shop: what to do next (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-tills-desktop.dc.html": {
+   "x": 29680,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Till › Tills: every till, by shop (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-till-move-desktop.dc.html": {
+   "x": 31000,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Moving a till to the other shop: its day, its sales waiting, its receipts (desktop)",
+   "is_interactive": true
+  },
+  "j19-ms-till-setup-desktop.dc.html": {
+   "x": 32320,
+   "y": 14074,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Set up a till at [Second site]: its numbers, taken ones In use (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-reports-home-desktop.dc.html": {
+   "x": 0,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Reports: “Activity log” beside the ready-made reports (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-reports-staff-desktop.dc.html": {
+   "x": 1320,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff with “Can see reports”: no activity log (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-desktop.dc.html": {
+   "x": 2640,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Reports › Activity log: what was done today, by whom (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-manager-desktop.dc.html": {
+   "x": 3960,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A manager’s activity log: everyone’s lines (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-all-desktop.dc.html": {
+   "x": 5280,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · All shops: every line shows its shop (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-filtered-desktop.dc.html": {
+   "x": 6600,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Opened from a Today alert, with Back to Today (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-empty-desktop.dc.html": {
+   "x": 7920,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Nothing matches the filters (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-log-refused-desktop.dc.html": {
+   "x": 9240,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Staff following a link to the log (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-first-note-desktop.dc.html": {
+   "x": 10720,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · The first sign-in: what Wheelhouse records (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-your-settings-desktop.dc.html": {
+   "x": 12040,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your settings: Send feedback, and what’s recorded about you (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-my-activity-desktop.dc.html": {
+   "x": 13360,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Your activity: a person’s own lines (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-today-alerts-desktop.dc.html": {
+   "x": 14840,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Today, owners and managers: a discount, voids, a price below cost (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-alert-settings-desktop.dc.html": {
+   "x": 16160,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Office › Alerts on Today: set by the owner (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-devices-desktop.dc.html": {
+   "x": 17640,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Settings › Office › Signed-in devices (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-till-checkout-desktop.dc.html": {
+   "x": 18960,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Check Jo Taylor out of Till B1: after this sale, or now (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-devices-signout-desktop.dc.html": {
+   "x": 20280,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sign a computer out (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-devices-signed-out-desktop.dc.html": {
+   "x": 21600,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Signed out (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-person-desktop.dc.html": {
+   "x": 22920,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · A person: “Sign out everywhere” (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-person-everywhere-desktop.dc.html": {
+   "x": 24240,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Sign Jo Taylor out everywhere? (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-empty-desktop.dc.html": {
+   "x": 25720,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Send feedback: Send waits until something is written (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-desktop.dc.html": {
+   "x": 27040,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Send feedback: what happened, and which screen (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-shot-desktop.dc.html": {
+   "x": 28360,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · With a picture of the screen, customer details hidden (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-failed-desktop.dc.html": {
+   "x": 29680,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Couldn’t send: kept, try again (desktop)",
+   "is_interactive": true
+  },
+  "j20-ops-feedback-sent-desktop.dc.html": {
+   "x": 31000,
+   "y": 15930,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Thanks — we’ve got it (desktop)",
+   "is_interactive": true
+  },
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1600,
+   "h": 1974,
+   "title": "Overview",
+   "is_interactive": true
+  },
+  "Workflow.dc.html": {
+   "x": 1840,
+   "y": 0,
+   "w": 3440,
+   "h": 1700,
+   "title": "Workflow: how the journeys connect"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Workflow.dc.html",
+  "j08-fr-today-desktop.dc.html",
+  "j08-fr-today-moving-desktop.dc.html",
+  "j08-fr-step-desktop.dc.html",
+  "j08-fr-done-desktop.dc.html",
+  "j08-set-list-phone.dc.html",
+  "j08-set-till-quick-desktop.dc.html",
+  "j08-set-till-quick-add-desktop.dc.html",
+  "j08-set-till-quick-saved-desktop.dc.html",
+  "j08-set-till-reasons-desktop.dc.html",
+  "j08-set-till-receipts-desktop.dc.html",
+  "j08-set-till-printer-desktop.dc.html",
+  "j08-set-till-tills-desktop.dc.html",
+  "j08-set-till-tills-owner-desktop.dc.html",
+  "j08-set-till-remove-desktop.dc.html",
+  "j08-set-till-empty-desktop.dc.html",
+  "j08-set-eod-desktop.dc.html",
+  "j08-set-eod-close-desktop.dc.html",
+  "j08-set-save-failed-desktop.dc.html",
+  "j08-set-pay-ways-desktop.dc.html",
+  "j08-set-pay-other-desktop.dc.html",
+  "j08-set-pay-card-desktop.dc.html",
+  "j08-set-staff-desktop.dc.html",
+  "j08-set-staff-person-desktop.dc.html",
+  "j08-set-staff-person-all-desktop.dc.html",
+  "j08-set-staff-clear-pin-desktop.dc.html",
+  "j08-set-staff-roles-desktop.dc.html",
+  "j08-set-staff-invite-desktop.dc.html",
+  "j08-set-staff-invited-desktop.dc.html",
+  "j08-set-staff-invite-expired-desktop.dc.html",
+  "j08-set-staff-invite-till-only-desktop.dc.html",
+  "j08-set-shop-details-desktop.dc.html",
+  "j08-set-shop-hours-desktop.dc.html",
+  "j08-set-workshop-services-desktop.dc.html",
+  "j08-set-workshop-mechanics-desktop.dc.html",
+  "j08-set-workshop-diary-desktop.dc.html",
+  "j08-set-msg-list-desktop.dc.html",
+  "j08-set-msg-edit-desktop.dc.html",
+  "j08-set-msg-new-desktop.dc.html",
+  "j08-set-msg-alongside-desktop.dc.html",
+  "j08-set-data-export-desktop.dc.html",
+  "j08-set-data-history-desktop.dc.html",
+  "j09-mv-start-desktop.dc.html",
+  "j09-mv-progress-desktop.dc.html",
+  "j09-mv-progress-failed-desktop.dc.html",
+  "j09-mv-summary-desktop.dc.html",
+  "j09-mv-fix-desktop.dc.html",
+  "j09-mv-sorted-desktop.dc.html",
+  "j09-mv-today-refresh-desktop.dc.html",
+  "j09-mv-alongside-desktop.dc.html",
+  "j09-mv-change-day-desktop.dc.html",
+  "j09-mv-both-desktop.dc.html",
+  "j09-mv-check-desktop.dc.html",
+  "j09-mv-check-result-desktop.dc.html",
+  "j09-mv-practice-checkin-desktop.dc.html",
+  "j09-mv-practice-sale-desktop.dc.html",
+  "j09-mv-practice-card-desktop.dc.html",
+  "j09-mv-practice-job-desktop.dc.html",
+  "j09-mv-ready-desktop.dc.html",
+  "j09-mv-weeks-desktop.dc.html",
+  "j09-mv-ready-all-desktop.dc.html",
+  "j09-mv-pick-day-desktop.dc.html",
+  "j09-mv-morning-desktop.dc.html",
+  "j09-mv-go-real-desktop.dc.html",
+  "j09-mv-week-desktop.dc.html",
+  "j09-mv-week-done-desktop.dc.html",
+  "j13-rs-hub-desktop.dc.html",
+  "j13-rs-hub-empty-desktop.dc.html",
+  "j13-rs-hub-staff-desktop.dc.html",
+  "j13-rs-receive-desktop.dc.html",
+  "j13-rs-add-product-desktop.dc.html",
+  "j13-rs-problem-desktop.dc.html",
+  "j13-rs-frame-desktop.dc.html",
+  "j13-rs-frame-dup-desktop.dc.html",
+  "j13-rs-receive-marked-desktop.dc.html",
+  "j13-rs-book-blocked-desktop.dc.html",
+  "j13-rs-problem-missing-desktop.dc.html",
+  "j13-rs-booked-desktop.dc.html",
+  "j13-rs-booked-staff-desktop.dc.html",
+  "j13-rs-booked-job-waiting-desktop.dc.html",
+  "j13-rs-labels-desktop.dc.html",
+  "j13-rs-receive-c2w-desktop.dc.html",
+  "j13-rs-frame-c2w-desktop.dc.html",
+  "j13-rs-booked-c2w-desktop.dc.html",
+  "j13-rs-receive-staff-desktop.dc.html",
+  "j13-rs-receive-staff-left-desktop.dc.html",
+  "j13-rs-add-left-desktop.dc.html",
+  "j13-rs-today-to-add-desktop.dc.html",
+  "j13-rs-job-arrived-desktop.dc.html",
+  "j13-rs-part-sold-desktop.dc.html",
+  "j13-rs-part-missing-desktop.dc.html",
+  "j13-rs-part-damaged-desktop.dc.html",
+  "j13-rs-part-order-closed-desktop.dc.html",
+  "j13-rs-diary-arrived-desktop.dc.html",
+  "j13-rs-overview-arrived-desktop.dc.html",
+  "j13-rs-delivery-desktop.dc.html",
+  "j13-rs-invoice-desktop.dc.html",
+  "j13-rs-invoice-checked-desktop.dc.html",
+  "j13-rs-invoice-diff-desktop.dc.html",
+  "j13-rs-invoice-cost-desktop.dc.html",
+  "j13-rs-invoice-queried-desktop.dc.html",
+  "j13-rs-invoice-accepted-desktop.dc.html",
+  "j13-rs-delivery-staff-desktop.dc.html",
+  "j13-rs-invoice-setting-desktop.dc.html",
+  "j13-rs-order-desktop.dc.html",
+  "j13-rs-order-ordered-desktop.dc.html",
+  "j13-rs-order-close-desktop.dc.html",
+  "j13-rs-restock-desktop.dc.html",
+  "j13-rs-restock-customers-desktop.dc.html",
+  "j13-rs-today-restock-desktop.dc.html",
+  "j13-po-suppliers.dc.html",
+  "j13-po-feed.dc.html",
+  "j13-po-send.dc.html",
+  "j14-st-list-desktop.dc.html",
+  "j14-st-list-staff-desktop.dc.html",
+  "j14-st-search-measure-desktop.dc.html",
+  "j14-st-filter-bearings-desktop.dc.html",
+  "j14-st-filter-derailleurs-desktop.dc.html",
+  "j14-st-search-size-desktop.dc.html",
+  "j14-st-list-none-desktop.dc.html",
+  "j14-st-list-unknown-desktop.dc.html",
+  "j14-st-list-new-desktop.dc.html",
+  "j14-st-categories-desktop.dc.html",
+  "j14-st-category-edit-desktop.dc.html",
+  "j14-st-product-desktop.dc.html",
+  "j14-st-product-staff-desktop.dc.html",
+  "j14-st-product-bike-desktop.dc.html",
+  "j14-st-product-sizes-desktop.dc.html",
+  "j14-st-list-ticked-desktop.dc.html",
+  "j14-st-prices-desktop.dc.html",
+  "j14-st-prices-done-desktop.dc.html",
+  "j14-st-adjust-desktop.dc.html",
+  "j14-st-adjust-faulty-desktop.dc.html",
+  "j14-st-today-adjust-desktop.dc.html",
+  "j14-st-setting-adjust-desktop.dc.html",
+  "j14-st-today-below-desktop.dc.html",
+  "j14-tk-count-below-desktop.dc.html",
+  "j14-tr-sites-desktop.dc.html",
+  "j14-tr-send-desktop.dc.html",
+  "j14-tr-incoming-desktop.dc.html",
+  "j14-tr-receive-desktop.dc.html",
+  "j14-tr-problem-desktop.dc.html",
+  "j14-tr-today-short-desktop.dc.html",
+  "j14-tk-hub-desktop.dc.html",
+  "j14-tk-hub-staff-desktop.dc.html",
+  "j14-tk-start-desktop.dc.html",
+  "j14-tk-start-category-desktop.dc.html",
+  "j14-tk-count-desktop.dc.html",
+  "j14-tk-diff-desktop.dc.html",
+  "j14-tk-applied-desktop.dc.html",
+  "j17-rp-home-desktop.dc.html",
+  "j17-rp-home-staff-desktop.dc.html",
+  "j17-rp-report-menu-desktop.dc.html",
+  "j17-rp-report-deleted-desktop.dc.html",
+  "j17-rp-your-settings-desktop.dc.html",
+  "j17-rp-sales-desktop.dc.html",
+  "j17-rp-sales-all-desktop.dc.html",
+  "j17-rp-sales-year-desktop.dc.html",
+  "j17-rp-sales-empty-desktop.dc.html",
+  "j17-rp-pick-dates-desktop.dc.html",
+  "j17-rp-change-desktop.dc.html",
+  "j17-rp-changed-desktop.dc.html",
+  "j17-rp-save-desktop.dc.html",
+  "j17-rp-save-taken-desktop.dc.html",
+  "j17-rp-takings-desktop.dc.html",
+  "j17-rp-takings-all-desktop.dc.html",
+  "j17-rp-day-desktop.dc.html",
+  "j17-rp-reopen-desktop.dc.html",
+  "j17-rp-takings-reopened-desktop.dc.html",
+  "j17-rp-vat-desktop.dc.html",
+  "j17-rp-vat-first-desktop.dc.html",
+  "j17-rp-vat-all-desktop.dc.html",
+  "j17-rp-vat-check-off-desktop.dc.html",
+  "j17-rp-margin-desktop.dc.html",
+  "j17-rp-workshop-desktop.dc.html",
+  "j17-rp-workshop-all-desktop.dc.html",
+  "j17-rp-discounts-desktop.dc.html",
+  "j17-rp-discounts-staff-desktop.dc.html",
+  "j17-rp-returning-desktop.dc.html",
+  "j17-rp-c2w-desktop.dc.html",
+  "j17-rp-accounts-connect-desktop.dc.html",
+  "j17-rp-accounts-map-desktop.dc.html",
+  "j17-rp-accounts-c2w-desktop.dc.html",
+  "j17-rp-accounts-missing-desktop.dc.html",
+  "j17-rp-accounts-log-desktop.dc.html",
+  "j17-rp-accounts-lost-desktop.dc.html",
+  "j17-rp-accounts-disconnect-desktop.dc.html",
+  "j17-rp-today-accounts-desktop.dc.html",
+  "j17-rp-person-desktop.dc.html",
+  "j18-ws-start-which-desktop.dc.html",
+  "j18-ws-start-look-desktop.dc.html",
+  "j18-ws-start-products-desktop.dc.html",
+  "j18-ws-start-products-answered-desktop.dc.html",
+  "j18-ws-editor-first-desktop.dc.html",
+  "j18-ws-page-desktop.dc.html",
+  "j18-ws-page-on-desktop.dc.html",
+  "j18-ws-page-changes-desktop.dc.html",
+  "j18-ws-no-access-desktop.dc.html",
+  "j18-ws-no-settings-desktop.dc.html",
+  "j18-ws-page-moving-desktop.dc.html",
+  "j18-ws-editor-moving-desktop.dc.html",
+  "j18-ws-pay-tested-moving-desktop.dc.html",
+  "j18-ws-address-moving-desktop.dc.html",
+  "j18-ws-page-switch-over-desktop.dc.html",
+  "j18-ws-editor-desktop.dc.html",
+  "j18-ws-editor-section-desktop.dc.html",
+  "j18-ws-editor-add-desktop.dc.html",
+  "j18-ws-editor-drag-desktop.dc.html",
+  "j18-ws-editor-moved-desktop.dc.html",
+  "j18-ws-editor-removed-desktop.dc.html",
+  "j18-ws-editor-header-desktop.dc.html",
+  "j18-ws-editor-on-phone-desktop.dc.html",
+  "j18-ws-editor-bigger-desktop.dc.html",
+  "j18-ws-editor-pages-menu-desktop.dc.html",
+  "j18-ws-editor-saving-desktop.dc.html",
+  "j18-ws-editor-taken-desktop.dc.html",
+  "j18-ws-theme-desktop.dc.html",
+  "j18-ws-theme-contrast-desktop.dc.html",
+  "j18-ws-theme-publish-desktop.dc.html",
+  "j18-ws-theme-product-desktop.dc.html",
+  "j18-ws-theme-fonts-desktop.dc.html",
+  "j18-ws-published-desktop.dc.html",
+  "j18-ws-published-off-desktop.dc.html",
+  "j18-ws-discard-desktop.dc.html",
+  "j18-ws-history-desktop.dc.html",
+  "j18-ws-pages-desktop.dc.html",
+  "j18-ws-pages-new-desktop.dc.html",
+  "j18-ws-page-settings-desktop.dc.html",
+  "j18-ws-page-returns-desktop.dc.html",
+  "j18-ws-tracking-desktop.dc.html",
+  "j18-ws-tracking-on-desktop.dc.html",
+  "j18-ws-tracking-error-desktop.dc.html",
+  "j18-ws-address-desktop.dc.html",
+  "j18-ws-address-typo-desktop.dc.html",
+  "j18-ws-address-steps-desktop.dc.html",
+  "j18-ws-address-waiting-desktop.dc.html",
+  "j18-ws-address-done-desktop.dc.html",
+  "j18-ws-pay-none-desktop.dc.html",
+  "j18-ws-pay-connected-desktop.dc.html",
+  "j18-ws-pay-tested-desktop.dc.html",
+  "j18-ws-pay-failed-desktop.dc.html",
+  "j18-ws-pay-more-desktop.dc.html",
+  "j18-ws-today-pay-more-desktop.dc.html",
+  "j18-ws-start-shopify-desktop.dc.html",
+  "j18-ws-shopify-connect-desktop.dc.html",
+  "j18-ws-shopify-failed-desktop.dc.html",
+  "j18-ws-shopify-check-desktop.dc.html",
+  "j18-ws-shopify-sending-desktop.dc.html",
+  "j18-ws-shopify-on-desktop.dc.html",
+  "j18-ws-shopify-problem-desktop.dc.html",
+  "j18-ws-shopify-switch-desktop.dc.html",
+  "j18-ws-pay-shopify-desktop.dc.html",
+  "j18-ws-shopify-order-desktop.dc.html",
+  "j19-ms-switch-open-desktop.dc.html",
+  "j19-ms-switched-desktop.dc.html",
+  "j19-ms-today-all-desktop.dc.html",
+  "j19-ms-pick-shop-desktop.dc.html",
+  "j19-ms-till-other-desktop.dc.html",
+  "j19-ms-one-shop-desktop.dc.html",
+  "j19-ms-service-price-desktop.dc.html",
+  "j19-ms-service-not-offered-desktop.dc.html",
+  "j19-ms-services-differs-desktop.dc.html",
+  "j19-ms-product-price-desktop.dc.html",
+  "j19-ms-person-desktop.dc.html",
+  "j19-ms-book-shop-desktop.dc.html",
+  "j19-ms-book-shop-chosen-desktop.dc.html",
+  "j19-ms-book-shop-change-desktop.dc.html",
+  "j19-ms-job-other-shop-desktop.dc.html",
+  "j19-ms-request-from-shop-desktop.dc.html",
+  "j19-ms-request-answered-desktop.dc.html",
+  "j19-ms-sites-desktop.dc.html",
+  "j19-ms-sites-manager-desktop.dc.html",
+  "j19-ms-add-shop-desktop.dc.html",
+  "j19-ms-add-shop-error-desktop.dc.html",
+  "j19-ms-today-new-desktop.dc.html",
+  "j19-ms-tills-desktop.dc.html",
+  "j19-ms-till-move-desktop.dc.html",
+  "j19-ms-till-setup-desktop.dc.html",
+  "j20-ops-reports-home-desktop.dc.html",
+  "j20-ops-reports-staff-desktop.dc.html",
+  "j20-ops-log-desktop.dc.html",
+  "j20-ops-log-manager-desktop.dc.html",
+  "j20-ops-log-all-desktop.dc.html",
+  "j20-ops-log-filtered-desktop.dc.html",
+  "j20-ops-log-empty-desktop.dc.html",
+  "j20-ops-log-refused-desktop.dc.html",
+  "j20-ops-first-note-desktop.dc.html",
+  "j20-ops-your-settings-desktop.dc.html",
+  "j20-ops-my-activity-desktop.dc.html",
+  "j20-ops-today-alerts-desktop.dc.html",
+  "j20-ops-alert-settings-desktop.dc.html",
+  "j20-ops-devices-desktop.dc.html",
+  "j20-ops-till-checkout-desktop.dc.html",
+  "j20-ops-devices-signout-desktop.dc.html",
+  "j20-ops-devices-signed-out-desktop.dc.html",
+  "j20-ops-person-desktop.dc.html",
+  "j20-ops-person-everywhere-desktop.dc.html",
+  "j20-ops-feedback-empty-desktop.dc.html",
+  "j20-ops-feedback-desktop.dc.html",
+  "j20-ops-feedback-shot-desktop.dc.html",
+  "j20-ops-feedback-failed-desktop.dc.html",
+  "j20-ops-feedback-sent-desktop.dc.html"
+ ],
+ "notes": {
+  "j08_s0": {
+   "x": 0,
+   "y": 2654,
+   "text": "First-run setup",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s1": {
+   "x": 5440,
+   "y": 2654,
+   "text": "Till settings",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s2": {
+   "x": 19270,
+   "y": 2654,
+   "text": "End of day and payment settings",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s3": {
+   "x": 27350,
+   "y": 2654,
+   "text": "Staff and roles",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s4": {
+   "x": 39390,
+   "y": 2654,
+   "text": "Shop and sites",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s5": {
+   "x": 42190,
+   "y": 2654,
+   "text": "Workshop settings",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s6": {
+   "x": 46310,
+   "y": 2654,
+   "text": "Messages",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_s7": {
+   "x": 51750,
+   "y": 2654,
+   "text": "Your data",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j08_title": {
+   "x": 0,
+   "y": 2334,
+   "text": "08 · Owner setup and onboarding — Owner and Manager",
+   "kind": "title1",
+   "maxW": 54310
+  },
+  "j09_s9": {
+   "x": 0,
+   "y": 4554,
+   "text": "Bring your data",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j09_s10": {
+   "x": 8080,
+   "y": 4554,
+   "text": "Run alongside",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j09_s11": {
+   "x": 16160,
+   "y": 4554,
+   "text": "Practice: the till and jobs",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j09_s12": {
+   "x": 21600,
+   "y": 4554,
+   "text": "Switch over",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j09_title": {
+   "x": 0,
+   "y": 4234,
+   "text": "09 · Moving from Citrus Lime — Owner",
+   "kind": "title1",
+   "maxW": 32080
+  },
+  "j13_s14": {
+   "x": 0,
+   "y": 6410,
+   "text": "Receiving a delivery",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s15": {
+   "x": 19960,
+   "y": 6410,
+   "text": "A Cycle to Work bike, booked in",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s16": {
+   "x": 24080,
+   "y": 6410,
+   "text": "A new product, received by Staff",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s17": {
+   "x": 29520,
+   "y": 6410,
+   "text": "The waiting job",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s18": {
+   "x": 38920,
+   "y": 6410,
+   "text": "Checking the invoice",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s19": {
+   "x": 50960,
+   "y": 6410,
+   "text": "Ordering",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_s20": {
+   "x": 59040,
+   "y": 6410,
+   "text": "Also in this journey",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j13_title": {
+   "x": 0,
+   "y": 6090,
+   "text": "13 · Receiving stock and purchase orders — Staff and Manager",
+   "kind": "title1",
+   "maxW": 62500
+  },
+  "j14_s22": {
+   "x": 0,
+   "y": 8266,
+   "text": "Finding stock",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s23": {
+   "x": 12040,
+   "y": 8266,
+   "text": "Categories and their details",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s24": {
+   "x": 14840,
+   "y": 8266,
+   "text": "A product",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s25": {
+   "x": 20280,
+   "y": 8266,
+   "text": "Changing prices",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s26": {
+   "x": 24400,
+   "y": 8266,
+   "text": "Correcting stock",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s27": {
+   "x": 32480,
+   "y": 8266,
+   "text": "Between shops",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_s28": {
+   "x": 40560,
+   "y": 8266,
+   "text": "Stock take",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j14_title": {
+   "x": 0,
+   "y": 7946,
+   "text": "14 · Stock take and stock control — Staff and Manager",
+   "kind": "title1",
+   "maxW": 49720
+  },
+  "j17_s30": {
+   "x": 0,
+   "y": 10122,
+   "text": "Reports",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s31": {
+   "x": 6760,
+   "y": 10122,
+   "text": "Sales",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s32": {
+   "x": 13520,
+   "y": 10122,
+   "text": "Your own reports",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s33": {
+   "x": 18960,
+   "y": 10122,
+   "text": "Takings and cash-ups",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s34": {
+   "x": 25720,
+   "y": 10122,
+   "text": "VAT, margin, workshop and discounts",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_s35": {
+   "x": 40400,
+   "y": 10122,
+   "text": "Accounts software and who sees what",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j17_title": {
+   "x": 0,
+   "y": 9802,
+   "text": "17 · Reports and accounts — Owner, Manager and Staff",
+   "kind": "title1",
+   "maxW": 52200
+  },
+  "j18_s37": {
+   "x": 0,
+   "y": 11978,
+   "text": "Setting it up",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s38": {
+   "x": 6760,
+   "y": 11978,
+   "text": "The Website page",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s39": {
+   "x": 13520,
+   "y": 11978,
+   "text": "While moving from Citrus Lime",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s40": {
+   "x": 20280,
+   "y": 11978,
+   "text": "Editing the home page",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s41": {
+   "x": 36280,
+   "y": 11978,
+   "text": "Theme",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s42": {
+   "x": 43040,
+   "y": 11978,
+   "text": "Publishing",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s43": {
+   "x": 48480,
+   "y": 11978,
+   "text": "Pages",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s44": {
+   "x": 53920,
+   "y": 11978,
+   "text": "Tracking tools",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s45": {
+   "x": 58040,
+   "y": 11978,
+   "text": "Web address (waiting on the business plan decision)",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s46": {
+   "x": 64800,
+   "y": 11978,
+   "text": "Online payments setup",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_s47": {
+   "x": 72880,
+   "y": 11978,
+   "text": "Shopify",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j18_title": {
+   "x": 0,
+   "y": 11658,
+   "text": "18 · Website management — Manager",
+   "kind": "title1",
+   "maxW": 86000
+  },
+  "j19_s49": {
+   "x": 0,
+   "y": 13834,
+   "text": "Choosing a shop",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s50": {
+   "x": 8080,
+   "y": 13834,
+   "text": "Prices and services by shop",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s51": {
+   "x": 13520,
+   "y": 13834,
+   "text": "People and booking",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s52": {
+   "x": 18960,
+   "y": 13834,
+   "text": "Jobs between shops",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_s53": {
+   "x": 23080,
+   "y": 13834,
+   "text": "Adding a shop, and its tills",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j19_title": {
+   "x": 0,
+   "y": 13514,
+   "text": "19 · Multiple sites — Owner, Manager and Staff",
+   "kind": "title1",
+   "maxW": 33560
+  },
+  "j20_s55": {
+   "x": 0,
+   "y": 15690,
+   "text": "The activity log",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s56": {
+   "x": 10720,
+   "y": 15690,
+   "text": "What staff are told",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s57": {
+   "x": 14840,
+   "y": 15690,
+   "text": "Alerts on Today",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s58": {
+   "x": 17640,
+   "y": 15690,
+   "text": "Signed-in devices",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_s59": {
+   "x": 25720,
+   "y": 15690,
+   "text": "Send feedback",
+   "w": 520,
+   "size": "l",
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150
+  },
+  "j20_title": {
+   "x": 0,
+   "y": 15370,
+   "text": "20 · Management oversight — Owner",
+   "kind": "title1",
+   "maxW": 32240
+  }
+ },
+ "designSystems": [
+  {
+   "title": "Wheelhouse",
+   "namespace": "wheelhouse",
+   "artifact": "https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH",
+   "version": null,
+   "copiedAt": "2026-10-03T12:00:00Z"
+  }
+ ]
+}

@@ -34,13 +34,15 @@ every recommendation taken and drawn. All seven walk-throughs are done.
 Overview: 823 screens, 820 designed. The staff canvas holds 497 of 512 files
 — any more screens there need the canvas split (ask Jack). Next: Jack's
 walk-throughs with Mark, then a clickable prototype.
-**Published (3 Oct):** walk-through 7 is on every journey canvas and the
-customers big canvas. The staff big canvas has the 79 changed screens but not
-the 4 new ones (`rp-workshop-all`, `ms-request-answered`, `ms-till-move`,
-`ms-till-setup`): it holds 510 files and a canvas takes at most 512, so it
-needs splitting before anything new can go on it (ask Jack how).
-`live-canvas.json` describes the staff canvas as live, without those 4;
-`live-canvas-customers.json` is the live customers canvas.
+**Published, and the staff canvas split (3 Oct):** walk-through 7 is on
+every canvas. The staff big canvas reached 510 of 512 files, so it is now two
+(Jack: "1"): shop floor (journeys A, 10, 11, 12, 15, 16, 21) keeps the shared
+link, https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j (198 files); back
+office (journeys 8, 9, 13, 14, 17, 18, 19, 20) is new and private until Jack
+shares it, https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4 (305 files).
+`build.mjs` PARTS has three entries; each overview links to the other two.
+On a big canvas, a sidebar link to a screen that is now on another big
+canvas goes nowhere (each journey's own canvas still has every link).
 
 **UX walk-throughs 5 (Cycle to Work) and 6 (a Lightspeed repair) (2 Oct):**
 every recommendation taken and drawn: the Cycle to Work sale at the till,

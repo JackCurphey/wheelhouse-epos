@@ -11,12 +11,15 @@ import { TOUCH_TITLE_OVERRIDE } from './diary-titles.mjs';
 import { workflow, WF_W, WF_H } from './workflow.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
-// The big canvas is two canvases (Buy online decision 10, Jack, 1 Oct: "1"):
-// a canvas holds at most 512 files. The staff app keeps the first link (the
-// one Jack has shared); customers and the website has its own. Each has the
-// whole overview, and its rows for the other half open that canvas.
+// The big canvas is three canvases: a canvas holds at most 512 files.
+// Customers and the website got their own first (Buy online decision 10, Jack,
+// 1 Oct: "1"); the staff app split into shop floor and back office when it
+// reached 510 (Jack, 3 Oct: "1"). Shop floor keeps the first link (the one
+// Jack has shared). Each has the whole overview, and its rows for another
+// canvas open that canvas.
 const PARTS = [
-  { key: 'staff', root: here + 'out/', live: 'live-canvas.json', url: 'https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j', title: 'Wheelhouse user journeys — the staff app', short: 'The staff app', ids: ['ja', 'j08', 'j09', 'j10', 'j11', 'j12', 'j13', 'j14', 'j15', 'j16', 'j17', 'j18', 'j19', 'j20', 'j21'] },
+  { key: 'staff', root: here + 'out/', live: 'live-canvas.json', url: 'https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j', title: 'Wheelhouse user journeys — the staff app: shop floor', short: 'The staff app: shop floor', ids: ['ja', 'j10', 'j11', 'j12', 'j15', 'j16', 'j21'] },
+  { key: 'backoffice', root: here + 'out-backoffice/', live: 'live-canvas-backoffice.json', url: 'https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4', title: 'Wheelhouse user journeys — the staff app: back office', short: 'The staff app: back office', ids: ['j08', 'j09', 'j13', 'j14', 'j17', 'j18', 'j19', 'j20'] },
   { key: 'customers', root: here + 'out-customers/', live: 'live-canvas-customers.json', url: 'https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh', title: 'Wheelhouse user journeys — customers and the website', short: 'Customers and the website', ids: ['jb', 'j01', 'j02', 'j03', 'j04', 'j05', 'j06', 'j07'] },
 ];
 
@@ -272,7 +275,7 @@ for (const [src, { dir, explore = [], exploreRow = null }] of Object.entries(SAN
   const ourRows = journeys.flatMap((j) => j.rows.filter((r) => r.screens.some((x) => x.sand === src)).map((r) => r.label));
   if (theirRows.join('|') !== ourRows.join('|')) throw new Error(`${src} rows differ: ${theirRows.join(' | ')}`);
 }
-for (const j of journeys) if (!PARTS.some((P) => P.ids.includes(j.id))) throw new Error(`journey ${j.id} is on neither canvas`);
+for (const j of journeys) if (!PARTS.some((P) => P.ids.includes(j.id))) throw new Error(`journey ${j.id} is on no canvas`);
 let numbered = 0;
 const NUMS = Object.fromEntries(journeys.map((j) => [j.id, j.num ?? String(++numbered).padStart(2, '0')]));
 const allCounts = {};
@@ -349,7 +352,7 @@ const KEYS = ['review', 'built', 'designed', 'old', 'gap'];
 for (const P of PARTS) {
 const { boards, order, notes, root } = P;
 const pages = [];
-const other = PARTS.find((x) => x !== P);
+const others = PARTS.filter((x) => x !== P);
 const counts = journeys.map((j) => allCounts[j.id]);
 const total = Object.fromEntries(KEYS.map((k) => [k, counts.reduce((a, c) => a + c[k], 0)]));
 const all = KEYS.reduce((a, k) => a + total[k], 0);
@@ -373,8 +376,10 @@ const overview = `<div style="width: ${OW}px; height: ${OH}px; box-sizing: borde
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #3f4d33">WHEELHOUSE</div>
 <h1 style="margin: 0; font-size: 48px; line-height: 1.1; font-weight: 700; letter-spacing: -1px">User journeys — ${esc(P.short.toLowerCase())}</h1>
-<p style="margin: 0; font-size: 19px; line-height: 1.5; color: #3d4038; max-width: 980px">${esc(P.short)}: every screen in its journeys, grouped by journey, with where each one stands. The table counts all ${all} screens in all ${counts.length} journeys, on both canvases. Scroll down to see this canvas’s journeys laid out left to right in the order they happen. In Play, click a row to jump to its first screen; rows for the other canvas open it.</p>
-<a href="${other.url}" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px; border-radius: 10px; background: #3f4d33; color: #ffffff; font-size: 17px; font-weight: 700; text-decoration: none">The other canvas: ${esc(other.short)} ›</a>
+<p style="margin: 0; font-size: 19px; line-height: 1.5; color: #3d4038; max-width: 980px">${esc(P.short)}: every screen in its journeys, grouped by journey, with where each one stands. The table counts all ${all} screens in all ${counts.length} journeys, on all ${PARTS.length} canvases. Scroll down to see this canvas’s journeys laid out left to right in the order they happen. In Play, click a row to jump to its first screen; rows for another canvas open it.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+${others.map((o) => `<a href="${o.url}" style="display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px; border-radius: 10px; background: #3f4d33; color: #ffffff; font-size: 17px; font-weight: 700; text-decoration: none">Open the canvas: ${esc(o.short)} ›</a>`).join('\n')}
+</div>
 </div>
 <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px">
 ${legend.map(([st, text]) => `<div style="padding: 18px 20px; border-radius: 12px; background: #fbfbf9; border: 1px solid #dcdbd3; display: flex; flex-direction: column; gap: 10px">

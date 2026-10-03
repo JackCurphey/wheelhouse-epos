@@ -1,7 +1,9 @@
 # User journeys canvas — source
 
-The **Wheelhouse user journeys** canvas (https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j)
-shows every screen by journey, colour-coded by status, with a workflow chart.
+The **Wheelhouse user journeys** canvases (staff shop floor
+https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j, staff back office
+https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4, customers and the website
+https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh) show every screen by journey, colour-coded by status, with a workflow chart.
 It is generated from the files here and published with Claude Code's Artifact
 tool. Started 27 Sep 2026.
 
