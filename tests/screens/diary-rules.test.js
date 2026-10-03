@@ -95,3 +95,20 @@ test('a waiting card says what it is, who, what and when', () => {
   );
   assert.equal(waitingCard({ kind: 'customer_cancelled', customerName: 'Aisha Khan', serviceNames: ['Safety check'], jobDate: '2026-10-07' }).label, 'Cancelled by customer');
 });
+
+// Piece 3: where a dragged job lands. The pointer's height in the column is
+// turned into a time, snapped to 15 minutes like the old diary, and kept
+// inside the grid's hours.
+import { dropStart } from '../../src/screens/diary/rules.ts';
+
+test('a dropped job starts where it was dropped, snapped to 15 minutes', () => {
+  // The grid starts at 09:00 and each 30-minute row is 29px.
+  assert.equal(dropStart(58, { start: 540, end: 1080 }, 60), 600); // exactly 10:00
+  assert.equal(dropStart(65, { start: 540, end: 1080 }, 60), 600); // a little after: still 10:00
+  assert.equal(dropStart(73, { start: 540, end: 1080 }, 60), 615); // nearer 10:15
+});
+
+test('a dropped job never starts before the grid or runs past its end', () => {
+  assert.equal(dropStart(-40, { start: 540, end: 1080 }, 60), 540);
+  assert.equal(dropStart(10_000, { start: 540, end: 1080 }, 60), 1020); // 17:00, so it ends at 18:00
+});
