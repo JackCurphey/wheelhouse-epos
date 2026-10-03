@@ -59,4 +59,6 @@ export const lines = [
   { on: 'rs-restock', text: 'For customers: a part added to a job with no free stock is on the list by itself, not yet ordered', who: 'Owner', decision: 'Receiving stock, 3 Oct (walk-through 3 M7)' },
   // Read from the old phone drawing, rs-receive-phone.
   { on: 'rs-receive', text: 'On a phone: Scan the box at the top, the list fills the screen, Book in [n] items at the bottom', who: 'Staff', decision: 'Stock control 5, 12; walk-through 3 M5' },
+  // Third walk, 3 Oct (walk-through 3 M2).
+  { on: 'rs-order', text: "Just ordered: every line 'ordered [n] · arrived 0', 'Waiting for the delivery'; job WH-1042's line now reads On order", who: 'Owner', decision: 'Receiving stock, 3 Oct (walk-through 3 M7); 3 Oct (third walk, walk-through 3 M2)' },
 ];

@@ -25,6 +25,7 @@ export default {
   'ms-add-shop': keep(9),
   'ms-add-shop-error': into('ms-add-shop', '', "Code error: 'B is Bolton’s code. Choose another letter.'"),
   'ms-today-new': into('op-today', '', "'[Second site] added': 'Getting [Second site] ready' checklist of five steps"),
+  'ms-today-shown': into('op-today', 'UX walk-through 7 M3 (2 Oct); Multiple sites; 3 Oct (third walk, answer 6)', "'Show it to customers' ticked Done; toast '[Second site] is showing on the website, in booking and for collecting' with 'Undo'"),
   'ms-tills': into('set-till-quick', '', "Tills page: every till grouped by shop, each with '…' — 'Move to [Second site]…', 'Stop using this till…'"),
   'ms-till-move': keep(9),
   'ms-till-setup': into('till-setup', '', "At [Second site]: numbers '[code]1 In use', '[code]2 In use'; 'Make this computer Till [code]3'"), // journey B's till setup
@@ -35,5 +36,7 @@ export default {
 export const lines = [
   { on: 'ms-switch-open', text: 'While [Second site] is being set up: [Second site] · [n] steps to get it ready', who: 'Owner', decision: 'Walk-through 7 H1 (as taken)' },
   // "Draw the answers" SI2
+  // Third walk, walk-through 7 L3: the moved till moves.
+  { on: 'set-till-quick', text: "Tills page after a move: Till [code]3 under [Second site], 'Was B3'; Bolton 2 tills", who: 'Owner', decision: 'UX walk-through 7 M2 (2 Oct); 3 Oct (third walk, walk-through 7 L3)' },
   { on: 'ms-switch-open', text: 'On tablet and phone, at a business with more than one shop: North Street Cycles · Bolton (or All shops) under each page’s title, 14px', who: 'Staff', decision: 'Multiple sites 11; walk-through 7 L2, L3' },
 ];

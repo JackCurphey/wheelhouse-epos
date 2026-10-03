@@ -29,6 +29,7 @@ export default {
   'till-pay-cash': keep(20),
   'till-pay-split': keep(20),
   'till-receipt': keep(20),
+  'till-receipt-split': into('till-receipt', 'UX walk-through decision 6 (2 Oct); 3 Oct (third walk, walk-through 2 H1)', "Discounted basket; 'Paid' £70.00 with 'Cash £20.00' and 'Card £50.00' rows, not 'Card · £74.00'"),
   // Other ways to pay
   'till-giftcard': keep(20),
   'till-account': keep(20),
@@ -55,7 +56,8 @@ export default {
   'till-c2w': into('till-sale', SALE + '; Cycle to Work 5', "Basket is Maya's Cycle to Work order: bike with held frame, accessories 'on the order', all £[£]"),
   'till-c2w-pay': into('till-pay', 'Till 6, 15', "Payment dialog for the order: 'Cycle to Work · [Provider]' first, then Card"),
   'till-c2w-extra': into('till-pay', 'Till 6, 15', "Accessory 'added at the counter'; certificate covers the order, 'Maya pays' it by card"),
-  'till-c2w-paid': into('till-receipt', 'Till 7', "Paid by 'Cycle to Work · [Provider] and card'; bike collected with frame on her record"),
+  'till-c2w-paid-cert': into('till-receipt', 'Cycle to Work 5; Selling at the till 7; 3 Oct (third walk, answer 4)', "Paid by 'Cycle to Work · [Provider]' only, nothing from Maya; the order's basket; bike collected with frame on her record"),
+  'till-c2w-paid': into('till-receipt', 'Till 7; 3 Oct (third walk, answer 4)', "After an accessory added at the counter: paid by 'Cycle to Work · [Provider] and card'; bike collected with frame on her record"),
   'till-c2w-deposit': into('till-sale', SALE + '; Cycle to Work 5', "One line 'Deposit · Maya Patel’s Cycle to Work order'; note it's refunded when the certificate arrives"),
   // When the internet drops
   'till-offline': into('till-sale', SALE, "Bar shows 'Offline · [n] waiting to send' with a 'No internet — keep selling' notice"),

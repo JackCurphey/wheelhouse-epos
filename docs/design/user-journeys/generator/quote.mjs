@@ -165,16 +165,27 @@ ${note('Saved as answered by phone, taken by Jo Taylor at [time]. Maya gets a te
 const withdrawDialog = () => popup('withdraw-title', 'Withdraw this quote?', 'WH-1042 · Maya Patel', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Maya’s page will say the quote was withdrawn and there’s nothing to answer. Only the booked Standard service stays agreed.</p>`, `${button('Keep the quote', { variant: 'ghost' })}${button('Withdraw quote', { variant: 'danger' })}`, 520);
 
 // ---------- The boards ----------
+// Walk-through 12 M2 and L3 (third walk, 3 Oct): on dq-quote and dq-answered
+// the shop's number is a phone link at every size, and at phone size the
+// last 12px words ("Tap to enlarge", the "Answered" tag) are 15px, as the
+// quote's own tags are. `swap` fails the build if a drawing's words move.
+const swap = (html, from, to) => { if (!html.includes(from)) throw new Error(`quote.mjs: "${from}" not found`); return html.split(from).join(to); };
+const PHONE_MONO = mono('[shop phone]');
+const telLinked = (html) => {
+  if (!html.includes('[shop phone]')) throw new Error('quote.mjs: no [shop phone] to link');
+  const link = `<a href="tel:[shop phone]" style="color: ${C.ink}; font-weight: 600">${PHONE_MONO}</a>`;
+  return html.split(PHONE_MONO).map((part) => part.split('[shop phone]').join(`<a href="tel:[shop phone]" style="color: ${C.ink}; font-weight: 600">[shop phone]</a>`)).join(link);
+};
 def('dq-in-shop', () => inShop());
 def('dq-waiting-part', () => waitingPart());
 def('dq-ready', () => collectScreens['cp-summary'][SIZE]);
-def('dq-quote', () => quotePage());
+def('dq-quote', () => { const html = telLinked(quotePage()); return isPhone() ? swap(html, `<span style="font-size: 12px; color: ${C.muted}">Tap to enlarge</span>`, `<span style="font-size: 15px; color: ${C.muted}">Tap to enlarge</span>`) : html; });
 def('dq-quote-photo', () => overlay(quotePage(), photoDialog()));
 def('dq-quote-untick', () => quotePage({ ticks: { pads: true, fit: true, cable: true } }));
 def('dq-quote-decline', () => quotePage({ ticks: { pads: false, fit: false, cable: false } }));
 def('dq-quote-deposit', () => quotePage({ deposit: true }));
 def('dq-quote-reminded', () => quotePage({ reminded: true }));
-def('dq-answered', () => answered());
+def('dq-answered', () => { const html = telLinked(answered()); return isPhone() ? swap(html, badge('Answered', 'green'), bigBadge('Answered', 'green')) : html; });
 def('dq-answered-declined', () => answered({ declined: true }));
 def('dq-answered-deposit', () => answered({ deposit: true }));
 def('dq-answered-by-phone', () => answered({ byPhone: true }));

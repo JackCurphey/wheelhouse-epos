@@ -36,7 +36,7 @@ export default {
   'ac-book-remind': into('bk-page', 'Account 2, 4', "Booking step 4 details, with 'Remind me when my bike is due its next service' unticked"),
   'ac-collect-remind': into('cp-summary', 'Account 2, 4', "Ready-to-collect page with the 'Remind me when my bike is due its next service' tick"),
   'ac-services': into('set-workshop-services', 'Owner setup 14', "'Full service' group open: 'Standard service' with 'reminder after [n] months'"),
-  'ac-service-edit': into('set-workshop-services', 'Owner setup 14', "Pop-up 'Standard service': 'Remind customers it’s due after [n] months'"),
+  'ac-service-edit': into('set-workshop-services', 'Owner setup 14, 16; Account 2; 3 Oct (third walk, walk-through 4 M2)', "Edit on 'Gear adjustment': the service box 'Gear adjustment', with Name, Group, Time in the diary, Price '[£ price]' and 'Remind customers it’s due after [n] months'"),
   'ac-messages': into('set-msg-list', 'Account 2', "Scrolled to the 'Service reminder' and review request rows; each ends 'Stop these: [link]'"),
   'ac-reminder-wording': into('set-msg-list', 'Account 2', "'Service reminder' wording pop-up; fixed 'Stop these: [link]' line and a preview"),
   'ac-reminder-landing': into('bk-when', 'Account 2, 4', "Booking step 3: 'From your reminder: booking the next Standard service…', details filled in"),
@@ -60,3 +60,8 @@ export default {
   'ac-privacy-requests': into('cs-privacy', 'Account 2, 4', "Row 'Maya Patel · Delete their details' from the website; delete disabled, 'Still in the way'"), // journey 15's Privacy requests page
   'ac-customer-delete': into('cs-page', 'Account 2, 4', "Amber line 'Asked to delete their account on [date]'; bike WH-1042 and store credit in the way"),
 };
+
+// Extra lines with no old drawing behind them (plan.mjs `lines`).
+export const lines = [
+  { on: 'ac-account', text: "After collecting: the repair moves to Earlier, 'WH-1042 · Trek Domane AL 3 · Standard service · Repair · collected · receipt £111.00 ›'", who: 'Customer', decision: 'Account and reminders 1; second walk answer 13; 3 Oct (third walk, walk-through 12 M1)' },
+];

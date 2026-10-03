@@ -70,11 +70,13 @@ export const journeys = [
         sa('staff-app', 'Staff app: search on every page, your name opens Your settings', 'Staff'),
         sa('staff-app-mechanic', 'Staff app: a mechanic sees only the Workshop room', 'Mechanic'),
         sa('staff-app-menu', 'Staff app: phone menu open', 'Staff'),
+        sa('staff-search', 'Staff app: search open on a staff page — each row opens its page, no till buttons', 'Staff'),
       ] },
       { label: 'Till mode', screens: [
         sa('till-rail', 'Till: sidebar folded to the rail', 'Staff'),
         sa('till-rail-open', 'Till: rail unfolded', 'Staff'),
         sa('till-search', 'Till: one search finds products, customers, jobs and orders', 'Staff'),
+        sa('till-search-paid', 'Till search: WH-1042 paid online — Hand over in place of Add to basket', 'Staff'),
       ] },
       { label: 'Your settings', screens: [sa('your-settings', 'Your settings', 'Everyone'), sa('your-settings-no-pin', "Your settings — no PIN yet, Get your PIN", 'Everyone')] },
       { label: 'Customer website', screens: [
@@ -100,6 +102,7 @@ export const journeys = [
         sb('till-checkin', 'Till check-in: PIN only', 'Staff'),
         sb('till-checkin-offline', 'Till start-up: offline, sales waiting to send (the start-up line on the PIN screen)', 'Staff'),
         sb('till-checkin-stale', 'Till start-up: online, but not up to date', 'Staff'),
+        sb('till-checkin-workshop', 'Workshop computer: Enter your PIN, no till number', 'Staff and Mechanic'),
         sb('till-pin-wrong', 'Till check-in: wrong PIN', 'Staff'),
         sb('pin-change', 'Your new till PIN', 'Staff'),
       ] },
@@ -520,7 +523,7 @@ export const journeys = [
         sd7("ac-book-remind", "Booking: “Remind me…”, unticked, with a review request", "Customer"),
         sd7("ac-collect-remind", "Ready to collect: the same tick", "Customer"),
         sd7("ac-services", "Settings › Workshop › Services: each service’s reminder", "Manager"),
-        sd7("ac-service-edit", "A service’s reminder time", "Manager"),
+        sd7("ac-service-edit", "A service’s box: name, group, time, price and reminder", "Manager"),
         sd7("ac-messages", "Settings › Messages: service reminders and review requests", "Manager"),
         sd7("ac-reminder-wording", "The service reminder’s wording; “Stop these” always added", "Manager"),
         sd7("ac-reminder-landing", "The reminder’s link: booking, bike and service chosen, saying why", "Customer"),
@@ -551,7 +554,7 @@ export const journeys = [
     rows: [
       { label: "First-run setup", screens: [
         sd8("fr-today", "Getting started: the owner’s checklist on Today", "Owner"),
-        sd8("fr-today-moving", "Getting started while moving from Citrus Lime — tills in practice, the move’s stage, shared steps", "Owner"),
+        sd8("fr-today-moving", "Getting started while moving from Citrus Lime — one checklist, the move’s stage, the tills start on switch-over day", "Owner"),
         sd8("fr-step", "A step opened from the checklist", "Owner"),
         sd8("fr-done", "All set up: the checklist goes", "Owner"),
       ] },
@@ -705,6 +708,7 @@ export const journeys = [
         sc("till-pay-cash", "Cash: notes to tap, change worked out", "Staff"),
         sc("till-pay-split", "Split payment: part paid, the rest by card", "Staff"),
         sc("till-receipt", "Paid: receipt choices, closes by itself", "Staff"),
+        sc("till-receipt-split", "Paid: the discounted £70.00, cash and card", "Staff"),
       ] },
       { label: "Other ways to pay", screens: [
         sc("till-giftcard", "Gift card or store credit", "Staff"),
@@ -734,6 +738,7 @@ export const journeys = [
         sc("till-c2w", "A Cycle to Work bike — the order’s lines locked, the held frame picked", "Staff"),
         sc("till-c2w-pay", "Take payment — Cycle to Work · [Provider] is one tap", "Staff"),
         sc("till-c2w-extra", "An accessory added at the counter — Maya pays for it as a second payment", "Staff"),
+        sc("till-c2w-paid-cert", "Cycle to Work paid — the certificate only, nothing from Maya, the bike collected", "Staff"),
         sc("till-c2w-paid", "Cycle to Work paid — both payments, the bike collected", "Staff"),
         sc("till-c2w-deposit", "A Cycle to Work deposit — one line, linked to the order", "Staff"),
       ] },
@@ -983,6 +988,7 @@ export const journeys = [
     rows: [
       { label: "Reports", screens: [
         sd17("rp-home", "Reports: the ready-made reports, and your own", "Owner"),
+        sd17("rp-home-all", "Reports on All shops: the strip has a row for each shop", "Owner"),
         sd17("rp-home-staff", "Reports for Staff with “Can see reports” (one shop, no costs)", "Staff"),
         sd17("rp-report-menu", "A saved report’s menu: rename, share, delete", "Owner"),
         sd17("rp-report-deleted", "A saved report deleted, with Undo", "Owner"),
@@ -1159,6 +1165,7 @@ export const journeys = [
         sd19("ms-add-shop", "Add a shop: code suggested, hours copied", "Owner"),
         sd19("ms-add-shop-error", "A code another shop already uses", "Owner"),
         sd19("ms-today-new", "Today at a new shop: what to do next", "Owner"),
+        sd19("ms-today-shown", "Today at a new shop: [Second site] shown to customers, with Undo", "Owner"),
         sd19("ms-tills", "Settings › Till › Tills: every till, by shop", "Owner"),
         sd19("ms-till-move", "Moving a till to the other shop: its day, its sales waiting, its receipts", "Owner"),
         sd19("ms-till-setup", "Set up a till at [Second site]: its numbers, taken ones In use", "Owner"),

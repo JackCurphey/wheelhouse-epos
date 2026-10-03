@@ -5,7 +5,7 @@ import { keep, into, later } from './plan.mjs';
 const CLOSE = 'Cash-up 2–6; WT2 H1, L5';
 
 export default {
-  'eod-entry': into('till-sale', 'Cash-up 5', "'Close the day' button in the till bar, Jack Lewis serving; phone: 'It’s after [closing time]' strip"), // a till-bar control hidden by role and time (j11)
+  'eod-entry': into('till-sale', 'Cash-up 5', "'Close the day' button in the till bar, Jack Lewis serving, basket empty; phone: 'It’s after [closing time]' strip"), // a till-bar control hidden by role and time (j11)
   'eod-waiting': into('eod-count', CLOSE, "Till bar offline; step 1 '[n] sales waiting' with 'Check again'; count 'To do · you can count now'"),
   'eod-waiting-banked': into('eod-count', CLOSE, "Counted and 'Bagged'; report step 'Waiting for [n] sales to send' with 'Check again'"),
   'eod-attention': into('eod-count', CLOSE, "Needs attention open, '[n] to check': flagged sales ('Check'), basket and parked sale ('Resume', 'Clear')"),
@@ -25,4 +25,6 @@ export default {
 export const lines = [
   // The second walk's smaller questions, 3 Oct (answer 9).
   { on: 'eod-count', text: "Closing the day at [Second site] while the owner is looking at Bolton: only [Second site]'s tills and count close; Bolton's day stays open", who: 'Owner, Manager, or anyone with Can close the day', decision: 'Multiple sites 2, 9 (H2); Cash-up 6; 3 Oct (second walk Q9)' },
+  // Third walk, 3 Oct (walk-through 2 M2): eod-z now shows the story's Looks right float.
+  { on: 'eod-z', text: 'A day the float was counted short in the morning: Float at the start [£] short, counted by [Name] at [time]', who: 'Owner, Manager, or anyone with Can close the day', decision: 'Opening the shop 2, 8; Cash-up 6; 3 Oct (third walk, walk-through 2 M2)' },
 ];

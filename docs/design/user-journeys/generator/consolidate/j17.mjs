@@ -4,6 +4,7 @@ import { keep, into, later } from './plan.mjs';
 
 export default {
   'rp-home': keep(5),
+  'rp-home-all': into('rp-home', 'Reports and accounts, 3 Oct (the strip and the shop menu); Multiple sites 1; 3 Oct (third walk, answers 2 and 3)', "All shops: 'So far: Mon 14 – Thu 17 September', a row each for Bolton and [Second site] — the shop's name, takings, margin"),
   'rp-home-staff': into('rp-home', '', "Staff: one shop, no Margin, VAT, Activity log or Cycle to Work; shared reports say 'Shared by Jack Lewis'"),
   'rp-report-menu': into('rp-home', '', "A saved report's menu: 'Rename', 'Share with managers', 'Delete'"),
   'rp-report-deleted': into('rp-home', '', "'“[Report name]” deleted.' with 'Undo'"),
@@ -47,7 +48,8 @@ export default {
 // Decisions drawn as lines, with no old drawing behind them ("Draw the
 // decisions" spec, section 2: R2–R4).
 export const lines = [
-  { on: 'rp-home', text: 'All shops in the shop menu: the strip has a row for each shop — takings, margin and a link to that shop', who: 'Owner', decision: 'Issue #116 question 1; Multiple sites 1 (Jack, 3 Oct: the strip follows the shop menu)' },
+  // Third walk, answer 3 (walk-through 11 Q2).
+  { on: 'rp-home', text: 'A shop’s name in the strip opens that shop’s Sales report, with the shop menu switched to that shop', who: 'Owner', decision: '3 Oct (third walk, answer 3)' },
   { on: 'rp-home', text: 'Staff with Can see reports, without Can see costs and margin: no margin figure in the strip', who: 'Staff', decision: 'Reports and accounts 5; issue #116 question 1' },
   { on: 'rp-margin', text: 'Margin and stock value for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },
   { on: 'rp-discounts', text: 'Discounts and refunds for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },

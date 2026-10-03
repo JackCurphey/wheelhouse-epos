@@ -36,4 +36,6 @@ export const lines = [
   // The second walk's smaller questions, 3 Oct (answer 4).
   { on: 'mv-start', text: 'Fix on a row that needs a look: a pop-up for that one row; new problem rows from a weekly refresh use the same list and Fix', who: 'Owner', decision: 'UX walk-through decision 6 (walk-through 4 M5); Moving from Citrus Lime 2, 9 (M3); 3 Oct (second walk Q4)' },
   { on: 'mv-start', text: "A weekly refresh with a file Wheelhouse couldn't read: the same Couldn't read it and Choose another file on the Weekly refresh card, with Ask us to help", who: 'Owner', decision: 'Moving from Citrus Lime 3, 9 (M1, M4); 3 Oct (second walk Q4)' },
+  // Third walk, 3 Oct (walk-through 4 L3); mv-morning is a situation of mv-start.
+  { on: 'mv-start', text: "Switch-over day, after Turn it on: step 2 ticks, 'Your website is on'", who: 'Owner', decision: 'Moving from Citrus Lime, 3 Oct (walk-through 4 H2); 3 Oct (third walk, walk-through 4 L3)' },
 ];

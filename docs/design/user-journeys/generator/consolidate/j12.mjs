@@ -16,7 +16,7 @@ export default {
   'job-quick-overview': keep(25),
   'diary-stack-hover': into('diary', 'Workshop day 59, 61', "Hovering Thursday's 09:00 stack fans its jobs out in place, two per row"),
   'diary-stack-open': into('diary', 'Workshop day 59, 61', "Clicking a stack: '2 jobs at 09:00' popover of blocks, choose one to open"),
-  'diary-hover-summary': into('job-quick-overview', 'Workshop day 65', "Hovering a block opens the summary as a card beside it (notes, line items, cost)"),
+  'diary-hover-summary': into('job-quick-overview', 'Workshop day 65', "Hovering a block opens the summary as a card beside it (notes, line items, the agreed total)"),
   // Requests, as a pop-up
   'request-new': keep(9),
   'request-decline': into('request-new', 'Workshop day 15', "'Decline booking request': message to Sam; 'Decline & notify customer' or 'Keep request'"),

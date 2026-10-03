@@ -42,20 +42,35 @@ ${serving ? barBtn(`${icon('reports', 16)}Past sales`, 'Past sales — find, ref
 // Left: the till's one search box (decision 12: products, customers and jobs)
 // and the shop's product buttons (not designed yet — journey 11).
 // `query` draws the box mid-search with grouped results over the buttons.
+// Third walk, answer 1 (3 Oct): each row is two controls — its name, a link
+// that opens the job, order or customer, and the till button on the right.
+// So the results are a labelled list of rows, not a listbox of options.
+// `till: false` is the staff header's search: the same rows, links only.
 const resultGroup = (title, inner) => `<div role="group" aria-label="${title}" style="display: flex; flex-direction: column; gap: 4px"><div aria-hidden="true" style="padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${title}</div>${inner}</div>`;
-const resultRow = (id, main, sub, action, first = false) => `<a href="#" id="${id}" role="option" aria-selected="${first}" style="display: flex; align-items: center; gap: 12px; min-height: 52px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; text-decoration: none; color: ${C.ink}; background: ${first ? C.hover : 'transparent'}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${main}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="font-size: 13px; font-weight: 600; color: ${C.ink}">${action}</span></a>`;
-function searchResults() {
-  return `<div id="till-search-results" role="listbox" aria-label="Search results" style="position: absolute; top: 58px; left: 0; right: 0; z-index: 3; box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)">
-${resultGroup('Jobs', resultRow('ts1', `${mono('WH-1042')} · Maya Patel`, `Trek Domane AL 3 · Standard service · approved ${mono(money(WORK_TOTAL_APPROVED))}`, 'Add to basket ↵', true))}
-${resultGroup('Orders', resultRow('ts2', 'Order [order number] · Maya Patel', 'Online order · ready', 'Hand over'))}
-${resultGroup('Customers', resultRow('ts3', 'Maya Patel', 'Customer · Trek Domane AL 3', 'Add to sale'))}
+const resultRow = ({ main, sub, action, label }, { first = false, till = true } = {}) => `<ul role="list" style="list-style: none; margin: 0; padding: 0"><li style="display: flex; align-items: center; gap: 12px; min-height: 52px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; background: ${first && till ? C.hover : 'transparent'}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><a href="#" style="display: inline-block; align-self: flex-start; padding: 5px 0; line-height: 22px; font-size: 15px; font-weight: 600; color: ${C.ink}; text-decoration: none">${main}</a><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${till ? `<button type="button" aria-label="${label}" style="display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${action}</button>` : ''}</li></ul>`;
+// Walk-through 8 decision 8 (third walk, answer 8): WH-1042 paid online reads
+// "Paid online · [date]" with Hand over; expected today, Book in.
+const searchRowsFor = (paid) => [
+  ['Jobs', paid
+    ? { main: `${mono('WH-1042')} · Maya Patel`, sub: 'Trek Domane AL 3 · Standard service · Paid online · [date]', action: 'Hand over', label: 'Hand over WH-1042' }
+    : { main: `${mono('WH-1042')} · Maya Patel`, sub: 'Trek Domane AL 3 · Standard service · Expected 11:30', action: 'Book in', label: 'Book in WH-1042' }],
+  ['Orders', { main: 'Order [order number] · Maya Patel', sub: 'Online order · ready', action: 'Hand over', label: 'Hand over order [order number]' }],
+  ['Customers', { main: 'Maya Patel', sub: 'Customer · Trek Domane AL 3', action: 'Add to sale', label: 'Add Maya Patel to the sale' }],
+];
+export function searchResultsList({ paid = false, till = true, id = 'till-search-results', style = '' } = {}) {
+  return `<section id="${id}" aria-label="Search results" style="box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; ${style}">
+${searchRowsFor(paid).map(([g, r], i) => resultGroup(g, resultRow(r, { first: i === 0, till }))).join('\n')}
 ${resultGroup('Products', `<div style="padding: 6px 12px; font-size: 14px; color: ${C.muted}">No products match “maya”.</div>`)}
-</div><span role="status" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">3 results. No products match “maya”.</span>`;
+</section><span role="status" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">3 results. No products match “maya”.</span>`;
 }
-function productArea({ query = '', compact = false } = {}) {
+const PANEL_STYLE = `border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18);`;
+function searchResults(paid = false) {
+  return searchResultsList({ paid, style: `position: absolute; top: 58px; left: 0; right: 0; z-index: 3; ${PANEL_STYLE}` });
+}
+function productArea({ query = '', compact = false, paid = false } = {}) {
   return `<div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${query ? C.ink : C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs, orders" placeholder="${compact ? 'Search or scan' : 'Search or scan: products, customers, jobs, orders'}" value="${esc(query)}"${query ? ' role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="till-search-results" aria-activedescendant="ts1"' : ''} style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
-${query ? searchResults() : ''}
+<label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${query ? C.ink : C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs, orders" placeholder="${compact ? 'Search or scan' : 'Search or scan: products, customers, jobs, orders'}" value="${esc(query)}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
+${query ? searchResults(paid) : ''}
 <div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: ${C.muted}; font-size: 14px; line-height: 1.5">Product buttons and search results${compact ? '' : '<br>(designed with Selling at the till, journey 11)'}</div>
 </div>`;
 }
@@ -80,7 +95,7 @@ ${button(`Take payment · ${money(WORK_TOTAL_APPROVED)}`, { block: true })}
 </div>`, `width: ${width}px; flex-shrink: 0; height: 100%`);
 }
 
-const tillBody = (basketW, pad = 20, { query = '' } = {}) => `<div style="height: 100%; box-sizing: border-box; padding: ${pad}px; display: flex; gap: 20px">${productArea({ query })}${query ? basketEmpty(basketW) : basket(basketW)}</div>`;
+const tillBody = (basketW, pad = 20, { query = '', paid = false } = {}) => `<div style="height: 100%; box-sizing: border-box; padding: ${pad}px; display: flex; gap: 20px">${productArea({ query, paid })}${query ? basketEmpty(basketW) : basket(basketW)}</div>`;
 
 // Folded rail (decisions 4, 5): the tablet rail's look at desktop size. Resting
 // the pointer on it for 300 ms (or focusing into it with the keyboard)
@@ -140,7 +155,7 @@ ${unfoldedPanel(active, forced)}
 </div>`;
 }
 
-const tillRail = (forced, query = '') => `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(400, 20, { query })}</main></div></div>`;
+const tillRail = (forced, query = '', paid = false) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(400, 20, { query, paid })}</main></div></div>`;
 
 // ---------- Screens ----------
 export const screens = {};
@@ -154,6 +169,9 @@ screens['till-rail-open'] = { desktop: tillRail(true) };
 // before anything is in the basket.
 // UX walk-through 2 M4: it finds her online order too, with Hand over.
 screens['till-search'] = { desktop: tillRail(false, 'maya') };
+// Third walk, answer 8: the same search with WH-1042 paid online — Hand over
+// in place of Book in, leading to the job's hand-over.
+screens['till-search-paid'] = { desktop: tillRail(false, 'maya', true) };
 
 // Decision 8: "Your settings" pop-up, opened from your name, for every role.
 // Holds the Accessibility settings (Workshop day decision 57 plus decision 7's
@@ -253,11 +271,32 @@ screens['staff-app-menu'] = {
   phone: shellPhone('Workshop diary', `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 12px"></div>`, { menuOpen: true, active: 'diary' }),
 };
 
+// Third walk, answer 1 (App map 2; Customer service 12; walk-through 9 M1):
+// the header search open on a staff page (Jo's diary behind), typed "maya".
+// The same groups and rows as the till's search, each row only a link that
+// opens its page: no till buttons, no basket. On tablet and phone the search
+// button opens the box and its results over the page, with Close search.
+const typedHeaderSearch = () => headerSearch().replace(`border: 1px solid ${C.input}`, `border: 1px solid ${C.ink}`).replace('<input type="search"', '<input type="search" value="maya"');
+const openSearchBtn = (dark) => searchIconBtn(dark).replace('<button type="button"', '<button type="button" aria-expanded="true"');
+const staffResults = (style = '') => searchResultsList({ till: false, id: 'staff-search-results', style });
+const searchBoxOpen = () => `<div style="display: flex; align-items: center; gap: 8px; padding: 10px 10px 0"><label style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" aria-label="Search jobs, customers, orders, products" placeholder="Search jobs, customers, orders, products" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label><button type="button" aria-label="Close search" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}">${icon('close', 20)}</button></div>`;
+const searchSheet = (style) => `<div role="dialog" aria-label="Search" style="position: absolute; z-index: 6; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.panel}; ${style}">${searchBoxOpen()}${staffResults()}</div>`;
+screens['staff-search'] = {
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop.replace(headerSearch(), typedHeaderSearch())}${staffResults(`position: absolute; top: 58px; right: 28px; width: 460px; z-index: 6; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18);`)}</div>`,
+  tablet: `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet.replace(searchIconBtn(), openSearchBtn(false))}${searchSheet(`top: 56px; right: 22px; width: 480px; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18);`)}</div>`,
+  phone: `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden">${diaryScreens.diary.phone.replace(searchIconBtn(true), openSearchBtn(true))}<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 5; background: rgba(38,36,32,0.45)"></div>${searchSheet(`top: 0; left: 0; right: 0; padding-bottom: 6px; border-radius: 0 0 14px 14px; box-shadow: 0 12px 32px rgba(38,36,32,0.28);`)}</div>`,
+};
+// Each base page must have carried the control the search replaces.
+for (const [k, mark] of [['desktop', 'value="maya"'], ['tablet', 'aria-expanded="true" aria-label="Search jobs'], ['phone', 'aria-expanded="true" aria-label="Search jobs']]) {
+  if (!screens['staff-search'][k].includes(mark)) throw new Error(`staff-search ${k}: the header search was not found to open`);
+}
+
 // ---- Till ----
-const tillTablet = (forced, query = '') => `<div style="position: relative; width: ${TW}px; height: ${TH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(360, 18, { query })}</main></div></div>`;
+const tillTablet = (forced, query = '', paid = false) => `<div style="position: relative; width: ${TW}px; height: ${TH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(360, 18, { query, paid })}</main></div></div>`;
 screens['till-rail'].tablet = tillTablet(false);
 screens['till-rail-open'].tablet = tillTablet(true);
 screens['till-search'].tablet = tillTablet(false, 'maya');
+screens['till-search-paid'].tablet = tillTablet(false, 'maya', true);
 
 // Phone till: menu button (no rail on a phone), the one search box, the
 // product buttons, and the basket as a bar along the bottom.
@@ -266,7 +305,7 @@ export const tillPhoneBar = (serving = 'Jo Taylor', offline = false) => `<header
 <span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.85">Bolton · ${icon('wifi', 12)} ${offline ? 'Offline' : 'Online'}</span></span>
 ${serving ? `<button type="button" aria-label="Serving: ${serving} — switch who’s serving" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">${icon('user', 16)}${serving.split(' ')[0]}</button>` : `<span style="font-size: 13px; opacity: 0.85; padding-right: 8px">Nobody serving</span>`}
 </header>`;
-function tillPhone(query = '') {
+function tillPhone(query = '', paid = false) {
   const lines = LINES_APPROVED.filter((l) => l.approval === 'Approved');
   const bar = tillPhoneBar();
   const basketBar = query
@@ -276,11 +315,12 @@ function tillPhone(query = '') {
 ${button(`Take payment · ${money(WORK_TOTAL_APPROVED)}`, { block: true })}
 </div>`;
   return `<div style="position: relative; width: ${_PW}px; height: 844px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${bar}
-<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column">${productArea({ query, compact: true })}</main>
+<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column">${productArea({ query, compact: true, paid })}</main>
 ${basketBar}</div>`;
 }
 screens['till-rail'].phone = tillPhone();
 screens['till-search'].phone = tillPhone('maya');
+screens['till-search-paid'].phone = tillPhone('maya', true);
 
 // ---- Your settings ----
 screens['your-settings'].tablet = `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${yourSettingsDialog('tablet', { help: false })}</div></div>`;
@@ -374,6 +414,7 @@ export const TITLES = {
   'staff-app': 'Staff app — Staff (search on every page, your name opens Your settings)',
   'staff-app-mechanic': 'Staff app — Mechanic sees only the Workshop room',
   'staff-app-menu': 'Staff app — phone menu open',
+  'staff-search': 'Staff app — search open on a staff page: each row opens its page, no till buttons', // third walk, answer 1
   'site-menu': 'Customer website — phone menu open',
   'site-ocean-menu': 'Customer website — phone menu open, shop’s own theme',
   'site': 'Customer website — default theme (Soft sand)',
@@ -383,12 +424,13 @@ export const TITLES = {
   'till-rail': 'Till — sidebar folded to the rail (rest on it to unfold)',
   'till-rail-open': 'Till — rail unfolded',
   'till-search': 'Till — one search finds products, customers, jobs and online orders', // UX walk-through 2 M4
+  'till-search-paid': 'Till search — WH-1042 paid online: Hand over in place of Add to basket', // third walk, answers 1 and 8
 };
 
 export const ROWS = [
   { label: 'App map', screens: ['map'] },
-  { label: 'Staff app', screens: ['staff-app', 'staff-app-mechanic', 'staff-app-menu'] },
-  { label: 'Till mode', screens: ['till-rail', 'till-rail-open', 'till-search'] },
+  { label: 'Staff app', screens: ['staff-app', 'staff-app-mechanic', 'staff-app-menu', 'staff-search'] },
+  { label: 'Till mode', screens: ['till-rail', 'till-rail-open', 'till-search', 'till-search-paid'] },
   { label: 'Your settings', screens: ['your-settings', 'your-settings-no-pin'] }, // UX walk-through 4 H1
   { label: 'Customer website', screens: ['site', 'site-menu', 'site-ocean', 'site-ocean-menu'] },
 ];

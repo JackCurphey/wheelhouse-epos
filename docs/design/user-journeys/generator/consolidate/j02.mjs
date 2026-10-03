@@ -4,7 +4,7 @@ import { keep, into, later, same } from './plan.mjs';
 
 export default {
   'on-product': into('wb-product', 'Buy online 2, 8', "Journey 2’s simpler page: one photo and a description, no specifications; 'Ready today at Bolton · [n] in stock'"),
-  'on-product-added': into('wb-product', 'Buy online 2, 8', "Basket shows 1; message 'Added Shimano brake pads' with 'View basket'"),
+  'on-product-added': into('wb-product', 'Buy online 2, 8', "Quantity 2; basket shows 3 (with [Product] already in it); message 'Added 2 × Shimano brake pads' with 'View basket'"),
   'on-product-two-shops': into('wb-product', 'Buy online 2, 8', "Grey 'Ready at Bolton in [n] days — it’s at our [Second site] shop, and we’ll bring it over'"),
   'on-product-order-in': into('wb-product', 'Buy online 2, 8', "Grey 'Ready at Bolton in about [n] days — we order it in for you'"),
   'on-product-out': into('wb-product', 'Buy online 2, 8', "Amber 'Not in stock at Bolton'; no Add to basket — 'Ask the shop about it', phone and email"),

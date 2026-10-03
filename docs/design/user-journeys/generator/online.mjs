@@ -100,7 +100,7 @@ const askShop = `<div style="display: flex; flex-direction: column; gap: 4px; pa
 const product = (avail = 'shelf', opts = {}) => {
   const [line, canBuy] = AVAIL[avail];
   const photo = `<div role="img" aria-label="Photo of the product" style="aspect-ratio: 4 / 3; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 2px dashed ${C.border}; background: ${C.panel}; color: ${C.muted}; font-size: 15px">[Photo of the product]</div>`;
-  const buy = canBuy ? `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">${qty(PADS.name)}${button('Add to basket')}</div>${avail === 'noshop' ? note('Add to basket asks which shop first, then adds it.') : ''}` : askShop;
+  const buy = canBuy ? `<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">${qty(PADS.name, opts.qty || 1)}${button('Add to basket')}</div>${avail === 'noshop' ? note('Add to basket asks which shop first, then adds it.') : ''}` : askShop;
   const info = stack(
     `<nav aria-label="You are here" style="font-size: 14px; color: ${C.muted}"><a href="#" style="color: inherit">Shop</a> › <a href="#" style="color: inherit">[Category]</a></nav>`,
     `<div style="display: flex; flex-direction: column; gap: 6px">${h1(`${PADS.name} ${mono(PADS.code)}`)}<span style="font-size: 24px; font-weight: 700">${mono(PADS.price)}</span><span style="font-size: 13px; color: ${C.muted}">Includes VAT</span></div>`,
@@ -213,7 +213,8 @@ const orderPage = (state = 'getting') => {
     shopCancelled: section('Your refund', `<p style="margin: 0; font-size: 15px; line-height: 1.5">We cancelled this order because it wasn’t collected by [date], after we reminded you on [date].</p>${msg(`${refundWords()}.`, 'ok')}`, 'or-refund'),
   }[state] || section('Collect from', `${shopLines()}<p style="margin: 0; font-size: 15px">We’ll tell you when it’s ready — about [n] days.</p><div style="padding-top: 10px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 6px">${button('Cancel this order', { variant: 'default' })}${note('Full refund, the way you paid, until it’s ready.')}</div>`, 'or-collect');
   const cant = state === 'cantSupply' ? msg('<strong>Sorry — we couldn’t supply [Product].</strong> “[their reason]” [£ price] has gone back the way you paid: to your card. The rest of your order is on its way.', 'warn') : '';
-  const where = state === 'moving' ? ['On the shelf at Bolton', 'Coming from [Second site] · arrives [day]'] : state === 'cantSupply' ? ['On the shelf at Bolton', 'Couldn’t supply · refunded'] : ['cancelled', 'shopCancelled', 'collected'].includes(state) ? ['', ''] : undefined;
+  // Walk-through 2 M1 (third walk): ready means everything is on the shelf at Bolton.
+  const where = state === 'ready' ? ['On the shelf at Bolton', 'On the shelf at Bolton'] : state === 'moving' ? ['On the shelf at Bolton', 'Coming from [Second site] · arrives [day]'] : state === 'cantSupply' ? ['On the shelf at Bolton', 'Couldn’t supply · refunded'] : ['cancelled', 'shopCancelled', 'collected'].includes(state) ? ['', ''] : undefined;
   return site(`${head}${cant}${two(items(where), side)}`);
 };
 const cancelOrder = () => popup('co-cancel', 'Cancel this order?', `${ORDER} · £[total]`, `<p style="margin: 0; font-size: 15px; line-height: 1.5">${refundWords()}. A card refund can take [n] working days to show. We’ll put the items back on sale.</p>`, `${button('Keep my order', { variant: 'ghost' })}${button('Cancel the order', { variant: 'danger' })}`, 480);
@@ -255,8 +256,10 @@ const ordersPage = ({ toast = false, arrived = false, sold = false } = {}) => {
     : orderRow({ who: 'Maya Patel', when: 'paid [time]', items: `${it(`${PADS.name} ${mono(PADS.code)}`, from('On the shelf'))}${it('[Product]', from('On its way from [Second site]'))}`, action: badge('Waiting for 1 item', 'amber') });
   const content = `<div style="position: relative; height: 100%"><div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · North Street Cycles, Bolton')}
 ${group('To get ready', toast ? 2 : 3, [
-  ...(toast ? [] : [maya]),
-  orderRow({ who: '[Customer]', when: 'paid [time]', items: it('[Product] × 2', from('On the shelf')), action: button('Mark ready') }),
+  // Walk-through 2 M1 (third walk): Mark ready is pressed on the order that's
+  // all on the shelf, so that row (not Maya's, still waiting) moves to Ready.
+  maya,
+  ...(toast ? [] : [orderRow({ who: '[Customer]', when: 'paid [time]', items: it('[Product] × 2', from('On the shelf')), action: button('Mark ready') })]),
   orderRow({ who: '[Customer]', when: 'paid [time]', items: it('[Product]', from('Ordered from [supplier] · due [date]')), action: badge('Due [date]', 'grey') }),
 ], 'Mark ready when everything’s on the shelf for collection — the customer is told straight away.')}
 ${group('Ready to collect', toast ? 3 : 2, [
@@ -337,7 +340,8 @@ const startQuestion = () => popup('st-title', 'How should your website start?', 
 
 // ---------- The boards ----------
 def('on-product', () => product('shelf'));
-def('on-product-added', () => product('shelf', { basket: 1, toast: siteToast(`Added ${PADS.name}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 6px; background: rgba(255,255,255,0.16); color: #ffffff; font-weight: 600; text-decoration: none">View basket</a>`) }));
+// Walk-through 12 L1 (third walk): agrees with on-basket — [Product] is already in it, and Maya adds 2 pads, so the basket reads 3.
+def('on-product-added', () => product('shelf', { basket: 3, qty: 2, toast: siteToast(`Added 2 × ${PADS.name}`, `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 6px; background: rgba(255,255,255,0.16); color: #ffffff; font-weight: 600; text-decoration: none">View basket</a>`) }));
 def('on-product-two-shops', () => product('other', { twoShops: true }));
 def('on-product-order-in', () => product('orderin', { twoShops: true }));
 def('on-product-out', () => product('out'));

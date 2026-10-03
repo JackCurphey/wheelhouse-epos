@@ -12,6 +12,7 @@ export default {
   'till-checkin': keep(43),
   'till-checkin-offline': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Offline · [n] sales waiting to send'; the till bar shows offline"),
   'till-checkin-stale': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Online · prices and stock last updated [time] · [n] sales still sending'"),
+  'till-checkin-workshop': into('till-checkin', 'Walk-through 8, decisions 1 and 3; 3 Oct (third walk, answer 8)', "Bar 'Workshop computer', no till number; 'What you do on this computer is recorded under your name and role'; no start-up line, no 'Checked in today'"),
   'till-pin-wrong': into('till-checkin', 'Leftover 4, Signing in 9', "Dots cleared; 'That PIN isn’t anyone’s — try again'"),
   'pin-change': keep(43),
   'pin-first': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "First-time version: 'Welcome to North Street Cycles, Jo'; no close; adds 'Skip for now'"),
@@ -29,7 +30,6 @@ export default {
 // ("Draw the decisions" spec, section 6: N2, N3, N4).
 export const lines = [
   { on: 'till-setup', text: 'Make this computer a workshop computer: it stays signed in as the shop, and each person takes over by typing their PIN', who: 'Owner', decision: 'Walk-through 8, decision 1' },
-  { on: 'till-checkin', text: 'A workshop computer: Enter your PIN, and what you do is recorded under your name and role', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 1' },
   { on: 'till-checkin', text: 'A workshop computer left alone for 10 minutes: back to Enter your PIN, nothing lost', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 3; build plan Q6' },
   { on: 'till-checkin', text: 'A till with nobody checked in: only the PIN screen', who: 'Staff', decision: 'Walk-through 8, fix M6 part 1' },
   { on: 'auth-site', text: 'Staff at two shops (Jo Taylor): their two shops, no All shops; the counts only for people who can close the day', who: 'Staff', decision: 'Multiple sites 9; Opening the shop 3 and 4' },
@@ -39,4 +39,5 @@ export const lines = [
   { on: 'till-checkin', text: "The keyboard's number keys work too", who: 'Staff', decision: 'Walk-through 10 L1' },
   { on: 'till-checkin', text: 'Taking over a workshop computer announces "Now working: [name]" to a screen reader', who: 'Staff and Mechanic', decision: 'Second walk, 3 Oct, answer 10 (walk-through 8 H1)' },
   { on: 'cust-signin', text: 'From a booking: you come straight back to your booking', who: 'Customer', decision: 'Book a repair 6, 9; walk-through 12 L6' },
+  { on: 'cust-signin', text: 'Opened from a link (See it in your account on a receipt email): after the code, that page opens, with the account behind it', who: 'Customer', decision: 'Leftover screens 1; Account 1; 3 Oct (third walk, answer 9)' },
 ];

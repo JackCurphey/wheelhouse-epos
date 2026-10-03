@@ -142,6 +142,36 @@ screens['till-checkin-offline'] = each((size) => checkin(size, { state: 'offline
 screens['till-checkin-stale'] = each((size) => checkin(size, { state: 'stale' }));
 screens['till-checkin-practice'] = each((size) => checkin(size, { practice: true })); // UX walk-through 4 M4
 
+// Third walk, answer 8 (walk-through 8 decisions 1 and 3; Q2): a workshop
+// computer's "Enter your PIN". It is set up like a till but is not one: the
+// bar has no till number, and there's no start-up line about sales, no float
+// and no "Checked in today" (those are the till's). The same PIN pad; what
+// you do is recorded under your name and role. Its keys lead to the diary
+// as that person ("Now working: [name]", second walk answer 10).
+const WORKSHOP_BAR_TILL = /<span style="font-size: 16px; font-weight: 700">[^]*?Till B1<\/span><\/span>/;
+function workshopBar(size) {
+  const bar = size === 'phone' ? tillPhoneBar(null) : tillBar({ serving: null });
+  if (!WORKSHOP_BAR_TILL.test(bar)) throw new Error('signin.mjs: the till bar’s "Till B1" moved');
+  let out = bar.replace(WORKSHOP_BAR_TILL, '<span style="font-size: 16px; font-weight: 700">Workshop computer</span>');
+  if (size === 'phone') {
+    // Nobody is working, so there is no menu to open: only the PIN screen.
+    out = out.replace(/<button type="button" aria-label="Open menu"[^]*?<\/button>\n/, '').replace('Nobody serving</span>', 'Nobody working</span>').replace('padding: 0 6px;', 'padding: 0 14px;');
+  } else {
+    out = out.replace('<span style="font-size: 12px; opacity: 0.8">Bolton · ', '<span style="font-size: 14px">Bolton · ').replace('Nobody serving — enter your PIN', 'Nobody working — enter your PIN');
+  }
+  if (/Till B1|serving|Open menu/.test(out)) throw new Error('signin.mjs: the workshop bar still shows till words');
+  return out;
+}
+function checkinWorkshop(size) {
+  const [W, H] = SIZE[size];
+  const P = size === 'phone';
+  const w = P ? 'auto' : '360px';
+  return `<div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}">${workshopBar(size)}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: ${P ? '16px' : '28px'}"><div style="height: 100%; display: flex; flex-direction: column; align-items: ${P ? 'stretch' : 'center'}; justify-content: center; gap: ${P ? 14 : 18}px">
+<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 14 : 18}px; text-align: center">${h1('Enter your PIN', P ? 24 : 28)}${p('What you do on this computer is recorded under your name and role.', P ? 14 : 15)}${dots(2)}${pinPad(P ? 56 : 64)}</div>
+</div></main></div>`;
+}
+screens['till-checkin-workshop'] = each((size) => checkinWorkshop(size));
+
 // Decisions 6 and 7: change your PIN from Your settings. Wheelhouse picks a
 // new random PIN nobody else has (so choosing can't reveal a colleague's);
 // "Give me a different one" rolls another. The digits shown are an example.
@@ -233,6 +263,7 @@ export const TITLES = {
   'till-checkin': 'Till check-in — PIN only',
   'till-checkin-offline': 'Till start-up: offline, sales waiting to send',
   'till-checkin-stale': 'Till start-up: online, but not up to date',
+  'till-checkin-workshop': 'Workshop computer: Enter your PIN, no till number',
   'till-pin-wrong': 'Till check-in — wrong PIN',
   'pin-change': 'Your new till PIN — Wheelhouse picks it',
   // UX walk-through 4 H1, M2, M4
@@ -248,7 +279,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-pin-wrong', 'pin-change'] },
+  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-pin-wrong', 'pin-change'] },
   // UX walk-through 4 H1, M2, M4: a new person's first PIN, and the till in practice.
   { label: 'A new person’s first PIN', screens: ['pin-first', 'pin-cleared', 'till-give-pin', 'till-checkin-practice'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code', 'cust-code-expired'] },

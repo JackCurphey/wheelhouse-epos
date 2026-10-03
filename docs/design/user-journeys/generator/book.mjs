@@ -239,9 +239,13 @@ const pageButtons = (request = false) => btnRow(`${button('Change the date', { v
 // Audit M2: messages go the way the customer chose — Maya chose Text.
 // UX walk-through 1 L4: a guest is told they can see the booking by signing in.
 const signInLine = `<p style="margin: 0; font-size: 14px; line-height: 1.5">See this booking any time: sign in with ${MAYA.email}.</p>`;
-const requestReceived = (deposit = false) => centred(answerCard(`${bigIcon('purple', 'inbox')}${announce(badge('Waiting for the shop to confirm', 'purple'))}${h1(`Thanks, ${MAYA.first} — your request is with us`)}
+// Walk-through 12 M2 and L3 (third walk, 3 Oct): on bk-request the shop's
+// number is a phone link, and at phone size the tag is body size (15px).
+const telLink = (t = '[shop phone]') => `<a href="tel:[shop phone]" style="color: ${C.ink}; font-weight: 600">${t}</a>`;
+const shopLinesTel = shopLines.replace('[shop phone]', telLink());
+const requestReceived = (deposit = false, { thirdWalk = false } = {}) => centred(answerCard(`${bigIcon('purple', 'inbox')}${announce(thirdWalk && isPhone() ? badge('Waiting for the shop to confirm', 'purple').replace('font-size: 12px', 'font-size: 15px') : badge('Waiting for the shop to confirm', 'purple'))}${h1(`Thanks, ${MAYA.first} — your request is with us`)}
 <p style="margin: 0; font-size: 15px; line-height: 1.5">We’ll check the workshop diary and send you a text to confirm. Please wait for that before bringing your bike in.${deposit ? ' If we can’t fit you in, your deposit comes back in full.' : ''}</p>${bookingLines({ deposit })}
-<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">We’ve sent you a link to this page by text, so you can check it, change the date or cancel.</p>${signInLine}${pageButtons(true)}${shopLines}`));
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">We’ve sent you a link to this page by text, so you can check it, change the date or cancel.</p>${signInLine}${pageButtons(true)}${thirdWalk ? shopLinesTel : shopLines}`));
 const confirmedNow = () => centred(answerCard(`${bigIcon('ok', 'check')}${announce(badge('Booking confirmed', 'green'))}${h1(`See you on ${DAY}, ${MAYA.first}`)}
 <p style="margin: 0; font-size: 15px; line-height: 1.5">Arrive at ${mono('11:30')} with your ${BIKE}. Please bring the lock key, and tell us about any accessories.</p>${bookingLines()}
 <p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">We’ve sent you a link to this page by text.</p>${signInLine}${pageButtons()}${shopLines}`));
@@ -360,7 +364,7 @@ def('bk-card-failed', () => layout(steps(4, DONE3, detailsBody({ deposit: true, 
 def('bk-not-sent', () => layout(steps(4, DONE3, detailsBody({ state: 'not-sent' })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call' })));
 def('bk-checking-payment', () => layout(steps(4, DONE3, detailsBody({ deposit: true, signedIn: true, state: 'checking' })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call', deposit: 'now' }), true));
 def('bk-resume', () => resume());
-def('bk-request', () => requestReceived());
+def('bk-request', () => requestReceived(false, { thirdWalk: true }));
 def('bk-request-deposit', () => requestReceived(true));
 def('bk-confirmed', () => confirmedNow());
 def('bk-bookings', () => yourBookings());

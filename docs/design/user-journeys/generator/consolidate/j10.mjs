@@ -23,7 +23,7 @@ export default {
   'op-today-staff': into('op-today', TODAY, "Jo Taylor, Staff: only Who’s in and Workshop today; no Tills, no Needs attention"),
   'op-today-late': into('op-today', TODAY, "Who’s in: Alex Morgan 'Due in at [start time]', tagged 'Late'"),
   'op-today-practice': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
-  'op-today-c2w': into('op-today', TODAY, "Needs attention: hold ended ('Hold longer', 'Release the bike') and 'Deposit to refund · Maya Patel'"),
+  'op-today-c2w': into('op-today', TODAY, "Needs attention: hold ended ('Hold longer', 'Release the bike') and 'Deposit to refund · [Customer]'"),
   'op-today-staff-lightspeed': into('op-today', TODAY, "Staff at a Lightspeed shop: '2 jobs need someone to look at Lightspeed', a Lightspeed 'Up to date' line; no Tills or Who’s in"),
   'desk': into('diary', '', "'Today’s workshop': three figure tiles, 'Arrivals · 3' tabs and an arrivals table, not the diary grid"), // inferred: link-only old journey 12 board "Today's workshop" (stage2.mjs:141)
 };
@@ -32,4 +32,6 @@ export default {
 // decisions 5, later change 3 Oct), shown to those who see Needs attention.
 export const lines = [
   { on: 'op-today', text: '[n] refunds to finish · Finish: finishing one opens the refund with the sale and items filled in', who: 'Owner, Manager, or anyone with Can close the day', decision: 'UX walk-through decisions 5; 3 Oct (walk-through 2 H1)' },
+  // Third walk, 3 Oct (walk-through 2 M2).
+  { on: 'op-float-check', text: "Looks right: the till opens with 'Float checked · looked right · [Name]'; only a count says 'counted by'", who: 'Staff', decision: 'Opening the shop 2, 8 (H1); UX walk-through decisions 2 Oct; 3 Oct (third walk, walk-through 2 M2)' },
 ];

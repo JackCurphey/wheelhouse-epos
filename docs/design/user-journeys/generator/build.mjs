@@ -10,6 +10,7 @@ import { FONT_LINK } from './ui.mjs';
 import { TOUCH_TITLE_OVERRIDE } from './diary-titles.mjs';
 import { workflow, WF_W, WF_H } from './workflow.mjs';
 import { loadPlan, blocks } from './consolidate/plan.mjs';
+import { situationLines } from './consolidate/situation-lines.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
 // One canvas for the whole product (issue #116 step 3, Jack, 3 Oct: "start
@@ -308,33 +309,19 @@ for (const [src, { dir, explore = [], exploreRow = null }] of Object.entries(SAN
   if (theirRows.join('|') !== ourRows.join('|')) throw new Error(`${src} rows differ: ${theirRows.join(' | ')}`);
 }
 for (const j of journeys) if (!PARTS.some((P) => P.ids.includes(j.id))) throw new Error(`journey ${j.id} is on no canvas`);
-// Each kept screen's situation list (README rule 2): the screens folded into
-// it, from any journey, in journeys.mjs order. "What's different" is the
-// folded drawing's own title; "who" its role; then the decision it came from.
-const situations = new Map();
-for (const x of allScreens) { const e = plan.get(x.id); if (e.kind === 'into') { const own = ownerOf(x.id); if (!situations.has(own)) situations.set(own, []); situations.get(own).push({ x, decision: e.decision, diff: e.diff }); } }
+// Each kept screen's situation list (README rule 2), shared with the mockup
+// (consolidate/situation-lines.mjs: the same lines under each drawing).
+const linesOf = await situationLines();
 // Release 1 pictures (d()) carry no title or role in journeys.mjs; theirs are
 // in shots/screens.json.
 const titleOf = (x) => x.title ?? designs[x.id]?.title ?? x.id;
-const roleOfScreen = (x) => x.role ?? (designs[x.id] ? roleOf(designs[x.id].role) : '');
 const situationText = (id) => {
-  const list = situations.get(id) ?? [];
-  // Lines a journey file adds with no old drawing behind them (decisions
-  // drawn as lines: consolidate/plan.mjs `lines`).
-  const extra = extraLines.filter((l) => l.on === id);
-  if (!list.length && !extra.length) return null;
-  const home = byId.get(id).journey.id;
-  // Lightspeed lines wait for after the trading week (Lightspeed shops, later
-  // change of 3 Oct, walk-through 6 M4): tagged where they sit.
-  const waits = (line, j21) => (j21 || /Lightspeed/.test(line) ? `${line} · ${LATER_TAG}` : line);
-  return [`Situations of this screen (${list.length + extra.length})`,
-    ...list.map(({ x, decision, diff }) => waits(`• ${titleOf(x)}${diff ? `: ${diff}` : ''} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`, x.journey.id === 'j21')),
-    ...extra.map((l) => waits(`• ${l.text} — ${l.who}${l.decision ? ` · ${l.decision}` : ''}`, l.file === 'j21.mjs'))].join('\n');
+  const lines = linesOf(id);
+  return lines.length ? [`Situations of this screen (${lines.length})`, ...lines].join('\n') : null;
 };
 const NOTE_LINE = 30;
 // A note's height: its lines, each wrapping at about 8px a character.
 const noteH = (t, w) => t.split('\n').reduce((n, l) => n + Math.max(1, Math.ceil((l.length * 8) / Math.max(w - 32, 200))), 0) * NOTE_LINE;
-const LATER_TAG = 'after the trading week (build-plan question 5)';
 const laterText = (j) => {
   const list = j.rows.flatMap((r) => r.screens).filter((x) => plan.get(x.id).kind === 'later');
   return list.length ? [`Later — not drawn here (${list.length})`, ...list.map((x) => `• ${titleOf(x)} — ${plan.get(x.id).reason}`)].join('\n') : null;

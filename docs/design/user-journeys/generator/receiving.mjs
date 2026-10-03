@@ -14,7 +14,7 @@
 // supplier, cost, count and date is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone, MANAGER, settingsPage, rowSwitch, stockFolds, STOCK_INTRO } from './settings-frame.mjs';
-import { PART_PROBLEM_TITLES, screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, tabletDiary, phoneDiary, TODAY, overviewAt } from './diary.mjs';
+import { PART_PROBLEM_TITLES, screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, buildJobPageDesktop, LINES_APPROVED, tabletDiary, phoneDiary, TODAY, overviewAt } from './diary.mjs';
 import { today } from './opening.mjs';
 
 export const screens = {};
@@ -334,7 +334,38 @@ def('rs-labels', () => overlay(bookedBoard(), labelsPopup()));
 def('rs-receive-c2w', () => receiveBoard('c2w', JO));
 def('rs-frame-c2w', () => overlay(receiveBoard('c2w', JO), framePopup(false, true)));
 def('rs-booked-c2w', () => bookedBoard({ staff: true, c2w: true }));
-def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
+// Walk-through 3 L1 (third walk): the diary behind the job shows WH-1042 as
+// rs-diary-arrived does (Waiting for parts, part arrived, Sat 16:00–17:30),
+// not journey 12's Thursday 11:30 block. diary.mjs builds job-part-arrived
+// over its plain frozen diary, so the backdrop is drawn twice from the same
+// exported builders, outside and inside withPartArrived, and the part that
+// differs is swapped into the job page. The phone job page has no diary behind.
+// diary.mjs numbers each hover lane and stack (wh-lane-<size>-<n>, wh-stack-…) from a running
+// count, so each copy is first renumbered to start where the job page's do.
+const LANE = /(wh-[a-z]+-(?:desktop|tablet)-)(\d+)/g;
+const firstLane = (x) => Math.min(...[...x.matchAll(LANE)].map((m) => +m[2]));
+const shiftLanes = (x, to) => { const d = to - firstLane(x); return x.replace(LANE, (_, name, n) => `${name}${+n + d}`); };
+const swapBackdrop = (html, before, after) => {
+  const start = firstLane(html);
+  before = shiftLanes(before, start); after = shiftLanes(after, start);
+  if (before === after) throw new Error('rs-job-arrived: withPartArrived changed nothing in the diary');
+  let i = 0; while (before[i] === after[i]) i++;
+  let j = 0; while (j < before.length - i && before[before.length - 1 - j] === after[after.length - 1 - j]) j++;
+  const from = before.slice(i, before.length - j), to = after.slice(i, after.length - j);
+  const at = html.indexOf(from);
+  if (at < 0 || html.indexOf(from, at + 1) >= 0) throw new Error('rs-job-arrived: the diary behind the job page is not the one expected');
+  return html.slice(0, at) + to + html.slice(at + from.length);
+};
+const jobArrivedBackdrop = () => {
+  const html = diaryScreens['job-part-arrived'][SIZE];
+  if (SIZE === 'desktop') {
+    const bare = () => buildJobPageDesktop({ status: 'Waiting for parts', tone: 'amber', leftStatus: 'Waiting for parts', bikeHere: true, customerTexts: [], staffTexts: [], checkedCount: 0, notedCount: 0, lines: LINES_APPROVED, totalLabel: '', totalValue: 0, footer: '' });
+    return swapBackdrop(html, bare(), withPartArrived('WH-1042', bare));
+  }
+  if (SIZE === 'tablet') return swapBackdrop(html, tabletDiary({ highlightJob: null }), withPartArrived('WH-1042', () => tabletDiary({ highlightJob: null })));
+  return html;
+};
+def('rs-job-arrived', () => jobArrivedBackdrop());
 // UX walk-through 3 H1, M2: the job when its part doesn't arrive as planned.
 for (const id of ['job-part-sold', 'job-part-missing', 'job-part-damaged', 'job-part-order-closed']) def('rs-' + id.slice(4), () => diaryScreens[id][SIZE]);
 // Audit H1: the badge on the diary block and the Overview row too.

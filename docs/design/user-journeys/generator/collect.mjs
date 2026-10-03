@@ -42,6 +42,9 @@ const box = (title, inner, sz = 18) => `<section aria-labelledby="c-${slug(title
 const row = (left, sub, right) => `<div role="listitem" style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 15px; font-weight: 600">${left}</span>${sub}</span>${right}</div>`;
 const sub = (t) => (t ? `<span style="font-size: 13px; color: ${C.muted}">${t}</span>` : '');
 const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><strong>North Street Cycles, Bolton</strong><span>Open [opening hours]</span><span>[Shop address] · [shop phone]</span></div>`;
+// Walk-through 12 M2 (third walk): on the page Maya has while paying at the
+// counter, the number opens the phone app, as on the website and the email.
+const shopLinesCall = shopLines.replace('· [shop phone]', `· <a href="tel:[shop phone]" style="color: ${C.ink}; font-weight: 600">[shop phone]</a>`);
 
 const approved = LINES_APPROVED.filter((l) => l.approval === 'Approved');
 const declined = LINES_APPROVED.filter((l) => l.approval === 'Declined');
@@ -83,7 +86,7 @@ ${note(`When you come in, give your name or job number ${mono('WH-1042')}.`)}${r
   if (state === 'paid') return box('Paid', `<p role="status" style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: ${C.successInk}">${icon('check', 18)}${money(WORK_TOTAL_APPROVED)} paid on [date]</p>
 <p style="margin: 0; font-size: 15px; line-height: 1.5">Nothing more to pay. When you come in, just give your name.</p>${shopLines}`);
   if (state === 'counter') return box('To pay', `${mono(money(WORK_TOTAL_APPROVED), 'font-size: 30px')}
-<p role="status" style="margin: 0; font-size: 15px; line-height: 1.5">This is being paid at the counter right now, so there’s nothing to pay here.</p>${shopLines}`);
+<p role="status" style="margin: 0; font-size: 15px; line-height: 1.5">This is being paid at the counter right now, so there’s nothing to pay here.</p>${shopLinesCall}`);
   if (state === 'inshop') return box('To pay when you collect', `${mono(dueText, 'font-size: 30px')}
 ${note('Pay at the counter by card or cash. When you come in, just give your name.')}${shopLines}`);
   return box('To pay', `${mono(dueText, 'font-size: 30px')}${depositLine}
@@ -118,7 +121,7 @@ ${balance ? `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Your ${mon
 // Audit L1: the confirmation is the page's heading and is announced.
 const paid = (balance = false) => centred(`<div role="status" style="display: flex; flex-direction: column; gap: 16px">${card(`<div style="padding: ${isPhone() ? 16 : 20}px; display: flex; flex-direction: column; gap: 10px"><span style="display: inline-flex; width: 44px; height: 44px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 24)}</span>
 <h1 style="margin: 0; font-size: 24px; font-weight: 700">Paid — thank you, Maya</h1>
-<p style="margin: 0; font-size: 15px; line-height: 1.5">${balance ? `${mono('£[rest]')} paid for job ${mono('WH-1042')}, with your ${mono('£[deposit]')} deposit: ${money(WORK_TOTAL_APPROVED)} in all.` : `${money(WORK_TOTAL_APPROVED)} paid for job ${mono('WH-1042')}.`} Your receipt is on its way by email.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5">${balance ? `${mono('£[rest]')} paid for your repair · ${mono('WH-1042')}, with your ${mono('£[deposit]')} deposit: ${money(WORK_TOTAL_APPROVED)} in all.` : `${money(WORK_TOTAL_APPROVED)} paid for your repair · ${mono('WH-1042')}.`} Your receipt is on its way by email.</p>
 <p style="margin: 0; font-size: 15px; line-height: 1.5">When you come in, just give your name — your Trek Domane AL 3 is ready to go.</p>${shopLines}</div>`)}</div>`);
 // Audit H1: the link stays live for [n] days after collection, then says so.
 const expired = () => centred(box('This link has expired', `<p style="margin: 0; font-size: 15px; line-height: 1.5">It was for job ${mono('WH-1042')}, which has been collected. If you need a copy of anything, get in touch.</p>${shopLines}`, 22));
@@ -184,10 +187,11 @@ const rkv = (k, v, strong = false) => `<tr style="border-top: 1px solid ${C.bord
 const hidden = 'position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap';
 const qty = (n, each) => `<span style="display: block; font-size: 13px; color: ${C.muted}">${n} × ${mono(money(each))}</span>`;
 // Audit M3: a till sale as well as a repair — the till's own example lines
-// (journey 11: 2 × brake pads, fitting, a split of £20.00 cash); the
-// discount and what follows from it are placeholders. One VAT row until the
+// (journey 11: 2 × brake pads, fitting, a split of £20.00 cash). Third walk
+// (walk-through 2 H1): story 2's discounted sale, with the till drawings'
+// figures: −£4.00, £70.00, cash £20.00 and card £50.00. One VAT row until the
 // accountant says whether lines can have different rates.
-const tillLines = () => `${rkv(`Shimano brake pads${qty(2, 28)}`, mono(money(56)))}${rkv('Fit &amp; adjust brakes', mono(money(18)))}${rkv('Discount · [reason]', mono('−£[amount]'))}${rkv('Total (includes VAT)', mono('£[total]'), true)}${rkv('VAT at [rate]', mono('£[VAT]'))}${rkv('Paid by cash', mono(money(20)))}${rkv('Paid by card · [card ending]', mono('£[rest]'))}`;
+const tillLines = () => `${rkv(`Shimano brake pads${qty(2, 28)}`, mono(money(56)))}${rkv('Fit &amp; adjust brakes', mono(money(18)))}${rkv('Discount · [reason]', mono(`−${money(4)}`))}${rkv('Total (includes VAT)', mono(money(70)), true)}${rkv('VAT at [rate]', mono('£[VAT]'))}${rkv('Paid by cash', mono(money(20)))}${rkv('Paid by card · [card ending]', mono(money(50)))}`;
 const repairLines = (deposit = false) => `${approved.map((l) => rkv(esc(l.work), mono(money(l.price)))).join('')}${rkv('Total (includes VAT)', mono(money(WORK_TOTAL_APPROVED)), true)}${rkv('VAT at [rate]', mono('£[VAT]'))}${deposit ? `${rkv('Deposit paid online · [date]', mono('£[deposit]'))}${rkv('Paid by card · [card ending]', mono('£[rest]'))}` : rkv('Paid by', 'Card · [card ending]')}`;
 // Audit H2: the "Invoice to" block comes from the company's record (Add a
 // customer gains "VAT number" and "Send invoices to"); a blank line is left out.

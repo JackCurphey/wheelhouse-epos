@@ -88,4 +88,6 @@ export const lines = [
   // The second walk's smaller questions, 3 Oct (answer 6).
   { on: 'cw-new', text: "Maya isn't a customer yet: + New customer under the Customer box, as on New job, opens Add a customer and puts her on the order; a number someone already has shows [Name] already has this number", who: 'Staff', decision: 'Workshop day 26; Customer service 3, 5; 3 Oct (second walk Q6)' },
   { on: 'cw-order-held', text: 'A bike back after the provider has paid: a manager chooses a refund to the provider or store credit to the customer, and the order reopens', who: 'Owner and Manager', decision: 'Cycle to Work 7 (money steps); 3 Oct (second walk, case 6d)' },
+  // Third walk, 3 Oct (walk-through 5 L2).
+  { on: 'cw-owed-provider', text: 'After Record a payment: the ticked bikes leave the list, with what was recorded', who: 'Owner', decision: 'Cycle to Work 7; 3 Oct (third walk, walk-through 5 L2)' },
 ];

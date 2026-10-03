@@ -89,7 +89,7 @@ const onPhone = (px) => (isPhone() ? px : 0);
 const STRIPES = `repeating-linear-gradient(45deg, ${C.input} 0 2px, ${C.panel} 2px 6px)`;
 const graph = (t, labels, { value = '[£]', key = ['This week so far', 'Same days last week'], upto = labels.length, says = 'busiest day [day]; [up or down] £[£] on the same days last week', stacked = false } = {}) => {
   const h = 120;
-  const grid = [1, 0.5, 0].map((f) => `<div style="position: absolute; left: 0; right: 0; bottom: ${Math.round(h * f)}px; border-top: 1px ${f ? 'dashed' : 'solid'} ${f ? C.border : C.input}"><span style="position: absolute; left: 0; top: -8px; font-size: 11px; font-family: ${MONO}; color: ${C.muted}">${f === 1 ? value : f ? '' : '0'}</span></div>`).join('');
+  const grid = [1, 0.5, 0].map((f) => `<div style="position: absolute; left: 0; right: 0; bottom: ${Math.round(h * f)}px; border-top: 1px ${f ? 'dashed' : 'solid'} ${f ? C.border : C.input}"><span style="position: absolute; left: 0; top: -8px; font-size: 12px; font-family: ${MONO}; color: ${C.muted}">${f === 1 ? value : f ? '' : '0'}</span></div>`).join('');
   const bars = labels.map((l, i) => `<div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px"><div style="position: relative; width: 100%; max-width: 56px; height: ${h}px; display: flex; align-items: flex-end; justify-content: center">${stacked ? `<div style="width: 60%; display: flex; flex-direction: column"><div style="height: ${Math.round(h * 0.25)}px; background: ${STRIPES}; border: 1px solid ${C.ink}; border-bottom: 0; border-radius: 4px 4px 0 0; box-sizing: border-box"></div><div style="height: ${Math.round(h * 0.4)}px; background: ${C.ink}; opacity: 0.85"></div></div>` : i < upto ? `<div style="position: absolute; left: 50%; transform: translateX(-30%); bottom: 0; width: 60%; height: ${Math.round(h * 0.6)}px; border: 1px dashed ${C.input}; border-bottom: 0; border-radius: 4px 4px 0 0"></div><div style="position: relative; width: 60%; transform: translateX(-15%); height: ${Math.round(h * 0.6)}px; background: ${C.ink}; opacity: 0.85; border-radius: 4px 4px 0 0"></div>` : `<span style="padding-bottom: 6px; font-size: 11px; color: ${C.muted}">Not yet</span>`}</div><span style="font-size: 12px; font-weight: 600; text-align: center; line-height: 1.25; ${isPhone() && labels.length > 8 ? `white-space: nowrap${i % 2 ? '; visibility: hidden' : ''}` : 'max-width: 100%; overflow-wrap: anywhere'}">${l}</span></div>`).join('');
   return `<figure style="margin: 0; display: flex; flex-direction: column; gap: 12px" role="img" aria-label="${esc(`${t}: ${says}. The figures are in the table below.`)}">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><figcaption style="font-size: 15px; font-weight: 700">${t}</figcaption><span style="display: inline-flex; align-items: center; gap: 14px; font-size: 12px; color: ${C.ink}"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 2px; background: ${C.ink}; opacity: 0.85"></span>${key[0]}</span>${key[1] ? `<span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 2px; ${stacked ? `box-sizing: border-box; border: 1px solid ${C.ink}; background: ${STRIPES}` : `border: 1px dashed ${C.input}`}"></span>${key[1]}</span>` : ''}</span></div>
@@ -133,17 +133,25 @@ const yourReports = (staff) => box(`${h3('Your reports')}${note('Start from any 
 // The figures strip (issue #116 question 1, Jack, 3 Oct: "1"; and 3 Oct,
 // "1": it follows the shop menu, Multiple sites 1): takings by shop, margin
 // (labelled Margin, not Profit) and a link to the shop, above the cards.
-// "All shops" in the menu gives one row per shop (a situation line). Margin
-// only with "Can see costs and margin" (Reports and accounts 5). Takings are
-// with VAT (Reports and accounts, later change, 3 Oct, walk-through 11 H2:
-// "Takings" has one meaning everywhere). Still open for Jack, so bracketed:
-// the period and what the shop's link opens.
-const shopLink = (name) => `<a href="#" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">Shop</span><span style="font-size: 17px; font-weight: 700">${name}</span></span><span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
-const strip = (staff) => box(`${h3('[period]')}${stats([stat('Takings', '£[£]', ''), ...(staff ? [] : [stat('Margin', `£[£] · ${mono('[%]')}`, '')]), shopLink('North Street Cycles, Bolton')])}`);
-const home = (staff = false) => wrap(`${note(`Thursday 17 September · North Street Cycles, Bolton${staff ? '' : ' · use the shop menu for another shop or all shops'}`)}
-${strip(staff)}
+// "All shops" in the menu gives one row per shop (rp-home-all; third walk,
+// walk-through 11 H1). Margin only with "Can see costs and margin" (Reports
+// and accounts 5). Takings are with VAT (Reports and accounts, later change,
+// 3 Oct, walk-through 11 H2: "Takings" has one meaning everywhere). The
+// period is this week so far, the same period every report opens on (3 Oct,
+// third walk, answer 2); a shop's name opens that shop's Sales report, with
+// the shop menu switched to it (answer 3).
+const shopLink = (name, label = '', extra = '') => `<a href="#"${label ? ` aria-label="${esc(label)}"` : ''} style="${extra}display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">Shop</span><span style="font-size: 17px; font-weight: 700">${name}</span></span><span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
+const STRIP_PERIOD = 'So far: Mon 14 – Thu 17 September';
+// All shops: a row per shop, the shop's name first (on a phone it spans the
+// row, so each shop's figures sit under its name).
+const shopRow = (shop) => `<div role="group" aria-label="${esc(shop)}" style="display: grid; grid-template-columns: repeat(${isPhone() ? 2 : 3}, minmax(0, 1fr)); gap: 10px">${shopLink(shop, `${shop}: open its Sales report`, isPhone() ? 'grid-column: 1 / -1; ' : '')}${stat('Takings', '£[£]', '')}${stat('Margin', `£[£] · ${mono('[%]')}`, '')}</div>`;
+const strip = (staff, all = false) => box(`${h3(STRIP_PERIOD)}${all
+  ? `<div style="display: flex; flex-direction: column; gap: 10px">${['Bolton', SECOND].map(shopRow).join('')}</div>`
+  : stats([stat('Takings', '£[£]', ''), ...(staff ? [] : [stat('Margin', `£[£] · ${mono('[%]')}`, '')]), shopLink('North Street Cycles, Bolton')])}`);
+const home = (staff = false, all = false) => wrap(`${note(`Thursday 17 September · ${all ? 'All shops · use the shop menu for one shop' : `North Street Cycles, Bolton${staff ? '' : ' · use the shop menu for another shop or all shops'}`}`)}
+${strip(staff, all)}
 ${box(`${h3('Ready-made reports')}<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 3}, minmax(0, 1fr)); gap: 10px">${REPORTS.filter((r) => !staff || !r[2]).map(reportCard).join('')}</div>`)}
-${yourReports(staff)}`, staff ? STAFF : OWNER);
+${yourReports(staff)}`, staff ? STAFF : OWNER, all ? 'All shops' : 'Bolton');
 // The "…" menu on your own saved report (audit M6). One shared with you
 // says who shared it and has no menu (on the Staff board).
 const homeShared = () => wrap(`${note('Thursday 17 September · North Street Cycles, Bolton · use the shop menu for another shop or all shops')}
@@ -371,6 +379,7 @@ const personBoard = () => overlay(managerStaffPage({ people: peopleOpen(false, f
 
 // ---------- The boards ----------
 def('rp-home', () => home());
+def('rp-home-all', () => home(false, true));
 def('rp-home-staff', () => home(true));
 def('rp-report-menu', () => scrolled(homeShared(), onPhone(560)));
 def('rp-report-deleted', () => deletedBar());
@@ -422,6 +431,7 @@ SIZE = 'desktop';
 export const TITLES = {
   'rp-returning': 'Returning customers: who comes back, who hasn’t lately',
   'rp-home': 'Reports: the ready-made reports, and your own',
+  'rp-home-all': 'Reports on All shops: the strip has a row for each shop',
   'rp-home-staff': 'Reports for Staff with “Can see reports” (one shop, no costs)',
   'rp-report-menu': 'A saved report’s menu: rename, share, delete',
   'rp-report-deleted': 'A saved report deleted, with Undo',
@@ -461,7 +471,7 @@ export const TITLES = {
   'rp-accounts-c2w': 'Xero choices (scrolled down): Cycle to Work, its commission and shortfalls', // UX walk-through 5 H3
 };
 export const ROWS = [
-  { label: 'Reports', screens: ['rp-home', 'rp-home-staff', 'rp-report-menu', 'rp-report-deleted', 'rp-your-settings'] },
+  { label: 'Reports', screens: ['rp-home', 'rp-home-all', 'rp-home-staff', 'rp-report-menu', 'rp-report-deleted', 'rp-your-settings'] },
   { label: 'Sales', screens: ['rp-sales', 'rp-sales-all', 'rp-sales-year', 'rp-sales-empty', 'rp-pick-dates'] },
   { label: 'Your own reports', screens: ['rp-change', 'rp-changed', 'rp-save', 'rp-save-taken'] },
   { label: 'Takings and cash-ups', screens: ['rp-takings', 'rp-takings-all', 'rp-day', 'rp-reopen', 'rp-takings-reopened'] },
