@@ -1,0 +1,101 @@
+<meta charset="utf-8">
+<title>Wheelhouse mockup</title>
+<link rel="stylesheet" href="%FONT_LINK%">
+<style>
+/* Layout: one slim bar of choices on top, the drawing below scaled to fit. */
+:root { --bg: #efece4; --panel: #fbfaf6; --ink: #24231f; --muted: #6b675d; --line: #d9d4c7; --accent: #2f5d50; --warn: #7a4d0b; --warn-bg: #f6ead2; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1d1c19; --panel: #26251f; --ink: #ece8de; --muted: #a8a294; --line: #3a382f; --accent: #8cc2b0; --warn: #f0cf8e; --warn-bg: #3b301c; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #1d1c19; --panel: #26251f; --ink: #ece8de; --muted: #a8a294; --line: #3a382f; --accent: #8cc2b0; --warn: #f0cf8e; --warn-bg: #3b301c; color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 14px; padding: 0 16px 24px; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; padding: 10px 0; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+.bar select, .bar button { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-height: 36px; padding: 0 10px; }
+.bar button { cursor: pointer; }
+.bar select:focus-visible, .bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.name { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.name strong { font-size: 15px; font-weight: 600; }
+.name span { color: var(--muted); font-size: 12px; }
+.note { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 13px; }
+.stage { margin-top: 12px; overflow: hidden; }
+.frame { transform-origin: top left; background: #fff; box-shadow: 0 0 0 1px var(--line); }
+.empty { padding: 40px 0; color: var(--muted); }
+</style>
+<div class="bar">
+  <label for="story">Start a story<select id="story"><option value="">Choose a story…</option></select></label>
+  <label for="person">Person<select id="person"></select></label>
+  <label for="shop">Shop<select id="shop"><option>Bolton</option><option>[Second site]</option><option>All shops</option></select></label>
+  <label for="size">Size<select id="size"><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="phone">Phone</option></select></label>
+  <button type="button" id="back">‹ Back</button>
+  <div class="name"><strong id="title">Loading…</strong><span id="where"></span></div>
+  <label for="sit">This screen's situations<select id="sit"></select></label>
+</div>
+<p class="note" id="note" hidden></p>
+<div class="stage" id="stage"><p class="empty">Loading the drawings…</p></div>
+<script>
+const PEOPLE = ['Owner', 'Manager', 'Staff', 'Saturday worker', 'Mechanic', 'Customer'];
+const $ = (id) => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem('wh-mockup-' + k); } catch { return null; } }, set(k, v) { try { localStorage.setItem('wh-mockup-' + k, v); } catch {} } };
+let M = null; const cache = {}; const trail = [];
+PEOPLE.forEach((p) => $('person').add(new Option(p)));
+for (const k of ['person', 'shop', 'size']) { const v = store.get(k); if (v) $(k).value = v; }
+
+const load = async (file) => (cache[file] ??= fetch('data/' + file + '.json').then((r) => r.json()));
+const ownerOf = (id) => M.screens[id]?.owner || id;
+const sitsOf = (id) => [ownerOf(id), ...(M.situations[ownerOf(id)] || [])];
+const matches = (sid, person, shop) => {
+  const s = M.screens[sid], t = (s.title + ' ' + sid).toLowerCase();
+  const p = !person || s.role.includes(person) || (person === 'Saturday worker' && s.role.includes('Staff'));
+  const sh = shop === 'All shops' ? /all shops|-all\b/.test(t) : shop === '[Second site]' ? /second site/.test(t) : !/all shops|-all\b/.test(t);
+  return p && sh;
+};
+const say = (t) => { $('note').textContent = t; $('note').hidden = !t; };
+
+async function show(id, { push = true } = {}) {
+  if (!M.screens[id]) { say('That screen isn’t in the mockup: ' + id); return; }
+  if (push && location.hash.slice(1) !== id) { trail.push(location.hash.slice(1)); history.replaceState(null, '', '#' + id); }
+  const s = M.screens[id];
+  const size = $('size').value;
+  const at = s.sizes[size] ? size : s.sizes.desktop ? 'desktop' : Object.keys(s.sizes)[0];
+  $('title').textContent = s.title;
+  $('where').textContent = `${s.journeyName} · ${s.role}${at !== size ? ` · not drawn at ${size}, showing ${at}` : ''}${s.kept ? '' : ` · a situation of “${M.screens[ownerOf(id)].title}”`}`;
+  const sel = $('sit'); sel.innerHTML = '';
+  sitsOf(id).forEach((x) => sel.add(new Option((x === ownerOf(id) ? 'The screen: ' : '') + M.screens[x].title, x, false, x === id)));
+  const html = (await load(s.sizes[at].file))[id];
+  const { w, h } = s.sizes[at];
+  const stage = $('stage'); stage.innerHTML = '';
+  const frame = document.createElement('div'); frame.className = 'frame'; frame.style.width = w + 'px'; frame.style.height = h + 'px';
+  const root = frame.attachShadow({ mode: 'open' });
+  root.innerHTML = `<style>${M.css}</style><link rel="stylesheet" href="${document.querySelector('link[rel=stylesheet]').href}">${html}`;
+  root.addEventListener('click', onClick);
+  stage.appendChild(frame);
+  const fit = () => { const k = Math.min(1, stage.clientWidth / w); frame.style.transform = `scale(${k})`; stage.style.height = h * k + 'px'; };
+  fit(); window.onresize = fit; scrollTo(0, 0);
+}
+function onClick(e) {
+  const c = e.target.closest('[data-go],[data-act]'); if (!c) return;
+  e.preventDefault(); say('');
+  const go = c.getAttribute('data-go'), act = c.getAttribute('data-act'), what = c.getAttribute('data-what');
+  if (go) return show(go);
+  if (act === 'back') return goBack();
+  if (act === 'outside') return say(what + ' — this happens outside Wheelhouse.');
+  if (act === 'notdrawn') return say('Not drawn yet: ' + what + '.');
+}
+function goBack() { const prev = trail.pop(); if (prev) { history.replaceState(null, '', '#' + prev); show(prev, { push: false }); } else say('This is where you started.'); }
+function pick() {
+  const id = location.hash.slice(1); if (!M.screens[id]) return;
+  const best = sitsOf(id).find((x) => matches(x, $('person').value, $('shop').value));
+  if (best && best !== id) show(best); else { if (!best) say(`No separate view of this screen for ${$('person').value} at ${$('shop').value}.`); show(id, { push: false }); }
+}
+$('back').onclick = goBack;
+$('sit').onchange = (e) => show(e.target.value);
+for (const k of ['person', 'shop']) $(k).onchange = (e) => { store.set(k, e.target.value); say(''); pick(); };
+$('size').onchange = (e) => { store.set('size', e.target.value); show(location.hash.slice(1), { push: false }); };
+$('story').onchange = (e) => { const st = M.stories.find((x) => String(x.n) === e.target.value); if (!st) return; $('person').value = st.person; $('shop').value = st.shop || 'Bolton'; $('size').value = st.size || 'desktop'; trail.length = 0; say(`Story ${st.n}: ${st.name}. ${st.steps[0].does ? 'Next: ' + st.steps[0].does : ''}`); show(st.steps[0].id); };
+fetch('manifest.json').then((r) => r.json()).then((m) => {
+  M = m;
+  m.stories.forEach((s) => $('story').add(new Option(`${s.n}. ${s.name}`, s.n)));
+  const start = location.hash.slice(1);
+  show(M.screens[start] ? start : 'map', { push: false });
+});
+window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (M?.screens[id]) show(id, { push: false }); });
+</script>
