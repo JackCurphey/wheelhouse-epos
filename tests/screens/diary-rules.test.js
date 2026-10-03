@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  diaryState, weekOf, addDays, gridRange, toMinutes, layoutLanes, waitingCard, dayLabel, weekLabel,
+  diaryState, weekOf, addDays, gridRange, toMinutes, layoutLanes, stackGroups, waitingCard, dayLabel, weekLabel,
 } from '../../src/screens/diary/rules.ts';
 
 const job = (over = {}) => ({
@@ -119,4 +119,17 @@ test('a job waiting for the customer to answer a quote is teal', () => {
   assert.equal(diaryState(job({ custodyState: 'in_shop', quote: { id: 9, state: 'sent', revision: 1 } })), 'answer');
   assert.equal(diaryState(job({ custodyState: 'in_shop', quote: { id: 9, state: 'approved', revision: 1 } })), 'scheduled');
   assert.equal(diaryState(job({ workState: 'complete', quote: { id: 9, state: 'sent', revision: 1 } })), 'ready');
+});
+
+test('jobs that start at the same time make one stack; a partly overlapping job stays on its own (decisions 58, 59)', () => {
+  const groups = stackGroups([
+    { id: 1, start: 600, end: 660 },
+    { id: 2, start: 600, end: 690 },
+    { id: 3, start: 630, end: 700 },
+    { id: 4, start: 600, end: 630 },
+  ]);
+  assert.deepEqual(groups, [
+    { id: 1, ids: [1, 2, 4], start: 600, end: 690 },
+    { id: 3, ids: [3], start: 630, end: 700 },
+  ]);
 });

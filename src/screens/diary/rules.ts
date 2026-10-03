@@ -211,3 +211,23 @@ export function dropStart(y: number, range: { start: number; end: number }, dura
   const snapped = Math.round(raw / SNAP_MIN) * SNAP_MIN;
   return Math.max(range.start, Math.min(range.end - durationMin, snapped));
 }
+
+/**
+ * Decision 58: jobs in one column that start at the same time become one
+ * stack (a group of one is just the job). A stack runs from that start to
+ * its longest job's end, and takes one lane like a job does. Each group is
+ * named by its first job's id, in the order the jobs came.
+ */
+export function stackGroups(items: { id: number; start: number; end: number }[]) {
+  const byStart = new Map<number, { id: number; ids: number[]; start: number; end: number }>();
+  for (const it of items) {
+    const g = byStart.get(it.start);
+    if (g) {
+      g.ids.push(it.id);
+      g.end = Math.max(g.end, it.end);
+    } else {
+      byStart.set(it.start, { id: it.id, ids: [it.id], start: it.start, end: it.end });
+    }
+  }
+  return [...byStart.values()];
+}
