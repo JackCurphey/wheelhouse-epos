@@ -1,6 +1,6 @@
 // tests/design-fonts.test.js
 //
-// Fjell's fonts are stored with the app (Jack, 27 Sep 2026): the offline till
+// The app's fonts are stored with it (Jack, 27 Sep 2026): the offline till
 // must keep them with no internet, and a customer's visit must not reach
 // Google. Record: docs/decisions/2026-09-27-fjell-theme.md.
 import test, { before, after } from 'node:test';
@@ -11,7 +11,7 @@ import { readFile, parseRootTokens, findDeclarations } from './helpers/css.js';
 import { startLiveServer } from './helpers/liveServer.js';
 
 const FONT_FILES = {
-  'Work Sans': 'public/fonts/work-sans/work-sans-latin-wght.woff2',
+  'Public Sans': 'public/fonts/public-sans/public-sans-latin-wght.woff2',
   'DM Mono': 'public/fonts/dm-mono/dm-mono-latin-500.woff2',
 };
 

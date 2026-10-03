@@ -14,15 +14,18 @@
  * against WCAG 2.1 AA (4.5:1 for body text). Do not change a colour without
  * running `npm test` - the gate will catch a regression, but only if you run it.
  *
- * THE PALETTE IS FJELL - the Wheelhouse design system, chosen by Jack on
- * 27 September 2026. Record: docs/decisions/2026-09-27-fjell-theme.md.
+ * THE LOOK IS SOFT SAND ("Soft sand, dark rail", sans-serif throughout),
+ * chosen by Jack on 28 September 2026: decisions 48 and 53 in
+ * docs/decisions/2026-09-27-workshop-day-review.md. It replaced Fjell
+ * (docs/decisions/2026-09-27-fjell-theme.md); the values are the approved
+ * drawings' own (SAND in docs/design/user-journeys/generator/ui.mjs).
  * src/styles/theme.css carries the same values for the React apps under the
- * --wh-* names; tests/design-fjell.test.js fails if the two files disagree,
- * so change both together. The staff app always uses Fjell - shops no longer
+ * --wh-* names; tests/design-sand.test.js fails if the two files disagree,
+ * so change both together. The staff app always uses Soft sand - shops no longer
  * recolour it. A shop's colour scheme (THEME_PRESETS) now reaches only the
  * public website (public-storefront), which does not link this file.
  *
- * Still approved from earlier: the --status-* colours (unchanged by Fjell;
+ * Still approved from earlier: the --status-* colours (unchanged by Fjell and Soft sand;
  * the --status-complete-paid treatment - a finished job recedes via the
  * palest background rather than pale ink - is from 2 September 2026), the
  * 4px spacing scale, the global focus ring (2 September) and the type scale
@@ -32,14 +35,15 @@
 /* ---------- Fonts (self-hosted - see the decision record) ----------
    Served from public/fonts/ so the till keeps its fonts with no internet and
    no page load ever asks Google for anything. Latin subset only, from the
-   Google Fonts API; both are SIL Open Font License (OFL.txt beside each).
-   Work Sans is one variable file that covers every weight we use. */
+   Google Fonts API or Fontsource; both are SIL Open Font License (OFL.txt
+   beside each). Public Sans is one variable file that covers every weight we
+   use. */
 @font-face {
-  font-family: "Work Sans";
+  font-family: "Public Sans";
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url("/fonts/work-sans/work-sans-latin-wght.woff2") format("woff2");
+  src: url("/fonts/public-sans/public-sans-latin-wght.woff2") format("woff2");
 }
 @font-face {
   font-family: "DM Mono";
@@ -50,34 +54,35 @@
 }
 
 :root {
-  /* ---------- Surfaces and text (Fjell) ---------- */
-  --bg: #f3f2ee;
-  --panel: #fbfbf9;
-  --ink: #1c1e19;
-  --muted: #56594f;         /* muted TEXT: 6.38 on --bg, 6.90 on --panel */
-  --surface-muted: #e8e7e1; /* muted SURFACE (Fjell) */
-  --border: #dcdbd3;        /* decorative lines and panel edges */
-  /* The edge of a form field. --border measures 1.3:1, too faint to show
-     where a field is (WCAG 1.4.11 wants 3:1); this is 3.10 on --panel. */
-  --input-border: #83867a;
+  /* ---------- Surfaces and text (Soft sand) ---------- */
+  --bg: #f4eee1;
+  --panel: #fffdf7;
+  --ink: #2a2822;
+  --muted: #6e6752;         /* muted TEXT: 4.5:1+ on --bg and --panel */
+  --surface-muted: #f0eadc; /* muted SURFACE */
+  --border: #e6dfcb;        /* decorative hairlines and panel edges */
+  /* The edge of a form field. --border is too faint to show where a field
+     is (WCAG 1.4.11 wants 3:1); this clears 3:1 on page, panel and grey. */
+  --input-border: #6e6752;
 
   /* ---------- Action ----------
-     Fjell has one action colour. --brand (.btn-primary) and --accent
-     (.btn-accent, focus rings, active pills) are the same primary, and both
-     darks are the primary-dark used for hover and the top bar. */
-  --brand: #3f4d33;
-  --brand-dark: #2a3024;
-  --accent: #3f4d33;
-  --accent-dark: #2a3024;
-  /* Active marker (e.g. the current top-bar tab), always with dark text. */
-  --highlight: #c5cf3e;
-  --on-highlight: #1c1e19;
-  --danger: #a8321f;
-  --danger-hover: #8a2819;
-  --danger-bg: #fdecea;
-  --warn-bg: #fff7e0;
-  --warn-ink: #8a6100;
-  --ok-bg: #e8f5ec;
+     One action colour. --brand (.btn-primary) and --accent (.btn-accent,
+     focus rings, active pills) are the same charcoal primary, and both darks
+     are the primary-dark used for hover and the top bar (the dark rail). */
+  --brand: #2a2822;
+  --brand-dark: #262420;
+  --accent: #2a2822;
+  --accent-dark: #262420;
+  /* Amber active marker (e.g. the current top-bar tab), always with dark
+     text, used sparingly. */
+  --highlight: #d9a441;
+  --on-highlight: #2a2822;
+  --danger: #9c3b2c;
+  --danger-hover: #7a2c20;
+  --danger-bg: #f6e3de;
+  --warn-bg: #f7eac2;
+  --warn-ink: #7a5a10;
+  --ok-bg: #e1eedd;
 
   /* ---------- Job status (six states) ---------- */
   --status-pending-bg: #f1e8fb;
@@ -111,27 +116,27 @@
   --badge-other-ink: #6a3ea1;
 
   /* ---------- On-fill text and surface variants ----------
-     Fjell names only the main surfaces; these in-between shades are derived
-     from them (warm greys between --panel, --bg and --surface-muted). */
+     Soft sand names only the main surfaces; these in-between shades are
+     derived from them (warm sands between --panel, --bg and --surface-muted). */
   --on-brand: #ffffff;         /* white text on a primary/danger fill */
-  --on-accent: #f3f2ee;        /* nav label on the top bar (Fjell sidebar text) */
-  --on-accent-muted: #c9cbbf;  /* .clock, .shop-info on the top bar */
-  --hover-bg: #e8e7e1;         /* .btn:hover, .btn-ghost:hover, .auth-tab:hover */
-  --hover-subtle: #f3f2ee;     /* .search-dropdown-item:hover, data-table tr:hover */
-  --surface-today: #f7f8ea;    /* .wk-cell.today etc: --panel with a hint of --highlight */
-  --surface-disabled: #e8e7e1; /* .price-input:disabled */
-  --surface-sunken: #e8e7e1;   /* .wk-day-header.day-off */
-  --hatch-a: #efeee9;          /* day-off diagonal stripe, lighter band */
-  --hatch-b: #e8e7e1;          /* day-off diagonal stripe, darker band */
+  --on-accent: #f4eee1;        /* nav label on the top bar (the dark rail's text) */
+  --on-accent-muted: #aca79d;  /* .clock, .shop-info on the top bar: the rail's muted text (65% sand) */
+  --hover-bg: #efe8d6;         /* .btn:hover, .btn-ghost:hover, .auth-tab:hover */
+  --hover-subtle: #f4eee1;     /* .search-dropdown-item:hover, data-table tr:hover */
+  --surface-today: #fcf6e8;    /* .wk-cell.today etc: --panel with a hint of --highlight */
+  --surface-disabled: #f0eadc; /* .price-input:disabled */
+  --surface-sunken: #f0eadc;   /* .wk-day-header.day-off */
+  --hatch-a: #f2ecdf;          /* day-off diagonal stripe, lighter band */
+  --hatch-b: #f0eadc;          /* day-off diagonal stripe, darker band */
   --hatch-full: #f2e3b8;       /* day-full diagonal stripe (amber) */
 
   /* Pop-up background. Shops used to tint this through their colour scheme;
-     the staff app is always Fjell now, so pop-ups are the Fjell panel and
+     the staff app is always Soft sand now, so pop-ups are the panel and
      their fields are told apart by --input-border. */
-  --modal-bg: #fbfbf9;
+  --modal-bg: #fffdf7;
 
   /* ---------- Type families ---------- */
-  --font-sans: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   /* Numbers people read or match: prices, SKUs, receipt and job numbers. */
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 

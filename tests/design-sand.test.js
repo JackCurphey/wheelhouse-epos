@@ -1,7 +1,11 @@
-// tests/design-fjell.test.js
+// tests/design-sand.test.js
 //
-// Fjell is the Wheelhouse design system (Jack, 27 Sep 2026; decision record
-// docs/decisions/2026-09-27-fjell-theme.md). public/tokens.css is the source
+// Soft sand is the Wheelhouse look (Jack, 28 Sep 2026: "Soft sand, dark
+// rail", sans-serif throughout; decisions 48 and 53 in
+// docs/decisions/2026-09-27-workshop-day-review.md). It replaced Fjell
+// (docs/decisions/2026-09-27-fjell-theme.md). The values are the drawings'
+// own (SAND in docs/design/user-journeys/generator/ui.mjs), so the app
+// matches what Jack approved. public/tokens.css is the source
 // of truth for the vanilla staff app; src/styles/theme.css carries the same
 // values for the React apps. Nothing links the two files, so this test is
 // what keeps them from drifting apart.
@@ -14,37 +18,43 @@ const themeCss = readFile('src/styles/theme.css');
 const theme = parseRootTokens(themeCss);
 const dark = new Map([...theme, ...parseBlockTokens(themeCss, '.dark')]);
 
-// The owner-approved Fjell values, by tokens.css name.
-const FJELL = {
-  '--bg': '#f3f2ee',
-  '--panel': '#fbfbf9',
-  '--ink': '#1c1e19',
-  '--muted': '#56594f',
-  '--surface-muted': '#e8e7e1',
-  '--border': '#dcdbd3',
-  '--input-border': '#83867a', // darkened by Jack, 27 Sep: 3:1 on page, panel and grey panel
-  '--brand': '#3f4d33',
-  '--brand-dark': '#2a3024',
-  '--accent': '#3f4d33',
-  '--accent-dark': '#2a3024',
+// The approved Soft sand values, by tokens.css name (ui.mjs SAND).
+const SAND = {
+  '--bg': '#f4eee1',
+  '--panel': '#fffdf7',
+  '--ink': '#2a2822',
+  '--muted': '#6e6752',
+  '--surface-muted': '#f0eadc',
+  '--border': '#e6dfcb',
+  '--input-border': '#6e6752',
+  '--brand': '#2a2822',
+  '--brand-dark': '#262420',
+  '--accent': '#2a2822',
+  '--accent-dark': '#262420',
   '--on-brand': '#ffffff',
-  '--on-accent': '#f3f2ee',
-  '--highlight': '#c5cf3e',
-  '--on-highlight': '#1c1e19',
-  '--danger': '#a8321f',
+  '--on-accent': '#f4eee1',
+  '--highlight': '#d9a441',
+  '--on-highlight': '#2a2822',
+  '--danger': '#9c3b2c',
+  '--danger-bg': '#f6e3de',
+  '--warn-bg': '#f7eac2',
+  '--warn-ink': '#7a5a10',
+  '--ok-bg': '#e1eedd',
+  '--hover-bg': '#efe8d6',
+  '--modal-bg': '#fffdf7',
   '--radius': '10px',
   '--radius-sm': '6px',
 };
 
-test('tokens.css holds the approved Fjell values', () => {
-  const wrong = Object.entries(FJELL)
+test('tokens.css holds the approved Soft sand values', () => {
+  const wrong = Object.entries(SAND)
     .filter(([name, value]) => (tokens.get(name) || '').toLowerCase() !== value)
-    .map(([name, value]) => `${name} is ${tokens.get(name)}, Fjell says ${value}`);
+    .map(([name, value]) => `${name} is ${tokens.get(name)}, Soft sand says ${value}`);
   assert.deepEqual(wrong, []);
 });
 
-test('the font tokens lead with the self-hosted Fjell fonts and fall back to system fonts', () => {
-  assert.match(tokens.get('--font-sans') || '', /^"Work Sans",.*\bsans-serif$/);
+test('the font tokens lead with the self-hosted Soft sand fonts and fall back to system fonts', () => {
+  assert.match(tokens.get('--font-sans') || '', /^"Public Sans",.*\bsans-serif$/);
   assert.match(tokens.get('--font-mono') || '', /^"DM Mono",.*\bmonospace$/);
 });
 
@@ -86,8 +96,8 @@ for (const state of ['pending', 'scheduled', 'waiting_parts', 'on_hold', 'comple
 // Genuine differences, each with its reason. Nothing else may differ.
 const KNOWN_DIFFERENCES = {
   // theme.css kept the old paler ink pending Jack's sign-off (see its comment);
-  // status colours are out of scope for Fjell and stay exactly as they are.
-  '--status-complete-paid-ink': 'status colours unchanged by Fjell',
+  // status colours are out of scope for the look and stay exactly as they are.
+  '--status-complete-paid-ink': 'status colours unchanged by Fjell or Soft sand',
 };
 
 test('theme.css carries the same values as tokens.css', () => {
@@ -98,7 +108,7 @@ test('theme.css carries the same values as tokens.css', () => {
   assert.deepEqual(drift, []);
 });
 
-test('theme.css radius is the Fjell 6px, so rounded-xl is the 10px card radius', () => {
+test('theme.css radius is 6px, so rounded-xl is the 10px card radius', () => {
   assert.equal(theme.get('--radius'), '6px');
   assert.match(themeCss, /--radius-xl:\s*calc\(var\(--radius\) \+ 4px\)/);
 });
@@ -116,6 +126,7 @@ const THEME_PAIRS = [
   ['white on primary hover', '--wh-on-brand', '--accent-dark', AA],
   ['white on danger', '--wh-on-brand', '--wh-danger', AA],
   ['sidebar text on sidebar', '--wh-on-accent', '--accent-dark', AA],
+  ['sidebar active text on the active item', '--wh-highlight', '--wh-sidebar-active', AA],
   ['dark text on highlight', '--wh-on-highlight', '--wh-highlight', AA],
   ['input border on panel', '--wh-input-border', '--wh-panel', UI],
   ['input border on the page', '--wh-input-border', '--wh-bg', UI],
@@ -133,6 +144,26 @@ for (const [mode, map] of [['light', theme], ['dark', dark]]) {
   }
 }
 
+// Soft sand outlines its delete buttons (decision 53), so the danger colour is
+// text on the panel. Light mode only: nothing switches the dark palette on.
+test('theme.css light: danger text on panel (outlined delete button) clears 4.5:1', () => {
+  const ratio = contrast(theme.get('--wh-danger'), theme.get('--wh-panel'));
+  assert.ok(ratio >= AA, `danger on panel is ${ratio}, needs >= ${AA}`);
+});
+
 test('--input is the input border, not the decorative border', () => {
   assert.match(themeCss, /--input:\s*var\(--wh-input-border\);/);
+});
+
+// Soft sand's dark rail: the selected sidebar item is a lighter charcoal with
+// amber text (look-4 in docs/design/user-journeys/generator/looks.mjs).
+test("the sidebar's selected item is the lighter charcoal with amber text", () => {
+  assert.equal((theme.get('--wh-sidebar-active') || '').toLowerCase(), '#39352e');
+  assert.match(themeCss, /--sidebar-primary:\s*var\(--wh-sidebar-active\);/);
+  assert.match(themeCss, /--sidebar-primary-foreground:\s*var\(--wh-highlight\);/);
+});
+
+// Soft sand cards sit on a hairline border with no shadow (ui.mjs SAND).
+test('cards have no shadow in Soft sand', () => {
+  assert.equal(theme.get('--wh-shadow'), 'none');
 });

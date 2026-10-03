@@ -9,10 +9,12 @@ import { cn } from '@/lib/utils';
  * Mirrors the existing `.btn` family in public/styles.css one-for-one so the
  * React screens sit next to the vanilla screens without a visible seam.
  *
- * Colour rule: every colour is a token from src/styles/theme.css (Fjell).
- * `primary` and `accent` are the same Fjell primary - Fjell has one action
- * colour. They stay CSS custom properties rather than baked-in values, so a
- * future per-shop theme for customer pages can still set them at runtime.
+ * Colour rule: every colour is a token from src/styles/theme.css (Soft sand).
+ * `primary` and `accent` are the same charcoal primary - Soft sand has one
+ * action colour. They stay CSS custom properties rather than baked-in values,
+ * so a future per-shop theme for customer pages can still set them at runtime.
+ * `danger` is outlined, never a solid red fill (decision 53 in
+ * docs/decisions/2026-09-27-workshop-day-review.md).
  */
 const buttonVariants = cva(
   [
@@ -28,7 +30,7 @@ const buttonVariants = cva(
         default: 'border-[var(--border)] bg-[var(--wh-panel)] text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]',
         primary: 'border-[var(--wh-brand)] bg-[var(--wh-brand)] text-[var(--wh-on-brand)] hover:bg-[var(--wh-brand-dark)]',
         accent: 'border-[var(--accent)] bg-[var(--accent)] text-[var(--wh-on-brand)] hover:bg-[var(--accent-dark)]',
-        danger: 'border-[var(--wh-danger)] bg-[var(--wh-danger)] text-[var(--wh-on-brand)] hover:bg-[var(--wh-danger-hover)]',
+        danger: 'border-[var(--wh-danger)] bg-transparent text-[var(--wh-danger)] hover:bg-[var(--wh-danger-bg)]',
         ghost: 'border-transparent bg-transparent text-[var(--wh-ink)] hover:bg-[var(--wh-hover)]',
       },
       size: {

@@ -89,7 +89,7 @@ input[type="number"]::-webkit-inner-spin-button {
   font-weight: 600;
 }
 
-/* Fjell: hover lifts to the primary; the current tab wears the highlight,
+/* Hover lifts to the primary; the current tab wears the highlight,
    always with dark text. */
 .nav button:hover { background: var(--accent); }
 
@@ -160,8 +160,9 @@ h3 { font-size: var(--text-base); margin: 0 0 8px; color: var(--muted); text-tra
 .btn-accent { background: var(--accent); border-color: var(--accent); color: var(--on-brand); }
 .btn-accent:hover { background: var(--accent-dark); }
 
-.btn-danger { background: var(--danger); border-color: var(--danger); color: var(--on-brand); }
-.btn-danger:hover { background: var(--danger-hover); }
+/* Outlined, never a solid red fill (Soft sand, decision 53). */
+.btn-danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: var(--danger-bg); }
 
 .btn-sm { padding: 5px 10px; font-size: var(--text-sm); border-radius: 6px; }
 .btn-ghost { background: transparent; border-color: transparent; }
@@ -1235,7 +1236,7 @@ table.data-table td.num, table.data-table th.num { text-align: right; }
 }
 
 .modal {
-  /* The Fjell panel (--modal-bg). Fields inside keep their --input-border
+  /* The panel colour (--modal-bg). Fields inside keep their --input-border
      edge (.field input/select/textarea), so they read as distinct boxes
      instead of blending into the modal. */
   background: var(--modal-bg);

@@ -7090,8 +7090,8 @@ function renderAuthScreen() {
 }
 
 // ---------------- Website colour schemes ----------------
-// The staff app always uses Fjell, the Wheelhouse design system (Jack,
-// 27 Sep 2026; docs/decisions/2026-09-27-fjell-theme.md) - shops no longer
+// The staff app always uses one Wheelhouse look (Fjell from 27 Sep 2026,
+// docs/decisions/2026-09-27-fjell-theme.md; Soft sand since) - shops no longer
 // recolour it. These presets are offered only for the shop's public website:
 // the Storefront panel's Theme menu (Edit Shop > Office) saves the key, and
 // public-storefront/storefront.js holds the matching colours. Kept in step

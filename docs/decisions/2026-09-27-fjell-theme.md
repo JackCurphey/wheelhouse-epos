@@ -130,10 +130,10 @@ other unhashed file in `public/`, the fonts are served `no-store`.
 ## How to change the theme later
 
 1. Change the value in **`public/tokens.css`** and the matching `--wh-*` value
-   in **`src/styles/theme.css`**. `tests/design-fjell.test.js` fails if they
-   disagree, and pins the approved Fjell values - update its `FJELL` table in
+   in **`src/styles/theme.css`**. `tests/design-sand.test.js` (was
+   `design-fjell`) fails if they disagree, and pins the approved values - update its `SAND` table in
    the same change, with the reason.
-2. Run `npm test`. The contrast tests (`design-contrast`, `design-fjell`)
+2. Run `npm test`. The contrast tests (`design-contrast`, `design-sand`)
    check text at 4.5:1 and field borders at 3:1, in light and dark.
 3. Colours in React code must be tokens: `tests/design-tokens.test.js` fails
    on any hex, `rgb()`, palette class like `bg-white`, or `white` inside an
@@ -147,3 +147,14 @@ other unhashed file in `public/`, the fonts are served `no-store`.
    the `@font-face` blocks in both stylesheets. A radius change moves every
    control's corners; theme.css derives all Tailwind radii from `--radius`.
 5. Update this record.
+
+## Superseded by Soft sand (3 Oct 2026)
+
+The app switched to Soft sand, the look of the approved drawings (Workshop
+day decisions 48 and 53, 28 Sep). Spec:
+`docs/superpowers/specs/2026-10-03-soft-sand-theme-design.md`. Public Sans
+replaced Work Sans: `public/fonts/public-sans/public-sans-latin-wght.woff2`
+is the Latin variable file from Fontsource (`@fontsource-variable/public-sans`
+5.3.0), SIL Open Font License (`OFL.txt` beside it). The "How to change the
+theme later" steps above still apply, with `design-sand` in place of
+`design-fjell`.
