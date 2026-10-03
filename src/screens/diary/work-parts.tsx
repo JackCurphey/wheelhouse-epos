@@ -1,7 +1,10 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button.tsx';
+import { ItemSearch } from './item-search.tsx';
+import { QuotePanel } from './quote-panel.tsx';
+import type { WorkshopJob } from '@/lib/api/types.ts';
 
 /**
  * A job's work and parts (journey 12; decision 46: labour above parts), on
@@ -20,8 +23,6 @@ type Line = {
   lineTotal: number; lineType: string | null; serviceId: number | null; minutes: number | null;
 };
 type Order = { id: number; status: string; total: number; items: Line[] };
-type Product = { id: number; name: string; sku: string | null; barcode: string | null; price: number; stockQty: number };
-type Service = { id: number; name: string; price: number; minutes: number; active: boolean };
 
 const money = (n: number) => `£${Number(n).toFixed(2)}`;
 const isLabour = (l: Line) => l.lineType === 'labour';
@@ -37,25 +38,14 @@ function asInput(l: Line) {
   return { productId: l.productId, qty: l.qty, unitPrice: l.unitPrice };
 }
 
-export function WorkParts({ orderId }: { orderId: number }) {
+export function WorkParts({ orderId, job }: { orderId: number; job?: WorkshopJob }) {
   const queryClient = useQueryClient();
   const order = useQuery({ queryKey: ['sale-document', orderId], queryFn: () => apiGet<Order>(`/api/sale-documents/${orderId}`) });
   const [adding, setAdding] = useState(false);
-  const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [qtyDraft, setQtyDraft] = useState<Record<number, string>>({});
 
-  const term = search.trim();
-  const products = useQuery({
-    queryKey: ['products', term],
-    queryFn: () => apiGet<Product[]>(`/api/products?search=${encodeURIComponent(term)}`),
-    enabled: adding && term.length >= 2,
-  });
-  const services = useQuery({ queryKey: ['workshop-services'], queryFn: () => apiGet<Service[]>('/api/workshop-services'), enabled: adding });
-  const serviceHits = term.length >= 2
-    ? (services.data ?? []).filter((s) => s.active && s.name.toLowerCase().includes(term.toLowerCase()))
-    : [];
 
   const lines = order.data?.items ?? [];
   const editable = order.data?.status === 'open';
@@ -81,18 +71,7 @@ export function WorkParts({ orderId }: { orderId: number }) {
   }
 
   async function add(input: Record<string, unknown>) {
-    if (await save([...sorted.map(asInput), input])) {
-      setSearch('');
-      setAdding(false);
-    }
-  }
-
-  function onSearchKey(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    // A scanner types the barcode, then Enter: add the product it matches exactly.
-    const exact = (products.data ?? []).find((p) => p.barcode === term || p.sku === term);
-    if (exact) void add({ productId: exact.id, qty: 1, unitPrice: exact.price });
+    if (await save([...sorted.map(asInput), input])) setAdding(false);
   }
 
   function commitQty(line: Line) {
@@ -116,35 +95,13 @@ export function WorkParts({ orderId }: { orderId: number }) {
         </div>
       ) : null}
       {adding ? (
-        <div className="flex flex-col gap-1.5 rounded-md border border-[var(--wh-border)] bg-[var(--wh-panel)] p-2.5">
-          <label htmlFor="wp-search" className="text-sm font-semibold">Search products or services, or scan a barcode</label>
-          <input
-            id="wp-search"
-            type="search"
-            autoComplete="off"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={onSearchKey}
-            className="min-h-11 w-full rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 text-sm"
-          />
-          <div className="flex flex-col gap-1">
-            {serviceHits.map((s) => (
-              <button key={`s${s.id}`} type="button" disabled={saving} onClick={() => add({ lineType: 'labour', serviceId: s.id })} className="flex min-h-11 items-center justify-between gap-3 rounded-md px-2.5 text-left text-sm hover:bg-[var(--wh-hover)]">
-                <span>{`${s.name} · ${money(s.price)}`}</span>
-                <span className="text-xs text-[var(--wh-muted)]">Labour</span>
-              </button>
-            ))}
-            {(products.data ?? []).map((p) => (
-              <button key={`p${p.id}`} type="button" disabled={saving} onClick={() => add({ productId: p.id, qty: 1, unitPrice: p.price })} className="flex min-h-11 items-center justify-between gap-3 rounded-md px-2.5 text-left text-sm hover:bg-[var(--wh-hover)]">
-                <span>{`${p.name} · ${money(p.price)}`}</span>
-                <span className="text-xs text-[var(--wh-muted)]">{p.stockQty > 0 ? `${p.stockQty} in stock` : 'None in stock'}</span>
-              </button>
-            ))}
-            {term.length >= 2 && products.isSuccess && products.data.length === 0 && serviceHits.length === 0 ? (
-              <span className="px-2.5 text-[13px] text-[var(--wh-muted)]">Nothing matches “{term}”.</span>
-            ) : null}
-          </div>
-        </div>
+        <ItemSearch
+          id="wp-search"
+          disabled={saving}
+          onPick={(p) => add(p.type === 'service'
+            ? { lineType: 'labour', serviceId: p.service.id }
+            : { productId: p.product.id, qty: 1, unitPrice: p.product.price })}
+        />
       ) : null}
       {error ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{error}</p> : null}
       {order.data ? (
@@ -201,6 +158,7 @@ export function WorkParts({ orderId }: { orderId: number }) {
         </div>
       ) : null}
       {order.data && !editable ? <p className="m-0 text-[13px] text-[var(--wh-muted)]">This job&apos;s order is closed, so its work and parts can&apos;t be changed here.</p> : null}
+      {job && order.data && editable ? <QuotePanel job={job} orderTotal={Number(order.data.total)} /> : null}
     </div>
   );
 }
