@@ -139,3 +139,30 @@ Below 768px the diary is one day at a time (decision 68, diary-phone):
 
 The top bar's action slot comes from the frame (`src/staff/header-slot.ts`).
 The "+" for a new job arrives with piece 5.
+
+## Piece 5a: New job (built 3 Oct)
+
+- **New job** in the toolbar (the "+" in the phone's top bar) turns the
+  diary to "Choose a time" (decision 22): busy blocks fade, a click on the
+  grid opens the form at that time (snapped to 15 minutes). "Enter a time
+  instead" opens the form without picking, for keyboard users. Cancel backs
+  out.
+- **The form** (new-job, new-job-day), with only what the server saves:
+  New bike build or pre-delivery check (decision 50: the customer becomes
+  optional); find a customer by name, phone or email; their bike (an only
+  bike is chosen for you); Work as pills, Full service / Individual service
+  (decision 66), from the shop's active services, which fill the title and
+  the length; Job title; Notes; the time and mechanic, with the mechanic
+  chosen automatically as the one working that day with most free time
+  (decision 18) or the column's mechanic in the Day view, changeable;
+  Starting status (Booked / Waiting for parts); "The bike is here now",
+  which books it in straight after saving.
+- Saving is `POST /api/workshop-jobs`; the server's reason for a refusal is
+  shown and the form stays open.
+
+Not yet, because the server has nowhere to keep them: storage hooks,
+separate customer and staff notes, "+ New customer" and "+ Add a bike" from
+the form, and the free-time warning.
+
+Still to come in piece 5: the hover summary, stacks that fan out, and the
+right-click menu (they open the job page, which isn't built yet).

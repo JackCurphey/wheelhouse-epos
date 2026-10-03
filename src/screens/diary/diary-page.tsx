@@ -7,6 +7,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
+import { NewJobDialog } from './new-job-dialog.tsx';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import {
   LEGEND, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
@@ -23,7 +24,7 @@ import {
  * reload or a shared link opens the same week.
  */
 
-type Mechanic = { id: number; name: string; active: boolean };
+type Mechanic = { id: number; name: string; active: boolean; workingDays?: number[] };
 type Settings = { openingHours?: { weekday: number; open: string; close: string }[] };
 type Waiting = { count: number; items: WaitingItem[] };
 
@@ -80,6 +81,10 @@ type MoveApi = {
 };
 const MoveContext = createContext<MoveApi | null>(null);
 
+/** New job's "choose a time" step (decision 22): a click on a column picks the time there. */
+type PickApi = { onPick: (colIndex: number, y: number) => void } | null;
+const PickContext = createContext<PickApi>(null);
+
 /** A booking request is answered before it is moved; a cancellation isn't moved at all. */
 const movable = (j: Shown) => Boolean(j.startTime) && j.state !== 'pending' && j.state !== 'cancelled';
 
@@ -88,6 +93,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
 }) {
   const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
+  const picking = useContext(PickContext);
   const moving = move?.preview?.jobId === job.id ? move.preview : null;
   const start = moving ? moving.startMin : toMinutes(job.startTime as string);
   const end = moving ? moving.startMin + moving.durationMin : job.endTime ? toMinutes(job.endTime) : start + 30;
@@ -106,7 +112,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
     style.left = 3;
     style.right = 3;
   }
-  const className = `absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''}`;
+  const className = `absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`;
   const inner = (
     <>
       <span className={SR}>{describe(job, chosen)}</span>
@@ -118,7 +124,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
       </span>
     </>
   );
-  if (!move || !movable(job)) {
+  if (!move || !movable(job) || picking) {
     return (
       <div title={describe(job, false)} className={className} style={style}>
         {inner}
@@ -170,12 +176,16 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
     return { id: j.id, start: s, end: j.endTime ? toMinutes(j.endTime) : s + 30 };
   }));
   const height = ((range.end - range.start) / 30) * SLOT_H;
+  const pick = useContext(PickContext);
   return (
+    // While choosing a time for a new job, a click on the column picks the
+    // time there; "Enter a time instead" is the keyboard way (decision 22).
     <div
       role="group"
       aria-label={label}
       data-diary-col={index}
-      className="relative border-l border-[var(--wh-border)] first:border-l-0"
+      onClick={pick ? (e) => pick.onPick(index, e.clientY - e.currentTarget.getBoundingClientRect().top) : undefined}
+      className={`relative border-l border-[var(--wh-border)] first:border-l-0 ${pick ? 'cursor-pointer bg-[var(--wh-accent-soft)]/30' : ''}`}
       style={{
         height,
         backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent ${SLOT_H * 2 - 1}px, var(--wh-border) ${SLOT_H * 2 - 1}px, var(--wh-border) ${SLOT_H * 2}px)`,
@@ -491,6 +501,55 @@ export function DiaryPage() {
     />
   );
 
+  // ---- New job (piece 5) ----
+  const [picking, setPicking] = useState(false);
+  const [newJob, setNewJob] = useState<{ date: string; startMin: number; mechanicId: number | null; auto: boolean } | null>(null);
+  /** Decision 18: the mechanic working that day with the most free time (fewest booked minutes). */
+  const freest = (day: string): number | null => {
+    const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+    const working = people.filter((m) => !Array.isArray(m.workingDays) || m.workingDays.includes(weekday));
+    const pool = working.length ? working : people;
+    let best: number | null = null;
+    let bestMinutes = Infinity;
+    for (const m of pool) {
+      const booked = (jobs.data ?? []).filter((j) => j.jobDate === day && j.mechanicId === m.id && j.startTime && j.endTime)
+        .reduce((sum, j) => sum + toMinutes(j.endTime as string) - toMinutes(j.startTime as string), 0);
+      if (booked < bestMinutes) { best = m.id; bestMinutes = booked; }
+    }
+    return best;
+  };
+  const pickApi: PickApi = picking ? {
+    onPick(colIndex, y) {
+      const c = columns[colIndex];
+      const startMin = dropStart(y, range, 30, slotPx);
+      const fixed = view === 'day' && !c.all;
+      setNewJob({ date: c.date, startMin, mechanicId: fixed ? c.mechanicId : freest(c.date), auto: !fixed });
+      setPicking(false);
+    },
+  } : null;
+  const enterInstead = () => {
+    setNewJob({ date, startMin: range.start, mechanicId: freest(date), auto: true });
+    setPicking(false);
+  };
+  const newJobDialog = newJob ? (
+    <NewJobDialog
+      key={`${newJob.date}-${newJob.startMin}`}
+      date={newJob.date}
+      startMin={newJob.startMin}
+      mechanicId={newJob.mechanicId}
+      autoChosen={newJob.auto}
+      people={people}
+      onClose={() => setNewJob(null)}
+    />
+  ) : null;
+  const pickBar = picking ? (
+    <div role="status" className="flex flex-wrap items-center gap-2.5 rounded-lg border border-[var(--wh-highlight)] bg-[var(--wh-accent-soft)] px-3 py-2 text-sm text-[var(--wh-accent-soft-ink)]">
+      <span className="grow font-semibold">Choose a time for the new job.</span>
+      <button type="button" onClick={enterInstead} className="min-h-11 rounded-md px-3 font-semibold underline">Enter a time instead</button>
+      <button type="button" onClick={() => setPicking(false)} className="min-h-11 rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-3 font-semibold text-[var(--wh-ink)]">Cancel</button>
+    </div>
+  ) : null;
+
   // ---- Phone (piece 4) ----
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -540,6 +599,18 @@ export function DiaryPage() {
             <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-panel)] px-[7px] text-[13px] font-bold text-[var(--wh-ink)]">
               {waiting.data?.count ?? items.length}
             </span>
+          </button>,
+          headerSlot,
+        ) : null}
+        {headerSlot ? createPortal(
+          <button
+            type="button"
+            aria-label={picking ? 'Choose a time' : 'New job'}
+            aria-pressed={picking}
+            onClick={() => setPicking((v) => !v)}
+            className={`inline-flex size-11 items-center justify-center rounded-[10px] text-[22px] ${picking ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)] shadow-[0_0_0_3px_var(--wh-highlight)]' : 'bg-[var(--wh-panel)] text-[var(--wh-ink)]'}`}
+          >
+            <span aria-hidden="true">+</span>
           </button>,
           headerSlot,
         ) : null}
@@ -625,6 +696,7 @@ export function DiaryPage() {
           ) : null}
         </div>
 
+        {pickBar ? <div className="px-3.5 pt-2.5">{pickBar}</div> : null}
         <p id="diary-move-hint" className={SR}>Drag a job to move it, or press Enter to pick it up and use the arrow keys.</p>
         <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
         {moveError ? <p role="alert" className="m-3.5 mb-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
@@ -639,6 +711,7 @@ export function DiaryPage() {
             </div>
           ) : null}
           <SlotContext.Provider value={PHONE_SLOT_H}>
+            <PickContext.Provider value={pickApi}>
             <MoveContext.Provider value={moveApi}>
               <div className="grid pt-2" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(0, 1fr))` }}>
                 <div aria-hidden="true" className="relative" style={{ height: ((range.end - range.start) / 30) * PHONE_SLOT_H }}>
@@ -653,6 +726,7 @@ export function DiaryPage() {
                 ))}
               </div>
             </MoveContext.Provider>
+            </PickContext.Provider>
           </SlotContext.Provider>
         </section>
 
@@ -707,6 +781,7 @@ export function DiaryPage() {
         </Dialog>
 
         {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
+        {newJobDialog}
       </div>
     );
   }
@@ -747,7 +822,19 @@ export function DiaryPage() {
           {chip('all', 'Everyone', 'Everyone', <NavIcon name="customers" size={13} />, whoId === null)}
           {people.map((m) => chip(String(m.id), m.name.split(' ')[0], m.name, initial(m.name), whoId === m.id))}
         </div>
+        <div className="w-5 shrink-0" />
+        {picking ? (
+          <button type="button" aria-pressed="true" onClick={() => setPicking(false)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
+            Choose a time
+          </button>
+        ) : (
+          <button type="button" onClick={() => { setPicking(true); setMoveError(null); }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent)] px-4 text-[15px] font-semibold text-[var(--wh-on-brand)]">
+            <span aria-hidden="true">+</span>
+            New job
+          </button>
+        )}
       </div>
+      {pickBar}
 
       <div className="flex items-start gap-4">
         {/* Waiting for you (decision 14). */}
@@ -797,7 +884,7 @@ export function DiaryPage() {
           <p id="diary-move-hint" className={SR}>Drag a job to move it, or press Enter to pick it up and use the arrow keys.</p>
           <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
           {moveError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
-          <div className="overflow-x-auto"><MoveContext.Provider value={moveApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</MoveContext.Provider></div>
+          <div className="overflow-x-auto"><PickContext.Provider value={pickApi}><MoveContext.Provider value={moveApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</MoveContext.Provider></PickContext.Provider></div>
           {jobs.isError ? <p role="alert">Wheelhouse couldn&apos;t load the diary. Try again in a moment.</p> : null}
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
             {LEGEND.map((s) => (
@@ -810,6 +897,7 @@ export function DiaryPage() {
         </div>
       </div>
       {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
+      {newJobDialog}
     </div>
   );
 }
