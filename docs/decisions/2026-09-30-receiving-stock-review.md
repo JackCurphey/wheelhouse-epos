@@ -165,3 +165,5 @@ decision 2 (orders are placed on the supplier's website or by phone, then
 marked as ordered), and the catalogue needs real supplier feeds — only a
 pretend Madison list exists, and the Madison trade account isn't recorded as
 opened.
+
+**Later change (3 Oct 2026, issue #116 question 6):** Jack, 3 Oct: "2". The supplier invoice check (decision 6), with its Settings › Stockroom switch, comes later. Until then, the VAT report's "Stock purchases" box points to the accounts software instead of giving a figure (Reports and accounts, later change). Chosen over keeping it, drawn as 2 screens. The drawings are not changed yet; they are redone when the canvases are merged (issue #116 step 3).
