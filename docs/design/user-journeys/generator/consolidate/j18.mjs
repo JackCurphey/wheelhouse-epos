@@ -4,7 +4,7 @@ import { keep, into, later } from './plan.mjs';
 
 export default {
   'ws-start-which': keep(24),
-  'ws-start-look': keep(18), // step 2 of the set-up, its own step
+  'ws-start-look': keep(24), // step 2 of the set-up, its own step
   'ws-start-products': into('ws-start-which', '', "Step 3 of 3: 'Every product online' or 'Nothing online'; counts with no photo or no price; 'Make my website'"),
   'ws-start-products-answered': into('ws-start-which', '', "Step 3 shows the earlier answer: 'Started with every product online on [date]' with 'Change'"),
   'ws-editor-first': later('Issue #116 question 2: fixed website design, editor later'),
