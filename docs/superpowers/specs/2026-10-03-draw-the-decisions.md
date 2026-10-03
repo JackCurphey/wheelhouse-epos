@@ -674,3 +674,9 @@ and why.
   step is the current step, with "Turn it on" (wording from `website.mjs`);
   deferred Settings folds are still drawn on the deferred boards that open
   them; W3's "Wheelhouse sets up your own address for you".
+- R1 drawn after Jack's answer (3 Oct, "1": the strip follows the shop menu):
+  Takings, Margin (owners and anyone with "Can see costs and margin") and the
+  shop as a link, above the report cards on `rp-home`; the period, VAT basis
+  and link target stay bracketed. A line on `rp-home` covers "All shops".
+  The strip pushes "Your reports" partly below the board's edge, as the page
+  would scroll.

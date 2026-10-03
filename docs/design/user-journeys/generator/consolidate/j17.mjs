@@ -47,6 +47,7 @@ export default {
 // Decisions drawn as lines, with no old drawing behind them ("Draw the
 // decisions" spec, section 2: R2–R4).
 export const lines = [
+  { on: 'rp-home', text: 'All shops in the shop menu: the strip has a row for each shop — takings, margin and a link to that shop', who: 'Owner', decision: 'Issue #116 question 1; Multiple sites 1 (Jack, 3 Oct: the strip follows the shop menu)' },
   { on: 'rp-home', text: 'Staff with Can see reports, without Can see costs and margin: no margin figure in the strip', who: 'Staff', decision: 'Reports and accounts 5; issue #116 question 1' },
   { on: 'rp-margin', text: 'Margin and stock value for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },
   { on: 'rp-discounts', text: 'Discounts and refunds for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },

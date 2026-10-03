@@ -129,7 +129,17 @@ const mine = (name, sub, who, own = true) => `<div style="display: flex; align-i
 const yourReports = (staff) => box(`${h3('Your reports')}${note('Start from any report, choose “Change what’s shown”, then “Save as my report”.')}${staff
   ? `${mine('[Report name]', 'Sales: items sold by product · Accessories only', 'Just you')}${mine('[Report name]', 'Workshop: jobs by service', 'Shared by Jack Lewis', false)}`
   : `${mine('[Report name]', 'Sales: items sold by product · Accessories only', 'Shared with managers')}${mine('[Report name]', 'Workshop: jobs by service', 'Just you')}`}`);
+// The figures strip (issue #116 question 1, Jack, 3 Oct: "1"; and 3 Oct,
+// "1": it follows the shop menu, Multiple sites 1): takings by shop, margin
+// (labelled Margin, not Profit) and a link to the shop, above the cards.
+// "All shops" in the menu gives one row per shop (a situation line). Margin
+// only with "Can see costs and margin" (Reports and accounts 5). Still open
+// for Jack, so bracketed: the period, takings with or without VAT, and what
+// the shop's link opens.
+const shopLink = (name) => `<a href="#" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">Shop</span><span style="font-size: 17px; font-weight: 700">${name}</span></span><span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
+const strip = (staff) => box(`${h3('[period]')}${stats([stat('Takings', '£[£]', ''), ...(staff ? [] : [stat('Margin', `£[£] · ${mono('[%]')}`, '')]), shopLink('North Street Cycles, Bolton')])}`);
 const home = (staff = false) => wrap(`${note(`Thursday 17 September · North Street Cycles, Bolton${staff ? '' : ' · use the shop menu for another shop or all shops'}`)}
+${strip(staff)}
 ${box(`${h3('Ready-made reports')}<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 3}, minmax(0, 1fr)); gap: 10px">${REPORTS.filter((r) => !staff || !r[2]).map(reportCard).join('')}</div>`)}
 ${yourReports(staff)}`, staff ? STAFF : OWNER);
 // The "…" menu on your own saved report (audit M6). One shared with you
