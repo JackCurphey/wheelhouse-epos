@@ -133,7 +133,7 @@ export function readLegacyStatus(status) {
 export const quote = defineMachine({
   name: 'quote',
   initial: 'draft',
-  states: ['draft', 'sent', 'partly_approved', 'approved', 'declined', 'superseded', 'expired'],
+  states: ['draft', 'sent', 'partly_approved', 'approved', 'declined', 'superseded', 'expired', 'withdrawn'],
   transitions: {
     draft: { send: 'sent' },
     sent: {
@@ -142,13 +142,16 @@ export const quote = defineMachine({
       decline_all: 'declined',
       revise: 'superseded',
       expire: 'expired',
+      // The shop takes back a quote the customer hasn't answered (journey 4,
+      // decision 7; migration 038). Final: a new quote is a new revision.
+      withdraw: 'withdrawn',
     },
     // Already-decided lines stay decided; changing the rest means a new
     // proposal for the changed work.
     partly_approved: { revise: 'superseded' },
     approved: { revise: 'superseded' },
   },
-  rest: ['declined', 'superseded', 'expired'],
+  rest: ['declined', 'superseded', 'expired', 'withdrawn'],
 });
 
 const APPROVABLE = new Set(['sent']);

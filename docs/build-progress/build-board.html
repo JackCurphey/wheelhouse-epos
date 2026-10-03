@@ -119,7 +119,7 @@ a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 // republish. Source: docs/build-progress/build-board.html in the repo.
 const BOARD = {
   updated: '3 October 2026',
-  lead: 'Building Workshop day in the new staff app: the diary, then the job page.',
+  lead: 'Building the quote stage: staff send a quote, the customer approves on their booking link.',
   sub: 'All 21 journeys are designed (820 of 823 screens). The new app has its Soft sand look, its sidebar and phone menu, and a diary you can read, answer requests from and move jobs around in.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
@@ -132,8 +132,11 @@ const BOARD = {
     { status: 'next', what: 'Diary 5b: the extras', detail: 'Hover summary, stacks that fan out, right-click menu (they open the job page)' },
     { status: 'done', what: 'Job page 1: open a job and move it on', detail: 'Customer, bike, mechanic, notes, work and parts; Book in, Start work, Waiting for parts, Mark ready, Hand over', pr: 103 },
     { status: 'done', what: 'Job page 2: editing', detail: 'Notes with Save notes, Bike is here, remove a later day', pr: 105 },
-    { status: 'review', what: 'Job page 3: work and parts', detail: 'Add item (services and products), scan a barcode, change quantity, remove; search now ignores capitals', pr: 106 },
-    { status: 'next', what: 'Job page 4 onwards', detail: 'Take payment, the quote stage' },
+    { status: 'done', what: 'Job page 3: work and parts', detail: 'Add item (services and products), scan a barcode, change quantity, remove; search now ignores capitals', pr: 106 },
+    { status: 'review', what: 'Quotes 1: the server', pr: 107, detail: 'Database changes (approved 3 Oct), send by text with a link, record an answer, withdraw, approval adds lines to the job' },
+    { status: 'build', what: 'Quotes 2: staff build and send', detail: 'The quote in the job page table, Send with Undo, Record their answer, Withdraw' },
+    { status: 'next', what: 'Quotes 3: the customer approves', detail: 'Yes or no per line on their booking link, then Approve' },
+    { status: 'next', what: 'Take payment and the till', detail: 'Journey 11' },
     { status: 'done', what: 'Diary 6: jobs over several days', detail: 'One block per day; Add another day on the job page; unfinished jobs carry over by themselves', pr: 104 },
     { status: 'next', what: 'The other journeys', detail: 'Each one: spec, tests first, build, in the order agreed' },
   ],

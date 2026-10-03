@@ -34,7 +34,10 @@ export async function sendSms(toPhone, body) {
 
   let res;
   try {
-    res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    // TWILIO_API_BASE lets the tests point this at a pretend Twilio; it is
+    // never set in production.
+    const base = process.env.TWILIO_API_BASE || 'https://api.twilio.com';
+    res = await fetch(`${base}/2010-04-01/Accounts/${accountSid}/Messages.json`, {
       method: 'POST',
       headers: {
         Authorization: `Basic ${auth}`,

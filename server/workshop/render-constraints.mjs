@@ -24,7 +24,7 @@ export const MIGRATION_COLUMNS = [
   { machine: bookingRequest, column: 'booking_state', migration: '016_workshop_job_states.sql' },
   { machine: custody, column: 'custody_state', migration: '016_workshop_job_states.sql' },
   { machine: work, column: 'work_state', migration: '016_workshop_job_states.sql' },
-  { machine: quote, column: 'state', migration: '017_workshop_quotes.sql' },
+  { machine: quote, column: 'state', migration: '038_quote_stage.sql' },
   { machine: capacityHold, column: 'state', migration: '018_workshop_capacity_holds.sql' },
   { machine: printTask, column: 'state', migration: '019_workshop_print_tasks.sql' },
   { machine: messageIntent, column: 'intent_state', migration: '020_message_intent_state.sql' },
