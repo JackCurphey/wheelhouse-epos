@@ -255,13 +255,9 @@ corrected, using only what an answer or a recorded decision says.
 3. **Walk 11 M3 and L1 (mockup notes on Jo's Sales and on "Show report"):**
    not added; the situation lines under each drawing now say the same.
 4. **Wording the drawers chose where the answers gave none**, for Jack to
-   check: `till-c2w-paid-cert` "Nothing to take from Maya."; `rp-home-all`
-   "use the shop menu for one shop"; `till-checkin-workshop` leaves out the
-   start-up line, "Checked in today", "No PIN yet?" and the phone's menu;
-   `fr-today-moving` lists "The weekly check matched 2 weeks in a row" (from
-   `mv-ready`) in its done steps.
-5. **Side effect of walk 1 M3:** with the diary's other jobs no longer Maya's,
-   Maya's customer page (built from the diary's jobs) lists only WH-1042.
+   check: `rp-home-all` "use the shop menu for one shop"; `till-checkin-workshop`
+   leaves out the start-up line, "Checked in today", "No PIN yet?" and the
+   phone's menu.
 
 ## Decision log
 - 3 Oct: new drawings made situations, not boards, so the one canvas keeps its
@@ -303,4 +299,18 @@ corrected, using only what an answer or a recorded decision says.
   `eod-z`; −1: journey 8's later list); `node fitcheck-canvas.mjs`: 211 boards,
   0 problems; `node mockup/build-mockup.mjs`: 763 screens, 0 dead;
   `node mockup/gaps.mjs`: 96 not drawn, 21 size gaps (was 22), 43 outside.
+
+### Review fixes (3 Oct)
+- `fr-today-moving`: the added "The weekly check matched 2 weeks in a row"
+  step is removed; no decision puts it on Getting started. The move's line
+  keeps "ready to switch over: 3 of 4", the count of the switch-over list as
+  drawn on `mv-ready` after practice sales were dropped (Moving, later change,
+  issue #116 question 4).
+- `till-c2w-paid-cert`: "Nothing to take from Maya." removed; no decision
+  supplies it.
+- `customer.mjs`: Maya's own jobs (WH-1051, 1054, 1056, 1059, 1062, 1071, 1074,
+  1077, as drawn at `1b9dc26`) are held in the module, so the diary's filler
+  rename leaves her history, open jobs and counts as they were (checked: every
+  job row and count on the customer canvas matches the `1b9dc26` build). "jobs"
+  is singular for one.
 

@@ -453,14 +453,11 @@ const STEPS = [
 // are already done for the move, as mv-ready draws them (shared items tick together, from the same
 // setting); Jo's invite is waiting (M3); messages wait for switch-over (H3).
 // Third walk, answer 10 (consolidation-back-office.md finding 5): while a
-// move is on there is one checklist, not two. The switch-over checklist's own
-// item (the weekly check, ticked as mv-ready draws it) joins Getting started,
-// and the three shared steps (card machine, float, website) show once, each
-// saying it is needed to switch over.
-const MOVING_STEPS = [
-  ...STEPS.map((x) => (['Connect the card machine', 'Float and closing up'].includes(x[0]) ? [x[0], x[1], true, x[3], x[4]] : x)),
-  ['The weekly check matched 2 weeks in a row', 'Office › Moving from Citrus Lime', true, 'two weekly checks match', true],
-];
+// move is on there is one checklist: Getting started's own steps, the three
+// shared ones (card machine, float, website) shown once, each saying it is
+// needed to switch over. The move's own checks stay with the move (its line
+// above the list); no step is added that a decision doesn't name.
+const MOVING_STEPS = STEPS.map((x) => (['Connect the card machine', 'Float and closing up'].includes(x[0]) ? [x[0], x[1], true, x[3], x[4]] : x));
 const MOVING_EXTRA = {
   'Invite your staff': '[n] invited, waiting to join',
   'Check the messages customers get': 'none go to customers until switch-over',

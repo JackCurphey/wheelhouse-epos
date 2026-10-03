@@ -428,7 +428,6 @@ def('till-c2w-paid-cert', () => overC2w(dialog('c2wpaid-title', 'Paid', `Cycle t
 <div style="display: flex; flex-direction: column">${paidRow('Cycle to Work · [Provider]', '£[£]')}<span style="padding: 0 0 8px 24px; font-size: 13px; color: ${C.muted}">${C2W_SUB}</span></div>
 <div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 14px; line-height: 1.45">${icon('bike', 18)}<span><strong>[Bike] · [Size] collected</strong>, frame ${mono('[frame number]')}, on Maya’s bike record. Her order is now Collected, with sale ${mono('B1-[0000]')} in its history.</span></div>
 <div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('mail', 'Email')}${rcptBtn('phone', 'Text')}${rcptBtn('close', 'No receipt', true)}</div>
-<p style="margin: 0; text-align: center; font-size: 13px; color: ${C.muted}">Nothing to take from Maya.</p>
 <p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)));
 // Paid with two payments, reached from till-c2w-extra when something is added
 // at the counter (third walk, answer 4): both payments on the receipt; the bike

@@ -22,7 +22,21 @@ const MAYA = { name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.
 // Built on first use, not at load: diary.mjs imports this file (journey 15
 // decision 11) and JOBS isn't ready while that import is starting up.
 let _mj;
-const mj = () => (_mj ??= JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => b.day - a.day || b.start - a.start));
+// Maya's other jobs, as this page drew them before the diary's other blocks
+// stopped using her name (third walk, walk-through 1 M3): held here so the
+// diary's filler jobs don't change her history. WH-1042 is the diary's own.
+const MAYA_OTHER_JOBS = [
+  { day: 0, start: 16 * 60, dur: 60, mech: 'Alex', key: 'waiting', job: 'WH-1051', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '16:00–17:00 · standard service' },
+  { day: 0, start: 15 * 60, dur: 60, mech: 'Jo', key: 'ready', job: 'WH-1054', svc: 'Gear adjustment', title: 'Maya Patel · Trek Domane AL 3', detail: '15:00–16:00 · gear adjustment' },
+  { day: 1, start: 13 * 60, dur: 60, mech: 'Alex', key: 'ready', job: 'WH-1056', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '13:00–14:00 · standard service' },
+  { day: 1, start: 12 * 60, dur: 60, mech: 'Jo', key: 'scheduled', job: 'WH-1059', svc: 'Gear adjustment', title: 'Maya Patel · Trek Domane AL 3', detail: '12:00–13:00 · gear adjustment' },
+  { day: 2, start: 11 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1062', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '11:00–12:00 · standard service' },
+  { day: 4, start: 12 * 60 + 30, dur: 60, mech: 'Alex', key: 'ready', job: 'WH-1071', svc: 'Gear adjustment', title: 'Maya Patel · Trek Domane AL 3', detail: '12:30–13:30 · gear adjustment' },
+  { day: 4, start: 16 * 60 + 15, dur: 60, mech: 'Jo', key: 'ready', job: 'WH-1074', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '16:15–17:15 · standard service' },
+  { day: 5, start: 13 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1077', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '13:00–14:00 · standard service' },
+];
+const mj = () => (_mj ??= [...JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel'), ...MAYA_OTHER_JOBS].sort((a, b) => b.day - a.day || b.start - a.start));
+const jobsWord = (n) => `${n} job${n === 1 ? '' : 's'}`;
 const when = (j) => { const [d, n] = DAYS[j.day]; return `${d} ${n} Sep · ${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`; };
 // Second walk Q11: a job's chip shows its own stage (diary.mjs stageOf).
 const status = (key, label) => { const [bg, ink, w0] = ST[key]; const word = label ?? w0; return `<span style="display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${word}</span>`; };
@@ -50,9 +64,9 @@ const saleRow = () => `<a href="cs-sale-desktop.dc.html" style="display: flex; a
 
 // ---------- Option 1: one page, everything in folding sections ----------
 function optionFolds() {
-  const jobs = `${mj().slice(0, 4).map(jobRow).join('')}<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ${mj().length} jobs</a>`;
+  const jobs = `${mj().slice(0, 4).map(jobRow).join('')}<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ${jobsWord(mj().length)}</a>`;
   const sections = fold('Bikes', 'Trek Domane AL 3')
-    + fold('Workshop jobs', `${mj().length} jobs`, jobs)
+    + fold('Workshop jobs', jobsWord(mj().length), jobs)
     + fold('Sales and refunds', 'B1-[0000] and [n] more')
     + fold('Account and loyalty', 'Owes [£] · [n] points')
     + fold('Messages', 'Texts and emails sent')
@@ -190,7 +204,7 @@ const dupNotice = () => `<div role="status" style="display: flex; align-items: c
 const customerPageDup = () => page('customers', 'Customers', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px">${backLink()}${header()}${dupNotice()}<div style="display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: 16px; align-items: ${isPhone() ? 'stretch' : 'flex-start'}">${summary()}${history()}</div></div>`, STAFF);
 function mergeDialog() {
   const cmpRow = (label, a, b, keepA = true) => `<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : '120px 1fr 1fr'}; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid ${C.border}"><span style="font-size: 13px; font-weight: 700; color: ${C.muted}">${label}</span>${[[a, keepA], [b, !keepA]].map(([v, on]) => `<button type="button" aria-pressed="${on}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${on ? C.ink : C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; text-align: left; color: ${C.ink}">${on ? icon('check', 15) : '<span style="width: 15px"></span>'}${v}</button>`).join('')}</div>`;
-  const heads = isPhone() ? '' : `<div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 10px"><span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">${mj().length} jobs · [n] sales</span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya P.</span><span style="font-size: 13px; color: ${C.muted}">[n] jobs · [n] sales</span></span></div>`;
+  const heads = isPhone() ? '' : `<div style="display: grid; grid-template-columns: 120px 1fr 1fr; gap: 10px"><span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">${jobsWord(mj().length)} · [n] sales</span></span><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Maya P.</span><span style="font-size: 13px; color: ${C.muted}">[n] jobs · [n] sales</span></span></div>`;
   return popup('merge-title', 'The same person?', 'Pick what to keep. Jobs, sales and bikes from both are kept together.', `${heads}
 ${note('Only what’s different is shown. Both have ' + MAYA.phone + '.')}${cmpRow('Name', 'Maya Patel', 'Maya P.')}${cmpRow('Email', MAYA.email, '[none]')}${cmpRow('Address', '[address]', '[none]')}
 ${note('Added on [date] and [date], on different tills. Merging can be undone from the customer’s page for [n] days.')}`, `${button('They’re different people', { variant: 'ghost' })}${button('Merge into one')}`, 760);
