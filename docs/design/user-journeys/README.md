@@ -1,16 +1,19 @@
 # User journeys canvas — source
 
-The **Wheelhouse user journeys** canvases (staff shop floor
-https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j, staff back office
-https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4, customers and the website
-https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh) show every screen by journey, colour-coded by status, with a workflow chart.
-It is generated from the files here and published with Claude Code's Artifact
-tool. Started 27 Sep 2026.
+The **Wheelhouse user journeys** canvas
+(https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j) shows the whole product
+on one canvas: one board per real screen, its other situations listed under
+it, by journey, with a workflow chart (issue #116 step 3, 3 Oct 2026). Every
+drawing at every size stays on each journey's own canvas, linked from each
+board. The old back-office (https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4)
+and customers (https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh) canvases
+are kept with a "Moved" note. It is generated from the files here and
+published with Claude Code's Artifact tool. Started 27 Sep 2026.
 
 | Folder | What |
 | --- | --- |
 | `generator/` | The canvas generator |
-| `themes/` | The five theme options (https://claude.ai/artifact/LrQtgcrCRc8kQEnSpXhdFN); Jack chose Fjell |
+| `themes/` | The five theme options (https://claude.ai/artifact/LrQtgcrCRc8kQEnSpXhdFN); Jack chose Fjell, then Soft sand (28 Sep) |
 | `design-system/` | The files of the Wheelhouse design system (https://claude.ai/artifact/PdfLu9EiYQ7QwRHnF2kESH) |
 
 ## Generator files
@@ -22,9 +25,14 @@ tool. Started 27 Sep 2026.
   review. `sd(id, title, role)` = an agreed Workshop day redesign screen
   (journey 12, decision 69), shown in the Soft sand look at desktop, tablet
   and phone.
-- `ui.mjs` — Fjell tokens (`C`) and shadcn-style helpers (button, field,
-  card, badge, icon, logo slot). **Keep these values in step with
-  `src/styles/theme.css`.**
+- `ui.mjs` — the tokens (`C`) and shadcn-style helpers (button, field,
+  card, badge, icon, logo slot). `--theme sand` (or `WH_THEME=sand`) gives
+  Soft sand, which every journey's drawings use; without it, the older Fjell.
+  **Keep these values in step with `src/styles/theme.css`.**
+- `consolidate/` — the one-canvas plan: for every screen id, `keep` (a
+  board, with its building block), `into` (a line in a kept screen's
+  situation list) or `later` (listed, not drawn). `node --test
+  consolidate/` checks it covers every screen.
 - `stage1.mjs` — shells (staff app with the room sidebar, till mode, customer
   website), the app map, and the sign-in journey. `ROOMS` is the staff
   navigation: Front desk, Workshop, Stockroom, Office.
@@ -34,8 +42,9 @@ tool. Started 27 Sep 2026.
   its own review canvas (`--theme sand` writes `out-diary-sand/`).
   `diary-titles.mjs` holds its board titles, shared with `build.mjs`.
 - `workflow.mjs` — the "How the journeys connect" chart.
-- `build.mjs` — writes `out/project/*` (the canvas files). It first runs
-  `node build-diary.mjs --theme sand` and wraps those boards as journey 12
+- `build.mjs` — writes `out/project/*` (the one canvas's files), following
+  `consolidate/`. It first runs every journey's `build-<name>.mjs --theme
+  sand` and wraps those boards (journey 12 is the oldest of them)
   (Soft sand fonts, links rewritten to the `j12-…` file names, links to
   other rooms dropped); it stops if journey 12 in `journeys.mjs` no longer
   matches `diary.mjs` ROWS. It also writes `out/removed.json`: boards on the
@@ -48,7 +57,10 @@ tool. Started 27 Sep 2026.
   PNG (the Fjell one swaps the old colours for Fjell tokens). The images are
   already uploaded; only rerun if the screen designs change, then upload the
   new PNGs as canvas assets and update `blobs-fjell.json`.
-- `fitcheck.mjs` — renders every drawing and fails if a sidebar overflows.
+- `fitcheck-canvas.mjs` — after `node build.mjs`, renders every board on
+  the canvas and fails if a page is bigger than its board or a link opens a
+  board that isn't there.
+- `fitcheck.mjs` — the older check of the stage 1 and 2 drawings' sidebars.
 - `text.mjs` — dumps a screen design's text, used as the content source for
   redrawing.
 
@@ -162,8 +174,9 @@ first list: step 3 merges any that turn out to be the same block.
    the boards first and `project/canvas.json` last. Pass `null` for boards
    that no longer exist — the list is `out/removed.json`.
 
-Rules the drawings follow (journey 12 is the exception: Soft sand tokens,
-Public Sans, and a tablet size of 1180×820): Fjell tokens only (no raw colours beyond `ui.mjs`),
-Work Sans (DM Mono for numbers), room navigation, desktop 1280×800 + phone
+Rules the drawings follow (with "Rules for drawings from now on" above):
+Soft sand tokens only (no raw colours beyond `ui.mjs`), Public Sans (DM Mono
+for numbers), room navigation, desktop 1280×800, tablet 1180×820 and phone
 390×844, no invented logo (a marked LOGO slot), and the glossary names in
-`docs/decisions/2026-09-27-names.md`.
+`docs/decisions/2026-09-27-names.md`. A few old Release 1 boards are still
+pictures in the earlier look.

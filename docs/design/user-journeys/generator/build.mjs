@@ -9,18 +9,17 @@ const DRAWN = { ...stage1.screens };
 import { FONT_LINK } from './ui.mjs';
 import { TOUCH_TITLE_OVERRIDE } from './diary-titles.mjs';
 import { workflow, WF_W, WF_H } from './workflow.mjs';
+import { loadPlan } from './consolidate/plan.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
-// The big canvas is three canvases: a canvas holds at most 512 files.
-// Customers and the website got their own first (Buy online decision 10, Jack,
-// 1 Oct: "1"); the staff app split into shop floor and back office when it
-// reached 510 (Jack, 3 Oct: "1"). Shop floor keeps the first link (the one
-// Jack has shared). Each has the whole overview, and its rows for another
-// canvas open that canvas.
+// One canvas for the whole product (issue #116 step 3, Jack, 3 Oct: "start
+// step 3"). It used to be three, each near the 512-file limit; now each real
+// screen is one board and its other situations are listed under it
+// (consolidate/, README "Rules for drawings from now on"). It keeps the shop
+// floor link, the one Jack has shared; the back-office and customers canvases
+// carry a "Moved" note.
 const PARTS = [
-  { key: 'staff', root: here + 'out/', live: 'live-canvas.json', url: 'https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j', title: 'Wheelhouse user journeys — the staff app: shop floor', short: 'The staff app: shop floor', ids: ['ja', 'j10', 'j11', 'j12', 'j15', 'j16', 'j21'] },
-  { key: 'backoffice', root: here + 'out-backoffice/', live: 'live-canvas-backoffice.json', url: 'https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4', title: 'Wheelhouse user journeys — the staff app: back office', short: 'The staff app: back office', ids: ['j08', 'j09', 'j13', 'j14', 'j17', 'j18', 'j19', 'j20'] },
-  { key: 'customers', root: here + 'out-customers/', live: 'live-canvas-customers.json', url: 'https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh', title: 'Wheelhouse user journeys — customers and the website', short: 'Customers and the website', ids: ['jb', 'j01', 'j02', 'j03', 'j04', 'j05', 'j06', 'j07'] },
+  { key: 'all', root: here + 'out/', live: 'live-canvas.json', url: 'https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j', title: 'Wheelhouse user journeys', short: 'Every journey', ids: journeys.map((j) => j.id) },
 ];
 
 // Journeys drawn in Soft sand on their own canvases (decisions 48 and 69 of
@@ -90,6 +89,24 @@ const sandSizesOf = (src, id) => SAND_SIZES.filter((v) => existsSync(SAND_SOURCE
 // 29 Sep — the canvas holds at most 512 files): desktop, or the one-off
 // large board, or — for a phone-only screen — its only size.
 const bigSizeOf = (src, id) => { const all = sandSizesOf(src, id); return all.includes('single') ? 'single' : all.includes('desktop') ? 'desktop' : all[0]; };
+// The one-canvas plan: every screen is kept, folded into a kept screen's
+// situation list, or listed as later (consolidate/check.test.mjs checks it).
+const { plan } = await loadPlan();
+const allScreens = journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.map((x) => ({ ...x, journey: j }))));
+const byId = new Map(allScreens.map((x) => [x.id, x]));
+for (const x of allScreens) if (!plan.has(x.id)) throw new Error(`no one-canvas plan for ${x.id} (consolidate/${x.journey.id}.mjs)`);
+const isKept = (id) => plan.get(id)?.kind === 'keep';
+// The kept screen a screen's situation belongs to (itself when kept).
+const ownerOf = (id) => { const e = plan.get(id); return e.kind === 'keep' ? id : e.kind === 'into' ? ownerOf(e.id) : null; };
+// Sizes shown for a kept screen: the plan's, else rule 3 — phone for a
+// customer page, otherwise desktop (or the one-off large board).
+const shownSizes = (x) => {
+  const all = sandSizesOf(x.sand, x.id);
+  const want = plan.get(x.id).sizes;
+  if (want) { const missing = want.filter((v) => !all.includes(v)); if (missing.length) throw new Error(`${x.id} has no ${missing.join(', ')} board`); return want; }
+  if (x.role === 'Customer' && all.includes('phone')) return ['phone'];
+  return [bigSizeOf(x.sand, x.id)];
+};
 function sandBoard(src, id, size) {
   const f = SAND_SOURCES[src].dir + sandFile(id, size);
   const src_ = readFileSync(f, 'utf8');
@@ -204,7 +221,7 @@ function sandBoardHtml(scr, w, h, meta, inner, nav) {
 // journey A's Your settings; links to screens with no board here (the other
 // rooms in the sidebar) lose their href.
 function relink(html, known) {
-  return html.replace(/ href="([^"#][^"]*?\.dc\.html)"/g, (m, f) => (known.has(f) ? ` href="${known.get(f)}-${f}"` : ''));
+  return html.replace(/ href="([^"#][^"]*?\.dc\.html)"/g, (m, f) => (known.get(f) ? ` href="${known.get(f)}"` : ''));
 }
 
 function placeholderBoard(scr, w, h, meta, nav) {
@@ -245,21 +262,30 @@ const GAP_X = 80;
 
 // A screen becomes one board, or two (desktop + phone) when it is a new drawing.
 const variantsOf = (j, x) => {
-  if (x.sand) { const v = bigSizeOf(x.sand, x.id); return [{ file: `${j.id}-${sandFile(x.id, v)}`, v, sand: x.sand }]; }
+  if (x.sand) return shownSizes(x).map((v) => ({ file: `${j.id}-${sandFile(x.id, v)}`, v, sand: x.sand }));
   if (!x.drawn) return [{ file: `${j.id}-${x.id}.dc.html`, v: null }];
   const d = DRAWN[x.id];
   if (!d) throw new Error(`no drawing for ${x.id}`);
   if (d.single) return [{ file: `${j.id}-${x.id}.dc.html`, v: 'single' }];
   return [{ file: `${j.id}-${x.id}-desktop.dc.html`, v: 'desktop' }, { file: `${j.id}-${x.id}-phone.dc.html`, v: 'phone' }];
 };
-const seq = journeys.map((j) => j.rows.flatMap((r) => r.screens.flatMap((x) => variantsOf(j, x).map((o) => o.file))));
-// Every Soft sand board file name (as its own canvas names it) → the journey
-// that holds it here, for relink().
+const seq = journeys.map((j) => j.rows.flatMap((r) => r.screens.filter((x) => isKept(x.id)).flatMap((x) => variantsOf(j, x).map((o) => o.file))));
+// Every Soft sand board file name (as its own canvas names it, any size) →
+// the board on this canvas a link to it should open, for relink(): its own
+// board at that size if shown, else its first board; a folded-in situation
+// opens the screen it belongs to; a "later" screen has no board.
 const sandFiles = new Map();
-for (const j of journeys) for (const r of j.rows) for (const x of r.screens) if (x.sand) for (const v of [bigSizeOf(x.sand, x.id)]) {
+const boardFor = (id, size) => {
+  const own = ownerOf(id);
+  if (!own) return null;
+  const x = byId.get(own);
+  const vs = variantsOf(x.journey, x);
+  return (vs.find((o) => o.v === size) ?? vs[0]).file;
+};
+for (const x of allScreens) if (x.sand) for (const v of sandSizesOf(x.sand, x.id)) {
   const f = sandFile(x.id, v);
   if (sandFiles.has(f)) throw new Error(`two Soft sand boards are both called ${f}`);
-  sandFiles.set(f, j.id);
+  sandFiles.set(f, boardFor(x.id, v));
 }
 // Each Soft sand canvas must hold exactly the screens journeys.mjs lists for
 // it, in the same order and rows — journeys.mjs lists them by hand (with
@@ -276,6 +302,22 @@ for (const [src, { dir, explore = [], exploreRow = null }] of Object.entries(SAN
   if (theirRows.join('|') !== ourRows.join('|')) throw new Error(`${src} rows differ: ${theirRows.join(' | ')}`);
 }
 for (const j of journeys) if (!PARTS.some((P) => P.ids.includes(j.id))) throw new Error(`journey ${j.id} is on no canvas`);
+// Each kept screen's situation list (README rule 2): the screens folded into
+// it, from any journey, in journeys.mjs order. "What's different" is the
+// folded drawing's own title; "who" its role; then the decision it came from.
+const situations = new Map();
+for (const x of allScreens) { const e = plan.get(x.id); if (e.kind === 'into') { const own = ownerOf(x.id); if (!situations.has(own)) situations.set(own, []); situations.get(own).push({ x, decision: e.decision }); } }
+const situationText = (id) => {
+  const list = situations.get(id) ?? [];
+  if (!list.length) return null;
+  const home = byId.get(id).journey.id;
+  return [`Situations of this screen (${list.length})`, ...list.map(({ x, decision }) => `• ${x.title} — ${x.role}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`)].join('\n');
+};
+const NOTE_LINE = 30;
+const laterText = (j) => {
+  const list = j.rows.flatMap((r) => r.screens).filter((x) => plan.get(x.id).kind === 'later');
+  return list.length ? [`Later — not drawn here (${list.length})`, ...list.map((x) => `• ${x.title} — ${plan.get(x.id).reason}`)].join('\n') : null;
+};
 let numbered = 0;
 const NUMS = Object.fromEntries(journeys.map((j) => [j.id, j.num ?? String(++numbered).padStart(2, '0')]));
 const allCounts = {};
@@ -284,7 +326,7 @@ const boards = P.boards = {};
 const order = P.order = [];
 const notes = P.notes = {};
 // Links to a screen on the other canvas lose their href (relink).
-const known = new Map([...sandFiles].filter(([, jid]) => P.ids.includes(jid)));
+const known = sandFiles;
 // One canvas: the overview on top, then every journey as a single left-to-right line, stacked.
 let y = 360 + 60 + journeys.length * 58 + 140 + 1000;
 journeys.filter((j) => P.ids.includes(j.id)).forEach((j) => {
@@ -293,10 +335,15 @@ journeys.filter((j) => P.ids.includes(j.id)).forEach((j) => {
   const tally = { review: 0, built: 0, designed: 0, old: 0, gap: 0, first: null };
   let x = 0;
   let tallest = 0;
+  let noteDepth = 0;
+  const boardH = (scr) => Math.max(...variantsOf(j, scr).map((o) => boards[o.file]?.h ?? 0));
   for (const row of j.rows) {
     notes[`${j.id}_s${Object.keys(notes).length}`] = { x, y: y - 240, text: row.label, w: 520, size: 'l', bold: true, fill: 'gray', maxH: 150 };
-    for (const scr0 of row.screens) {
+    const kept = row.screens.filter((x) => isKept(x.id));
+    if (!kept.length) continue;
+    for (const scr0 of kept) {
       const scr = { ...scr0 };
+      const x0 = x;
       for (const { file, v, sand } of variantsOf(j, scr)) {
         const nav = { ...navFor(list, file), };
         let title, meta, w, h, html, helmet = null;
@@ -338,12 +385,19 @@ journeys.filter((j) => P.ids.includes(j.id)).forEach((j) => {
         tallest = Math.max(tallest, h + STRIP);
       }
       tally[scr.status]++; // count each screen once, whatever its sizes (Jack, 29 Sep)
+      const sit = situationText(scr.id);
+      if (sit) {
+        notes[`${j.id}_sit_${scr.id}`] = { x: x0, y: y + boardH(scr) + 40, text: sit, w: Math.max(x - x0 - 40, 360) };
+        noteDepth = Math.max(noteDepth, 40 + sit.split('\n').length * NOTE_LINE);
+      }
     }
     x += 160; // a wider gap between sections of the same journey
   }
+  const lt = laterText(j);
+  if (lt) notes[`${j.id}_later`] = { x, y, text: lt, w: 720, fill: 'gray' };
   notes[`${j.id}_title`] = { x: 0, y: y - 560, text: `${num} · ${j.name} — ${j.who}`, kind: 'title1', maxW: Math.max(x - 240, 1600) };
   allCounts[j.id] = { num, name: j.name, who: j.who, ...tally, part: P };
-  y += tallest + 1000;
+  y += Math.max(tallest + noteDepth, lt ? lt.split('\n').length * NOTE_LINE : 0) + 1000;
 });
 }
 
@@ -352,7 +406,6 @@ const KEYS = ['review', 'built', 'designed', 'old', 'gap'];
 for (const P of PARTS) {
 const { boards, order, notes, root } = P;
 const pages = [];
-const others = PARTS.filter((x) => x !== P);
 const counts = journeys.map((j) => allCounts[j.id]);
 const total = Object.fromEntries(KEYS.map((k) => [k, counts.reduce((a, c) => a + c[k], 0)]));
 const all = KEYS.reduce((a, k) => a + total[k], 0);
@@ -376,9 +429,8 @@ const overview = `<div style="width: ${OW}px; height: ${OH}px; box-sizing: borde
 <div style="display: flex; flex-direction: column; gap: 10px">
 <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #3f4d33">WHEELHOUSE</div>
 <h1 style="margin: 0; font-size: 48px; line-height: 1.1; font-weight: 700; letter-spacing: -1px">User journeys — ${esc(P.short.toLowerCase())}</h1>
-<p style="margin: 0; font-size: 19px; line-height: 1.5; color: #3d4038; max-width: 980px">${esc(P.short)}: every screen in its journeys, grouped by journey, with where each one stands. The table counts all ${all} screens in all ${counts.length} journeys, on all ${PARTS.length} canvases. Scroll down to see this canvas’s journeys laid out left to right in the order they happen. In Play, click a row to jump to its first screen; rows for another canvas open it.</p>
+<p style="margin: 0; font-size: 19px; line-height: 1.5; color: #3d4038; max-width: 980px">Every journey on one canvas, one board per real screen. The other situations of a screen — empty, saved, failed, the Staff view, all shops and so on — are listed under its board instead of drawn (issue #116). Screens put off for later are listed at the end of their journey. The table counts the ${all} screens drawn here, in ${counts.length} journeys. Scroll down to see the journeys laid out left to right in the order they happen. In Play, click a row to jump to its first screen; each board's "Tablet and phone" link opens its journey's own canvas, where every drawing is kept.</p>
 <div style="display: flex; flex-wrap: wrap; gap: 12px">
-${others.map((o) => `<a href="${o.url}" style="display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px; border-radius: 10px; background: #3f4d33; color: #ffffff; font-size: 17px; font-weight: 700; text-decoration: none">Open the canvas: ${esc(o.short)} ›</a>`).join('\n')}
 </div>
 </div>
 <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px">

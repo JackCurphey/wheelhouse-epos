@@ -1,7 +1,7 @@
 // Renders every current atlas screen to a PNG at its frame size, using a real browser.
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
+import { chromium } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
-const atlas = 'file:///Users/jackcurphey/wheelhouse-epos/docs/design/release-1-journey/Wheelhouse-Release-1-Screen-Designs.html';
+const atlas = new URL('../../release-1-journey/Wheelhouse-Release-1-Screen-Designs.html', import.meta.url).href;
 const out = new URL('./shots/', import.meta.url);
 const browser = await chromium.launch();
 const page = await browser.newPage();
