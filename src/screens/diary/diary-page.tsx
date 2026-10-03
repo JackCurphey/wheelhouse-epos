@@ -8,6 +8,7 @@ import { NavIcon } from '@/staff/nav-icon.tsx';
 import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
 import { NewJobDialog } from './new-job-dialog.tsx';
+import { JobDialog } from './job-dialog.tsx';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import {
   LEGEND, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
@@ -78,6 +79,8 @@ type MoveApi = {
   preview: Preview | null;
   onKeyDown: (job: Shown, colIndex: number, e: KeyboardEvent<HTMLElement>) => void;
   onPointerDown: (job: Shown, colIndex: number, e: PointerEvent<HTMLElement>) => void;
+  /** A click (not a drag) or Enter opens the job page. */
+  onOpen: (job: Shown) => void;
 };
 const MoveContext = createContext<MoveApi | null>(null);
 
@@ -137,7 +140,9 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
       title={describe(job, false)}
       aria-describedby="diary-move-hint"
       onKeyDown={(e) => move.onKeyDown(job, colIndex, e)}
+      onKeyUp={(e) => { if (moving && e.key === ' ') e.preventDefault(); }}
       onPointerDown={(e) => move.onPointerDown(job, colIndex, e)}
+      onClick={() => move.onOpen(job)}
       className={`${className} cursor-grab touch-none`}
       style={style}
     >
@@ -414,13 +419,28 @@ export function DiaryPage() {
     }
   }
 
+  const [openJobId, setOpenJobId] = useState<number | null>(null);
+  // The click that follows the end of a drag must not open the job.
+  const justDragged = useRef(false);
+  const openJob = (job: Shown) => {
+    if (justDragged.current) { justDragged.current = false; return; }
+    if (preview) return;
+    setOpenJobId(job.id);
+  };
   const moveApi: MoveApi = {
     preview,
+    onOpen: openJob,
     onKeyDown(job, colIndex, e) {
       const bike = job.bikeLabel || 'Bike';
       const hint = 'Use the arrow keys to move it, Enter to save, Escape to cancel.';
       if (!preview || preview.jobId !== job.id) {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.key === 'Enter') {
+          // Handled here rather than by the button's own click, so it opens once.
+          e.preventDefault();
+          openJob(job);
+          return;
+        }
+        if (e.key !== 'm' && e.key !== 'M') return;
         e.preventDefault();
         const p = startOf(job, colIndex);
         setPreview(p);
@@ -477,6 +497,11 @@ export function DiaryPage() {
         const d = drag.current;
         drag.current = null;
         const p = previewRef.current;
+        if (d?.moved) {
+          justDragged.current = true;
+          // A drag that ends off the block fires no click, so don't let the flag linger.
+          setTimeout(() => { justDragged.current = false; }, 0);
+        }
         if (d?.moved && p) void save(d.job, p, d.origCol);
       };
       window.addEventListener('pointermove', onMove);
@@ -697,7 +722,7 @@ export function DiaryPage() {
         </div>
 
         {pickBar ? <div className="px-3.5 pt-2.5">{pickBar}</div> : null}
-        <p id="diary-move-hint" className={SR}>Drag a job to move it, or press Enter to pick it up and use the arrow keys.</p>
+        <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
         <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
         {moveError ? <p role="alert" className="m-3.5 mb-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
 
@@ -782,6 +807,7 @@ export function DiaryPage() {
 
         {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
         {newJobDialog}
+        {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
       </div>
     );
   }
@@ -881,7 +907,7 @@ export function DiaryPage() {
         </section>
 
         <div className="flex min-w-0 grow flex-col gap-2.5">
-          <p id="diary-move-hint" className={SR}>Drag a job to move it, or press Enter to pick it up and use the arrow keys.</p>
+          <p id="diary-move-hint" className={SR}>Press Enter to open the job, or M to move it with the arrow keys. You can also drag it.</p>
           <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
           {moveError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
           <div className="overflow-x-auto"><PickContext.Provider value={pickApi}><MoveContext.Provider value={moveApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</MoveContext.Provider></PickContext.Provider></div>
@@ -898,6 +924,7 @@ export function DiaryPage() {
       </div>
       {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
       {newJobDialog}
+      {openJobId !== null ? <JobDialog key={openJobId} jobId={openJobId} onClose={() => setOpenJobId(null)} /> : null}
     </div>
   );
 }
