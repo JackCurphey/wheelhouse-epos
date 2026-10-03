@@ -694,3 +694,35 @@ page (Q1), `ops-till-checkout` (O1).
   fix says relabel.
 - 3 Oct: the seven text-size fixes are listed, but gated on Jack, because they
   are visual changes.
+
+### Done (3 Oct)
+
+- Drawn: every change in this list, the seven text-size changes (Jack: "yes
+  you can go ahead and make some text bigger", so the three other `cw-list`
+  badges went to 14px too, to match CW7), and group Z. Built: 211 files (−2:
+  `j05-ready`, `bk-request`; `ls-customer-pick` swapped for `ls-book-in`),
+  174 notes; plan check 9/9; `fitcheck-canvas.mjs` 0 problems.
+- Beyond the list, after reports from the implementers: `ac-job-note*` moved
+  from `cp-summary` to `bk-page` (the drawing is the job "in the shop", built
+  with `inShopAt()` like `dq-in-shop`, which also folds into `bk-page`);
+  `j04`'s `dq-in-shop` phrase says "[time]"; `stock.mjs` and `journeys.mjs`
+  titles mirrored; `weekPill` gets `on = false` (it printed
+  `aria-pressed="undefined"`); `till-find-customer`'s email is
+  maya@example.test; `rp-day`'s saved report says "Takings" like the till's
+  (Reports, 3 Oct, walk-through 11 H2).
+- O1: the Tills board isn't exported, so `ops-till-checkout` (the "Check Jo
+  Taylor out of Till B1?" box) now folds into `set-till-quick` beside the
+  tills (walk-through 8, 3 Oct, H3) instead of `till-sale`; its drawing still
+  sits over Signed-in devices on journey 20's own canvas.
+- Fresh review fixes: Your settings' PIN sentence ("…sales and workshop
+  work"); the till search's announcements moved outside its results list;
+  `ls-customer-pick`'s phrase quotes its own drawing; `on-hand-over` is
+  `same('till-collect')` (`same()` may now point at a board); stale phrases on
+  `cw-cancel-ordered`, `till-held-job`, `bk-page-dropoff`, `bk-page-ls`,
+  `ready` corrected.
+- Logged, not changed: `cw-cancel` now refunds the deposit ("your rule for a
+  customer who pulls out") while its line "Cancelling after ordering: the
+  deposit kept" shows the other rule — both are shop settings (Cycle to Work
+  4); `customer.mjs`'s Lightspeed "Change" link points at the old
+  `ls-customer-pick` board (for step 5's mockup); 16 quote boards were already
+  taller than their frame before the text-size change.

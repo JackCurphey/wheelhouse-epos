@@ -1,7 +1,7 @@
 // Journey 21, Lightspeed (after the trading week) — one-canvas plan (issue #116 step 3).
 // Source: ../../consolidation-12-21.md merge table. Consolidated like the rest
 // (spec decision log): keep/into, not later.
-import { keep, into } from './plan.mjs';
+import { keep, into, same } from './plan.mjs';
 
 const STRIP = 'Lightspeed 2, 3, 6, 10 (H3), 12';
 
@@ -18,7 +18,7 @@ export default {
   'ls-reconnect': into('ls-settings-on', 'Lightspeed 7', "Warning 'Lightspeed signed Wheelhouse out on [date].'; 'Reconnect Lightspeed'"),
   // Quote and approval
   'ls-today': into('op-today', 'Lightspeed 6, 10', "Lightspeed shop: a 'Lightspeed · Up to date' section instead of the tills"),
-  'ls-book-in': into('ls-customer-pick', 'Lightspeed 4; walk-through 6 M1', "At book-in over Today: 'Maya is at the desk'; 'Link and book in'; nothing sent yet"),
+  'ls-book-in': keep(21), // walk-through 6 L2: the board shows book-in with Maya at the desk, the commoner moment
   'ls-job-not-connected': into('ls-job-sent', STRIP, "'Not in Lightspeed': 'Lightspeed isn’t connected'"),
   'ls-part-search': keep(17),
   'ls-part-search-down': into('ls-part-search', 'Lightspeed 5, 11', "Warning 'Showing products and stock as of [time].' Prices may have changed"),
@@ -28,7 +28,7 @@ export default {
   'ls-job-price-asked': into('ls-job-sent', STRIP, "'Waiting for Maya’s answer': the work order keeps £28.00 until she answers"),
   'ls-job-cancelled': into('ls-job-sent', STRIP, "Status 'Cancelled': 'work order [number] marked cancelled in Lightspeed'; footer 'Done'"),
   'ls-job-pick': into('ls-job-sent', STRIP, "'Not sent yet': 'Choose Maya in Lightspeed'; button 'Choose the customer'"),
-  'ls-customer-pick': keep(21),
+  'ls-customer-pick': into('ls-book-in', 'Lightspeed 4; walk-through 6 M1, L2', "Over the job page, not Today: 'Which Maya Patel in Lightspeed?', 'WH-1042 is ready to go to Lightspeed', 'Link and send'"),
   // When Lightspeed can't be reached
   'ls-job-waiting': into('ls-job-sent', STRIP, "'Waiting to reach Lightspeed': 'Wheelhouse keeps trying by itself'"),
   'ls-job-unsure': into('ls-job-sent', STRIP, "'Not sure it arrived': won’t send again; button 'Check this in Lightspeed'"),
@@ -52,7 +52,7 @@ export default {
   'ls-messages': into('set-msg-list', 'Lightspeed 10 (M1, M2)', "Lightspeed shop: '13 on', no online order messages; ready messages say 'pay at the till'"),
   'ls-office-data': into('ops-log', 'Lightspeed 10 (M1, M2)', "Settings › Your data's 'Activity' fold (Reports hidden): three entries, 'Open the activity log'"), // Settings › Your data's activity log; owner list's activity log is ops-log
   'ls-workshop-settings': into('set-workshop-services', 'Lightspeed 10 (M1, M2)', "Banner 'Deposits and paying online are off.'; Online booking 'no deposit'"), // Settings › Workshop page
-  'ls-customer-ready': into('cp-summary', 'Walk-through 6 H1', "No 'Pay now': 'Agreed price £111.00 — pay at the till'"), // report: same as j05's cp-summary-ls; owner list names cp-summary
+  'ls-customer-ready': same('cp-summary-ls'), // walk-through 6 L1: the same drawing as journey 5's cp-summary-ls
 };
 
 // Extra situation lines with no old drawing behind them ("Draw the decisions"
@@ -66,5 +66,8 @@ export const lines = [
   // L2
   { on: 'ls-job-check', text: "The box's first sentence follows the cause", who: 'Staff', decision: 'Walk-through 6 H2; Lightspeed shops 10' },
   // L5
-  { on: 'ls-customer-pick', text: "Changing Maya's Lightspeed customer: WH-1042's unpaid work order moves to the customer you choose; paid work orders stay where they are", who: 'Staff', decision: 'Walk-through 6 M3; Lightspeed shops 4' },
+  { on: 'ls-book-in', text: "Changing Maya's Lightspeed customer: WH-1042's unpaid work order moves to the customer you choose; paid work orders stay where they are", who: 'Staff', decision: 'Walk-through 6 M3; Lightspeed shops 4' },
+  // "Draw the answers" spec, section 22: L1, L2
+  { on: 'ls-job-sent', text: 'On a tablet: the desktop layout with a shorter icon rail; on a phone: the strip at the top of the job with its button full width, pop-ups fill the screen, and part-search rows put the name on its own line', who: 'Staff', decision: 'Lightspeed shops 13; walk-through 6 M5' },
+  { on: 'ls-job-sent', text: "Marked ready while waiting for Maya's answer: the work order keeps £28.00", who: 'Staff', decision: 'Lightspeed shops 12; walk-through 6 L3' },
 ];

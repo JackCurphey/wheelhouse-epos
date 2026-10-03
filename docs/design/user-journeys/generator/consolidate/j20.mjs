@@ -17,7 +17,7 @@ export default {
   'ops-today-alerts': later('Issue #116 question 5: oversight extras later'),
   'ops-alert-settings': later('Issue #116 question 5: oversight extras later'),
   'ops-devices': later('Issue #116 question 5: oversight extras later'),
-  'ops-till-checkout': into('till-sale', 'Management oversight 6 H5', "'Check Jo Taylor out of Till B1?' box: 'After this sale' or 'Now' (basket put on hold)"), // inferred: the button is on the till ("Check out Jo Taylor"), not one of the deferred extras
+  'ops-till-checkout': into('set-till-quick', 'Management oversight 6 H5; 3 Oct (walk-through 8 H3): beside the tills', "'Check Jo Taylor out of Till B1?' box: 'After this sale' or 'Now' (basket put on hold)"), // inferred: the button is on the till ("Check out Jo Taylor"), not one of the deferred extras
   'ops-devices-signout': later('Issue #116 question 5: oversight extras later'),
   'ops-devices-signed-out': later('Issue #116 question 5: oversight extras later'),
   'ops-person': later('Issue #116 question 5: oversight extras later'),

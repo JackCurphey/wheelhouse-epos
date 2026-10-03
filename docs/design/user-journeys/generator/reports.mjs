@@ -36,10 +36,11 @@ const DAYS = [['Mon', '14'], ['Tue', '15'], ['Wed', '16'], ['Thu', '17'], ['Fri'
 const CATS = ['Workshop', 'Parts', 'Accessories'];
 // UX walk-through 3 M10: Margin and stock value use the Stockroom's
 // categories (Settings › Stockroom › Categories: Bearings, Drivetrain and the
-// shop's own), not the till's quick-button groups. Margin adds labour as its
-// own row; stock value has no labour row, since labour holds no stock.
+// shop's own), not the till's quick-button groups. Reports and accounts,
+// later change (3 Oct, walk-through 11 M2): margin is on goods only; labour
+// is left out of it and shown beside it ("Labour £[£] · not in margin").
 const STOCK_CATS = ['Bearings', 'Drivetrain', '[Category]'];
-const MARGIN_ROWS = [...STOCK_CATS, 'Labour'];
+const MARGIN_ROWS = STOCK_CATS;
 const SECOND = '[Second site]';
 
 // The page: Owner by default. Staff with "Can see reports" get Reports in
@@ -67,7 +68,7 @@ const title = (t, sub, actions) => `<div style="display: flex; flex-wrap: wrap; 
 const DL = () => button(isPhone() ? 'Download' : 'Download as spreadsheet', { variant: 'default' });
 const head = (t, sub, period, { list = PERIODS, change = true } = {}) => `${back()}${title(t, sub, `${change ? button('Change what’s shown', { variant: 'default' }) : ''}${DL()}`)}${periodGroup(period, list)}`;
 // A headline figure, with the comparison in words (audit M9).
-const stat = (k, v, cmp) => `<div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">${k}</span><span style="font-size: 22px; font-weight: 700">${v}</span><span style="font-size: 12px; color: ${C.ink}">${cmp}</span></div>`;
+const stat = (k, v, cmp) => `<div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">${k}</span><span style="font-size: 22px; font-weight: 700">${v}</span><span style="font-size: 14px; color: ${C.ink}">${cmp}</span></div>`;
 const stats = (items) => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 2 : items.length}, minmax(0, 1fr)); gap: 10px">${items.join('')}</div>`;
 const UP = (what = '£[£]', vs = 'the same days last week') => `[Up or down] ${what} on ${vs}`;
 // A plain table; `text` lists the columns of words, the rest are amounts.
@@ -133,9 +134,10 @@ const yourReports = (staff) => box(`${h3('Your reports')}${note('Start from any 
 // "1": it follows the shop menu, Multiple sites 1): takings by shop, margin
 // (labelled Margin, not Profit) and a link to the shop, above the cards.
 // "All shops" in the menu gives one row per shop (a situation line). Margin
-// only with "Can see costs and margin" (Reports and accounts 5). Still open
-// for Jack, so bracketed: the period, takings with or without VAT, and what
-// the shop's link opens.
+// only with "Can see costs and margin" (Reports and accounts 5). Takings are
+// with VAT (Reports and accounts, later change, 3 Oct, walk-through 11 H2:
+// "Takings" has one meaning everywhere). Still open for Jack, so bracketed:
+// the period and what the shop's link opens.
 const shopLink = (name) => `<a href="#" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">Shop</span><span style="font-size: 17px; font-weight: 700">${name}</span></span><span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
 const strip = (staff) => box(`${h3('[period]')}${stats([stat('Takings', '£[£]', ''), ...(staff ? [] : [stat('Margin', `£[£] · ${mono('[%]')}`, '')]), shopLink('North Street Cycles, Bolton')])}`);
 const home = (staff = false) => wrap(`${note(`Thursday 17 September · North Street Cycles, Bolton${staff ? '' : ' · use the shop menu for another shop or all shops'}`)}
@@ -161,17 +163,17 @@ const salesRows = () => DAYS.map(([d, n], i) => (i < 4 ? [`${d} ${n} Sep`, '[£]
 // before it opened; its row in an All shops table says so.
 const opened = (shop = SECOND) => `<span style="display: flex; flex-direction: column; gap: 2px">${shop}<span style="font-size: 12px; font-weight: 400; color: ${C.ink}; white-space: normal">Opened [date] — nothing to compare before then</span></span>`;
 const sales = (site = 'Bolton') => wrap(`${head('Sales', `${shopName(site)} · ${SO_FAR}`, 'This week')}
-${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Number of sales', '[n]', UP('[n]')), stat('Average sale', '£[£]', UP()), stat('Refunds', '£[£]', UP())])}
+${stats([stat('Takings', '£[£]', UP()), stat('Number of sales', '[n]', UP('[n]')), stat('Average sale', '£[£]', UP()), stat('Refunds', '£[£]', UP())])}
 ${box(`${site === 'All shops'
   ? `${graph('Takings by shop', ['Bolton', SECOND], { says: 'Bolton £[£], [Second site] £[£]' })}${table('Sales by shop', ['Shop', 'Takings', 'Sales', 'Average'], [['Bolton', '[£]', '[n]', '[£]'], [opened(), '[£]', '[n]', '[£]'] /* UX walk-through 7 M1 */], ['All shops', '[£]', '[n]', '[£]'])}`
   : `${graph('Takings by day', DAY_LABELS, { upto: 4 })}${table('Sales by day', ['Day', 'Takings', 'Sales', 'Average'], salesRows(), ['So far', '[£]', '[n]', '[£]'])}`}`)}
-${note('Takings include VAT and take refunds off.')}`, OWNER, site);
+${note('Takings include VAT, take refunds off, and count online and Cycle to Work money; today counts so far.')}`, OWNER, site);
 // Nothing sold yet, and no period before to compare with (audit M7).
 const salesEmpty = () => wrap(`${head('Sales', 'North Street Cycles, Bolton · Today, Thursday 17 September', 'Today')}
 ${box(`<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px 12px; text-align: center"><span style="font-size: 17px; font-weight: 700">Nothing sold yet today</span>${note('Sales show here as soon as the first one goes through a till.')}</div>`)}
 ${box(`${h3('Nothing to compare with yet')}${note('The shop started on Wheelhouse on [date], so there’s no period before this one. Comparisons start once there is.')}`)}`);
 const salesYear = () => wrap(`${head('Sales', 'North Street Cycles, Bolton · October 2025 – September 2026, against the 12 months before', 'Last 12 months')}
-${stats([stat('Takings (with VAT)', '£[£]', UP('£[£]', 'the 12 months before')), stat('Number of sales', '[n]', UP('[n]', 'the 12 months before')), stat('Average sale', '£[£]', UP('£[£]', 'the 12 months before')), stat('Refunds', '£[£]', UP('£[£]', 'the 12 months before'))])}
+${stats([stat('Takings', '£[£]', UP('£[£]', 'the 12 months before')), stat('Number of sales', '[n]', UP('[n]', 'the 12 months before')), stat('Average sale', '£[£]', UP('£[£]', 'the 12 months before')), stat('Refunds', '£[£]', UP('£[£]', 'the 12 months before'))])}
 ${box(`${lineGraph('Takings by month', MONTHS)}${table('Takings by month', ['Month', 'Takings', 'Sales', 'Average'], MONTHS.map((m) => [m, '[£]', '[n]', '[£]']), ['12 months', '[£]', '[n]', '[£]'])}`)}`);
 // Pick dates (audit M8).
 const pickDates = () => popup('pd-title', 'Pick dates', 'Sales · North Street Cycles, Bolton', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('From', { type: 'date', value: '2026-09-01' })}${field('To', { type: 'date', value: '2026-09-17' })}</div>${note('Compared with the same number of days just before.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Show report')}`, 520);
@@ -221,7 +223,7 @@ const ONLINE_NOTE = 'Online is what customers paid on the website, from [payment
 const reopenedBar = () => bar('<strong>Wed 16 Sep, Till B2 is reopened</strong> — its figures are left out until it’s closed again.', button('Close the day', { variant: 'default' }));
 const takings = ({ reopened = false, site = 'Bolton' } = {}) => wrap(`${head('Takings and cash-ups', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${reopened ? reopenedBar() : ''}
-${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Cycle to Work', '£[£]', 'Owed by providers, not in the drawer') /* UX walk-through 5 H3 */, stat('Online', '£[£]', 'Paid on the website · separate from the tills'), stat('Cash differences', '£[£]', UP())])}
+${stats([stat('Closed days’ takings', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Cycle to Work', '£[£]', 'Owed by providers, not in the drawer') /* UX walk-through 5 H3 */, stat('Online', '£[£]', 'Paid on the website · separate from the tills'), stat('Cash differences', '£[£]', UP())])}
 ${box(`${graph('Takings by closed day', DAY_LABELS, { upto: 3, key: ['Closed days this week', 'Same days last week'] })}${site === 'All shops'
   ? table('Closed days by shop', ['Shop', 'Takings at the tills', 'Online', 'Cash banked', 'Cash difference', 'Sent to Xero'], [['Bolton', '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`], [SECOND, '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`]], ['All shops', '[£]', '[£]', '[£]', '£[£]', ''], [0, 5])
   : table('Closed days', ['Day and till', 'Takings', 'Cash banked', 'Cash difference', 'Closed by', 'Sent to Xero'], dayRows(reopened), null, [0, 4, 5])}`)}
@@ -230,7 +232,7 @@ ${note('Open a closed day for its end-of-day report. A manager can reopen it fro
 // A row's third part is a line under its name.
 // UX walk-through 2 M2: the morning's float, and any difference, stays on the
 // day's report after "Seen" is pressed.
-const ZROWS = [['Sales', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Cycle to Work', '£[£]', 'Owed by providers, not in the drawer'] /* UX walk-through 5 H3 */, ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Float at the start', '£[£]', '£[£] short, counted by Jo Taylor at [time]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
+const ZROWS = [['Takings', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Cycle to Work', '£[£]', 'Owed by providers, not in the drawer'] /* UX walk-through 5 H3 */, ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Float at the start', '£[£]', '£[£] short, counted by Jo Taylor at [time]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
 const zRow = ([k, v, sub]) => `<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px"><dt style="display: flex; flex-direction: column; gap: 2px">${k}${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</dt><dd style="margin: 0; font-family: ${MONO}; white-space: nowrap">${v}</dd></div>`;
 // UX walk-through 2 M5: the day's online payments, said apart from this till.
 const zOnline = () => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 700"><span>Online that day</span>${mono('£[£]')}</div><span style="font-size: 13px; line-height: 1.45">Paid on the website, from [payment provider]. Separate from the tills — it isn’t in this till’s figures above.</span></div>`;
@@ -278,7 +280,7 @@ const WRITTEN_OFF = [
 const margin = (site = 'Bolton') => wrap(`${head('Margin and stock value', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${stats([stat('Sales before VAT', '£[£]', UP()), stat('What it cost you', '£[£]', UP()), stat('Margin (sales less cost)', '£[£] · [n]%', UP('[n] points'))])}
 <p role="note" style="margin: 0; font-size: 14px; line-height: 1.45"><strong>[n] products sold without a cost</strong> — their margin can’t be worked out, so they’re left out below. ${linkBtn('See them and add a cost')}</p>
-${box(`${graph('Margin by category', MARGIN_ROWS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], MARGIN_ROWS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}`)}
+${box(`${graph('Margin by category', MARGIN_ROWS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], MARGIN_ROWS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}<p style="margin: 0; font-size: 15px">Labour ${mono('£[£]')} · not in margin</p>${note('Margin is on goods only.')}`)}
 ${box(`${h3('On the shelves today')}<p style="margin: 0; font-size: 15px">Stock value, at what it cost you: ${mono('£[£]', 'font-weight: 700')}</p>${note(`Includes stock held for customers (${mono('£[£]')}). Stock on its way between shops counts at the shop it’s going to (${mono('£[£]')}).`)}${table('Stock value by category', ['Category', 'Items', 'What it cost you'], STOCK_CATS.map((c) => [c, '[n]', '[£]']), ['All', '[n]', '[£]'])}`)}
 ${box(`${h3('Stock written off')}${note('Stock takes and adjustments this week, at what it cost you.')}${table('Stock written off', ['Why', 'Items', 'At cost', ''], WRITTEN_OFF.map(([why, n, v, link, label]) => [why, n, v, linkBtn(link, label)]), ['All', '[n]', '[£]', ''], [0, 3])}`)}`, OWNER, site);
 

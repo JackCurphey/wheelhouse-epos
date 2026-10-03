@@ -1,6 +1,6 @@
 // Journey 2, Buying online — one-canvas plan (issue #116 step 3).
 // Source: ../../consolidation-B-1-2.md merge table.
-import { keep, into, later } from './plan.mjs';
+import { keep, into, later, same } from './plan.mjs';
 
 export default {
   'on-product': into('wb-product', 'Buy online 2, 8', "Journey 2’s simpler page: one photo and a description, no specifications; 'Ready today at Bolton · [n] in stock'"),
@@ -48,8 +48,8 @@ export default {
   'on-not-ready': into('on-order-staff', 'H4, H5', "'Not ready after all?' box: back to 'To get ready'; ticked 'Send Maya “Sorry, not ready yet”'"),
   'on-cant-supply': keep(9),
   'on-cancel-refund': into('on-cant-supply', 'Buy online 7, M2', "'Cancel and refund this order?' for the whole order; a reason Maya sees is needed"),
-  'on-hand-over': into('till-sale', 'H5', "The till’s 'Online order · [order number]' hand-over: tick each item; 'Already paid online'"),
-  'on-hand-over-refunded': into('till-sale', 'H5', "Hand-over adds: one item 'couldn’t be supplied and was refunded — nothing to hand over for it'"),
+  'on-hand-over': same('till-collect'), // online.mjs draws it as till-collect itself
+  'on-hand-over-refunded': into('till-collect', 'H5', "Hand-over adds: one item 'couldn’t be supplied and was refunded — nothing to hand over for it'"),
   'on-today': into('op-today', 'Buy online 6, 7', "A '[n] new online orders' line with 'Open Online orders'"),
   'on-today-uncollected': into('op-today', 'Buy online 6, 7', "Amber 'Order [order number] · Maya Patel — not collected' with 'Contacted' and 'Open'"),
   'on-settings': keep(1),
@@ -61,3 +61,8 @@ export default {
   'on-settings-keep': into('on-settings', 'Buy online 2, 3', "Scrolled to 'Keep orders for [n] days' and 'Shelf or spot' ([Shelf name])"),
   'on-messages': into('set-msg-list', 'M5', "Scrolled down to the online order messages"),
 };
+
+// Extra situation lines (Draw the answers, spec section 14: ON3).
+export const lines = [
+  { on: 'on-orders', text: 'Till only (no email): this page opens from the till, so a till-only worker can mark orders ready', who: 'Staff', decision: 'Walk-through 8 decision 8; 3 Oct (walk-through 10 M1)' },
+];

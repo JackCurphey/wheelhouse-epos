@@ -49,4 +49,12 @@ export default {
 // "Draw the decisions" S4: a decision drawn as a line (spec B0).
 export const lines = [
   { on: 'set-staff-person', text: 'Uses a workshop computer: needs a PIN, not only people with Can use the till', who: 'Owner', decision: 'Walk-through 8, decision 1' },
+  // "Draw the answers" S3, S5, S7, S8: Jack's 3 Oct answers drawn as lines.
+  { on: 'set-staff-person', text: 'Give a new PIN, from your own phone: a one-time PIN to read out over a call; they change it at check-in', who: 'Owner and Manager', decision: 'Signing in, 3 Oct (walk-through 10 M2)' },
+  { on: 'fr-today', text: 'Running alongside Citrus Lime: the tills start on switch-over day', who: 'Owner', decision: 'Moving from Citrus Lime, 3 Oct (walk-through 4 H2)' },
+  { on: 'set-msg-list', text: 'Request received, draft: Hi Maya, North Street Cycles, Bolton has your request for a Standard service on your Trek Domane AL 3, Thu 17 Sep, 11:30. We\'ll let you know when it\'s confirmed. See your booking: [link] — no app or sign-in needed. Job WH-1042.', who: 'Manager', decision: 'Build-plan questions Q9, 3 Oct (walk-through 12 M2)' },
+  { on: 'set-msg-list', text: 'Booking confirmed, draft: Hi Maya, your Standard service at North Street Cycles, Bolton is booked for Thu 17 Sep: bring your Trek Domane AL 3 at 11:30. See or change your booking: [link] — no app or sign-in needed. Job WH-1042.', who: 'Manager', decision: 'Build-plan questions Q9, 3 Oct (walk-through 12 M2)' },
+  { on: 'set-msg-list', text: 'Quote to approve, draft: Hi Maya, North Street Cycles, Bolton has a quote for more work on your Trek Domane AL 3. See it and say yes or no to each part: [link] — no app or sign-in needed. Job WH-1042.', who: 'Manager', decision: 'Build-plan questions Q9, 3 Oct (walk-through 12 M2)' },
+  { on: 'set-till-quick', text: 'Workshop computers, listed beside the tills: [name] · … › Stop using as a workshop computer', who: 'Owner', decision: 'Walk-through 8 decision 1; 3 Oct (walk-through 8 H3)' },
+  { on: 'set-till-quick', text: 'A till\'s …: Check Jo Taylor out', who: 'Owner', decision: 'Walk-through 8, 3 Oct (walk-through 8 H3)' },
 ];

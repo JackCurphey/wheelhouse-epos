@@ -10,7 +10,7 @@ export default {
   'till-empty': into('till-sale', SALE, "Basket empty: 'Nothing in the sale yet', £0.00 total"),
   'till-noresults': into('till-sale', SALE, "Left side shows 'Nothing matches “[what was typed]”' and search tips, no quick buttons"),
   'till-held': into('till-sale', SALE, "Pads line warns '[n] held for online orders — sold anyway'"),
-  'till-held-job': into('till-sale', SALE, "Pads line warns '1 held for job WH-1042 — sold anyway'"),
+  'till-held-job': into('till-sale', SALE, "Pads line warns '1 held for job WH-1042 — selling it leaves Maya's job waiting for parts'"),
   'till-line': keep(9),
   'till-discount': into('till-line', 'Till 3', "Whole-sale discount dialog: 'Sale total £74.00 · 3 items', 'New total' £70.00, 'Remove discount'"),
   'till-discounted': into('till-sale', SALE, "Basket has a 'Discount · [reason]' line −£4.00; total and 'Take payment · £70.00'"),
@@ -66,3 +66,16 @@ export default {
   'till-no-signout': into('till-sale', 'Walk-through 2 M7', "Offline till, dialog 'Can’t sign this till out yet' — '[n] sales are still waiting to send'"), // report: "Messages, not drawings"
   'till-failed': keep(3), // report: a list layout of its own, for a manager
 };
+
+// Extra situation lines (Draw the answers, spec section 6: T5, T6, T7).
+export const lines = [
+  // T5 — the sale
+  { on: 'till-sale', text: 'A refund noted while offline, still to finish: Past sales carries the count', who: 'Staff', decision: 'UX walk-through decisions 5; 3 Oct (walk-through 2 H1)' },
+  { on: 'till-sale', text: 'While running alongside Citrus Lime: Take payment is off until switch-over day', who: 'Staff', decision: 'Moving from Citrus Lime, 3 Oct (walk-through 4 H2)' },
+  { on: 'till-sale', text: "A job already paid online can't go in the basket; it says Paid online · [date]", who: 'Staff', decision: 'Collect and pay 5 (H3); walk-through 10 H2' },
+  { on: 'till-sale', text: "After closing time, for someone who can't close the day: Closing up? [Name] closes the day. If nobody who can is in, just check out; the drawer is counted when the shop next opens", who: 'Staff', decision: 'Cash-up 5; Opening the shop 7; walk-through 10 M3' },
+  // T6 — a refund
+  { on: 'till-refund', text: 'Finishing a noted refund: the sale and items already filled in', who: 'Staff', decision: 'UX walk-through decisions 5; 3 Oct (walk-through 2 H1)' },
+  // T7 — handing over an online order
+  { on: 'till-collect', text: 'Handed over: Handed over · Undo for a few minutes', who: 'Staff', decision: 'Collect and pay 5 (M4); walk-through 10 L2' },
+];

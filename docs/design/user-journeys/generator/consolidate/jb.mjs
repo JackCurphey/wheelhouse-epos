@@ -33,4 +33,9 @@ export const lines = [
   { on: 'till-checkin', text: 'A workshop computer left alone for 10 minutes: back to Enter your PIN, nothing lost', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 3; build plan Q6' },
   { on: 'till-checkin', text: 'A till with nobody checked in: only the PIN screen', who: 'Staff', decision: 'Walk-through 8, fix M6 part 1' },
   { on: 'auth-site', text: 'Staff at two shops (Jo Taylor): their two shops, no All shops; the counts only for people who can close the day', who: 'Staff', decision: 'Multiple sites 9; Opening the shop 3 and 4' },
+  // "Draw the answers" spec, section 4: N5, N6.
+  { on: 'till-checkin', text: 'While running alongside Citrus Lime: Sales start on switch-over day, [date] · keep using Citrus Lime until then; check-in, search, customers and jobs still work', who: 'Staff', decision: 'Moving from Citrus Lime, 3 Oct (walk-through 4 H2)' },
+  { on: 'till-checkin', text: 'Forgotten PIN: the owner or a manager gives a one-time PIN from their phone, read out over a call; you change it here at check-in', who: 'Staff', decision: 'Signing in, 3 Oct (walk-through 10 M2)' },
+  { on: 'till-checkin', text: "The keyboard's number keys work too", who: 'Staff', decision: 'Walk-through 10 L1' },
+  { on: 'cust-signin', text: 'From a booking: you come straight back to your booking', who: 'Customer', decision: 'Book a repair 6, 9; walk-through 12 L6' },
 ];

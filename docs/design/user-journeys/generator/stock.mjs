@@ -370,7 +370,7 @@ export const TITLES = {
   'tr-incoming': 'Deliveries and orders: on its way, in and out',
   'tr-receive': 'Receiving a transfer, as Staff: typed counts, Problem?, the job flag', // UX walk-through 3 M9
   'tr-problem': 'A transfer line marked missing', // UX walk-through 3 M9
-  'tr-today-short': 'Today: a transfer arrived short',
+  'tr-today-short': 'Today: a transfer arrived with 1 missing',
   'tk-hub': 'Stockroom › Stock take: counts in progress and finished',
   'tk-hub-staff': 'Stock take as Staff see it: join a count',
   'tk-start': 'Start a count: an area, with areas used before',

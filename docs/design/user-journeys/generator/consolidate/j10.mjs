@@ -27,3 +27,9 @@ export default {
   'op-today-staff-lightspeed': into('op-today', TODAY, "Staff at a Lightspeed shop: '2 jobs need someone to look at Lightspeed', a Lightspeed 'Up to date' line; no Tills or Who’s in"),
   'desk': into('diary', '', "'Today’s workshop': three figure tiles, 'Arrivals · 3' tabs and an arrivals table, not the diary grid"), // inferred: link-only old journey 12 board "Today's workshop" (stage2.mjs:141)
 };
+
+// "Draw the answers" OP1: walk-through 2 second walk H1 (UX walk-through
+// decisions 5, later change 3 Oct), shown to those who see Needs attention.
+export const lines = [
+  { on: 'op-today', text: '[n] refunds to finish · Finish: finishing one opens the refund with the sale and items filled in', who: 'Owner, Manager, or anyone with Can close the day', decision: 'UX walk-through decisions 5; 3 Oct (walk-through 2 H1)' },
+];

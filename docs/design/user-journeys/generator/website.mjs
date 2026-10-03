@@ -82,6 +82,12 @@ const websitePage = (content, who = OWNER) => page('website', 'Website', `<div d
 const chevron = `<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span>`;
 const row = (title, sub, end = '') => `<a href="#" style="display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 18px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${title}</span><span style="font-size: 14px; color: ${C.muted}">${sub}</span></span>${end}${chevron}</a>`;
 const rows = (...r) => card(r.join('').replace('border-top: 1px solid', 'border-top: 0 solid'), 'overflow: hidden; flex-shrink: 0');
+// Website management, later change (3 Oct, walk-through 4 H3): the fixed
+// design's words and photos, one row per fixed part, each with Edit opening a
+// form box. A row with starting wording says "Check this" until it is saved once.
+const WORDS = [['Headline'], ['A line about the shop'], ['The big photo'], ['The workshop’s words'], ['The shop’s own words and photo'], ['Collection and returns', true], ['Privacy', true]];
+const wordsRow = ([t, starting], check) => `<div style="display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 6px 18px; border-top: 1px solid ${C.border}"><span style="flex-grow: 1; min-width: 0; font-size: 16px; font-weight: 700">${t}</span>${starting && check ? badge('Check this', 'amber') : ''}${button('Edit', { variant: 'default' }).replace('<button type="button"', `<button type="button" aria-label="Edit: ${esc(t)}"`)}</div>`;
+const wordsList = (check) => card(`<div style="padding: 14px 18px 10px">${h3('Words and photos', 'ws-words')}</div><div role="list" aria-labelledby="ws-words">${WORDS.map((w) => wordsRow(w, check).replace('<div style', '<div role="listitem" style')).join('')}</div>`, 'overflow: hidden; flex-shrink: 0');
 // The list of unpublished changes (audit M4, M6).
 // Issue #116 question 2: no theme editor for now, so no Theme change.
 const CHANGES = [['Home page', 'Headline, Book a repair moved'], ['Collection and returns', 'Returns text']];
@@ -92,7 +98,7 @@ const PAY_ROW = {
   ok: ['Taking payments', 'Connected to [payment provider] · test payment done', ''],
   more: ['Taking payments', '[payment provider] needs more details by [date], or online payments stop', badge('Needs details', 'amber')],
 };
-const payRow = (k) => { const [t, s, end] = PAY_ROW[k]; return row(t, `${s} · in Settings › Online orders`, end); };
+const payRow = (k) => { const [t, s, end] = PAY_ROW[k]; return row(t, `${s} · in Settings › Front desk › Online orders`, end); };
 // UX walk-through 4 H2: during a move from Citrus Lime the website is made
 // ready while running alongside and turned on during switch-over morning, so
 // it never takes orders or bookings that Citrus Lime doesn't see. moving:
@@ -127,6 +133,7 @@ const overview = ({ on = false, published = true, changes = false, open = false,
     row('Web address', `${FREE} · your free address · Wheelhouse sets up your own address for you`),
     row('Wheelhouse’s website or Shopify', 'Wheelhouse’s website'),
   )}
+${wordsList(moving !== 'morning')}
 ${card(`<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px"><span style="flex-grow: 1; font-size: 15px">What the website sells, “Show on website” and online payments are in <strong>Settings › Front desk › Online orders</strong>.</span><a href="#" style="${tall}; font-size: 15px; font-weight: 600; color: ${C.ink}">Open Online orders settings</a></div>`, 'flex-shrink: 0')}`);
 };
 

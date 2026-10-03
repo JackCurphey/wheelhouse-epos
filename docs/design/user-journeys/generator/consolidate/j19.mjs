@@ -17,8 +17,8 @@ export default {
   'ms-book-shop': into('bk-service', '', "'Which shop?' first: each shop with address and hours; 'Choose a shop to carry on'"), // journey 3's booking, first step
   'ms-book-shop-chosen': into('bk-service', '', "Shop already chosen: 'North Street Cycles, Bolton' with 'Change'"), // as above
   'ms-book-shop-change': into('bk-service', '', "'Changing shop clears your time. Your service stays if [Second site] offers it'"), // as above
-  'ms-job-other-shop': into('diary', '', "New job with 'Workshop at [Second site]': 'Goes to [Second site] as a request'; 'Send request to [Second site]'"), // inferred: drawn from diary.mjs
-  'ms-request-from-shop': into('diary', '', "At [Second site], Waiting for you: 'Request from Bolton' with 'Accept', 'Offer another time', 'Decline'"), // inferred: drawn from diary.mjs
+  'ms-job-other-shop': into('new-job', '', "New job with 'Workshop at [Second site]': 'Goes to [Second site] as a request'; 'Send request to [Second site]'"), // inferred: drawn from diary.mjs
+  'ms-request-from-shop': into('request-new', '', "At [Second site], Waiting for you: 'Request from Bolton' with 'Accept', 'Offer another time', 'Decline'"), // inferred: drawn from diary.mjs
   'ms-request-answered': into('diary', '', "At Bolton, Waiting for you: 'Answered by [Second site]' — 'accepted for [day] [time]'"), // inferred: the diary's Waiting for you
   'ms-sites': into('set-shop-details', '', "Each shop listed with address, phone, tills and hours, 'Edit'; '+ Add a shop'"),
   'ms-sites-manager': into('set-shop-details', '', "Manager: shops listed, no 'Edit' or 'Add a shop'; 'Only the owner can add or change shops.'"),
@@ -34,4 +34,6 @@ export default {
 // ms-switch-open, not op-today, because op-today stays a one-shop board.
 export const lines = [
   { on: 'ms-switch-open', text: 'While [Second site] is being set up: [Second site] · [n] steps to get it ready', who: 'Owner', decision: 'Walk-through 7 H1 (as taken)' },
+  // "Draw the answers" SI2
+  { on: 'ms-switch-open', text: 'On tablet and phone, at a business with more than one shop: North Street Cycles · Bolton (or All shops) under each page’s title, 14px', who: 'Staff', decision: 'Multiple sites 11; walk-through 7 L2, L3' },
 ];

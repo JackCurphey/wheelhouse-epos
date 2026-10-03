@@ -27,4 +27,11 @@ export const lines = [
   { on: 'staff-app', text: 'On a workshop computer, owner and manager pages open only after an Owner or Manager PIN', who: 'Owner and Manager', decision: 'Walk-through 8, decision 3' },
   { on: 'till-search', text: 'A job paid online: Paid online · [date], with Hand over in place of Add to basket', who: 'Staff', decision: 'Walk-through 8, decision 8; Collect and pay 5 (H3)' },
   { on: 'till-search', text: 'A job expected today: Book in', who: 'Staff', decision: 'Walk-through 8, decision 8' },
+  // "Draw the answers" spec, section 3: A3–A6.
+  { on: 'till-search', text: 'Each result row: its name opens the job, customer or product; a button on the right does the till action; Enter and scanning still do the till action', who: 'Staff', decision: 'App map, 3 Oct (walk-through 9 H1)' },
+  { on: 'till-search', text: 'A job row shows its stage and ready-by date: Waiting for parts · ready by Thu 17 Sep · approved £111.00', who: 'Staff', decision: 'App map, 3 Oct (walk-through 9 H1)' },
+  { on: 'till-search', text: 'A product row shows its price and [n] in stock here · [n] at [Second site], for everyone, Staff included', who: 'Staff', decision: 'Stock control, 3 Oct (walk-through 9 M2)' },
+  { on: 'staff-app', text: "Search open on any staff page: the same groups and rows as the till's search; each row opens its page; no till buttons", who: 'Staff', decision: 'App map 2; Customer service 12; walk-through 9 M1' },
+  { on: 'till-rail', text: 'Till only (no email): the rail opens the till and Front desk › Online orders, so they can mark online orders ready; every other room stays hidden', who: 'Staff', decision: 'Walk-through 8 decision 8; 3 Oct (walk-through 10 M1)' },
+  { on: 'site', text: 'A Lightspeed shop: no Shop or Basket in the header', who: 'Customer', decision: 'Lightspeed shops 10 (H1); walk-through 6 L4' },
 ];

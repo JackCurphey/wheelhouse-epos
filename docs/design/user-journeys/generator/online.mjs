@@ -44,7 +44,10 @@ const SHELF = '[Shelf name]';
 // Audit H3: Maya's example order was paid partly with store credit, so every
 // refund line is built from how it was paid.
 const PAID_BY = [['Store credit', '£[£]'], ['Card', '£[£]']];
-const paidLines = () => PAID_BY.map(([k, v]) => `<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span>${k}</span>${mono(v)}</div>`).join('');
+// Walk-through 12 L4 (second walk): a guest paid by card only; store credit is
+// for signed-in customers, so on-confirmed draws Card alone.
+const GUEST_PAID_BY = [['Card', '£[total]']];
+const paidLines = (by = PAID_BY) => by.map(([k, v]) => `<div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span>${k}</span>${mono(v)}</div>`).join('');
 const refundWords = (what = '£[total]') => `${what} goes back the way you paid: £[£] to your store credit and £[£] to your card`;
 
 // ---------- The website frame (App map 15) ----------
@@ -142,7 +145,9 @@ const pay = ({ signedIn = false, credit = false, gift = '', error = '', covered 
   : `${signedIn ? creditBox(credit) : ''}${giftPart(gift)}${wallets}<div style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: ${C.muted}"><span style="flex-grow: 1; height: 1px; background: ${C.border}"></span>or pay by card<span style="flex-grow: 1; height: 1px; background: ${C.border}"></span></div>${cardForm(error)}`, 'co-pay');
 const checkout = (opts = {}) => {
   const { credit, gift, covered, state = '', scroll = 0 } = opts;
-  const rows = [sumRow(PADS.name, PADS.price), sumRow('[Product]', '[£ price]'), sumRow('Collect from Bolton', 'Free'), sumRow('Total (includes VAT)', '£[total]', true)];
+  // Walk-through 12 L4 (second walk): the same basket as on-basket, the pads
+  // at 2 and 3 items in all.
+  const rows = [sumRow(`${PADS.name} × 2`, '£[£]'), sumRow('[Product]', '[£ price]'), sumRow('Collect from Bolton', 'Free'), sumRow('Total (includes VAT)', '£[total]', true)];
   if (credit || covered) rows.push(sumRow('Store credit', covered ? '−£[total]' : '−£[credit]'));
   if (gift === 'applied') rows.push(sumRow('Gift card', '−£[£]'));
   if (credit || gift === 'applied' || covered) rows.push(sumRow('Left to pay', covered ? '£0.00' : '£[£]', true));
@@ -162,7 +167,7 @@ const checkout = (opts = {}) => {
   // bottom, so the button and its messages are always in view.
   const left = (isPhone() ? stack(h1('Checkout'), summary(rows, terms), how(), details(opts.signedIn, opts.errors), pay(opts), '<div style="height: 150px"></div>') : stack(h1('Checkout'), how(), details(opts.signedIn, opts.errors), pay(opts))).replace('min-width: 0">', `min-width: 0${sc ? `; position: relative; top: -${sc}px` : ''}">`);
   const bar = `<div style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 8px; background: ${C.panel}; border-top: 1px solid ${C.border}">${cta}${keep}</div>`;
-  const html = isPhone() ? site(left, { basket: 2, toast: bar }) : site(`${two(left, `<div style="position: sticky; top: 0">${summary(rows, `${cta}${keep}${terms}`)}</div>`)}`, { basket: 2 });
+  const html = isPhone() ? site(left, { basket: 3, toast: bar }) : site(`${two(left, `<div style="position: sticky; top: 0">${summary(rows, `${cta}${keep}${terms}`)}</div>`)}`, { basket: 3 });
   return sc ? html.replace(/<div data-scroll style="([^"]*?)overflow-y: auto;?/, '<div data-scroll style="$1overflow-y: hidden;') : html;
 };
 // The bank's own check opens over checkout (the provider's window; audit H2).
@@ -173,7 +178,7 @@ const bigOrder = () => `<span style="display: flex; flex-direction: column; gap:
 const confirmed = (saving = false) => site(`${two(stack(
   `<div style="display: flex; flex-direction: column; gap: 10px">${msg('Paid · £[total]', 'ok', true)}${h1('Thanks, Maya — your order is in')}${bigOrder()}<span style="font-size: 15px">We’ve emailed a copy to maya@example.test · <a href="#" style="color: ${C.ink}">Not right? Change email</a></span></div>`,
   section('What happens next', `<ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5"><li>We get it ready — about [n] days, as one item comes from our [Second site] shop.</li><li>We tell you when it’s ready to collect.</li><li>Come in and give your name or order number. Nothing more to pay.</li></ol>${shopLines()}`, 'cf-next'),
-  section('How you paid', paidLines(), 'cf-paid'),
+  section('How you paid', paidLines(GUEST_PAID_BY), 'cf-paid'),
 ), stack(
   saving
     ? section('Save your details for next time', `<p style="margin: 0; font-size: 15px; line-height: 1.5">We’ve sent a code to maya@example.test.</p>${field('Code from the email', { placeholder: '6 digits', autocomplete: 'one-time-code', linked: true })}${button('Save my details', { block: true })}${linkBtn('Send a new code')}`, 'cf-save')

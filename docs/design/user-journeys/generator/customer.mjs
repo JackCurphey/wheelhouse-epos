@@ -7,7 +7,7 @@
 // (diary.mjs JOBS — nothing hand-picked), the till sale B1-[0000] and the
 // approved £111 on WH-1042. Anything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { JOBS, DAYS, ST, customerBikeOf, headerSearch } from './diary.mjs';
+import { JOBS, DAYS, TODAY, ST, customerBikeOf, headerSearch } from './diary.mjs';
 import { page, fold, pill, offer, choice, note, popup, overlay, setSize, size, withSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
 import { field } from './ui.mjs';
 import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs'; // UX walk-through 6 M3
@@ -116,8 +116,9 @@ function history(filter = 'Everything', empty = false, c2w = '') {
   if (empty) return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 17px; font-weight: 700">History</span><div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 16px; border: 2px dashed ${C.border}; border-radius: 10px; text-align: center"><span style="font-size: 16px; font-weight: 700">Nothing yet</span>${note('Jobs, sales and messages show here, newest first.')}${button('New job', { variant: 'default' })}</div></div>`, 'flex-grow: 1; min-width: 0');
   // UX walk-through 9 L5 (Customer service 12): a Ready job is still open —
   // the bike is waiting to be collected — so it sits under "Open now",
-  // newest first with the others, not under "Earlier".
-  const shownJobs = new Set([...mj().filter((j) => j.key !== 'ready').slice(0, 3), ...mj().filter((j) => j.key === 'ready').slice(0, 1)]);
+  // newest first with the others, not under "Earlier". The Ready job shown
+  // is the newest on or before today (walk-through 9 L5, second walk).
+  const shownJobs = new Set([...mj().filter((j) => j.key !== 'ready').slice(0, 3), ...mj().filter((j) => j.key === 'ready' && j.day <= TODAY).slice(0, 1)]);
   const open = mj().filter((j) => shownJobs.has(j));
   const rows = `${subHead('Open now')}${open.map(jobRow).join('')}${c2w === 'open' ? c2wRow('open') : ''}
 ${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', `[date] · [what came back]${atShop()}`, mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}

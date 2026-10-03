@@ -28,3 +28,9 @@ export default {
   'mv-week': into('mv-start', '', "'Your first week on Wheelhouse': 'Day 5 of 7', days traded and to come; keep Citrus Lime"),
   'mv-week-done': into('mv-start', '', "'A full week on Wheelhouse': seven days traded; switch Citrus Lime off when ready"),
 };
+
+// "Draw the answers" MV1, MV2: Jack's 3 Oct answers drawn as lines (spec B0).
+export const lines = [
+  { on: 'mv-start', text: 'Running alongside: the tills wait for switch-over day — check-in says Sales start on switch-over day, [date], and Take payment is off', who: 'Owner', decision: 'Moving from Citrus Lime, 3 Oct (walk-through 4 H2)' },
+  { on: 'mv-start', text: 'The website is ready ticks once no Words and photos row says Check this', who: 'Owner', decision: 'Website management, 3 Oct (walk-through 4 H3)' },
+];

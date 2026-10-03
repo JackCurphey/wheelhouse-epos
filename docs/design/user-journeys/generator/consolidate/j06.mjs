@@ -1,6 +1,6 @@
 // Journey 6, Cycle to Work — one-canvas plan (issue #116 step 3).
 // Source: ../../consolidation-6-7.md merge table.
-import { keep, into, later } from './plan.mjs';
+import { keep, into, later, same } from './plan.mjs';
 
 const LIST = 'C2W 2, 7 (M2, M3); walk-through 5 M3, H2';
 const ORDER = 'C2W 1, 3, 4';
@@ -56,12 +56,12 @@ export default {
   'cw-more': into('cw-order-held', ORDER, "'More…' menu open: change bike, accessories, provider, 'Release the bike', 'Cancel the order…'"),
   'cw-quote-revised': into('cw-quote', 'C2W 6, 7 (M9)', "'Revised [date]', '[Different bike]'; 'Email the revised quote to Maya'"),
   'cw-cancel': keep(8),
-  'cw-cancel-ordered': into('cw-cancel', 'Walk-through 5 M8', "Bike already ordered: 'Keep it as shop stock' or 'Send it back to [supplier]'; tell [Provider]"),
+  'cw-cancel-ordered': into('cw-cancel', 'Walk-through 5 M8', "Ordered after applying, with no deposit: 'Keep it as shop stock' or 'Send it back to [supplier]'; tell [Provider]"),
   'cw-cancel-ordered-deposit': into('cw-cancel', 'Walk-through 5 M8', "Ordered after a deposit: 'Deposit £[£] · kept, as your quote said.'"),
   // Today, the customer, settings and messages
   'cw-today': into('op-today', 'Opening the shop 3, 4', "Lines 'Maya Patel · Cycle to Work quote, no certificate yet' and '[Provider] payment is [n] days late'"),
   'cw-today-held': into('op-today', 'Opening the shop 3, 4', "Only the late-payment line; toast 'Maya Patel’s bike is held until [date]…' with 'Undo'"),
-  'cw-today-choose': into('op-today', 'Opening the shop 3, 4', "Lines 'Cycle to Work hold ended [date] — choose' and 'Deposit to refund · Maya Patel'"), // the same board as op-today-c2w
+  'cw-today-choose': same('op-today-c2w'), // walk-through 5 L2: the same board as op-today-c2w
   'cw-customer-view': keep(37),
   'cw-customer-released': into('cw-customer-view', 'Walk-through 5 M3, M8', "Amber 'Your bike is no longer put aside.' in place of 'put aside until [date]'"),
   'cw-customer-cancelled': into('cw-customer-view', 'Walk-through 5 M3, M8', "'This order is cancelled.' deposit kept; no stages, no 'How to apply'"),
@@ -80,4 +80,9 @@ export default {
 export const lines = [
   { on: 'cw-customer-view', text: 'Certificate received: What you pay at collection £[£]', who: 'Customer', decision: 'Cycle to Work 6, 7; walk-through 5 H4' },
   { on: 'cw-customer-view', text: 'Ready to collect: What you pay at collection £[£]', who: 'Customer', decision: 'Cycle to Work 6, 7; walk-through 5 H4' },
+  // draw-the-answers CW2–CW4.
+  { on: 'cw-cancel', text: 'Cancelling before the bike is ordered, with no deposit held: no deposit line; an in-stock bike goes back on sale at Bolton', who: 'Staff, Owner and Manager', decision: 'Cycle to Work 4, 7; 3 Oct (walk-through 5 L4); walk-through 5 M4' },
+  { on: 'cw-order-held', text: 'More, as Staff: Cancel the order when it holds no deposit; with a deposit held, A deposit is held: ask a manager to cancel', who: 'Staff', decision: 'Cycle to Work 7; 3 Oct (walk-through 5 L4)' },
+  { on: 'cw-customer-view', text: 'Collected: the bike and its frame number', who: 'Customer', decision: 'Cycle to Work 6, 7; walk-through 5 M2' },
+  { on: 'cw-customer-view', text: 'Opened from the email\'s See your order: a private link, no sign-in, like a repair\'s; also in the website account when signed in', who: 'Customer', decision: 'Cycle to Work 7; 3 Oct (walk-through 12 M4)' },
 ];

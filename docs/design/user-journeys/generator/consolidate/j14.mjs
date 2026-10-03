@@ -41,3 +41,10 @@ export default {
   'tk-diff': keep(3), // its own step: a list of differences, largest first
   'tk-applied': into('tk-diff', '', "'Count applied · [Category] · [n] products corrected' with 'Undo'; 'Download the count'"),
 };
+
+// Decisions drawn as lines, with no old drawing behind them ("Draw the
+// answers" spec, section 18: K1). Read from the old phone drawing,
+// tk-count-phone.
+export const lines = [
+  { on: 'tk-count', text: "On a phone: Scan what's here at the top, the list fills the screen, I've finished my part at the bottom", who: 'Staff', decision: 'Stock control 5, 12; walk-through 3 M5' },
+];

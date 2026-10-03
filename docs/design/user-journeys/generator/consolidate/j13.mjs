@@ -51,3 +51,12 @@ export default {
   'po-feed': later('Build plan: held back'),
   'po-send': later('Build plan: held back'),
 };
+
+// Decisions drawn as lines, with no old drawing behind them ("Draw the
+// answers" spec, section 17: V1–V3).
+export const lines = [
+  { on: 'rs-delivery', text: "Booked in, as someone who can order stock: each line has Cost went up? Change it, and the product's cost and history record it", who: 'Owner and Manager', decision: 'Receiving stock, 3 Oct (walk-through 3 M3)' },
+  { on: 'rs-restock', text: 'For customers: a part added to a job with no free stock is on the list by itself, not yet ordered', who: 'Owner', decision: 'Receiving stock, 3 Oct (walk-through 3 M7)' },
+  // Read from the old phone drawing, rs-receive-phone.
+  { on: 'rs-receive', text: 'On a phone: Scan the box at the top, the list fills the screen, Book in [n] items at the bottom', who: 'Staff', decision: 'Stock control 5, 12; walk-through 3 M5' },
+];

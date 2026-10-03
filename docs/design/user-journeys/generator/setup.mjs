@@ -271,8 +271,8 @@ const tillOnlyDialog = () => popup('inv-title', 'Add someone', 'No email — the
 ${howPills(true)}
 ${field('Name', { placeholder: 'Their name, as it shows on sales' })}
 ${choice('Role', [['Staff', true], ['Mechanic', false]])}
-${note('A Mechanic added this way gets “Can use the till” switched on. They don’t sign in to Wheelhouse, so they can’t open anything away from the till.')}
-${note('Their PIN is given at the till: you or a manager checks in, opens “Give [name] their PIN” and turns the screen to them. A forgotten PIN is cleared and given again the same way.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add them')}`);
+${note('A Mechanic added this way gets “Can use the till” switched on. They don’t sign in to Wheelhouse, so they can’t open anything away from the till except Front desk › Online orders.')}
+${note('Their PIN is given at the till: you or a manager checks in, opens “Give [name] their PIN” and turns the screen to them. A forgotten PIN is cleared and given again the same way. Or use Give a new PIN on their page, from your phone: it shows a one-time PIN to read out over a call, and they change it at check-in.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add them')}`);
 def('set-staff-invite', () => overlay(settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds({ people: peopleOpen(false, true) }), { who: MANAGER /* UX walk-through 2 (decision 6): Jack Lewis, Owner */ }), inviteDialog()));
 // UX walk-through 4 M2, M3: the Owner's list after inviting Jo and adding a
 // till-only person; the same invite once it has expired; the till-only form.
@@ -440,7 +440,7 @@ const STEPS = [
   ['Quick buttons for the till', 'Settings › Till', false, 'the first button is added'],
   ['Float and closing up', 'Settings › Front desk › End of day', false, 'a float is set', true],
   ['Check the messages customers get', 'Settings › Messages', false, 'you’ve looked at Messages'],
-  ['Set up your website', 'Office › Website', false, 'the website’s three-step start is done', true],
+  ['Set up your website', 'Office › Website', false, 'no Words and photos row says Check this', true],
 ];
 // UX walk-through 4 M1: while a move is on, the card machine and the float
 // are already done for the move, as mv-ready draws them (shared items tick together, from the same
@@ -482,7 +482,7 @@ function gettingStarted({ moving = false } = {}) {
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><h2 style="margin: 0; font-size: 20px; font-weight: 700">Getting started</h2>${isPhone() || moving ? '' : moveLink}</div>
 ${moving ? moveLine() : ''}
 <div aria-hidden="true" style="height: 6px; border-radius: 999px; background: ${C.mutedBg}; overflow: hidden"><div style="width: ${Math.round((done.length / steps.length) * 100)}%; height: 100%; background: ${C.ink}"></div></div>
-${note(moving ? 'Your tills are in practice until switch-over — do these in any order.' : 'Your till is ready, so you can sell now — do the rest in any order.')}
+${note(moving ? 'Running alongside Citrus Lime: the tills start on switch-over day.' : 'Your till is ready, so you can sell now — do the rest in any order.')}
 <button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0; border: 0; border-top: 1px solid ${C.border}; background: transparent; font-family: inherit; text-align: left; color: ${C.muted}"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 15)}</span><span style="font-size: 14px; flex-grow: 1">${done.length} done: ${done.join(', ')}</span>${icon('chevron', 16)}</button>
 <div style="display: flex; flex-direction: column">${steps.map((st, i) => (st[2] ? '' : stepRow(st, i, i === firstTodo, moving))).join('')}</div>
 ${isPhone() && !moving ? moveLink : ''}

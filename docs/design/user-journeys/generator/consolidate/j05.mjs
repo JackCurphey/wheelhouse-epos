@@ -47,5 +47,5 @@ export default {
   'cp-receipt-address-customer': into('cp-receipt-address', 'Leftover screens 3', "'maya@example.test' filled in, 'From Maya’s customer record'; no save tick"),
   'cp-receipt-address-offline': into('cp-receipt-address', 'Leftover screens 3', "'The till is offline…' bar; button 'Send when back online'"),
   // Also at collection: old Release 1 picture
-  'ready': keep(37), // kept: Collect 6 — report says removing `ready` goes against Collect 6 (2026-09-30-collect-and-pay-review.md:83-85 keeps it)
+  'ready': into('cp-summary', 'Collect and pay 6; 3 Oct (walk-through 1 L6)', "older Release 1 picture of this page, 'Customer is invited to collect'; nothing it shows is missing here"), // 3 Oct: leaves the canvas as a board (README rule 5); changes Collect 6, which kept it
 };

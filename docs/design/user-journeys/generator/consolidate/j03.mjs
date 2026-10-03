@@ -22,15 +22,15 @@ export default {
   'bk-checking-payment': into('bk-details', 'Book 2, 9', "'We’re checking whether your payment went through — please don’t pay again'; 'Check again'"),
   'bk-resume': into('bk-details', 'Book 2, 9', "'You didn’t finish booking.' banner with 'Carry on' and 'Start again'"),
   // "Booking sent": 1 drawing, 3 situations
-  'bk-request': keep(40),
-  'bk-request-deposit': into('bk-request', 'Book 8', "adds 'Deposit paid £[deposit]', 'Free to cancel until', and the deposit-back line"),
-  'bk-confirmed': into('bk-request', 'Book 8', "green 'Booking confirmed': 'See you on Thursday 17 September, Maya'; 'Cancel booking'"),
+  'bk-request': into('bk-page', 'Book 8; walk-through 1 L1 (one drawing per page)', "Just sent: 'Thanks, Maya — your request is with us'"),
+  'bk-request-deposit': into('bk-page', 'Book 8', "adds 'Deposit paid £[deposit]', 'Free to cancel until', and the deposit-back line"),
+  'bk-confirmed': into('bk-page', 'Book 8', "green 'Booking confirmed': 'See you on Thursday 17 September, Maya'; 'Cancel booking'"),
   // Your booking: the one customer job page
   'bk-bookings': into('ac-account', '', "'Your bookings' list: 'Coming up' and 'Earlier' cards, each with 'Open'"), // inferred — report Low 7: overlaps journey 7's account list of repairs; left out of its reduced count
   'bk-page-request': into('bk-page', 'Quote 1', "'Your booking request', purple 'Waiting for the shop to confirm'; 'Cancel request'"),
   'bk-offered': into('bk-page', 'Quote 1', "'The shop has suggested another time': 'Accept this time' or 'Cancel my request'"),
   'bk-page': keep(37),
-  'bk-page-dropoff': into('bk-page', 'Quote 1', "'drop off 09:00–18:00', 'Mechanic: Alex Morgan'; no deposit rows"),
+  'bk-page-dropoff': into('bk-page', 'Quote 1', "'drop off 09:00–18:00', 'Mechanic: Alex Morgan'"),
   'bk-change': keep(37),
   'bk-change-pending': into('bk-change', 'Quote 1', "purple 'New date waiting for the shop'; 'Cancel my date change' button"),
   'bk-change-declined': into('bk-change', 'Quote 1', "warning 'The shop couldn’t do Friday 25 September.' — still Thursday"),
@@ -43,7 +43,7 @@ export default {
   'bk-expired': into('bk-page', 'Walk-through 1 M5', "'This booking link has expired' — only 'Book a repair' and shop details"),
   'bk-unavailable': into('bk-service', '', "no steps: 'Online booking is unavailable just now' — call the shop"), // inferred — edge case not in the merge table; shown in place of the booking page
   // A Lightspeed shop
-  'bk-page-ls': into('bk-page', 'Quote 1', "no 'Deposit paid' or 'Free to cancel until' rows; no Basket in the header"),
+  'bk-page-ls': into('bk-page', 'Quote 1', "no Basket in the header"),
   'bk-cancel-ls': into('bk-cancel', 'Book 10', "cancel pop-up says 'There’s nothing to pay or refund.'"),
   // The shop's side
   'bk-staff-request': into('diary', '', "request pop-up: 'Deposit paid £[deposit]', 'Customer OK up to £[amount]', updates choice"),
@@ -52,3 +52,8 @@ export default {
   'bk-settings': keep(1),
   'bk-settings-deposits': into('bk-settings', 'Book 11', "scrolled to 'Deposits' and 'Terms': 'Free to cancel until', 'Use your own'"),
 };
+
+// Situation lines with no old drawing behind them ("Draw the answers" BK3).
+export const lines = [
+  { on: 'bk-page', text: 'Confirmed, after paying a deposit: Deposit paid £[deposit] and Free to cancel until [date and time]', who: 'Customer', decision: 'Book a repair 8; walk-through 1 M3' },
+];

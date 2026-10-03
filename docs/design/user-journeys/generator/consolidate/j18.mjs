@@ -68,3 +68,8 @@ export default {
   'ws-pay-shopify': into('ws-pay-none', '', "Shopify takes website payments; [Payment provider] only for 'Pay now' on repairs"),
   'ws-shopify-order': into('on-orders', '', "Order row says 'From Shopify'"), // journey 2's Online orders
 };
+
+// "Draw the answers" W2: Jack's 3 Oct answer drawn as a line (spec B0).
+export const lines = [
+  { on: 'ws-page', text: 'Edit on a Words and photos row: a form box with that part\'s words or photo; a row with starting wording says Check this until it\'s saved once', who: 'Owner', decision: 'Website management, 3 Oct (walk-through 4 H3)' },
+];

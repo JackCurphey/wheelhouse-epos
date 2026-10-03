@@ -17,9 +17,9 @@ export default {
   'ac-account-c2w': into('ac-account', ACCOUNT, "History 'Now' row '[Bike] · Waiting for the certificate', 'What you pay at collection: £[£]'"),
   'ac-account-c2w-collected': into('ac-account', ACCOUNT, "'[Bike] · [Size]' in Your bikes with 'Frame [frame number]'; '[Bike] · Collected' in history"),
   // Talking to the shop
-  'ac-job-note': into('cp-summary', 'Account 3', "The job’s page with 'Notes with the shop': 'Add a note for the shop', 'Send note'"),
-  'ac-job-note-sent': into('cp-summary', 'Account 3', "Maya’s note in the thread; 'Sent. North Street Cycles will reply here…'"),
-  'ac-job-note-answered': into('cp-summary', 'Account 3', "Maya’s note and 'Jo Taylor, North Street Cycles' reply; a 'Reply' box"),
+  'ac-job-note': into('bk-page', 'Account 3', "The job’s page with 'Notes with the shop': 'Add a note for the shop', 'Send note'"),
+  'ac-job-note-sent': into('bk-page', 'Account 3', "Maya’s note in the thread; 'Sent. North Street Cycles will reply here…'"),
+  'ac-job-note-answered': into('bk-page', 'Account 3', "Maya’s note and 'Jo Taylor, North Street Cycles' reply; a 'Reply' box"),
   'ac-ask': keep(9), // inferred: not in the merge table; the "ask a question" box over the account
   'ac-account-question-sent': into('ac-account', ACCOUNT, "Banner 'Question sent. We’ll text you…'; history row badged 'Sent'"),
   'ac-question': keep(47),
@@ -39,7 +39,7 @@ export default {
   'ac-service-edit': into('set-workshop-services', 'Owner setup 14', "Pop-up 'Standard service': 'Remind customers it’s due after [n] months'"),
   'ac-messages': into('set-msg-list', 'Account 2', "Scrolled to the 'Service reminder' and review request rows; each ends 'Stop these: [link]'"),
   'ac-reminder-wording': into('set-msg-list', 'Account 2', "'Service reminder' wording pop-up; fixed 'Stop these: [link]' line and a preview"),
-  'ac-reminder-landing': into('bk-page', 'Account 2, 4', "Booking step 3: 'From your reminder: booking the next Standard service…', details filled in"),
+  'ac-reminder-landing': into('bk-when', 'Account 2, 4', "Booking step 3: 'From your reminder: booking the next Standard service…', details filled in"),
   // Reviews and how we contact you
   'ac-review-first': into('ac-review-setting', 'Account 5', "Switch off and disabled: 'Add your review page first, then switch this on.'"),
   'ac-review-setting': keep(9),

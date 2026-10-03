@@ -71,7 +71,7 @@ export function finalCustStrip(customer, mechanicName, custHref = '#') {
   // hesitate over. Added `title` (a native browser tooltip) alongside the
   // existing aria-label, same text.
   const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" title="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
-  const custLinkF = `<a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
+  const custLinkF = `<a href="${custHref}" aria-label="Open ${esc(customer.name)}'s page" style="font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
   return `<div style="flex-shrink: 0; box-sizing: border-box; padding: 2px 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}">
 <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: ${C.ink}">${custLinkF}<span>${esc(customer.phone)}</span><span>${esc(customer.email)}</span><span>${esc(customer.bike)}</span>${customer.storageSlot ? `<span style="color: ${C.muted}">Kept on ${esc(customer.storageSlot)}</span>` : ''}<span>Mechanic: <strong>${esc(mechanicName)}</strong></span></div>
 <div style="display: flex; gap: 8px; flex-shrink: 0">${iconBtnF('inbox', `Message ${esc(customer.name)}`)}${iconBtnF('mail', `Email ${esc(customer.name)}`)}${iconBtnF('menu', 'Notes')}</div>
@@ -89,7 +89,7 @@ export function finalCustStrip(customer, mechanicName, custHref = '#') {
 // in" are visually separated from "what the diary/quote says").
 export function finalCustStripTwoRow(customer, mechanicName, custHref = '#', tags = '', touchLinks = false) {
   const iconBtnF = (name, label) => `<button type="button" aria-label="${esc(label)}" title="${esc(label)}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}">${icon(name, 18)}</button>`;
-  const custLinkF = `<a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="${touchLinks ? 'display: inline-flex; align-items: center; min-height: 44px; ' : ''}font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
+  const custLinkF = `<a href="${custHref}" aria-label="Open ${esc(customer.name)}'s page" style="${touchLinks ? 'display: inline-flex; align-items: center; min-height: 44px; ' : ''}font-size: 14px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>`;
   // Rows trimmed to 0px vertical padding (from finalCustStrip's 2px): the
   // 44px icon buttons already set the identity row's floor, and the
   // logistics row's plain text needs no extra air either — every px here is
@@ -328,7 +328,7 @@ export function jobPhoneSections({
   const metaLimit = limit !== undefined ? limit : SPEND_LIMIT;
   const strip = `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.mutedBg}; overflow: hidden">
 <div style="padding: 8px 8px 10px 12px; display: flex; flex-direction: column; gap: 2px">
-<div style="display: flex; align-items: center; gap: 6px"><a href="${custHref}" aria-label="View ${esc(customer.name)}'s account" style="flex-grow: 1; display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>${iconBtn('inbox', `Message ${customer.name}`)}${iconBtn('mail', `Email ${customer.name}`)}${iconBtn('menu', 'Notes')}</div>
+<div style="display: flex; align-items: center; gap: 6px"><a href="${custHref}" aria-label="Open ${esc(customer.name)}'s page" style="flex-grow: 1; display: inline-flex; align-items: center; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.accentDark}; text-decoration: underline; text-underline-offset: 3px">${esc(customer.name)}</a>${iconBtn('inbox', `Message ${customer.name}`)}${iconBtn('mail', `Email ${customer.name}`)}${iconBtn('menu', 'Notes')}</div>
 <span style="font-size: 14px; color: ${C.ink}">${esc(customer.phone)}</span><span style="font-size: 14px; color: ${C.ink}">${esc(customer.email)}</span>
 </div>
 <div style="padding: 10px 12px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: ${C.ink}">

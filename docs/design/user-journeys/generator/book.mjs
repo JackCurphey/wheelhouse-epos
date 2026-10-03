@@ -48,9 +48,11 @@ const FULL = [{ name: 'Standard service', what: 'Safety check, gears, brakes and
   { name: '[Full service]', what: '[What’s included]', time: '[time]', price: '£[price]' },
   { name: '[Full service]', what: '[What’s included]', time: '[time]', price: '£[price]' }];
 const SINGLE = [['Brake service', '45 min'], ['Gear adjustment', '60 min'], ['Safety check', '60 min']];
-// UX walk-through 1 H1: in the story Maya asks to be called first, so the
+// UX walk-through 1 H1: in the story Maya asks to be asked first, so the
 // quote in journey 4 is sent by the rules (a limit skips it, Workshop day 43).
-const LIMIT = 'We’ll call you before any extra work';
+// Drop off and approve the quote, 3 Oct (walk-through 12 H1): "Ask me", not
+// "Call me", and the pages that repeated it say this instead.
+const LIMIT = 'We’ll send you the quote to approve, or call us';
 const CUTOFF = '[date and time]';
 
 // ---------- The page frame (decision 2) ----------
@@ -103,7 +105,7 @@ function summaryBox({ service = null, price = null, bike = null, when = null, me
   // to the same box.
   if (isPhone()) return `<aside aria-label="Your booking" style="flex-shrink: 0"><button type="button" aria-expanded="false" style="display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left"><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 700">Your booking</span><span style="font-size: 13px; color: ${C.muted}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${[service, when].filter(Boolean).join(' · ') || 'Not chosen yet'}${deposit ? ' · deposit £[deposit]' : ''}</span></span>${price === 'agree' ? `<span style="font-size: 13px; font-weight: 600">Price agreed first</span>` : price ? mono(price, 'font-size: 17px') : ''}<span style="display: inline-flex; transform: rotate(180deg)">${icon('chevron', 16)}</span></button></aside>`;
   return `<aside aria-label="Your booking" style="flex-shrink: 0">${card(`<div style="padding: 18px; display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0 0 6px; font-size: 18px; font-weight: 700">Your booking</h2>
-${shop ? r('Shop', shop) : ''}${r('Service', service)}${r('Bike', bike)}${r('When', when)}${mechanic ? r('Mechanic', mechanic) : ''}${limit === 'call' ? r('Extra work', 'We’ll call you first') : limit ? r('Extra work', LIMIT) : ''}
+${shop ? r('Shop', shop) : ''}${r('Service', service)}${r('Bike', bike)}${r('When', when)}${mechanic ? r('Mechanic', mechanic) : ''}${limit ? r('Extra work', LIMIT) : ''}
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0 4px; border-top: 1px solid ${C.border}"><span style="font-size: 15px; font-weight: 700">Price</span>${priceVal}</div>
 ${dep}${depNote}
 <p style="margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: ${C.muted}">Prices include VAT. ${limit && limit !== 'call' ? 'Anything above your limit is agreed with you first.' : 'Any extra work is agreed with you first.'}</p></div>`)}</aside>`;
@@ -144,7 +146,7 @@ const textarea = (label, value, hint = '', rows = 3) => { const id = `bt-${++FID
 const photos = () => `<button type="button" style="display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; min-height: 44px; padding: 0 14px; border-radius: 6px; border: 1px dashed ${C.input}; background: transparent; color: ${C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${icon('plus', 16)}Add photos or a short video <span style="font-weight: 400; color: ${C.muted}">· optional</span></button>`;
 // Workshop day 41: the customer can name how much the whole bill may come to.
 const limit = (set = false) => `<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px"><legend style="padding: 0 0 6px; font-size: 14px; font-weight: 600">If the mechanic finds more to do</legend>
-<label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px"><input type="radio" name="limit"${set ? '' : ' checked'} style="width: 20px; height: 20px; accent-color: ${C.ink}">Call me before any extra work</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px"><input type="radio" name="limit"${set ? '' : ' checked'} style="width: 20px; height: 20px; accent-color: ${C.ink}">Ask me before any extra work</label>
 <label style="display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px"><input type="radio" name="limit"${set ? ' checked' : ''} style="flex-shrink: 0; width: 20px; height: 20px; accent-color: ${C.ink}"><span style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px">Go ahead if the whole bill comes to no more than <span style="display: inline-flex; align-items: center; gap: 4px">£<input aria-label="Most the whole bill can come to, in pounds" inputmode="numeric" value="200" style="width: 72px; min-height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 6px; border: 1px solid ${C.input}; background: #ffffff; font-family: ${MONO}; font-size: 15px; color: ${C.ink}"></span></span></label></fieldset>`;
 const twoCol = (a, b) => `<div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : '1fr 1fr'}; gap: 12px">${a}${b}</div>`;
 const bikeGuest = () => `${twoCol(bfield('Make and model', { value: BIKE }), bfield('Colour, or anything that helps us spot it', { value: BIKE_DETAIL }))}
@@ -171,7 +173,7 @@ function strip(chosen, { hoverFull = false, booked = null } = {}) {
     const tipId = `full-${d}`;
     const tip = hoverFull && s === 'full' ? `<span role="tooltip" id="${tipId}" style="position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 2; width: 200px; padding: 10px 12px; border-radius: 8px; background: ${C.ink}; color: #ffffff; font-size: 13px; font-weight: 400; line-height: 1.4; text-align: left">Fully booked. The shop is open, but the workshop has no room left that day.</span>` : '';
     // A full day also explains itself on keyboard focus (audit M3).
-    return `<button type="button" role="radio" aria-checked="${on}" aria-label="${long} ${d} September, ${sub === '[n] times' ? '[n] times free' : sub}"${s !== 'open' ? ' aria-disabled="true"' : ''}${s === 'full' ? ` aria-describedby="${tipId}"` : ''} style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 70px; padding: 10px 6px; box-sizing: border-box; border-radius: 10px; border: ${on ? `2px solid ${C.ink}` : mine ? `2px dashed ${C.ink}` : `1px solid ${s === 'open' ? C.input : C.border}`}; background: ${on ? C.ink : s === 'open' ? C.panel : C.mutedBg}; color: ${on ? '#ffffff' : s === 'open' ? C.ink : C.muted}; font-family: inherit; flex-shrink: 0; ${hoverFull && s === 'full' ? `box-shadow: 0 0 0 3px rgba(${C.highlightRgb},0.6);` : ''}"><span style="font-size: 13px">${w}</span><span style="font-size: 20px; font-weight: 700">${d}</span><span style="font-size: 12px">${sub}</span>${tip}</button>`;
+    return `<button type="button" role="radio" aria-checked="${on}" aria-label="${long} ${d} September, ${sub === '[n] times' ? '[n] times free' : sub}"${s !== 'open' ? ' aria-disabled="true"' : ''}${s === 'full' ? ` aria-describedby="${tipId}"` : ''} style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 70px; padding: 10px 6px; box-sizing: border-box; border-radius: 10px; border: ${on ? `2px solid ${C.ink}` : mine ? `2px dashed ${C.ink}` : `1px solid ${s === 'open' ? C.input : C.border}`}; background: ${on ? C.ink : s === 'open' ? C.panel : C.mutedBg}; color: ${on ? '#ffffff' : s === 'open' ? C.ink : C.muted}; font-family: inherit; flex-shrink: 0; ${hoverFull && s === 'full' ? `box-shadow: 0 0 0 3px rgba(${C.highlightRgb},0.6);` : ''}"><span style="font-size: 13px">${w}</span><span style="font-size: 20px; font-weight: 700">${d}</span><span style="font-size: 15px">${sub}</span>${tip}</button>`;
   };
   return `<div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 700; flex-grow: 1">September 2026</span>${link('Later weeks ›')}</div>
 ${radios('Days', DAYS.map(cell).join(''), `display: flex; gap: 8px; overflow-x: auto; padding-bottom: ${hoverFull ? 84 : 4}px`)}`;
@@ -248,7 +250,7 @@ ${steps(4, [DONE_SERVICE, DONE_BIKE, DONE_WHEN], detailsBody())}`, summaryBox({ 
 
 // ---------- The booking's own page (decision 10; audit H2) ----------
 const notice = (tone, inner) => `<p role="status" style="margin: 0; display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${tone === 'warn' ? C.warnBg : C.purpleBg}; color: ${tone === 'warn' ? C.warnInk : C.purpleInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span>${inner}</span></p>`;
-const bookingPage = ({ state = 'confirmed', dialog = '' } = {}) => {
+const bookingPage = ({ state = 'confirmed', dialog = '', deposit } = {}) => {
   let head, body, heading = `${BIKE} · Standard service`;
   if (state === 'request') {
     heading = 'Your booking request';
@@ -276,7 +278,7 @@ ${note('Your booking stays on Thursday until the shop confirms the new time.')}<
     body = `${bookingLines({ deposit: false, when: `${DAY}, drop off ${mono('09:00')}–${mono('18:00')}`, mechanic: 'Alex Morgan' })}${pageButtons()}`;
   } else {
     head = badge('Booking confirmed', 'green');
-    body = `${bookingLines()}${pageButtons()}`;
+    body = `${bookingLines(deposit === undefined ? {} : { deposit })}${pageButtons()}`;
   }
   const page = centred(`<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span>${h1(heading, 28)}</div>${answerCard(`${head}${body}${state === 'change' ? '' : shopLines}`)}`, state === 'change' ? 1000 : 640);
   return dialog ? overlay(page, dialog) : page;
@@ -363,7 +365,9 @@ def('bk-confirmed', () => confirmedNow());
 def('bk-bookings', () => yourBookings());
 def('bk-page-request', () => bookingPage({ state: 'request' }));
 def('bk-offered', () => bookingPage({ state: 'offered' }));
-def('bk-page', () => bookingPage());
+// Walk-through 1 M3, walk-through 12 M6: Maya's path has no deposit, so her
+// confirmed page has none; the deposit rows are a line on its list.
+def('bk-page', () => bookingPage({ deposit: false }));
 def('bk-page-dropoff', () => bookingPage({ state: 'dropoff' }));
 def('bk-change', () => bookingPage({ state: 'change' }));
 def('bk-change-pending', () => bookingPage({ state: 'pending-change' }));

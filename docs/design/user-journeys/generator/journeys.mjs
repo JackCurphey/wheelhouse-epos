@@ -106,14 +106,14 @@ export const journeys = [
       { label: 'A new person’s first PIN', screens: [
         sb('pin-first', "First sign-in — Your till PIN opens straight away (Skip for now if you never use the till or a workshop computer)", 'Staff'),
         sb('pin-cleared', "First sign-in after a PIN was cleared — a new PIN, the same way", 'Staff'),
-        sb('till-give-pin', "Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person", 'Owner'),
+        sb('till-give-pin', "No PIN yet — the Owner or a manager gives it at the till, screen turned to the person", 'Owner'),
         sb('till-checkin-practice', "Till check-in while running alongside — the practice band before anyone checks in", 'Staff'),
       ] },
       { label: 'Customers', screens: [
         sb('cust-signin', 'Sign in to your account', 'Customer'),
         sb('cust-code', 'Enter your code', 'Customer'),
         sb('cust-code-expired', 'Code expired', 'Customer'),
-        d('pending', { note: 'Booking link: no sign-in needed' }),
+        d('pending', { title: 'Request received — Release 1 picture, replaced by bk-page', note: 'Booking link: no sign-in needed' }),
         d('expired'),
       ] },
     ],
@@ -888,7 +888,7 @@ export const journeys = [
         sd14("st-prices-done", "Prices changed, with Undo", "Manager"),
       ] },
       { label: "Correcting stock", screens: [
-        sd14("st-adjust", "Adjust stock: the change or the count after it, and a reason", "Staff"),
+        sd14("st-adjust", "Adjust stock: the change or the count after it, and a reason", "Owner"),
         sd14("st-adjust-faulty", "Adjust stock: faulty, onto the supplier’s To return list", "Owner"),
         sd14("st-today-adjust", "Today: a big adjustment, for the manager", "Manager"),
         sd14("st-setting-adjust", "Settings › Stockroom: when an adjustment shows on Today", "Manager"),
@@ -896,12 +896,12 @@ export const journeys = [
         sd14("tk-count-below", "Counting the products below zero: still to find", "Staff"),
       ] },
       { label: "Between shops", screens: [
-        sd14("tr-sites", "A product’s stock at each shop, and on its way", "Manager"),
+        sd14("tr-sites", "A product’s stock at each shop, and on its way", "Staff"),
         sd14("tr-send", "Send to another shop", "Staff"),
         sd14("tr-incoming", "Deliveries and orders: on its way, in and out", "Staff"),
-        sd14("tr-receive", "Receiving a transfer: one short", "Staff"),
+        sd14("tr-receive", "Receiving a transfer: 1 missing", "Staff"),
         sd14("tr-problem", "A transfer line marked missing", "Staff"),
-        sd14("tr-today-short", "Today: a transfer arrived short", "Manager"),
+        sd14("tr-today-short", "Today: a transfer arrived with 1 missing", "Manager"),
       ] },
       { label: "Stock take", screens: [
         sd14("tk-hub", "Stockroom › Stock take: counts in progress and finished", "Manager"),
@@ -1205,7 +1205,7 @@ export const journeys = [
     ],
   },
   {
-    id: 'j21', name: 'Lightspeed shops (Release 1)', who: 'Owner, Manager and Staff',
+    id: 'j21', name: 'Lightspeed shops (after the trading week, build-plan question 5)', who: 'Owner, Manager and Staff',
     rows: [
       { label: "Connecting Lightspeed", screens: [
         sd21("ls-settings-off", "Settings › Office › Lightspeed: not connected", "Owner"),

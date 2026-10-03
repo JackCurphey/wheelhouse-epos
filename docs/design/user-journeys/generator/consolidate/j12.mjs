@@ -59,4 +59,9 @@ export const lines = [
   { on: 'job-overview', text: 'Who did what, folded: name, what, time; Mark ready records Signed off by Alex Morgan · 15:30', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 7; build plan Q3' },
   // D5 — the quick look
   { on: 'job-quick-overview', text: 'After Mark ready: Signed off by Alex Morgan · 15:30 in the hover summary', who: 'Staff and Mechanic', decision: 'Build plan Q3' },
+  // "Draw the answers" spec, section 11: D3, D4, D5
+  { on: 'job-overview', text: 'A part added with no free stock (stock less holds): it goes on the For customers restock list by itself, and the line reads On order once that part is on an order marked ordered', who: 'Mechanic', decision: 'Receiving stock, 3 Oct (walk-through 3 M7)' },
+  { on: 'job-overview', text: 'At a Lightspeed shop: the Lightspeed strip under the header, Hand over in place of Take payment, and the header tag reads Agreed', who: 'Staff', decision: 'Lightspeed shops 10; walk-through 6 L5' },
+  { on: 'new-job', text: 'Saved: Booking confirmed sent to 07700 900 142, or No message — no phone or email', who: 'Staff', decision: 'Book a repair 12; 3 Oct (walk-through 9 L4)' },
+  { on: 'diary', text: "Maya's own request, WH-1042, with no deposit, in Waiting for you", who: 'Staff', decision: 'Walk-through 1 L6' },
 ];

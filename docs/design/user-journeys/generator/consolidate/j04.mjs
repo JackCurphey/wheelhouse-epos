@@ -4,7 +4,7 @@ import { keep, into, later } from './plan.mjs';
 
 export default {
   // While the bike is in: the one customer job page (Quote 1)
-  'dq-in-shop': into('bk-page', 'Quote 1', "tracker at 'In the shop', 'booked in Thu 17 Sep at 09:12'; no change or cancel"),
+  'dq-in-shop': into('bk-page', 'Quote 1', "tracker at 'In the shop', 'booked in Thu 17 Sep at [time]'; no change or cancel"),
   'dq-waiting-part': into('bk-page', 'Quote 1', "tracker warns 'Waiting for a part — we’ll update you.'; ready Sat 19 Sep 16:00"),
   'dq-ready': into('cp-summary', 'Quote 1', "drawn from cp-summary itself — nothing differs"),
   // The quote: the customer job page with a quote to answer

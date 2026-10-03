@@ -51,4 +51,6 @@ export const lines = [
   { on: 'rp-home', text: 'Staff with Can see reports, without Can see costs and margin: no margin figure in the strip', who: 'Staff', decision: 'Reports and accounts 5; issue #116 question 1' },
   { on: 'rp-margin', text: 'Margin and stock value for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },
   { on: 'rp-discounts', text: 'Discounts and refunds for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },
+  // "Draw the answers" spec, section 9 (R4).
+  { on: 'rp-margin', text: "Cycle to Work bikes: margin after the provider's commission, taken from the provider's settings at the sale and corrected when the bike is marked paid, so a closed day's margin can move", who: 'Owner', decision: 'Reports and accounts, 3 Oct (walk-through 5 M3)' },
 ];

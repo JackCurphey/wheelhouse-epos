@@ -186,13 +186,13 @@ const tick = (done) => `<span style="display: inline-flex; width: 28px; height: 
 // Audit L2: the chip first, then any link, on every row.
 const readyRow = (t, sub, done, action = '') => line(t, sub, `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">${done ? tag('Done') : tag('Not yet', 'grey')}${action}</span>`, tick(done));
 // Decision 8: the owner picks how many matching weeks, 2 by default.
-const weekPill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-width: 64px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`;
+const weekPill = (t, on = false) => `<button type="button" aria-pressed="${on}" style="min-width: 64px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`;
 const weeksPopup = () => popup('wk-title', 'Matching weeks before switch-over', 'The weekly check must match this many weeks in a row', `<div role="group" aria-label="Weeks in a row" style="display: flex; flex-wrap: wrap; gap: 8px">${weekPill('2', true)}${weekPill('3')}${weekPill('4')}${weekPill('Other…')}</div>
 ${note('2 proves a refresh came across cleanly twice running. More weeks take in a month-end, but the move takes longer.')}`, `${button('Cancel', { variant: 'default' })}${button('Save')}`, 520);
 // H2 (option 1): the website is made ready, not moved — it goes on during
 // switch-over morning (this changes what Moving 7's fourth item means). It
-// ticks when the website's three-step start is done, payments are connected,
-// the test payment worked and its starting wording has been checked.
+// ticks once no Words and photos row says Check this (Website management,
+// 3 Oct, walk-through 4 H3: one rule for this list and Getting started).
 // M1: items shared with Getting started tick together, from the same
 // setting, and say so. M4: "A float is set" joins the list.
 const SHARED = 'also on Getting started';
