@@ -426,7 +426,7 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
-  // Self-hosted Fjell fonts (public/fonts/).
+  // Self-hosted fonts (public/fonts/).
   '.woff2': 'font/woff2',
 };
 
@@ -4794,8 +4794,9 @@ route('PUT', '/api/label-settings', async (req, res) => {
 // each key actually renders as - only the key is stored server-side). Same
 // singleton-per-shop, lazy-create-on-GET pattern as label_settings above.
 //
-// Since 27 Sep 2026 the staff app always uses Fjell and no longer reads or
-// writes this (docs/decisions/2026-09-27-fjell-theme.md). Kept, with its
+// Since 27 Sep 2026 the staff app always uses one look (Fjell, then Soft sand
+// from 3 Oct) and no longer reads or writes this
+// (docs/decisions/2026-09-27-fjell-theme.md). Kept, with its
 // table, for the customer surfaces until the Release 2 website theme system
 // decides what replaces it; the public website reads its own
 // storefront_settings.theme_preset.

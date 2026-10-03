@@ -3,12 +3,15 @@
 /* ---------------------------------------------------------------------------
    Wheelhouse design tokens for the React/Tailwind bundle (/workshop, /book).
 
-   THE PALETTE IS FJELL - the Wheelhouse design system, chosen by Jack on
-   27 September 2026. Record: docs/decisions/2026-09-27-fjell-theme.md.
+   THE LOOK IS SOFT SAND ("Soft sand, dark rail", sans-serif throughout),
+   chosen by Jack on 28 September 2026: decisions 48 and 53 in
+   docs/decisions/2026-09-27-workshop-day-review.md. It replaced Fjell
+   (docs/decisions/2026-09-27-fjell-theme.md). The values are the approved
+   drawings' own: SAND in docs/design/user-journeys/generator/ui.mjs.
 
    public/tokens.css is the source of truth (it styles the vanilla staff app);
    this file carries the same values under --wh-* names. Nothing links the two
-   files, so tests/design-fjell.test.js compares them and fails on any
+   files, so tests/design-sand.test.js compares them and fails on any
    difference it has not been told about. Change a value in both, then run
    `npm test`.
 
@@ -23,11 +26,11 @@
 /* Self-hosted fonts, the same files public/tokens.css uses (public/fonts/,
    served by the app, never fetched from Google). SIL Open Font License. */
 @font-face {
-  font-family: "Work Sans";
+  font-family: "Public Sans";
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url("/fonts/work-sans/work-sans-latin-wght.woff2") format("woff2");
+  src: url("/fonts/public-sans/public-sans-latin-wght.woff2") format("woff2");
 }
 @font-face {
   font-family: "DM Mono";
@@ -41,41 +44,43 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ---- Action (Fjell has one action colour) ---- */
-  --accent: #3f4d33;
-  --accent-dark: #2a3024;
-  --modal-bg: #fbfbf9;
+  /* ---- Action (one action colour: the ink-dark charcoal) ---- */
+  --accent: #2a2822;
+  --accent-dark: #262420;       /* primary hover, and the dark rail (sidebar) */
+  --modal-bg: #fffdf7;
 
   /* ---- Surfaces / text ---- */
-  --wh-bg: #f3f2ee;
-  --wh-panel: #fbfbf9;
-  --wh-ink: #1c1e19;
-  --wh-muted: #56594f;          /* muted TEXT */
-  --wh-surface-muted: #e8e7e1;  /* muted SURFACE */
-  --wh-border: #dcdbd3;         /* decorative lines */
-  --wh-input-border: #83867a;   /* form field edges: 3:1+ on page (3.31), panel (3.58) and grey panel (3.00) */
+  --wh-bg: #f4eee1;
+  --wh-panel: #fffdf7;
+  --wh-ink: #2a2822;
+  --wh-muted: #6e6752;          /* muted TEXT */
+  --wh-surface-muted: #f0eadc;  /* muted SURFACE */
+  --wh-border: #e6dfcb;         /* decorative hairlines */
+  --wh-input-border: #6e6752;   /* form field edges: 3:1+ on page, panel and grey panel */
 
   /* ---- Brand ----
-     Was a separate orange for the 'primary' button. Fjell has one action
-     colour, so brand and accent are the same primary and primary-dark. */
-  --wh-brand: #3f4d33;
-  --wh-brand-dark: #2a3024;
-  --wh-on-brand: #ffffff;       /* text on primary and danger fills */
-  --wh-on-accent: #f3f2ee;      /* text on the dark primary (top bar, sidebar) */
-  --wh-highlight: #c5cf3e;      /* active marker */
-  --wh-on-highlight: #1c1e19;   /* always dark text on the highlight */
+     One action colour, so brand and accent are the same primary and
+     primary-dark. */
+  --wh-brand: #2a2822;
+  --wh-brand-dark: #262420;
+  --wh-on-brand: #ffffff;       /* text on primary fills */
+  --wh-on-accent: #f4eee1;      /* text on the dark rail */
+  --wh-sidebar-active: #39352e; /* the dark rail's selected item, amber text on it */
+  --wh-highlight: #d9a441;      /* amber: active marker, used sparingly */
+  --wh-on-highlight: #2a2822;   /* always dark text on the highlight */
 
   /* ---- Feedback ---- */
-  --wh-hover: #e8e7e1;
-  --wh-hover-subtle: #f3f2ee;
-  --wh-danger-hover: #8a2819;
-  --wh-danger: #a8321f;
-  --wh-danger-bg: #fdecea;
-  --wh-warn-bg: #fff7e0;
-  --wh-warn-ink: #8a6100;
-  --wh-ok-bg: #e8f5ec;
+  --wh-hover: #efe8d6;
+  --wh-hover-subtle: #f4eee1;
+  --wh-danger-hover: #7a2c20;
+  --wh-danger: #9c3b2c;         /* delete buttons are outlined in this colour (decision 53) */
+  --wh-danger-bg: #f6e3de;
+  --wh-warn-bg: #f7eac2;
+  --wh-warn-ink: #7a5a10;
+  --wh-ok-bg: #e1eedd;
 
-  /* ---- Job status chips (bg / border / ink triples) - unchanged by Fjell ---- */
+  /* ---- Job status chips (bg / border / ink triples) - unchanged by Fjell or
+     Soft sand; the diary piece brings the drawings' own chip colours ---- */
   --wh-status-pending-bg: #f1e8fb;
   --wh-status-pending-border: #6a3ea1;
   --wh-status-pending-ink: #6a3ea1;
@@ -99,14 +104,14 @@
   --wh-status-complete-paid-ink: #6b9484;
 
   /* ---- Overlays ---- */
-  --wh-backdrop: rgba(28, 30, 25, 0.45);            /* behind a pop-up: Fjell ink */
+  --wh-backdrop: rgba(42, 40, 34, 0.45);            /* behind a pop-up: the ink */
   --wh-shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.25);
 
   /* ---- Type families (same stacks as public/tokens.css) ---- */
-  --wh-font-sans: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --wh-font-sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --wh-font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* ---- shadcn contract, mapped onto Fjell ---- */
+  /* ---- shadcn contract, mapped onto Soft sand ---- */
   --background: var(--wh-bg);
   --foreground: var(--wh-ink);
   --card: var(--wh-panel);
@@ -127,22 +132,23 @@
   --ring: var(--accent);
   --sidebar: var(--accent-dark);
   --sidebar-foreground: var(--wh-on-accent);
-  --sidebar-primary: var(--accent);      /* the active item */
-  --sidebar-primary-foreground: var(--wh-on-brand);
-  --sidebar-accent: var(--accent);
+  --sidebar-primary: var(--wh-sidebar-active);      /* the active item */
+  --sidebar-primary-foreground: var(--wh-highlight);
+  --sidebar-accent: var(--wh-sidebar-active);
   --sidebar-accent-foreground: var(--wh-on-accent);
-  --sidebar-border: var(--accent);
+  --sidebar-border: var(--wh-sidebar-active);
   --sidebar-ring: var(--wh-highlight);
 
-  /* Fjell radius: 6px for controls; rounded-xl (radius + 4px) is the 10px
-     card radius. */
+  /* Radius: 6px for controls; rounded-xl (radius + 4px) is the 10px card
+     radius. Cards sit on a hairline border with no shadow. */
   --radius: 6px;
-  --wh-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --wh-shadow: none;
 }
 
-/* Dark mode: a Fjell dark palette, derived (not part of the 27 Sep decision -
-   nothing switches it on yet). Primary, highlight and status colours stay as
-   in light mode; contrast is checked by tests/design-fjell.test.js. */
+/* Dark mode: a dark palette derived from Fjell (not part of any decision -
+   nothing switches it on yet, and Soft sand has no dark version drawn).
+   Primary, highlight and status colours stay as in light mode; contrast is
+   checked by tests/design-sand.test.js. */
 .dark {
   --wh-bg: #161813;
   --wh-panel: #1f221b;

@@ -463,8 +463,9 @@ Fjell until switched.
 1. Done 29 Sep: Workshop day approved (desktop, tablet, phone) and copied
    into the big canvas as journey 12, status Designed (decision 69).
 2. Next design journey on the canvas, same way (design → approve → copy in).
-3. **Switch the app's tokens from Fjell to Soft sand** (`src/styles/theme.css`
-   + the design-system artifact), sans-serif throughout.
+3. **Switch the app's tokens from Fjell to Soft sand**: built 3 Oct on
+   `feat/soft-sand-theme` (spec `docs/superpowers/specs/2026-10-03-soft-sand-theme-design.md`);
+   design-system artifact updated too.
 4. **Then build Workshop day, piece by piece**, in the React staff app
    (`src/staff/`): spec → plan → subagent-driven development, test-first,
    starting with the shell (room sidebar, phone menu) and the diary with its
