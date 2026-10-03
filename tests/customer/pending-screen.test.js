@@ -163,10 +163,19 @@ test('an expired link says so', async () => {
 });
 
 test('any other failure offers Try again, which asks again', async () => {
+  // Only the booking itself is counted: once it loads, the page also asks for
+  // any quote (journey 4), which this booking hasn't got.
   let calls = 0;
-  const { ui } = await open(() => (++calls === 1 ? { status: 500, body: { error: 'Something went wrong' } } : { status: 200, body: LINK }));
+  let quoteAsked = false;
+  const { ui } = await open((url) => {
+    if (url.endsWith('/quote')) { quoteAsked = true; return { status: 404, body: { error: 'There is no quote for this booking' } }; }
+    return ++calls === 1 ? { status: 500, body: { error: 'Something went wrong' } } : { status: 200, body: LINK };
+  });
   assert.ok(await heading(ui, "We couldn't load this booking"));
   await click(ui.getByRole('button', { name: 'Try again' }));
   assert.ok(await heading(ui, 'Awaiting shop confirmation'));
   assert.equal(calls, 2);
+  const { waitFor } = await rtl();
+  await waitFor(() => assert.ok(quoteAsked));
+  await new Promise((r) => setTimeout(r, 20));
 });

@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api/client.ts';
 import { BookFrame } from './frame.tsx';
+import { QuoteCard } from './quote-card.tsx';
 import { useBookingLink, type BookingLink } from './pending-query.ts';
 import {
   COPIED_MS, EXPIRED, LOAD_FAILED, NOT_FOUND, answerLines, contactLine, serviceLines, statusText, totalLine, whenLine,
@@ -19,7 +20,7 @@ import {
 export function PendingScreen() {
   const { shopSlug = '', code = '' } = useParams();
   const link = useBookingLink(shopSlug, code);
-  if (link.data) return <BookingView link={link.data} />;
+  if (link.data) return <BookingView link={link.data} shopSlug={shopSlug} code={code} />;
   if (link.isError) {
     const status = link.error instanceof ApiError ? link.error.status : 0;
     if (status === 404) return <BookFrame title={NOT_FOUND}>{null}</BookFrame>;
@@ -33,7 +34,7 @@ export function PendingScreen() {
   return <BookFrame title="Loading…">{null}</BookFrame>;
 }
 
-function BookingView({ link }: { link: BookingLink }) {
+function BookingView({ link, shopSlug, code }: { link: BookingLink; shopSlug: string; code: string }) {
   const [copied, setCopied] = React.useState(false);
   // "Copied" for a moment, then back. The state is set in the timer's
   // callback, not in the effect itself.
@@ -59,6 +60,8 @@ function BookingView({ link }: { link: BookingLink }) {
   // requires a string title, and the rest of the summary still renders.
   return (
     <BookFrame title={statusText(link.stage) ?? ''}>
+      {/* A quote waiting for the customer's answer comes first (journey 4). */}
+      <QuoteCard shopSlug={shopSlug} code={code} agreedTotal={typeof link.totalPrice === 'number' ? link.totalPrice : null} />
       <div className="mb-4 rounded-md border border-[var(--wh-border)] p-3 text-sm">
         <p className="m-0 mb-2 flex justify-between gap-3">
           {/* The {' '} spaces keep the words apart for a screen reader, as ChoiceCard does. */}
