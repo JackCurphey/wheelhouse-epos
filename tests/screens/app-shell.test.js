@@ -27,10 +27,8 @@ async function renderAt(path) {
   return render(createElement(AppShell));
 }
 
-test('an unbuilt screen renders its placeholder at its own URL', async () => {
-  const screen = await renderAt('/workshop');
-  assert.ok(await screen.findByText('Not built yet: desk'));
-});
+// Where /workshop lands, and the placeholders inside the frame, are in
+// tests/screens/staff-shell.test.js.
 
 test('an edge screen entered from outside the app is routable before it is built', async () => {
   const screen = await renderAt('/workshop/booking/42/reschedule');
