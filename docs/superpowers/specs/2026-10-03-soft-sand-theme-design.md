@@ -35,7 +35,7 @@ pins the outlined delete button. Each was watched failing before the change.
 
 Status chip colours (the diary piece brings the drawings' own), the rooms
 sidebar, the phone menu and the diary; the unused dark palette (still
-derived from Fjell); removing the Work Sans files (ask Jack).
+derived from Fjell); the Work Sans files were removed afterwards (Jack, 3 Oct: "go ahead").
 
 ## Done when
 
