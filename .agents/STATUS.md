@@ -34,14 +34,13 @@ every recommendation taken and drawn. All seven walk-throughs are done.
 Overview: 823 screens, 820 designed. The staff canvas holds 497 of 512 files
 — any more screens there need the canvas split (ask Jack). Next: Jack's
 walk-throughs with Mark, then a clickable prototype.
-**Not yet published (2 Oct, the day's 200-publish limit was reached):**
-walk-through 7 is on 10 journey canvases; still to publish are opening,
-oversight, quote, receiving, reports, setup, signin, sites, stock and
-website, and both big canvases. To finish: rebuild every canvas, diff
-against the live canvases, publish the changed boards (with canvas.json
-for reports, signin, sites and stock, and for the staff big canvas, merged
-onto its live copy). `live-canvas*.json` still describe the big canvases as
-they are live, without walk-through 7.
+**Published (3 Oct):** walk-through 7 is on every journey canvas and the
+customers big canvas. The staff big canvas has the 79 changed screens but not
+the 4 new ones (`rp-workshop-all`, `ms-request-answered`, `ms-till-move`,
+`ms-till-setup`): it holds 510 files and a canvas takes at most 512, so it
+needs splitting before anything new can go on it (ask Jack how).
+`live-canvas.json` describes the staff canvas as live, without those 4;
+`live-canvas-customers.json` is the live customers canvas.
 
 **UX walk-throughs 5 (Cycle to Work) and 6 (a Lightspeed repair) (2 Oct):**
 every recommendation taken and drawn: the Cycle to Work sale at the till,
@@ -576,3 +575,5 @@ Fjell until switched.
   030 (it drops columns; there is no code-only rollback).
 - Keep this file under 8 KB. Move finished-piece history to `ARCHIVE.md`
   rather than deleting it.
+- House style (Jack, 3 Oct 2026): any PowerPoint or slide deck about this
+  project is titled "Deez Nuts".

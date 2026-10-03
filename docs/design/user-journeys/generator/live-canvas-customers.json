@@ -2731,7 +2731,7 @@
   },
   "j01_title": {
    "kind": "title1",
-   "maxW": 49720,
+   "maxW": 8000,
    "text": "01 · Find the shop and browse the website — Customer",
    "w": 240,
    "x": 0,
@@ -2855,9 +2855,19 @@
    "x": 45520,
    "y": 8266
   },
+  "j03_s26": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The shop’s side",
+   "w": 520,
+   "x": 48320,
+   "y": 8266
+  },
   "j03_title": {
    "kind": "title1",
-   "maxW": 54840,
+   "maxW": 8000,
    "text": "03 · Book a repair — Customer, Staff and Manager",
    "w": 240,
    "x": 0,
@@ -2903,9 +2913,29 @@
    "x": 21600,
    "y": 10122
   },
+  "j04_s32": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The shop’s side",
+   "w": 520,
+   "x": 25720,
+   "y": 10122
+  },
+  "j04_s33": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Also in this journey",
+   "w": 520,
+   "x": 39080,
+   "y": 10122
+  },
   "j04_title": {
    "kind": "title1",
-   "maxW": 39940,
+   "maxW": 8000,
    "text": "04 · Drop off and approve the quote — Customer and Staff",
    "w": 240,
    "x": 0,
@@ -2951,9 +2981,39 @@
    "x": 26880,
    "y": 12022
   },
+  "j05_s39": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Settings",
+   "w": 520,
+   "x": 28360,
+   "y": 12022
+  },
+  "j05_s40": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The receipt",
+   "w": 520,
+   "x": 32480,
+   "y": 12022
+  },
+  "j05_s41": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Also at collection",
+   "w": 520,
+   "x": 49800,
+   "y": 12022
+  },
   "j05_title": {
    "kind": "title1",
-   "maxW": 50190,
+   "maxW": 8000,
    "text": "05 · Collect the bike and pay — Customer",
    "w": 240,
    "x": 0,
@@ -2979,9 +3039,39 @@
    "x": 10720,
    "y": 13922
   },
+  "j06_s45": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Collection and payment",
+   "w": 520,
+   "x": 30680,
+   "y": 13922
+  },
+  "j06_s46": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Changes and cancelling",
+   "w": 520,
+   "x": 53280,
+   "y": 13922
+  },
+  "j06_s47": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Today, the customer, settings and messages",
+   "w": 520,
+   "x": 60040,
+   "y": 13922
+  },
   "j06_title": {
    "kind": "title1",
-   "maxW": 79760,
+   "maxW": 8000,
    "text": "06 · Cycle to Work — Customer and staff",
    "w": 240,
    "x": 0,
@@ -3017,9 +3107,49 @@
    "x": 10880,
    "y": 15778
   },
+  "j07_s52": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "The shop’s side of messages",
+   "w": 520,
+   "x": 20280,
+   "y": 15778
+  },
+  "j07_s53": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Service reminders",
+   "w": 520,
+   "x": 28830,
+   "y": 15778
+  },
+  "j07_s54": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Reviews and how we contact you",
+   "w": 520,
+   "x": 38230,
+   "y": 15778
+  },
+  "j07_s55": {
+   "bold": true,
+   "fill": "gray",
+   "maxH": 150,
+   "size": 40,
+   "text": "Your data",
+   "w": 520,
+   "x": 46310,
+   "y": 15778
+  },
   "j07_title": {
    "kind": "title1",
-   "maxW": 58110,
+   "maxW": 8000,
    "text": "07 · Account, history and reminders — Customer and Staff",
    "w": 240,
    "x": 0,
@@ -3082,136 +3212,6 @@
    "w": 240,
    "x": 0,
    "y": 2334
-  },
-  "j03_s26": {
-   "x": 48320,
-   "y": 8266,
-   "text": "The shop’s side",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j04_s32": {
-   "x": 25720,
-   "y": 10122,
-   "text": "The shop’s side",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j04_s33": {
-   "x": 39080,
-   "y": 10122,
-   "text": "Also in this journey",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s39": {
-   "x": 28360,
-   "y": 12022,
-   "text": "Settings",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s40": {
-   "x": 32480,
-   "y": 12022,
-   "text": "The receipt",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j05_s41": {
-   "x": 49800,
-   "y": 12022,
-   "text": "Also at collection",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_s45": {
-   "x": 30680,
-   "y": 13922,
-   "text": "Collection and payment",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_s46": {
-   "x": 53280,
-   "y": 13922,
-   "text": "Changes and cancelling",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j06_s47": {
-   "x": 60040,
-   "y": 13922,
-   "text": "Today, the customer, settings and messages",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s52": {
-   "x": 20280,
-   "y": 15778,
-   "text": "The shop’s side of messages",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s53": {
-   "x": 28830,
-   "y": 15778,
-   "text": "Service reminders",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s54": {
-   "x": 38230,
-   "y": 15778,
-   "text": "Reviews and how we contact you",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
-  },
-  "j07_s55": {
-   "x": 46310,
-   "y": 15778,
-   "text": "Your data",
-   "w": 520,
-   "size": "l",
-   "bold": true,
-   "fill": "gray",
-   "maxH": 150
   }
  },
  "order": [

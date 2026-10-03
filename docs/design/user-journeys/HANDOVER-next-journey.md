@@ -98,8 +98,8 @@ addresses (ECOM-03, frozen)).
 drawn (`docs/decisions/2026-10-02-ux-walkthrough.md`). Jack will run more
 walk-throughs with Mark using `ux-walkthrough-script.md`. The step after
 that is a clickable prototype to test with real customers. Before shipping:
-remind Jack about the Doom easter egg. Walk-through 7 still has to be published to
-12 canvases (see STATUS: the daily publish limit was reached on 2 Oct).
+remind Jack about the Doom easter egg. Everything is published except 4 new screens
+on the staff big canvas, which is at its 512-file limit (see STATUS).
 
 **Planned: one UX audit at the end** (Jack, 1 Oct: "i guess we can just do a
 ux audit at the end when all the pages are done?"). Each journey keeps its own
