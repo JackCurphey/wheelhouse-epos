@@ -102,6 +102,33 @@ In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack 
 - **Your activity: a person’s own lines — later (issue #116 question 5)** — from Management oversight: See my own activity
 - **Your own booking terms: adding them (Settings › Workshop › Online booking)** — from Book a repair: Use your own
 
+## Story steps a smaller size can't click (22)
+
+The check walks every story at desktop, tablet and phone. At these sizes the drawing has no button for the step, so the story can't be clicked there. Each is for Jack to decide on: draw the button at that size, or accept the longer way round.
+
+- **Story 1, step 17** (phone): Mark ready for collection on `job-checklist` — the phone checklist sheet has only Done and Close; Mark ready is on the job page behind it
+- **Story 2, step 4** (phone): Add a discount on `till-sale` — the phone till keeps the sale behind “Open the sale”, which isn’t drawn
+- **Story 2, step 13** (phone): Past sales — find, refund, void or reprint on `till-sale` — the phone till has no Past sales link, and the phone menu doesn’t list it
+- **Story 4, step 4** (phone): Workshop on `set-staff-invited` — the phone Settings page has no room tabs; Workshop is two taps away, through the Settings list
+- **Story 5, step 18** (phone): Reports on `cw-owed-provider` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
+- **Story 6, step 13** (phone): Send quote on `ls-part-search` — the phone parts sheet has no Send quote, only Done and Close
+- **Story 6, step 18** (phone): Mark ready for collection on `job-checklist` — the phone checklist sheet has only Done and Close; Mark ready is on the job page behind it
+- **Story 7, step 2** (phone): Settings on `op-today` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
+- **Story 7, step 3** (phone): Office on `set-till-quick` — the phone Settings page has no room tabs; Office is two taps away, through the Settings list
+- **Story 7, step 9** (phone): Settings on `tr-sites` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
+- **Story 7, step 10** (phone): Office on `set-till-quick` — the phone Settings page has no room tabs; Office is two taps away, through the Settings list
+- **Story 7, step 12** (phone): Open on `set-staff` — the phone People list has no Open button on each person
+- **Story 7, step 13** (tablet, phone): Shop: Bolton. Choose a shop on `set-staff-person` — the tablet sidebar has no shop chooser; the phone person sheet covers the page and has no shop chooser or menu
+- **Story 7, step 23** (phone): Reports on `ms-today-all` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
+- **Story 8, step 4** (tablet, phone): Switch on `job-checklist` — the “Working: Alex Morgan · Switch” line is drawn on desktop only
+- **Story 8, step 9** (phone): Mark ready for collection on `job-checklist` — the phone checklist sheet has only Done and Close; Mark ready is on the job page behind it
+- **Story 11, step 1** (tablet): Shop: Bolton. Choose a shop on `op-today` — the tablet sidebar has no shop chooser
+- **Story 11, step 3** (phone): Reports on `ms-today-all` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
+- **Story 11, step 12** (phone): All reports on `rp-day` — the phone day sheet has no All reports link, only Close
+- **Story 11, step 14** (phone): Settings on `ops-log` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
+- **Story 11, step 15** (phone): Office on `set-till-quick` — the phone Settings page has no room tabs; Office is two taps away, through the Settings list
+- **Story 11, step 17** (phone): Open on `set-staff` — the phone People list has no Open button on each person
+
 ## Steps that leave Wheelhouse (43)
 
 In the mockup these say "this happens outside Wheelhouse".

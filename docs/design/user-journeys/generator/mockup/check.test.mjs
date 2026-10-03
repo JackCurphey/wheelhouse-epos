@@ -38,3 +38,30 @@ test('every story clicks from each step to the next', async () => {
   });
   assert.deepEqual(broken, []);
 });
+
+// Step 6: … "as each persona, at each size". The mockup shows a step at the
+// chosen size, or desktop (then any size) where it isn't drawn at that size;
+// at every size the step's named button must lead on.
+test('every story clicks through at desktop, tablet and phone', async () => {
+  const { stories } = await import('./stories.mjs');
+  const broken = [];
+  for (const size of ['desktop', 'tablet', 'phone']) for (const st of stories) st.steps.forEach((step, i) => {
+    const next = st.steps[i + 1];
+    if (!next || /^\(.*\)$/.test(String(step.does ?? '').trim())) return;
+    // A size whose drawing genuinely lacks the button (`missingAt`, with
+    // `missingWhy`) is a real gap in the drawings, not a click to fake.
+    if (step.missingAt?.includes(size)) return;
+    const d = drawings.get(step.id);
+    const at =(dd) => dd?.sizes[size] ?? dd?.sizes.desktop ?? dd?.sizes.single ?? Object.values(dd?.sizes ?? {})[0];
+    const s = at(d);
+    // A step may name its button for one size (`doesAt: { phone: '…' }`) where the label differs.
+    const label = String(step.doesAt?.[size] ?? step.does).trim();
+    const leads = (dd, ss) => ss && controlsOf(ss.html).some((c) => c.label === label && resolve(c, dd, maps, fileToId)?.go === next.id);
+    // On a phone or tablet the sidebar sits behind a menu: one tap to open it,
+    // then the named item (a menu situation's drawing, id ending "-menu").
+    const viaMenu = s && controlsOf(s.html).some((c) => { const t = resolve(c, d, maps, fileToId)?.go; return t && /-menu$/.test(t) && leads(drawings.get(t), at(drawings.get(t))); });
+    const ok = leads(d, s) || viaMenu;
+    if (!ok) broken.push(`${size}: story ${st.n}, step ${i + 1}: ${step.id} → ${next.id} (${step.does ?? ''})`);
+  });
+  assert.deepEqual(broken, []);
+});
