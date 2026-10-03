@@ -5,6 +5,7 @@ import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog } from '@/components/ui/dialog.tsx';
 import { shortDay, todayIso } from './rules.ts';
+import { WorkParts } from './work-parts.tsx';
 
 /**
  * The job page, piece 1 (journey 12; drawn as job-overview, job-book-in,
@@ -15,8 +16,6 @@ import { shortDay, todayIso } from './rules.ts';
  */
 
 type Customer = { id: number; name: string; email: string | null; phone: string | null };
-type OrderLine = { id: number; name: string; lineType: string | null; qty: number; unitPrice: number; lineTotal: number };
-type Order = { id: number; total: number; items: OrderLine[] };
 
 const money = (n: number) => `£${n.toFixed(2)}`;
 
@@ -73,11 +72,6 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     queryKey: ['customer', job?.customerId],
     queryFn: () => apiGet<Customer>(`/api/customers/${job?.customerId}`),
     enabled: Boolean(job?.customerId),
-  });
-  const order = useQuery({
-    queryKey: ['sale-document', job?.orderId],
-    queryFn: () => apiGet<Order>(`/api/sale-documents/${job?.orderId}`),
-    enabled: Boolean(job?.orderId),
   });
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -285,41 +279,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 </div>
                 <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
                   <h3 id="job-work" className="m-0 text-sm font-bold">Work and parts</h3>
-                  {!job.orderId ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing added yet.</p> : null}
-                  {order.data ? (
-                    <div className="overflow-x-auto rounded-md border border-[var(--wh-border)]">
-                      <table className="w-full border-collapse text-sm">
-                        <thead>
-                          <tr className="bg-[var(--wh-surface-muted)] text-left text-xs text-[var(--wh-muted)]">
-                            <th scope="col" className="px-3 py-2 font-semibold">Work or part</th>
-                            <th scope="col" className="px-3 py-2 text-right font-semibold">Qty</th>
-                            <th scope="col" className="px-3 py-2 text-right font-semibold">Price</th>
-                            <th scope="col" className="px-3 py-2 text-right font-semibold">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {/* Labour first, then parts (decision 46). */}
-                          {[...order.data.items].sort((a, b) => Number(b.lineType === 'service') - Number(a.lineType === 'service')).map((l) => (
-                            <tr key={l.id} className="border-t border-[var(--wh-border)]">
-                              <td className="px-3 py-2">{l.name}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">{l.qty}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">{money(l.unitPrice)}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">{money(l.lineTotal)}</td>
-                            </tr>
-                          ))}
-                          {order.data.items.length === 0 ? (
-                            <tr><td colSpan={4} className="px-3 py-2 text-[var(--wh-muted)]">Nothing added yet.</td></tr>
-                          ) : null}
-                        </tbody>
-                        <tfoot>
-                          <tr className="border-t border-[var(--wh-border)] font-bold">
-                            <td colSpan={3} className="px-3 py-2 text-right">Total</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{money(order.data.total)}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  ) : null}
+                  {job.orderId ? <WorkParts orderId={job.orderId} /> : <p className="m-0 text-sm text-[var(--wh-muted)]">This job has no order to add work and parts to.</p>}
                 </section>
               </div>
             </div>
