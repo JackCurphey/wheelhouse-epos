@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiGet, ApiError, jobAction } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError, jobAction } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog } from '@/components/ui/dialog.tsx';
@@ -104,7 +104,30 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
     }
   }
 
+  async function addDay() {
+    if (!job) return;
+    setSending(true);
+    setMessage(null);
+    try {
+      await apiMutate(`/api/workshop-jobs/${job.id}/parts`, { version: job.version });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workshop-job', job.id] }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+      ]);
+    } catch (err) {
+      setMessage(err instanceof ApiError
+        ? (err.code === 'stale' ? 'This job changed while you were looking at it.' : err.message)
+        : "Couldn't reach the server — try again.");
+      if (err instanceof ApiError && err.code === 'stale') void jobQuery.refetch();
+    } finally {
+      setSending(false);
+    }
+  }
+
   const stage = job ? jobStage(job) : '';
+  const parts = job?.parts ?? [];
+  // Decision 51: ready by the diary day, which for a job over several days is its last.
+  const readyBy = parts.length ? parts[parts.length - 1].date : job?.jobDate;
   const actions = job ? stageActions(job) : [];
 
   return (
@@ -141,7 +164,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 {job.bikeLabel ? <span>{job.bikeLabel}</span> : null}
                 <span>{`Mechanic: ${job.mechanicName ?? 'Shared queue'}`}</span>
-                <Tag>{`Ready by ${shortDay(job.jobDate)}`}</Tag>
+                <Tag>{`Ready by ${shortDay(readyBy as string)}`}</Tag>
                 {job.orderTotal ? <Tag>{`Total ${money(job.orderTotal)}`}</Tag> : null}
               </div>
             </div>
@@ -153,7 +176,19 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                     <h3 id="job-details" className="m-0 text-sm font-bold">Job details</h3>
                     <span className="font-[family-name:var(--wh-font-mono)]">{job.reference}</span>
                     <span className="text-[var(--wh-muted)]">{`Created ${shortDay(todayIso(new Date(job.createdAt)))}`}</span>
-                    <span>{job.startTime ? `${shortDay(job.jobDate)}, ${job.startTime}${job.endTime ? `–${job.endTime}` : ''}` : `${shortDay(job.jobDate)}, no set time`}</span>
+                    {parts.length > 1 ? null : (
+                      <span>{job.startTime ? `${shortDay(job.jobDate)}, ${job.startTime}${job.endTime ? `–${job.endTime}` : ''}` : `${shortDay(job.jobDate)}, no set time`}</span>
+                    )}
+                    {parts.length > 1 ? (
+                      <ul aria-label="Days" className="m-0 flex list-none flex-col gap-0.5 p-0">
+                        {parts.map((p) => (
+                          <li key={p.id}>{`Day ${p.position}: ${shortDay(p.date)}${p.startTime ? `, ${p.startTime}${p.endTime ? `–${p.endTime}` : ''}` : ''}${p.mechanicName ? `, ${p.mechanicName}` : ''}`}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {stageActions(job).length || job.custodyState !== 'collected' ? (
+                      <Button size="sm" className="self-start" disabled={sending} onClick={addDay}>Add another day</Button>
+                    ) : null}
                   </section>
                   <section aria-labelledby="job-notes" className="flex flex-col gap-1.5">
                     <h3 id="job-notes" className="m-0 text-sm font-bold">Notes</h3>

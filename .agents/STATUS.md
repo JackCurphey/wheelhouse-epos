@@ -587,6 +587,10 @@ Fjell until switched.
   `ECONNREFUSED`.
 - Deploy warning: back up any real shop database before deploying migration
   030 (it drops columns; there is no code-only rollback).
+- Migration 037 (jobs over several days, 3 Oct) is additive: a new
+  `workshop_job_parts` table kept in step with each job's own date by
+  triggers. The old staff diary (`public/app.js`) still shows only a job's
+  first day; the React diary shows every day.
 - Keep this file under 8 KB. Move finished-piece history to `ARCHIVE.md`
   rather than deleting it.
 - House style (Jack, 3 Oct 2026): any PowerPoint or slide deck about this
