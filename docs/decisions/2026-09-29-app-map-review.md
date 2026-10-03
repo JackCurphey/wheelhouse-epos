@@ -102,3 +102,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
 
 **Later change (2 Oct 2026, Management oversight decisions 6 and 7):** Your settings gains a Help column: "Send feedback", and "What Wheelhouse records about you" with "See my own activity". Nothing else changed.
+
+**Later change (3 Oct 2026, walk-through 9 H1, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". Each row in the search's results is split: its name opens the job, customer or product, and a button on the right does the till action. Enter and scanning still do the till action, so decision 12 holds for them. A job row also shows its stage and ready-by date (for example "Waiting for parts · ready by Thu 17 Sep · approved £111.00"). Chosen over keeping the till's search for selling only, and a hover box. Lines on the search's situation list; not drawn yet.

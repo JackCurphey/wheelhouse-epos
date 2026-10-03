@@ -76,3 +76,7 @@ of sight — the shop's name, "North Street Cycles · Bolton", sits in small typ
 under each staff page's title. Nothing else on these boards changed.
 
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
+
+**Later change (3 Oct 2026, walk-through 10 M2, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". An owner or manager can give a forgotten till PIN from their own phone: "Give a new PIN" on the person shows a one-time PIN they read out over a call, and the person changes it at check-in. This makes an exception to decision 6 ("so nobody else knows it") for a one-time PIN only. Chosen over a "Can give till PINs" switch, and keeping it in person at the till. Not drawn yet.
+
+**Later change (3 Oct 2026, walk-through 4 M3):** Jack, 3 Oct: "1". The owner or a manager can give anyone their first PIN at the till, as they already do for till-only people, with the screen turned to the person. The till reads "No PIN yet? Sign in on your phone, or ask the owner or a manager to give you one here." Chosen over a line in the invite asking them to sign in on their phone first. Not drawn yet.

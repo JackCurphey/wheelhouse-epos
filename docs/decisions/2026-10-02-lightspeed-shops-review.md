@@ -156,3 +156,5 @@ desktop first, then tablet and phone. Rules for every journey apply (Workshop da
     app) journey 21 replaces its five Release 1 screens. No other journey's
     boards change: the Lightspeed-shop switch only applies to boards drawn
     as a Lightspeed shop.
+
+**Later change (3 Oct 2026, walk-through 6 second walk M4, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". Every Lightspeed situation line on the one canvas is tagged "after the trading week (build-plan question 5)" where it sits, and journey 21 is retitled to say so instead of "(Release 1)". The lines stay beside the screens they change. Chosen over moving them all to a journey 21 "Later" note. Not drawn yet.

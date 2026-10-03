@@ -167,3 +167,7 @@ pretend Madison list exists, and the Madison trade account isn't recorded as
 opened.
 
 **Later change (3 Oct 2026, issue #116 question 6):** Jack, 3 Oct: "2". The supplier invoice check (decision 6), with its Settings › Stockroom switch, comes later. Until then, the VAT report's "Stock purchases" box points to the accounts software instead of giving a figure (Reports and accounts, later change). Chosen over keeping it, drawn as 2 screens. The drawings are not changed yet; they are redone when the canvases are merged (issue #116 step 3).
+
+**Later change (3 Oct 2026, walk-through 3 second walk M3, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". On a booked-in delivery, people who can order stock can change each line's cost ("Cost went up? Change it"); the product's cost and history record it. This catches a cost rise on every delivery, with or without an order, while the invoice check is later. Chosen over editing the cost on the order line, and leaving it to the product's Edit. Not drawn yet.
+
+**Later change (3 Oct 2026, walk-through 3 second walk M7):** Jack, 3 Oct: "1". A part added to a job when there is no free stock (stock less holds) goes on the "For customers" restock list automatically, and the job's line reads "On order" once that part is on an order marked ordered. No click for the mechanic. This adds a stage before "On order" (on the list, not yet ordered) to decision 2's wording without reversing it. Chosen over a "Needs ordering" button on the line. Not drawn yet.

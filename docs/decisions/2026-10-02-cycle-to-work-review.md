@@ -160,3 +160,7 @@ as few clicks as possible).
    "Held for [Customer] until [date] · Cycle to Work — not for sale" (M4).
    Not drawn yet: a held bike in the till's search, and shown as sold out on
    the website (M4).
+
+**Later change (3 Oct 2026, walk-through 12 M4, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". The Cycle to Work email's "See your order" is a private link that opens the order with no sign-in, like a repair's link; the order is also in the website account for a signed-in customer. Adds to decision 7. Chosen over keeping it in the account only. A line on `cw-customer-view`; not drawn yet.
+
+**Later change (3 Oct 2026, walk-through 5 second walk L4):** Jack, 3 Oct: "1". Staff can cancel a Cycle to Work order that holds no deposit, from "More"; with a deposit held they see "A deposit is held: ask a manager to cancel". Owners, managers and anyone with "Can close the day" can cancel either (decision 7's money-step rule, unchanged). Chosen over cancelling only for those who can do money steps. A line on `cw-order-held`'s More; not drawn yet.

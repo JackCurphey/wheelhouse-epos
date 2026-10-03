@@ -70,3 +70,9 @@ Jack, 3 Oct: "all recommended, saturday workers do work the front desk".
 
 The drawings and the build are not changed yet. These decisions are recorded
 for when the workshop and signing-in pieces are drawn and built.
+
+**Later change (3 Oct 2026, walk-through 8 second walk H3, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". With Signed-in devices put off (issue #116 answer 5), decision 1's workshop computers are seen and stopped beside the tills, in Settings › Front desk › Till: "Workshop computers: [name] · … › Stop using as a workshop computer", and "Check Jo Taylor out" in a till's "…". Chosen over bringing Signed-in devices back for tills and workshop computers, and leaving it. Not drawn yet.
+
+**Later change (3 Oct 2026, walk-through 10 M1):** Jack, 3 Oct: "1". "Till only" also opens Front desk › Online orders, so a till-only worker can mark online orders ready; every other room stays hidden. This widens what decision 8 kept as "till only". Chosen over the till page alone, with "A colleague gets these ready". Not drawn yet.
+
+**Later change (3 Oct 2026, walk-through 1 second walk L3):** Jack, 3 Oct: "1". Maya's book-in time is "[time]" everywhere (job note, tag, quote page), since her appointment is 11:30. Replaces fix L1's 09:12. Not drawn yet.

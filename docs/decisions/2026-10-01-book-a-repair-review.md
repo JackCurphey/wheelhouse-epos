@@ -180,3 +180,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Buy online decision 10):** the Messages board lists the five online-order messages and reads "15 on". Nothing else changed.
 
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
+
+**Later change (3 Oct 2026, walk-through 9 L4, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". A job made by staff (New job) sends "Booking confirmed" the customer's chosen way, as an online booking does (decision 12). Saving shows "Booking confirmed sent to 07700 900 142", or "No message — no phone or email". Chosen over no message for staff-made jobs. A line on `new-job`; not drawn yet.
