@@ -177,22 +177,24 @@ renderVals() { return {}; }
 `;
 }
 
-const navLink = (href, text, label) => href
-  ? `<a href="${href}" aria-label="${label}" style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; background: rgba(255,255,255,0.18); color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none">${text}</a>`
-  : `<span style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; color: rgba(255,255,255,0.45); font-size: 14px; font-weight: 600">${text}</span>`;
+// tight: a phone-width board, where the strip's buttons have no room to spare
+// (Linux draws the strip's font wider than macOS; CI found 20px too many).
+const navLink = (href, text, label, tight = false) => href
+  ? `<a href="${href}" aria-label="${label}" style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 ${tight ? 8 : 12}px; border-radius: 8px; background: rgba(255,255,255,0.18); color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none">${text}</a>`
+  : `<span style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 ${tight ? 8 : 12}px; border-radius: 8px; color: rgba(255,255,255,0.45); font-size: 14px; font-weight: 600">${text}</span>`;
 
 let CUR_BLOCK = ''; // the building block of the board being drawn
-function strip(st, meta, nav, extra = '') {
+function strip(st, meta, nav, extra = '', tight = false) {
   const s = STATUS[st];
-  return `<div style="height: ${STRIP}px; box-sizing: border-box; padding: 0 10px 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: ${s.bar}; color: #ffffff">
+  return `<div style="height: ${STRIP}px; box-sizing: border-box; padding: 0 ${tight ? '8px 0 12px' : '10px 0 20px'}; display: flex; align-items: center; justify-content: space-between; gap: ${tight ? 8 : 12}px; background: ${s.bar}; color: #ffffff">
 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
 <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${s.long}</span>
 <span style="font-size: 12px; font-weight: 500; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${CUR_BLOCK ? `${esc(CUR_BLOCK)} · ` : ''}${esc(meta)} · ${nav.pos}</span>
 </div>
-<nav style="display: flex; gap: 6px; flex-shrink: 0">
-${extra}${navLink(nav.prev, '‹ Prev', 'Previous screen')}
-${navLink('Main.dc.html', 'Overview', 'Back to the overview')}
-${navLink(nav.next, 'Next ›', 'Next screen')}
+<nav style="display: flex; gap: ${tight ? 4 : 6}px; flex-shrink: 0">
+${extra}${navLink(nav.prev, '‹ Prev', 'Previous screen', tight)}
+${navLink('Main.dc.html', 'Overview', 'Back to the overview', tight)}
+${navLink(nav.next, 'Next ›', 'Next screen', tight)}
 </nav>
 </div>`;
 }
@@ -217,9 +219,9 @@ ${strip(scr.status, meta, nav)}
 function sandBoardHtml(scr, w, h, meta, inner, nav) {
   // Second walk question 2 (Jack, 3 Oct): the link says it opens the journey's
   // own canvas, where every size is drawn.
-  const others = SAND_CANVAS[scr.sand] ? navLink(SAND_CANVAS[scr.sand], w < 500 ? 'Its canvas ↗' : 'Other sizes, on its own canvas ↗', 'Tablet and phone sizes, on this journey’s own canvas') : '';
+  const others = SAND_CANVAS[scr.sand] ? navLink(SAND_CANVAS[scr.sand], w < 500 ? 'Its canvas ↗' : 'Other sizes, on its own canvas ↗', 'Tablet and phone sizes, on this journey’s own canvas', w < 500) : '';
   return `<div style="width: ${w}px; height: ${h + STRIP}px; display: flex; flex-direction: column; background: #ffffff">
-<div style="font-family: ${FONT}">${strip(scr.status, meta, nav, others)}</div>
+<div style="font-family: ${FONT}">${strip(scr.status, meta, nav, others, w < 500)}</div>
 <div style="width: ${w}px; height: ${h}px; overflow: hidden">${inner}</div>
 </div>`;
 }

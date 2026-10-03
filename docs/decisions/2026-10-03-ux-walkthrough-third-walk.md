@@ -64,3 +64,14 @@ drawn, and the one count is followed all the way through (walk-through 3
 M3): the manager's Stock take shows "[Area] · everyone has finished · Ready to
 check", and Check and Applied name [Area]. Staff still see [Area] being
 counted, with Join. Chosen over a "still counting" state on `tk-hub`.
+
+## Phone and tablet steps (3 Oct)
+
+Jack, 3 Oct: "lets just accept the longer way around for phones and tablets
+right now". The 21 story steps a phone or tablet drawing has no button for
+(`docs/design/user-journeys/mockup-gaps.md`, "Story steps a smaller size can't
+click") stay as they are: at those sizes the person goes the longer way
+round, for example through the Settings list or the job page. Any of them
+can still be drawn later. The mockup's every-size check skips them through
+each step's `missingAt`.
+

@@ -45,7 +45,24 @@ for (const f of canvas.order) {
   await p.setContent(`${helmet}${body}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
   await Promise.race([p.evaluate(() => document.fonts.ready), new Promise((r) => setTimeout(r, 6000))]);
   const size = await p.evaluate(() => ({ w: document.documentElement.scrollWidth, h: document.documentElement.scrollHeight }));
-  if (size.w > w + 1 || size.h > h + 1) bad.push(`${f}: page is ${size.w}×${size.h}, its board is ${w}×${h}`);
+  if (size.w > w + 1 || size.h > h + 1) {
+    // Name what sticks out furthest, so a failure on another machine says why.
+    const out = await p.evaluate(([bw, bh, wide]) => {
+      // Content inside a scrolling or clipped box can't stretch the page.
+      const clipped = (el) => { for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) if (getComputedStyle(a).overflow !== 'visible') return true; return false; };
+      let worst = null, by = 0;
+      for (const el of document.body.querySelectorAll('*')) {
+        if (clipped(el)) continue;
+        const r = el.getBoundingClientRect();
+        const over = wide ? r.right - bw : r.bottom - bh;
+        if (over > by) { by = over; worst = el; }
+      }
+      if (!worst) return '';
+      const r = worst.getBoundingClientRect();
+      return ` · furthest out: <${worst.tagName.toLowerCase()}> right ${Math.round(r.right)}, bottom ${Math.round(r.bottom)}, font ${getComputedStyle(worst).fontFamily.split(',')[0]}, "${(worst.textContent || '').trim().slice(0, 60)}"`;
+    }, [w, h, size.w > w + 1]);
+    bad.push(`${f}: page is ${size.w}×${size.h}, its board is ${w}×${h}${out}`);
+  }
   await p.close();
 }
 await b.close();

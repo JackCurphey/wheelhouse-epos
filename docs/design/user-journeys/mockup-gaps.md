@@ -105,7 +105,7 @@ In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack 
 
 ## Story steps a smaller size can't click (21)
 
-The check walks every story at desktop, tablet and phone. At these sizes the drawing has no button for the step, so the story can't be clicked there. Each is for Jack to decide on: draw the button at that size, or accept the longer way round.
+The check walks every story at desktop, tablet and phone. At these sizes the drawing has no button for the step, so the story can't be clicked there. Jack, 3 Oct: accepted the longer way round at these sizes for now (`docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`). Each can still be drawn later.
 
 - **Story 1, step 17** (phone): Mark ready for collection on `job-checklist` — the phone checklist sheet has only Done and Close; Mark ready is on the job page behind it
 - **Story 2, step 4** (phone): Add a discount on `till-sale` — the phone till keeps the sale behind “Open the sale”, which isn’t drawn
