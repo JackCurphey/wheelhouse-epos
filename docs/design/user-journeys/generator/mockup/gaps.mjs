@@ -36,7 +36,7 @@ ${list(gaps)}
 
 ## Story steps a smaller size can't click (${sizeGaps.length})
 
-The check walks every story at desktop, tablet and phone. At these sizes the drawing has no button for the step, so the story can't be clicked there. Each is for Jack to decide on: draw the button at that size, or accept the longer way round.
+The check walks every story at desktop, tablet and phone. At these sizes the drawing has no button for the step, so the story can't be clicked there. Jack, 3 Oct: accepted the longer way round at these sizes for now (\`docs/decisions/2026-10-03-ux-walkthrough-third-walk.md\`). Each can still be drawn later.
 
 ${sizeGaps.join('\n')}
 
