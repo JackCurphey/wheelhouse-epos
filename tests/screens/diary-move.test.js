@@ -1,8 +1,8 @@
 // The staff diary, piece 3: moving a job (journey 12; decision 32 moves a
 // job to another mechanic in the Day view). Dragging is checked in a real
 // browser (tests/browser/diary-move.spec.ts); here, the keyboard way to move
-// a job, which jsdom can do without layout: Enter picks the job up, arrows
-// move it, Enter saves, Escape puts it back. Saving is the existing
+// a job, which jsdom can do without layout: M picks the job up (Enter opens
+// it, as a button does), arrows move it, Enter saves, Escape puts it back. Saving is the existing
 // PUT /api/workshop-jobs/:id with the version the diary saw.
 // Spec: docs/superpowers/specs/2026-10-03-staff-diary-view-design.md (piece 3)
 import test, { afterEach } from 'node:test';
@@ -76,10 +76,10 @@ const puts = () => calls.filter((c) => c.method === 'PUT').map((c) => `${c.url} 
 const has = (q) => Boolean(q);
 const block = (ui, name) => ui.getByRole('button', { name: new RegExp(`^${name}`) });
 
-test('a job can be picked up with Enter, moved with the arrows, and saved with Enter', async () => {
+test('a job can be picked up with M, moved with the arrows, and saved with Enter', async () => {
   const { ui, fireEvent, waitFor } = await openDiary();
   const b = block(ui, 'Trek Domane');
-  fireEvent.keyDown(b, { key: 'Enter' });
+  fireEvent.keyDown(b, { key: 'm' });
   assert.ok(has(ui.queryByText(/Moving Trek Domane\. Tue 6 Oct, 10:00–11:00\./)));
   fireEvent.keyDown(b, { key: 'ArrowDown' });
   fireEvent.keyDown(b, { key: 'ArrowDown' });
@@ -92,7 +92,7 @@ test('a job can be picked up with Enter, moved with the arrows, and saved with E
 test('Escape puts the job back without saving', async () => {
   const { ui, fireEvent } = await openDiary();
   const b = block(ui, 'Trek Domane');
-  fireEvent.keyDown(b, { key: 'Enter' });
+  fireEvent.keyDown(b, { key: 'm' });
   fireEvent.keyDown(b, { key: 'ArrowDown' });
   fireEvent.keyDown(b, { key: 'Escape' });
   assert.ok(has(ui.queryByText('Move cancelled. Trek Domane stays at Tue 6 Oct, 10:00–11:00.')));
@@ -102,7 +102,7 @@ test('Escape puts the job back without saving', async () => {
 test('in the Day view, left and right move the job to another mechanic', async () => {
   const { ui, fireEvent, waitFor } = await openDiary('?date=2026-10-06&view=day');
   const b = block(ui, 'Trek Domane');
-  fireEvent.keyDown(b, { key: 'Enter' });
+  fireEvent.keyDown(b, { key: 'm' });
   fireEvent.keyDown(b, { key: 'ArrowRight' });
   assert.ok(has(ui.queryByText(/Moving Trek Domane\. Tue 6 Oct, 10:00–11:00, Jo Taylor\./)));
   fireEvent.keyDown(b, { key: 'Enter' });
@@ -113,7 +113,7 @@ test('if the server refuses the time, it says why and the job stays put', async 
   const { ui, fireEvent } = await openDiary();
   answer = { status: 400, body: { error: 'Alex Morgan already has a job at that time' } };
   const b = block(ui, 'Trek Domane');
-  fireEvent.keyDown(b, { key: 'Enter' });
+  fireEvent.keyDown(b, { key: 'm' });
   fireEvent.keyDown(b, { key: 'ArrowDown' });
   fireEvent.keyDown(b, { key: 'Enter' });
   assert.ok(has(await ui.findByText("Couldn't move Trek Domane: Alex Morgan already has a job at that time")));
@@ -123,7 +123,7 @@ test('if someone else changed the job first, it says so', async () => {
   const { ui, fireEvent } = await openDiary();
   answer = { status: 409, body: { error: 'Job has been changed by someone else', code: 'stale' } };
   const b = block(ui, 'Trek Domane');
-  fireEvent.keyDown(b, { key: 'Enter' });
+  fireEvent.keyDown(b, { key: 'm' });
   fireEvent.keyDown(b, { key: 'ArrowUp' });
   fireEvent.keyDown(b, { key: 'Enter' });
   assert.ok(has(await ui.findByText("Couldn't move Trek Domane: This job changed while you were looking at it.")));

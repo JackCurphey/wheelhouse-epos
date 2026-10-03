@@ -64,4 +64,18 @@ test('dragging a job down an hour and across a day moves it there', async ({ pag
     return `${now.jobDate} ${now.startTime}-${now.endTime}`;
   }).toBe(`${WED} 11:00-12:00`);
   await expect(page.getByRole('group', { name: 'Wednesday 14 October' }).getByRole('button', { name: /^Bike, Brake service/ })).toBeVisible();
+  // A drag is not a click: the job page must not open.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('a click on a job opens its page, and Book in books it in', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await page.getByRole('button', { name: /^Bike, Brake service/ }).click();
+  const job = page.getByRole('dialog', { name: /Brake service/ });
+  await expect(job.getByText('Expected')).toBeVisible();
+  await job.getByRole('button', { name: 'Book in' }).click();
+  await expect(job.getByRole('button', { name: 'Start work' })).toBeVisible();
+  expect((await staff(`/api/workshop-jobs/${jobId}`)).body.custodyState).toBe('in_shop');
 });

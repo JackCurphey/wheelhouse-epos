@@ -478,7 +478,8 @@ Fjell until switched.
    Owner sees every room, everyone else the Staff rooms, until roles exist)
    and the diary's piece 1, seeing the week and day (3 Oct, `feat/staff-diary`,
    spec `docs/superpowers/specs/2026-10-03-staff-diary-view-design.md`, which lists
-   pieces 2-6) and the diary with its
+   pieces 2-6; pieces 1-5a built 3 Oct) and the job page, piece 1 (spec
+   `docs/superpowers/specs/2026-10-03-staff-job-page-design.md`) and the diary with its
    Waiting column. Open design items to settle first or on the way: multi-day
    jobs (52: settled 3 Oct, one block per day), payment + collection as one step (63), mechanic sign-off (64),
    customer spending limit on /book (41), accessibility settings (57).
