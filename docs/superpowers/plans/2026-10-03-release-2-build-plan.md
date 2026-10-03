@@ -15,8 +15,11 @@ still sets the goal, scope and finish line, and it does not change them.
 > so each work package now says exactly what it builds: the **building blocks**
 > it builds first (later packages reuse them), the **screens** (board ids on
 > the one canvas), and the **situations** on each screen it must cover. Every
-> kept screen and every situation is in exactly one package; a script checked
-> this against `docs/design/user-journeys/generator/consolidate/` on 3 Oct.
+> kept screen and every situation is in exactly one package, and every
+> building block is built in exactly one package, before any package reuses
+> it. The test `docs/design/user-journeys/generator/consolidate/plan-coverage.test.mjs`
+> checks this plan file against the consolidation files; it was watched
+> failing on a deliberately broken copy of this plan before it passed.
 > Jack's answers to issue #116 questions 2–6 moved some work out of the first
 > build: the invoice check, the oversight extras, the full website editor,
 > theme, extra pages and own web address are **later**, and practice mode is
@@ -206,9 +209,9 @@ later packages.
 
 *Screens it builds (3) and the situations it covers:*
 
-- **`map`** (block 16) — no other situations.
-- **`staff-app`** (block 16) — 3 situations: `staff-app-mechanic`, `staff-app-menu`, `auth-noaccess`; plus 3 written lines.
-- **`till-rail`** (block 16) — 1 situation: `till-rail-open`; plus 2 written lines.
+- **`map`** (block 16, App frame) — no other situations.
+- **`staff-app`** (block 16, App frame) — 3 situations: `staff-app-mechanic`, `staff-app-menu`, `auth-noaccess`; plus 3 written lines.
+- **`till-rail`** (block 16, App frame) — 1 situation: `till-rail-open`; plus 2 written lines.
 <!-- /screens -->
 
 - **WP-1.2 Settings store, change record and activity log** (Owner setup 4;
@@ -232,8 +235,8 @@ later packages.
 
 *Screens it builds (2) and the situations it covers:*
 
-- **`set-till-quick`** (block 1) — 3 of its 11 situations here: `set-list`, `set-till-quick-saved`, `set-till-empty`.
-- **`set-till-quick-add`** (block 9) — no other situations.
+- **`set-till-quick`** (block 1, Settings page) — 3 of its 11 situations here: `set-list`, `set-till-quick-saved`, `set-till-empty`.
+- **`set-till-quick-add`** (block 9, Form box) — no other situations.
 <!-- /screens -->
 
 - **WP-1.4 Shops (sites) everywhere** (Multiple sites 1–2). The current shop
@@ -279,17 +282,16 @@ later packages.
 *Building blocks built here:* 13 Shop switcher; 22 Status line (no board of its own); 26 "Working: [name] · Switch" bar for a shared workshop computer (no board of its own); 40 Message or outcome page; 42 Emailed-code sign-in; 43 PIN pad.
 *Reused, already built:* 1 Settings page (WP-1.3).
 
-*Screens it builds (9) and the situations it covers:*
+*Screens it builds (8) and the situations it covers:*
 
-- **`workos-signin`** (block 42) — no other situations.
-- **`auth-site`** (block 13) — no other situations; plus 1 written line.
-- **`auth-signedout`** (block 40) — 1 situation: `auth-expired`.
-- **`till-setup`** (block 1) — its one situation comes with a later package; plus 1 written line.
-- **`till-checkin`** (block 43) — 3 situations: `till-checkin-offline`, `till-checkin-stale`, `till-pin-wrong`; plus 7 written lines.
-- **`pin-change`** (block 43) — 3 situations: `pin-first`, `pin-cleared`, `till-give-pin`.
-- **`cust-signin`** (block 42) — no other situations; plus 1 written line.
-- **`cust-code`** (block 42) — 1 situation: `cust-code-expired`.
-- **`pending`** (block 40) — 1 situation: `expired`.
+- **`workos-signin`** (block 42, Emailed-code sign-in) — no other situations.
+- **`auth-site`** (block 13, Shop switcher) — no other situations; plus 1 written line.
+- **`auth-signedout`** (block 40, Message or outcome page) — 1 situation: `auth-expired`.
+- **`till-setup`** (block 1, Settings page) — its one situation comes with a later package; plus 1 written line.
+- **`till-checkin`** (block 43, PIN pad) — 3 situations: `till-checkin-offline`, `till-checkin-stale`, `till-pin-wrong`; plus 7 written lines.
+- **`pin-change`** (block 43, PIN pad) — 3 situations: `pin-first`, `pin-cleared`, `till-give-pin`.
+- **`cust-signin`** (block 42, Emailed-code sign-in) — no other situations; plus 1 written line.
+- **`cust-code`** (block 42, Emailed-code sign-in) — 1 situation: `cust-code-expired`.
 <!-- /screens -->
 
 - **WP-1.8 Messages engine and email** (Owner setup Messages; journeys 3, 4,
@@ -305,9 +307,9 @@ later packages.
 
 *Screens it builds (3) and the situations it covers:*
 
-- **`set-msg-list`** (block 1) — its 10 situations come with a later package.
-- **`set-msg-edit`** (block 9) — no other situations.
-- **`set-msg-new`** (block 9) — no other situations.
+- **`set-msg-list`** (block 1, Settings page) — its 10 situations come with a later package.
+- **`set-msg-edit`** (block 9, Form box) — no other situations.
+- **`set-msg-new`** (block 9, Form box) — no other situations.
 <!-- /screens -->
 
 - **WP-1.9 Live updates** (walk-through 8 decision 2). Changes on one device
@@ -329,7 +331,7 @@ later packages.
 
 *Screens it builds (1) and the situations it covers:*
 
-- **`op-today`** (block 6) — 2 of its 31 situations here: `op-today-staff`, `op-today-late`.
+- **`op-today`** (block 6, Today cards) — 2 of its 31 situations here: `op-today-staff`, `op-today-late`.
 <!-- /screens -->
 
 - **WP-1.11 Small shared parts:** spreadsheet download (programme rule 5);
@@ -344,8 +346,8 @@ later packages.
 
 *Screens it builds (2) and the situations it covers:*
 
-- **`till-search`** (block 17) — its one situation comes with a later package; plus 6 written lines.
-- **`your-settings`** (block 2) — 1 of its 2 situations here: `your-settings-no-pin`; plus 2 written lines.
+- **`till-search`** (block 17, Search with grouped results) — its one situation comes with a later package; plus 6 written lines.
+- **`your-settings`** (block 2, Settings row) — 1 of its 2 situations here: `your-settings-no-pin`; plus 2 written lines.
 <!-- /screens -->
 
 ### Stage 2 — Products and stock
@@ -360,12 +362,12 @@ later packages.
 
 *Screens it builds (6) and the situations it covers:*
 
-- **`st-list`** (block 3) — 9 situations: `st-list-staff`, `st-search-measure`, `st-filter-bearings`, `st-filter-derailleurs`, `st-search-size`, `st-list-none`, `st-list-unknown`, `st-list-new`, `st-list-ticked`.
-- **`st-categories`** (block 1) — 1 situation: `st-setting-adjust`.
-- **`st-category-edit`** (block 9) — no other situations.
-- **`st-product`** (block 4) — 3 of its 4 situations here: `st-product-staff`, `st-product-bike`, `st-product-sizes`.
-- **`st-prices`** (block 9) — 1 situation: `st-prices-done`.
-- **`st-adjust`** (block 9) — 1 situation: `st-adjust-faulty`.
+- **`st-list`** (block 3, Table with search and filters) — 9 situations: `st-list-staff`, `st-search-measure`, `st-filter-bearings`, `st-filter-derailleurs`, `st-search-size`, `st-list-none`, `st-list-unknown`, `st-list-new`, `st-list-ticked`.
+- **`st-categories`** (block 1, Settings page) — 1 situation: `st-setting-adjust`.
+- **`st-category-edit`** (block 9, Form box) — no other situations.
+- **`st-product`** (block 4, Detail page) — 3 of its 4 situations here: `st-product-staff`, `st-product-bike`, `st-product-sizes`.
+- **`st-prices`** (block 9, Form box) — 1 situation: `st-prices-done`.
+- **`st-adjust`** (block 9, Form box) — 1 situation: `st-adjust-faulty`.
 - Added to the `op-today` board (built in WP-1.10) — 2 situations: `st-today-adjust`, `st-today-below`.
 <!-- /screens -->
 
@@ -379,11 +381,11 @@ later packages.
 
 *Screens it builds (5) and the situations it covers:*
 
-- **`tr-send`** (block 9) — no other situations.
-- **`tk-hub`** (block 3) — 1 situation: `tk-hub-staff`.
-- **`tk-start`** (block 9) — 1 situation: `tk-start-category`.
-- **`tk-count`** (block 27) — 1 situation: `tk-count-below`; plus 1 written line.
-- **`tk-diff`** (block 3) — 1 situation: `tk-applied`.
+- **`tr-send`** (block 9, Form box) — no other situations.
+- **`tk-hub`** (block 3, Table with search and filters) — 1 situation: `tk-hub-staff`.
+- **`tk-start`** (block 9, Form box) — 1 situation: `tk-start-category`.
+- **`tk-count`** (block 27, Scan-and-count list) — 1 situation: `tk-count-below`; plus 1 written line.
+- **`tk-diff`** (block 3, Table with search and filters) — 1 situation: `tk-applied`.
 - Added to the `st-product` board (built in WP-2.1) — 1 situation: `tr-sites`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `tr-today-short`.
 <!-- /screens -->
@@ -400,13 +402,13 @@ later packages.
 
 *Screens it builds (7) and the situations it covers:*
 
-- **`rs-hub`** (block 3) — 3 situations: `rs-hub-empty`, `rs-hub-staff`, `tr-incoming`.
-- **`rs-receive`** (block 27) — 7 of its 9 situations here: `rs-frame`, `rs-frame-dup`, `rs-receive-marked`, `rs-book-blocked`, `rs-receive-staff`, `rs-receive-staff-left`, `tr-receive`; plus 1 written line.
-- **`rs-add-product`** (block 9) — 1 situation: `rs-add-left`.
-- **`rs-problem`** (block 9) — 2 situations: `rs-problem-missing`, `tr-problem`.
-- **`rs-delivery`** (block 4) — 5 of its 6 situations here: `rs-booked`, `rs-booked-staff`, `rs-booked-job-waiting`, `rs-labels`, `rs-delivery-staff`; plus 1 written line.
-- **`rs-order`** (block 4) — 2 situations: `rs-order-ordered`, `rs-order-close`.
-- **`rs-restock`** (block 3) — 1 situation: `rs-restock-customers`; plus 1 written line.
+- **`rs-hub`** (block 3, Table with search and filters) — 3 situations: `rs-hub-empty`, `rs-hub-staff`, `tr-incoming`.
+- **`rs-receive`** (block 27, Scan-and-count list) — 7 of its 9 situations here: `rs-frame`, `rs-frame-dup`, `rs-receive-marked`, `rs-book-blocked`, `rs-receive-staff`, `rs-receive-staff-left`, `tr-receive`; plus 1 written line.
+- **`rs-add-product`** (block 9, Form box) — 1 situation: `rs-add-left`.
+- **`rs-problem`** (block 9, Form box) — 2 situations: `rs-problem-missing`, `tr-problem`.
+- **`rs-delivery`** (block 4, Detail page) — 5 of its 6 situations here: `rs-booked`, `rs-booked-staff`, `rs-booked-job-waiting`, `rs-labels`, `rs-delivery-staff`; plus 1 written line.
+- **`rs-order`** (block 4, Detail page) — 2 situations: `rs-order-ordered`, `rs-order-close`.
+- **`rs-restock`** (block 3, Table with search and filters) — 1 situation: `rs-restock-customers`; plus 1 written line.
 - Added to the `op-today` board (built in WP-1.10) — 2 situations: `rs-today-to-add`, `rs-today-restock`.
 <!-- /screens -->
 
@@ -420,7 +422,7 @@ later packages.
 
 *Screens it builds (1) and the situations it covers:*
 
-- **`mv-start`** (block 24) — 5 of its 13 situations here: `mv-progress`, `mv-progress-failed`, `mv-summary`, `mv-fix`, `mv-sorted`.
+- **`mv-start`** (block 24, Stage strip and its next-step box) — 5 of its 13 situations here: `mv-progress`, `mv-progress-failed`, `mv-summary`, `mv-fix`, `mv-sorted`.
 <!-- /screens -->
 
 ### Stage 3 — The till and the shop day
@@ -430,7 +432,11 @@ later packages.
   groups; parked sales; receipts (print, email, text link, receipt page);
   past sales and voids; refunds; store credit and gift cards; customer
   accounts; paying for a workshop job with collection recorded; the offline
-  screens. Cycle to Work at the till comes with WP-7.1.
+  screens. Cycle to Work at the till comes with WP-7.1. The till gives a
+  customer group's discount by itself (Customer service 8); the groups are
+  set up in Settings › Payments › Customer groups (`cs-groups`), built in
+  WP-5.1, so until then the group parts are built and tested with groups made
+  in the tests.
 
 <!-- screens 3.1 -->
 *Building blocks built here:* 8 "Are you sure?" box; 19 Till page; 20 Payment step; 21 Pick-one box.
@@ -438,34 +444,35 @@ later packages.
 
 *Screens it builds (22) and the situations it covers:*
 
-- **`till-sale`** (block 19) — 13 of its 18 situations here: `till-empty`, `till-noresults`, `till-held`, `till-held-job`, `till-discounted`, `till-loyalty`, `till-job`, `till-job-balance`, `till-offline`, `till-offline-long`, `till-needs-net`, `till-noted`, `till-no-signout`; plus 6 written lines.
-- **`till-line`** (block 9) — 1 situation: `till-discount`.
-- **`till-customer`** (block 21) — no other situations.
-- **`till-variant`** (block 21) — no other situations.
-- **`till-serial`** (block 21) — 1 situation: `till-serial-held`.
-- **`till-pay`** (block 20) — 2 of its 4 situations here: `till-pay-other`, `till-pay-discounted`; plus 1 written line.
-- **`till-card`** (block 20) — 2 situations: `till-card-discounted`, `till-card-declined`.
-- **`till-pay-cash`** (block 20) — no other situations.
-- **`till-pay-split`** (block 20) — 1 situation: `till-split-discounted`.
-- **`till-receipt`** (block 20) — its one situation comes with a later package.
-- **`till-giftcard`** (block 20) — no other situations.
-- **`till-account`** (block 20) — no other situations.
-- **`till-deposit`** (block 20) — 1 situation: `till-job-deposit`.
-- **`till-park`** (block 21) — no other situations.
-- **`till-find`** (block 3) — 1 situation: `till-find-customer`.
-- **`till-sale-detail`** (block 4) — its one situation comes with a later package.
-- **`till-refund`** (block 9) — 3 situations: `till-refund-older`, `till-refund-cash`, `till-refund-noreceipt`; plus 1 written line.
-- **`till-void`** (block 8) — no other situations.
-- **`till-collect`** (block 9) — 1 of its 2 situations here: `till-collect-offline`; plus 1 written line.
-- **`till-book-in`** (block 9) — no other situations.
-- **`till-hand-over-job`** (block 9) — no other situations.
-- **`till-failed`** (block 3) — no other situations.
+- **`till-sale`** (block 19, Till page) — 13 of its 18 situations here: `till-empty`, `till-noresults`, `till-held`, `till-held-job`, `till-discounted`, `till-loyalty`, `till-job`, `till-job-balance`, `till-offline`, `till-offline-long`, `till-needs-net`, `till-noted`, `till-no-signout`; plus 6 written lines.
+- **`till-line`** (block 9, Form box) — 1 situation: `till-discount`.
+- **`till-customer`** (block 21, Pick-one box) — no other situations.
+- **`till-variant`** (block 21, Pick-one box) — no other situations.
+- **`till-serial`** (block 21, Pick-one box) — 1 situation: `till-serial-held`.
+- **`till-pay`** (block 20, Payment step) — 2 of its 4 situations here: `till-pay-other`, `till-pay-discounted`; plus 1 written line.
+- **`till-card`** (block 20, Payment step) — 2 situations: `till-card-discounted`, `till-card-declined`.
+- **`till-pay-cash`** (block 20, Payment step) — no other situations.
+- **`till-pay-split`** (block 20, Payment step) — 1 situation: `till-split-discounted`.
+- **`till-receipt`** (block 20, Payment step) — its one situation comes with a later package.
+- **`till-giftcard`** (block 20, Payment step) — no other situations.
+- **`till-account`** (block 20, Payment step) — no other situations.
+- **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.
+- **`till-park`** (block 21, Pick-one box) — no other situations.
+- **`till-find`** (block 3, Table with search and filters) — 1 situation: `till-find-customer`.
+- **`till-sale-detail`** (block 4, Detail page) — its one situation comes with a later package.
+- **`till-refund`** (block 9, Form box) — 3 situations: `till-refund-older`, `till-refund-cash`, `till-refund-noreceipt`; plus 1 written line.
+- **`till-void`** (block 8, "Are you sure?" box) — no other situations.
+- **`till-collect`** (block 9, Form box) — 1 of its 2 situations here: `till-collect-offline`; plus 1 written line.
+- **`till-book-in`** (block 9, Form box) — no other situations.
+- **`till-hand-over-job`** (block 9, Form box) — no other situations.
+- **`till-failed`** (block 3, Table with search and filters) — no other situations.
 - `on-hand-over` is the same drawing as `till-collect`, so it adds nothing of its own.
 <!-- /screens -->
 
 - **WP-3.2 Customers** (journey 15): customers page with duplicates caught;
   the customer page with one history; bike warranty; store credit and
-  account statements; customer groups; merging; privacy requests.
+  account statements; a customer's group (setting up the groups themselves
+  comes with WP-5.1, as for WP-3.1); merging; privacy requests.
 
 <!-- screens 3.2 -->
 *Building blocks built here:* none new.
@@ -473,14 +480,14 @@ later packages.
 
 *Screens it builds (8) and the situations it covers:*
 
-- **`cs-list`** (block 3) — no other situations.
-- **`cs-page`** (block 4) — 5 of its 9 situations here: `customer`, `cs-page-over`, `cs-page-new`, `cs-page-off`, `cs-page-dup`.
-- **`cs-credit`** (block 9) — no other situations.
-- **`cs-add`** (block 9) — 3 situations: `cs-edit`, `cs-add-company`, `cs-add-match`.
-- **`cs-account`** (block 4) — no other situations.
-- **`cs-transfer`** (block 9) — no other situations.
-- **`cs-privacy`** (block 3) — 2 of its 3 situations here: `cs-privacy-delete`, `cs-privacy-blocked`.
-- **`cs-merge`** (block 4) — no other situations.
+- **`cs-list`** (block 3, Table with search and filters) — no other situations.
+- **`cs-page`** (block 4, Detail page) — 5 of its 9 situations here: `customer`, `cs-page-over`, `cs-page-new`, `cs-page-off`, `cs-page-dup`.
+- **`cs-credit`** (block 9, Form box) — no other situations.
+- **`cs-add`** (block 9, Form box) — 3 situations: `cs-edit`, `cs-add-company`, `cs-add-match`.
+- **`cs-account`** (block 4, Detail page) — no other situations.
+- **`cs-transfer`** (block 9, Form box) — no other situations.
+- **`cs-privacy`** (block 3, Table with search and filters) — 2 of its 3 situations here: `cs-privacy-delete`, `cs-privacy-blocked`.
+- **`cs-merge`** (block 4, Detail page) — no other situations.
 - Added to the `till-sale-detail` board (built in WP-3.1) — 1 situation: `cs-sale`.
 <!-- /screens -->
 
@@ -488,13 +495,13 @@ later packages.
   counter; Today's money side.
 
 <!-- screens 3.3 -->
-*Building blocks built here:* 18 Note-and-coin counter.
+*Building blocks built here:* 18 Note-and-coin counter (no board of its own).
 *Reused, already built:* 9 Form box (WP-1.3).
 
 *Screens it builds (2) and the situations it covers:*
 
-- **`op-float-check`** (block 9) — 3 situations: `op-float-check-unclosed`, `op-float-check-first`, `op-float-matched`.
-- **`op-float-short`** (block 9) — 1 situation: `op-float-over`.
+- **`op-float-check`** (block 9, Form box) — 3 situations: `op-float-check-unclosed`, `op-float-check-first`, `op-float-matched`.
+- **`op-float-short`** (block 9, Form box) — 1 situation: `op-float-over`.
 - Added to the `op-today` board (built in WP-1.10) — 3 situations: `op-today-short`, `op-today-seen`, `op-today-waiting`; plus 1 written line.
 <!-- /screens -->
 
@@ -507,10 +514,10 @@ later packages.
 
 *Screens it builds (4) and the situations it covers:*
 
-- **`eod-check`** (block 9) — no other situations.
-- **`eod-count`** (block 7) — 12 situations: `op-float-count`, `op-close-yesterday`, `eod-waiting`, `eod-waiting-banked`, `eod-attention`, `eod-count-shown`, `eod-count-result`, `eod-count-exact`, `eod-banking`, `eod-banking-none`, `eod-card`, `eod-finish`; plus 1 written line.
-- **`eod-paidout`** (block 9) — no other situations.
-- **`eod-z`** (block 5) — no other situations.
+- **`eod-check`** (block 9, Form box) — no other situations.
+- **`eod-count`** (block 7, Step-by-step checklist) — 12 situations: `op-float-count`, `op-close-yesterday`, `eod-waiting`, `eod-waiting-banked`, `eod-attention`, `eod-count-shown`, `eod-count-result`, `eod-count-exact`, `eod-banking`, `eod-banking-none`, `eod-card`, `eod-finish`; plus 1 written line.
+- **`eod-paidout`** (block 9, Form box) — no other situations.
+- **`eod-z`** (block 5, Report page) — no other situations.
 - Added to the `op-today` board (built in WP-1.10) — 3 situations: `op-today-banked`, `op-today-unclosed`, `op-today-two`.
 - Added to the `till-sale` board (built in WP-3.1) — 1 situation: `eod-entry`.
 <!-- /screens -->
@@ -529,15 +536,15 @@ later packages.
 
 *Screens it builds (9) and the situations it covers:*
 
-- **`set-workshop-diary`** (block 1) — 1 situation: `diary-settings`.
-- **`diary`** (block 23) — 9 of its 14 situations here: `desk`, `diary-mechanic`, `waiting-open`, `change-selected`, `diary-context-menu`, `diary-stack-hover`, `diary-stack-open`, `new-job-pick`, `rs-diary-arrived`; plus 6 written lines.
-- **`diary-day`** (block 23) — no other situations.
-- **`job-quick-overview`** (block 25) — 1 situation: `diary-hover-summary`; plus 1 written line.
-- **`request-new`** (block 9) — 3 of its 4 situations here: `request-decline`, `request-change`, `request-cancel`.
-- **`new-job`** (block 9) — 1 of its 2 situations here: `new-job-day`; plus 1 written line.
-- **`job-overview`** (block 15) — 11 of its 22 situations here: `job-book-in`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 10 of its 11 written lines.
-- **`job-checklist`** (block 7) — no other situations.
-- **`overview`** (block 3) — 1 situation: `rs-overview-arrived`.
+- **`set-workshop-diary`** (block 1, Settings page) — 1 situation: `diary-settings`.
+- **`diary`** (block 23, Diary) — 9 of its 14 situations here: `desk`, `diary-mechanic`, `waiting-open`, `change-selected`, `diary-context-menu`, `diary-stack-hover`, `diary-stack-open`, `new-job-pick`, `rs-diary-arrived`; plus 6 written lines.
+- **`diary-day`** (block 23, Diary) — no other situations.
+- **`job-quick-overview`** (block 25, Quick-look box) — 1 situation: `diary-hover-summary`; plus 1 written line.
+- **`request-new`** (block 9, Form box) — 3 of its 4 situations here: `request-decline`, `request-change`, `request-cancel`.
+- **`new-job`** (block 9, Form box) — 1 of its 2 situations here: `new-job-day`; plus 1 written line.
+- **`job-overview`** (block 15, The job page, reused as it is) — 11 of its 22 situations here: `job-book-in`, `job-quote`, `job-mechanic`, `job-waiting-parts`, `job-finished`, `job-collection`, `rs-job-arrived`, `rs-part-sold`, `rs-part-missing`, `rs-part-damaged`, `rs-part-order-closed`; plus 10 of its 11 written lines.
+- **`job-checklist`** (block 7, Step-by-step checklist) — no other situations.
+- **`overview`** (block 3, Table with search and filters) — 1 situation: `rs-overview-arrived`.
 <!-- /screens -->
 
 - **WP-4.2 Quotes, the rest** (journey 4): the customer's job page with its
@@ -550,9 +557,9 @@ later packages.
 
 *Screens it builds (3) and the situations it covers:*
 
-- **`bk-page`** (block 37) — 2 of its 17 situations here: `dq-in-shop`, `dq-waiting-part`.
-- **`dq-quote`** (block 38) — 12 of its 15 situations here: `dq-quote-photo`, `dq-quote-untick`, `dq-quote-decline`, `dq-quote-deposit`, `dq-quote-reminded`, `dq-quote-newer`, `dq-withdrawn`, `dq-within-limit`, `dq-answered`, `dq-answered-declined`, `dq-answered-deposit`, `dq-answered-by-phone`; plus 2 written lines.
-- **`dq-record-answer`** (block 9) — no other situations.
+- **`bk-page`** (block 37, Customer job page) — 2 of its 17 situations here: `dq-in-shop`, `dq-waiting-part`.
+- **`dq-quote`** (block 38, Quote card) — 12 of its 15 situations here: `dq-quote-photo`, `dq-quote-untick`, `dq-quote-decline`, `dq-quote-deposit`, `dq-quote-reminded`, `dq-quote-newer`, `dq-withdrawn`, `dq-within-limit`, `dq-answered`, `dq-answered-declined`, `dq-answered-deposit`, `dq-answered-by-phone`; plus 2 written lines.
+- **`dq-record-answer`** (block 9, Form box) — no other situations.
 - Added to the `job-overview` board (built in WP-4.1) — 6 situations: `dq-job-quote`, `dq-job-sent`, `dq-job-withdraw`, `dq-job-answered`, `dq-job-within`, `dq-job-waiting`.
 - Added to the `diary` board (built in WP-4.1) — 1 situation: `dq-diary-waiting`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `dq-today-no-answer`.
@@ -561,7 +568,8 @@ later packages.
 
 - **WP-4.3 Collect and pay** (journey 5): the customer's ready page; "Bike
   ready" sent on Mark ready; pay now online; receipts; the uncollected
-  reminder; collection settings.
+  reminder. Collection settings come with WP-4.4 (they are a section of
+  Settings › Workshop › Online booking).
 
 <!-- screens 4.3 -->
 *Building blocks built here:* 39 Card payment box; 41 Receipt and printed documents.
@@ -569,11 +577,11 @@ later packages.
 
 *Screens it builds (5) and the situations it covers:*
 
-- **`cp-summary`** (block 37) — 9 of its 12 situations here: `dq-ready`, `customer-message`, `cp-summary-said-yes`, `cp-summary-deposit`, `cp-summary-paid`, `cp-summary-counter`, `cp-summary-inshop`, `cp-expired`, `ready`.
-- **`cp-pay`** (block 39) — 4 situations: `cp-pay-failed`, `cp-pay-balance`, `cp-paid`, `cp-paid-balance`.
-- **`cp-receipt-email`** (block 41) — 4 situations: `cp-receipt-email-guest`, `cp-invoice-email`, `cp-receipt-email-till`, `cp-receipt-email-deposit`.
-- **`cp-receipt-text`** (block 41) — 1 situation: `cp-receipt-text-email`.
-- **`cp-receipt-address`** (block 9) — 5 situations: `cp-receipt-address-error`, `cp-receipt-address-save`, `cp-receipt-address-text`, `cp-receipt-address-customer`, `cp-receipt-address-offline`.
+- **`cp-summary`** (block 37, Customer job page) — 9 of its 12 situations here: `dq-ready`, `customer-message`, `cp-summary-said-yes`, `cp-summary-deposit`, `cp-summary-paid`, `cp-summary-counter`, `cp-summary-inshop`, `cp-expired`, `ready`.
+- **`cp-pay`** (block 39, Card payment box) — 4 situations: `cp-pay-failed`, `cp-pay-balance`, `cp-paid`, `cp-paid-balance`.
+- **`cp-receipt-email`** (block 41, Receipt and printed documents) — 4 situations: `cp-receipt-email-guest`, `cp-invoice-email`, `cp-receipt-email-till`, `cp-receipt-email-deposit`.
+- **`cp-receipt-text`** (block 41, Receipt and printed documents) — 1 situation: `cp-receipt-text-email`.
+- **`cp-receipt-address`** (block 9, Form box) — 5 situations: `cp-receipt-address-error`, `cp-receipt-address-save`, `cp-receipt-address-text`, `cp-receipt-address-customer`, `cp-receipt-address-offline`.
 - Added to the `job-overview` board (built in WP-4.1) — 5 situations: `cp-ready-unpaid`, `cp-ready-deposit`, `cp-ready-paid`, `cp-ready-ticks`, `cp-collected`.
 - Added to the `till-sale` board (built in WP-3.1) — 1 situation: `cp-till`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `cp-today-uncollected`.
@@ -582,23 +590,26 @@ later packages.
 
 - **WP-4.4 Book a repair, rebuilt** (journey 3): change and cancel (d6);
   the one-page booking with steps; the two-week day strip; a saved draft;
-  signed-in prefill; online-booking settings; auto-confirm; deposits;
+  signed-in prefill; online-booking settings, with collection settings;
+  auto-confirm; deposits;
   offered times; booking messages. "Which shop?" in the booking comes with
-  WP-5.2.
+  WP-5.2. The Release 1 request page (`pending`) is rebuilt here, reusing
+  block 40.
 
 <!-- screens 4.4 -->
 *Building blocks built here:* 36 Step-by-step booking, with the day strip and time picker.
-*Reused, already built:* 1 Settings page (WP-1.3); 8 "Are you sure?" box (WP-3.1); 37 Customer job page (WP-4.2).
+*Reused, already built:* 1 Settings page (WP-1.3); 8 "Are you sure?" box (WP-3.1); 37 Customer job page (WP-4.2); 40 Message or outcome page (WP-1.7).
 
-*Screens it builds (7) and the situations it covers:*
+*Screens it builds (8) and the situations it covers:*
 
-- **`bk-service`** (block 36) — 3 of its 6 situations here: `bk-service-chosen`, `bk-service-many`, `bk-unavailable`.
-- **`bk-bike`** (block 36) — 2 situations: `bk-bike-signed-in`, `bk-not-sure`.
-- **`bk-when`** (block 36) — 2 of its 3 situations here: `bk-when-full`, `bk-when-dropoff`.
-- **`bk-details`** (block 36) — 6 situations: `bk-details-deposit`, `bk-sending`, `bk-card-failed`, `bk-not-sent`, `bk-checking-payment`, `bk-resume`.
-- **`bk-change`** (block 37) — 2 situations: `bk-change-pending`, `bk-change-declined`.
-- **`bk-cancel`** (block 8) — 1 of its 2 situations here: `bk-cancel-late`.
-- **`bk-settings`** (block 1) — 2 situations: `bk-settings-deposits`, `cp-setting`; plus 1 written line.
+- **`bk-service`** (block 36, Step-by-step booking, with the day strip and time picker) — 3 of its 6 situations here: `bk-service-chosen`, `bk-service-many`, `bk-unavailable`.
+- **`bk-bike`** (block 36, Step-by-step booking, with the day strip and time picker) — 2 situations: `bk-bike-signed-in`, `bk-not-sure`.
+- **`bk-when`** (block 36, Step-by-step booking, with the day strip and time picker) — 2 of its 3 situations here: `bk-when-full`, `bk-when-dropoff`.
+- **`bk-details`** (block 36, Step-by-step booking, with the day strip and time picker) — 6 situations: `bk-details-deposit`, `bk-sending`, `bk-card-failed`, `bk-not-sent`, `bk-checking-payment`, `bk-resume`.
+- **`bk-change`** (block 37, Customer job page) — 2 situations: `bk-change-pending`, `bk-change-declined`.
+- **`bk-cancel`** (block 8, "Are you sure?" box) — 1 of its 2 situations here: `bk-cancel-late`.
+- **`bk-settings`** (block 1, Settings page) — 2 situations: `bk-settings-deposits`, `cp-setting`; plus 1 written line.
+- **`pending`** (block 40, Message or outcome page) — 1 situation: `expired`.
 - Added to the `bk-page` board (built in WP-4.2) — 10 situations: `bk-request`, `bk-request-deposit`, `bk-confirmed`, `bk-page-request`, `bk-offered`, `bk-page-dropoff`, `bk-cancelled`, `bk-cancelled-late`, `bk-declined`, `bk-expired`; plus 1 written line.
 - Added to the `diary` board (built in WP-4.1) — 2 situations: `bk-staff-request`, `bk-staff-decline`.
 - Added to the `set-msg-list` board (built in WP-1.8) — 1 situation: `bk-messages`.
@@ -615,15 +626,15 @@ later packages.
 
 *Screens it builds (9) and the situations it covers:*
 
-- **`ac-account`** (block 4) — 10 of its 12 situations here: `bk-bookings`, `ac-account-lower`, `ac-account-repairs`, `ac-account-new`, `ac-account-question-sent`, `ac-account-asked`, `ac-download`, `ac-download-failed`, `ac-account-delete-pending`, `ac-account-delete-cancelled`.
-- **`ac-receipt`** (block 41) — 1 situation: `ac-receipt-sent`.
-- **`ac-ask`** (block 9) — no other situations.
-- **`ac-question`** (block 47) — no other situations.
-- **`ac-inbox`** (block 3) — 5 situations: `ac-inbox-list`, `ac-inbox-sent`, `ac-inbox-all`, `ac-inbox-empty`, `ac-reply-text`.
-- **`ac-review-setting`** (block 9) — 1 situation: `ac-review-first`.
-- **`ac-contact`** (block 9) — 2 situations: `preferences`, `ac-contact-changed`.
-- **`ac-stopped`** (block 40) — 1 situation: `ac-stopped-on`.
-- **`ac-delete`** (block 8) — 2 situations: `ac-delete-blocked`, `ac-delete-sent`.
+- **`ac-account`** (block 4, Detail page) — 10 of its 12 situations here: `bk-bookings`, `ac-account-lower`, `ac-account-repairs`, `ac-account-new`, `ac-account-question-sent`, `ac-account-asked`, `ac-download`, `ac-download-failed`, `ac-account-delete-pending`, `ac-account-delete-cancelled`.
+- **`ac-receipt`** (block 41, Receipt and printed documents) — 1 situation: `ac-receipt-sent`.
+- **`ac-ask`** (block 9, Form box) — no other situations.
+- **`ac-question`** (block 47, Conversation thread with a reply box) — no other situations.
+- **`ac-inbox`** (block 3, Table with search and filters) — 5 situations: `ac-inbox-list`, `ac-inbox-sent`, `ac-inbox-all`, `ac-inbox-empty`, `ac-reply-text`.
+- **`ac-review-setting`** (block 9, Form box) — 1 situation: `ac-review-first`.
+- **`ac-contact`** (block 9, Form box) — 2 situations: `preferences`, `ac-contact-changed`.
+- **`ac-stopped`** (block 40, Message or outcome page) — 1 situation: `ac-stopped-on`.
+- **`ac-delete`** (block 8, "Are you sure?" box) — 2 situations: `ac-delete-blocked`, `ac-delete-sent`.
 - Added to the `bk-page` board (built in WP-4.2) — 4 situations: `ac-job-note`, `ac-job-note-sent`, `ac-job-note-answered`, `ac-book-remind`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `ac-today`.
 - Added to the `cp-summary` board (built in WP-4.3) — 1 situation: `ac-collect-remind`.
@@ -646,16 +657,16 @@ later packages.
 
 *Screens it builds (10) and the situations it covers:*
 
-- **`fr-today`** (block 7) — 1 situation: `fr-done`; plus 1 written line.
-- **`set-eod`** (block 1) — 2 situations: `set-eod-close`, `set-save-failed`.
-- **`set-pay-ways`** (block 1) — 4 situations: `fr-step`, `set-pay-other`, `set-pay-card`, `cs-groups`.
-- **`set-staff`** (block 1) — 3 situations: `set-staff-roles`, `set-staff-invited`, `set-staff-invite-expired`.
-- **`set-staff-person`** (block 9) — 2 of its 4 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
-- **`set-staff-invite`** (block 9) — 1 situation: `set-staff-invite-till-only`.
-- **`set-shop-details`** (block 1) — 1 of its 3 situations here: `set-shop-hours`.
-- **`set-workshop-services`** (block 1) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`.
-- **`set-data-export`** (block 1) — no other situations.
-- **`set-data-history`** (block 14) — no other situations.
+- **`fr-today`** (block 7, Step-by-step checklist) — 1 situation: `fr-done`; plus 1 written line.
+- **`set-eod`** (block 1, Settings page) — 2 situations: `set-eod-close`, `set-save-failed`.
+- **`set-pay-ways`** (block 1, Settings page) — 4 situations: `fr-step`, `set-pay-other`, `set-pay-card`, `cs-groups`.
+- **`set-staff`** (block 1, Settings page) — 3 situations: `set-staff-roles`, `set-staff-invited`, `set-staff-invite-expired`.
+- **`set-staff-person`** (block 9, Form box) — 2 of its 4 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
+- **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
+- **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
+- **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`.
+- **`set-data-export`** (block 1, Settings page) — no other situations.
+- **`set-data-history`** (block 14, Activity list) — no other situations.
 - Added to the `set-till-quick` board (built in WP-1.3) — 6 situations: `set-till-reasons`, `set-till-receipts`, `set-till-printer`, `set-till-tills`, `set-till-tills-owner`, `set-till-remove`; plus 2 written lines.
 - Added to the `set-msg-list` board (built in WP-1.8) — plus 3 written lines.
 <!-- /screens -->
@@ -671,11 +682,11 @@ later packages.
 
 *Screens it builds (5) and the situations it covers:*
 
-- **`ms-switch-open`** (block 13) — 2 situations: `ms-switched`, `ms-one-shop`; plus 2 written lines.
-- **`ms-service-price`** (block 28) — 1 situation: `ms-service-not-offered`.
-- **`ms-product-price`** (block 28) — no other situations.
-- **`ms-add-shop`** (block 9) — 1 situation: `ms-add-shop-error`.
-- **`ms-till-move`** (block 9) — no other situations.
+- **`ms-switch-open`** (block 13, Shop switcher) — 2 situations: `ms-switched`, `ms-one-shop`; plus 2 written lines.
+- **`ms-service-price`** (block 28, Price at each shop field) — 1 situation: `ms-service-not-offered`.
+- **`ms-product-price`** (block 28, Price at each shop field) — no other situations.
+- **`ms-add-shop`** (block 9, Form box) — 1 situation: `ms-add-shop-error`.
+- **`ms-till-move`** (block 9, Form box) — no other situations.
 - Added to the `op-today` board (built in WP-1.10) — 2 situations: `ms-today-all`, `ms-today-new`.
 - Added to the `diary` board (built in WP-4.1) — 2 situations: `ms-pick-shop`, `ms-request-answered`.
 - Added to the `till-sale` board (built in WP-3.1) — 1 situation: `ms-till-other`.
@@ -701,17 +712,17 @@ later packages.
 
 *Screens it builds (11) and the situations it covers:*
 
-- **`rp-home`** (block 5) — 3 of its 5 situations here: `rp-home-staff`, `rp-report-menu`, `rp-report-deleted`; plus 2 written lines.
-- **`rp-sales`** (block 5) — 5 situations: `rp-sales-all`, `rp-sales-year`, `rp-sales-empty`, `rp-pick-dates`, `rp-changed`.
-- **`rp-change`** (block 9) — 2 situations: `rp-save`, `rp-save-taken`.
-- **`rp-takings`** (block 5) — 2 situations: `rp-takings-all`, `rp-takings-reopened`.
-- **`rp-day`** (block 5) — 1 situation: `rp-reopen`.
-- **`rp-vat`** (block 5) — 2 situations: `rp-vat-first`, `rp-vat-all`.
-- **`rp-margin`** (block 5) — no other situations; plus 2 written lines.
-- **`rp-workshop`** (block 5) — 1 situation: `rp-workshop-all`.
-- **`rp-discounts`** (block 5) — 1 situation: `rp-discounts-staff`; plus 1 written line.
-- **`rp-returning`** (block 5) — no other situations.
-- **`rp-accounts-connect`** (block 1) — 5 of its 6 situations here: `rp-accounts-map`, `rp-accounts-missing`, `rp-accounts-log`, `rp-accounts-lost`, `rp-accounts-disconnect`.
+- **`rp-home`** (block 5, Report page) — 3 of its 5 situations here: `rp-home-staff`, `rp-report-menu`, `rp-report-deleted`; plus 2 written lines.
+- **`rp-sales`** (block 5, Report page) — 5 situations: `rp-sales-all`, `rp-sales-year`, `rp-sales-empty`, `rp-pick-dates`, `rp-changed`.
+- **`rp-change`** (block 9, Form box) — 2 situations: `rp-save`, `rp-save-taken`.
+- **`rp-takings`** (block 5, Report page) — 2 situations: `rp-takings-all`, `rp-takings-reopened`.
+- **`rp-day`** (block 5, Report page) — 1 situation: `rp-reopen`.
+- **`rp-vat`** (block 5, Report page) — 2 situations: `rp-vat-first`, `rp-vat-all`.
+- **`rp-margin`** (block 5, Report page) — no other situations; plus 2 written lines.
+- **`rp-workshop`** (block 5, Report page) — 1 situation: `rp-workshop-all`.
+- **`rp-discounts`** (block 5, Report page) — 1 situation: `rp-discounts-staff`; plus 1 written line.
+- **`rp-returning`** (block 5, Report page) — no other situations.
+- **`rp-accounts-connect`** (block 1, Settings page) — 5 of its 6 situations here: `rp-accounts-map`, `rp-accounts-missing`, `rp-accounts-log`, `rp-accounts-lost`, `rp-accounts-disconnect`.
 - Added to the `your-settings` board (built in WP-1.11) — 1 situation: `rp-your-settings`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `rp-today-accounts`.
 - Added to the `set-staff-person` board (built in WP-5.1) — 1 situation: `rp-person`.
@@ -728,7 +739,7 @@ later packages.
 
 *Screens it builds (1) and the situations it covers:*
 
-- **`ops-log`** (block 14) — 4 of its 5 situations here: `ops-log-manager`, `ops-log-all`, `ops-log-empty`, `ops-log-refused`.
+- **`ops-log`** (block 14, Activity list) — 4 of its 5 situations here: `ops-log-manager`, `ops-log-all`, `ops-log-empty`, `ops-log-refused`.
 - Added to the `rp-home` board (built in WP-5.3) — 2 situations: `ops-reports-home`, `ops-reports-staff`.
 - Added to the `set-till-quick` board (built in WP-1.3) — 1 situation: `ops-till-checkout`.
 <!-- /screens -->
@@ -741,7 +752,8 @@ later packages.
   walk-through 4 H3); the shop's logo and main colour; tracking tools;
   online payments setup; Shopify in the new frame. Every shop keeps its free
   address. The editor, theme, extra pages and own web address are later (see
-  "Later").
+  "Later"). Until the editor exists, the "Review in the editor" button on
+  the list of unpublished changes (`ws-page-changes`) stays hidden.
 
 <!-- screens 6.1 -->
 *Building blocks built here:* 30 Simple text-and-photo editor for the fixed website (no board of its own).
@@ -749,13 +761,13 @@ later packages.
 
 *Screens it builds (7) and the situations it covers:*
 
-- **`ws-start-which`** (block 24) — 3 situations: `ws-start-products`, `ws-start-products-answered`, `ws-start-shopify`.
-- **`ws-start-look`** (block 24) — no other situations (step 2 of the set-up, the same step strip as step 1; corrected 3 Oct from a mistyped block 18).
-- **`ws-page`** (block 1) — 10 situations: `ws-page-on`, `ws-page-changes`, `ws-no-access`, `ws-no-settings`, `ws-page-moving`, `ws-page-switch-over`, `ws-published`, `ws-published-off`, `ws-discard`, `ws-shopify-on`; plus 1 written line.
-- **`ws-history`** (block 14) — no other situations.
-- **`ws-tracking`** (block 1) — 2 situations: `ws-tracking-on`, `ws-tracking-error`.
-- **`ws-pay-none`** (block 1) — 6 situations: `ws-pay-tested-moving`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-pay-shopify`.
-- **`ws-shopify-connect`** (block 9) — 5 situations: `ws-shopify-failed`, `ws-shopify-check`, `ws-shopify-sending`, `ws-shopify-problem`, `ws-shopify-switch`.
+- **`ws-start-which`** (block 24, Stage strip and its next-step box) — 3 situations: `ws-start-products`, `ws-start-products-answered`, `ws-start-shopify`.
+- **`ws-start-look`** (block 24, Stage strip and its next-step box) — no other situations (step 2 of the set-up, the same step strip as step 1; corrected 3 Oct from a mistyped block 18).
+- **`ws-page`** (block 1, Settings page) — 10 situations: `ws-page-on`, `ws-page-changes`, `ws-no-access`, `ws-no-settings`, `ws-page-moving`, `ws-page-switch-over`, `ws-published`, `ws-published-off`, `ws-discard`, `ws-shopify-on`; plus 1 written line.
+- **`ws-history`** (block 14, Activity list) — no other situations.
+- **`ws-tracking`** (block 1, Settings page) — 2 situations: `ws-tracking-on`, `ws-tracking-error`.
+- **`ws-pay-none`** (block 1, Settings page) — 6 situations: `ws-pay-tested-moving`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-pay-shopify`.
+- **`ws-shopify-connect`** (block 9, Form box) — 5 situations: `ws-shopify-failed`, `ws-shopify-check`, `ws-shopify-sending`, `ws-shopify-problem`, `ws-shopify-switch`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `ws-today-pay-more`.
 <!-- /screens -->
 
@@ -769,23 +781,23 @@ later packages.
 
 *Screens it builds (17) and the situations it covers:*
 
-- **`wb-home`** (block 16) — 3 situations: `wb-home-lower`, `wb-home-one-shop`, `wb-first-visit`.
-- **`wb-choose-shop`** (block 33) — its one situation comes with a later package.
-- **`wb-shop`** (block 31) — no other situations.
-- **`wb-category`** (block 31) — 7 situations: `wb-category-empty`, `wb-category-parent`, `wb-category-child`, `wb-category-no-shop`, `wb-search-results`, `wb-search-measure`, `wb-search-none`.
-- **`wb-category-filtered`** (block 31) — no other situations.
-- **`wb-product`** (block 32) — 3 of its 11 situations here: `wb-product-sizes`, `wb-product-size-other`, `wb-product-held`.
-- **`wb-product-photos`** (block 32) — no other situations.
-- **`wb-search-typing`** (block 17) — 1 situation: `wb-search-no-suggestions`.
-- **`wb-shops`** (block 34) — no other situations.
-- **`wb-shop-page`** (block 34) — 2 situations: `wb-shop-collect`, `wb-find-us`.
-- **`wb-not-found`** (block 40) — 1 situation: `wb-off`.
-- **`wb-off-preview`** (block 44) — 3 situations: `wb-off-preview-product`, `wb-off-preview-ask`, `wb-turned-on`.
-- **`wb-cookies-banner`** (block 45) — 1 situation: `wb-cookies-saved`.
-- **`wb-cookies-choose`** (block 45) — no other situations.
-- **`wb-cookies-page`** (block 45) — 1 situation: `wb-cookies-page-plain`.
-- **`site`** (block 16) — 1 situation: `site-menu`.
-- **`site-ocean`** (block 16) — 1 situation: `site-ocean-menu`.
+- **`wb-home`** (block 16, App frame) — 3 situations: `wb-home-lower`, `wb-home-one-shop`, `wb-first-visit`.
+- **`wb-choose-shop`** (block 33, "Which shop?" box) — its one situation comes with a later package.
+- **`wb-shop`** (block 31, Product card and product list) — no other situations.
+- **`wb-category`** (block 31, Product card and product list) — 7 situations: `wb-category-empty`, `wb-category-parent`, `wb-category-child`, `wb-category-no-shop`, `wb-search-results`, `wb-search-measure`, `wb-search-none`.
+- **`wb-category-filtered`** (block 31, Product card and product list) — no other situations.
+- **`wb-product`** (block 32, Product page, with its availability line) — 3 of its 11 situations here: `wb-product-sizes`, `wb-product-size-other`, `wb-product-held`.
+- **`wb-product-photos`** (block 32, Product page, with its availability line) — no other situations.
+- **`wb-search-typing`** (block 17, Search with grouped results) — 1 situation: `wb-search-no-suggestions`.
+- **`wb-shops`** (block 34, Shop card) — no other situations.
+- **`wb-shop-page`** (block 34, Shop card) — 2 situations: `wb-shop-collect`, `wb-find-us`.
+- **`wb-not-found`** (block 40, Message or outcome page) — 1 situation: `wb-off`.
+- **`wb-off-preview`** (block 44, Staff banner on the website) — 3 situations: `wb-off-preview-product`, `wb-off-preview-ask`, `wb-turned-on`.
+- **`wb-cookies-banner`** (block 45, Cookie choice) — 1 situation: `wb-cookies-saved`.
+- **`wb-cookies-choose`** (block 45, Cookie choice) — no other situations.
+- **`wb-cookies-page`** (block 45, Cookie choice) — 1 situation: `wb-cookies-page-plain`.
+- **`site`** (block 16, App frame) — 1 situation: `site-menu`.
+- **`site-ocean`** (block 16, App frame) — 1 situation: `site-ocean-menu`.
 <!-- /screens -->
 
 - **WP-6.3 Buy online and click and collect** (journey 2): basket;
@@ -799,17 +811,17 @@ later packages.
 
 *Screens it builds (11) and the situations it covers:*
 
-- **`on-basket`** (block 35) — 2 situations: `on-basket-changed`, `on-basket-empty`.
-- **`on-checkout`** (block 35) — 9 situations: `on-checkout-errors`, `on-checkout-credit`, `on-checkout-covered`, `on-checkout-gift-code`, `on-checkout-gift`, `on-checkout-paying`, `on-checkout-declined`, `on-checkout-unsure`, `on-checkout-sold-out`.
-- **`on-checkout-bank`** (block 39) — no other situations.
-- **`on-confirmed`** (block 40) — 1 situation: `on-save-details`.
-- **`on-order`** (block 4) — 8 situations: `on-order-moving`, `on-order-ready`, `on-order-collected`, `on-order-cancel`, `on-order-cancelled`, `on-order-clash`, `on-order-shop-cancelled`, `on-order-cant-supply`.
-- **`on-email-ready`** (block 46) — no other situations.
-- **`on-orders`** (block 3) — 5 situations: `on-orders-ready`, `on-orders-arrived`, `on-orders-sold-at-till`, `on-orders-second`, `ws-shopify-order`; plus 1 written line.
-- **`on-order-staff`** (block 4) — 2 situations: `on-order-staff-ready`, `on-not-ready`.
-- **`on-cant-supply`** (block 9) — 1 situation: `on-cancel-refund`.
-- **`on-settings`** (block 1) — 5 situations: `on-settings-order-in`, `on-settings-start-answered`, `on-settings-show`, `on-settings-pay`, `on-settings-keep`.
-- **`on-settings-start`** (block 21) — no other situations.
+- **`on-basket`** (block 35, Basket and checkout sections) — 2 situations: `on-basket-changed`, `on-basket-empty`.
+- **`on-checkout`** (block 35, Basket and checkout sections) — 9 situations: `on-checkout-errors`, `on-checkout-credit`, `on-checkout-covered`, `on-checkout-gift-code`, `on-checkout-gift`, `on-checkout-paying`, `on-checkout-declined`, `on-checkout-unsure`, `on-checkout-sold-out`.
+- **`on-checkout-bank`** (block 39, Card payment box) — no other situations.
+- **`on-confirmed`** (block 40, Message or outcome page) — 1 situation: `on-save-details`.
+- **`on-order`** (block 4, Detail page) — 8 situations: `on-order-moving`, `on-order-ready`, `on-order-collected`, `on-order-cancel`, `on-order-cancelled`, `on-order-clash`, `on-order-shop-cancelled`, `on-order-cant-supply`.
+- **`on-email-ready`** (block 46, Email and text frame) — no other situations.
+- **`on-orders`** (block 3, Table with search and filters) — 5 situations: `on-orders-ready`, `on-orders-arrived`, `on-orders-sold-at-till`, `on-orders-second`, `ws-shopify-order`; plus 1 written line.
+- **`on-order-staff`** (block 4, Detail page) — 2 situations: `on-order-staff-ready`, `on-not-ready`.
+- **`on-cant-supply`** (block 9, Form box) — 1 situation: `on-cancel-refund`.
+- **`on-settings`** (block 1, Settings page) — 5 situations: `on-settings-order-in`, `on-settings-start-answered`, `on-settings-show`, `on-settings-pay`, `on-settings-keep`.
+- **`on-settings-start`** (block 21, Pick-one box) — no other situations.
 - Added to the `wb-product` board (built in WP-6.2) — 8 situations: `on-product`, `on-product-added`, `on-product-two-shops`, `on-product-order-in`, `on-product-out`, `on-product-out-other`, `on-product-no-shop`, `on-product-off`.
 - Added to the `wb-choose-shop` board (built in WP-6.2) — 1 situation: `on-choose-shop`.
 - Added to the `till-collect` board (built in WP-3.1) — 1 situation: `on-hand-over-refunded`.
@@ -831,26 +843,26 @@ later packages.
 
 *Screens it builds (20) and the situations it covers:*
 
-- **`cw-list`** (block 3) — 5 situations: `cw-list-owner`, `cw-first-use`, `cw-ordered`, `cw-list-hold-ended`, `cw-list-deposit-refund`.
-- **`cw-new`** (block 9) — 1 situation: `cw-new-not-in-stock`; plus 1 written line.
-- **`cw-quote`** (block 41) — 2 situations: `cw-quote-deposit`, `cw-quote-revised`.
-- **`cw-order-held`** (block 4) — 13 situations: `cw-order-applied`, `cw-order-deposit`, `cw-order-deposit-paid`, `cw-order-deposit-counted`, `cw-order-on-order`, `cw-order-deposit-refund`, `cw-order-get-ready`, `cw-marked-ready`, `cw-order-ready`, `cw-order-owed`, `cw-order-part-paid`, `cw-order-paid`, `cw-more`; plus 2 written lines.
-- **`cw-hold-ending`** (block 9) — no other situations.
-- **`cw-applied`** (block 9) — no other situations.
-- **`cw-order-anyway`** (block 8) — no other situations.
-- **`cw-certificate`** (block 9) — 4 situations: `cw-certificate-diff`, `cw-certificate-more`, `cw-certificate-late`, `cw-certificate-released`.
-- **`cw-certificate-match`** (block 9) — no other situations.
-- **`cw-hand-over`** (block 9) — no other situations.
-- **`cw-owed`** (block 3) — 1 situation: `cw-owed-reports`.
-- **`cw-owed-provider`** (block 3) — no other situations.
-- **`cw-record-payment`** (block 9) — 3 situations: `cw-mark-paid`, `cw-mark-paid-diff`, `cw-record-payment-more`.
-- **`cw-cancel`** (block 8) — 2 situations: `cw-cancel-ordered`, `cw-cancel-ordered-deposit`; plus 1 written line.
-- **`cw-customer-view`** (block 37) — 2 situations: `cw-customer-released`, `cw-customer-cancelled`; plus 4 written lines.
-- **`cw-email`** (block 46) — 4 situations: `cw-email-certificate-revised`, `cw-texts-certificate`, `cw-texts-hold`, `cw-texts-cancelled`.
-- **`cw-settings`** (block 1) — 1 situation: `cw-settings-deposit`.
-- **`cw-settings-provider`** (block 9) — no other situations.
-- **`till-c2w-pick`** (block 21) — no other situations.
-- **`rp-c2w`** (block 5) — no other situations.
+- **`cw-list`** (block 3, Table with search and filters) — 5 situations: `cw-list-owner`, `cw-first-use`, `cw-ordered`, `cw-list-hold-ended`, `cw-list-deposit-refund`.
+- **`cw-new`** (block 9, Form box) — 1 situation: `cw-new-not-in-stock`; plus 1 written line.
+- **`cw-quote`** (block 41, Receipt and printed documents) — 2 situations: `cw-quote-deposit`, `cw-quote-revised`.
+- **`cw-order-held`** (block 4, Detail page) — 13 situations: `cw-order-applied`, `cw-order-deposit`, `cw-order-deposit-paid`, `cw-order-deposit-counted`, `cw-order-on-order`, `cw-order-deposit-refund`, `cw-order-get-ready`, `cw-marked-ready`, `cw-order-ready`, `cw-order-owed`, `cw-order-part-paid`, `cw-order-paid`, `cw-more`; plus 2 written lines.
+- **`cw-hold-ending`** (block 9, Form box) — no other situations.
+- **`cw-applied`** (block 9, Form box) — no other situations.
+- **`cw-order-anyway`** (block 8, "Are you sure?" box) — no other situations.
+- **`cw-certificate`** (block 9, Form box) — 4 situations: `cw-certificate-diff`, `cw-certificate-more`, `cw-certificate-late`, `cw-certificate-released`.
+- **`cw-certificate-match`** (block 9, Form box) — no other situations.
+- **`cw-hand-over`** (block 9, Form box) — no other situations.
+- **`cw-owed`** (block 3, Table with search and filters) — 1 situation: `cw-owed-reports`.
+- **`cw-owed-provider`** (block 3, Table with search and filters) — no other situations.
+- **`cw-record-payment`** (block 9, Form box) — 3 situations: `cw-mark-paid`, `cw-mark-paid-diff`, `cw-record-payment-more`.
+- **`cw-cancel`** (block 8, "Are you sure?" box) — 2 situations: `cw-cancel-ordered`, `cw-cancel-ordered-deposit`; plus 1 written line.
+- **`cw-customer-view`** (block 37, Customer job page) — 2 situations: `cw-customer-released`, `cw-customer-cancelled`; plus 4 written lines.
+- **`cw-email`** (block 46, Email and text frame) — 4 situations: `cw-email-certificate-revised`, `cw-texts-certificate`, `cw-texts-hold`, `cw-texts-cancelled`.
+- **`cw-settings`** (block 1, Settings page) — 1 situation: `cw-settings-deposit`.
+- **`cw-settings-provider`** (block 9, Form box) — no other situations.
+- **`till-c2w-pick`** (block 21, Pick-one box) — no other situations.
+- **`rp-c2w`** (block 5, Report page) — no other situations.
 - Added to the `op-today` board (built in WP-1.10) — 3 situations: `cw-today`, `cw-today-held`, `op-today-c2w`.
 - Added to the `set-msg-list` board (built in WP-1.8) — 1 situation: `cw-messages`.
 - Added to the `ac-account` board (built in WP-4.5) — 2 situations: `ac-account-c2w`, `ac-account-c2w-collected`.
@@ -880,10 +892,10 @@ later packages.
 
 *Screens it builds (4) and the situations it covers:*
 
-- **`mv-change-day`** (block 21) — no other situations.
-- **`mv-both`** (block 25) — no other situations.
-- **`mv-weeks`** (block 21) — no other situations.
-- **`mv-pick-day`** (block 21) — no other situations.
+- **`mv-change-day`** (block 21, Pick-one box) — no other situations.
+- **`mv-both`** (block 25, Quick-look box) — no other situations.
+- **`mv-weeks`** (block 21, Pick-one box) — no other situations.
+- **`mv-pick-day`** (block 21, Pick-one box) — no other situations.
 - Added to the `set-msg-list` board (built in WP-1.8) — 1 situation: `set-msg-alongside`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `mv-today-refresh`.
 - Added to the `mv-start` board (built in WP-2.4) — 8 situations: `mv-alongside`, `mv-check`, `mv-check-result`, `mv-ready`, `mv-ready-all`, `mv-morning`, `mv-week`, `mv-week-done`; plus 4 written lines.
@@ -920,14 +932,14 @@ later packages.
 
 *Screens it builds (8) and the situations it covers:*
 
-- **`ls-connect-signin`** (block 7) — 3 situations: `ls-connect-shops`, `ls-connect-shops-two`, `ls-connect-checks`.
-- **`ls-settings-on`** (block 1) — 4 situations: `ls-settings-off`, `ls-settings-manager`, `ls-disconnect`, `ls-reconnect`.
-- **`ls-book-in`** (block 21) — 1 situation: `ls-customer-pick`; plus 1 written line.
-- **`ls-part-search`** (block 17) — 1 situation: `ls-part-search-down`.
-- **`ls-job-sent`** (block 24) — 13 situations: `ls-job-not-connected`, `ls-job-changed`, `ls-job-price-changed`, `ls-job-price-asked`, `ls-job-cancelled`, `ls-job-pick`, `ls-job-waiting`, `ls-job-unsure`, `ls-job-ready-no-wo`, `ls-job-unpaid`, `ls-job-paid`, `ls-job-fallback`, `ls-job-collected-unpaid`; plus 5 written lines.
-- **`ls-job-check`** (block 9) — 1 situation: `ls-hand-over-no-wo`; plus 1 written line.
-- **`ls-hand-over-unpaid`** (block 9) — 3 situations: `ls-hand-over-found`, `ls-hand-over-unreachable`, `ls-hand-over-unchecked`.
-- **`ls-job-sorted`** (block 9) — no other situations.
+- **`ls-connect-signin`** (block 7, Step-by-step checklist) — 3 situations: `ls-connect-shops`, `ls-connect-shops-two`, `ls-connect-checks`.
+- **`ls-settings-on`** (block 1, Settings page) — 4 situations: `ls-settings-off`, `ls-settings-manager`, `ls-disconnect`, `ls-reconnect`.
+- **`ls-book-in`** (block 21, Pick-one box) — 1 situation: `ls-customer-pick`; plus 1 written line.
+- **`ls-part-search`** (block 17, Search with grouped results) — 1 situation: `ls-part-search-down`.
+- **`ls-job-sent`** (block 24, Stage strip and its next-step box) — 13 situations: `ls-job-not-connected`, `ls-job-changed`, `ls-job-price-changed`, `ls-job-price-asked`, `ls-job-cancelled`, `ls-job-pick`, `ls-job-waiting`, `ls-job-unsure`, `ls-job-ready-no-wo`, `ls-job-unpaid`, `ls-job-paid`, `ls-job-fallback`, `ls-job-collected-unpaid`; plus 5 written lines.
+- **`ls-job-check`** (block 9, Form box) — 1 situation: `ls-hand-over-no-wo`; plus 1 written line.
+- **`ls-hand-over-unpaid`** (block 9, Form box) — 3 situations: `ls-hand-over-found`, `ls-hand-over-unreachable`, `ls-hand-over-unchecked`.
+- **`ls-job-sorted`** (block 9, Form box) — no other situations.
 - Added to the `bk-page` board (built in WP-4.2) — 1 situation: `bk-page-ls`.
 - Added to the `bk-cancel` board (built in WP-4.4) — 1 situation: `bk-cancel-ls`.
 - Added to the `dq-quote` board (built in WP-4.2) — 3 situations: `dq-quote-ls`, `dq-quote-price-ls`, `dq-answered-price-no-ls`.
