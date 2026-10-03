@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { ROUTES } from '../../src/staff/routes.ts';
+import { NAV_ROUTES } from '../../src/staff/nav.ts';
 
 const index = JSON.parse(
   await readFile(new URL('../../docs/design/release-1-journey/screen-index.json', import.meta.url), 'utf8'),
@@ -17,10 +18,18 @@ test('the five standalone edge screens have their own URLs', () => {
   }
 });
 
-test('every route is keyed by a screen id that exists in the screen designs', () => {
+// Release 2's rooms sidebar (src/staff/nav.ts, checked against the drawings
+// by tests/screens/nav.test.js) adds its own pages, plus Your settings.
+const SIDEBAR_IDS = new Set([...Object.keys(NAV_ROUTES), 'your-settings']);
+
+test('every route is keyed by a screen id from the screen designs or the rooms sidebar', () => {
   for (const id of Object.keys(ROUTES)) {
-    assert.ok(SCREEN_DESIGN_IDS.has(id), `${id} is not a screen in screen-index.json`);
+    assert.ok(SCREEN_DESIGN_IDS.has(id) || SIDEBAR_IDS.has(id), `${id} is not a screen in screen-index.json or the sidebar`);
   }
+});
+
+test('every sidebar page has a route', () => {
+  for (const [id, path] of Object.entries(NAV_ROUTES)) assert.equal(ROUTES[id], path);
 });
 
 test('every route lives under /workshop, the only path the server gives this app', () => {

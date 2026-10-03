@@ -468,7 +468,9 @@ Fjell until switched.
    design-system artifact updated too.
 4. **Then build Workshop day, piece by piece**, in the React staff app
    (`src/staff/`): spec → plan → subagent-driven development, test-first,
-   starting with the shell (room sidebar, phone menu) and the diary with its
+   starting with the shell (room sidebar, phone menu: built 3 Oct on
+   `feat/staff-shell`, spec `docs/superpowers/specs/2026-10-03-staff-shell-design.md`;
+   Owner sees every room, everyone else the Staff rooms, until roles exist) and the diary with its
    Waiting column. Open design items to settle first or on the way: multi-day
    jobs (52), payment + collection as one step (63), mechanic sign-off (64),
    customer spending limit on /book (41), accessibility settings (57).
