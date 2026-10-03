@@ -276,3 +276,5 @@ All seven stories in `ux-walkthrough-script.md` are walked. The staff canvas
 holds 497 of its 512 files.
 
 **Later change (3 Oct 2026, walk-through 2 second walk H1, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". A refund noted while offline is reminded in two places: Today shows "[n] refunds to finish · Finish" (to those who see Needs attention), and finishing one opens the refund with the sale and items already filled in; the till's "Past sales" button also carries a count, so whoever is on the till sees it. Fills the gap in decision 5 (M7). Chosen over the Today line only, and the till count only. Not drawn yet.
+
+**Later change (3 Oct 2026, third walk, answer 6, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** Jack, 3 Oct: "1". Walk-through 7 M3's "Show [Second site] to customers" is one press, with "Undo" for a moment; the shop shows on the website, in booking and for collecting straight away. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.

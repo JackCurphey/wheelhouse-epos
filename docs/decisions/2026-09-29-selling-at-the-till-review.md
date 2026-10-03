@@ -129,3 +129,5 @@ number is now recorded when it's booked in, so "Record a frame number"
 becomes "Which one?" — pick from the bikes in stock by frame number, or scan
 the frame on the bike; "Skip for now" stays for stock that came in without
 one.
+
+**Later change (3 Oct 2026, third walk, answers 1 and 4, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** Jack, 3 Oct: "1" to each. The till search's rows are drawn as decided (each row's name opens it, the till button sits on the right; a job row reads "Expected 11:30 · Book in" or "Paid online · [date] · Hand over"), and a Cycle to Work bike paid with only the certificate has its own paid box, "Paid · Cycle to Work · [Provider]". Decisions 7 and 12 are unchanged. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.

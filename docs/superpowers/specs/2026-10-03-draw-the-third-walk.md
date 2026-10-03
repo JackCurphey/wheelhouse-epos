@@ -245,8 +245,23 @@ corrected, using only what an answer or a recorded decision says.
    `node mockup/build-mockup.mjs` 0 dead; `node mockup/gaps.mjs` run.
 4. Each answer's decision file has a dated "Later change" note pointing here.
 
-## Left for Jack (not settled by a decision)
-Filled in as the work goes; see the decision log.
+## Left for Jack (not settled by a decision, or not done here)
+1. **Walk 3 M3 (one stock count all the way through):** not changed. Both fixes
+   need a choice the decisions don't make: the story counting a category while
+   `tk-count` is drawn counting an area, or a new "still counting" state on
+   `tk-hub`.
+2. **Walk 10 L1 (every PIN opens the first-in float check):** the mockup can
+   give a key only one target; left as it is.
+3. **Walk 11 M3 and L1 (mockup notes on Jo's Sales and on "Show report"):**
+   not added; the situation lines under each drawing now say the same.
+4. **Wording the drawers chose where the answers gave none**, for Jack to
+   check: `till-c2w-paid-cert` "Nothing to take from Maya."; `rp-home-all`
+   "use the shop menu for one shop"; `till-checkin-workshop` leaves out the
+   start-up line, "Checked in today", "No PIN yet?" and the phone's menu;
+   `fr-today-moving` lists "The weekly check matched 2 weeks in a row" (from
+   `mv-ready`) in its done steps.
+5. **Side effect of walk 1 M3:** with the diary's other jobs no longer Maya's,
+   Maya's customer page (built from the diary's jobs) lists only WH-1042.
 
 ## Decision log
 - 3 Oct: new drawings made situations, not boards, so the one canvas keeps its
@@ -263,3 +278,29 @@ Filled in as the work goes; see the decision log.
   option.
 - 3 Oct: walk 7 M1: the mockup always has two shops (its shop menu), so a
   person's Open goes to `ms-person` everywhere.
+- 3 Oct: `cp-receipt-email-guest` stays the repair receipt (the texted
+  receipt's "Email it to me" uses it); story 2's till email is
+  `cp-receipt-email-till`, filled with the discounted sale's figures.
+- 3 Oct: `on-orders-ready` now moves the order that is all on the shelf to
+  Ready (the drawing had moved Maya's, which is still waiting); story 2 marks
+  that order ready from the list (walk 2 M1).
+- 3 Oct: `mv-morning` is a situation of `mv-start`, so its "after Turn it on"
+  line sits on `mv-start`; the Tills page's line sits on `set-till-quick`.
+- 3 Oct: the mockup picks a person's or shop's view on a click only when it is
+  the same page drawn for them (its id plus -staff, -mechanic, -manager,
+  -owner or -all); a first version that picked any situation for the role sent
+  clicks to different moments (job pages to "in the workshop"), so it was
+  narrowed. "-all" counts as All shops only when the title says so.
+- 3 Oct: the customer page's "Messages" history filter is a pressed button,
+  not a radio, so it is kept on the page by its own rule.
+- 3 Oct: the situation-lines check skips screens the mockup has no drawing of
+  (the Release 1 picture `pending`).
+
+### Done (3 Oct)
+- Consolidate checks 16 of 16; mockup checks 5 of 5 (the new lines check
+  failed first on the old manifest: 145 screens differed).
+- `node build.mjs`: 211 boards (unchanged), 178 notes (+2: `cw-owed-provider`,
+  `eod-z`; −1: journey 8's later list); `node fitcheck-canvas.mjs`: 211 boards,
+  0 problems; `node mockup/build-mockup.mjs`: 763 screens, 0 dead;
+  `node mockup/gaps.mjs`: 96 not drawn, 21 size gaps (was 22), 43 outside.
+

@@ -135,3 +135,5 @@ counter: "yeah that could be good").** The text receipt page keeps its
 barcode so a customer can show it on their phone at the counter, for a
 return or a question; the link doesn't expire. This settles the open
 question in decision 6 (audit M10, option 1).
+
+**Later change (3 Oct 2026, third walk, answer 9, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** Jack, 3 Oct: "1". "See it in your account" on the receipt email opens that receipt after the sign-in code, with the account behind it: a sign-in link carries the page it came from. Chosen over opening the account drawn after collection, and opening the receipt with no sign-in. Decision 1's wording is unchanged. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.

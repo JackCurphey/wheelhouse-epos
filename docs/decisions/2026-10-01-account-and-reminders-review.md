@@ -135,3 +135,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Buy online decision 10):** the Messages boards list the five online-order messages and read "15 on". Nothing else changed.
 
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
+
+**Later change (3 Oct 2026, third walk, answer 9, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** Jack, 3 Oct: "1". From the receipt email's "See it in your account", the account opens with that receipt in front, after the sign-in code. Taken without a question, following decision 1 (one history): once the bike is collected the repair moves to Earlier as "collected · receipt £111.00 ›" (a line on the account). Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.
