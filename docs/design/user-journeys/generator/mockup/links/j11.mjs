@@ -99,6 +99,10 @@ export default {
     'Note it for later': go('till-noted'),
     Fix: notDrawn('A sale that didn’t send, opened with its problem shown'),
   },
+  // Done applies the discount: the basket with its Discount line and new total (decisions 3, 4).
+  'till-discount': { Done: go('till-discounted') },
+  // Book-in is drawn over the empty till: Done closes it there (walk-through 8, decision 8).
+  'till-book-in': { Done: go('till-empty') },
   'till-pay-discounted': { Split: go('till-split-discounted') },
   'till-find-customer': { Refund: go('till-refund-older'), Change: STAY },
   'till-account': { Change: go('till-customer') },

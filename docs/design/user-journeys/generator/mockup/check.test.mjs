@@ -21,3 +21,20 @@ test('every target is a screen the mockup can show', () => {
   for (const d of shown) for (const s of Object.values(d.sizes)) for (const c of controlsOf(s.html)) { const t = resolve(c, d, maps, fileToId); if (t?.go && !(drawings.get(t.go) && Object.keys(drawings.get(t.go).sizes).length)) bad.add(`${d.id} · ${c.label} → ${t.go}`); }
   assert.deepEqual([...bad].slice(0, 40), []);
 });
+
+// Step 6: every walk-through story can be clicked start to finish. A step's
+// `does` in brackets is a hand-over (the next person picks up), not a click.
+test('every story clicks from each step to the next', async () => {
+  const { stories } = await import('./stories.mjs');
+  const broken = [];
+  for (const st of stories) st.steps.forEach((step, i) => {
+    const next = st.steps[i + 1];
+    if (!next || /^\(.*\)$/.test(String(step.does ?? '').trim())) return;
+    const d = drawings.get(step.id);
+    // The button the step names (its exact label) must itself lead on; a
+    // sidebar link to the same place doesn't count.
+    const ok = d && Object.values(d.sizes).some((s) => controlsOf(s.html).some((c) => c.label === String(step.does).trim() && resolve(c, d, maps, fileToId)?.go === next.id));
+    if (!ok) broken.push(`story ${st.n}, step ${i + 1}: ${step.id} → ${next.id} (${step.does ?? ''})`);
+  });
+  assert.deepEqual(broken, []);
+});

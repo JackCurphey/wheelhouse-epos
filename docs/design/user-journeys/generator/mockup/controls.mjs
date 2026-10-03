@@ -45,8 +45,9 @@ export function resolve(control, { id, owner, journey }, maps, fileToId) {
   if (control.href && control.href !== '#' && fileToId(control.href)) return go(fileToId(control.href));
   // A jump to a part of the same page (Settings' "Jump to" pills: href="#set-till").
   if (control.href && /^#./.test(control.href)) return STAY;
+  // A shared target can depend on whose screen it is (a function of the drawing).
   const shared = maps.shared?.[control.label];
-  if (shared) return shared;
+  if (shared) return typeof shared === 'function' ? shared({ id, owner, journey, role: arguments[1].role ?? '' }) : shared;
   if (NAV_KINDS.test(control.attrs)) return STAY;
   if (CLOSE.test(control.label)) return BACK;
   return null;

@@ -63,7 +63,9 @@ export default {
     'Download receipt (PDF)': outside('The receipt as a PDF download'),
     'Email it to me': go('cp-receipt-text-email'),
     Send: go('cp-receipt-email-guest'),
-    'See it in your account': go('ac-receipt'),
+    // From an email the customer isn't signed in yet: sign in first (Signing in;
+    // walk-throughs 1 and 12: cust-signin, cust-code, then the account).
+    'See it in your account': go('cust-signin'),
     // Today
     Contacted: STAY,
     'Book in': go('job-book-in'),

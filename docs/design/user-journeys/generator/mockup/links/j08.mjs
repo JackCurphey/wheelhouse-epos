@@ -15,7 +15,9 @@ const editWording = Object.fromEntries(messages.map((m) => [`Edit the wording of
 // Getting started: each step opens the right Settings section (Owner setup 16).
 const steps = {
   card: go('fr-step'), staff: go('set-staff-invite'), services: go('set-workshop-services'),
-  quick: go('set-till-empty'), float: go('set-eod'), messages: go('set-msg-list'), website: go('ws-page'),
+  quick: go('set-till-empty'), float: go('set-eod'), messages: go('set-msg-list'),
+  // A new shop's first visit to Website is the three-step start (Website 11).
+  website: go('ws-start-which'),
 };
 
 export default {
@@ -73,7 +75,8 @@ export default {
     'Stockroom Stock adjustments, categories': go('st-categories'),
     'Office Shop and sites, staff and roles, your data': go('set-shop-details'),
   },
-  'set-till-quick': { Edit: go('set-till-quick-add') },
+  // Settings' room links open that room's page, as on a phone (set-list).
+  'set-till-quick': { Edit: go('set-till-quick-add'), Office: go('set-shop-details') },
   'set-till-quick-add': { 'Add the button': go('set-till-quick-saved') },
   'set-till-quick-saved': { Undo: go('set-till-quick') },
   'set-till-reasons': { 'Remove this reason': STAY, Add: STAY },
@@ -92,7 +95,9 @@ export default {
   'set-staff-clear-pin': { 'Keep the PIN': go('set-staff-person'), 'Clear the PIN': go('set-staff-person') },
   'set-staff-invite': { 'Send the invite': go('set-staff-invited') },
   'set-staff-invite-till-only': { 'Add them': go('set-staff-invited') },
-  'set-staff-invited': { 'Cancel the invite': STAY },
+  'set-staff-invited': { 'Cancel the invite': STAY, Workshop: go('set-workshop-services') },
+  // Opening Sites shows each shop and + Add a shop (Multiple sites 7).
+  'set-shop-details': { 'Sites Bolton': go('ms-sites') },
   'set-workshop-services': {
     Edit: go('ac-service-edit'),
     '+ Add a service': notDrawn('Adding a workshop service: the service box, empty'),

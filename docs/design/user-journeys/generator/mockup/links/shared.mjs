@@ -34,7 +34,8 @@ export default {
   'Your account': go('ac-account'),
   'LOGO North Street Cycles': go('wb-home'),
   'Search the shop': go('wb-search-typing'),
-  Shop: go('wb-category'),
+  // The website header's Shop opens Shop: every category (Find the shop: header links).
+  Shop: go('wb-shop'),
   'Basket, 0 items': go('on-basket'),
   Cookies: go('wb-cookies-page'),
   Privacy: notDrawn('The shop’s Privacy page (Words and photos, Website 3 Oct)'),
@@ -43,7 +44,8 @@ export default {
   'Skip to the main content': STAY,
   // Staff header and rail
   'Search jobs, customers, orders, products': go('till-search'),
-  'Open menu': go('staff-app-menu'),
+  // The phone menu: the website's on a customer page, the staff app's otherwise.
+  'Open menu': ({ role }) => go(/Customer/.test(role) ? 'site-menu' : 'staff-app-menu'),
   'Fold the menu': go('till-rail'),
   'Front desk': STAY, Workshop: STAY, Stockroom: STAY, Office: STAY,
   'Online orders [n] to get ready': go('on-orders'),

@@ -52,7 +52,8 @@ export default {
   'job-collection': { 'Hand over': go('cp-collected') },
   'job-checklist': {
     ...JOB,
-    'Switch': notDrawn('A workshop computer: the PIN screen to switch who’s working (walk-through 8, decision 1)'),
+    // A workshop computer's PIN screen is till-checkin (its line: Walk-through 8, decision 1).
+    'Switch': go('till-checkin'),
     'Add a note for Bolts torqued': STAY, 'Add a note for Bottom bracket': STAY,
     'Add a note for Cables & housing': STAY, 'Add a note for Chain & drivetrain': STAY,
     'Add a note for Frame & fork': STAY, 'Add a note for Gears indexed': STAY,

@@ -89,5 +89,10 @@ export default {
   'rs-part-damaged': job(),
   'rs-part-order-closed': job(),
   'rs-overview-arrived': { 'Open job': go('rs-job-arrived') },
-  'rs-diary-arrived': { 'Showing Everyone. Change whose jobs are shown': STAY },
+  'rs-diary-arrived': {
+    'Showing Everyone. Change whose jobs are shown': STAY,
+    // The arrived block opens its job, showing Part arrived (walk-through 3, step 3).
+    'Trek Domane AL 3, Standard service, Maya Patel, WH-1042, Waiting for parts, part arrived, 16:00–17:30 · waiting for parts': go('rs-job-arrived'),
+    'Trek Domane AL 3, Standard service, Maya Patel, WH-1042, Waiting for parts, part arrived, 16:00–17:30 · waiting for parts. Press and hold for more.': go('rs-job-arrived'),
+  },
 };

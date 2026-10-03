@@ -65,6 +65,8 @@ export default {
   'ms-add-shop-error': { '+ Add a shop': STAY, 'Add the shop': STAY, 'Copy hours from Bolton': STAY },
   'ms-book-shop-chosen': { Change: go('ms-book-shop-change'), 'Next: your bike': go('bk-bike') },
   'ms-pick-shop': { Bolton: go('diary'), '[Second site]': go('diary') },
+  // The menu is open over Today: All shops shows Today for every shop (9).
+  'ms-switch-open': { 'All shops Today, reports and stock for every shop': go('ms-today-all') },
   'ms-product-price': { Edit: STAY, Save: go('st-product') },
   'ms-service-price': { Edit: STAY, Save: go('ms-services-differs') },
   'ms-service-not-offered': { Edit: STAY, Save: go('ms-services-differs') },

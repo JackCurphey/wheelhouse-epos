@@ -85,7 +85,8 @@ export default {
   'ac-job-note': { 'Send note': go('ac-job-note-sent') },
   'ac-job-note-sent': { Send: STAY },
   'ac-job-note-answered': { Send: STAY },
-  'ac-receipt': { 'Download receipt (PDF)': outside('The receipt as a PDF file'), 'Email it to me': go('ac-receipt-sent') },
+  // The receipt opens from the account's history; Close goes back to the account.
+  'ac-receipt': { Close: go('ac-account'), 'Download receipt (PDF)': outside('The receipt as a PDF file'), 'Email it to me': go('ac-receipt-sent') },
   'ac-receipt-sent': { 'Download receipt (PDF)': outside('The receipt as a PDF file'), 'Email it to me': STAY },
   'ac-download': { 'Not started? Download it again': STAY },
   'ac-download-failed': { 'Try again': go('ac-download') },

@@ -58,7 +58,8 @@ export default {
   },
   'rp-report-menu': { Rename: STAY, 'Share with managers': STAY, Delete: go('rp-report-deleted') },
   'rp-report-deleted': { Undo: go('rp-home') },
-  'rp-change': { 'Show report': go('rp-changed') },
+  // Shop here picks what the report covers (beside Workshop), not the website.
+  'rp-change': { 'Show report': go('rp-changed'), Shop: STAY },
   'rp-pick-dates': { 'Show report': go('rp-sales') },
   'rp-save': { Save: go('rp-home') },
   'rp-save-taken': { Save: STAY },
