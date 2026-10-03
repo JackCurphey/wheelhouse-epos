@@ -4,6 +4,8 @@
 //   2. every link between boards opens a board that is on the canvas, and
 //   3. no note says "undefined" or sits on top of another note, and
 //   4. the canvas is inside the Design type's limits: 200 notes, 512 files, and
+//   6. no note is longer than the 5,000 characters the canvas editor keeps
+//      (it cuts the rest off when it saves, seen 3 Oct), and
 //   5. every Lightspeed situation line says it waits (Lightspeed shops, later
 //      change of 3 Oct: "after the trading week (build-plan question 5)").
 // Run after `node build.mjs`, from any machine:  node fitcheck-canvas.mjs
@@ -19,6 +21,7 @@ const bad = [];
 const noteCount = Object.keys(canvas.notes ?? {}).length;
 if (noteCount > 200) bad.push(`${noteCount} notes; a canvas holds at most 200`);
 if (canvas.order.length + 1 > 512) bad.push(`${canvas.order.length} boards plus the index; a canvas holds at most 512 files`);
+for (const [k, n] of Object.entries(canvas.notes ?? {})) if (n.text.length > 5000) bad.push(`note ${k} is ${n.text.length} characters; the canvas keeps 5,000`);
 const LATER_TAG = 'after the trading week (build-plan question 5)';
 for (const [k, n] of Object.entries(canvas.notes ?? {})) for (const line of n.text.split('\n')) if (line.startsWith('• ') && /Lightspeed/.test(line) && !line.endsWith(LATER_TAG)) bad.push(`note ${k}: a Lightspeed line without "${LATER_TAG}": ${line.slice(0, 80)}`);
 const spots = new Map();

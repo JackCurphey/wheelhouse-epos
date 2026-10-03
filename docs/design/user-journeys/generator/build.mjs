@@ -328,6 +328,8 @@ const situationText = (id) => {
     ...extra.map((l) => waits(`• ${l.text} — ${l.who}${l.decision ? ` · ${l.decision}` : ''}`, l.file === 'j21.mjs'))].join('\n');
 };
 const NOTE_LINE = 30;
+// A note's height: its lines, each wrapping at about 8px a character.
+const noteH = (t, w) => t.split('\n').reduce((n, l) => n + Math.max(1, Math.ceil((l.length * 8) / Math.max(w - 32, 200))), 0) * NOTE_LINE;
 const LATER_TAG = 'after the trading week (build-plan question 5)';
 const laterText = (j) => {
   const list = j.rows.flatMap((r) => r.screens).filter((x) => plan.get(x.id).kind === 'later');
@@ -403,8 +405,19 @@ journeys.filter((j) => P.ids.includes(j.id)).forEach((j) => {
       tally[scr.status]++; // count each screen once, whatever its sizes (Jack, 29 Sep)
       const sit = situationText(scr.id);
       if (sit) {
-        notes[`${j.id}_sit_${scr.id}`] = { x: x0, y: y + boardH(scr) + 40, text: sit, w: Math.max(x - x0 - 40, 360) };
-        noteDepth = Math.max(noteDepth, 40 + sit.split('\n').length * NOTE_LINE);
+        // The canvas editor keeps 5,000 characters of a note (seen 3 Oct), so a
+        // long list carries on in a second note beside the first.
+        const w = Math.min(Math.max(x - x0 - 40, 360), 2000);
+        const parts = [];
+        let cur = [];
+        for (const line of sit.split('\n')) {
+          if (cur.length && [...cur, line].join('\n').length > 4800) { parts.push(cur.join('\n')); cur = ['Situations of this screen, continued']; }
+          cur.push(line);
+        }
+        parts.push(cur.join('\n'));
+        let ny = y + boardH(scr) + 40;
+        parts.forEach((t, i) => { notes[`${j.id}_sit_${scr.id}${i ? `_${i + 1}` : ''}`] = { x: x0, y: ny, text: t, w }; ny += noteH(t, w) + 40; });
+        noteDepth = Math.max(noteDepth, ny - (y + boardH(scr)));
       }
     }
     x += 160; // a wider gap between sections of the same journey
