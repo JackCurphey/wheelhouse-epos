@@ -1,8 +1,9 @@
 # Release 2 build plan — from here to the trading week
 
 **Date:** 3 October 2026
-**Status:** draft, waiting for Jack's answers on
-`docs/decisions/2026-10-03-build-plan-questions.md`
+**Status:** answered by Jack on 3 Oct (`docs/decisions/2026-10-03-build-plan-questions.md`);
+waiting for Mark's view before anything starts. Jack: "dont start the build
+yet".
 **Kind:** programme plan. It puts every remaining piece of Release 2 in order,
 so a session can pick up the next piece without asking. It sits under the
 programme spec `docs/superpowers/specs/2026-09-27-release-2-design.md`, which
@@ -73,13 +74,13 @@ of them blocks building; all of them block going live.
 | Outside service | Stand-in until it's real | Who unblocks it |
 |---|---|---|
 | Hosting and a public address (PL-1) | local server | Mark |
-| Card machine | staff key the amount in (already in #111) | Jack: which provider (Q8) |
-| Online payments (PAY-05) | fake provider with test outcomes | Jack and Mark (Q9) |
+| Card machine | staff key the amount in (already in #111) | Paymentsense (Jack, Q7); model, linking and offline still to check |
+| Online payments (PAY-05) | fake provider with test outcomes | Jack and Mark (Q10) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
 | Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
 | Text messages (Twilio) | already real; fake in tests | keys exist in Jack's set-up |
 | Xero and QuickBooks | spreadsheet downloads first, then a fake connector | developer accounts (Q10) |
-| Citrus Lime import | a guessed spreadsheet format | Jack's real export files (Q4) |
+| Citrus Lime import | Excel files in a guessed layout (Jack, Q4: Citrus Lime exports Excel) | Jack's real export files |
 | Lightspeed | fake Lightspeed server | a test account (Q5) |
 | Receipt and label printers | browser print; the existing print agent | — |
 
@@ -89,6 +90,41 @@ Stages run in order. Inside a stage, work packages run in the order listed
 unless marked as able to run alongside. Each line under a work package is
 roughly one pull request. Journey numbers refer to the decision files in
 `docs/decisions/`.
+
+### Stage W — Persona walk-throughs of everything, before building
+
+Jack, 3 Oct: "i also want to make sure that we have done persona
+walkthroughs of everything before we build so that we have to make the least
+changes at the end." Walk-throughs 1–8 walked eight stories, but the
+personas file (`docs/design/user-journeys/personas.md`) only arrived with
+walk-through 8, and two journeys (A App map, 15 Customer service) are in no
+story yet. A problem found on a drawing costs a redraw; found after building
+it costs a rebuild.
+
+Each walk-through follows `ux-walkthrough-script.md`, uses the personas'
+"Walk-through checks", has every finding checked by a second reviewer, and
+ends with Jack's choices. Nothing in stage W is built.
+
+- **WP-W.1 Walk-through 9 — Jo on the phone** (journeys 15, A, with 3 and
+  11): a customer rings; Jo finds them, their bike, their job, a product and
+  a price from one search box, one-handed, while talking.
+- **WP-W.2 Walk-through 10 — the Saturday worker's day** (journeys 10, 11,
+  16, 2, with the book-in and hand-over of 3 and 5): someone in one day a
+  week, at the front desk, with till-only access, who doesn't remember last
+  week's screens.
+- **WP-W.3 Walk-through 11 — the owner's reports** (journeys 17, 19, 20, 8):
+  the revenue and profit overview by shop first, margins one step away,
+  figures that match everywhere.
+- **WP-W.4 Walk-through 12 — Maya, not confident with phones, and Maya in
+  a hurry** (journeys 1, 2, 3, 4, 5, 7, and the customer side of 6): every
+  customer page walked twice, once as each.
+- **WP-W.5 The coverage check.** A table of every journey against every
+  persona who uses it, saying which walk-through covered it. Any empty cell
+  gets walked before stage W closes.
+- **WP-W.6 Draw the decisions.** Walk-through 8's decisions and stage W's
+  are drawn on the canvases (walk-through 8 says "The drawings and the build
+  are not changed yet"), so the build starts from drawings that match every
+  decision.
 
 ### Stage 0 — Close what's open
 
@@ -163,8 +199,8 @@ Everything later stands on these. Order matters: roles first.
   diary); problem lines and returns; labels; invoice check; purchase orders;
   the restock list.
 - **WP-2.4 Citrus Lime import, first half** (journey 9, pieces 1–4): upload,
-  products and stock, customers and bikes, rows that need a look. Built on
-  the guessed format; matched to the real files when Jack has them (Q4).
+  products and stock, customers and bikes, rows that need a look. Reads Excel
+  (Q4) in a guessed layout; matched to the real files when Jack has them (Q4).
   Runs alongside WP-2.1–2.3.
 
 ### Stage 3 — The till and the shop day
@@ -255,7 +291,7 @@ Everything later stands on these. Order matters: roles first.
 
 ### After the trading week (not in this plan's order)
 
-- Lightspeed shops (journey 21), unless Jack says otherwise (Q5).
+- Lightspeed shops (journey 21) (Jack, Q5).
 - The three journey 13 supplier screens (held by Jack: "I dont want to build
   in browsing things from the suppliers").
 - The programme spec's extras not already in journey 7: stock suggestions.

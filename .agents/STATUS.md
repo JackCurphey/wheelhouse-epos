@@ -9,6 +9,12 @@
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
+**Build plan (3 Oct, PR pending):** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`,
+answered by Jack in `docs/decisions/2026-10-03-build-plan-questions.md`; the
+project rules are in `CLAUDE.md`. **Nothing started:** Jack is sharing the
+plan with Mark ("dont start the build yet"). First comes stage W (persona
+walk-throughs of everything), then the build.
+
 **Build board (keep it current):** https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
 source `docs/build-progress/build-board.html`. After any build piece merges or
 opens, edit its `BOARD` data block and republish (Jack, 3 Oct: he keeps it open
@@ -564,8 +570,8 @@ Fjell until switched.
   canvas index before publishing (Jack edits it live); ≤255 files per call.
 
 - Jack wants plain English, numbered options with concrete trade-offs,
-  mock-ups for anything visual, one question at a time. Merge only when Jack
-  says, and only after CI passed on the PR's final commit.
+  mock-ups for anything visual, one question at a time. Merging: until the build starts, only when Jack says; after, as `CLAUDE.md`
+  sets out. Always after CI passed on the PR's final commit.
 - Build method: spec → plan → subagent-driven development (fresh helper per
   task, task review, a final whole-branch review on the most capable model,
   one fix wave). Every new test must be shown failing via its own targeted

@@ -106,4 +106,25 @@ done before switch-over.
 
 ## Answers
 
-(To be recorded with Jack's words and the date.)
+Jack, 3 Oct 2026: "all recommended, but dont start the build yet, i just
+want to ge the build plan on github so i can share it with mark and get his
+opinion on it."
+
+- **Q1–Q3, Q5, Q6, Q8–Q12:** the recommendation, as written above. So: the
+  plan's order; "Mark ready" is the mechanic sign-off; Lightspeed shops after
+  the trading week; a workshop computer asks for a PIN again after 10
+  minutes; the six starting numbers in Q8; draft message wording read in one
+  go before going live.
+- **Q4, Citrus Lime exports:** "citrus exports data in excel sheets, but im
+  sure we can mutate it into a different format once thats downloaded." So
+  the import reads Excel files (or spreadsheets saved from them). Which
+  kinds of data can be exported is still to check.
+- **Q7, card machine:** "we use a paymentsense machine, something 5000 i
+  believe." The exact model is still to confirm. Whether it can take amounts
+  from the till, and what it does offline, is still to check (offline spec
+  open item).
+- **Not started:** the build waits for Mark's view of the plan.
+- **Persona walk-throughs first:** "i also want to make sure that we have
+  done persona walkthroughs of everything before we build so that we have to
+  make the least changes at the end." Added to the plan as stage W, before
+  stage 0.
