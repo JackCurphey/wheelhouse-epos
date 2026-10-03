@@ -544,7 +544,8 @@ async function listProducts({ search, category, activeOnly }) {
     params.push(category);
   }
   if (search) {
-    sql += ' AND (name LIKE ? OR sku LIKE ? OR barcode LIKE ?)';
+    // ILIKE: staff type "brake" and expect "Brake pads".
+    sql += ' AND (name ILIKE ? OR sku ILIKE ? OR barcode ILIKE ?)';
     const like = `%${search}%`;
     params.push(like, like, like);
   }
@@ -1298,7 +1299,8 @@ async function listCustomers({ search, activeOnly }) {
     sql += ' AND active = 1';
   }
   if (search) {
-    sql += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+    // ILIKE: staff type "maya" and expect "Maya Patel".
+    sql += ' AND (name ILIKE ? OR email ILIKE ? OR phone ILIKE ?)';
     const like = `%${search}%`;
     params.push(like, like, like);
   }

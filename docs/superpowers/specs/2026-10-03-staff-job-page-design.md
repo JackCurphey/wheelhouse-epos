@@ -72,3 +72,21 @@ failing first.
 
 Title, customer and bike stay as set on New job; the drawings don't edit
 them on the job page.
+
+## Piece 3: work and parts (built 3 Oct)
+
+- **Add item** opens a search of the shop's services and products ("Search
+  products or services, or scan a barcode"). A service goes on as labour,
+  and a product as a part with its stock shown. A scanner types the barcode
+  and Enter, which adds the product with that exact barcode or SKU straight
+  away.
+- A part's **quantity** can be changed; any line can be **removed**.
+  Labour sorts above parts (decision 46).
+- The lines live on the job's order. The server takes the whole list back
+  each time (`PUT /api/sale-documents/:id/items`), so every change sends
+  every line. An order that isn't open (paid) is read-only.
+- **Fixed on the way:** product and customer search on the server ignored
+  lowercase ("brake" didn't find "Brake pads"); both now ignore capitals.
+
+Not yet (no server field): the Done tick, a note per line, and approval per
+line (the quote stage).

@@ -91,3 +91,20 @@ test('notes typed on the job page are saved with Save notes', async ({ page, con
   await expect(job.getByText('Notes saved.')).toBeVisible();
   expect((await staff(`/api/workshop-jobs/${jobId}`)).body.notes).toBe('Rear hub bearings are gritty.');
 });
+
+test('Add item puts a product on the job', async ({ page, context }) => {
+  const product = await staff('/api/products', { method: 'POST', body: { name: 'Brake pads (pair)', price: 18, sku: 'BP-01', stockQty: 5 } });
+  expect(product.status, JSON.stringify(product.body)).toBe(201);
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await page.getByRole('button', { name: /^Bike, Brake service/ }).click();
+  const job = page.getByRole('dialog', { name: /Brake service/ });
+  await job.getByRole('button', { name: 'Add item' }).click();
+  await job.getByLabel('Search products or services, or scan a barcode').fill('brake');
+  await job.getByRole('button', { name: /Brake pads \(pair\)/ }).click();
+  await expect(job.getByRole('table').getByText('Brake pads (pair)')).toBeVisible();
+  const orderId = (await staff(`/api/workshop-jobs/${jobId}`)).body.orderId;
+  const order = (await staff(`/api/sale-documents/${orderId}`)).body;
+  expect(order.items.map((i: { name: string }) => i.name)).toEqual(['Brake pads (pair)']);
+});
