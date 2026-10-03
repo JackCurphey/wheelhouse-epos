@@ -126,7 +126,8 @@ Based on: the Saturday workers at Jack's shop.
 ### Who they are
 - Age: 17–18.
 - Works Saturdays, and sometimes one day during the week.
-- Job: not known in detail. (Ask: till, workshop, or both?)
+- Job: front desk (Jack, 3 Oct 2026: "saturday workers do work the front
+  desk"). Workshop: not known.
 - Comfort with technology: not known. Don't assume it's high because of
   their age.
 
@@ -206,5 +207,5 @@ Questions to ask the real people, so the "not known" lines can be filled in:
 2. Mechanics: what do they do on the computer, are their hands usually dirty
    or gloved, and what annoys them now?
 3. Owner: what device and where do they read reports?
-4. Saturday workers: till, workshop, or both? What do they find hard?
+4. Saturday workers: do they ever work in the workshop? What do they find hard?
 5. Customers: do most book online, phone, or walk in?
