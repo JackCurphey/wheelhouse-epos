@@ -118,9 +118,11 @@ test('a diary drag on a copy someone else has changed is refused and the diary r
   const after = (await staff(`/api/workshop-jobs/${booked.id}`)).body;
   expect(after.startTime).toBe('10:00');
   // The diary reloads: the block is drawn back at its original 10:00 position.
+  // Polled, not read once: the toast shows before the reload redraws the
+  // block, and on a slow machine (CI) a single read still saw it where it
+  // was dropped, an hour lower.
   await expect(block).toBeVisible();
-  const redrawnBox = (await block.boundingBox())!;
-  expect(Math.round(redrawnBox.y)).toBe(Math.round(origBox.y));
+  await expect.poll(async () => Math.round((await block.boundingBox())!.y)).toBe(Math.round(origBox.y));
 });
 
 test('toggling complete on a job changed elsewhere is refused and the form closes', async ({ page, context }) => {
