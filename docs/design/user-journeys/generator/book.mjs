@@ -14,7 +14,8 @@
 //
 // Real example data only: Release 1's booking fixture (Maya Patel, Trek
 // Domane AL 3 · green · black mudguards, her note, Standard service £65 /
-// 60 min, Thursday 17 September, drop-off 09:00–18:00, the appointment
+// 60 min, Thursday 17 September, drop-off 09:00–10:00 (the shop's drop-off
+// window: Jack's example, 4 Sep; Book a repair, 3 Oct), the appointment
 // times, 07700 900 142, maya@example.test), Oliver Chen's Brompton C Line
 // "not sure" fixture, the diary's services and people, North Street Cycles,
 // Bolton, and Workshop day 41's "up to £200". Anything else is a bracketed
@@ -187,8 +188,8 @@ const timesFor = (chosen) => `<div style="display: flex; flex-direction: column;
 // arrival time is the slot's start, Workshop day 12).
 const whenAppt = (chosen = '11:30', opts = {}) => `${earliest(chosen === '09:30')}${strip(chosen ? 17 : null, opts)}${chosen ? timesFor(chosen) : ''}${chosen ? next('Next: your details') : ''}`;
 // Drop-off days: the window, and the mechanic (2026-09-24).
-const whenDropoff = () => `${earliest(true, `${DAY_SHORT}, drop off 09:00–18:00`)}${strip(17)}
-<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">${DAY}</span><p style="margin: 0; font-size: 15px; line-height: 1.5">Drop your bike off any time from ${mono('09:00')} to ${mono('18:00')}. The mechanic starts on it later that day.</p></div>
+const whenDropoff = () => `${earliest(true, `${DAY_SHORT}, drop off 09:00–10:00`)}${strip(17)}
+<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">${DAY}</span><p style="margin: 0; font-size: 15px; line-height: 1.5">Drop your bike off between ${mono('09:00')} and ${mono('10:00')}. The mechanic starts on it later that day.</p></div>
 <div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">Who would you like to work on it?</span>${radios('Mechanic', `${rpill('Whoever’s free', true)}${rpill('Alex Morgan', false)}`)}</div>${next('Next: your details')}`;
 const DONE_WHEN = `${DAY_SHORT}, arrive 11:30`;
 
@@ -275,7 +276,7 @@ ${note('Your booking stays on Thursday until the shop confirms the new time.')}<
   } else if (state === 'dropoff') {
     // A drop-off shop, no deposit, the mechanic picked (decision 10).
     head = badge('Booking confirmed', 'green');
-    body = `${bookingLines({ deposit: false, when: `${DAY}, drop off ${mono('09:00')}–${mono('18:00')}`, mechanic: 'Alex Morgan' })}${pageButtons()}`;
+    body = `${bookingLines({ deposit: false, when: `${DAY}, drop off ${mono('09:00')}–${mono('10:00')}`, mechanic: 'Alex Morgan' })}${pageButtons()}`;
   } else {
     head = badge('Booking confirmed', 'green');
     body = `${bookingLines(deposit === undefined ? {} : { deposit })}${pageButtons()}`;
@@ -351,7 +352,7 @@ def('bk-bike-signed-in', () => layout(steps(2, [DONE_SERVICE], bikeSignedIn()), 
 def('bk-not-sure', () => layout(steps(2, ['Not sure — we’ll take a look'], bikeNotSure(), 'What have you noticed?'), summaryBox({ service: 'We’ll take a look', price: 'agree', bike: 'Brompton C Line' })));
 def('bk-when', () => layout(steps(3, [DONE_SERVICE, DONE_BIKE], whenAppt()), S({ bike: BIKE, when: DONE_WHEN, limit: 'call' })));
 def('bk-when-full', () => layout(steps(3, [DONE_SERVICE, DONE_BIKE], whenAppt(null, { hoverFull: true })), S({ bike: BIKE, limit: 'call' })));
-def('bk-when-dropoff', () => layout(steps(3, [DONE_SERVICE, DONE_BIKE], whenDropoff()), S({ bike: BIKE, when: `${DAY_SHORT}, drop off 09:00–18:00`, mechanic: 'Whoever’s free', limit: 'call' })));
+def('bk-when-dropoff', () => layout(steps(3, [DONE_SERVICE, DONE_BIKE], whenDropoff()), S({ bike: BIKE, when: `${DAY_SHORT}, drop off 09:00–10:00`, mechanic: 'Whoever’s free', limit: 'call' })));
 def('bk-details', () => layout(steps(4, DONE3, detailsBody()), S({ bike: BIKE, when: DONE_WHEN, limit: 'call' })));
 def('bk-details-deposit', () => layout(steps(4, DONE3, detailsBody({ deposit: true, signedIn: true })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call', deposit: 'now' }), true));
 def('bk-sending', () => layout(steps(4, DONE3, detailsBody({ state: 'sending' })), S({ bike: BIKE, when: DONE_WHEN, limit: 'call' })));
