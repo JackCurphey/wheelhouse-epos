@@ -119,3 +119,5 @@ switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
 state) for screen readers, and on tablet and phone — where the switcher is out
 of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
 under each staff page's title. Nothing else on these boards changed.
+
+**Later change (3 Oct 2026, issue #116 question 4):** Jack, 3 Oct: "2". Practice mode is dropped. Decision 6 no longer applies: there are no practice tills, no "Practice: not real money" band, and no practice sales to keep out of reports or to clear. The data still comes across (decisions 2 and 3) and the weekly check still runs (decision 5). Decision 7's checklist loses "every member of staff has made a practice sale", and on the switch-over day the tills are real from the first sale, with no "Clear and go real". Audit items that only served practice mode (M5, M7, and L2's practice-sale count) go with it. Chosen over keeping practice mode, and keeping it with the move done for the shop. The drawings are not changed yet; they are redone when the canvases are merged (issue #116 step 3).

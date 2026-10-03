@@ -15,6 +15,12 @@ project rules are in `CLAUDE.md`. **Nothing started:** Jack is sharing the
 plan with Mark ("dont start the build yet"). First comes stage W (persona
 walk-throughs of everything), then the build.
 
+**Issue #116 (Mark, 3 Oct): fewer drawings, one canvas, re-walk, clickable
+mockup — before stage W, replacing WP-W.6.** Jack answered its six questions
+on 3 Oct (1, 1, 1, 2, 2, 2), posted on the issue and recorded as dated "Later
+change" notes in the Reports, Website, Moving, Oversight and Receiving
+decision files. Step 1's seven reports are in `docs/design/user-journeys/consolidation-*.md` (823 screens → about 196, estimates). Step 2's six drawing rules and the building-block list are in `docs/design/user-journeys/README.md`. The drawings aren't redrawn yet; steps 3–6 are not started.
+
 **Build board (keep it current):** https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
 source `docs/build-progress/build-board.html`. After any build piece merges or
 opens, edit its `BOARD` data block and republish (Jack, 3 Oct: he keeps it open

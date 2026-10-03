@@ -204,3 +204,7 @@ possible).
     buying online off on purpose. Found and fixed on the way: journey 1's
     product page under the staff banner had lost its banner when the skip
     link was added (Find the shop decision 8).
+
+**Later change (3 Oct 2026, issue #116 question 2):** Jack, 3 Oct: "lets do one for now, once the rest of it is built then im going to spend a lot of time working on the editor". For the first release, each shop's website is a fixed design with editable text and photos: no live-preview editor with drag-and-drop sections, and no theme editor. That puts decisions 1, 3 and 4 off until after the rest of Release 2 is built. They are later, not dropped, and Jack will work on the editor then. Chosen over keeping the full editor as drawn, and the full editor built last. The drawings are not changed yet; they are redone when the canvases are merged (issue #116 step 3).
+
+**Later change (3 Oct 2026, issue #116 question 3):** Jack, 3 Oct: "1". Settles decision 7's open question: own web addresses stay frozen, as the business plan has them (ECOM-03). Wheelhouse sets up a shop's own address for them as a service, so the "Use your own address" screens are not built. Every shop still has its free address. Chosen over building the 6 screens for shops to do it themselves. The drawings are not changed yet; they are redone when the canvases are merged (issue #116 step 3).
