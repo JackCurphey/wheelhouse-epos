@@ -126,3 +126,26 @@ and M3.
   **Approved total** with "… declined. Anything beyond these lines needs a
   new approval."
 - The search is now shared by Add item and Add to quote (`item-search.tsx`).
+
+## Piece 3: the customer approves (built 3 Oct)
+
+On their booking-link page, above the booking summary:
+- **Waiting for your answer:** "We recommend more work", when it was sent,
+  "Untick anything you don't want", and a tick box per line. The box's
+  label carries the price. Needed lines start ticked and Optional ones
+  don't. Each line shows its reason, and "We recommend this." appears if a
+  Needed line is unticked.
+- "Already agreed" (when the shop shows prices online), the **New total**,
+  "Your answers are final once sent", and one button: "Approve £…", or
+  "Decline the extra work" when nothing is ticked. The whole answer goes in
+  one call with the revision shown. If the quote changed meanwhile, it says
+  so and shows it afresh.
+- **Answered:** "Thanks — the work you agreed is going ahead.", what was
+  agreed and what they said no thanks to, and who took the answer if it was
+  by phone or in the shop.
+- **Withdrawn:** "The shop has withdrawn this quote. There is nothing to
+  answer."
+
+The browser test `quote-staff.spec.ts` runs the whole story: staff send a
+quote, the customer opens the link in a browser with no sign-in and
+approves, and the part is on the job's order with the quote approved.

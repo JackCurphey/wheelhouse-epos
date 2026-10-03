@@ -60,3 +60,35 @@ test('staff quote, send and record a phone answer; the approved part joins the j
   const orderId = (await staff(`/api/workshop-jobs/${jobId}`)).body.orderId;
   expect((await staff(`/api/sale-documents/${orderId}`)).body.items.map((i: { name: string }) => i.name)).toEqual(['Brake pads (pair)']);
 });
+
+test('the customer approves on their link, with no sign-in, and the staff side sees it', async ({ page, context, browser }) => {
+  // A second job, so this test stands alone.
+  const c = (await staff('/api/customers', { method: 'POST', body: { name: 'Oliver Chen' } })).body;
+  const job2 = (await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Full service', jobDate: '2026-10-14', startTime: '13:00', endTime: '14:00', customerId: c.id } })).body;
+  const booked = await staff(`/api/workshop-jobs/${job2.id}/book-in`, { method: 'POST', body: { version: job2.version } });
+  expect(booked.status).toBe(200);
+  await page.addInitScript(() => { (window as unknown as { WH_QUOTE_SEND_DELAY_MS: number }).WH_QUOTE_SEND_DELAY_MS = 200; });
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=2026-10-12`);
+  await page.getByRole('button', { name: /^Bike, Full service/ }).click();
+  const job = page.getByRole('dialog', { name: /Full service/ });
+  await job.getByRole('button', { name: 'Add to quote' }).click();
+  await job.getByLabel('Search products or services, or scan a barcode').fill('brake');
+  await job.getByRole('button', { name: /Brake pads \(pair\)/ }).click();
+  await job.getByRole('button', { name: 'Send quote' }).click();
+  const link = (await job.getByText(/\/book\/.*\/booking\//).textContent())!.trim();
+
+  // The customer, in a browser with no staff sign-in.
+  const customer = await browser.newContext();
+  const theirs = await customer.newPage();
+  await theirs.goto(link);
+  await expect(theirs.getByText('Waiting for your answer')).toBeVisible();
+  await theirs.getByRole('button', { name: 'Approve £18.00' }).click();
+  await expect(theirs.getByText('Thanks — the work you agreed is going ahead.')).toBeVisible();
+  await customer.close();
+
+  const orderId = (await staff(`/api/workshop-jobs/${job2.id}`)).body.orderId;
+  expect((await staff(`/api/sale-documents/${orderId}`)).body.items.map((i: { name: string }) => i.name)).toEqual(['Brake pads (pair)']);
+  expect((await staff(`/api/workshop-jobs/${job2.id}`)).body.quote.state).toBe('approved');
+});
