@@ -90,13 +90,13 @@ export const journeys = [
     rows: [
       { label: 'Staff sign-in (WorkOS)', screens: [sb('workos-signin', 'Sign in (WorkOS’s page, approximate look)', 'Staff')] },
       { label: 'Staff access', screens: [
-        sb('auth-site', 'Where are you working today?', 'Staff'),
+        sb('auth-site', 'Where are you working today?', 'Owner'),
         sb('auth-signedout', 'Signed out', 'Staff'),
         sb('auth-expired', 'Signed out after a while', 'Staff'),
         sb('auth-noaccess', 'Not part of your role', 'Staff'),
       ] },
       { label: 'Till', screens: [
-        sb('till-setup', 'Set up this till', 'Manager'),
+        sb('till-setup', 'Set up this till', 'Owner'),
         sb('till-checkin', 'Till check-in: PIN only', 'Staff'),
         sb('till-checkin-offline', 'Till start-up: offline, sales waiting to send (the start-up line on the PIN screen)', 'Staff'),
         sb('till-checkin-stale', 'Till start-up: online, but not up to date', 'Staff'),
@@ -104,7 +104,7 @@ export const journeys = [
         sb('pin-change', 'Your new till PIN', 'Staff'),
       ] },
       { label: 'A new person’s first PIN', screens: [
-        sb('pin-first', "First sign-in — Your till PIN opens straight away (Skip for now if you never use the till)", 'Staff'),
+        sb('pin-first', "First sign-in — Your till PIN opens straight away (Skip for now if you never use the till or a workshop computer)", 'Staff'),
         sb('pin-cleared', "First sign-in after a PIN was cleared — a new PIN, the same way", 'Staff'),
         sb('till-give-pin', "Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person", 'Owner'),
         sb('till-checkin-practice', "Till check-in while running alongside — the practice band before anyone checks in", 'Staff'),
@@ -634,11 +634,11 @@ export const journeys = [
         sd9("mv-practice-job", "A job marked ready in practice: “Not sent — practice”", "Staff"),
       ] },
       { label: "Switch over", screens: [
-        sd9("mv-ready", "Switch over: the checklist, two still to do", "Owner"),
+        sd9("mv-ready", "Switch over: the checklist, one still to do", "Owner"),
         sd9("mv-weeks", "Change how many weeks must match (2 by default)", "Owner"),
         sd9("mv-ready-all", "Switch over: everything ticked", "Owner"),
         sd9("mv-pick-day", "Pick switch-over day", "Owner"),
-        sd9("mv-morning", "Switch-over morning: last refresh, go real, then turn the website on", "Owner"),
+        sd9("mv-morning", "Switch-over morning: last refresh, then turn the website on", "Owner"),
         sd9("mv-go-real", "Clear practice sales and go real?", "Owner"),
         sd9("mv-week", "The first full week on Wheelhouse", "Owner"),
         sd9("mv-week-done", "A full week done: Citrus Lime can go", "Owner"),
@@ -726,6 +726,8 @@ export const journeys = [
         sc("till-job-deposit", "Deposit on a workshop job: bike stays in", "Staff"),
         sc("till-job-balance", "Workshop job back for collection: deposit taken off, pay the rest", "Staff"),
         sc("till-collect", "Hand over an online order", "Staff"),
+        sc("till-book-in", "Book a bike in at the till", "Staff"),
+        sc("till-hand-over-job", "Hand over a repair paid online at the till", "Staff"),
       ] },
       { label: "Cycle to Work", screens: [
         sc("till-c2w-pick", "Other ways to pay › Cycle to Work — orders ready to collect", "Staff"),
@@ -798,7 +800,7 @@ export const journeys = [
         sd13("rs-hub-empty", "Deliveries and orders, for a shop that orders on supplier websites", "Manager"),
         sd13("rs-hub-staff", "Deliveries and orders, as Staff see it", "Staff"),
         sd13("rs-receive", "Receive a delivery: scan each item", "Staff"),
-        sd13("rs-add-product", "A barcode Wheelhouse doesn’t know: Add this product, with its measurements", "Staff"),
+        sd13("rs-add-product", "A barcode Wheelhouse doesn’t know: Add this product, with its measurements", "Owner"),
         sd13("rs-problem", "Something wrong with an item: damaged, wrong or missing", "Staff"),
         sd13("rs-frame", "A bike in the delivery: its frame number first", "Staff"),
         sd13("rs-frame-dup", "A frame number already in stock", "Staff"),
@@ -806,7 +808,7 @@ export const journeys = [
         sd13("rs-book-blocked", "Book in with an unknown barcode still on the list", "Staff"),
         sd13("rs-problem-missing", "Missing, with no order: the part a job is waiting for", "Staff"),
         sd13("rs-booked", "Delivery booked in: the waiting job flagged, what’s next", "Manager"),
-        sd13("rs-booked-staff", "Delivery booked in, as Staff see it: labels first, no invoice", "Staff"),
+        sd13("rs-booked-staff", "Delivery booked in, as Staff see it: labels first", "Staff"),
         sd13("rs-booked-job-waiting", "Booked in without the job’s part: the job is still waiting", "Owner"),
         sd13("rs-labels", "Print labels: only what needs one", "Manager"),
       ] },
@@ -831,14 +833,14 @@ export const journeys = [
         sd13("rs-overview-arrived", "Workshop Overview: “Part arrived” on the job’s row", "Staff"),
       ] },
       { label: "Checking the invoice", screens: [
-        sd13("rs-delivery", "A booked-in delivery, waiting for its invoice", "Manager"),
+        sd13("rs-delivery", "A booked-in delivery", "Manager"),
         sd13("rs-invoice", "Add the invoice: its total against what was booked in", "Manager"),
         sd13("rs-invoice-checked", "The invoice matches: checked", "Manager"),
         sd13("rs-invoice-diff", "The invoice doesn’t match: the difference, to query", "Manager"),
         sd13("rs-invoice-cost", "Accept the difference: did a cost go up?", "Owner"),
         sd13("rs-invoice-queried", "Queried with the supplier", "Manager"),
         sd13("rs-invoice-accepted", "The difference accepted, with Undo", "Manager"),
-        sd13("rs-delivery-staff", "A delivery, as Staff see it: no costs, no invoice", "Staff"),
+        sd13("rs-delivery-staff", "A delivery, as Staff see it: no costs", "Staff"),
         sd13("rs-invoice-setting", "Settings › Stockroom: the invoice check, on or off", "Manager"),
       ] },
       { label: "Ordering", screens: [
@@ -958,7 +960,7 @@ export const journeys = [
     id: 'j16', name: 'End-of-day cash-up', who: 'Staff and Manager',
     rows: [
       { label: "Close the day", screens: [
-        sd16("eod-entry", "Close the day appears in the till bar after closing time", "Manager"),
+        sd16("eod-entry", "Close the day appears in the till bar after closing time", "Owner, Manager, or anyone with Can close the day"),
         sd16("eod-waiting", "Close the day — sales still waiting: count and bank now", "Manager"),
         sd16("eod-waiting-banked", "Counted and banked — the day closes once the sales have sent", "Manager"),
         sd16("eod-attention", "Close the day: sales that need checking", "Manager"),
@@ -1010,7 +1012,7 @@ export const journeys = [
         sd17("rp-vat", "VAT for your VAT quarter, against the quarter before", "Owner"),
         sd17("rp-vat-first", "When does your VAT quarter start? (asked once)", "Owner"),
         sd17("rp-vat-all", "VAT for all shops", "Owner"),
-        sd17("rp-vat-check-off", "VAT with the invoice check off: stock purchases from your accounts software", "Owner"),
+        sd17("rp-vat-check-off", "VAT with the supplier invoice check: invoices booked in", "Owner"),
         sd17("rp-margin", "Margin and stock value", "Owner"),
         sd17("rp-workshop", "Workshop: jobs, takings, how full, turnaround, quotes", "Owner"),
         sd17("rp-workshop-all", "Workshop for all shops: shop by shop, and how full at each", "Owner"),
@@ -1148,7 +1150,7 @@ export const journeys = [
       ] },
       { label: "Jobs between shops", screens: [
         sd19("ms-job-other-shop", "Booking a job into the other shop’s workshop: it goes as a request", "Staff"),
-        sd19("ms-request-from-shop", "At [Second site]: the request, from Bolton, to accept", "Mechanic"),
+        sd19("ms-request-from-shop", "At [Second site]: the request, from Bolton, to accept", "Staff"),
         sd19("ms-request-answered", "Back at Bolton: the answer in Waiting for you", "Staff"),
       ] },
       { label: "Adding a shop, and its tills", screens: [

@@ -10,7 +10,7 @@
 import { C, MONO, esc, icon, button, card, field, badge } from './ui.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { foldedRail, tillBar, tillPhoneBar } from './app-map.mjs';
-import { LINES_APPROVED, WORK_TOTAL_APPROVED, TW, TH } from './diary.mjs';
+import { LINES_APPROVED, WORK_TOTAL_APPROVED, TW, TH, STORAGE, barcode128 } from './diary.mjs';
 
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
 const money = (n) => `£${n.toFixed(2)}`;
@@ -441,6 +441,25 @@ const handOver = (sub, extra = '') => dialog('collect-title', 'Online order · [
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Hand over')}`, 600);
 def('till-collect', () => overTill(handOver('[Customer] · paid online [date]'), []));
 
+// UX walk-through 8 decision 8: the till can book a bike in and hand over a
+// repair paid online, so a till-only worker needs no email sign-in. Both stay
+// on the till — nothing opens the job page (walk-through 8 M6 part 2).
+// Book in: the expected job found from the till's search, with the storage
+// choice and the tag print as the job page's book-in draws them (diary.mjs
+// "Where the bike is kept", tagStripCompact); one person and one time, Jo
+// Taylor at 09:12 (walk-through 8 fix L1). Slots: the shop's list in diary.mjs.
+const SLOTS = ['Hook 1', 'Hook 2', 'Hook 3', 'Hook 4', 'Hook 5', 'Hook 6', 'Workshop floor', 'Front window'];
+const slotPill = (t, on) => `<button type="button" role="radio" aria-checked="${on}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
+const tagSent = `<div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 700">Bike tag sent</span>${badge('Acknowledged', 'green')}</div><span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${mono('09:12')} · printed by Jo Taylor</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div></div>`;
+def('till-book-in', () => overTill(dialog('bookin-title', `Book in · job ${mono('WH-1042')}`, 'Maya Patel · Trek Domane AL 3 · Standard service', `
+<div style="display: flex; flex-direction: column; gap: 8px"><span id="bookin-slot-label" style="font-size: 14px; font-weight: 600">Where the bike is kept</span><div role="radiogroup" aria-labelledby="bookin-slot-label" style="display: flex; flex-wrap: wrap; gap: 6px">${SLOTS.map((t) => slotPill(t, t === STORAGE['WH-1042'])).join('')}</div></div>
+${tagSent}`, `${button('Not now', { variant: 'ghost' })}${button('Done')}`, 600), []));
+// Hand over a repair paid online: the same layout as till-collect's online
+// order hand-over, for job WH-1042 (paid online, £111.00 as agreed).
+def('till-hand-over-job', () => overTill(dialog('handjob-title', `Workshop job · ${mono('WH-1042')}`, 'Maya Patel · paid online [date]', `
+<div>${tickRow('Trek Domane AL 3', `Kept on ${STORAGE['WH-1042']}`, '', false)}${infoRow('Paid online', money(WORK_TOTAL_APPROVED), true)}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Hand over')}`, 600), []));
+
 // ---------- When the internet drops (offline spec §3) ----------
 // Selling carries on: sales are saved on this till and send themselves, in
 // order, when the connection is back. No time limit; after four hours the
@@ -555,6 +574,8 @@ export const TITLES = {
   'till-c2w-deposit': 'A Cycle to Work deposit — one line, linked to the order', // UX walk-through 5 H2
   'till-serial-held': 'A frame held for Cycle to Work — warned, not blocked', // UX walk-through 5 M4
   'till-collect': 'Hand over an online order', // UX walk-through 2 L1
+  'till-book-in': 'Book a bike in at the till', // UX walk-through 8 decision 8
+  'till-hand-over-job': 'Hand over a repair paid online at the till', // UX walk-through 8 decision 8
   'till-empty': 'Empty basket',
   'till-noresults': 'Search with no results',
   'till-sale-detail': 'A past sale — refund, reprint, void',
@@ -572,7 +593,7 @@ export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
-  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect'] },
+  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect', 'till-book-in', 'till-hand-over-job'] },
   // UX walk-through 5 H1, H2: a Cycle to Work bike at the till.
   { label: 'Cycle to Work', screens: ['till-c2w-pick', 'till-c2w', 'till-c2w-pay', 'till-c2w-extra', 'till-c2w-paid', 'till-c2w-deposit'] },
   { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-noted', 'till-collect-offline', 'till-no-signout', 'till-failed'] },

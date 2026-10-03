@@ -23,8 +23,10 @@ function sideItem([key, label, ic], active) {
   return `<a href="#" aria-current="${on ? 'page' : 'false'}" style="display: flex; align-items: center; gap: 12px; min-height: 30px; padding: 0 12px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: ${on ? 700 : 500}; color: ${C.sidebarInk}; background: ${on ? C.sidebarActive : 'transparent'}; box-shadow: ${on ? `inset 3px 0 0 ${C.highlight}` : 'none'}">${icon(ic, 18)}<span>${esc(label)}</span></a>`;
 }
 
+// Multiple sites 9 and its 1 Oct later change: named "Shop: Bolton. Choose a
+// shop", with its open state, like the sidebar switcher in diary.mjs.
 function siteSwitcher(dark = true) {
-  return `<button type="button" aria-label="Switch site" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; border-radius: 8px; border: 1px solid ${dark ? 'rgba(255,255,255,0.25)' : C.border}; background: ${dark ? 'rgba(255,255,255,0.08)' : '#ffffff'}; color: ${dark ? '#ffffff' : C.ink}; font-family: inherit; text-align: left">
+  return `<button type="button" aria-label="Shop: Bolton. Choose a shop" aria-haspopup="menu" aria-expanded="false" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 6px 12px; border-radius: 8px; border: 1px solid ${dark ? 'rgba(255,255,255,0.25)' : C.border}; background: ${dark ? 'rgba(255,255,255,0.08)' : '#ffffff'}; color: ${dark ? '#ffffff' : C.ink}; font-family: inherit; text-align: left">
 <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">Bolton</span></span>${icon('chevron', 16)}</button>`;
 }
 

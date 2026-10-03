@@ -367,7 +367,7 @@ const CHECKLIST = [
 // small box a "View overview" click opens over the (lightly dimmed) diary:
 // just the job's notes, line items and cost, no customer details or
 // mechanic. Reuses the exact texts already in this file — Maya's booking
-// concern (CONCERN), the 09:05 booked-in note (HISTORY_ALL) attributed to
+// concern (CONCERN), the 09:12 booked-in note (HISTORY_ALL) attributed to
 // Jo Taylor (the default staff person throughout this file) and the brakes
 // checklist note (CHECKLIST) attributed to Alex Morgan, the mechanic who
 // starts work at 11:30 per HISTORY_ALL — nothing invented beyond those two
@@ -376,7 +376,7 @@ const CHECKLIST = [
 // content of WH-1042's hover summary card (decision 65).
 const QUICK_NOTES = [
   { who: 'Customer', when: '', text: CONCERN.replace(/[“”]/g, '') },
-  { who: 'Jo Taylor', when: '09:05', text: 'Bike booked in, tag printed.' },
+  { who: 'Jo Taylor', when: '09:12', text: 'Bike booked in, tag printed.' },
   { who: 'Alex Morgan', when: '12:10', text: CHECKLIST.find((c) => c.t === 'Brakes bled & adjusted').note },
 ];
 
@@ -2282,7 +2282,7 @@ export const NOTES_STAFF_FULL = [STAFF_NOTE_BOOKED_IN, STAFF_NOTE_BRAKES];
 // notes-box layout's tighter vertical budget.
 function tagStripCompact(size = 'desktop') {
   const f = size === 'desktop' ? 11 : 12;
-  return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 13)}${badge('Acknowledged', 'green')}</div><span style="font-size: ${f}px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: ${f}px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div>`, 12, 'align-items: center')}`, '', 6, 0);
+  return jpPanel(`${jpRow(`${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 1px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 13)}${badge('Acknowledged', 'green')}</div><span style="font-size: ${f}px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jo Taylor</span><span style="font-size: ${f}px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div>`, 12, 'align-items: center')}`, '', 6, 0);
 }
 // UX walk-through 1 M4: the strip says when the new ready date was sent.
 function waitingStripCompact(size = 'desktop') {
@@ -2359,7 +2359,7 @@ export function buildJobPageDesktop({
 // strips above, stacked for a narrow screen).
 export const phoneStagePanel = (inner, extra = '') => `<div style="flex-shrink: 0; box-sizing: border-box; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; ${extra}">${inner}</div>`;
 const PHONE_STAGE_TOP = {
-  bookIn: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 15)}${badge('Acknowledged', 'green')}</div>${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jack Lewis</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span>`),
+  bookIn: () => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${jpH2('Bike tag sent', 15)}${badge('Acknowledged', 'green')}</div>${barcode128('WH-1042', 200, 34)}<span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${jpMono('09:12')} · printed by Jo Taylor</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span>`),
   waiting: () => phoneStagePanel(`<div>${badge('Waiting for parts', 'amber')}</div><span style="font-size: 15px; font-weight: 600">Replacement rear brake pads delayed</span><span style="font-size: 14px">Moved to ${jpMono('Sat 19 Sep · 16:00')} in the diary</span><span style="font-size: 13px; color: ${C.muted}; line-height: 1.35">The brake pads are arriving later than expected. We’ve moved your job to Saturday at 16:00 in the diary and will confirm as soon as your bike is ready.</span><span style="font-size: 13px; font-weight: 600">Sent to Maya by text · [time] (“New ready date”)</span>`, `border-color: ${ST.waiting[1]}`),
   finished: () => phoneStagePanel(`<span role="status" style="font-size: 14px">Alex marked it ready at ${jpMono('15:30')}. “Bike ready” goes to Maya by text in 1 minute.</span><div>${UNDO_BTN('default')}</div>`),
   unpaid: (deposit = 0) => phoneStagePanel(`<div style="display: flex; align-items: center; gap: 8px">${badge('Not paid yet', 'amber')}<span style="font-size: 15px; font-weight: 700">${jpMono(`£${(WORK_TOTAL_APPROVED - deposit).toFixed(2)}`)} to pay</span></div><span style="font-size: 13px; color: ${C.muted}">${deposit ? `Deposit paid ${jpMono(`£${deposit.toFixed(2)}`)} · ` : ''}Customer told the bike is ready.</span>`),
@@ -2581,6 +2581,13 @@ keepDesktopSeq('job-collection');
 
 
 
+// Building block 26 (walk-through 8, decisions 1 and 4; "Draw the decisions"
+// D2): on a workshop computer, the "Working: Alex Morgan · Switch" bar names
+// the person working now. Drawn once, on job-checklist (the mechanic's view),
+// as the top row of the open pop-up; the job keeps "Mechanic: Alex Morgan".
+const workingBar = (person) => `<div style="flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 6px 24px; background: ${C.mutedBg}; border-bottom: 1px solid ${C.border}; font-size: 13px; color: ${C.ink}">${icon('user', 16)}<span>Working: <strong>${esc(person)}</strong></span><span aria-hidden="true" style="color: ${C.muted}">·</span><a href="#" style="display: inline-flex; align-items: center; min-height: 24px; font-weight: 600; color: ${C.accentDark}">Switch</a></div>`;
+const withWorkingBar = (dialogHtml, person) => dialogHtml.replace(/^(<div role="dialog"[^>]*>)\n/, `$1\n${workingBar(person)}`);
+
 // 16. job-checklist — "Job · full service checklist" (task item 2): the Full
 // service checklist full-screen pop-up (as job-final-2-detailed), stacked
 // over the (dimmed) job-mechanic pop-up — the in-the-workshop stage, where a
@@ -2606,7 +2613,7 @@ ${jobLayer}
 </div>
 </div>
 <div style="position: absolute; inset: 0; background: rgba(28,30,25,0.55); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 20px">
-${fullChecklistDialog({ titleId: 'job-checklist-title', subtitle: 'Standard service · WH-1042 · Trek Domane AL 3', checklist: CHECKLIST_10, doneHref: 'job-mechanic-desktop.dc.html', closeHref: 'job-mechanic-desktop.dc.html', idPrefix: 'jc' })}
+${withWorkingBar(fullChecklistDialog({ titleId: 'job-checklist-title', subtitle: 'Standard service · WH-1042 · Trek Domane AL 3', checklist: CHECKLIST_10, doneHref: 'job-mechanic-desktop.dc.html', closeHref: 'job-mechanic-desktop.dc.html', idPrefix: 'jc' }), 'Alex Morgan')}
 </div>
 </div>`;
   })(),

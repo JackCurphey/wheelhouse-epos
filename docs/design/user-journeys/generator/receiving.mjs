@@ -83,10 +83,11 @@ ${section('Orders', empty
       line('[Supplier 2] · [n] lines', 'Draft · not ordered yet', `${tag('Draft', 'grey')}${link('Open', 'Open the draft order for [Supplier 2]')}`),
     ]), button('+ New order', { variant: 'default' }))}`}
 ${section('Recent deliveries', list(empty
-    ? [line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', `${staff ? '' : tag('Waiting for invoice', 'grey')}${link('Open', 'Open the delivery from [Supplier], [date]')}`)]
+    ? [line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', link('Open', 'Open the delivery from [Supplier], [date]'))]
     : [
-      line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', `${staff ? '' : tag('Waiting for invoice', 'grey')}${link('Open', 'Open the delivery from [Supplier], [date]')}`),
-      line('[Supplier 2] · [n] items', 'Booked in [date] by Jo Taylor', `${staff ? '' : tag('Invoice checked')}${link('Open', 'Open the delivery from [Supplier 2], [date]')}`),
+      // Issue #116 question 6: the invoice check is later, so no invoice tags.
+      line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', link('Open', 'Open the delivery from [Supplier], [date]')),
+      line('[Supplier 2] · [n] items', 'Booked in [date] by Jo Taylor', link('Open', 'Open the delivery from [Supplier 2], [date]')),
     ]))}
 ${staff ? note('Orders, returns and the restock list are for people who can order stock.') : ''}`, staff ? JO : MANAGER, false);
 
@@ -140,7 +141,6 @@ const detailField = (id, label, value, unit = '') => `<div style="display: flex;
 // UX walk-through 3 M3: opened from "Products to add", for one Staff left on a
 // delivery — adding it counts it into stock and offers its label.
 const addProduct = (left = false) => popup('add-title', 'Add this product', left ? `Barcode ${'[barcode]'} · left by Jo Taylor on the delivery from [Supplier 2]` : `Barcode ${'[barcode]'} · not in Wheelhouse yet`, `
-<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px">${icon('search', 16)}<span style="flex-grow: 1">Look it up in a supplier’s catalogue to fill this in</span>${linkBtn('Find it', 'Find it in a supplier’s catalogue')}</div>
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 2fr) minmax(0, 1fr)'}; gap: 12px">${fieldRow('ap-name', 'Name', '[Bearing]')}${fieldRow('ap-code', 'Supplier code', '[code]')}</div>
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr 1fr' : 'repeat(3, minmax(0, 1fr))'}; gap: 12px">${fieldRow('ap-cost', 'Cost', '£[cost]')}${fieldRow('ap-price', 'Price', '£[price]')}${fieldRow('ap-low', 'Low-stock level', '[n]')}</div>
 <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 6px"><label for="ap-cat" style="font-size: 14px; font-weight: 600">Category</label><select id="ap-cat" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>Bearings</option></select></div>
@@ -158,7 +158,7 @@ ${dup ? `<div role="alert" style="display: flex; align-items: flex-start; gap: 8
 ${c2w ? note('This frame becomes the frame on Maya Patel’s Cycle to Work order. It’s held for her — not for sale — and the till picks it when she collects.') : note('Each bike is then known by its frame number — the till picks it at the sale, and its warranty starts from the right bike.')}`, `${button('Cancel', { variant: 'default' })}${button('Count this bike')}`, 560);
 
 // After Book in (audit M10): what happened, then the next steps — labels
-// first when any are due, and the invoice for people who can order stock.
+// first when any are due (the invoice check is later: issue #116 question 6).
 // UX walk-through 3 H1 (option 1): booking in holds what the job is waiting
 // for, until it's used on the job or the job is cancelled.
 // UX walk-through 3 M2: `jobShort` — the job's pads came damaged, so the job
@@ -183,7 +183,7 @@ ${list([
     ? line(`${mono('[n]')} still to come on the order`, '[Supplier] · ordered [date]')
     : line(`${mono('[n]')} still to come on the order`, '[Supplier] · ordered [date]', link('Open the order', 'Open the order from [Supplier]')),
 ])}
-<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px">${staff ? button('Receive another delivery', { variant: 'default' }) : `${button('Print labels')}${button('Add the invoice', { variant: 'default' })}${button('Receive another delivery', { variant: 'default' })}`}</div>`)}`, staff ? JO : MANAGER);
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px">${staff ? button('Receive another delivery', { variant: 'default' }) : `${button('Print labels')}${button('Receive another delivery', { variant: 'default' })}`}</div>`)}`, staff ? JO : MANAGER);
 
 // ---------- Decision 6: a quick invoice check (a settings switch) ----------
 // The invoice total before VAT is compared with the cost of what was booked
@@ -213,7 +213,7 @@ const INVOICE = {
 const deliveryBoard = (state = 'waiting', { staff = false, problems = false } = {}) => stockPage('Delivery', `${section('[Supplier] · [n] items', `<span style="font-size: 14px; color: ${C.muted}">Booked in [date] by Jack Lewis</span>${deliveryLines(staff)}
 ${staff ? '' : `<div style="display: flex; justify-content: space-between; gap: 10px; padding-top: 6px; font-size: 15px"><span>Booked-in cost, before VAT</span>${mono('£[y]', 'font-size: 16px; font-weight: 700')}</div>`}
 ${problems ? setAside(staff) : ''}`)}
-${staff ? note('Costs and the invoice are for people who can order stock.') : section('Invoice', INVOICE[state][1](), INVOICE[state][0])}`, staff ? JO : MANAGER);
+${staff ? note('Costs are for people who can order stock.') : state ? section('Invoice', INVOICE[state][1](), INVOICE[state][0]) : ''}`, staff ? JO : MANAGER);
 // UX walk-through 3 M6 (option 1): "Accept the difference" asks one optional
 // question, so a cost the supplier put up reaches the product (and margin and
 // stock value). The check itself stays totals only (decision 6).
@@ -340,7 +340,9 @@ for (const id of ['job-part-sold', 'job-part-missing', 'job-part-damaged', 'job-
 // Audit H1: the badge on the diary block and the Overview row too.
 def('rs-diary-arrived', () => withPartArrived('WH-1042', () => (SIZE === 'desktop' ? buildDiaryDesktopBoard() : SIZE === 'tablet' ? tabletDiary() : phoneDiary({ day: TODAY, mode: 'everyone' }))));
 def('rs-overview-arrived', () => withPartArrived('WH-1042', () => overviewAt(SIZE)));
-def('rs-delivery', () => deliveryBoard('waiting', { problems: true }));
+// Issue #116 question 6: the invoice check is later, so the booked-in
+// delivery has no Invoice section (state null).
+def('rs-delivery', () => deliveryBoard(null, { problems: true }));
 def('rs-invoice', () => overlay(deliveryBoard('waiting', { problems: true }), invoicePopup()));
 def('rs-invoice-checked', () => deliveryBoard('checked'));
 def('rs-invoice-diff', () => deliveryBoard('diff', { problems: true }));
@@ -381,7 +383,7 @@ export const TITLES = {
   'rs-add-left': 'Adding the product Jo left: it counts into stock, then its label',
   'rs-today-to-add': 'Today: a product left on a delivery, to add',
   'rs-booked': 'Delivery booked in: one held for the waiting job, what’s next',
-  'rs-booked-staff': 'Delivery booked in, as Staff see it: labels first, no invoice',
+  'rs-booked-staff': 'Delivery booked in, as Staff see it: labels first',
   'rs-booked-job-waiting': 'Booked in without the job’s part: the job is still waiting',
   'rs-labels': 'Print labels: only what needs one',
   // UX walk-through 5 M2.
@@ -395,14 +397,14 @@ export const TITLES = {
   'rs-part-order-closed': PART_PROBLEM_TITLES['job-part-order-closed'],
   'rs-diary-arrived': 'The diary: “Part arrived” on the job’s block',
   'rs-overview-arrived': 'Workshop Overview: “Part arrived” on the job’s row',
-  'rs-delivery': 'A booked-in delivery, waiting for its invoice',
+  'rs-delivery': 'A booked-in delivery',
   'rs-invoice': 'Add the invoice: its total against what was booked in',
   'rs-invoice-checked': 'The invoice matches: checked',
   'rs-invoice-diff': 'The invoice doesn’t match: the difference, to query',
   'rs-invoice-cost': 'Accept the difference: did a cost go up?',
   'rs-invoice-queried': 'Queried with the supplier',
   'rs-invoice-accepted': 'The difference accepted, with Undo',
-  'rs-delivery-staff': 'A delivery, as Staff and mechanics see it: no costs, no invoice — where the job’s “booked in” link goes for them',
+  'rs-delivery-staff': 'A delivery, as Staff and mechanics see it: no costs — where the job’s “booked in” link goes for them',
   'rs-invoice-setting': 'Settings › Stockroom: the invoice check, on or off',
   'rs-order': 'A purchase order, built by hand',
   'rs-order-ordered': 'An order, partly delivered: receive against it, or close it',

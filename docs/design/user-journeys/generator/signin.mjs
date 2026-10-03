@@ -230,7 +230,7 @@ export const TITLES = {
   'till-pin-wrong': 'Till check-in — wrong PIN',
   'pin-change': 'Your new till PIN — Wheelhouse picks it',
   // UX walk-through 4 H1, M2, M4
-  'pin-first': 'First sign-in — Your till PIN opens straight away (Skip for now if you never use the till)',
+  'pin-first': 'First sign-in — Your till PIN opens straight away (Skip for now if you never use the till or a workshop computer)',
   'pin-cleared': 'First sign-in after a PIN was cleared — a new PIN, the same way',
   'till-give-pin': 'Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person',
   'till-checkin-practice': 'Till check-in while running alongside — the practice band before anyone checks in',

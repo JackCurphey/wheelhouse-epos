@@ -25,7 +25,7 @@ export default {
   'rp-vat': keep(5),
   'rp-vat-first': into('rp-vat', ''), // inferred
   'rp-vat-all': into('rp-vat', ''),
-  'rp-vat-check-off': into('rp-vat', ''),
+  'rp-vat-check-off': later('Issue #116 question 6: invoice check later'),
   'rp-margin': keep(5),
   'rp-workshop': keep(5),
   'rp-workshop-all': into('rp-workshop', ''),
@@ -43,3 +43,11 @@ export default {
   'rp-today-accounts': into('op-today', ''),
   'rp-person': into('set-staff-person', ''),
 };
+
+// Decisions drawn as lines, with no old drawing behind them ("Draw the
+// decisions" spec, section 2: R2–R4).
+export const lines = [
+  { on: 'rp-home', text: 'Staff with Can see reports, without Can see costs and margin: no margin figure in the strip', who: 'Staff', decision: 'Reports and accounts 5; issue #116 question 1' },
+  { on: 'rp-margin', text: 'Margin and stock value for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },
+  { on: 'rp-discounts', text: 'Discounts and refunds for all shops: a shop column', who: 'Owner', decision: 'Reports and accounts 8 (M13)' },
+];

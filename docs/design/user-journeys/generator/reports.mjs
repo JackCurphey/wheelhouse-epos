@@ -155,7 +155,7 @@ ${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Number of sales', '[n
 ${box(`${site === 'All shops'
   ? `${graph('Takings by shop', ['Bolton', SECOND], { says: 'Bolton £[£], [Second site] £[£]' })}${table('Sales by shop', ['Shop', 'Takings', 'Sales', 'Average'], [['Bolton', '[£]', '[n]', '[£]'], [opened(), '[£]', '[n]', '[£]'] /* UX walk-through 7 M1 */], ['All shops', '[£]', '[n]', '[£]'])}`
   : `${graph('Takings by day', DAY_LABELS, { upto: 4 })}${table('Sales by day', ['Day', 'Takings', 'Sales', 'Average'], salesRows(), ['So far', '[£]', '[n]', '[£]'])}`}`)}
-${note('Takings include VAT and take refunds off. Practice sales from moving across are never counted.')}`, OWNER, site);
+${note('Takings include VAT and take refunds off.')}`, OWNER, site);
 // Nothing sold yet, and no period before to compare with (audit M7).
 const salesEmpty = () => wrap(`${head('Sales', 'North Street Cycles, Bolton · Today, Thursday 17 September', 'Today')}
 ${box(`<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px 12px; text-align: center"><span style="font-size: 17px; font-weight: 700">Nothing sold yet today</span>${note('Sales show here as soon as the first one goes through a till.')}</div>`)}
@@ -167,7 +167,7 @@ ${box(`${lineGraph('Takings by month', MONTHS)}${table('Takings by month', ['Mon
 const pickDates = () => popup('pd-title', 'Pick dates', 'Sales · North Street Cycles, Bolton', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('From', { type: 'date', value: '2026-09-01' })}${field('To', { type: 'date', value: '2026-09-17' })}</div>${note('Compared with the same number of days just before.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Show report')}`, 520);
 // Your settings: graphs on or off, in Accessibility (decision 7; audit L4).
 // Scrolled down the Accessibility list so the new row is in view.
-const settingsGraphs = () => overlay(home(), scrolled(yourSettingsDialog(SIZE, { graphs: true }).replace('Jo Taylor · Staff', 'Jack Lewis · Owner'), onPhone(420))
+const settingsGraphs = () => overlay(home(), scrolled(yourSettingsDialog(SIZE, { graphs: true, help: false }).replace('Jo Taylor · Staff', 'Jack Lewis · Owner'), onPhone(420))
   .replace('padding: 18px 22px 22px; display: grid;', 'padding: 18px 22px 22px; min-height: 0; overflow: hidden; display: grid;')
   .replace(/(grid-template-columns: 250px[^>]*>.*?<\/div>)<div style="display: flex; flex-direction: column; gap: 12px">/s, '$1<div style="display: flex; flex-direction: column; gap: 12px; position: relative; top: -250px">'));
 
@@ -233,16 +233,18 @@ ${note('Saved with your name and the time. The day goes back to Needs attention,
 // accountant needs — and no "Change what's shown".
 const VATP = ['This VAT quarter', 'Last VAT quarter', 'Pick dates'];
 // UX walk-through 3 M8 (option 1): the Stock purchases box never shows a
-// figure that's short. With the invoice check off it says to take the figure
-// from the accounts software; with it on it says how many deliveries are
-// still waiting for their invoice, and links to them.
-const vat = (site = 'Bolton', { checkOff = false } = {}) => wrap(`${head('VAT', `${shopName(site)} · this VAT quarter, [start] – [end], against the quarter before`, 'This VAT quarter', { list: VATP, change: false })}
+// figure that's short. Reports and accounts, later change (issue #116
+// question 6): the supplier invoice check comes later, so the box gives no
+// figure and says to take it from the accounts software. The invoice version
+// (\`invoices: true\`) is kept for when the check is built (rp-vat-check-off,
+// listed as later).
+const vat = (site = 'Bolton', { invoices = false } = {}) => wrap(`${head('VAT', `${shopName(site)} · this VAT quarter, [start] – [end], against the quarter before`, 'This VAT quarter', { list: VATP, change: false })}
 ${box(`${h3('Sales')}${site === 'All shops'
   ? table('VAT on sales by shop', ['Shop', 'Sales before VAT', 'VAT charged', 'Quarter before'], [['Bolton', '[£]', '[£]', '[£]'], [SECOND, '[£]', '[£]', '[£]']], ['All shops', '[£]', '[£]', '[£]'])
   : table('VAT on sales by rate', ['Rate', 'Sales before VAT', 'VAT charged', 'Quarter before'], [['Standard 20%', '[£]', '[£]', '[£]'], ['Reduced rate 5%', '[£]', '[£]', '[£]'], ['Zero rate 0%', '[£]', '[£]', '[£]'], ['Refunds', '−[£]', '−[£]', '−[£]']], ['Total', '[£]', '[£]', '[£]'])}`)}
-${box(`${h3('Stock purchases')}<p role="note" style="margin: 0; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Stock purchases only — not your full VAT reclaim.</strong> Rent, bills and other costs don’t go through Wheelhouse.</p>${checkOff
-  ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">Supplier invoices are checked in your accounts software — take this figure from there.</p>${note('The invoice check is off in Settings › Stockroom, so Wheelhouse has no supplier invoices to add up.')}`
-  : `${table('VAT on stock invoices', ['From', 'Before VAT', 'VAT', 'Quarter before'], [['Supplier invoices booked in · [n]', '[£]', '[£]', '[£]']])}<p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; line-height: 1.45"><span>${mono('[n]')} deliveries are still waiting for their invoice and aren’t in this.</span>${linkBtn('See them', 'See the deliveries waiting for their invoice')}</p>`}`)}
+${box(`${h3('Stock purchases')}<p role="note" style="margin: 0; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Stock purchases only — not your full VAT reclaim.</strong> Rent, bills and other costs don’t go through Wheelhouse.</p>${invoices
+  ? `${table('VAT on stock invoices', ['From', 'Before VAT', 'VAT', 'Quarter before'], [['Supplier invoices booked in · [n]', '[£]', '[£]', '[£]']])}<p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; line-height: 1.45"><span>${mono('[n]')} deliveries are still waiting for their invoice and aren’t in this.</span>${linkBtn('See them', 'See the deliveries waiting for their invoice')}</p>`
+  : `<p style="margin: 0; font-size: 15px; line-height: 1.5">Supplier invoices are checked in your accounts software — take this figure from there.</p>`}`)}
 ${note('No graph here: these are the exact figures your accountant needs. Wheelhouse doesn’t file your VAT return — file it from your accounts software, or send this to your accountant.')}`, OWNER, site);
 const vatFirst = () => overlay(vat(), popup('vq-title', 'When does your VAT quarter start?', 'Asked once. Change it later in Settings › Shop and sites.', `<div role="radiogroup" aria-label="Months your VAT quarters start" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px">${['January, April, July, October', 'February, May, August, November', 'March, June, September, December'].map((t, i) => chip(t, i === 0)).join('')}</div>${note('It’s on your VAT registration, or ask your accountant.')}`, `${button('Not now', { variant: 'ghost' })}${button('Save')}`, 560));
 
@@ -378,7 +380,7 @@ def('rp-takings-reopened', () => takings({ reopened: true }));
 def('rp-vat', () => vat());
 def('rp-vat-first', () => vatFirst());
 def('rp-vat-all', () => vat('All shops'));
-def('rp-vat-check-off', () => vat('Bolton', { checkOff: true })); // UX walk-through 3 M8
+def('rp-vat-check-off', () => vat('Bolton', { invoices: true })); // UX walk-through 3 M8; later (issue #116 question 6)
 def('rp-margin', () => margin());
 def('rp-workshop', () => workshop());
 def('rp-workshop-all', () => scrolled(workshopAll(), { desktop: 300, tablet: 300, phone: 640 }[SIZE])); // UX walk-through 7 M1: scrolled to the shop rows and How full
@@ -429,7 +431,7 @@ export const TITLES = {
   'rp-vat': 'VAT for your VAT quarter, against the quarter before',
   'rp-vat-first': 'When does your VAT quarter start? (asked once)',
   'rp-vat-all': 'VAT for all shops',
-  'rp-vat-check-off': 'VAT with the invoice check off: stock purchases from your accounts software',
+  'rp-vat-check-off': 'VAT with the supplier invoice check: invoices booked in',
   'rp-margin': 'Margin and stock value',
   'rp-workshop': 'Workshop: jobs, takings, how full, turnaround, quotes',
   'rp-workshop-all': 'Workshop for all shops: shop by shop, and how full at each', // UX walk-through 7 M1

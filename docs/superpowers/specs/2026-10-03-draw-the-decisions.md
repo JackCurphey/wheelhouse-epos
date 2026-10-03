@@ -649,3 +649,28 @@ and why.
 - 3 Oct: the "[Second site] · [n] steps to get it ready" line goes on
   `ms-switch-open`, not `op-today`, because the fix it comes from keeps
   `op-today` a one-shop board.
+
+### Done (3 Oct)
+
+- All changes made except R1 (the Reports strip), which waits on Jack's
+  answer to "needs Jack" item 1. Built: 213 files, 174 notes; plan check 7/7;
+  `fitcheck-canvas.mjs` 0 problems; none of the done-condition's banned
+  phrases on any board.
+- Fresh review fixes: the website's "4 unpublished changes" → 3 (W5 took one
+  out); `rp-your-settings` drops the Help cards like the other Your settings
+  drawings; the new till screens titled as T1 says ("…at the till"),
+  "Workshop job · WH-1042" like "Online order · [order number]", "Not now"
+  instead of "Back" on book-in, and `till-collect`'s "Tick each item as you
+  hand it over".
+- Logged, not changed: `mv-ready` retitled "one still to do" (it follows from
+  MV3); `rs-delivery` still sits in the row "Checking the invoice"; the
+  `ws-history` box still lists "Home page, Theme colour" and "Going back puts
+  that version in the editor", as W1 left it; `till.mjs` copies the storage
+  list from `diary.mjs` (it isn't exported); `job-checklist` shows the
+  "Working: Alex Morgan · Switch" bar while the sidebar still says "Sign out"
+  — both are right for different devices (a shared workshop computer checks
+  out; Alex's own tablet signs out), so the diary's shared sidebar is left.
+- Implementer choices the review accepted: the switch-over morning's website
+  step is the current step, with "Turn it on" (wording from `website.mjs`);
+  deferred Settings folds are still drawn on the deferred boards that open
+  them; W3's "Wheelhouse sets up your own address for you".

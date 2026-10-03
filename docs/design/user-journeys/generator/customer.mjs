@@ -114,10 +114,13 @@ const c2wRow = (stage) => otherRow('Order', `Cycle to Work · [Bike] · ${stage 
 function history(filter = 'Everything', empty = false, c2w = '') {
   const pills = `<div role="group" aria-label="Show" style="display: flex; gap: 6px; flex-wrap: wrap">${(lightspeedShop() ? ['Everything', 'Jobs', 'Messages'] : ['Everything', 'Jobs', 'Sales', 'Messages']).map((t) => pill(t, t === filter)).join('')}</div>`;
   if (empty) return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 17px; font-weight: 700">History</span><div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 16px; border: 2px dashed ${C.border}; border-radius: 10px; text-align: center"><span style="font-size: 16px; font-weight: 700">Nothing yet</span>${note('Jobs, sales and messages show here, newest first.')}${button('New job', { variant: 'default' })}</div></div>`, 'flex-grow: 1; min-width: 0');
-  const open = mj().filter((j) => j.key !== 'ready');
-  const past = mj().filter((j) => j.key === 'ready');
-  const rows = `${subHead('Open now')}${open.slice(0, 3).map(jobRow).join('')}${c2w === 'open' ? c2wRow('open') : ''}
-${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${past.slice(0, 1).map(jobRow).join('')}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', `[date] · [what came back]${atShop()}`, mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
+  // UX walk-through 9 L5 (Customer service 12): a Ready job is still open —
+  // the bike is waiting to be collected — so it sits under "Open now",
+  // newest first with the others, not under "Earlier".
+  const shownJobs = new Set([...mj().filter((j) => j.key !== 'ready').slice(0, 3), ...mj().filter((j) => j.key === 'ready').slice(0, 1)]);
+  const open = mj().filter((j) => shownJobs.has(j));
+  const rows = `${subHead('Open now')}${open.map(jobRow).join('')}${c2w === 'open' ? c2wRow('open') : ''}
+${subHead('Earlier, newest first')}${c2w === 'collected' ? c2wRow('collected') : ''}${lightspeedShop() ? '' : `${otherRow('Refund', 'Refund · Till B1', `[date] · [what came back]${atShop()}`, mono('−[£]', 'font-size: 15px'))}${saleRow()}`}${otherRow('Text', 'Bike ready', '[date] · sent to ' + MAYA.phone)}${lightspeedShop() ? '' : otherRow('Credit', 'Store credit added', '[date] · [reason] · by [name]', mono('+[£]', 'font-size: 15px'))}
 <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Show all ([n])</a>`;
   return card(`<div style="padding: 14px 18px; display: flex; flex-direction: column; gap: 6px">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><span style="font-size: 17px; font-weight: 700">History</span>${pills}</div>

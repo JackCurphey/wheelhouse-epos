@@ -94,8 +94,9 @@ const progressBoard = (failed = false) => movePage(section('Bringing your data a
 
 // The plain summary: what came across, and how many need a look.
 const count = (n) => mono(n, 'font-size: 15px');
-// Audit M5: say what "Next: run alongside" does to the tills.
-const nextLine = `<p style="margin: 0; text-align: right; font-size: 14px; color: ${C.muted}">Running alongside puts every till into practice until switch-over day.</p>`;
+// Audit M5's line on what running alongside does to the tills is gone:
+// practice mode is dropped (Moving from Citrus Lime, later change, issue #116
+// question 4; "Draw the decisions" MV2).
 const summaryBoard = () => movePage(`${section('Here’s what came across', `${list([
     line('Products', `${count('[n]')} brought across`, tag('All in')),
     line('Stock levels', `${count('[n]')} brought across`, tag('All in')),
@@ -103,8 +104,7 @@ const summaryBoard = () => movePage(`${section('Here’s what came across', `${l
     line('Sales', `${count('[n]')} brought across, back to [date]`, tag('All in')),
     line('Workshop jobs', `${count('[n]')} brought across`, tag('[n] need a look', 'warn')),
   ])}
-<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 6px">${button('Next: run alongside', { variant: 'default' })}${button('Look at the [n]')}</div>
-${nextLine}`, helpLink)}`);
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 6px">${button('Next: run alongside', { variant: 'default' })}${button('Look at the [n]')}</div>`, helpLink)}`);
 
 // The rows that didn't fit: say why, fix it or leave it out.
 const fixRow = (what, why) => line(what, why, `<span style="display: flex; gap: 8px">${named(button('Leave it out', { variant: 'default' }), `Leave out ${what}`)}${named(button('Fix', { variant: 'default' }), `Fix ${what}`)}</span>`);
@@ -117,26 +117,26 @@ ${list([fixRow('[Job number]', 'The customer on this job isn’t in the customer
 // Audit M3: when every row is fixed or left out.
 const sortedBoard = () => movePage(section('Everything’s sorted', `${note('Everything that fitted is in. The ones you left out are listed under Settings › Office › Your data, to add by hand when you like.')}
 ${list([line('Left out', `${count('[n]')} rows`, link('See them'))])}
-<div style="display: flex; justify-content: flex-end; padding-top: 6px">${button('Next: run alongside')}</div>
-${nextLine}`, helpLink));
+<div style="display: flex; justify-content: flex-end; padding-top: 6px">${button('Next: run alongside')}</div>`, helpLink));
 
 // ---------- Stage 2: run alongside, with a weekly refresh (decision 3) ----------
-// UX walk-through 4 M4: Today's Tills card says the till is in practice.
-const todayRefresh = () => withMoveNav(today({ refresh: true, practice: true, as: OWNER }), 'today');
+// Today with the refresh card. Practice mode is dropped (issue #116 question
+// 4; "Draw the decisions" MV7), so the Tills card is the usual one.
+const todayRefresh = () => withMoveNav(today({ refresh: true, practice: false, as: OWNER }), 'today');
 // Audit M1: the refresh drop zone is on the card; Today's "Refresh now"
 // opens it. H3: the note says what "Changed in both" does.
 // UX walk-through 4 M5: the refresh remembers every import decision, and says
-// how many rows are still left out. M4: no float check or Close the day in
-// practice. H3 (option 1): no automatic messages to customers until
-// switch-over day; a job or booking says "Not sent — practice".
+// how many rows are still left out. H3 (option 1): no automatic messages to
+// customers until switch-over day; a job or booking says "Not sent — before
+// switch-over". M4's practice Tills section is gone: practice mode is dropped
+// (issue #116 question 4; "Draw the decisions" MV1).
 const alongsideBoard = () => movePage(`${section('Weekly refresh', `${list([
     line('Every [day]', 'Last refreshed [date] · next [date]', link('Change day')),
   ])}
 ${smallDrop('Drop this week’s files here')}
 ${note('Download the same files from Citrus Lime. Only what changed comes across, and what you did in Wheelhouse stays — except where both changed the same thing: Citrus Lime’s kept until switch-over.')}
 ${note('Every refresh remembers what you decided when you brought your data across. Rows you left out stay out, and their changes don’t come in. A customer you merged takes changes from both Citrus Lime records.')}`, helpLink)}
-${section('Tills', list([line('Every till is in practice', 'Until switch-over day · not real money · no float check or Close the day', tag('Practice', 'grey'))]))}
-${section('Messages to customers', list([line('None go out until switch-over day', 'Where one would have gone, the job or booking says “Not sent — practice” · you can still send one by hand', tag('Off', 'grey'))]))}
+${section('Messages to customers', list([line('None go out until switch-over day', 'Where one would have gone, the job or booking says “Not sent — before switch-over” · you can still send one by hand', tag('Off', 'grey'))]))}
 ${section('What the last refresh changed', `${list([
     line('Came across', `${count('[n]')} new products · ${count('[n]')} price changes · ${count('[n]')} new customers`),
     line('Changed in both — Citrus Lime’s kept', count('[n]'), link('See them')),
@@ -179,8 +179,9 @@ const bothPopup = () => popup('both-title', 'Changed in both', 'Refresh on [date
 const bothBoard = () => overlay(alongsideBoard(), bothPopup());
 
 // ---------- Decision 7: switch over — a checklist that ticks itself ----------
-// Then the owner picks the day; that morning: one last refresh, practice
-// sales cleared, tills made real; then the first full trading week.
+// Then the owner picks the day; that morning: one last refresh, then the
+// website goes on; the tills are real from the first sale (issue #116
+// question 4); then the first full trading week.
 const tick = (done) => `<span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; ${done ? `background: ${C.okBg}; color: ${C.successInk}` : `border: 2px solid ${C.input}; box-sizing: border-box`}">${done ? icon('check', 15) : ''}</span>`;
 // Audit L2: the chip first, then any link, on every row.
 const readyRow = (t, sub, done, action = '') => line(t, sub, `<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">${done ? tag('Done') : tag('Not yet', 'grey')}${action}</span>`, tick(done));
@@ -188,7 +189,6 @@ const readyRow = (t, sub, done, action = '') => line(t, sub, `<span style="displ
 const weekPill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-width: 64px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`;
 const weeksPopup = () => popup('wk-title', 'Matching weeks before switch-over', 'The weekly check must match this many weeks in a row', `<div role="group" aria-label="Weeks in a row" style="display: flex; flex-wrap: wrap; gap: 8px">${weekPill('2', true)}${weekPill('3')}${weekPill('4')}${weekPill('Other…')}</div>
 ${note('2 proves a refresh came across cleanly twice running. More weeks take in a month-end, but the move takes longer.')}`, `${button('Cancel', { variant: 'default' })}${button('Save')}`, 520);
-// UX walk-through 4 L1: Jack Lewis is "you", so he isn't listed twice.
 // H2 (option 1): the website is made ready, not moved — it goes on during
 // switch-over morning (this changes what Moving 7's fourth item means). It
 // ticks when the website's three-step start is done, payments are connected,
@@ -200,33 +200,36 @@ const READY = (all) => [
   readyRow('The weekly check matched 2 weeks in a row', '2 of 2 so far', true, link('Change')),
   readyRow('The card machine is connected', `Settings › Front desk › Payments · ${SHARED}`, true),
   readyRow('A float is set', `Settings › Front desk › End of day · ${SHARED}`, true),
-  readyRow('Everyone has made a practice sale', all ? 'Jo Taylor, Alex Morgan and you' : 'Jo Taylor and you have · Alex Morgan hasn’t yet', all, all ? '' : link('Remind Alex')),
   readyRow('The website is ready', `It goes on during switch-over morning · until then only your staff can see it · ${SHARED}`, all, all ? '' : link('Open Website')),
 ];
-const READY_COUNT = (all) => all ? 5 : 3; // ticked, of the 5 above
+// "Everyone has made a practice sale" is gone: practice mode is dropped
+// (issue #116 question 4; "Draw the decisions" MV3).
+const READY_COUNT = (all) => all ? 4 : 3; // ticked, of the 4 above
 const readyBoard = (all) => movePage(section('Before you switch over', `${note(all ? 'Everything’s ready. Pick the day — it can be any day the shop is open.' : 'Each of these ticks itself when it’s done. Once they’re all ticked, you pick the day.')}
-<p role="status" style="margin: 0; font-size: 14px; font-weight: 600">Ready to switch over: ${mono(String(READY_COUNT(all)))} of ${mono('5')}</p>
+<p role="status" style="margin: 0; font-size: 14px; font-weight: 600">Ready to switch over: ${mono(String(READY_COUNT(all)))} of ${mono('4')}</p>
 ${list(READY(all))}
 <div style="display: flex; justify-content: flex-end; padding-top: 6px">${all ? button('Pick the day') : offBtn('Pick the day')}</div>`, helpLink));
 // Audit M6: the next days the shop is open, the first already chosen.
 const openDay = (on) => `<button type="button" aria-pressed="${on}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 56px; padding: 8px 14px; border-radius: 10px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; text-align: left"><span style="font-size: 15px; font-weight: 700">[day]</span><span style="font-size: 13px">[date]</span></button>`;
 const pickDay = () => popup('day-title', 'Pick switch-over day', 'Everything on the checklist is ticked', `<div role="group" aria-labelledby="sw-day" style="display: flex; flex-direction: column; gap: 8px"><span id="sw-day" style="font-size: 14px; font-weight: 600">Switch over on</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${openDay(true)}${openDay(false)}${openDay(false)}${openDay(false)}</div>${link('Another day…')}</div>
-<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">That morning</span><ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.5"><li>One last refresh from Citrus Lime</li><li>Practice sales are cleared, the tills take real money and messages to customers start</li><li>Your website goes on</li></ol></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; font-weight: 600">That morning</span><ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.5"><li>One last refresh from Citrus Lime</li><li>The tills take real money and messages to customers start</li><li>Your website goes on</li></ol></div>
 ${note('Keep Citrus Lime until the first full week — including a weekend — is done on Wheelhouse.')}`, `${button('Cancel', { variant: 'default' })}${button('Switch over on [date]')}`, 600);
-// The morning: three steps, one after another.
-// UX walk-through 4 H2 (option 1): turning the website on is the third step;
+// The morning: two steps, one after another ("Draw the decisions" MV5: no
+// "Clear and go real", issue #116 question 4; MV6: no own-address step,
+// Website management, later change, question 3).
+// UX walk-through 4 H2 (option 1): turning the website on is the last step;
 // Citrus Lime's website keeps selling until then. H3 (option 1): messages to
-// customers start with going real, with no backlog. M4: the first person in
+// customers start on switch-over day, with no backlog. M4: the first person in
 // counts the float ("Count it" only — op-float-check-first).
 const stepRow = (n, t, sub, state, action = '') => line(t, sub, state === 'done' ? tag('Done') : state === 'now' ? action : tag('Next', 'grey'), `<span style="display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; border-radius: 999px; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; ${state === 'done' ? `background: ${C.okBg}; color: ${C.successInk}` : state === 'now' ? `background: ${C.ink}; color: #ffffff` : `background: ${C.mutedBg}; color: ${C.muted}`}">${state === 'done' ? icon('check', 15) : n}</span>`);
 const morningBoard = () => movePage(section('Switch-over day · [date]', `${note('Do this before the first sale of the day. It takes a few minutes.')}
 ${list([
     stepRow(1, 'One last refresh from Citrus Lime', 'Last night’s files · only what changed comes across', 'done'),
-    stepRow(2, 'Clear practice sales and make the tills real', `${mono('[n]')} practice sales go · the practice band goes from every till · messages to customers start, with nothing sent for what happened before`, 'now', button('Clear and go real')),
-    stepRow(3, 'Turn your website on', 'Customers can buy and book on it from now · if you use your own address, point [your address] to it — this can take up to a day', 'next'),
+    stepRow(2, 'Turn your website on', 'Customers can buy and book on it from now', 'now', button('Turn it on')),
   ])}
-${note('The first person to check in counts the float — nothing has been counted in Wheelhouse before.')}`, helpLink));
-// Audit M7: one act, confirmed once.
+${note('The tills take real money and messages to customers start. The first person to check in counts the float — nothing has been counted in Wheelhouse before.')}`, helpLink));
+// Audit M7: one act, confirmed once. Dropped with practice mode (issue #116
+// question 4); only mv-go-real uses it.
 const goReal = () => popup('real-title', 'Clear practice sales and go real?', 'Switch-over day · [date]', `${note('The [n] practice sales are deleted — they were never real money. From now on every till takes real money and the card machine is used. Messages to customers start too — nothing is sent for anything before today.')}`, `${button('Cancel', { variant: 'default' })}${button('Clear and go real')}`, 560);
 
 // The first full trading week, including a weekend (the finish line).
@@ -238,7 +241,9 @@ const weekBoard = (all = false) => movePage(`${section(all ? 'A full week on Whe
 <ol aria-label="The first trading week" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: ${isPhone() ? 'column' : 'row'}; gap: ${isPhone() ? 6 : 8}px">${DAYS7.map((d, i) => dayBox(d, i, all)).join('')}</ol>
 ${list([line('Citrus Lime', all ? 'Switch it off in Citrus Lime when you’re ready · this page leaves the sidebar in a week' : 'Keep it until [date] · nothing needs doing in it')])}`, helpLink)}`);
 
-// ---------- Decision 6: every till is in practice until switch-over ----------
+// ---------- Decision 6 (dropped, issue #116 question 4: practice mode) ----------
+// Kept only for this journey's own canvas; the one canvas lists these as
+// dropped (consolidate/j09.mjs).
 // The card machine isn't used: the practice card step lets staff try both
 // outcomes. Totals come from journey 11's example sale.
 const practiceCard = () => popup('pc-title', 'Card payment · £74.00 · practice', 'The card machine isn’t used in practice', `${note('Try what happens either way. Nothing is charged and nothing goes in the drawer.')}`, `${button('Pretend it’s declined', { variant: 'default' })}${button('Pretend it’s paid')}`, 520);
@@ -302,11 +307,11 @@ export const TITLES = {
   'mv-practice-card': 'A practice card payment: try either outcome',
   'mv-practice-checkin': 'Checked in during practice: no float check', // UX walk-through 4 M4
   'mv-practice-job': 'A job marked ready in practice: “Not sent — practice”', // UX walk-through 4 H3
-  'mv-ready': 'Switch over: the checklist, two still to do',
+  'mv-ready': 'Switch over: the checklist, one still to do',
   'mv-weeks': 'Change how many weeks must match (2 by default)',
   'mv-ready-all': 'Switch over: everything ticked',
   'mv-pick-day': 'Pick switch-over day',
-  'mv-morning': 'Switch-over morning: last refresh, go real, then turn the website on', // UX walk-through 4 H2
+  'mv-morning': 'Switch-over morning: last refresh, then turn the website on', // UX walk-through 4 H2; "Draw the decisions" J8
   'mv-go-real': 'Clear practice sales and go real?',
   'mv-week': 'The first full week on Wheelhouse',
   'mv-week-done': 'A full week done: Citrus Lime can go',

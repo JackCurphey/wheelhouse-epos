@@ -17,3 +17,14 @@ export default {
   'site-ocean': keep(16), // kept: App map 3 — report says a list line "goes against App map 3's 'one extra board'"
   'site-ocean-menu': into('site-ocean', 'App map 3, 10'),
 };
+
+// Decisions drawn as lines, with no old drawing behind them
+// ("Draw the decisions" spec, section 5: A2, A5, A6, A7).
+export const lines = [
+  { on: 'your-settings', text: 'On a workshop computer: Your settings belong to the person who typed their PIN, and switch with them', who: 'Staff and Mechanic', decision: 'Walk-through 8, fix M3' },
+  { on: 'your-settings', text: 'On a workshop computer: no Change PIN', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 3' },
+  { on: 'till-rail', text: 'On a till, the rest of the shop opens as the person checked in by PIN, with their role', who: 'Staff', decision: 'Walk-through 8, fix M6 part 1' },
+  { on: 'staff-app', text: 'On a workshop computer, owner and manager pages open only after an Owner or Manager PIN', who: 'Owner and Manager', decision: 'Walk-through 8, decision 3' },
+  { on: 'till-search', text: 'A job paid online: Paid online · [date], with Hand over in place of Add to basket', who: 'Staff', decision: 'Walk-through 8, decision 8; Collect and pay 5 (H3)' },
+  { on: 'till-search', text: 'A job expected today: Book in', who: 'Staff', decision: 'Walk-through 8, decision 8' },
+];

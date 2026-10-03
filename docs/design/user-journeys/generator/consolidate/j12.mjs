@@ -40,3 +40,23 @@ export default {
   // Overview page
   'overview': keep(3),
 };
+
+// Extra situation lines with no old drawing behind them ("Draw the decisions"
+// spec, section 8: D3, D4, D5).
+export const lines = [
+  // D3 — the diary
+  { on: 'diary', text: 'A workshop computer: the Working: Alex Morgan · Switch bar, and everything done is recorded under that name and role', who: 'Mechanic', decision: 'Walk-through 8, decisions 1 and 4' },
+  { on: 'diary', text: 'A change on another device shows here within a few seconds', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
+  { on: 'diary', text: "A shared-queue job: I'll do this puts it in your column at your next free time; every device shows Taken by Jo Taylor", who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 5' },
+  { on: 'diary', text: 'Me is the person working now; anyone with Works in the workshop gets Me', who: 'Staff and Mechanic', decision: 'Walk-through 8, fix M2' },
+  { on: 'diary', text: 'A workshop computer with nobody working: opens on Everyone', who: 'Staff and Mechanic', decision: 'Walk-through 8, fix M2' },
+  // D4 — the job
+  { on: 'job-overview', text: "A workshop computer: Working: Alex Morgan · Switch in the job's header", who: 'Mechanic', decision: 'Walk-through 8, decision 4' },
+  { on: 'job-overview', text: 'Open on another device: Jo Taylor has this job open', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
+  { on: 'job-overview', text: "Notes: the other person's words arrive as they type", who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
+  { on: 'job-overview', text: "Two people change one line: Keep mine or Keep Alex's", who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 2' },
+  { on: 'job-overview', text: "On a desktop, Add photo: Choose a file or Use my phone (a code to scan opens that line's photo step, no sign-in)", who: 'Mechanic', decision: 'Walk-through 8, decision 6' },
+  { on: 'job-overview', text: 'Who did what, folded: name, what, time; Mark ready records Signed off by Alex Morgan · 15:30', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 7; build plan Q3' },
+  // D5 — the quick look
+  { on: 'job-quick-overview', text: 'After Mark ready: Signed off by Alex Morgan · 15:30 in the hover summary', who: 'Staff and Mechanic', decision: 'Build plan Q3' },
+];

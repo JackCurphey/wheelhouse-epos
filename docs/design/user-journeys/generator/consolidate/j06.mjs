@@ -75,3 +75,9 @@ export default {
   'cw-settings-provider': keep(9), // inferred: not in the merge table; a provider's form box
   'cw-messages': into('set-msg-list', 'C2W 8'),
 };
+
+// Situation lines with no old drawing behind them (draw-the-decisions CW1).
+export const lines = [
+  { on: 'cw-customer-view', text: 'Certificate received: What you pay at collection £[£]', who: 'Customer', decision: 'Cycle to Work 6, 7; walk-through 5 H4' },
+  { on: 'cw-customer-view', text: 'Ready to collect: What you pay at collection £[£]', who: 'Customer', decision: 'Cycle to Work 6, 7; walk-through 5 H4' },
+];

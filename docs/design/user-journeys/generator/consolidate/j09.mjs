@@ -15,16 +15,16 @@ export default {
   'mv-both': keep(25), // inferred: a box over the move page
   'mv-check': into('mv-start', ''),
   'mv-check-result': into('mv-start', ''),
-  'mv-practice-checkin': later('Issue #116 question 4: practice mode dropped'),
-  'mv-practice-sale': later('Issue #116 question 4: practice mode dropped'),
-  'mv-practice-card': later('Issue #116 question 4: practice mode dropped'),
-  'mv-practice-job': later('Issue #116 question 4: practice mode dropped'),
+  'mv-practice-checkin': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
+  'mv-practice-sale': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
+  'mv-practice-card': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
+  'mv-practice-job': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
   'mv-ready': into('mv-start', ''),
   'mv-weeks': keep(21), // inferred: a box with its own choice
   'mv-ready-all': into('mv-start', ''),
   'mv-pick-day': keep(21), // inferred: a box with its own choice
   'mv-morning': into('mv-start', ''),
-  'mv-go-real': later('Issue #116 question 4: practice mode dropped'),
+  'mv-go-real': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
   'mv-week': into('mv-start', ''),
   'mv-week-done': into('mv-start', ''),
 };

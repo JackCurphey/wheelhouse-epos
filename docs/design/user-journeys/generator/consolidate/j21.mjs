@@ -54,3 +54,17 @@ export default {
   'ls-workshop-settings': into('set-workshop-services', 'Lightspeed 10 (M1, M2)'), // Settings › Workshop page
   'ls-customer-ready': into('cp-summary', 'Walk-through 6 H1'), // report: same as j05's cp-summary-ls; owner list names cp-summary
 };
+
+// Extra situation lines with no old drawing behind them ("Draw the decisions"
+// spec, section 17: L1, L2, L4, L5).
+export const lines = [
+  // L1 — the strip keeps the button for its cause (walk-through 6 H2 option 1)
+  { on: 'ls-job-sent', text: 'Ready, Maya still to choose: the strip keeps Choose the customer', who: 'Staff', decision: 'Walk-through 6 H2; Lightspeed shops 10' },
+  { on: 'ls-job-sent', text: 'Ready, not sure it arrived: the strip keeps Check this in Lightspeed', who: 'Staff', decision: 'Walk-through 6 H2; Lightspeed shops 10' },
+  // L4
+  { on: 'ls-job-sent', text: 'Maya said no to £[£]: back to Keep £28.00 or Ask Maya again', who: 'Staff', decision: 'Walk-through 6 M4; Lightspeed shops 12' },
+  // L2
+  { on: 'ls-job-check', text: "The box's first sentence follows the cause", who: 'Staff', decision: 'Walk-through 6 H2; Lightspeed shops 10' },
+  // L5
+  { on: 'ls-customer-pick', text: "Changing Maya's Lightspeed customer: WH-1042's unpaid work order moves to the customer you choose; paid work orders stay where they are", who: 'Staff', decision: 'Walk-through 6 M3; Lightspeed shops 4' },
+];

@@ -29,3 +29,9 @@ export default {
   'ms-till-move': keep(9),
   'ms-till-setup': into('till-setup', ''), // journey B's till setup
 };
+
+// "Draw the decisions" SI1: a decision drawn as a line (spec B0). It goes on
+// ms-switch-open, not op-today, because op-today stays a one-shop board.
+export const lines = [
+  { on: 'ms-switch-open', text: 'While [Second site] is being set up: [Second site] · [n] steps to get it ready', who: 'Owner', decision: 'Walk-through 7 H1 (as taken)' },
+];

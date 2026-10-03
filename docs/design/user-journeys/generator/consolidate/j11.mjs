@@ -48,13 +48,15 @@ export default {
   'till-job-deposit': into('till-deposit', 'Till 11'),
   'till-job-balance': into('till-sale', SALE),
   'till-collect': keep(9),
+  'till-book-in': keep(9), // walk-through 8 decision 8: two new till screens (Draw the decisions T1)
+  'till-hand-over-job': keep(9), // walk-through 8 decision 8; the same layout as till-collect
   // Cycle to Work
   'till-c2w-pick': keep(21),
-  'till-c2w': into('till-sale', SALE),
+  'till-c2w': into('till-sale', SALE + '; Cycle to Work 5'),
   'till-c2w-pay': into('till-pay', 'Till 6, 15'),
   'till-c2w-extra': into('till-pay', 'Till 6, 15'),
   'till-c2w-paid': into('till-receipt', 'Till 7'),
-  'till-c2w-deposit': into('till-sale', SALE),
+  'till-c2w-deposit': into('till-sale', SALE + '; Cycle to Work 5'),
   // When the internet drops
   'till-offline': into('till-sale', SALE),
   'till-offline-long': into('till-sale', SALE),

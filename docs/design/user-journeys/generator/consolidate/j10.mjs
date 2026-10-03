@@ -22,7 +22,7 @@ export default {
   'op-today-two': into('op-today', TODAY),
   'op-today-staff': into('op-today', TODAY),
   'op-today-late': into('op-today', TODAY),
-  'op-today-practice': later('Issue #116 question 4: practice mode dropped'),
+  'op-today-practice': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
   'op-today-c2w': into('op-today', TODAY),
   'op-today-staff-lightspeed': into('op-today', TODAY),
   'desk': into('diary', ''), // inferred: link-only old journey 12 board "Today's workshop" (stage2.mjs:141)

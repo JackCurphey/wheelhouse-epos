@@ -45,3 +45,8 @@ export default {
   'set-data-export': keep(1),
   'set-data-history': keep(14), // kept: Management oversight 1 — "the histories already drawn (Settings changes…) stay"
 };
+
+// "Draw the decisions" S4: a decision drawn as a line (spec B0).
+export const lines = [
+  { on: 'set-staff-person', text: 'Uses a workshop computer: needs a PIN, not only people with Can use the till', who: 'Owner', decision: 'Walk-through 8, decision 1' },
+];
