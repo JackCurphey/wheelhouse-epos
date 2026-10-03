@@ -13,11 +13,11 @@ export default {
   'ops-log-refused': into('ops-log', ''),
   'ops-first-note': later('Issue #116 question 5: oversight extras later'),
   'ops-your-settings': later('Issue #116 question 5: oversight extras later'),
-  'ops-my-activity': later('Issue #116 question 5: oversight extras later'),
+  'ops-my-activity': later('Issue #116 question 5: "What Wheelhouse records about you" and See my own activity (audit H2) later'),
   'ops-today-alerts': later('Issue #116 question 5: oversight extras later'),
   'ops-alert-settings': later('Issue #116 question 5: oversight extras later'),
   'ops-devices': later('Issue #116 question 5: oversight extras later'),
-  'ops-till-checkout': later('Issue #116 question 5: oversight extras later'),
+  'ops-till-checkout': into('till-sale', 'Management oversight 6 H5'), // inferred: the button is on the till ("Check out Jo Taylor"), not one of the deferred extras
   'ops-devices-signout': later('Issue #116 question 5: oversight extras later'),
   'ops-devices-signed-out': later('Issue #116 question 5: oversight extras later'),
   'ops-person': later('Issue #116 question 5: oversight extras later'),

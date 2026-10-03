@@ -1,7 +1,8 @@
 // Checks every board on the one canvas that build.mjs wrote (out/project/):
 //   1. each board's page fits the size the canvas gives it (no scrollbars,
 //      nothing pushed past its edge), and
-//   2. every link between boards opens a board that is on the canvas.
+//   2. every link between boards opens a board that is on the canvas, and
+//   3. no note says "undefined" or sits on top of another note.
 // Run after `node build.mjs`, from any machine:  node fitcheck-canvas.mjs
 // Exits 1 and lists the boards that fail. Font downloads can stall: each page
 // waits at most 6 s for fonts.
@@ -12,6 +13,13 @@ const dir = new URL('./out/project/', import.meta.url);
 const canvas = JSON.parse(readFileSync(new URL('canvas.json', dir), 'utf8'));
 const files = new Set(Object.keys(canvas.boards));
 const bad = [];
+const spots = new Map();
+for (const [k, n] of Object.entries(canvas.notes ?? {})) {
+  if (/\bundefined\b/.test(n.text)) bad.push(`note ${k} says "undefined"`);
+  const at = `${n.x},${n.y}`;
+  if (spots.has(at)) bad.push(`note ${k} sits on top of note ${spots.get(at)}`);
+  spots.set(at, k);
+}
 const b = await chromium.launch();
 for (const f of canvas.order) {
   const { w, h } = canvas.boards[f];

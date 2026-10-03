@@ -307,16 +307,20 @@ for (const j of journeys) if (!PARTS.some((P) => P.ids.includes(j.id))) throw ne
 // folded drawing's own title; "who" its role; then the decision it came from.
 const situations = new Map();
 for (const x of allScreens) { const e = plan.get(x.id); if (e.kind === 'into') { const own = ownerOf(x.id); if (!situations.has(own)) situations.set(own, []); situations.get(own).push({ x, decision: e.decision }); } }
+// Release 1 pictures (d()) carry no title or role in journeys.mjs; theirs are
+// in shots/screens.json.
+const titleOf = (x) => x.title ?? designs[x.id]?.title ?? x.id;
+const roleOfScreen = (x) => x.role ?? (designs[x.id] ? roleOf(designs[x.id].role) : '');
 const situationText = (id) => {
   const list = situations.get(id) ?? [];
   if (!list.length) return null;
   const home = byId.get(id).journey.id;
-  return [`Situations of this screen (${list.length})`, ...list.map(({ x, decision }) => `• ${x.title} — ${x.role}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`)].join('\n');
+  return [`Situations of this screen (${list.length})`, ...list.map(({ x, decision }) => `• ${titleOf(x)} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`)].join('\n');
 };
 const NOTE_LINE = 30;
 const laterText = (j) => {
   const list = j.rows.flatMap((r) => r.screens).filter((x) => plan.get(x.id).kind === 'later');
-  return list.length ? [`Later — not drawn here (${list.length})`, ...list.map((x) => `• ${x.title} — ${plan.get(x.id).reason}`)].join('\n') : null;
+  return list.length ? [`Later — not drawn here (${list.length})`, ...list.map((x) => `• ${titleOf(x)} — ${plan.get(x.id).reason}`)].join('\n') : null;
 };
 let numbered = 0;
 const NUMS = Object.fromEntries(journeys.map((j) => [j.id, j.num ?? String(++numbered).padStart(2, '0')]));
@@ -338,9 +342,9 @@ journeys.filter((j) => P.ids.includes(j.id)).forEach((j) => {
   let noteDepth = 0;
   const boardH = (scr) => Math.max(...variantsOf(j, scr).map((o) => boards[o.file]?.h ?? 0));
   for (const row of j.rows) {
-    notes[`${j.id}_s${Object.keys(notes).length}`] = { x, y: y - 240, text: row.label, w: 520, size: 'l', bold: true, fill: 'gray', maxH: 150 };
     const kept = row.screens.filter((x) => isKept(x.id));
-    if (!kept.length) continue;
+    if (!kept.length) continue; // a row whose screens all became situations elsewhere
+    notes[`${j.id}_s${Object.keys(notes).length}`] = { x, y: y - 240, text: row.label, w: 520, size: 'l', bold: true, fill: 'gray', maxH: 150 };
     for (const scr0 of kept) {
       const scr = { ...scr0 };
       const x0 = x;
@@ -430,8 +434,6 @@ const overview = `<div style="width: ${OW}px; height: ${OH}px; box-sizing: borde
 <div style="font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #3f4d33">WHEELHOUSE</div>
 <h1 style="margin: 0; font-size: 48px; line-height: 1.1; font-weight: 700; letter-spacing: -1px">User journeys — ${esc(P.short.toLowerCase())}</h1>
 <p style="margin: 0; font-size: 19px; line-height: 1.5; color: #3d4038; max-width: 980px">Every journey on one canvas, one board per real screen. The other situations of a screen — empty, saved, failed, the Staff view, all shops and so on — are listed under its board instead of drawn (issue #116). Screens put off for later are listed at the end of their journey. The table counts the ${all} screens drawn here, in ${counts.length} journeys. Scroll down to see the journeys laid out left to right in the order they happen. In Play, click a row to jump to its first screen; each board's "Tablet and phone" link opens its journey's own canvas, where every drawing is kept.</p>
-<div style="display: flex; flex-wrap: wrap; gap: 12px">
-</div>
 </div>
 <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px">
 ${legend.map(([st, text]) => `<div style="padding: 18px 20px; border-radius: 12px; background: #fbfbf9; border: 1px solid #dcdbd3; display: flex; flex-direction: column; gap: 10px">

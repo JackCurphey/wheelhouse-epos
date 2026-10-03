@@ -38,6 +38,6 @@ export default {
   'tk-start': keep(9),
   'tk-start-category': into('tk-start', ''),
   'tk-count': keep(27),
-  'tk-diff': into('tk-count', ''), // inferred: the check step of the same count
-  'tk-applied': into('tk-count', ''),
+  'tk-diff': keep(3), // its own step: a list of differences, largest first
+  'tk-applied': into('tk-diff', ''),
 };

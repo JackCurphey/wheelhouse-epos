@@ -90,3 +90,19 @@ Kept in this file as the work goes.
 - The 1–2 new screens the back-office report says the fixed website needs
   (editing text and photos) are not drawn: drawing new screens is outside
   step 3 and changes the design, which is Jack's to approve.
+- Fresh review (3 Oct) fixes: Release 1 pictures take their title and role
+  from `shots/screens.json` (the lists said "undefined"); a row whose
+  screens all moved elsewhere gets no label (labels were stacking);
+  `set-data-history` kept (Management oversight 1: the histories stay);
+  Accounts software is its own page (`rp-accounts-connect` kept, Reports
+  and accounts 4), not a situation of Download everything; `tk-diff` and
+  `ws-start-look` kept as their own steps; `fr-today-moving` later (its
+  practice wording is out of date after question 4); `ops-till-checkout`
+  folded into the till page (Oversight 6 H5 is not one of the deferred
+  extras). `fitcheck-canvas.mjs` now also fails on a note saying
+  "undefined" or two notes at the same spot. Result: 202 kept, 211 files.
+- Left as found, for Jack: some kept boards still show content the 3 Oct
+  answers put off (`ws-page` and `ws-history` show the editor's Publish and
+  History; `rs-delivery` shows "waiting for its invoice"). Changing them is a
+  redraw. Decision references in the lists are copied per merge group from
+  the reports, so a line can carry its group's whole list.

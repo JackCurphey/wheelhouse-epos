@@ -4,7 +4,7 @@ import { keep, into, later } from './plan.mjs';
 
 export default {
   'fr-today': keep(7),
-  'fr-today-moving': into('fr-today', ''),
+  'fr-today-moving': later('Issue #116 question 4: practice mode dropped, so its "tills in practice" wording is out of date; one checklist while moving is still to draw (consolidation-back-office.md finding 5)'),
   'fr-step': into('set-pay-ways', ''), // inferred: the Payments page with the Getting started banner
   'fr-done': into('fr-today', ''),
   'set-list': into('set-till-quick', ''), // inferred: the Settings frame on a phone (rule 3: other sizes become written rules)
@@ -43,5 +43,5 @@ export default {
   'set-msg-new': keep(9), // inferred: a box with its own form
   'set-msg-alongside': into('set-msg-list', ''),
   'set-data-export': keep(1),
-  'set-data-history': into('set-data-export', ''),
+  'set-data-history': keep(14), // kept: Management oversight 1 — "the histories already drawn (Settings changes…) stay"
 };
