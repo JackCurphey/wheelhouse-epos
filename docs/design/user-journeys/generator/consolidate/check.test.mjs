@@ -48,3 +48,8 @@ test('every situation line says what is different (README rule 2)', () => {
   const bad = [...plan].filter(([, e]) => e.kind === 'into' && !String(e.diff || '').trim()).map(([id]) => id);
   assert.deepEqual(bad, [], `${bad.length} lines have no "what's different"`);
 });
+
+test('every "same" points at a screen that is itself a situation line', () => {
+  const bad = [...plan].filter(([, e]) => e.kind === 'same' && plan.get(e.id)?.kind !== 'into').map(([id, e]) => `${id} → ${e.id}`);
+  assert.deepEqual(bad, []);
+});

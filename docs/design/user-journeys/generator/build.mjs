@@ -97,7 +97,7 @@ const byId = new Map(allScreens.map((x) => [x.id, x]));
 for (const x of allScreens) if (!plan.has(x.id)) throw new Error(`no one-canvas plan for ${x.id} (consolidate/${x.journey.id}.mjs)`);
 const isKept = (id) => plan.get(id)?.kind === 'keep';
 // The kept screen a screen's situation belongs to (itself when kept).
-const ownerOf = (id) => { const e = plan.get(id); return e.kind === 'keep' ? id : e.kind === 'into' ? ownerOf(e.id) : null; };
+const ownerOf = (id) => { const e = plan.get(id); return e.kind === 'keep' ? id : e.kind === 'into' || e.kind === 'same' ? ownerOf(e.id) : null; };
 // Sizes shown for a kept screen: the plan's, else rule 3 — phone for a
 // customer page, otherwise desktop (or the one-off large board).
 const shownSizes = (x) => {
@@ -318,11 +318,15 @@ const situationText = (id) => {
   const extra = extraLines.filter((l) => l.on === id);
   if (!list.length && !extra.length) return null;
   const home = byId.get(id).journey.id;
+  // Lightspeed lines wait for after the trading week (Lightspeed shops, later
+  // change of 3 Oct, walk-through 6 M4): tagged where they sit.
+  const waits = (line, j21) => (j21 || /Lightspeed/.test(line) ? `${line} · ${LATER_TAG}` : line);
   return [`Situations of this screen (${list.length + extra.length})`,
-    ...list.map(({ x, decision, diff }) => `• ${titleOf(x)}${diff ? `: ${diff}` : ''} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`),
-    ...extra.map((l) => `• ${l.text} — ${l.who}${l.decision ? ` · ${l.decision}` : ''}`)].join('\n');
+    ...list.map(({ x, decision, diff }) => waits(`• ${titleOf(x)}${diff ? `: ${diff}` : ''} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`, x.journey.id === 'j21')),
+    ...extra.map((l) => waits(`• ${l.text} — ${l.who}${l.decision ? ` · ${l.decision}` : ''}`, l.file === 'j21.mjs'))].join('\n');
 };
 const NOTE_LINE = 30;
+const LATER_TAG = 'after the trading week (build-plan question 5)';
 const laterText = (j) => {
   const list = j.rows.flatMap((r) => r.screens).filter((x) => plan.get(x.id).kind === 'later');
   return list.length ? [`Later — not drawn here (${list.length})`, ...list.map((x) => `• ${titleOf(x)} — ${plan.get(x.id).reason}`)].join('\n') : null;

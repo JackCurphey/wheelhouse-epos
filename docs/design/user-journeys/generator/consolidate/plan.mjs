@@ -7,6 +7,8 @@
 //   into(id, decision, diff) a line in that kept screen's situation list (rule 1);
 //                           diff = what's different from the kept board, in a few
 //                           words taken from the old drawing (rule 2)
+//   same(id)                the same drawing as `id` (itself an into()), so it
+//                           adds no line of its own ("Draw the answers" Z0)
 //   later(reason)           deferred (3 Oct answers or the build plan): listed
 //                           on its journey, not drawn
 // A journey file may also export `lines`: extra situation-list lines that
@@ -22,6 +24,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const keep = (block, { sizes } = {}) => ({ kind: 'keep', block, sizes });
 export const into = (id, decision = '', diff = '') => ({ kind: 'into', id, decision, diff });
 export const later = (reason) => ({ kind: 'later', reason });
+export const same = (id) => ({ kind: 'same', id });
 
 // The numbered list under "### Building blocks" in ../../README.md.
 export const blocks = () => {
