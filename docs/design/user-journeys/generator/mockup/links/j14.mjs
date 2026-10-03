@@ -44,7 +44,8 @@ export default {
     Edit: EDIT_PRODUCT,
     'Edit details': EDIT_DETAILS,
     'Adjust stock': go('st-adjust'),
-    'Open job WH-1042': go('job-overview'),
+    // WH-1042 is in the workshop: its In the workshop page (third walk, walk-through 9 M1).
+    'Open job WH-1042': go('job-mechanic', 'Showing the mechanic’s view of WH-1042 in the workshop: the Staff view of that stage isn’t drawn separately.'),
     'Open sale B1-[0000]': go('till-sale-detail'),
     'Open the delivery from [Supplier]': go('rs-delivery'),
     'Open the stock take of [Category]': go('tk-applied'),
@@ -119,4 +120,6 @@ export default {
   'tr-receive': { 'Book in [n] items': go('rs-booked'), 'Problem with Shimano brake pads': go('tr-problem'), 'Problem with [Product]': go('tr-problem') },
   'tr-problem': { 'Mark as missing': go('tr-receive'), 'Book in [n] items': STAY, 'Problem with Shimano brake pads': STAY, 'Problem with [Product]': STAY },
   'tr-today-short': { Open: go('tr-incoming') },
+  // Staff stay on the Staff pages: no cost or margin (Reports 5; third walk, walk-throughs 3 M1, 9 M2).
+  'st-list-staff': Object.fromEntries(['Shimano brake pads B05S-RX · [Category] · [Supplier]', 'Shimano brake pads B05S-RX · [Category] · [Supplier] · £28.00', 'Shimano brake pads B05S-RX · [Category] · [Supplier] · £[price]', '[Product] [Supplier code] · [Category] · [Supplier] · £[price]', '[Product] [Supplier code] · [Category] · [Supplier]'].map((k) => [k, go('st-product-staff')])),
 };

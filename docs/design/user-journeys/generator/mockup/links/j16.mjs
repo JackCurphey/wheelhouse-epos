@@ -22,6 +22,7 @@ export default {
   },
   // The till with Close the day in the bar
   'eod-entry': {
+    'Take payment': STAY, // the basket is empty at closing (third walk, walk-through 10 L2)
     'Add a customer (optional)': go('till-customer'),
     'Standard service Labour · 60 min £65.00': STAY,
     'Fit & adjust brakes Labour · 30 min £18.00': STAY,
@@ -38,5 +39,6 @@ export default {
   'eod-paidout': { 'Take it out · open the drawer': go('eod-banking') },
   'eod-card': { 'Match to a sale': notDrawn('Choosing the sale a card-machine-only payment belongs to (Close the day, card step)') },
   'eod-finish': { 'Close the day and show the report': go('eod-z') },
-  'eod-z': { 'see Reports': go('rp-takings'), 'Email it': outside('The day’s report, emailed'), Email: outside('The day’s report, emailed') },
+  // Close after closing the day goes to the till (third walk, walk-throughs 2 L1, 10 L3).
+  'eod-z': { Close: go('till-empty'), 'see Reports': go('rp-takings'), 'Email it': outside('The day’s report, emailed'), Email: outside('The day’s report, emailed') },
 };

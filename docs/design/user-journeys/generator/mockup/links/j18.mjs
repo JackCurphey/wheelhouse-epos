@@ -81,7 +81,9 @@ export default {
     'Change logo': outside('This computer’s files, to choose the logo'),
     'Choose another colour': notDrawn('Choosing another main colour in set-up step 2'),
   },
-  'ws-start-products': { 'Make my website': go('ws-page') },
+  // While a move from Citrus Lime is running the website waits for switch-over
+  // morning (2 Oct walk-through decisions, 4 H2; third walk, walk-through 4 M1).
+  'ws-start-products': { 'Make my website': go('ws-page-moving', 'Showing the Website page while a move from Citrus Lime is running: Turn it on waits for switch-over morning.') },
   'ws-start-products-answered': { 'Make my website': go('ws-page'), 'Change what your website started with': go('ws-start-products') },
   'ws-start-shopify': { Next: go('ws-shopify-check') },
   // The Website page's situations.

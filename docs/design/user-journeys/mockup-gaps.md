@@ -2,7 +2,7 @@
 
 Built by `generator/mockup/gaps.mjs` from the clickable mockup's wiring (issue #116 step 5).
 
-## Pages a button leads to that no drawing shows yet (95)
+## Pages a button leads to that no drawing shows yet (96)
 
 In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack to decide on: draw it, make it a line on an existing screen, or leave it for the build.
 
@@ -58,7 +58,7 @@ In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack 
 - **Oliver Chen’s answered conversation, opened in Messages** — from Account, history and reminders: Oliver Chen
 - **Pages — later (issue #116 question 2)** — from Website management: Pages Home, About us, Contact us, Collection and returns, Privacy, Cookies
 - **Payment link: texting or emailing the customer a link to pay** — from Selling at the till: Payment link Text or email the customer a link to pay — once set up
-- **Refunded: what the till shows once a refund is done** — from Selling at the till: Refund £28.00 · open the drawer; Selling at the till: Add [£] to store credit
+- **Refunded: what the till shows once a refund is done** — from Selling at the till: Refund £28.00 to the card; Selling at the till: Refund £28.00 · open the drawer; Selling at the till: Add [£] to store credit
 - **Remove a service, in Settings › Workshop › Services** — from Account, history and reminders: Remove
 - **Retiring a scheme provider — what it asks first** — from Cycle to Work: Retire [Provider]
 - **Settings › Office after checking Jo Taylor out: Till B1 with nobody checked in** — from Management oversight: Check out Jo Taylor
@@ -82,7 +82,6 @@ In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack 
 - **The product page collecting from [Second site]** — from Find the shop and browse the website: Collect from [Second site] instead; Buy online, or click and collect: Collect from [Second site] instead
 - **The products behind a line of Margin and stock value (stock written off, counted over or under, no cost) — a filtered list** — from Reports and accounts: See them and add a cost; Reports and accounts: See the stock takes counted under; Reports and accounts: See the stock takes counted over (and 6 more)
 - **The question’s own page before the shop replies (only the answered page, ac-question, is drawn)** — from Account, history and reminders: Message [The first line of Maya’s question] [date] · waiting for a reply Sent ›; Account, history and reminders: [The first line of Maya’s question] Message · [date] · waiting for a reply Sent ›
-- **The sale opened on a phone till (the phone till shows it only as a bottom bar)** — from End-of-day cash-up: Open the sale
 - **The sale with a new customer just added (only Maya Patel’s row is drawn)** — from Selling at the till: Add new customer to sale
 - **The shop’s booking terms page** — from Book a repair: booking terms; Account, history and reminders: booking terms
 - **The shop’s Collection and returns page (Words and photos, Website 3 Oct)** — from App map and navigation: Collection and returns; Signing in and access: Collection and returns; Find the shop and browse the website: Collection and returns (and 10 more)
@@ -98,11 +97,13 @@ In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack 
 - **The website editor — later (issue #116 question 2)** — from Website management: Review in the editor
 - **The Website page after discarding: no unpublished changes** — from Website management: Discard changes
 - **The whole sale opened from the bar along the bottom on a phone (drawn only with a warning, a discount or a customer)** — from Selling at the till: Open the sale
+- **This job’s page: only WH-1042’s pages are drawn** — from App map and navigation: Giant Escape 2, Gear adjustment, Jamie Brooks, WH-1049, Expected, 09:00–10:00 · gear adjustment; App map and navigation: Brompton C Line, Gear adjustment, Oliver Chen, WH-1052, Change requested, Requested move to 14:00; App map and navigation: Cannondale Quick, Safety check, Aisha Khan, WH-1050, Finished, 11:00–12:00 · safety check (and 653 more)
 - **Web address — later (issue #116 question 3)** — from Website management: Web address [shop-name].wheelhouseepos.com · your free address · Wheelhouse sets up your own address for you
+- **WH-1046’s page (the shared queue’s “I’ll do this” is a line under the diary)** — from App map and navigation: WH-1046 · Standard service; Signing in and access: WH-1046 · Standard service; Book a repair: WH-1046 · Standard service (and 6 more)
 - **Your activity: a person’s own lines — later (issue #116 question 5)** — from Management oversight: See my own activity
 - **Your own booking terms: adding them (Settings › Workshop › Online booking)** — from Book a repair: Use your own
 
-## Story steps a smaller size can't click (22)
+## Story steps a smaller size can't click (21)
 
 The check walks every story at desktop, tablet and phone. At these sizes the drawing has no button for the step, so the story can't be clicked there. Each is for Jack to decide on: draw the button at that size, or accept the longer way round.
 
@@ -112,16 +113,15 @@ The check walks every story at desktop, tablet and phone. At these sizes the dra
 - **Story 4, step 4** (phone): Workshop on `set-staff-invited` — the phone Settings page has no room tabs; Workshop is two taps away, through the Settings list
 - **Story 5, step 18** (phone): Reports on `cw-owed-provider` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
 - **Story 6, step 13** (phone): Send quote on `ls-part-search` — the phone parts sheet has no Send quote, only Done and Close
-- **Story 6, step 18** (phone): Mark ready for collection on `job-checklist` — the phone checklist sheet has only Done and Close; Mark ready is on the job page behind it
 - **Story 7, step 2** (phone): Settings on `op-today` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
 - **Story 7, step 3** (phone): Office on `set-till-quick` — the phone Settings page has no room tabs; Office is two taps away, through the Settings list
 - **Story 7, step 9** (phone): Settings on `tr-sites` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
 - **Story 7, step 10** (phone): Office on `set-till-quick` — the phone Settings page has no room tabs; Office is two taps away, through the Settings list
 - **Story 7, step 12** (phone): Open on `set-staff` — the phone People list has no Open button on each person
-- **Story 7, step 13** (tablet, phone): Shop: Bolton. Choose a shop on `set-staff-person` — the tablet sidebar has no shop chooser; the phone person sheet covers the page and has no shop chooser or menu
+- **Story 7, step 13** (tablet, phone): Shop: Bolton. Choose a shop on `ms-person` — the tablet sidebar has no shop chooser; the phone person sheet covers the page and has no shop chooser or menu
 - **Story 7, step 23** (phone): Reports on `ms-today-all` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
 - **Story 8, step 4** (tablet, phone): Switch on `job-checklist` — the “Working: Alex Morgan · Switch” line is drawn on desktop only
-- **Story 8, step 9** (phone): Mark ready for collection on `job-checklist` — the phone checklist sheet has only Done and Close; Mark ready is on the job page behind it
+- **Story 8, step 8** (phone): Mark ready for collection on `job-checklist` — the phone checklist sheet has only Done and Close; Mark ready is on the job page behind it
 - **Story 11, step 1** (tablet): Shop: Bolton. Choose a shop on `op-today` — the tablet sidebar has no shop chooser
 - **Story 11, step 3** (phone): Reports on `ms-today-all` — the phone menu is drawn for staff only: it has no Office room (Reports, Settings)
 - **Story 11, step 12** (phone): All reports on `rp-day` — the phone day sheet has no All reports link, only Close
@@ -152,7 +152,6 @@ In the mockup these say "this happens outside Wheelhouse".
 - **Shopify’s own admin** — from Website management: Open Shopify
 - **The card machine, pairing with the till** — from Owner setup and onboarding: Connect a card machine
 - **The card machine: key the amount in on it** — from Selling at the till: Machine not answering? Key it in on the machine instead
-- **The card machine: the customer taps the same card** — from Selling at the till: Refund £28.00 to the card
 - **The cash drawer opens** — from Owner setup and onboarding: Open the drawer
 - **The customer’s email app, writing to the shop** — from Find the shop and browse the website: [shop email]; Buy online, or click and collect: [shop email]
 - **The customer’s maps app, with directions to the shop** — from Find the shop and browse the website: Directions to Bolton (opens your maps app); Find the shop and browse the website: Directions to [Second site] (opens your maps app); Find the shop and browse the website: Directions to North Street Cycles (opens your maps app) (and 1 more)
@@ -162,12 +161,13 @@ In the mockup these say "this happens outside Wheelhouse".
 - **The label printer** — from Receiving stock and purchase orders: Print [n] labels; Stock take and stock control: Print labels
 - **The maps app** — from Website management: Directions to Bolton (opens your maps app); Website management: Directions to [Second site] (opens your maps app)
 - **The phone app, calling Maya Patel** — from Buy online, or click and collect: 07700 900 142
-- **The phone app, calling the shop** — from Find the shop and browse the website: [shop phone]; Buy online, or click and collect: [shop phone]
+- **The phone app, calling the shop** — from Find the shop and browse the website: [shop phone]; Buy online, or click and collect: [shop phone]; Book a repair: [shop phone] (and 2 more)
 - **The phone or computer’s photo and video picker** — from Book a repair: Add photos or a short video · optional
 - **The phone, calling Maya Patel** — from Account, history and reminders: 07700 900 142
 - **The phone, calling the shop** — from Website management: [shop phone]
 - **The printer** — from Drop off and approve the quote: Print; Collect the bike and pay: Print; Cycle to Work: Print (and 8 more)
 - **The printer — the quote** — from Cycle to Work: Print the quote
+- **The quote as a PDF, the one the email attaches** — from Cycle to Work: See your quote
 - **The receipt as a PDF download** — from Collect the bike and pay: Download receipt (PDF)
 - **The receipt as a PDF file** — from Account, history and reminders: Download receipt (PDF)
 - **The receipt printer** — from Customer service: Print the receipt

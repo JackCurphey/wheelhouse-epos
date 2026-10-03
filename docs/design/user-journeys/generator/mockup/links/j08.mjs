@@ -68,6 +68,14 @@ export default {
     '8 Check the messages customers get Ticks when you’ve looked at Messages': steps.messages,
     '9 Set up your website Ticks when no Words and photos row says Check this': steps.website,
   },
+  // Getting started while moving: one checklist (third walk, answer 10).
+  'fr-today-moving': {
+    'Moving from Citrus Lime: Run alongside, ready to switch over 3 of 4. Open the move': go('mv-progress'),
+    'Start: Invite your staff': steps.staff,
+    '4 Invite your staff Ticks when someone accepts an invite · [n] invited, waiting to join': steps.staff,
+    '8 Check the messages customers get Ticks when you’ve looked at Messages · none go to customers until switch-over': steps.messages,
+    '9 Set up your website Ticks when no Words and photos row says Check this · needed to switch over': steps.website,
+  },
   'fr-step': { 'Connect a card machine': go('set-pay-card'), 'Next: Invite your staff': steps.staff },
   'set-list': {
     'Front desk Till, payments, messages, end of day': go('set-till-quick'),
@@ -90,12 +98,15 @@ export default {
     Add: notDrawn('Adding another way to pay, under Payments › Other ways to pay'),
   },
   'set-pay-card': { 'Connect a card machine': outside('The card machine, pairing with the till') },
-  'set-staff': { Open: go('set-staff-person') },
+  // The mockup has two shops (its shop menu), so a person opens with "Works at"
+  // (Multiple sites 4; third walk, walk-through 7 M1).
+  'set-staff': { Open: go('ms-person') },
   'set-staff-person': { 'Give everything a Manager can do': go('set-staff-person-all') },
   'set-staff-clear-pin': { 'Keep the PIN': go('set-staff-person'), 'Clear the PIN': go('set-staff-person') },
   'set-staff-invite': { 'Send the invite': go('set-staff-invited') },
   'set-staff-invite-till-only': { 'Add them': go('set-staff-invited') },
-  'set-staff-invited': { 'Cancel the invite': STAY, Workshop: go('set-workshop-services') },
+  // Every page opened from Getting started keeps its bar (Owner setup 17; third walk, walk-through 4 M3).
+  'set-staff-invited': { Checklist: go('fr-today'), 'Next: Workshop services and prices': steps.services, 'Cancel the invite': STAY, Workshop: go('set-workshop-services') },
   // Opening Sites shows each shop and + Add a shop (Multiple sites 7).
   'set-shop-details': { 'Sites Bolton': go('ms-sites') },
   'set-workshop-services': {

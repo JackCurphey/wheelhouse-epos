@@ -29,6 +29,9 @@ export default {
     'Activity log › What was done, when and by whom: prices, voids, refunds, discounts, jobs, stock': go('ops-log'),
     'Cycle to Work: owed and paid › What each provider owes, has paid, and kept as commission': go('rp-c2w'),
     'Shop North Street Cycles, Bolton ›': go('rp-sales'),
+    // All shops: a shop's name opens that shop's Sales, the shop menu switched to it (third walk, answer 3).
+    'Bolton: open its Sales report': go('rp-sales', 'Bolton’s Sales: the shop menu is switched to Bolton.', 'Bolton'),
+    '[Second site]: open its Sales report': go('rp-sales', '[Second site]’s Sales, the shop menu switched to [Second site]: drawn as Bolton’s, the same page for that shop.', '[Second site]'),
     'More for [Report name]': go('rp-report-menu'),
     '[Report name] Sales: items sold by product · Accessories only Shared with managers': go('rp-changed'),
     '[Report name] Sales: items sold by product · Accessories only Just you': go('rp-changed'),

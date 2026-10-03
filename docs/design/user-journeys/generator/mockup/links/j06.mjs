@@ -15,6 +15,7 @@ const messages = {
 
 export default {
   '*': {
+    'Refund [Customer]’s deposit': go('till-refund'),
     // The sidebar item, with its count (decision 2)
     'Cycle to Work 3 due or late': go('cw-list'),
     // Settings › Front desk tabs
@@ -101,7 +102,8 @@ export default {
     'Edit [Provider]': go('cw-settings-provider'),
     'Retire [Provider]': notDrawn('Retiring a scheme provider — what it asks first'),
     // The customer's side
-    'See your quote': go('cw-quote'),
+    // Maya's link opens the quote itself, the PDF the email attaches (third walk, walk-through 5 M1).
+    'See your quote': outside('The quote as a PDF, the one the email attaches'),
     'Ask the shop a question': go('ac-ask'),
     'See your Cycle to Work bike': go('cw-customer-view'),
   },

@@ -87,7 +87,8 @@ export default {
     Void: go('till-void'),
     'Keep the sale': BACK,
     'Void sale': go('till-find'),
-    'Refund £28.00 to the card': outside('The card machine: the customer taps the same card'),
+    // The card machine refunds; what the till shows after is the Refunded gap (walk 3, walk-through 2 M3).
+    'Refund £28.00 to the card': REFUNDED,
     'Refund £28.00 · open the drawer': REFUNDED,
     'Add [£] to store credit': REFUNDED,
     // Hand-overs
@@ -104,12 +105,19 @@ export default {
   // Book-in is drawn over the empty till: Done closes it there (walk-through 8, decision 8).
   'till-book-in': { Done: go('till-empty') },
   'till-pay-discounted': { Split: go('till-split-discounted') },
+  // After paying, Close goes to the empty till, as No receipt does (third walk, walk-through 5 L2).
+  'till-receipt': { Close: go('till-empty') },
+  'till-receipt-split': { Close: go('till-empty') },
   'till-find-customer': { Refund: go('till-refund-older'), Change: STAY },
   'till-account': { Change: go('till-customer') },
+  // Paying with only the certificate: the paid box with nothing from Maya
+  // (third walk, answer 4). Close goes back to the sale (walk-through 5 L2).
   'till-c2w-pay': {
-    'Cycle to Work · [Provider] · £[£] The certificate · owed by [Provider], not in the drawer · certificate [certificate number]': go('till-c2w-paid'),
+    'Cycle to Work · [Provider] · £[£] The certificate · owed by [Provider], not in the drawer · certificate [certificate number]': go('till-c2w-paid-cert'),
     Card: go('till-card'),
+    Close: BACK,
   },
-  'till-c2w-extra': { 'Card · £[£] Sends £[£] to the card machine': go('till-c2w-paid') },
-  'till-c2w-paid': { Email: go('cp-receipt-address-customer') },
+  'till-c2w-extra': { 'Card · £[£] Sends £[£] to the card machine': go('till-c2w-paid'), Close: BACK },
+  'till-c2w-paid': { Email: go('cp-receipt-address-customer'), Close: go('till-empty') },
+  'till-c2w-paid-cert': { Email: go('cp-receipt-address-customer'), Close: go('till-empty') },
 };

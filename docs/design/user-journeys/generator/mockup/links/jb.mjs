@@ -25,12 +25,15 @@ export default {
   // any digit stands for the whole PIN, and the first check-in of the day
   // opens the float check (Opening the shop 2).
   'till-checkin': Object.fromEntries(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => [k, go('op-float-check')])),
+  // A workshop computer's PIN opens the diary as that person (third walk, answer 8).
+  'till-checkin-workshop': Object.fromEntries(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => [k, go('diary-mechanic', 'Now working: Alex Morgan')])),
   'till-setup': { 'Make this computer Till B1': go('till-checkin'), 'Make this device Till B1': go('till-checkin') },
   // Change PIN from Your settings
   'pin-change': { 'Keep this PIN': go('your-settings') },
   // First sign-in: the PIN box opens over the diary
-  'pin-first': { 'Keep this PIN': go('diary'), 'Skip for now': go('diary') },
-  'pin-cleared': { 'Keep this PIN': go('diary'), 'Skip for now': go('diary') },
+  // Staff land on Front desk › Till (App map 11; third walk, walk-through 4 L1).
+  'pin-first': { 'Keep this PIN': go('till-sale'), 'Skip for now': go('op-today-staff') },
+  'pin-cleared': { 'Keep this PIN': go('till-sale'), 'Skip for now': go('op-today-staff') },
   // Given at the till: then back to the PIN screen
   'till-give-pin': { 'Keep this PIN': go('till-checkin'), 'Close without giving a PIN': BACK },
 };

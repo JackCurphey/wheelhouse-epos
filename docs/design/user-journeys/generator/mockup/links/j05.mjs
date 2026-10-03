@@ -56,7 +56,8 @@ export default {
     Email: go('cp-receipt-address'),
     Text: go('cp-receipt-address-text'),
     'No receipt': go('till-sale'),
-    'Send receipt': go('cp-receipt-email-guest'),
+    // The till sale's email: the discounted sale (third walk, walk-through 2 H1).
+    'Send receipt': go('cp-receipt-email-till'),
     'Send when back online': go('till-sale'),
     'Add the customer': go('till-sale'),
     // The receipt the customer gets
@@ -66,6 +67,8 @@ export default {
     // From an email the customer isn't signed in yet: sign in first (Signing in;
     // walk-throughs 1 and 12: cust-signin, cust-code, then the account).
     'See it in your account': go('cust-signin'),
+    // "Call us": the number opens the phone app, as on the website (walk-through 12 M2).
+    '[shop phone]': outside('The phone app, calling the shop'),
     // Today
     Contacted: STAY,
     'Book in': go('job-book-in'),

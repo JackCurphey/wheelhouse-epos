@@ -8,6 +8,7 @@ import { mkdirSync, rmSync, writeFileSync, readFileSync, statSync, readdirSync }
 import { loadDrawings } from './drawings.mjs';
 import { controlsOf, resolve, loadLinks } from './controls.mjs';
 import { FONT_LINK } from '../ui.mjs';
+import { situationLines } from '../consolidate/situation-lines.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
 const out = new URL('../out-mockup/', import.meta.url).pathname;
@@ -25,7 +26,7 @@ const mark = (d, html) => {
   for (const c of controlsOf(html)) {
     const t = resolve(c, d, maps, fileToId);
     if (!t) { dead.push(`${d.id} · ${c.label}`); continue; }
-    const extra = t.go ? ` data-go="${esc(t.go)}"` : ` data-act="${t.act}"${t.what ? ` data-what="${esc(t.what)}"` : ''}`;
+    const extra = t.go ? ` data-go="${esc(t.go)}"${t.say ? ` data-say="${esc(t.say)}"` : ''}${t.shop ? ` data-shop="${esc(t.shop)}"` : ''}` : ` data-act="${t.act}"${t.what ? ` data-what="${esc(t.what)}"` : ''}`;
     res += html.slice(at, c.openEnd - 1) + extra + '>';
     at = c.openEnd;
   }
@@ -52,8 +53,13 @@ for (const [k, v] of Object.entries(data)) writeFileSync(`${out}data/${k}.json`,
 // Situations of each kept screen, in journeys.mjs order.
 const situations = {};
 for (const [id, s] of Object.entries(screens)) if (s.owner && s.owner !== id) (situations[s.owner] ??= []).push(id);
+// Each kept screen's situation lines, the same as the canvas's note under its
+// board (third walk, answer 7): shown under the drawing, read-only.
+const linesOf = await situationLines();
+const lines = {};
+for (const [id, s] of Object.entries(screens)) if (s.kept) { const l = linesOf(id); if (l.length) lines[id] = l; }
 const css = helmets.map((h) => h.replace(/<link[^>]*>/g, '').replace(/<\/?style>/g, '').replace(/\bbody\s*\{/g, ':host{')).join('\n');
-writeFileSync(out + 'manifest.json', JSON.stringify({ screens, situations, stories, css }));
+writeFileSync(out + 'manifest.json', JSON.stringify({ screens, situations, lines, stories, css }));
 writeFileSync(out + 'index.html', readFileSync(here + 'page.html', 'utf8').replace('%FONT_LINK%', FONT_LINK.replace(/&/g, '&amp;')));
 const files = readdirSync(out + 'data');
 const biggest = Math.max(...files.map((f) => statSync(out + 'data/' + f).size));

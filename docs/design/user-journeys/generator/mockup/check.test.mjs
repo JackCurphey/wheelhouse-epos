@@ -65,3 +65,25 @@ test('every story clicks through at desktop, tablet and phone', async () => {
   });
   assert.deepEqual(broken, []);
 });
+
+// Third walk, answer 7: under each drawing the mockup lists that screen's
+// situation lines, the same lines as the canvas. Needs `node build.mjs` and
+// `node mockup/build-mockup.mjs` run after the last change.
+test('the mockup lists each screen’s situation lines, the same as the canvas', async () => {
+  const { readFileSync } = await import('node:fs');
+  const canvas = JSON.parse(readFileSync(new URL('../out/project/canvas.json', import.meta.url), 'utf8'));
+  const manifest = JSON.parse(readFileSync(new URL('../out-mockup/manifest.json', import.meta.url), 'utf8'));
+  const onCanvas = {};
+  for (const [key, n] of Object.entries(canvas.notes)) {
+    const m = /^[a-z0-9]+_sit_(.+?)(?:_(\d+))?$/.exec(key);
+    if (!m) continue;
+    (onCanvas[m[1]] ??= []).push(...n.text.split('\n').filter((l) => l.startsWith('• ')));
+  }
+  const lines = manifest.lines ?? {};
+  assert.ok(Object.keys(onCanvas).length > 100, `${Object.keys(onCanvas).length} situation notes on the canvas`);
+  const bad = [];
+  // A screen the mockup has no drawing of (a Release 1 picture) has no page to list them under.
+  for (const [id, want] of Object.entries(onCanvas)) if (manifest.screens[id] && JSON.stringify(lines[id] ?? []) !== JSON.stringify(want)) bad.push(id);
+  for (const id of Object.keys(lines)) if (!onCanvas[id]) bad.push(`${id} (not on the canvas)`);
+  assert.deepEqual(bad.slice(0, 20), [], `${bad.length} screens whose lines differ`);
+});

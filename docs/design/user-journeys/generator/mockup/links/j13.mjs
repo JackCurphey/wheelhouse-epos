@@ -76,7 +76,8 @@ export default {
   'rs-booked-c2w': { 'Open Maya Patel’s Cycle to Work order': go('cw-order-get-ready') },
   'rs-labels': { 'Print [n] labels': outside('The label printer'), 'Change the label printer': notDrawn('Choosing the label printer (Settings › Stockroom)'), 'Print labels': STAY },
   // Orders
-  'rs-order': { 'Mark as ordered': go('rs-order-ordered'), 'Save as draft': go('rs-hub'), 'Remove Shimano brake pads': STAY, 'Remove [Product]': STAY },
+  // Just ordered, nothing arrived yet, is a line (third walk, walk-through 3 M2).
+  'rs-order': { 'Mark as ordered': go('rs-order', 'Marked as ordered: every line “ordered [n] · arrived 0”, waiting for the delivery; WH-1042’s line reads On order (a line under this screen).'), 'Save as draft': go('rs-hub'), 'Remove Shimano brake pads': STAY, 'Remove [Product]': STAY },
   'rs-order-ordered': { 'Close the order': go('rs-order-close'), 'Receive against this order': go('rs-receive') },
   'rs-order-close': { 'Close the order': go('rs-hub'), 'Keep it open': go('rs-order-ordered'), 'Receive against this order': STAY },
   // Today

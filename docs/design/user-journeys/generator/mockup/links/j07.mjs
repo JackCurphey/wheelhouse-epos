@@ -78,6 +78,9 @@ export default {
     // Settings › Workshop › Services
     '+ Add a service': notDrawn('Add a service, in Settings › Workshop › Services'),
     'Move Standard service — drag, or use the arrow keys': STAY,
+    'Move Brake service — drag, or use the arrow keys': STAY,
+    'Move Gear adjustment — drag, or use the arrow keys': STAY,
+    'Move Safety check — drag, or use the arrow keys': STAY,
     'Sign in to your account': go('cust-signin'),
   },
   'ac-ask': { 'Send question': go('ac-account-question-sent') },

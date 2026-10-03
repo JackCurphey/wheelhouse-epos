@@ -134,4 +134,6 @@ export default {
     'Review request', 'Service reminder', 'Work added within your limit', 'Your answers',
     'Your bike is no longer put aside', 'Your bike is put aside', 'Your hold ends on [date]', 'Your order is cancelled',
   ].map((m) => [`Edit the wording of ${m}`, go('set-msg-edit')]).concat([['+ Add your own message', go('set-msg-new')]])),
+  // Mark ready waits while an item is on its way: the button is off, so it goes nowhere (third walk, walk-through 2 M1).
+  'on-order-staff': { 'Mark ready': STAY },
 };

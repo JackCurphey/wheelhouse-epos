@@ -8,6 +8,8 @@ const fixRow = notDrawn('Fix on a row that needs a look: the pop-up for that one
 
 export default {
   '*': {
+    // While a move is running the Website page waits for switch-over morning (third walk, walk-through 4 M1).
+    Website: go('ws-page-moving'),
     // The move's own page in the sidebar (Moving 4); "Moving" on tablet and phone.
     'Moving from Citrus Lime': go('mv-start'),
     Moving: go('mv-start'),
@@ -52,5 +54,6 @@ export default {
     'Another day…': notDrawn('Another day…: picking a switch-over day beyond the next open days (Moving 9 M6)'),
     'Switch over on [date]': go('mv-morning'),
   },
-  'mv-morning': { 'Turn it on': go('mv-week') },
+  // Turn it on puts the website on (third walk, walk-throughs 4 M1, L3).
+  'mv-morning': { 'Turn it on': go('ws-published', 'Your website is on: step 2 of the morning ticks (a line under the morning).') },
 };

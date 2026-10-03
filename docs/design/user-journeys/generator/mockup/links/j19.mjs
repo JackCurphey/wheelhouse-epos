@@ -32,14 +32,16 @@ export default {
     'See the 3 things that need attention at [Second site]': go('ms-switched'),
     'Seen: [Second site], Till [code]1 float short': STAY,
     'Contacted: [Second site], [Job number] ready since [date]': STAY,
-    'Book in': go('till-book-in'),
+    // Today's Book in opens the job's book-in, as Today does everywhere (third walk, walk-throughs 7 L2, 11 L3).
+    'Book in': go('job-book-in'),
     'Open the diary': go('diary'),
     // A new shop's checklist on Today (7)
     'Count it at [Second site]': go('tk-start'),
     'How to set up a till at [Second site]': go('ms-till-setup'),
     'Open Staff and roles at [Second site]': go('set-staff'),
     'Send from Bolton at [Second site]': go('tr-send'),
-    'Show [Second site] to customers': go('ms-sites'),
+    // One press: the shop shows straight away, with Undo (third walk, answer 6).
+    'Show [Second site] to customers': go('ms-today-shown'),
     // Booking: Which shop? (5)
     'Sign in to use your saved bikes and details': go('cust-signin'),
     // A service's price at each shop (3)
@@ -50,7 +52,8 @@ export default {
     // A product's page (journey 14's screens)
     'Adjust stock': go('st-adjust'),
     'Edit details': notDrawn('Edit a product’s details: its category’s measurements and specifications (Stock take and stock control 10)'),
-    'Open job WH-1042': go('job-overview'),
+    // WH-1042 is in the workshop: its In the workshop page (third walk, walk-through 9 M1).
+    'Open job WH-1042': go('job-mechanic', 'Showing the mechanic’s view of WH-1042 in the workshop: the Staff view of that stage isn’t drawn separately.'),
     'Open sale B1-[0000]': go('till-sale-detail'),
     'Open transfer T-[0000]': go('tr-incoming'),
     'Send to another shop': go('tr-send'),
@@ -61,6 +64,9 @@ export default {
     'Clear a forgotten PIN': go('set-staff-clear-pin'),
     'Give everything a Manager can do': go('set-staff-person-all'),
   },
+  'ms-today-shown': { Undo: go('ms-today-new') },
+  // Reports from All shops opens the All shops strip (third walk, walk-through 11 H1).
+  'ms-today-all': { Reports: go('rp-home-all') },
   'ms-add-shop': { '+ Add a shop': STAY, 'Add the shop': go('ms-today-new'), 'Copy hours from Bolton': STAY },
   'ms-add-shop-error': { '+ Add a shop': STAY, 'Add the shop': STAY, 'Copy hours from Bolton': STAY },
   'ms-book-shop-chosen': { Change: go('ms-book-shop-change'), 'Next: your bike': go('bk-bike') },

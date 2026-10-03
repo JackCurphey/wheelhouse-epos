@@ -6,6 +6,7 @@ import { go, STAY, notDrawn } from '../controls.mjs';
 
 export default {
   '*': {
+    'Refund [Customer]’s deposit': go('till-refund'),
     // The till behind the float check: quick buttons add to the sale; the
     // basket is empty, so Take payment is off.
     'Standard service Labour · 60 min £65.00': STAY,
@@ -18,7 +19,7 @@ export default {
     'Book in': go('job-book-in'),
   },
   // The float check (decision 2; M1: Count it and Looks right are the only ways out)
-  'op-float-check': { 'Count it': go('op-float-count'), 'Looks right': go('op-float-matched') },
+  'op-float-check': { 'Count it': go('op-float-count'), 'Looks right': go('till-empty', 'Float checked · looked right · Jo Taylor') }, // third walk, walk-through 2 M2: only a count says "counted by"
   'op-float-check-first': { 'Count it': go('op-float-count') },
   'op-float-check-unclosed': { 'Count it': go('op-float-count') },
   'op-float-count': { 'Done counting': go('op-float-matched') },

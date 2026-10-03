@@ -1,5 +1,5 @@
 // Journey 12, Workshop day — where each button goes in the mockup.
-import { go, STAY, outside, notDrawn } from '../controls.mjs';
+import { go, STAY, BACK, outside, notDrawn } from '../controls.mjs';
 
 // The job page's own controls, on every stage of the job (job-page.mjs).
 const JOB = {
@@ -20,7 +20,8 @@ const NEW_JOB = {
   'Add note': STAY,
   'Search services': STAY,
   'Find the next free 60 minutes': STAY,
-  'Save job': go('job-overview'),
+  // The saved job's page isn't drawn; the confirmation is a line (Book a repair, 3 Oct; third walk, walk-through 9 M4).
+  'Save job': go('job-overview', 'Saved: “Booking confirmed” is sent to 07700 900 142 (a line under New job). Showing WH-1042’s page: the new job’s own page isn’t drawn.'),
 };
 
 export default {
@@ -45,7 +46,8 @@ export default {
   // New job
   'new-job': NEW_JOB,
   // The job
-  'job-overview': JOB,
+  // Close goes back to where the job was opened from (third walk, walk-through 9 L1).
+  'job-overview': { ...JOB, 'Close, back to the diary': BACK },
   'job-quote': { 'Send quote': go('dq-job-sent') },
   'job-waiting-parts': { 'Mark ready for collection': go('job-finished') },
   'job-finished': { 'Undo': go('job-mechanic') },
@@ -53,7 +55,9 @@ export default {
   'job-checklist': {
     ...JOB,
     // A workshop computer's PIN screen is till-checkin (its line: Walk-through 8, decision 1).
-    'Switch': go('till-checkin'),
+    'Switch': go('till-checkin-workshop'),
+    // Close and Done go back to the job page it was opened from (third walk, walk-throughs 6 M1, 8 L2).
+    'Close, back to the job': BACK, Done: BACK,
     'Add a note for Bolts torqued': STAY, 'Add a note for Bottom bracket': STAY,
     'Add a note for Cables & housing': STAY, 'Add a note for Chain & drivetrain': STAY,
     'Add a note for Frame & fork': STAY, 'Add a note for Gears indexed': STAY,
