@@ -75,3 +75,11 @@ decision covered ("go with the recommended ones"):
   owner can give any shop.
 
 All are situation lines on the one canvas; no drawing changes.
+
+Fresh review fixes (3 Oct): `job-overview`'s diary backdrop shows WH-1042 as
+Expected, so the board agrees with itself; tablet and phone diary blocks read
+their own stage aloud; an unsent quote is "Quoting" on both its drawings
+(Workshop day 20); the repair's Pay now says "For your repair · WH-1042";
+the Website page keeps its "2 pages still have starting wording" sentence
+beside Turn on (answer 5 only took "2 to check" off the Pages row). Left:
+`job-overview`'s backdrop block still reads "approved £111".

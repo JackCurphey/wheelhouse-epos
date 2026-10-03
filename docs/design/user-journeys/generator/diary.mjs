@@ -669,6 +669,22 @@ let PART_ARRIVED = null;
 // Thursday 11:30 example. Moved only while such a board is drawn,
 // as diaryWithJobState does.
 const PART_ARRIVED_AT = { 'WH-1042': { day: 5, start: 16 * 60, dur: 90, mech: 'Alex', key: 'waiting', detail: '16:00–17:30 · waiting for parts' } };
+// 3 Oct answer 11 (review fix): job-overview draws WH-1042 at Expected, so
+// the diary behind it must too — no stage override (so the block reads
+// Expected), no hook, and the hover card keeps only the customer's own
+// booking note (nothing has been done to the bike yet). Only while that
+// board is drawn; the diary boards keep WH-1042 later in the day.
+let JOB_EXPECTED = null;
+function withJobExpected(job, fn) {
+  const j = JOBS.find((x) => x.job === job && x.day === TODAY);
+  const was = { stage: j.stage, slot: STORAGE[job], flag: JOB_EXPECTED };
+  delete j.stage; delete STORAGE[job]; JOB_EXPECTED = job;
+  try { return fn(); } finally {
+    if (was.stage !== undefined) j.stage = was.stage;
+    if (was.slot !== undefined) STORAGE[job] = was.slot;
+    JOB_EXPECTED = was.flag;
+  }
+}
 export function withPartArrived(job, fn) {
   const was = PART_ARRIVED; PART_ARRIVED = job;
   const j = JOBS.find((x) => x.job === job);
@@ -784,7 +800,7 @@ function jobHoverSummaryMarkup(j, size, cls, forced, blockTop) {
   const wrapForcedStyle = forced ? 'opacity: 1; pointer-events: auto; overflow: visible; max-width: none; z-index: 12;' : '';
   const notesCol = `<div style="display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-width: 0">
 <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: ${C.muted}">Notes</span>
-${QUICK_NOTES.map((n) => `<div style="display: flex; flex-direction: column; gap: 1px">
+${QUICK_NOTES.filter((n) => JOB_EXPECTED !== j.job || n.who === 'Customer').map((n) => `<div style="display: flex; flex-direction: column; gap: 1px">
 <span style="font-size: 11px; font-weight: 700; color: ${C.muted}">${n.who === 'Customer' ? 'Customer' : `${esc(n.who)}${n.when ? ` · ${esc(n.when)}` : ''}`}</span>
 <span style="font-size: 13px; line-height: 1.3; color: ${C.ink}">${esc(n.text)}</span>
 </div>`).join('')}
@@ -1292,7 +1308,8 @@ const touchRing = (highlighted, lightMarked) => (highlighted ? `box-shadow: 0 0 
 // many lines show is worked out from the block's real height so nothing is
 // cut off mid-line.
 function touchJobBlock(j, size, slotH, { highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null } = {}) {
-  const [bg, ink, statusWord] = ST[j.key];
+  const [bg, ink] = ST[j.key];
+  const statusWord = stageOf(j);
   const [customer, bike] = customerBikeOf(j);
   const jobTitle = j.svc || '';
   const fs = touchFs(size);
@@ -2411,7 +2428,7 @@ function buildJobPage({ jobNum = 'WH-1042', status, tone, mechanic = false, desk
 // 9. job-overview — "Job · expected". Notes: only the customer's booking
 // section (decision 40's rollout — nothing's happened yet). Checklist: 0 of
 // 10. Work: the booked service line only, not yet started.
-screens['job-overview'] = buildJobPage({
+screens['job-overview'] = withJobExpected('WH-1042', () => buildJobPage({
   status: 'Expected', tone: 'blue',
   touch: { footer: (size) => button('Book in', { variant: 'primary', block: true, href: `job-book-in-${size}.dc.html` }) },
   desktop: {
@@ -2421,7 +2438,7 @@ screens['job-overview'] = buildJobPage({
     lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
     footer: button('Book in', { variant: 'primary', block: true, href: 'job-book-in-desktop.dc.html' }),
   },
-});
+}));
 keepDesktopSeq('job-overview');
 
 screens['job-book-in'] = buildJobPage({
@@ -2493,10 +2510,15 @@ export const quoteJobBoards = (stage = 'build') => {
     });
   }
   const lines = answered ? LINES_QUOTE_ANSWERED : sent ? LINES_QUOTE_SENT : LINES_QUOTE_BUILD;
-  const status = sent ? 'Quoting' : 'In the workshop';
+  // 3 Oct answer 11 (review fix): Workshop day 20's stages run booked in →
+  // quoting → in the workshop, and job-quote draws the quote being written
+  // (Send quote still to press) at Quoting — so an unsent quote is Quoting
+  // here too, as is a sent one. Answered moves on to In the workshop.
+  const quoting = sent || stage === 'build';
+  const status = quoting ? 'Quoting' : 'In the workshop';
   const footer = sent ? sentFooter() : answered ? button('Start work', { variant: 'primary', block: true }) : button('Send quote', { variant: 'primary', block: true });
   return buildJobPage({
-    status, tone: sent ? 'purple' : 'blue',
+    status, tone: quoting ? 'purple' : 'blue',
     touch: { footer: () => footer },
     desktop: {
       customerTexts: NOTES_CUSTOMER, staffTexts: answered ? [...NOTES_STAFF_FULL, 'Maya answered the quote online at [time].'] : NOTES_STAFF_FULL,

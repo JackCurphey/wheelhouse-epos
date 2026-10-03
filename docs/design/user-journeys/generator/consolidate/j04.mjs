@@ -27,9 +27,9 @@ export default {
   'dq-quote-price-ls': into('dq-quote', 'Quote 1', "'A price has gone up since you agreed': 'Approve £[new total]' or 'No thanks — keep to £111.00'"),
   'dq-answered-price-no-ls': into('dq-quote', 'Quote 1', "'you said no to the new price' — agreed price stays £111.00"),
   // The shop's side
-  'dq-job-quote': into('job-overview', 'Workshop day 20', "'In the workshop'; new lines 'Quoting', Needed or Optional, pads photo; 'Send quote'"),
+  'dq-job-quote': into('job-overview', 'Workshop day 20', "'In the workshop'; new lines tagged 'Awaiting approval', Needed or Optional, pads photo; 'Send quote'"),
   'dq-job-sent': into('job-overview', 'Workshop day 20', "'Quoting' with 'Sending the quote to Maya by text in 1 minute' and 'Undo'"),
-  'dq-diary-waiting': into('diary', '', "WH-1042 in the 'Waiting for the customer' colour"),
+  'dq-diary-waiting': into('diary', '', "WH-1042 in the 'Quoting' colour"),
   'dq-today-no-answer': into('op-today', '', "'WH-1042 · Maya Patel — no answer to the quote yet' with 'Record their answer'"),
   'dq-record-answer': keep(9),
   'dq-job-withdraw': into('job-overview', 'Quote 7', "'Withdraw this quote?' pop-up: 'Keep the quote' or 'Withdraw quote'"), // staff withdraw the quote on the job page; its "Are you sure?" is a line there

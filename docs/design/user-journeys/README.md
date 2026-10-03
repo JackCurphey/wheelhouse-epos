@@ -186,7 +186,7 @@ each page's title, 14px (Multiple sites 11; walk-through 7 L2).
 | A App map | Icon rail with labels; the till page folds to the rail | Top bar with a menu | App map 2, 4, 14 |
 | B Signing in | not decided | not decided | — (approved at three sizes, Signing in 10) |
 | 1 Find the shop | The header's search button opens a search box across the top, suggestions under it; "Collecting from Bolton · Change" at the top | As tablet; "Filter" opens a full-screen panel with "Show [n] products"; shop cards one to a row | Find the shop 8 |
-| 2 Buy online | With two shops, "Collecting from Bolton · Change" under the header | Checkout puts the order at the top and Pay in a bar along the bottom | Buy online 10 |
+| 2 Buy online | With two shops, "Collecting from Bolton · Change" under the header | With two shops, the same "Collecting from Bolton · Change" line; checkout puts the order at the top and Pay in a bar along the bottom | Buy online 10 |
 | 3 Book a repair | Keeps the desktop's two columns | "Your booking" a bar along the bottom; steps in one column; cards and fields one to a row; the day strip scrolls sideways; pop-ups fill the screen | Book a repair 13 |
 | 4 Drop off and quote | New total, "Your answers are final once sent." and Approve in a bar pinned along the bottom; staff boards use the job page's layouts | As tablet, no "Send your answers?" pop-up; the tracker stacks; pop-ups fill the screen | Quote 8 |
 | 5 Collect and pay | not decided | not decided | — (approved at three sizes, Collect and pay 6) |
