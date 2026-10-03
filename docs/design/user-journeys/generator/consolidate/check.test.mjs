@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { blocks, screens, loadPlan } from './plan.mjs';
 
 const all = screens();
-const { plan, dupes } = await loadPlan();
+const { plan, dupes, lines } = await loadPlan();
 const ids = new Set(all.map((s) => s.id));
 
 test('every screen in journeys.mjs has a plan entry', () => {
@@ -37,4 +37,9 @@ test('every "later" says why', () => {
 test('the canvas fits: at most 450 screen boards', () => {
   const boards = [...plan.values()].filter((e) => e.kind === 'keep').reduce((n, e) => n + (e.sizes?.length || 1), 0);
   assert.ok(boards <= 450, `${boards} boards`);
+});
+
+test('every extra situation line sits on a kept screen and says what and who', () => {
+  const bad = lines.filter((l) => plan.get(l.on)?.kind !== 'keep' || !String(l.text || '').trim() || !String(l.who || '').trim()).map((l) => `${l.file}: ${l.on} "${l.text}"`);
+  assert.deepEqual(bad, []);
 });

@@ -91,7 +91,7 @@ const sandSizesOf = (src, id) => SAND_SIZES.filter((v) => existsSync(SAND_SOURCE
 const bigSizeOf = (src, id) => { const all = sandSizesOf(src, id); return all.includes('single') ? 'single' : all.includes('desktop') ? 'desktop' : all[0]; };
 // The one-canvas plan: every screen is kept, folded into a kept screen's
 // situation list, or listed as later (consolidate/check.test.mjs checks it).
-const { plan } = await loadPlan();
+const { plan, lines: extraLines } = await loadPlan();
 const allScreens = journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.map((x) => ({ ...x, journey: j }))));
 const byId = new Map(allScreens.map((x) => [x.id, x]));
 for (const x of allScreens) if (!plan.has(x.id)) throw new Error(`no one-canvas plan for ${x.id} (consolidate/${x.journey.id}.mjs)`);
@@ -313,9 +313,14 @@ const titleOf = (x) => x.title ?? designs[x.id]?.title ?? x.id;
 const roleOfScreen = (x) => x.role ?? (designs[x.id] ? roleOf(designs[x.id].role) : '');
 const situationText = (id) => {
   const list = situations.get(id) ?? [];
-  if (!list.length) return null;
+  // Lines a journey file adds with no old drawing behind them (decisions
+  // drawn as lines: consolidate/plan.mjs `lines`).
+  const extra = extraLines.filter((l) => l.on === id);
+  if (!list.length && !extra.length) return null;
   const home = byId.get(id).journey.id;
-  return [`Situations of this screen (${list.length})`, ...list.map(({ x, decision }) => `• ${titleOf(x)} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`)].join('\n');
+  return [`Situations of this screen (${list.length + extra.length})`,
+    ...list.map(({ x, decision }) => `• ${titleOf(x)} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`),
+    ...extra.map((l) => `• ${l.text} — ${l.who}${l.decision ? ` · ${l.decision}` : ''}`)].join('\n');
 };
 const NOTE_LINE = 30;
 const laterText = (j) => {

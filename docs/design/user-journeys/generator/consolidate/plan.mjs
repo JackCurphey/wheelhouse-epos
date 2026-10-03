@@ -7,6 +7,9 @@
 //   into(id, decision)      a line in that kept screen's situation list (rule 1)
 //   later(reason)           deferred (3 Oct answers or the build plan): listed
 //                           on its journey, not drawn
+// A journey file may also export `lines`: extra situation-list lines that
+// have no old drawing behind them, [{ on, text, who, decision }] — `on` is a
+// kept screen id (a decision drawn as a line, "Draw the decisions" spec B0).
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,12 +37,14 @@ export const screens = () => journeys.flatMap((j) => j.rows.flatMap((r) => r.scr
 export const loadPlan = async () => {
   const plan = new Map();
   const dupes = [];
+  const lines = [];
   for (const f of readdirSync(here).filter((f) => /^j[0-9a-z]+\.mjs$/.test(f)).sort()) {
-    const { default: part } = await import(join(here, f));
+    const { default: part, lines: extra = [] } = await import(join(here, f));
+    for (const l of extra) lines.push({ ...l, file: f });
     for (const [id, entry] of Object.entries(part)) {
       if (plan.has(id)) dupes.push(id);
       plan.set(id, { ...entry, file: f });
     }
   }
-  return { plan, dupes };
+  return { plan, dupes, lines };
 };
