@@ -128,6 +128,7 @@ const THEME_PAIRS = [
   ['sidebar text on sidebar', '--wh-on-accent', '--accent-dark', AA],
   ['sidebar active text on the active item', '--wh-highlight', '--wh-sidebar-active', AA],
   ['dark text on highlight', '--wh-on-highlight', '--wh-highlight', AA],
+  ['chosen filter text on its tint', '--wh-accent-soft-ink', '--wh-accent-soft', AA],
   ['input border on panel', '--wh-input-border', '--wh-panel', UI],
   ['input border on the page', '--wh-input-border', '--wh-bg', UI],
   ['input border on a grey panel', '--wh-input-border', '--wh-surface-muted', UI],
@@ -167,3 +168,33 @@ test("the sidebar's selected item is the lighter charcoal with amber text", () =
 test('cards have no shadow in Soft sand', () => {
   assert.equal(theme.get('--wh-shadow'), 'none');
 });
+
+// The diary's status colours: the drawings' own (ST in
+// docs/design/user-journeys/generator/diary.mjs), as --wh-state-* tokens for
+// the React diary. Each status word sits in its ink on its fill.
+const STATES = {
+  pending: ['#ece3f2', '#5c3e87'],
+  scheduled: ['#e4eaf3', '#294872'],
+  waiting: ['#f5e3d0', '#8b4715'],
+  hold: ['#f7eac2', '#7a5a10'],
+  ready: ['#e1eedd', '#295c39'],
+  answer: ['#d9ecea', '#1e5753'],
+};
+
+test('the diary status colours are the drawings\' own', () => {
+  const wrong = [];
+  for (const [state, [bg, ink]] of Object.entries(STATES)) {
+    if ((theme.get(`--wh-state-${state}-bg`) || '').toLowerCase() !== bg) wrong.push(`${state} fill`);
+    if ((theme.get(`--wh-state-${state}-ink`) || '').toLowerCase() !== ink) wrong.push(`${state} ink`);
+  }
+  assert.match(themeCss, /--wh-state-cancelled-bg:\s*var\(--wh-surface-muted\);/);
+  assert.match(themeCss, /--wh-state-cancelled-ink:\s*var\(--wh-muted\);/);
+  assert.deepEqual(wrong, []);
+});
+
+for (const state of Object.keys(STATES)) {
+  test(`diary ${state}: its ink on its fill clears 4.5:1`, () => {
+    const ratio = contrast(theme.get(`--wh-state-${state}-ink`), theme.get(`--wh-state-${state}-bg`));
+    assert.ok(ratio >= AA, `${state} is ${ratio}`);
+  });
+}

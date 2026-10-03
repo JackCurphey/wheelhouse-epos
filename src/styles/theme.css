@@ -67,6 +67,8 @@
   --wh-on-accent: #f4eee1;      /* text on the dark rail */
   --wh-sidebar-active: #39352e; /* the dark rail's selected item, amber text on it */
   --wh-highlight: #d9a441;      /* amber: active marker, used sparingly */
+  --wh-accent-soft: #f1e3be;    /* a chosen filter (the diary's people chips), never solid */
+  --wh-accent-soft-ink: #7a5a10;
   --wh-on-highlight: #2a2822;   /* always dark text on the highlight */
 
   /* ---- Feedback ---- */
@@ -102,6 +104,24 @@
   /* NOT corrected: D-001 computes #4d7364 (5.03) but styles.css:31-34 documents
      that this state is meant to recede. Needs sign-off - do not change silently. */
   --wh-status-complete-paid-ink: #6b9484;
+
+  /* ---- Diary status colours (fill / ink): the approved drawings' own, ST in
+     docs/design/user-journeys/generator/diary.mjs. Pending is only ever a
+     booking request; hold is a change requested, not paused work. ---- */
+  --wh-state-pending-bg: #ece3f2;
+  --wh-state-pending-ink: #5c3e87;
+  --wh-state-scheduled-bg: #e4eaf3;
+  --wh-state-scheduled-ink: #294872;
+  --wh-state-waiting-bg: #f5e3d0;
+  --wh-state-waiting-ink: #8b4715;
+  --wh-state-hold-bg: #f7eac2;
+  --wh-state-hold-ink: #7a5a10;
+  --wh-state-ready-bg: #e1eedd;
+  --wh-state-ready-ink: #295c39;
+  --wh-state-cancelled-bg: var(--wh-surface-muted);
+  --wh-state-cancelled-ink: var(--wh-muted);
+  --wh-state-answer-bg: #d9ecea;      /* waiting for the customer (teal) */
+  --wh-state-answer-ink: #1e5753;
 
   /* ---- Overlays ---- */
   --wh-backdrop: rgba(42, 40, 34, 0.45);            /* behind a pop-up: the ink */
