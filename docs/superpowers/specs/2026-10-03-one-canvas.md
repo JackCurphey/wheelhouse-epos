@@ -106,3 +106,11 @@ Kept in this file as the work goes.
   History; `rs-delivery` shows "waiting for its invoice"). Changing them is a
   redraw. Decision references in the lists are copied per merge group from
   the reports, so a line can carry its group's whole list.
+- Publishing found a limit the build didn't know: a canvas holds at most 200
+  notes, and the build made 271. Row-label notes were dropped (each board
+  keeps its own name strip); 171 notes now. `fitcheck-canvas.mjs` checks the
+  200-note and 512-file limits.
+- Published 3 Oct (Jack: "yeah lets publish them"): the shop floor canvas,
+  version 93, 211 boards; "Moved" notes on the back-office (version 5) and
+  customers (version 27) canvases. Those two canvases are private, so only
+  Jack can open them. `live-canvas.json` is the published index.

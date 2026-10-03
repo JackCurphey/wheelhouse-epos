@@ -344,7 +344,8 @@ journeys.filter((j) => P.ids.includes(j.id)).forEach((j) => {
   for (const row of j.rows) {
     const kept = row.screens.filter((x) => isKept(x.id));
     if (!kept.length) continue; // a row whose screens all became situations elsewhere
-    notes[`${j.id}_s${Object.keys(notes).length}`] = { x, y: y - 240, text: row.label, w: 520, size: 'l', bold: true, fill: 'gray', maxH: 150 };
+    // No row-label note: a canvas holds at most 200 notes, and the situation
+    // lists need them. Rows stay apart by the wider gap below.
     for (const scr0 of kept) {
       const scr = { ...scr0 };
       const x0 = x;
