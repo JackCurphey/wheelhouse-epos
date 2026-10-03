@@ -1,0 +1,194 @@
+<title>Wheelhouse Build Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column of status, newest work first; journeys as a compact grid below.
+   The palette is Wheelhouse's own Soft sand look (src/styles/theme.css). */
+:root {
+  --bg: #f4eee1;
+  --panel: #fffdf7;
+  --ink: #2a2822;
+  --muted: #6e6752;
+  --line: #e6dfcb;
+  --rail: #262420;
+  --amber: #d9a441;
+  --done-bg: #e1eedd; --done-ink: #295c39;
+  --review-bg: #e4eaf3; --review-ink: #294872;
+  --build-bg: #f7eac2; --build-ink: #7a5a10;
+  --next-bg: #f0eadc; --next-ink: #6e6752;
+  --ask-bg: #f6e3de; --ask-ink: #7a2c20;
+  --sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1d1b17; --panel: #262420; --ink: #f4eee1; --muted: #b8b0a0; --line: #3a3630; --rail: #12110e; --amber: #d9a441;
+    --done-bg: #24392a; --done-ink: #b9dcbf; --review-bg: #24304a; --review-ink: #bccbe8; --build-bg: #3b3218; --build-ink: #ecd38f;
+    --next-bg: #302d27; --next-ink: #c9c1b0; --ask-bg: #47261f; --ask-ink: #f0bdb2; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1d1b17; --panel: #262420; --ink: #f4eee1; --muted: #b8b0a0; --line: #3a3630; --rail: #12110e; --amber: #d9a441;
+  --done-bg: #24392a; --done-ink: #b9dcbf; --review-bg: #24304a; --review-ink: #bccbe8; --build-bg: #3b3218; --build-ink: #ecd38f;
+  --next-bg: #302d27; --next-ink: #c9c1b0; --ask-bg: #47261f; --ask-ink: #f0bdb2; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 0 48px; display: flex; flex-direction: column; gap: 28px; }
+header.top { background: var(--rail); color: #f4eee1; padding-inline: 20px; padding-block: 18px; }
+header.top .in { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 18px; }
+header.top h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.2px; }
+header.top h1 span { color: var(--amber); }
+header.top .upd { font-size: 13px; color: #c9c1b0; }
+h2 { margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); }
+.now { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+.now p { margin: 0; max-width: 68ch; }
+.now .lead { font-size: 18px; font-weight: 600; text-wrap: balance; }
+.tally { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.s-done { background: var(--done-bg); color: var(--done-ink); }
+.s-review { background: var(--review-bg); color: var(--review-ink); }
+.s-build { background: var(--build-bg); color: var(--build-ink); }
+.s-next { background: var(--next-bg); color: var(--next-ink); }
+.s-ask { background: var(--ask-bg); color: var(--ask-ink); }
+ol.pieces { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+ol.pieces li { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 4px 14px; align-items: start; padding: 12px 18px; border-top: 1px solid var(--line); }
+ol.pieces li:first-child { border-top: 0; }
+ol.pieces .what { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+ol.pieces .what strong { font-weight: 600; }
+ol.pieces .what span { font-size: 13px; color: var(--muted); }
+ol.pieces .ref { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+ol.pieces .ref a { color: var(--ink); }
+.journeys { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.journeys div { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.journeys .n { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-right: 6px; font-variant-numeric: tabular-nums; }
+.journeys .t { min-width: 0; font-size: 14px; }
+ul.asks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+ul.asks li { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; }
+ul.asks li p { margin: 0; min-width: 0; }
+.links { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; }
+.links a { color: var(--ink); }
+a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+@media (max-width: 560px) {
+  ol.pieces li { grid-template-columns: minmax(0, 1fr) auto; }
+  ol.pieces li .st { grid-column: 1 / -1; }
+}
+</style>
+
+<header class="top">
+  <div class="in">
+    <h1>Wheelhouse <span>build board</span></h1>
+    <div class="upd" id="updated"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="now" aria-labelledby="now-h">
+    <h2 id="now-h">Where we are</h2>
+    <p class="lead" id="lead"></p>
+    <p id="sub"></p>
+    <div class="tally" id="tally"></div>
+  </section>
+
+  <section aria-labelledby="pieces-h">
+    <h2 id="pieces-h">Build pieces, in order</h2>
+    <ol class="pieces" id="pieces"></ol>
+  </section>
+
+  <section aria-labelledby="asks-h">
+    <h2 id="asks-h">Waiting on a decision</h2>
+    <ul class="asks" id="asks"></ul>
+  </section>
+
+  <section aria-labelledby="journeys-h">
+    <h2 id="journeys-h">Journeys: designed, and what's being built</h2>
+    <div class="journeys" id="journeys"></div>
+  </section>
+
+  <section aria-labelledby="links-h">
+    <h2 id="links-h">Design canvases</h2>
+    <div class="links">
+      <a href="https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j">Staff app: shop floor</a>
+      <a href="https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4">Staff app: back office</a>
+      <a href="https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh">Customers and the website</a>
+    </div>
+  </section>
+</main>
+
+<script>
+// THE DATA. Update this block (and only this block) as pieces move on, then
+// republish. Source: docs/build-progress/build-board.html in the repo.
+const BOARD = {
+  updated: '3 October 2026',
+  lead: 'Building the Workshop day diary in the new staff app.',
+  sub: 'All 21 journeys are designed (820 of 823 screens). The new app has its Soft sand look, its sidebar and phone menu, and a diary you can read, answer requests from and move jobs around in.',
+  pieces: [
+    { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
+    { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
+    { status: 'done', what: 'Diary 1: seeing the week and day', detail: 'Jobs in their day and time, people chips, Waiting for you, legend', pr: 98 },
+    { status: 'done', what: 'Diary 2: answering what is waiting', detail: 'Accept or decline bookings and change requests, mark cancellations seen', pr: 99 },
+    { status: 'review', what: 'Diary 3: moving jobs', detail: 'Drag, or use the keyboard, to another time, day or mechanic', pr: 100 },
+    { status: 'next', what: 'Diary 4: the phone diary', detail: 'One day as a timeline, the Waiting sheet' },
+    { status: 'next', what: 'Diary 5: new job and the extras', detail: 'New job, hover summary, stacks that fan out, right-click menu' },
+    { status: 'next', what: 'Diary 6: jobs over several days', detail: 'One block per day (decided 3 Oct); needs a database change, asked about first' },
+    { status: 'next', what: 'The other journeys', detail: 'Each one: spec, tests first, build, in the order agreed' },
+  ],
+  asks: [
+    { what: 'Mechanic sign-off (Workshop day 64)', detail: 'Where and when a mechanic puts their name to a finished job. Still to design.' },
+    { what: 'Staff roles', detail: 'The server only knows who the Owner is. Managers and mechanics need marking before the sidebar can show each role its own rooms.' },
+    { what: 'Things the server cannot do yet', detail: 'Choosing the mechanic as you accept a booking, offering another time, a message with a decline, and the teal "waiting for the customer" colour.' },
+  ],
+  // status per journey id; anything not listed is 'designed'.
+  building: { ja: 'Frame built', j12: 'Building' },
+  journeys: [
+    ['A', 'App map and navigation', 'ja'], ['B', 'Signing in and access', 'jb'], ['1', 'Find the shop and browse the website'], ['2', 'Buy online, or click and collect'],
+    ['3', 'Book a repair'], ['4', 'Drop off and approve the quote'], ['5', 'Collect the bike and pay'], ['6', 'Cycle to Work'],
+    ['7', 'Account, history and reminders'], ['8', 'Owner setup and onboarding'], ['9', 'Moving from Citrus Lime'], ['10', 'Opening the shop and checking in'],
+    ['11', 'Selling at the till'], ['12', 'Workshop day', 'j12'], ['13', 'Receiving stock and purchase orders'], ['14', 'Stock take and stock control'],
+    ['15', 'Customer service'], ['16', 'End-of-day cash-up'], ['17', 'Reports and accounts'], ['18', 'Website management'],
+    ['19', 'Multiple sites'], ['20', 'Management oversight'], ['21', 'Lightspeed shops'],
+  ],
+};
+
+const LABEL = { done: 'Merged', review: 'In review', build: 'Building', next: 'Next' };
+const REPO = 'https://github.com/JackCurphey/wheelhouse-epos/pull/';
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+document.getElementById('updated').textContent = `Updated ${BOARD.updated}`;
+document.getElementById('lead').textContent = BOARD.lead;
+document.getElementById('sub').textContent = BOARD.sub;
+
+const counts = {};
+for (const p of BOARD.pieces) counts[p.status] = (counts[p.status] || 0) + 1;
+const tally = document.getElementById('tally');
+for (const s of ['done', 'review', 'build', 'next']) {
+  if (counts[s]) tally.append(el('span', `pill s-${s}`, `${counts[s]} ${LABEL[s].toLowerCase()}`));
+}
+
+const list = document.getElementById('pieces');
+for (const p of BOARD.pieces) {
+  const li = el('li');
+  const st = el('span', 'st'); st.append(el('span', `pill s-${p.status}`, LABEL[p.status]));
+  const what = el('div', 'what'); what.append(el('strong', null, p.what), el('span', null, p.detail));
+  const ref = el('span', 'ref');
+  if (p.pr) { const a = el('a', null, `PR #${p.pr}`); a.href = REPO + p.pr; ref.append(a); }
+  li.append(st, what, ref);
+  list.append(li);
+}
+
+const asks = document.getElementById('asks');
+for (const a of BOARD.asks) {
+  const li = el('li'); const p = el('p');
+  p.append(el('strong', null, `${a.what}. `), document.createTextNode(a.detail));
+  li.append(el('span', 'pill s-ask', 'Open'), p);
+  asks.append(li);
+}
+
+const grid = document.getElementById('journeys');
+for (const [num, name, id] of BOARD.journeys) {
+  const d = el('div'); const t = el('span', 't');
+  t.append(el('span', 'n', num), document.createTextNode(name));
+  const b = id && BOARD.building[id];
+  d.append(t, el('span', `pill ${b ? 's-build' : 's-next'}`, b || 'Designed'));
+  grid.append(d);
+}
+</script>
