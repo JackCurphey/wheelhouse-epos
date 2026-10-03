@@ -168,5 +168,5 @@ test('choosing a waiting card moves the diary to its week and marks its job', as
 test('the legend names each colour', async () => {
   const { ui, within } = await openDiary();
   const legend = within(ui.getByRole('list', { name: 'What the colours mean' }));
-  for (const label of ['Scheduled', 'Pending', 'Change requested', 'Waiting for parts', 'Ready', 'Cancelled']) assert.ok(has(legend.queryByText(label)), label);
+  for (const label of ['Scheduled', 'Pending', 'Waiting for the customer', 'Change requested', 'Waiting for parts', 'Ready', 'Cancelled']) assert.ok(has(legend.queryByText(label)), label);
 });
