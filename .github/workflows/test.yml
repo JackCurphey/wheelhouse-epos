@@ -137,7 +137,7 @@ jobs:
 
       - name: Check the one-canvas plan and the build plan's coverage
         working-directory: docs/design/user-journeys/generator
-        run: node --test consolidate/
+        run: node --test 'consolidate/*.test.mjs'
 
       - name: Build the clickable mockup (fails on a button with no target)
         working-directory: docs/design/user-journeys/generator
@@ -145,7 +145,7 @@ jobs:
 
       - name: Check every mockup link and every story at every size
         working-directory: docs/design/user-journeys/generator
-        run: node --test mockup/
+        run: node --test 'mockup/*.test.mjs'
 
       # ---------- Screen-design traceability ----------
 
