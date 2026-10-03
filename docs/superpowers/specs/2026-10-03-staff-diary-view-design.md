@@ -123,3 +123,19 @@ decline (the server sends none, so the button says "Decline booking", not
 
 Not yet: changing a job's length by dragging its edge (the old diary has
 resize handles; the drawings don't show them).
+
+## Piece 4: the phone diary (built 3 Oct)
+
+Below 768px the diary is one day at a time (decision 68, diary-phone):
+- one people chip that opens a choice of Everyone (one column), By mechanic
+  (a column each) or one person;
+- week arrows ("5–11 Oct") and a strip of the week's seven days in place of
+  the Week/Day switch, today marked with an amber dot;
+- the "No time" row (when one column shows), a 44px-a-row timeline, and the
+  same blocks, moving and keyboard moving as on a computer;
+- "Waiting (n)" in the top bar opens the list as a sheet; choosing a card
+  goes to its day and pins a bar at the bottom with Open; choosing it again,
+  or Open, opens the request.
+
+The top bar's action slot comes from the frame (`src/staff/header-slot.ts`).
+The "+" for a new job arrives with piece 5.

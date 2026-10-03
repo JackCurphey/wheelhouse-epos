@@ -1,10 +1,13 @@
-import { createContext, useContext, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
+import { createPortal } from 'react-dom';
 import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
+import { HeaderSlotContext } from '@/staff/header-slot.ts';
 import { RequestDialog } from './request-dialog.tsx';
+import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import {
   LEGEND, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
@@ -24,7 +27,10 @@ type Mechanic = { id: number; name: string; active: boolean };
 type Settings = { openingHours?: { weekday: number; open: string; close: string }[] };
 type Waiting = { count: number; items: WaitingItem[] };
 
-const SLOT_H = 29; // one 30-minute row, as drawn
+const SLOT_H = 29; // one 30-minute row, as drawn (desktop and tablet)
+// The phone's timeline is taller: 44px a row (P_SLOT in the drawings).
+const PHONE_SLOT_H = 44;
+const SlotContext = createContext(SLOT_H);
 
 // Whole class strings, so Tailwind sees every one (never built from parts).
 const BLOCK: Record<DiaryState, string> = {
@@ -80,6 +86,7 @@ const movable = (j: Shown) => Boolean(j.startTime) && j.state !== 'pending' && j
 function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
   job: Shown; range: { start: number }; wide: boolean; chosen: boolean; lane?: { lane: number; total: number }; colIndex: number;
 }) {
+  const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
   const moving = move?.preview?.jobId === job.id ? move.preview : null;
   const start = moving ? moving.startMin : toMinutes(job.startTime as string);
@@ -135,6 +142,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
 
 /** A change request's dashed outline at the time the customer asked for. */
 function RequestedOutline({ job, range }: { job: Shown; range: { start: number } }) {
+  const SLOT_H = useContext(SlotContext);
   const r = job.requested;
   if (!r?.startTime) return null;
   const start = toMinutes(r.startTime);
@@ -155,6 +163,7 @@ function RequestedOutline({ job, range }: { job: Shown; range: { start: number }
 function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
   label: string; index: number; jobs: Shown[]; outlines: Shown[]; range: { start: number; end: number }; wide: boolean; chosenId: number | null;
 }) {
+  const SLOT_H = useContext(SlotContext);
   const timed = jobs.filter((j) => j.startTime);
   const lanes = layoutLanes(timed.map((j) => {
     const s = toMinutes(j.startTime as string);
@@ -183,6 +192,7 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
 }
 
 function HourGutter({ range }: { range: { start: number; end: number } }) {
+  const SLOT_H = useContext(SlotContext);
   const hours: number[] = [];
   for (let m = Math.ceil(range.start / 60) * 60; m < range.end; m += 60) hours.push(m);
   return (
@@ -248,16 +258,39 @@ function Chevron({ dir }: { dir: 'prev' | 'next' }) {
   );
 }
 
+/** "5–11 Oct", or "28 Sep – 4 Oct" across months: the phone's week label. */
+function shortWeek(monday: string) {
+  const [, d1, m1] = shortDay(monday).split(' ');
+  const [, d2, m2] = shortDay(addDays(monday, 6)).split(' ');
+  return m1 === m2 ? `${d1}–${d2} ${m2}` : `${d1} ${m1} – ${d2} ${m2}`;
+}
+
 function initial(name: string) {
   return name.trim()[0]?.toUpperCase() ?? '?';
 }
 
+/** True below the tablet width (768px), where the diary is one day at a time. */
+function useIsPhone(): boolean {
+  const query = '(max-width: 767px)';
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = typeof window.matchMedia === 'function' ? window.matchMedia(query) : null;
+      mq?.addEventListener('change', onChange);
+      return () => mq?.removeEventListener('change', onChange);
+    },
+    () => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false),
+  );
+}
+
 export function DiaryPage() {
   const [params, setParams] = useSearchParams();
+  const isPhone = useIsPhone();
   const today = todayIso();
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get('date') ?? '') ? (params.get('date') as string) : today;
-  const view = params.get('view') === 'day' ? 'day' : 'week';
+  // On a phone the diary is always one day (decision 68); the week is the strip of days.
+  const view = isPhone || params.get('view') === 'day' ? 'day' : 'week';
   const who = params.get('who');
+  const slotPx = isPhone ? PHONE_SLOT_H : SLOT_H;
   const [chosen, setChosen] = useState<number | null>(null);
   const [openItem, setOpenItem] = useState<WaitingItem | null>(null);
 
@@ -271,8 +304,10 @@ export function DiaryPage() {
   };
 
   const days = view === 'week' ? weekOf(date) : [date];
-  const start = days[0];
-  const end = days[days.length - 1];
+  // A phone loads the whole week, so tapping another day in the strip is instant.
+  const fetchDays = isPhone ? weekOf(date) : days;
+  const start = fetchDays[0];
+  const end = fetchDays[fetchDays.length - 1];
 
   const mechanics = useQuery({ queryKey: ['mechanics'], queryFn: () => apiGet<Mechanic[]>('/api/employees?role=mechanic') });
   const settings = useQuery({ queryKey: ['workshop-settings'], queryFn: () => apiGet<Settings>('/api/workshop-settings') });
@@ -287,6 +322,8 @@ export function DiaryPage() {
 
   const people = (mechanics.data ?? []).filter((m) => m.active);
   const whoId = who && people.some((m) => String(m.id) === who) ? Number(who) : null;
+  // A phone shows Everyone in one column unless "By mechanic" is chosen.
+  const byMechanic = !isPhone || who === 'bymech';
 
   const shown: Shown[] = (jobs.data ?? [])
     .map((j) => ({ ...j, state: diaryState(j) }))
@@ -300,10 +337,12 @@ export function DiaryPage() {
   const unit = view === 'week' ? 'week' : 'day';
 
   // The grid's columns: the week's days, or the day's mechanics.
-  type Col = { key: string; label: string; date: string; mechanicId: number | null };
+  type Col = { key: string; label: string; date: string; mechanicId: number | null; all?: boolean };
   let columns: Col[];
   if (view === 'week') {
     columns = days.map((d) => ({ key: d, label: dayLabel(d), date: d, mechanicId: null }));
+  } else if (whoId === null && !byMechanic) {
+    columns = [{ key: 'all', label: 'Everyone', date, mechanicId: null, all: true }];
   } else {
     columns = (whoId === null ? people : people.filter((m) => m.id === whoId))
       .map((m) => ({ key: String(m.id), label: m.name, date, mechanicId: m.id }));
@@ -311,9 +350,9 @@ export function DiaryPage() {
       columns.push({ key: 'none', label: 'Not assigned yet', date, mechanicId: null });
     }
   }
-  const jobsIn = (c: Col) => shown.filter((j) => j.jobDate === c.date && (view === 'week' || j.mechanicId === c.mechanicId));
+  const jobsIn = (c: Col) => shown.filter((j) => j.jobDate === c.date && (view === 'week' || c.all || j.mechanicId === c.mechanicId));
   const outlinesIn = (c: Col) => outlinesFor((j) => j.requested?.jobDate === c.date
-    && (view === 'week' || (j.requested?.mechanicId ?? j.mechanicId) === c.mechanicId));
+    && (view === 'week' || c.all || (j.requested?.mechanicId ?? j.mechanicId) === c.mechanicId));
 
   // ---- Moving a job (piece 3) ----
   const queryClient = useQueryClient();
@@ -331,7 +370,7 @@ export function DiaryPage() {
   };
   const whereText = (p: Preview) => {
     const c = columns[p.colIndex];
-    return `${shortDay(c.date)}, ${hhmm(p.startMin)}–${hhmm(p.startMin + p.durationMin)}${view === 'day' ? `, ${c.label}` : ''}`;
+    return `${shortDay(c.date)}, ${hhmm(p.startMin)}–${hhmm(p.startMin + p.durationMin)}${view === 'day' && !c.all ? `, ${c.label}` : ''}`;
   };
   const startOf = (j: Shown, colIndex: number): Preview => ({ jobId: j.id, colIndex, startMin: toMinutes(j.startTime as string), durationMin: durationOf(j) });
 
@@ -345,7 +384,7 @@ export function DiaryPage() {
     const body: Record<string, unknown> = {
       jobDate: c.date, startTime: hhmm(p.startMin), endTime: hhmm(p.startMin + p.durationMin), version: job.version,
     };
-    if (view === 'day' && c.mechanicId !== job.mechanicId) body.mechanicId = c.mechanicId;
+    if (view === 'day' && !c.all && c.mechanicId !== job.mechanicId) body.mechanicId = c.mechanicId;
     setMoveError(null);
     try {
       await apiMutate(`/api/workshop-jobs/${job.id}`, body, { method: 'PUT' });
@@ -420,7 +459,7 @@ export function DiaryPage() {
         if (!colEl) return;
         const ci = Number(colEl.dataset.diaryCol);
         const top = colEl.getBoundingClientRect().top;
-        setPreview({ ...startOf(d.job, ci), startMin: dropStart(ev.clientY - top - d.grab, range, durationOf(d.job)) });
+        setPreview({ ...startOf(d.job, ci), startMin: dropStart(ev.clientY - top - d.grab, range, durationOf(d.job), slotPx) });
       };
       const onUp = () => {
         window.removeEventListener('pointermove', onMove);
@@ -452,6 +491,11 @@ export function DiaryPage() {
     />
   );
 
+  // ---- Phone (piece 4) ----
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // The top bar's action slot, drawn by the frame outside this page.
+  const headerSlot = useContext(HeaderSlotContext);
   const items = waiting.data?.items ?? [];
   const chip = (key: string, label: string, name: string, badge: ReactNode, on: boolean) => (
     <button
@@ -468,6 +512,204 @@ export function DiaryPage() {
       {label}
     </button>
   );
+
+  if (isPhone) {
+    const week = weekOf(date);
+    const showing = whoId !== null ? people.find((m) => m.id === whoId)?.name ?? 'Everyone' : byMechanic ? 'By mechanic' : 'Everyone';
+    const chosenItem = items.find((i) => i.jobId === chosen) ?? null;
+    const hours: number[] = [];
+    for (let m = Math.ceil(range.start / 60) * 60; m < range.end; m += 60) hours.push(m);
+    const noTime = columns.length === 1 ? shown.filter((j) => j.jobDate === date && !j.startTime) : [];
+    const pickPeople = (value: string | null) => { set({ who: value }); setPeopleOpen(false); };
+    const chooseItem = (item: WaitingItem) => {
+      if (chosen === item.jobId) { setOpenItem(item); setSheetOpen(false); return; }
+      setChosen(item.jobId ?? null);
+      if (item.jobDate) set({ date: item.jobDate, who: null });
+      setSheetOpen(false);
+    };
+    return (
+      <div className="-m-3.5 flex flex-col">
+        {headerSlot ? createPortal(
+          <button
+            type="button"
+            aria-label={`Waiting for you, ${waiting.data?.count ?? items.length}`}
+            onClick={() => setSheetOpen(true)}
+            className="inline-flex min-h-11 items-center gap-[7px] rounded-[10px] border border-[var(--wh-on-accent)]/35 pr-2.5 pl-3 text-[15px] font-semibold text-[var(--sidebar-foreground)]"
+          >
+            Waiting
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--wh-panel)] px-[7px] text-[13px] font-bold text-[var(--wh-ink)]">
+              {waiting.data?.count ?? items.length}
+            </span>
+          </button>,
+          headerSlot,
+        ) : null}
+
+        <div className="flex flex-col gap-2 border-b border-[var(--wh-border)] px-3.5 py-2.5">
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="relative">
+              <button
+                type="button"
+                aria-expanded={peopleOpen}
+                aria-label={`Showing ${showing}. Change whose jobs are shown`}
+                onClick={() => setPeopleOpen((o) => !o)}
+                className="inline-flex min-h-11 items-center gap-[7px] rounded-full bg-[var(--wh-accent-soft)] py-[5px] pr-2.5 pl-1.5 text-sm font-semibold whitespace-nowrap text-[var(--wh-accent-soft-ink)]"
+              >
+                <span aria-hidden="true" className="inline-flex size-6 items-center justify-center rounded-full bg-[var(--wh-panel)]">
+                  {whoId !== null ? initial(showing) : <NavIcon name="customers" size={14} />}
+                </span>
+                {showing}
+                <Chevron dir="next" />
+              </button>
+              {peopleOpen ? (
+                <div role="menu" aria-label="Whose jobs to show" className="absolute top-full left-0 z-20 mt-1 flex min-w-[200px] flex-col rounded-lg border border-[var(--wh-border)] bg-[var(--wh-panel)] p-1 shadow-[0_10px_26px_var(--wh-backdrop)]">
+                  {[{ v: null as string | null, label: 'Everyone' }, { v: 'bymech', label: 'By mechanic' }, ...people.map((m) => ({ v: String(m.id), label: m.name }))].map((o) => (
+                    <button
+                      key={o.label}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={showing === o.label}
+                      onClick={() => pickPeople(o.v)}
+                      className={`min-h-11 rounded-md px-3 text-left text-sm font-semibold ${showing === o.label ? 'bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'hover:bg-[var(--wh-hover)]'}`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <button type="button" aria-label="Previous week" onClick={() => set({ date: addDays(date, -7) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
+                <Chevron dir="prev" />
+              </button>
+              <span className="min-w-[74px] text-center text-sm font-bold whitespace-nowrap">{shortWeek(week[0])}</span>
+              <button type="button" aria-label="Next week" onClick={() => set({ date: addDays(date, 7) })} className="inline-flex size-11 items-center justify-center rounded-lg border border-[var(--wh-input-border)]">
+                <Chevron dir="next" />
+              </button>
+            </div>
+          </div>
+          {/* The week's days replace the Week/Day switch (decision 68). */}
+          <div role="tablist" aria-label="Choose a day" className="flex gap-0.5 rounded-[10px] bg-[var(--wh-surface-muted)] p-[3px]">
+            {week.map((d) => {
+              const on = d === date;
+              const [wd, dn] = shortDay(d).split(' ');
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  aria-label={`${dayLabel(d)}${d === today ? ', today' : ''}`}
+                  onClick={() => set({ date: d })}
+                  className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center rounded-lg ${on ? 'bg-[var(--wh-panel)] shadow-[0_1px_2px_var(--wh-border)]' : ''}`}
+                >
+                  <span className={`text-xs font-bold uppercase ${on ? '' : 'text-[var(--wh-muted)]'}`}>{wd}</span>
+                  <span className="text-base leading-tight font-bold">{dn}</span>
+                  {d === today ? <span aria-hidden="true" className="absolute bottom-1 size-[5px] rounded-full bg-[var(--wh-highlight)]" /> : null}
+                </button>
+              );
+            })}
+          </div>
+          {columns.length === 1 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase">No time</span>
+              <div role="group" aria-label="No time" className="flex flex-wrap gap-1.5">
+                {noTime.length === 0 ? <span className="text-[13px] text-[var(--wh-muted)]">None</span> : null}
+                {noTime.map((j) => (
+                  <span key={j.id} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-[13px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
+                    <span className={SR}>{describe(j, false)}</span>
+                    <span aria-hidden="true">{j.bikeLabel || 'Bike'}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <p id="diary-move-hint" className={SR}>Drag a job to move it, or press Enter to pick it up and use the arrow keys.</p>
+        <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
+        {moveError ? <p role="alert" className="m-3.5 mb-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
+
+        <section aria-label={`Workshop diary, ${dayLabel(date)}`} className="px-3.5 pb-3.5">
+          {columns.length > 1 ? (
+            <div className="sticky top-0 z-[4] grid bg-[var(--wh-bg)]" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(0, 1fr))` }}>
+              <span />
+              {columns.map((c) => (
+                <span key={c.key} className="border-b border-l border-[var(--wh-border)] px-1 py-1.5 text-center text-sm font-bold first:border-l-0">{c.label}</span>
+              ))}
+            </div>
+          ) : null}
+          <SlotContext.Provider value={PHONE_SLOT_H}>
+            <MoveContext.Provider value={moveApi}>
+              <div className="grid pt-2" style={{ gridTemplateColumns: `48px repeat(${columns.length}, minmax(0, 1fr))` }}>
+                <div aria-hidden="true" className="relative" style={{ height: ((range.end - range.start) / 30) * PHONE_SLOT_H }}>
+                  {hours.map((m) => (
+                    <span key={m} className="absolute left-0 font-[family-name:var(--wh-font-mono)] text-xs text-[var(--wh-muted)]" style={{ top: Math.max(((m - range.start) / 30) * PHONE_SLOT_H - 8, 0) }}>
+                      {hhmm(m)}
+                    </span>
+                  ))}
+                </div>
+                {columns.map((c, i) => (
+                  <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={false} chosenId={chosen} />
+                ))}
+              </div>
+            </MoveContext.Provider>
+          </SlotContext.Provider>
+        </section>
+
+        {chosenItem ? (
+          <div role="status" aria-label="Chosen from Waiting for you" className="sticky bottom-0 flex flex-col gap-1.5 border-t border-[var(--wh-border)] bg-[var(--wh-panel)] px-3.5 pt-2.5 pb-3 shadow-[0_-6px_18px_var(--wh-backdrop)]">
+            <div className="flex items-center gap-2.5">
+              <div className="flex min-w-0 grow flex-col gap-[3px]">
+                <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[waitingCard(chosenItem).tone]}`}>{waitingCard(chosenItem).label}</span>
+                <span className="text-[15px] font-bold">{waitingCard(chosenItem).customer}</span>
+                <span className="text-sm">{waitingCard(chosenItem).detail}</span>
+              </div>
+              <button
+                type="button"
+                aria-label={`Open ${waitingCard(chosenItem).customer}'s request`}
+                onClick={() => setOpenItem(chosenItem)}
+                className="inline-flex min-h-11 min-w-[72px] items-center justify-center rounded-lg bg-[var(--accent)] px-4 text-[15px] font-bold text-[var(--wh-on-brand)]"
+              >
+                Open
+              </button>
+            </div>
+            <span className="text-xs text-[var(--wh-muted)]">Tap the card again to open it.</span>
+          </div>
+        ) : null}
+
+        <Dialog open={sheetOpen} onOpenChange={setSheetOpen} aria-labelledby="waiting-sheet-title">
+          <DialogHeader>
+            <DialogTitle id="waiting-sheet-title">{`Waiting for you (${waiting.data?.count ?? items.length})`}</DialogTitle>
+            <button type="button" aria-label="Close" onClick={() => setSheetOpen(false)} className="inline-flex size-11 items-center justify-center rounded-lg">
+              <NavIcon name="close" size={20} />
+            </button>
+          </DialogHeader>
+          <DialogBody className="flex flex-col gap-2">
+            {items.length === 0 ? <p className="m-0 text-sm text-[var(--wh-muted)]">Nothing waiting.</p> : null}
+            {items.map((item) => {
+              const card = waitingCard(item);
+              const on = chosen === item.jobId;
+              return (
+                <button
+                  key={`${item.kind}-${item.jobId}`}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => chooseItem(item)}
+                  className={`flex min-h-11 flex-col gap-1 rounded-lg bg-[var(--wh-panel)] px-3 py-2.5 text-left ${on ? 'border-2 border-[var(--accent)]' : 'border border-[var(--wh-border)]'}`}
+                >
+                  <span className={`self-start rounded-full px-2 py-0.5 text-xs font-bold ${CHIP[card.tone]}`}>{card.label}</span>
+                  <span className="text-[15px] font-bold">{card.customer}</span>
+                  <span className="text-sm">{card.detail}</span>
+                </button>
+              );
+            })}
+          </DialogBody>
+        </Dialog>
+
+        {openItem ? <RequestDialog key={`${openItem.kind}-${openItem.jobId}`} item={openItem} onClose={() => setOpenItem(null)} onAnswered={() => setChosen(null)} /> : null}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
