@@ -306,7 +306,7 @@ for (const j of journeys) if (!PARTS.some((P) => P.ids.includes(j.id))) throw ne
 // it, from any journey, in journeys.mjs order. "What's different" is the
 // folded drawing's own title; "who" its role; then the decision it came from.
 const situations = new Map();
-for (const x of allScreens) { const e = plan.get(x.id); if (e.kind === 'into') { const own = ownerOf(x.id); if (!situations.has(own)) situations.set(own, []); situations.get(own).push({ x, decision: e.decision }); } }
+for (const x of allScreens) { const e = plan.get(x.id); if (e.kind === 'into') { const own = ownerOf(x.id); if (!situations.has(own)) situations.set(own, []); situations.get(own).push({ x, decision: e.decision, diff: e.diff }); } }
 // Release 1 pictures (d()) carry no title or role in journeys.mjs; theirs are
 // in shots/screens.json.
 const titleOf = (x) => x.title ?? designs[x.id]?.title ?? x.id;
@@ -319,7 +319,7 @@ const situationText = (id) => {
   if (!list.length && !extra.length) return null;
   const home = byId.get(id).journey.id;
   return [`Situations of this screen (${list.length + extra.length})`,
-    ...list.map(({ x, decision }) => `• ${titleOf(x)} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`),
+    ...list.map(({ x, decision, diff }) => `• ${titleOf(x)}${diff ? `: ${diff}` : ''} — ${roleOfScreen(x)}${x.journey.id !== home ? ` · from journey ${x.journey.num ?? Number(x.journey.id.slice(1))}` : ''}${decision ? ` · ${decision}` : ''}`),
     ...extra.map((l) => `• ${l.text} — ${l.who}${l.decision ? ` · ${l.decision}` : ''}`)].join('\n');
 };
 const NOTE_LINE = 30;

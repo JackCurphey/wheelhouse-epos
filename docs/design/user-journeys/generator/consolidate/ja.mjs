@@ -5,17 +5,17 @@ import { keep, into, later } from './plan.mjs';
 export default {
   'map': keep(16), // inferred: the map of the three frames; no closer block
   'staff-app': keep(16), // owner of the staff app frame (brief rule 6)
-  'staff-app-mechanic': into('staff-app', 'App map 11, 14'),
-  'staff-app-menu': into('staff-app', 'App map 11, 14'),
+  'staff-app-mechanic': into('staff-app', 'App map 11, 14', "Alex Morgan, Mechanic: sidebar shows only the Workshop room; diary filtered to Alex, no Waiting column"),
+  'staff-app-menu': into('staff-app', 'App map 11, 14', "Phone menu open over the dimmed page: rooms, shop switcher, your name, 'Close menu'"),
   'till-rail': keep(16),
-  'till-rail-open': into('till-rail', 'App map 4, 5'),
+  'till-rail-open': into('till-rail', 'App map 4, 5', "Rail unfolded over the till: room names, 'Shop: Bolton' switcher, 'Fold the menu', 'Check out'"),
   'till-search': keep(17),
   'your-settings': keep(2), // owner of Your settings (brief rule 6)
-  'your-settings-no-pin': into('your-settings', 'WT4 H1'),
+  'your-settings-no-pin': into('your-settings', 'WT4 H1', "Till PIN reads 'No PIN yet' with 'Get your PIN' in place of 'Change PIN'"),
   'site': keep(16),
-  'site-menu': into('site', 'App map 3, 10'),
+  'site-menu': into('site', 'App map 3, 10', "Phone menu open: 'Shop', 'Book a repair', 'Our shops', 'Account' as a full-width list"),
   'site-ocean': keep(16), // kept: App map 3 — report says a list line "goes against App map 3's 'one extra board'"
-  'site-ocean-menu': into('site-ocean', 'App map 3, 10'),
+  'site-ocean-menu': into('site-ocean', 'App map 3, 10', "Phone menu open, Ocean Blue: 'Book a repair' as a big button above the list"),
 };
 
 // Decisions drawn as lines, with no old drawing behind them

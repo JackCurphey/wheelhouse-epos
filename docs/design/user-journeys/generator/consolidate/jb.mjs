@@ -6,23 +6,23 @@ export default {
   'workos-signin': keep(42), // inferred: real screen; closest block is a sign-in page
   'auth-site': keep(13), // inferred: real screen, choosing the shop
   'auth-signedout': keep(40),
-  'auth-expired': into('auth-signedout', ''), // Walk-through 8 M4: decision 3 is the workshop computer's PIN screen (on till-checkin), not an email sign-out
-  'auth-noaccess': into('staff-app', ''),
+  'auth-expired': into('auth-signedout', '', "Lock icon; 'Please sign in again' after being signed out 'after a while without activity'"), // Walk-through 8 M4: decision 3 is the workshop computer's PIN screen (on till-checkin), not an email sign-out
+  'auth-noaccess': into('staff-app', '', "'Reports aren’t part of your role' card for Jo Taylor (Staff), with 'Go to Today'"),
   'till-setup': keep(1),
   'till-checkin': keep(43),
-  'till-checkin-offline': into('till-checkin', 'Leftover 4, Signing in 9'),
-  'till-checkin-stale': into('till-checkin', 'Leftover 4, Signing in 9'),
-  'till-pin-wrong': into('till-checkin', 'Leftover 4, Signing in 9'),
+  'till-checkin-offline': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Offline · [n] sales waiting to send'; the till bar shows offline"),
+  'till-checkin-stale': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Online · prices and stock last updated [time] · [n] sales still sending'"),
+  'till-pin-wrong': into('till-checkin', 'Leftover 4, Signing in 9', "Dots cleared; 'That PIN isn’t anyone’s — try again'"),
   'pin-change': keep(43),
-  'pin-first': into('pin-change', 'Signing in 6–7, Walk-through 4 H1'),
-  'pin-cleared': into('pin-change', 'Signing in 6–7, Walk-through 4 H1'),
-  'till-give-pin': into('pin-change', 'Signing in 6–7, Walk-through 4 H1'),
+  'pin-first': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "First-time version: 'Welcome to North Street Cycles, Jo'; no close; adds 'Skip for now'"),
+  'pin-cleared': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "'Your old PIN was cleared, so here’s a new one'; no close; adds 'Skip for now'"),
+  'till-give-pin': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "'[Name]’s till PIN' over the till: 'Turn the screen to [Name]'"),
   'till-checkin-practice': later('Dropped, not later: issue #116 question 4, practice mode dropped'),
   'cust-signin': keep(42),
   'cust-code': keep(42),
-  'cust-code-expired': into('cust-code', 'Signing in 5, 9'),
+  'cust-code-expired': into('cust-code', 'Signing in 5, 9', "All six digits in red; 'That code has expired — send a new one'"),
   'pending': keep(40),
-  'expired': into('pending', 'Signing in 10'),
+  'expired': into('pending', 'Signing in 10', "'This request has expired.' with 'Find a new day' or 'Contact the shop'"),
 };
 
 // Decisions drawn as lines, with no old drawing behind them

@@ -43,3 +43,8 @@ test('every extra situation line sits on a kept screen and says what and who', (
   const bad = lines.filter((l) => plan.get(l.on)?.kind !== 'keep' || !String(l.text || '').trim() || !String(l.who || '').trim()).map((l) => `${l.file}: ${l.on} "${l.text}"`);
   assert.deepEqual(bad, []);
 });
+
+test('every situation line says what is different (README rule 2)', () => {
+  const bad = [...plan].filter(([, e]) => e.kind === 'into' && !String(e.diff || '').trim()).map(([id]) => id);
+  assert.deepEqual(bad, [], `${bad.length} lines have no "what's different"`);
+});

@@ -4,7 +4,9 @@
 //   keep(block, { sizes })  stays a board; block is a number from the README's
 //                           "Building blocks" list; sizes defaults to desktop
 //                           (customer pages: phone) — rule 3
-//   into(id, decision)      a line in that kept screen's situation list (rule 1)
+//   into(id, decision, diff) a line in that kept screen's situation list (rule 1);
+//                           diff = what's different from the kept board, in a few
+//                           words taken from the old drawing (rule 2)
 //   later(reason)           deferred (3 Oct answers or the build plan): listed
 //                           on its journey, not drawn
 // A journey file may also export `lines`: extra situation-list lines that
@@ -18,7 +20,7 @@ import { journeys } from '../journeys.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 
 export const keep = (block, { sizes } = {}) => ({ kind: 'keep', block, sizes });
-export const into = (id, decision = '') => ({ kind: 'into', id, decision });
+export const into = (id, decision = '', diff = '') => ({ kind: 'into', id, decision, diff });
 export const later = (reason) => ({ kind: 'later', reason });
 
 // The numbered list under "### Building blocks" in ../../README.md.
