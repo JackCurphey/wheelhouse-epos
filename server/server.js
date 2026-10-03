@@ -2502,6 +2502,93 @@ const WORKSHOP_JOB_SELECT = `SELECT w.*, c.name AS customer_name, trim(b.make ||
   LEFT JOIN sale_documents d ON d.workshop_job_id = w.id`;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+// ---- A job's parts: one per day it is worked (migration 037; Workshop day
+// decision 52). Part 1 is the job's own date, times and mechanic, kept
+// identical by triggers; later parts come from "Add another day" and from
+// carry-over. Spec: docs/superpowers/specs/2026-10-03-multi-day-jobs-design.md
+function serializePart(row) {
+  return {
+    id: row.id,
+    position: row.position,
+    date: row.part_date,
+    startTime: row.start_time || '',
+    endTime: row.end_time || '',
+    mechanicId: row.mechanic_id ?? null,
+    mechanicName: row.mechanic_name ?? null,
+  };
+}
+
+// Adds each job's parts, in order, to serialized jobs.
+async function attachParts(jobs) {
+  if (!jobs.length) return jobs;
+  const rows = await db.prepare(
+    `SELECT p.*, e.name AS mechanic_name FROM workshop_job_parts p
+     LEFT JOIN employees e ON e.id = p.mechanic_id
+     WHERE p.workshop_job_id = ANY(?::int[]) ORDER BY p.workshop_job_id, p.position`
+  ).all(jobs.map((j) => j.id));
+  const byJob = new Map();
+  for (const r of rows) {
+    if (!byJob.has(r.workshop_job_id)) byJob.set(r.workshop_job_id, []);
+    byJob.get(r.workshop_job_id).push(serializePart(r));
+  }
+  return jobs.map((j) => ({ ...j, parts: byJob.get(j.id) ?? [] }));
+}
+
+const addDaysIso = (date, n) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+// The first day on or after `from` that the shop opens and the mechanic works
+// (any day the shop opens when there is no mechanic), within 60 days.
+async function nextWorkingDay(from, mechanicId) {
+  const settings = await db.prepare('SELECT opening_days FROM workshop_settings LIMIT 1').get();
+  const shopDays = settings ? parseWorkingDays(settings.opening_days) : null;
+  let mechDays = null;
+  if (mechanicId) {
+    const m = await db.prepare('SELECT working_days FROM employees WHERE id = ?').get(mechanicId);
+    mechDays = m ? parseWorkingDays(m.working_days) : null;
+  }
+  for (let i = 0; i < 60; i += 1) {
+    const date = addDaysIso(from, i);
+    const weekday = new Date(`${date}T00:00:00Z`).getUTCDay();
+    if (Array.isArray(shopDays) && !shopDays.includes(weekday)) continue;
+    if (Array.isArray(mechDays) && !mechDays.includes(weekday)) continue;
+    return date;
+  }
+  return null;
+}
+
+// Carry-over (decision 52; Jack, 3 Oct): an unfinished job - the bike is in
+// the shop and the work isn't finished - whose last day has passed gets a new
+// part on the next working day from today, at the same time, with the same
+// mechanic. Run when the jobs list is read (nothing runs at midnight). Not
+// refused for overlapping another job: the diary shows the overlap.
+// Idempotent: once a job has a part today or later it no longer qualifies,
+// and a second reader racing the first is stopped by UNIQUE(job, position).
+async function carryOverUnfinished() {
+  const today = await currentShopToday();
+  const late = await db.prepare(
+    `SELECT w.id, w.shop_id, p.part_date, p.start_time, p.end_time, p.mechanic_id, p.position
+       FROM workshop_jobs w
+       JOIN workshop_job_parts p ON p.workshop_job_id = w.id
+      WHERE w.custody_state = 'in_shop' AND w.work_state <> 'complete'
+        AND w.booking_state IN ('scheduled', 'reschedule_requested')
+        AND p.position = (SELECT max(position) FROM workshop_job_parts q WHERE q.workshop_job_id = w.id)
+        AND p.part_date < ?`
+  ).all(today);
+  for (const last of late) {
+    const date = await nextWorkingDay(today, last.mechanic_id);
+    if (!date) continue;
+    const added = await db.prepare(
+      `INSERT INTO workshop_job_parts (shop_id, workshop_job_id, part_date, start_time, end_time, mechanic_id, position)
+       VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (workshop_job_id, position) DO NOTHING RETURNING id`
+    ).get(last.shop_id, last.id, date, last.start_time, last.end_time, last.mechanic_id, last.position + 1);
+    if (added) await db.prepare('UPDATE workshop_jobs SET version = version + 1, updated_at = now() WHERE id = ?').run(last.id);
+  }
+}
+
 async function resolveJobCustomerId(rawId, existingId) {
   if (rawId === undefined) return { ok: true, customerId: existingId };
   if (rawId === null || rawId === '') return { ok: true, customerId: null };
@@ -2570,15 +2657,14 @@ function resolveJobTimes(startTime, endTimeInput) {
 route('GET', '/api/workshop-jobs', async (req, res, params, query) => {
   const start = query.get('start');
   const end = query.get('end');
+  await carryOverUnfinished();
   let sql = WORKSHOP_JOB_SELECT + ' WHERE 1=1';
   const args = [];
-  if (start) {
-    sql += ' AND w.job_date >= ?';
-    args.push(start);
-  }
-  if (end) {
-    sql += ' AND w.job_date <= ?';
-    args.push(end);
+  // A job is in the range when any of its days is (a job over several days).
+  if (start || end) {
+    sql += ` AND EXISTS (SELECT 1 FROM workshop_job_parts p WHERE p.workshop_job_id = w.id
+      AND (?::text IS NULL OR p.part_date >= ?) AND (?::text IS NULL OR p.part_date <= ?))`;
+    args.push(start || null, start || null, end || null, end || null);
   }
   const status = query.get('status');
   if (status) {
@@ -2587,14 +2673,14 @@ route('GET', '/api/workshop-jobs', async (req, res, params, query) => {
   }
   sql += ' ORDER BY w.job_date, w.start_time';
   const rows = await db.prepare(sql).all(...args);
-  sendJson(res, 200, rows.map(serializeWorkshopJob));
+  sendJson(res, 200, await attachParts(rows.map(serializeWorkshopJob)));
 });
 
 route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
   if (!row) return notFound(res, 'Job not found');
-  sendJson(res, 200, serializeWorkshopJob(row));
+  sendJson(res, 200, (await attachParts([serializeWorkshopJob(row)]))[0]);
 });
 
 // A new booking link for a job: the old one stops working at once, because a
@@ -2929,10 +3015,10 @@ async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJob
   // answer, so it is an overlap too - except for the job that asked for it.
   const overlap = await db
     .prepare(
-      `SELECT id FROM workshop_jobs
-       WHERE mechanic_id = ? AND job_date = ? AND start_time IS NOT NULL AND start_time != ''
-       AND start_time < ? AND end_time > ? AND (?::int IS NULL OR id != ?::int)
-       AND booking_state IN (${LIVE_STATES_SQL})
+      `SELECT w.id FROM workshop_job_parts p JOIN workshop_jobs w ON w.id = p.workshop_job_id
+       WHERE p.mechanic_id = ? AND p.part_date = ? AND p.start_time IS NOT NULL AND p.start_time != ''
+       AND p.start_time < ? AND p.end_time > ? AND (?::int IS NULL OR w.id != ?::int)
+       AND w.booking_state IN (${LIVE_STATES_SQL})
        UNION ALL
        SELECT id FROM workshop_jobs
        WHERE requested_mechanic_id = ? AND requested_job_date = ? AND requested_start_time <> ''
@@ -3015,7 +3101,103 @@ route('POST', '/api/workshop-jobs', async (req, res) => {
     if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
     else throw err;
   }
+  if (out.status === 201) out.body = (await attachParts([out.body]))[0];
   sendJson(res, out.status, out.body);
+});
+
+// ---- A job's later days (Jack, 3 Oct: "Add another day" on the job page) ----
+// Each changes the job, so each needs the version the caller saw and bumps
+// it. Day 1 is the job's own date and is moved with PUT /api/workshop-jobs/:id.
+// Spec: docs/superpowers/specs/2026-10-03-multi-day-jobs-design.md
+async function sendJobWithParts(res, id) {
+  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+  if (!row) return notFound(res, 'Job not found');
+  sendJson(res, 200, (await attachParts([serializeWorkshopJob(row)]))[0]);
+}
+const bumpJobVersion = (id) => db.prepare('UPDATE workshop_jobs SET version = version + 1, updated_at = now() WHERE id = ?').run(id);
+const lastPartOf = (id) => db.prepare('SELECT * FROM workshop_job_parts WHERE workshop_job_id = ? ORDER BY position DESC LIMIT 1').get(id);
+
+// screens: diary, week
+route('POST', '/api/workshop-jobs/:id/parts', async (req, res, params) => {
+  const id = Number(params.id);
+  const body = await readJsonBody(req);
+  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+  const last = await lastPartOf(id);
+  if (!last) return notFound(res, 'Job not found');
+  const date = await nextWorkingDay(addDaysIso(last.part_date, 1), last.mechanic_id);
+  if (!date) return badRequest(res, 'There is no working day for this mechanic in the next 60 days');
+  const out = await withJobBookingLock(id, [date], async (job) => {
+    if (job.version !== body.version) return staleRefusal;
+    const now = await lastPartOf(id);
+    if (now.id !== last.id || now.part_date !== last.part_date) return staleRefusal;
+    const slot = await checkJobSlot({ jobDate: date, startTime: last.start_time, endTime: last.end_time, mechanicId: last.mechanic_id, ignoreJobId: id });
+    if (slot) return refusal(slot.error);
+    await db.prepare(
+      `INSERT INTO workshop_job_parts (shop_id, workshop_job_id, part_date, start_time, end_time, mechanic_id, position)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(job.shop_id, id, date, last.start_time, last.end_time, last.mechanic_id, last.position + 1);
+    await bumpJobVersion(id);
+    return undefined;
+  });
+  if (out?.gone) return notFound(res, 'Job not found');
+  if (out) return sendJson(res, out.status, out.body);
+  return sendJobWithParts(res, id);
+});
+
+// screens: diary, week
+route('PUT', '/api/workshop-jobs/:id/parts/:partId', async (req, res, params) => {
+  const id = Number(params.id);
+  const partId = Number(params.partId);
+  const body = await readJsonBody(req);
+  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+  const part = await db.prepare('SELECT * FROM workshop_job_parts WHERE id = ? AND workshop_job_id = ?').get(partId, id);
+  if (!part) return notFound(res, 'That day of the job was not found');
+  if (part.position === 1) return badRequest(res, "Move a job's first day by moving the job itself");
+  const jobDate = body.jobDate !== undefined ? String(body.jobDate).trim() : part.part_date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
+  const times = resolveJobTimes(
+    body.startTime !== undefined ? String(body.startTime).trim() : part.start_time,
+    body.endTime !== undefined ? String(body.endTime).trim() : part.end_time,
+  );
+  if (times.error) return badRequest(res, times.error);
+  const mech = await resolveJobMechanicId(body.mechanicId, part.mechanic_id);
+  if (!mech.ok) return badRequest(res, 'Mechanic not found or inactive');
+  const out = await withJobBookingLock(id, [part.part_date, jobDate], async (job) => {
+    if (job.version !== body.version) return staleRefusal;
+    const slot = await checkJobSlot({ jobDate, startTime: times.startTime, endTime: times.endTime, mechanicId: mech.mechanicId, ignoreJobId: id });
+    if (slot) return refusal(slot.error);
+    await db.prepare('UPDATE workshop_job_parts SET part_date = ?, start_time = ?, end_time = ?, mechanic_id = ? WHERE id = ?')
+      .run(jobDate, times.startTime, times.endTime, mech.mechanicId, partId);
+    await bumpJobVersion(id);
+    return undefined;
+  });
+  if (out?.gone) return notFound(res, 'Job not found');
+  if (out) return sendJson(res, out.status, out.body);
+  return sendJobWithParts(res, id);
+});
+
+// screens: diary, week
+route('DELETE', '/api/workshop-jobs/:id/parts/:partId', async (req, res, params) => {
+  const id = Number(params.id);
+  const partId = Number(params.partId);
+  const body = await readJsonBody(req);
+  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+  const part = await db.prepare('SELECT * FROM workshop_job_parts WHERE id = ? AND workshop_job_id = ?').get(partId, id);
+  if (!part) return notFound(res, 'That day of the job was not found');
+  if (part.position === 1) return badRequest(res, "A job's first day can't be removed");
+  const out = await withJobBookingLock(id, [part.part_date], async (job) => {
+    if (job.version !== body.version) return staleRefusal;
+    await db.prepare('DELETE FROM workshop_job_parts WHERE id = ?').run(partId);
+    // Close up the positions after it, in two steps so UNIQUE(job, position)
+    // never sees two parts at the same position mid-update.
+    await db.prepare('UPDATE workshop_job_parts SET position = -position WHERE workshop_job_id = ? AND position > ?').run(id, part.position);
+    await db.prepare('UPDATE workshop_job_parts SET position = -position - 1 WHERE workshop_job_id = ? AND position < 0').run(id);
+    await bumpJobVersion(id);
+    return undefined;
+  });
+  if (out?.gone) return notFound(res, 'Job not found');
+  if (out) return sendJson(res, out.status, out.body);
+  return sendJobWithParts(res, id);
 });
 
 route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
@@ -4295,14 +4477,17 @@ function toCapacityJob(row) {
 async function clashesFor(block) {
   const today = await currentShopToday();
   const from = block.kind === 'dates' && block.startDate > today ? block.startDate : today;
-  let sql = `SELECT id, reference, title, mechanic_id, job_date, start_time, end_time, planned_minutes
-    FROM workshop_jobs WHERE job_date >= ? AND booking_state IN (${LIVE_STATES_SQL})`;
+  // Every day of a job (its parts), so a block over a job's second day finds it.
+  let sql = `SELECT w.id, w.reference, w.title, p.mechanic_id, p.part_date AS job_date, p.start_time, p.end_time,
+      CASE WHEN p.position = 1 THEN w.planned_minutes END AS planned_minutes
+    FROM workshop_job_parts p JOIN workshop_jobs w ON w.id = p.workshop_job_id
+    WHERE p.part_date >= ? AND w.booking_state IN (${LIVE_STATES_SQL})`;
   const args = [from];
   if (block.kind === 'dates') {
-    sql += ' AND job_date <= ?';
+    sql += ' AND p.part_date <= ?';
     args.push(block.endDate);
   }
-  const rows = await db.prepare(`${sql} ORDER BY job_date, start_time`).all(...args);
+  const rows = await db.prepare(`${sql} ORDER BY p.part_date, p.start_time`).all(...args);
   const byId = new Map(rows.map((r) => [r.id, r]));
   return blockClashes(block, rows.map(toCapacityJob)).map((j) => ({
     id: j.id,
@@ -5188,10 +5373,14 @@ async function loadCapacity(start, end, { ignoreJobId = null } = {}) {
   const blocks = (await db.prepare(
     `SELECT * FROM workshop_unavailability WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?)`
   ).all(end, start)).map(toBlock);
+  // One row per day a job is worked (its parts), so a job's second day takes
+  // that mechanic's time too. Only part 1 speaks for untimed planned minutes.
   const jobs = (await db.prepare(
-    `SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes FROM workshop_jobs
-     WHERE job_date >= ? AND job_date <= ? AND booking_state IN (${LIVE_STATES_SQL})
-       AND (?::int IS NULL OR id <> ?::int)`
+    `SELECT w.id, p.mechanic_id, p.part_date AS job_date, p.start_time, p.end_time,
+            CASE WHEN p.position = 1 THEN w.planned_minutes END AS planned_minutes
+       FROM workshop_job_parts p JOIN workshop_jobs w ON w.id = p.workshop_job_id
+      WHERE p.part_date >= ? AND p.part_date <= ? AND w.booking_state IN (${LIVE_STATES_SQL})
+        AND (?::int IS NULL OR w.id <> ?::int)`
   ).all(start, end, ignoreJobId, ignoreJobId)).map(toCapacityJob);
   // A customer's requested time (piece 12) takes capacity like a booking while
   // staff decide, so nobody else is offered it. Tagged `requested` so a job is

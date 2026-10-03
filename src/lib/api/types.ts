@@ -4,6 +4,17 @@
  * is the bug.
  */
 
+/** One day of a job (serializePart in server/server.js). */
+export type JobPart = {
+  id: number;
+  position: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  mechanicId: number | null;
+  mechanicName: string | null;
+};
+
 /** serializeWorkshopJob. The three `*State` fields are what screens drive
  * from; `status` is the derived legacy field kept for the old app. */
 export type WorkshopJob = {
@@ -31,6 +42,8 @@ export type WorkshopJob = {
   cancelledBy?: string | null;
   cancelledAt?: string | null;
   cancellationSeenAt?: string | null;
+  /** Each day the job is worked, in order; part 1 is the job's own date (migration 037). */
+  parts?: JobPart[];
   /** What the customer wrote when booking online, if anything. */
   customerDescription?: string | null;
   notes: string | null;

@@ -54,19 +54,39 @@ const CHIP: Record<DiaryState, string> = {
 
 const SR = 'sr-only';
 
-type Shown = WorkshopJob & { state: DiaryState };
+/** One block: a job on one of its days (decision 52), with that day's date, times and mechanic. */
+type Shown = WorkshopJob & { state: DiaryState; partId: number; partPos: number; partCount: number };
+
+/** A job as one block per day it is worked; a job sent without parts is one day. */
+function blocksOf(j: WorkshopJob): Omit<Shown, 'state'>[] {
+  const parts = j.parts?.length ? j.parts : null;
+  if (!parts) return [{ ...j, partId: -j.id, partPos: 1, partCount: 1 }];
+  return parts.map((p) => ({
+    ...j,
+    jobDate: p.date,
+    startTime: p.startTime || null,
+    endTime: p.endTime || null,
+    mechanicId: p.mechanicId,
+    mechanicName: p.mechanicName,
+    partId: p.id,
+    partPos: p.position,
+    partCount: parts.length,
+  }));
+}
 
 function timeText(j: { startTime: string | null; endTime: string | null }) {
   return j.startTime ? `${j.startTime}${j.endTime ? `–${j.endTime}` : ''}` : 'no set time';
 }
 
+const dayOf = (j: Shown) => (j.partCount > 1 ? `day ${j.partPos} of ${j.partCount}` : '');
+
 function describe(j: Shown, chosen: boolean) {
   const bike = j.bikeLabel || 'Bike';
-  return [bike, j.title, j.customerName || 'Customer', j.reference, STATE_LABEL[j.state], timeText(j)]
-    .join(', ') + (chosen ? ', chosen from Waiting for you' : '');
+  return [bike, j.title, j.customerName || 'Customer', j.reference, STATE_LABEL[j.state], timeText(j), dayOf(j)]
+    .filter(Boolean).join(', ') + (chosen ? ', chosen from Waiting for you' : '');
 }
 
-type Preview = { jobId: number; colIndex: number; startMin: number; durationMin: number };
+type Preview = { partId: number; colIndex: number; startMin: number; durationMin: number };
 
 /**
  * Moving a job (piece 3): by dragging, or from the keyboard (Enter picks it
@@ -97,7 +117,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
   const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
   const picking = useContext(PickContext);
-  const moving = move?.preview?.jobId === job.id ? move.preview : null;
+  const moving = move?.preview?.partId === job.partId ? move.preview : null;
   const start = moving ? moving.startMin : toMinutes(job.startTime as string);
   const end = moving ? moving.startMin + moving.durationMin : job.endTime ? toMinutes(job.endTime) : start + 30;
   const top = ((start - range.start) / 30) * SLOT_H + 2;
@@ -123,7 +143,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
         {job.bikeLabel || 'Bike'}
       </span>
       <span aria-hidden="true" className="truncate text-[10px] leading-tight font-bold">
-        {wide ? `${job.title} · ${STATE_LABEL[job.state]}` : job.title}
+        {[job.partCount > 1 ? `Day ${job.partPos} of ${job.partCount}` : '', job.title, wide ? STATE_LABEL[job.state] : ''].filter(Boolean).join(' · ')}
       </span>
     </>
   );
@@ -178,7 +198,7 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
   const timed = jobs.filter((j) => j.startTime);
   const lanes = layoutLanes(timed.map((j) => {
     const s = toMinutes(j.startTime as string);
-    return { id: j.id, start: s, end: j.endTime ? toMinutes(j.endTime) : s + 30 };
+    return { id: j.partId, start: s, end: j.endTime ? toMinutes(j.endTime) : s + 30 };
   }));
   const height = ((range.end - range.start) / 30) * SLOT_H;
   const pick = useContext(PickContext);
@@ -197,7 +217,7 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
       }}
     >
       {timed.map((j) => (
-        <JobBlock key={j.id} job={j} range={range} wide={wide} chosen={j.id === chosenId} lane={lanes.get(j.id)} colIndex={index} />
+        <JobBlock key={j.partId} job={j} range={range} wide={wide} chosen={j.id === chosenId} lane={lanes.get(j.partId)} colIndex={index} />
       ))}
       {outlines.map((j) => (
         <RequestedOutline key={`req-${j.id}`} job={j} range={range} />
@@ -249,7 +269,7 @@ function Grid({ heads, columns, noTime, range, ariaLabel }: {
           </div>
           <div role="group" aria-label="No time" className="flex min-h-[26px] flex-wrap items-center gap-[5px] px-2 py-1">
             {noTime.map((j) => (
-              <span key={j.id} title={describe(j, false)} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
+              <span key={j.partId} title={describe(j, false)} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
                 <span className={SR}>{describe(j, false)}</span>
                 <span aria-hidden="true">{j.bikeLabel || 'Bike'}</span>
               </span>
@@ -341,6 +361,7 @@ export function DiaryPage() {
   const byMechanic = !isPhone || who === 'bymech';
 
   const shown: Shown[] = (jobs.data ?? [])
+    .flatMap(blocksOf)
     .map((j) => ({ ...j, state: diaryState(j) }))
     .filter((j): j is Shown => j.state !== 'hidden')
     .filter((j) => whoId === null || j.mechanicId === whoId);
@@ -387,7 +408,7 @@ export function DiaryPage() {
     const c = columns[p.colIndex];
     return `${shortDay(c.date)}, ${hhmm(p.startMin)}–${hhmm(p.startMin + p.durationMin)}${view === 'day' && !c.all ? `, ${c.label}` : ''}`;
   };
-  const startOf = (j: Shown, colIndex: number): Preview => ({ jobId: j.id, colIndex, startMin: toMinutes(j.startTime as string), durationMin: durationOf(j) });
+  const startOf = (j: Shown, colIndex: number): Preview => ({ partId: j.partId, colIndex, startMin: toMinutes(j.startTime as string), durationMin: durationOf(j) });
 
   async function save(job: Shown, p: Preview, origCol: number) {
     const c = columns[p.colIndex];
@@ -402,7 +423,9 @@ export function DiaryPage() {
     if (view === 'day' && !c.all && c.mechanicId !== job.mechanicId) body.mechanicId = c.mechanicId;
     setMoveError(null);
     try {
-      await apiMutate(`/api/workshop-jobs/${job.id}`, body, { method: 'PUT' });
+      // Day 1 is the job itself; a later day is moved on its own (decision 52).
+      const path = job.partPos > 1 ? `/api/workshop-jobs/${job.id}/parts/${job.partId}` : `/api/workshop-jobs/${job.id}`;
+      await apiMutate(path, body, { method: 'PUT' });
       setMoveNote(`${job.bikeLabel || 'Bike'} moved to ${whereText(p)}.`);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
@@ -433,7 +456,7 @@ export function DiaryPage() {
     onKeyDown(job, colIndex, e) {
       const bike = job.bikeLabel || 'Bike';
       const hint = 'Use the arrow keys to move it, Enter to save, Escape to cancel.';
-      if (!preview || preview.jobId !== job.id) {
+      if (!preview || preview.partId !== job.partId) {
         if (e.key === 'Enter') {
           // Handled here rather than by the button's own click, so it opens once.
           e.preventDefault();
@@ -537,7 +560,7 @@ export function DiaryPage() {
     let best: number | null = null;
     let bestMinutes = Infinity;
     for (const m of pool) {
-      const booked = (jobs.data ?? []).filter((j) => j.jobDate === day && j.mechanicId === m.id && j.startTime && j.endTime)
+      const booked = (jobs.data ?? []).flatMap(blocksOf).filter((j) => j.jobDate === day && j.mechanicId === m.id && j.startTime && j.endTime)
         .reduce((sum, j) => sum + toMinutes(j.endTime as string) - toMinutes(j.startTime as string), 0);
       if (booked < bestMinutes) { best = m.id; bestMinutes = booked; }
     }
@@ -711,7 +734,7 @@ export function DiaryPage() {
               <div role="group" aria-label="No time" className="flex flex-wrap gap-1.5">
                 {noTime.length === 0 ? <span className="text-[13px] text-[var(--wh-muted)]">None</span> : null}
                 {noTime.map((j) => (
-                  <span key={j.id} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-[13px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
+                  <span key={j.partId} className={`inline-flex min-h-11 items-center rounded-full border border-[var(--wh-state-scheduled-ink)] px-3 text-[13px] font-bold whitespace-nowrap ${CHIP[j.state]}`}>
                     <span className={SR}>{describe(j, false)}</span>
                     <span aria-hidden="true">{j.bikeLabel || 'Bike'}</span>
                   </span>
