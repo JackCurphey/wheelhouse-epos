@@ -128,3 +128,4 @@ For the "same thing, same name" question. If a screen uses another word for one 
 | Stock moved between shops | (online: "Coming from [Second site]") | "Send to another shop"; "On its way"; "Receive it"; transfer T-[0000]; the new shop's checklist "Send from Bolton" |
 | A new shop being set up | — | "+ Add a shop"; "Add the shop"; "Getting [Second site] ready"; on Bolton's Today "[Second site] · [n] steps to get it ready"; "Show [Second site] to customers" (walk-through 7 H1, M3) |
 | Something wrong at the other shop | — | On the chosen shop's Today, "[Second site] · [n] things need attention" with "See them" (walk-through 7 H1) |
+| Taking over a shared computer | — | "Enter your PIN" to take over; "Working: [name] · Switch" (like "Serving: [name]"); "Check out [name]" to leave. "Sign in" and "Sign out" stay for your own email sign-in (walk-through 8 L3) |
