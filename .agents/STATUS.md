@@ -19,7 +19,7 @@ walk-throughs of everything), then the build.
 mockup — before stage W, replacing WP-W.6.** Jack answered its six questions
 on 3 Oct (1, 1, 1, 2, 2, 2), posted on the issue and recorded as dated "Later
 change" notes in the Reports, Website, Moving, Oversight and Receiving
-decision files. The drawings aren't redrawn yet; issue steps 1–6 are not started.
+decision files. Step 1's seven reports are in `docs/design/user-journeys/consolidation-*.md` (823 screens → about 196, estimates). The drawings aren't redrawn yet; steps 2–6 are not started.
 
 **Build board (keep it current):** https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
 source `docs/build-progress/build-board.html`. After any build piece merges or
