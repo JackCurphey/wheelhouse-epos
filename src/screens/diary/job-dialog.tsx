@@ -81,6 +81,9 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
   });
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // The notes as typed, until saved (null: nothing typed since the last save).
+  const [draft, setDraft] = useState<string | null>(null);
+  const [notesNote, setNotesNote] = useState('');
 
   async function run(action: string) {
     if (!job) return;
@@ -99,6 +102,50 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
       } else {
         setMessage(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
       }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const refresh = (id: number) => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['workshop-job', id] }),
+    queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+  ]);
+
+  async function saveNotes() {
+    if (!job || draft === null) return;
+    setSending(true);
+    setMessage(null);
+    setNotesNote('');
+    try {
+      await apiMutate(`/api/workshop-jobs/${job.id}`, { notes: draft, version: job.version }, { method: 'PUT' });
+      setDraft(null);
+      setNotesNote('Notes saved.');
+      await refresh(job.id);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'stale') {
+        setMessage('This job changed while you were looking at it. Your words are still in the box.');
+        void jobQuery.refetch();
+      } else {
+        setMessage(err instanceof ApiError ? err.message : "Couldn't reach the server — try again.");
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function removeDay(partId: number) {
+    if (!job) return;
+    setSending(true);
+    setMessage(null);
+    try {
+      await apiMutate(`/api/workshop-jobs/${job.id}/parts/${partId}`, { version: job.version }, { method: 'DELETE' });
+      await refresh(job.id);
+    } catch (err) {
+      setMessage(err instanceof ApiError
+        ? (err.code === 'stale' ? 'This job changed while you were looking at it.' : err.message)
+        : "Couldn't reach the server — try again.");
+      if (err instanceof ApiError && err.code === 'stale') void jobQuery.refetch();
     } finally {
       setSending(false);
     }
@@ -182,13 +229,35 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                     {parts.length > 1 ? (
                       <ul aria-label="Days" className="m-0 flex list-none flex-col gap-0.5 p-0">
                         {parts.map((p) => (
-                          <li key={p.id}>{`Day ${p.position}: ${shortDay(p.date)}${p.startTime ? `, ${p.startTime}${p.endTime ? `–${p.endTime}` : ''}` : ''}${p.mechanicName ? `, ${p.mechanicName}` : ''}`}</li>
+                          <li key={p.id} className="flex flex-wrap items-center gap-2">
+                            <span>{`Day ${p.position}: ${shortDay(p.date)}${p.startTime ? `, ${p.startTime}${p.endTime ? `–${p.endTime}` : ''}` : ''}${p.mechanicName ? `, ${p.mechanicName}` : ''}`}</span>
+                            {p.position > 1 ? (
+                              <Button size="sm" variant="ghost" disabled={sending} onClick={() => removeDay(p.id)} aria-label={`Remove day ${p.position}`}>Remove</Button>
+                            ) : null}
+                          </li>
                         ))}
                       </ul>
                     ) : null}
                     {stageActions(job).length || job.custodyState !== 'collected' ? (
                       <Button size="sm" className="self-start" disabled={sending} onClick={addDay}>Add another day</Button>
                     ) : null}
+                    {/* Decision 50: a toggle pill. Turning it on books the bike in; it can't be turned back off here. */}
+                    {(() => {
+                      const here = job.custodyState !== 'expected';
+                      return (
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={here}
+                          disabled={here || sending || job.bookingState === 'pending'}
+                          onClick={() => run('book-in')}
+                          className={`inline-flex min-h-9 items-center gap-2 self-start rounded-full border px-3.5 text-[13px] font-semibold ${here ? 'border-transparent bg-[var(--wh-accent-soft)] text-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)] bg-[var(--wh-panel)]'}`}
+                        >
+                          <span aria-hidden="true" className={`inline-block size-3 rounded-full border ${here ? 'border-[var(--wh-accent-soft-ink)] bg-[var(--wh-accent-soft-ink)]' : 'border-[var(--wh-input-border)]'}`} />
+                          Bike is here
+                        </button>
+                      );
+                    })()}
                   </section>
                   <section aria-labelledby="job-notes" className="flex flex-col gap-1.5">
                     <h3 id="job-notes" className="m-0 text-sm font-bold">Notes</h3>
@@ -199,7 +268,18 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                           <span>{job.customerDescription}</span>
                         </div>
                       ) : null}
-                      <span className={job.notes ? '' : 'text-[var(--wh-muted)]'}>{job.notes || 'No notes yet.'}</span>
+                      <textarea
+                        aria-labelledby="job-notes"
+                        rows={5}
+                        value={draft ?? job.notes ?? ''}
+                        onChange={(e) => { setDraft(e.target.value); setNotesNote(''); }}
+                        placeholder="Add notes for the workshop"
+                        className="min-h-24 w-full resize-y rounded-md border border-[var(--wh-input-border)] bg-[var(--wh-panel)] px-2.5 py-2 text-sm leading-normal"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button size="sm" disabled={sending || draft === null || draft === (job.notes ?? '')} onClick={saveNotes}>Save notes</Button>
+                      <span role="status" className="text-[13px] text-[var(--wh-muted)]">{notesNote}</span>
                     </div>
                   </section>
                 </div>

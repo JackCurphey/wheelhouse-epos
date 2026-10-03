@@ -57,3 +57,18 @@ Message / Email / Notes buttons.
 header, customer strip, details, notes and lines; each stage's button and
 the action it sends; a stale action; M to move still works. Watched
 failing first.
+
+## Piece 2: editing (built 3 Oct)
+
+- **Notes** (decision 38): one plain box under the customer's own words,
+  saved with **Save notes** once something has changed (never by itself;
+  "Don't close things by themselves" is in the same spirit). "Notes saved."
+  confirms it. A job someone else changed first keeps the typed words in the
+  box and says so.
+- **Bike is here** (decision 50): a toggle pill in the job details. Turning
+  it on books the bike in; once the bike is in it stays on.
+- **Remove a day**: each later day in the Days list has Remove; day 1 has
+  none.
+
+Title, customer and bike stay as set on New job; the drawings don't edit
+them on the job page.
