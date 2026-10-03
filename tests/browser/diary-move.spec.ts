@@ -79,3 +79,15 @@ test('a click on a job opens its page, and Book in books it in', async ({ page, 
   await expect(job.getByRole('button', { name: 'Start work' })).toBeVisible();
   expect((await staff(`/api/workshop-jobs/${jobId}`)).body.custodyState).toBe('in_shop');
 });
+
+test('notes typed on the job page are saved with Save notes', async ({ page, context }) => {
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  await page.getByRole('button', { name: /^Bike, Brake service/ }).click();
+  const job = page.getByRole('dialog', { name: /Brake service/ });
+  await job.getByRole('textbox', { name: 'Notes' }).fill('Rear hub bearings are gritty.');
+  await job.getByRole('button', { name: 'Save notes' }).click();
+  await expect(job.getByText('Notes saved.')).toBeVisible();
+  expect((await staff(`/api/workshop-jobs/${jobId}`)).body.notes).toBe('Rear hub bearings are gritty.');
+});
