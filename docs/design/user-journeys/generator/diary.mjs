@@ -54,22 +54,26 @@ const segmented = (items, activeIdx, label, minH = 36, fontSize = 13) => `<div r
 // the same five status colours Jack reviewed on the job-page look boards.
 export const ST = THEME === 'sand' ? {
   pending: ['#ECE3F2', '#5C3E87', 'Pending'],
-  scheduled: ['#E4EAF3', '#294872', 'Scheduled'],
+  scheduled: ['#E4EAF3', '#294872', 'Expected'],
   waiting: ['#F5E3D0', '#8B4715', 'Waiting for parts'],
   hold: ['#F7EAC2', '#7A5A10', 'Change requested'],
-  ready: ['#E1EEDD', '#295C39', 'Ready'],
+  ready: ['#E1EEDD', '#295C39', 'Finished'],
   cancelled: [C.mutedBg, C.muted, 'Cancelled'],
   // UX walk-through 1 M3: a quote sent and not answered yet — its own colour,
   // so purple only ever means a booking request (Workshop day 12).
-  answer: ['#D9ECEA', '#1E5753', 'Waiting for the customer'],
+  answer: ['#D9ECEA', '#1E5753', 'Quoting'],
+  // 3 Oct answer 11 (walk-through 9 M4): the status words are the job page's
+  // stages (Workshop day 20) — Scheduled is Expected, Ready is Finished, a
+  // quote sent is Quoting. Pending, Change requested and Cancelled are
+  // booking-request words, not job stages, and stay.
 } : {
   pending: ['#f1e8fb', '#6a3ea1', 'Pending'],
-  scheduled: ['#eaf1fb', '#2c5289', 'Scheduled'],
+  scheduled: ['#eaf1fb', '#2c5289', 'Expected'],
   waiting: ['#fff0e3', '#a8420f', 'Waiting for parts'],
   hold: ['#fff7e0', '#8a6100', 'Change requested'],
-  ready: ['#e8f5ec', '#164f42', 'Ready'],
+  ready: ['#e8f5ec', '#164f42', 'Finished'],
   cancelled: [C.mutedBg, C.muted, 'Cancelled'],
-  answer: ['#e0f2f0', '#1d5551', 'Waiting for the customer'],
+  answer: ['#e0f2f0', '#1d5551', 'Quoting'],
 };
 const statusBadge = (key, textOverride) => { const [bg, ink, label] = ST[key]; return `<span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${esc(textOverride || label)}</span>`; };
 
@@ -163,7 +167,7 @@ function siteSwitcher() {
 
 // ---------- Shells (copied/adapted from stage1.mjs staffDesktop/staffPhone: same look, new rooms) ----------
 // Journey A decision 2 (29 Sep): one search box in the staff header on every page.
-export const headerSearch = (w = 320) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}px; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" aria-label="Search jobs, customers, products" placeholder="Search jobs, customers, products" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: ${C.ink}"></label>`;
+export const headerSearch = (w = 320) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}px; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.input}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" aria-label="Search jobs, customers, orders, products" placeholder="Search jobs, customers, orders, products" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 14px; color: ${C.ink}"></label>`;
 // UX walk-through 2 (decision 6): initials skip a placeholder's brackets, so
 // "[Manager]" shows M rather than "[".
 export function shellDesktop(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '', height = DH, search = true } = {}) {
@@ -196,7 +200,7 @@ const RAIL_W = 84;
 // Journey A decisions 2, 8, 9, 13: on tablet and phone the header search is a
 // magnifying-glass button, and your name badge (with a small cog) opens Your
 // settings.
-export const searchIconBtn = (dark = false) => `<button type="button" aria-label="Search jobs, customers, products" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: ${dark ? '0' : `1px solid ${C.input}`}; background: transparent; color: ${dark ? '#ffffff' : C.ink}">${icon('search', 20)}</button>`;
+export const searchIconBtn = (dark = false) => `<button type="button" aria-label="Search jobs, customers, orders, products" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: ${dark ? '0' : `1px solid ${C.input}`}; background: transparent; color: ${dark ? '#ffffff' : C.ink}">${icon('search', 20)}</button>`;
 export const avatarWithCog = (ini) => `<span style="position: relative; display: inline-block; width: 38px; height: 37px"><span style="position: absolute; top: 0; left: 0; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700">${ini}</span>${cogBadge()}</span>`;
 export const cogBadge = () => `<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: ${C.accentDark}; border: 1px solid rgba(255,255,255,0.45)">${icon('settings', 11)}</span>`;
 export function shellTablet(active, title, content, { role = 'S', person = 'Jo Taylor', roleName = 'Staff', actions = '', search = true } = {}) {
@@ -392,8 +396,8 @@ const HINT_SLOT = { day: 1, start: 10 * 60, mech: 'Alex', label: '10:00 · Alex 
 export const JOBS = [
   // Thu 17 Sep (today) — as already drawn, plus more of the same day's load.
   { day: TODAY, start: 9 * 60, dur: 60, mech: 'Alex', key: 'scheduled', job: 'WH-1038', svc: 'Safety check', title: 'Safety check', detail: '09:00–10:00' },
-  { day: TODAY, start: 9 * 60, dur: 90, mech: 'Jo', key: 'scheduled', job: 'WH-1040', svc: 'Gear service', title: 'Gear service', detail: '09:00–10:30' },
-  { day: TODAY, start: 11 * 60 + 30, dur: 90, mech: 'Alex', key: 'scheduled', job: 'WH-1042', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '11:30–13:00 · approved £111' },
+  { day: TODAY, start: 9 * 60, dur: 90, mech: 'Jo', key: 'scheduled', stage: 'Booked in', job: 'WH-1040', svc: 'Gear service', title: 'Gear service', detail: '09:00–10:30' },
+  { day: TODAY, start: 11 * 60 + 30, dur: 90, mech: 'Alex', key: 'scheduled', stage: 'In the workshop', job: 'WH-1042', svc: 'Standard service', title: 'Maya Patel · Trek Domane AL 3', detail: '11:30–13:00 · approved £111' },
   { day: TODAY, start: 14 * 60, dur: 60, mech: 'Alex', key: 'ready', job: 'WH-1067', svc: 'Safety check', title: 'Jamie Brooks · Giant Escape 2', detail: '14:00–15:00 · safety check' },
   { day: TODAY, start: 13 * 60 + 30, dur: 60, mech: 'Jo', key: 'scheduled', job: 'WH-1068', svc: 'Standard service', title: 'Oliver Chen · Brompton C Line', detail: '13:30–14:30 · standard service' },
   { day: TODAY, start: 15 * 60, dur: 60, mech: 'Jo', key: 'waiting', job: 'WH-1069', svc: 'Gear adjustment', title: 'Aisha Khan · Cannondale Quick', detail: '15:00–16:00 · gear adjustment' },
@@ -469,7 +473,13 @@ export function customerBikeOf(j) {
 // an unreadable "Waiting for p…" at block width, so the block uses a label
 // short enough to read in full, or wraps onto a second line where the block is
 // tall enough.
-const BLOCK_LABEL = { pending: 'Pending', scheduled: 'Scheduled', waiting: 'Waiting parts', hold: 'Change request', ready: 'Ready', cancelled: 'Cancelled' };
+const BLOCK_LABEL = { pending: 'Pending', scheduled: 'Expected', waiting: 'Waiting parts', hold: 'Change request', ready: 'Finished', cancelled: 'Cancelled' };
+// 3 Oct answer 11: a blue block is a confirmed job with a time, at any of the
+// first stages (Workshop day 20). It reads Expected unless its row says
+// otherwise (`stage`): WH-1040 is on Hook 1, so Booked in; WH-1042 is on
+// Hook 3 with the quote approved, so In the workshop. Any other colour uses
+// its own word. customer.mjs can use this too.
+export const stageOf = (j, short = false) => (j.key === 'scheduled' && j.stage ? j.stage : short ? BLOCK_LABEL[j.key] : ST[j.key][2]);
 // The shop's choice of what a block shows first/second, in diary-settings
 // (decision 29, refining decision 17). Defaults: bike first, job title
 // second — the status is always shown too, on its own line or sharing the
@@ -483,7 +493,7 @@ const BLOCK_PREF = { first: 'bike', second: 'jobTitle' };
 // bike is kept" pills.
 export const STORAGE = { 'WH-1042': 'Hook 3', 'WH-1040': 'Hook 1' };
 const STORAGE_SLOTS = ['Hook 1', 'Hook 2', 'Hook 3', 'Hook 4', 'Hook 5', 'Hook 6', 'Workshop floor', 'Front window'];
-const STARTING_STATUS = ['Booked', 'Bike is here', 'Waiting for parts'];
+const STARTING_STATUS = ['Expected', 'Booked in', 'Waiting for parts']; // 3 Oct answer 11: the job page's stage words
 
 // Unscheduled row: bikes with no set time (stage2's "Shared queue" example).
 // A confirmed job with no set time uses the ordinary scheduled colour — purple
@@ -656,7 +666,7 @@ let PART_ARRIVED = null;
 // UX walk-through 3 M5: the "part arrived" boards draw the job where the job
 // page has it — WH-1042 is Waiting for parts, moved to Sat 19 Sep 16:00–17:30
 // (job-waiting-parts, job-part-arrived), Alex's column — not journey 12's
-// Thursday 11:30 Scheduled example. Moved only while such a board is drawn,
+// Thursday 11:30 example. Moved only while such a board is drawn,
 // as diaryWithJobState does.
 const PART_ARRIVED_AT = { 'WH-1042': { day: 5, start: 16 * 60, dur: 90, mech: 'Alex', key: 'waiting', detail: '16:00–17:30 · waiting for parts' } };
 export function withPartArrived(job, fn) {
@@ -669,7 +679,7 @@ export function withPartArrived(job, fn) {
 function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, faded = false, narrow = true, rect = null) {
   if (size !== 'desktop') return touchJobBlock(j, size, slotH, { highlighted, lightMarked, faded, narrow, rect });
   const [bg, ink] = ST[j.key];
-  const blockLabel = BLOCK_LABEL[j.key];
+  const blockLabel = stageOf(j, true);
   const [customer, bike] = customerBikeOf(j);
   const jobTitle = j.svc || '';
   const top = ((j.start - GRID_START) / 30) * slotH + 2;
@@ -719,7 +729,7 @@ function jobBlock(j, size, slotH, highlighted = false, lightMarked = false, fade
   const isSummaryJob = narrow && j.job === 'WH-1042';
   const summaryCls = isSummaryJob ? `wh-hovsum-${size}-${nextSeq(size)}` : '';
   const classAttr = [hoverCls, summaryCls].filter(Boolean).join(' ');
-  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(ST[j.key][2])}${arrived ? ', part arrived' : ''}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(ST[j.key][2])} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
+  return `${hoverCls ? laneHoverCSS(hoverCls) : ''}<a href="${href}" ${classAttr ? `class="${classAttr}" ` : ''}aria-label="${esc(bike)}, ${esc(jobTitle)}, ${esc(customer)}, ${esc(j.job)}, ${esc(stageOf(j))}${arrived ? ', part arrived' : ''}, ${esc(j.detail)}" title="${esc(bike)} · ${esc(jobTitle)} · ${esc(customer)} · ${esc(j.job)} · ${esc(stageOf(j))} · ${esc(j.detail)}" style="position: absolute; ${posStyle} top: ${top}px; height: ${h}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0; box-sizing: border-box; padding: 3px ${showSymbol ? 16 : 6}px 3px 6px; border-radius: 5px; background: ${bg}; border: 1.75px solid ${ink}; overflow: hidden; ${cancelled ? 'opacity: 0.8;' : ''} ${faded ? 'opacity: 0.5;' : ''} ${ring}">
 ${showSymbol ? statusDot(j.key) : ''}
 <span style="font-size: 11px; font-weight: 700; color: ${C.ink}; ${strike} ${bikeWrap ? 'white-space: normal; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2' : 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis'}">${esc(bike)}</span>
 <span style="font-size: 10px; font-weight: 700; color: ${tiny ? C.ink : ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25">${esc(line2)}</span>
@@ -1254,7 +1264,7 @@ function diaryToolbar(mechFilter, size, { mechOptions = TOOLBAR_MECHS, activeVie
 // SHOW_STATUS_SYMBOLS is on (the same flag jobBlock/pendingBlock use), in
 // which case the swatch carries the same shape as the grid's blocks so the
 // legend stays a literal key to what's drawn.
-const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, answer: ST.answer, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0">${SHOW_STATUS_SYMBOLS ? statusDot(k, 11).replace('top: 4px; right: 4px;', 'top: 1.5px; right: 1.5px;') : ''}</span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
+const diaryLegend = () => row(Object.entries({ scheduled: ST.scheduled, pending: ST.pending, answer: ST.answer, hold: ST.hold, waiting: ST.waiting, ready: ST.ready, cancelled: ST.cancelled }).map(([k, [bg, ink, label]]) => [k, [bg, ink, k === 'scheduled' ? 'Expected, booked in or in the workshop' : label]]).map(([k, [bg, ink, label]]) => `<span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: ${C.ink}"><span style="position: relative; display: inline-block; width: 14px; height: 14px; border-radius: 3px; background: ${bg}; border: 1.75px solid ${ink}; box-sizing: border-box; flex-shrink: 0">${SHOW_STATUS_SYMBOLS ? statusDot(k, 11).replace('top: 4px; right: 4px;', 'top: 1.5px; right: 1.5px;') : ''}</span>${label}</span>`).join(''), 16, 'flex-wrap: wrap');
 // Decision 13: the mechanic's diary is the standard diary filtered to that
 // mechanic, with one Me / Everyone switch in the normal toolbar position.
 // Mechanics can't accept bookings, but they can create a walk-in job (chosen
@@ -1293,7 +1303,7 @@ function touchJobBlock(j, size, slotH, { highlighted = false, lightMarked = fals
   const cancelled = j.key === 'cancelled';
   const strike = cancelled ? 'text-decoration: line-through;' : '';
   const slot = STORAGE[j.job];
-  const extra = narrow ? slot || '' : [BLOCK_LABEL[j.key], slot].filter(Boolean).join(' · ');
+  const extra = narrow ? slot || '' : [stageOf(j, true), slot].filter(Boolean).join(' · ');
   const one = (t, style) => `<span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: ${lineH}px; ${style}">${esc(t)}</span>`;
   const bikeStyle = `font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}; ${strike}`;
   const titleStyle = `font-size: ${fs.s}px; font-weight: 700; color: ${ink};`;
@@ -1302,7 +1312,7 @@ function touchJobBlock(j, size, slotH, { highlighted = false, lightMarked = fals
   let lines;
   if (arrived) lines = fitLines <= 1 ? one(`${bike} · Part arrived`, bikeStyle) : fitLines === 2 ? one(bike, bikeStyle) + arrivedLine : one(bike, bikeStyle) + one(jobTitle, titleStyle) + arrivedLine;
   else if (fitLines <= 1) lines = one(`${bike} · ${jobTitle}`, bikeStyle);
-  else if (fitLines === 2) lines = one(bike, bikeStyle) + one(narrow ? jobTitle : [jobTitle, BLOCK_LABEL[j.key]].join(' · '), titleStyle);
+  else if (fitLines === 2) lines = one(bike, bikeStyle) + one(narrow ? jobTitle : [jobTitle, stageOf(j, true)].join(' · '), titleStyle);
   else lines = one(bike, bikeStyle) + one(jobTitle, titleStyle) + (extra ? one(extra, `font-size: ${fs.x}px; color: ${C.ink}; opacity: 0.8; ${strike}`) : '');
   const posStyle = rect ? `left: ${rect.left}; width: ${rect.width};` : 'left: 3px; right: 3px;';
   const href = `${j.link || 'job-overview'}-${size}.dc.html`;
@@ -1333,7 +1343,7 @@ function touchStackTile(j, size, slotH, width) {
   const [, bike] = customerBikeOf(j);
   const fs = touchFs(size);
   const th = Math.max((j.dur / 30) * slotH - 4, 56);
-  return `<a href="job-overview-${size}.dc.html" aria-label="${esc(bike)}, ${esc(j.svc || '')}, ${esc(j.job)}, ${esc(ST[j.key][2])}" style="position: relative; ${width ? `width: ${width}px;` : ''} height: ${th}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 1px; box-sizing: border-box; padding: 5px 8px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden">
+  return `<a href="job-overview-${size}.dc.html" aria-label="${esc(bike)}, ${esc(j.svc || '')}, ${esc(j.job)}, ${esc(stageOf(j))}" style="position: relative; ${width ? `width: ${width}px;` : ''} height: ${th}px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 1px; box-sizing: border-box; padding: 5px 8px; border-radius: 6px; background: ${bg}; border: 1px solid ${ink}; overflow: hidden">
 <span style="font-size: ${fs.b}px; font-weight: 700; color: ${C.ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(bike)}</span>
 <span style="font-size: ${fs.s}px; font-weight: 700; color: ${ink}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.svc || '')}</span>
 <span style="font-size: 12px; color: ${C.ink}; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(j.job)} · ${esc(hhmm(j.start))}–${esc(hhmm(j.start + j.dur))}</span>
@@ -1666,7 +1676,7 @@ ${diaryLegend()}`, 12)),
 // Item 29/4 (27 Sep round 2): the block preview leads with whichever field is
 // chosen for line 1/2 (defaults bike/job title), and always shows the status
 // as its own third line — e.g. "Trek Domane AL 3 / Standard service /
-// Scheduled".
+// Expected".
 function blockPreviewCard(first, second, size = 'desktop') {
   const T = size !== 'desktop';
   const sample = { customer: 'Maya Patel', job: 'WH-1042', bike: 'Trek Domane AL 3', jobTitle: 'Standard service' };
@@ -1675,7 +1685,7 @@ function blockPreviewCard(first, second, size = 'desktop') {
   return `<div aria-label="Block preview" style="width: 190px; box-sizing: border-box; padding: 6px 8px; border-radius: 5px; background: ${ST.scheduled[0]}; border: 1.75px solid ${ST.scheduled[1]}">
 <div style="font-size: 12px; font-weight: 700; color: ${C.ink}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(line1)}</div>
 <div style="font-size: ${T ? 12 : 11}px; font-weight: 700; color: ${C.ink}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">${esc(line2)}</div>
-<div style="font-size: ${T ? 12 : 11}px; font-weight: 700; color: ${ST.scheduled[1]}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Scheduled</div>
+<div style="font-size: ${T ? 12 : 11}px; font-weight: 700; color: ${ST.scheduled[1]}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Expected</div>
 </div>`;
 }
 // Item 27 (27 Sep round): storage slots are optional per shop, turned on or
@@ -1985,7 +1995,7 @@ ${link('Search services')}
 }
 // UX walk-through 7 H2: a job booked into the other shop's workshop starts
 // as "Booked" only; the bike isn't at that shop yet, so Bolton's hooks go.
-const otherShopStatus = (shop, size, pillFn, hintSize) => `${pillRadioGroup('Starting status', ['Booked'], 0, 'nj-status-' + size, pillFn)}${note(`The customer brings the bike to ${esc(shop)}.`, hintSize)}`;
+const otherShopStatus = (shop, size, pillFn, hintSize) => `${pillRadioGroup('Starting status', ['Expected'], 0, 'nj-status-' + size, pillFn)}${note(`The customer brings the bike to ${esc(shop)}.`, hintSize)}`;
 function newJobBody(size, opts = {}) {
   const {
     when = 'Tue 15 Sep · 10:00',
@@ -2341,7 +2351,7 @@ export function buildJobPageDesktop({
 }) {
   const opts = mechanic ? { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' } : {};
   const base = shellDesktop('diary', 'Workshop diary', mechanic ? diaryFrozenContentMechanic('desktop') : diaryFrozenContent('desktop'), opts);
-  const customer = { ...JOB_CUSTOMER, storageSlot: STORAGE[jobNum] };
+  const customer = { ...JOB_CUSTOMER, storageSlot: bikeHere ? STORAGE[jobNum] : undefined }; // 3 Oct answer 11: no hook until the bike is booked in
   const content = jobPopupContent({
     titleId: 'job-page-title', jobTitle: 'Standard service', status, tone, closeHref,
     customer, mechanicName: 'Alex Morgan', custHref: 'customer-desktop.dc.html',
@@ -2377,7 +2387,7 @@ function buildJobPage({ jobNum = 'WH-1042', status, tone, mechanic = false, desk
   const closeHref = (size) => jobCloseHref(size, mechanic);
   const opts = mechanic ? MECH_SHELL : {};
   const common = (size) => ({
-    customer: { ...JOB_CUSTOMER, storageSlot: STORAGE[jobNum] }, mechanicName: 'Alex Morgan', custHref: `customer-${size}.dc.html`,
+    customer: { ...JOB_CUSTOMER, storageSlot: desktop.bikeHere ? STORAGE[jobNum] : undefined }, mechanicName: 'Alex Morgan', custHref: `customer-${size}.dc.html`,
     jobNum, created: 'Created Thu 17 Sep · by Jo Taylor', limit: desktop.limit,
     readyByBadge: badge(`Ready by ${desktop.readyBy || JOB_READY_BY}`, 'grey'), totalBadge: desktop.totalBadge || '',
     left: jpJobLeftCol({ status: desktop.leftStatus, diaryTime: desktop.diaryTime || JOB_DIARY_TIME, readyBy: desktop.readyBy || JOB_READY_BY, bikeHere: desktop.bikeHere, idPrefix: 'jp-' + size, stackTimes: size === 'phone' }),
@@ -2415,7 +2425,7 @@ screens['job-overview'] = buildJobPage({
 keepDesktopSeq('job-overview');
 
 screens['job-book-in'] = buildJobPage({
-  status: 'In workshop', tone: 'blue',
+  status: 'Booked in', tone: 'blue',
   touch: {
     footer: (size) => `${button('Send quote', { variant: 'default', block: true, href: `job-quote-${size}.dc.html` })}${button('Start work', { variant: 'primary', block: true, href: `job-mechanic-${size}.dc.html` })}`,
     stageTop: (size) => tagStripCompact(size), phoneTop: PHONE_STAGE_TOP.bookIn,
@@ -2424,7 +2434,7 @@ screens['job-book-in'] = buildJobPage({
     stageTop: tagStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
     checkedCount: 0, notedCount: 0,
-    leftStatus: 'In workshop', bikeHere: true,
+    leftStatus: 'Booked in', bikeHere: true,
     lines: LINES_EXPECTED, totalLabel: 'Booked', totalValue: WORK_LINE_SERVICE.price, footerNote: '',
     footer: `${button('Send quote', { variant: 'default', block: true, href: 'job-quote-desktop.dc.html' })}${button('Start work', { variant: 'primary', block: true, href: 'job-mechanic-desktop.dc.html' })}`,
   },
@@ -2435,12 +2445,12 @@ keepDesktopSeq('job-book-in');
 // tablet/phone. Desktop: the four lines pending approval, "Send quote" both
 // in the table toolbar and the footer.
 screens['job-quote'] = buildJobPage({
-  status: 'Awaiting approval', tone: 'purple',
+  status: 'Quoting', tone: 'purple',
   touch: { footer: () => button('Send quote', { variant: 'primary', block: true }) },
   desktop: {
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_BOOKED,
     checkedCount: 0, notedCount: 0,
-    leftStatus: 'Awaiting approval', bikeHere: true,
+    leftStatus: 'Quoting', bikeHere: true,
     lines: LINES_QUOTE, totalLabel: 'Proposed total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: true,
     // UX walk-through 1 H1: Maya asked to be called before any extra work,
     // so her quote is sent by the rules (decision 43) and the tag is hers.
@@ -2471,11 +2481,11 @@ export const quoteJobBoards = (stage = 'build') => {
   const sent = stage === 'sent', answered = stage === 'answered', within = stage === 'within';
   if (within) {
     return buildJobPage({
-      status: 'In workshop', tone: 'blue',
+      status: 'In the workshop', tone: 'blue',
       touch: { footer: () => button('Save and tell Maya', { variant: 'primary', block: true }) },
       desktop: {
         customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: 0, notedCount: 0,
-        leftStatus: 'In workshop', bikeHere: true, limit: 'Customer OK up to £200',
+        leftStatus: 'In the workshop', bikeHere: true, limit: 'Customer OK up to £200',
         lines: LINES_WITHIN, totalLabel: 'Approved total', totalValue: WORK_TOTAL_QUOTE, footerNote: '', quoteAction: 'within',
         totalBadge: badge(`Approved £${WORK_TOTAL_QUOTE.toFixed(2)}`, 'green'),
         footer: button('Save and tell Maya', { variant: 'primary', block: true }),
@@ -2483,7 +2493,7 @@ export const quoteJobBoards = (stage = 'build') => {
     });
   }
   const lines = answered ? LINES_QUOTE_ANSWERED : sent ? LINES_QUOTE_SENT : LINES_QUOTE_BUILD;
-  const status = sent ? 'Awaiting approval' : 'In workshop';
+  const status = sent ? 'Quoting' : 'In the workshop';
   const footer = sent ? sentFooter() : answered ? button('Start work', { variant: 'primary', block: true }) : button('Send quote', { variant: 'primary', block: true });
   return buildJobPage({
     status, tone: sent ? 'purple' : 'blue',
@@ -2504,13 +2514,13 @@ export const quoteJobBoards = (stage = 'build') => {
 // (decision 40's base board, job-final-2 itself) — close → diary-mechanic;
 // the "Full service checklist" bar links to job-checklist (task item 2).
 screens['job-mechanic'] = buildJobPage({
-  status: 'In workshop', tone: 'blue', mechanic: true,
+  status: 'In the workshop', tone: 'blue', mechanic: true,
   touch: { footer: (size) => button('Mark ready for collection', { variant: 'primary', block: true, href: `job-finished-${size}.dc.html` }) },
   desktop: {
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
     checklistHref: 'job-checklist-desktop.dc.html',
-    leftStatus: 'In workshop', bikeHere: true,
+    leftStatus: 'In the workshop', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-desktop.dc.html' }),
@@ -2544,7 +2554,7 @@ screens['job-waiting-parts'] = buildJobPage({
 keepDesktopSeq('job-waiting-parts');
 
 screens['job-finished'] = buildJobPage({
-  status: 'Ready for collection', tone: 'green',
+  status: 'Finished', tone: 'green',
   touch: {
     footer: (size) => `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-' + size + '.dc.html' })}${note('Opens the till with this job’s lines.' /* UX walk-through 6 L2: a Lightspeed shop's job has Hand over, not Take payment */, size === 'phone' ? 13 : 12)}`,
     stageTop: () => finishedStripCompact(), phoneTop: PHONE_STAGE_TOP.finished,
@@ -2553,7 +2563,7 @@ screens['job-finished'] = buildJobPage({
     stageTop: finishedStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
-    leftStatus: 'Ready for collection', bikeHere: true,
+    leftStatus: 'Finished', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: `${button('Take payment', { variant: 'primary', block: true, href: 'job-collection-desktop.dc.html' })}${note('Opens the till with this job’s lines.' /* UX walk-through 6 L2: a Lightspeed shop's job has Hand over, not Take payment */, 12)}`,
@@ -2562,7 +2572,7 @@ screens['job-finished'] = buildJobPage({
 keepDesktopSeq('job-finished');
 
 screens['job-collection'] = buildJobPage({
-  status: 'Ready for collection', tone: 'green',
+  status: 'Collecting', tone: 'green',
   touch: {
     footer: (size) => handOverFooter(size),
     stageTop: () => collectionStripCompact(), phoneTop: PHONE_STAGE_TOP.collection,
@@ -2571,7 +2581,7 @@ screens['job-collection'] = buildJobPage({
     stageTop: collectionStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
-    leftStatus: 'Ready for collection', bikeHere: true,
+    leftStatus: 'Collecting', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: handOverFooter('desktop'),
@@ -2596,11 +2606,11 @@ screens['job-checklist'] = {
   desktop: (() => {
     const base = shellDesktop('diary', 'Workshop diary', diaryFrozenContentMechanic('desktop'), { role: 'K', person: 'Alex Morgan', roleName: 'Mechanic' });
     const jobLayer = jobPopupContent({
-      titleId: 'job-page-title', jobTitle: 'Standard service', status: 'In workshop', tone: 'blue', closeHref: 'diary-mechanic-desktop.dc.html',
+      titleId: 'job-page-title', jobTitle: 'Standard service', status: 'In the workshop', tone: 'blue', closeHref: 'diary-mechanic-desktop.dc.html',
       customer: { ...JOB_CUSTOMER, storageSlot: STORAGE['WH-1042'] }, mechanicName: 'Alex Morgan', custHref: 'customer-desktop.dc.html',
       jobNum: 'WH-1042', created: 'Created Thu 17 Sep · by Jo Taylor',
       readyByBadge: badge(`Ready by ${JOB_READY_BY}`, 'grey'), totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
-      left: jpJobLeftCol({ status: 'In workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: JOB_READY_BY, bikeHere: true, idPrefix: 'jpc' }),
+      left: jpJobLeftCol({ status: 'In the workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: JOB_READY_BY, bikeHere: true, idPrefix: 'jpc' }),
       customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: CHECKLIST_CHECKED, totalCount: CHECKLIST_10.length, notedCount: CHECKLIST_NOTED, checklistHref: null,
       lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT, quoteAction: false,
       footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-desktop.dc.html' }),
@@ -2622,11 +2632,11 @@ ${withWorkingBar(fullChecklistDialog({ titleId: 'job-checklist-title', subtitle:
   tablet: (() => {
     const base = shellTablet('diary', 'Workshop diary', diaryFrozenContentMechanic('tablet'), MECH_SHELL);
     const jobLayer = jobPopupContent({
-      titleId: 'job-page-title', jobTitle: 'Standard service', status: 'In workshop', tone: 'blue', closeHref: 'diary-mechanic-tablet.dc.html',
+      titleId: 'job-page-title', jobTitle: 'Standard service', status: 'In the workshop', tone: 'blue', closeHref: 'diary-mechanic-tablet.dc.html',
       customer: { ...JOB_CUSTOMER, storageSlot: STORAGE['WH-1042'] }, mechanicName: 'Alex Morgan', custHref: 'customer-tablet.dc.html',
       jobNum: 'WH-1042', created: 'Created Thu 17 Sep · by Jo Taylor',
       readyByBadge: badge(`Ready by ${JOB_READY_BY}`, 'grey'), totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
-      left: jpJobLeftCol({ status: 'In workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: JOB_READY_BY, bikeHere: true, idPrefix: 'jpc-tablet' }),
+      left: jpJobLeftCol({ status: 'In the workshop', diaryTime: 'Thu 17 Sep · 11:30–13:00', readyBy: JOB_READY_BY, bikeHere: true, idPrefix: 'jpc-tablet' }),
       customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL, checkedCount: CHECKLIST_CHECKED, totalCount: CHECKLIST_10.length, notedCount: CHECKLIST_NOTED, checklistHref: null,
       lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT, quoteAction: false, doneH: 44, touchLinks: true,
       footer: button('Mark ready for collection', { variant: 'primary', block: true, href: 'job-finished-tablet.dc.html' }),
@@ -2858,7 +2868,7 @@ export const ROWS = [
 // Journey 5 (Collect the bike and pay): ready, not paid yet. Drawn for
 // journey 5's canvas; not a row of journey 12's.
 screens['job-ready-unpaid'] = buildJobPage({
-  status: 'Ready for collection', tone: 'green',
+  status: 'Finished', tone: 'green',
   touch: {
     footer: (size) => takePaymentFooter(size),
     stageTop: () => unpaidStripCompact(), phoneTop: PHONE_STAGE_TOP.unpaid,
@@ -2867,7 +2877,7 @@ screens['job-ready-unpaid'] = buildJobPage({
     stageTop: unpaidStripCompact(),
     customerTexts: NOTES_CUSTOMER, staffTexts: NOTES_STAFF_FULL,
     checkedCount: CHECKLIST_CHECKED, notedCount: CHECKLIST_NOTED,
-    leftStatus: 'Ready for collection', bikeHere: true,
+    leftStatus: 'Finished', bikeHere: true,
     lines: LINES_APPROVED, totalLabel: 'Approved total', totalValue: WORK_TOTAL_APPROVED, footerNote: DECLINED_NOTE_TEXT,
     totalBadge: badge(`Approved £${WORK_TOTAL_APPROVED.toFixed(2)}`, 'green'),
     footer: takePaymentFooter('desktop'),
@@ -2892,11 +2902,11 @@ export const jobVariant = (status, tone, strip, phoneTop, footer) => buildJobPag
     footer: footer('desktop'),
   },
 });
-screens['job-ready-deposit'] = jobVariant('Ready for collection', 'green', () => unpaidStripCompact(J5_DEPOSIT), () => PHONE_STAGE_TOP.unpaid(J5_DEPOSIT), takePaymentFooter);
+screens['job-ready-deposit'] = jobVariant('Finished', 'green', () => unpaidStripCompact(J5_DEPOSIT), () => PHONE_STAGE_TOP.unpaid(J5_DEPOSIT), takePaymentFooter);
 // M5: with Hand-back reminders on, the two ticks come back above Hand over.
 const handbackTick = (label, id, size) => `<label for="${id}" style="display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer"><input id="${id}" type="checkbox" style="width: 20px; height: 20px; margin: 0; accent-color: ${C.accent}; flex-shrink: 0"><span style="font-size: 14px; color: ${C.ink}; ${size === 'phone' ? '' : 'white-space: nowrap'}">${esc(label)}</span></label>`;
 const handbackTicks = (size) => `<div role="group" aria-label="Before you hand over" style="display: flex; flex-shrink: 0; ${size === 'phone' ? 'flex-direction: column' : 'column-gap: 18px'}">${handbackTick('Bike handed to the customer or authorised collector', 'hb1-' + size, size)}${handbackTick('Lock key and rear light returned', 'hb2-' + size, size)}</div>`;
-screens['job-collection-ticks'] = jobVariant('Ready for collection', 'green', collectionStripCompact, PHONE_STAGE_TOP.collection, (size) => `${handbackTicks(size)}${handOverFooter(size)}`);
+screens['job-collection-ticks'] = jobVariant('Collecting', 'green', collectionStripCompact, PHONE_STAGE_TOP.collection, (size) => `${handbackTicks(size)}${handOverFooter(size)}`);
 // M4: after Hand over (or paying at the till): Collected, with Undo for a
 // few minutes.
 function collectedStripCompact() {

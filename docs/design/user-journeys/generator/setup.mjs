@@ -395,7 +395,7 @@ const editMsgDialog = () => popup('msg-title', 'Bike ready', 'Sent when a job is
 <p style="margin: 0; font-size: 15px">Sent the way each customer chose: text, WhatsApp or email.</p>
 ${wordingBox('msg-words', `Hi [Customer’s first name], your [Bike] is ready to collect from [Shop name]. [Amount to pay]${lightspeedShop() ? '' : ' to pay on collection'}. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].`, 4, null, SHOP_NAME_NOTE())}
 ${lightspeedShop() ? LS_PAY_WORDS : ''}
-${bubble(`Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles, Bolton. ${lightspeedShop() ? `${LS_PAY}.` : '£111.00 to pay on collection.'} See what we did: [link]. Job WH-1042. We’re open [opening hours].`)}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
+${bubble(`Hi Maya, your Trek Domane AL 3 is ready to collect from North Street Cycles, Bolton. ${lightspeedShop() ? `${LS_PAY}.` : '£111.00 to pay on collection.'} See what we did: [link]. Your repair · WH-1042. We’re open [opening hours].`)}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
 // Decision 14: the shop's own automatic messages, with a "send when…".
 // Marketing only reaches customers who allow it (journey 7, acct-unsubscribe).
 const newMsgDialog = () => popup('new-msg-title', 'Your own message', 'Sent automatically', `

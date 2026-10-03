@@ -20,10 +20,10 @@ export default {
   'cp-summary-ls': into('cp-summary', 'Quote 1', "'Agreed price £111.00 — pay at the till'; no Pay now, no Basket"),
   'cp-summary-ls-paid': into('cp-summary', 'Quote 1', "'Paid at the till · [date], [time]' — 'Nothing more to pay.'"),
   // At the counter: journey 12's job page and journey 11's till
-  'cp-ready-unpaid': into('job-overview', 'Workshop day 20', "'Ready for collection', 'Not paid yet' £111.00 to pay; 'Take payment'"),
+  'cp-ready-unpaid': into('job-overview', 'Workshop day 20', "'Finished', 'Not paid yet' £111.00 to pay; 'Take payment'"),
   'cp-ready-deposit': into('job-overview', 'Workshop day 20', "'Not paid yet': the rest to pay, 'Deposit paid' with its date; 'Take payment'"),
   'cp-till': into('till-sale', '', "basket of the job’s lines 'agreed on the job', 'Bike collected when paid' on"),
-  'cp-ready-paid': into('job-overview', 'Workshop day 20', "'Ready for collection', 'Paid £111.00 · Paid online'; 'Hand over'"),
+  'cp-ready-paid': into('job-overview', 'Workshop day 20', "'Finished', 'Paid £111.00 · Paid online'; 'Hand over'"),
   'cp-ready-ticks': into('job-overview', 'Workshop day 20', "two ticks above 'Hand over': bike handed over, 'Lock key and rear light returned'"),
   'cp-collected': into('job-overview', 'Workshop day 20', "grey 'Collected', 'handed over by Jo Taylor'; 'Collected · the job is closed' with 'Undo'"),
   // Not collected

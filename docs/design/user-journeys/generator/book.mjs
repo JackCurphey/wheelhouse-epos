@@ -181,7 +181,7 @@ ${radios('Days', DAYS.map(cell).join(''), `display: flex; gap: 8px; overflow-x: 
 }
 // Audit L1: Earliest shows when it's the choice, and "Book this time" goes
 // straight to the details step — one click.
-const earliest = (chosen, label = `${DAY_SHORT}, 09:30`) => `<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; border: ${chosen ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${chosen ? C.hover : C.panel}"><span style="flex-grow: 1"><span style="display: block; font-size: 13px; color: ${C.muted}">Earliest you can have</span><span style="font-size: 16px; font-weight: 700">${label}</span></span>${chosen ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700">${icon('check', 14)}Chosen</span>` : button('Book this time', { variant: 'default' })}</div>`;
+const earliest = (chosen, label = `${DAY_SHORT}, [time]`) => `<div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; border: ${chosen ? `2px solid ${C.ink}` : `1px solid ${C.input}`}; background: ${chosen ? C.hover : C.panel}"><span style="flex-grow: 1"><span style="display: block; font-size: 13px; color: ${C.muted}">Earliest you can have</span><span style="font-size: 16px; font-weight: 700">${label}</span></span>${chosen ? `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700">${icon('check', 14)}Chosen</span>` : button('Book this time', { variant: 'default' })}</div>`;
 const time = ([t, taken], chosen) => `<button type="button" role="radio" aria-checked="${t === chosen}"${taken ? ' aria-disabled="true"' : ''} style="min-height: 44px; min-width: 76px; padding: 0 12px; border-radius: 8px; border: ${t === chosen ? `2px solid ${C.ink}` : `1px solid ${taken ? C.border : C.input}`}; background: ${t === chosen ? C.ink : taken ? C.mutedBg : C.panel}; color: ${t === chosen ? '#ffffff' : taken ? C.muted : C.ink}; font-family: ${MONO}; font-size: 15px; ${taken ? 'text-decoration: line-through;' : ''}">${t}${taken ? hidden(' taken') : ''}</button>`;
 const timesFor = (chosen) => `<div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 15px; font-weight: 700">${DAY} — choose a time to arrive</span>${radios(`Times on ${DAY}`, TIMES.map((x) => time(x, chosen)).join(''))}</div>`;
 // UX walk-through 1 M2: Maya books 11:30, the start of her diary slot (the
@@ -227,7 +227,7 @@ const kv = (k, v) => `<div style="display: flex; justify-content: space-between;
 const WHEN_APPT = `${DAY}, arrive ${mono('11:30')}`;
 // UX walk-through 6 H1: a Lightspeed shop takes no deposit (Lightspeed shops
 // decision 9), so its booking leaves the deposit rows out.
-const bookingLines = ({ deposit = !lightspeedShop(), when = WHEN_APPT, mechanic = null } = {}) => `<div>${kv('Service', DONE_SERVICE)}${kv('Bike', `${BIKE} · green`)}${kv('When', when)}${mechanic ? kv('Mechanic', mechanic) : ''}${kv('Extra work', LIMIT)}${deposit ? kv('Deposit paid', mono('£[deposit]')) : ''}${deposit ? kv('Free to cancel until', CUTOFF) : ''}${kv('Reference', mono('WH-1042'))}</div>`;
+const bookingLines = ({ deposit = !lightspeedShop(), when = WHEN_APPT, mechanic = null } = {}) => `<div>${kv('Service', DONE_SERVICE)}${kv('Bike', `${BIKE} · green`)}${kv('When', when)}${mechanic ? kv('Mechanic', mechanic) : ''}${kv('Extra work', LIMIT)}${deposit ? kv('Deposit paid', mono('£[deposit]')) : ''}${deposit ? kv('Free to cancel until', CUTOFF) : ''}${kv('Your repair', mono('WH-1042'))}</div>`;
 const bigIcon = (tone, ic) => `<span style="display: inline-flex; width: 48px; height: 48px; border-radius: 999px; align-items: center; justify-content: center; background: ${tone === 'ok' ? C.okBg : tone === 'purple' ? C.purpleBg : C.mutedBg}; color: ${tone === 'ok' ? C.successInk : tone === 'purple' ? C.purpleInk : C.muted}">${icon(ic, 24)}</span>`;
 const answerCard = (inner) => card(`<div style="padding: ${isPhone() ? 18 : 24}px; display: flex; flex-direction: column; gap: 12px">${inner}</div>`);
 // Audit M3: only the one-line outcome is announced; focus goes to the heading.
@@ -281,7 +281,7 @@ ${note('Your booking stays on Thursday until the shop confirms the new time.')}<
     head = badge('Booking confirmed', 'green');
     body = `${bookingLines(deposit === undefined ? {} : { deposit })}${pageButtons()}`;
   }
-  const page = centred(`<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span>${h1(heading, 28)}</div>${answerCard(`${head}${body}${state === 'change' ? '' : shopLines}`)}`, state === 'change' ? 1000 : 640);
+  const page = centred(`<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your repair · ${mono('WH-1042')}</span>${h1(heading, 28)}</div>${answerCard(`${head}${body}${state === 'change' ? '' : shopLines}`)}`, state === 'change' ? 1000 : 640);
   return dialog ? overlay(page, dialog) : page;
 };
 // Decision 4: the cancel question says what happens to the deposit.

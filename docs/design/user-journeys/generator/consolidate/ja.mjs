@@ -33,5 +33,8 @@ export const lines = [
   { on: 'till-search', text: 'A product row shows its price and [n] in stock here · [n] at [Second site], for everyone, Staff included', who: 'Staff', decision: 'Stock control, 3 Oct (walk-through 9 M2)' },
   { on: 'staff-app', text: "Search open on any staff page: the same groups and rows as the till's search; each row opens its page; no till buttons", who: 'Staff', decision: 'App map 2; Customer service 12; walk-through 9 M1' },
   { on: 'till-rail', text: 'Till only (no email): the rail opens the till and Front desk › Online orders, so they can mark online orders ready; every other room stays hidden', who: 'Staff', decision: 'Walk-through 8 decision 8; 3 Oct (walk-through 10 M1)' },
+  // The second walk-through's smaller questions, 3 Oct (answer 12).
+  { on: 'staff-app', text: 'Search also finds bikes, frame numbers and booking requests', who: 'Staff', decision: 'Second walk, 3 Oct, answer 12 (walk-through 9 L3)' },
+  { on: 'till-search', text: 'On the till the cursor starts in the search box', who: 'Staff', decision: 'Second walk, 3 Oct, answer 12 (walk-through 9 L3)' },
   { on: 'site', text: 'A Lightspeed shop: no Shop or Basket in the header', who: 'Customer', decision: 'Lightspeed shops 10 (H1); walk-through 6 L4' },
 ];

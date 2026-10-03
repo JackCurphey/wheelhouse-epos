@@ -28,11 +28,11 @@ export default {
   'new-job-day': into('new-job', 'Workshop day 18, 54', "From Jo's day column: mechanic pre-filled, no customer yet, 'The bike is here now' on"),
   // The job — one page, no tabs (the 7 stages are its situation list)
   'job-overview': keep(15, { sizes: ['desktop', 'tablet', 'phone'] }), // rule 3: own touch layout (Workshop day 3)
-  'job-book-in': into('job-overview', 'Workshop day 20', "'In workshop'; 'Bike tag sent' strip with barcode; 'Send quote' and 'Start work'"),
-  'job-quote': into('job-overview', 'Workshop day 20', "'Awaiting approval'; new lines pending, 'Proposed' total; 'Send quote'"),
+  'job-book-in': into('job-overview', 'Workshop day 20', "'Booked in'; 'Bike tag sent' strip with barcode; 'Send quote' and 'Start work'"),
+  'job-quote': into('job-overview', 'Workshop day 20', "'Quoting'; new lines pending, 'Proposed' total; 'Send quote'"),
   'job-mechanic': into('job-overview', 'Workshop day 20', "Alex Morgan's view: checklist progress, approved lines; 'Mark ready for collection'"),
   'job-waiting-parts': into('job-overview', 'Workshop day 20', "'Waiting for parts' strip: 'Replacement rear brake pads delayed', 'Moved to Sat 19 Sep · 16:00'"),
-  'job-finished': into('job-overview', 'Workshop day 20', "'Ready for collection'; 'Alex marked it ready at 15:30' with 'Undo'; 'Take payment'"),
+  'job-finished': into('job-overview', 'Workshop day 20', "'Finished'; 'Alex marked it ready at 15:30' with 'Undo'; 'Take payment'"),
   'job-collection': into('job-overview', 'Workshop day 20', "'Paid' strip, 'Paid online · [date]'; footer 'Hand over'"),
   'job-checklist': keep(7),
   // Customer account

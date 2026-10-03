@@ -136,10 +136,10 @@ const JOB_AT = {
   pick: () => job('In the workshop', 'blue', 'pick', readyFooter),
   waitReach: () => job('In the workshop', 'blue', 'waitReach', readyFooter),
   unsure: () => job('In the workshop', 'blue', 'unsure', readyFooter),
-  readyNoWo: () => job('Ready for collection', 'green', 'readyNoWo', (size) => handOverFooter(size)),
-  unpaid: () => job('Ready for collection', 'green', 'unpaid', (size) => handOverFooter(size)),
-  paid: () => job('Ready for collection', 'green', 'paid', (size) => handOverFooter(size)),
-  fallback: () => job('Ready for collection', 'green', 'fallback', fallbackFooter),
+  readyNoWo: () => job('Finished', 'green', 'readyNoWo', (size) => handOverFooter(size)),
+  unpaid: () => job('Finished', 'green', 'unpaid', (size) => handOverFooter(size)),
+  paid: () => job('Finished', 'green', 'paid', (size) => handOverFooter(size)),
+  fallback: () => job('Finished', 'green', 'fallback', fallbackFooter),
   // UX walk-through 6 M5: owners and managers can close the mark when the
   // bike was settled another way ("Mark it sorted…" opens ls-job-sorted).
   collectedUnpaid: () => job('Collected', 'grey', 'collectedUnpaid', sortedFooter),

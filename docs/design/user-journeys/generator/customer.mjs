@@ -7,7 +7,7 @@
 // (diary.mjs JOBS — nothing hand-picked), the till sale B1-[0000] and the
 // approved £111 on WH-1042. Anything else is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
-import { JOBS, DAYS, TODAY, ST, customerBikeOf, headerSearch } from './diary.mjs';
+import { JOBS, DAYS, TODAY, ST, customerBikeOf, headerSearch, stageOf } from './diary.mjs';
 import { page, fold, pill, offer, choice, note, popup, overlay, setSize, size, withSize, isPhone, settingsPage, payFolds, PAY_INTRO } from './settings-frame.mjs';
 import { field } from './ui.mjs';
 import { lightspeedShop, withLightspeedShop } from './shop-mode.mjs'; // UX walk-through 6 M3
@@ -24,7 +24,8 @@ const MAYA = { name: 'Maya Patel', phone: '07700 900 142', email: 'maya@example.
 let _mj;
 const mj = () => (_mj ??= JOBS.filter((j) => customerBikeOf(j)[0] === 'Maya Patel').sort((a, b) => b.day - a.day || b.start - a.start));
 const when = (j) => { const [d, n] = DAYS[j.day]; return `${d} ${n} Sep · ${String(Math.floor(j.start / 60)).padStart(2, '0')}:${String(j.start % 60).padStart(2, '0')}`; };
-const status = (key) => { const [bg, ink, word] = ST[key]; return `<span style="display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${word}</span>`; };
+// Second walk Q11: a job's chip shows its own stage (diary.mjs stageOf).
+const status = (key, label) => { const [bg, ink, w0] = ST[key]; const word = label ?? w0; return `<span style="display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: ${bg}; color: ${ink}; font-size: 12px; font-weight: 700; white-space: nowrap">${word}</span>`; };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // The top of the page, the same in both options: who, how to reach them,
@@ -44,7 +45,7 @@ ${button('New job')}</div>`;
 // with its shop. `SHOP` is set while such a page is drawn.
 let SHOP = '';
 const atShop = () => (SHOP ? ` · ${SHOP}` : '');
-const jobRow = (j) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono(j.job, 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${cap(j.svc)}</span><span style="font-size: 13px; color: ${C.muted}">${when(j)} · ${j.mech === 'Alex' ? 'Alex Morgan' : 'Jo Taylor'}${atShop()}</span></span>${status(j.key)}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
+const jobRow = (j) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono(j.job, 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">${cap(j.svc)}</span><span style="font-size: 13px; color: ${C.muted}">${when(j)} · ${j.mech === 'Alex' ? 'Alex Morgan' : 'Jo Taylor'}${atShop()}</span></span>${status(j.key, stageOf(j))}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
 const saleRow = () => `<a href="cs-sale-desktop.dc.html" style="display: flex; align-items: center; gap: 12px; min-height: 52px; border-top: 1px solid ${C.border}; text-decoration: none; color: ${C.ink}">${mono('B1-[0000]', 'font-size: 14px; width: 76px; flex-shrink: 0')}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Sale · Till B1</span><span style="font-size: 13px; color: ${C.muted}">[date] · [what was bought]${atShop()}</span></span>${mono('[£ total]', 'font-size: 15px')}<span style="display: inline-flex; color: ${C.muted}; transform: rotate(-90deg)">${icon('chevron', 16)}</span></a>`;
 
 // ---------- Option 1: one page, everything in folding sections ----------
@@ -148,7 +149,7 @@ const resRow = (main, sub, action, first = false) => `<a href="#" role="option" 
 const c2wResults = () => `${resGroup('Cycle to Work orders', resRow('Maya Patel · Cycle to Work · [Bike]', `Quote ${mono('[quote number]')} · Waiting for the certificate · held until [date]`, 'Open the order', true))}
 ${resGroup('Customers', resRow('Maya Patel', `Customer · ${mono(MAYA.phone)} · 1 Cycle to Work order`, 'Open'))}
 <p style="margin: 0; padding: 4px 12px 0; font-size: 13px; color: ${C.muted}">Cycle to Work orders are found by name, quote number or certificate number.</p>`;
-const typedBox = (w) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 2px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" role="combobox" aria-expanded="true" aria-controls="cs-c2w-results" aria-label="Search jobs, customers, products" value="[quote number]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 14px; color: ${C.ink}"></label>`;
+const typedBox = (w) => `<label style="display: flex; align-items: center; gap: 8px; width: ${w}; flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 2px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" role="combobox" aria-expanded="true" aria-controls="cs-c2w-results" aria-label="Search jobs, customers, orders, products" value="[quote number]" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: ${MONO}; font-size: 14px; color: ${C.ink}"></label>`;
 const resPanel = (style) => `<div id="cs-c2w-results" role="listbox" aria-label="Search results" style="${style} box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)">${c2wResults()}</div>`;
 const searchC2w = () => {
   if (size() === 'desktop') return customerList().replace(headerSearch(), `<div style="position: relative; flex-shrink: 0">${typedBox('320px')}${resPanel('position: absolute; top: 52px; right: 0; width: 480px; z-index: 5;')}</div>`);

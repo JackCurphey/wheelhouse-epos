@@ -94,7 +94,7 @@ ${button(`Pay ${dueText} now`, { block: true })}${note('Or pay when you collect 
 // the quote — the "Your booking" line and the tracker, now at Ready.
 const STEPS = ['Booked', 'In the shop', 'Being worked on', 'Ready'];
 const trackerDone = () => `<ol aria-label="Where your bike is" style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: ${isPhone() ? 8 : 16}px">${STEPS.map((t, i) => `<li${i === 3 ? ' aria-current="step"' : ''} style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: ${i === 3 ? 700 : 500}"><span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; box-sizing: border-box; border-radius: 999px; ${i === 3 ? `background: ${C.ink}; color: #ffffff` : `background: ${C.okBg}; color: ${C.successInk}`}">${icon('check', 12)}</span>${t}</li>`).join('')}</ol>`;
-const heading = () => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1>${trackerDone()}</div>`;
+const heading = () => `<div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; color: ${C.muted}">Your repair · ${mono('WH-1042')}</span><h1 style="margin: 0; font-size: ${isPhone() ? 24 : 30}px; font-weight: 700">Your Trek Domane AL 3 is ready</h1>${trackerDone()}</div>`;
 // Audit L1: the pay card comes first in reading order; on a wide screen it
 // sits in the right-hand column.
 function summary(state, remind = true) {
@@ -106,8 +106,12 @@ function summary(state, remind = true) {
 // (no provider is chosen yet, so it's a placeholder). Audit H1: a card that
 // fails says nothing was taken and offers the way on.
 const centred = (inner) => site(`<div style="width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px">${inner}</div>`);
+// Walk-through 12 L7 (Jack, 3 Oct, answer 14): the same ways to pay as online
+// checkout (Buy online 5), drawn as on-checkout draws them.
+const wallets = `<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">${['Apple Pay', 'Google Pay'].map((w) => `<button type="button" style="min-height: 48px; border-radius: 8px; border: 1px solid ${C.ink}; background: ${C.ink}; color: #ffffff; font-family: inherit; font-size: 15px; font-weight: 700">Pay with ${w}</button>`).join('')}</div>`;
 const payOnline = (failed = false, balance = false) => { const amt = balance ? '£[rest]' : money(WORK_TOTAL_APPROVED); return centred(`${heading()}${box(`Pay ${amt}`, `${note('For job WH-1042 at North Street Cycles, Bolton.')}
 ${failed ? `<p role="alert" style="margin: 0; display: flex; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span><strong>The card didn’t go through.</strong> Nothing was taken. Try another card, or pay when you collect.</span></p>` : ''}
+${wallets}<div style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: ${C.muted}"><span style="flex-grow: 1; height: 1px; background: ${C.border}"></span>or pay by card<span style="flex-grow: 1; height: 1px; background: ${C.border}"></span></div>
 <div style="display: flex; align-items: center; justify-content: center; min-height: 150px; padding: 16px; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 10px; text-align: center; font-size: 14px; color: ${C.muted}">[The payment provider’s secure card form]</div>
 ${balance ? `<p style="margin: 0; font-size: 14px; color: ${C.muted}">Your ${mono('£[deposit]')} deposit is already taken off.</p>` : ''}${button(failed ? 'Try again' : `Pay ${amt}`, { block: true })}
 <a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Back to the summary</a>`)}`); };
@@ -136,8 +140,8 @@ const waitingDialog = () => popup('wait-title', 'Bike still waiting', 'Sent when
 <p style="margin: 0; font-size: 15px">Sent the way each customer chose: text, WhatsApp or email.</p>
 ${wordingBox('wait-words', 'Hi [Customer’s first name], just a reminder that your [Bike] is ready to collect from [Shop name]. [What’s left to pay]. See what we did: [Link to the job]. Job [Job number]. We’re open [Opening hours].', isPhone() ? 8 : 4)}
 ${note('[What’s left to pay] reads “£111.00 to pay on collection”, or “Paid — nothing more to pay” once it’s paid.')}
-${bubble('Hi Maya, just a reminder that your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Job WH-1042. We’re open [opening hours].')}
-${bubble('Hi Maya, just a reminder that your Trek Domane AL 3 is ready to collect from North Street Cycles. Paid — nothing more to pay. See what we did: [link]. Job WH-1042. We’re open [opening hours].').replace('PREVIEW · TEXT TO MAYA PATEL', 'PREVIEW · ONCE IT’S PAID')}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
+${bubble('Hi Maya, just a reminder that your Trek Domane AL 3 is ready to collect from North Street Cycles. £111.00 to pay on collection. See what we did: [link]. Your repair · WH-1042. We’re open [opening hours].')}
+${bubble('Hi Maya, just a reminder that your Trek Domane AL 3 is ready to collect from North Street Cycles. Paid — nothing more to pay. See what we did: [link]. Your repair · WH-1042. We’re open [opening hours].').replace('PREVIEW · TEXT TO MAYA PATEL', 'PREVIEW · ONCE IT’S PAID')}`, `${button('Go back to Wheelhouse’s wording', { variant: 'ghost' })}${button('Done')}`, 620);
 
 def('cp-summary', () => summary('pay'));
 def('cp-summary-deposit', () => summary('deposit'));

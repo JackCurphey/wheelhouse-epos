@@ -84,5 +84,5 @@ export const lines = [
   { on: 'cw-cancel', text: 'Cancelling before the bike is ordered, with no deposit held: no deposit line; an in-stock bike goes back on sale at Bolton', who: 'Staff, Owner and Manager', decision: 'Cycle to Work 4, 7; 3 Oct (walk-through 5 L4); walk-through 5 M4' },
   { on: 'cw-order-held', text: 'More, as Staff: Cancel the order when it holds no deposit; with a deposit held, A deposit is held: ask a manager to cancel', who: 'Staff', decision: 'Cycle to Work 7; 3 Oct (walk-through 5 L4)' },
   { on: 'cw-customer-view', text: 'Collected: the bike and its frame number', who: 'Customer', decision: 'Cycle to Work 6, 7; walk-through 5 M2' },
-  { on: 'cw-customer-view', text: 'Opened from the email\'s See your order: a private link, no sign-in, like a repair\'s; also in the website account when signed in', who: 'Customer', decision: 'Cycle to Work 7; 3 Oct (walk-through 12 M4)' },
+  { on: 'cw-customer-view', text: 'Opened from the email\'s See your Cycle to Work bike: a private link, no sign-in, like a repair\'s; also in the website account when signed in', who: 'Customer', decision: 'Cycle to Work 7; 3 Oct (walk-through 12 M4)' },
 ];

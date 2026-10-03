@@ -47,7 +47,7 @@ ${siteSwitcher(true)}
 <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
 <header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 28px; display: flex; align-items: center; gap: 16px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
 <h1 style="margin: 0; font-size: 20px; font-weight: 700; flex-grow: 1">${esc(title)}</h1>
-<div style="display: flex; align-items: center; gap: 8px; width: 320px; min-height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<span>Search jobs, customers, products</span></div>
+<div style="display: flex; align-items: center; gap: 8px; width: 320px; min-height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.border}; border-radius: 8px; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<span>Search jobs, customers, orders, products</span></div>
 ${actions}
 </header>
 <main style="flex-grow: 1; box-sizing: border-box; padding: 28px; overflow: hidden">${content}</main>

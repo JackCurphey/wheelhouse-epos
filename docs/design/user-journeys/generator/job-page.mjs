@@ -110,7 +110,7 @@ export function finalCustStripTwoRow(customer, mechanicName, custHref = '#', tag
 // Decision 42: the customer's spending limit from their booking (decision 41),
 // shown as a tag so a mechanic sees how far extra work can go before a call.
 // UX walk-through 1 H1: in the story Maya asked to be called first.
-export const SPEND_LIMIT = 'Call before any extra work';
+export const SPEND_LIMIT = 'Ask before any extra work'; // 3 Oct answer 16: the customer's own choice
 // M2 (29 Sep audit): this is the one chip meant to stop a mechanic doing
 // unapproved work, but the plain "blue" badge() sat at the same quiet visual
 // weight as the "Ready by" chip next to it — nothing marked it as the one

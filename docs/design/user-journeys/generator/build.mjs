@@ -210,7 +210,9 @@ ${strip(scr.status, meta, nav)}
 // A Soft sand board: the canvas's own status strip (kept in Work Sans like
 // every other board) over the approved drawing, which keeps its own fonts.
 function sandBoardHtml(scr, w, h, meta, inner, nav) {
-  const others = SAND_CANVAS[scr.sand] ? navLink(SAND_CANVAS[scr.sand], w < 500 ? 'Sizes ↗' : 'Tablet and phone ↗', 'Tablet and phone, on this journey’s own canvas') : '';
+  // Second walk question 2 (Jack, 3 Oct): the link says it opens the journey's
+  // own canvas, where every size is drawn.
+  const others = SAND_CANVAS[scr.sand] ? navLink(SAND_CANVAS[scr.sand], w < 500 ? 'Its canvas ↗' : 'Other sizes, on its own canvas ↗', 'Tablet and phone sizes, on this journey’s own canvas') : '';
   return `<div style="width: ${w}px; height: ${h + STRIP}px; display: flex; flex-direction: column; background: #ffffff">
 <div style="font-family: ${FONT}">${strip(scr.status, meta, nav, others)}</div>
 <div style="width: ${w}px; height: ${h}px; overflow: hidden">${inner}</div>

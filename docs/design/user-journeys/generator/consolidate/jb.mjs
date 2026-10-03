@@ -37,5 +37,6 @@ export const lines = [
   { on: 'till-checkin', text: 'While running alongside Citrus Lime: Sales start on switch-over day, [date] · keep using Citrus Lime until then; check-in, search, customers and jobs still work', who: 'Staff', decision: 'Moving from Citrus Lime, 3 Oct (walk-through 4 H2)' },
   { on: 'till-checkin', text: 'Forgotten PIN: the owner or a manager gives a one-time PIN from their phone, read out over a call; you change it here at check-in', who: 'Staff', decision: 'Signing in, 3 Oct (walk-through 10 M2)' },
   { on: 'till-checkin', text: "The keyboard's number keys work too", who: 'Staff', decision: 'Walk-through 10 L1' },
+  { on: 'till-checkin', text: 'Taking over a workshop computer announces "Now working: [name]" to a screen reader', who: 'Staff and Mechanic', decision: 'Second walk, 3 Oct, answer 10 (walk-through 8 H1)' },
   { on: 'cust-signin', text: 'From a booking: you come straight back to your booking', who: 'Customer', decision: 'Book a repair 6, 9; walk-through 12 L6' },
 ];
