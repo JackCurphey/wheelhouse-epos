@@ -587,6 +587,10 @@ Fjell until switched.
   `ECONNREFUSED`.
 - Deploy warning: back up any real shop database before deploying migration
   030 (it drops columns; there is no code-only rollback).
+- Migration 038 (the quote stage, 3 Oct) is additive: new columns on quote
+  lines and quotes, and the quote state CHECK re-rendered with 'withdrawn'.
+  Sending a quote texts the customer through Twilio (TWILIO_* settings);
+  without them it says texts aren't set up. There is no email sending yet.
 - Migration 037 (jobs over several days, 3 Oct) is additive: a new
   `workshop_job_parts` table kept in step with each job's own date by
   triggers. The old staff diary (`public/app.js`) still shows only a job's

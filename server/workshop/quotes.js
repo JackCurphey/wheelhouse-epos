@@ -15,9 +15,10 @@ import { quote as quoteMachine, canApprove } from './state-machines.js';
 async function insertLines(quoteId, lines) {
   for (const line of lines) {
     await prepare(
-      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(quoteId, line.kind, line.description, line.productId ?? null, line.quantity ?? 1, line.unitAmount);
+      `INSERT INTO workshop_quote_lines (workshop_quote_id, kind, description, product_id, quantity, unit_amount, need, reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(quoteId, line.kind, line.description, line.productId ?? null, line.quantity ?? 1, line.unitAmount,
+      line.need === 'optional' ? 'optional' : 'needed', line.reason ? String(line.reason).trim() || null : null);
   }
 }
 
@@ -33,6 +34,9 @@ export async function createRevision({ jobId, lines }) {
     if (!Number.isFinite(Number(line.unitAmount))) {
       return { ok: false, code: 'illegal', message: 'each line needs a unitAmount' };
     }
+    if (line.need !== undefined && !['needed', 'optional'].includes(line.need)) {
+      return { ok: false, code: 'illegal', message: "each line's need must be 'needed' or 'optional'" };
+    }
   }
 
   const job = await prepare('SELECT id FROM workshop_jobs WHERE id = ?').get(jobId);
@@ -46,6 +50,16 @@ export async function createRevision({ jobId, lines }) {
     await prepare('DELETE FROM workshop_quote_lines WHERE workshop_quote_id = ?').run(current.id);
     await insertLines(current.id, lines);
     return { ok: true, quote: current };
+  }
+
+  // A withdrawn quote is finished with; a new quote is simply the next
+  // revision, with nothing to supersede (journey 4 decision 7).
+  if (current?.state === 'withdrawn') {
+    const { lastInsertRowid: quoteId } = await prepare(
+      "INSERT INTO workshop_quotes (workshop_job_id, revision, state) VALUES (?, ?, 'draft')"
+    ).run(jobId, current.revision + 1);
+    await insertLines(quoteId, lines);
+    return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
   }
 
   if (current && !quoteMachine.can(current.state, 'revise')) {
@@ -79,9 +93,73 @@ export async function send({ quoteId }) {
   if (!quoteMachine.can(row.state, 'send')) {
     return { ok: false, code: 'illegal', message: `a quote that is ${row.state} cannot be sent` };
   }
-  await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?')
+  await prepare('UPDATE workshop_quotes SET state = ?, sent_at = now() WHERE id = ?')
     .run(quoteMachine.next(row.state, 'send'), quoteId);
   return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
+}
+
+// The shop takes back a quote the customer hasn't answered (journey 4
+// decision 7). Final; a new quote is the next revision (createRevision).
+export async function withdraw({ quoteId }) {
+  const row = await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId);
+  if (!row) return { ok: false, code: 'not_found', message: 'Quote not found' };
+  if (!quoteMachine.can(row.state, 'withdraw')) {
+    return { ok: false, code: 'illegal', message: `a quote that is ${row.state} cannot be withdrawn` };
+  }
+  await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?').run(quoteMachine.next(row.state, 'withdraw'), quoteId);
+  return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
+}
+
+// The whole answer at once - every line's yes or no, then the quote moves -
+// for the customer on their booking link (via 'online') and for staff after a
+// phone call or a chat in the shop (via 'phone' / 'in_shop', with who took it;
+// journey 4 decision 4). Every line must be decided. `linkRevision`, when
+// given (the booking link), must be the job's current revision, as approve()
+// requires. Decisions stay final: a line already decided is refused.
+// The caller runs this in a transaction.
+export async function answerAll({ quoteId, jobId = null, decisions, via, loginId = null, linkRevision = undefined }) {
+  if (!['online', 'phone', 'in_shop'].includes(via)) return { ok: false, code: 'illegal', message: "via must be 'online', 'phone' or 'in_shop'" };
+  const row = await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId);
+  if (!row || (jobId !== null && row.workshop_job_id !== jobId)) return { ok: false, code: 'not_found', message: 'Quote not found' };
+  if (linkRevision !== undefined) {
+    const { revision: currentRevision } = await prepare(
+      'SELECT MAX(revision) AS revision FROM workshop_quotes WHERE workshop_job_id = ?'
+    ).get(row.workshop_job_id);
+    const verdict = canApprove({ quoteState: row.state, linkRevision, currentRevision });
+    if (!verdict.allowed) return { ok: false, code: 'illegal', message: verdict.reason };
+  } else if (row.state !== 'sent') {
+    return { ok: false, code: 'illegal', message: `a quote that is ${row.state} is not open for an answer` };
+  }
+  const lines = await prepare('SELECT id, decision FROM workshop_quote_lines WHERE workshop_quote_id = ?').all(quoteId);
+  const given = new Map((Array.isArray(decisions) ? decisions : []).map((d) => [Number(d.lineId), d.decision]));
+  if (lines.some((l) => !['approved', 'declined'].includes(given.get(l.id)))) {
+    return { ok: false, code: 'illegal', message: 'every line needs a yes or a no before the answer can be saved' };
+  }
+  if (lines.some((l) => l.decision !== 'pending')) {
+    return { ok: false, code: 'illegal', message: 'this quote has already been answered' };
+  }
+  for (const l of lines) {
+    await prepare(
+      `UPDATE workshop_quote_lines SET decision = ?, decided_via = ?, decided_by_login_id = ?, decided_at = now()
+       WHERE id = ? AND decision = 'pending'`
+    ).run(given.get(l.id), via, loginId, l.id);
+  }
+  const approved = lines.filter((l) => given.get(l.id) === 'approved').length;
+  const event = approved === lines.length ? 'approve_all' : approved === 0 ? 'decline_all' : 'approve_some';
+  await prepare('UPDATE workshop_quotes SET state = ? WHERE id = ?').run(quoteMachine.next(row.state, event), quoteId);
+  return { ok: true, quote: await prepare('SELECT * FROM workshop_quotes WHERE id = ?').get(quoteId) };
+}
+
+// The job's quote a customer may see on their booking link: its latest
+// revision, if that is customer-readable (a draft being written is not).
+export async function currentQuoteForJob(jobId) {
+  const quote = await prepare(
+    'SELECT * FROM workshop_quotes WHERE workshop_job_id = ? ORDER BY revision DESC LIMIT 1'
+  ).get(jobId);
+  if (!quote || !CUSTOMER_READABLE_STATES.has(quote.state)) return { ok: false, reason: 'not_found' };
+  const lines = await prepare(LINE_TOTALS).all(quote.id);
+  const totals = await prepare(QUOTE_TOTALS).get(quote.id);
+  return { ok: true, quote, lines, totals };
 }
 
 // The quote belongs to this customer, or it does not exist as far as they are
@@ -178,6 +256,7 @@ export function serializeQuote(row) {
     revision: row.revision,
     state: row.state,
     createdAt: row.created_at,
+    sentAt: row.sent_at ?? null,
   };
 }
 
@@ -188,11 +267,13 @@ export function serializeQuote(row) {
 // the decision was taken to avoid.
 const LINE_TOTALS = `
   SELECT
-    id, kind, description, product_id, quantity, unit_amount, decision,
-    (quantity * unit_amount) AS line_total
-  FROM workshop_quote_lines
-  WHERE workshop_quote_id = ?
-  ORDER BY id
+    l.id, l.kind, l.description, l.product_id, l.quantity, l.unit_amount, l.decision,
+    l.need, l.reason, l.decided_via, l.decided_at, l.added_to_order_at, who.name AS decided_by_name,
+    (l.quantity * l.unit_amount) AS line_total
+  FROM workshop_quote_lines l
+  LEFT JOIN logins who ON who.id = l.decided_by_login_id
+  WHERE l.workshop_quote_id = ?
+  ORDER BY l.id
 `;
 
 const QUOTE_TOTALS = `
@@ -225,6 +306,8 @@ export const CUSTOMER_READABLE_STATES = new Set([
   'declined',
   'superseded',
   'expired',
+  // The customer's page says the shop withdrew it (journey 4 decision 7).
+  'withdrawn',
 ]);
 
 // The complement, kept explicit so a test can assert every declared quote
@@ -270,6 +353,12 @@ export function serializeQuoteWithLines(quote, lines, totals) {
       unitAmount: Number(l.unit_amount),
       decision: l.decision,
       lineTotal: Number(l.line_total),
+      need: l.need,
+      reason: l.reason ?? null,
+      decidedVia: l.decided_via ?? null,
+      decidedAt: l.decided_at ?? null,
+      decidedByName: l.decided_by_name ?? null,
+      addedToOrderAt: l.added_to_order_at ?? null,
     })),
     totals: {
       all: Number(totals.all_total),
