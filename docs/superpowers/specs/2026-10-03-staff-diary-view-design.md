@@ -102,3 +102,24 @@ Left out because the server can't do them yet: choosing the mechanic as you
 accept (decision 62), "Offer another time", and a written message with a
 decline (the server sends none, so the button says "Decline booking", not
 "Decline & notify customer"). "Open full job" waits for the job page.
+
+## Piece 3: moving a job (built 3 Oct)
+
+- **Drag** a job to another time or day (Week view) or another mechanic
+  (Day view, decision 32). Moves snap to 15 minutes, like the old diary, and
+  stay inside the grid's hours; a click that doesn't move past 4px isn't a
+  drag.
+- **From the keyboard**, so dragging is never the only way (accessibility
+  first): Enter (or Space) picks the job up, Up/Down move it 15 minutes,
+  Left/Right move it a day or a mechanic, Enter saves, Escape puts it back.
+  Each step is read out ("Moving Trek Domane. Wed 7 Oct, 10:30–11:30.").
+- Saving is the existing `PUT /api/workshop-jobs/:id` with the version the
+  diary saw, and `mechanicId` only when it changed. The server's own reason
+  for a refused time is shown ("Couldn't move Trek Domane: …"); a job
+  someone else changed first says so and the diary reloads. Dropping a
+  change request on its requested time accepts it (the server does this).
+- A booking request is answered before it's moved, and a cancelled booking
+  isn't moved.
+
+Not yet: changing a job's length by dragging its edge (the old diary has
+resize handles; the drawings don't show them).

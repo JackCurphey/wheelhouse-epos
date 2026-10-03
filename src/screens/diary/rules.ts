@@ -192,3 +192,19 @@ export function waitingCard(item: WaitingItem) {
   }
   return { tone, label, customer: item.customerName || 'Customer', detail };
 }
+
+/** The diary's 30-minute row height, in pixels (as drawn). */
+export const SLOT_PX = 29;
+/** Moves snap to 15 minutes, like the old diary (WORKSHOP_SNAP_MIN). */
+export const SNAP_MIN = 15;
+
+/**
+ * Where a dragged job starts: the top of the dropped block, `y` pixels down
+ * its column, as a time snapped to 15 minutes and kept inside the grid's
+ * hours (so a job never starts before them or runs past their end).
+ */
+export function dropStart(y: number, range: { start: number; end: number }, durationMin: number): number {
+  const raw = range.start + (y / SLOT_PX) * 30;
+  const snapped = Math.round(raw / SNAP_MIN) * SNAP_MIN;
+  return Math.max(range.start, Math.min(range.end - durationMin, snapped));
+}

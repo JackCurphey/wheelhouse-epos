@@ -1,12 +1,12 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { createContext, useContext, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
-import { apiGet } from '@/lib/api/client.ts';
+import { apiGet, apiMutate, ApiError } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { NavIcon } from '@/staff/nav-icon.tsx';
 import { RequestDialog } from './request-dialog.tsx';
 import {
-  LEGEND, STATE_LABEL, addDays, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
+  LEGEND, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
 } from './rules.ts';
 
@@ -58,29 +58,50 @@ function describe(j: Shown, chosen: boolean) {
     .join(', ') + (chosen ? ', chosen from Waiting for you' : '');
 }
 
-function JobBlock({ job, range, wide, chosen, lane }: {
-  job: Shown; range: { start: number }; wide: boolean; chosen: boolean; lane?: { lane: number; total: number };
+type Preview = { jobId: number; colIndex: number; startMin: number; durationMin: number };
+
+/**
+ * Moving a job (piece 3): by dragging, or from the keyboard (Enter picks it
+ * up, arrows move it, Enter saves, Escape puts it back). Shared through a
+ * context so each block can take part without threading props through the
+ * grid. A job being moved stays in its own column's markup and is shifted
+ * across visually, so it keeps keyboard focus as it moves between days.
+ */
+type MoveApi = {
+  preview: Preview | null;
+  onKeyDown: (job: Shown, colIndex: number, e: KeyboardEvent<HTMLElement>) => void;
+  onPointerDown: (job: Shown, colIndex: number, e: PointerEvent<HTMLElement>) => void;
+};
+const MoveContext = createContext<MoveApi | null>(null);
+
+/** A booking request is answered before it is moved; a cancellation isn't moved at all. */
+const movable = (j: Shown) => Boolean(j.startTime) && j.state !== 'pending' && j.state !== 'cancelled';
+
+function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
+  job: Shown; range: { start: number }; wide: boolean; chosen: boolean; lane?: { lane: number; total: number }; colIndex: number;
 }) {
-  const start = toMinutes(job.startTime as string);
-  const end = job.endTime ? toMinutes(job.endTime) : start + 30;
+  const move = useContext(MoveContext);
+  const moving = move?.preview?.jobId === job.id ? move.preview : null;
+  const start = moving ? moving.startMin : toMinutes(job.startTime as string);
+  const end = moving ? moving.startMin + moving.durationMin : job.endTime ? toMinutes(job.endTime) : start + 30;
   const top = ((start - range.start) / 30) * SLOT_H + 2;
   const height = Math.max(((end - start) / 30) * SLOT_H - 4, SLOT_H - 6);
   const cancelled = job.state === 'cancelled';
   const style: CSSProperties = { top, height };
-  if (lane && lane.total > 1) {
+  if (moving) {
+    // Shifted across by whole columns (each column is 100% of this one's width).
+    style.left = `calc(3px + ${moving.colIndex - colIndex} * 100%)`;
+    style.width = 'calc(100% - 6px)';
+  } else if (lane && lane.total > 1) {
     style.left = `calc(3px + (100% - 6px) * ${lane.lane} / ${lane.total})`;
     style.width = `calc((100% - 6px) / ${lane.total} - 4px)`;
   } else {
     style.left = 3;
     style.right = 3;
   }
-  return (
-    <div
-      title={describe(job, false)}
-      data-chosen={chosen || undefined}
-      className={`absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
-      style={style}
-    >
+  const className = `absolute flex flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${BLOCK[job.state]} ${cancelled ? 'opacity-80' : ''} ${chosen ? 'z-[1] shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''} ${moving ? 'z-[2] cursor-grabbing shadow-[0_10px_26px_var(--wh-backdrop)]' : ''}`;
+  const inner = (
+    <>
       <span className={SR}>{describe(job, chosen)}</span>
       <span aria-hidden="true" className={`truncate text-[11px] font-bold text-[var(--wh-ink)] ${cancelled ? 'line-through' : ''}`}>
         {job.bikeLabel || 'Bike'}
@@ -88,7 +109,27 @@ function JobBlock({ job, range, wide, chosen, lane }: {
       <span aria-hidden="true" className="truncate text-[10px] leading-tight font-bold">
         {wide ? `${job.title} · ${STATE_LABEL[job.state]}` : job.title}
       </span>
-    </div>
+    </>
+  );
+  if (!move || !movable(job)) {
+    return (
+      <div title={describe(job, false)} className={className} style={style}>
+        {inner}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      title={describe(job, false)}
+      aria-describedby="diary-move-hint"
+      onKeyDown={(e) => move.onKeyDown(job, colIndex, e)}
+      onPointerDown={(e) => move.onPointerDown(job, colIndex, e)}
+      className={`${className} cursor-grab touch-none`}
+      style={style}
+    >
+      {inner}
+    </button>
   );
 }
 
@@ -111,8 +152,8 @@ function RequestedOutline({ job, range }: { job: Shown; range: { start: number }
   );
 }
 
-function Column({ label, jobs, outlines, range, wide, chosenId }: {
-  label: string; jobs: Shown[]; outlines: Shown[]; range: { start: number; end: number }; wide: boolean; chosenId: number | null;
+function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
+  label: string; index: number; jobs: Shown[]; outlines: Shown[]; range: { start: number; end: number }; wide: boolean; chosenId: number | null;
 }) {
   const timed = jobs.filter((j) => j.startTime);
   const lanes = layoutLanes(timed.map((j) => {
@@ -124,6 +165,7 @@ function Column({ label, jobs, outlines, range, wide, chosenId }: {
     <div
       role="group"
       aria-label={label}
+      data-diary-col={index}
       className="relative border-l border-[var(--wh-border)] first:border-l-0"
       style={{
         height,
@@ -131,7 +173,7 @@ function Column({ label, jobs, outlines, range, wide, chosenId }: {
       }}
     >
       {timed.map((j) => (
-        <JobBlock key={j.id} job={j} range={range} wide={wide} chosen={j.id === chosenId} lane={lanes.get(j.id)} />
+        <JobBlock key={j.id} job={j} range={range} wide={wide} chosen={j.id === chosenId} lane={lanes.get(j.id)} colIndex={index} />
       ))}
       {outlines.map((j) => (
         <RequestedOutline key={`req-${j.id}`} job={j} range={range} />
@@ -257,55 +299,158 @@ export function DiaryPage() {
   const step = view === 'week' ? 7 : 1;
   const unit = view === 'week' ? 'week' : 'day';
 
-  let grid: ReactNode;
+  // The grid's columns: the week's days, or the day's mechanics.
+  type Col = { key: string; label: string; date: string; mechanicId: number | null };
+  let columns: Col[];
   if (view === 'week') {
-    grid = (
-      <Grid
-        ariaLabel={`Workshop diary, week of ${dayLabel(start)}`}
-        range={range}
-        heads={days.map((d) => {
+    columns = days.map((d) => ({ key: d, label: dayLabel(d), date: d, mechanicId: null }));
+  } else {
+    columns = (whoId === null ? people : people.filter((m) => m.id === whoId))
+      .map((m) => ({ key: String(m.id), label: m.name, date, mechanicId: m.id }));
+    if (whoId === null && shown.some((j) => j.jobDate === date && j.startTime && j.mechanicId === null)) {
+      columns.push({ key: 'none', label: 'Not assigned yet', date, mechanicId: null });
+    }
+  }
+  const jobsIn = (c: Col) => shown.filter((j) => j.jobDate === c.date && (view === 'week' || j.mechanicId === c.mechanicId));
+  const outlinesIn = (c: Col) => outlinesFor((j) => j.requested?.jobDate === c.date
+    && (view === 'week' || (j.requested?.mechanicId ?? j.mechanicId) === c.mechanicId));
+
+  // ---- Moving a job (piece 3) ----
+  const queryClient = useQueryClient();
+  const [preview, setPreview] = useState<Preview | null>(null);
+  // The latest preview, for the pointer-up handler (added once per drag).
+  const previewRef = useRef<Preview | null>(null);
+  previewRef.current = preview;
+  const [moveNote, setMoveNote] = useState('');
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const drag = useRef<{ job: Shown; origCol: number; x: number; y: number; grab: number; moved: boolean } | null>(null);
+
+  const durationOf = (j: Shown) => {
+    const s0 = toMinutes(j.startTime as string);
+    return j.endTime ? toMinutes(j.endTime) - s0 : 30;
+  };
+  const whereText = (p: Preview) => {
+    const c = columns[p.colIndex];
+    return `${shortDay(c.date)}, ${hhmm(p.startMin)}–${hhmm(p.startMin + p.durationMin)}${view === 'day' ? `, ${c.label}` : ''}`;
+  };
+  const startOf = (j: Shown, colIndex: number): Preview => ({ jobId: j.id, colIndex, startMin: toMinutes(j.startTime as string), durationMin: durationOf(j) });
+
+  async function save(job: Shown, p: Preview, origCol: number) {
+    const c = columns[p.colIndex];
+    const same = p.colIndex === origCol && p.startMin === toMinutes(job.startTime as string);
+    if (same) {
+      setPreview(null);
+      return;
+    }
+    const body: Record<string, unknown> = {
+      jobDate: c.date, startTime: hhmm(p.startMin), endTime: hhmm(p.startMin + p.durationMin), version: job.version,
+    };
+    if (view === 'day' && c.mechanicId !== job.mechanicId) body.mechanicId = c.mechanicId;
+    setMoveError(null);
+    try {
+      await apiMutate(`/api/workshop-jobs/${job.id}`, body, { method: 'PUT' });
+      setMoveNote(`${job.bikeLabel || 'Bike'} moved to ${whereText(p)}.`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] }),
+        queryClient.invalidateQueries({ queryKey: ['workshop-waiting'] }),
+      ]);
+    } catch (err) {
+      const why = err instanceof ApiError
+        ? (err.code === 'stale' ? 'This job changed while you were looking at it.' : err.message)
+        : "Couldn't reach the server — try again.";
+      setMoveError(`Couldn't move ${job.bikeLabel || 'Bike'}: ${why}`);
+      if (err instanceof ApiError && err.code === 'stale') void queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
+    } finally {
+      setPreview(null);
+    }
+  }
+
+  const moveApi: MoveApi = {
+    preview,
+    onKeyDown(job, colIndex, e) {
+      const bike = job.bikeLabel || 'Bike';
+      const hint = 'Use the arrow keys to move it, Enter to save, Escape to cancel.';
+      if (!preview || preview.jobId !== job.id) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        const p = startOf(job, colIndex);
+        setPreview(p);
+        setMoveError(null);
+        setMoveNote(`Moving ${bike}. ${whereText(p)}. ${hint}`);
+        return;
+      }
+      let next: Preview | null = null;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        const delta = e.key === 'ArrowUp' ? -SNAP_MIN : SNAP_MIN;
+        next = { ...preview, startMin: Math.max(range.start, Math.min(range.end - preview.durationMin, preview.startMin + delta)) };
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const ci = Math.max(0, Math.min(columns.length - 1, preview.colIndex + (e.key === 'ArrowLeft' ? -1 : 1)));
+        next = { ...preview, colIndex: ci };
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        void save(job, preview, colIndex);
+        return;
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setPreview(null);
+        setMoveNote(`Move cancelled. ${bike} stays at ${whereText(startOf(job, colIndex))}.`);
+        return;
+      }
+      if (next) {
+        e.preventDefault();
+        setPreview(next);
+        setMoveNote(`Moving ${bike}. ${whereText(next)}. ${hint}`);
+      }
+    },
+    onPointerDown(job, colIndex, e) {
+      if (e.button !== 0) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      drag.current = { job, origCol: colIndex, x: e.clientX, y: e.clientY, grab: e.clientY - rect.top, moved: false };
+      const onMove = (ev: globalThis.PointerEvent) => {
+        const d = drag.current;
+        if (!d) return;
+        if (!d.moved && Math.abs(ev.clientX - d.x) < 4 && Math.abs(ev.clientY - d.y) < 4) return;
+        d.moved = true;
+        const cols = [...document.querySelectorAll<HTMLElement>('[data-diary-col]')];
+        const over = cols.find((el) => {
+          const r = el.getBoundingClientRect();
+          return ev.clientX >= r.left && ev.clientX < r.right;
+        });
+        const colEl = over ?? cols[d.origCol];
+        if (!colEl) return;
+        const ci = Number(colEl.dataset.diaryCol);
+        const top = colEl.getBoundingClientRect().top;
+        setPreview({ ...startOf(d.job, ci), startMin: dropStart(ev.clientY - top - d.grab, range, durationOf(d.job)) });
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        const d = drag.current;
+        drag.current = null;
+        const p = previewRef.current;
+        if (d?.moved && p) void save(d.job, p, d.origCol);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    },
+  };
+
+  const grid: ReactNode = (
+    <Grid
+      ariaLabel={view === 'week' ? `Workshop diary, week of ${dayLabel(start)}` : `Workshop diary, ${dayLabel(date)}, by mechanic`}
+      range={range}
+      heads={view === 'week'
+        ? days.map((d) => {
           const [weekday, ...rest] = shortDay(d).split(' ');
           return { key: d, top: weekday, main: rest.join(' '), today: d === today };
-        })}
-        noTime={shown.filter((j) => !j.startTime)}
-        columns={days.map((d) => (
-          <Column
-            key={d}
-            label={dayLabel(d)}
-            jobs={shown.filter((j) => j.jobDate === d)}
-            outlines={outlinesFor((j) => j.requested?.jobDate === d)}
-            range={range}
-            wide={false}
-            chosenId={chosen}
-          />
-        ))}
-      />
-    );
-  } else {
-    const cols: { key: string; name: string; id: number | null }[] = (whoId === null ? people : people.filter((m) => m.id === whoId))
-      .map((m) => ({ key: String(m.id), name: m.name, id: m.id }));
-    if (whoId === null && shown.some((j) => j.jobDate === date && j.startTime && j.mechanicId === null)) {
-      cols.push({ key: 'none', name: 'Not assigned yet', id: null });
-    }
-    grid = (
-      <Grid
-        ariaLabel={`Workshop diary, ${dayLabel(date)}, by mechanic`}
-        range={range}
-        heads={cols.map((c) => ({ key: c.key, main: c.name }))}
-        columns={cols.map((c) => (
-          <Column
-            key={c.key}
-            label={c.name}
-            jobs={shown.filter((j) => j.jobDate === date && j.mechanicId === c.id)}
-            outlines={outlinesFor((j) => j.requested?.jobDate === date && (j.requested?.mechanicId ?? j.mechanicId) === c.id)}
-            range={range}
-            wide
-            chosenId={chosen}
-          />
-        ))}
-      />
-    );
-  }
+        })
+        : columns.map((c) => ({ key: c.key, main: c.label }))}
+      noTime={view === 'week' ? shown.filter((j) => !j.startTime) : undefined}
+      columns={columns.map((c, i) => (
+        <Column key={c.key} label={c.label} index={i} jobs={jobsIn(c)} outlines={outlinesIn(c)} range={range} wide={view === 'day'} chosenId={chosen} />
+      ))}
+    />
+  );
 
   const items = waiting.data?.items ?? [];
   const chip = (key: string, label: string, name: string, badge: ReactNode, on: boolean) => (
@@ -407,7 +552,10 @@ export function DiaryPage() {
         </section>
 
         <div className="flex min-w-0 grow flex-col gap-2.5">
-          <div className="overflow-x-auto">{jobs.isLoading ? <p>Loading the diary…</p> : grid}</div>
+          <p id="diary-move-hint" className={SR}>Drag a job to move it, or press Enter to pick it up and use the arrow keys.</p>
+          <p role="status" aria-live="polite" className={SR}>{moveNote}</p>
+          {moveError ? <p role="alert" className="m-0 rounded-md bg-[var(--wh-danger-bg)] px-3 py-2 text-sm text-[var(--wh-danger-hover)]">{moveError}</p> : null}
+          <div className="overflow-x-auto"><MoveContext.Provider value={moveApi}>{jobs.isLoading ? <p>Loading the diary…</p> : grid}</MoveContext.Provider></div>
           {jobs.isError ? <p role="alert">Wheelhouse couldn&apos;t load the diary. Try again in a moment.</p> : null}
           <ul aria-label="What the colours mean" className="m-0 flex list-none flex-wrap gap-3 p-0">
             {LEGEND.map((s) => (

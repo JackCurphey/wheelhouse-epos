@@ -9,6 +9,11 @@
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
+**Build board (keep it current):** https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
+source `docs/build-progress/build-board.html`. After any build piece merges or
+opens, edit its `BOARD` data block and republish (Jack, 3 Oct: he keeps it open
+to see where we are).
+
 **Resume here:** read `docs/design/user-journeys/HANDOVER-next-journey.md` —
 Workshop day (journey 12), App map and navigation (journey A), Signing in
 and access (journey B), Selling at the till (journey 11), End-of-day
