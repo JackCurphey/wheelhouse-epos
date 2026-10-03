@@ -63,3 +63,13 @@ walk-through story can be clicked start to finish".
 - 3 Oct: one page plus data files, not one HTML file per screen (the Artifact
   file limit; above).
 - 3 Oct: links are plain `#<id>` tokens (the Artifact link limit; above).
+- 3 Oct: built. 755 screens and situations (the 63 later ones left out), 69
+  data files, 56MB; 0 of about 28,700 buttons without a target; 12 stories
+  click start to finish on each step's named button. 95 pages no drawing
+  shows say "Not drawn yet" and are listed in `mockup-gaps.md`; 43 steps
+  leave Wheelhouse. Published privately:
+  https://claude.ai/artifact/6rfhPpmSNY8eDtD6bEnChi
+- 3 Oct: tried in the browser: story 1 starts on the home page as the
+  customer on a phone and "Book a repair" opens booking; story 2's PIN, float
+  check and Back work; the person switcher says when a screen has no separate
+  view for that person.
