@@ -60,7 +60,7 @@ export default {
     // Stock take
     'Start a count': go('tk-start'),
     'Start the count': go('tk-count'),
-    'Check the count of [Category]': go('tk-diff'),
+    'Check the count of [Area]': go('tk-diff'),
     'Open the count of [Area]': go('tk-count'),
     'Open the whole-shop count from [date]': go('tk-applied'),
     'I’ve finished my part': go('tk-hub'),

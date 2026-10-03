@@ -56,3 +56,11 @@ so they can be traced:
 - Each walk file's findings marked as following a recorded decision are fixed
   as the decision says: wrong links, drawings whose figures disagree, and the
   website's "Turn it on" while moving.
+
+## Story 3's stock count (3 Oct)
+
+Jack, 3 Oct: "1". Story 3 counts an area, as `tk-start` and `tk-count` are
+drawn, and the one count is followed all the way through (walk-through 3
+M3): the manager's Stock take shows "[Area] · everyone has finished · Ready to
+check", and Check and Applied name [Area]. Staff still see [Area] being
+counted, with Join. Chosen over a "still counting" state on `tk-hub`.

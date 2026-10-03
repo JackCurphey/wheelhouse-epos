@@ -103,7 +103,7 @@ export const stories = [
       { id: 'tk-hub', who: 'Owner', does: 'Start a count' },
       { id: 'tk-start', who: 'Owner', does: 'Start the count' },
       { id: 'tk-count', who: 'Staff', does: 'I’ve finished my part' },
-      { id: 'tk-hub', who: 'Owner', does: 'Check the count of [Category]' },
+      { id: 'tk-hub', who: 'Owner', does: 'Check the count of [Area]' },
       { id: 'tk-diff', who: 'Owner', does: 'Apply to [n] products' },
       { id: 'tk-applied', who: 'Owner', does: '(Jo opens Stock)' },
       { id: 'st-list-staff', who: 'Staff', does: 'Shimano brake pads B05S-RX · [Category] · [Supplier]', doesAt: { phone: 'Shimano brake pads B05S-RX · [Category] · [Supplier] · £28.00' } },

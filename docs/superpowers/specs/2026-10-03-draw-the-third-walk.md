@@ -246,7 +246,7 @@ corrected, using only what an answer or a recorded decision says.
 4. Each answer's decision file has a dated "Later change" note pointing here.
 
 ## Left for Jack (not settled by a decision, or not done here)
-1. **Walk 3 M3 (one stock count all the way through):** not changed. Both fixes
+1. **Walk 3 M3 (one stock count all the way through):** settled 3 Oct (Jack: "1", count an area): `tk-hub` shows [Area] ready to check, `tk-diff` and `tk-applied` name [Area]. Was: not changed. Both fixes
    need a choice the decisions don't make: the story counting a category while
    `tk-count` is drawn counting an area, or a new "still counting" state on
    `tk-hub`.
@@ -313,4 +313,4 @@ corrected, using only what an answer or a recorded decision says.
   rename leaves her history, open jobs and counts as they were (checked: every
   job row and count on the customer canvas matches the `1b9dc26` build). "jobs"
   is singular for one.
-
+- 3 Oct: walk 3 M3 settled by Jack ("1"): the area count is followed through on `tk-hub`, `tk-diff` and `tk-applied` (`stock.mjs`); story 3's step and the j14 link renamed to "Check the count of [Area]". Checks: consolidate 16/16, mockup 5/5, fitcheck 0 problems, 0 dead.
