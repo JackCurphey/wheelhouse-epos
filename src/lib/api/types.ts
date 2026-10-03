@@ -42,6 +42,8 @@ export type WorkshopJob = {
   cancelledBy?: string | null;
   cancelledAt?: string | null;
   cancellationSeenAt?: string | null;
+  /** The job's current quote (its latest revision), or null (journey 4). */
+  quote?: { id: number; state: string; revision: number } | null;
   /** Each day the job is worked, in order; part 1 is the job's own date (migration 037). */
   parts?: JobPart[];
   /** What the customer wrote when booking online, if anything. */

@@ -20,8 +20,10 @@ type Customer = { id: number; name: string; email: string | null; phone: string 
 const money = (n: number) => `£${n.toFixed(2)}`;
 
 /** The badge's word for where the job is (the drawings' stage names). */
-export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState'>): string {
+export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'>): string {
   if (j.bookingState === 'pending') return 'Booking request';
+  // A quote the customer hasn't answered (UX walk-through M3: its own teal).
+  if (j.quote?.state === 'sent' && j.workState !== 'complete') return 'Waiting for the customer';
   if (j.custodyState === 'collected') return 'Collected';
   if (j.workState === 'complete') return 'Ready for collection';
   if (j.workState === 'waiting_parts') return 'Waiting for parts';
@@ -52,6 +54,7 @@ function stageActions(j: WorkshopJob): Action[] {
 
 const BADGE: Record<string, string> = {
   'Booking request': 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
+  'Waiting for the customer': 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
   Expected: 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   'In workshop': 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   'Waiting for parts': 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
@@ -279,7 +282,7 @@ export function JobDialog({ jobId, onClose }: { jobId: number; onClose: () => vo
                 </div>
                 <section aria-labelledby="job-work" className="flex min-w-0 flex-col gap-1.5">
                   <h3 id="job-work" className="m-0 text-sm font-bold">Work and parts</h3>
-                  {job.orderId ? <WorkParts orderId={job.orderId} /> : <p className="m-0 text-sm text-[var(--wh-muted)]">This job has no order to add work and parts to.</p>}
+                  {job.orderId ? <WorkParts orderId={job.orderId} job={job} /> : <p className="m-0 text-sm text-[var(--wh-muted)]">This job has no order to add work and parts to.</p>}
                 </section>
               </div>
             </div>

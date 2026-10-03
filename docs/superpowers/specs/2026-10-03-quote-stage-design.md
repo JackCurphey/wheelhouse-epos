@@ -103,3 +103,26 @@ and M3.
   decided), the customer answer by link (revision, decisions, readable
   states), approved lines added to the order, and the job's quote summary.
 - The existing quote tests keep passing.
+
+## Piece 2: staff build and send (built 3 Oct)
+
+- **Add to quote** sits under the job's work and parts (while the bike is
+  in the shop and no quote is waiting). It searches services and products,
+  the same search as Add item.
+- **Draft lines** are listed in a Quote table: a Needed / Optional switch,
+  the reason for the customer, the total, and "Awaiting approval". Under it
+  is the **Proposed total** (the booked work plus the quote).
+- **Send quote** shows "Sending the quote to Maya Patel by text in 1
+  minute." with **Undo**; when the minute is up, it sends. Staff are told
+  whether the text went. If it didn't, they're told why, with the link and
+  **Copy link**.
+- **While waiting:** the job's badge is "Waiting for the customer" (teal),
+  with **Record their answer** and **Withdraw quote** (which asks first).
+- **Record their answer:** by phone or in the shop. The ticks start the way
+  the mechanic recommended (Needed yes, Optional no), and the save button
+  reads back what will be saved ("Save: yes to 1 line, no thanks to 1").
+- **Answered:** the approved lines are in the work and parts, the declined
+  ones are struck through below with "Declined", and the footer shows the
+  **Approved total** with "… declined. Anything beyond these lines needs a
+  new approval."
+- The search is now shared by Add item and Add to quote (`item-search.tsx`).
