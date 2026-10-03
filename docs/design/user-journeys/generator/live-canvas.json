@@ -69,7 +69,7 @@
   },
   "jb-workos-signin-desktop.dc.html": {
    "x": 0,
-   "y": 5290,
+   "y": 5320,
    "w": 1280,
    "h": 856,
    "title": "Designed · Sign in (WorkOS’s page, approximate look) (desktop)",
@@ -77,7 +77,7 @@
   },
   "jb-auth-site-desktop.dc.html": {
    "x": 1480,
-   "y": 5290,
+   "y": 5320,
    "w": 1280,
    "h": 856,
    "title": "Designed · Where are you working today? (desktop)",
@@ -85,7 +85,7 @@
   },
   "jb-auth-signedout-desktop.dc.html": {
    "x": 2800,
-   "y": 5290,
+   "y": 5320,
    "w": 1280,
    "h": 856,
    "title": "Designed · Signed out (desktop)",
@@ -93,7 +93,7 @@
   },
   "jb-till-setup-desktop.dc.html": {
    "x": 4280,
-   "y": 5290,
+   "y": 5320,
    "w": 1280,
    "h": 856,
    "title": "Designed · Set up this till (desktop)",
@@ -101,7 +101,7 @@
   },
   "jb-till-checkin-desktop.dc.html": {
    "x": 5600,
-   "y": 5290,
+   "y": 5320,
    "w": 1280,
    "h": 856,
    "title": "Designed · Till check-in: PIN only (desktop)",
@@ -109,7 +109,7 @@
   },
   "jb-pin-change-desktop.dc.html": {
    "x": 6920,
-   "y": 5290,
+   "y": 5320,
    "w": 1280,
    "h": 856,
    "title": "Designed · Your new till PIN (desktop)",
@@ -117,7 +117,7 @@
   },
   "jb-cust-signin-phone.dc.html": {
    "x": 8400,
-   "y": 5290,
+   "y": 5320,
    "w": 390,
    "h": 900,
    "title": "Designed · Sign in to your account (phone)",
@@ -125,7 +125,7 @@
   },
   "jb-cust-code-phone.dc.html": {
    "x": 8870,
-   "y": 5290,
+   "y": 5320,
    "w": 390,
    "h": 900,
    "title": "Designed · Enter your code (phone)",
@@ -133,7 +133,7 @@
   },
   "jb-pending.dc.html": {
    "x": 9340,
-   "y": 5290,
+   "y": 5320,
    "w": 390,
    "h": 900,
    "title": "Designed · Request received",
@@ -141,7 +141,7 @@
   },
   "j01-wb-home-phone.dc.html": {
    "x": 0,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Home page: the sections a new shop starts with (phone)",
@@ -149,7 +149,7 @@
   },
   "j01-wb-choose-shop-phone.dc.html": {
    "x": 470,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Choosing the shop: one tap (phone)",
@@ -157,7 +157,7 @@
   },
   "j01-wb-shop-phone.dc.html": {
    "x": 1100,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Shop: every category (phone)",
@@ -165,7 +165,7 @@
   },
   "j01-wb-category-phone.dc.html": {
    "x": 1570,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · A category: Bearings, with filters from its details (phone)",
@@ -173,7 +173,7 @@
   },
   "j01-wb-category-filtered-phone.dc.html": {
    "x": 2040,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Filtered: ready today, and an inner diameter (on a phone, the Filter panel open) (phone)",
@@ -181,7 +181,7 @@
   },
   "j01-wb-product-phone.dc.html": {
    "x": 2670,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · A product: photos, specifications, description, buying (phone)",
@@ -189,7 +189,7 @@
   },
   "j01-wb-product-photos-phone.dc.html": {
    "x": 3140,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Photos, larger (phone)",
@@ -197,7 +197,7 @@
   },
   "j01-wb-search-typing-phone.dc.html": {
    "x": 3770,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Search as you type: products, repairs, categories, pages (phone)",
@@ -205,7 +205,7 @@
   },
   "j01-wb-shops-phone.dc.html": {
    "x": 4400,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Our shops: a card for each shop (phone)",
@@ -213,7 +213,7 @@
   },
   "j01-wb-shop-page-phone.dc.html": {
    "x": 4870,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · A shop’s own page: hours, closures, collect from here (phone)",
@@ -221,7 +221,7 @@
   },
   "j01-wb-not-found-phone.dc.html": {
    "x": 5500,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Page not found (phone)",
@@ -229,7 +229,7 @@
   },
   "j01-wb-off-preview-desktop.dc.html": {
    "x": 5970,
-   "y": 7350,
+   "y": 7470,
    "w": 1280,
    "h": 856,
    "title": "Designed · Switched off: what the shop’s own staff see (desktop)",
@@ -237,7 +237,7 @@
   },
   "j01-wb-cookies-banner-phone.dc.html": {
    "x": 7450,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · A shop that added a tracking tool: the cookie choice (phone)",
@@ -245,7 +245,7 @@
   },
   "j01-wb-cookies-choose-phone.dc.html": {
    "x": 7920,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · Choose cookies (phone)",
@@ -253,7 +253,7 @@
   },
   "j01-wb-cookies-page-phone.dc.html": {
    "x": 8390,
-   "y": 7350,
+   "y": 7470,
    "w": 390,
    "h": 900,
    "title": "Designed · The Cookies page, with the visitor’s choice (phone)",
@@ -261,7 +261,7 @@
   },
   "j02-on-basket-phone.dc.html": {
    "x": 0,
-   "y": 9650,
+   "y": 9770,
    "w": 390,
    "h": 900,
    "title": "Designed · The basket (phone)",
@@ -269,7 +269,7 @@
   },
   "j02-on-checkout-phone.dc.html": {
    "x": 470,
-   "y": 9650,
+   "y": 9770,
    "w": 390,
    "h": 900,
    "title": "Designed · Checkout: how you’ll get it, your details, pay — one page (phone)",
@@ -277,7 +277,7 @@
   },
   "j02-on-checkout-bank-phone.dc.html": {
    "x": 1100,
-   "y": 9650,
+   "y": 9770,
    "w": 390,
    "h": 900,
    "title": "Designed · Your bank wants to check it’s you (phone)",
@@ -285,7 +285,7 @@
   },
   "j02-on-confirmed-phone.dc.html": {
    "x": 1570,
-   "y": 9650,
+   "y": 9770,
    "w": 390,
    "h": 900,
    "title": "Designed · Order in: order number, what happens next, how you paid (phone)",
@@ -293,7 +293,7 @@
   },
   "j02-on-order-phone.dc.html": {
    "x": 2200,
-   "y": 9650,
+   "y": 9770,
    "w": 390,
    "h": 900,
    "title": "Designed · The order’s page: getting it ready (phone)",
@@ -301,7 +301,7 @@
   },
   "j02-on-email-ready-phone.dc.html": {
    "x": 2670,
-   "y": 9650,
+   "y": 9770,
    "w": 390,
    "h": 900,
    "title": "Designed · The “ready to collect” email (phone)",
@@ -309,7 +309,7 @@
   },
   "j02-on-orders-desktop.dc.html": {
    "x": 3300,
-   "y": 9650,
+   "y": 9770,
    "w": 1280,
    "h": 856,
    "title": "Designed · Front desk › Online orders: to get ready, ready, collected (desktop)",
@@ -317,7 +317,7 @@
   },
   "j02-on-order-staff-desktop.dc.html": {
    "x": 4620,
-   "y": 9650,
+   "y": 9770,
    "w": 1280,
    "h": 856,
    "title": "Designed · One order: items, how it was paid, the customer (desktop)",
@@ -325,7 +325,7 @@
   },
   "j02-on-cant-supply-desktop.dc.html": {
    "x": 5940,
-   "y": 9650,
+   "y": 9770,
    "w": 1280,
    "h": 856,
    "title": "Designed · Can’t supply an item: refund it, with a reason (desktop)",
@@ -333,7 +333,7 @@
   },
   "j02-on-settings-desktop.dc.html": {
    "x": 7420,
-   "y": 9650,
+   "y": 9770,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Online orders: buying online, what the website sells (desktop)",
@@ -341,15 +341,15 @@
   },
   "j02-on-settings-start-desktop.dc.html": {
    "x": 8740,
-   "y": 9650,
+   "y": 9770,
    "w": 1280,
    "h": 856,
-   "title": "Designed · Turning on buying online before the website is set up: start with everything, or nothing (asked once) (desktop)",
+   "title": "Designed · Turning on buying online before the website is set up: start with everything, or nothing (asked once) (deskto",
    "is_interactive": true
   },
   "j03-bk-service-phone.dc.html": {
    "x": 0,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · Book a repair: every service at once (phone)",
@@ -357,7 +357,7 @@
   },
   "j03-bk-bike-phone.dc.html": {
    "x": 470,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · Your bike, and what to look at (phone)",
@@ -365,7 +365,7 @@
   },
   "j03-bk-when-phone.dc.html": {
    "x": 940,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · When: Earliest, then a strip of days and times (phone)",
@@ -373,7 +373,7 @@
   },
   "j03-bk-details-phone.dc.html": {
    "x": 1410,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · Your details, and how to send updates (phone)",
@@ -381,7 +381,7 @@
   },
   "j03-bk-request-phone.dc.html": {
    "x": 2040,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · Request received: waiting for the shop (phone)",
@@ -389,7 +389,7 @@
   },
   "j03-bk-page-phone.dc.html": {
    "x": 2670,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · The booking’s page, confirmed (phone)",
@@ -397,7 +397,7 @@
   },
   "j03-bk-change-phone.dc.html": {
    "x": 3140,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · Change the date, in place (phone)",
@@ -405,7 +405,7 @@
   },
   "j03-bk-cancel-phone.dc.html": {
    "x": 3770,
-   "y": 11890,
+   "y": 12010,
    "w": 390,
    "h": 900,
    "title": "Designed · Cancel: the deposit comes back (phone)",
@@ -413,7 +413,7 @@
   },
   "j03-bk-settings-desktop.dc.html": {
    "x": 4400,
-   "y": 11890,
+   "y": 12010,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Workshop › Online booking (desktop)",
@@ -421,7 +421,7 @@
   },
   "j04-dq-quote-phone.dc.html": {
    "x": 0,
-   "y": 14220,
+   "y": 14340,
    "w": 390,
    "h": 900,
    "title": "Designed · A quote to answer: ticked the way the mechanic recommends (phone)",
@@ -429,7 +429,7 @@
   },
   "j04-dq-record-answer-desktop.dc.html": {
    "x": 630,
-   "y": 14220,
+   "y": 14340,
    "w": 1280,
    "h": 856,
    "title": "Designed · Record their answer, from a phone call (desktop)",
@@ -437,7 +437,7 @@
   },
   "j05-cp-summary-phone.dc.html": {
    "x": 0,
-   "y": 16640,
+   "y": 16760,
    "w": 390,
    "h": 900,
    "title": "Designed · The “Bike ready” link: what we did, and Pay now (phone)",
@@ -445,7 +445,7 @@
   },
   "j05-cp-pay-phone.dc.html": {
    "x": 470,
-   "y": 16640,
+   "y": 16760,
    "w": 390,
    "h": 900,
    "title": "Designed · Pay online (phone)",
@@ -453,7 +453,7 @@
   },
   "j05-cp-receipt-email-phone.dc.html": {
    "x": 1100,
-   "y": 16640,
+   "y": 16760,
    "w": 390,
    "h": 900,
    "title": "Designed · The receipt email (phone)",
@@ -461,7 +461,7 @@
   },
   "j05-cp-receipt-text-phone.dc.html": {
    "x": 1570,
-   "y": 16640,
+   "y": 16760,
    "w": 390,
    "h": 900,
    "title": "Designed · A text receipt: a link to the same receipt (phone)",
@@ -469,7 +469,7 @@
   },
   "j05-cp-receipt-address-desktop.dc.html": {
    "x": 2040,
-   "y": 16640,
+   "y": 16760,
    "w": 1280,
    "h": 856,
    "title": "Designed · No customer on the sale: this receipt only (desktop)",
@@ -477,7 +477,7 @@
   },
   "j05-ready.dc.html": {
    "x": 3520,
-   "y": 16640,
+   "y": 16760,
    "w": 390,
    "h": 900,
    "title": "Designed · Customer is invited to collect",
@@ -485,7 +485,7 @@
   },
   "j06-cw-list-desktop.dc.html": {
    "x": 0,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Front desk › Cycle to Work: every order, by stage (staff) (desktop)",
@@ -493,7 +493,7 @@
   },
   "j06-cw-new-desktop.dc.html": {
    "x": 1320,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · New Cycle to Work order: a bike in stock, held (desktop)",
@@ -501,7 +501,7 @@
   },
   "j06-cw-quote-desktop.dc.html": {
    "x": 2640,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · The quote, to print or email (desktop)",
@@ -509,7 +509,7 @@
   },
   "j06-cw-order-held-desktop.dc.html": {
    "x": 3960,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · The order: quote given, bike held until [date] (desktop)",
@@ -517,7 +517,7 @@
   },
   "j06-cw-hold-ending-desktop.dc.html": {
    "x": 5440,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · The hold is ending: hold longer, or release (desktop)",
@@ -525,7 +525,7 @@
   },
   "j06-cw-applied-desktop.dc.html": {
    "x": 6760,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Maya has applied: date and reference (desktop)",
@@ -533,7 +533,7 @@
   },
   "j06-cw-order-anyway-desktop.dc.html": {
    "x": 8080,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Order now anyway, with a reason (desktop)",
@@ -541,7 +541,7 @@
   },
   "j06-cw-certificate-desktop.dc.html": {
    "x": 9400,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add the certificate (desktop)",
@@ -549,7 +549,7 @@
   },
   "j06-cw-certificate-match-desktop.dc.html": {
    "x": 10720,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change the order to match: tick what comes off (desktop)",
@@ -557,7 +557,7 @@
   },
   "j06-cw-hand-over-desktop.dc.html": {
    "x": 12200,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Hand over: the provider’s checks, then the till (desktop)",
@@ -565,7 +565,7 @@
   },
   "j06-cw-owed-desktop.dc.html": {
    "x": 13520,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Owed by Cycle to Work providers (desktop)",
@@ -573,7 +573,7 @@
   },
   "j06-cw-owed-provider-desktop.dc.html": {
    "x": 14840,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · One provider’s bikes owed (desktop)",
@@ -581,7 +581,7 @@
   },
   "j06-cw-record-payment-desktop.dc.html": {
    "x": 16160,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Record a payment for several bikes (desktop)",
@@ -589,7 +589,7 @@
   },
   "j06-cw-cancel-desktop.dc.html": {
    "x": 17640,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · The customer isn’t going ahead: a deposit to refund (desktop)",
@@ -597,7 +597,7 @@
   },
   "j06-cw-customer-view-phone.dc.html": {
    "x": 19120,
-   "y": 19060,
+   "y": 19180,
    "w": 390,
    "h": 900,
    "title": "Designed · The customer’s account: their Cycle to Work bike (phone)",
@@ -605,7 +605,7 @@
   },
   "j06-cw-email-phone.dc.html": {
    "x": 19590,
-   "y": 19060,
+   "y": 19180,
    "w": 390,
    "h": 900,
    "title": "Designed · The quote email: the bike put aside, both dates (phone)",
@@ -613,7 +613,7 @@
   },
   "j06-cw-settings-desktop.dc.html": {
    "x": 20060,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Front desk › Cycle to Work: holding and ordering (desktop)",
@@ -621,7 +621,7 @@
   },
   "j06-cw-settings-provider-desktop.dc.html": {
    "x": 21380,
-   "y": 19060,
+   "y": 19180,
    "w": 1280,
    "h": 856,
    "title": "Designed · A provider: commission, payment days, hand-over checks (desktop)",
@@ -629,7 +629,7 @@
   },
   "j07-ac-account-phone.dc.html": {
    "x": 0,
-   "y": 21420,
+   "y": 21540,
    "w": 390,
    "h": 900,
    "title": "Designed · Your account: bikes, details and how we contact you; one history (phone)",
@@ -637,7 +637,7 @@
   },
   "j07-ac-receipt-phone.dc.html": {
    "x": 470,
-   "y": 21420,
+   "y": 21540,
    "w": 390,
    "h": 900,
    "title": "Designed · A receipt, from the history (phone)",
@@ -645,7 +645,7 @@
   },
   "j07-ac-ask-phone.dc.html": {
    "x": 1100,
-   "y": 21420,
+   "y": 21540,
    "w": 390,
    "h": 900,
    "title": "Designed · Ask the shop a question, from the account (phone)",
@@ -653,7 +653,7 @@
   },
   "j07-ac-question-phone.dc.html": {
    "x": 1570,
-   "y": 21420,
+   "y": 21540,
    "w": 390,
    "h": 900,
    "title": "Designed · The question and its answer (phone)",
@@ -661,7 +661,7 @@
   },
   "j07-ac-inbox-desktop.dc.html": {
    "x": 2200,
-   "y": 21420,
+   "y": 21540,
    "w": 1280,
    "h": 856,
    "title": "Designed · Staff Messages: needs a reply, and the open conversation (desktop)",
@@ -669,7 +669,7 @@
   },
   "j07-ac-review-setting-desktop.dc.html": {
    "x": 3680,
-   "y": 21420,
+   "y": 21540,
    "w": 1280,
    "h": 856,
    "title": "Designed · Review requests: the review page, when, the wording (desktop)",
@@ -677,7 +677,7 @@
   },
   "j07-ac-contact-phone.dc.html": {
    "x": 5000,
-   "y": 21420,
+   "y": 21540,
    "w": 390,
    "h": 900,
    "title": "Designed · How we contact you (phone)",
@@ -685,7 +685,7 @@
   },
   "j07-ac-stopped-phone.dc.html": {
    "x": 5470,
-   "y": 21420,
+   "y": 21540,
    "w": 390,
    "h": 900,
    "title": "Designed · “Stop these”: stopped in one click, no signing in (phone)",
@@ -693,7 +693,7 @@
   },
   "j07-ac-delete-phone.dc.html": {
    "x": 6100,
-   "y": 21420,
+   "y": 21540,
    "w": 390,
    "h": 900,
    "title": "Designed · Ask us to delete your account: store credit will be lost (phone)",
@@ -701,7 +701,7 @@
   },
   "j08-fr-today-desktop.dc.html": {
    "x": 0,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Getting started: the owner’s checklist on Today (desktop)",
@@ -709,7 +709,7 @@
   },
   "j08-set-till-quick-desktop.dc.html": {
    "x": 1480,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Till › Quick buttons: hover a button to edit or remove it (desktop)",
@@ -717,7 +717,7 @@
   },
   "j08-set-till-quick-add-desktop.dc.html": {
    "x": 2800,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a quick button (desktop)",
@@ -725,7 +725,7 @@
   },
   "j08-set-eod-desktop.dc.html": {
    "x": 4280,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · End of day: float (desktop)",
@@ -733,7 +733,7 @@
   },
   "j08-set-pay-ways-desktop.dc.html": {
    "x": 5600,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Payments › Ways to pay: each on or off (desktop)",
@@ -741,7 +741,7 @@
   },
   "j08-set-staff-desktop.dc.html": {
    "x": 7080,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Staff and roles › People (desktop)",
@@ -749,7 +749,7 @@
   },
   "j08-set-staff-person-desktop.dc.html": {
    "x": 8400,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · One person: role, switches, till PIN (desktop)",
@@ -757,7 +757,7 @@
   },
   "j08-set-staff-invite-desktop.dc.html": {
    "x": 9720,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · The owner invites someone (desktop)",
@@ -765,7 +765,7 @@
   },
   "j08-set-shop-details-desktop.dc.html": {
    "x": 11200,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Shop and sites › Shop details (desktop)",
@@ -773,7 +773,7 @@
   },
   "j08-set-workshop-services-desktop.dc.html": {
    "x": 12680,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Workshop › Services, by group (desktop)",
@@ -781,7 +781,7 @@
   },
   "j08-set-workshop-diary-desktop.dc.html": {
    "x": 14000,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Workshop › Diary blocks and storage slots (journey 12’s settings, moved here) (desktop)",
@@ -789,7 +789,7 @@
   },
   "j08-set-msg-list-desktop.dc.html": {
    "x": 15480,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Messages › Automatic messages: text, email or both (desktop)",
@@ -797,7 +797,7 @@
   },
   "j08-set-msg-edit-desktop.dc.html": {
    "x": 16800,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change a message’s wording, with a preview (desktop)",
@@ -805,7 +805,7 @@
   },
   "j08-set-msg-new-desktop.dc.html": {
    "x": 18120,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add your own automatic message (desktop)",
@@ -813,7 +813,7 @@
   },
   "j08-set-data-export-desktop.dc.html": {
    "x": 19600,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Your data › Download everything (desktop)",
@@ -821,7 +821,7 @@
   },
   "j08-set-data-history-desktop.dc.html": {
    "x": 20920,
-   "y": 23750,
+   "y": 23870,
    "w": 1280,
    "h": 856,
    "title": "Designed · Your data › Settings changes (desktop)",
@@ -829,7 +829,7 @@
   },
   "j09-mv-start-desktop.dc.html": {
    "x": 0,
-   "y": 25976,
+   "y": 26096,
    "w": 1280,
    "h": 856,
    "title": "Designed · Bring your data: the files to drop in (desktop)",
@@ -837,7 +837,7 @@
   },
   "j09-mv-change-day-desktop.dc.html": {
    "x": 1480,
-   "y": 25976,
+   "y": 26096,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change the refresh day (desktop)",
@@ -845,7 +845,7 @@
   },
   "j09-mv-both-desktop.dc.html": {
    "x": 2800,
-   "y": 25976,
+   "y": 26096,
    "w": 1280,
    "h": 856,
    "title": "Designed · Changed in both: Citrus Lime’s kept (desktop)",
@@ -853,7 +853,7 @@
   },
   "j09-mv-weeks-desktop.dc.html": {
    "x": 4280,
-   "y": 25976,
+   "y": 26096,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change how many weeks must match (2 by default) (desktop)",
@@ -861,7 +861,7 @@
   },
   "j09-mv-pick-day-desktop.dc.html": {
    "x": 5600,
-   "y": 25976,
+   "y": 26096,
    "w": 1280,
    "h": 856,
    "title": "Designed · Pick switch-over day (desktop)",
@@ -869,7 +869,7 @@
   },
   "j10-op-float-check-desktop.dc.html": {
    "x": 0,
-   "y": 28292,
+   "y": 28412,
    "w": 1280,
    "h": 856,
    "title": "Designed · First in: a one-tap float check (desktop)",
@@ -877,7 +877,7 @@
   },
   "j10-op-float-short-desktop.dc.html": {
    "x": 1320,
-   "y": 28292,
+   "y": 28412,
    "w": 1280,
    "h": 856,
    "title": "Designed · The float is short (desktop)",
@@ -885,7 +885,7 @@
   },
   "j10-op-today-desktop.dc.html": {
    "x": 2800,
-   "y": 28292,
+   "y": 28412,
    "w": 1280,
    "h": 856,
    "title": "Designed · Office › Today: the start of the day (desktop)",
@@ -893,7 +893,7 @@
   },
   "j11-till-sale-desktop.dc.html": {
    "x": 0,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Sale: quick buttons by group, basket on the right (desktop)",
@@ -901,7 +901,7 @@
   },
   "j11-till-sale-phone.dc.html": {
    "x": 1320,
-   "y": 31178,
+   "y": 31298,
    "w": 390,
    "h": 900,
    "title": "Designed · Sale: quick buttons by group, basket on the right (phone)",
@@ -909,7 +909,7 @@
   },
   "j11-till-line-desktop.dc.html": {
    "x": 1790,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change a line: price, discount with a reason, note, remove (desktop)",
@@ -917,7 +917,7 @@
   },
   "j11-till-customer-desktop.dc.html": {
    "x": 3110,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a customer: search, or add someone new (desktop)",
@@ -925,7 +925,7 @@
   },
   "j11-till-variant-desktop.dc.html": {
    "x": 4430,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Choose size and colour (desktop)",
@@ -933,7 +933,7 @@
   },
   "j11-till-serial-desktop.dc.html": {
    "x": 5750,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Record a frame number (desktop)",
@@ -941,7 +941,7 @@
   },
   "j11-till-pay-desktop.dc.html": {
    "x": 7230,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Take payment: card is one tap (desktop)",
@@ -949,7 +949,7 @@
   },
   "j11-till-card-desktop.dc.html": {
    "x": 8550,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Card: the amount is on the card machine, waiting for the card (desktop)",
@@ -957,7 +957,7 @@
   },
   "j11-till-pay-cash-desktop.dc.html": {
    "x": 9870,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Cash: notes to tap, change worked out (desktop)",
@@ -965,7 +965,7 @@
   },
   "j11-till-pay-split-desktop.dc.html": {
    "x": 11190,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Split payment: part paid, the rest by card (desktop)",
@@ -973,7 +973,7 @@
   },
   "j11-till-receipt-desktop.dc.html": {
    "x": 12510,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Paid: receipt choices, closes by itself (desktop)",
@@ -981,7 +981,7 @@
   },
   "j11-till-giftcard-desktop.dc.html": {
    "x": 13990,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Gift card or store credit (desktop)",
@@ -989,7 +989,7 @@
   },
   "j11-till-account-desktop.dc.html": {
    "x": 15310,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Put on account: pay later (desktop)",
@@ -997,7 +997,7 @@
   },
   "j11-till-deposit-desktop.dc.html": {
    "x": 16630,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Take a deposit: part now, the rest later (desktop)",
@@ -1005,7 +1005,7 @@
   },
   "j11-till-park-desktop.dc.html": {
    "x": 18110,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Parked sales: resume (desktop)",
@@ -1013,7 +1013,7 @@
   },
   "j11-till-find-desktop.dc.html": {
    "x": 19430,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Past sales — scan the receipt, today’s list, or find the customer (desktop)",
@@ -1021,7 +1021,7 @@
   },
   "j11-till-sale-detail-desktop.dc.html": {
    "x": 20750,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · A past sale: refund, reprint, void (desktop)",
@@ -1029,7 +1029,7 @@
   },
   "j11-till-refund-desktop.dc.html": {
    "x": 22070,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Refund from the original sale: back to the card (desktop)",
@@ -1037,7 +1037,7 @@
   },
   "j11-till-void-desktop.dc.html": {
    "x": 23390,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Void a sale: with a reason (desktop)",
@@ -1045,23 +1045,39 @@
   },
   "j11-till-collect-desktop.dc.html": {
    "x": 24710,
-   "y": 31178,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Hand over an online order (desktop)",
    "is_interactive": true
   },
+  "j11-till-book-in-desktop.dc.html": {
+   "x": 26030,
+   "y": 31298,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Book a bike in at the till (desktop)",
+   "is_interactive": true
+  },
+  "j11-till-hand-over-job-desktop.dc.html": {
+   "x": 27350,
+   "y": 31298,
+   "w": 1280,
+   "h": 856,
+   "title": "Designed · Hand over a repair paid online at the till (desktop)",
+   "is_interactive": true
+  },
   "j11-till-c2w-pick-desktop.dc.html": {
-   "x": 26190,
-   "y": 31178,
+   "x": 28830,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Other ways to pay › Cycle to Work — orders ready to collect (desktop)",
    "is_interactive": true
   },
   "j11-till-failed-desktop.dc.html": {
-   "x": 27670,
-   "y": 31178,
+   "x": 30310,
+   "y": 31298,
    "w": 1280,
    "h": 856,
    "title": "Designed · Sales that didn’t send: for a manager (desktop)",
@@ -1069,7 +1085,7 @@
   },
   "j12-diary-desktop.dc.html": {
    "x": 0,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary (desktop)",
@@ -1077,7 +1093,7 @@
   },
   "j12-diary-tablet.dc.html": {
    "x": 1320,
-   "y": 33778,
+   "y": 33898,
    "w": 1180,
    "h": 876,
    "title": "Designed · Diary (tablet)",
@@ -1085,7 +1101,7 @@
   },
   "j12-diary-phone.dc.html": {
    "x": 2540,
-   "y": 33778,
+   "y": 33898,
    "w": 390,
    "h": 900,
    "title": "Designed · Diary (phone)",
@@ -1093,7 +1109,7 @@
   },
   "j12-diary-day-desktop.dc.html": {
    "x": 3010,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · Day view (desktop)",
@@ -1101,7 +1117,7 @@
   },
   "j12-diary-day-tablet.dc.html": {
    "x": 4330,
-   "y": 33778,
+   "y": 33898,
    "w": 1180,
    "h": 876,
    "title": "Designed · Day view (tablet)",
@@ -1109,7 +1125,7 @@
   },
   "j12-diary-day-phone.dc.html": {
    "x": 5550,
-   "y": 33778,
+   "y": 33898,
    "w": 390,
    "h": 900,
    "title": "Designed · Day view (phone)",
@@ -1117,7 +1133,7 @@
   },
   "j12-job-quick-overview-desktop.dc.html": {
    "x": 6020,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · Diary · job overview (quick look) (desktop)",
@@ -1125,7 +1141,7 @@
   },
   "j12-request-new-desktop.dc.html": {
    "x": 7500,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · Booking request (desktop)",
@@ -1133,7 +1149,7 @@
   },
   "j12-new-job-desktop.dc.html": {
    "x": 8980,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · New job (desktop)",
@@ -1141,7 +1157,7 @@
   },
   "j12-job-overview-desktop.dc.html": {
    "x": 10460,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · expected (desktop)",
@@ -1149,7 +1165,7 @@
   },
   "j12-job-overview-tablet.dc.html": {
    "x": 11780,
-   "y": 33778,
+   "y": 33898,
    "w": 1180,
    "h": 876,
    "title": "Designed · Job · expected (tablet)",
@@ -1157,7 +1173,7 @@
   },
   "j12-job-overview-phone.dc.html": {
    "x": 13000,
-   "y": 33778,
+   "y": 33898,
    "w": 390,
    "h": 900,
    "title": "Designed · Job · expected (phone)",
@@ -1165,7 +1181,7 @@
   },
   "j12-job-checklist-desktop.dc.html": {
    "x": 13470,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · Job · full service checklist (desktop)",
@@ -1173,7 +1189,7 @@
   },
   "j12-overview-desktop.dc.html": {
    "x": 14950,
-   "y": 33778,
+   "y": 33898,
    "w": 1280,
    "h": 856,
    "title": "Designed · Workshop overview (desktop)",
@@ -1181,7 +1197,7 @@
   },
   "j13-rs-hub-desktop.dc.html": {
    "x": 0,
-   "y": 36408,
+   "y": 36708,
    "w": 1280,
    "h": 856,
    "title": "Designed · Stockroom › Deliveries and orders (desktop)",
@@ -1189,7 +1205,7 @@
   },
   "j13-rs-receive-desktop.dc.html": {
    "x": 1320,
-   "y": 36408,
+   "y": 36708,
    "w": 1280,
    "h": 856,
    "title": "Designed · Receive a delivery: scan each item (desktop)",
@@ -1197,7 +1213,7 @@
   },
   "j13-rs-add-product-desktop.dc.html": {
    "x": 2640,
-   "y": 36408,
+   "y": 36708,
    "w": 1280,
    "h": 856,
    "title": "Designed · A barcode Wheelhouse doesn’t know: Add this product, with its measurements (desktop)",
@@ -1205,7 +1221,7 @@
   },
   "j13-rs-problem-desktop.dc.html": {
    "x": 3960,
-   "y": 36408,
+   "y": 36708,
    "w": 1280,
    "h": 856,
    "title": "Designed · Something wrong with an item: damaged, wrong or missing (desktop)",
@@ -1213,15 +1229,15 @@
   },
   "j13-rs-delivery-desktop.dc.html": {
    "x": 5440,
-   "y": 36408,
+   "y": 36708,
    "w": 1280,
    "h": 856,
-   "title": "Designed · A booked-in delivery, waiting for its invoice (desktop)",
+   "title": "Designed · A booked-in delivery (desktop)",
    "is_interactive": true
   },
   "j13-rs-order-desktop.dc.html": {
    "x": 6920,
-   "y": 36408,
+   "y": 36708,
    "w": 1280,
    "h": 856,
    "title": "Designed · A purchase order, built by hand (desktop)",
@@ -1229,7 +1245,7 @@
   },
   "j13-rs-restock-desktop.dc.html": {
    "x": 8240,
-   "y": 36408,
+   "y": 36708,
    "w": 1280,
    "h": 856,
    "title": "Designed · Restock list: by supplier, a download for each basket (desktop)",
@@ -1237,7 +1253,7 @@
   },
   "j14-st-list-desktop.dc.html": {
    "x": 0,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Stockroom › Stock: search, filters, tick boxes, every product (desktop)",
@@ -1245,7 +1261,7 @@
   },
   "j14-st-categories-desktop.dc.html": {
    "x": 1480,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Stockroom › Categories: each with its own details (desktop)",
@@ -1253,7 +1269,7 @@
   },
   "j14-st-category-edit-desktop.dc.html": {
    "x": 2800,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Editing a category: Derailleurs, its choices and units (desktop)",
@@ -1261,7 +1277,7 @@
   },
   "j14-st-product-desktop.dc.html": {
    "x": 4280,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · A product’s page: stock first, history with links (desktop)",
@@ -1269,7 +1285,7 @@
   },
   "j14-st-prices-desktop.dc.html": {
    "x": 5760,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change prices: by a percentage, rounded, with a preview (desktop)",
@@ -1277,7 +1293,7 @@
   },
   "j14-st-adjust-desktop.dc.html": {
    "x": 7240,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Adjust stock: the change or the count after it, and a reason (desktop)",
@@ -1285,7 +1301,7 @@
   },
   "j14-tr-send-desktop.dc.html": {
    "x": 8720,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Send to another shop (desktop)",
@@ -1293,7 +1309,7 @@
   },
   "j14-tk-hub-desktop.dc.html": {
    "x": 10200,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Stockroom › Stock take: counts in progress and finished (desktop)",
@@ -1301,7 +1317,7 @@
   },
   "j14-tk-start-desktop.dc.html": {
    "x": 11520,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Start a count: an area, with areas used before (desktop)",
@@ -1309,7 +1325,7 @@
   },
   "j14-tk-count-desktop.dc.html": {
    "x": 12840,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Counting, without the expected number; a recount asked (desktop)",
@@ -1317,7 +1333,7 @@
   },
   "j14-tk-diff-desktop.dc.html": {
    "x": 14160,
-   "y": 38604,
+   "y": 38904,
    "w": 1280,
    "h": 856,
    "title": "Designed · Check the count: largest first, recount, not counted (desktop)",
@@ -1325,7 +1341,7 @@
   },
   "j15-cs-list-desktop.dc.html": {
    "x": 0,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · Customers: find someone, or add them (desktop)",
@@ -1333,7 +1349,7 @@
   },
   "j15-cs-page-desktop.dc.html": {
    "x": 1320,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · A customer’s page: details, bikes with warranty, one history (desktop)",
@@ -1341,7 +1357,7 @@
   },
   "j15-cs-credit-desktop.dc.html": {
    "x": 2640,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add or take away store credit, with a reason (desktop)",
@@ -1349,7 +1365,7 @@
   },
   "j15-cs-add-desktop.dc.html": {
    "x": 3960,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a customer: a person (desktop)",
@@ -1357,7 +1373,7 @@
   },
   "j15-cs-account-desktop.dc.html": {
    "x": 5440,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · Her account: balance, her limit, statement, pay it off (desktop)",
@@ -1365,7 +1381,7 @@
   },
   "j15-cs-transfer-desktop.dc.html": {
    "x": 6760,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · Record a bank transfer (desktop)",
@@ -1373,7 +1389,7 @@
   },
   "j15-cs-privacy-desktop.dc.html": {
    "x": 8240,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · Privacy requests: dated, answered within a month (desktop)",
@@ -1381,7 +1397,7 @@
   },
   "j15-cs-merge-desktop.dc.html": {
    "x": 9720,
-   "y": 40800,
+   "y": 41100,
    "w": 1280,
    "h": 856,
    "title": "Designed · The same person? Keep or merge (desktop)",
@@ -1389,7 +1405,7 @@
   },
   "j16-eod-check-desktop.dc.html": {
    "x": 0,
-   "y": 42996,
+   "y": 43296,
    "w": 1280,
    "h": 856,
    "title": "Designed · Checking a flagged sale (desktop)",
@@ -1397,7 +1413,7 @@
   },
   "j16-eod-count-desktop.dc.html": {
    "x": 1320,
-   "y": 42996,
+   "y": 43296,
    "w": 1280,
    "h": 856,
    "title": "Designed · Count the cash: note by note (blind) (desktop)",
@@ -1405,7 +1421,7 @@
   },
   "j16-eod-paidout-desktop.dc.html": {
    "x": 2640,
-   "y": 42996,
+   "y": 43296,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a paid-out (desktop)",
@@ -1413,7 +1429,7 @@
   },
   "j16-eod-z-desktop.dc.html": {
    "x": 3960,
-   "y": 42996,
+   "y": 43296,
    "w": 1280,
    "h": 856,
    "title": "Designed · Day closed: the end-of-day report (desktop)",
@@ -1421,7 +1437,7 @@
   },
   "j17-rp-home-desktop.dc.html": {
    "x": 0,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Reports: the ready-made reports, and your own (desktop)",
@@ -1429,7 +1445,7 @@
   },
   "j17-rp-sales-desktop.dc.html": {
    "x": 1480,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Sales: this week so far, against the same days last week (desktop)",
@@ -1437,7 +1453,7 @@
   },
   "j17-rp-change-desktop.dc.html": {
    "x": 2960,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Change what’s shown: choices that don’t fit are greyed, with why (desktop)",
@@ -1445,7 +1461,7 @@
   },
   "j17-rp-takings-desktop.dc.html": {
    "x": 4440,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Takings and cash-ups: each closed day opens from its row (desktop)",
@@ -1453,7 +1469,7 @@
   },
   "j17-rp-day-desktop.dc.html": {
    "x": 5760,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · A closed day’s end-of-day report (desktop)",
@@ -1461,7 +1477,7 @@
   },
   "j17-rp-vat-desktop.dc.html": {
    "x": 7240,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · VAT for your VAT quarter, against the quarter before (desktop)",
@@ -1469,7 +1485,7 @@
   },
   "j17-rp-margin-desktop.dc.html": {
    "x": 8560,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Margin and stock value (desktop)",
@@ -1477,7 +1493,7 @@
   },
   "j17-rp-workshop-desktop.dc.html": {
    "x": 9880,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Workshop: jobs, takings, how full, turnaround, quotes (desktop)",
@@ -1485,7 +1501,7 @@
   },
   "j17-rp-discounts-desktop.dc.html": {
    "x": 11200,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Discounts and refunds, with reasons and who gave them (desktop)",
@@ -1493,7 +1509,7 @@
   },
   "j17-rp-returning-desktop.dc.html": {
    "x": 12520,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Returning customers: who comes back, who hasn’t lately (desktop)",
@@ -1501,7 +1517,7 @@
   },
   "j17-rp-c2w-desktop.dc.html": {
    "x": 13840,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Cycle to Work: owed and paid, by provider, with the commission (desktop)",
@@ -1509,7 +1525,7 @@
   },
   "j17-rp-accounts-connect-desktop.dc.html": {
    "x": 15320,
-   "y": 45282,
+   "y": 45582,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Your data › Accounts software: connect (desktop)",
@@ -1517,7 +1533,7 @@
   },
   "j18-ws-start-which-desktop.dc.html": {
    "x": 0,
-   "y": 47388,
+   "y": 47718,
    "w": 1280,
    "h": 856,
    "title": "Designed · Set up, step 1: Wheelhouse’s website or your Shopify shop? (desktop)",
@@ -1525,7 +1541,7 @@
   },
   "j18-ws-start-look-desktop.dc.html": {
    "x": 1320,
-   "y": 47388,
+   "y": 47718,
    "w": 1280,
    "h": 856,
    "title": "Designed · Step 2: logo and main colour, suggested from the logo (desktop)",
@@ -1533,7 +1549,7 @@
   },
   "j18-ws-page-desktop.dc.html": {
    "x": 2800,
-   "y": 47388,
+   "y": 47718,
    "w": 1280,
    "h": 856,
    "title": "Designed · Office › Website: off and never published — Turn it on also publishes (desktop)",
@@ -1541,7 +1557,7 @@
   },
   "j18-ws-history-desktop.dc.html": {
    "x": 4280,
-   "y": 47388,
+   "y": 47718,
    "w": 1280,
    "h": 856,
    "title": "Designed · Earlier versions and discarded drafts (desktop)",
@@ -1549,7 +1565,7 @@
   },
   "j18-ws-tracking-desktop.dc.html": {
    "x": 5760,
-   "y": 47388,
+   "y": 47718,
    "w": 1280,
    "h": 856,
    "title": "Designed · Tracking tools: none on, so no cookie choice (desktop)",
@@ -1557,7 +1573,7 @@
   },
   "j18-ws-pay-none-desktop.dc.html": {
    "x": 7240,
-   "y": 47388,
+   "y": 47718,
    "w": 1280,
    "h": 856,
    "title": "Designed · Online orders › Paying online: not connected, Buying online off (desktop)",
@@ -1565,7 +1581,7 @@
   },
   "j18-ws-shopify-connect-desktop.dc.html": {
    "x": 8720,
-   "y": 47388,
+   "y": 47718,
    "w": 1280,
    "h": 856,
    "title": "Designed · Connect your Shopify shop: what happens first (desktop)",
@@ -1573,7 +1589,7 @@
   },
   "j19-ms-switch-open-desktop.dc.html": {
    "x": 0,
-   "y": 49614,
+   "y": 49944,
    "w": 1280,
    "h": 856,
    "title": "Designed · The shop switcher open: your shops, and “All shops” (owner) (desktop)",
@@ -1581,7 +1597,7 @@
   },
   "j19-ms-service-price-desktop.dc.html": {
    "x": 1480,
-   "y": 49614,
+   "y": 49944,
    "w": 1280,
    "h": 856,
    "title": "Designed · A service: price for all shops, different at one, where it’s offered (desktop)",
@@ -1589,7 +1605,7 @@
   },
   "j19-ms-product-price-desktop.dc.html": {
    "x": 2800,
-   "y": 49614,
+   "y": 49944,
    "w": 1280,
    "h": 856,
    "title": "Designed · A product’s price, different at one shop (desktop)",
@@ -1597,7 +1613,7 @@
   },
   "j19-ms-add-shop-desktop.dc.html": {
    "x": 4280,
-   "y": 49614,
+   "y": 49944,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a shop: code suggested, hours copied (desktop)",
@@ -1605,7 +1621,7 @@
   },
   "j19-ms-till-move-desktop.dc.html": {
    "x": 5600,
-   "y": 49614,
+   "y": 49944,
    "w": 1280,
    "h": 856,
    "title": "Designed · Moving a till to the other shop: its day, its sales waiting, its receipts (desktop)",
@@ -1613,7 +1629,7 @@
   },
   "j20-ops-log-desktop.dc.html": {
    "x": 0,
-   "y": 51600,
+   "y": 51960,
    "w": 1280,
    "h": 856,
    "title": "Designed · Reports › Activity log: what was done today, by whom (desktop)",
@@ -1621,7 +1637,7 @@
   },
   "j21-ls-connect-signin-desktop.dc.html": {
    "x": 0,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Connect Lightspeed: sign in on Lightspeed’s page (desktop)",
@@ -1629,7 +1645,7 @@
   },
   "j21-ls-settings-on-desktop.dc.html": {
    "x": 1320,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Settings › Office › Lightspeed: connected (desktop)",
@@ -1637,7 +1653,7 @@
   },
   "j21-ls-part-search-desktop.dc.html": {
    "x": 2800,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Add a part: Lightspeed’s products, one press (desktop)",
@@ -1645,7 +1661,7 @@
   },
   "j21-ls-job-sent-desktop.dc.html": {
    "x": 4120,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Approved: the work order made in Lightspeed (desktop)",
@@ -1653,7 +1669,7 @@
   },
   "j21-ls-customer-pick-desktop.dc.html": {
    "x": 5440,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Which customer in Lightspeed? Nothing chosen to start (desktop)",
@@ -1661,7 +1677,7 @@
   },
   "j21-ls-job-check-desktop.dc.html": {
    "x": 6920,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Check this in Lightspeed (desktop)",
@@ -1669,7 +1685,7 @@
   },
   "j21-ls-hand-over-unpaid-desktop.dc.html": {
    "x": 8400,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Hand over before it shows as paid (desktop)",
@@ -1677,7 +1693,7 @@
   },
   "j21-ls-job-sorted-desktop.dc.html": {
    "x": 9720,
-   "y": 53676,
+   "y": 54036,
    "w": 1280,
    "h": 856,
    "title": "Designed · Mark it sorted: why, recorded (desktop)",
@@ -1832,6 +1848,8 @@
   "j11-till-refund-desktop.dc.html",
   "j11-till-void-desktop.dc.html",
   "j11-till-collect-desktop.dc.html",
+  "j11-till-book-in-desktop.dc.html",
+  "j11-till-hand-over-job-desktop.dc.html",
   "j11-till-c2w-pick-desktop.dc.html",
   "j11-till-failed-desktop.dc.html",
   "j12-diary-desktop.dc.html",
@@ -1916,25 +1934,25 @@
   "ja_sit_staff-app": {
    "x": 2000,
    "y": 3790,
-   "text": "Situations of this screen (3)\n• Staff app: a mechanic sees only the Workshop room — Mechanic · App map 11, 14\n• Staff app: phone menu open — Staff · App map 11, 14\n• Not part of your role — Staff · from journey B",
+   "text": "Situations of this screen (4)\n• Staff app: a mechanic sees only the Workshop room — Mechanic · App map 11, 14\n• Staff app: phone menu open — Staff · App map 11, 14\n• Not part of your role — Staff · from journey B\n• On a workshop computer, owner and manager pages open only after an Owner or Manager PIN — Owner and Manager · Walk-through 8, decision 3",
    "w": 1280
   },
   "ja_sit_till-rail": {
    "x": 3480,
    "y": 3790,
-   "text": "Situations of this screen (1)\n• Till: rail unfolded — Staff · App map 4, 5",
+   "text": "Situations of this screen (2)\n• Till: rail unfolded — Staff · App map 4, 5\n• On a till, the rest of the shop opens as the person checked in by PIN, with their role — Staff · Walk-through 8, fix M6 part 1",
    "w": 1280
   },
   "ja_sit_till-search": {
    "x": 4800,
    "y": 3790,
-   "text": "Situations of this screen (1)\n• The staff search finds a Cycle to Work order by its quote or certificate number — Staff · from journey 15 · Walk-through 5 M5",
+   "text": "Situations of this screen (3)\n• The staff search finds a Cycle to Work order by its quote or certificate number — Staff · from journey 15 · Walk-through 5 M5\n• A job paid online: Paid online · [date], with Hand over in place of Add to basket — Staff · Walk-through 8, decision 8; Collect and pay 5 (H3)\n• A job expected today: Book in — Staff · Walk-through 8, decision 8",
    "w": 1280
   },
   "ja_sit_your-settings": {
    "x": 6280,
    "y": 3790,
-   "text": "Situations of this screen (2)\n• Your settings — no PIN yet, Get your PIN — Everyone · WT4 H1\n• Your settings › Accessibility (scrolled down): show graphs in reports — Owner · from journey 17",
+   "text": "Situations of this screen (4)\n• Your settings — no PIN yet, Get your PIN — Everyone · WT4 H1\n• Your settings › Accessibility (scrolled down): show graphs in reports — Owner · from journey 17\n• On a workshop computer: Your settings belong to the person who typed their PIN, and switch with them — Staff and Mechanic · Walk-through 8, fix M3\n• On a workshop computer: no Change PIN — Staff and Mechanic · Walk-through 8, decision 3",
    "w": 1280
   },
   "ja_sit_site": {
@@ -1954,1020 +1972,1039 @@
    "y": 2334,
    "text": "A · App map and navigation — Everyone",
    "kind": "title1",
-   "maxW": 8620
+   "maxW": 8000
+  },
+  "jb_sit_auth-site": {
+   "x": 1480,
+   "y": 6216,
+   "text": "Situations of this screen (1)\n• Staff at two shops (Jo Taylor): their two shops, no All shops; the counts only for people who can close the day — Staff · Multiple sites 9; Opening the shop 3 and 4",
+   "w": 1280
   },
   "jb_sit_auth-signedout": {
    "x": 2800,
-   "y": 6186,
-   "text": "Situations of this screen (1)\n• Signed out after a while — Staff · Walk-through 8, decision 3",
+   "y": 6216,
+   "text": "Situations of this screen (1)\n• Signed out after a while — Staff",
    "w": 1280
   },
   "jb_sit_till-setup": {
    "x": 4280,
-   "y": 6186,
-   "text": "Situations of this screen (1)\n• Set up a till at [Second site]: its numbers, taken ones In use — Owner · from journey 19",
+   "y": 6216,
+   "text": "Situations of this screen (2)\n• Set up a till at [Second site]: its numbers, taken ones In use — Owner · from journey 19\n• Make this computer a workshop computer: it stays signed in as the shop, and each person takes over by typing their PIN — Owner · Walk-through 8, decision 1",
    "w": 1280
   },
   "jb_sit_till-checkin": {
    "x": 5600,
-   "y": 6186,
-   "text": "Situations of this screen (3)\n• Till start-up: offline, sales waiting to send (the start-up line on the PIN screen) — Staff · Leftover 4, Signing in 9\n• Till start-up: online, but not up to date — Staff · Leftover 4, Signing in 9\n• Till check-in: wrong PIN — Staff · Leftover 4, Signing in 9",
+   "y": 6216,
+   "text": "Situations of this screen (6)\n• Till start-up: offline, sales waiting to send (the start-up line on the PIN screen) — Staff · Leftover 4, Signing in 9\n• Till start-up: online, but not up to date — Staff · Leftover 4, Signing in 9\n• Till check-in: wrong PIN — Staff · Leftover 4, Signing in 9\n• A workshop computer: Enter your PIN, and what you do is recorded under your name and role — Staff and Mechanic · Walk-through 8, decision 1\n• A workshop computer left alone for 10 minutes: back to Enter your PIN, nothing lost — Staff and Mechanic · Walk-through 8, decision 3; build plan Q6\n• A till with nobody checked in: only the PIN screen — Staff · Walk-through 8, fix M6 part 1",
    "w": 1280
   },
   "jb_sit_pin-change": {
    "x": 6920,
-   "y": 6186,
-   "text": "Situations of this screen (3)\n• First sign-in — Your till PIN opens straight away (Skip for now if you never use the till) — Staff · Signing in 6–7, Walk-through 4 H1\n• First sign-in after a PIN was cleared — a new PIN, the same way — Staff · Signing in 6–7, Walk-through 4 H1\n• Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person — Owner · Signing in 6–7, Walk-through 4 H1",
+   "y": 6216,
+   "text": "Situations of this screen (3)\n• First sign-in — Your till PIN opens straight away (Skip for now if you never use the till or a workshop computer) — Staff · Signing in 6–7, Walk-through 4 H1\n• First sign-in after a PIN was cleared — a new PIN, the same way — Staff · Signing in 6–7, Walk-through 4 H1\n• Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person — Owner · Signing in 6–7, Walk-through 4 H1",
    "w": 1280
   },
   "jb_sit_cust-code": {
    "x": 8870,
-   "y": 6230,
+   "y": 6260,
    "text": "Situations of this screen (1)\n• Code expired — Customer · Signing in 5, 9",
    "w": 430
   },
   "jb_sit_pending": {
    "x": 9340,
-   "y": 6230,
+   "y": 6260,
    "text": "Situations of this screen (1)\n• Expired request / private link — Customer · Signing in 10",
    "w": 430
   },
   "jb_later": {
    "x": 9970,
-   "y": 5290,
-   "text": "Later — not drawn here (1)\n• Till check-in while running alongside — the practice band before anyone checks in — Issue #116 question 4: practice mode dropped",
+   "y": 5320,
+   "text": "Later — not drawn here (1)\n• Till check-in while running alongside — the practice band before anyone checks in — Dropped, not later: issue #116 question 4, practice mode dropped",
    "w": 720,
    "fill": "gray"
   },
   "jb_title": {
    "x": 0,
-   "y": 4730,
+   "y": 4760,
    "text": "B · Signing in and access — Staff and customers",
    "kind": "title1",
-   "maxW": 9730
+   "maxW": 8000
   },
   "j01_sit_wb-home": {
    "x": 0,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (3)\n• Home page, further down: repairs, our shops, the shop’s own words — Customer · Find the shop 1 (now fixed), M1\n• Home page for a shop with one site: “Find us” — Customer · Find the shop 1 (now fixed), M1\n• First visit, two shops: nothing chosen yet — Customer · Find the shop 1 (now fixed), M1",
    "w": 430
   },
   "j01_sit_wb-choose-shop": {
    "x": 470,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (1)\n• Which shop will you collect from? (one tap, asked once) — Customer · from journey 2 · Buy online 8, audit M3",
    "w": 430
   },
   "j01_sit_wb-category": {
    "x": 1570,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (7)\n• Nothing matches: which filter is the cause — Customer · Find the shop 2, 4, 7 (H2, M4)\n• A parent category: Drivetrain, with its types — Customer · Find the shop 2, 4, 7 (H2, M4)\n• Derailleurs: number of gears — Customer · Find the shop 2, 4, 7 (H2, M4)\n• A category before a shop is chosen — Customer · Find the shop 2, 4, 7 (H2, M4)\n• Search results: products, with repairs and pages above — Customer · Find the shop 2, 4, 7 (H2, M4)\n• Searching by a measurement: “bearing 30mm” — Customer · Find the shop 2, 4, 7 (H2, M4)\n• No results: ask the shop — Customer · Find the shop 2, 4, 7 (H2, M4)",
    "w": 430
   },
   "j01_sit_wb-product": {
    "x": 2670,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (11)\n• Sizes and colours: nothing chosen yet — Customer · Find the shop 3\n• A size not here, but at the other shop — Customer · Find the shop 3\n• A bike held for a Cycle to Work order: counted out, so sold out — Public · Find the shop 3\n• A product: ready today at Bolton — Customer · from journey 2 · Buy online 2, 8\n• Added to the basket — Customer · from journey 2 · Buy online 2, 8\n• Two shops: “Collecting from Bolton”, the item at the other shop — Customer · from journey 2 · Buy online 2, 8\n• An item the shop orders in — Customer · from journey 2 · Buy online 2, 8\n• Not in stock: ask the shop — Customer · from journey 2 · Buy online 2, 8\n• Not here, but in stock at the other shop — Customer · from journey 2 · Buy online 2, 8\n• No shop chosen yet — Customer · from journey 2 · Buy online 2, 8\n• Buying online switched off — Customer · from journey 2 · Buy online later change",
    "w": 430
   },
   "j01_sit_wb-search-typing": {
    "x": 3770,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (1)\n• No suggestions: press Enter to search — Customer · Find the shop 4",
    "w": 430
   },
   "j01_sit_wb-shop-page": {
    "x": 4870,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (2)\n• Collect from here: the shop chosen — Customer · Find the shop 5, M2\n• One shop: “Find us” — Customer · Find the shop 5, M2",
    "w": 430
   },
   "j01_sit_wb-not-found": {
    "x": 5500,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (1)\n• Switched off, or no such shop: what the public sees — Customer · Find the shop 6, M13",
    "w": 430
   },
   "j01_sit_wb-off-preview": {
    "x": 5970,
-   "y": 8246,
+   "y": 8366,
    "text": "Situations of this screen (3)\n• Switched off: the staff banner on every page — Staff · Find the shop M14, later change\n• Switched off: staff without “Can edit the website” are told who to ask — Staff · Find the shop M14, later change\n• Turned on: “Your website is on · Turn off” — Staff · Find the shop M14, later change",
    "w": 1280
   },
   "j01_sit_wb-cookies-banner": {
    "x": 7450,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (1)\n• Choices saved; “Cookie choices” in the footer — Customer · Find the shop 6, H3",
    "w": 430
   },
   "j01_sit_wb-cookies-page": {
    "x": 8390,
-   "y": 8290,
+   "y": 8410,
    "text": "Situations of this screen (1)\n• The Cookies page for a shop with no tracking tool — Customer",
    "w": 430
   },
   "j01_title": {
    "x": 0,
-   "y": 6790,
+   "y": 6910,
    "text": "01 · Find the shop and browse the website — Customer",
    "kind": "title1",
-   "maxW": 8780
+   "maxW": 8000
   },
   "j02_sit_on-basket": {
    "x": 0,
-   "y": 10590,
+   "y": 10710,
    "text": "Situations of this screen (2)\n• Something in the basket changed — Customer · Buy online audit H1\n• An empty basket, with Undo — Customer · Buy online audit H1",
    "w": 430
   },
   "j02_sit_on-checkout": {
    "x": 470,
-   "y": 10590,
+   "y": 10710,
    "text": "Situations of this screen (9)\n• Details to check — Customer · Buy online 5, 10; audit H2, M7\n• Signed in, store credit used — Customer · Buy online 5, 10; audit H2, M7\n• Store credit covers it all: Place order — Customer · Buy online 5, 10; audit H2, M7\n• A gift card code not recognised — Customer · Buy online 5, 10; audit H2, M7\n• A gift card used, and what’s left on it — Customer · Buy online 5, 10; audit H2, M7\n• Paying — please don’t close this page — Customer · Buy online 5, 10; audit H2, M7\n• Card declined: nothing taken — Customer · Buy online 5, 10; audit H2, M7\n• Couldn’t confirm the payment: don’t pay again — Customer · Buy online 5, 10; audit H2, M7\n• Sold out just before paying: nothing taken — Customer · Buy online 5, 10; audit H2, M7",
    "w": 430
   },
   "j02_sit_on-confirmed": {
    "x": 1570,
-   "y": 10590,
+   "y": 10710,
    "text": "Situations of this screen (1)\n• Save your details: the emailed code — Customer · Buy online 4",
    "w": 430
   },
   "j02_sit_on-order": {
    "x": 2200,
-   "y": 10590,
+   "y": 10710,
    "text": "Situations of this screen (8)\n• On its way from the other shop — Customer · Buy online 7, M4\n• Ready to collect — Customer · Buy online 7, M4\n• Collected, with the receipt — Customer · Buy online 7, M4\n• Cancel this order? (until it’s ready) — Customer · Buy online 7, M4\n• Cancelled and refunded the way it was paid — Customer · Buy online 7, M4\n• Cancel pressed just after it was marked ready — Customer · Buy online 7, M4\n• Cancelled by the shop: not collected — Customer · Buy online 7, M4\n• An item the shop couldn’t supply, refunded — Customer · Buy online 7, M4",
    "w": 430
   },
   "j02_sit_on-orders": {
    "x": 3300,
-   "y": 10546,
+   "y": 10666,
    "text": "Situations of this screen (5)\n• Marked ready: the email waits a few seconds, with Undo — Staff · Buy online 6; H4, M1\n• The item arrived from the other shop: Mark ready — Staff · Buy online 6; H4, M1\n• Held stock sold at the till anyway: not on the shelf any more — Staff · Buy online 6; H4, M1\n• At [Second site]: an item to send to Bolton — Staff · Buy online 6; H4, M1\n• A Shopify order in Online orders — Owner · from journey 18",
    "w": 1280
   },
   "j02_sit_on-order-staff": {
    "x": 4620,
-   "y": 10546,
+   "y": 10666,
    "text": "Situations of this screen (2)\n• A ready order: Hand over, or not ready after all — Staff · H4, H5\n• Not ready after all: a sorry email — Staff · H4, H5",
    "w": 1280
   },
   "j02_sit_on-cant-supply": {
    "x": 5940,
-   "y": 10546,
+   "y": 10666,
    "text": "Situations of this screen (1)\n• Cancel and refund: the way it was paid, with a reason — Manager · Buy online 7, M2",
    "w": 1280
   },
   "j02_sit_on-settings": {
    "x": 7420,
-   "y": 10546,
+   "y": 10666,
    "text": "Situations of this screen (5)\n• Also things we order in: how long it takes — Owner · Buy online 2, 3\n• Turning on buying online after the website’s set-up: the answer shown, with Change — Owner · Buy online 2, 3\n• Showing products: switches on each category — Owner · Buy online 2, 3\n• Paying online, and orders not collected — Owner · Buy online 2, 3\n• Keep orders for [n] days, and where ready orders wait — Manager · Buy online 2, 3",
    "w": 1280
   },
   "j02_title": {
    "x": 0,
-   "y": 9090,
+   "y": 9210,
    "text": "02 · Buy online, or click and collect — Customer, Staff and Owner",
    "kind": "title1",
-   "maxW": 9980
+   "maxW": 8000
   },
   "j03_sit_bk-service": {
    "x": 0,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (6)\n• From the website: the repair already chosen — Customer · Book 2, 9\n• A shop with many single jobs: search them — Customer · Book 2, 9\n• Online booking unavailable — Customer\n• No shop chosen yet on the website: “Which shop?” first — Customer · from journey 19\n• The website already has Bolton: the shop chosen, straight to the service — Customer · from journey 19\n• Changing the shop: what it resets — Customer · from journey 19",
    "w": 430
   },
   "j03_sit_bk-bike": {
    "x": 470,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (2)\n• Signed in, in a shop that takes a deposit — Customer · Book 2, 9\n• Not sure what’s wrong: tell us what you’ve noticed — Customer · Book 2, 9",
    "w": 430
   },
   "j03_sit_bk-when": {
    "x": 940,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (2)\n• A full day says why — Customer · Book 2, 9\n• A shop that takes drop-off days: the window and the mechanic — Customer · Book 2, 9",
    "w": 430
   },
   "j03_sit_bk-details": {
    "x": 1410,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (6)\n• Pay the deposit and send — Customer · Book 2, 9\n• Sending — Customer · Book 2, 9\n• The card didn’t go through — Customer · Book 2, 9\n• Not sent yet — everything kept — Customer · Book 2, 9\n• The connection dropped after paying: checking, not paying again — Customer · Book 2, 9\n• Coming back: carry on where you left off — Customer · Book 2, 9",
    "w": 430
   },
   "j03_sit_bk-request": {
    "x": 2040,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (2)\n• Request received, after paying a deposit — Customer · Book 8\n• Confirmed straight away (the shop’s setting) — Customer · Book 8",
    "w": 430
   },
   "j03_sit_bk-page": {
    "x": 2670,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (12)\n• The booking’s page while it’s still a request — Customer · Quote 1\n• The shop suggests another time: accept, or cancel — Customer · Quote 1\n• A drop-off booking, no deposit, the mechanic picked — Customer · Quote 1\n• Cancelled, deposit refunded — Customer · Quote 1\n• Cancelled after the cut-off, deposit kept — Customer · Quote 1\n• The shop couldn’t fit it in — Customer · Quote 1\n• The link, [n] days after a booking that never came in — Customer · Walk-through 1 M5\n• A Lightspeed shop: the booking’s page, no deposit — Customer · Quote 1\n• The job’s page once the bike is in: where it is, when it’s ready — Customer · from journey 4 · Quote 1\n• Waiting for a part — Customer · from journey 4 · Quote 1\n• Booking: “Remind me…”, unticked, with a review request — Customer · from journey 7 · Account 2, 4\n• The reminder’s link: booking, bike and service chosen, saying why — Customer · from journey 7 · Account 2, 4",
    "w": 430
   },
   "j03_sit_bk-change": {
    "x": 3140,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (2)\n• New date waiting for the shop — Customer · Quote 1\n• The shop couldn’t do the new date — Customer · Quote 1",
    "w": 430
   },
   "j03_sit_bk-cancel": {
    "x": 3770,
-   "y": 12830,
+   "y": 12950,
    "text": "Situations of this screen (2)\n• Cancel after the cut-off: the deposit is kept — Customer · Book 10\n• A Lightspeed shop: cancel, nothing to pay or refund — Customer · Book 10",
    "w": 430
   },
   "j03_sit_bk-settings": {
    "x": 4400,
-   "y": 12786,
+   "y": 12906,
    "text": "Situations of this screen (2)\n• Online booking, scrolled: deposits and terms — Manager · Book 11\n• Settings › Workshop › Collection: reminder, flag, hand-back — Manager · from journey 5 · Receiving 7",
    "w": 1280
   },
   "j03_title": {
    "x": 0,
-   "y": 11330,
+   "y": 11450,
    "text": "03 · Book a repair — Customer, Staff and Manager",
    "kind": "title1",
    "maxW": 5640
   },
   "j04_sit_dq-quote": {
    "x": 0,
-   "y": 15160,
+   "y": 15280,
    "text": "Situations of this screen (15)\n• A line’s photo, enlarged — Customer · Quote 1\n• Ticking the optional line: the total follows — Customer · Quote 1\n• Unticking the needed pair: what happens without it — Customer · Quote 1\n• A quote after a deposit: still to pay — Customer · Quote 1\n• After the reminder: when it was sent, and reminded — Customer · Quote 1\n• The quote has changed: earlier answers kept — Customer · Quote 1\n• The shop withdrew the quote — Customer · Quote 1\n• Within the limit: told what was added — Customer · Quote 1\n• Answered: the work carries on — Customer · Quote 1\n• Answered no thanks to all of it — Customer · Quote 1\n• Answered, with the deposit taken off — Customer · Quote 1\n• Answered by phone, recorded by the shop — Customer · Quote 1\n• A Lightspeed shop: the quote, no deposit, no Basket — Customer · Quote 1\n• A Lightspeed shop: a price has gone up since you agreed — Customer · Quote 1\n• A Lightspeed shop: no thanks to the new price — Customer · Quote 1",
    "w": 430
   },
   "j04_title": {
    "x": 0,
-   "y": 13660,
+   "y": 13780,
    "text": "04 · Drop off and approve the quote — Customer and Staff",
    "kind": "title1",
    "maxW": 1870
   },
   "j05_sit_cp-summary": {
    "x": 0,
-   "y": 17580,
+   "y": 17700,
    "text": "Situations of this screen (15)\n• Ready to collect (journey 5): the same page, at Ready — Customer · from journey 4 · Quote 1\n• Customer follows up — Customer · from journey 4\n• Said yes to reminders when booking: not asked again — Customer · Quote 1\n• The same link, after a deposit: only the rest to pay — Customer · Quote 1\n• The link opened again after paying — Customer · Quote 1\n• The link while it’s being paid at the counter — Customer · Quote 1\n• The same link, for a shop without online payments — Customer · Quote 1\n• The link, [n] days after collection — Customer · Walk-through 1 M5\n• A Lightspeed shop: the agreed price, pay at the till — Customer · Quote 1\n• A Lightspeed shop: paid at the till — Customer · Quote 1\n• A job’s page: “Add a note for the shop” — Customer · from journey 7 · Account 3\n• The note sent, waiting for a reply — Customer · from journey 7 · Account 3\n• The shop’s reply, on the job’s page — Customer · from journey 7 · Account 3\n• Ready to collect: the same tick — Customer · from journey 7 · Account 2, 4\n• Maya’s job page at Ready: agreed price, pay at the till — Customer · from journey 21 · Walk-through 6 H1",
    "w": 430
   },
   "j05_sit_cp-pay": {
    "x": 470,
-   "y": 17580,
+   "y": 17700,
    "text": "Situations of this screen (4)\n• Pay online: the card didn’t go through — Customer · Collect 2, 5 H1\n• Pay online after a deposit: only the rest — Customer · Collect 2, 5 H1\n• Paid — see you soon — Customer · Collect 2, 5 H1\n• Paid after a deposit — Customer · Collect 2, 5 H1",
    "w": 430
   },
   "j05_sit_cp-receipt-email": {
    "x": 1100,
-   "y": 17580,
+   "y": 17700,
    "text": "Situations of this screen (4)\n• No customer on the sale: the email without an account — Customer · Leftover screens 1, 6 H1\n• For a business: headed “VAT invoice” — Customer · Leftover screens 1, 6 H1\n• A till sale: quantities, a discount, a split payment — Customer · Leftover screens 1, 6 H1\n• After a deposit: the deposit and the rest as two payments — Customer · Leftover screens 1, 6 H1",
    "w": 430
   },
   "j05_sit_cp-receipt-text": {
    "x": 1570,
-   "y": 17580,
+   "y": 17700,
    "text": "Situations of this screen (1)\n• The receipt page: Email it to me — Customer · Leftover screens 2",
    "w": 430
   },
   "j05_sit_cp-receipt-address": {
    "x": 2040,
-   "y": 17536,
+   "y": 17656,
    "text": "Situations of this screen (5)\n• The address doesn’t look right — Staff · Leftover screens 3\n• Ticked: the receipt goes, then Add a customer — Staff · Leftover screens 3\n• Text the receipt: a mobile number — Staff · Leftover screens 3\n• A customer on the sale: their address filled in — Staff · Leftover screens 3\n• The till is offline: it sends when back online — Staff · Leftover screens 3",
    "w": 1280
   },
   "j05_title": {
    "x": 0,
-   "y": 16080,
+   "y": 16200,
    "text": "05 · Collect the bike and pay — Customer",
    "kind": "title1",
    "maxW": 3910
   },
   "j06_sit_cw-list": {
    "x": 0,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (5)\n• The list for the owner: what’s owed, and Mark paid — Owner and Manager · C2W 2, 7 (M2, M3); walk-through 5 M3, H2\n• The first time: no providers yet — Owner and Manager · C2W 2, 7 (M2, M3); walk-through 5 M3, H2\n• Ordered from the supplier, with Undo — Staff · C2W 2, 7 (M2, M3); walk-through 5 M3, H2\n• The list: a hold ended, nobody chose — Staff · C2W 2, 7 (M2, M3); walk-through 5 M3, H2\n• The list: a deposit to refund — Staff · C2W 2, 7 (M2, M3); walk-through 5 M3, H2",
    "w": 1280
   },
   "j06_sit_cw-new": {
    "x": 1320,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (1)\n• A bike that isn’t in stock: what the quote will say — Staff · C2W 7 (H5)",
    "w": 1280
   },
   "j06_sit_cw-quote": {
    "x": 2640,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (2)\n• The quote for a bike ordered with a deposit — Staff · C2W 6, 7 (M9)\n• A revised quote, not sent until Email — Owner and Manager · C2W 6, 7 (M9)",
    "w": 1280
   },
   "j06_sit_cw-order-held": {
    "x": 3960,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (13)\n• Not in stock, customer applied: ready to order — Staff · C2W 1, 3, 4\n• Not in stock, deposit rule: waiting for a deposit — Staff · C2W 1, 3, 4\n• Deposit paid, bike ordered — Staff · C2W 1, 3, 4\n• Deposit paid, counted toward the price — Staff · C2W 1, 3, 4\n• Certificate received, bike on order — Staff · C2W 1, 3, 4\n• Certificate in: refund the deposit next — Staff · C2W 1, 3, 4\n• Certificate in, the bike needs work: get it ready — Staff · C2W 1, 3, 4\n• Marked ready to collect, with Undo — Staff · C2W 1, 3, 4\n• Ready to collect — Staff · C2W 1, 3, 4\n• Collected: expected from the provider — Owner and Manager · C2W 1, 3, 4\n• Part paid: the rest still owed — Owner and Manager · C2W 1, 3, 4\n• Paid by the provider — Owner and Manager · C2W 1, 3, 4\n• More: change or cancel the order — Owner and Manager · C2W 1, 3, 4",
    "w": 1280
   },
   "j06_sit_cw-certificate": {
    "x": 9400,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (4)\n• A certificate for less than the quote — Staff · Walk-through 5 H4, M1, M3\n• A certificate for more than the quote — Staff · Walk-through 5 H4, M1, M3\n• A certificate after the quote ran out — Staff · Walk-through 5 H4, M1, M3\n• A certificate for a bike already released — Staff · Walk-through 5 H4, M1, M3",
    "w": 1280
   },
   "j06_sit_cw-owed": {
    "x": 13520,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (1)\n• Owed by providers, opened from Reports — Owner · Walk-through 5 L1",
    "w": 1280
   },
   "j06_sit_cw-record-payment": {
    "x": 16160,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (3)\n• Mark paid — Owner and Manager · C2W 5; walk-through 5 M7 (kept)\n• Paid less than expected — Owner and Manager · C2W 5; walk-through 5 M7 (kept)\n• A payment for more than expected — Owner · C2W 5; walk-through 5 M7 (kept)",
    "w": 1280
   },
   "j06_sit_cw-cancel": {
    "x": 17640,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (2)\n• Cancelling after the bike was ordered — Owner and Manager · Walk-through 5 M8\n• Cancelling after ordering: the deposit kept — Owner · Walk-through 5 M8",
    "w": 1280
   },
   "j06_sit_cw-customer-view": {
    "x": 19120,
-   "y": 20000,
-   "text": "Situations of this screen (2)\n• The customer’s view: no longer put aside — Customer · Walk-through 5 M3, M8\n• The customer’s view: the order cancelled — Customer · Walk-through 5 M3, M8",
+   "y": 20120,
+   "text": "Situations of this screen (4)\n• The customer’s view: no longer put aside — Customer · Walk-through 5 M3, M8\n• The customer’s view: the order cancelled — Customer · Walk-through 5 M3, M8\n• Certificate received: What you pay at collection £[£] — Customer · Cycle to Work 6, 7; walk-through 5 H4\n• Ready to collect: What you pay at collection £[£] — Customer · Cycle to Work 6, 7; walk-through 5 H4",
    "w": 430
   },
   "j06_sit_cw-email": {
    "x": 19590,
-   "y": 20000,
+   "y": 20120,
    "text": "Situations of this screen (4)\n• “Certificate received” email, with the revised quote — Customer · C2W 6; walk-through 5 M6\n• “Certificate received” and “Ready to collect” texts — Customer · C2W 6; walk-through 5 M6\n• “Put aside” again, or “no longer put aside” texts — Customer · C2W 6; walk-through 5 M6\n• “Your order is cancelled” texts — Customer · C2W 6; walk-through 5 M6",
    "w": 430
   },
   "j06_sit_cw-settings": {
    "x": 20060,
-   "y": 19956,
+   "y": 20076,
    "text": "Situations of this screen (1)\n• Deposits, and how to apply — Owner and Manager · C2W 8",
    "w": 1280
   },
   "j06_title": {
    "x": 0,
-   "y": 18500,
+   "y": 18620,
    "text": "06 · Cycle to Work — Customer and staff",
    "kind": "title1",
-   "maxW": 22620
+   "maxW": 8000
   },
   "j07_sit_ac-account": {
    "x": 0,
-   "y": 22360,
+   "y": 22480,
    "text": "Situations of this screen (12)\n• Signed in: Your bookings — Customer · from journey 3\n• Further down: how we contact you, and your data — Customer · Account 1, 4, 8\n• History showing repairs only — Customer · Account 1, 4, 8\n• A new account, with nothing in it yet — Customer · Account 1, 4, 8\n• Her Cycle to Work order in her history, with what she pays at collection — Customer · Account 1, 4, 8\n• After collection: the Cycle to Work bike in her bikes, with its frame number — Customer · Account 1, 4, 8\n• The question sent: in the history, waiting — Customer · Account 1, 4, 8\n• The history once answered: the note and the question — Customer · Account 1, 4, 8\n• Download a copy of your data: straight away — Customer · Account 1, 4, 8\n• The download didn’t start — Customer · Account 1, 4, 8\n• The request on the account, with Cancel my request — Customer · Account 1, 4, 8\n• Request cancelled — Customer · Account 1, 4, 8",
    "w": 430
   },
   "j07_sit_ac-receipt": {
    "x": 470,
-   "y": 22360,
+   "y": 22480,
    "text": "Situations of this screen (1)\n• The receipt emailed — Customer · Leftover screens 1–2",
    "w": 430
   },
   "j07_sit_ac-inbox": {
    "x": 2200,
-   "y": 22316,
+   "y": 22436,
    "text": "Situations of this screen (5)\n• On a phone: the list first — Staff · Account 7, 9\n• Reply sent the way Maya chose; reply again — Staff · Account 7, 9\n• All conversations, “Needs a reply” in words — Staff · Account 7, 9\n• Nothing needs a reply — Staff · Account 7, 9\n• The text Maya gets, linking back — Staff · Account 7, 9",
    "w": 1280
   },
   "j07_sit_ac-review-setting": {
    "x": 3680,
-   "y": 22316,
+   "y": 22436,
    "text": "Situations of this screen (1)\n• Review requests the first time: add a review page, then switch on — Manager · Account 5",
    "w": 1280
   },
   "j07_sit_ac-contact": {
    "x": 5000,
-   "y": 22360,
+   "y": 22480,
    "text": "Situations of this screen (2)\n• Change customer update channels — Customer · from journey 4\n• A switch changed, and said so — Customer · Account 6, 8 (H2)",
    "w": 430
   },
   "j07_sit_ac-stopped": {
    "x": 5470,
-   "y": 22360,
+   "y": 22480,
    "text": "Situations of this screen (1)\n• Turned back on — Customer · Account 6",
    "w": 430
   },
   "j07_sit_ac-delete": {
    "x": 6100,
-   "y": 22360,
+   "y": 22480,
    "text": "Situations of this screen (2)\n• Can’t delete yet: the bike is still with us — Customer · Account 4\n• Deletion request sent — Customer · Account 4",
    "w": 430
   },
   "j07_title": {
    "x": 0,
-   "y": 20860,
+   "y": 20980,
    "text": "07 · Account, history and reminders — Customer and Staff",
    "kind": "title1",
    "maxW": 6490
   },
   "j08_sit_fr-today": {
    "x": 0,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (1)\n• All set up: the checklist goes — Owner",
    "w": 1280
   },
   "j08_sit_set-till-quick": {
    "x": 1480,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (10)\n• Settings on a phone: the list of rooms — Manager\n• Saved as you go, with Undo — Manager\n• Till › Reasons: a list for each kind — Manager\n• Till › Receipts — Manager\n• Till › Printer and cash drawer — Manager\n• Till › Tills: as a Manager sees it — Manager\n• Till › Tills: as the owner sees it — Owner\n• Removing a till asks first — Owner\n• A new shop: no quick buttons yet — Owner\n• Settings › Till › Tills: every till, by shop — Owner · from journey 19",
    "w": 1280
   },
   "j08_sit_set-eod": {
    "x": 4280,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (2)\n• End of day: Close the day at, or before, closing time — Manager\n• A change that couldn’t be saved — Manager",
    "w": 1280
   },
   "j08_sit_set-pay-ways": {
    "x": 5600,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (4)\n• A step opened from the checklist — Owner\n• Payments › Other ways to pay — Manager\n• Payments › Card machine — Manager\n• Settings › Front desk › Payments › Customer groups — Manager · from journey 15 · Customer service 8",
    "w": 1280
   },
   "j08_sit_set-staff": {
    "x": 7080,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (3)\n• Staff and roles › What each role can do — Manager\n• People — Jo invited, not joined yet (Send again, Cancel the invite), and a till-only person — Owner\n• People — an invite that expired (Send again) — Owner",
    "w": 1280
   },
   "j08_sit_set-staff-person": {
    "x": 8400,
-   "y": 24646,
-   "text": "Situations of this screen (4)\n• Give everything a Manager can do — Manager\n• Clear a forgotten PIN — Manager\n• A person: “Can see reports” on, “Can see costs and margin” off — Manager · from journey 17\n• A person: where they work, and workshop days at each shop — Manager · from journey 19",
+   "y": 24766,
+   "text": "Situations of this screen (5)\n• Give everything a Manager can do — Manager\n• Clear a forgotten PIN — Manager\n• A person: “Can see reports” on, “Can see costs and margin” off — Manager · from journey 17\n• A person: where they work, and workshop days at each shop — Manager · from journey 19\n• Uses a workshop computer: needs a PIN, not only people with Can use the till — Owner · Walk-through 8, decision 1",
    "w": 1280
   },
   "j08_sit_set-staff-invite": {
    "x": 9720,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (1)\n• Add someone with no email — till only — Owner",
    "w": 1280
   },
   "j08_sit_set-shop-details": {
    "x": 11200,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (3)\n• Shop and sites › Opening hours — Manager\n• Settings › Shop and sites: each shop (owner) — Owner · from journey 19\n• The same, as a manager sees it — Manager · from journey 19",
    "w": 1280
   },
   "j08_sit_set-workshop-services": {
    "x": 12680,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (5)\n• Settings › Workshop › Services: each service’s reminder — Manager · from journey 7 · Owner setup 14\n• A service’s reminder time — Manager · from journey 7 · Owner setup 14\n• Workshop › Mechanics — Manager\n• Services list at [Second site]: its price beside the all-shops one — Owner · from journey 19\n• Settings › Workshop: no deposits or paying online — Owner and Manager · from journey 21 · Lightspeed 10 (M1, M2)",
    "w": 1280
   },
   "j08_sit_set-workshop-diary": {
    "x": 14000,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (1)\n• Diary settings — Manager · from journey 12 · Owner setup 12",
    "w": 1280
   },
   "j08_sit_set-msg-list": {
    "x": 15480,
-   "y": 24646,
+   "y": 24766,
    "text": "Situations of this screen (10)\n• Settings › Messages: the online order messages — Owner · from journey 2 · M5\n• Settings › Front desk › Messages: the booking messages — Manager · from journey 3 · Receiving 7\n• Settings › Front desk › Messages: the quote and its reminder — Manager · from journey 4 · Receiving 7\n• Settings › Front desk › Messages: “Bike still waiting” — Manager · from journey 5 · Receiving 7\n• “Bike still waiting”: the wording — Manager · from journey 5 · Receiving 7\n• Settings › Messages: the Cycle to Work messages — Owner and Manager · from journey 6 · C2W 8\n• Settings › Messages: service reminders and review requests — Manager · from journey 7 · Account 2\n• The service reminder’s wording; “Stop these” always added — Manager · from journey 7 · Account 2\n• Messages while running alongside — none go to customers until switch-over day — Owner\n• Settings › Front desk › Messages for a Lightspeed shop — Owner and Manager · from journey 21 · Lightspeed 10 (M1, M2)",
    "w": 1280
   },
   "j08_later": {
    "x": 22400,
-   "y": 23750,
+   "y": 23870,
    "text": "Later — not drawn here (1)\n• Getting started while moving from Citrus Lime — tills in practice, the move’s stage, shared steps — Issue #116 question 4: practice mode dropped, so its \"tills in practice\" wording is out of date; one checklist while moving is still to draw (consolidation-back-office.md finding 5)",
    "w": 720,
    "fill": "gray"
   },
   "j08_title": {
    "x": 0,
-   "y": 23190,
+   "y": 23310,
    "text": "08 · Owner setup and onboarding — Owner and Manager",
    "kind": "title1",
-   "maxW": 22160
+   "maxW": 8000
   },
   "j09_sit_mv-start": {
    "x": 0,
-   "y": 26872,
-   "text": "Situations of this screen (13)\n• Bringing it across (starts by itself) — Owner\n• A file Wheelhouse couldn’t read — Owner\n• Here’s what came across — Owner\n• The few that need a look — Owner\n• Everything’s sorted — Owner\n• Run alongside: the weekly refresh — Owner\n• The weekly check: each figure checks itself — Owner\n• The weekly check: three match, one doesn’t — Owner\n• Switch over: the checklist, two still to do — Owner\n• Switch over: everything ticked — Owner\n• Switch-over morning: last refresh, go real, then turn the website on — Owner\n• The first full week on Wheelhouse — Owner\n• A full week done: Citrus Lime can go — Owner",
+   "y": 26992,
+   "text": "Situations of this screen (13)\n• Bringing it across (starts by itself) — Owner\n• A file Wheelhouse couldn’t read — Owner\n• Here’s what came across — Owner\n• The few that need a look — Owner\n• Everything’s sorted — Owner\n• Run alongside: the weekly refresh — Owner\n• The weekly check: each figure checks itself — Owner\n• The weekly check: three match, one doesn’t — Owner\n• Switch over: the checklist, one still to do — Owner\n• Switch over: everything ticked — Owner\n• Switch-over morning: last refresh, then turn the website on — Owner\n• The first full week on Wheelhouse — Owner\n• A full week done: Citrus Lime can go — Owner",
    "w": 1280
   },
   "j09_later": {
    "x": 7080,
-   "y": 25976,
-   "text": "Later — not drawn here (5)\n• Checked in during practice: no float check — Issue #116 question 4: practice mode dropped\n• The till before switch-over: practice, not real money — Issue #116 question 4: practice mode dropped\n• A practice card payment: try either outcome — Issue #116 question 4: practice mode dropped\n• A job marked ready in practice: “Not sent — practice” — Issue #116 question 4: practice mode dropped\n• Clear practice sales and go real? — Issue #116 question 4: practice mode dropped",
+   "y": 26096,
+   "text": "Later — not drawn here (5)\n• Checked in during practice: no float check — Dropped, not later: issue #116 question 4, practice mode dropped\n• The till before switch-over: practice, not real money — Dropped, not later: issue #116 question 4, practice mode dropped\n• A practice card payment: try either outcome — Dropped, not later: issue #116 question 4, practice mode dropped\n• A job marked ready in practice: “Not sent — practice” — Dropped, not later: issue #116 question 4, practice mode dropped\n• Clear practice sales and go real? — Dropped, not later: issue #116 question 4, practice mode dropped",
    "w": 720,
    "fill": "gray"
   },
   "j09_title": {
    "x": 0,
-   "y": 25416,
+   "y": 25536,
    "text": "09 · Moving from Citrus Lime — Owner",
    "kind": "title1",
    "maxW": 6840
   },
   "j10_sit_op-float-check": {
    "x": 0,
-   "y": 29188,
+   "y": 29308,
    "text": "Situations of this screen (3)\n• First in, when yesterday wasn’t counted: the float plus Wednesday’s cash — Staff · Opening 2, 7; WT2 H1(b); WT4 M4\n• First in on the first real day: count the float — Staff · Opening 2, 7; WT2 H1(b); WT4 M4\n• The count matches: the till is ready — Staff · Opening 8 H1",
    "w": 1280
   },
   "j10_sit_op-float-short": {
    "x": 1320,
-   "y": 29188,
+   "y": 29308,
    "text": "Situations of this screen (1)\n• The float is over — Staff · Opening 8 H1; WT2 L3",
    "w": 1280
   },
   "j10_sit_op-today": {
    "x": 2800,
-   "y": 29188,
+   "y": 29308,
    "text": "Situations of this screen (32)\n• Today: new online orders — Manager · from journey 2 · Buy online 6, 7\n• Today: an order not collected — Contacted or Open — Manager · from journey 2 · Buy online 6, 7\n• Today: no answer to a quote — Staff · from journey 4\n• Today: a ready bike left too long — Manager · from journey 5\n• Today: no certificate yet, a payment late — Owner and Manager · from journey 6 · Opening the shop 3, 4\n• Today: Hold longer, done in one press — Owner and Manager · from journey 6 · Opening the shop 3, 4\n• Today: a hold ended with no choice, a deposit to refund — Owner · from journey 6 · Opening the shop 3, 4\n• Today: messages needing a reply, and a request to delete an account — Manager · from journey 7 · Account 2, 4\n• Today: time to refresh from Citrus Lime — Owner · from journey 9\n• Today, with a short float to check — Manager · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today, after the short float is marked Seen — Manager · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today, with sales waiting to send — Manager · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today, when yesterday was counted and banked but sales are still to send — Manager · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today, when yesterday wasn’t closed — Manager · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today, with two things to deal with — Manager · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today, as Staff see it — Staff · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today, when someone due in is late — Manager · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today: a Cycle to Work hold that ended with nobody choosing, and a deposit to refund — Owner · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today at a Lightspeed shop, as Staff see it: jobs that need someone to look — Staff · Opening 3, 4, 6, 7, 8; WT2 H1(a), L2; WT5 M3, H2; WT6 M1\n• Today: a product left on a delivery, to add — Owner · from journey 13\n• Today: new on the restock list — Manager · from journey 13\n• Today: a big adjustment, for the manager — Manager · from journey 14\n• Today: products below zero, with Count them — Manager · from journey 14\n• Today: a transfer arrived short — Manager · from journey 14\n• Today: Wednesday didn’t go to Xero — Owner · from journey 17\n• The same warning on Today — Owner · from journey 18\n• Today, all shops: a row per shop, one list of what needs you — Owner · from journey 19\n• Today at a new shop: what to do next — Owner · from journey 19\n• Today for a Lightspeed shop — Owner and Manager · from journey 21 · Lightspeed 6, 10\n• Today: can’t reach Lightspeed — Owner and Manager · from journey 21 · Lightspeed 6, 10\n• Today: jobs that need someone to look — Owner and Manager · from journey 21 · Lightspeed 6, 10\n• Today: handed over, not paid after [n] days — Owner and Manager · from journey 21 · Lightspeed 6, 10",
    "w": 1280
   },
   "j10_later": {
    "x": 4280,
-   "y": 28292,
-   "text": "Later — not drawn here (1)\n• Today, while the tills are in practice: the drawer isn’t counted — Issue #116 question 4: practice mode dropped",
+   "y": 28412,
+   "text": "Later — not drawn here (1)\n• Today, while the tills are in practice: the drawer isn’t counted — Dropped, not later: issue #116 question 4, practice mode dropped",
    "w": 720,
    "fill": "gray"
   },
   "j10_title": {
    "x": 0,
-   "y": 27732,
+   "y": 27852,
    "text": "10 · Opening the shop and checking in — Staff and Manager",
    "kind": "title1",
    "maxW": 4040
   },
   "j11_sit_till-sale": {
    "x": 0,
-   "y": 32118,
-   "text": "Situations of this screen (21)\n• Hand over: the till’s hand-over for the order — Staff · from journey 2 · H5\n• Hand over with one item refunded — Staff · from journey 2 · H5\n• The till: the job’s lines locked, collected when paid — Staff · from journey 5\n• Empty basket — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Search with no results — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Selling pads held for an online order — warned, not blocked — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Selling pads held for job WH-1042 — warned, not blocked — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Basket with a discount — the new total — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Store credit, earned by buying: shown with the customer in the basket — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Pay for a workshop job: bike collected when paid — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Workshop job back for collection: deposit taken off, pay the rest — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• A Cycle to Work bike — the order’s lines locked, the held frame picked — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• A Cycle to Work deposit — one line, linked to the order — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Offline: keep selling, sales wait to send — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Offline for over four hours: the notice grows — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Needs the internet — refunds wait, or note one for later — Staff · Walk-through 2 M7\n• Offline refund noted for later — Staff · Walk-through 2 M7\n• Can’t sign out while sales are waiting — Staff · Walk-through 2 M7\n• Close the day appears in the till bar after closing time — Manager · from journey 16 · Cash-up 5\n• A till sells for its own shop, whatever the menu says — Staff · from journey 19\n• Check Jo Taylor out of Till B1: after this sale, or now — Owner · from journey 20 · Management oversight 6 H5",
+   "y": 32238,
+   "text": "Situations of this screen (21)\n• Hand over: the till’s hand-over for the order — Staff · from journey 2 · H5\n• Hand over with one item refunded — Staff · from journey 2 · H5\n• The till: the job’s lines locked, collected when paid — Staff · from journey 5\n• Empty basket — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Search with no results — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Selling pads held for an online order — warned, not blocked — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Selling pads held for job WH-1042 — warned, not blocked — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Basket with a discount — the new total — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Store credit, earned by buying: shown with the customer in the basket — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Pay for a workshop job: bike collected when paid — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Workshop job back for collection: deposit taken off, pay the rest — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• A Cycle to Work bike — the order’s lines locked, the held frame picked — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2; Cycle to Work 5\n• A Cycle to Work deposit — one line, linked to the order — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2; Cycle to Work 5\n• Offline: keep selling, sales wait to send — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Offline for over four hours: the notice grows — Staff · Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H1/H2\n• Needs the internet — refunds wait, or note one for later — Staff · Walk-through 2 M7\n• Offline refund noted for later — Staff · Walk-through 2 M7\n• Can’t sign out while sales are waiting — Staff · Walk-through 2 M7\n• Close the day appears in the till bar after closing time — Owner, Manager, or anyone with Can close the day · from journey 16 · Cash-up 5\n• A till sells for its own shop, whatever the menu says — Staff · from journey 19\n• Check Jo Taylor out of Till B1: after this sale, or now — Owner · from journey 20 · Management oversight 6 H5",
    "w": 1750
   },
   "j11_sit_till-line": {
    "x": 1790,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• Discount the whole sale — Staff · Till 3",
    "w": 1280
   },
   "j11_sit_till-serial": {
    "x": 5750,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• A frame held for Cycle to Work — warned, not blocked — Staff",
    "w": 1280
   },
   "j11_sit_till-pay": {
    "x": 7230,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (4)\n• Take payment: Other ways to pay opened — Staff · Till 6, 15\n• Take payment — from the discounted total — Staff · Till 6, 15\n• Take payment — Cycle to Work · [Provider] is one tap — Staff · Till 6, 15\n• An accessory added at the counter — Maya pays for it as a second payment — Staff · Till 6, 15",
    "w": 1280
   },
   "j11_sit_till-card": {
    "x": 8550,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (2)\n• Card — from the discounted total — Staff · Till 6\n• Card declined — Staff · Till 6",
    "w": 1280
   },
   "j11_sit_till-pay-split": {
    "x": 11190,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• Split payment — from the discounted total — Staff",
    "w": 1280
   },
   "j11_sit_till-receipt": {
    "x": 12510,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• Cycle to Work paid — both payments, the bike collected — Staff · Till 7",
    "w": 1280
   },
   "j11_sit_till-deposit": {
    "x": 16630,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• Deposit on a workshop job: bike stays in — Staff · Till 11",
    "w": 1280
   },
   "j11_sit_till-find": {
    "x": 19430,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• Past sales — find the customer, then their sales — Staff · Till 13",
    "w": 1280
   },
   "j11_sit_till-sale-detail": {
    "x": 20750,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• A sale from her history: refunds start here — Staff · from journey 15 · Customer service 12; Till 13",
    "w": 1280
   },
   "j11_sit_till-refund": {
    "x": 22070,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (3)\n• Refund an older sale, found through the customer — Staff · Till 9\n• Refund a cash sale: back in cash — Staff · Till 9\n• No receipt: store credit only — Staff · Till 9",
    "w": 1280
   },
   "j11_sit_till-collect": {
    "x": 24710,
-   "y": 32074,
+   "y": 32194,
    "text": "Situations of this screen (1)\n• Hand over an online order while offline — marked to send — Staff · Walk-through 2 M7",
    "w": 1280
   },
   "j11_title": {
    "x": 0,
-   "y": 30618,
+   "y": 30738,
    "text": "11 · Selling at the till — Staff",
    "kind": "title1",
-   "maxW": 28910
+   "maxW": 8000
   },
   "j12_sit_diary": {
    "x": 0,
-   "y": 34718,
-   "text": "Situations of this screen (16)\n• The diary: a request with a deposit — Staff · from journey 3\n• Declining it refunds the deposit — Staff · from journey 3\n• The diary: the job waiting for the customer’s answer — Staff · from journey 4\n• The workshop at a glance — Staff · from journey 10\n• Diary · a mechanic’s view — Mechanic · Workshop day 13\n• Pending request selected — Staff · Workshop day 14\n• Change request selected — Staff · Workshop day 19\n• Diary · right-click a job — Staff · Workshop day 37\n• Diary · stacked jobs fanned out on hover — Staff · Workshop day 59, 61\n• Diary · choose a job from a stack — Staff · Workshop day 59, 61\n• New job · choose a free time — Staff · Workshop day 22\n• The diary: “Part arrived” on the job’s block — Staff · from journey 13\n• “All shops” on the diary: choose one — Owner · from journey 19\n• Booking a job into the other shop’s workshop: it goes as a request — Staff · from journey 19\n• At [Second site]: the request, from Bolton, to accept — Mechanic · from journey 19\n• Back at Bolton: the answer in Waiting for you — Staff · from journey 19",
-   "w": 2970
+   "y": 34838,
+   "text": "Situations of this screen (21)\n• The diary: a request with a deposit — Staff · from journey 3\n• Declining it refunds the deposit — Staff · from journey 3\n• The diary: the job waiting for the customer’s answer — Staff · from journey 4\n• The workshop at a glance — Staff · from journey 10\n• Diary · a mechanic’s view — Mechanic · Workshop day 13\n• Pending request selected — Staff · Workshop day 14\n• Change request selected — Staff · Workshop day 19\n• Diary · right-click a job — Staff · Workshop day 37\n• Diary · stacked jobs fanned out on hover — Staff · Workshop day 59, 61\n• Diary · choose a job from a stack — Staff · Workshop day 59, 61\n• New job · choose a free time — Staff · Workshop day 22\n• The diary: “Part arrived” on the job’s block — Staff · from journey 13\n• “All shops” on the diary: choose one — Owner · from journey 19\n• Booking a job into the other shop’s workshop: it goes as a request — Staff · from journey 19\n• At [Second site]: the request, from Bolton, to accept — Staff · from journey 19\n• Back at Bolton: the answer in Waiting for you — Staff · from journey 19\n• A workshop computer: the Working: Alex Morgan · Switch bar, and everything done is recorded under that name and role — Mechanic · Walk-through 8, decisions 1 and 4\n• A change on another device shows here within a few seconds — Staff and Mechanic · Walk-through 8, decision 2\n• A shared-queue job: I'll do this puts it in your column at your next free time; every device shows Taken by Jo Taylor — Staff and Mechanic · Walk-through 8, decision 5\n• Me is the person working now; anyone with Works in the workshop gets Me — Staff and Mechanic · Walk-through 8, fix M2\n• A workshop computer with nobody working: opens on Everyone — Staff and Mechanic · Walk-through 8, fix M2",
+   "w": 2000
   },
   "j12_sit_job-quick-overview": {
    "x": 6020,
-   "y": 34674,
-   "text": "Situations of this screen (1)\n• Diary · hover a job for its summary — Staff · Workshop day 65",
+   "y": 34794,
+   "text": "Situations of this screen (2)\n• Diary · hover a job for its summary — Staff · Workshop day 65\n• After Mark ready: Signed off by Alex Morgan · 15:30 in the hover summary — Staff and Mechanic · Build plan Q3",
    "w": 1280
   },
   "j12_sit_request-new": {
    "x": 7500,
-   "y": 34674,
+   "y": 34794,
    "text": "Situations of this screen (3)\n• Decline a booking request — Staff · Workshop day 15\n• Change request — Staff · Workshop day 15\n• Cancelled booking — Staff · Workshop day 15",
    "w": 1280
   },
   "j12_sit_new-job": {
    "x": 8980,
-   "y": 34674,
+   "y": 34794,
    "text": "Situations of this screen (1)\n• New job (from the day view) — Staff · Workshop day 18, 54",
    "w": 1280
   },
   "j12_sit_job-overview": {
    "x": 10460,
-   "y": 34718,
-   "text": "Situations of this screen (22)\n• Job page: each new line Needed or Optional, its reason, a photo, what it goes with — Staff · from journey 4 · Workshop day 20\n• Sending the quote, with Undo for a minute — Staff · from journey 4 · Workshop day 20\n• Withdraw the quote — Staff · from journey 4 · Quote 7\n• The job page once answered: approved and declined — Staff · from journey 4 · Workshop day 20\n• A £200 limit, and the work within it: no quote — Staff · from journey 4 · Workshop day 20\n• The job page: waiting for a part (Workshop day) — Staff · from journey 4 · Workshop day 20\n• At the counter, not paid: Take payment — Staff · from journey 5 · Workshop day 20\n• At the counter, deposit paid: the rest to pay — Staff · from journey 5 · Workshop day 20\n• At the counter, paid online: Hand over — Staff · from journey 5 · Workshop day 20\n• Hand over, with hand-back reminders switched on — Staff · from journey 5 · Workshop day 20\n• Collected, with Undo for a few minutes — Staff · from journey 5 · Workshop day 20\n• Job · booked in, tag printed — Staff · Workshop day 20\n• Job · quote — Staff · Workshop day 20\n• Job · in the workshop (mechanic) — Mechanic · Workshop day 20\n• Job · waiting for parts — Staff · Workshop day 20\n• Job · finished — Staff · Workshop day 20\n• Job · collection — Staff · Workshop day 20\n• The job: its part has arrived — Staff · from journey 13\n• The job: its held pads were sold at the till — reorder — Staff · from journey 13\n• The job: its pads weren’t in the delivery — still on order — Staff · from journey 13\n• The job: its pads came damaged — reorder — Staff · from journey 13\n• The job: the order was closed before its pads came — Staff · from journey 13",
-   "w": 2970
+   "y": 34838,
+   "text": "Situations of this screen (28)\n• Job page: each new line Needed or Optional, its reason, a photo, what it goes with — Staff · from journey 4 · Workshop day 20\n• Sending the quote, with Undo for a minute — Staff · from journey 4 · Workshop day 20\n• Withdraw the quote — Staff · from journey 4 · Quote 7\n• The job page once answered: approved and declined — Staff · from journey 4 · Workshop day 20\n• A £200 limit, and the work within it: no quote — Staff · from journey 4 · Workshop day 20\n• The job page: waiting for a part (Workshop day) — Staff · from journey 4 · Workshop day 20\n• At the counter, not paid: Take payment — Staff · from journey 5 · Workshop day 20\n• At the counter, deposit paid: the rest to pay — Staff · from journey 5 · Workshop day 20\n• At the counter, paid online: Hand over — Staff · from journey 5 · Workshop day 20\n• Hand over, with hand-back reminders switched on — Staff · from journey 5 · Workshop day 20\n• Collected, with Undo for a few minutes — Staff · from journey 5 · Workshop day 20\n• Job · booked in, tag printed — Staff · Workshop day 20\n• Job · quote — Staff · Workshop day 20\n• Job · in the workshop (mechanic) — Mechanic · Workshop day 20\n• Job · waiting for parts — Staff · Workshop day 20\n• Job · finished — Staff · Workshop day 20\n• Job · collection — Staff · Workshop day 20\n• The job: its part has arrived — Staff · from journey 13\n• The job: its held pads were sold at the till — reorder — Staff · from journey 13\n• The job: its pads weren’t in the delivery — still on order — Staff · from journey 13\n• The job: its pads came damaged — reorder — Staff · from journey 13\n• The job: the order was closed before its pads came — Staff · from journey 13\n• A workshop computer: Working: Alex Morgan · Switch in the job's header — Mechanic · Walk-through 8, decision 4\n• Open on another device: Jo Taylor has this job open — Staff and Mechanic · Walk-through 8, decision 2\n• Notes: the other person's words arrive as they type — Staff and Mechanic · Walk-through 8, decision 2\n• Two people change one line: Keep mine or Keep Alex's — Staff and Mechanic · Walk-through 8, decision 2\n• On a desktop, Add photo: Choose a file or Use my phone (a code to scan opens that line's photo step, no sign-in) — Mechanic · Walk-through 8, decision 6\n• Who did what, folded: name, what, time; Mark ready records Signed off by Alex Morgan · 15:30 — Staff and Mechanic · Walk-through 8, decision 7; build plan Q3",
+   "w": 2000
   },
   "j12_sit_overview": {
    "x": 14950,
-   "y": 34674,
+   "y": 34794,
    "text": "Situations of this screen (1)\n• Workshop Overview: “Part arrived” on the job’s row — Staff · from journey 13",
    "w": 1280
   },
   "j12_title": {
    "x": 0,
-   "y": 33218,
+   "y": 33338,
    "text": "12 · Workshop day — Staff and Mechanic",
    "kind": "title1",
-   "maxW": 16190
+   "maxW": 8000
   },
   "j13_sit_rs-hub": {
    "x": 0,
-   "y": 37304,
+   "y": 37604,
    "text": "Situations of this screen (3)\n• Deliveries and orders, for a shop that orders on supplier websites — Manager\n• Deliveries and orders, as Staff see it — Staff\n• Deliveries and orders: on its way, in and out — Staff · from journey 14",
    "w": 1280
   },
   "j13_sit_rs-receive": {
    "x": 1320,
-   "y": 37304,
+   "y": 37604,
    "text": "Situations of this screen (9)\n• A bike in the delivery: its frame number first — Staff\n• A frame number already in stock — Staff\n• Ready to book in: one item set aside, a bike with its frame numbers — Staff\n• Book in with an unknown barcode still on the list — Staff\n• A Cycle to Work bike in the delivery: “for Maya Patel · Cycle to Work — put it aside” — Staff\n• The Cycle to Work bike’s frame number becomes her order’s frame — Staff\n• Staff meet a barcode Wheelhouse doesn’t know: Leave it for [Owner or manager] — Staff\n• Left for [Owner or manager]: the rest books in — Staff\n• Receiving a transfer: one short — Staff · from journey 14",
    "w": 1280
   },
   "j13_sit_rs-add-product": {
    "x": 2640,
-   "y": 37304,
+   "y": 37604,
    "text": "Situations of this screen (1)\n• Adding the product Jo left: it counts into stock, then its label — Owner",
    "w": 1280
   },
   "j13_sit_rs-problem": {
    "x": 3960,
-   "y": 37304,
+   "y": 37604,
    "text": "Situations of this screen (2)\n• Missing, with no order: the part a job is waiting for — Staff\n• A transfer line marked missing — Staff · from journey 14",
    "w": 1280
   },
   "j13_sit_rs-delivery": {
    "x": 5440,
-   "y": 37304,
-   "text": "Situations of this screen (6)\n• Delivery booked in: the waiting job flagged, what’s next — Manager\n• Delivery booked in, as Staff see it: labels first, no invoice — Staff\n• Booked in without the job’s part: the job is still waiting — Owner\n• Print labels: only what needs one — Manager\n• Booked in: the bike put aside for Maya, her order moves on — Staff\n• A delivery, as Staff see it: no costs, no invoice — Staff",
+   "y": 37604,
+   "text": "Situations of this screen (6)\n• Delivery booked in: the waiting job flagged, what’s next — Manager\n• Delivery booked in, as Staff see it: labels first — Staff\n• Booked in without the job’s part: the job is still waiting — Owner\n• Print labels: only what needs one — Manager\n• Booked in: the bike put aside for Maya, her order moves on — Staff\n• A delivery, as Staff see it: no costs — Staff",
    "w": 1280
   },
   "j13_sit_rs-order": {
    "x": 6920,
-   "y": 37304,
+   "y": 37604,
    "text": "Situations of this screen (2)\n• An order, partly delivered: receive against it, or close it — Manager\n• Close the order? A job’s part is still to come — Owner",
    "w": 1280
   },
   "j13_sit_rs-restock": {
    "x": 8240,
-   "y": 37304,
+   "y": 37604,
    "text": "Situations of this screen (1)\n• Restock list, for customers: what jobs and online orders wait for — Owner",
    "w": 1280
   },
   "j13_later": {
    "x": 9720,
-   "y": 36408,
+   "y": 36708,
    "text": "Later — not drawn here (10)\n• Add the invoice: its total against what was booked in — Issue #116 question 6: invoice check later\n• The invoice matches: checked — Issue #116 question 6: invoice check later\n• The invoice doesn’t match: the difference, to query — Issue #116 question 6: invoice check later\n• Accept the difference: did a cost go up? — Issue #116 question 6: invoice check later\n• Queried with the supplier — Issue #116 question 6: invoice check later\n• The difference accepted, with Undo — Issue #116 question 6: invoice check later\n• Settings › Stockroom: the invoice check, on or off — Issue #116 question 6: invoice check later\n• Suppliers — Build plan: held back\n• Supplier catalogue — Build plan: held back\n• Send the order — Build plan: held back",
    "w": 720,
    "fill": "gray"
   },
   "j13_title": {
    "x": 0,
-   "y": 35848,
+   "y": 36148,
    "text": "13 · Receiving stock and purchase orders — Staff and Manager",
    "kind": "title1",
-   "maxW": 9480
+   "maxW": 8000
   },
   "j14_sit_st-list": {
    "x": 0,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (9)\n• Stock as Staff see it: no cost or margin — Staff\n• Searching by a measurement: “bearing 30 mm” — Manager\n• A category picked: bearings, its details as columns — Manager\n• A category picked: derailleurs, number of gears — Manager\n• Searching a size: that size and colour — Manager\n• Nothing matches the search — Manager\n• A barcode Wheelhouse doesn’t know — Manager\n• A new shop: no products yet — Manager\n• Ticked products: labels, send, change prices — Manager",
    "w": 1280
   },
   "j14_sit_st-categories": {
    "x": 1480,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (1)\n• Settings › Stockroom: when an adjustment shows on Today — Manager",
    "w": 1280
   },
   "j14_sit_st-product": {
    "x": 4280,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (4)\n• A product’s page as Staff see it — Staff\n• A bike’s page: each frame number, in stock or sold — Manager\n• Sizes and colours: one product, a grid of stock — Manager\n• A product’s stock at each shop, and on its way — Manager",
    "w": 1280
   },
   "j14_sit_st-prices": {
    "x": 5760,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (1)\n• Prices changed, with Undo — Manager",
    "w": 1280
   },
   "j14_sit_st-adjust": {
    "x": 7240,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (1)\n• Adjust stock: faulty, onto the supplier’s To return list — Owner",
    "w": 1280
   },
   "j14_sit_tk-hub": {
    "x": 10200,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (1)\n• Stock take as Staff see it: join a count — Staff",
    "w": 1280
   },
   "j14_sit_tk-start": {
    "x": 11520,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (1)\n• Start a count: a category — Manager",
    "w": 1280
   },
   "j14_sit_tk-count": {
    "x": 12840,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (1)\n• Counting the products below zero: still to find — Staff",
    "w": 1280
   },
   "j14_sit_tk-diff": {
    "x": 14160,
-   "y": 39500,
+   "y": 39800,
    "text": "Situations of this screen (1)\n• Count applied, with Undo — Manager",
    "w": 1280
   },
   "j14_title": {
    "x": 0,
-   "y": 38044,
+   "y": 38344,
    "text": "14 · Stock take and stock control — Staff and Manager",
    "kind": "title1",
-   "maxW": 15400
+   "maxW": 8000
   },
   "j15_sit_cs-page": {
    "x": 1320,
-   "y": 41696,
+   "y": 41996,
    "text": "Situations of this screen (9)\n• The staff customer page: the request, and what’s in the way — Staff · from journey 7 · Account 2, 4\n• Customer account — Staff · from journey 12 · Customer service 11\n• Over her account limit — Staff · Customer service 5, 6, 12; walk-throughs 5 M5, 6 M3, 7 L3\n• A new customer: nothing in the history yet — Staff · Customer service 5, 6, 12; walk-throughs 5 M5, 6 M3, 7 L3\n• A shop with customer accounts switched off (Payments › Ways to pay) — Staff · Customer service 5, 6, 12; walk-throughs 5 M5, 6 M3, 7 L3\n• Her Cycle to Work order in her history, opening the order — Staff · Customer service 5, 6, 12; walk-throughs 5 M5, 6 M3, 7 L3\n• After collection: the bike in her Bikes, with its frame number — Staff · Customer service 5, 6, 12; walk-throughs 5 M5, 6 M3, 7 L3\n• A possible duplicate, flagged on the page — Staff · Customer service 5, 6, 12; walk-throughs 5 M5, 6 M3, 7 L3\n• Her page at a Lightspeed shop: which Lightspeed customer she’s linked to, and Change — Staff · Customer service 5, 6, 12; walk-throughs 5 M5, 6 M3, 7 L3",
    "w": 1280
   },
   "j15_sit_cs-add": {
    "x": 3960,
-   "y": 41696,
+   "y": 41996,
    "text": "Situations of this screen (3)\n• Edit her details — Staff · Customer service 3, 5, 12(4)\n• Add a customer: a company or club — Staff · Customer service 3, 5, 12(4)\n• Adding someone who’s already here — Staff · Customer service 3, 5, 12(4)",
    "w": 1280
   },
   "j15_sit_cs-privacy": {
    "x": 8240,
-   "y": 41696,
+   "y": 41996,
    "text": "Situations of this screen (3)\n• The shop’s Privacy requests: from the website, and what’s in the way — Manager · from journey 7 · Account 2, 4\n• Deleting someone’s details: sales stay, without their name — Manager · Customer service 9, 12(2)\n• Can’t delete yet: money, credit or a bike still open — Manager · Customer service 9, 12(2)",
    "w": 1280
   },
   "j15_title": {
    "x": 0,
-   "y": 40240,
+   "y": 40540,
    "text": "15 · Customer service — Staff and Manager",
    "kind": "title1",
-   "maxW": 10960
+   "maxW": 8000
   },
   "j16_sit_eod-count": {
    "x": 1320,
-   "y": 43892,
+   "y": 44192,
    "text": "Situations of this screen (12)\n• Count it: note by note — Staff · from journey 10 · Opening 2; Cash-up 3\n• “Close it”: yesterday’s close the day, at banking — Manager · from journey 10 · Opening 8 H3; WT2 H1\n• Close the day — sales still waiting: count and bank now — Manager · Cash-up 2–6; WT2 H1, L5\n• Counted and banked — the day closes once the sales have sent — Manager · Cash-up 2–6; WT2 H1, L5\n• Close the day: sales that need checking — Manager · Cash-up 2–6; WT2 H1, L5\n• Count the cash: with the expected amount shown (shop setting) — Staff · Cash-up 2–6; WT2 H1, L5\n• Count the cash: the difference — Staff · Cash-up 2–6; WT2 H1, L5\n• Count the cash: spot on — Staff · Cash-up 2–6; WT2 H1, L5\n• Paid-outs and banking: leave the float, bank the rest — Manager · Cash-up 2–6; WT2 H1, L5\n• Paid-outs and banking: nothing taken out today — Manager · Cash-up 2–6; WT2 H1, L5\n• Card sales don’t match the card machine — Manager · Cash-up 2–6; WT2 H1, L5\n• Ready to close the day — Manager · Cash-up 2–6; WT2 H1, L5",
    "w": 1280
   },
   "j16_title": {
    "x": 0,
-   "y": 42436,
+   "y": 42736,
    "text": "16 · End-of-day cash-up — Staff and Manager",
    "kind": "title1",
    "maxW": 5200
   },
   "j17_sit_rp-home": {
    "x": 0,
-   "y": 46178,
-   "text": "Situations of this screen (5)\n• Reports for Staff with “Can see reports” (one shop, no costs) — Staff\n• A saved report’s menu: rename, share, delete — Owner\n• A saved report deleted, with Undo — Owner\n• Reports: “Activity log” beside the ready-made reports — Owner and Manager · from journey 20\n• Staff with “Can see reports”: no activity log — Staff · from journey 20",
+   "y": 46478,
+   "text": "Situations of this screen (7)\n• Reports for Staff with “Can see reports” (one shop, no costs) — Staff\n• A saved report’s menu: rename, share, delete — Owner\n• A saved report deleted, with Undo — Owner\n• Reports: “Activity log” beside the ready-made reports — Owner and Manager · from journey 20\n• Staff with “Can see reports”: no activity log — Staff · from journey 20\n• All shops in the shop menu: the strip has a row for each shop — takings, margin and a link to that shop — Owner · Issue #116 question 1; Multiple sites 1 (Jack, 3 Oct: the strip follows the shop menu)\n• Staff with Can see reports, without Can see costs and margin: no margin figure in the strip — Staff · Reports and accounts 5; issue #116 question 1",
    "w": 1280
   },
   "j17_sit_rp-sales": {
    "x": 1480,
-   "y": 46178,
+   "y": 46478,
    "text": "Situations of this screen (5)\n• Sales for all shops: shop by shop — Owner\n• Sales over 12 months: a line, against the year before — Owner\n• Nothing sold yet, and nothing to compare with — Owner\n• Pick dates — Owner\n• The changed report, with Save as my report — Owner",
    "w": 1280
   },
   "j17_sit_rp-change": {
    "x": 2960,
-   "y": 46178,
+   "y": 46478,
    "text": "Situations of this screen (2)\n• Save as my report: Just me to start — Owner\n• A name you’ve already used — Owner",
    "w": 1280
   },
   "j17_sit_rp-takings": {
    "x": 4440,
-   "y": 46178,
+   "y": 46478,
    "text": "Situations of this screen (2)\n• Takings and cash-ups for all shops — Owner\n• A reopened day, left out and said so — Owner",
    "w": 1280
   },
   "j17_sit_rp-day": {
    "x": 5760,
-   "y": 46178,
+   "y": 46478,
    "text": "Situations of this screen (1)\n• Reopen a closed day: a reason first — Owner",
    "w": 1280
   },
   "j17_sit_rp-vat": {
    "x": 7240,
-   "y": 46178,
-   "text": "Situations of this screen (3)\n• When does your VAT quarter start? (asked once) — Owner\n• VAT for all shops — Owner\n• VAT with the invoice check off: stock purchases from your accounts software — Owner",
+   "y": 46478,
+   "text": "Situations of this screen (2)\n• When does your VAT quarter start? (asked once) — Owner\n• VAT for all shops — Owner",
+   "w": 1280
+  },
+  "j17_sit_rp-margin": {
+   "x": 8560,
+   "y": 46478,
+   "text": "Situations of this screen (1)\n• Margin and stock value for all shops: a shop column — Owner · Reports and accounts 8 (M13)",
    "w": 1280
   },
   "j17_sit_rp-workshop": {
    "x": 9880,
-   "y": 46178,
+   "y": 46478,
    "text": "Situations of this screen (1)\n• Workshop for all shops: shop by shop, and how full at each — Owner",
    "w": 1280
   },
   "j17_sit_rp-discounts": {
    "x": 11200,
-   "y": 46178,
-   "text": "Situations of this screen (1)\n• Discounts and refunds as Staff see them (without who) — Staff",
+   "y": 46478,
+   "text": "Situations of this screen (2)\n• Discounts and refunds as Staff see them (without who) — Staff\n• Discounts and refunds for all shops: a shop column — Owner · Reports and accounts 8 (M13)",
    "w": 1280
   },
   "j17_sit_rp-accounts-connect": {
    "x": 15320,
-   "y": 46178,
+   "y": 46478,
    "text": "Situations of this screen (6)\n• Which Xero account each line goes to — Owner · Reports and accounts 4\n• Xero choices (scrolled down): Cycle to Work, its commission and shortfalls — Owner · Reports and accounts 4\n• A category with no Xero account — Owner · Reports and accounts 4\n• What was sent: sent, not sent, waiting, not closed yet — Owner · Reports and accounts 4\n• Xero disconnected: days wait to be sent — Owner · Reports and accounts 4\n• Disconnect Xero — Owner · Reports and accounts 4",
    "w": 1280
   },
+  "j17_later": {
+   "x": 16800,
+   "y": 45582,
+   "text": "Later — not drawn here (1)\n• VAT with the supplier invoice check: invoices booked in — Issue #116 question 6: invoice check later",
+   "w": 720,
+   "fill": "gray"
+  },
   "j17_title": {
    "x": 0,
-   "y": 44722,
+   "y": 45022,
    "text": "17 · Reports and accounts — Owner, Manager and Staff",
    "kind": "title1",
-   "maxW": 16560
+   "maxW": 8000
   },
   "j18_sit_ws-start-which": {
    "x": 0,
-   "y": 48284,
+   "y": 48614,
    "text": "Situations of this screen (3)\n• Step 3: start with every product online, or nothing — Owner\n• Step 3 when buying online asked first: the answer, with Change — Owner\n• Set up with Shopify, step 2: connect — Owner",
    "w": 1280
   },
   "j18_sit_ws-page": {
    "x": 2800,
-   "y": 48284,
+   "y": 48614,
    "text": "Situations of this screen (10)\n• On, with unpublished changes and payments connected — Manager\n• The unpublished changes, with Publish and Discard — Manager\n• Without “Can edit the website”: who to ask — Staff\n• Can edit the website, but not change settings — Staff\n• Moving from Citrus Lime: ready for switch-over, Turn it on waits — Owner\n• Switch-over morning: the website is ready — Turn it on — Owner\n• Published, with View website — Manager\n• Published while the website is off — Manager\n• Discard unpublished changes? Kept in History — Manager\n• Connected to Shopify: the Website page — Owner",
    "w": 1280
   },
   "j18_sit_ws-tracking": {
    "x": 5760,
-   "y": 48284,
+   "y": 48614,
    "text": "Situations of this screen (2)\n• Google Analytics on: goes live when you publish — Manager\n• An ID that doesn’t look right: no cookie choice yet — Manager",
    "w": 1280
   },
   "j18_sit_ws-pay-none": {
    "x": 7240,
-   "y": 48284,
+   "y": 48614,
    "text": "Situations of this screen (6)\n• The test payment worked, while moving from Citrus Lime — Owner\n• Back from [payment provider]: make a test payment — Owner\n• The test payment worked — Owner\n• Connecting didn’t finish: nothing changed — Owner\n• [payment provider] needs more details — Owner\n• Online orders with Shopify: Shopify takes website payments — Owner",
    "w": 1280
   },
   "j18_sit_ws-shopify-connect": {
    "x": 8720,
-   "y": 48284,
+   "y": 48614,
    "text": "Situations of this screen (5)\n• Couldn’t connect to Shopify — Owner\n• Before sending: how many products will change — Owner\n• Sending to Shopify — Owner\n• Products that couldn’t be sent to Shopify — Owner\n• Switching to Wheelhouse’s website: what changes — Owner",
    "w": 1280
   },
   "j18_later": {
    "x": 10200,
-   "y": 47388,
+   "y": 47718,
    "text": "Later — not drawn here (29)\n• The editor opens on a ready-made home page, still off — Issue #116 question 2: fixed website design, editor later\n• The editor while moving: off until switch-over morning — Issue #116 question 2: fixed website design, editor later\n• While moving: point your address here on switch-over morning — Issue #116 question 3: own web address frozen\n• The editor: sections down the side; pointing at a part of the page — Issue #116 question 2: fixed website design, editor later\n• A section chosen: its settings, and the photo’s description — Issue #116 question 2: fixed website design, editor later\n• + Add section: below the chosen section — Issue #116 question 2: fixed website design, editor later\n• Dragging a section (or its arrows, or Alt + arrow keys) — Issue #116 question 2: fixed website design, editor later\n• Moved: the page shows the new order, with Undo — Issue #116 question 2: fixed website design, editor later\n• A section removed, with Undo — Issue #116 question 2: fixed website design, editor later\n• The header: logo, and one link as a button — Issue #116 question 2: fixed website design, editor later\n• Preview on a phone — Issue #116 question 2: fixed website design, editor later\n• Bigger: the preview without the panel — Issue #116 question 2: fixed website design, editor later\n• The Page menu: your pages, and Wheelhouse’s shop pages — Issue #116 question 2: fixed website design, editor later\n• Couldn’t save — trying again — Issue #116 question 2: fixed website design, editor later\n• Someone else is editing: view only, or take over — Issue #116 question 2: fixed website design, editor later\n• Theme: main colour, background, fonts, corners, buttons — Issue #116 question 2: fixed website design, theme later\n• A colour that’s hard to read: where, and two fixes — Issue #116 question 2: fixed website design, theme later\n• Publishing with a hard-to-read colour asks once — Issue #116 question 2: fixed website design, theme later\n• The theme on a product page (preview only) — Issue #116 question 2: fixed website design, theme later\n• Fonts: a chosen list of tested pairs — Issue #116 question 2: fixed website design, theme later\n• Pages: ready-made, two with wording to check — Issue #116 question 2: fixed website design, pages later\n• Add a page: linked from the footer by default — Issue #116 question 2: fixed website design, pages later\n• Page settings: a page that always stays in the footer — Issue #116 question 2: fixed website design, pages later\n• Editing Collection and returns: starting wording to check — Issue #116 question 2: fixed website design, pages later\n• Web address: the free one, or use your own — Issue #116 question 3: own web address frozen\n• An address that needs an ending — Issue #116 question 3: own web address frozen\n• Your own address: the 2 records, and what it changes — Issue #116 question 3: own web address frozen\n• Not connected yet — up to a day — Issue #116 question 3: own web address frozen\n• Your own address connected — Issue #116 question 3: own web address frozen",
    "w": 720,
    "fill": "gray"
   },
   "j18_title": {
    "x": 0,
-   "y": 46828,
+   "y": 47158,
    "text": "18 · Website management — Manager",
    "kind": "title1",
-   "maxW": 9960
+   "maxW": 8000
   },
   "j19_sit_ms-switch-open": {
    "x": 0,
-   "y": 50510,
-   "text": "Situations of this screen (2)\n• After switching: “Now working in [Second site]” — Owner\n• Someone with one shop: its name, no switcher (staff with two shops get their shops, no “All shops”) — Staff",
+   "y": 50840,
+   "text": "Situations of this screen (3)\n• After switching: “Now working in [Second site]” — Owner\n• Someone with one shop: its name, no switcher (staff with two shops get their shops, no “All shops”) — Staff\n• While [Second site] is being set up: [Second site] · [n] steps to get it ready — Owner · Walk-through 7 H1 (as taken)",
    "w": 1280
   },
   "j19_sit_ms-service-price": {
    "x": 1480,
-   "y": 50510,
+   "y": 50840,
    "text": "Situations of this screen (1)\n• Not offered at one shop — Owner",
    "w": 1280
   },
   "j19_sit_ms-add-shop": {
    "x": 4280,
-   "y": 50510,
+   "y": 50840,
    "text": "Situations of this screen (1)\n• A code another shop already uses — Owner",
    "w": 1280
   },
   "j19_title": {
    "x": 0,
-   "y": 49054,
+   "y": 49384,
    "text": "19 · Multiple sites — Owner, Manager and Staff",
    "kind": "title1",
    "maxW": 6840
   },
   "j20_sit_ops-log": {
    "x": 0,
-   "y": 52496,
+   "y": 52856,
    "text": "Situations of this screen (5)\n• A manager’s activity log: everyone’s lines — Owner and Manager\n• All shops: every line shows its shop — Owner and Manager\n• Nothing matches the filters — Owner and Manager\n• Staff following a link to the log — Staff\n• Settings › Office › Your data: the Activity log — Owner and Manager · from journey 21 · Lightspeed 10 (M1, M2)",
    "w": 1280
   },
   "j20_later": {
    "x": 1480,
-   "y": 51600,
+   "y": 51960,
    "text": "Later — not drawn here (16)\n• Opened from a Today alert, with Back to Today — Issue #116 question 5: oversight extras later\n• The first sign-in: what Wheelhouse records — Issue #116 question 5: oversight extras later\n• Your settings: Send feedback, and what’s recorded about you — Issue #116 question 5: oversight extras later\n• Your activity: a person’s own lines — Issue #116 question 5: \"What Wheelhouse records about you\" and See my own activity (audit H2) later\n• Today, owners and managers: a discount, voids, a price below cost — Issue #116 question 5: oversight extras later\n• Settings › Office › Alerts on Today: set by the owner — Issue #116 question 5: oversight extras later\n• Settings › Office › Signed-in devices — Issue #116 question 5: oversight extras later\n• Sign a computer out — Issue #116 question 5: oversight extras later\n• Signed out — Issue #116 question 5: oversight extras later\n• A person: “Sign out everywhere” — Issue #116 question 5: oversight extras later\n• Sign Jo Taylor out everywhere? — Issue #116 question 5: oversight extras later\n• Send feedback: Send waits until something is written — Issue #116 question 5: oversight extras later\n• Send feedback: what happened, and which screen — Issue #116 question 5: oversight extras later\n• With a picture of the screen, customer details hidden — Issue #116 question 5: oversight extras later\n• Couldn’t send: kept, try again — Issue #116 question 5: oversight extras later\n• Thanks — we’ve got it — Issue #116 question 5: oversight extras later",
    "w": 720,
    "fill": "gray"
   },
   "j20_title": {
    "x": 0,
-   "y": 51040,
+   "y": 51400,
    "text": "20 · Management oversight — Owner",
    "kind": "title1",
    "maxW": 1600
   },
   "j21_sit_ls-connect-signin": {
    "x": 0,
-   "y": 54572,
+   "y": 54932,
    "text": "Situations of this screen (3)\n• Connect Lightspeed: staff on work orders — Owner · Lightspeed 7, 10 (M5)\n• Two shops: which Lightspeed shop is which — Owner · Lightspeed 7, 10 (M5)\n• Connect Lightspeed: working, not proven yet — Owner · Lightspeed 7, 10 (M5)",
    "w": 1280
   },
   "j21_sit_ls-settings-on": {
    "x": 1320,
-   "y": 54572,
+   "y": 54932,
    "text": "Situations of this screen (4)\n• Settings › Office › Lightspeed: not connected — Owner · Lightspeed 7\n• A manager sees the connection, read only — Owner and Manager · Lightspeed 7\n• Disconnect Lightspeed? — Owner · Lightspeed 10 (L5)\n• Lightspeed signed Wheelhouse out: reconnect — Owner · Lightspeed 7",
    "w": 1280
   },
   "j21_sit_ls-part-search": {
    "x": 2800,
-   "y": 54572,
+   "y": 54932,
    "text": "Situations of this screen (1)\n• Add a part while Lightspeed can’t be reached — Staff · Lightspeed 5, 11",
    "w": 1280
   },
   "j21_sit_ls-job-sent": {
    "x": 4120,
-   "y": 54572,
-   "text": "Situations of this screen (13)\n• A job before Lightspeed is connected — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• A new price approved: the work order updated — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• A part’s price changed in Lightspeed: keep it or ask again — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Waiting for Maya’s answer on the new price — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Cancelled: the work order marked cancelled — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Not sent yet: choose the customer — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Waiting to reach Lightspeed — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Not sure the work order arrived — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Ready, but not in Lightspeed yet — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Ready: waiting to be paid in Lightspeed — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Paid in Lightspeed — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Payment not checked: tick “Paid in Lightspeed” — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Collected, not shown as paid — Staff · Lightspeed 2, 3, 6, 10 (H3), 12",
+   "y": 54932,
+   "text": "Situations of this screen (16)\n• A job before Lightspeed is connected — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• A new price approved: the work order updated — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• A part’s price changed in Lightspeed: keep it or ask again — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Waiting for Maya’s answer on the new price — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Cancelled: the work order marked cancelled — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Not sent yet: choose the customer — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Waiting to reach Lightspeed — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Not sure the work order arrived — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Ready, but not in Lightspeed yet — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Ready: waiting to be paid in Lightspeed — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Paid in Lightspeed — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Payment not checked: tick “Paid in Lightspeed” — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Collected, not shown as paid — Staff · Lightspeed 2, 3, 6, 10 (H3), 12\n• Ready, Maya still to choose: the strip keeps Choose the customer — Staff · Walk-through 6 H2; Lightspeed shops 10\n• Ready, not sure it arrived: the strip keeps Check this in Lightspeed — Staff · Walk-through 6 H2; Lightspeed shops 10\n• Maya said no to £[£]: back to Keep £28.00 or Ask Maya again — Staff · Walk-through 6 M4; Lightspeed shops 12",
    "w": 1280
   },
   "j21_sit_ls-customer-pick": {
    "x": 5440,
-   "y": 54572,
-   "text": "Situations of this screen (1)\n• Book in: choose Maya in Lightspeed while she’s at the desk — Staff · Lightspeed 4; walk-through 6 M1",
+   "y": 54932,
+   "text": "Situations of this screen (2)\n• Book in: choose Maya in Lightspeed while she’s at the desk — Staff · Lightspeed 4; walk-through 6 M1\n• Changing Maya's Lightspeed customer: WH-1042's unpaid work order moves to the customer you choose; paid work orders stay where they are — Staff · Walk-through 6 M3; Lightspeed shops 4",
    "w": 1280
   },
   "j21_sit_ls-job-check": {
    "x": 6920,
-   "y": 54572,
-   "text": "Situations of this screen (1)\n• Hand over with no work order: pays later, or rung up by hand — Staff · Lightspeed 6; walk-through 6 H2",
+   "y": 54932,
+   "text": "Situations of this screen (2)\n• Hand over with no work order: pays later, or rung up by hand — Staff · Lightspeed 6; walk-through 6 H2\n• The box's first sentence follows the cause — Staff · Walk-through 6 H2; Lightspeed shops 10",
    "w": 1280
   },
   "j21_sit_ls-hand-over-unpaid": {
    "x": 8400,
-   "y": 54572,
+   "y": 54932,
    "text": "Situations of this screen (3)\n• “Check Lightspeed now” finds the payment — Staff · Lightspeed 10 (H2, L5)\n• Hand over while Lightspeed can’t be reached — Staff · Lightspeed 10 (H2, L5)\n• Payment not checked: “Has Maya paid?” — Staff · Lightspeed 10 (H2, L5)",
    "w": 1280
   },
   "j21_title": {
    "x": 0,
-   "y": 53116,
+   "y": 53476,
    "text": "21 · Lightspeed shops (Release 1) — Owner, Manager and Staff",
    "kind": "title1",
-   "maxW": 10960
+   "maxW": 8000
   }
  },
  "designSystems": [

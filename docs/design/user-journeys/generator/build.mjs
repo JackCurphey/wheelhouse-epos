@@ -473,6 +473,11 @@ const canvas = {
   notes,
   designSystems: JSON.parse(readFileSync(here + P.live, 'utf8')).designSystems ?? [],
 };
+// The canvas editor caps these when it saves (seen 3 Oct): a sticky note's
+// width at 2000, a title's maxW at 8000, a board title at 120 characters.
+// Capped here too, so a build matches what the canvas keeps.
+for (const n of Object.values(canvas.notes)) { if (n.w > 2000) n.w = 2000; if (n.maxW > 8000) n.maxW = 8000; }
+for (const b of Object.values(canvas.boards)) if (b.title && b.title.length > 120) b.title = b.title.slice(0, 120);
 writeFileSync(root + 'project/canvas.json', JSON.stringify(canvas, null, 1));
 // Boards on the live canvas that this build no longer makes: publish these as
 // null so they are removed.
