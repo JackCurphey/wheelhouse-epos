@@ -9,7 +9,7 @@ const DRAWN = { ...stage1.screens };
 import { FONT_LINK } from './ui.mjs';
 import { TOUCH_TITLE_OVERRIDE } from './diary-titles.mjs';
 import { workflow, WF_W, WF_H } from './workflow.mjs';
-import { loadPlan } from './consolidate/plan.mjs';
+import { loadPlan, blocks } from './consolidate/plan.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
 // One canvas for the whole product (issue #116 step 3, Jack, 3 Oct: "start
@@ -96,6 +96,9 @@ const allScreens = journeys.flatMap((j) => j.rows.flatMap((r) => r.screens.map((
 const byId = new Map(allScreens.map((x) => [x.id, x]));
 for (const x of allScreens) if (!plan.has(x.id)) throw new Error(`no one-canvas plan for ${x.id} (consolidate/${x.journey.id}.mjs)`);
 const isKept = (id) => plan.get(id)?.kind === 'keep';
+// Each kept screen's building block, named on its board (issue #116 step 6).
+const BLOCKS = blocks();
+const blockOf = (id) => { const n = plan.get(id)?.block; return n ? `Block ${n}: ${String(BLOCKS.get(n) ?? '').replace(/\s*\(.*$/, '')}` : ''; };
 // The kept screen a screen's situation belongs to (itself when kept).
 const ownerOf = (id) => { const e = plan.get(id); return e.kind === 'keep' ? id : e.kind === 'into' || e.kind === 'same' ? ownerOf(e.id) : null; };
 // Sizes shown for a kept screen: the plan's, else rule 3 — phone for a
@@ -177,12 +180,13 @@ const navLink = (href, text, label) => href
   ? `<a href="${href}" aria-label="${label}" style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; background: rgba(255,255,255,0.18); color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none">${text}</a>`
   : `<span style="display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 8px; color: rgba(255,255,255,0.45); font-size: 14px; font-weight: 600">${text}</span>`;
 
+let CUR_BLOCK = ''; // the building block of the board being drawn
 function strip(st, meta, nav, extra = '') {
   const s = STATUS[st];
   return `<div style="height: ${STRIP}px; box-sizing: border-box; padding: 0 10px 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: ${s.bar}; color: #ffffff">
 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
 <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${s.long}</span>
-<span style="font-size: 12px; font-weight: 500; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(meta)} · ${nav.pos}</span>
+<span style="font-size: 12px; font-weight: 500; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${CUR_BLOCK ? `${esc(CUR_BLOCK)} · ` : ''}${esc(meta)} · ${nav.pos}</span>
 </div>
 <nav style="display: flex; gap: 6px; flex-shrink: 0">
 ${extra}${navLink(nav.prev, '‹ Prev', 'Previous screen')}
@@ -363,6 +367,7 @@ journeys.filter((j) => P.ids.includes(j.id)).forEach((j) => {
       const scr = { ...scr0 };
       const x0 = x;
       for (const { file, v, sand } of variantsOf(j, scr)) {
+        CUR_BLOCK = blockOf(scr.id);
         const nav = { ...navFor(list, file), };
         let title, meta, w, h, html, helmet = null;
         if (sand) {

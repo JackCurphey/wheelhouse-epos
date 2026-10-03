@@ -4,6 +4,8 @@
 //   2. every link between boards opens a board that is on the canvas, and
 //   3. no note says "undefined" or sits on top of another note, and
 //   4. the canvas is inside the Design type's limits: 200 notes, 512 files, and
+//   7. every screen board names its building block (issue #116 step 6:
+//      "each with its building block"),
 //   6. no note is longer than the 5,000 characters the canvas editor keeps
 //      (it cuts the rest off when it saves, seen 3 Oct), and
 //   5. every Lightspeed situation line says it waits (Lightspeed shops, later
@@ -36,6 +38,7 @@ for (const f of canvas.order) {
   const { w, h } = canvas.boards[f];
   const src = readFileSync(new URL(f, dir), 'utf8');
   for (const [, href] of src.matchAll(/ href="([^"#:]+\.dc\.html)"/g)) if (!files.has(href)) bad.push(`${f}: links to ${href}, which is not on the canvas`);
+  if (!['Main.dc.html', 'Workflow.dc.html'].includes(f) && !/Block \d+: /.test(src)) bad.push(`${f}: doesn't name its building block`);
   const helmet = /<helmet>\n([\s\S]*?)<\/helmet>\n/.exec(src)?.[1] ?? '';
   const body = /<\/helmet>\n([\s\S]*)\n<\/x-dc>/.exec(src)?.[1] ?? '';
   const p = await b.newPage({ viewport: { width: w, height: h } });
