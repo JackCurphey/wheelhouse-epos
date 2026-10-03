@@ -41,3 +41,9 @@ export default {
   'customer-message': into('cp-summary', '', "Release 1 picture 'Customer follows up' (Customer · phone)"), // old Release 1 picture; replaced by journey 7's job note (ac-job-note), itself a line on cp-summary
   'preferences': into('ac-contact', '', "Release 1 picture 'Change customer update channels' (Customer · phone)"), // old Release 1 picture; replaced by journey 7's ac-contact
 };
+
+export const lines = [
+  // The second walk's smaller questions, 3 Oct (answer 1).
+  { on: 'dq-quote', text: "From a Not sure what's wrong? booking: every line is the mechanic's, each Needed or Optional with its reason; a deposit paid shows as Deposit paid £[deposit] and Still to pay when you collect £[balance]", who: 'Customer', decision: 'Booking mode 2026-09-04 §7.4; Book a repair 12 (H3); Quote 2, 7; 3 Oct (second walk Q1)' },
+  { on: 'dq-quote', text: "From a Not sure what's wrong? booking: no charge for looking at the bike; every line on the quote is new", who: 'Customer', decision: '3 Oct (second walk, case 1c)' },
+];

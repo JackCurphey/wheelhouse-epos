@@ -64,4 +64,8 @@ export const lines = [
   { on: 'job-overview', text: 'At a Lightspeed shop: the Lightspeed strip under the header, Hand over in place of Take payment, and the header tag reads Agreed', who: 'Staff', decision: 'Lightspeed shops 10; walk-through 6 L5' },
   { on: 'new-job', text: 'Saved: Booking confirmed sent to 07700 900 142, or No message — no phone or email', who: 'Staff', decision: 'Book a repair 12; 3 Oct (walk-through 9 L4)' },
   { on: 'diary', text: "Maya's own request, WH-1042, with no deposit, in Waiting for you", who: 'Staff', decision: 'Walk-through 1 L6' },
+  // The second walk's smaller questions, 3 Oct (answer 9).
+  { on: 'job-overview', text: 'Waiting for a part on a transfer that was cancelled: Banner: Transfer T-[0000] was cancelled on [date] before the Shimano brake pads B05S-RX came · reorder them, or tell Maya', who: 'Staff and Mechanic', decision: 'Stock control 11; UX walk-through decision 6 (walk-through 3, rs-part-order-closed); 3 Oct (second walk Q9)' },
+  { on: 'job-overview', text: 'Mark ready for collection with the quote still unanswered: it waits until the quote is answered, recorded from a phone call, or withdrawn', who: 'Staff and Mechanic', decision: 'Quote 4; 3 Oct (second walk, case 1a)' },
+  { on: 'job-overview', text: 'Collecting at the other shop: a bike is collected and paid for only at the shop that did the work', who: 'Staff', decision: 'Multiple sites 2; 3 Oct (second walk, case 9c)' },
 ];

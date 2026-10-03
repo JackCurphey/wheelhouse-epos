@@ -21,3 +21,8 @@ export default {
   'eod-finish': into('eod-count', CLOSE, "Steps 1–5 done; report step 'Ready' with 'Close the day and show the report'"),
   'eod-z': keep(5),
 };
+
+export const lines = [
+  // The second walk's smaller questions, 3 Oct (answer 9).
+  { on: 'eod-count', text: "Closing the day at [Second site] while the owner is looking at Bolton: only [Second site]'s tills and count close; Bolton's day stays open", who: 'Owner, Manager, or anyone with Can close the day', decision: 'Multiple sites 2, 9 (H2); Cash-up 6; 3 Oct (second walk Q9)' },
+];

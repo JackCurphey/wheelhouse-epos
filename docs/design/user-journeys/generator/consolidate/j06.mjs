@@ -85,4 +85,7 @@ export const lines = [
   { on: 'cw-order-held', text: 'More, as Staff: Cancel the order when it holds no deposit; with a deposit held, A deposit is held: ask a manager to cancel', who: 'Staff', decision: 'Cycle to Work 7; 3 Oct (walk-through 5 L4)' },
   { on: 'cw-customer-view', text: 'Collected: the bike and its frame number', who: 'Customer', decision: 'Cycle to Work 6, 7; walk-through 5 M2' },
   { on: 'cw-customer-view', text: 'Opened from the email\'s See your Cycle to Work bike: a private link, no sign-in, like a repair\'s; also in the website account when signed in', who: 'Customer', decision: 'Cycle to Work 7; 3 Oct (walk-through 12 M4)' },
+  // The second walk's smaller questions, 3 Oct (answer 6).
+  { on: 'cw-new', text: "Maya isn't a customer yet: + New customer under the Customer box, as on New job, opens Add a customer and puts her on the order; a number someone already has shows [Name] already has this number", who: 'Staff', decision: 'Workshop day 26; Customer service 3, 5; 3 Oct (second walk Q6)' },
+  { on: 'cw-order-held', text: 'A bike back after the provider has paid: a manager chooses a refund to the provider or store credit to the customer, and the order reopens', who: 'Owner and Manager', decision: 'Cycle to Work 7 (money steps); 3 Oct (second walk, case 6d)' },
 ];

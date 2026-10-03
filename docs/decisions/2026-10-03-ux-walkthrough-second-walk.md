@@ -53,3 +53,25 @@ answered on 3 Oct from a checklist, every one with option 1.
 16. **The job's tag for staff reads "Ask before any extra work"**, the
     customer's own choice (walk-through 12 H1, following Drop off's 3 Oct
     later change).
+
+## The edge-case lines, checked (3 Oct)
+
+Jack checked the ten drafted lines in `docs/design/user-journeys/walk-2/edge-case-lines.md`
+("all look right") and took the recommended option for the six cases no
+decision covered ("go with the recommended ones"):
+
+- **1a.** "Mark ready for collection" waits while a quote is unanswered,
+  until it is answered, recorded from a phone call (Quote 4), or withdrawn.
+- **1c.** Looking at a "Not sure what's wrong?" bike costs nothing; every
+  line on its quote is new.
+- **4d.** What the one-row Fix pop-up asks for each kind of imported row is
+  left for the build, once Citrus Lime's real export files are known (Moving
+  2), and logged then for Jack to overrule.
+- **6d.** A Cycle to Work bike back after the provider has paid: a manager
+  chooses a refund to the provider or store credit to the customer, and the
+  order reopens.
+- **9c.** A bike is collected and paid for only at the shop that did the work.
+- **9d.** A manager can only give someone the shops the manager works at; the
+  owner can give any shop.
+
+All are situation lines on the one canvas; no drawing changes.

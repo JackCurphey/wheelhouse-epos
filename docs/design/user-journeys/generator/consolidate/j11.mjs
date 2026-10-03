@@ -78,4 +78,8 @@ export const lines = [
   { on: 'till-refund', text: 'Finishing a noted refund: the sale and items already filled in', who: 'Staff', decision: 'UX walk-through decisions 5; 3 Oct (walk-through 2 H1)' },
   // T7 — handing over an online order
   { on: 'till-collect', text: 'Handed over: Handed over · Undo for a few minutes', who: 'Staff', decision: 'Collect and pay 5 (M4); walk-through 10 L2' },
+  // The second walk's smaller questions, 3 Oct (answers 4 and 6).
+  { on: 'till-sale', text: "Serving: [name] menu, for the Owner or a manager: Give [name] their PIN, for a till-only person, a first PIN or a cleared one; it opens [Name]'s till PIN, with the screen turned to them", who: 'Owner and Manager', decision: 'UX walk-through decision 6 (walk-through 4 M2); Signing in, 3 Oct (walk-through 4 M3); App map 13; 3 Oct (second walk Q4)' },
+  { on: 'till-sale', text: "Offline during a Cycle to Work sale: the order is handed over from the till's own copy, marked To send, and the sale waits with the others to send", who: 'Staff', decision: 'UX walk-through decision 5 (walk-through 2 M7); Cycle to Work 5; 3 Oct (second walk Q6)' },
+  { on: 'till-pay', text: "Card declined for what Maya pays, after Cycle to Work · [Provider]: the provider's line stays and nothing is taken from the card; Try the card again or Pay another way", who: 'Staff', decision: 'Selling at the till 6; Cycle to Work 7 (H2); 3 Oct (second walk Q6)' },
 ];

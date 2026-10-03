@@ -33,4 +33,7 @@ export default {
 export const lines = [
   { on: 'mv-start', text: 'Running alongside: the tills wait for switch-over day — check-in says Sales start on switch-over day, [date], and Take payment is off', who: 'Owner', decision: 'Moving from Citrus Lime, 3 Oct (walk-through 4 H2)' },
   { on: 'mv-start', text: 'The website is ready ticks once no Words and photos row says Check this', who: 'Owner', decision: 'Website management, 3 Oct (walk-through 4 H3)' },
+  // The second walk's smaller questions, 3 Oct (answer 4).
+  { on: 'mv-start', text: 'Fix on a row that needs a look: a pop-up for that one row; new problem rows from a weekly refresh use the same list and Fix', who: 'Owner', decision: 'UX walk-through decision 6 (walk-through 4 M5); Moving from Citrus Lime 2, 9 (M3); 3 Oct (second walk Q4)' },
+  { on: 'mv-start', text: "A weekly refresh with a file Wheelhouse couldn't read: the same Couldn't read it and Choose another file on the Weekly refresh card, with Ask us to help", who: 'Owner', decision: 'Moving from Citrus Lime 3, 9 (M1, M4); 3 Oct (second walk Q4)' },
 ];

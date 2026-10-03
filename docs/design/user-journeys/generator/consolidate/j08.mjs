@@ -57,4 +57,7 @@ export const lines = [
   { on: 'set-msg-list', text: 'Quote to approve, draft: Hi Maya, North Street Cycles, Bolton has a quote for more work on your Trek Domane AL 3. See it and say yes or no to each part: [link] — no app or sign-in needed. Your repair · WH-1042.', who: 'Manager', decision: 'Build-plan questions Q9, 3 Oct (walk-through 12 M2)' },
   { on: 'set-till-quick', text: 'Workshop computers, listed beside the tills: [name] · … › Stop using as a workshop computer', who: 'Owner', decision: 'Walk-through 8 decision 1; 3 Oct (walk-through 8 H3)' },
   { on: 'set-till-quick', text: 'A till\'s …: Check Jo Taylor out', who: 'Owner', decision: 'Walk-through 8, 3 Oct (walk-through 8 H3)' },
+  // The second walk's smaller questions, 3 Oct (answer 9).
+  { on: 'set-staff-person', text: 'Unticking a shop in Works at for someone with jobs booked there: it says so first, before it saves', who: 'Owner', decision: 'Multiple sites 9 (H5); 3 Oct (second walk Q9)' },
+  { on: 'set-staff-person', text: 'Works at: a manager can only give someone the shops they work at themselves; the owner can give any shop', who: 'Owner and Manager', decision: 'Multiple sites 9; 3 Oct (second walk, case 9d)' },
 ];
