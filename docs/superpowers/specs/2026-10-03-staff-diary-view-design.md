@@ -1,0 +1,84 @@
+# The staff diary, piece 1: seeing the week and the day
+
+**Asked for by Jack, 3 Oct 2026** ("just continue building if you can"),
+after the shell (PR #97). The design is approved: journey 12, Workshop day
+(`docs/decisions/2026-09-27-workshop-day-review.md`, decision 69), drawn by
+`docs/design/user-journeys/generator/diary.mjs` (`diary-desktop`,
+`diary-day-desktop`, the tablet boards).
+
+## The pieces of the diary
+
+1. **This piece: seeing it.** Week and Day views, the toolbar, the "Waiting
+   for you" column, the legend. Nothing changes a job yet.
+2. Answering what's waiting: the request pop-ups (accept, decline, change,
+   cancellation seen), using the existing routes.
+3. Moving jobs: drag to another time or mechanic (`PUT /api/workshop-jobs/:id`).
+4. The phone diary: one day as a timeline, the Waiting sheet.
+5. New job, the hover summary, stacks that fan out, the right-click menu.
+6. Multi-day jobs as one block per day (decision 52, settled 3 Oct); this
+   needs a database change, so it is asked about first.
+
+## Intent (piece 1)
+
+`/workshop/diary` shows the shop's real jobs the way the drawings do, so
+staff can see the week at a glance and what is waiting for them.
+
+## Approach
+
+- **Data**, all existing routes: `GET /api/workshop-jobs?start&end`,
+  `GET /api/employees?role=mechanic`, `GET /api/workshop-settings` (opening
+  hours) and `GET /api/workshop-waiting` (refreshed every minute, as the old
+  diary does).
+- **Toolbar** (decision 60): Week/Day switch; previous and next arrows, the
+  date range and Today; people chips (Everyone, then each mechanic, tinted
+  when chosen). No New job button until piece 5.
+- **Waiting for you (n)**, 224px on the left: one card per item, with its
+  kind as a coloured label, the customer, the service and the time. Choosing
+  a card moves the diary to that job's week and rings its block (decision 14).
+  The Open button arrives with the pop-ups in piece 2.
+- **Week grid**: seven days from Monday, an hour gutter, 30-minute rows
+  covering the shop's opening hours (09:00–18:00 if none are set), a "No
+  time" row for jobs without a time, and today's header marked "Today".
+  Overlapping jobs share the column side by side (decision 59's lanes).
+- **Day view**: one column per mechanic for one day.
+- **Job blocks** (decision 45): tinted fill with an ink outline in the
+  status colour; bike on the first line, the job's title on the second;
+  the Day view also writes the status word. The full description (bike, job,
+  customer, WH number, status, time) is read out to screen readers.
+- **Status colours**: the drawings' own (`ST` in `diary.mjs`), added to
+  `src/styles/theme.css` as `--wh-state-*` tokens, contrast-checked.
+- **Which jobs show, and how** (the old diary's rules in
+  `public/diary-marks.js`): a booking request is purple and shows in the
+  Everyone view; a change request is amber with a dashed outline at the
+  time asked for; a cancellation by the customer is struck through until
+  someone marks it seen; declined, expired and other cancelled jobs are
+  hidden.
+- **Legend** under the grid.
+- **Tablet**: the same page in the narrower frame. **Phone**: the week grid
+  scrolls sideways until piece 4.
+
+## Decided here, for Jack to overrule
+
+- **Status mapping.** The drawings have six states; the database has more.
+  Waiting for parts is `workState = waiting_parts`; Ready is
+  `workState = complete` (collected or not); started and on-hold work shows
+  as Scheduled.
+- **"Waiting for the customer" (teal)** needs the quote's state, which the
+  jobs list doesn't send. It is left out of the grid and the legend until
+  the server sends it.
+- **No "Me" view for mechanics** yet: the server doesn't link a login to a
+  mechanic.
+
+## Tests first
+
+Pure rules (`tests/screens/diary-rules.test.js`): status mapping, the week's
+days, grid hours, lanes, waiting card wording. The page in jsdom
+(`tests/screens/diary-page.test.js`): blocks in the right day and time,
+people chips filter, Week/Day, previous/next/Today, the waiting column and
+choosing a card, the change-request outline, the struck-through cancellation.
+Status colour tokens pinned and contrast-checked. Each watched failing first.
+
+## Done when
+
+`npm test`, typecheck, lint, build and the browser tests pass, and the diary
+is checked in a browser with real jobs at computer and tablet widths.

@@ -16,8 +16,9 @@ export type WorkshopJob = {
   mechanicId: number | null;
   mechanicName?: string | null;
   jobDate: string;
-  startTime: string;
-  endTime: string;
+  /** Null for a job with no set time (the diary's "No time" row). */
+  startTime: string | null;
+  endTime: string | null;
   status: string;
   reference: string;
   bookingState: string;
@@ -25,6 +26,10 @@ export type WorkshopJob = {
   workState: string;
   /** Echoed on every action; see jobAction in client.ts. */
   version: number;
+  /** A customer's change request: the time they asked for, or null. */
+  requested?: { jobDate: string; startTime: string | null; endTime: string | null; mechanicId: number | null } | null;
+  cancelledBy?: string | null;
+  cancellationSeenAt?: string | null;
   notes: string | null;
   orderId: number | null;
   orderStatus: string | null;
