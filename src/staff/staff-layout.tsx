@@ -4,6 +4,7 @@ import { apiMutate } from '@/lib/api/client.ts';
 import { useSession, type SessionUser } from '@/lib/auth/use-session.ts';
 import { NAV_ROUTES, pageLabel, roomsFor, type NavItem, type Role } from './nav.ts';
 import { NavIcon } from './nav-icon.tsx';
+import { HeaderSlotContext } from './header-slot.ts';
 
 /**
  * The frame every staff page sits in (journey A; Workshop day decision 68):
@@ -186,6 +187,7 @@ export function StaffLayout() {
   const session = useSession();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
 
   if (session.status === 'loading') return <p className="p-8">Loading…</p>;
@@ -256,10 +258,14 @@ export function StaffLayout() {
           >
             <NavIcon name="menu" size={22} />
           </button>
-          <h1 className="m-0 truncate text-lg font-bold md:text-xl">{title}</h1>
+          <h1 className="m-0 min-w-0 grow truncate text-lg font-bold md:text-xl">{title}</h1>
+          {/* A page can put its own phone actions here (the diary's Waiting button). */}
+          <div ref={setHeaderSlot} className="flex shrink-0 items-center gap-1.5 md:hidden" />
         </header>
         <main className="min-h-0 grow p-3.5 md:px-[22px] md:py-4 lg:px-7 lg:py-[18px]">
-          <Outlet />
+          <HeaderSlotContext.Provider value={headerSlot}>
+            <Outlet />
+          </HeaderSlotContext.Provider>
         </main>
       </div>
       {menuOpen ? (

@@ -203,8 +203,8 @@ export const SNAP_MIN = 15;
  * its column, as a time snapped to 15 minutes and kept inside the grid's
  * hours (so a job never starts before them or runs past their end).
  */
-export function dropStart(y: number, range: { start: number; end: number }, durationMin: number): number {
-  const raw = range.start + (y / SLOT_PX) * 30;
+export function dropStart(y: number, range: { start: number; end: number }, durationMin: number, slotPx = SLOT_PX): number {
+  const raw = range.start + (y / slotPx) * 30;
   const snapped = Math.round(raw / SNAP_MIN) * SNAP_MIN;
   return Math.max(range.start, Math.min(range.end - durationMin, snapped));
 }
