@@ -240,3 +240,55 @@ test('a login that isn’t a staff member who takes sales is asked who’s servi
   assert.equal(sales()[0].cashierId, 31);
   assert.ok(calls.some((c) => c.url === '/api/employees?role=cashier'));
 });
+
+// Fresh review of #111, 4 Oct: closing the window mid-save hid a sale that
+// the server still saved, so Take payment again sold it twice.
+test('while a card payment is saving, Escape can’t close the window, and Paid follows', async () => {
+  const t = await openTill();
+  await addService(t);
+  let answer;
+  saleReply = new Promise((resolve) => { answer = resolve; });
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  const dialog = t.ui.getByRole('dialog');
+  const escape = new window.Event('cancel', { cancelable: true });
+  dialog.dispatchEvent(escape);
+  assert.equal(escape.defaultPrevented, true);
+  answer({ status: 201, ok: true, json: async () => ({ id: 501 }) });
+  assert.ok(has(await pay.findByText('Paid')));
+  assert.equal(sales().length, 1);
+});
+
+test('if the reply is lost, staff are told the sale may have saved', async () => {
+  const t = await openTill();
+  await addService(t);
+  saleReply = Promise.reject(new TypeError('Failed to fetch'));
+  saleReply.catch(() => {});
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(has(await pay.findByText(/may have saved/)));
+  assert.equal(has(pay.queryByText(/nothing was saved/)), false);
+});
+
+test('typed amounts are sent to the penny', async () => {
+  const t = await openTill();
+  await scanPads(t);
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Cash/ }));
+  t.fireEvent.change(await pay.findByLabelText('Or type the amount'), { target: { value: '30.004' } });
+  t.fireEvent.click(pay.getByRole('button', { name: 'Cash taken' }));
+  assert.ok(has(await pay.findByText('Paid')));
+  assert.equal(sales()[0].cashTendered, 30);
+});
+
+test('each step moves keyboard focus to its title', async () => {
+  const t = await openTill();
+  await addService(t);
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  await t.waitFor(() => assert.equal(document.activeElement?.textContent, 'Card · £18.00'));
+  t.fireEvent.click(pay.getByRole('button', { name: 'Card approved' }));
+  await t.waitFor(() => assert.equal(document.activeElement?.textContent, 'Paid'));
+});

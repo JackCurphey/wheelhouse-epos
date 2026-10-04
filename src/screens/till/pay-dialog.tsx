@@ -55,21 +55,26 @@ export function PayDialog({ lines, onClose, onNextSale }: { lines: TillLine[]; o
     try {
       await apiMutate('/api/sales', {
         items: lines.map(asSaleItem),
-        cashAmount: cash,
-        cardAmount: card,
-        cashTendered: tendered,
+        // To the penny: the screen rounds what staff type, so the record must too.
+        cashAmount: pence(cash) / 100,
+        cardAmount: pence(card) / 100,
+        cashTendered: tendered === null ? null : pence(tendered) / 100,
         cashierId: serving.id,
         sellPastStock: true,
       });
       setStep({ kind: 'paid', how, change: tendered === null ? 0 : (pence(tendered) - pence(cash)) / 100 });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't reach the server — nothing was saved. Try again.");
+      setError(err instanceof ApiError ? err.message : "Lost touch with the server, so the sale may have saved. Check the sale went through before taking payment again.");
     } finally {
       setSaving(false);
     }
   }
 
   const go = (s: Step) => { setError(null); setStep(s); };
+
+  // Each step replaces the buttons, so move keyboard focus to the new title.
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { titleRef.current?.focus(); }, [step.kind]);
   const close = () => (step.kind === 'paid' ? onNextSale() : onClose());
 
   let title = `Take payment · ${money(total)}`;
@@ -136,10 +141,16 @@ export function PayDialog({ lines, onClose, onNextSale }: { lines: TillLine[]; o
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) close(); }} dismissOnBackdrop={false} aria-labelledby="pay-title" aria-describedby="pay-sub">
+    <Dialog
+      open
+      onOpenChange={(open) => { if (!open) close(); }}
+      // While a payment is saving, Escape must not hide a sale the server is
+      // still recording (fresh review of pull request 111, 4 Oct).
+      onCancel={(event) => { if (saving) event.preventDefault(); }}
+      dismissOnBackdrop={false} aria-labelledby="pay-title" aria-describedby="pay-sub">
       <DialogHeader>
         <div className="min-w-0 grow">
-          <DialogTitle id="pay-title">{title}</DialogTitle>
+          <DialogTitle id="pay-title" ref={titleRef} tabIndex={-1} className="outline-none">{title}</DialogTitle>
           <DialogDescription id="pay-sub">{description}</DialogDescription>
         </div>
       </DialogHeader>
