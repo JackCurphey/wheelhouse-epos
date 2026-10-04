@@ -114,7 +114,8 @@ unless a rule in the project's `CLAUDE.md` says to stop.
    against the spec, the boards and their situation lists.
 6. **Tests pass** locally (`npm test`, `npm run test:browser`), then a pull
    request; merge when CI is green.
-7. **Update** the build board artifact and `.agents/STATUS.md`.
+7. **Update** `.agents/STATUS.md`. (Jack's dashboard tracks each session as it
+   goes; it replaced the build board on 4 Oct.)
 
 Pull requests aim for 250–600 changed lines. A database change listed in
 this plan needs no separate approval (see the questions file, Q1).

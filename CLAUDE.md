@@ -43,9 +43,22 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
    merged.
 6. Add a small, well-known dependency when a piece needs it; say so in the
    pull request.
-7. Keep the build board artifact (https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
-   source `docs/build-progress/build-board.html`, edit only its `BOARD` block)
-   and `.agents/STATUS.md` current after every pull request opens or merges.
+7. Keep `.agents/STATUS.md` current after every pull request opens or merges.
+
+## Jack's dashboard (applies now, not only once the build starts)
+
+For any task with more than 5 steps, or likely to take over 30 minutes, have
+the `dashboard-builder` agent set up Jack's dashboard (`.dashboard/index.html`
+in the main checkout, on his Mac only) before starting, and update it after
+every step. When a decision is needed, add it to the dashboard's questions
+with the default and carry on with the default, unless it is on the "Always
+stop and ask Jack" list below: those still stop and wait, and tell the agent
+which questions have stopped work. This replaced the build board artifact
+(Jack, 4 Oct, `docs/decisions/2026-10-04-dashboard-builder.md`); don't update
+the old board.
+
+The impeccable design skill is for the dashboard only. Never use it on app or
+website screens: those are built exactly to the drawings.
 
 ## Always stop and ask Jack
 
@@ -62,7 +75,7 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 Short spec section → tests first, each watched failing for the right reason
 → build to the drawings → fresh review → `npm test` and
 `npm run test:browser` pass locally → pull request → merge when CI is green →
-update the board and STATUS. Pull requests aim for 250–600 changed lines.
+update STATUS. Pull requests aim for 250–600 changed lines.
 Outside services (payments, email, sign-in, accounts software, Lightspeed,
 Citrus Lime) are built behind an adapter with a pretend version until a real
 account exists.

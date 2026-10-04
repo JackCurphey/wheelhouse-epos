@@ -25,6 +25,8 @@ the idle-time fallback and live updates (walk-through 8, decisions 2–3).
 6. Add a small, well-known piece of add-on software when a piece needs it,
    noted in the pull request.
 7. Keep the build board and the status file up to date as I go.
+   *Later change (Jack, 4 Oct): the build board was replaced by a live dashboard
+   on Jack's Mac; see `2026-10-04-dashboard-builder.md`.*
 
 Still stops for Jack: spending money; creating or connecting a real
 account or key; touching real shop data; deleting anything else; anything
