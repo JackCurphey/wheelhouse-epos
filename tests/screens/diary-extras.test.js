@@ -345,7 +345,51 @@ test('on a phone the job menu sheet says whose job it is', async () => {
   const b = await block(t.ui);
   b.focus();
   t.fireEvent.keyDown(b, { key: 'F10', shiftKey: true });
-  const menu = t.within(await t.ui.findByRole('menu', { name: 'Job actions' }));
+  const el = await t.ui.findByRole('menu', { name: 'Job actions' });
+  const menu = t.within(el);
   assert.ok(has(menu.queryByText('Standard service · WH-1042')));
   assert.ok(has(menu.queryByText('Maya Patel · Trek Domane')));
+  // A menu holds only menu items, so the heading isn't read inside it; the
+  // menu's description says whose job it is instead.
+  const head = menu.getByText('Standard service · WH-1042').parentElement;
+  assert.equal(head.getAttribute('aria-hidden'), 'true');
+  assert.equal(document.getElementById(el.getAttribute('aria-describedby'))?.textContent, 'Standard service · WH-1042Maya Patel · Trek Domane');
+});
+
+test('the chooser box closes on a click outside, on Tab out, and when the diary scrolls', async () => {
+  const t = await openDiary(PAIR());
+  const stack = await t.ui.findByRole('button', { name: /^2 jobs booked 10:00 to 11:30/ });
+  const name = { name: '2 jobs at 10:00' };
+  t.fireEvent.click(stack);
+  await t.ui.findByRole('dialog', name);
+  t.fireEvent.mouseDown(document.body);
+  assert.equal(has(t.ui.queryByRole('dialog', name)), false);
+  t.fireEvent.click(stack);
+  const tile = t.within(await t.ui.findByRole('dialog', name)).getAllByRole('button')[0];
+  t.fireEvent.blur(tile, { relatedTarget: stack });
+  assert.equal(has(t.ui.queryByRole('dialog', name)), false);
+  t.fireEvent.click(stack);
+  await t.ui.findByRole('dialog', name);
+  t.fireEvent.scroll(window);
+  assert.equal(has(t.ui.queryByRole('dialog', name)), false);
+});
+
+test('the job menu closes when the diary scrolls', async () => {
+  const t = await openDiary([FULL]);
+  const b = await block(t.ui);
+  b.focus();
+  t.fireEvent.keyDown(b, { key: 'F10', shiftKey: true });
+  await t.ui.findByRole('menu', { name: 'Job actions' });
+  t.fireEvent.scroll(window);
+  assert.equal(has(t.ui.queryByRole('menu')), false);
+});
+
+test('Enter on a stack always gets the small tiles, even after a tap', async () => {
+  const t = await openDiary(PAIR());
+  const stack = await t.ui.findByRole('button', { name: /^2 jobs booked 10:00 to 11:30/ });
+  t.fireEvent.pointerDown(stack, { button: 0, pointerType: 'touch', clientX: 200, clientY: 200 });
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  t.fireEvent.click(stack, { detail: 0 }); // what Enter on a button sends
+  const chooser = t.within(await t.ui.findByRole('dialog', { name: '2 jobs at 10:00' }));
+  assert.ok(has(chooser.queryByText('Puncture repair · 10:00')));
 });

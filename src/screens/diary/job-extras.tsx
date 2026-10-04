@@ -168,8 +168,14 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview }: {
     const away = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) closeRef.current(false);
     };
+    // It sits where it was opened, so scrolling the diary closes it.
+    const scrolled = () => closeRef.current(false);
     document.addEventListener('mousedown', away);
-    return () => document.removeEventListener('mousedown', away);
+    window.addEventListener('scroll', scrolled, true);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      window.removeEventListener('scroll', scrolled, true);
+    };
   }, []);
 
   function onKey(e: KeyboardEvent<HTMLDivElement>) {
@@ -199,6 +205,7 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview }: {
       ref={ref}
       role="menu"
       aria-label="Job actions"
+      aria-describedby={at.phone ? 'job-menu-head' : undefined}
       onKeyDown={onKey}
       onContextMenu={(e) => e.preventDefault()}
       className={at.phone
@@ -207,8 +214,9 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview }: {
       style={at.phone ? undefined : pos}
     >
       {at.phone ? (
-        // As drawn (diary-context-menu, phone): the job, then whose it is.
-        <span className="flex flex-col gap-0.5 px-4 pt-3.5 pb-2">
+        // As drawn (diary-context-menu, phone): the job, then whose it is. A
+        // menu holds only menu items, so this is the menu's description.
+        <span id="job-menu-head" aria-hidden="true" className="flex flex-col gap-0.5 px-4 pt-3.5 pb-2">
           <span className="text-base font-bold">{headOf(job)}</span>
           <span className="text-sm text-[var(--wh-muted)]">{whoOf(job)}</span>
         </span>
@@ -268,12 +276,12 @@ export function StackChooser({ jobs, time, at, onClose, onPick, onMove, onMenu }
           if ((e.key === 'm' || e.key === 'M') && canMove) { e.preventDefault(); onMove(j); }
           else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); onMenu(j); }
         }}
-        className={`flex flex-col items-start gap-px overflow-hidden rounded-md border-[1.75px] px-2 py-1.5 text-left ${at.touch || at.phone ? 'min-h-14' : ''} ${TILE[j.state]}`}
+        className={`flex flex-col items-start gap-px overflow-hidden rounded-md px-2 py-1.5 text-left ${at.touch || at.phone ? 'min-h-14 border' : 'border-[1.75px]'} ${TILE[j.state]}`}
       >
-        <span className="w-full truncate text-xs font-bold text-[var(--wh-ink)]">{j.bikeLabel || 'Bike'}</span>
+        <span className={`w-full truncate font-bold text-[var(--wh-ink)] ${at.phone ? 'text-sm' : 'text-xs'}`}>{j.bikeLabel || 'Bike'}</span>
         {at.touch || at.phone ? (
           <>
-            <span className="w-full truncate text-xs font-bold">{j.title}</span>
+            <span className={`w-full truncate font-bold ${at.phone ? 'text-[13px]' : 'text-xs'}`}>{j.title}</span>
             <span className="w-full truncate text-xs text-[var(--wh-ink)] opacity-80">{`${j.reference} · ${j.startTime ?? ''}–${j.endTime ?? ''}`}</span>
           </>
         ) : (
@@ -328,8 +336,14 @@ function StackBox({ jobs, time, at, onClose, hints, tiles }: {
     const away = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) closeRef.current(false);
     };
+    // It sits where it was opened, so scrolling the diary closes it.
+    const scrolled = () => closeRef.current(false);
     document.addEventListener('mousedown', away);
-    return () => document.removeEventListener('mousedown', away);
+    window.addEventListener('scroll', scrolled, true);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      window.removeEventListener('scroll', scrolled, true);
+    };
   }, []);
   return (
     <div

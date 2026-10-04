@@ -180,6 +180,7 @@ test('a chosen job in a stack marks the stack', async () => {
     fireEvent.click(within(ui.getByRole('region', { name: 'Waiting for you (2)' })).getByRole('button', { name: /Lena Fox/ }));
     const stack = await ui.findByRole('button', { name: /^2 jobs booked 11:00 to 12:00/ });
     assert.ok(stack.getAttribute('aria-label').endsWith(', chosen from Waiting for you'));
+    assert.ok(stack.className.includes('var(--wh-highlight)'), 'the chosen outline shows');
   } finally {
     NEXT_WEEK.pop();
   }

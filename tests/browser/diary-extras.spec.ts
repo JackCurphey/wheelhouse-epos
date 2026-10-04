@@ -126,3 +126,25 @@ test('nudging a fanned job a little keeps it on its own day', async ({ page, con
   const put = await saved;
   expect(put.request().postDataJSON().jobDate).toBe(WED);
 });
+
+// Fresh review of the follow-up: an ordinary job grabbed off-centre and dropped
+// near the far edge of the next day lands on that day, where the pointer is.
+test('a job grabbed near its edge lands on the day under the pointer', async ({ page, context }) => {
+  const THU = '2026-10-22';
+  const FRI = '2026-10-23';
+  const mech = await seedMechanic(owner.shop.id, { name: 'Rae Moss' });
+  const j = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Bottom bracket', jobDate: THU, startTime: '16:00', endTime: '17:00', mechanicId: mech } });
+  expect(j.status, JSON.stringify(j.body)).toBe(201);
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const block = page.getByRole('button', { name: /^Bike, Bottom bracket/ });
+  const b = (await block.boundingBox())!;
+  const fri = (await page.locator('[data-diary-col="4"]').boundingBox())!;
+  await page.mouse.move(b.x + 4, b.y + 8);
+  await page.mouse.down();
+  const saved = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/api\/workshop-jobs\/\d+$/.test(r.url()));
+  await page.mouse.move(fri.x + fri.width - 4, b.y + 8, { steps: 8 });
+  await page.mouse.up();
+  expect((await saved).request().postDataJSON().jobDate).toBe(FRI);
+});

@@ -318,8 +318,11 @@ function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: {
         aria-hidden="true"
         data-fan
         data-open={fanned ? 'true' : undefined}
-        className="invisible absolute data-[open=true]:visible data-[open=true]:opacity-100 top-0 left-1/2 grid -translate-x-1/2 gap-1.5 opacity-0 drop-shadow-[0_10px_26px_var(--wh-backdrop)] transition-[opacity,visibility] group-hover/stack:visible group-hover/stack:opacity-100 group-hover/stack:delay-300 motion-reduce:transition-none"
-        style={{ gridTemplateColumns: `repeat(${cols}, 128px)` }}
+        className={`invisible absolute left-1/2 grid -translate-x-1/2 opacity-0 transition-[opacity,visibility] group-hover/stack:visible group-hover/stack:opacity-100 group-hover/stack:delay-300 motion-reduce:transition-none data-[open=true]:visible data-[open=true]:opacity-100 ${fanned
+          // Press and hold (touchStackBlock): the jobs on a lifted tray.
+          ? '-top-2 gap-2 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-2 shadow-[0_14px_32px_var(--wh-backdrop)]'
+          : 'top-0 gap-1.5 drop-shadow-[0_10px_26px_var(--wh-backdrop)]'}`}
+        style={{ gridTemplateColumns: `repeat(${cols}, ${fanned ? 150 : 128}px)` }}
       >
         {jobs.map((j) => <FanTile key={j.partId} job={j} colIndex={colIndex} touch={fanned} />)}
       </div>
@@ -341,14 +344,14 @@ function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch
       tabIndex={-1}
       onPointerDown={(e) => { onPress?.(e); if (move && movable(job)) move.onPointerDown(job, colIndex, e); }}
       onClick={() => move?.onOpen(job)}
-      className={`flex w-32 touch-none flex-col overflow-hidden rounded-[5px] border-[1.75px] px-1.5 py-[3px] text-left ${tileClass(job.state)}`}
+      className={`flex touch-none flex-col overflow-hidden px-1.5 py-[3px] text-left ${touch ? 'w-[150px] rounded-md border' : 'w-32 rounded-[5px] border-[1.75px]'} ${tileClass(job.state)}`}
       style={{ height: Math.max((dur / 30) * SLOT_H - 4, SLOT_H - 6) }}
       {...hover}
     >
-      <span className="truncate text-[11px] font-bold text-[var(--wh-ink)]">{job.bikeLabel || 'Bike'}</span>
-      <span className="truncate text-[10px] font-bold">{job.title}</span>
+      <span className="truncate text-xs font-bold text-[var(--wh-ink)]">{job.bikeLabel || 'Bike'}</span>
+      <span className="truncate text-xs font-bold">{job.title}</span>
       {/* Fanned by a press and hold: the touch tile's number and times (touchStackTile). */}
-      <span className="truncate text-[9px] text-[var(--wh-muted)]">{touch ? `${job.reference} · ${job.startTime}–${job.endTime ?? ''}` : job.reference}</span>
+      <span className="truncate text-xs text-[var(--wh-muted)]">{touch ? `${job.reference} · ${job.startTime}–${job.endTime ?? ''}` : job.reference}</span>
     </button>
   );
 }
@@ -709,18 +712,19 @@ export function DiaryPage() {
       if (e.button !== 0) return;
       const rect = e.currentTarget.getBoundingClientRect();
       drag.current = { job, origCol: colIndex, x: e.clientX, y: e.clientY, grab: e.clientY - rect.top, moved: false };
-      // The column follows how far the pointer has moved from the job's own
-      // column, so a fanned tile hanging over the next day doesn't land there
-      // when nudged (fresh review of pull request 112).
+      // A fanned tile can hang over the next day. Grabbed there, the pointer
+      // counts as being at the edge of the job's own day, so a nudge doesn't
+      // land it next door (fresh review of pull request 112). Anywhere else,
+      // the day is simply the one under the pointer.
       const ownCol = document.querySelector<HTMLElement>(`[data-diary-col="${colIndex}"]`)?.getBoundingClientRect();
-      const ownX = ownCol ? ownCol.left + ownCol.width / 2 : e.clientX;
+      const overhang = ownCol ? e.clientX - Math.max(ownCol.left, Math.min(e.clientX, ownCol.right - 1)) : 0;
       const onMove = (ev: globalThis.PointerEvent) => {
         const d = drag.current;
         if (!d) return;
         if (!d.moved && Math.abs(ev.clientX - d.x) < 4 && Math.abs(ev.clientY - d.y) < 4) return;
         d.moved = true;
         const cols = [...document.querySelectorAll<HTMLElement>('[data-diary-col]')];
-        const x = ownX + (ev.clientX - d.x);
+        const x = ev.clientX - overhang;
         const over = cols.find((el) => {
           const r = el.getBoundingClientRect();
           return x >= r.left && x < r.right;
