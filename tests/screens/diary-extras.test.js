@@ -286,3 +286,25 @@ test('lifting a finger after a long press doesn’t open the job', async () => {
   // The job window opens at once (titled "Job" until it loads), so any dialog means it opened.
   assert.equal(has(t.ui.queryByRole('dialog')), false);
 });
+
+test('after a press and hold with no tap at the end, the next tap on the stack still opens the chooser', async () => {
+  const t = await openDiary(PAIR());
+  const stack = await t.ui.findByRole('button', { name: /^2 jobs booked 10:00 to 11:30/ });
+  const fan = stack.parentElement.querySelector('[data-fan]');
+  t.fireEvent.pointerDown(stack, { button: 0, pointerType: 'touch', clientX: 200, clientY: 200 });
+  await t.waitFor(() => assert.equal(fan.dataset.open, 'true'), { timeout: 2000 });
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  await new Promise((r) => setTimeout(r, 20));
+  t.fireEvent.click(stack);
+  assert.ok(has(await t.ui.findByRole('dialog', { name: '2 jobs at 10:00' })));
+});
+
+test('a booking request in a stack isn’t offered M, and M leaves the chooser open', async () => {
+  const t = await openDiary([PAIR()[0], { ...PAIR()[1], bookingState: 'pending' }]);
+  const chooser = await openChooser(t);
+  const tile = chooser.getByRole('button', { name: /^Specialized Sirrus, Puncture repair, WH-1043, Pending/ });
+  const hint = document.getElementById(tile.getAttribute('aria-describedby'));
+  assert.equal(hint.textContent.includes('M to move'), false);
+  t.fireEvent.keyDown(tile, { key: 'm' });
+  assert.ok(has(t.ui.queryByRole('dialog', { name: '2 jobs at 10:00' })));
+});

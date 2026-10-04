@@ -244,15 +244,17 @@ export function StackChooser({ jobs, time, onClose, onPick, onMove, onMenu }: {
       </DialogHeader>
       <DialogBody className="grid grid-cols-2 gap-2">
         <p id="stack-move-hint" className="sr-only">Press Enter to open the job, M to move it with the arrow keys, or the Menu key for more.</p>
-        {jobs.map((j) => (
+        <p id="stack-open-hint" className="sr-only">Press Enter to open the job, or the Menu key for more.</p>
+        {jobs.map((j) => { const canMove = j.state !== 'pending' && j.state !== 'cancelled'; return (
           <button
             key={j.partId}
             type="button"
             aria-label={`${j.bikeLabel || 'Bike'}, ${j.title}, ${j.reference}, ${STATE_LABEL[j.state]}`}
-            aria-describedby="stack-move-hint"
+            aria-describedby={canMove ? 'stack-move-hint' : 'stack-open-hint'}
             onClick={() => onPick(j)}
             onKeyDown={(e) => {
-              if (e.key === 'm' || e.key === 'M') { e.preventDefault(); onMove(j); }
+              // A booking request is answered before it's moved; a cancellation isn't moved.
+              if ((e.key === 'm' || e.key === 'M') && canMove) { e.preventDefault(); onMove(j); }
               else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); onMenu(j); }
             }}
             className={`flex min-h-14 flex-col items-start gap-0.5 overflow-hidden rounded-[5px] border-[1.75px] px-2 py-1.5 text-left ${TILE[j.state]}`}
@@ -260,7 +262,7 @@ export function StackChooser({ jobs, time, onClose, onPick, onMove, onMenu }: {
             <span className="w-full truncate text-xs font-bold text-[var(--wh-ink)]">{j.bikeLabel || 'Bike'}</span>
             <span className="w-full truncate text-[11px] font-semibold text-[var(--wh-muted)]">{`${j.title} · ${j.startTime ?? ''}`}</span>
           </button>
-        ))}
+        ); })}
       </DialogBody>
     </Dialog>
   );

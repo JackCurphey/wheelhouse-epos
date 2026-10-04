@@ -262,6 +262,9 @@ function StackBlock({ jobs, start, end, range, lane, colIndex }: {
     const stop = () => {
       if (holdTimer.current) clearTimeout(holdTimer.current);
       holdTimer.current = null;
+      // Many touch browsers send no click after a long press, so the flag that
+      // swallows that click mustn't outlive it (as with justDragged).
+      if (held.current) setTimeout(() => { held.current = false; }, 0);
       window.removeEventListener('pointerup', stop);
       window.removeEventListener('pointercancel', stop);
       window.removeEventListener('pointermove', moved);
