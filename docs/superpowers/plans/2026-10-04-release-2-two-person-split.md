@@ -6,8 +6,8 @@ started. Jack, 4 Oct: the build starts only when he says so.
 **Not ready to build from yet (Codex review, 4 Oct):** four blockers and
 eleven should-fix findings in
 `docs/reviews/2026-10-04-release-2-plans-codex-adversarial.md`. Two of the
-blockers are in this file: the migration-number rule (§4.2) and the
-first-week schedule (§9). Jack's GitHub issues track the fixes; the
+blockers were in this file: the migration-number rule (§4.2, fixed 4 Oct,
+#128) and the first-week schedule (§9, fixed 4 Oct, #130). Jack's GitHub issues track the fixes; the
 first-week schedule and §7.2's list will change.
 **Sits under:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`
 (the build plan). This file does not change that plan's scope, its work
@@ -355,16 +355,36 @@ Q2, so Jack has to agree (§8).
 
 ## 9. The first week, concretely
 
-1. Jack merges #110, #112 and #111 (WP-0.1). The till, the teal "Waiting for
-   the customer" and the diary extras are then on `main` to click.
-2. Mark opens WP-0.4 (route files, types files, the migration-number CI
-   check) and WP-0.3. Jack reviews them.
-3. Mark writes the WP-1.1 contract, then builds 1.1's server half, then 1.2.
-4. Jack, meanwhile: the screen half of WP-0.2, then workshop pieces (§7.2),
-   then 1.1's screens as soon as their server half merges, then 1.3.
-5. Mark stands up the hosted copy (WP-0.5) once WP-0.4 has merged.
-6. Mark takes WP-0.2's server half between 1.1 and 1.2, so the booking
-   bugs are closed within the week.
+Stage 0 finishes, including its stage check, before any of stage 1 starts
+(build plan §2). Each line below says what it waits for; nothing is listed
+before the thing it waits for is done. (#114, also in the build plan's
+WP-0.1, merged on 3 Oct.)
+
+**Stage 0**
+
+| # | Who | What | Waits for |
+|---|---|---|---|
+| 1 | Jack | WP-0.1: bring #110, #112 and #111 up to date with `main` (all three clash with it on 4 Oct), then merge them | nothing |
+| 2 | Mark | WP-0.2 server half: write its contract (§4.3), including the request key a retry repeats, then fix another shop's page on a subdomain, "today" at UTC midnight, the duplicate booking from a lost reply, and the `null` body error. It edits `server/server.js`, so it merges before WP-0.4 starts | nothing; can run alongside line 1 |
+| 3 | Mark | WP-0.3: trim STATUS to 8 KB with §5's layout | nothing |
+| 4 | Mark | WP-0.4: route files (§4.1), per-area types files (§4.3), the migration checks (§4.2). Jack reviews | lines 1 and 2 merged: every open change to `server.js` is in before it moves |
+| 5 | Jack | WP-0.2 screens half: Back while "Sending…" keeps the private link; a retry sends the same request key | line 2 merged |
+| 6 | Mark | WP-0.5: the hosted copy | line 4 merged |
+| 7 | Jack | Stage 0's stage check: the journeys stage 0 touches (booking, and the till and diary from #110–#112) walked in the real app (build plan §2) | lines 1–6 merged |
+
+While Jack waits on line 2 or line 4, the work that is ready for him is the
+two checks only he can do (what Citrus Lime exports, #136; the Paymentsense
+card machine, #138) and the planning fixes due before stage 1 (#131, #132,
+#133, #141). Workshop server work waits until WP-0.4 has merged, so nothing
+edits `server.js` while it moves.
+
+**Stage 1, once stage 0's check has passed**
+
+1. Mark writes the WP-1.1 contract, builds 1.1's server half, then 1.2, then
+   the rest in §7.1's order.
+2. Jack builds the workshop pieces pulled forward (§7.2, if Jack agrees),
+   then 1.1's screens as soon as their server half merges, then 1.3 once
+   1.2's server half merges.
 
 ## 10. Decision log
 
@@ -382,4 +402,5 @@ Q2, so Jack has to agree (§8).
 | Migrations keep their numbers; the second to merge renumbers; CI catches a clash | Mark, 4 Oct, answer 3 |
 | §4.2: claim a number with a draft pull request before running it; renumber only on a rebuilt throwaway database; names on `main` frozen; CI upgrades from the previous `main` | Codex finding 2 (issue #128): the runner tracks files by name, so a renamed file runs twice |
 | Project rules changed to match: two lanes, one status pull request a day | Jack, 4 Oct (issue #127, option 1) |
+| §9 rewritten: stage 0's server work first, every line names what it waits for, stage 0 closes before stage 1 | Codex finding 4 (issue #130): Jack's WP-0.2 screens were listed before the server half they need |
 | Hosting and infrastructure are Mark's, and a hosted copy comes in stage 0 | Mark, 4 Oct: "assign the hosting and infra to me"; Jack sees each merge without running the app |
