@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { createPortal } from 'react-dom';
@@ -254,6 +254,21 @@ function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: {
     return () => document.removeEventListener('pointerdown', away);
   }, [fanned]);
   useEffect(() => () => { if (holdTimer.current) clearTimeout(holdTimer.current); }, []);
+  // The tray is wider than a tablet's day, so once it's open, slide it back
+  // inside the diary if it runs past either edge (seen on screen, 4 Oct).
+  const fanRef = useRef<HTMLDivElement>(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const f = fanRef.current;
+    const box = f?.closest('.overflow-x-auto')?.getBoundingClientRect();
+    if (!fanned || !f || !box) { setShift(0); return; }
+    const r = f.getBoundingClientRect();
+    const left = r.left - shift;
+    const right = r.right - shift;
+    setShift(left < box.left + 4 ? box.left + 4 - left : right > box.right - 4 ? box.right - 4 - right : 0);
+    // Measured once each time the tray opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fanned]);
   const wrap = useRef<HTMLDivElement>(null);
   // What started the last press, so a tap gets the touch chooser (not every
   // browser says on the click itself).
@@ -316,13 +331,14 @@ function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: {
           click lands on the stack, not on a job that hasn't appeared. */}
       <div
         aria-hidden="true"
+        ref={fanRef}
         data-fan
         data-open={fanned ? 'true' : undefined}
         className={`invisible absolute left-1/2 grid -translate-x-1/2 opacity-0 transition-[opacity,visibility] group-hover/stack:visible group-hover/stack:opacity-100 group-hover/stack:delay-300 motion-reduce:transition-none data-[open=true]:visible data-[open=true]:opacity-100 ${fanned
           // Press and hold (touchStackBlock): the jobs on a lifted tray.
           ? '-top-2 gap-2 rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] p-2 shadow-[0_14px_32px_var(--wh-backdrop)]'
           : 'top-0 gap-1.5 drop-shadow-[0_10px_26px_var(--wh-backdrop)]'}`}
-        style={{ gridTemplateColumns: `repeat(${cols}, ${fanned ? 150 : 128}px)` }}
+        style={{ gridTemplateColumns: `repeat(${cols}, ${fanned ? 150 : 128}px)`, marginLeft: shift }}
       >
         {jobs.map((j) => <FanTile key={j.partId} job={j} colIndex={colIndex} touch={fanned} />)}
       </div>
@@ -345,7 +361,8 @@ function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch
       onPointerDown={(e) => { onPress?.(e); if (move && movable(job)) move.onPointerDown(job, colIndex, e); }}
       onClick={() => move?.onOpen(job)}
       className={`flex touch-none flex-col overflow-hidden px-1.5 py-[3px] text-left ${touch ? 'w-[150px] rounded-md border' : 'w-32 rounded-[5px] border-[1.75px]'} ${tileClass(job.state)}`}
-      style={{ height: Math.max((dur / 30) * SLOT_H - 4, SLOT_H - 6) }}
+      // Touch tiles are at least 56px tall, as drawn (touchStackTile).
+      style={{ height: Math.max((dur / 30) * SLOT_H - 4, touch ? 56 : SLOT_H - 6) }}
       {...hover}
     >
       <span className="truncate text-xs font-bold text-[var(--wh-ink)]">{job.bikeLabel || 'Bike'}</span>

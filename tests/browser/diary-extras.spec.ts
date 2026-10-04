@@ -148,3 +148,40 @@ test('a job grabbed near its edge lands on the day under the pointer', async ({ 
   await page.mouse.up();
   expect((await saved).request().postDataJSON().jobDate).toBe(FRI);
 });
+
+// Seen on screen (4 Oct): on a tablet, the press-and-hold tray ran off the
+// diary's left edge and squashed short jobs. It must stay inside the diary,
+// with tiles at least the drawn 56px tall (touchStackTile).
+test('on a tablet, press and hold lays a stack out on a tray that fits the diary', async ({ browser }) => {
+  // Monday, the left-most day, where the tray has least room.
+  const a = await seedMechanic(owner.shop.id, { name: 'Lou Hart' });
+  const b = await seedMechanic(owner.shop.id, { name: 'Ida Kerr' });
+  for (const body of [
+    { title: 'Brake bleed', jobDate: MON, startTime: '09:00', endTime: '10:00', mechanicId: a },
+    { title: 'Valve swap', jobDate: MON, startTime: '09:00', endTime: '09:30', mechanicId: b },
+  ]) {
+    const r = await staff('/api/workshop-jobs', { method: 'POST', body });
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
+  }
+  const ctx = await browser.newContext({ hasTouch: true, viewport: { width: 1024, height: 768 } });
+  try {
+    const [name, value] = owner.cookie.split('=');
+    await ctx.addCookies([{ name, value, url: server!.baseUrl }]);
+    const page = await ctx.newPage();
+    await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+    const stack = page.getByRole('button', { name: /^2 jobs booked 09:00 to 10:00/ });
+    const s = (await stack.boundingBox())!;
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: s.x + s.width / 2, y: s.y + 10 }] });
+    const fan = page.locator('[data-fan][data-open="true"]');
+    await expect(fan).toBeVisible();
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    const grid = (await page.locator('[data-diary-col]').first().locator('xpath=ancestor::div[contains(@class,"overflow-x-auto")][1]').boundingBox())!;
+    const tray = (await fan.boundingBox())!;
+    expect(tray.x, 'the tray starts inside the diary').toBeGreaterThanOrEqual(grid.x);
+    expect(tray.x + tray.width, 'the tray ends inside the diary').toBeLessThanOrEqual(grid.x + grid.width);
+    for (const tile of await fan.locator('button').all()) expect((await tile.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+  } finally {
+    await ctx.close();
+  }
+});
