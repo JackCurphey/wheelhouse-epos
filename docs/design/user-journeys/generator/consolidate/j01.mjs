@@ -41,3 +41,8 @@ export default {
   'wb-cookies-page': keep(45),
   'wb-cookies-page-plain': into('wb-cookies-page', '', "No tracking tool: 'This website doesn’t use any other cookies, so there’s nothing for you to choose.'"),
 };
+
+// The coverage walks (4 Oct, docs/design/user-journeys/walk-4/): Jack's answers and the walks' fixes drawn as lines.
+export const lines = [
+  { on: 'wb-off-preview', text: "While moving from Citrus Lime: the banner reads 'Your website goes on during switch-over morning'; no 'Turn it on' (owner) and no 'Ask Jack Lewis to turn it on' (staff)", who: 'Owner and Staff', decision: 'Walk-through 4 H2; Moving from Citrus Lime, later change 3 Oct; 4 Oct (coverage walk 4 H1)' },
+];

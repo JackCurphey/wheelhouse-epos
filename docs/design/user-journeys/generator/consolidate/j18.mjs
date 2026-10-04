@@ -6,18 +6,18 @@ export default {
   'ws-start-which': keep(24),
   'ws-start-look': keep(24), // step 2 of the set-up, its own step
   'ws-start-products': into('ws-start-which', '', "Step 3 of 3: 'Every product online' or 'Nothing online'; counts with no photo or no price; 'Make my website'"),
-  'ws-start-products-answered': into('ws-start-which', '', "Step 3 shows the earlier answer: 'Started with every product online on [date]' with 'Change'"),
+  'ws-start-products-answered': later('Dropped, not later: coverage walks answer 2 (4 Oct), the question is asked once, in the website’s set-up'),
   'ws-editor-first': later('Issue #116 question 2: fixed website design, editor later'),
   'ws-page': keep(1), // inferred block: the Website page, on/off and publishing
   'ws-page-on': into('ws-page', '', "'Your website is on' with 'Turn off'; '3 unpublished changes'; payments connected"),
   'ws-page-changes': into('ws-page', '', "The 3 unpublished changes listed, with 'Publish', 'Discard changes', 'Review in the editor'"),
   'ws-no-access': into('ws-page', '', "No 'Can edit the website': 'Only some people can change the website' — ask Jack Lewis"),
   'ws-no-settings': into('ws-page', '', "Can edit, not settings: selling and payments 'are in Settings, which you can’t change. Ask Jack Lewis'"),
-  'ws-page-moving': into('ws-page', '', "Moving: 'Your website goes on during switch-over morning'; 'Ready for switch-over · 2 of 3'"),
+  'ws-page-moving': into('ws-page', '', "Moving: 'Your website goes on during switch-over morning'; 'Ready for switch-over · 1 of 2'"),
   'ws-editor-moving': later('Issue #116 question 2: fixed website design, editor later'),
   'ws-pay-tested-moving': into('ws-pay-none', '', "Test payment worked, plus 'Customers can buy once your website goes on, during switch-over morning'"),
   'ws-address-moving': later('Issue #116 question 3: own web address frozen'),
-  'ws-page-switch-over': into('ws-page', '', "'Your website is ready': 'Switch-over morning: turn your website on now'; '3 of 3'"),
+  'ws-page-switch-over': into('ws-page', '', "'Your website is ready': 'Switch-over morning: turn your website on now'; '2 of 2'"),
   'ws-editor': later('Issue #116 question 2: fixed website design, editor later'),
   'ws-editor-section': later('Issue #116 question 2: fixed website design, editor later'),
   'ws-editor-add': later('Issue #116 question 2: fixed website design, editor later'),
@@ -72,4 +72,6 @@ export default {
 // "Draw the answers" W2: Jack's 3 Oct answer drawn as a line (spec B0).
 export const lines = [
   { on: 'ws-page', text: 'Edit on a Words and photos row: a form box with that part\'s words or photo; a row with starting wording says Check this until it\'s saved once', who: 'Owner', decision: 'Website management, 3 Oct (walk-through 4 H3)' },
+// The coverage walks (4 Oct, docs/design/user-journeys/walk-4/): Jack's answers and the walks' fixes drawn as lines.
+  { on: 'ws-page', text: "Moving from Citrus Lime before payments are connected: the Taking payments row reads 'Not connected · customers can look but not buy · open to connect [payment provider]', as here", who: 'Owner', decision: 'Website management 5, 8, 12 H5; 4 Oct (coverage walk 5 M1)' },
 ];

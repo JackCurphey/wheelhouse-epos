@@ -159,10 +159,13 @@ const phoneText = (body) => `<div style="display: flex; flex-direction: column; 
 // ---------- The staff Messages inbox (decision 7) ----------
 // Left: conversations, "Needs a reply" first. Right: the open one, and a
 // reply box that says how the reply goes. Audit M7: "Needs a reply" in words.
-const convRow = ({ who, about, last, when, open = false, waiting = false }) => `<a href="#"${open ? ' aria-current="true"' : ''} aria-label="${waiting ? 'Needs a reply: ' : ''}${esc(who)}" style="display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 8px; border: 1px solid ${open ? C.ink : 'transparent'}; background: ${open ? C.mutedBg : 'transparent'}; text-decoration: none; color: ${C.ink}"><span style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 700">${who}</span><span style="font-size: 12px; color: ${C.muted}; white-space: nowrap">${when}</span></span><span style="font-size: 13px; color: ${C.muted}">${about}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 14px">${waiting ? `<span style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: ${C.purpleInk}; white-space: nowrap"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: ${C.purpleInk}"></span>Needs a reply</span>` : ''}<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${last}</span></span></a>`;
+// Coverage walk 10 M1: a row may add what it is to its name (`kind`), so
+// Maya's job note and her account question aren't both just "Maya Patel".
+const convRow = ({ who, about, last, when, open = false, waiting = false, kind = '' }) => `<a href="#"${open ? ' aria-current="true"' : ''} aria-label="${waiting ? 'Needs a reply: ' : ''}${esc(who)}${kind ? ` · ${esc(kind)}` : ''}" style="display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 8px; border: 1px solid ${open ? C.ink : 'transparent'}; background: ${open ? C.mutedBg : 'transparent'}; text-decoration: none; color: ${C.ink}"><span style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span style="font-size: 15px; font-weight: 700">${who}</span><span style="font-size: 12px; color: ${C.muted}; white-space: nowrap">${when}</span></span><span style="font-size: 13px; color: ${C.muted}">${about}</span><span style="display: flex; align-items: center; gap: 6px; font-size: 14px">${waiting ? `<span style="flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: ${C.purpleInk}; white-space: nowrap"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: ${C.purpleInk}"></span>Needs a reply</span>` : ''}<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${last}</span></span></a>`;
 const CONVS = {
   maya: { who: MAYA.name, about: `${MAYA.bike} · ${mono('WH-1042')}`, last: '[Maya’s note to the shop]', when: '[time]' },
-  q: { who: '[Customer name]', about: 'Question from their account', last: '[Their question]', when: '[time]' },
+  // Coverage walks, answer 3 (Jack, 4 Oct): Maya's question from her account.
+  q: { who: MAYA.name, about: 'Question from her account', kind: 'Question from her account', last: '[Maya’s question]', when: '[time]' },
   done1: { who: 'Oliver Chen', about: `Brompton C Line · ${mono('WH-1068')}`, last: 'You: [the last reply]', when: '[day]' },
   done2: { who: '[Customer name]', about: 'Question from their account', last: 'You: [the last reply]', when: '[day]' },
 };
@@ -257,9 +260,11 @@ ${back ? '' : `<div style="display: flex; flex-wrap: wrap; gap: 8px">${button('T
 // ---------- Your data (decision 4; audit H3, M12, L3, L9) ----------
 const credLost = `<p style="margin: 0; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">You have <strong>${mono('£[credit]')}</strong> of store credit. It will be lost when your account is deleted — use it first, or ask for it back.</p>`;
 const dataDialog = (state = 'ask') => {
-  if (state === 'blocked') return popup('del-title', 'Ask us to delete your account', '', `${p('We can delete your account once your bike has been collected.')}
+  // Coverage walks, answer 4 (Jack, 4 Oct): with the bike still in, Maya can
+  // still ask; the request waits until the bike is collected.
+  if (state === 'blocked') return popup('del-title', 'Ask us to delete your account', '', `${p('We’ll delete your account once your bike has been collected.')}
 <div>${kv('Bike with us', `${MAYA.bike} · ${mono('WH-1042')}`)}</div>
-${note('Ask again after that, or call [shop phone] if you need to talk it through.')}`, button('OK'), 520);
+${note('Call [shop phone] if you need to talk it through.')}`, `${button('Keep my account', { variant: 'ghost' })}${button('Ask to delete', { variant: 'danger' })}`, 520);
   if (state === 'sent') return popup('del-title', 'Request sent', '', `<p role="status" style="margin: 0; font-size: 15px; line-height: 1.5">North Street Cycles will delete your account and tell you when it’s done — by [date] at the latest.</p>
 ${note('Changed your mind? “Cancel my request” is on your account until the shop has done it.')}`, button('OK'), 520);
   return popup('del-title', 'Ask us to delete your account', '', `${p('North Street Cycles will delete your account within one month, and tell you when it’s done.')}

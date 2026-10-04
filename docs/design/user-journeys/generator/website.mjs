@@ -106,8 +106,10 @@ const payRow = (k) => { const [t, s, end] = PAY_ROW[k]; return row(t, `${s} · i
 // ready while running alongside and turned on during switch-over morning, so
 // it never takes orders or bookings that Citrus Lime doesn't see. moving:
 // 'ready' (running alongside) or 'morning' (switch-over morning).
-const READY_ITEMS = (done) => [['Set up: the three steps', true], ['Payments connected, and the test payment worked', true], [done ? 'Starting wording checked' : '2 pages still have starting wording: <a href="#" style="color: inherit; font-weight: 700">Collection and returns</a>, <a href="#" style="color: inherit; font-weight: 700">Privacy</a>', done]];
-const readyList = (done) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.bg}"><span style="font-size: 15px; font-weight: 700">Ready for switch-over · ${done ? '3' : '2'} of 3 <span style="font-weight: 500; color: ${C.muted}">· also on the switch-over checklist</span></span><ul style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px">${READY_ITEMS(done).map(([t, ok]) => `<li style="list-style: none; display: flex; align-items: flex-start; gap: 8px; font-size: 15px; line-height: 1.45"><span style="display: inline-flex; padding-top: 2px; color: ${ok ? C.successInk : C.warnInk}">${icon(ok ? 'check' : 'alert', 16)}</span>${sr(ok ? 'Done: ' : 'To do: ')}<span>${t}</span></li>`).join('')}</ul></div>`;
+// Coverage walk 5 M2: one rule for "The website is ready" (Website management,
+// later change 3 Oct, walk-through 4 H3): payments are their own row, not counted.
+const READY_ITEMS = (done) => [['Set up: the three steps', true], [done ? 'Starting wording checked' : '2 pages still have starting wording: <a href="#" style="color: inherit; font-weight: 700">Collection and returns</a>, <a href="#" style="color: inherit; font-weight: 700">Privacy</a>', done]];
+const readyList = (done) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.bg}"><span style="font-size: 15px; font-weight: 700">Ready for switch-over · ${done ? '2' : '1'} of 2 <span style="font-weight: 500; color: ${C.muted}">· also on the switch-over checklist</span></span><ul style="margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px">${READY_ITEMS(done).map(([t, ok]) => `<li style="list-style: none; display: flex; align-items: flex-start; gap: 8px; font-size: 15px; line-height: 1.45"><span style="display: inline-flex; padding-top: 2px; color: ${ok ? C.successInk : C.warnInk}">${icon(ok ? 'check' : 'alert', 16)}</span>${sr(ok ? 'Done: ' : 'To do: ')}<span>${t}</span></li>`).join('')}</ul></div>`;
 const overview = ({ on = false, published = true, changes = false, open = false, pay = 'none', tracking = false, moving = '' } = {}) => {
   // Audit L2: while the website has never been on, turning it on is the main job.
   const first = !on && !published;
@@ -435,7 +437,7 @@ ${isP() ? RECORDS.map(([t, n, v], i) => `<div style="display: flex; flex-directi
 const master = (on = true, why = '') => card(`<div style="padding: 4px 18px">${on ? rowSwitch('Buying online', true) : `<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px"><span style="font-size: 15px; font-weight: 700">Buying online</span><span style="font-size: 14px; font-weight: 600; color: ${C.muted}">Off until you connect [payment provider]</span></div>`}<p style="margin: 0 0 12px; font-size: 14px; color: ${C.muted}">${on ? 'Customers can buy from your website and collect from the shop.' : why || 'Customers can look at products, but the website says “Not taking online orders right now”.'}</p></div>`, 'flex-shrink: 0');
 const wallets = (on) => `${rowSwitch('Apple Pay and Google Pay', on)}${rowSwitch('Gift cards', on)}${rowSwitch('Store credit (for signed-in customers)', on)}`;
 const PAY = {
-  none: [false, `${msg('<strong>Not connected.</strong> Customers can’t buy online, and “Pay now” for repairs is hidden, until you connect [payment provider].', 'warn')}
+  none: [false, `${msg('<strong>Not connected.</strong> Customers can’t buy online, “Pay now” for repairs is hidden and booking deposits are off, until you connect [payment provider].', 'warn')}
 ${slot(button('Connect [payment provider]'))}
 ${note('Opens [payment provider]’s own page to sign up or sign in, then brings you back here. Your shop has its own account with them: card details, payouts and fees ([fees]) are between you and [payment provider].')}`],
   connected: [true, `${msg('Connected to [payment provider] by Jack Lewis just now', 'ok', true)}
@@ -454,9 +456,10 @@ ${wallets(true)}`],
 ${msg('Connected to [payment provider] by Jack Lewis on [date] · for “Pay now” on repairs', 'ok')}
 ${rowSwitch('Gift cards and store credit on repairs', true)}`],
 };
-// UX walk-through 4 H2: during a move, a working test payment counts towards
-// "The website is ready"; customers can buy once the website goes on.
-const PAY_MOVING = msg('<strong>You’re moving from Citrus Lime.</strong> Customers can buy once your website goes on, during switch-over morning. This counts towards “The website is ready” on the switch-over checklist.', 'grey');
+// UX walk-through 4 H2: during a move, customers can buy once the website
+// goes on. Coverage walk 5 M2: the test payment doesn't count towards "The
+// website is ready" (one rule: no Words and photos row says Check this).
+const PAY_MOVING = msg('<strong>You’re moving from Citrus Lime.</strong> Customers can buy once your website goes on, during switch-over morning.', 'grey');
 const paySettings = (k, moving = false) => {
   const [on, body0] = PAY[k];
   const at = body0.lastIndexOf('</p>') + 4;

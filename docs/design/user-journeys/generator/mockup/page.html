@@ -118,10 +118,12 @@ async function show(id, { push = true, refit = true } = {}) {
 // Person box follows the step's person; "Next step" opens the next step
 // (third walk, walk-through 1 L2).
 let story = null, stepAt = -1;
+// The counter moves only to the next step, and stays on a screen off the path
+// (story 8: the Saturday PIN opens the till, which is also the last step).
+const stepIndex = (steps, at, id) => (steps[at]?.id === id ? at : steps[at + 1]?.id === id ? at + 1 : at);
 function storyStep(id) {
   if (!story) return;
-  const i = story.steps.findIndex((s, k) => k > stepAt && s.id === id);
-  const j = story.steps[stepAt]?.id === id ? stepAt : i;
+  const j = stepIndex(story.steps, stepAt, id);
   if (j < 0) return;
   stepAt = j;
   const st = story.steps[stepAt];
@@ -136,6 +138,10 @@ function onClick(e) {
   e.preventDefault(); say('');
   const go = c.getAttribute('data-go'), act = c.getAttribute('data-act'), what = c.getAttribute('data-what'), note = c.getAttribute('data-say');
   const shop = c.getAttribute('data-shop'); if (shop) { $('shop').value = shop; store.set('shop', shop); }
+  // A story's first check-in of the day (its step marked firstIn) opens the
+  // float check, as its next step; any other PIN opens the till (walk-through 10 L1).
+  const first = c.getAttribute('data-first'), nx = story?.steps[stepAt + 1];
+  if (first && story?.steps[stepAt]?.firstIn && nx && ownerOf(nx.id) === first) return show(nx.id, { refit: false });
   if (go) return show(go).then(() => { if (note) say(note); });
   if (act === 'back') return goBack();
   if (act === 'outside') return say(what + ' — this happens outside Wheelhouse.');

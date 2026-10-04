@@ -233,7 +233,7 @@ export const journeys = [
         sd2("on-order-staff-ready", "A ready order: Hand over, or not ready after all", "Staff"),
         sd2("on-not-ready", "Not ready after all: a sorry email", "Staff"),
         sd2("on-cant-supply", "Can’t supply an item: refund it, with a reason", "Staff"),
-        sd2("on-cancel-refund", "Cancel and refund: the way it was paid, with a reason", "Manager"),
+        sd2("on-cancel-refund", "Cancel and refund: the way it was paid, with a reason", "Staff"), // coverage walk 6 L2: staff can refund (Selling at the till 9; Buy online 7)
         sd2("on-hand-over", "Hand over: the till’s hand-over for the order", "Staff"),
         sd2("on-hand-over-refunded", "Hand over with one item refunded", "Staff"),
         sd2("on-today", "Today: new online orders", "Manager"),

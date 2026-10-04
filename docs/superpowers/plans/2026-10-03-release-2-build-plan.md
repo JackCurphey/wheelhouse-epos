@@ -210,7 +210,7 @@ later packages.
 *Screens it builds (3) and the situations it covers:*
 
 - **`map`** (block 16, App frame) — no other situations.
-- **`staff-app`** (block 16, App frame) — 4 situations: `staff-app-mechanic`, `staff-app-menu`, `staff-search`, `auth-noaccess`; plus 2 written lines.
+- **`staff-app`** (block 16, App frame) — 4 situations: `staff-app-mechanic`, `staff-app-menu`, `staff-search`, `auth-noaccess`; plus 3 written lines.
 - **`till-rail`** (block 16, App frame) — 1 situation: `till-rail-open`; plus 2 written lines.
 <!-- /screens -->
 
@@ -486,7 +486,7 @@ later packages.
 - **`cs-add`** (block 9, Form box) — 3 situations: `cs-edit`, `cs-add-company`, `cs-add-match`.
 - **`cs-account`** (block 4, Detail page) — no other situations.
 - **`cs-transfer`** (block 9, Form box) — no other situations.
-- **`cs-privacy`** (block 3, Table with search and filters) — 2 of its 3 situations here: `cs-privacy-delete`, `cs-privacy-blocked`.
+- **`cs-privacy`** (block 3, Table with search and filters) — 1 of its 2 situations here: `cs-privacy-delete`; plus 4 written lines.
 - **`cs-merge`** (block 4, Detail page) — no other situations.
 - Added to the `till-sale-detail` board (built in WP-3.1) — 1 situation: `cs-sale`.
 <!-- /screens -->
@@ -559,8 +559,8 @@ later packages.
 
 - **`bk-page`** (block 37, Customer job page) — 2 of its 17 situations here: `dq-in-shop`, `dq-waiting-part`.
 - **`dq-quote`** (block 38, Quote card) — 12 of its 15 situations here: `dq-quote-photo`, `dq-quote-untick`, `dq-quote-decline`, `dq-quote-deposit`, `dq-quote-reminded`, `dq-quote-newer`, `dq-withdrawn`, `dq-within-limit`, `dq-answered`, `dq-answered-declined`, `dq-answered-deposit`, `dq-answered-by-phone`; plus 2 written lines.
-- **`dq-record-answer`** (block 9, Form box) — no other situations.
-- Added to the `job-overview` board (built in WP-4.1) — 6 situations: `dq-job-quote`, `dq-job-sent`, `dq-job-withdraw`, `dq-job-answered`, `dq-job-within`, `dq-job-waiting`.
+- **`dq-record-answer`** (block 9, Form box) — no other situations; plus 1 written line.
+- Added to the `job-overview` board (built in WP-4.1) — 6 situations: `dq-job-quote`, `dq-job-sent`, `dq-job-withdraw`, `dq-job-answered`, `dq-job-within`, `dq-job-waiting`; plus 1 written line.
 - Added to the `diary` board (built in WP-4.1) — 1 situation: `dq-diary-waiting`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `dq-today-no-answer`.
 - Added to the `set-msg-list` board (built in WP-1.8) — 1 situation: `dq-messages`.
@@ -608,7 +608,7 @@ later packages.
 - **`bk-details`** (block 36, Step-by-step booking, with the day strip and time picker) — 6 situations: `bk-details-deposit`, `bk-sending`, `bk-card-failed`, `bk-not-sent`, `bk-checking-payment`, `bk-resume`.
 - **`bk-change`** (block 37, Customer job page) — 2 situations: `bk-change-pending`, `bk-change-declined`.
 - **`bk-cancel`** (block 8, "Are you sure?" box) — 1 of its 2 situations here: `bk-cancel-late`.
-- **`bk-settings`** (block 1, Settings page) — 2 situations: `bk-settings-deposits`, `cp-setting`; plus 1 written line.
+- **`bk-settings`** (block 1, Settings page) — 2 situations: `bk-settings-deposits`, `cp-setting`; plus 2 written lines.
 - **`pending`** (block 40, Message or outcome page) — 1 situation: `expired`.
 - Added to the `bk-page` board (built in WP-4.2) — 10 situations: `bk-request`, `bk-request-deposit`, `bk-confirmed`, `bk-page-request`, `bk-offered`, `bk-page-dropoff`, `bk-cancelled`, `bk-cancelled-late`, `bk-declined`, `bk-expired`; plus 1 written line.
 - Added to the `diary` board (built in WP-4.1) — 2 situations: `bk-staff-request`, `bk-staff-decline`.
@@ -630,7 +630,7 @@ later packages.
 - **`ac-receipt`** (block 41, Receipt and printed documents) — 1 situation: `ac-receipt-sent`.
 - **`ac-ask`** (block 9, Form box) — no other situations.
 - **`ac-question`** (block 47, Conversation thread with a reply box) — no other situations.
-- **`ac-inbox`** (block 3, Table with search and filters) — 5 situations: `ac-inbox-list`, `ac-inbox-sent`, `ac-inbox-all`, `ac-inbox-empty`, `ac-reply-text`.
+- **`ac-inbox`** (block 3, Table with search and filters) — 5 situations: `ac-inbox-list`, `ac-inbox-sent`, `ac-inbox-all`, `ac-inbox-empty`, `ac-reply-text`; plus 1 written line.
 - **`ac-review-setting`** (block 9, Form box) — 1 situation: `ac-review-first`.
 - **`ac-contact`** (block 9, Form box) — 2 situations: `preferences`, `ac-contact-changed`.
 - **`ac-stopped`** (block 40, Message or outcome page) — 1 situation: `ac-stopped-on`.
@@ -638,7 +638,7 @@ later packages.
 - Added to the `bk-page` board (built in WP-4.2) — 4 situations: `ac-job-note`, `ac-job-note-sent`, `ac-job-note-answered`, `ac-book-remind`.
 - Added to the `op-today` board (built in WP-1.10) — 1 situation: `ac-today`.
 - Added to the `cp-summary` board (built in WP-4.3) — 1 situation: `ac-collect-remind`.
-- Added to the `set-msg-list` board (built in WP-1.8) — 2 situations: `ac-messages`, `ac-reminder-wording`.
+- Added to the `set-msg-list` board (built in WP-1.8) — 2 situations: `ac-messages`, `ac-reminder-wording`; plus 1 written line.
 - Added to the `bk-when` board (built in WP-4.4) — 1 situation: `ac-reminder-landing`.
 - Added to the `cs-privacy` board (built in WP-3.2) — 1 situation: `ac-privacy-requests`.
 - Added to the `cs-page` board (built in WP-3.2) — 1 situation: `ac-customer-delete`.
@@ -664,7 +664,7 @@ later packages.
 - **`set-staff-person`** (block 9, Form box) — 2 of its 4 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
 - **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
 - **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
-- **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`.
+- **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`; plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).
 - **`set-data-export`** (block 1, Settings page) — no other situations.
 - **`set-data-history`** (block 14, Activity list) — no other situations.
 - Added to the `set-till-quick` board (built in WP-1.3) — 6 situations: `set-till-reasons`, `set-till-receipts`, `set-till-printer`, `set-till-tills`, `set-till-tills-owner`, `set-till-remove`; plus 2 written lines.
@@ -761,9 +761,9 @@ later packages.
 
 *Screens it builds (7) and the situations it covers:*
 
-- **`ws-start-which`** (block 24, Stage strip and its next-step box) — 3 situations: `ws-start-products`, `ws-start-products-answered`, `ws-start-shopify`.
+- **`ws-start-which`** (block 24, Stage strip and its next-step box) — 2 situations: `ws-start-products`, `ws-start-shopify`.
 - **`ws-start-look`** (block 24, Stage strip and its next-step box) — no other situations (step 2 of the set-up, the same step strip as step 1; corrected 3 Oct from a mistyped block 18).
-- **`ws-page`** (block 1, Settings page) — 10 situations: `ws-page-on`, `ws-page-changes`, `ws-no-access`, `ws-no-settings`, `ws-page-moving`, `ws-page-switch-over`, `ws-published`, `ws-published-off`, `ws-discard`, `ws-shopify-on`; plus 1 written line.
+- **`ws-page`** (block 1, Settings page) — 10 situations: `ws-page-on`, `ws-page-changes`, `ws-no-access`, `ws-no-settings`, `ws-page-moving`, `ws-page-switch-over`, `ws-published`, `ws-published-off`, `ws-discard`, `ws-shopify-on`; plus 2 written lines.
 - **`ws-history`** (block 14, Activity list) — no other situations.
 - **`ws-tracking`** (block 1, Settings page) — 2 situations: `ws-tracking-on`, `ws-tracking-error`.
 - **`ws-pay-none`** (block 1, Settings page) — 6 situations: `ws-pay-tested-moving`, `ws-pay-connected`, `ws-pay-tested`, `ws-pay-failed`, `ws-pay-more`, `ws-pay-shopify`.
@@ -792,7 +792,7 @@ later packages.
 - **`wb-shops`** (block 34, Shop card) — no other situations.
 - **`wb-shop-page`** (block 34, Shop card) — 2 situations: `wb-shop-collect`, `wb-find-us`.
 - **`wb-not-found`** (block 40, Message or outcome page) — 1 situation: `wb-off`.
-- **`wb-off-preview`** (block 44, Staff banner on the website) — 3 situations: `wb-off-preview-product`, `wb-off-preview-ask`, `wb-turned-on`.
+- **`wb-off-preview`** (block 44, Staff banner on the website) — 3 situations: `wb-off-preview-product`, `wb-off-preview-ask`, `wb-turned-on`; plus 1 written line.
 - **`wb-cookies-banner`** (block 45, Cookie choice) — 1 situation: `wb-cookies-saved`.
 - **`wb-cookies-choose`** (block 45, Cookie choice) — no other situations.
 - **`wb-cookies-page`** (block 45, Cookie choice) — 1 situation: `wb-cookies-page-plain`.
@@ -807,9 +807,9 @@ later packages.
 
 <!-- screens 6.3 -->
 *Building blocks built here:* 35 Basket and checkout sections; 46 Email and text frame.
-*Reused, already built:* 1 Settings page (WP-1.3); 3 Table with search and filters (WP-2.1); 4 Detail page (WP-2.1); 9 Form box (WP-1.3); 21 Pick-one box (WP-3.1); 39 Card payment box (WP-4.3); 40 Message or outcome page (WP-1.7).
+*Reused, already built:* 1 Settings page (WP-1.3); 3 Table with search and filters (WP-2.1); 4 Detail page (WP-2.1); 9 Form box (WP-1.3); 39 Card payment box (WP-4.3); 40 Message or outcome page (WP-1.7).
 
-*Screens it builds (11) and the situations it covers:*
+*Screens it builds (10) and the situations it covers:*
 
 - **`on-basket`** (block 35, Basket and checkout sections) — 2 situations: `on-basket-changed`, `on-basket-empty`.
 - **`on-checkout`** (block 35, Basket and checkout sections) — 9 situations: `on-checkout-errors`, `on-checkout-credit`, `on-checkout-covered`, `on-checkout-gift-code`, `on-checkout-gift`, `on-checkout-paying`, `on-checkout-declined`, `on-checkout-unsure`, `on-checkout-sold-out`.
@@ -820,8 +820,7 @@ later packages.
 - **`on-orders`** (block 3, Table with search and filters) — 5 situations: `on-orders-ready`, `on-orders-arrived`, `on-orders-sold-at-till`, `on-orders-second`, `ws-shopify-order`; plus 1 written line.
 - **`on-order-staff`** (block 4, Detail page) — 2 situations: `on-order-staff-ready`, `on-not-ready`.
 - **`on-cant-supply`** (block 9, Form box) — 1 situation: `on-cancel-refund`.
-- **`on-settings`** (block 1, Settings page) — 5 situations: `on-settings-order-in`, `on-settings-start-answered`, `on-settings-show`, `on-settings-pay`, `on-settings-keep`.
-- **`on-settings-start`** (block 21, Pick-one box) — no other situations.
+- **`on-settings`** (block 1, Settings page) — 4 situations: `on-settings-order-in`, `on-settings-show`, `on-settings-pay`, `on-settings-keep`.
 - Added to the `wb-product` board (built in WP-6.2) — 8 situations: `on-product`, `on-product-added`, `on-product-two-shops`, `on-product-order-in`, `on-product-out`, `on-product-out-other`, `on-product-no-shop`, `on-product-off`.
 - Added to the `wb-choose-shop` board (built in WP-6.2) — 1 situation: `on-choose-shop`.
 - Added to the `till-collect` board (built in WP-3.1) — 1 situation: `on-hand-over-refunded`.
@@ -1011,6 +1010,19 @@ dropped, except practice mode.
   is built with Getting started in WP-5.1.
 <!-- later DROPPED-practice -->
   Screens not built (7): `mv-practice-checkin`, `mv-practice-sale`, `mv-practice-card`, `mv-practice-job`, `mv-go-real`, `op-today-practice`, `till-checkin-practice`.
+<!-- /later -->
+- **Dropped: the coverage walks' answers 2 and 5** (were in WP-6.3, WP-6.1
+  and WP-3.2). Jack, 4 Oct (`docs/decisions/2026-10-04-coverage-walks.md`,
+  all option 1): "Start with every product online, or nothing?" is asked
+  once, in the website's set-up, so the Online orders box that asked it and
+  the two "answered" situations go; connecting payments turns buying online
+  on (Buy online, later change 4 Oct). And one way of saying "can't delete
+  yet": every privacy request shows "Still in the way: …" on its row with
+  Delete held back, so the "Settle up first" pop-up goes (a line on
+  `cs-privacy` says it). Drawn in
+  `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`.
+<!-- later DROPPED-coverage -->
+  Screens not built (4): `on-settings-start`, `on-settings-start-answered`, `ws-start-products-answered`, `cs-privacy-blocked`.
 <!-- /later -->
 
 ## 7. When a session must stop instead of carrying on

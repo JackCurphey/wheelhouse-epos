@@ -361,7 +361,11 @@ ${siteNav(['Shop', 'Book a repair', 'Our shops', 'Account']).filter((l) => l !==
 <a href="#main-content" style="position: absolute; left: -9999px; top: 0">Skip to the main content</a><header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 4px 0 14px; display: flex; align-items: center; gap: 2px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
 <a href="#" style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${SHOP}</span></a>
 ${iconBtn('search', 'Search the shop')}${noBasket(iconBtn('basket', 'Basket, 0 items'))}
-<button type="button" aria-label="${menuOpen ? 'Close menu' : 'Open menu'}" aria-expanded="${menuOpen}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${t.headerInk}">${icon(menuOpen ? 'close' : 'menu', 22)}</button>
+${menuOpen
+    ? `<button type="button" aria-label="Close menu" aria-expanded="true" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${t.headerInk}">${icon('close', 22)}</button>`
+    // Coverage walks, answer 1 (Jack, 4 Oct): the customer website's menu
+    // button says "Menu" beside the three lines; the staff app's doesn't.
+    : `<button type="button" aria-label="Open menu" aria-expanded="false" style="height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; font-family: inherit; font-size: 15px; font-weight: 600; color: ${t.headerInk}">${icon('menu', 22)}<span>Menu</span></button>`}
 </header>
 <main id="main-content" style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 16px; display: flex">${content ?? `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: ${t.mutedInk}; font-size: 14px; line-height: 1.5">Page content<br>(journey 1)</div>`}</main>
 ${menu}

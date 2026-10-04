@@ -56,7 +56,8 @@ export default {
     'Open the job': go('job-overview'),
     'Needs a reply: Maya Patel': go('ac-inbox'),
     'Maya Patel': go('ac-inbox-sent'),
-    'Needs a reply: [Customer name]': notDrawn('Another customer’s question, opened in Messages'),
+    // Coverage walks, answer 3: Maya's question from her account is a line on Messages.
+    'Needs a reply: Maya Patel · Question from her account': go('ac-inbox', 'Showing Maya’s job note: her question from her account reads the same, with no bike or job, and the reply says “Sent to Maya by text, with a link to her question” (see the lines below).'),
     '[Customer name]': notDrawn('Another customer’s answered question, opened in Messages'),
     'Oliver Chen': notDrawn('Oliver Chen’s answered conversation, opened in Messages'),
     'Messages · needs a reply 2': go('ac-inbox-list'),
@@ -66,7 +67,7 @@ export default {
     // Settings › Messages (and its wording boxes)
     ...WORDING,
     'Edit the wording of Service reminder': go('ac-reminder-wording'),
-    'Edit the wording of Review request': go('ac-review-setting'),
+    'Edit the wording of Review request': go('ac-review-first'), // its row is Off (coverage walk 11 M1)
     'Edit the wording of Bike still waiting': go('cp-message-wording'),
     '+ Add your own message': go('set-msg-new'),
     Payments: go('set-pay-ways'),
@@ -94,7 +95,10 @@ export default {
   'ac-download': { 'Not started? Download it again': STAY },
   'ac-download-failed': { 'Try again': go('ac-download') },
   'ac-delete': { 'Ask to delete': go('ac-delete-sent'), 'Keep my account': BACK },
-  'ac-delete-blocked': { OK: go('ac-account') },
+  // Coverage walks, answer 4: she can still ask; it waits for the bike.
+  'ac-delete-blocked': { 'Ask to delete': go('ac-delete-sent'), 'Keep my account': BACK },
+  // Coverage walk 11 L3: Save says it worked.
+  'ac-review-first': { Save: go('set-msg-list', 'Review request is now On.') },
   'ac-delete-sent': { OK: go('ac-account-delete-pending') },
   'ac-stopped': { 'Turn them back on': go('ac-stopped-on') },
   'ac-today': { 'Open Messages': go('ac-inbox'), 'Open the diary': go('diary'), Open: go('ac-privacy-requests') },

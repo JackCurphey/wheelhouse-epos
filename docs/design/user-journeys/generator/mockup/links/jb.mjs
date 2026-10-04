@@ -22,9 +22,10 @@ export default {
   'auth-noaccess': { 'Go to Today': go('op-today-staff') },
   'cust-signin': { 'Email me a code': go('cust-code') },
   // The PIN pad: the real till moves on after the fourth digit. In the mockup
-  // any digit stands for the whole PIN, and the first check-in of the day
-  // opens the float check (Opening the shop 2).
-  'till-checkin': Object.fromEntries(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => [k, go('op-float-check')])),
+  // any digit stands for the whole PIN and opens the till; only the first
+  // check-in of the day opens the float check (Opening the shop 2; walk-through
+  // 10 L1). `first` is used by a story step marked `firstIn`.
+  'till-checkin': Object.fromEntries(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => [k, { ...go('till-empty'), first: 'op-float-check' }])),
   // A workshop computer's PIN opens the diary as that person (third walk, answer 8).
   'till-checkin-workshop': Object.fromEntries(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => [k, go('diary-mechanic', 'Now working: Alex Morgan')])),
   'till-setup': { 'Make this computer Till B1': go('till-checkin'), 'Make this device Till B1': go('till-checkin') },

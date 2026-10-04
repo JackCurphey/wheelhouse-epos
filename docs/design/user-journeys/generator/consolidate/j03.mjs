@@ -57,4 +57,8 @@ export default {
 export const lines = [
   { on: 'bk-settings', text: "'A day to drop off' chosen: a 'Drop-off window' row, [09:00] to [10:00], that every drop-off customer is told", who: 'Manager', decision: 'Booking mode 2026-09-04 §2 item 3; Book a repair, 3 Oct (drop-off window)' },
   { on: 'bk-page', text: 'Confirmed, after paying a deposit: Deposit paid £[deposit] and Free to cancel until [date and time]', who: 'Customer', decision: 'Book a repair 8; walk-through 1 M3' },
+// The coverage walks (4 Oct, docs/design/user-journeys/walk-4/): Jack's answers and the walks' fixes drawn as lines.
+  { on: 'bk-settings', text: "No online payments connected yet: 'Take a deposit when booking' is Off and reads 'Connect [payment provider] first · in Settings › Front desk › Online orders'", who: 'Owner', decision: 'Book a repair 3; Website management 8, 12 H5; 4 Oct (coverage walk 7 M2)' },
+  { on: 'set-workshop-services', text: "Edit on a service: the box also has 'Customers can book this online', on unless switched off", who: 'Owner', decision: 'Book a repair 11; Owner setup 11 (the pattern); 4 Oct (coverage walk 7 M3)' },
+  { on: 'set-workshop-services', text: "Edit on a service, when deposits are for chosen services: the box also has 'Take a deposit for this service'", who: 'Owner', decision: 'Book a repair 3, 11; 4 Oct (coverage walk 7 M3)' },
 ];

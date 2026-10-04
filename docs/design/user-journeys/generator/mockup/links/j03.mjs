@@ -56,7 +56,8 @@ const map = {
   'bk-staff-request': { Accept: go('diary'), 'Offer another time': go('request-change'), 'Another time': go('request-change') },
   'bk-staff-decline': { 'Decline & notify customer': go('diary'), 'Keep request': go('bk-staff-request') },
   // Settings
-  'bk-settings': { 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
+  // Coverage walk 7 M1: the Services and Mechanics rows open their sections.
+  'bk-settings': { 'Services Full service, Individual service': go('set-workshop-services'), 'Mechanics Alex Morgan, Jo Taylor, Shared queue': go('set-workshop-mechanics'), 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-settings-deposits': { 'See your booking page ↗': go('bk-service'), 'Use your own': notDrawn('Your own booking terms: adding them (Settings › Workshop › Online booking)') },
   'bk-messages': {
     '+ Add your own message': go('set-msg-new'),

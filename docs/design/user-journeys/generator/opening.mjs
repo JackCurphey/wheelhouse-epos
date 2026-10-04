@@ -153,7 +153,8 @@ ${list([line('WH-1045 · Jamie Brooks', 'Giant Escape 2 · Gear adjustment', `<s
     onlineNew && line('[n] new online orders', 'To get ready · oldest from [time]', button('Open Online orders', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('orders', 18)}</span>`),
     onlineUncollected && line('Order [order number] · Maya Patel — not collected', `Ready since [date] · reminder sent [date] · <a href="tel:07700900142" style="color: inherit; white-space: nowrap">${mono('07700 900 142')}</a>`, `<span style="display: inline-flex; gap: 6px">${button('Contacted', { variant: 'default' })}${button('Open', { variant: 'default' })}</span>`, warnLead),
     replies && line('2 messages need a reply', 'From customers · oldest from Maya Patel at [time]', button('Open Messages', { variant: 'default' }), `<span style="display: inline-flex; color: ${C.ink}" aria-hidden="true">${icon('mail', 18)}</span>`),
-    deleteRequest && line('[Customer name] asked us to delete their account', 'From their account on the website, [date] · answer by [date]', button('Open', { variant: 'default' }), warnLead),
+    deleteRequest && line('Maya Patel asked us to delete her account', // coverage walk 12 L1: the name Privacy requests shows
+      'From their account on the website, [date] · answer by [date]', button('Open', { variant: 'default' }), warnLead),
     uncollected && line('WH-1050 · Aisha Khan — ready since Mon 14 Sep', `Cannondale Quick · reminder sent [date] · ${mono('[phone]')}`, button('Contacted', { variant: 'default' }), warnLead),
     // Journey 13 decision 2: the restock list, for owners, managers and
     // anyone who can order stock (audit L6). It counts what's new since the

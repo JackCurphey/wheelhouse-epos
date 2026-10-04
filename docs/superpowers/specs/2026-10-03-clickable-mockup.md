@@ -73,3 +73,11 @@ walk-through story can be clicked start to finish".
   customer on a phone and "Book a repair" opens booking; story 2's PIN, float
   check and Back work; the person switcher says when a screen has no separate
   view for that person.
+- 4 Oct: walk-through 10 L1 (Opening the shop 2): a PIN on `till-checkin`
+  opens the till (`till-empty`), not the float check. The digits carry
+  `first: 'op-float-check'` (`data-first`); a story step marked `firstIn`
+  (stories 2, 4, 10) opens its next step, the float check, instead. No new
+  drawing; a check covers both halves.
+- 4 Oct: story mode's step counter moves only to the next step and stays
+  put off the path. It had jumped to any later step with the same screen,
+  which showed once story 8's Saturday PIN opened the till, its last step.

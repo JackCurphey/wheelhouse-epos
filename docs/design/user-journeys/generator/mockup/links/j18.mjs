@@ -84,18 +84,30 @@ export default {
   // While a move from Citrus Lime is running the website waits for switch-over
   // morning (2 Oct walk-through decisions, 4 H2; third walk, walk-through 4 M1).
   'ws-start-products': { 'Make my website': go('ws-page-moving', 'Showing the Website page while a move from Citrus Lime is running: Turn it on waits for switch-over morning.') },
-  'ws-start-products-answered': { 'Make my website': go('ws-page'), 'Change what your website started with': go('ws-start-products') },
   'ws-start-shopify': { Next: go('ws-shopify-check') },
   // The Website page's situations.
+  // While the website is off, its address opens it as staff see it, with the
+  // banner (coverage walk 4 M1); once it's on, the customers' page.
+  'ws-page': { '[shop-name].wheelhouseepos.com': go('wb-off-preview') },
+  'ws-page-on': { '[shop-name].wheelhouseepos.com': go('wb-home') },
   'ws-page-changes': {
+    '[shop-name].wheelhouseepos.com': go('wb-home'),
     'Add it': wordsBox,
     Publish: go('ws-published'),
     'Discard changes': go('ws-discard'),
     'Review in the editor': editor('The website editor'),
   },
-  'ws-no-access': { 'Back to Today': go('op-today') },
-  'ws-no-settings': { 'Taking payments Connected to [payment provider] · test payment done': STAY, 'Taking payments Connected to [payment provider] · test payment done · in Settings › Front desk › Online orders': STAY },
-  'ws-page-moving': { 'Turn it on': STAY, 'Open the switch-over checklist': go('mv-ready') }, // Turn it on waits for switch-over morning
+  // Jo's own Today (coverage walk 4 L1).
+  'ws-no-access': { 'Back to Today': go('op-today-staff') },
+  'ws-no-settings': { '[shop-name].wheelhouseepos.com': go('wb-home'), 'Taking payments Connected to [payment provider] · test payment done': STAY, 'Taking payments Connected to [payment provider] · test payment done · in Settings › Front desk › Online orders': STAY },
+  // Turn it on waits for switch-over morning. Payments: the story's shop hasn't
+  // connected yet, so both ways into Online orders open the not-connected
+  // page (coverage walk 5 M1; the line on ws-page says the row reads so).
+  'ws-page-moving': {
+    'Turn it on': STAY, 'Open the switch-over checklist': go('mv-ready'),
+    'Open Online orders settings': go('ws-pay-none'),
+    'Taking payments Connected to [payment provider] · test payment done · in Settings › Front desk › Online orders': go('ws-pay-none'),
+  },
   'ws-published': { Publish: STAY, 'View website': go('wb-home') },
   'ws-published-off': { Publish: STAY, 'View it': go('wb-home'), 'check them': go('ws-page') },
   'ws-discard': { Publish: go('ws-published'), 'Discard changes': notDrawn('The Website page after discarding: no unpublished changes') },
@@ -106,7 +118,8 @@ export default {
   'ws-tracking-on': { Undo: go('ws-tracking') },
   // Paying online (Online orders settings).
   'ws-pay-none': { 'Connect [payment provider]': outside('[payment provider]’s own page, to sign up or sign in') },
-  'ws-pay-connected': { 'Make a test payment': go('ws-pay-tested') },
+  // While a move runs, the result reads as ws-pay-tested-moving (coverage walk 5 L1).
+  'ws-pay-connected': { 'Make a test payment': go('ws-pay-tested', 'While moving from Citrus Lime, this reads as “The test payment worked, while moving from Citrus Lime” (in this screen’s situations).') },
   'ws-pay-failed': { 'Try again': outside('[payment provider]’s own page, to sign up or sign in') },
   'ws-pay-more': { 'Add the details at [payment provider]': outside('[payment provider]’s own page') },
   'ws-today-pay-more': { 'Add the details': go('ws-pay-more'), 'Open the diary': go('diary'), 'Book in': go('till-book-in') },
