@@ -62,3 +62,10 @@ out-oversight-sand/
 out-c2w-sand/
 out-lightspeed-sand/
 out-mockup/
+
+# Jack's live progress dashboard and his saved style for it: on his Mac only.
+.dashboard/
+
+# The impeccable design skill's engine program (14 MB). Its launcher
+# downloads it to ~/.impeccable/bin/ when missing, so it is not committed.
+.claude/skills/impeccable/scripts/bin/
