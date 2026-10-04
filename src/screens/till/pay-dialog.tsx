@@ -75,7 +75,14 @@ export function PayDialog({ lines, onClose, onNextSale }: { lines: TillLine[]; o
   // Each step replaces the buttons, so move keyboard focus to the new title.
   const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { titleRef.current?.focus(); }, [step.kind]);
-  const close = () => (step.kind === 'paid' ? onNextSale() : onClose());
+  // A browser can close the window anyway (Chrome lets a second Escape
+  // through). Mid-save, a fresh window comes straight back instead, so a sale
+  // the server is still recording can't vanish and be taken twice.
+  const [reopened, setReopened] = useState(0);
+  const close = () => {
+    if (saving) return setReopened((n) => n + 1);
+    return step.kind === 'paid' ? onNextSale() : onClose();
+  };
 
   let title = `Take payment · ${money(total)}`;
   let description = sub;
@@ -142,6 +149,7 @@ export function PayDialog({ lines, onClose, onNextSale }: { lines: TillLine[]; o
 
   return (
     <Dialog
+      key={reopened}
       open
       onOpenChange={(open) => { if (!open) close(); }}
       // While a payment is saving, Escape must not hide a sale the server is

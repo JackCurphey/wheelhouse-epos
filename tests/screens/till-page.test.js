@@ -292,3 +292,34 @@ test('each step moves keyboard focus to its title', async () => {
   t.fireEvent.click(pay.getByRole('button', { name: 'Card approved' }));
   await t.waitFor(() => assert.equal(document.activeElement?.textContent, 'Paid'));
 });
+
+// A browser may close the window anyway (Chrome lets a second Escape through):
+// mid-save it must come straight back, so the sale can't vanish.
+test('if the browser closes the window mid-save, it comes back and shows Paid', async () => {
+  const t = await openTill();
+  await addService(t);
+  let answer;
+  saleReply = new Promise((resolve) => { answer = resolve; });
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £18.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  t.act(() => { t.ui.getByRole('dialog').close(); });
+  await t.waitFor(() => assert.equal(t.ui.getByRole('dialog').open, true));
+  answer({ status: 201, ok: true, json: async () => ({ id: 501 }) });
+  assert.ok(has(await t.within(t.ui.getByRole('dialog')).findByText('Paid')));
+  assert.equal(sales().length, 1);
+});
+
+test('a typed split cash part is sent to the penny', async () => {
+  const t = await openTill();
+  await scanPads(t);
+  await addService(t);
+  const pay = await openPay(t);
+  t.fireEvent.click(pay.getByRole('button', { name: 'Split' }));
+  t.fireEvent.change(await pay.findByLabelText('Cash part'), { target: { value: '20.004' } });
+  t.fireEvent.click(pay.getByRole('button', { name: /^Card · £26.00/ }));
+  t.fireEvent.click(await pay.findByRole('button', { name: 'Card approved' }));
+  assert.ok(has(await pay.findByText('Paid')));
+  const [s] = sales();
+  assert.deepEqual([s.cashAmount, s.cardAmount, s.cashTendered], [20, 26, 20]);
+});
