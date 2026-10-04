@@ -3,12 +3,13 @@
 **Date:** 4 October 2026
 **Status:** proposal from Mark's review of the build plan. Nothing here is
 started. Jack, 4 Oct: the build starts only when he says so.
-**Not ready to build from yet (Codex review, 4 Oct):** four blockers and
+**Codex review, 4 Oct:** four blockers and
 eleven should-fix findings in
-`docs/reviews/2026-10-04-release-2-plans-codex-adversarial.md`. Two of the
-blockers were in this file: the migration-number rule (§4.2, fixed 4 Oct,
-#128) and the first-week schedule (§9, fixed 4 Oct, #130). Jack's GitHub issues track the fixes; the
-first-week schedule and §7.2's list will change.
+`docs/reviews/2026-10-04-release-2-plans-codex-adversarial.md`. The four blockers
+have fixes written in this file and `CLAUDE.md` (4 Oct), for Mark to review: project rules (#127),
+migration numbers (§4.2, #128), the route-split design (§4.1, #129) and the
+first week (§9, #130). The eleven later fixes are Jack's GitHub issues,
+each due before the stage it affects.
 **Sits under:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`
 (the build plan). This file does not change that plan's scope, its work
 packages, which screens each package builds or the stage order. It only
@@ -34,7 +35,7 @@ Surveyed on `origin/main` at `a7958bb` (4 Oct):
 
 | Shared spot | Why it collides | Fix in this plan |
 |---|---|---|
-| `server/server.js`: 6,861 lines, all 146 routes, and every serializer | Every server change edits it | §4.1: one route file per area (WP-0.4) |
+| `server/server.js`: 6,861 lines, all 161 routes (146 written out, 15 generated), and every serializer | Every server change edits it | §4.1: one route file per area (WP-0.4) |
 | `server/migrations/NNN_*.sql`: numbered one after another (`038` is the latest) | Both people would claim `039` | §4.2 |
 | `src/lib/api/types.ts`: client copies of server shapes, written by hand | Every package adds types here | §4.3: one types file per area |
 | `src/staff/routes.ts`, `nav.ts`, `app-shell.tsx` `SCREENS` | Every new staff screen edits all three | Jack's alone (§3) |
@@ -80,15 +81,84 @@ a contract for every small change.
 
 ### 4.1 One route file per area (new WP-0.4, Mark, before anything runs in parallel)
 
-Move the routes out of `server/server.js` into `server/routes/<area>.js`
-(auth, settings, shops, products, stock, till, customers, workshop, booking,
-messages, reports, website, orders, c2w, import). Each file exports a
-`register(route)` function, and `server.js` calls them **in a fixed order**:
-the router takes the first route that matches, so moving routes must not
-change which one wins. This is a move, not a rewrite: no behaviour change,
-proven by the existing `npm test` and `npm run test:browser` passing
-unchanged. After it lands, a package adds its own route file instead of
-editing `server.js`.
+Move the routes out of `server/server.js` into `server/routes/<area>.js`.
+After it lands, a package adds to its own route file instead of editing
+`server.js`. This is a move, not a rewrite: no behaviour change, proven by
+the route-list test below and by `npm test` and `npm run test:browser`
+passing unchanged. (Design added 4 Oct for Codex finding 3, issue #129,
+from a survey of `server.js` at `a7958bb`.)
+
+**What exists today.** `server.js` has its own router (lines 562–581):
+`route(method, pattern, handler)` turns each pattern into an anchored regex
+and pushes it onto one `routes` array; the dispatcher (from line 6351)
+takes the first entry whose method and regex match. There are **161
+entries**: 146 `route(...)` calls plus 15 `jobActionRoute(...)` calls
+(line 3385), which each register `POST /api/workshop-jobs/:id/<action>`
+(accept, decline, request-reschedule, cancel, expire, book-in, collect,
+reopen-custody, start, await-parts, parts-arrived, hold, resume, finish,
+reopen-work). No two entries share a method and path, and none shadows
+another today. A few handlers sit outside the table: `/healthz`, storefront
+hosts, the Shopify webhooks, `/api/uploaded-images/` and `/sdbdemo`.
+
+**1. Calling conventions stay where they are.** The arguments a handler gets
+are set by the dispatcher branch, chosen by path prefix in this order:
+`/api/till/` (till token, shop from `:shopSlug`, handler gets the `till`),
+then `/api/portal/` (customer pages, shop by slug), then `/api/` (staff:
+session, then `afterRelease` and the shop id; `/api/auth/` gets no shop).
+WP-0.4 moves only the table entries. The dispatcher, its branch order and
+the handlers outside the table stay in `server.js`. Each route file's header
+says which branch its routes run under (note: `/api/tills` and
+`/api/till-attention` are staff routes, not till routes).
+
+**2. Where shared helpers and state go.**
+
+| Module | Moves there | Used by |
+|---|---|---|
+| `server/lib/http.js` | `sendJson`, `notFound`, `badRequest`, `readJsonBody`, `readRawBody`, `parseCookies`, `makeRateLimiter`, `nowIso` | every area |
+| `server/lib/session.js` | `currentSession`, `currentCustomerSession` | auth, staff areas, portal |
+| `server/lib/sales.js` | `createSale`, `serializeSale`, `SALE_SELECT`, `resolveCashierId`, `loadDocumentLine`, the Shopify push helpers, **`pendingShopifyPushes`** | till, orders, customers, the Shopify webhook, shutdown |
+| `server/workshop/jobs.js` (Jack's area) | `checkJobSlot`, `createWorkshopJob`, `syncJobHold`, `withBookingLock`, `withJobBookingLock`, `applyLocked`, `resolveJobMechanicId`, `serializeWorkshopJob`, `WORKSHOP_JOB_SELECT`, `CLEAR_REQUEST`, `requestedOf`, `refusal`, `capacityRefusal`, `SLOT_GONE`, `sendQuoteResult`, `answerAndAddToOrder`, `loadCapacity`, `parseWorkingDays`, `toCapacitySettings`, `currentShopToday` | workshop and booking (and settings, sales, dashboard for the last three) |
+| `server/lib/serializers.js` | `serializeProduct`, `serializeBike` | products, stock, customers, booking |
+| the area's own route file | its rate limiters (auth: `loginLimiter`, `signupLimiter`; booking: the portal and booking-link limiters) and the print-agent maps (`printAgentsByShop`, `printJobsByDevice`, `printJobStatus`) | that area only |
+| stays in `server.js` | `pendingPushSlotRequestStorage`, `tillAuthFailures`, `shuttingDown`, `serverListening` | the dispatcher and shutdown |
+
+`server/workshop/jobs.js` is in Jack's area but booking (Mark's) calls it,
+so it is one of the ownership exceptions to write down (#141). Nine test
+files import names from `server.js` (`createSale`, `pendingShopifyPushes`,
+`JOB_STATUSES` and others); `server.js` keeps re-exporting every one, so no
+test changes.
+
+**3. Registration, in a fixed order.** Each route file exports
+`register(route)`. `server/routes/index.js` holds the list of areas in one
+fixed order, and `server.js` calls each `register` in that order. The order
+is today's order of first appearance in `server.js`, so the route table
+comes out identical. Areas with no routes yet (Cycle to Work, the Citrus
+Lime import) get their file when their package lands.
+
+**4. The proof: a route-list test** (`tests/route-list.test.js`), written
+and committed **before** anything moves:
+
+- `route()` also records its method and pattern string; `server.js` exports
+  `listRoutes()`, returning `METHOD pattern` in table order.
+- A snapshot, `tests/fixtures/route-list.txt`, is generated from `main`
+  before the move: 161 lines, including the 15 workshop actions.
+- The test requires `listRoutes()` to equal the snapshot exactly, in order.
+  It is watched failing first, by deleting one route and by swapping two.
+- It must pass unchanged after every move pull request. Later packages
+  that add routes update the snapshot in the same pull request, so every
+  route change shows up in review.
+
+**5. The screen-trace check follows the routes.**
+`scripts/ci/assert-screen-trace.mjs` (line 94) reads only `server/server.js`.
+After the move it would find no routes and still print OK, and so would
+`tests/screen-trace.test.js`. It changes to read `server/server.js` plus
+every file in `server/routes/`, and it **fails if it finds no screen-tagged
+routes at all**, so an empty read can never pass. That failure is watched
+first, by pointing it at an empty folder.
+
+**6. Size.** The move is several pull requests, one or two areas each, every
+one with the route-list test passing. They run over the usual 250–600 line
+size because moved lines count twice; each says so in its description.
 
 ### 4.2 Migrations
 
@@ -402,5 +472,6 @@ edits `server.js` while it moves.
 | Migrations keep their numbers; the second to merge renumbers; CI catches a clash | Mark, 4 Oct, answer 3 |
 | §4.2: claim a number with a draft pull request before running it; renumber only on a rebuilt throwaway database; names on `main` frozen; CI upgrades from the previous `main` | Codex finding 2 (issue #128): the runner tracks files by name, so a renamed file runs twice |
 | Project rules changed to match: two lanes, one status pull request a day | Jack, 4 Oct (issue #127, option 1) |
+| §4.1 design for WP-0.4: dispatcher and calling conventions stay put, shared helpers to `server/lib/*` and `server/workshop/jobs.js`, fixed registration order, a 161-route list test written before the move, screen-trace check reads the route files and fails on an empty read | Codex finding 3 (issue #129): shared helpers and state, three calling conventions, and a check that would pass with nothing to check |
 | §9 rewritten: stage 0's server work first, every line names what it waits for, stage 0 closes before stage 1 | Codex finding 4 (issue #130): Jack's WP-0.2 screens were listed before the server half they need |
 | Hosting and infrastructure are Mark's, and a hosted copy comes in stage 0 | Mark, 4 Oct: "assign the hosting and infra to me"; Jack sees each merge without running the app |
