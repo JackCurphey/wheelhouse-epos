@@ -92,3 +92,37 @@ test('a stack fans out on hover; a fanned job opens, shows its summary, and drag
   await expect(page.getByRole('button', { name: /^2 jobs booked/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Bike, Brake service/ })).toBeVisible();
 });
+
+// Fresh review of #112, finding 3: a fanned tile hangs over the next day, so
+// a small nudge on its outer half must not move the job there.
+test('nudging a fanned job a little keeps it on its own day', async ({ page, context }) => {
+  const WED = '2026-10-21';
+  const alex = await seedMechanic(owner.shop.id, { name: 'Sam Price' });
+  const jo = await seedMechanic(owner.shop.id, { name: 'Kit Lane' });
+  const a = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Gear tune', jobDate: WED, startTime: '14:00', endTime: '15:00', mechanicId: alex } });
+  const b = await staff('/api/workshop-jobs', { method: 'POST', body: { title: 'Chain swap', jobDate: WED, startTime: '14:00', endTime: '14:30', mechanicId: jo } });
+  expect(a.status, JSON.stringify(a.body)).toBe(201);
+  expect(b.status, JSON.stringify(b.body)).toBe(201);
+  const [name, value] = owner.cookie.split('=');
+  await context.addCookies([{ name, value, url: server!.baseUrl }]);
+  await page.goto(`${server!.baseUrl}/workshop/diary?date=${MON}`);
+  const stack = page.getByRole('button', { name: /^2 jobs booked 14:00 to 15:00/ });
+  await stack.hover();
+  const fan = page.locator('[data-fan]').filter({ hasText: 'Gear tune' });
+  await expect(fan).toHaveCSS('opacity', '1');
+  // The tile furthest from the stack's middle, grabbed near its outer edge.
+  const day = (await page.locator(`[data-diary-col]`).nth(2).boundingBox())!;
+  const tiles = fan.locator('button');
+  const boxes = [(await tiles.nth(0).boundingBox())!, (await tiles.nth(1).boundingBox())!];
+  const outer = boxes[0].x < day.x || boxes[0].x + boxes[0].width > day.x + day.width ? boxes[0] : boxes[1];
+  const x = outer.x < day.x ? outer.x + 4 : outer.x + outer.width - 4;
+  expect(x < day.x || x > day.x + day.width, 'the grab point hangs over the next day').toBe(true);
+  await page.mouse.move(x, outer.y + 8);
+  await page.mouse.down();
+  // Down half an hour, so the move is saved either way; then check the day.
+  const saved = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/api\/workshop-jobs\/\d+$/.test(r.url()));
+  await page.mouse.move(x, outer.y + 8 + 30, { steps: 4 });
+  await page.mouse.up();
+  const put = await saved;
+  expect(put.request().postDataJSON().jobDate).toBe(WED);
+});

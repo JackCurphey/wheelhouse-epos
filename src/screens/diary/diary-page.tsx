@@ -10,7 +10,7 @@ import { RequestDialog } from './request-dialog.tsx';
 import { NewJobDialog } from './new-job-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
-import { HoverSummary, JobMenu, OverviewDialog, StackChooser, tileClass, type MenuAt } from './job-extras.tsx';
+import { HoverSummary, JobMenu, OverviewDialog, StackChooser, tileClass, type ChooserAt, type MenuAt } from './job-extras.tsx';
 import {
   LEGEND, LEGEND_LABEL, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, stackGroups, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
@@ -121,7 +121,7 @@ type ExtrasApi = {
   leave: () => void;
   menu: (job: Shown, at: { x: number; y: number; touch: boolean }, opener: HTMLElement | null) => void;
   press: (job: Shown, e: PointerEvent<HTMLElement>) => void;
-  stack: (jobs: Shown[], colIndex: number, opener: HTMLElement) => void;
+  stack: (jobs: Shown[], colIndex: number, opener: HTMLElement, touch: boolean) => void;
 };
 const ExtrasContext = createContext<ExtrasApi | null>(null);
 
@@ -225,8 +225,8 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
  * out as diary blocks, two to a row, which open, move and summarise like any
  * job. The fan is for the mouse; the chooser is the way for everyone else.
  */
-function StackBlock({ jobs, start, end, range, lane, colIndex }: {
-  jobs: Shown[]; start: number; end: number; range: { start: number }; lane?: { lane: number; total: number }; colIndex: number;
+function StackBlock({ jobs, start, end, range, lane, colIndex, chosen }: {
+  jobs: Shown[]; start: number; end: number; range: { start: number }; lane?: { lane: number; total: number }; colIndex: number; chosen: boolean;
 }) {
   const SLOT_H = useContext(SlotContext);
   const extras = useContext(ExtrasContext);
@@ -255,7 +255,11 @@ function StackBlock({ jobs, start, end, range, lane, colIndex }: {
   }, [fanned]);
   useEffect(() => () => { if (holdTimer.current) clearTimeout(holdTimer.current); }, []);
   const wrap = useRef<HTMLDivElement>(null);
+  // What started the last press, so a tap gets the touch chooser (not every
+  // browser says on the click itself).
+  const lastPointer = useRef('mouse');
   const onHold = (e: PointerEvent<HTMLElement>) => {
+    lastPointer.current = e.pointerType;
     if (e.pointerType !== 'touch' || e.button !== 0) return;
     const x0 = e.clientX;
     const y0 = e.clientY;
@@ -289,16 +293,17 @@ function StackBlock({ jobs, start, end, range, lane, colIndex }: {
       {edge(3, 0.7)}
       <button
         type="button"
-        aria-label={`${jobs.length} jobs booked ${hhmm(start)} to ${hhmm(end)}, click to choose which one to open: ${names}`}
+        aria-label={`${jobs.length} jobs booked ${hhmm(start)} to ${hhmm(end)}, click to choose which one to open: ${names}${chosen ? ', chosen from Waiting for you' : ''}`}
         title={names}
         data-parts={jobs.map((j) => j.partId).join(' ')}
         onPointerDown={onHold}
         onClick={(e) => {
           // The tap that ends a press and hold leaves the fan open, not the chooser.
           if (held.current) { held.current = false; return; }
-          extras?.stack(jobs, colIndex, e.currentTarget);
+          // A click from the keyboard (detail 0) is never a tap.
+          extras?.stack(jobs, colIndex, e.currentTarget, e.detail > 0 && lastPointer.current === 'touch');
         }}
-        className="absolute inset-0 flex flex-col overflow-hidden rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)] py-[3px] pr-[22px] pl-1.5 text-left"
+        className={`absolute inset-0 flex flex-col overflow-hidden rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)] py-[3px] pr-[22px] pl-1.5 text-left ${chosen ? 'shadow-[0_0_0_2px_var(--accent),0_0_0_6px_var(--wh-highlight)]' : ''}`}
       >
         <span aria-hidden="true" className="absolute top-[3px] right-[3px] inline-flex items-center gap-px rounded-full bg-[var(--wh-ink)] px-[5px] py-px text-[9px] font-bold text-[var(--wh-panel)]">
           {jobs.length}
@@ -316,14 +321,14 @@ function StackBlock({ jobs, start, end, range, lane, colIndex }: {
         className="invisible absolute data-[open=true]:visible data-[open=true]:opacity-100 top-0 left-1/2 grid -translate-x-1/2 gap-1.5 opacity-0 drop-shadow-[0_10px_26px_var(--wh-backdrop)] transition-[opacity,visibility] group-hover/stack:visible group-hover/stack:opacity-100 group-hover/stack:delay-300 motion-reduce:transition-none"
         style={{ gridTemplateColumns: `repeat(${cols}, 128px)` }}
       >
-        {jobs.map((j) => <FanTile key={j.partId} job={j} colIndex={colIndex} />)}
+        {jobs.map((j) => <FanTile key={j.partId} job={j} colIndex={colIndex} touch={fanned} />)}
       </div>
     </div>
   );
 }
 
 /** One job in a fanned-out stack: its true length, and it opens, moves and summarises. */
-function FanTile({ job, colIndex }: { job: Shown; colIndex: number }) {
+function FanTile({ job, colIndex, touch }: { job: Shown; colIndex: number; touch: boolean }) {
   const SLOT_H = useContext(SlotContext);
   const move = useContext(MoveContext);
   const { onMenuKey: _menuKey, onPress, ...hover } = useExtrasHandlers(job);
@@ -342,7 +347,8 @@ function FanTile({ job, colIndex }: { job: Shown; colIndex: number }) {
     >
       <span className="truncate text-[11px] font-bold text-[var(--wh-ink)]">{job.bikeLabel || 'Bike'}</span>
       <span className="truncate text-[10px] font-bold">{job.title}</span>
-      <span className="truncate text-[9px] text-[var(--wh-muted)]">{job.reference}</span>
+      {/* Fanned by a press and hold: the touch tile's number and times (touchStackTile). */}
+      <span className="truncate text-[9px] text-[var(--wh-muted)]">{touch ? `${job.reference} · ${job.startTime}–${job.endTime ?? ''}` : job.reference}</span>
     </button>
   );
 }
@@ -404,7 +410,7 @@ function Column({ label, index, jobs, outlines, range, wide, chosenId }: {
       {groups.map((g) => (g.ids.length === 1 ? (
         <JobBlock key={g.id} job={byId.get(g.id) as Shown} range={range} wide={wide} chosen={byId.get(g.id)?.id === chosenId} lane={lanes.get(g.id)} colIndex={index} />
       ) : (
-        <StackBlock key={`stack-${g.id}`} jobs={g.ids.map((id) => byId.get(id) as Shown)} start={g.start} end={g.end} range={range} lane={lanes.get(g.id)} colIndex={index} />
+        <StackBlock key={`stack-${g.id}`} jobs={g.ids.map((id) => byId.get(id) as Shown)} start={g.start} end={g.end} range={range} lane={lanes.get(g.id)} colIndex={index} chosen={g.ids.some((id) => byId.get(id)?.id === chosenId)} />
       )))}
       {outlines.map((j) => (
         <RequestedOutline key={`req-${j.id}`} job={j} range={range} />
@@ -703,15 +709,21 @@ export function DiaryPage() {
       if (e.button !== 0) return;
       const rect = e.currentTarget.getBoundingClientRect();
       drag.current = { job, origCol: colIndex, x: e.clientX, y: e.clientY, grab: e.clientY - rect.top, moved: false };
+      // The column follows how far the pointer has moved from the job's own
+      // column, so a fanned tile hanging over the next day doesn't land there
+      // when nudged (fresh review of pull request 112).
+      const ownCol = document.querySelector<HTMLElement>(`[data-diary-col="${colIndex}"]`)?.getBoundingClientRect();
+      const ownX = ownCol ? ownCol.left + ownCol.width / 2 : e.clientX;
       const onMove = (ev: globalThis.PointerEvent) => {
         const d = drag.current;
         if (!d) return;
         if (!d.moved && Math.abs(ev.clientX - d.x) < 4 && Math.abs(ev.clientY - d.y) < 4) return;
         d.moved = true;
         const cols = [...document.querySelectorAll<HTMLElement>('[data-diary-col]')];
+        const x = ownX + (ev.clientX - d.x);
         const over = cols.find((el) => {
           const r = el.getBoundingClientRect();
-          return ev.clientX >= r.left && ev.clientX < r.right;
+          return x >= r.left && x < r.right;
         });
         const colEl = over ?? cols[d.origCol];
         if (!colEl) return;
@@ -764,6 +776,7 @@ export function DiaryPage() {
   const [overview, setOverview] = useState<Shown | null>(null);
   const [stackJobs, setStackJobs] = useState<Shown[] | null>(null);
   const stackFrom = useRef<{ colIndex: number; opener: HTMLElement } | null>(null);
+  const [stackAt, setStackAt] = useState<ChooserAt>({ phone: false, touch: false, anchor: null });
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const touchPress = useRef(false);
@@ -838,9 +851,10 @@ export function DiaryPage() {
       }, 500));
       pressTimers.current.push(setTimeout(() => showOverview(job), 1100));
     },
-    stack(list, colIndex, opener) {
+    stack(list, colIndex, opener, touch) {
       stopHover();
       stackFrom.current = { colIndex, opener };
+      setStackAt({ phone: isPhone, touch, anchor: opener.getBoundingClientRect() });
       setStackJobs(list);
     },
   };
@@ -863,7 +877,8 @@ export function DiaryPage() {
         <StackChooser
           jobs={stackJobs}
           time={stackJobs[0].startTime ?? ''}
-          onClose={() => setStackJobs(null)}
+          at={stackAt}
+          onClose={(back) => { setStackJobs(null); if (back) stackFrom.current?.opener.focus(); }}
           onPick={(j) => { setStackJobs(null); setOpenJobId(j.id); }}
           onMove={(picked) => {
             const from = stackFrom.current;

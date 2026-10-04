@@ -16,6 +16,21 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
 
 ## Jack's lane
 
+### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
+
+1. **`diary-stack-open`: which tiles a computer and a tablet get.** The
+   drawings show the small tiles (bike; work · start) on a computer and the
+   touch tiles (bike; work; number · start–end) on a tablet. The app can't
+   tell a tablet from a computer by size alone, so a **tap** on a stack gets
+   the touch tiles and a click or Enter gets the small ones. *Pattern:* the
+   diary already tells touch from mouse by how the press started (press and
+   hold, the touch menu tip).
+2. **The chooser box opens above the stack when there's no room below.**
+   Not drawn (the drawing's stack sits high on the board). *Pattern:* the
+   job menu keeps itself on screen the same way.
+3. **A tapped-open fan's tiles show number and times**, as the touch tiles
+   do; a mouse-hover fan keeps the drawn number only (`fanTile`).
+
 ### 4 Oct 2026: diary piece 5b (pull request 112), after its fresh review
 
 1. **`diary-stack-open`: each chooser tile answers M (move with the arrow

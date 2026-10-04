@@ -66,9 +66,12 @@ function stubServer() {
   };
 }
 
-async function openDiary(jobs) {
+async function openDiary(jobs, { phone = false } = {}) {
   JOBS = jobs;
-  uninstall = installDom('http://localhost/workshop/diary?date=2026-10-05');
+  // A phone shows one day, so it opens on the jobs' day.
+  uninstall = installDom(`http://localhost/workshop/diary?date=${phone ? '2026-10-06' : '2026-10-05'}`);
+  // jsdom has no screen size; a phone is stubbed as in diary-phone.test.js.
+  if (phone) window.matchMedia = (q) => ({ matches: q.includes('max-width'), media: q, addEventListener() {}, removeEventListener() {} });
   window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
   window.HTMLDialogElement.prototype.close = function close() { if (this.open) { this.open = false; this.dispatchEvent(new window.Event('close')); } };
   stubServer();
@@ -76,7 +79,8 @@ async function openDiary(jobs) {
   const { createElement } = await import('react');
   shell = await importFresh(SHELL);
   const ui = rtl.render(createElement(shell.AppShell));
-  await ui.findByRole('group', { name: 'Tuesday 6 October' });
+  if (phone) await ui.findByText('Trek Domane');
+  else await ui.findByRole('group', { name: 'Tuesday 6 October' });
   return { ...rtl, ui };
 }
 
@@ -307,4 +311,41 @@ test('a booking request in a stack isn’t offered M, and M leaves the chooser o
   assert.equal(hint.textContent.includes('M to move'), false);
   t.fireEvent.keyDown(tile, { key: 'm' });
   assert.ok(has(t.ui.queryByRole('dialog', { name: '2 jobs at 10:00' })));
+});
+
+// Follow-up to #112: the chooser and the phone menu as drawn
+// (diary-stack-open, diary-context-menu phone).
+test('on a computer the chooser is a small box under the stack: focus on the first job, Escape back to the stack', async () => {
+  const t = await openDiary(PAIR());
+  const stack = await t.ui.findByRole('button', { name: /^2 jobs booked 10:00 to 11:30/ });
+  t.fireEvent.click(stack);
+  const box = await t.ui.findByRole('dialog', { name: '2 jobs at 10:00' });
+  assert.equal(box.tagName, 'DIV'); // a box beside the stack, not a window over the diary
+  const chooser = t.within(box);
+  assert.ok(has(chooser.queryByText('Standard service · 10:00')));
+  await t.waitFor(() => assert.equal(document.activeElement === chooser.getAllByRole('button')[0], true));
+  t.fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+  assert.equal(has(t.ui.queryByRole('dialog', { name: '2 jobs at 10:00' })), false);
+  assert.equal(document.activeElement === stack, true);
+});
+
+test('a tap on a stack shows each job’s number and times, as on the tablet', async () => {
+  const t = await openDiary(PAIR());
+  const stack = await t.ui.findByRole('button', { name: /^2 jobs booked 10:00 to 11:30/ });
+  t.fireEvent.pointerDown(stack, { button: 0, pointerType: 'touch', clientX: 200, clientY: 200 });
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  t.fireEvent.click(stack, { detail: 1 });
+  const chooser = t.within(await t.ui.findByRole('dialog', { name: '2 jobs at 10:00' }));
+  assert.ok(has(chooser.queryByText('WH-1043 · 10:00–11:30')));
+  assert.ok(has(chooser.queryByText('Puncture repair')));
+});
+
+test('on a phone the job menu sheet says whose job it is', async () => {
+  const t = await openDiary([FULL], { phone: true });
+  const b = await block(t.ui);
+  b.focus();
+  t.fireEvent.keyDown(b, { key: 'F10', shiftKey: true });
+  const menu = t.within(await t.ui.findByRole('menu', { name: 'Job actions' }));
+  assert.ok(has(menu.queryByText('Standard service · WH-1042')));
+  assert.ok(has(menu.queryByText('Maya Patel · Trek Domane')));
 });

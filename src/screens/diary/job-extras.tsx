@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
@@ -206,7 +206,13 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview }: {
         : `fixed z-40 flex flex-col overflow-hidden rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] py-1 shadow-[0_10px_26px_var(--wh-backdrop)] ${at.touch ? 'w-[236px]' : 'w-[208px]'}`}
       style={at.phone ? undefined : pos}
     >
-      {at.phone ? <span aria-hidden="true" className="px-4 pt-3.5 pb-2 text-base font-bold">{headOf(job)}</span> : null}
+      {at.phone ? (
+        // As drawn (diary-context-menu, phone): the job, then whose it is.
+        <span className="flex flex-col gap-0.5 px-4 pt-3.5 pb-2">
+          <span className="text-base font-bold">{headOf(job)}</span>
+          <span className="text-sm text-[var(--wh-muted)]">{whoOf(job)}</span>
+        </span>
+      ) : null}
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOpenJob}>Open job</button>
       <button type="button" role="menuitem" tabIndex={-1} className={item} onClick={onOverview}>View overview</button>
       <p className="m-0 border-t border-[var(--wh-border)] px-3.5 pt-2 pb-1.5 text-xs leading-snug text-[var(--wh-muted)]">{tip}</p>
@@ -225,45 +231,125 @@ const TILE: Record<DiaryState, string> = {
 };
 export const tileClass = (s: DiaryState) => TILE[s];
 
-/** Decision 61: a stack opens a chooser with a tile for each of its jobs. */
-export function StackChooser({ jobs, time, onClose, onPick, onMove, onMenu }: {
-  jobs: DiaryJob[]; time: string; onClose: () => void; onPick: (j: DiaryJob) => void;
+/** Where a stack's chooser opens: a box under the stack, or (phone) a sheet. */
+export type ChooserAt = { phone: boolean; touch: boolean; anchor: DOMRect | null };
+
+/**
+ * Decision 61: a stack opens a chooser with a tile for each of its jobs.
+ * Drawn (diary-stack-open) as a small box under the stack on a computer or
+ * tablet, and a sheet on a phone. A tap shows the touch tiles, with each
+ * job's number and times (touchStackTile); a click shows bike, work and start.
+ */
+export function StackChooser({ jobs, time, at, onClose, onPick, onMove, onMenu }: {
+  jobs: DiaryJob[]; time: string; at: ChooserAt; onClose: (returnFocus: boolean) => void; onPick: (j: DiaryJob) => void;
   /** M on a tile: move that job with the arrow keys, as on any job block. */
   onMove: (j: DiaryJob) => void;
   /** The Menu key or Shift+F10 on a tile: that job's actions. */
   onMenu: (j: DiaryJob) => void;
 }) {
+  const hints = (
+    <>
+      <p id="stack-sub" className="sr-only">{`${dayLabel(jobs[0].jobDate)} · choose one to open`}</p>
+      <p id="stack-move-hint" className="sr-only">Press Enter to open the job, M to move it with the arrow keys, or the Menu key for more.</p>
+      <p id="stack-open-hint" className="sr-only">Press Enter to open the job, or the Menu key for more.</p>
+    </>
+  );
+  const tiles = jobs.map((j) => {
+    const canMove = j.state !== 'pending' && j.state !== 'cancelled';
+    return (
+      <button
+        key={j.partId}
+        type="button"
+        aria-label={`${j.bikeLabel || 'Bike'}, ${j.title}, ${j.reference}, ${STATE_LABEL[j.state]}`}
+        aria-describedby={canMove ? 'stack-move-hint' : 'stack-open-hint'}
+        onClick={() => onPick(j)}
+        onKeyDown={(e) => {
+          // A booking request is answered before it's moved; a cancellation isn't moved.
+          if ((e.key === 'm' || e.key === 'M') && canMove) { e.preventDefault(); onMove(j); }
+          else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); onMenu(j); }
+        }}
+        className={`flex flex-col items-start gap-px overflow-hidden rounded-md border-[1.75px] px-2 py-1.5 text-left ${at.touch || at.phone ? 'min-h-14' : ''} ${TILE[j.state]}`}
+      >
+        <span className="w-full truncate text-xs font-bold text-[var(--wh-ink)]">{j.bikeLabel || 'Bike'}</span>
+        {at.touch || at.phone ? (
+          <>
+            <span className="w-full truncate text-xs font-bold">{j.title}</span>
+            <span className="w-full truncate text-xs text-[var(--wh-ink)] opacity-80">{`${j.reference} · ${j.startTime ?? ''}–${j.endTime ?? ''}`}</span>
+          </>
+        ) : (
+          <span className="w-full truncate text-xs font-bold">{`${j.title} · ${j.startTime ?? ''}`}</span>
+        )}
+      </button>
+    );
+  });
+  if (at.phone) {
+    return (
+      <Dialog open onOpenChange={(open) => { if (!open) onClose(false); }} aria-labelledby="stack-title" aria-describedby="stack-sub">
+        <DialogHeader>
+          <div className="min-w-0 grow">
+            <DialogTitle id="stack-title">{`${jobs.length} jobs at ${time}`}</DialogTitle>
+            <DialogDescription>{`${dayLabel(jobs[0].jobDate)} · choose one to open`}</DialogDescription>
+          </div>
+          <DialogClose onClick={() => onClose(false)} aria-label="Close" />
+        </DialogHeader>
+        <DialogBody className="grid grid-cols-2 gap-2">
+          {hints}
+          {tiles}
+        </DialogBody>
+      </Dialog>
+    );
+  }
+  return <StackBox jobs={jobs} time={time} at={at} onClose={onClose} hints={hints} tiles={tiles} />;
+}
+
+/** The computer and tablet chooser: a box under the stack, first job focused, Escape back to the stack. */
+function StackBox({ jobs, time, at, onClose, hints, tiles }: {
+  jobs: DiaryJob[]; time: string; at: ChooserAt; onClose: (returnFocus: boolean) => void; hints: ReactNode; tiles: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const tileW = at.touch ? 150 : 122;
+  const width = Math.min(jobs.length, 2) * tileW + 8 + (at.touch ? 20 : 16);
+  const a = at.anchor;
+  const [pos, setPos] = useState({ left: a ? a.left + a.width / 2 - width / 2 : 8, top: a ? a.bottom + 8 : 8 });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos((p) => ({
+      left: Math.max(8, Math.min(p.left, window.innerWidth - r.width - 8)),
+      // No room below: open above the stack.
+      top: a && p.top + r.height > window.innerHeight - 8 ? Math.max(8, a.top - r.height - 8) : p.top,
+    }));
+  }, [a]);
+  const closeRef = useRef(onClose);
+  useLayoutEffect(() => { closeRef.current = onClose; });
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('button')?.focus();
+    const away = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) closeRef.current(false);
+    };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, []);
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }} aria-labelledby="stack-title" aria-describedby="stack-sub">
-      <DialogHeader>
-        <div className="min-w-0 grow">
-          <DialogTitle id="stack-title">{`${jobs.length} jobs at ${time}`}</DialogTitle>
-          <DialogDescription id="stack-sub">{`${dayLabel(jobs[0].jobDate)} · choose one to open`}</DialogDescription>
-        </div>
-        <DialogClose onClick={onClose} aria-label="Close" />
-      </DialogHeader>
-      <DialogBody className="grid grid-cols-2 gap-2">
-        <p id="stack-move-hint" className="sr-only">Press Enter to open the job, M to move it with the arrow keys, or the Menu key for more.</p>
-        <p id="stack-open-hint" className="sr-only">Press Enter to open the job, or the Menu key for more.</p>
-        {jobs.map((j) => { const canMove = j.state !== 'pending' && j.state !== 'cancelled'; return (
-          <button
-            key={j.partId}
-            type="button"
-            aria-label={`${j.bikeLabel || 'Bike'}, ${j.title}, ${j.reference}, ${STATE_LABEL[j.state]}`}
-            aria-describedby={canMove ? 'stack-move-hint' : 'stack-open-hint'}
-            onClick={() => onPick(j)}
-            onKeyDown={(e) => {
-              // A booking request is answered before it's moved; a cancellation isn't moved.
-              if ((e.key === 'm' || e.key === 'M') && canMove) { e.preventDefault(); onMove(j); }
-              else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); onMenu(j); }
-            }}
-            className={`flex min-h-14 flex-col items-start gap-0.5 overflow-hidden rounded-[5px] border-[1.75px] px-2 py-1.5 text-left ${TILE[j.state]}`}
-          >
-            <span className="w-full truncate text-xs font-bold text-[var(--wh-ink)]">{j.bikeLabel || 'Bike'}</span>
-            <span className="w-full truncate text-[11px] font-semibold text-[var(--wh-muted)]">{`${j.title} · ${j.startTime ?? ''}`}</span>
-          </button>
-        ); })}
-      </DialogBody>
-    </Dialog>
+    <div
+      ref={ref}
+      role="dialog"
+      aria-labelledby="stack-title"
+      aria-describedby="stack-sub"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') { e.preventDefault(); onClose(true); }
+      }}
+      onBlur={(e) => {
+        // Tabbing out of the box closes it, as with the job menu.
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) onClose(false);
+      }}
+      className={`fixed z-40 flex flex-col rounded-[10px] border border-[var(--wh-border)] bg-[var(--wh-panel)] shadow-[0_12px_32px_var(--wh-backdrop)] ${at.touch ? 'gap-2 p-2.5' : 'gap-1.5 p-2'}`}
+      style={{ ...pos, width }}
+    >
+      <span id="stack-title" className={`px-1 font-bold tracking-[0.4px] text-[var(--wh-muted)] uppercase ${at.touch ? 'text-xs' : 'text-[11px]'}`}>{`${jobs.length} jobs at ${time}`}</span>
+      {hints}
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(jobs.length, 2)}, ${tileW}px)` }}>{tiles}</div>
+    </div>
   );
 }
