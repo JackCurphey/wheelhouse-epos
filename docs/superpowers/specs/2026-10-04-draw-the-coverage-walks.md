@@ -153,7 +153,34 @@ what an answer, a recorded decision or the walk's own fix text says.
 
 ## Left for Jack (not settled by a decision, or not done here)
 
-Filled in as the work goes; see the end of the decision log.
+1. **Wording chosen where the answers gave none**, for Jack to check:
+   - `cs-privacy`'s answer-5 line keeps the dropped pop-up's how-to as
+     "Take the payment and hand the bike back, then delete", without its
+     store-credit part (store credit isn't in the way, Account 8).
+   - `ac-delete-blocked` (answer 4) keeps "Call [shop phone] if you need to
+     talk it through" and has "Keep my account" beside "Ask to delete", as the
+     ordinary delete pop-up has.
+   - Answer 1 puts "Menu" on the button that opens the website's menu; the
+     open menu's close button (an ✕) has no word.
+   - `ws-page-moving`'s ready list (walk 5 M2) now reads "1 of 2": "Set up: the
+     three steps" and the starting-wording item. The decided rule is the
+     wording item alone; the set-up item is always done when this page shows,
+     so it was left rather than redesigning the box.
+2. **Walk 5 L1:** a mockup button leads to one page, so "Make a test payment"
+   opens the everyday result with a note naming the moving one
+   (`ws-pay-tested-moving`, in the situations list), rather than opening it.
+3. **Walk 8 M1:** the search's WH-1042 row still opens the job at its
+   everyday stage (one target per row); story 9 reaches the quote's moment
+   through Today (`dq-today-no-answer`) and the diary at that moment
+   (`dq-diary-waiting` → `dq-job-sent`).
+4. **Walk 12 M3:** the held-back Delete on `ac-privacy-requests` is still
+   wired to the confirm, though a browser sends no click from it; the walk's
+   route is `cs-privacy`'s enabled row, with a note naming Maya.
+5. **Walk 2 M1's `mockup-gaps.md` line** (the phone menu drawn as Jo's) is a
+   note on a mechanic's "Open menu" instead: `mockup-gaps.md` is written by
+   `gaps.mjs` and lists only not-drawn pages and size gaps.
+6. The build plan's "Where things stand (3 Oct)" totals were already out of
+   date before this pass and are not changed here.
 
 ## Decision log
 
@@ -167,3 +194,50 @@ Filled in as the work goes; see the end of the decision log.
 - 4 Oct: walk 5 M3 needs nothing more: its boards are dropped by answer 2.
   Walk 12 M1 likewise: the "Settle up first" pop-up is dropped by answer 5, and
   the credit's wording is in walk 12 M3's line.
+- 4 Oct: the mockup gains a shared "tried before a drawing's own file link"
+  list (`links/shared.mjs` '^'): the name buttons link to Jo Taylor's Your
+  settings file, so a label rule alone never reached them (walks 2 M1, 3 M1).
+  The shared rules also get the control's tag, so the diary's "Today" button
+  stays while the sidebar's "Today" link still opens Today (walk 2 L2).
+- 4 Oct: the address link opens `wb-off-preview` on every Website page drawn
+  with the website off (`ws-page`, `ws-page-moving`, `ws-page-switch-over`)
+  and the customers' page on those drawn on (`ws-page-on`, `ws-page-changes`,
+  `ws-no-settings`), read from each drawing's own words.
+- 4 Oct: walk 4 L2's fix covers `wb-off-preview-product` through its kept
+  screen's map; `wb-off-preview`'s "Edit this page" (the editor, later) now
+  says "Not drawn yet" like "Review in the editor", found by the new
+  "no button leads to a dropped or later screen" check.
+- 4 Oct: walk 11 M1 is applied on every Messages board that has the three
+  rows (`set-msg-list` and the journey 2, 4 and 7 boards), not only journey 8's.
+- 4 Oct: walk 10 M1 gives each conversation row an optional "kind" in its
+  screen-reader name, so Maya's job note and her account question are two
+  buttons ("Needs a reply: Maya Patel" and "… · Question from her account").
+- 4 Oct: walk 7 M3's two lines sit on `set-workshop-services` (the service
+  box is its situation `ac-service-edit`; a line must sit on a kept screen),
+  in `consolidate/j03.mjs` (Book a repair 3, 11), and are counted in the
+  build plan beside that board in WP-5.1.
+- 4 Oct: story 10's added steps reach `on-orders` on a phone through the
+  menu (`doesAt: { phone: 'Online orders' }`), so no new size gap.
+- 4 Oct: the "a Close button never stays" check counts "Close", "Close menu",
+  "Close search" and "Close, …" only; "Close the day 1 hour before closing" is
+  a setting, not a close button.
+
+### Done (4 Oct)
+- Every new check failed first for the reason it names: consolidate 1
+  (17 tests, 1 failing: the four screens weren't dropped, the 14 lines
+  missing); mockup 5 (12 tests, 5 failing: 7 unreachable screens, 3 buttons
+  into the later editor, 2 "Close menu" staying, the walks' links still
+  going where the walks found them, and the wording checks).
+- `node build.mjs`: 210 files (was 211: `on-settings-start` gone; no board
+  added), 181 notes (was 178), 201 kept screens, 1 removed.
+- `node --test 'consolidate/*.test.mjs'`: 17 of 17, with
+  `plan-coverage.test.mjs` (the plan's new DROPPED-coverage region, 117
+  written lines).
+- `node mockup/build-mockup.mjs`: 759 screens (was 763), 0 dead;
+  `node --test 'mockup/*.test.mjs'`: 12 of 12.
+- `node fitcheck-canvas.mjs`: 210 boards, 0 problems.
+- `node mockup/gaps.mjs`: 95 not drawn (was 96: Maya's question settled by
+  answer 3), 21 size gaps, 43 outside.
+- `node docs/design/user-journeys/generator/coverage.mjs` from the repo root
+  runs.
+
