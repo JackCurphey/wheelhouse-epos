@@ -12,11 +12,23 @@ Jack takes the screens and the whole workshop. STATUS and the build board are
 updated by **one status pull request a day**, not by every feature pull
 request (`CLAUDE.md`, rule 7).
 
-**Mark is on:** — (stage 0 not started).
-**Jack is on:** the four blockers before stage 0 (issue #142: #127 rules,
-#128 migration numbers, #129 route-file design, #130 first-week order).
-**The build has not started:** stage 0 begins once those four are fixed and
-Jack says so.
+**The build has started** (Jack, 4 Oct: "the corrections are all good, we
+can go"). #126 merged with the four blockers fixed (#127–#130 closed);
+`main` now requires the `test` check and an up-to-date branch (Jack's yes,
+4 Oct). Stage 0, line 1 done: #110 (Quoting, the drawings' status words
+everywhere, waiting for parts beats Quoting), #111 (the till; Escape and a
+closed window can't hide a sale mid-save) and #112 (diary extras; stacked
+jobs move by keyboard, press and hold fans a stack on touch) merged.
+
+**Mark is on:** stage 0 — WP-0.2's server half, then WP-0.3 and WP-0.4
+(split plan §9).
+**Jack is on:** waiting on WP-0.2's server half for the booking screens.
+Ready meanwhile: #136 (Citrus Lime exports) and #138 (card machine), only
+Jack can do; the follow-up to #112 (chooser placement, phone sheet line,
+fan tile times as drawn; a nudged fan tile landing on the next day; the
+highlight inside a stack).
+**Open for Jack:** §7.2 workshop pieces earlier (after #131); a Change
+requested badge on the job window (not drawn).
 
 **Earlier (2 Oct, kept until WP-0.3 trims this file; the branch named next is old):** **Merged to `main`:** #90, #91, #92 (names), #93
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
