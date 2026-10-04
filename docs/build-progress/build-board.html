@@ -119,7 +119,7 @@ a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 // republish. Source: docs/build-progress/build-board.html in the repo.
 const BOARD = {
   updated: '4 October 2026',
-  lead: 'Before the Release 2 build: the last 12 journey-and-person pairs are walked; 5 questions are waiting for you, then the fixes get drawn.',
+  lead: 'The walk-throughs are finished: every journey has been walked as every person who uses it. The Release 2 build is ready to start when you say so.',
   sub: 'Mark\'s issue #116 is done in the drawings: one canvas of 211 boards (202 real screens, each with its building block and situation list), a clickable mockup where all 12 stories click through at every size, and a build plan that names each piece\'s building blocks. CI now checks all of them on every pull request.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
@@ -144,11 +144,11 @@ const BOARD = {
     { status: 'done', what: 'Issue #116: Mark\'s six questions and the drawing rules', pr: 117, detail: 'Answers in the decision files; consolidation reports for every journey; six drawing rules and 47 building blocks' },
     { status: 'done', what: 'Issue #116: one canvas, three walks, the clickable mockup', pr: 118, detail: '823 screens down to 202, each with its situations; 12 stories walked three times; your answers drawn; build plan per building block' },
     { status: 'done', what: 'Issue #116: design checks in CI', pr: 119, detail: 'Every pull request builds the drawings and checks the canvas, the mockup, every story at every size, and the build plan' },
-    { status: 'build', what: 'Stage W: the coverage check', detail: 'Every journey against every person: the 12 pairs no walk covered are walked (4 Oct); 5 questions for you, then the fixes are drawn. The mockup PIN now opens the till.' },
+    { status: 'done', what: 'Stage W: the coverage check', pr: 121, detail: 'Every journey against every person: the 12 pairs no walk covered are walked, your 5 answers drawn, 0 gaps left. The mockup PIN now opens the till.' },
     { status: 'next', what: 'Start the Release 2 build', detail: 'When you say so: stage 0 first, then each piece in the build plan\'s order' },
   ],
   asks: [
-    { what: 'Five coverage-walk questions', detail: 'The website menu word, asking "everything or nothing" once, account questions in Messages, deleting an account while a bike is in, one "can\'t delete yet" pattern.' },
+    { what: 'Wording to check', detail: 'A few words the drawings needed that no answer gave, in decided-while-building.md, for you to overrule if you want.' },
     { what: 'Start the build', detail: 'The build waits for your go-ahead (3 Oct: "dont start the build yet").' },
     { what: 'Pages not drawn yet', detail: '96 pages a mockup button leads to that no drawing shows, listed in mockup-gaps.md, for later.' },
     { what: 'Mechanic sign-off (Workshop day 64)', detail: 'Where and when a mechanic puts their name to a finished job. Still to design.' },
