@@ -11,6 +11,8 @@
 // label in the drawing where the drawing has it. A `does` in brackets is not
 // a control: someone else picks up (a message arrives, the next day comes),
 // or the control is only a situation line, not drawn (the gaps).
+// `firstIn` on a till-checkin step: the shop's first check-in of the day, so
+// the PIN opens the float check, not the till (walk-through 10 L1).
 
 export const stories = [
   {
@@ -48,7 +50,7 @@ export const stories = [
   {
     n: 2, name: 'A shop day', person: 'Staff', shop: 'Bolton', size: 'desktop',
     steps: [
-      { id: 'till-checkin', who: 'Staff', does: '(Types the PIN)' },
+      { id: 'till-checkin', who: 'Staff', does: '(Types the PIN)', firstIn: true },
       { id: 'op-float-check', who: 'Staff', does: 'Looks right' },
       { id: 'till-empty', who: 'Staff', does: '(Scans the brake pads and rings up the fitting)' },
       { id: 'till-sale', who: 'Staff', does: 'Add a discount', missingAt: ['phone'], missingWhy: 'the phone till keeps the sale behind “Open the sale”, which isn’t drawn' },
@@ -137,7 +139,7 @@ export const stories = [
       { id: 'mv-pick-day', who: 'Owner', does: 'Switch over on [date]' },
       { id: 'mv-morning', who: 'Owner', does: 'Turn it on' },
       { id: 'ws-published', who: 'Owner', does: '(Jo is first to check in at Till B1 on switch-over morning)' },
-      { id: 'till-checkin', who: 'Staff', does: '(Types the PIN)' },
+      { id: 'till-checkin', who: 'Staff', does: '(Types the PIN)', firstIn: true },
       { id: 'op-float-check-first', who: 'Staff', does: 'Count it' },
       { id: 'op-float-count', who: 'Staff', does: '(The first week)' },
       { id: 'mv-week', who: 'Owner' },
@@ -271,7 +273,7 @@ export const stories = [
   {
     n: 10, name: 'The Saturday worker’s day', person: 'Saturday worker', shop: 'Bolton', size: 'desktop',
     steps: [
-      { id: 'till-checkin', who: 'Saturday worker', does: '(Types the PIN)' },
+      { id: 'till-checkin', who: 'Saturday worker', does: '(Types the PIN)', firstIn: true },
       { id: 'op-float-check', who: 'Saturday worker', does: 'Looks right' },
       { id: 'till-empty', who: 'Saturday worker', does: '(Scans the brake pads and rings up the fitting)' },
       { id: 'till-sale', who: 'Saturday worker', does: 'Take payment · £74.00' },

@@ -26,7 +26,7 @@ const mark = (d, html) => {
   for (const c of controlsOf(html)) {
     const t = resolve(c, d, maps, fileToId);
     if (!t) { dead.push(`${d.id} · ${c.label}`); continue; }
-    const extra = t.go ? ` data-go="${esc(t.go)}"${t.say ? ` data-say="${esc(t.say)}"` : ''}${t.shop ? ` data-shop="${esc(t.shop)}"` : ''}` : ` data-act="${t.act}"${t.what ? ` data-what="${esc(t.what)}"` : ''}`;
+    const extra = t.go ? ` data-go="${esc(t.go)}"${t.say ? ` data-say="${esc(t.say)}"` : ''}${t.shop ? ` data-shop="${esc(t.shop)}"` : ''}${t.first ? ` data-first="${esc(t.first)}"` : ''}` : ` data-act="${t.act}"${t.what ? ` data-what="${esc(t.what)}"` : ''}`;
     res += html.slice(at, c.openEnd - 1) + extra + '>';
     at = c.openEnd;
   }

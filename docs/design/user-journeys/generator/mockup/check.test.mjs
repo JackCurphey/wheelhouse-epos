@@ -87,3 +87,41 @@ test('the mockup lists each screen’s situation lines, the same as the canvas',
   for (const id of Object.keys(lines)) if (!onCanvas[id]) bad.push(`${id} (not on the canvas)`);
   assert.deepEqual(bad.slice(0, 20), [], `${bad.length} screens whose lines differ`);
 });
+
+// Walk-through 10 L1 (Opening the shop 2): the float check is for the first
+// person in today only. A PIN on till-checkin opens the till; only a story's
+// first check-in of the day (its step marked `firstIn`) opens the float check.
+test('a PIN on till-checkin opens the till, except at a story’s first check-in', async () => {
+  const { stories } = await import('./stories.mjs');
+  const d = drawings.get('till-checkin');
+  const digits = Object.values(d.sizes).flatMap((s) => controlsOf(s.html)).filter((c) => /^[0-9]$/.test(c.label));
+  assert.ok(digits.length >= 10, `${digits.length} PIN digits drawn`);
+  const bad = digits.map((c) => resolve(c, d, maps, fileToId)).filter((t) => t?.go !== 'till-empty' || t?.first !== 'op-float-check');
+  assert.deepEqual(bad, [], 'every digit opens till-empty, and op-float-check at a first check-in');
+  const wrong = [];
+  for (const st of stories) st.steps.forEach((step, i) => {
+    const next = st.steps[i + 1];
+    if (step.id !== 'till-checkin' || !next) return;
+    const toFloat = (drawings.get(next.id)?.owner ?? next.id) === 'op-float-check';
+    if (toFloat !== Boolean(step.firstIn)) wrong.push(`story ${st.n}, step ${i + 1}: ${toFloat ? 'opens the float check but is not marked firstIn' : 'marked firstIn but its next step is not the float check'}`);
+  });
+  assert.deepEqual(wrong, []);
+});
+
+// Story mode's step counter follows the steps in order: a click to a screen
+// that is only a later step (story 8: the Saturday PIN opens the till, which
+// is the story's last step) doesn't jump the counter there.
+test('story mode’s step counter moves only to the current or the next step', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { stories } = await import('./stories.mjs');
+  const src = /^const stepIndex = .*;$/m.exec(readFileSync(new URL('./page.html', import.meta.url), 'utf8'))?.[0];
+  assert.ok(src, 'page.html defines stepIndex on one line');
+  const stepIndex = new Function(`${src}; return stepIndex;`)();
+  const s8 = stories.find((s) => s.n === 8).steps;
+  const at = s8.findIndex((s) => s.id === 'till-checkin');
+  assert.equal(stepIndex(s8, at, 'till-empty'), at, 'off the path: the counter stays');
+  assert.equal(stepIndex(s8, at, 'till-search-paid'), at + 1);
+  const bad = [];
+  for (const st of stories) st.steps.forEach((step, i) => { if (stepIndex(st.steps, i - 1, step.id) !== i) bad.push(`story ${st.n}, step ${i + 1}`); });
+  assert.deepEqual(bad, []);
+});

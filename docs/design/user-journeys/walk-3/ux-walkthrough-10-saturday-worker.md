@@ -45,6 +45,8 @@ The Saturday worker has no name yet (`personas.md`). The drawings call whoever i
 
 Every digit on `till-checkin` goes to `op-float-check`: "Hello, Jo · Till B1 · first in today to take payments". So the worker coming back from lunch, or the owner checking in at closing to close the day, gets the morning float check again. **Fix, no choice:** the mockup sends the PIN to the till (`till-empty`) except at the story's first step, or adds a note "first in only" (mockup only). Opening the shop 2 already says the float check is for the first person to check in. **Second check:** KEPT. The digits 0–9 all have `data-go="op-float-check"`.
 
+**Fixed 4 Oct:** the PIN digits now open the till (`till-empty`). Only a story step marked `firstIn` (the day's first check-in: stories 2, 4 and 10) opens the float check. Mockup only; no drawing changed.
+
 ### L2: At closing time, the morning's £74.00 sale is still in the basket, unpaid
 
 `eod-entry` ("Close the day appears in the till bar after closing time") shows "Serving: Jack Lewis" over a basket with the pads and the fitting, "Total £74.00 · Take payment · £74.00". On the phone it reads "Sale · 3 items · £74.00". That's the sale the worker took at step 2. **Fix, no choice:** the closing-time drawing's backdrop is an empty basket, as `till-empty` is. This is example data. **Second check:** KEPT. Text as quoted at desktop and phone.
@@ -86,7 +88,7 @@ Clicking shows the old behaviour, because these answers are lines:
 |---|---|---|---|
 | H1 | till-search, till-book-in, till-hand-over-job, till-job | New till screens unreachable; paid repair's only button charges £111.00 | Yes (question 1) |
 | M1 | till-job, till-pay | £111.00 becomes £74.00 on the pay screen | No |
-| L1 | till-checkin | Every PIN opens the first-in float check | No |
+| L1 | till-checkin | Every PIN opens the first-in float check (fixed 4 Oct) | No |
 | L2 | eod-entry | The morning's sale still in the basket at closing | No |
 | L3 | eod-z | Close after closing goes back to "Ready to close the day" | No |
 | L4 | till-hand-over-job | "Tick each item" with nothing to tick | No |
