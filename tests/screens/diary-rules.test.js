@@ -23,11 +23,12 @@ test('a change request is Change requested (amber)', () => {
 
 test('waiting for parts and finished work have their own colours', () => {
   assert.equal(diaryState(job({ workState: 'waiting_parts' })), 'waiting');
+  assert.equal(diaryState(job({ workState: 'waiting_parts', quote: { state: 'sent' } })), 'waiting');
   assert.equal(diaryState(job({ workState: 'complete' })), 'ready');
   assert.equal(diaryState(job({ workState: 'complete', custodyState: 'collected' })), 'ready');
 });
 
-test('started or paused work shows as Scheduled', () => {
+test('started or paused work shows as Expected', () => {
   assert.equal(diaryState(job({ workState: 'in_progress' })), 'scheduled');
   assert.equal(diaryState(job({ workState: 'on_hold' })), 'scheduled');
   assert.equal(diaryState(job()), 'scheduled');
@@ -111,4 +112,12 @@ test('a dropped job starts where it was dropped, snapped to 15 minutes', () => {
 test('a dropped job never starts before the grid or runs past its end', () => {
   assert.equal(dropStart(-40, { start: 540, end: 1080 }, 60), 540);
   assert.equal(dropStart(10_000, { start: 540, end: 1080 }, 60), 1020); // 17:00, so it ends at 18:00
+});
+
+// Quote stage piece 4 (UX walk-through M3): a job whose quote waits for the
+// customer has its own teal state, so purple only ever means a booking request.
+test('a job waiting for the customer to answer a quote is teal', () => {
+  assert.equal(diaryState(job({ custodyState: 'in_shop', quote: { id: 9, state: 'sent', revision: 1 } })), 'answer');
+  assert.equal(diaryState(job({ custodyState: 'in_shop', quote: { id: 9, state: 'approved', revision: 1 } })), 'scheduled');
+  assert.equal(diaryState(job({ workState: 'complete', quote: { id: 9, state: 'sent', revision: 1 } })), 'ready');
 });

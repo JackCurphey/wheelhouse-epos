@@ -70,7 +70,7 @@ const changes = () => calls.filter((c) => c.method !== 'GET').map((c) => `${c.me
 
 test('a job over two days has a block on each day, each saying which day it is', async () => {
   const { ui, within } = await openDiary();
-  assert.ok(has(within(ui.getByRole('group', { name: 'Monday 5 October' })).queryByText(/Trek Domane AL 3, Frame rebuild, Maya Patel, WH-1050, Scheduled, 10:00–12:00, day 1 of 2/)));
+  assert.ok(has(within(ui.getByRole('group', { name: 'Monday 5 October' })).queryByText(/Trek Domane AL 3, Frame rebuild, Maya Patel, WH-1050, Expected, 10:00–12:00, day 1 of 2/)));
   assert.ok(has(within(ui.getByRole('group', { name: 'Tuesday 6 October' })).queryByText(/day 2 of 2/)));
   assert.ok(has(within(ui.getByRole('group', { name: 'Tuesday 6 October' })).queryByText('Day 2 of 2 · Frame rebuild')));
 });

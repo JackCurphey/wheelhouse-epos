@@ -52,7 +52,7 @@ test('staff quote, send and record a phone answer; the approved part joins the j
   await expect(job.getByText('Awaiting approval')).toBeVisible();
   await job.getByRole('button', { name: 'Send quote' }).click();
   await expect(job.getByText(/but no text went: Texts aren't set up/)).toBeVisible();
-  await expect(job.getByText('Waiting for the customer')).toBeVisible();
+  await expect(job.getByText('Quoting')).toBeVisible();
   await job.getByRole('button', { name: 'Record their answer' }).click();
   const rec = page.getByRole('dialog', { name: "Record Maya Patel's answer" });
   await rec.getByRole('button', { name: 'Save: yes to 1 line, no thanks to 0' }).click();

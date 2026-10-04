@@ -5,20 +5,24 @@
  */
 
 /** The diary's colours (ST in docs/design/user-journeys/generator/diary.mjs). */
-export type DiaryState = 'pending' | 'scheduled' | 'waiting' | 'hold' | 'ready' | 'cancelled';
+export type DiaryState = 'pending' | 'scheduled' | 'answer' | 'waiting' | 'hold' | 'ready' | 'cancelled';
 
+// The job page's stage words, everywhere (3 Oct answer 11, walk-through 9 M4).
 export const STATE_LABEL: Record<DiaryState, string> = {
-  scheduled: 'Scheduled',
+  scheduled: 'Expected',
   pending: 'Pending',
+  answer: 'Quoting',
   hold: 'Change requested',
   waiting: 'Waiting for parts',
-  ready: 'Ready',
+  ready: 'Finished',
   cancelled: 'Cancelled',
 };
 
-/** The legend's order, as drawn (diaryLegend), without the teal state the
- *  jobs list can't report yet. */
-export const LEGEND: DiaryState[] = ['scheduled', 'pending', 'hold', 'waiting', 'ready', 'cancelled'];
+/** The legend's words: blue covers more than one stage (diaryLegend). */
+export const LEGEND_LABEL: Record<DiaryState, string> = { ...STATE_LABEL, scheduled: 'Expected, booked in or in the workshop' };
+
+/** The legend's order, as drawn (diaryLegend). */
+export const LEGEND: DiaryState[] = ['scheduled', 'pending', 'answer', 'hold', 'waiting', 'ready', 'cancelled'];
 
 type JobStates = {
   bookingState: string;
@@ -26,6 +30,7 @@ type JobStates = {
   requested?: unknown;
   cancelledBy?: string | null;
   cancellationSeenAt?: string | null;
+  quote?: { state: string } | null;
 };
 
 /**
@@ -41,6 +46,8 @@ export function diaryState(job: JobStates): DiaryState | 'hidden' {
   if (b === 'reschedule_requested' && job.requested) return 'hold';
   if (job.workState === 'waiting_parts') return 'waiting';
   if (job.workState === 'complete') return 'ready';
+  // A quote waiting for the customer (UX walk-through M3): its own teal.
+  if (job.quote?.state === 'sent') return 'answer';
   return 'scheduled';
 }
 
