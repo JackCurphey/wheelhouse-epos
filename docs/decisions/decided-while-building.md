@@ -16,6 +16,20 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
 
 ## Jack's lane
 
+### 4 Oct 2026: diary piece 5b (pull request 112), after its fresh review
+
+1. **`diary-stack-open`: each chooser tile answers M (move with the arrow
+   keys) and the Menu key (Job actions)**, and its name ends with the job's
+   state. Not drawn; it keeps the spec's promise that dragging is never the
+   only way, which stacking had broken for keyboard and screen-reader users.
+   *Pattern:* the same keys as a job block (`diary-move-hint`).
+2. **A stacked job being moved by keyboard leaves its stack and takes focus;
+   when the move ends, focus goes back to the stack.** *Pattern:* "a job
+   being moved leaves its stack" (already built for dragging).
+3. **`diary-stack-hover` on touch: press and hold fans the stack out**, as
+   drawn (`touchStackBlock`); a tap elsewhere folds it. The tap that ends
+   the hold doesn't also open the chooser.
+
 ### 4 Oct 2026: till piece 1 (pull request 111), after its fresh review
 
 1. **`till-pay`: the message when the reply to a payment is lost** reads
