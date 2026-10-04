@@ -36,10 +36,11 @@ const DAYS = [['Mon', '14'], ['Tue', '15'], ['Wed', '16'], ['Thu', '17'], ['Fri'
 const CATS = ['Workshop', 'Parts', 'Accessories'];
 // UX walk-through 3 M10: Margin and stock value use the Stockroom's
 // categories (Settings › Stockroom › Categories: Bearings, Drivetrain and the
-// shop's own), not the till's quick-button groups. Margin adds labour as its
-// own row; stock value has no labour row, since labour holds no stock.
+// shop's own), not the till's quick-button groups. Reports and accounts,
+// later change (3 Oct, walk-through 11 M2): margin is on goods only; labour
+// is left out of it and shown beside it ("Labour £[£] · not in margin").
 const STOCK_CATS = ['Bearings', 'Drivetrain', '[Category]'];
-const MARGIN_ROWS = [...STOCK_CATS, 'Labour'];
+const MARGIN_ROWS = STOCK_CATS;
 const SECOND = '[Second site]';
 
 // The page: Owner by default. Staff with "Can see reports" get Reports in
@@ -67,7 +68,7 @@ const title = (t, sub, actions) => `<div style="display: flex; flex-wrap: wrap; 
 const DL = () => button(isPhone() ? 'Download' : 'Download as spreadsheet', { variant: 'default' });
 const head = (t, sub, period, { list = PERIODS, change = true } = {}) => `${back()}${title(t, sub, `${change ? button('Change what’s shown', { variant: 'default' }) : ''}${DL()}`)}${periodGroup(period, list)}`;
 // A headline figure, with the comparison in words (audit M9).
-const stat = (k, v, cmp) => `<div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">${k}</span><span style="font-size: 22px; font-weight: 700">${v}</span><span style="font-size: 12px; color: ${C.ink}">${cmp}</span></div>`;
+const stat = (k, v, cmp) => `<div style="display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">${k}</span><span style="font-size: 22px; font-weight: 700">${v}</span><span style="font-size: 14px; color: ${C.ink}">${cmp}</span></div>`;
 const stats = (items) => `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 2 : items.length}, minmax(0, 1fr)); gap: 10px">${items.join('')}</div>`;
 const UP = (what = '£[£]', vs = 'the same days last week') => `[Up or down] ${what} on ${vs}`;
 // A plain table; `text` lists the columns of words, the rest are amounts.
@@ -88,7 +89,7 @@ const onPhone = (px) => (isPhone() ? px : 0);
 const STRIPES = `repeating-linear-gradient(45deg, ${C.input} 0 2px, ${C.panel} 2px 6px)`;
 const graph = (t, labels, { value = '[£]', key = ['This week so far', 'Same days last week'], upto = labels.length, says = 'busiest day [day]; [up or down] £[£] on the same days last week', stacked = false } = {}) => {
   const h = 120;
-  const grid = [1, 0.5, 0].map((f) => `<div style="position: absolute; left: 0; right: 0; bottom: ${Math.round(h * f)}px; border-top: 1px ${f ? 'dashed' : 'solid'} ${f ? C.border : C.input}"><span style="position: absolute; left: 0; top: -8px; font-size: 11px; font-family: ${MONO}; color: ${C.muted}">${f === 1 ? value : f ? '' : '0'}</span></div>`).join('');
+  const grid = [1, 0.5, 0].map((f) => `<div style="position: absolute; left: 0; right: 0; bottom: ${Math.round(h * f)}px; border-top: 1px ${f ? 'dashed' : 'solid'} ${f ? C.border : C.input}"><span style="position: absolute; left: 0; top: -8px; font-size: 12px; font-family: ${MONO}; color: ${C.muted}">${f === 1 ? value : f ? '' : '0'}</span></div>`).join('');
   const bars = labels.map((l, i) => `<div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px"><div style="position: relative; width: 100%; max-width: 56px; height: ${h}px; display: flex; align-items: flex-end; justify-content: center">${stacked ? `<div style="width: 60%; display: flex; flex-direction: column"><div style="height: ${Math.round(h * 0.25)}px; background: ${STRIPES}; border: 1px solid ${C.ink}; border-bottom: 0; border-radius: 4px 4px 0 0; box-sizing: border-box"></div><div style="height: ${Math.round(h * 0.4)}px; background: ${C.ink}; opacity: 0.85"></div></div>` : i < upto ? `<div style="position: absolute; left: 50%; transform: translateX(-30%); bottom: 0; width: 60%; height: ${Math.round(h * 0.6)}px; border: 1px dashed ${C.input}; border-bottom: 0; border-radius: 4px 4px 0 0"></div><div style="position: relative; width: 60%; transform: translateX(-15%); height: ${Math.round(h * 0.6)}px; background: ${C.ink}; opacity: 0.85; border-radius: 4px 4px 0 0"></div>` : `<span style="padding-bottom: 6px; font-size: 11px; color: ${C.muted}">Not yet</span>`}</div><span style="font-size: 12px; font-weight: 600; text-align: center; line-height: 1.25; ${isPhone() && labels.length > 8 ? `white-space: nowrap${i % 2 ? '; visibility: hidden' : ''}` : 'max-width: 100%; overflow-wrap: anywhere'}">${l}</span></div>`).join('');
   return `<figure style="margin: 0; display: flex; flex-direction: column; gap: 12px" role="img" aria-label="${esc(`${t}: ${says}. The figures are in the table below.`)}">
 <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"><figcaption style="font-size: 15px; font-weight: 700">${t}</figcaption><span style="display: inline-flex; align-items: center; gap: 14px; font-size: 12px; color: ${C.ink}"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 2px; background: ${C.ink}; opacity: 0.85"></span>${key[0]}</span>${key[1] ? `<span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 2px; ${stacked ? `box-sizing: border-box; border: 1px solid ${C.ink}; background: ${STRIPES}` : `border: 1px dashed ${C.input}`}"></span>${key[1]}</span>` : ''}</span></div>
@@ -129,9 +130,28 @@ const mine = (name, sub, who, own = true) => `<div style="display: flex; align-i
 const yourReports = (staff) => box(`${h3('Your reports')}${note('Start from any report, choose “Change what’s shown”, then “Save as my report”.')}${staff
   ? `${mine('[Report name]', 'Sales: items sold by product · Accessories only', 'Just you')}${mine('[Report name]', 'Workshop: jobs by service', 'Shared by Jack Lewis', false)}`
   : `${mine('[Report name]', 'Sales: items sold by product · Accessories only', 'Shared with managers')}${mine('[Report name]', 'Workshop: jobs by service', 'Just you')}`}`);
-const home = (staff = false) => wrap(`${note(`Thursday 17 September · North Street Cycles, Bolton${staff ? '' : ' · use the shop menu for another shop or all shops'}`)}
+// The figures strip (issue #116 question 1, Jack, 3 Oct: "1"; and 3 Oct,
+// "1": it follows the shop menu, Multiple sites 1): takings by shop, margin
+// (labelled Margin, not Profit) and a link to the shop, above the cards.
+// "All shops" in the menu gives one row per shop (rp-home-all; third walk,
+// walk-through 11 H1). Margin only with "Can see costs and margin" (Reports
+// and accounts 5). Takings are with VAT (Reports and accounts, later change,
+// 3 Oct, walk-through 11 H2: "Takings" has one meaning everywhere). The
+// period is this week so far, the same period every report opens on (3 Oct,
+// third walk, answer 2); a shop's name opens that shop's Sales report, with
+// the shop menu switched to it (answer 3).
+const shopLink = (name, label = '', extra = '') => `<a href="#"${label ? ` aria-label="${esc(label)}"` : ''} style="${extra}display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; min-width: 0; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0"><span style="font-size: 13px; color: ${C.muted}">Shop</span><span style="font-size: 17px; font-weight: 700">${name}</span></span><span aria-hidden="true" style="color: ${C.muted}">›</span></a>`;
+const STRIP_PERIOD = 'So far: Mon 14 – Thu 17 September';
+// All shops: a row per shop, the shop's name first (on a phone it spans the
+// row, so each shop's figures sit under its name).
+const shopRow = (shop) => `<div role="group" aria-label="${esc(shop)}" style="display: grid; grid-template-columns: repeat(${isPhone() ? 2 : 3}, minmax(0, 1fr)); gap: 10px">${shopLink(shop, `${shop}: open its Sales report`, isPhone() ? 'grid-column: 1 / -1; ' : '')}${stat('Takings', '£[£]', '')}${stat('Margin', `£[£] · ${mono('[%]')}`, '')}</div>`;
+const strip = (staff, all = false) => box(`${h3(STRIP_PERIOD)}${all
+  ? `<div style="display: flex; flex-direction: column; gap: 10px">${['Bolton', SECOND].map(shopRow).join('')}</div>`
+  : stats([stat('Takings', '£[£]', ''), ...(staff ? [] : [stat('Margin', `£[£] · ${mono('[%]')}`, '')]), shopLink('North Street Cycles, Bolton')])}`);
+const home = (staff = false, all = false) => wrap(`${note(`Thursday 17 September · ${all ? 'All shops · use the shop menu for one shop' : `North Street Cycles, Bolton${staff ? '' : ' · use the shop menu for another shop or all shops'}`}`)}
+${strip(staff, all)}
 ${box(`${h3('Ready-made reports')}<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 3}, minmax(0, 1fr)); gap: 10px">${REPORTS.filter((r) => !staff || !r[2]).map(reportCard).join('')}</div>`)}
-${yourReports(staff)}`, staff ? STAFF : OWNER);
+${yourReports(staff)}`, staff ? STAFF : OWNER, all ? 'All shops' : 'Bolton');
 // The "…" menu on your own saved report (audit M6). One shared with you
 // says who shared it and has no menu (on the Staff board).
 const homeShared = () => wrap(`${note('Thursday 17 September · North Street Cycles, Bolton · use the shop menu for another shop or all shops')}
@@ -151,23 +171,23 @@ const salesRows = () => DAYS.map(([d, n], i) => (i < 4 ? [`${d} ${n} Sep`, '[£]
 // before it opened; its row in an All shops table says so.
 const opened = (shop = SECOND) => `<span style="display: flex; flex-direction: column; gap: 2px">${shop}<span style="font-size: 12px; font-weight: 400; color: ${C.ink}; white-space: normal">Opened [date] — nothing to compare before then</span></span>`;
 const sales = (site = 'Bolton') => wrap(`${head('Sales', `${shopName(site)} · ${SO_FAR}`, 'This week')}
-${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Number of sales', '[n]', UP('[n]')), stat('Average sale', '£[£]', UP()), stat('Refunds', '£[£]', UP())])}
+${stats([stat('Takings', '£[£]', UP()), stat('Number of sales', '[n]', UP('[n]')), stat('Average sale', '£[£]', UP()), stat('Refunds', '£[£]', UP())])}
 ${box(`${site === 'All shops'
   ? `${graph('Takings by shop', ['Bolton', SECOND], { says: 'Bolton £[£], [Second site] £[£]' })}${table('Sales by shop', ['Shop', 'Takings', 'Sales', 'Average'], [['Bolton', '[£]', '[n]', '[£]'], [opened(), '[£]', '[n]', '[£]'] /* UX walk-through 7 M1 */], ['All shops', '[£]', '[n]', '[£]'])}`
   : `${graph('Takings by day', DAY_LABELS, { upto: 4 })}${table('Sales by day', ['Day', 'Takings', 'Sales', 'Average'], salesRows(), ['So far', '[£]', '[n]', '[£]'])}`}`)}
-${note('Takings include VAT and take refunds off. Practice sales from moving across are never counted.')}`, OWNER, site);
+${note('Takings include VAT, take refunds off, and count online and Cycle to Work money; today counts so far.')}`, OWNER, site);
 // Nothing sold yet, and no period before to compare with (audit M7).
 const salesEmpty = () => wrap(`${head('Sales', 'North Street Cycles, Bolton · Today, Thursday 17 September', 'Today')}
 ${box(`<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 36px 12px; text-align: center"><span style="font-size: 17px; font-weight: 700">Nothing sold yet today</span>${note('Sales show here as soon as the first one goes through a till.')}</div>`)}
 ${box(`${h3('Nothing to compare with yet')}${note('The shop started on Wheelhouse on [date], so there’s no period before this one. Comparisons start once there is.')}`)}`);
 const salesYear = () => wrap(`${head('Sales', 'North Street Cycles, Bolton · October 2025 – September 2026, against the 12 months before', 'Last 12 months')}
-${stats([stat('Takings (with VAT)', '£[£]', UP('£[£]', 'the 12 months before')), stat('Number of sales', '[n]', UP('[n]', 'the 12 months before')), stat('Average sale', '£[£]', UP('£[£]', 'the 12 months before')), stat('Refunds', '£[£]', UP('£[£]', 'the 12 months before'))])}
+${stats([stat('Takings', '£[£]', UP('£[£]', 'the 12 months before')), stat('Number of sales', '[n]', UP('[n]', 'the 12 months before')), stat('Average sale', '£[£]', UP('£[£]', 'the 12 months before')), stat('Refunds', '£[£]', UP('£[£]', 'the 12 months before'))])}
 ${box(`${lineGraph('Takings by month', MONTHS)}${table('Takings by month', ['Month', 'Takings', 'Sales', 'Average'], MONTHS.map((m) => [m, '[£]', '[n]', '[£]']), ['12 months', '[£]', '[n]', '[£]'])}`)}`);
 // Pick dates (audit M8).
 const pickDates = () => popup('pd-title', 'Pick dates', 'Sales · North Street Cycles, Bolton', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('From', { type: 'date', value: '2026-09-01' })}${field('To', { type: 'date', value: '2026-09-17' })}</div>${note('Compared with the same number of days just before.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Show report')}`, 520);
 // Your settings: graphs on or off, in Accessibility (decision 7; audit L4).
 // Scrolled down the Accessibility list so the new row is in view.
-const settingsGraphs = () => overlay(home(), scrolled(yourSettingsDialog(SIZE, { graphs: true }).replace('Jo Taylor · Staff', 'Jack Lewis · Owner'), onPhone(420))
+const settingsGraphs = () => overlay(home(), scrolled(yourSettingsDialog(SIZE, { graphs: true, help: false }).replace('Jo Taylor · Staff', 'Jack Lewis · Owner'), onPhone(420))
   .replace('padding: 18px 22px 22px; display: grid;', 'padding: 18px 22px 22px; min-height: 0; overflow: hidden; display: grid;')
   .replace(/(grid-template-columns: 250px[^>]*>.*?<\/div>)<div style="display: flex; flex-direction: column; gap: 12px">/s, '$1<div style="display: flex; flex-direction: column; gap: 12px; position: relative; top: -250px">'));
 
@@ -211,7 +231,7 @@ const ONLINE_NOTE = 'Online is what customers paid on the website, from [payment
 const reopenedBar = () => bar('<strong>Wed 16 Sep, Till B2 is reopened</strong> — its figures are left out until it’s closed again.', button('Close the day', { variant: 'default' }));
 const takings = ({ reopened = false, site = 'Bolton' } = {}) => wrap(`${head('Takings and cash-ups', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${reopened ? reopenedBar() : ''}
-${stats([stat('Takings (with VAT)', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Cycle to Work', '£[£]', 'Owed by providers, not in the drawer') /* UX walk-through 5 H3 */, stat('Online', '£[£]', 'Paid on the website · separate from the tills'), stat('Cash differences', '£[£]', UP())])}
+${stats([stat('Closed days’ takings', '£[£]', UP()), stat('Card', '£[£]', UP()), stat('Cash', '£[£]', UP()), stat('Other', '£[£]', 'Gift cards, store credit and customer accounts'), stat('Cycle to Work', '£[£]', 'Owed by providers, not in the drawer') /* UX walk-through 5 H3 */, stat('Online', '£[£]', 'Paid on the website · separate from the tills'), stat('Cash differences', '£[£]', UP())])}
 ${box(`${graph('Takings by closed day', DAY_LABELS, { upto: 3, key: ['Closed days this week', 'Same days last week'] })}${site === 'All shops'
   ? table('Closed days by shop', ['Shop', 'Takings at the tills', 'Online', 'Cash banked', 'Cash difference', 'Sent to Xero'], [['Bolton', '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`], [SECOND, '[£]', '[£]', '[£]', '£[£]', `${mono('[n]')} of ${mono('[n]')} days`]], ['All shops', '[£]', '[£]', '[£]', '£[£]', ''], [0, 5])
   : table('Closed days', ['Day and till', 'Takings', 'Cash banked', 'Cash difference', 'Closed by', 'Sent to Xero'], dayRows(reopened), null, [0, 4, 5])}`)}
@@ -220,7 +240,7 @@ ${note('Open a closed day for its end-of-day report. A manager can reopen it fro
 // A row's third part is a line under its name.
 // UX walk-through 2 M2: the morning's float, and any difference, stays on the
 // day's report after "Seen" is pressed.
-const ZROWS = [['Sales', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Cycle to Work', '£[£]', 'Owed by providers, not in the drawer'] /* UX walk-through 5 H3 */, ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Float at the start', '£[£]', '£[£] short, counted by Jo Taylor at [time]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
+const ZROWS = [['Takings', '£[£]'], ['Card', '£[£]'], ['Cash', '£[£]'], ['Gift cards, store credit, customer accounts', '£[£]'], ['Cycle to Work', '£[£]', 'Owed by providers, not in the drawer'] /* UX walk-through 5 H3 */, ['Refunds', '£[£]'], ['Voids', `${'[n]'} · £[£]`], ['Discounts given', '[n] · £[£]'], ['VAT in the day’s sales', '£[£]'], ['Float at the start', '£[£]', '£[£] short, counted by Jo Taylor at [time]'], ['Cash difference', '−£[£]'], ['Banked', '£[£]']];
 const zRow = ([k, v, sub]) => `<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-top: 1px solid ${C.border}; font-size: 15px"><dt style="display: flex; flex-direction: column; gap: 2px">${k}${sub ? `<span style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</dt><dd style="margin: 0; font-family: ${MONO}; white-space: nowrap">${v}</dd></div>`;
 // UX walk-through 2 M5: the day's online payments, said apart from this till.
 const zOnline = () => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; background: ${C.mutedBg}"><div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 700"><span>Online that day</span>${mono('£[£]')}</div><span style="font-size: 13px; line-height: 1.45">Paid on the website, from [payment provider]. Separate from the tills — it isn’t in this till’s figures above.</span></div>`;
@@ -233,16 +253,18 @@ ${note('Saved with your name and the time. The day goes back to Needs attention,
 // accountant needs — and no "Change what's shown".
 const VATP = ['This VAT quarter', 'Last VAT quarter', 'Pick dates'];
 // UX walk-through 3 M8 (option 1): the Stock purchases box never shows a
-// figure that's short. With the invoice check off it says to take the figure
-// from the accounts software; with it on it says how many deliveries are
-// still waiting for their invoice, and links to them.
-const vat = (site = 'Bolton', { checkOff = false } = {}) => wrap(`${head('VAT', `${shopName(site)} · this VAT quarter, [start] – [end], against the quarter before`, 'This VAT quarter', { list: VATP, change: false })}
+// figure that's short. Reports and accounts, later change (issue #116
+// question 6): the supplier invoice check comes later, so the box gives no
+// figure and says to take it from the accounts software. The invoice version
+// (\`invoices: true\`) is kept for when the check is built (rp-vat-check-off,
+// listed as later).
+const vat = (site = 'Bolton', { invoices = false } = {}) => wrap(`${head('VAT', `${shopName(site)} · this VAT quarter, [start] – [end], against the quarter before`, 'This VAT quarter', { list: VATP, change: false })}
 ${box(`${h3('Sales')}${site === 'All shops'
   ? table('VAT on sales by shop', ['Shop', 'Sales before VAT', 'VAT charged', 'Quarter before'], [['Bolton', '[£]', '[£]', '[£]'], [SECOND, '[£]', '[£]', '[£]']], ['All shops', '[£]', '[£]', '[£]'])
   : table('VAT on sales by rate', ['Rate', 'Sales before VAT', 'VAT charged', 'Quarter before'], [['Standard 20%', '[£]', '[£]', '[£]'], ['Reduced rate 5%', '[£]', '[£]', '[£]'], ['Zero rate 0%', '[£]', '[£]', '[£]'], ['Refunds', '−[£]', '−[£]', '−[£]']], ['Total', '[£]', '[£]', '[£]'])}`)}
-${box(`${h3('Stock purchases')}<p role="note" style="margin: 0; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Stock purchases only — not your full VAT reclaim.</strong> Rent, bills and other costs don’t go through Wheelhouse.</p>${checkOff
-  ? `<p style="margin: 0; font-size: 15px; line-height: 1.5">Supplier invoices are checked in your accounts software — take this figure from there.</p>${note('The invoice check is off in Settings › Stockroom, so Wheelhouse has no supplier invoices to add up.')}`
-  : `${table('VAT on stock invoices', ['From', 'Before VAT', 'VAT', 'Quarter before'], [['Supplier invoices booked in · [n]', '[£]', '[£]', '[£]']])}<p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; line-height: 1.45"><span>${mono('[n]')} deliveries are still waiting for their invoice and aren’t in this.</span>${linkBtn('See them', 'See the deliveries waiting for their invoice')}</p>`}`)}
+${box(`${h3('Stock purchases')}<p role="note" style="margin: 0; padding: 10px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Stock purchases only — not your full VAT reclaim.</strong> Rent, bills and other costs don’t go through Wheelhouse.</p>${invoices
+  ? `${table('VAT on stock invoices', ['From', 'Before VAT', 'VAT', 'Quarter before'], [['Supplier invoices booked in · [n]', '[£]', '[£]', '[£]']])}<p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; line-height: 1.45"><span>${mono('[n]')} deliveries are still waiting for their invoice and aren’t in this.</span>${linkBtn('See them', 'See the deliveries waiting for their invoice')}</p>`
+  : `<p style="margin: 0; font-size: 15px; line-height: 1.5">Supplier invoices are checked in your accounts software — take this figure from there.</p>`}`)}
 ${note('No graph here: these are the exact figures your accountant needs. Wheelhouse doesn’t file your VAT return — file it from your accounts software, or send this to your accountant.')}`, OWNER, site);
 const vatFirst = () => overlay(vat(), popup('vq-title', 'When does your VAT quarter start?', 'Asked once. Change it later in Settings › Shop and sites.', `<div role="radiogroup" aria-label="Months your VAT quarters start" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px">${['January, April, July, October', 'February, May, August, November', 'March, June, September, December'].map((t, i) => chip(t, i === 0)).join('')}</div>${note('It’s on your VAT registration, or ask your accountant.')}`, `${button('Not now', { variant: 'ghost' })}${button('Save')}`, 560));
 
@@ -266,7 +288,7 @@ const WRITTEN_OFF = [
 const margin = (site = 'Bolton') => wrap(`${head('Margin and stock value', `${shopName(site)} · ${SO_FAR}`, 'This week')}
 ${stats([stat('Sales before VAT', '£[£]', UP()), stat('What it cost you', '£[£]', UP()), stat('Margin (sales less cost)', '£[£] · [n]%', UP('[n] points'))])}
 <p role="note" style="margin: 0; font-size: 14px; line-height: 1.45"><strong>[n] products sold without a cost</strong> — their margin can’t be worked out, so they’re left out below. ${linkBtn('See them and add a cost')}</p>
-${box(`${graph('Margin by category', MARGIN_ROWS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], MARGIN_ROWS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}`)}
+${box(`${graph('Margin by category', MARGIN_ROWS, { value: '[n]%', says: 'highest [Category] [n]%; [up or down] [n] points on the same days last week' })}${table('Margin by category', ['Category', 'Sales before VAT', 'What it cost you', 'Margin', 'Margin %'], MARGIN_ROWS.map((c) => [c, '[£]', '[£]', '[£]', '[n]%']), ['All', '[£]', '[£]', '[£]', '[n]%'])}<p style="margin: 0; font-size: 15px">Labour ${mono('£[£]')} · not in margin</p>${note('Margin is on goods only.')}`)}
 ${box(`${h3('On the shelves today')}<p style="margin: 0; font-size: 15px">Stock value, at what it cost you: ${mono('£[£]', 'font-weight: 700')}</p>${note(`Includes stock held for customers (${mono('£[£]')}). Stock on its way between shops counts at the shop it’s going to (${mono('£[£]')}).`)}${table('Stock value by category', ['Category', 'Items', 'What it cost you'], STOCK_CATS.map((c) => [c, '[n]', '[£]']), ['All', '[n]', '[£]'])}`)}
 ${box(`${h3('Stock written off')}${note('Stock takes and adjustments this week, at what it cost you.')}${table('Stock written off', ['Why', 'Items', 'At cost', ''], WRITTEN_OFF.map(([why, n, v, link, label]) => [why, n, v, linkBtn(link, label)]), ['All', '[n]', '[£]', ''], [0, 3])}`)}`, OWNER, site);
 
@@ -357,6 +379,7 @@ const personBoard = () => overlay(managerStaffPage({ people: peopleOpen(false, f
 
 // ---------- The boards ----------
 def('rp-home', () => home());
+def('rp-home-all', () => home(false, true));
 def('rp-home-staff', () => home(true));
 def('rp-report-menu', () => scrolled(homeShared(), onPhone(560)));
 def('rp-report-deleted', () => deletedBar());
@@ -378,7 +401,7 @@ def('rp-takings-reopened', () => takings({ reopened: true }));
 def('rp-vat', () => vat());
 def('rp-vat-first', () => vatFirst());
 def('rp-vat-all', () => vat('All shops'));
-def('rp-vat-check-off', () => vat('Bolton', { checkOff: true })); // UX walk-through 3 M8
+def('rp-vat-check-off', () => vat('Bolton', { invoices: true })); // UX walk-through 3 M8; later (issue #116 question 6)
 def('rp-margin', () => margin());
 def('rp-workshop', () => workshop());
 def('rp-workshop-all', () => scrolled(workshopAll(), { desktop: 300, tablet: 300, phone: 640 }[SIZE])); // UX walk-through 7 M1: scrolled to the shop rows and How full
@@ -408,6 +431,7 @@ SIZE = 'desktop';
 export const TITLES = {
   'rp-returning': 'Returning customers: who comes back, who hasn’t lately',
   'rp-home': 'Reports: the ready-made reports, and your own',
+  'rp-home-all': 'Reports on All shops: the strip has a row for each shop',
   'rp-home-staff': 'Reports for Staff with “Can see reports” (one shop, no costs)',
   'rp-report-menu': 'A saved report’s menu: rename, share, delete',
   'rp-report-deleted': 'A saved report deleted, with Undo',
@@ -429,7 +453,7 @@ export const TITLES = {
   'rp-vat': 'VAT for your VAT quarter, against the quarter before',
   'rp-vat-first': 'When does your VAT quarter start? (asked once)',
   'rp-vat-all': 'VAT for all shops',
-  'rp-vat-check-off': 'VAT with the invoice check off: stock purchases from your accounts software',
+  'rp-vat-check-off': 'VAT with the supplier invoice check: invoices booked in',
   'rp-margin': 'Margin and stock value',
   'rp-workshop': 'Workshop: jobs, takings, how full, turnaround, quotes',
   'rp-workshop-all': 'Workshop for all shops: shop by shop, and how full at each', // UX walk-through 7 M1
@@ -447,7 +471,7 @@ export const TITLES = {
   'rp-accounts-c2w': 'Xero choices (scrolled down): Cycle to Work, its commission and shortfalls', // UX walk-through 5 H3
 };
 export const ROWS = [
-  { label: 'Reports', screens: ['rp-home', 'rp-home-staff', 'rp-report-menu', 'rp-report-deleted', 'rp-your-settings'] },
+  { label: 'Reports', screens: ['rp-home', 'rp-home-all', 'rp-home-staff', 'rp-report-menu', 'rp-report-deleted', 'rp-your-settings'] },
   { label: 'Sales', screens: ['rp-sales', 'rp-sales-all', 'rp-sales-year', 'rp-sales-empty', 'rp-pick-dates'] },
   { label: 'Your own reports', screens: ['rp-change', 'rp-changed', 'rp-save', 'rp-save-taken'] },
   { label: 'Takings and cash-ups', screens: ['rp-takings', 'rp-takings-all', 'rp-day', 'rp-reopen', 'rp-takings-reopened'] },

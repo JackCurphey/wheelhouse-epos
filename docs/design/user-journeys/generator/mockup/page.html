@@ -1,0 +1,169 @@
+<meta charset="utf-8">
+<title>Wheelhouse mockup</title>
+<link rel="stylesheet" href="%FONT_LINK%">
+<style>
+/* Layout: one slim bar of choices on top, the drawing below scaled to fit. */
+:root { --bg: #efece4; --panel: #fbfaf6; --ink: #24231f; --muted: #6b675d; --line: #d9d4c7; --accent: #2f5d50; --warn: #7a4d0b; --warn-bg: #f6ead2; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1d1c19; --panel: #26251f; --ink: #ece8de; --muted: #a8a294; --line: #3a382f; --accent: #8cc2b0; --warn: #f0cf8e; --warn-bg: #3b301c; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #1d1c19; --panel: #26251f; --ink: #ece8de; --muted: #a8a294; --line: #3a382f; --accent: #8cc2b0; --warn: #f0cf8e; --warn-bg: #3b301c; color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 14px; padding: 0 16px 24px; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; padding: 10px 0; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+.bar select, .bar button { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-height: 36px; padding: 0 10px; }
+.bar button { cursor: pointer; }
+.bar select:focus-visible, .bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.name { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.name strong { font-size: 15px; font-weight: 600; }
+.name span { color: var(--muted); font-size: 12px; }
+.note { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 13px; }
+.stage { margin-top: 12px; overflow: hidden; }
+.frame { transform-origin: top left; background: #fff; box-shadow: 0 0 0 1px var(--line); }
+.empty { padding: 40px 0; color: var(--muted); }
+[hidden] { display: none !important; }
+.step { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 0; font-size: 14px; }
+.step button { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-height: 36px; padding: 0 12px; cursor: pointer; }
+.step button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lines { margin-top: 16px; max-width: 980px; }
+.lines h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.lines p { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.lines ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+</style>
+<div class="bar">
+  <label for="story">Start a story<select id="story"><option value="">Choose a story…</option></select></label>
+  <label for="person">Person<select id="person"></select></label>
+  <label for="shop">Shop<select id="shop"><option>Bolton</option><option>[Second site]</option><option>All shops</option></select></label>
+  <label for="size">Size<select id="size"><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="phone">Phone</option></select></label>
+  <button type="button" id="back">‹ Back</button>
+  <div class="name"><strong id="title">Loading…</strong><span id="where"></span></div>
+  <label for="sit">This screen's situations<select id="sit"></select></label>
+</div>
+<p class="note" id="note" role="status" hidden></p>
+<p class="step" id="step" hidden><span id="stepText"></span><button type="button" id="next">Next step ›</button></p>
+<div class="stage" id="stage"><p class="empty">Loading the drawings…</p></div>
+<section class="lines" id="lines" aria-labelledby="linesTitle" hidden><h2 id="linesTitle">Situation lines</h2><p>The same lines as under this screen’s board on the canvas. Read only: they are not drawn, so they can’t be clicked.</p><ul id="linesList"></ul></section>
+<script>
+const PEOPLE = ['Owner', 'Manager', 'Staff', 'Saturday worker', 'Mechanic', 'Customer'];
+const $ = (id) => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem('wh-mockup-' + k); } catch { return null; } }, set(k, v) { try { localStorage.setItem('wh-mockup-' + k, v); } catch {} } };
+let M = null; const cache = {}; const trail = [];
+PEOPLE.forEach((p) => $('person').add(new Option(p)));
+for (const k of ['person', 'shop', 'size']) { const v = store.get(k); if (v) $(k).value = v; }
+
+const load = async (file) => (cache[file] ??= fetch('data/' + file + '.json').then((r) => r.json()));
+const ownerOf = (id) => M.screens[id]?.owner || id;
+const sitsOf = (id) => [ownerOf(id), ...(M.situations[ownerOf(id)] || [])];
+// Which shop a drawing is for: All shops or [Second site] when its title says
+// so, otherwise any one shop (drawn at Bolton).
+const shopOf = (sid) => { const t = (M.screens[sid].title + ' ' + sid).toLowerCase(); return /all shops/.test(t) ? 'All shops' : /second site/.test(t) ? '[Second site]' : ''; };
+// How well a drawing fits the chosen person: 2 drawn for them, 1 they can see
+// it (an owner sees what a manager or staff see), 0 not theirs.
+const SEES = { Owner: ['Owner', 'Manager', 'Staff', 'Everyone'], Manager: ['Manager', 'Owner', 'Staff', 'Everyone'], Staff: ['Staff', 'Everyone'], 'Saturday worker': ['Staff', 'Everyone'], Mechanic: ['Mechanic', 'Everyone'], Customer: ['Customer', 'Everyone'] };
+const roleFit = (sid, person) => { const r = M.screens[sid].role; const me = person === 'Saturday worker' ? 'Staff' : person; return r === me || r.split(/ and |, /).includes(me) ? 2 : (SEES[person] || []).some((x) => r.includes(x)) ? 1 : 0; };
+const shopFit = (sid, shop) => { const o = shopOf(sid); return o === (shop === 'Bolton' ? '' : shop) ? 2 : !o ? 1 : 0; };
+const matches = (sid, person, shop) => roleFit(sid, person) > 0 && shopFit(sid, shop) > 0 && (shop === 'Bolton' || shopFit(sid, shop) === 2 || !sitsOf(sid).some((x) => shopFit(x, shop) === 2));
+// The screen to show for the chosen person and shop (the mockup spec: "Person
+// and shop pick the screen's situation for that person or shop where one
+// exists"). On every page, not only when the bar changes (third walk,
+// walk-through 7 M3): a page that already fits stays; one that doesn't opens
+// the situation drawn for them, if there is one.
+// On a page opened by a click, only the same page drawn for another person or
+// shop is picked (its id is the page's own id plus -staff, -mechanic,
+// -manager or -all: st-list → st-list-staff, rp-home → rp-home-all), never a
+// different moment.
+const viewOf = (x, id) => x.startsWith(id + '-') && /^-(staff|mechanic|manager|owner|all)\b/.test(x.slice(id.length));
+function fitFor(id, { strict = false } = {}) {
+  const person = $('person').value, shop = $('shop').value;
+  const score = (x) => roleFit(x, person) * 3 + shopFit(x, shop);
+  const pool = strict ? sitsOf(id) : sitsOf(id).filter((x) => viewOf(x, id));
+  const best = pool.filter((x) => matches(x, person, shop)).sort((a, b) => score(b) - score(a) || (b === id) - (a === id))[0];
+  if (strict) return best || id;
+  // A click keeps its page unless a view drawn better for this person or shop exists.
+  return best && (!matches(id, person, shop) || score(best) > score(id)) ? best : id;
+}
+const say = (t) => { $('note').textContent = t; $('note').hidden = !t; };
+
+async function show(id, { push = true, refit = true } = {}) {
+  if (!M.screens[id]) { say('That screen isn’t in the mockup: ' + id); return; }
+  // A drawing for one shop (All shops, [Second site]) sets the shop it shows.
+  // In a story, the story's own next step is shown as it is.
+  if (story && story.steps[stepAt + 1]?.id === id) refit = false;
+  if (shopOf(id) && shopOf(id) !== $('shop').value) $('shop').value = shopOf(id);
+  if (refit) id = fitFor(id);
+  storyStep(id);
+  if (push && location.hash.slice(1) !== id) { trail.push(location.hash.slice(1)); history.replaceState(null, '', '#' + id); }
+  const s = M.screens[id];
+  const size = $('size').value;
+  const at = s.sizes[size] ? size : s.sizes.desktop ? 'desktop' : Object.keys(s.sizes)[0];
+  $('title').textContent = s.title;
+  $('where').textContent = `${s.journeyName} · ${s.role}${at !== size ? ` · not drawn at ${size}, showing ${at}` : ''}${s.kept ? '' : ` · a situation of “${M.screens[ownerOf(id)].title}”`}`;
+  const sel = $('sit'); sel.innerHTML = '';
+  sitsOf(id).forEach((x) => sel.add(new Option((x === ownerOf(id) ? 'The screen: ' : '') + M.screens[x].title, x, false, x === id)));
+  const html = (await load(s.sizes[at].file))[id];
+  const { w, h } = s.sizes[at];
+  const stage = $('stage'); stage.innerHTML = '';
+  const frame = document.createElement('div'); frame.className = 'frame'; frame.style.width = w + 'px'; frame.style.height = h + 'px';
+  const root = frame.attachShadow({ mode: 'open' });
+  root.innerHTML = `<style>${M.css}</style><link rel="stylesheet" href="${document.querySelector('link[rel=stylesheet]').href}">${html}`;
+  root.addEventListener('click', onClick);
+  stage.appendChild(frame);
+  const fit = () => { const k = Math.min(1, stage.clientWidth / w); frame.style.transform = `scale(${k})`; stage.style.height = h * k + 'px'; };
+  fit(); window.onresize = fit; scrollTo(0, 0);
+  // Third walk, answer 7: the screen's situation lines, as on the canvas.
+  const ls = M.lines?.[ownerOf(id)] || [];
+  $('linesList').innerHTML = '';
+  for (const l of ls) { const li = document.createElement('li'); li.textContent = l.replace(/^• /, ''); $('linesList').appendChild(li); }
+  $('lines').hidden = !ls.length;
+}
+// Story mode: each step says who is on the screen and what they press; the
+// Person box follows the step's person; "Next step" opens the next step
+// (third walk, walk-through 1 L2).
+let story = null, stepAt = -1;
+// The counter moves only to the next step, and stays on a screen off the path
+// (story 8: the Saturday PIN opens the till, which is also the last step).
+const stepIndex = (steps, at, id) => (steps[at]?.id === id ? at : steps[at + 1]?.id === id ? at + 1 : at);
+function storyStep(id) {
+  if (!story) return;
+  const j = stepIndex(story.steps, stepAt, id);
+  if (j < 0) return;
+  stepAt = j;
+  const st = story.steps[stepAt];
+  if (PEOPLE.includes(st.who)) $('person').value = st.who;
+  $('stepText').textContent = `Story ${story.n}, step ${stepAt + 1} of ${story.steps.length} · ${st.who}${st.does ? ': ' + st.does : ' · the end'}`;
+  $('next').hidden = stepAt + 1 >= story.steps.length;
+  $('step').hidden = false;
+}
+$('next').onclick = () => { if (!story || stepAt + 1 >= story.steps.length) return; const st = story.steps[stepAt + 1]; if (PEOPLE.includes(st.who)) $('person').value = st.who; say(''); show(st.id, { refit: false }); };
+function onClick(e) {
+  const c = e.target.closest('[data-go],[data-act]'); if (!c) return;
+  e.preventDefault(); say('');
+  const go = c.getAttribute('data-go'), act = c.getAttribute('data-act'), what = c.getAttribute('data-what'), note = c.getAttribute('data-say');
+  const shop = c.getAttribute('data-shop'); if (shop) { $('shop').value = shop; store.set('shop', shop); }
+  // A story's first check-in of the day (its step marked firstIn) opens the
+  // float check, as its next step; any other PIN opens the till (walk-through 10 L1).
+  const first = c.getAttribute('data-first'), nx = story?.steps[stepAt + 1];
+  if (first && story?.steps[stepAt]?.firstIn && nx && ownerOf(nx.id) === first) return show(nx.id, { refit: false });
+  if (go) return show(go).then(() => { if (note) say(note); });
+  if (act === 'back') return goBack();
+  if (act === 'outside') return say(what + ' — this happens outside Wheelhouse.');
+  if (act === 'notdrawn') return say('Not drawn yet: ' + what + '.');
+}
+function goBack() { const prev = trail.pop(); if (prev) { history.replaceState(null, '', '#' + prev); show(prev, { push: false, refit: false }); } else say('This is where you started.'); }
+function pick() {
+  const id = location.hash.slice(1); if (!M.screens[id]) return;
+  const best = fitFor(id, { strict: true });
+  if (!matches(best, $('person').value, $('shop').value)) say(`No separate view of this screen for ${$('person').value} at ${$('shop').value}.`);
+  if (best !== id) show(best, { refit: false }); else show(id, { push: false, refit: false });
+}
+$('back').onclick = goBack;
+$('sit').onchange = (e) => show(e.target.value);
+for (const k of ['person', 'shop']) $(k).onchange = (e) => { store.set(k, e.target.value); say(''); pick(); };
+$('size').onchange = (e) => { store.set('size', e.target.value); show(location.hash.slice(1), { push: false }); };
+$('story').onchange = (e) => { const st = M.stories.find((x) => String(x.n) === e.target.value); if (!st) { story = null; $('step').hidden = true; return; } story = st; stepAt = -1; $('person').value = st.person; $('shop').value = st.shop || 'Bolton'; $('size').value = st.size || 'desktop'; trail.length = 0; say(`Story ${st.n}: ${st.name}.`); show(st.steps[0].id, { refit: false }); };
+fetch('manifest.json').then((r) => r.json()).then((m) => {
+  M = m;
+  m.stories.forEach((s) => $('story').add(new Option(`${s.n}. ${s.name}`, s.n)));
+  const start = location.hash.slice(1);
+  show(M.screens[start] ? start : 'map', { push: false, refit: false });
+});
+window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (M?.screens[id]) show(id, { push: false, refit: false }); });
+</script>

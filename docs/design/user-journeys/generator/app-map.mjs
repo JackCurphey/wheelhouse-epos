@@ -42,20 +42,35 @@ ${serving ? barBtn(`${icon('reports', 16)}Past sales`, 'Past sales — find, ref
 // Left: the till's one search box (decision 12: products, customers and jobs)
 // and the shop's product buttons (not designed yet — journey 11).
 // `query` draws the box mid-search with grouped results over the buttons.
-const resultGroup = (title, inner) => `<div style="display: flex; flex-direction: column; gap: 4px"><div style="padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${title}</div>${inner}</div>`;
-const resultRow = (main, sub, action, first = false) => `<a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 52px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; text-decoration: none; color: ${C.ink}; background: ${first ? C.hover : 'transparent'}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><span style="font-size: 15px; font-weight: 600">${main}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="font-size: 13px; font-weight: 600; color: ${C.ink}">${action}</span></a>`;
-function searchResults() {
-  return `<div role="listbox" aria-label="Search results" style="position: absolute; top: 58px; left: 0; right: 0; z-index: 3; box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18)">
-${resultGroup('Jobs', resultRow(`${mono('WH-1042')} · Maya Patel`, `Trek Domane AL 3 · Standard service · approved ${mono(money(WORK_TOTAL_APPROVED))}`, 'Add to basket ↵', true))}
-${resultGroup('Orders', resultRow('Order [order number] · Maya Patel', 'Online order · ready', 'Hand over'))}
-${resultGroup('Customers', resultRow('Maya Patel', 'Customer · Trek Domane AL 3', 'Add to sale'))}
+// Third walk, answer 1 (3 Oct): each row is two controls — its name, a link
+// that opens the job, order or customer, and the till button on the right.
+// So the results are a labelled list of rows, not a listbox of options.
+// `till: false` is the staff header's search: the same rows, links only.
+const resultGroup = (title, inner) => `<div role="group" aria-label="${title}" style="display: flex; flex-direction: column; gap: 4px"><div aria-hidden="true" style="padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${title}</div>${inner}</div>`;
+const resultRow = ({ main, sub, action, label }, { first = false, till = true } = {}) => `<ul role="list" style="list-style: none; margin: 0; padding: 0"><li style="display: flex; align-items: center; gap: 12px; min-height: 52px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; background: ${first && till ? C.hover : 'transparent'}"><span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0"><a href="#" style="display: inline-block; align-self: flex-start; padding: 5px 0; line-height: 22px; font-size: 15px; font-weight: 600; color: ${C.ink}; text-decoration: none">${main}</a><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span>${till ? `<button type="button" aria-label="${label}" style="display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${action}</button>` : ''}</li></ul>`;
+// Walk-through 8 decision 8 (third walk, answer 8): WH-1042 paid online reads
+// "Paid online · [date]" with Hand over; expected today, Book in.
+const searchRowsFor = (paid) => [
+  ['Jobs', paid
+    ? { main: `${mono('WH-1042')} · Maya Patel`, sub: 'Trek Domane AL 3 · Standard service · Paid online · [date]', action: 'Hand over', label: 'Hand over WH-1042' }
+    : { main: `${mono('WH-1042')} · Maya Patel`, sub: 'Trek Domane AL 3 · Standard service · Expected 11:30', action: 'Book in', label: 'Book in WH-1042' }],
+  ['Orders', { main: 'Order [order number] · Maya Patel', sub: 'Online order · ready', action: 'Hand over', label: 'Hand over order [order number]' }],
+  ['Customers', { main: 'Maya Patel', sub: 'Customer · Trek Domane AL 3', action: 'Add to sale', label: 'Add Maya Patel to the sale' }],
+];
+export function searchResultsList({ paid = false, till = true, id = 'till-search-results', style = '' } = {}) {
+  return `<section id="${id}" aria-label="Search results" style="box-sizing: border-box; padding: 10px 8px; display: flex; flex-direction: column; gap: 12px; background: ${C.panel}; ${style}">
+${searchRowsFor(paid).map(([g, r], i) => resultGroup(g, resultRow(r, { first: i === 0, till }))).join('\n')}
 ${resultGroup('Products', `<div style="padding: 6px 12px; font-size: 14px; color: ${C.muted}">No products match “maya”.</div>`)}
-</div>`;
+</section><span role="status" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">3 results. No products match “maya”.</span>`;
 }
-function productArea({ query = '', compact = false } = {}) {
+const PANEL_STYLE = `border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18);`;
+function searchResults(paid = false) {
+  return searchResultsList({ paid, style: `position: absolute; top: 58px; left: 0; right: 0; z-index: 3; ${PANEL_STYLE}` });
+}
+function productArea({ query = '', compact = false, paid = false } = {}) {
   return `<div style="position: relative; flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
 <label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${query ? C.ink : C.input}; border-radius: 10px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search or scan: products, customers, jobs, orders" placeholder="${compact ? 'Search or scan' : 'Search or scan: products, customers, jobs, orders'}" value="${esc(query)}" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
-${query ? searchResults() : ''}
+${query ? searchResults(paid) : ''}
 <div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: ${C.muted}; font-size: 14px; line-height: 1.5">Product buttons and search results${compact ? '' : '<br>(designed with Selling at the till, journey 11)'}</div>
 </div>`;
 }
@@ -80,7 +95,7 @@ ${button(`Take payment · ${money(WORK_TOTAL_APPROVED)}`, { block: true })}
 </div>`, `width: ${width}px; flex-shrink: 0; height: 100%`);
 }
 
-const tillBody = (basketW, pad = 20, { query = '' } = {}) => `<div style="height: 100%; box-sizing: border-box; padding: ${pad}px; display: flex; gap: 20px">${productArea({ query })}${query ? basketEmpty(basketW) : basket(basketW)}</div>`;
+const tillBody = (basketW, pad = 20, { query = '', paid = false } = {}) => `<div style="height: 100%; box-sizing: border-box; padding: ${pad}px; display: flex; gap: 20px">${productArea({ query, paid })}${query ? basketEmpty(basketW) : basket(basketW)}</div>`;
 
 // Folded rail (decisions 4, 5): the tablet rail's look at desktop size. Resting
 // the pointer on it for 300 ms (or focusing into it with the keyboard)
@@ -98,12 +113,16 @@ const ORDERS_COUNT = '[n]';
 const ordersPill = (extra = '') => `<span style="padding: 0 7px; border-radius: 999px; background: ${C.highlight}; color: ${C.ink}; font-size: 12px; font-weight: 700; line-height: 18px; ${extra}">${ORDERS_COUNT}${sr(' to get ready')}</span>`;
 
 // Decision 8: your name opens "Your settings" — same block as the full sidebar in diary.mjs.
-const personBlock = () => `<div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)"><a href="your-settings-desktop.dc.html" aria-label="Your settings — ${STAFF.person}, ${STAFF.roleName}" title="Your settings" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${initials(STAFF.person)}</span><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${STAFF.person}</span><span style="font-size: 12px; opacity: 0.8">${STAFF.roleName}</span></span><span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span></a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-size: 13px; color: #ffffff">Sign out</a></div>`;
+// Walk-through 8, fix M6 part 1: on the till the foot reads "Check out" (the
+// person checked in by PIN), not "Sign out".
+const personBlock = () => `<div style="display: flex; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2)"><a href="your-settings-desktop.dc.html" aria-label="Your settings — ${STAFF.person}, ${STAFF.roleName}" title="Your settings" style="display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 4px 8px; border-radius: 8px; color: #ffffff; text-decoration: none"><span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 700; flex-shrink: 0">${initials(STAFF.person)}</span><span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 14px; font-weight: 600">${STAFF.person}</span><span style="font-size: 12px; opacity: 0.8">${STAFF.roleName}</span></span><span style="display: inline-flex; opacity: 0.8">${icon('settings', 16)}</span></a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-size: 13px; color: #ffffff">Check out</a></div>`;
 
+// Multiple sites 9 and its 1 Oct later change: the till's shop switcher is
+// named like the sidebar's, "Shop: Bolton. Choose a shop", with its open state.
 function unfoldedPanel(active, forced) {
   return `<nav aria-label="Main" class="wh-rail-full" style="position: absolute; top: 0; left: 0; bottom: 0; width: 248px; box-sizing: border-box; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; background: ${C.accentDark}; color: #ffffff; box-shadow: 8px 0 24px rgba(38,36,32,0.28); z-index: 5; ${forced ? '' : 'visibility: hidden; opacity: 0;'}">
 <div style="display: flex; align-items: center; gap: 10px; padding: 0 0 0 6px">${logoSlot('Wheelhouse logo', true)}<span style="font-size: 17px; font-weight: 700; flex-grow: 1">Wheelhouse</span><button type="button" aria-label="Fold the menu" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff"><span style="display: inline-flex; transform: rotate(90deg)">${icon('chevron', 16)}</span></button></div>
-<button type="button" aria-label="Switch site" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #ffffff; font-family: inherit; text-align: left"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">Bolton</span></span>${icon('chevron', 16)}</button>
+<button type="button" aria-label="Shop: Bolton. Choose a shop" aria-haspopup="menu" aria-expanded="false" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: #ffffff; font-family: inherit; text-align: left"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; opacity: 0.8">${SHOP}</span><span style="font-size: 14px; font-weight: 600">Bolton</span></span>${icon('chevron', 16)}</button>
 <div style="display: flex; flex-direction: column; gap: 8px">${staffRooms().map(([room, items]) => `<div style="display: flex; flex-direction: column; gap: 2px"><div style="padding: 2px 12px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(243,242,238,0.75)">${room}</div>${items.map(([key, label, ic]) => `<a href="#" aria-current="${key === active ? 'page' : 'false'}" style="${sideItemStyle(key === active)}">${icon(ic, 18)}<span>${esc(label)}</span>${key === 'orders' ? ordersPill('margin-left: auto;') : ''}</a>`).join('')}</div>`).join('')}</div>
 <div style="flex-grow: 1"></div>
 ${personBlock()}
@@ -136,7 +155,7 @@ ${unfoldedPanel(active, forced)}
 </div>`;
 }
 
-const tillRail = (forced, query = '') => `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(400, 20, { query })}</main></div></div>`;
+const tillRail = (forced, query = '', paid = false) => `<div style="position: relative; width: ${DW}px; height: ${DH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(400, 20, { query, paid })}</main></div></div>`;
 
 // ---------- Screens ----------
 export const screens = {};
@@ -150,6 +169,9 @@ screens['till-rail-open'] = { desktop: tillRail(true) };
 // before anything is in the basket.
 // UX walk-through 2 M4: it finds her online order too, with Hand over.
 screens['till-search'] = { desktop: tillRail(false, 'maya') };
+// Third walk, answer 8: the same search with WH-1042 paid online — Hand over
+// in place of Book in, leading to the job's hand-over.
+screens['till-search-paid'] = { desktop: tillRail(false, 'maya', true) };
 
 // Decision 8: "Your settings" pop-up, opened from your name, for every role.
 // Holds the Accessibility settings (Workshop day decision 57 plus decision 7's
@@ -158,7 +180,7 @@ screens['till-search'] = { desktop: tillRail(false, 'maya') };
 // UX walk-through 4 H1 (option 1): `pin: false` is someone with no PIN yet
 // (skipped it at first sign-in, or it was cleared) — "No PIN yet" and
 // "Get your PIN", which opens the first-time "Your till PIN" pop-up.
-export function yourSettingsDialog(size = 'desktop', { graphs = false, pin = true } = {}) {
+export function yourSettingsDialog(size = 'desktop', { graphs = false, pin = true, help = true } = {}) {
   const P = size === 'phone';
   const rows = [
     a11ySettingRow('ys-symbols', 'Show status symbols', 'Adds a small symbol to each diary job so its status doesn’t rely on colour alone. Helpful for colour blindness.', false, symbolsPreview(size)),
@@ -174,11 +196,14 @@ export function yourSettingsDialog(size = 'desktop', { graphs = false, pin = tru
   // Journey B decision 6: each person sets their own till PIN here.
   const label = (t) => `<div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">${t}</div>`;
   const pinBlock = pin
-    ? `${label('Till')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Till PIN</span><span aria-label="PIN is set" style="font-family: ${MONO}; font-size: 18px; letter-spacing: 3px">••••</span></div><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Checks you in at the till and puts your name on sales. Only you know it.</span>${button('Change PIN', { variant: 'default', block: true, href: `pin-change-${size}.dc.html` })}</div>`)}`
+    ? `${label('Till')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Till PIN</span><span aria-label="PIN is set" style="font-family: ${MONO}; font-size: 18px; letter-spacing: 3px">••••</span></div><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Checks you in at the till and puts your name on sales and workshop work. Only you know it.</span>${button('Change PIN', { variant: 'default', block: true, href: `pin-change-${size}.dc.html` })}</div>`)}`
     : `${label('Till')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px"><span style="font-size: 15px; font-weight: 700">Till PIN</span><span style="font-size: 14px; font-weight: 600; color: ${C.warnInk}">No PIN yet</span></div><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">You need one to check in at the till. Wheelhouse picks it, and only you see it.</span>${button('Get your PIN', { block: true, href: `pin-first-${size}.dc.html` })}</div>`)}`;
   // Management oversight (journey 20) decision 4: feedback to the
   // Wheelhouse team, for everyone.
-  const helpBlock = `${label('Help')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 15px; font-weight: 700">Something wrong or missing?</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Tell the Wheelhouse team. We see which screen you were on.</span>${button('Send feedback', { variant: 'default', block: true, href: `send-feedback-${size}.dc.html` })}</div>`)}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 15px; font-weight: 700">What Wheelhouse records about you</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Sales, discounts, refunds, voids, price and job changes are kept with your name, for [period]. Owners and managers can see them.</span>${button('See my own activity', { variant: 'default', block: true, href: `my-activity-${size}.dc.html` })}</div>`)}`;
+  // Management oversight, later change (issue #116 question 5): Send feedback
+  // and "What Wheelhouse records about you" come later, so the kept
+  // Your settings board passes `help: false`; the later boards keep them.
+  const helpBlock = !help ? '' : `${label('Help')}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 15px; font-weight: 700">Something wrong or missing?</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Tell the Wheelhouse team. We see which screen you were on.</span>${button('Send feedback', { variant: 'default', block: true, href: `send-feedback-${size}.dc.html` })}</div>`)}${card(`<div style="padding: 16px; display: flex; flex-direction: column; gap: 10px"><span style="font-size: 15px; font-weight: 700">What Wheelhouse records about you</span><span style="font-size: 13px; line-height: 1.45; color: ${C.muted}">Sales, discounts, refunds, voids, price and job changes are kept with your name, for [period]. Owners and managers can see them.</span>${button('See my own activity', { variant: 'default', block: true, href: `my-activity-${size}.dc.html` })}</div>`)}`;
   const accBlock = `${label('Accessibility')}${rows.join('')}<p style="margin: 0; font-size: 13px; color: ${C.muted}">Changes apply straight away.</p>`;
   return `<div role="dialog" aria-modal="true" aria-labelledby="ys-title-${size}" style="${P ? 'width: 100%; height: 100%;' : 'width: 900px; max-height: 100%; border: 1px solid ' + C.border + '; border-radius: 12px; box-shadow: 0 18px 48px rgba(38,36,32,0.28);'} box-sizing: border-box; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">
 <div style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 22px; background: ${C.panel}; border-bottom: 1px solid ${C.border}">
@@ -190,7 +215,7 @@ ${P ? `<div data-scroll style="padding: 14px; display: flex; flex-direction: col
 </div>`;
 }
 screens['your-settings'] = {
-  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 28px; box-sizing: border-box">${yourSettingsDialog()}</div></div>`,
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 28px; box-sizing: border-box">${yourSettingsDialog('desktop', { help: false })}</div></div>`,
 };
 
 // ---------- Customer website (decision 3) ----------
@@ -246,11 +271,32 @@ screens['staff-app-menu'] = {
   phone: shellPhone('Workshop diary', `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${C.border}; border-radius: 12px"></div>`, { menuOpen: true, active: 'diary' }),
 };
 
+// Third walk, answer 1 (App map 2; Customer service 12; walk-through 9 M1):
+// the header search open on a staff page (Jo's diary behind), typed "maya".
+// The same groups and rows as the till's search, each row only a link that
+// opens its page: no till buttons, no basket. On tablet and phone the search
+// button opens the box and its results over the page, with Close search.
+const typedHeaderSearch = () => headerSearch().replace(`border: 1px solid ${C.input}`, `border: 1px solid ${C.ink}`).replace('<input type="search"', '<input type="search" value="maya"');
+const openSearchBtn = (dark) => searchIconBtn(dark).replace('<button type="button"', '<button type="button" aria-expanded="true"');
+const staffResults = (style = '') => searchResultsList({ till: false, id: 'staff-search-results', style });
+const searchBoxOpen = () => `<div style="display: flex; align-items: center; gap: 8px; padding: 10px 10px 0"><label style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}; font-size: 14px">${icon('search', 16)}<input type="search" aria-label="Search jobs, customers, orders, products" placeholder="Search jobs, customers, orders, products" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label><button type="button" aria-label="Close search" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${C.input}; background: ${C.panel}; color: ${C.ink}">${icon('close', 20)}</button></div>`;
+const searchSheet = (style) => `<div role="dialog" aria-label="Search" style="position: absolute; z-index: 6; box-sizing: border-box; display: flex; flex-direction: column; background: ${C.panel}; ${style}">${searchBoxOpen()}${staffResults()}</div>`;
+screens['staff-search'] = {
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop.replace(headerSearch(), typedHeaderSearch())}${staffResults(`position: absolute; top: 58px; right: 28px; width: 460px; z-index: 6; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18);`)}</div>`,
+  tablet: `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet.replace(searchIconBtn(), openSearchBtn(false))}${searchSheet(`top: 56px; right: 22px; width: 480px; border: 1px solid ${C.border}; border-radius: 10px; box-shadow: 0 12px 32px rgba(38,36,32,0.18);`)}</div>`,
+  phone: `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden">${diaryScreens.diary.phone.replace(searchIconBtn(true), openSearchBtn(true))}<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 5; background: rgba(38,36,32,0.45)"></div>${searchSheet(`top: 0; left: 0; right: 0; padding-bottom: 6px; border-radius: 0 0 14px 14px; box-shadow: 0 12px 32px rgba(38,36,32,0.28);`)}</div>`,
+};
+// Each base page must have carried the control the search replaces.
+for (const [k, mark] of [['desktop', 'value="maya"'], ['tablet', 'aria-expanded="true" aria-label="Search jobs'], ['phone', 'aria-expanded="true" aria-label="Search jobs']]) {
+  if (!screens['staff-search'][k].includes(mark)) throw new Error(`staff-search ${k}: the header search was not found to open`);
+}
+
 // ---- Till ----
-const tillTablet = (forced, query = '') => `<div style="position: relative; width: ${TW}px; height: ${TH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(360, 18, { query })}</main></div></div>`;
+const tillTablet = (forced, query = '', paid = false) => `<div style="position: relative; width: ${TW}px; height: ${TH}px; display: flex; background: ${C.bg}">${foldedRail('till', { forced })}<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">${tillBar()}<main style="flex-grow: 1; min-height: 0">${tillBody(360, 18, { query, paid })}</main></div></div>`;
 screens['till-rail'].tablet = tillTablet(false);
 screens['till-rail-open'].tablet = tillTablet(true);
 screens['till-search'].tablet = tillTablet(false, 'maya');
+screens['till-search-paid'].tablet = tillTablet(false, 'maya', true);
 
 // Phone till: menu button (no rail on a phone), the one search box, the
 // product buttons, and the basket as a bar along the bottom.
@@ -259,7 +305,7 @@ export const tillPhoneBar = (serving = 'Jo Taylor', offline = false) => `<header
 <span style="display: flex; flex-direction: column; gap: 1px; flex-grow: 1; min-width: 0"><span style="font-size: 16px; font-weight: 700">${mono('Till B1')}</span><span style="font-size: 12px; opacity: 0.85">Bolton · ${icon('wifi', 12)} ${offline ? 'Offline' : 'Online'}</span></span>
 ${serving ? `<button type="button" aria-label="Serving: ${serving} — switch who’s serving" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 600">${icon('user', 16)}${serving.split(' ')[0]}</button>` : `<span style="font-size: 13px; opacity: 0.85; padding-right: 8px">Nobody serving</span>`}
 </header>`;
-function tillPhone(query = '') {
+function tillPhone(query = '', paid = false) {
   const lines = LINES_APPROVED.filter((l) => l.approval === 'Approved');
   const bar = tillPhoneBar();
   const basketBar = query
@@ -269,20 +315,21 @@ function tillPhone(query = '') {
 ${button(`Take payment · ${money(WORK_TOTAL_APPROVED)}`, { block: true })}
 </div>`;
   return `<div style="position: relative; width: ${_PW}px; height: 844px; display: flex; flex-direction: column; background: ${C.bg}; overflow: hidden">${bar}
-<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column">${productArea({ query, compact: true })}</main>
+<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column">${productArea({ query, compact: true, paid })}</main>
 ${basketBar}</div>`;
 }
 screens['till-rail'].phone = tillPhone();
 screens['till-search'].phone = tillPhone('maya');
+screens['till-search-paid'].phone = tillPhone('maya', true);
 
 // ---- Your settings ----
-screens['your-settings'].tablet = `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${yourSettingsDialog('tablet')}</div></div>`;
-screens['your-settings'].phone = `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone')}</div>`;
+screens['your-settings'].tablet = `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${yourSettingsDialog('tablet', { help: false })}</div></div>`;
+screens['your-settings'].phone = `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone', { help: false })}</div>`;
 // UX walk-through 4 H1: Your settings for someone with no PIN yet.
 screens['your-settings-no-pin'] = {
-  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 28px; box-sizing: border-box">${yourSettingsDialog('desktop', { pin: false })}</div></div>`,
-  tablet: `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${yourSettingsDialog('tablet', { pin: false })}</div></div>`,
-  phone: `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone', { pin: false })}</div>`,
+  desktop: `<div style="position: relative; width: ${DW}px; height: ${DH}px; overflow: hidden">${diaryScreens.diary.desktop}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 28px; box-sizing: border-box">${yourSettingsDialog('desktop', { pin: false, help: false })}</div></div>`,
+  tablet: `<div style="position: relative; width: ${TW}px; height: ${TH}px; overflow: hidden">${diaryScreens.diary.tablet}<div style="position: absolute; inset: 0; background: rgba(38,36,32,0.45); display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box">${yourSettingsDialog('tablet', { pin: false, help: false })}</div></div>`,
+  phone: `<div style="position: relative; width: ${_PW}px; height: 844px; overflow: hidden; display: flex">${yourSettingsDialog('phone', { pin: false, help: false })}</div>`,
 };
 
 // ---- Customer website ----
@@ -314,7 +361,11 @@ ${siteNav(['Shop', 'Book a repair', 'Our shops', 'Account']).filter((l) => l !==
 <a href="#main-content" style="position: absolute; left: -9999px; top: 0">Skip to the main content</a><header style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 4px 0 14px; display: flex; align-items: center; gap: 2px; background: ${t.headerBg}; color: ${t.headerInk}; border-bottom: 1px solid ${t.headerBorder}">
 <a href="#" style="display: flex; align-items: center; gap: 8px; flex-grow: 1; min-width: 0; color: ${t.headerInk}; text-decoration: none">${logoSlot('Shop logo', dark)}<span style="font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${SHOP}</span></a>
 ${iconBtn('search', 'Search the shop')}${noBasket(iconBtn('basket', 'Basket, 0 items'))}
-<button type="button" aria-label="${menuOpen ? 'Close menu' : 'Open menu'}" aria-expanded="${menuOpen}" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${t.headerInk}">${icon(menuOpen ? 'close' : 'menu', 22)}</button>
+${menuOpen
+    ? `<button type="button" aria-label="Close menu" aria-expanded="true" style="width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: ${t.headerInk}">${icon('close', 22)}</button>`
+    // Coverage walks, answer 1 (Jack, 4 Oct): the customer website's menu
+    // button says "Menu" beside the three lines; the staff app's doesn't.
+    : `<button type="button" aria-label="Open menu" aria-expanded="false" style="height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; font-family: inherit; font-size: 15px; font-weight: 600; color: ${t.headerInk}">${icon('menu', 22)}<span>Menu</span></button>`}
 </header>
 <main id="main-content" style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 16px; display: flex">${content ?? `<div style="flex-grow: 1; box-sizing: border-box; border: 2px dashed ${dark ? '#b8c4d0' : C.border}; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: ${t.mutedInk}; font-size: 14px; line-height: 1.5">Page content<br>(journey 1)</div>`}</main>
 ${menu}
@@ -347,7 +398,7 @@ ${mapLine('Buy', 'Basket → Checkout → Order confirmed')}
 ${mapLine('Book a repair', 'Service → Bike → Date → Details → Request sent')}
 ${mapLine('Booking link', 'Opened from a text or email; no sign-in needed')}
 ${mapLine('Account (optional)', 'Sign in with an emailed code → bookings, bikes, history')}</div>`)}
-${mapBox('Staff app', 'ONE APP, ORGANISED BY ROOMS OF THE SHOP', `<div style="display: flex; flex-direction: column; gap: 4px">${mapP('Signed in with email and password. The sidebar groups pages by room and shows only what each role may use. Search sits at the top of every page (on the till it finds products too); your name opens Your settings.')}
+${mapBox('Staff app', 'ONE APP, ORGANISED BY ROOMS OF THE SHOP', `<div style="display: flex; flex-direction: column; gap: 4px">${mapP('Signed in with email and password. The sidebar groups pages by room and shows only what each role may use. Search sits at the top of every page; on the till, a result can also go into the basket. Your name opens Your settings.')}
 ${ROOMS_DIARY.map(([room, items]) => `<div style="padding-top: 8px; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: ${C.muted}">${room}</div>` + items.map(([, label, , r]) => `<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-top: 1px solid ${C.border}"><span style="font-size: 14px; font-weight: 600">${label}</span><span style="display: flex; gap: 4px">${roleChips(r)}</span></div>`).join('')).join('')}</div>`)}
 ${mapBox('Till mode', 'ON A REGISTERED TILL', `<div style="display: flex; flex-direction: column; gap: 10px">${mapP('A till computer is set up once by a manager. It stays signed in, works offline, and staff check in with a PIN. The sidebar is folded to the rail and unfolds when you rest on it, or press its Unfold button.')}
 ${mapLine('Start-up', `${mono('Till B1')} · Bolton · online or offline`)}
@@ -367,6 +418,7 @@ export const TITLES = {
   'staff-app': 'Staff app — Staff (search on every page, your name opens Your settings)',
   'staff-app-mechanic': 'Staff app — Mechanic sees only the Workshop room',
   'staff-app-menu': 'Staff app — phone menu open',
+  'staff-search': 'Staff app — search open on a staff page: each row opens its page, no till buttons', // third walk, answer 1
   'site-menu': 'Customer website — phone menu open',
   'site-ocean-menu': 'Customer website — phone menu open, shop’s own theme',
   'site': 'Customer website — default theme (Soft sand)',
@@ -376,12 +428,13 @@ export const TITLES = {
   'till-rail': 'Till — sidebar folded to the rail (rest on it to unfold)',
   'till-rail-open': 'Till — rail unfolded',
   'till-search': 'Till — one search finds products, customers, jobs and online orders', // UX walk-through 2 M4
+  'till-search-paid': 'Till search — WH-1042 paid online: Hand over in place of Add to basket', // third walk, answers 1 and 8
 };
 
 export const ROWS = [
   { label: 'App map', screens: ['map'] },
-  { label: 'Staff app', screens: ['staff-app', 'staff-app-mechanic', 'staff-app-menu'] },
-  { label: 'Till mode', screens: ['till-rail', 'till-rail-open', 'till-search'] },
+  { label: 'Staff app', screens: ['staff-app', 'staff-app-mechanic', 'staff-app-menu', 'staff-search'] },
+  { label: 'Till mode', screens: ['till-rail', 'till-rail-open', 'till-search', 'till-search-paid'] },
   { label: 'Your settings', screens: ['your-settings', 'your-settings-no-pin'] }, // UX walk-through 4 H1
   { label: 'Customer website', screens: ['site', 'site-menu', 'site-ocean', 'site-ocean-menu'] },
 ];

@@ -6,7 +6,7 @@
 //     fitcheck-job-options.mjs does;
 //  2. every interactive control (button, link, select) is at least 44x44 —
 //     reports the smallest found across all boards.
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
+import { chromium } from '@playwright/test';
 import { LOOKS, buildLook, buildIntro } from './looks.mjs';
 
 const boards = [...LOOKS.map(buildLook), buildIntro()];

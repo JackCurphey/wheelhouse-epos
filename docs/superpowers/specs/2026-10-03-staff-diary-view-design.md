@@ -60,12 +60,15 @@ staff can see the week at a glance and what is waiting for them.
 ## Decided here, for Jack to overrule
 
 - **Status mapping.** The drawings have six states; the database has more.
-  Waiting for parts is `workState = waiting_parts`; Ready is
+  Waiting for parts is `workState = waiting_parts`; Finished is
   `workState = complete` (collected or not); started and on-hold work shows
-  as Scheduled.
-- **"Waiting for the customer" (teal)** needs the quote's state, which the
+  as Expected (the legend: "Expected, booked in or in the workshop"). Words
+  per 3 Oct answer 11 (#110).
+- ~~**"Waiting for the customer" (teal)** needs the quote's state, which the
   jobs list doesn't send. It is left out of the grid and the legend until
-  the server sends it.
+  the server sends it.~~ Replaced (#110): the jobs list sends the quote's
+  state, and the teal state is drawn and in the legend, named "Quoting"
+  (3 Oct answer 11).
 - **No "Me" view for mechanics** yet: the server doesn't link a login to a
   mechanic.
 

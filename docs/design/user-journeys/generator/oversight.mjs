@@ -77,16 +77,16 @@ const TODAY_ENTRIES = (shops = false) => {
   const s = (x) => (shops ? { shop: x } : {});
   const all = { shop: 'All shops' };
   return [
-    entry('[time]', 'Jo Taylor', 'discount', '£[£] off Sale [sale number]', '“[reason]” · Till B1, while Jo Taylor was checked in', 'Sale [sale number]', { ...s('Bolton'), flag: 'Seen by Jack Lewis at [time]' }),
-    entry('[time]', 'Jack Lewis', 'price', `Shimano brake pads ${mono('B05S-RX')}`, '£28.00 → £[£] for all shops · now below cost (£[£])', 'Shimano brake pads B05S-RX', { ...all, flag: 'today' }), // UX walk-through 7 M4
+    entry('[time]', 'Jo Taylor', 'discount', '£[£] off Sale [sale number]', '“[reason]” · Till B1, while Jo Taylor was checked in', 'Sale [sale number]', s('Bolton')), // issue #116 question 5: alerts and Seen later
+    entry('[time]', 'Jack Lewis', 'price', `Shimano brake pads ${mono('B05S-RX')}`, '£28.00 → £[£] for all shops · now below cost (£[£])', 'Shimano brake pads B05S-RX', all), // UX walk-through 7 M4; no On Today tag (issue #116 question 5)
     // UX walk-through 3 L1: the job status is "Waiting for parts", as on the diary and the job.
     entry('[time]', 'Alex Morgan', 'job', 'WH-1045 · Jamie Brooks', 'Giant Escape 2 · gear adjustment · In progress → Waiting for parts', 'job WH-1045', s('Bolton')),
-    entry('[time]', 'Jo Taylor', 'void', 'Sale [sale number] · £[£]', '“[reason]” · Till B1, while Jo Taylor was checked in · [n]th void today', 'the voided sale', { ...s('Bolton'), flag: 'today' }),
+    entry('[time]', 'Jo Taylor', 'void', 'Sale [sale number] · £[£]', '“[reason]” · Till B1, while Jo Taylor was checked in · [n]th void today', 'the voided sale', s('Bolton')), // no On Today tag (issue #116 question 5)
     entry('[time]', 'Jo Taylor', 'refund', '£[£] to card · from Sale [sale number]', '“[reason]” · Till B1, while Jo Taylor was checked in', 'the refund', s('Bolton')),
     shops && entry('[time]', 'Jack Lewis', 'stock', '[Product] · −[n]', '“[reason]” · stock take', '[Product]', s('[Second site]')), // UX walk-through 7 M4
-    entry('[time]', 'Jack Lewis', 'signout', '[Computer] · [browser]', 'Signed out from Signed-in devices', '', s('Bolton')),
+    // Issue #116 question 5: Signed-in devices later, so no sign-out line.
     entry('[time]', 'Jack Lewis', 'setting', 'Float, Till B1', '£[£] → £[£] · Settings › Front desk › End of day', 'the float setting', s('Bolton')),
-    entry('[time]', 'Jack Lewis', 'website', 'Home page and Theme', '4 changes published', 'the website’s history', all), // UX walk-through 7 M4
+    entry('[time]', 'Jack Lewis', 'website', 'Home page', '4 changes published', 'the website’s history', all), // UX walk-through 7 M4; no Theme (Website management, issue #116 question 2)
   ].filter(Boolean);
 };
 const dayGroup = (label, items) => `<section aria-label="${esc(label)}" style="display: flex; flex-direction: column"><h3 style="margin: 0 0 4px; font-size: 15px; font-weight: 700; color: ${C.muted}">${label}</h3><ul style="margin: 0; padding: 0">${items.join('')}</ul></section>`;

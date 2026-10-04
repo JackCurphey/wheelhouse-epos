@@ -23,11 +23,12 @@ test('a change request is Change requested (amber)', () => {
 
 test('waiting for parts and finished work have their own colours', () => {
   assert.equal(diaryState(job({ workState: 'waiting_parts' })), 'waiting');
+  assert.equal(diaryState(job({ workState: 'waiting_parts', quote: { state: 'sent' } })), 'waiting');
   assert.equal(diaryState(job({ workState: 'complete' })), 'ready');
   assert.equal(diaryState(job({ workState: 'complete', custodyState: 'collected' })), 'ready');
 });
 
-test('started or paused work shows as Scheduled', () => {
+test('started or paused work shows as Expected', () => {
   assert.equal(diaryState(job({ workState: 'in_progress' })), 'scheduled');
   assert.equal(diaryState(job({ workState: 'on_hold' })), 'scheduled');
   assert.equal(diaryState(job()), 'scheduled');

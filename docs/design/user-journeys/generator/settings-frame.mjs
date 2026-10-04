@@ -61,7 +61,7 @@ export const AREAS = [
 export const SETTINGS_ROOMS = [
   ['frontdesk', 'Front desk', 'The till, payments, messages to customers and closing the day.', 'Till, payments, messages, end of day', ['till', 'payments', 'messages', 'eod']],
   ['workshop', 'Workshop', '', 'Services, mechanics, diary, storage, collection', ['workshop']],
-  ['stockroom', 'Stockroom', '', 'Supplier invoices, stock adjustments, categories', ['stock']],
+  ['stockroom', 'Stockroom', '', 'Stock adjustments, categories', ['stock']],
   ['office', 'Office', 'The shop and its sites, the people who work here, and your data.', 'Shop and sites, staff and roles, your data', ['shop', 'staff', 'data']],
 ];
 // Buy online (journey 2): Front desk has an "Online orders" area, on every
@@ -218,14 +218,16 @@ export const eodFolds = (open = {}) =>
   + fold('Close the day', '1 hour before closing', open.close || '')
   + fold('Counting the cash', 'Count first', open.count || '');
 export const STAFF_INTRO = 'Who works here, and what each person can do.';
-// Management oversight (journey 20) decisions 2 and 3: where people are
-// signed in, and the alerts that reach Today.
+// Management oversight, later change (issue #116 question 5): Signed-in
+// devices (decision 3) and the alerts on Today (decision 2) come later, so
+// the page no longer shows them. The folds are drawn only when a deferred
+// journey 20 board opens them (ops-devices, ops-alert-settings).
 // UX walk-through 2 (decision 6): `people` is the People summary — a manager's view adds
 // the [Manager] placeholder.
 export const staffFolds = (open = {}, people = 'Jack Lewis, Jo Taylor, Alex Morgan') => (lightspeedShop()
   // Lightspeed shops (journey 21 audit M2): no tills, no till alerts.
-  ? fold('People', people, open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] phones and computers', open.devices || '')
-  : fold('People', people, open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + fold('Signed-in devices', '[n] tills · [n] phones and computers', open.devices || '') + fold('Alerts on Today', 'Discounts, refunds, voids, prices below cost · set by the owner', open.alerts || ''));
+  ? fold('People', people, open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + (open.devices ? fold('Signed-in devices', '[n] phones and computers', open.devices) : '')
+  : fold('People', people, open.people || '') + fold('What each role can do', 'Owner, Manager, Staff, Mechanic', open.roles || '') + (open.devices ? fold('Signed-in devices', '[n] tills · [n] phones and computers', open.devices) : '') + (open.alerts ? fold('Alerts on Today', 'Discounts, refunds, voids, prices below cost · set by the owner', open.alerts) : ''));
 export const SHOP_INTRO = 'The shop’s details, its sites and their opening hours.';
 export const shopFolds = (open = {}, sites = 'Bolton') =>
   fold('Shop details', 'North Street Cycles', open.details || '')
@@ -247,10 +249,12 @@ export const dataFolds = (open = {}) => (lightspeedShop()
 // An on/off switch on its own row (journey 5's hand-back reminders).
 export const rowSwitch = (label, on) => `<button type="button" role="switch" aria-checked="${on}" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; font-family: inherit; text-align: left; color: ${C.ink}"><span style="font-size: 15px; font-weight: 700">${label}</span><span style="display: inline-flex; align-items: center; gap: 10px"><span style="font-size: 14px; font-weight: 600; color: ${on ? C.ink : C.muted}">${on ? 'On' : 'Off'}</span><span aria-hidden="true" style="position: relative; display: inline-block; width: 44px; height: 26px; border-radius: 999px; background: ${on ? C.accent : C.input}"><span style="position: absolute; top: 3px; left: ${on ? 21 : 3}px; width: 20px; height: 20px; border-radius: 999px; background: #ffffff; box-shadow: 0 1px 2px rgba(28,30,25,0.35)"></span></span></span></button>`;
 
-// Stockroom (journey 13 decision 6): the supplier invoice check, on or off.
-export const STOCK_INTRO = 'Supplier invoices, stock adjustments, and each category’s details.';
+// Stockroom. Receiving stock, later change (issue #116 question 6): the
+// supplier invoice check (journey 13 decision 6) and its switch come later,
+// so its fold is drawn only when the deferred rs-invoice-setting board opens it.
+export const STOCK_INTRO = 'Stock adjustments, and each category’s details.';
 export const stockFolds = (open = {}) =>
-  fold('Supplier invoices', 'Checked against deliveries · on', open.invoices || '')
+  (open.invoices ? fold('Supplier invoices', 'Checked against deliveries · on', open.invoices) : '')
   // Journey 14 decision 6: big stock adjustments show on Today.
   + fold('Stock adjustments', 'Show on Today over £[amount]', open.adjust || '')
   // Journey 14 decision 10: each category's own details.

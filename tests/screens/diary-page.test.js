@@ -91,7 +91,7 @@ test('a job sits in its own day, showing the bike and the job', async () => {
   const tue = within(ui.getByRole('group', { name: 'Tuesday 6 October' }));
   assert.ok(has(tue.queryByText('Trek Domane')));
   assert.ok(has(tue.queryByText('Brake service')));
-  assert.ok(has(tue.queryByText('Trek Domane, Brake service, Maya Patel, WH-1001, Scheduled, 10:00–11:00')));
+  assert.ok(has(tue.queryByText('Trek Domane, Brake service, Maya Patel, WH-1001, Expected, 10:00–11:00')));
 });
 
 test('the week runs Monday to Sunday and is named in the toolbar', async () => {
@@ -144,7 +144,7 @@ test('Day view shows one column per mechanic for one day', async () => {
   assert.ok(has(await ui.findByText('Tuesday 6 October')));
   const alex = within(await ui.findByRole('group', { name: 'Alex Morgan' }));
   assert.ok(has(alex.queryByText('Trek Domane')));
-  assert.ok(has(alex.queryByText('Brake service · Scheduled')));
+  assert.ok(has(alex.queryByText('Brake service · Expected')));
   assert.ok(has(ui.queryByRole('group', { name: 'Jo Taylor' })));
 });
 
@@ -162,11 +162,11 @@ test('choosing a waiting card moves the diary to its week and marks its job', as
   fireEvent.click(card);
   assert.equal(card.getAttribute('aria-pressed'), 'true');
   assert.ok(has(await ui.findByText('12–18 October 2026')));
-  assert.ok(has(await ui.findByText(/Cube Attain, Wheel true, Lena Fox, WH-1007, Scheduled, 11:00–12:00, chosen from Waiting for you/)));
+  assert.ok(has(await ui.findByText(/Cube Attain, Wheel true, Lena Fox, WH-1007, Expected, 11:00–12:00, chosen from Waiting for you/)));
 });
 
 test('the legend names each colour', async () => {
   const { ui, within } = await openDiary();
   const legend = within(ui.getByRole('list', { name: 'What the colours mean' }));
-  for (const label of ['Scheduled', 'Pending', 'Waiting for the customer', 'Change requested', 'Waiting for parts', 'Ready', 'Cancelled']) assert.ok(has(legend.queryByText(label)), label);
+  for (const label of ['Expected, booked in or in the workshop', 'Pending', 'Quoting', 'Change requested', 'Waiting for parts', 'Finished', 'Cancelled']) assert.ok(has(legend.queryByText(label)), label);
 });

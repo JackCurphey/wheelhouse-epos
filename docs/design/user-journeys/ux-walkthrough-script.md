@@ -13,6 +13,9 @@ For Jack and Mark, to walk Wheelhouse's stories by hand. A UI audit checks one s
 | 5 | A Cycle to Work bike | 6 Cycle to Work, 11 Selling at the till, 17 Reports | Maya (customer), Jo Taylor, Jack Lewis — **done 2 Oct 2026** |
 | 6 | A repair at a Lightspeed shop | 21 Lightspeed shops (with the customer pages of 3, 4 and 5 it uses) | Maya, Jo Taylor, Alex Morgan, Jack Lewis — **done 2 Oct 2026** |
 | 7 | An owner with two shops | 19 Multiple sites, 20 Management oversight, 17 Reports | Jack Lewis, and staff at Bolton and [Second site] — **done 2 Oct 2026** |
+| 8 | The workshop on a shared computer, and several mechanics at once | B Signing in, 12 Workshop day, 4 Drop off and approve the quote, 5 Collect and pay | Alex Morgan and Jo Taylor on one shared desktop and on their own tablets, the Saturday worker at the till — **done 3 Oct 2026** |
+
+Who each person is, what they need and the checks to run as them are in `personas.md`. Read it before you start. Walk every story as the Saturday worker too, wherever they could be on the till or front desk.
 
 In every story, also walk it as: **someone using a screen reader**, **someone using only a keyboard**, and **someone with low vision** (large text or zoom).
 
@@ -21,7 +24,7 @@ In every story, also walk it as: **someone using a screen reader**, **someone us
 1. Read the story's decision files in `docs/decisions/` (one per journey, named after it). They say what has already been decided. Don't reopen those; note when a problem touches one.
 2. Open the canvases: customers and the website on https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh, the staff app's shop floor (workshop, till, opening, cash-up, customers, Lightspeed) on https://claude.ai/artifact/WzmMdudJPoWH5aUd7J9V4j and its back office (setup, moving over, stock, reports, website, multiple shops, oversight) on https://claude.ai/artifact/5H8Dv294J1eF6idFoLU6e4. Each journey's board links to its own canvas for tablet and phone.
 3. Write down the story in five or six lines: who does what, in what order. Use the example data the drawings use (Maya Patel, WH-1042, £111.00 and so on). Don't make up new facts; a bracketed value like `[time]` is unknown, not wrong.
-4. Pick the size each person really uses: Maya on a phone (a computer for her account), Jo on a desktop, Alex on a tablet.
+4. Pick the size each person really uses: Maya on a phone (a computer for her account), Jo on a desktop, Alex on **both** a shared desktop and a tablet (the workshop must not depend on one computer; see `personas.md`).
 
 ## How to walk it
 
@@ -125,3 +128,4 @@ For the "same thing, same name" question. If a screen uses another word for one 
 | Stock moved between shops | (online: "Coming from [Second site]") | "Send to another shop"; "On its way"; "Receive it"; transfer T-[0000]; the new shop's checklist "Send from Bolton" |
 | A new shop being set up | — | "+ Add a shop"; "Add the shop"; "Getting [Second site] ready"; on Bolton's Today "[Second site] · [n] steps to get it ready"; "Show [Second site] to customers" (walk-through 7 H1, M3) |
 | Something wrong at the other shop | — | On the chosen shop's Today, "[Second site] · [n] things need attention" with "See them" (walk-through 7 H1) |
+| Taking over a shared computer | — | "Enter your PIN" to take over; "Working: [name] · Switch" (like "Serving: [name]"); "Check out [name]" to leave. "Sign in" and "Sign out" stay for your own email sign-in (walk-through 8 L3) |
