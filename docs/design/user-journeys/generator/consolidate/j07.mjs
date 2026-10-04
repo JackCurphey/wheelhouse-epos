@@ -31,7 +31,7 @@ export default {
   'ac-inbox-all': into('ac-inbox', INBOX, "'All' filter: every conversation, unanswered ones marked 'Needs a reply'"),
   'ac-inbox-empty': into('ac-inbox', INBOX, "Empty list: 'Nothing needs a reply. Every conversation is under All.'"),
   'ac-reply-text': into('ac-inbox', INBOX, "Pop-up 'What Maya gets': the reply as a text, 'reply on your page: [link]'"),
-  'ac-today': into('op-today', 'Account 2, 4', "Lines '2 messages need a reply' and '[Customer name] asked us to delete their account'"),
+  'ac-today': into('op-today', 'Account 2, 4; 4 Oct (coverage walk 12 L1)', "Lines '2 messages need a reply' and 'Maya Patel asked us to delete her account'"),
   // Service reminders
   'ac-book-remind': into('bk-page', 'Account 2, 4', "Booking step 4 details, with 'Remind me when my bike is due its next service' unticked"),
   'ac-collect-remind': into('cp-summary', 'Account 2, 4', "Ready-to-collect page with the 'Remind me when my bike is due its next service' tick"),
@@ -51,7 +51,7 @@ export default {
   'ac-download': into('ac-account', ACCOUNT, "Banner 'Your data is downloading as one file, [file name].zip…'"),
   'ac-download-failed': into('ac-account', ACCOUNT, "Amber banner 'The download didn’t start.' with 'Try again'"),
   'ac-delete': keep(8),
-  'ac-delete-blocked': into('ac-delete', 'Account 4', "'We can delete your account once your bike has been collected.'; only 'OK'"),
+  'ac-delete-blocked': into('ac-delete', 'Account 4; coverage walks answer 4 (4 Oct)', "Bike still in: 'We’ll delete your account once your bike has been collected.'; 'Keep my account' or 'Ask to delete'"),
   'ac-delete-sent': into('ac-delete', 'Account 4', "'Request sent' — deleted 'by [date] at the latest'; only 'OK'"),
   'ac-account-delete-pending': into('ac-account', ACCOUNT, "Amber banner 'You asked us to delete your account on [date]…' with 'Cancel my request'"),
   'ac-account-delete-cancelled': into('ac-account', ACCOUNT, "Banner 'Request cancelled — your account stays as it is.'"),
@@ -64,4 +64,7 @@ export default {
 // Extra lines with no old drawing behind them (plan.mjs `lines`).
 export const lines = [
   { on: 'ac-account', text: "After collecting: the repair moves to Earlier, 'WH-1042 · Trek Domane AL 3 · Standard service · Repair · collected · receipt £111.00 ›'", who: 'Customer', decision: 'Account and reminders 1; second walk answer 13; 3 Oct (third walk, walk-through 12 M1)' },
+// The coverage walks (4 Oct, docs/design/user-journeys/walk-4/): Jack's answers and the walks' fixes drawn as lines.
+  { on: 'ac-inbox', text: "A question from the account: no bike or job; 'Question from her account'; the reply 'Sent to Maya by text, with a link to her question'", who: 'Staff', decision: 'Account 3, 7; coverage walks answer 3 (4 Oct)' },
+  { on: 'set-msg-list', text: "Until a review page is saved: the Review request row reads 'Off · add your review page first' and its switch can't be pressed; Edit is the way in", who: 'Owner', decision: 'Account 5; Owner setup, 1 Oct later change; 4 Oct (coverage walk 11 L1)' },
 ];

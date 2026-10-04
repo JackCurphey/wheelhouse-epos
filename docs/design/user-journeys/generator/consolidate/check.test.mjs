@@ -53,3 +53,21 @@ test('every "same" points at a board or a situation line', () => {
   const bad = [...plan].filter(([, e]) => e.kind === 'same' && !['into', 'keep'].includes(plan.get(e.id)?.kind)).map(([id, e]) => `${id} → ${e.id}`);
   assert.deepEqual(bad, []);
 });
+
+// The coverage walks (4 Oct, walk-4; docs/decisions/2026-10-04-coverage-walks.md):
+// answers 2 and 5 drop four screens, and the answers and the walks' fixes are
+// situation lines on the screens they name.
+test('the coverage walks: dropped screens are later, and the new lines sit on their screens', () => {
+  const notDropped = ['on-settings-start', 'on-settings-start-answered', 'ws-start-products-answered', 'cs-privacy-blocked'].filter((id) => plan.get(id)?.kind !== 'later' || !/^Dropped, not later: /.test(plan.get(id).reason));
+  assert.deepEqual(notDropped, []);
+  const want = [
+    ['ac-inbox', 'Question from her account'], ['cs-privacy', 'Still in the way'],
+    ['staff-app', 'Check out'], ['wb-off-preview', 'switch-over morning'], ['ws-page', 'Not connected'],
+    ['bk-settings', 'Connect [payment provider] first'], ['set-workshop-services', 'Customers can book this online'],
+    ['set-workshop-services', 'Take a deposit for this service'], ['job-overview', 'answered by phone'],
+    ['dq-record-answer', 'Goes with'], ['set-msg-list', 'add your review page first'],
+    ['cs-privacy', 'once WH-1042 is collected'], ['cs-privacy', 'Done [date]'], ['cs-privacy', 'build-plan question 9'],
+  ];
+  const missing = want.filter(([on, t]) => !lines.some((l) => l.on === on && l.text.includes(t))).map(([on, t]) => `${on}: ${t}`);
+  assert.deepEqual(missing, []);
+});

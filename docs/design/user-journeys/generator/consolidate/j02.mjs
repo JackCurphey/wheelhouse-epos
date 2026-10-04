@@ -54,8 +54,8 @@ export default {
   'on-today-uncollected': into('op-today', 'Buy online 6, 7', "Amber 'Order [order number] · Maya Patel — not collected' with 'Contacted' and 'Open'"),
   'on-settings': keep(1),
   'on-settings-order-in': into('on-settings', 'Buy online 2, 3', "'Also things we can order in' picked; 'Moving between shops takes' and 'Ordering in takes about'"),
-  'on-settings-start': keep(21), // the report keeps it as its own box (asked once)
-  'on-settings-start-answered': into('on-settings', 'Buy online 2, 3', "'Showing products' open: 'Started with every product online …, in your website’s set-up' with Change"),
+  'on-settings-start': later('Dropped, not later: coverage walks answer 2 (4 Oct), the question is asked once, in the website’s set-up'),
+  'on-settings-start-answered': later('Dropped, not later: coverage walks answer 2 (4 Oct), the question is asked once, in the website’s set-up'),
   'on-settings-show': into('on-settings', 'Buy online 2, 3', "'Showing products' open: a switch per category; 'Started with every product online on [date]' with Change"),
   'on-settings-pay': into('on-settings', 'Buy online 2, 3', "Paying open: 'Connected to [payment provider]', three switches; 'Remind the customer after', 'Keep orders for'"),
   'on-settings-keep': into('on-settings', 'Buy online 2, 3', "Scrolled to 'Keep orders for [n] days' and 'Shelf or spot' ([Shelf name])"),

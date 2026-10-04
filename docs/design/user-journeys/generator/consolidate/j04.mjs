@@ -46,4 +46,7 @@ export const lines = [
   // The second walk's smaller questions, 3 Oct (answer 1).
   { on: 'dq-quote', text: "From a Not sure what's wrong? booking: every line is the mechanic's, each Needed or Optional with its reason; a deposit paid shows as Deposit paid £[deposit] and Still to pay when you collect £[balance]", who: 'Customer', decision: 'Booking mode 2026-09-04 §7.4; Book a repair 12 (H3); Quote 2, 7; 3 Oct (second walk Q1)' },
   { on: 'dq-quote', text: "From a Not sure what's wrong? booking: no charge for looking at the bike; every line on the quote is new", who: 'Customer', decision: '3 Oct (second walk, case 1c)' },
+// The coverage walks (4 Oct, docs/design/user-journeys/walk-4/): Jack's answers and the walks' fixes drawn as lines.
+  { on: 'job-overview', text: "Once answered by phone: the note reads 'Maya answered by phone at [time] · taken by Jo Taylor'", who: 'Staff', decision: 'Drop off and approve the quote 4; 4 Oct (coverage walk 8 M2)' },
+  { on: 'dq-record-answer', text: "The fitting shows 'Goes with: Shimano brake pads', and the pair ticks together, as if answered online", who: 'Staff', decision: 'Drop off and approve the quote 2, audit M2; 4 Oct (coverage walk 8 L1)' },
 ];

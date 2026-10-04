@@ -36,4 +36,6 @@ export const lines = [
   { on: 'staff-app', text: 'Search also finds bikes, frame numbers and booking requests', who: 'Staff', decision: 'Second walk, 3 Oct, answer 12 (walk-through 9 L3)' },
   { on: 'till-search', text: 'On the till the cursor starts in the search box', who: 'Staff', decision: 'Second walk, 3 Oct, answer 12 (walk-through 9 L3)' },
   { on: 'site', text: 'A Lightspeed shop: no Shop or Basket in the header', who: 'Customer', decision: 'Lightspeed shops 10 (H1); walk-through 6 L4' },
+// The coverage walks (4 Oct, docs/design/user-journeys/walk-4/): Jack's answers and the walks' fixes drawn as lines.
+  { on: 'staff-app', text: "On a workshop computer the sidebar's foot reads 'Alex Morgan · Mechanic · Check out'; Check out goes back to Enter your PIN; no Sign out", who: 'Mechanic', decision: 'Walk-through 8, decision 1, fix M6 part 1, L3; 4 Oct (coverage walk 2 M2)' },
 ];
