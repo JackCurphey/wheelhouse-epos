@@ -4,7 +4,7 @@ import { apiGet } from '@/lib/api/client.ts';
 import type { WorkshopJob } from '@/lib/api/types.ts';
 import { Button } from '@/components/ui/button.tsx';
 import { Dialog, DialogBody, DialogClose, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog.tsx';
-import { dayLabel, type DiaryState } from './rules.ts';
+import { STATE_LABEL, dayLabel, type DiaryState } from './rules.ts';
 
 /**
  * The diary's extras (piece 5b): the hover summary, View overview, the
@@ -159,14 +159,18 @@ export function JobMenu({ job, at, onClose, onOpenJob, onOverview }: {
       top: Math.max(8, Math.min(at.y, window.innerHeight - r.height - 8)),
     });
   }, [at]);
+  // The diary passes a fresh onClose on every redraw, so read it through a ref:
+  // focus goes to the first item once, when the menu opens, not on each redraw.
+  const closeRef = useRef(onClose);
+  useLayoutEffect(() => { closeRef.current = onClose; });
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const away = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) closeRef.current(false);
     };
     document.addEventListener('mousedown', away);
     return () => document.removeEventListener('mousedown', away);
-  }, [onClose]);
+  }, []);
 
   function onKey(e: KeyboardEvent<HTMLDivElement>) {
     const items = [...(ref.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
@@ -222,7 +226,13 @@ const TILE: Record<DiaryState, string> = {
 export const tileClass = (s: DiaryState) => TILE[s];
 
 /** Decision 61: a stack opens a chooser with a tile for each of its jobs. */
-export function StackChooser({ jobs, time, onClose, onPick }: { jobs: DiaryJob[]; time: string; onClose: () => void; onPick: (j: DiaryJob) => void }) {
+export function StackChooser({ jobs, time, onClose, onPick, onMove, onMenu }: {
+  jobs: DiaryJob[]; time: string; onClose: () => void; onPick: (j: DiaryJob) => void;
+  /** M on a tile: move that job with the arrow keys, as on any job block. */
+  onMove: (j: DiaryJob) => void;
+  /** The Menu key or Shift+F10 on a tile: that job's actions. */
+  onMenu: (j: DiaryJob) => void;
+}) {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }} aria-labelledby="stack-title" aria-describedby="stack-sub">
       <DialogHeader>
@@ -233,12 +243,18 @@ export function StackChooser({ jobs, time, onClose, onPick }: { jobs: DiaryJob[]
         <DialogClose onClick={onClose} aria-label="Close" />
       </DialogHeader>
       <DialogBody className="grid grid-cols-2 gap-2">
+        <p id="stack-move-hint" className="sr-only">Press Enter to open the job, M to move it with the arrow keys, or the Menu key for more.</p>
         {jobs.map((j) => (
           <button
             key={j.partId}
             type="button"
-            aria-label={`${j.bikeLabel || 'Bike'}, ${j.title}, ${j.reference}`}
+            aria-label={`${j.bikeLabel || 'Bike'}, ${j.title}, ${j.reference}, ${STATE_LABEL[j.state]}`}
+            aria-describedby="stack-move-hint"
             onClick={() => onPick(j)}
+            onKeyDown={(e) => {
+              if (e.key === 'm' || e.key === 'M') { e.preventDefault(); onMove(j); }
+              else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); onMenu(j); }
+            }}
             className={`flex min-h-14 flex-col items-start gap-0.5 overflow-hidden rounded-[5px] border-[1.75px] px-2 py-1.5 text-left ${TILE[j.state]}`}
           >
             <span className="w-full truncate text-xs font-bold text-[var(--wh-ink)]">{j.bikeLabel || 'Bike'}</span>

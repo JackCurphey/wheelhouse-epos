@@ -42,10 +42,16 @@ afterEach(async () => {
   globalThis.fetch = realFetch;
 });
 
+let puts = [];
 function stubServer() {
-  globalThis.fetch = async (url) => {
+  puts = [];
+  globalThis.fetch = async (url, init = {}) => {
     const reply = (status, body) => ({ status, ok: status < 300, json: async () => body });
     const u = new URL(url, 'http://localhost');
+    if (init.method === 'PUT') {
+      puts.push(`${u.pathname} ${init.body}`);
+      return reply(200, { ...JOBS.find((j) => u.pathname.endsWith(`/${j.id}`)), version: 4 });
+    }
     if (u.pathname === '/api/auth/me') return reply(200, OWNER);
     if (u.pathname === '/api/employees') return reply(200, MECHANICS);
     if (u.pathname === '/api/workshop-settings') return reply(200, { openingHours: [] });
@@ -88,7 +94,7 @@ test('two jobs at the same time are one stack that opens a chooser; a tile opens
   fireEvent.click(stack);
   const chooser = within(await ui.findByRole('dialog', { name: '2 jobs at 10:00' }));
   assert.ok(has(chooser.queryByText('Tuesday 6 October · choose one to open')));
-  fireEvent.click(chooser.getByRole('button', { name: 'Specialized Sirrus, Puncture repair, WH-1043' }));
+  fireEvent.click(chooser.getByRole('button', { name: 'Specialized Sirrus, Puncture repair, WH-1043, Expected' }));
   assert.ok(has(await ui.findByRole('dialog', { name: /Puncture repair/ })));
 });
 
@@ -191,4 +197,92 @@ test('the overview of a job with nothing on its order yet says so', async () => 
   const box = within(await ui.findByRole('dialog', { name: 'Standard service · WH-1042' }));
   assert.ok(has(await box.findByText('£0.00')));
   assert.ok(has(box.queryByText('No work or parts yet.')));
+});
+
+// Fresh review of pull request 112, 4 Oct: stacking jobs must not take away
+// what keyboard, screen-reader and touch users could do with each job before
+// (spec: dragging is never the only way; Jack's accessibility-first rule).
+const PAIR = () => [
+  job({}),
+  job({ id: 2, reference: 'WH-1043', bikeLabel: 'Specialized Sirrus', customerName: 'Sam Reed', title: 'Puncture repair', endTime: '11:30' }),
+];
+async function openChooser(t) {
+  t.fireEvent.click(await t.ui.findByRole('button', { name: /^2 jobs booked 10:00 to 11:30/ }));
+  return t.within(await t.ui.findByRole('dialog', { name: '2 jobs at 10:00' }));
+}
+
+test('a stacked job can be moved from the keyboard: M on its tile, the arrows, Enter', async () => {
+  const t = await openDiary(PAIR());
+  const chooser = await openChooser(t);
+  t.fireEvent.keyDown(chooser.getByRole('button', { name: /^Specialized Sirrus, Puncture repair, WH-1043/ }), { key: 'm' });
+  assert.equal(has(t.ui.queryByRole('dialog', { name: '2 jobs at 10:00' })), false);
+  assert.ok(has(t.ui.queryByText(/Moving Specialized Sirrus\. Tue 6 Oct, 10:00–11:30\./)));
+  await t.waitFor(() => assert.ok(document.activeElement?.getAttribute('title')?.startsWith('Specialized Sirrus, Puncture repair')));
+  t.fireEvent.keyDown(document.activeElement, { key: 'ArrowDown' });
+  t.fireEvent.keyDown(document.activeElement, { key: 'Enter' });
+  await t.waitFor(() => assert.deepEqual(puts, ['/api/workshop-jobs/2 {"jobDate":"2026-10-06","startTime":"10:15","endTime":"11:45","version":3}']));
+});
+
+test('cancelling a stacked job’s move puts focus back on its stack', async () => {
+  const t = await openDiary(PAIR());
+  const chooser = await openChooser(t);
+  t.fireEvent.keyDown(chooser.getByRole('button', { name: /^Specialized Sirrus/ }), { key: 'm' });
+  await t.waitFor(() => assert.ok(document.activeElement?.getAttribute('title')?.startsWith('Specialized Sirrus')));
+  t.fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+  await t.waitFor(() => assert.ok(document.activeElement?.getAttribute('aria-label')?.startsWith('2 jobs booked 10:00 to 11:30')));
+  assert.deepEqual(puts, []);
+});
+
+test('the Menu key on a chooser tile opens that job’s menu', async () => {
+  const t = await openDiary(PAIR());
+  const chooser = await openChooser(t);
+  t.fireEvent.keyDown(chooser.getByRole('button', { name: /^Specialized Sirrus/ }), { key: 'ContextMenu' });
+  const menu = t.within(await t.ui.findByRole('menu', { name: 'Job actions' }));
+  t.fireEvent.click(menu.getByRole('menuitem', { name: 'Open job' }));
+  assert.ok(has(await t.ui.findByRole('dialog', { name: /Puncture repair/ })));
+});
+
+test('each chooser tile says the job’s state and how to move it', async () => {
+  const t = await openDiary(PAIR());
+  const chooser = await openChooser(t);
+  const tile = chooser.getByRole('button', { name: 'Specialized Sirrus, Puncture repair, WH-1043, Expected' });
+  assert.ok(has(tile.getAttribute('aria-describedby')));
+});
+
+test('press and hold on a stack on a touch screen fans it out', async () => {
+  const t = await openDiary(PAIR());
+  const stack = await t.ui.findByRole('button', { name: /^2 jobs booked 10:00 to 11:30/ });
+  const fan = stack.parentElement.querySelector('[data-fan]');
+  assert.equal(fan.dataset.open, undefined);
+  t.fireEvent.pointerDown(stack, { button: 0, pointerType: 'touch', clientX: 200, clientY: 200 });
+  await t.waitFor(() => assert.equal(fan.dataset.open, 'true'), { timeout: 2000 });
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  t.fireEvent.click(stack);
+  assert.equal(has(t.ui.queryByRole('dialog', { name: '2 jobs at 10:00' })), false);
+});
+
+test('the menu keeps its focus when the diary redraws', async () => {
+  const t = await openDiary([FULL, job({ id: 3, reference: 'WH-1050', bikeLabel: 'Cube Attain', startTime: '14:00', endTime: '15:00' })]);
+  const b = await block(t.ui);
+  b.focus();
+  t.fireEvent.keyDown(b, { key: 'F10', shiftKey: true });
+  const menu = t.within(t.ui.getByRole('menu', { name: 'Job actions' }));
+  await t.waitFor(() => assert.equal(document.activeElement === menu.getByRole('menuitem', { name: 'Open job' }), true));
+  t.fireEvent.keyDown(document.activeElement, { key: 'ArrowDown' });
+  // Someone else changes a job, and the fresh list redraws the diary while the menu is open.
+  JOBS = JOBS.map((j) => (j.id === 3 ? { ...j, version: 9, updatedAt: '2026-10-05T09:00:00Z' } : j));
+  await t.act(async () => { await shell.queryClient.invalidateQueries(); });
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(document.activeElement === menu.getByRole('menuitem', { name: 'View overview' }), true);
+});
+
+test('lifting a finger after a long press doesn’t open the job', async () => {
+  const t = await openDiary([FULL]);
+  const b = await block(t.ui);
+  t.fireEvent.pointerDown(b, { button: 0, pointerType: 'touch', clientX: 200, clientY: 200 });
+  await t.ui.findByRole('menu', { name: 'Job actions' }, { timeout: 2000 });
+  t.fireEvent.pointerUp(window, { pointerType: 'touch' });
+  t.fireEvent.click(b);
+  // The job window opens at once (titled "Job" until it loads), so any dialog means it opened.
+  assert.equal(has(t.ui.queryByRole('dialog')), false);
 });

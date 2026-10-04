@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { createPortal } from 'react-dom';
@@ -121,7 +121,7 @@ type ExtrasApi = {
   leave: () => void;
   menu: (job: Shown, at: { x: number; y: number; touch: boolean }, opener: HTMLElement | null) => void;
   press: (job: Shown, e: PointerEvent<HTMLElement>) => void;
-  stack: (jobs: Shown[]) => void;
+  stack: (jobs: Shown[], colIndex: number, opener: HTMLElement) => void;
 };
 const ExtrasContext = createContext<ExtrasApi | null>(null);
 
@@ -204,6 +204,7 @@ function JobBlock({ job, range, wide, chosen, lane, colIndex }: {
     <button
       type="button"
       title={describe(job, false)}
+      data-part={job.partId}
       aria-describedby="diary-move-hint"
       onKeyDown={(e) => { if (!moving && onMenuKey?.(e)) return; move.onKeyDown(job, colIndex, e); }}
       onKeyUp={(e) => { if (moving && e.key === ' ') e.preventDefault(); }}
@@ -240,6 +241,39 @@ function StackBlock({ jobs, start, end, range, lane, colIndex }: {
     style.left = 3;
     style.right = 3;
   }
+  // The drawings' touch stack: press and hold fans it out (there's no hover).
+  const [fanned, setFanned] = useState(false);
+  const held = useRef(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!fanned) return;
+    const away = (e: globalThis.PointerEvent) => {
+      if (!(e.target instanceof Node) || !wrap.current?.contains(e.target)) setFanned(false);
+    };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [fanned]);
+  useEffect(() => () => { if (holdTimer.current) clearTimeout(holdTimer.current); }, []);
+  const wrap = useRef<HTMLDivElement>(null);
+  const onHold = (e: PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== 'touch' || e.button !== 0) return;
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    const stop = () => {
+      if (holdTimer.current) clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      window.removeEventListener('pointermove', moved);
+    };
+    const moved = (ev: globalThis.PointerEvent) => {
+      if (Math.abs(ev.clientX - x0) > 6 || Math.abs(ev.clientY - y0) > 6) stop();
+    };
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    window.addEventListener('pointermove', moved);
+    holdTimer.current = setTimeout(() => { held.current = true; setFanned(true); }, 500);
+  };
   const front = jobs[0];
   const names = jobs.map((j) => `${j.bikeLabel || 'Bike'} · ${j.title} (${j.reference})`).join(', ');
   const edge = (offset: number, opacity: number) => (
@@ -247,14 +281,20 @@ function StackBlock({ jobs, start, end, range, lane, colIndex }: {
   );
   const cols = Math.min(jobs.length, 2);
   return (
-    <div className={`group/stack absolute hover:z-[9] ${picking ? 'pointer-events-none opacity-50' : ''}`} style={style}>
+    <div ref={wrap} className={`group/stack absolute hover:z-[9] ${fanned ? 'z-[9]' : ''} ${picking ? 'pointer-events-none opacity-50' : ''}`} style={style}>
       {edge(6, 0.45)}
       {edge(3, 0.7)}
       <button
         type="button"
         aria-label={`${jobs.length} jobs booked ${hhmm(start)} to ${hhmm(end)}, click to choose which one to open: ${names}`}
         title={names}
-        onClick={() => extras?.stack(jobs)}
+        data-parts={jobs.map((j) => j.partId).join(' ')}
+        onPointerDown={onHold}
+        onClick={(e) => {
+          // The tap that ends a press and hold leaves the fan open, not the chooser.
+          if (held.current) { held.current = false; return; }
+          extras?.stack(jobs, colIndex, e.currentTarget);
+        }}
         className="absolute inset-0 flex flex-col overflow-hidden rounded-[5px] border-[1.75px] border-[var(--wh-ink)] bg-[var(--wh-panel)] py-[3px] pr-[22px] pl-1.5 text-left"
       >
         <span aria-hidden="true" className="absolute top-[3px] right-[3px] inline-flex items-center gap-px rounded-full bg-[var(--wh-ink)] px-[5px] py-px text-[9px] font-bold text-[var(--wh-panel)]">
@@ -269,7 +309,8 @@ function StackBlock({ jobs, start, end, range, lane, colIndex }: {
       <div
         aria-hidden="true"
         data-fan
-        className="invisible absolute top-0 left-1/2 grid -translate-x-1/2 gap-1.5 opacity-0 drop-shadow-[0_10px_26px_var(--wh-backdrop)] transition-[opacity,visibility] group-hover/stack:visible group-hover/stack:opacity-100 group-hover/stack:delay-300 motion-reduce:transition-none"
+        data-open={fanned ? 'true' : undefined}
+        className="invisible absolute data-[open=true]:visible data-[open=true]:opacity-100 top-0 left-1/2 grid -translate-x-1/2 gap-1.5 opacity-0 drop-shadow-[0_10px_26px_var(--wh-backdrop)] transition-[opacity,visibility] group-hover/stack:visible group-hover/stack:opacity-100 group-hover/stack:delay-300 motion-reduce:transition-none"
         style={{ gridTemplateColumns: `repeat(${cols}, 128px)` }}
       >
         {jobs.map((j) => <FanTile key={j.partId} job={j} colIndex={colIndex} />)}
@@ -593,6 +634,27 @@ export function DiaryPage() {
     if (preview) return;
     setOpenJobId(job.id);
   };
+  /** M: pick a job up to move with the arrow keys (from its block, or its stack's chooser). */
+  const startKeyMove = (job: Shown, colIndex: number) => {
+    const p = startOf(job, colIndex);
+    setPreview(p);
+    setMoveError(null);
+    setMoveNote(`Moving ${job.bikeLabel || 'Bike'}. ${whereText(p)}. Use the arrow keys to move it, Enter to save, Escape to cancel.`);
+  };
+  // A job moved from its stack's chooser leaves the stack and shows as itself
+  // while it moves: focus follows it there, and when the move ends, goes back
+  // to the stack it's in (or the job, if it no longer stacks).
+  const followPart = useRef<number | null>(null);
+  useEffect(() => {
+    const id = followPart.current;
+    if (id === null) return;
+    if (preview?.partId === id) {
+      document.querySelector<HTMLElement>(`[data-part="${id}"]`)?.focus();
+    } else if (!preview) {
+      followPart.current = null;
+      (document.querySelector<HTMLElement>(`[data-parts~="${id}"]`) ?? document.querySelector<HTMLElement>(`[data-part="${id}"]`))?.focus();
+    }
+  });
   const moveApi: MoveApi = {
     preview,
     onOpen: openJob,
@@ -608,10 +670,7 @@ export function DiaryPage() {
         }
         if (e.key !== 'm' && e.key !== 'M') return;
         e.preventDefault();
-        const p = startOf(job, colIndex);
-        setPreview(p);
-        setMoveError(null);
-        setMoveNote(`Moving ${bike}. ${whereText(p)}. ${hint}`);
+        startKeyMove(job, colIndex);
         return;
       }
       let next: Preview | null = null;
@@ -701,6 +760,7 @@ export function DiaryPage() {
   const [menuFor, setMenuFor] = useState<{ job: Shown; at: MenuAt; opener: HTMLElement | null } | null>(null);
   const [overview, setOverview] = useState<Shown | null>(null);
   const [stackJobs, setStackJobs] = useState<Shown[] | null>(null);
+  const stackFrom = useRef<{ colIndex: number; opener: HTMLElement } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const touchPress = useRef(false);
@@ -775,8 +835,9 @@ export function DiaryPage() {
       }, 500));
       pressTimers.current.push(setTimeout(() => showOverview(job), 1100));
     },
-    stack(list) {
+    stack(list, colIndex, opener) {
       stopHover();
+      stackFrom.current = { colIndex, opener };
       setStackJobs(list);
     },
   };
@@ -801,6 +862,22 @@ export function DiaryPage() {
           time={stackJobs[0].startTime ?? ''}
           onClose={() => setStackJobs(null)}
           onPick={(j) => { setStackJobs(null); setOpenJobId(j.id); }}
+          onMove={(picked) => {
+            const from = stackFrom.current;
+            const j = stackJobs.find((x) => x.partId === picked.partId);
+            setStackJobs(null);
+            if (!from || !j || !movable(j)) return;
+            followPart.current = j.partId;
+            startKeyMove(j, from.colIndex);
+          }}
+          onMenu={(picked) => {
+            const opener = stackFrom.current?.opener ?? null;
+            const j = stackJobs.find((x) => x.partId === picked.partId);
+            setStackJobs(null);
+            if (!j) return;
+            const r = opener?.getBoundingClientRect();
+            setMenuFor({ job: j, at: { x: r?.left ?? 0, y: (r?.bottom ?? 0) + 4, touch: false, phone: isPhone }, opener });
+          }}
         />
       ) : null}
     </>
