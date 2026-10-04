@@ -24,7 +24,9 @@ jobs move by keyboard, press and hold fans a stack on touch) merged.
 (split plan §9).
 **Jack is on:** waiting on WP-0.2's server half for the booking screens.
 Ready meanwhile: #136 (Citrus Lime exports) and #138 (card machine), only
-Jack can do; the follow-up to #112 (chooser placement, phone sheet line,
+Jack can do; the planning fixes due before stage 1 (#131, #132, #133, #141);
+reviewing WP-0.4 when Mark opens it; stage 0's stage check once lines 1–6
+of §9 are in; the follow-up to #112 (chooser placement, phone sheet line,
 fan tile times as drawn; a nudged fan tile landing on the next day; the
 highlight inside a stack).
 **Open for Jack:** §7.2 workshop pieces earlier (after #131); a Change
