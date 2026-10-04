@@ -82,7 +82,8 @@ export default {
     'Save my choices': go('wb-cookies-saved'),
     // The staff banner while the website is off (decisions M14, later change)
     'Back to Wheelhouse': go('ws-page'),
-    'Edit this page': go('ws-editor'),
+    // The editor is later (Website, issue #116 question 2).
+    'Edit this page': notDrawn('The website editor — later (issue #116 question 2)'),
     'Turn it on': go('wb-turned-on'),
     'Turn off': go('wb-off-preview'),
     // One shop
@@ -119,4 +120,8 @@ export default {
   'wb-find-us': { 'Find us': STAY },
   'wb-shop-page': { 'Collect from here': go('wb-shop-collect') },
   'wb-turned-on': { 'Back to Wheelhouse': go('ws-page-on') },
+  // Coverage walk 4: Jo goes back to her own Today (L1); the website's menu is
+  // the website's, not the staff app's (L2).
+  'wb-off-preview': { 'Open menu': go('site-menu') },
+  'wb-off-preview-ask': { 'Back to Wheelhouse': go('op-today-staff'), 'Open menu': go('site-menu') },
 };

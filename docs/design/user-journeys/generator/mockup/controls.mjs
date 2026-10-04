@@ -54,6 +54,11 @@ export function resolve(control, { id, owner, journey }, maps, fileToId) {
   if (own) return own;
   if (IN_PAGE.test(control.attrs) || FILTER(control)) return STAY;
   if (per['*']?.[control.label]) return per['*'][control.label];
+  // Shared labels that win over a drawing's own file link (links/shared.mjs '^'):
+  // the name buttons link to Jo Taylor's Your settings file (coverage walks 2 M1, 3 M1).
+  const ctx = { id, owner, journey, role: arguments[1].role ?? '', tag: control.tag };
+  const first = maps.shared?.['^']?.[control.label];
+  if (first) return typeof first === 'function' ? first(ctx) : first;
   // Shared label patterns (links/shared.mjs '~'): the diary's job blocks.
   const pat = (maps.shared?.['~'] ?? []).find(([re]) => re.test(control.label));
   if (pat) return pat[1];
@@ -62,7 +67,7 @@ export function resolve(control, { id, owner, journey }, maps, fileToId) {
   if (control.href && /^#./.test(control.href)) return STAY;
   // A shared target can depend on whose screen it is (a function of the drawing).
   const shared = maps.shared?.[control.label];
-  if (shared) return typeof shared === 'function' ? shared({ id, owner, journey, role: arguments[1].role ?? '' }) : shared;
+  if (shared) return typeof shared === 'function' ? shared(ctx) : shared;
   if (NAV_KINDS.test(control.attrs)) return STAY;
   if (CLOSE.test(control.label)) return BACK;
   return null;

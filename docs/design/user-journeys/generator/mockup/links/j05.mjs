@@ -57,9 +57,11 @@ export default {
     Text: go('cp-receipt-address-text'),
     'No receipt': go('till-sale'),
     // The till sale's email: the discounted sale (third walk, walk-through 2 H1).
-    'Send receipt': go('cp-receipt-email-till'),
-    'Send when back online': go('till-sale'),
-    'Add the customer': go('till-sale'),
+    // Coverage walk 9 M1: one receipt email is drawn, for the discounted sale.
+    'Send receipt': go('cp-receipt-email-till', 'The email is drawn for the £70.00 cash-and-card sale; it always shows the sale it’s for, so after the £74.00 card sale it reads Card · £74.00.'),
+    // Once the receipt has gone, the till is empty for the next sale (coverage walk 9 L1).
+    'Send when back online': go('till-empty'),
+    'Add the customer': go('till-empty'),
     // The receipt the customer gets
     'Download receipt (PDF)': outside('The receipt as a PDF download'),
     'Email it to me': go('cp-receipt-text-email'),
@@ -93,7 +95,7 @@ export default {
   'cp-receipt-address-customer': { 'Send receipt': go('cp-receipt-email') },
   'cp-receipt-address-text': { 'Send receipt': go('cp-receipt-text') },
   'cp-receipt-address-error': { 'Send receipt': STAY }, // the address is wrong: nothing sends
-  'cp-receipt-address-save': { 'Add the customer': go('till-sale') },
+  'cp-receipt-address-save': { 'Add the customer': go('till-empty'), 'Not now': go('till-empty') },
   'cp-messages': messages,
   'cp-message-wording': messages,
 };

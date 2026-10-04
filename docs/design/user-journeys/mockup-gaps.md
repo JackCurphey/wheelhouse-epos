@@ -2,7 +2,7 @@
 
 Built by `generator/mockup/gaps.mjs` from the clickable mockup's wiring (issue #116 step 5).
 
-## Pages a button leads to that no drawing shows yet (96)
+## Pages a button leads to that no drawing shows yet (95)
 
 In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack to decide on: draw it, make it a line on an existing screen, or leave it for the build.
 
@@ -34,7 +34,6 @@ In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack 
 - **Adding another way to pay, under Payments › Other ways to pay** — from Owner setup and onboarding: Add
 - **An earlier version of the website, to look at** — from Website management: View
 - **Another customer’s answered question, opened in Messages** — from Account, history and reminders: [Customer name]
-- **Another customer’s question, opened in Messages** — from Account, history and reminders: Needs a reply: [Customer name]
 - **Another day…: picking a switch-over day beyond the next open days (Moving 9 M6)** — from Moving from Citrus Lime: Another day…
 - **Ask us to help: how the owner reaches Wheelhouse for help with the move (Moving 2, 9 H2)** — from Moving from Citrus Lime: Ask us to help
 - **Cancel a transfer while it’s on its way (Stock take and stock control 11)** — from Stock take and stock control: Cancel transfer T-[0000] to [Second site]
@@ -94,7 +93,7 @@ In the mockup these say "Not drawn yet". Each is a gap in the drawings for Jack 
 - **The staff order page with one item refunded as couldn’t supply** — from Buy online, or click and collect: Refund this item
 - **The till taking a payment off her account** — from Customer service: Take a payment at the till
 - **The website collecting from [Second site] (only Bolton chosen is drawn)** — from Find the shop and browse the website: [Second site] [Shop address] · open [opening hours]
-- **The website editor — later (issue #116 question 2)** — from Website management: Review in the editor
+- **The website editor — later (issue #116 question 2)** — from Find the shop and browse the website: Edit this page; Website management: Review in the editor
 - **The Website page after discarding: no unpublished changes** — from Website management: Discard changes
 - **The whole sale opened from the bar along the bottom on a phone (drawn only with a warning, a discount or a customer)** — from Selling at the till: Open the sale
 - **This job’s page: only WH-1042’s pages are drawn** — from App map and navigation: Giant Escape 2, Gear adjustment, Jamie Brooks, WH-1049, Expected, 09:00–10:00 · gear adjustment; App map and navigation: Brompton C Line, Gear adjustment, Oliver Chen, WH-1052, Change requested, Requested move to 14:00; App map and navigation: Cannondale Quick, Safety check, Aisha Khan, WH-1050, Finished, 11:00–12:00 · safety check (and 653 more)

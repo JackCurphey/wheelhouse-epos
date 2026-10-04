@@ -27,6 +27,9 @@ const NEW_JOB = {
 export default {
   '*': { ...SHOWING, 'Previous day': STAY, 'Next day': STAY },
   'diary': SHOWING,
+  // A mechanic's sidebar Diary opens his own diary (coverage walk 2 L1).
+  'diary-mechanic': { Diary: go('diary-mechanic') },
+  'job-mechanic': { Diary: go('diary-mechanic') },
   'diary-day': { 'Showing By mechanic. Change whose jobs are shown': STAY },
   'diary-settings': {
     '+ Add a slot': STAY,
@@ -56,6 +59,7 @@ export default {
     ...JOB,
     // A workshop computer's PIN screen is till-checkin (its line: Walk-through 8, decision 1).
     'Switch': go('till-checkin-workshop'),
+    Diary: go('diary-mechanic'),
     // Close and Done go back to the job page it was opened from (third walk, walk-throughs 6 M1, 8 L2).
     'Close, back to the job': BACK, Done: BACK,
     'Add a note for Bolts torqued': STAY, 'Add a note for Bottom bracket': STAY,

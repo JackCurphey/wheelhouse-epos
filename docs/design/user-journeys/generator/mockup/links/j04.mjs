@@ -9,7 +9,7 @@ const messages = {
   ...Object.fromEntries(WORDING.map((m) => [`Edit the wording of ${m}`, go('set-msg-edit')])),
   'Edit the wording of Bike still waiting': go('cp-message-wording'),
   'Edit the wording of Service reminder': go('ac-reminder-wording'),
-  'Edit the wording of Review request': go('ac-review-setting'),
+  'Edit the wording of Review request': go('ac-review-first'), // its row is Off (coverage walk 11 M1)
   '+ Add your own message': go('set-msg-new'),
   Payments: go('set-pay-ways'),
   'End of day': go('set-eod'),
@@ -32,7 +32,8 @@ export default {
     Undo: go('dq-job-quote'),
     'See what Maya sees': go('dq-quote'),
     'Record their answer': go('dq-record-answer'),
-    'Save: yes to 2 lines, no thanks to 1': go('dq-job-answered'),
+    // Coverage walk 8 M2: a phone answer's note says so (a line under the job page).
+    'Save: yes to 2 lines, no thanks to 1': go('dq-job-answered', 'Answered by phone: the job’s note reads “Maya answered by phone at [time] · taken by Jo Taylor” (a line under the job page).'),
     'Withdraw quote': go('dq-job-withdraw'),
     'Keep the quote': BACK,
     'Save and tell Maya': go('dq-within-limit'),
@@ -55,6 +56,8 @@ export default {
   },
   // The confirm button in the "Withdraw this quote?" box: Maya's page then says withdrawn.
   'dq-job-withdraw': { 'Withdraw quote': go('dq-withdrawn') },
+  // Coverage walk 8 M1: the diary at the quote's moment opens the job with the quote out.
+  'dq-diary-waiting': Object.fromEntries(['', '. Press and hold for more.'].map((end) => [`Trek Domane AL 3, Standard service, Maya Patel, WH-1042, Quoting, 11:30–13:00 · approved £111${end}`, go('dq-job-sent', 'WH-1042 with the quote out: Record their answer is on the job page.')])),
   // On the ready page (journey 5's cp-summary) no enlarged photo is drawn.
   'dq-ready': { 'Photo of Shimano brake pads: rear pads worn — open larger photo': notDrawn('The pads photo enlarged, over the ready-to-collect page') },
   'dq-messages': messages,

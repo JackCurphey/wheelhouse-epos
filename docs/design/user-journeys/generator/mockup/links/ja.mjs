@@ -5,10 +5,17 @@ export default {
   '*': {
     'Take payment · £111.00': go('till-pay'),
   },
-  'site-menu': { Account: go('ac-account') },
-  'site-ocean-menu': { Account: go('ac-account') },
+  // Coverage walk 1: the shop's own theme opens its own menu (M1); Close menu goes back (L1).
+  'site-ocean': { 'Open menu': go('site-ocean-menu') },
+  'site-menu': { Account: go('ac-account'), 'Close menu': BACK },
+  'site-ocean-menu': { Account: go('ac-account'), 'Close menu': BACK },
   'staff-app': { 'Showing Everyone. Change whose jobs are shown': STAY },
-  'staff-app-menu': { 'Close menu': BACK },
+  // On a phone, Messages is the list, then the conversation (Account 9; coverage walk 10 L1).
+  'staff-app-menu': { 'Close menu': BACK, Messages: go('ac-inbox-list') },
+  // Alex's own pages: his Diary is his (coverage walk 2 L1).
+  'staff-app-mechanic': { Diary: go('diary-mechanic') },
+  // Close leaves you where you were (coverage walks 2 L1, 3 M2).
+  'your-settings': { Close: BACK },
   'till-rail': { 'Open the basket': notDrawn('The basket opened on a phone till (the phone till shows it only as a bottom bar)') },
   // The search's rows (App map, 3 Oct; third walk, answers 1 and 8): each
   // row's name opens its page; the button on the right does the till action.

@@ -3,11 +3,16 @@
 // the shop menu, Your settings, and the website's header.
 import { go, STAY, notDrawn, outside } from '../controls.mjs';
 
+// Coverage walk 2 M1: the settings drawn are Jo Taylor's.
+const ALEX_SETTINGS = go('your-settings', 'Showing Jo Taylor’s settings: on the workshop computer they’re Alex Morgan’s, with no Change PIN (see the lines below).');
+
 export default {
   // Front desk
   // Today, Stock and Stock take open the page drawn for the role of the
   // screen they're on (third walk, walk-throughs 1 L2, 3 M1, 9 M2).
-  Today: ({ role }) => go(/^Staff/.test(role) ? 'op-today-staff' : 'op-today'),
+  // The diary's own Today button (a button, not the sidebar's link) moves the
+  // diary to this week, so it stays (coverage walk 2 L2).
+  Today: ({ role, tag }) => (tag === 'button' ? STAY : go(/^Staff/.test(role) ? 'op-today-staff' : 'op-today')),
   Till: go('till-sale'),
   'Online orders': go('on-orders'),
   'Cycle to Work': go('cw-list'),
@@ -30,7 +35,6 @@ export default {
   'Shop: [Second site]. Choose a shop': go('ms-switch-open'),
   'Shop: All shops. Choose a shop': go('ms-switch-open'),
   'Your settings — Jo Taylor, Staff': go('your-settings'),
-  'Your settings — Jack Lewis, Owner': go('your-settings'),
   'Sign out': go('auth-signedout'),
   'Check out': go('till-checkin'),
   // The shop's website header
@@ -53,7 +57,8 @@ export default {
   // "Call us": the shop's number opens the phone app (walk-through 12 M2).
   '[shop phone]': outside('The phone app, calling the shop'),
   // The phone menu: the website's on a customer page, the staff app's otherwise.
-  'Open menu': ({ role }) => go(/Customer/.test(role) ? 'site-menu' : 'staff-app-menu'),
+  // A mechanic's phone menu is drawn as Jo Taylor's (coverage walk 2 M1).
+  'Open menu': ({ role }) => (/Customer/.test(role) ? go('site-menu') : /Mechanic/.test(role) ? go('staff-app-menu', 'The phone menu is drawn as Jo Taylor’s; a mechanic sees only the Workshop room (as on Alex Morgan’s staff app).') : go('staff-app-menu')),
   'Fold the menu': go('till-rail'),
   'Front desk': STAY, Workshop: STAY, Stockroom: STAY, Office: STAY,
   'Online orders [n] to get ready': go('on-orders'),
@@ -65,6 +70,12 @@ export default {
   'One fewer': STAY, 'One more': STAY, Clear: STAY,
   'Previous week': STAY, 'Next week': STAY,
   Print: outside('The printer'),
+  // Tried before a drawing's own file link: the name buttons open the settings
+  // drawn for that person (coverage walks 2 M1, 3 M1).
+  '^': {
+    'Your settings — Jack Lewis, Owner': go('rp-your-settings'),
+    'Your settings — Alex Morgan, Mechanic': ALEX_SETTINGS,
+  },
   // Patterns, tried after a journey's own labels: the diary's job blocks. Only
   // WH-1042's pages are drawn; its "In the workshop" block opens that stage
   // (third walk, walk-throughs 8 M2 and 9 M1). Other jobs' blocks say so

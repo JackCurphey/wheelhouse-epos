@@ -10,7 +10,13 @@ const messages = ['Bike ready', 'Bike still waiting', 'Booking cancelled', 'Book
   'Quote to approve', 'Ready to collect', 'Request declined', 'Request received', 'Review request', 'Service reminder',
   'Work added within your limit', 'Your answers', 'Your bike is no longer put aside', 'Your bike is put aside',
   'Your hold ends on [date]', 'Your order is cancelled'];
-const editWording = Object.fromEntries(messages.map((m) => [`Edit the wording of ${m}`, go('set-msg-edit')]));
+const OWN_BOX = {
+  // Coverage walk 11 M1: these three have their own boxes; Review request's row is Off.
+  'Review request': go('ac-review-first'),
+  'Service reminder': go('ac-reminder-wording'),
+  'Bike still waiting': go('cp-message-wording'),
+};
+const editWording = Object.fromEntries(messages.map((m) => [`Edit the wording of ${m}`, OWN_BOX[m] ?? go('set-msg-edit')]));
 
 // Getting started: each step opens the right Settings section (Owner setup 16).
 const steps = {
@@ -111,6 +117,8 @@ export default {
   'set-shop-details': { 'Sites Bolton': go('ms-sites') },
   'set-workshop-services': {
     Edit: go('ac-service-edit'),
+    // Coverage walk 7 M1: the Online booking row opens its section.
+    'Online booking Exact times · 2 hours’ notice · deposit [n]% · each booking a request': go('bk-settings'),
     '+ Add a service': notDrawn('Adding a workshop service: the service box, empty'),
   },
   'set-workshop-mechanics': { 'Change in Staff and roles': go('set-staff') },

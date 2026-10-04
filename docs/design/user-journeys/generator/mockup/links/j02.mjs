@@ -91,7 +91,9 @@ export default {
     'See the products with no photo, in Stock': go('st-list'),
     'See the products with no price, in Stock': go('st-list'),
     'See them': go('st-list'),
-    'Change what your website started with': go('on-settings-start'),
+    // Asked once, in the website's set-up (coverage walks, answer 2): Change
+    // opens set-up step 3, where it's asked.
+    'Change what your website started with': go('ws-start-products'),
   },
   'on-product-added': { 'Add to basket': STAY },
   'on-product-no-shop': { 'Add to basket': go('on-choose-shop') },
@@ -109,6 +111,10 @@ export default {
   'on-save-details': { 'Save my details': go('ac-account-new') },
   'on-email-ready': { 'See your order': go('on-order-ready') },
   'on-order-cancel': { 'Cancel this order': STAY },
+  // Coverage walk 5 L2: the Showing products row opens its section.
+  'on-settings': { 'Showing products Set on each category and product': go('on-settings-show') },
+  // Coverage walk 6 L1: either Mark ready shows the order marked ready.
+  'on-orders-arrived': { 'Mark ready': go('on-orders-ready', 'Showing [Customer]’s order marked ready; Maya’s is marked ready the same way, and the email goes to her.') },
   'on-cancel-refund': { 'Cancel and refund': notDrawn('The staff order page once the whole order is cancelled and refunded') },
   'on-hand-over': {
     'Hand over': go('till-sale'),
@@ -133,7 +139,8 @@ export default {
     'Quote reminder', 'Quote to approve', 'Ready to collect', 'Request declined', 'Request received',
     'Review request', 'Service reminder', 'Work added within your limit', 'Your answers',
     'Your bike is no longer put aside', 'Your bike is put aside', 'Your hold ends on [date]', 'Your order is cancelled',
-  ].map((m) => [`Edit the wording of ${m}`, go('set-msg-edit')]).concat([['+ Add your own message', go('set-msg-new')]])),
+  // Coverage walk 11 M1: three messages have their own boxes.
+  ].map((m) => [`Edit the wording of ${m}`, { 'Review request': go('ac-review-first'), 'Service reminder': go('ac-reminder-wording'), 'Bike still waiting': go('cp-message-wording') }[m] ?? go('set-msg-edit')]).concat([['+ Add your own message', go('set-msg-new')]])),
   // Mark ready waits while an item is on its way: the button is off, so it goes nowhere (third walk, walk-through 2 M1).
   'on-order-staff': { 'Mark ready': STAY },
 };

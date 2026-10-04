@@ -125,7 +125,10 @@ export const stories = [
       { id: 'set-staff-invited', who: 'Owner', does: 'Workshop', missingAt: ['phone'], missingWhy: 'the phone Settings page has no room tabs; Workshop is two taps away, through the Settings list' },
       { id: 'set-workshop-services', who: 'Owner', does: '(Jo signs in for the first time, on a phone or computer)' },
       { id: 'pin-first', who: 'Staff', does: 'Keep this PIN' },
-      { id: 'till-sale', who: 'Staff', does: '(Jack carries on with Getting started)' },
+      // Coverage walk 4 M1: Jo opens the website's address while it's off.
+      { id: 'till-sale', who: 'Staff', does: '(Jo opens the shop’s website address)' },
+      { id: 'wb-off-preview-ask', who: 'Staff', does: 'Back to Wheelhouse' },
+      { id: 'op-today-staff', who: 'Staff', does: '(Jack carries on with Getting started)' },
       { id: 'fr-today', who: 'Owner', does: 'Moving from another system?' },
       { id: 'mv-start', who: 'Owner', does: 'Choose files' },
       { id: 'mv-progress', who: 'Owner', does: '(The import runs; Getting started now shows the move)' },
@@ -258,6 +261,10 @@ export const stories = [
   {
     n: 9, name: 'Jo on the phone', person: 'Staff', shop: 'Bolton', size: 'desktop',
     steps: [
+      // Coverage walk 8 M1: Maya rings about the quote; Jo records her answer.
+      { id: 'dq-today-no-answer', who: 'Staff', does: 'Record their answer' },
+      { id: 'dq-record-answer', who: 'Staff', does: 'Save: yes to 2 lines, no thanks to 1' },
+      { id: 'dq-job-answered', who: 'Staff', does: '(Later, Maya rings again; Jo types her name in the till’s search)' },
       { id: 'till-search', who: 'Staff', does: 'Diary' },
       { id: 'diary', who: 'Staff', does: 'Trek Domane AL 3, Standard service, Maya Patel, WH-1042, In the workshop, 11:30–13:00 · approved £111', doesAt: { tablet: 'Trek Domane AL 3, Standard service, Maya Patel, WH-1042, In the workshop, 11:30–13:00 · approved £111. Press and hold for more.', phone: 'Trek Domane AL 3, Standard service, Maya Patel, WH-1042, In the workshop, 11:30–13:00 · approved £111. Press and hold for more.' } },
       { id: 'job-mechanic', who: 'Staff', does: "Open Maya Patel's page" },
@@ -280,7 +287,11 @@ export const stories = [
       { id: 'till-pay', who: 'Saturday worker', does: 'Card · £74.00 Sends £74.00 to the card machine' },
       { id: 'till-card', who: 'Saturday worker', does: '(The card goes through on the card machine)' },
       { id: 'till-receipt', who: 'Saturday worker', does: 'No receipt' },
-      { id: 'till-empty', who: 'Saturday worker', does: '(Maya comes for her online order; types her name in the search)' },
+      // Coverage walk 6 L1: online orders made ready, Maya's once her last item arrives.
+      { id: 'till-empty', who: 'Saturday worker', does: 'Online orders [n] to get ready', doesAt: { phone: 'Online orders' } },
+      { id: 'on-orders', who: 'Saturday worker', does: '(Maya’s last item arrives from [Second site])' },
+      { id: 'on-orders-arrived', who: 'Saturday worker', does: 'Mark ready' },
+      { id: 'on-orders-ready', who: 'Saturday worker', does: '(Back at the till, Maya comes for her online order; types her name in the search)' },
       { id: 'till-search', who: 'Saturday worker', does: 'Hand over order [order number]' },
       { id: 'till-collect', who: 'Saturday worker', does: 'Hand over' },
       { id: 'till-empty', who: 'Saturday worker', does: '(A customer brings a bike in; types WH-1042 in the search)' },

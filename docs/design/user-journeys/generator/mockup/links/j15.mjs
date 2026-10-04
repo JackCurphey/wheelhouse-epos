@@ -71,9 +71,9 @@ export default {
   // Privacy requests
   'cs-privacy': {
     '+ Log a request': notDrawn('Logging a privacy request by hand'),
-    'Delete their details': go('cs-privacy-delete'),
+    // Coverage walk 12 M3: the story goes through this row, as Maya's once WH-1042 is collected.
+    'Delete their details': go('cs-privacy-delete', 'Maya Patel’s request, once WH-1042 is collected (a line under Privacy requests).'),
     'Send the copy': notDrawn('The copy of someone’s details, as sent to them'),
   },
-  'cs-privacy-delete': { 'Delete their details': go('cs-privacy'), 'Keep their details': BACK },
-  'cs-privacy-blocked': { 'OK': BACK },
+  'cs-privacy-delete': { 'Delete their details': go('cs-privacy', 'Deleted: the request’s row now reads Done [date], and Maya is told (lines under Privacy requests).'), 'Keep their details': BACK },
 };
