@@ -5,7 +5,20 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-10-02. **Merged to `main`:** #90, #91, #92 (names), #93
+**Updated:** 2026-10-04. **Two people build at once** (Jack agreed to Mark's
+split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
+PR #126): Mark takes the server half of each work package and all hosting;
+Jack takes the screens and the whole workshop. STATUS and the build board are
+updated by **one status pull request a day**, not by every feature pull
+request (`CLAUDE.md`, rule 7).
+
+**Mark is on:** — (stage 0 not started).
+**Jack is on:** the four blockers before stage 0 (issue #142: #127 rules,
+#128 migration numbers, #129 route-file design, #130 first-week order).
+**The build has not started:** stage 0 begins once those four are fixed and
+Jack says so.
+
+**Earlier (2 Oct, kept until WP-0.3 trims this file; the branch named next is old):** **Merged to `main`:** #90, #91, #92 (names), #93
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 

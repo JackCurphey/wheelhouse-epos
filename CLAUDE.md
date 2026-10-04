@@ -12,10 +12,18 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 1. Read the top of `.agents/STATUS.md` (where things stand, what's next).
 2. If building, read `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`
-   and take the next work package in its order.
-3. **The build has not been started.** Jack, 3 Oct: "dont start the build
-   yet" — he is sharing the plan with Mark first. Start stage W or the build
-   only when Jack says so in chat.
+   (what is built, in which stage) and
+   `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md` (who
+   builds which half, and in what order). Find out whose session this is —
+   Mark's or Jack's — and take the next piece in that person's lane.
+3. **Two people build at once** (Jack, 4 Oct, agreeing to the split plan):
+   Mark takes the server half of each work package and all hosting; Jack
+   takes the screens and the whole workshop. Each file has one owner (split
+   plan §3); a pull request touching the other person's files needs their
+   approval.
+4. **The build has not been started.** Mark has reviewed the plan (4 Oct).
+   Stage 0 starts once the four blockers in issue #142 are fixed and Jack
+   says so in chat.
 
 ## Where things live
 
@@ -32,7 +40,8 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 ## Allowed without asking (once the build has started)
 
-1. Build exactly what the drawings and decisions show, in the plan's order.
+1. Build exactly what the drawings and decisions show, in your lane's order
+   (split plan §4.4, §7 and §9).
 2. Make the database changes the plan lists.
 3. Where a drawing is silent, follow the closest pattern already built, log
    it in `decided-while-building.md`, and carry on.
@@ -45,7 +54,11 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
    pull request.
 7. Keep the build board artifact (https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
    source `docs/build-progress/build-board.html`, edit only its `BOARD` block)
-   and `.agents/STATUS.md` current after every pull request opens or merges.
+   and `.agents/STATUS.md` current with **one status pull request a day**,
+   made by whoever finishes last, covering both people's merges (split plan
+   §5). Feature pull requests don't touch `STATUS.md` or the board.
+   `decided-while-building.md` has a section per person; append only to
+   your own.
 
 ## Always stop and ask Jack
 
@@ -61,8 +74,10 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 
 Short spec section → tests first, each watched failing for the right reason
 → build to the drawings → fresh review → `npm test` and
-`npm run test:browser` pass locally → pull request → merge when CI is green →
-update the board and STATUS. Pull requests aim for 250–600 changed lines.
+`npm run test:browser` pass locally → pull request → merge when CI is green.
+The board and STATUS catch up in the day's status pull request. Where a
+package has both halves, the contract is written first and Mark's server
+half merges before Jack's screens half starts (split plan §4.3, §4.4). Pull requests aim for 250–600 changed lines.
 Outside services (payments, email, sign-in, accounts software, Lightspeed,
 Citrus Lime) are built behind an adapter with a pretend version until a real
 account exists.
