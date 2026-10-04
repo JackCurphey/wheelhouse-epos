@@ -123,3 +123,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Buy online decision 10):** the Messages board lists the five online-order messages and reads "15 on". Nothing else changed.
 
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
+
+**Later change (3 Oct 2026, walk-through 12 H1, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". The booking's "Call me before any extra work" becomes "Ask me before any extra work", and the pages that repeated "We'll call you before any extra work" say "We'll send you the quote to approve, or call us". The quote is sent the way the customer chose (decision 5), and there is no longer an option asking for a phone call. This changes the example wording walk-through 1 chose. Chosen over keeping "Call me" and phoning, and a "Send me the quote / Call me" choice at booking. Not drawn yet.

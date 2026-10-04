@@ -1,8 +1,8 @@
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
+import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 const ids = process.argv.slice(2);
 const b = await chromium.launch(); const p = await b.newPage();
-await p.goto('file:///Users/jackcurphey/wheelhouse-epos/docs/design/release-1-journey/Wheelhouse-Release-1-Screen-Designs.html');
+await p.goto(new URL('../../release-1-journey/Wheelhouse-Release-1-Screen-Designs.html', import.meta.url).href);
 const out = await p.evaluate((ids) => screens.filter((s) => ids.includes(s.id)).map((s) => {
   const d = document.createElement('div'); d.innerHTML = s.html || ''; 
   return { id: s.id, title: s.title, role: s.role, note: s.note, next: s.next, branches: s.branches, html: doc(s) };

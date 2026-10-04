@@ -12,7 +12,7 @@
 // of scrolling a phone page is allowed — an element marked data-scroll,
 // which may only appear on the phone boards listed in PHONE_SCROLL below.
 // Tablet boards (and every tablet pop-up) must not scroll at all.
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
+import { chromium } from '@playwright/test';
 import { screens } from './diary.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { TW, TH } from './diary.mjs';

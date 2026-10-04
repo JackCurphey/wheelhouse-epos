@@ -2,7 +2,7 @@
 // every board with Playwright at 1280x800 and confirms every element's
 // scrollHeight <= clientHeight inside the dialog (no scrolling anywhere) and
 // nothing is clipped.
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
+import { chromium } from '@playwright/test';
 import { boards } from './job-options.mjs';
 import { DW, DH } from './stage1.mjs';
 import { FONT_LINK } from './ui.mjs';

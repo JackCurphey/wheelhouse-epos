@@ -150,3 +150,5 @@ of sight — the shop's name, "North Street Cycles · Bolton", sits in small typ
 under each staff page's title. Nothing else on these boards changed.
 
 **Later change (1 Oct 2026, Buy online decision 10):** Settings › Front desk shows the new "Online orders" Jump to pill on Customer groups. Nothing else changed.
+
+**Later change (4 Oct 2026, coverage walks, answer 5, `docs/decisions/2026-10-04-coverage-walks.md`):** Jack, 4 Oct: "1". One way of saying "can't delete yet" on privacy requests (decisions 9 and 12(2)): every request, from the website or logged by hand, shows "Still in the way: …" on its row, with Delete their details held back until it's clear. The "Settle up first" pop-up (`cs-privacy-blocked`) goes. Store credit is not in the way (Account and reminders, audit M12): it is lost on deletion. Drawn in `docs/superpowers/specs/2026-10-04-draw-the-coverage-walks.md`.

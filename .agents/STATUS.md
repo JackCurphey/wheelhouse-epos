@@ -5,9 +5,34 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Updated:** 2026-10-02. **Merged to `main`:** #90, #91, #92 (names), #93
+**Updated:** 2026-10-04. **Two people build at once** (Jack agreed to Mark's
+split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
+PR #126): Mark takes the server half of each work package and all hosting;
+Jack takes the screens and the whole workshop. STATUS and the build board are
+updated by **one status pull request a day**, not by every feature pull
+request (`CLAUDE.md`, rule 7).
+
+**Mark is on:** — (stage 0 not started).
+**Jack is on:** the four blockers before stage 0 (issue #142: #127 rules,
+#128 migration numbers, #129 route-file design, #130 first-week order).
+**The build has not started:** stage 0 begins once those four are fixed and
+Jack says so.
+
+**Earlier (2 Oct, kept until WP-0.3 trims this file; the branch named next is old):** **Merged to `main`:** #90, #91, #92 (names), #93
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
+
+**Build plan (3 Oct, PR pending):** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`,
+answered by Jack in `docs/decisions/2026-10-03-build-plan-questions.md`; the
+project rules are in `CLAUDE.md`. **Nothing started:** Jack is sharing the
+plan with Mark ("dont start the build yet"). First comes stage W (persona
+walk-throughs of everything), then the build.
+
+**Issue #116 (Mark, 3 Oct): fewer drawings, one canvas, re-walk, clickable
+mockup — before stage W, replacing WP-W.6.** Jack answered its six questions
+on 3 Oct (1, 1, 1, 2, 2, 2), posted on the issue and recorded as dated "Later
+change" notes in the Reports, Website, Moving, Oversight and Receiving
+decision files. Step 1's seven reports are in `docs/design/user-journeys/consolidation-*.md` (823 screens → about 196, estimates). Step 2's six drawing rules and the building-block list are in `docs/design/user-journeys/README.md`. Step 3 is published (3 Oct): one canvas at the shop floor link, 202 screens as 209 boards with situation lists, 63 later; the back-office and customers canvases carry a "Moved" note. Plan: `docs/superpowers/specs/2026-10-03-one-canvas.md`. Step 4 first pass (3 Oct): all 12 stories walked again on the one canvas, every finding second-checked, in `docs/design/user-journeys/walk-2/` (121 findings). Jack's recorded decisions and his 3 Oct answers to the walks are drawn and published (version 100), with the drop-off window and the answers to the 16 smaller questions (`docs/decisions/2026-10-03-ux-walkthrough-second-walk.md`); every situation line says what's different; no open walk-through questions left. Step 5: the clickable mockup is published privately at https://claude.ai/artifact/6rfhPpmSNY8eDtD6bEnChi (build: `generator/mockup/`, checks `node --test docs/design/user-journeys/generator/mockup/`; gaps in `docs/design/user-journeys/mockup-gaps.md`), waiting for Jack to try it. Step 6 (Jack: "lets do those three things"): each board's name strip now names its building block (canvas version 101); the mockup check walks every story at desktop, tablet and phone (mockup version 2), and the 22 steps a smaller size can't click are listed in `mockup-gaps.md` for Jack; the 12 stories walked again by clicking the mockup at every size (`docs/design/user-journeys/walk-3/`); Jack's ten answers (`docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`, all option 1) drawn, reviewed and published (canvas version 102, mockup version 3 at the time, which now lists each screen's situation lines). The build plan names each work package's building blocks, screens and situations, checked by `consolidate/plan-coverage.test.mjs`. Story 3 follows one area count through (Jack: "1"; canvas version 103, mockup version 4). Open for Jack: walk 10 L1 (a mockup PIN key can only lead to one screen), walk 11 M3/L1 notes, drawer wording to check (`docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`, Left for Jack), the 21 size gaps and 96 not-drawn pages in `mockup-gaps.md`. Jack accepted the longer way round for the 21 phone and tablet steps (3 Oct). PRs #117, #118 and #119 merged (3 Oct); #119 runs the drawings, canvas, mockup and build-plan checks in CI. Its first runs caught two real problems, both fixed: Node 22 needs the test files named, and on Linux every phone board's name strip was 20px too wide (canvas version 104 has the tighter strip). Issue #116's step 6 list: every box has work behind it. Stage W (4 Oct, PR #121): the owner walk (WP-W.3) was walked twice already; the coverage check (WP-W.5, `docs/design/user-journeys/coverage-check.md`) found 12 uncovered journey-and-person pairs, all walked (`walk-4/`), Jack's five answers drawn (`docs/decisions/2026-10-04-coverage-walks.md`), 0 empty cells. Canvas version 105 (210 boards), mockup version 5. Derived wording for Jack to overrule: `docs/decisions/decided-while-building.md`. Next: Mark reviews the finished design work (Jack, 4 Oct: "not yet, im going to have mark review it first and then we can get buildung"); the Release 2 build starts at stage 0 only when Jack says so.
 
 **Build board (keep it current):** https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
 source `docs/build-progress/build-board.html`. After any build piece merges or
@@ -564,8 +589,8 @@ Fjell until switched.
   canvas index before publishing (Jack edits it live); ≤255 files per call.
 
 - Jack wants plain English, numbered options with concrete trade-offs,
-  mock-ups for anything visual, one question at a time. Merge only when Jack
-  says, and only after CI passed on the PR's final commit.
+  mock-ups for anything visual, one question at a time. Merging: until the build starts, only when Jack says; after, as `CLAUDE.md`
+  sets out. Always after CI passed on the PR's final commit.
 - Build method: spec → plan → subagent-driven development (fresh helper per
   task, task review, a final whole-branch review on the most capable model,
   one fix wave). Every new test must be shown failing via its own targeted

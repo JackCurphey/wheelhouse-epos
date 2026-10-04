@@ -79,10 +79,10 @@ ${section('Workshop today', `<p style="margin: 0; font-size: 15px; color: ${C.mu
 const gridCols = () => (isPhone() ? '1fr' : 'minmax(180px, 1.2fr) repeat(3, minmax(0, 1fr)) 190px');
 const head = (t) => `<span role="columnheader" style="font-size: 12px; font-weight: 700; color: ${C.muted}">${t}</span>`;
 const cell = (v) => `<span role="cell" style="font-size: 15px; font-weight: 600">${v}</span>`;
-const shopGridRow = (name, sales, expected, ready, tillTag) => isPhone() ? `<div role="row" style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid ${C.border}"><span role="rowheader" style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><a href="#" aria-label="Work in ${esc(name)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.ink}">${name}<span aria-hidden="true" style="color: ${C.muted}">›</span></a><a href="#" aria-label="${esc(name)} tills: see every till" style="display: inline-flex; align-items: center; min-height: 44px; text-decoration: none">${tillTag}</a></span><span style="font-size: 14px; color: ${C.muted}">Sales so far <strong style="color: ${C.ink}">${mono(sales)}</strong> · ${expected} expected · ${ready} ready</span></div>` : `<div role="row" style="display: grid; grid-template-columns: ${gridCols()}; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-top: 1px solid ${C.border}"><span role="rowheader" style="display: flex; flex-direction: column; gap: 2px"><a href="#" aria-label="Work in ${esc(name)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.ink}">${name}<span aria-hidden="true" style="color: ${C.muted}">›</span></a><span style="font-size: 12px; color: ${C.muted}">Open [opens]–[closes]</span></span>${cell(mono(sales))}${cell(expected)}${cell(ready)}<span role="cell"><a href="#" aria-label="${esc(name)} tills: see every till" style="display: inline-flex; align-items: center; min-height: 44px; text-decoration: none">${tillTag}</a></span></div>`;
+const shopGridRow = (name, sales, expected, ready, tillTag) => isPhone() ? `<div role="row" style="display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid ${C.border}"><span role="rowheader" style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><a href="#" aria-label="Work in ${esc(name)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.ink}">${name}<span aria-hidden="true" style="color: ${C.muted}">›</span></a><a href="#" aria-label="${esc(name)} tills: see every till" style="display: inline-flex; align-items: center; min-height: 44px; text-decoration: none">${tillTag}</a></span><span style="font-size: 14px; color: ${C.muted}">Takings so far <strong style="color: ${C.ink}">${mono(sales)}</strong> · ${expected} expected · ${ready} ready</span></div>` : `<div role="row" style="display: grid; grid-template-columns: ${gridCols()}; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-top: 1px solid ${C.border}"><span role="rowheader" style="display: flex; flex-direction: column; gap: 2px"><a href="#" aria-label="Work in ${esc(name)}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 16px; font-weight: 700; color: ${C.ink}">${name}<span aria-hidden="true" style="color: ${C.muted}">›</span></a><span style="font-size: 12px; color: ${C.muted}">Open [opens]–[closes]</span></span>${cell(mono(sales))}${cell(expected)}${cell(ready)}<span role="cell"><a href="#" aria-label="${esc(name)} tills: see every till" style="display: inline-flex; align-items: center; min-height: 44px; text-decoration: none">${tillTag}</a></span></div>`;
 const shopTag = (name) => `<span style="font-weight: 700; color: ${C.ink}">${name} · </span>`;
 const todayAll = () => withSite('All shops', () => page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${note('Thursday 17 September · All shops')}
-${section('Shops', `<div role="table" aria-label="Shops today">${isPhone() ? '' : `<div role="row" style="display: grid; grid-template-columns: ${gridCols()}; gap: 12px; padding-bottom: 6px">${head('Shop')}${head('Sales so far')}${head('Bikes expected')}${head('Ready to collect')}${head('Tills')}</div>`}${shopGridRow('Bolton', '£[sales]', '8 bikes', '4', tag('All sales sent'))}${shopGridRow(SECOND, '£[sales]', '[n] bikes', '[n]', tag('[n] sales waiting', 'warn'))}</div>`)}
+${section('Shops', `<div role="table" aria-label="Shops today">${isPhone() ? '' : `<div role="row" style="display: grid; grid-template-columns: ${gridCols()}; gap: 12px; padding-bottom: 6px">${head('Shop')}${head('Takings so far')}${head('Bikes expected')}${head('Ready to collect')}${head('Tills')}</div>`}${shopGridRow('Bolton', '£[sales]', '8 bikes', '4', tag('All sales sent'))}${shopGridRow(SECOND, '£[sales]', '[n] bikes', '[n]', tag('[n] sales waiting', 'warn'))}</div>`)}
 ${section('Needs attention', list(SECOND_LINES().map((l) => l.replace('<span style="font-size: 15px; font-weight: 600">', `<span style="font-size: 15px; font-weight: 600">${shopTag(SECOND)}`))), '', 3)}</div>`, OWNER));
 
 // "All shops" on a page that needs one shop: say so, one tap each.
@@ -160,7 +160,12 @@ ${field(req('Address'), { placeholder: 'Street, town, postcode' })}${field('Phon
 ${note('Stock starts at zero. Customers don’t see it until you choose to. Today shows what to do next: tills, who works there, its stock, and showing it to customers.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add the shop')}`, 600);
 // Today at the new shop: its checklist, and the move announced (M3, M11).
 const step = (done, t, sub, actions, label) => line(`${done ? '' : `<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Not done: </span>`}${t}`, sub, done ? tag('Done') : `<span style="display: inline-flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end">${actions.map((a) => button(a, { variant: 'default' }).replace('<button', `<button aria-label="${esc(a.includes(SECOND) ? a : `${a} at ${SECOND}`)}"`)).join('')}</span>`, `<span aria-hidden="true" style="display: inline-flex; flex-shrink: 0; width: 22px; height: 22px; border-radius: 999px; align-items: center; justify-content: center; ${done ? `background: ${C.okBg}; color: ${C.successInk}` : `border: 2px solid ${C.input}`}">${done ? icon('check', 13) : ''}</span>`);
-const todayNew = () => withSite(SECOND, () => page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${statusLine(`${SECOND} added. You’re now looking at it.`)}${note(`Thursday 17 September · North Street Cycles, ${SECOND}`)}
+// Third walk, answer 6 (walk-through 7 Q1): "Show [Second site] to customers"
+// is one press. The step ticks and a toast with Undo shows for a moment, as
+// Hold longer's does on Today (c2w.mjs cw-today-held; its toast copied here).
+const toast = (t, action = '') => `<div role="status" style="position: absolute; ${isPhone() ? 'left: 12px; right: 12px; bottom: 12px' : 'left: 50%; bottom: 24px; transform: translateX(-50%); white-space: nowrap'}; z-index: 6; display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)">${icon('check', 16)}<span style="flex-grow: 1; padding: 8px 0">${t}</span>${action ? `<button type="button" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: rgba(255,255,255,0.14); color: #ffffff; font-family: inherit; font-size: 14px; font-weight: 700">${action}</button>` : ''}</div>`;
+const withToast = (html, t) => html.replace('<main style="', '<main style="position: relative; ').replace('</main>', `${t}</main>`);
+const todayNew = (shown = false) => withSite(SECOND, () => page('today', 'Today', `<div data-scroll style="height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${shown ? '' : statusLine(`${SECOND} added. You’re now looking at it.`)}${note(`Thursday 17 September · North Street Cycles, ${SECOND}`)}
 ${section(`Getting ${SECOND} ready`, `<div role="list" style="position: relative">${[
   step(true, 'Add the shop', 'Name, code, address, phone and opening hours', []),
   // UX walk-through 7 L1: one name for making a computer a till (the word list).
@@ -169,7 +174,7 @@ ${section(`Getting ${SECOND} ready`, `<div role="list" style="position: relative
   step(false, 'Get its stock in', 'Send some from Bolton, or count what’s already there', ['Send from Bolton', 'Count it']),
   // UX walk-through 7 M3 (option 1): a new shop stays hidden from customers
   // until the owner shows it.
-  step(false, 'Show it to customers', 'On your website, in booking and for collecting online orders. Until then customers don’t see it.', [`Show ${SECOND} to customers`]),
+  step(shown, 'Show it to customers', 'On your website, in booking and for collecting online orders. Until then customers don’t see it.', [`Show ${SECOND} to customers`]),
 ].join('')}</div>`, '', 0)}${note('This list goes away when all five are done.')}</div>`, OWNER));
 
 // ---------- Every till at every shop (decision 8; audit M10, L4) ----------
@@ -211,6 +216,7 @@ def('ms-sites-manager', () => sitesBoard(false));
 def('ms-add-shop', () => overlay(sitesBoard(), addShopDialog()));
 def('ms-add-shop-error', () => overlay(sitesBoard(), addShopDialog(true)));
 def('ms-today-new', () => todayNew());
+def('ms-today-shown', () => withToast(todayNew(true), toast(`${SECOND} is showing on the website, in booking and for collecting`, 'Undo')));
 def('ms-tills', () => tillsBoard(true)); // UX walk-through 7 M2: B3's "…" menu open
 def('ms-till-move', () => overlay(tillsBoard(), tillMoveDialog()));
 // UX walk-through 7 M2: setting up a till at the new shop — its own numbers.
@@ -249,6 +255,7 @@ export const TITLES = {
   'ms-add-shop': 'Add a shop: code suggested, hours copied',
   'ms-add-shop-error': 'A code another shop already uses',
   'ms-today-new': 'Today at a new shop: what to do next',
+  'ms-today-shown': 'Today at a new shop: [Second site] shown to customers, with Undo',
   'ms-tills': 'Settings › Till › Tills: every till, by shop, each with “…” (Move, Stop using)',
   'ms-till-move': 'Moving a till to the other shop: its day, its sales waiting, its receipts',
   'ms-till-setup': 'Set up a till at [Second site]: its numbers, taken ones In use',
@@ -261,5 +268,5 @@ export const ROWS = [
   { label: 'Prices and services by shop', screens: ['ms-service-price', 'ms-service-not-offered', 'ms-services-differs', 'ms-product-price'] },
   { label: 'People and booking', screens: ['ms-person', 'ms-book-shop', 'ms-book-shop-chosen', 'ms-book-shop-change'] },
   { label: 'Jobs between shops', screens: ['ms-job-other-shop', 'ms-request-from-shop', 'ms-request-answered'] },
-  { label: 'Adding a shop, and its tills', screens: ['ms-sites', 'ms-sites-manager', 'ms-add-shop', 'ms-add-shop-error', 'ms-today-new', 'ms-tills', 'ms-till-move', 'ms-till-setup'] },
+  { label: 'Adding a shop, and its tills', screens: ['ms-sites', 'ms-sites-manager', 'ms-add-shop', 'ms-add-shop-error', 'ms-today-new', 'ms-today-shown', 'ms-tills', 'ms-till-move', 'ms-till-setup'] },
 ];

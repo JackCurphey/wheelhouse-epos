@@ -104,7 +104,7 @@ screens['till-setup'] = each((size) => tillSetupAt(size));
 const key = (k, label = k, h = 68) => `<button type="button"${label !== k ? ` aria-label="${label}"` : ''} style="min-height: ${h}px; border-radius: 12px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: ${/^\d$/.test(k) ? 26 : 16}px; font-weight: 600; color: ${C.ink}">${k}</button>`;
 const pinPad = (h = 68) => `<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((k) => key(k, k, h)).join('')}${key('Clear', 'Clear', h)}${key('0', '0', h)}${key('Delete', 'Delete the last digit', h)}</div>`;
 const dots = (n) => `<div role="status" aria-label="${n} of 4 digits entered" style="display: flex; gap: 16px; justify-content: center">${[0, 1, 2, 3].map((i) => `<span style="width: 18px; height: 18px; border-radius: 999px; border: 2px solid ${C.ink}; background: ${i < n ? C.ink : 'transparent'}"></span>`).join('')}</div>`;
-const checkedIn = (names) => `<div style="display: flex; flex-direction: column; gap: 10px"><span style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}">Checked in today</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${names.map((n) => `<span style="display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 14px; font-weight: 600"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}; font-size: 12px; font-weight: 700">${n.split(' ').map((x) => x[0]).join('')}</span>${n}</span>`).join('')}</div></div>`;
+const checkedIn = (names) => `<div style="display: flex; flex-direction: column; gap: 10px"><span style="font-size: 14px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.ink}">Checked in today</span><div style="display: flex; flex-wrap: wrap; gap: 8px">${names.map((n) => `<span style="display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid ${C.border}; background: ${C.panel}; font-size: 14px; font-weight: 600"><span style="display: inline-flex; width: 28px; height: 28px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}; font-size: 12px; font-weight: 700">${n.split(' ').map((x) => x[0]).join('')}</span>${n}</span>`).join('')}</div></div>`;
 // Leftover screens decision 4 (2 Oct): the till's start-up status is one
 // line on the PIN screen — amber when something's wrong.
 // Leftover audit M4: the line says what is up to date (prices and stock,
@@ -118,7 +118,7 @@ const STATUS = {
 const tillStatus = (size, state) => { const [warn, ic, t] = STATUS[state]; return `<p role="status" style="margin: 0; display: inline-flex; align-self: center; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 10px; background: ${warn ? C.warnBg : C.okBg}; color: ${warn ? C.warnInk : C.successInk}; font-size: ${size === 'phone' ? 13 : 14}px; font-weight: 600; text-align: left">${icon(ic, 15)}<span>${t}</span></p>`; };
 // UX walk-through 4 H1: one line under the pad for someone who has no PIN
 // yet — the till can't give one, it stays signed in as the till.
-const noPinLine = (size) => `<p style="margin: 0; font-size: ${size === 'phone' ? 13 : 14}px; line-height: 1.45; color: ${C.muted}"><strong style="color: ${C.ink}">No PIN yet?</strong> Sign in to Wheelhouse on a phone or computer — it gives you one. No email? Ask the owner or a manager.</p>`;
+const noPinLine = (size) => `<p style="margin: 0; font-size: ${size === 'phone' ? 13 : 14}px; line-height: 1.45; color: ${C.muted}"><strong style="color: ${C.ink}">No PIN yet?</strong> Sign in on your phone, or ask the owner or a manager to give you one here.</p>`;
 // UX walk-through 4 M4: while the shop runs alongside its old system, the
 // PIN screen already shows the practice band, before anyone checks in — the
 // till's own band (till.mjs, journey 9 decision 6).
@@ -127,17 +127,50 @@ function checkin(size, { wrong = false, state = 'online', practice = false } = {
   const P = size === 'phone';
   const w = P ? 'auto' : '360px';
   const html = tillFrame(size, `<div style="height: 100%; display: flex; flex-direction: column; align-items: ${P ? 'stretch' : 'center'}; justify-content: center; gap: ${P ? 14 : 18}px">
-<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 14 : 18}px; text-align: center">${tillStatus(size, state)}${h1('Enter your PIN', P ? 24 : 28)}${p('Your PIN checks you in and puts your name on sales. It works even when the internet is down.', P ? 14 : 15)}${dots(wrong ? 0 : 2)}${wrong ? errorLine('That PIN isn’t anyone’s — try again') : ''}${pinPad(P ? 56 : 64)}${noPinLine(size)}</div>
+<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 14 : 18}px; text-align: center">${tillStatus(size, state)}${h1('Enter your PIN', P ? 24 : 28)}${p('Your PIN checks you in and puts your name on sales and workshop work. It works even when the internet is down.', P ? 14 : 15)}${dots(wrong ? 0 : 2)}${wrong ? errorLine('That PIN isn’t anyone’s — try again') : ''}${pinPad(P ? 56 : 64)}${noPinLine(size)}</div>
 <div style="width: ${w}">${checkedIn(['Alex Morgan'])}</div>
 </div>`, offline);
+  // Walk-through 4 L2 (part 2): on the PIN screen the bar's shop line is
+  // body size and full colour (app-map.mjs's tillBar is shared, so here).
+  const big = html.replace('<span style="font-size: 12px; opacity: 0.8">Bolton · ', '<span style="font-size: 14px">Bolton · ');
   // The band sits straight under the till bar.
-  return practice ? html.replace('</header>', `</header>${practiceBandFor(size)}`) : html;
+  return practice ? big.replace('</header>', `</header>${practiceBandFor(size)}`) : big;
 }
 screens['till-checkin'] = each((size) => checkin(size));
 screens['till-pin-wrong'] = each((size) => checkin(size, { wrong: true }));
 screens['till-checkin-offline'] = each((size) => checkin(size, { state: 'offline' }));
 screens['till-checkin-stale'] = each((size) => checkin(size, { state: 'stale' }));
 screens['till-checkin-practice'] = each((size) => checkin(size, { practice: true })); // UX walk-through 4 M4
+
+// Third walk, answer 8 (walk-through 8 decisions 1 and 3; Q2): a workshop
+// computer's "Enter your PIN". It is set up like a till but is not one: the
+// bar has no till number, and there's no start-up line about sales, no float
+// and no "Checked in today" (those are the till's). The same PIN pad; what
+// you do is recorded under your name and role. Its keys lead to the diary
+// as that person ("Now working: [name]", second walk answer 10).
+const WORKSHOP_BAR_TILL = /<span style="font-size: 16px; font-weight: 700">[^]*?Till B1<\/span><\/span>/;
+function workshopBar(size) {
+  const bar = size === 'phone' ? tillPhoneBar(null) : tillBar({ serving: null });
+  if (!WORKSHOP_BAR_TILL.test(bar)) throw new Error('signin.mjs: the till bar’s "Till B1" moved');
+  let out = bar.replace(WORKSHOP_BAR_TILL, '<span style="font-size: 16px; font-weight: 700">Workshop computer</span>');
+  if (size === 'phone') {
+    // Nobody is working, so there is no menu to open: only the PIN screen.
+    out = out.replace(/<button type="button" aria-label="Open menu"[^]*?<\/button>\n/, '').replace('Nobody serving</span>', 'Nobody working</span>').replace('padding: 0 6px;', 'padding: 0 14px;');
+  } else {
+    out = out.replace('<span style="font-size: 12px; opacity: 0.8">Bolton · ', '<span style="font-size: 14px">Bolton · ').replace('Nobody serving — enter your PIN', 'Nobody working — enter your PIN');
+  }
+  if (/Till B1|serving|Open menu/.test(out)) throw new Error('signin.mjs: the workshop bar still shows till words');
+  return out;
+}
+function checkinWorkshop(size) {
+  const [W, H] = SIZE[size];
+  const P = size === 'phone';
+  const w = P ? 'auto' : '360px';
+  return `<div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}">${workshopBar(size)}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: ${P ? '16px' : '28px'}"><div style="height: 100%; display: flex; flex-direction: column; align-items: ${P ? 'stretch' : 'center'}; justify-content: center; gap: ${P ? 14 : 18}px">
+<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 14 : 18}px; text-align: center">${h1('Enter your PIN', P ? 24 : 28)}${p('What you do on this computer is recorded under your name and role.', P ? 14 : 15)}${dots(2)}${pinPad(P ? 56 : 64)}</div>
+</div></main></div>`;
+}
+screens['till-checkin-workshop'] = each((size) => checkinWorkshop(size));
 
 // Decisions 6 and 7: change your PIN from Your settings. Wheelhouse picks a
 // new random PIN nobody else has (so choosing can't reveal a colleague's);
@@ -153,7 +186,7 @@ const pinDigit = (d) => `<span style="display: inline-flex; align-items: center;
 // in and turns the screen to the person; it goes back to the PIN screen.
 const PIN_TEXT = {
   change: ['Your new till PIN', 'Wheelhouse picked this for you — nobody else at the shop has it. Learn it before you close this.', 'Your old PIN stops working when you keep this one.'],
-  first: ['Your till PIN', 'Welcome to North Street Cycles, Jo. This PIN checks you in at the till and puts your name on sales. Wheelhouse picked it — nobody else at the shop has it, and only you see it. Learn it before you close this.', 'Not using the till? Skip it — you can get a PIN later in Your settings.'],
+  first: ['Your till PIN', 'Welcome to North Street Cycles, Jo. This PIN checks you in at the till and puts your name on sales and workshop work. Wheelhouse picked it — nobody else at the shop has it, and only you see it. Learn it before you close this.', 'Not using the till? Skip it — you can get a PIN later in Your settings.'],
   cleared: ['Your till PIN', 'Your old PIN was cleared, so here’s a new one. Wheelhouse picked it — nobody else at the shop has it, and only you see it. Learn it before you close this.', 'Not using the till? Skip it — you can get a PIN later in Your settings.'],
   give: ['[Name]’s till PIN', 'Turn the screen to [Name]. Wheelhouse picked this PIN — nobody else at the shop has it. [Name] learns it now; only they should see it.', 'Then the till goes back to the PIN screen, ready for [Name] to check in.'],
 };
@@ -198,19 +231,22 @@ function custPage(size, inner) {
   return size === 'desktop' ? siteDesktop('sand', 'Account', box) : siteTablet('sand', box);
 }
 screens['cust-signin'] = each((size) => custPage(size, `${h1('Sign in to your account', size === 'phone' ? 24 : 26)}${p('See your bookings, your bikes and past work. We’ll email you a code — no password needed.')}
-${field('Email', { type: 'email', value: 'maya@example.com' })}
+${field('Email', { type: 'email', value: 'maya@example.test', autocomplete: 'email' })}
 ${button('Email me a code', { block: true })}
 <div style="padding-top: 14px; border-top: 1px solid ${C.border}">${p('Just checking a booking? Open the link in your text or email — no sign-in needed.', 14)}</div>`));
 // Fewer clicks (journey A decision 6): the code checks itself when the 6th
 // digit goes in, and a code pasted from the email fills all six boxes.
 // Decision 9: a wrong or expired code says so under the boxes.
-const codeBox = (d, i, { focus = -1, bad = false, w = 48 } = {}) => `<input aria-label="Digit ${i + 1} of 6" inputmode="numeric" maxlength="1" value="${d}" style="width: ${w}px; height: 56px; box-sizing: border-box; text-align: center; border-radius: 8px; border: ${bad ? `2px solid ${C.danger}` : `1px solid ${i === focus ? C.ink : C.input}`}; background: #ffffff; font-family: ${MONO}; font-size: 24px; color: ${C.ink}">`;
+// Walk-through 12 M3: one field (one-time-code, numeric) drawn to look like
+// the six boxes, so the code can be pasted or filled in from the email.
+const codeBox = (d, i, { focus = -1, bad = false, w = 48 } = {}) => `<span aria-hidden="true" style="display: inline-flex; align-items: center; justify-content: center; width: ${w}px; height: 56px; box-sizing: border-box; text-align: center; border-radius: 8px; border: ${bad ? `2px solid ${C.danger}` : `1px solid ${i === focus ? C.ink : C.input}`}; background: #ffffff; font-family: ${MONO}; font-size: 24px; color: ${C.ink}">${d}</span>`;
+const codeField = (digits, opts) => `<div style="position: relative; display: flex; gap: 8px">${digits.map((d, i) => codeBox(d, i, opts)).join('')}<input aria-label="Your 6-digit code" autocomplete="one-time-code" inputmode="numeric" maxlength="6" value="${digits.join('')}"${opts.bad ? ' aria-invalid="true"' : ''} style="position: absolute; inset: 0; width: 100%; height: 100%; box-sizing: border-box; opacity: 0; border: 0; font-family: ${MONO}; font-size: 24px"></div>`;
 const codeLinks = (strong = false) => `<div style="display: flex; justify-content: space-between; gap: 12px"><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: ${strong ? 700 : 600}; color: ${C.ink}">Send a new code</a><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Use a different email</a></div>`;
 function codePage(size, { expired = false } = {}) {
   const w = size === 'phone' ? 46 : 48;
   const digits = expired ? ['4', '8', '1', '2', '9', '6'] : ['4', '8', '1', '', '', ''];
-  return custPage(size, `${h1('Enter your code', size === 'phone' ? 24 : 26)}${p(`We sent a 6-digit code to <strong style="color: ${C.ink}">maya@example.com</strong>. It works for 10 minutes and signs you in as soon as the last digit goes in.`)}
-<div role="group" aria-label="Your 6-digit code" style="display: flex; gap: 8px">${digits.map((d, i) => codeBox(d, i, { focus: expired ? -1 : 3, bad: expired, w })).join('')}</div>
+  return custPage(size, `${h1('Enter your code', size === 'phone' ? 24 : 26)}${p(`We sent a 6-digit code to <strong style="color: ${C.ink}">maya@example.test</strong>. It works for 10 minutes and signs you in as soon as the last digit goes in.`)}
+${codeField(digits, { focus: expired ? -1 : 3, bad: expired, w })}
 ${expired ? `<div style="text-align: left">${errorLine('That code has expired — send a new one')}</div>` : ''}
 ${codeLinks(expired)}`);
 }
@@ -227,10 +263,11 @@ export const TITLES = {
   'till-checkin': 'Till check-in — PIN only',
   'till-checkin-offline': 'Till start-up: offline, sales waiting to send',
   'till-checkin-stale': 'Till start-up: online, but not up to date',
+  'till-checkin-workshop': 'Workshop computer: Enter your PIN, no till number',
   'till-pin-wrong': 'Till check-in — wrong PIN',
   'pin-change': 'Your new till PIN — Wheelhouse picks it',
   // UX walk-through 4 H1, M2, M4
-  'pin-first': 'First sign-in — Your till PIN opens straight away (Skip for now if you never use the till)',
+  'pin-first': 'First sign-in — Your till PIN opens straight away (Skip for now if you never use the till or a workshop computer)',
   'pin-cleared': 'First sign-in after a PIN was cleared — a new PIN, the same way',
   'till-give-pin': 'Till only (no email) — the Owner or a manager gives the PIN at the till, screen turned to the person',
   'till-checkin-practice': 'Till check-in while running alongside — the practice band before anyone checks in',
@@ -242,7 +279,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-pin-wrong', 'pin-change'] },
+  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-pin-wrong', 'pin-change'] },
   // UX walk-through 4 H1, M2, M4: a new person's first PIN, and the till in practice.
   { label: 'A new person’s first PIN', screens: ['pin-first', 'pin-cleared', 'till-give-pin', 'till-checkin-practice'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code', 'cust-code-expired'] },

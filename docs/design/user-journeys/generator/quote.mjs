@@ -13,11 +13,13 @@
 // lines and prices (Standard service £65, Shimano brake pads B05S-RX £28
 // "Rear pads worn — replacing", Fit & adjust brakes £18, Replace gear cable
 // £12, cable still serviceable; £111.00 approved, £123.00 if all), the
-// mechanic's note, Alex Morgan, Jo Taylor, booked in Thu 17 Sep at 09:12,
+// mechanic's note, Alex Morgan, Jo Taylor, booked in Thu 17 Sep at [time]
+// (walk-through 8 decisions, 3 Oct: walk-through 1 L3 replaces 09:12),
 // ready by Thu 17 Sep, the delayed pads moved to Sat 19 Sep 16:00, North
 // Street Cycles, Bolton. Anything else is a bracketed placeholder. UX
-// walk-through 1 H1: Maya asked at booking to be called before any extra
-// work, so her quote is sent (Workshop day 43: under a limit, no quote is
+// walk-through 1 H1: Maya asked at booking to be asked before any extra
+// work (Drop off and approve the quote, 3 Oct: "Ask me", not "Call me"),
+// so her quote is sent (Workshop day 43: under a limit, no quote is
 // sent). The within-limit path is drawn for a customer with a £200 limit.
 import { C, MONO, esc, icon, button, card, badge } from './ui.mjs';
 import { popup, overlay, withSize, isPhone } from './settings-frame.mjs';
@@ -34,6 +36,8 @@ const recipes = [];
 const def = (id, fn) => recipes.push([id, fn]);
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${t}</span>`;
 const money = (n) => `£${n.toFixed(2)}`;
+// Walk-through 12 M5: the quote's badges at the page's body size (15px).
+const bigBadge = (t, tone) => badge(t, tone).replace('font-size: 12px', 'font-size: 15px');
 const VH = 'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0';
 const hidden = (t) => `<span style="${VH}">${t}</span>`;
 let SIZE = 'desktop';
@@ -47,7 +51,7 @@ const site = (content, bar = '') => {
 const shopLines = `<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid ${C.border}; font-size: 14px; line-height: 1.5"><strong>North Street Cycles, Bolton</strong><span>[Shop address] · [shop phone]</span></div>`;
 const cardBox = (inner, extra = '') => card(`<div style="padding: ${isPhone() ? 16 : 22}px; display: flex; flex-direction: column; gap: 12px">${inner}</div>`, extra);
 const h2 = (t, id, focus = false) => `<h2 id="${id}"${focus ? ' tabindex="-1"' : ''} style="margin: 0; font-size: 20px; font-weight: 700">${t}</h2>`;
-const page = (inner, { width = 720, bar = '' } = {}) => site(`<div style="width: 100%; max-width: ${width}px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your booking · ${mono('WH-1042')}</span><h1 tabindex="-1" style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Trek Domane AL 3 · Standard service</h1></div>${inner}</div>`, bar);
+const page = (inner, { width = 720, bar = '' } = {}) => site(`<div style="width: 100%; max-width: ${width}px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px"><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px; color: ${C.muted}">Your repair · ${mono('WH-1042')}</span><h1 tabindex="-1" style="margin: 0; font-size: ${isPhone() ? 24 : 28}px; font-weight: 700">Trek Domane AL 3 · Standard service</h1></div>${inner}</div>`, bar);
 const note = (t) => `<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">${t}</p>`;
 
 // Decision 6: Booked → In the shop → Being worked on → Ready. Audit L4: the
@@ -84,7 +88,7 @@ const NEW_LINES = [
 const photoThumb = (big = false) => `<button type="button" aria-label="Photo of Shimano brake pads: rear pads worn — open larger photo" style="position: relative; flex-shrink: 0; width: ${big ? '100%' : '96px'}; height: ${big ? 360 : 72}px; display: flex; align-items: center; justify-content: center; padding: 6px; box-sizing: border-box; border-radius: 8px; border: 1px dashed ${C.input}; background: ${C.mutedBg}; color: ${C.muted}; font-family: inherit; font-size: 12px; text-align: center">[Photo of the worn rear pads]${big ? '' : `<span aria-hidden="true" style="position: absolute; right: 4px; bottom: 4px; display: inline-flex; padding: 3px; border-radius: 6px; background: ${C.ink}; color: #ffffff">${icon('search', 12)}</span>`}</button>`;
 // Audit M4: the price is part of the tick box's label.
 const quoteLine = (l, on) => `<li style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid ${C.border}"><div style="display: flex; gap: 12px; align-items: flex-start">
-<label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-width: 0; min-height: 44px; cursor: pointer"><input type="checkbox"${on ? ' checked' : ''} style="width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1"><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">${l.work}</span>${badge(l.need, l.need === 'Needed' ? 'amber' : 'grey')}<span style="margin-left: auto">${mono(money(l.price), 'font-size: 16px')}</span></span><span style="font-size: 14px; line-height: 1.45">${l.reason}</span></span></label>
+<label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-width: 0; min-height: 44px; cursor: pointer"><input type="checkbox"${on ? ' checked' : ''} style="width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; min-width: 0; flex-grow: 1"><span style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">${l.work}</span>${bigBadge(l.need, l.need === 'Needed' ? 'amber' : 'grey')}<span style="margin-left: auto">${mono(money(l.price), 'font-size: 16px')}</span></span><span style="font-size: 14px; line-height: 1.45">${l.reason}</span></span></label>
 ${l.photo ? `<span style="display: flex; flex-direction: column; align-items: center; gap: 2px">${photoThumb()}<span style="font-size: 12px; color: ${C.muted}">Tap to enlarge</span></span>` : ''}</div>
 ${!on && l.need === 'Needed' && l.without ? `<p style="margin: 0 0 0 34px; padding: 8px 12px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 14px; line-height: 1.45"><strong>Alex recommends this.</strong> ${l.without}</p>` : ''}</li>`;
 const quoteSums = ({ ticks = { pads: true, fit: true, cable: false }, newer = false } = {}) => {
@@ -98,7 +102,7 @@ const quoteBar = (opts = {}) => {
   const { totalText, label } = quoteSums(opts);
   // UX walk-through 6 M4: a price that went up has two answers, both in the bar.
   if (opts.priceUp) return `<div aria-live="polite" style="flex-shrink: 0; box-sizing: border-box; width: 100%; max-width: 720px; margin: 0 auto; padding: 10px 14px; border-radius: 10px; border: 2px solid ${C.ink}; background: ${C.panel}; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">New total <strong>${mono('£[new total]', 'font-size: 17px')}</strong></span><span style="font-size: 13px; font-weight: 600">Your answer is final once sent.</span></span><span style="display: flex; flex-wrap: wrap; gap: 8px; ${isPhone() ? 'width: 100%' : ''}">${button('Approve £[new total]', { block: isPhone() })}${button('No thanks — keep to £111.00', { variant: 'default', block: isPhone() })}</span></div>`;
-  return `<div aria-live="polite" style="flex-shrink: 0; box-sizing: border-box; width: 100%; max-width: 720px; margin: 0 auto; padding: 10px 14px; border-radius: 10px; border: 2px solid ${C.ink}; background: ${C.panel}; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">New total <strong>${mono(totalText, 'font-size: 17px')}</strong>${opts.deposit ? ` <span style="font-size: 13px; color: ${C.muted}">· deposit £[deposit] paid</span>` : ''}</span><span style="font-size: 13px; font-weight: 600">Your answers are final once sent.</span></span>${button(label, { block: isPhone() })}</div>`;
+  return `<div aria-live="polite" style="flex-shrink: 0; box-sizing: border-box; width: 100%; max-width: 720px; margin: 0 auto; padding: 10px 14px; border-radius: 10px; border: 2px solid ${C.ink}; background: ${C.panel}; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px">New total <strong>${mono(totalText, 'font-size: 17px')}</strong>${opts.deposit ? ` <span style="font-size: 13px; color: ${C.muted}">· deposit £[deposit] paid</span>` : ''}</span><span style="font-size: 15px; font-weight: 600">Your answers are final once sent.</span></span>${button(label, { block: isPhone() })}</div>`;
 };
 function quoteCard({ ticks = { pads: true, fit: true, cable: false }, newer = false, deposit = false, reminded = false, priceUp = false } = {}) {
   const { total, label } = quoteSums({ ticks, newer });
@@ -117,14 +121,14 @@ ${inCard ? `<p style="margin: 0; font-size: 14px; font-weight: 600">Your answer 
 ${note('Prices include VAT. Nothing to pay today.')}
 ${inCard ? `<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end">${button('No thanks — keep to £111.00', { variant: 'default' })}${button('Approve £[new total]')}</div>` : ''}
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 14px">Not sure? Call ${mono('[shop phone]')}, or</span>${button('Add a note for the shop', { variant: 'default' })}</div>`, `border: 2px solid ${C.ink}`);
-  return cardBox(`${badge(newer ? 'The quote has changed' : 'Waiting for your answer', 'purple')}${h2(newer ? 'Alex has added to the quote' : 'Alex recommends more work', 'q')}${sentLine}
+  return cardBox(`${bigBadge(newer ? 'The quote has changed' : 'Waiting for your answer', 'purple')}${h2(newer ? 'Alex has added to the quote' : 'Alex recommends more work', 'q')}${sentLine}
 <p style="margin: 0; font-size: 15px; line-height: 1.5">${newer ? 'Your earlier answers are kept. Please answer the new line below.' : `“${STAFF_NOTE_BRAKES}” — Alex Morgan, your mechanic`}</p>
 ${newer ? `<div>${kv('Already agreed', `Standard service, brake pads, fitting · ${mono('£111.00')}`)}${kv('You said no thanks', 'Replace gear cable')}</div>` : ''}
 <p style="margin: 0; font-size: 15px; font-weight: 600">Untick anything you don’t want.</p>
-<ul aria-labelledby="q" style="list-style: none; margin: 0; padding: 0">${newer ? `<li style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid ${C.border}"><label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-height: 44px"><input type="checkbox" checked style="width: 22px; height: 22px; margin: 2px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">[New line]</span>${badge('Needed', 'amber')}<span style="margin-left: auto">${mono('£[price]', 'font-size: 16px')}</span></span><span style="font-size: 14px">[The mechanic’s reason]</span></span></label></li>` : NEW_LINES.map((l) => quoteLine(l, ticks[l.id])).join('')}</ul>
+<ul aria-labelledby="q" style="list-style: none; margin: 0; padding: 0">${newer ? `<li style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid ${C.border}"><label style="display: flex; gap: 12px; align-items: flex-start; flex-grow: 1; min-height: 44px"><input type="checkbox" checked style="width: 22px; height: 22px; margin: 2px 0 0; accent-color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1"><span style="display: flex; align-items: center; gap: 8px"><span style="font-size: 16px; font-weight: 700">[New line]</span>${bigBadge('Needed', 'amber')}<span style="margin-left: auto">${mono('£[price]', 'font-size: 16px')}</span></span><span style="font-size: 14px">[The mechanic’s reason]</span></span></label></li>` : NEW_LINES.map((l) => quoteLine(l, ticks[l.id])).join('')}</ul>
 ${newer ? '' : `<div>${kv('Already agreed', `Standard service · ${mono('£65.00')}`)}</div>`}
 <div aria-live="polite" style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; border-top: 1px solid ${C.border}">${kv(`<strong style="color: ${C.ink}">New total</strong>`, mono(newer ? '£[total]' : money(total), 'font-size: 18px'), 'border-top: 0; padding-top: 0')}${deposit ? depositRows(total) : ''}${ticks.pads === false ? hidden('Fit & adjust brakes unticked too.') : ''}</div>
-${inCard ? `<p style="margin: 0; font-size: 14px; font-weight: 600">Your answers are final once sent.</p>` : ''}
+${inCard ? `<p style="margin: 0; font-size: 15px; font-weight: 600">Your answers are final once sent.</p>` : ''}
 <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">${note(deposit ? 'Prices include VAT. Nothing to pay today — the rest is due when you collect.' : 'Prices include VAT. Nothing to pay today.')}${inCard ? button(label) : ''}</div>
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 14px">Not sure? Call ${mono('[shop phone]')}, or</span>${button('Add a note for the shop', { variant: 'default' })}</div>`, `border: 2px solid ${C.ink}`);
 }
@@ -140,7 +144,7 @@ const DECLINED_ROWS = `${SERVICE_ROW}${noThanks('Shimano brake pads', '£28.00')
 const priceNo = () => page(`<div role="status">${badge('Answered', 'green')}</div>${cardBox(`${h2('Thanks, Maya — you said no to the new price', 'ans', true)}<p style="margin: 0; font-size: 15px; line-height: 1.5">You said no to ${mono('£[new price]')} for the Shimano brake pads. Your agreed price stays ${mono('£111.00')}. The shop will let you know what happens next. Call ${mono('[shop phone]')} if you have a question.</p>`)}${tracker(2, { sub: readyLine })}${agreed(DONE_ROWS, '£111.00')}`);
 const answered = ({ byPhone = false, declined = false, deposit = false } = {}) => page(`<div role="status">${badge('Answered', 'green')}</div>${cardBox(`${h2(byPhone ? 'Your answers, from your call' : declined ? 'Thanks, Maya — Alex will carry on with the service' : 'Thanks, Maya — Alex is carrying on', 'ans', true)}<p style="margin: 0; font-size: 15px; line-height: 1.5">${byPhone ? 'You answered by phone with Jo Taylor at [time]. Here’s what was agreed.' : declined ? 'You didn’t add any extra work. We’ve saved your answers.' : 'We’ve saved your answers. The work you agreed is going ahead.'}</p>`)}${tracker(2, { sub: readyLine })}${agreed(declined ? DECLINED_ROWS : DONE_ROWS, declined ? '£65.00' : '£111.00', { deposit })}`);
 // Decision 6: the tracker on its own, at each stage.
-const inShop = (extra = '') => page(`${tracker(1, { sub: `We’ve got your bike — booked in Thu 17 Sep at ${mono('09:12')}. ${readyLine}` })}${extra}${agreed(SERVICE_ROW, '£65.00')}`);
+const inShop = (extra = '') => page(`${tracker(1, { sub: `We’ve got your bike — booked in Thu 17 Sep at [time]. ${readyLine}` })}${extra}${agreed(SERVICE_ROW, '£65.00')}`);
 // Account, history and reminders decision 3: the job's page with its conversation.
 export const inShopAt = (size, extra = '') => withSize(size, () => { const was = SIZE; SIZE = size; try { return inShop(typeof extra === 'function' ? extra() : extra); } finally { SIZE = was; } });
 const waitingPart = () => page(`${tracker(2, { warn: '<strong>Waiting for a part — we’ll update you.</strong> Your new brake pads are taking longer to arrive.', sub: `Expected ready: <strong>Sat 19 Sep</strong>, ${mono('16:00')}.` })}${agreed(DONE_ROWS, '£111.00')}`);
@@ -161,16 +165,27 @@ ${note('Saved as answered by phone, taken by Jo Taylor at [time]. Maya gets a te
 const withdrawDialog = () => popup('withdraw-title', 'Withdraw this quote?', 'WH-1042 · Maya Patel', `<p style="margin: 0; font-size: 15px; line-height: 1.5">Maya’s page will say the quote was withdrawn and there’s nothing to answer. Only the booked Standard service stays agreed.</p>`, `${button('Keep the quote', { variant: 'ghost' })}${button('Withdraw quote', { variant: 'danger' })}`, 520);
 
 // ---------- The boards ----------
+// Walk-through 12 M2 and L3 (third walk, 3 Oct): on dq-quote and dq-answered
+// the shop's number is a phone link at every size, and at phone size the
+// last 12px words ("Tap to enlarge", the "Answered" tag) are 15px, as the
+// quote's own tags are. `swap` fails the build if a drawing's words move.
+const swap = (html, from, to) => { if (!html.includes(from)) throw new Error(`quote.mjs: "${from}" not found`); return html.split(from).join(to); };
+const PHONE_MONO = mono('[shop phone]');
+const telLinked = (html) => {
+  if (!html.includes('[shop phone]')) throw new Error('quote.mjs: no [shop phone] to link');
+  const link = `<a href="tel:[shop phone]" style="color: ${C.ink}; font-weight: 600">${PHONE_MONO}</a>`;
+  return html.split(PHONE_MONO).map((part) => part.split('[shop phone]').join(`<a href="tel:[shop phone]" style="color: ${C.ink}; font-weight: 600">[shop phone]</a>`)).join(link);
+};
 def('dq-in-shop', () => inShop());
 def('dq-waiting-part', () => waitingPart());
 def('dq-ready', () => collectScreens['cp-summary'][SIZE]);
-def('dq-quote', () => quotePage());
+def('dq-quote', () => { const html = telLinked(quotePage()); return isPhone() ? swap(html, `<span style="font-size: 12px; color: ${C.muted}">Tap to enlarge</span>`, `<span style="font-size: 15px; color: ${C.muted}">Tap to enlarge</span>`) : html; });
 def('dq-quote-photo', () => overlay(quotePage(), photoDialog()));
 def('dq-quote-untick', () => quotePage({ ticks: { pads: true, fit: true, cable: true } }));
 def('dq-quote-decline', () => quotePage({ ticks: { pads: false, fit: false, cable: false } }));
 def('dq-quote-deposit', () => quotePage({ deposit: true }));
 def('dq-quote-reminded', () => quotePage({ reminded: true }));
-def('dq-answered', () => answered());
+def('dq-answered', () => { const html = telLinked(answered()); return isPhone() ? swap(html, badge('Answered', 'green'), bigBadge('Answered', 'green')) : html; });
 def('dq-answered-declined', () => answered({ declined: true }));
 def('dq-answered-deposit', () => answered({ deposit: true }));
 def('dq-answered-by-phone', () => answered({ byPhone: true }));

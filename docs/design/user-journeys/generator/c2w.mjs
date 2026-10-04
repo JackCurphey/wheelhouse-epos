@@ -64,6 +64,8 @@ const countIn = (html) => html.replace(/(>Cycle to Work<\/span>)(<\/a>)/, `$1<sp
 const c2wPage = (content, who = WHO) => page('c2w', 'Cycle to Work', `<div data-scroll style="position: relative; height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">${content}</div>`, who);
 
 // ---------- The list, grouped by stage (decision 1) ----------
+// Walk-through 5 L3: the list's status badges and its top line at 14px.
+const bigBadge = (t, tone) => badge(t, tone).replace('font-size: 12px', 'font-size: 14px');
 const cols = () => (isPhone() ? '1fr' : '200px minmax(0, 1fr) 230px 190px');
 const orderRow = ({ who, quote = `Quote ${QNUM}`, bike = `${BIKE} · ${SIZE_}`, prov = PROV, status, action }) => `<div role="listitem" style="display: grid; grid-template-columns: ${cols()}; gap: ${isPhone() ? 6 : 16}px; align-items: center; padding: 12px 0; border-top: 1px solid ${C.border}"><a href="#" aria-label="Open ${esc(who)}’s order" style="display: flex; flex-direction: column; gap: 2px; min-height: 44px; justify-content: center; color: ${C.ink}; text-decoration: none"><span style="font-size: 15px; font-weight: 700; text-decoration: underline">${who}</span><span style="font-size: 13px; color: ${C.muted}">${quote}</span></a><span style="display: flex; flex-direction: column; gap: 3px; font-size: 14px"><span>${bike}</span><span style="color: ${C.muted}">${prov}</span></span><span style="font-size: 14px">${status}</span><span style="justify-self: ${isPhone() ? 'start' : 'end'}">${action}</span></div>`;
 const stageGroup = (title, count, rows, sub = '') => box(`<h2 style="margin: 0; font-size: 17px; font-weight: 700">${title} · ${count}</h2>${sub ? note(sub) : ''}<div role="list">${rows.join('')}</div>`);
@@ -73,20 +75,20 @@ const stageGroup = (title, count, rows, sub = '') => box(`<h2 style="margin: 0; 
 const listPage = ({ holdEnded = false, refund = false } = {}) => {
   const money = seesMoney();
   const maya = refund
-    ? orderRow({ who: '[Customer]', status: `Held until [date]<br>${badge('Hold ends in [n] days', 'amber')}`, action: named(button('Add the certificate', { variant: 'default' }), 'Add [Customer]’s certificate') })
+    ? orderRow({ who: '[Customer]', status: `Held until [date]<br>${bigBadge('Hold ends in [n] days', 'amber')}`, action: named(button('Add the certificate', { variant: 'default' }), 'Add [Customer]’s certificate') })
     : holdEnded
-      ? orderRow({ who: 'Maya Patel', status: `Still held<br>${badge('Hold ended [date] — choose', 'amber')}`, action: named(button('Choose', { variant: 'default' }), 'Choose what to do with Maya Patel’s hold') })
-      : orderRow({ who: 'Maya Patel', status: `Held until [date]<br>${badge('Hold ends in [n] days', 'amber')}`, action: named(button('Add the certificate', { variant: 'default' }), 'Add Maya Patel’s certificate') });
+      ? orderRow({ who: 'Maya Patel', status: `Still held<br>${bigBadge('Hold ended [date] — choose', 'amber')}`, action: named(button('Choose', { variant: 'default' }), 'Choose what to do with Maya Patel’s hold') })
+      : orderRow({ who: 'Maya Patel', status: `Held until [date]<br>${bigBadge('Hold ends in [n] days', 'amber')}`, action: named(button('Add the certificate', { variant: 'default' }), 'Add Maya Patel’s certificate') });
   const markPaid = (who) => named(button('Mark paid', { variant: 'default' }), `Mark paid: ${who} · ${PROV}`);
   return c2wPage(`${note('Thursday 17 September · North Street Cycles, Bolton')}
-<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px"><p style="margin: 0; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 15px">${badge(holdEnded ? '1 hold ended — choose' : '1 hold ending soon', 'amber')}${refund ? badge('1 deposit to refund', 'amber') : ''}${badge('1 bike ready to order', 'blue')}${badge('1 payment late', 'amber')}${money ? `<a href="#" style="${tall}; font-weight: 600; color: ${C.ink}">Owed by providers £[£] · 1 late</a>` : ''}</p>${button('+ New Cycle to Work order')}</div>
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px"><p style="margin: 0; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 15px">${bigBadge(holdEnded ? '1 hold ended — choose' : '1 hold ending soon', 'amber')}${refund ? bigBadge('1 deposit to refund', 'amber') : ''}${bigBadge('1 bike ready to order', 'blue')}${bigBadge('1 payment late', 'amber')}${money ? `<a href="#" style="${tall}; font-weight: 600; color: ${C.ink}">Owed by providers £[£] · 1 late</a>` : ''}</p>${button('+ New Cycle to Work order')}</div>
 ${stageGroup('Waiting for the certificate', 3, [
     maya,
     orderRow({ who: '[Customer]', status: 'Held until [date]', action: named(button('Add the certificate', { variant: 'default' }), 'Add [Customer]’s certificate') }),
-    orderRow({ who: '[Customer]', bike: `${BIKE} · ${SIZE_} · not in stock`, status: `Applied [date]<br>${badge('Ready to order', 'blue')}`, action: named(button('Order from [supplier]', { variant: 'default' }), 'Order [Customer]’s bike from [supplier]') }),
+    orderRow({ who: '[Customer]', bike: `${BIKE} · ${SIZE_} · not in stock`, status: `Applied [date]<br>${bigBadge('Ready to order', 'blue')}`, action: named(button('Order from [supplier]', { variant: 'default' }), 'Order [Customer]’s bike from [supplier]') }),
   ], 'Bikes in stock are held for the customer. Ones to order follow your rule in Settings.')}
 ${stageGroup('Certificate received', refund ? 2 : 1, [
-    ...(refund ? [orderRow({ who: 'Maya Patel', bike: `${BIKE} · ${SIZE_} · on order`, status: `Due from [supplier] [date]<br>${badge('Deposit to refund · Maya Patel', 'amber')}`, action: named(button('Refund the deposit', { variant: 'default' }), 'Refund Maya Patel’s £[£] deposit') })] : []),
+    ...(refund ? [orderRow({ who: 'Maya Patel', bike: `${BIKE} · ${SIZE_} · on order`, status: `Due from [supplier] [date]<br>${bigBadge('Deposit to refund · Maya Patel', 'amber')}`, action: named(button('Refund the deposit', { variant: 'default' }), 'Refund Maya Patel’s £[£] deposit') })] : []),
     orderRow({ who: '[Customer]', bike: `${BIKE} · ${SIZE_} · on order`, status: 'Due from [supplier] [date]', action: link('Open', 'Open [Customer]’s order') }),
   ])}
 ${stageGroup('Ready to collect', 1, [
@@ -94,7 +96,7 @@ ${stageGroup('Ready to collect', 1, [
   ])}
 ${stageGroup('Collected · waiting for payment', 2, [
     orderRow({ who: '[Customer]', status: 'Expected £[£] by [date]', action: money ? markPaid('[Customer]') : link('Open', 'Open [Customer]’s order') }),
-    orderRow({ who: '[Customer]', status: `${badge('[n] days late', 'amber')} £[£] was due [date]`, action: money ? markPaid('[Customer]') : link('Open', 'Open [Customer]’s late order') }),
+    orderRow({ who: '[Customer]', status: `${bigBadge('[n] days late', 'amber')} £[£] was due [date]`, action: money ? markPaid('[Customer]') : link('Open', 'Open [Customer]’s late order') }),
   ])}
 ${stageGroup('Paid · last 30 days', '[n]', [orderRow({ who: '[Customer]', status: 'Paid £[£] on [date]', action: link('Open', 'Open [Customer]’s paid order') })])}`);
 };
@@ -110,21 +112,31 @@ const stages = (at, labels = STAGES) => `<ol aria-label="Stages" style="margin: 
 // UX walk-through 5 M6: step messages go the way Maya chose (text); the quote
 // stays an email. M1 (option 1): the certificate and "ready" in one save,
 // one message. M3: "Hold longer" sends "put aside" again with the new date.
+// UX walk-through 5 M3: the closing line names both dates.
+const CLOSING = {
+  held: 'We’re holding your bike until [date]. This quote is valid until [date]. Once your certificate reaches us, it’s yours to collect.',
+  applied: `${BIKE} isn’t in stock. We’ll order it once you’ve applied, and let you know when it arrives.`,
+  deposit: `${BIKE} isn’t in stock. We’ll order it once you’ve paid a £[£] deposit, refunded when your certificate reaches us.`,
+};
 const EV = {
   quote: ['Jo Taylor', `gave quote ${QNUM} and emailed it to maya@example.test · it says the bike is put aside until [date]`],
+  // UX walk-through 5 L1: when the bike isn't in stock, the history ends with
+  // the quote's own closing sentence.
+  quoteApplied: ['Jo Taylor', `gave quote ${QNUM} and emailed it to maya@example.test · it says “${CLOSING.applied}”`],
+  quoteDeposit: ['Jo Taylor', `gave quote ${QNUM} and emailed it to maya@example.test · it says “${CLOSING.deposit}”`],
   held: ['Jo Taylor', `held ${BIKE} · ${SIZE_} until [date]`],
   putAside: ['Wheelhouse', 'texted Maya: “Your bike is put aside”'],
-  longer: ['Jo Taylor', 'held the bike longer, until [date]'],
+  longer: ['Jack Lewis', 'held the bike longer, until [date]'], // walk-through 5 L1 (third walk): Jack pressed Hold longer on Today
   longerMail: ['Wheelhouse', 'texted Maya: “Your bike is put aside” · until [date]'],
   toOrder: ['Jo Taylor', `${BIKE} · ${SIZE_} not in stock — to order once Maya has applied (your rule)`],
   toOrderDep: ['Jo Taylor', `${BIKE} · ${SIZE_} not in stock — to order once a £[£] deposit is paid (your rule)`],
   applied: ['Jo Taylor', 'marked Maya as applied · employer [Employer] · reference [reference]'],
   deposit: ['Jo Taylor', 'took a £[£] deposit at the till · sale B1-[0000]'],
   ordered: ['Jo Taylor', 'ordered the bike from [supplier] · supplier order [order number]'],
-  cert: ['Jack Lewis', 'added certificate [certificate number] · certificate £[£] · quote £[£]'],
+  cert: ['Jo Taylor', 'added certificate [certificate number] · certificate £[£] · quote £[£]'],
   certMail: ['Wheelhouse', 'texted Maya: “Certificate received”'],
   certMailDep: ['Wheelhouse', 'texted Maya: “Certificate received” · her £[£] deposit is being refunded'],
-  certReady: ['Jack Lewis', 'added certificate [certificate number] · certificate £[£] · quote £[£] · and marked the bike ready to collect'],
+  certReady: ['Jo Taylor', 'added certificate [certificate number] · certificate £[£] · quote £[£] · and marked the bike ready to collect'],
   ready: ['Jo Taylor', 'marked the bike ready to collect'],
   readyMail: ['Wheelhouse', 'texted Maya: “Ready to collect” · it says the certificate arrived'],
   readyOnly: ['Wheelhouse', 'texted Maya: “Ready to collect”'],
@@ -177,12 +189,6 @@ const moreMenu = () => `<div role="menu" aria-label="More for Maya Patel’s ord
 
 // ---------- Starting one (decisions 1, 3, 4, 6; audit H5, M1, M4, M11) ----------
 const select = (id, label, value, sub = '') => `<div style="display: flex; flex-direction: column; gap: 6px"><label id="${id}-l" for="${id}" style="font-size: 14px; font-weight: 600">${label}</label><button id="${id}" type="button" aria-haspopup="listbox" aria-labelledby="${id}-l ${id}"${sub ? ` aria-describedby="${id}-s"` : ''} style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 14px; color: ${C.ink}">${value}${icon('chevron', 14)}</button>${sub ? `<span id="${id}-s" style="font-size: 13px; color: ${C.muted}">${sub}</span>` : ''}</div>`;
-// UX walk-through 5 M3: the closing line names both dates.
-const CLOSING = {
-  held: 'We’re holding your bike until [date]. This quote is valid until [date]. Once your certificate reaches us, it’s yours to collect.',
-  applied: `${BIKE} isn’t in stock. We’ll order it once you’ve applied, and let you know when it arrives.`,
-  deposit: `${BIKE} isn’t in stock. We’ll order it once you’ve paid a £[£] deposit, refunded when your certificate reaches us.`,
-};
 const saysBox = (k) => `<div style="padding: 10px 12px; border-radius: 8px; border: 1px dashed ${C.input}; font-size: 14px; line-height: 1.5"><span style="display: block; font-size: 13px; font-weight: 700; color: ${C.muted}">The quote will say</span>${CLOSING[k]}</div>`;
 const newOrder = (inStock = true) => popup('no-title', 'New Cycle to Work order', 'North Street Cycles, Bolton', `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${select('no-cust', 'Customer', 'Maya Patel · 07700 900 142')}${select('no-prov', 'Scheme provider', PROV, 'Pays in about [n] days')}</div>
 ${select('no-bike', 'Bike', `${BIKE} · ${SIZE_}`, inStock ? '1 free at Bolton · none held' : 'None at Bolton or [Second site] · from [supplier], about [n] days')}
@@ -210,7 +216,7 @@ const quoteDoc = ({ closing = 'held', revised = false } = {}) => {
 // Maya gets one message. H4: each choice says what Maya will be told, and a
 // certificate for more is drawn. M3: a certificate after the quote ran out.
 // kind: 'match', 'less', 'more' or 'late'.
-const readyTick = () => tick('The bike is ready — tell Maya she can collect it', true, 'Untick if it needs work first. Maya is sent “Certificate received” now, and “Ready to collect” when you mark it ready.');
+const readyTick = () => tick('The bike is ready — tell Maya she can collect it', true, 'Leave it ticked if the bike can go now. Untick it if it needs work first: Maya is sent “Certificate received” now, and “Ready to collect” when you mark it ready.');
 const certificate = (kind = 'match') => { const diff = kind === 'less' || kind === 'more'; return popup('ce-title', 'Add the certificate', `Maya Patel · ${PROV}`, `<div style="display: grid; grid-template-columns: repeat(${isPhone() ? 1 : 2}, minmax(0, 1fr)); gap: 12px">${field('Certificate number', { value: '[certificate number]' })}${field('Amount on the certificate', { value: kind === 'less' ? '£[£ less]' : kind === 'more' ? '£[£ more]' : '£[£]' })}</div>${field('Received', { value: '[date]' })}
 ${kind === 'less' ? `${msg('<strong>Certificate £[£ less] · quote £[£].</strong> £[£] less than the quote.', 'warn', true)}${group('What to do', `${radio('Change the order to match', true, 'Take something off so the total is the certificate amount. Maya is emailed “Certificate received” with the revised quote.', 'cd')}${radio('Keep the order; Maya pays the £[£] difference', false, 'At collection, as a second payment at the till. Maya is told “You pay £[£] when you collect”.', 'cd')}`)}${note(`What’s expected from ${PROV} follows the order either way.`)}`
     : kind === 'more' ? `${msg('<strong>Certificate £[£ more] · quote £[£].</strong> £[£] more than the quote.', 'warn', true)}${group('What to do', `${radio('Keep the order as quoted', true, `Maya pays nothing at collection. ${PROV} is expected to pay the order’s total, £[£].`, 'cm')}${radio('Change the order to match', false, 'Add to the order so the total is the certificate amount. Maya is emailed “Certificate received” with the revised quote.', 'cm')}`)}${note(`What’s expected from ${PROV} follows the order either way.`)}`
@@ -242,9 +248,12 @@ ${diff ? msg('<strong>£[£] less than expected.</strong> Save it as part paid a
 // deposit; cancelling after ordering with a deposit follows the shop's rule.
 // M6: it goes the way Maya chose.
 const tellMaya = () => tick('Tell Maya the order is cancelled', true, '“Your order is cancelled”, sent the way she chose. It says what happens to any deposit.');
-const cancelOrder = (ordered = false, keptDeposit = false) => popup('cx-title', 'Maya isn’t going ahead?', `Quote ${QNUM} · ${BIKE} · ${SIZE_}`, ordered
-  ? `${msg(keptDeposit ? '<strong>The bike was ordered from [supplier]</strong> on [date], after Maya paid a £[£] deposit.' : '<strong>The bike was ordered from [supplier]</strong> on [date], and certificate [certificate number] was added.', 'grey')}${group('The bike', `${radio('Keep it as shop stock', true, 'It goes on sale at Bolton when it arrives.', 'cxb')}${radio('Send it back to [supplier]', false, 'Starts a return in Deliveries and orders.', 'cxb')}`)}${keptDeposit ? msg('<strong>Deposit £[£] · kept, as your quote said.</strong> Your rule: keep it when the bike was ordered in.', 'grey') : ''}${msg(`<strong>Tell ${PROV}</strong> the order is cancelled — the way your note for them says.`, 'warn')}${tellMaya()}${textBox('cx-why', 'Why?', '[reason]')}${logged()}`
-  : `${msg(`<strong>${BIKE} · ${SIZE_}</strong> goes back on sale at Bolton.`, 'grey')}${msg('<strong>Deposit:</strong> £[£] refunded, the way it was paid — your rule for a customer who pulls out.', 'grey')}${tellMaya()}${textBox('cx-why', 'Why?', '[reason]')}${logged()}`, `${button('Keep the order', { variant: 'ghost' })}${button('Cancel the order', { variant: 'danger' })}`, 560);
+// UX walk-through 5 M4: deposit is false, 'kept' (or true) or 'refund' — a
+// deposit paid and the bike ordered, refunded by the shop's rule for a
+// customer who pulls out.
+const cancelOrder = (ordered = false, deposit = false) => { const dep = deposit === true ? 'kept' : deposit; return popup('cx-title', 'Maya isn’t going ahead?', `Quote ${QNUM} · ${BIKE} · ${SIZE_}`, ordered
+  ? `${msg(dep ? '<strong>The bike was ordered from [supplier]</strong> on [date], after Maya paid a £[£] deposit.' : '<strong>The bike was ordered from [supplier]</strong> on [date], and certificate [certificate number] was added.', 'grey')}${group('The bike', `${radio('Keep it as shop stock', true, 'It goes on sale at Bolton when it arrives.', 'cxb')}${radio('Send it back to [supplier]', false, 'Starts a return in Deliveries and orders.', 'cxb')}`)}${dep === 'kept' ? msg('<strong>Deposit £[£] · kept, as your quote said.</strong> Your rule: keep it when the bike was ordered in.', 'grey') : dep === 'refund' ? msg('<strong>Deposit:</strong> £[£] refunded, the way it was paid — your rule for a customer who pulls out.', 'grey') : ''}${msg(`<strong>Tell ${PROV}</strong> the order is cancelled — the way your note for them says.`, 'warn')}${tellMaya()}${textBox('cx-why', 'Why?', '[reason]')}${logged()}`
+  : `${msg(`<strong>${BIKE} · ${SIZE_}</strong> goes back on sale at Bolton.`, 'grey')}${msg('<strong>Deposit:</strong> £[£] refunded, the way it was paid — your rule for a customer who pulls out.', 'grey')}${tellMaya()}${textBox('cx-why', 'Why?', '[reason]')}${logged()}`, `${button('Keep the order', { variant: 'ghost' })}${button('Cancel the order', { variant: 'danger' })}`, 560); };
 
 // ---------- Money owed (decision 5; audit M6) ----------
 // UX walk-through 5 L1: the back link follows where Jack came from.
@@ -287,30 +296,30 @@ const mailFrame = (inner, label = 'Email to Maya Patel') => {
 const attachment = (t) => `<span style="display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.bg}; font-size: 14px; font-weight: 600">Attached: ${t}</span>`;
 // UX walk-through 5 L3: when the quote and the hold start together, this one
 // email carries both. M3: it names both dates. M6: the quote stays an email.
-const email = () => mailFrame(`<span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to maya@example.test</span><h1 style="margin: 0; font-size: 22px">Your Cycle to Work quote</h1><p style="margin: 0">Hi Maya, here’s your quote ${mono(QNUM)} for ${BIKE} · ${SIZE_}, for your Cycle to Work scheme through ${PROV}.</p><p style="margin: 0"><strong>We’re holding your bike until [date].</strong> This quote is valid until [date]. We’ll let you know as soon as your certificate reaches us.</p>${attachment(`Quote ${QNUM}`)}<p style="margin: 0"><strong>How to apply:</strong> [The shop’s own words, from Settings]</p>${linkBtn('See your order')}`);
+const email = () => mailFrame(`<span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to maya@example.test</span><h1 style="margin: 0; font-size: 22px">Your Cycle to Work quote</h1><p style="margin: 0">Hi Maya, here’s your quote ${mono(QNUM)} for ${BIKE} · ${SIZE_}, for your Cycle to Work scheme through ${PROV}.</p><p style="margin: 0"><strong>We’re holding your bike until [date].</strong> This quote is valid until [date]. We’ll let you know as soon as your certificate reaches us.</p>${attachment(`Quote ${QNUM}`)}<p style="margin: 0"><strong>How to apply:</strong> [The shop’s own words, from Settings]</p>${linkBtn('See your Cycle to Work bike')}`);
 // UX walk-through 5 H4: the revised quote goes with "Certificate received".
 // It's an email because the quote stays one (M6).
-const emailRevised = () => mailFrame(`<span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to maya@example.test</span><h1 style="margin: 0; font-size: 22px">Certificate received</h1><p style="margin: 0">Hi Maya, your certificate for £[£] has reached us.</p><p style="margin: 0">To match your certificate, we’ve taken [Accessory] off. Your revised quote is attached.</p>${attachment(`Revised quote ${QNUM}`)}${linkBtn('See your order')}`);
+const emailRevised = () => mailFrame(`<span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to maya@example.test</span><h1 style="margin: 0; font-size: 22px">Certificate received</h1><p style="margin: 0">Hi Maya, your certificate for £[£] has reached us.</p><p style="margin: 0">To match your certificate, we’ve taken [Accessory] off. Your revised quote is attached.</p>${attachment(`Revised quote ${QNUM}`)}${linkBtn('See your Cycle to Work bike')}`);
 // UX walk-through 5 M6: Cycle to Work messages go the way the customer chose.
 // Maya chose text, so these are texts; customers who chose email get the same
 // words by email. Each board shows the versions of one message.
 const textBubble = (t) => `<div style="align-self: flex-start; max-width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 14px 14px 14px 4px; background: ${C.mutedBg}; font-size: 15px; line-height: 1.5">${t}</div>`;
 const textsBoard = (title, versions) => {
   const [W, H] = DIMS[SIZE];
-  return `<div data-scroll style="width: ${W}px; height: ${H}px; box-sizing: border-box; padding: ${isPhone() ? 12 : 40}px; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; background: ${C.bg}"><section aria-labelledby="tx-title" style="width: ${isPhone() ? '100%' : '600px'}; box-sizing: border-box; padding: ${isPhone() ? 18 : 28}px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; display: flex; flex-direction: column; gap: 14px; color: ${C.ink}"><span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to Maya Patel, ${mono('07700 900 142')} · by text, the way Maya chose</span><h1 id="tx-title" style="margin: 0; font-size: 22px">${title}</h1>${note('Customers who chose email get the same words by email, with a “See your order” link. Each message can be switched off in Settings › Messages.')}${versions.map(([when, t]) => `<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid ${C.border}"><h2 style="margin: 0; font-size: 14px; font-weight: 700; color: ${C.muted}">${when}</h2>${textBubble(t)}</div>`).join('')}</section></div>`;
+  return `<div data-scroll style="width: ${W}px; height: ${H}px; box-sizing: border-box; padding: ${isPhone() ? 12 : 40}px; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; background: ${C.bg}"><section aria-labelledby="tx-title" style="width: ${isPhone() ? '100%' : '600px'}; box-sizing: border-box; padding: ${isPhone() ? 18 : 28}px; background: ${C.panel}; border: 1px solid ${C.border}; border-radius: 10px; display: flex; flex-direction: column; gap: 14px; color: ${C.ink}"><span style="font-size: 13px; color: ${C.muted}">From North Street Cycles · to Maya Patel, ${mono('07700 900 142')} · by text, the way Maya chose</span><h1 id="tx-title" style="margin: 0; font-size: 22px">${title}</h1>${note('Customers who chose email get the same words by email, with a “See your Cycle to Work bike” link. Each message can be switched off in Settings › Messages.')}${versions.map(([when, t]) => `<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid ${C.border}"><h2 style="margin: 0; font-size: 14px; font-weight: 700; color: ${C.muted}">${when}</h2>${textBubble(t)}</div>`).join('')}</section></div>`;
 };
 const TEXTS = {
   // UX walk-through 5 M1, H4, H2.
   certificate: () => textsBoard('Certificate received, or Ready to collect', [
-    ['The bike was ready when the certificate came — one message, “Ready to collect”', `Hi Maya, your Cycle to Work certificate has reached us and ${BIKE} · ${SIZE_} is ready to collect. Quote ${QNUM}. See your order: [link]`],
-    ['The bike needs work first — “Certificate received”', `Hi Maya, your Cycle to Work certificate has reached us. We’re getting ${BIKE} ready and we’ll text you when you can collect it. See your order: [link]`],
-    ['A certificate for less, order kept', 'Hi Maya, your certificate for £[£] has reached us. You pay £[£] when you collect. See your order: [link]'],
-    ['A deposit to refund — your rule', 'Hi Maya, your Cycle to Work certificate has reached us. Your £[£] deposit is being refunded, the way you paid it. See your order: [link]'],
+    ['The bike was ready when the certificate came — one message, “Ready to collect”', `Hi Maya, your Cycle to Work certificate has reached us and ${BIKE} · ${SIZE_} is ready to collect. Quote ${QNUM}. See your Cycle to Work bike: [link]`],
+    ['The bike needs work first — “Certificate received”', `Hi Maya, your Cycle to Work certificate has reached us. We’re getting ${BIKE} ready and we’ll text you when you can collect it. See your Cycle to Work bike: [link]`],
+    ['A certificate for less, order kept', 'Hi Maya, your certificate for £[£] has reached us. You pay £[£] when you collect. See your Cycle to Work bike: [link]'],
+    ['A deposit to refund — your rule', 'Hi Maya, your Cycle to Work certificate has reached us. Your £[£] deposit is being refunded, the way you paid it. See your Cycle to Work bike: [link]'],
   ]),
   // UX walk-through 5 M3.
   hold: () => textsBoard('Your bike is put aside, or no longer put aside', [
-    ['“Hold longer” — “Your bike is put aside”, with the new date', `Hi Maya, we’re now holding ${BIKE} · ${SIZE_} for you until [date]. Quote ${QNUM}. See your order: [link]`],
-    ['“Release the bike” — “Your bike is no longer put aside”', `Hi Maya, ${BIKE} · ${SIZE_} is no longer put aside. We’ll still get you one when your certificate comes. See your order: [link]`],
+    ['“Hold longer” — “Your bike is put aside”, with the new date', `Hi Maya, we’re now holding ${BIKE} · ${SIZE_} for you until [date]. Quote ${QNUM}. See your Cycle to Work bike: [link]`],
+    ['“Release the bike” — “Your bike is no longer put aside”', `Hi Maya, ${BIKE} · ${SIZE_} is no longer put aside. We’ll still get you one when your certificate comes. See your Cycle to Work bike: [link]`],
   ]),
   // UX walk-through 5 M8.
   cancelled: () => textsBoard('Your order is cancelled', [
@@ -354,15 +363,15 @@ staff('cw-quote', () => quoteDoc());
 staff('cw-quote-deposit', () => quoteDoc({ closing: 'deposit' }));
 staff('cw-order-held', () => withToast(orderPage(), toast('Quote emailed to maya@example.test. Bike held until [date].')));
 staff('cw-hold-ending', () => overlay(orderPage(), holdReminder()));
-staff('cw-applied', () => overlay(orderPage({ next: 'toApply', order: true, hist: ['quote', 'toOrder'] }), applied()));
-staff('cw-order-applied', () => orderPage({ next: 'applied', order: true, hist: ['quote', 'toOrder', 'applied'] }));
+staff('cw-applied', () => overlay(orderPage({ next: 'toApply', order: true, hist: ['quoteApplied', 'toOrder'] }), applied()));
+staff('cw-order-applied', () => orderPage({ next: 'applied', order: true, hist: ['quoteApplied', 'toOrder', 'applied'] }));
 staff('cw-ordered', () => withToast(listPage(), toast('Ordered [Customer]’s bike from [supplier].', 'Undo')));
-staff('cw-order-deposit', () => orderPage({ next: 'deposit', order: true, hist: ['quote', 'toOrderDep'] }));
-owner('cw-order-anyway', () => overlay(orderPage({ next: 'deposit', order: true, hist: ['quote', 'toOrderDep'] }), orderAnyway()));
-staff('cw-order-deposit-paid', () => orderPage({ next: 'depositPaid', order: true, deposit: 'refund', hist: ['quote', 'toOrderDep', 'deposit', 'ordered'] }));
+staff('cw-order-deposit', () => orderPage({ next: 'deposit', order: true, hist: ['quoteDeposit', 'toOrderDep'] }));
+owner('cw-order-anyway', () => overlay(orderPage({ next: 'deposit', order: true, hist: ['quoteDeposit', 'toOrderDep'] }), orderAnyway()));
+staff('cw-order-deposit-paid', () => orderPage({ next: 'depositPaid', order: true, deposit: 'refund', hist: ['quoteDeposit', 'toOrderDep', 'deposit', 'ordered'] }));
 // UX walk-through 5 H2 (option 1): the other rule, and the refund as the next step.
-staff('cw-order-deposit-counted', () => orderPage({ next: 'depositCounted', order: true, deposit: 'count', hist: ['quote', 'toOrderDep', 'deposit', 'ordered'] }));
-staff('cw-order-deposit-refund', () => orderPage({ stage: 2, next: 'depositRefund', order: true, deposit: 'refund', hist: ['quote', 'toOrderDep', 'deposit', 'ordered', 'cert', 'certMailDep'] }));
+staff('cw-order-deposit-counted', () => orderPage({ next: 'depositCounted', order: true, deposit: 'count', hist: ['quoteDeposit', 'toOrderDep', 'deposit', 'ordered'] }));
+staff('cw-order-deposit-refund', () => orderPage({ stage: 2, next: 'depositRefund', order: true, deposit: 'refund', hist: ['quoteDeposit', 'toOrderDep', 'deposit', 'ordered', 'cert', 'certMailDep'] }));
 staff('cw-list-deposit-refund', () => listPage({ refund: true }));
 staff('cw-certificate', () => overlay(orderPage({ hist: upTo('longerMail') }), certificate()));
 staff('cw-certificate-diff', () => overlay(orderPage({ hist: upTo('longerMail') }), certificate('less')));
@@ -374,7 +383,7 @@ staff('cw-order-get-ready', () => orderPage({ stage: 2, next: 'getReady', hist: 
 staff('cw-marked-ready', () => withToast(orderPage({ stage: 3, next: 'ready', hist: [...upTo('longerMail'), 'cert', 'certMail', 'ready', 'readyOnly'] }), toast('Marked ready to collect. Maya is sent “Ready to collect”.', 'Undo')));
 staff('cw-list-hold-ended', () => listPage({ holdEnded: true }));
 staff('cw-certificate-released', () => overlay(orderPage(), certReleased()));
-staff('cw-order-on-order', () => orderPage({ stage: 2, next: 'onOrder', order: true, hist: ['quote', 'toOrder', 'applied', 'ordered', 'cert', 'certMail'] }));
+staff('cw-order-on-order', () => orderPage({ stage: 2, next: 'onOrder', order: true, hist: ['quoteApplied', 'toOrder', 'applied', 'ordered', 'cert', 'certMail'] }));
 staff('cw-order-ready', () => orderPage({ stage: 3, next: 'ready', hist: upTo('readyMail') }));
 staff('cw-hand-over', () => overlay(orderPage({ stage: 3, next: 'ready', hist: upTo('readyMail') }), handOver()));
 owner('cw-order-owed', () => orderPage({ stage: 4, next: 'owed', hist: upTo('handed'), expected: true }));
@@ -390,10 +399,12 @@ owner('cw-record-payment', () => overlay(owedProvider(), recordPayment()));
 owner('cw-record-payment-more', () => overlay(owedProvider(), recordPayment(true)));
 owner('cw-more', () => orderPage({ menu: moreMenu() }));
 owner('cw-quote-revised', () => quoteDoc({ revised: true }));
-owner('cw-cancel', () => overlay(orderPage({ next: 'deposit', order: true, deposit: true, hist: ['quote', 'toOrderDep', 'deposit'] }), cancelOrder()));
-owner('cw-cancel-ordered', () => overlay(orderPage({ stage: 2, next: 'onOrder', order: true, hist: ['quote', 'toOrder', 'applied', 'ordered', 'cert', 'certMail'] }), cancelOrder(true)));
+// UX walk-through 5 M4: a state that can happen — deposit paid, bike ordered,
+// the deposit refunded by the shop's rule for a customer who pulls out.
+owner('cw-cancel', () => overlay(orderPage({ next: 'depositPaid', order: true, deposit: 'refund', hist: ['quoteDeposit', 'toOrderDep', 'deposit', 'ordered'] }), cancelOrder(true, 'refund')));
+owner('cw-cancel-ordered', () => overlay(orderPage({ stage: 2, next: 'onOrder', order: true, hist: ['quoteApplied', 'toOrder', 'applied', 'ordered', 'cert', 'certMail'] }), cancelOrder(true)));
 // UX walk-through 5 M8: cancelled after ordering, with a deposit the rule keeps.
-owner('cw-cancel-ordered-deposit', () => overlay(orderPage({ next: 'depositPaid', order: true, deposit: 'refund', hist: ['quote', 'toOrderDep', 'deposit', 'ordered'] }), cancelOrder(true, true)));
+owner('cw-cancel-ordered-deposit', () => overlay(orderPage({ next: 'depositPaid', order: true, deposit: 'refund', hist: ['quoteDeposit', 'toOrderDep', 'deposit', 'ordered'] }), cancelOrder(true, true)));
 owner('cw-today', () => todayBoard());
 owner('cw-today-held', () => todayBoard(true));
 // UX walk-through 5 M3, H2: a hold nobody chose for, and a deposit to refund.
