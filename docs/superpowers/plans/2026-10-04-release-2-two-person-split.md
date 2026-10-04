@@ -225,11 +225,11 @@ second time (Codex review, finding 2). The rules close that:
   CI only builds from empty (`.github/workflows/test.yml`, "Migrations are
   idempotent"), which can't see a rename.
 - *The checks see the latest `main`.* A check only sees the pull request's
-  base, and `main` has no branch protection today (4 Oct). WP-0.4 turns on
-  GitHub's "require these checks to pass" and "branches must be up to date
-  before merging" for `main`. That is a repository setting, so Mark asks
-  Jack before changing it, and **stage 1 doesn't start until it is on**:
-  with it, two pull requests can't both merge the same number.
+  base, so `main` now requires the `test` check to pass and the branch to be
+  up to date with `main` before merging (GitHub branch protection, turned on
+  4 Oct with Jack's yes). With it, two pull requests can't both merge the
+  same number. Repository admins can still override it in an
+  emergency; doing so skips these checks, so don't.
 - *A backstop on every push to `main`* checks that all migration numbers on
   `main` are unique and in merge order. It should never fail. If it does, a
   rule above was broken: stop and ask Jack, rather than renaming anything on
@@ -311,7 +311,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 | 0.1 Merge #110, #112, #111 | review | **J** merges, first, before 0.4 |
 | 0.2 Booking bugs | another shop's page on a subdomain; "today" at UTC midnight; a duplicate booking from a lost reply (the server accepts each request once); `null` body error | Back while "Sending…" loses the private link; the client sends the same request key on a retry (from the contract) |
 | 0.3 Trim STATUS to 8 KB | **M**, with §5's new layout | — |
-| **0.4 (new) Make it splittable** | **M**: route files (§4.1); per-area types files (§4.3); the migration checks and the `main` setting (§4.2) | review |
+| **0.4 (new) Make it splittable** | **M**: route files (§4.1); per-area types files (§4.3); the migration checks and `scripts/new-db.sh` (§4.2) | review |
 | **0.5 (new) A hosted copy for Jack** | **M**: choose the host (PL-1), deploy `main` there on every merge, test data only | tries it |
 
 ### Stage 1 — Foundations (mostly Mark, in the order of §7; Jack pulls workshop pieces forward)
@@ -477,7 +477,7 @@ WP-0.1, merged on 3 Oct.)
 | 1 | Jack | WP-0.1: bring #110, #112 and #111 up to date with `main` (all three clash with it on 4 Oct), then merge them | nothing |
 | 2 | Mark | WP-0.2 server half: write its contract, including the request key a retry repeats (its types go in today's `src/lib/api/types.ts`, since the per-area files of §4.3 come with WP-0.4, which moves them), then fix another shop's page on a subdomain, "today" at UTC midnight, the duplicate booking from a lost reply, and the `null` body error. It edits `server/server.js`, so it merges before WP-0.4 starts | nothing; can run alongside line 1 |
 | 3 | Mark | WP-0.3: trim STATUS to 8 KB with §5's layout | nothing |
-| 4 | Mark | WP-0.4: route files (§4.1), per-area types files (§4.3), the migration checks and `scripts/new-db.sh` (§4.2), and, once Jack says yes, the `main` setting that stage 1 waits for (§4.2). Jack reviews | lines 1 and 2 merged: every open change to `server.js` is in before it moves |
+| 4 | Mark | WP-0.4: route files (§4.1), per-area types files (§4.3), the migration checks and `scripts/new-db.sh` (§4.2). (The `main` setting of §4.2 is already on, 4 Oct.) Jack reviews | lines 1 and 2 merged: every open change to `server.js` is in before it moves |
 | 5 | Jack | WP-0.2 screens half: Back while "Sending…" keeps the private link; a retry sends the same request key | line 2 merged |
 | 6 | Mark | WP-0.5: the hosted copy | line 4 merged |
 | 7 | Jack | Stage 0's stage check: the journeys stage 0 touches (booking, and the till and diary from #110–#112) walked in the real app (build plan §2) | lines 1–6 merged |
@@ -510,7 +510,7 @@ edits `server.js` while it moves.
 | One status pull request a day | Mark, 4 Oct, answer 1: avoids a conflict on most merges |
 | No building blocks ahead; stage 1's server order puts screens first; workshop pieces pulled forward | Mark, 4 Oct, answer 2: Jack should see progress and working software as early as possible |
 | Migrations keep their numbers; the second to merge renumbers; CI catches a clash | Mark, 4 Oct, answer 3 |
-| §4.2 after two fresh reviews: every worktree and review on its own database; new numbers must be higher than everything on `main`; checks required and run against the latest `main` (a setting Mark asks Jack about; stage 1 waits for it); renumbering only when another merges first; a backstop on `main` that stops and asks | Fresh reviews, 4 Oct: no branch protection; reviewers' servers run a branch's migrations on start; a freeze rule that forbade the only fix; a late low number runs in a different order on the hosted copy than on a fresh build |
+| §4.2 after two fresh reviews: every worktree and review on its own database; new numbers must be higher than everything on `main`; checks required and run against the latest `main` (GitHub setting, on 4 Oct with Jack's yes); renumbering only when another merges first; a backstop on `main` that stops and asks | Fresh reviews, 4 Oct: no branch protection; reviewers' servers run a branch's migrations on start; a freeze rule that forbade the only fix; a late low number runs in a different order on the hosted copy than on a fresh build |
 | §4.1 after the fresh review: the route-list test compares as a set plus a no-shadowing check; the push-tracking store moves with the push helpers; the screen-trace test follows the script | Fresh review, 4 Oct: grouping by area reorders the table (e.g. line 3968); `sales.js` and `server.js` would import each other |
 | §4.2: claim a number with a draft pull request before running it; renumber only on a rebuilt throwaway database; names on `main` frozen; CI upgrades from the previous `main` | Codex finding 2 (issue #128): the runner tracks files by name, so a renamed file runs twice |
 | Project rules changed to match: two lanes, one status pull request a day | Jack, 4 Oct (issue #127, option 1) |
