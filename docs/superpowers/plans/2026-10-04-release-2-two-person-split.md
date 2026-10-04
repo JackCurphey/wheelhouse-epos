@@ -185,46 +185,48 @@ filename order and remembers what it has run **by filename**, in the
 file that has run under one name and is then renamed looks new, and runs a
 second time (Codex review, finding 2). The rules close that:
 
-1. **Claim the number first.** Open a draft pull request containing the
-   migration file *before* running it anywhere, even locally. Look at the
-   other open pull requests first; if the number is taken, take the next one.
-2. **Renumber only while the pull request is a draft, and only on a
-   throwaway database.** The server runs every migration each time it
-   starts (`server/server.js:6834`), so a draft is run only by its author,
-   on their own scratch database. To renumber, the author drops that
-   database and rebuilds it from empty. **Once the pull request leaves
-   draft, the number is frozen**: reviewers, the fresh review subagent and
-   other worktrees only ever run non-draft branches, so a renamed file can
-   never meet a database that ran its old name.
-3. **The hosted copy (WP-0.5) only ever runs merged migrations.** It deploys
-   `main`, never a branch, so no unmerged name can reach it.
-4. **Once on `main`, a migration file's name never changes and the file is
+1. **Every worktree and every review runs its own database.** Each
+   worktree's `.env` names its own database on the compose Postgres (port
+   5433), and a review (Jack's, or the fresh review subagent's) builds a
+   fresh one from empty. So the only databases that ever run an unmerged
+   migration are throwaway ones.
+2. **Take the next free number and claim it.** The number must be higher
+   than every migration on `main`. Open a draft pull request containing the
+   file before running it anywhere, and check the other open pull requests;
+   if one already has that number, take the next one.
+3. **If someone else's migration merges first, renumber.** Rename the file
+   to the next free number, then drop and rebuild your database from empty,
+   and tell anyone who ran your branch to rebuild theirs (rule 1 makes those
+   throwaway). This is the only time a migration is renamed.
+4. **The hosted copy (WP-0.5) only ever runs merged migrations.** It
+   deploys `main`, never a branch.
+5. **Once on `main`, a migration file's name never changes and the file is
    never deleted.** A later fix is a new migration.
 
 **Checks (in WP-0.4, Mark), each watched failing first:**
 
-- *No two files share a number.* Fails CI if a migration file the pull
-  request adds shares its three digits with any other file. Files already on
-  `main` are not re-checked (see the last point).
+- *Every new number is higher than everything on `main`.* Fails CI if a
+  migration file the pull request adds has a number equal to or lower than
+  the highest number on `main`. This catches a clash and a late low number
+  alike, so migrations always run in the same order on every database: a
+  fresh build and the hosted copy can't disagree.
 - *Names on `main` are frozen.* Fails CI if a migration file that exists on
   `main` has been renamed, deleted or edited in the pull request.
-- *Upgrade from the previous `main`.* CI migrates a database at the pull
-  request's base commit on `main`, then checks out the pull request and
-  migrates again. It fails if the second run errors, or applies anything
-  other than the pull request's own new files. Today's CI only builds from
-  empty (`.github/workflows/test.yml`, "Migrations are idempotent"), which
-  can't see a rename.
-- *Checked against today's `main`, not an old one.* Each check above only
-  sees the pull request's base, so two pull requests that both add `039`
-  could each pass and both merge. `main` has no branch protection today
-  (4 Oct). WP-0.4 therefore turns on GitHub's "branches must be up to date
-  before merging" for `main`, so the checks always run against the latest
-  `main`. That is a repository setting: Mark asks Jack before changing it.
-  The checks also run on every push to `main`, as a backstop.
-- *If a clash reaches `main` anyway,* both files stay exactly as they are.
-  The runner tracks each file by its full name, so each still runs once,
-  in name order. Rule 4 holds; the next migration takes the next free
-  number.
+- *Upgrade from `main`.* CI migrates a database at `main`, then checks out
+  the pull request and migrates again. It fails if the second run errors,
+  or applies anything other than the pull request's own new files. Today's
+  CI only builds from empty (`.github/workflows/test.yml`, "Migrations are
+  idempotent"), which can't see a rename.
+- *The checks see the latest `main`.* A check only sees the pull request's
+  base, and `main` has no branch protection today (4 Oct). WP-0.4 turns on
+  GitHub's "require these checks to pass" and "branches must be up to date
+  before merging" for `main`. That is a repository setting, so Mark asks
+  Jack before changing it, and **stage 1 doesn't start until it is on**:
+  with it, two pull requests can't both merge the same number.
+- *A backstop on every push to `main`* checks that all migration numbers on
+  `main` are unique and in merge order. It should never fail. If it does, a
+  rule above was broken: stop and ask Jack, rather than renaming anything on
+  `main`.
 
 ### 4.3 The contract, before either half is built
 
@@ -302,7 +304,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 | 0.1 Merge #110, #112, #111 | review | **J** merges, first, before 0.4 |
 | 0.2 Booking bugs | another shop's page on a subdomain; "today" at UTC midnight; a duplicate booking from a lost reply (the server accepts each request once); `null` body error | Back while "Sending…" loses the private link; the client sends the same request key on a retry (from the contract) |
 | 0.3 Trim STATUS to 8 KB | **M**, with §5's new layout | — |
-| **0.4 (new) Make it splittable** | **M**: route files (§4.1); per-area types files (§4.3); the three migration checks (§4.2) | review |
+| **0.4 (new) Make it splittable** | **M**: route files (§4.1); per-area types files (§4.3); the migration checks and the `main` setting (§4.2) | review |
 | **0.5 (new) A hosted copy for Jack** | **M**: choose the host (PL-1), deploy `main` there on every merge, test data only | tries it |
 
 ### Stage 1 — Foundations (mostly Mark, in the order of §7; Jack pulls workshop pieces forward)
@@ -501,7 +503,7 @@ edits `server.js` while it moves.
 | One status pull request a day | Mark, 4 Oct, answer 1: avoids a conflict on most merges |
 | No building blocks ahead; stage 1's server order puts screens first; workshop pieces pulled forward | Mark, 4 Oct, answer 2: Jack should see progress and working software as early as possible |
 | Migrations keep their numbers; the second to merge renumbers; CI catches a clash | Mark, 4 Oct, answer 3 |
-| §4.2 after the fresh review: numbers frozen once out of draft; checks run against the latest `main` (branch must be up to date, asked of Jack first) and on every push to `main`; a clash that reaches `main` stays as it is | Fresh review, 4 Oct: two holes left in #128 (no branch protection; reviewers' servers run the branch's migrations on start) |
+| §4.2 after two fresh reviews: every worktree and review on its own database; new numbers must be higher than everything on `main`; checks required and run against the latest `main` (a setting Mark asks Jack about; stage 1 waits for it); renumbering only when another merges first; a backstop on `main` that stops and asks | Fresh reviews, 4 Oct: no branch protection; reviewers' servers run a branch's migrations on start; a freeze rule that forbade the only fix; a late low number runs in a different order on the hosted copy than on a fresh build |
 | §4.1 after the fresh review: the route-list test compares as a set plus a no-shadowing check; the push-tracking store moves with the push helpers; the screen-trace test follows the script | Fresh review, 4 Oct: grouping by area reorders the table (e.g. line 3968); `sales.js` and `server.js` would import each other |
 | §4.2: claim a number with a draft pull request before running it; renumber only on a rebuilt throwaway database; names on `main` frozen; CI upgrades from the previous `main` | Codex finding 2 (issue #128): the runner tracks files by name, so a renamed file runs twice |
 | Project rules changed to match: two lanes, one status pull request a day | Jack, 4 Oct (issue #127, option 1) |
