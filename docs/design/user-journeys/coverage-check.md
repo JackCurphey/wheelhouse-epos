@@ -12,7 +12,9 @@ they do, and no walk-through has covered it yet.
 The table is worked out by a script, not by hand:
 `generator/coverage.mjs` (run from the repo root with `node docs/design/user-journeys/generator/coverage.mjs`, or `--json` for the detail). It
 reads `generator/journeys.mjs`, `generator/consolidate/j*.mjs`,
-`generator/mockup/stories.mjs` and the build plan. It was checked by taking
+`generator/mockup/stories.mjs`, `generator/coverage-walks.mjs` (the walk-4
+files, each with the journey and person it walked; the script fails if a
+listed file is missing) and the build plan. It was checked by taking
 story 9 out: journey 15 for Jo went to EMPTY, as it should, and came back
 when story 9 was put back.
 
@@ -27,31 +29,38 @@ walks.
 
 | Journey | Maya (customer) | Jo (front desk) | Alex (mechanic) | Jack Lewis (owner) | Saturday worker |
 |---|---|---|---|---|---|
-| A App map and navigation | **EMPTY** | 2, 9 | **EMPTY** | **EMPTY** | 8, 10 |
+| A App map and navigation | walk 4 | 2, 9 | walk 4 | walk 4 | 8, 10 |
 | B Signing in and access | 1, 12 | 2, 4, 8 | 8 | 7 | 8, 10 |
-| 1 Find the shop and browse the website | 1, 6, 12 | **EMPTY** | — | — | — |
-| 2 Buy online, or click and collect | 2, 12 | 2 | — | **EMPTY** | **EMPTY** |
-| 3 Book a repair | 1, 6, 12 | — | — | **EMPTY** | — |
-| 4 Drop off and approve the quote | 1, 6, 12 | **EMPTY** | — | — | — |
-| 5 Collect the bike and pay | 1, 2, 12 | 2 | — | — | **EMPTY** |
+| 1 Find the shop and browse the website | 1, 6, 12 | 4 | — | — | — |
+| 2 Buy online, or click and collect | 2, 12 | 2 | — | walk 4 | 10 |
+| 3 Book a repair | 1, 6, 12 | — | — | walk 4 | — |
+| 4 Drop off and approve the quote | 1, 6, 12 | 9 | — | — | — |
+| 5 Collect the bike and pay | 1, 2, 12 | 2 | — | — | walk 4 |
 | 6 Cycle to Work | 5, 12 | 5 | — | 5 | — |
-| 7 Account, history and reminders | 1, 12 | **EMPTY** | — | **EMPTY** | — |
+| 7 Account, history and reminders | 1, 12 | walk 4 | — | walk 4 | — |
 | 8 Owner setup and onboarding | — | — | — | 4, 7, 11 | — |
 | 9 Moving from Citrus Lime | — | — | — | 4 | — |
-| 10 Opening the shop and checking in | — | 1, 2, 4 | — | 5, 7, 11 | 10 |
+| 10 Opening the shop and checking in | — | 1, 2, 4, 9 | — | 5, 7, 11 | 10 |
 | 11 Selling at the till | — | 2, 3, 4, 5 | — | 2, 10 | 8, 10 |
 | 12 Workshop day | — | 1, 6, 7, 8, 9 | 1, 3, 6, 8 | — | — |
 | 13 Receiving stock and purchase orders | — | 3 | — | 3 | — |
 | 14 Stock take and stock control | — | 3, 9 | — | 3, 7 | — |
-| 15 Customer service | — | 9 | — | **EMPTY** | — |
+| 15 Customer service | — | 9 | — | walk 4 | — |
 | 16 End-of-day cash-up | — | 4 | — | 2, 10 | — |
 | 17 Reports and accounts | — | 11 | — | 3, 5, 7, 11 | — |
 | 18 Website management | — | — | — | 4 | — |
 | 19 Multiple sites | — | — | — | 7, 11 | — |
 | 20 Management oversight | — | — | — | 7, 11 | — |
-| 21 Lightspeed shops | — | out of first build | — | out of first build | — |
+| 21 Lightspeed shops (after the trading week, build-plan question 5) | — | later | — | later | — |
 
-**12 empty cells.**
+**No empty cells (4 Oct).** The 12 empty cells found on 4 Oct were all
+walked on the clickable mockup the same day (`walk-4/`, one file per cell);
+"walk 4" marks a cell covered only by those walks. Three of them are now
+also covered by story steps the walks added (journey 1 × Jo in story 4,
+journey 2 × the Saturday worker in story 10, journey 4 × Jo in story 9).
+Jack's answers to their questions are in
+`docs/decisions/2026-10-04-coverage-walks.md`. The empty cells listed below
+are the ones found before those walks.
 
 ### Out of Release 2's first build
 

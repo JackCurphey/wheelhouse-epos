@@ -5,7 +5,7 @@
 // (keep / into / same / later), generator/mockup/stories.mjs (each step's
 // screen id and person), the build plan's AFTER-LS block (Lightspeed, after
 // the trading week).
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -16,6 +16,14 @@ const { journeys } = await imp('journeys.mjs');
 const { loadPlan, screens } = await imp('consolidate/plan.mjs');
 const { stories } = await imp('mockup/stories.mjs');
 const { plan } = await loadPlan();
+// The second source of evidence: the coverage walks (coverage-walks.mjs).
+// `--without <file>` leaves one out (to check it is what covers its cell);
+// COVERAGE_WALKS_DIR points at another folder (to check a missing file fails).
+const { coverageWalks, WALK_DIR } = await imp('coverage-walks.mjs');
+const without = process.argv.includes('--without') ? process.argv[process.argv.indexOf('--without') + 1] : null;
+const walkDir = process.env.COVERAGE_WALKS_DIR || join(repo, WALK_DIR);
+const missingWalks = coverageWalks.filter((w) => !existsSync(join(walkDir, w.file))).map((w) => w.file);
+if (missingWalks.length) { console.error(`coverage.mjs: listed coverage walk files are missing from ${walkDir}: ${missingWalks.join(', ')}`); process.exit(1); }
 
 const all = new Map(screens().map((s) => [s.id, s]));
 
@@ -68,7 +76,7 @@ const kept = [...all.values()].filter((s) => plan.get(s.id)?.kind === 'keep' && 
 const cells = {}; // journey → persona → { uses:Set(screen), strict:Set(story), lines:Set(story), lsOnly:Set(story) }
 for (const j of journeys) {
   cells[j.id] = {};
-  for (const p of P) cells[j.id][p] = { uses: new Set(), strict: new Set(), lines: new Set(), ls: new Set(), byEvidence: false };
+  for (const p of P) cells[j.id][p] = { uses: new Set(), strict: new Set(), lines: new Set(), ls: new Set(), walks: [], byEvidence: false };
 }
 for (const s of kept) for (const p of P) if (uses[p](s)) cells[s.journey][p].uses.add(s.id);
 
@@ -89,6 +97,14 @@ for (const st of stories) {
   }
 }
 
+for (const w of coverageWalks) {
+  if (w.file === without) continue;
+  const c = cells[w.journey]?.[w.person];
+  if (!c) { problems.push(`coverage walk ${w.file}: no cell ${w.journey} × ${w.person}`); continue; }
+  if (!c.uses.size) problems.push(`coverage walk ${w.file}: ${w.person} doesn't use ${w.journey}`);
+  c.walks.push(w.file);
+}
+
 const name = (j) => (j.num ? j.num : String(Number(j.id.slice(1))));
 const out = [];
 for (const j of journeys) {
@@ -102,6 +118,7 @@ for (const j of journeys) {
       stories: [...c.strict].sort((a, b) => a - b),
       linesOnly: [...c.lines].filter((n) => !c.strict.has(n)).sort((a, b) => a - b),
       lightspeedOnly: [...c.ls].sort((a, b) => a - b),
+      walks: c.walks,
       byEvidence: c.byEvidence,
     };
   }
@@ -117,6 +134,7 @@ for (const r of out) {
   const cellText = (c) => {
     if (!c.uses) return '—';
     if (r.out) return c.stories.length ? c.stories.join(', ') + ' (later)' : 'later';
+    if (!c.stories.length && c.walks.length) return 'walk 4';
     if (!c.stories.length) { empty++; return '**EMPTY**'; }
     return c.stories.join(', ');
   };
@@ -125,7 +143,7 @@ for (const r of out) {
 console.log(`\nEmpty cells: ${empty}`);
 for (const r of out) for (const p of P) {
   const c = r.cells[p];
-  if (c.uses && !r.out && !c.stories.length) console.log(`EMPTY ${r.num} ${r.name} × ${p}: screens ${c.screens.join(', ')}; situation lines only in stories [${c.linesOnly}]; Lightspeed-only steps [${c.lightspeedOnly}]`);
+  if (c.uses && !r.out && !c.stories.length && !c.walks.length) console.log(`EMPTY ${r.num} ${r.name} × ${p}: screens ${c.screens.join(', ')}; situation lines only in stories [${c.linesOnly}]; Lightspeed-only steps [${c.lightspeedOnly}]`);
   if (c.uses && !r.out && c.stories.length && c.linesOnly.length) console.log(`also lines ${r.num} × ${p}: [${c.linesOnly}]`);
   if (c.byEvidence) console.log(`note ${r.num} × ${p}: a story step adds a screen the role rule did not give this person`);
 }
