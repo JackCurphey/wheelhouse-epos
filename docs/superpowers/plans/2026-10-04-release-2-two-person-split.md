@@ -116,24 +116,32 @@ says which branch its routes run under (note: `/api/tills` and
 |---|---|---|
 | `server/lib/http.js` | `sendJson`, `notFound`, `badRequest`, `readJsonBody`, `readRawBody`, `parseCookies`, `makeRateLimiter`, `nowIso` | every area |
 | `server/lib/session.js` | `currentSession`, `currentCustomerSession` | auth, staff areas, portal |
-| `server/lib/sales.js` | `createSale`, `serializeSale`, `SALE_SELECT`, `resolveCashierId`, `loadDocumentLine`, the Shopify push helpers, **`pendingShopifyPushes`** | till, orders, customers, the Shopify webhook, shutdown |
+| `server/lib/sales.js` | `createSale`, `serializeSale`, `SALE_SELECT`, `resolveCashierId`, `loadDocumentLine`, the Shopify push helpers, **`pendingShopifyPushes`**, and with them `pendingPushSlotRequestStorage` and `runRequestWithPushSlotCleanup` (the push helpers read that store, so they move together; the dispatcher imports `runRequestWithPushSlotCleanup`) | till, orders, customers, the Shopify webhook, the dispatcher, shutdown |
 | `server/workshop/jobs.js` (Jack's area) | `checkJobSlot`, `createWorkshopJob`, `syncJobHold`, `withBookingLock`, `withJobBookingLock`, `applyLocked`, `resolveJobMechanicId`, `serializeWorkshopJob`, `WORKSHOP_JOB_SELECT`, `CLEAR_REQUEST`, `requestedOf`, `refusal`, `capacityRefusal`, `SLOT_GONE`, `sendQuoteResult`, `answerAndAddToOrder`, `loadCapacity`, `parseWorkingDays`, `toCapacitySettings`, `currentShopToday` | workshop and booking (and settings, sales, dashboard for the last three) |
 | `server/lib/serializers.js` | `serializeProduct`, `serializeBike` | products, stock, customers, booking |
 | the area's own route file | its rate limiters (auth: `loginLimiter`, `signupLimiter`; booking: the portal and booking-link limiters) and the print-agent maps (`printAgentsByShop`, `printJobsByDevice`, `printJobStatus`) | that area only |
-| stays in `server.js` | `pendingPushSlotRequestStorage`, `tillAuthFailures`, `shuttingDown`, `serverListening` | the dispatcher and shutdown |
+| stays in `server.js` | `tillAuthFailures`, `shuttingDown`, `serverListening` | the dispatcher and shutdown |
 
-`server/workshop/jobs.js` is in Jack's area but booking (Mark's) calls it,
-so it is one of the ownership exceptions to write down (#141). Nine test
+`server/workshop/jobs.js` is in Jack's area but Mark's areas call it:
+booking for most of it, and settings, sales and the dashboard for
+`parseWorkingDays`, `toCapacitySettings` and `currentShopToday`
+(`currentShopToday` at `server.js:1633` and 5283). It is one of the
+ownership exceptions to write down (#141). Nine test
 files import names from `server.js` (`createSale`, `pendingShopifyPushes`,
 `JOB_STATUSES` and others); `server.js` keeps re-exporting every one, so no
 test changes.
 
 **3. Registration, in a fixed order.** Each route file exports
 `register(route)`. `server/routes/index.js` holds the list of areas in one
-fixed order, and `server.js` calls each `register` in that order. The order
-is today's order of first appearance in `server.js`, so the route table
-comes out identical. Areas with no routes yet (Cycle to Work, the Citrus
-Lime import) get their file when their package lands.
+fixed order, and `server.js` calls each `register` in that order. Grouping
+by area **does change the table's order**, because areas are mixed together
+in `server.js` today (for example `POST /api/products/:id/photo` is at line
+3968, among the workshop routes, while the rest of products is at 659–790).
+That is safe only because no route shadows another today (no repeated
+method and path, and no pattern that matches another's path), so the proof
+in step 4 checks exactly that rather than the order. Areas with no routes
+yet (Cycle to Work, the Citrus Lime import) get their file when their
+package lands.
 
 **4. The proof: a route-list test** (`tests/route-list.test.js`), written
 and committed **before** anything moves:
@@ -142,8 +150,14 @@ and committed **before** anything moves:
   `listRoutes()`, returning `METHOD pattern` in table order.
 - A snapshot, `tests/fixtures/route-list.txt`, is generated from `main`
   before the move: 161 lines, including the 15 workshop actions.
-- The test requires `listRoutes()` to equal the snapshot exactly, in order.
-  It is watched failing first, by deleting one route and by swapping two.
+- The test requires `listRoutes()` to hold exactly the snapshot's routes,
+  no more and no fewer (compared as a set, since step 3 changes the order).
+- A second test requires that **no route shadows another**: for every pair
+  with the same method, neither pattern matches a path the other would
+  answer. That is what makes the order safe to change, now and as routes
+  are added.
+- Both are watched failing first: by deleting one route, and by adding a
+  route that an earlier one would shadow.
 - It must pass unchanged after every move pull request. Later packages
   that add routes update the snapshot in the same pull request, so every
   route change shows up in review.
@@ -153,8 +167,10 @@ and committed **before** anything moves:
 After the move it would find no routes and still print OK, and so would
 `tests/screen-trace.test.js`. It changes to read `server/server.js` plus
 every file in `server/routes/`, and it **fails if it finds no screen-tagged
-routes at all**, so an empty read can never pass. That failure is watched
-first, by pointing it at an empty folder.
+routes at all**, so an empty read can never pass. `tests/screen-trace.test.js`
+("the real server.js passes", line 48) changes the same way: it reads the
+same set of files, not `server.js` alone. Both failures are watched first,
+by pointing them at an empty folder.
 
 **6. Size.** The move is several pull requests, one or two areas each, every
 one with the route-list test passing. They run over the usual 250–600 line
@@ -172,11 +188,14 @@ second time (Codex review, finding 2). The rules close that:
 1. **Claim the number first.** Open a draft pull request containing the
    migration file *before* running it anywhere, even locally. Look at the
    other open pull requests first; if the number is taken, take the next one.
-2. **Renumber only on a throwaway database.** If a clash slips through,
-   whoever merges second renumbers, and only after dropping their local
-   database and rebuilding it from empty (`npm run migrate` on a scratch
-   database). A renamed file must never meet a database that ran its old
-   name.
+2. **Renumber only while the pull request is a draft, and only on a
+   throwaway database.** The server runs every migration each time it
+   starts (`server/server.js:6834`), so a draft is run only by its author,
+   on their own scratch database. To renumber, the author drops that
+   database and rebuilds it from empty. **Once the pull request leaves
+   draft, the number is frozen**: reviewers, the fresh review subagent and
+   other worktrees only ever run non-draft branches, so a renamed file can
+   never meet a database that ran its old name.
 3. **The hosted copy (WP-0.5) only ever runs merged migrations.** It deploys
    `main`, never a branch, so no unmerged name can reach it.
 4. **Once on `main`, a migration file's name never changes and the file is
@@ -184,8 +203,9 @@ second time (Codex review, finding 2). The rules close that:
 
 **Checks (in WP-0.4, Mark), each watched failing first:**
 
-- *No two files share a number.* Fails CI if two `.sql` files start with the
-  same three digits.
+- *No two files share a number.* Fails CI if a migration file the pull
+  request adds shares its three digits with any other file. Files already on
+  `main` are not re-checked (see the last point).
 - *Names on `main` are frozen.* Fails CI if a migration file that exists on
   `main` has been renamed, deleted or edited in the pull request.
 - *Upgrade from the previous `main`.* CI migrates a database at the pull
@@ -194,6 +214,17 @@ second time (Codex review, finding 2). The rules close that:
   other than the pull request's own new files. Today's CI only builds from
   empty (`.github/workflows/test.yml`, "Migrations are idempotent"), which
   can't see a rename.
+- *Checked against today's `main`, not an old one.* Each check above only
+  sees the pull request's base, so two pull requests that both add `039`
+  could each pass and both merge. `main` has no branch protection today
+  (4 Oct). WP-0.4 therefore turns on GitHub's "branches must be up to date
+  before merging" for `main`, so the checks always run against the latest
+  `main`. That is a repository setting: Mark asks Jack before changing it.
+  The checks also run on every push to `main`, as a backstop.
+- *If a clash reaches `main` anyway,* both files stay exactly as they are.
+  The runner tracks each file by its full name, so each still runs once,
+  in name order. Rule 4 holds; the next migration takes the next free
+  number.
 
 ### 4.3 The contract, before either half is built
 
@@ -255,9 +286,9 @@ merge. Recommended:
 - `decided-while-building.md` gets a section for each person, and each
   person appends only to their own.
 
-Agreed by Mark, 4 Oct (§8 answer 1). It changes a project rule (CLAUDE.md
-"Allowed without asking" item 7), so Jack has to agree too, and CLAUDE.md
-is updated in the same pull request as this plan.
+Agreed by Mark, 4 Oct (§8 answer 1), and by Jack, 4 Oct (§8 answer 6,
+issue #127). It changes a project rule (CLAUDE.md "Allowed without asking"
+item 7), so CLAUDE.md is updated in the same pull request as this plan.
 
 ## 6. Every work package, split
 
@@ -435,7 +466,7 @@ WP-0.1, merged on 3 Oct.)
 | # | Who | What | Waits for |
 |---|---|---|---|
 | 1 | Jack | WP-0.1: bring #110, #112 and #111 up to date with `main` (all three clash with it on 4 Oct), then merge them | nothing |
-| 2 | Mark | WP-0.2 server half: write its contract (§4.3), including the request key a retry repeats, then fix another shop's page on a subdomain, "today" at UTC midnight, the duplicate booking from a lost reply, and the `null` body error. It edits `server/server.js`, so it merges before WP-0.4 starts | nothing; can run alongside line 1 |
+| 2 | Mark | WP-0.2 server half: write its contract, including the request key a retry repeats (its types go in today's `src/lib/api/types.ts`, since the per-area files of §4.3 come with WP-0.4, which moves them), then fix another shop's page on a subdomain, "today" at UTC midnight, the duplicate booking from a lost reply, and the `null` body error. It edits `server/server.js`, so it merges before WP-0.4 starts | nothing; can run alongside line 1 |
 | 3 | Mark | WP-0.3: trim STATUS to 8 KB with §5's layout | nothing |
 | 4 | Mark | WP-0.4: route files (§4.1), per-area types files (§4.3), the migration checks (§4.2). Jack reviews | lines 1 and 2 merged: every open change to `server.js` is in before it moves |
 | 5 | Jack | WP-0.2 screens half: Back while "Sending…" keeps the private link; a retry sends the same request key | line 2 merged |
@@ -470,6 +501,8 @@ edits `server.js` while it moves.
 | One status pull request a day | Mark, 4 Oct, answer 1: avoids a conflict on most merges |
 | No building blocks ahead; stage 1's server order puts screens first; workshop pieces pulled forward | Mark, 4 Oct, answer 2: Jack should see progress and working software as early as possible |
 | Migrations keep their numbers; the second to merge renumbers; CI catches a clash | Mark, 4 Oct, answer 3 |
+| §4.2 after the fresh review: numbers frozen once out of draft; checks run against the latest `main` (branch must be up to date, asked of Jack first) and on every push to `main`; a clash that reaches `main` stays as it is | Fresh review, 4 Oct: two holes left in #128 (no branch protection; reviewers' servers run the branch's migrations on start) |
+| §4.1 after the fresh review: the route-list test compares as a set plus a no-shadowing check; the push-tracking store moves with the push helpers; the screen-trace test follows the script | Fresh review, 4 Oct: grouping by area reorders the table (e.g. line 3968); `sales.js` and `server.js` would import each other |
 | §4.2: claim a number with a draft pull request before running it; renumber only on a rebuilt throwaway database; names on `main` frozen; CI upgrades from the previous `main` | Codex finding 2 (issue #128): the runner tracks files by name, so a renamed file runs twice |
 | Project rules changed to match: two lanes, one status pull request a day | Jack, 4 Oct (issue #127, option 1) |
 | §4.1 design for WP-0.4: dispatcher and calling conventions stay put, shared helpers to `server/lib/*` and `server/workshop/jobs.js`, fixed registration order, a 161-route list test written before the move, screen-trace check reads the route files and fails on an empty read | Codex finding 3 (issue #129): shared helpers and state, three calling conventions, and a check that would pass with nothing to check |

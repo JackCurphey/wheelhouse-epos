@@ -18,7 +18,7 @@ request (`CLAUDE.md`, rule 7).
 **The build has not started:** stage 0 begins once those four are fixed and
 Jack says so.
 
-**Updated:** 2026-10-02. **Merged to `main`:** #90, #91, #92 (names), #93
+**Earlier (2 Oct, kept until WP-0.3 trims this file; the branch named next is old):** **Merged to `main`:** #90, #91, #92 (names), #93
 (Fjell design system). **Current branch:** `feat/workshop-diary-design` (not
 pushed, no PR yet) — the Workshop day redesign drawings and Jack's decisions.
 
