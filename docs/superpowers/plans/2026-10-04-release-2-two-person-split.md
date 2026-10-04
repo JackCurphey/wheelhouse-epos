@@ -323,8 +323,11 @@ Q2, so Jack has to agree (§8).
 4. **The workshop as Jack's full-stack area.** Mark, 4 Oct: yes.
 5. **Hosting and infrastructure.** Mark, 4 Oct: Mark's, all of it,
    including the hosted copy for Jack (WP-0.5).
-6. **Open, for Jack:** agree to §5's change to the project rules and §7.2's
-   change to the build order.
+6. **For Jack:** agree to §5's change to the project rules and §7.2's
+   change to the build order. Jack, 4 Oct (issue #127): **agrees to §5**
+   (one status pull request a day) **and to working in two lanes** (§3, §4);
+   `CLAUDE.md` and the top of `.agents/STATUS.md` now say the same. §7.2's
+   change to the build order is still open.
 
 ## 9. The first week, concretely
 
@@ -353,4 +356,5 @@ Q2, so Jack has to agree (§8).
 | One status pull request a day | Mark, 4 Oct, answer 1: avoids a conflict on most merges |
 | No building blocks ahead; stage 1's server order puts screens first; workshop pieces pulled forward | Mark, 4 Oct, answer 2: Jack should see progress and working software as early as possible |
 | Migrations keep their numbers; the second to merge renumbers; CI catches a clash | Mark, 4 Oct, answer 3 |
+| Project rules changed to match: two lanes, one status pull request a day | Jack, 4 Oct (issue #127, option 1) |
 | Hosting and infrastructure are Mark's, and a hosted copy comes in stage 0 | Mark, 4 Oct: "assign the hosting and infra to me"; Jack sees each merge without running the app |

@@ -6,6 +6,18 @@ live"). Each entry gives the screen id, what was decided and the pattern it
 followed. Jack can overrule any of them; nothing here reopens a recorded
 decision.
 
+From the Release 2 build on, Mark's sessions append under "Mark's lane" and
+Jack's under "Jack's lane", so the two never edit the same spot (split plan
+§5). Everything before the build stays where it is, below.
+
+## Mark's lane
+
+(Nothing yet.)
+
+## Jack's lane
+
+(Nothing yet.)
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
