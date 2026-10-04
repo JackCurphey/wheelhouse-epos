@@ -170,3 +170,18 @@ test('the legend names each colour', async () => {
   const legend = within(ui.getByRole('list', { name: 'What the colours mean' }));
   for (const label of ['Expected, booked in or in the workshop', 'Pending', 'Quoting', 'Change requested', 'Waiting for parts', 'Finished', 'Cancelled']) assert.ok(has(legend.queryByText(label)), label);
 });
+
+// Follow-up to #112 (its fresh review, finding 5): a job chosen from Waiting
+// for you stays marked when it sits in a stack.
+test('a chosen job in a stack marks the stack', async () => {
+  NEXT_WEEK.push(job({ id: 8, reference: 'WH-1008', title: 'Puncture repair', bikeLabel: 'Brompton', customerName: 'Sam Reed', jobDate: '2026-10-14', startTime: '11:00', endTime: '11:30' }));
+  try {
+    const { ui, fireEvent, within } = await openDiary();
+    fireEvent.click(within(ui.getByRole('region', { name: 'Waiting for you (2)' })).getByRole('button', { name: /Lena Fox/ }));
+    const stack = await ui.findByRole('button', { name: /^2 jobs booked 11:00 to 12:00/ });
+    assert.ok(stack.getAttribute('aria-label').endsWith(', chosen from Waiting for you'));
+    assert.ok(stack.className.includes('var(--wh-highlight)'), 'the chosen outline shows');
+  } finally {
+    NEXT_WEEK.pop();
+  }
+});
