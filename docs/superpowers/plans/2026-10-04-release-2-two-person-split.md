@@ -189,7 +189,14 @@ second time (Codex review, finding 2). The rules close that:
    worktree's `.env` names its own database on the compose Postgres (port
    5433), and a review (Jack's, or the fresh review subagent's) builds a
    fresh one from empty. So the only databases that ever run an unmerged
-   migration are throwaway ones.
+   migration are throwaway ones. The app's database role can't create
+   databases (`docker/init-db.sh:17`), so WP-0.4 adds a small helper,
+   `scripts/new-db.sh <name>`: as the compose superuser it creates the
+   database and grants `epos_app` the same rights `init-db.sh` does, and
+   the worktree's `DATABASE_URL` (read by `server/db.js:41`) then points at
+   it. Its proof: `npm run migrate` and `scripts/ci/assert-rls-coverage.mjs`
+   pass on a database it made, so row-level security works there as it
+   does on `epos`.
 2. **Take the next free number and claim it.** The number must be higher
    than every migration on `main`. Open a draft pull request containing the
    file before running it anywhere, and check the other open pull requests;
@@ -470,7 +477,7 @@ WP-0.1, merged on 3 Oct.)
 | 1 | Jack | WP-0.1: bring #110, #112 and #111 up to date with `main` (all three clash with it on 4 Oct), then merge them | nothing |
 | 2 | Mark | WP-0.2 server half: write its contract, including the request key a retry repeats (its types go in today's `src/lib/api/types.ts`, since the per-area files of §4.3 come with WP-0.4, which moves them), then fix another shop's page on a subdomain, "today" at UTC midnight, the duplicate booking from a lost reply, and the `null` body error. It edits `server/server.js`, so it merges before WP-0.4 starts | nothing; can run alongside line 1 |
 | 3 | Mark | WP-0.3: trim STATUS to 8 KB with §5's layout | nothing |
-| 4 | Mark | WP-0.4: route files (§4.1), per-area types files (§4.3), the migration checks (§4.2). Jack reviews | lines 1 and 2 merged: every open change to `server.js` is in before it moves |
+| 4 | Mark | WP-0.4: route files (§4.1), per-area types files (§4.3), the migration checks and `scripts/new-db.sh` (§4.2), and, once Jack says yes, the `main` setting that stage 1 waits for (§4.2). Jack reviews | lines 1 and 2 merged: every open change to `server.js` is in before it moves |
 | 5 | Jack | WP-0.2 screens half: Back while "Sending…" keeps the private link; a retry sends the same request key | line 2 merged |
 | 6 | Mark | WP-0.5: the hosted copy | line 4 merged |
 | 7 | Jack | Stage 0's stage check: the journeys stage 0 touches (booking, and the till and diary from #110–#112) walked in the real app (build plan §2) | lines 1–6 merged |
