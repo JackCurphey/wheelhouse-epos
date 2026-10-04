@@ -78,6 +78,22 @@ No database change.
   services don't yet, so a single figure would be a guess.
 - Each part of a split is saved together at the end, not "as it goes".
 
+## Left for WP-3.1 (the till, complete)
+
+The fresh review of #111 (4 Oct) found these differences from the drawings
+and decisions. Each is part of WP-3.1, which builds the payment steps to
+the drawings, so none was changed here:
+
+- The till bar's "Serving: …" (decision A13); who's serving shows only
+  inside Take payment for now.
+- Split records each part as it goes (`till-pay-split`); here the cash and
+  card parts are saved together when the card is approved.
+- Split is a small button in a row with Gift card, On account and Deposit;
+  here it's a full-width button.
+- "Cash taken · open the drawer", and the linked card machine (decision 6,
+  #138); here the card amount is keyed in by hand.
+- Back from the card step of a split clears the typed cash part.
+
 ## Tests first
 
 - Server (`tests/till-sale-server.test.js`):

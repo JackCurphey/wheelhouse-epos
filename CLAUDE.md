@@ -21,9 +21,9 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
    takes the screens and the whole workshop. Each file has one owner (split
    plan §3); a pull request touching the other person's files needs their
    approval.
-4. **The build has not been started.** Mark has reviewed the plan (4 Oct).
-   Stage 0 starts once the four blockers in issue #142 are fixed and Jack
-   says so in chat.
+4. **The build has started** (Jack, 4 Oct). Take the next piece in your
+   lane in the split plan's §9 order; stage 0 closes, with its stage check,
+   before stage 1 starts.
 
 ## Where things live
 
