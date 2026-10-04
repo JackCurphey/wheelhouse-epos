@@ -4,9 +4,25 @@
     {
       "name": "workshop-local",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["server/server.js"],
-      "env": { "PORT": "8090" },
+      "runtimeArgs": [
+        "server/server.js"
+      ],
+      "env": {
+        "PORT": "8090"
+      },
       "port": 8090
+    },
+    {
+      "name": "mockup",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8099",
+        "--directory",
+        "docs/design/user-journeys/generator/out-mockup"
+      ],
+      "port": 8099
     }
   ]
 }

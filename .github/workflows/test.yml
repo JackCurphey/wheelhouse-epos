@@ -122,6 +122,31 @@ jobs:
             exit 1
           fi
 
+      # ---------- User-journey drawings (issue #116) ----------
+
+      # The Release 2 drawings, the one canvas, the clickable mockup and the
+      # build plan are generated from docs/design/user-journeys/generator/.
+      # Until now their checks ran only on someone's machine. Each was seen
+      # failing on purpose before it was added here (3 Oct): a mockup link to
+      # a screen that doesn't exist fails the mockup tests, a wrong building
+      # block fails the consolidation tests, and a board too small for its
+      # page fails fitcheck-canvas (run later, once Chromium is installed).
+      - name: Build the journey drawings and the one canvas
+        working-directory: docs/design/user-journeys/generator
+        run: node build.mjs
+
+      - name: Check the one-canvas plan and the build plan's coverage
+        working-directory: docs/design/user-journeys/generator
+        run: node --test 'consolidate/*.test.mjs'
+
+      - name: Build the clickable mockup (fails on a button with no target)
+        working-directory: docs/design/user-journeys/generator
+        run: node mockup/build-mockup.mjs
+
+      - name: Check every mockup link and every story at every size
+        working-directory: docs/design/user-journeys/generator
+        run: node --test 'mockup/*.test.mjs'
+
       # ---------- Screen-design traceability ----------
 
       # The Release 1 design's one rule for the API layer: every workshop
@@ -151,6 +176,11 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Journey tests
         run: npm run test:browser
+
+      # Needs the Chromium installed above and the canvas built earlier.
+      - name: Check every board on the one canvas fits
+        working-directory: docs/design/user-journeys/generator
+        run: node fitcheck-canvas.mjs
 
       # A second migrate must be a no-op. run-migrations.js skips anything
       # already recorded in schema_migrations, so re-applying means a

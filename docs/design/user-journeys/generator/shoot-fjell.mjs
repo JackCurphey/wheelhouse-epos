@@ -1,6 +1,6 @@
 // Re-renders every Release 1 screen design with the Fjell tokens swapped in.
-import { chromium } from '/Users/jackcurphey/wheelhouse-epos/node_modules/playwright/index.mjs';
-const atlas = 'file:///Users/jackcurphey/wheelhouse-epos/docs/design/release-1-journey/Wheelhouse-Release-1-Screen-Designs.html';
+import { chromium } from '@playwright/test';
+const atlas = new URL('../../release-1-journey/Wheelhouse-Release-1-Screen-Designs.html', import.meta.url).href;
 const out = new URL('./shots-fjell/', import.meta.url).pathname;
 // old colour -> Fjell token
 const MAP = {

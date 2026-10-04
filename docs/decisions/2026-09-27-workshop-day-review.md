@@ -397,3 +397,5 @@ switcher in the sidebar is named "Shop: Bolton. Choose a shop" (with its open
 state) for screen readers, and on tablet and phone — where the switcher is out
 of sight — the shop's name, "North Street Cycles · Bolton", sits in small type
 under each staff page's title. Nothing else on these boards changed.
+
+**Later change (3 Oct 2026, third walk, taken without a question, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** following Jack's 3 Oct "yes you can go ahead and make some text bigger", the desktop diary's block text is at least 12px. A block too short for two lines shows only the bike; the service is in the hover summary and the quick look. Other jobs' blocks no longer use Maya Patel's name. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.

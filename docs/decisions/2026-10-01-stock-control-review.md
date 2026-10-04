@@ -145,3 +145,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (1 Oct 2026, Buy online decision 10):** a product’s page shows "Show on website: On · as [Category]" under Price and cost (Buy online decision 3).
 
 **Later change (2 Oct 2026, Cycle to Work decision 7, audit M4):** the bike page's "Bikes by frame number" shows one frame "Held for [Customer] until [date] · Cycle to Work — not for sale". The sidebar on every board has the new Front desk › Cycle to Work item.
+
+**Later change (3 Oct 2026, walk-through 9 M2, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". A product row in the search shows its price and "[n] in stock here · [n] at [Second site]", for everyone, Staff included. This settles that Staff see the other shop's count (the product page's "stock at each shop" line was marked Manager without a decision). Chosen over price and this shop's count only. A line on the search's situation list; not drawn yet.

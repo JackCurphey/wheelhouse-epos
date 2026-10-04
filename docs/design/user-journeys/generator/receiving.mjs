@@ -14,7 +14,7 @@
 // supplier, cost, count and date is a bracketed placeholder.
 import { C, MONO, esc, icon, button, card } from './ui.mjs';
 import { page, note, popup, overlay, withSize, isPhone, MANAGER, settingsPage, rowSwitch, stockFolds, STOCK_INTRO } from './settings-frame.mjs';
-import { PART_PROBLEM_TITLES, screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, tabletDiary, phoneDiary, TODAY, overviewAt } from './diary.mjs';
+import { PART_PROBLEM_TITLES, screens as diaryScreens, withPartArrived, buildDiaryDesktopBoard, buildJobPageDesktop, LINES_APPROVED, tabletDiary, phoneDiary, TODAY, overviewAt } from './diary.mjs';
 import { today } from './opening.mjs';
 
 export const screens = {};
@@ -83,10 +83,11 @@ ${section('Orders', empty
       line('[Supplier 2] · [n] lines', 'Draft · not ordered yet', `${tag('Draft', 'grey')}${link('Open', 'Open the draft order for [Supplier 2]')}`),
     ]), button('+ New order', { variant: 'default' }))}`}
 ${section('Recent deliveries', list(empty
-    ? [line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', `${staff ? '' : tag('Waiting for invoice', 'grey')}${link('Open', 'Open the delivery from [Supplier], [date]')}`)]
+    ? [line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', link('Open', 'Open the delivery from [Supplier], [date]'))]
     : [
-      line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', `${staff ? '' : tag('Waiting for invoice', 'grey')}${link('Open', 'Open the delivery from [Supplier], [date]')}`),
-      line('[Supplier 2] · [n] items', 'Booked in [date] by Jo Taylor', `${staff ? '' : tag('Invoice checked')}${link('Open', 'Open the delivery from [Supplier 2], [date]')}`),
+      // Issue #116 question 6: the invoice check is later, so no invoice tags.
+      line('[Supplier] · [n] items', 'Booked in [date] by Jack Lewis', link('Open', 'Open the delivery from [Supplier], [date]')),
+      line('[Supplier 2] · [n] items', 'Booked in [date] by Jo Taylor', link('Open', 'Open the delivery from [Supplier 2], [date]')),
     ]))}
 ${staff ? note('Orders, returns and the restock list are for people who can order stock.') : ''}`, staff ? JO : MANAGER, false);
 
@@ -140,7 +141,6 @@ const detailField = (id, label, value, unit = '') => `<div style="display: flex;
 // UX walk-through 3 M3: opened from "Products to add", for one Staff left on a
 // delivery — adding it counts it into stock and offers its label.
 const addProduct = (left = false) => popup('add-title', 'Add this product', left ? `Barcode ${'[barcode]'} · left by Jo Taylor on the delivery from [Supplier 2]` : `Barcode ${'[barcode]'} · not in Wheelhouse yet`, `
-<div style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px">${icon('search', 16)}<span style="flex-grow: 1">Look it up in a supplier’s catalogue to fill this in</span>${linkBtn('Find it', 'Find it in a supplier’s catalogue')}</div>
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr' : 'minmax(0, 2fr) minmax(0, 1fr)'}; gap: 12px">${fieldRow('ap-name', 'Name', '[Bearing]')}${fieldRow('ap-code', 'Supplier code', '[code]')}</div>
 <div style="display: grid; grid-template-columns: ${isPhone() ? '1fr 1fr' : 'repeat(3, minmax(0, 1fr))'}; gap: 12px">${fieldRow('ap-cost', 'Cost', '£[cost]')}${fieldRow('ap-price', 'Price', '£[price]')}${fieldRow('ap-low', 'Low-stock level', '[n]')}</div>
 <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${C.border}"><div style="display: flex; flex-direction: column; gap: 6px"><label for="ap-cat" style="font-size: 14px; font-weight: 600">Category</label><select id="ap-cat" style="min-height: 44px; padding: 0 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}"><option>Bearings</option></select></div>
@@ -158,7 +158,7 @@ ${dup ? `<div role="alert" style="display: flex; align-items: flex-start; gap: 8
 ${c2w ? note('This frame becomes the frame on Maya Patel’s Cycle to Work order. It’s held for her — not for sale — and the till picks it when she collects.') : note('Each bike is then known by its frame number — the till picks it at the sale, and its warranty starts from the right bike.')}`, `${button('Cancel', { variant: 'default' })}${button('Count this bike')}`, 560);
 
 // After Book in (audit M10): what happened, then the next steps — labels
-// first when any are due, and the invoice for people who can order stock.
+// first when any are due (the invoice check is later: issue #116 question 6).
 // UX walk-through 3 H1 (option 1): booking in holds what the job is waiting
 // for, until it's used on the job or the job is cancelled.
 // UX walk-through 3 M2: `jobShort` — the job's pads came damaged, so the job
@@ -183,7 +183,7 @@ ${list([
     ? line(`${mono('[n]')} still to come on the order`, '[Supplier] · ordered [date]')
     : line(`${mono('[n]')} still to come on the order`, '[Supplier] · ordered [date]', link('Open the order', 'Open the order from [Supplier]')),
 ])}
-<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px">${staff ? button('Receive another delivery', { variant: 'default' }) : `${button('Print labels')}${button('Add the invoice', { variant: 'default' })}${button('Receive another delivery', { variant: 'default' })}`}</div>`)}`, staff ? JO : MANAGER);
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px">${staff ? button('Receive another delivery', { variant: 'default' }) : `${button('Print labels')}${button('Receive another delivery', { variant: 'default' })}`}</div>`)}`, staff ? JO : MANAGER);
 
 // ---------- Decision 6: a quick invoice check (a settings switch) ----------
 // The invoice total before VAT is compared with the cost of what was booked
@@ -213,7 +213,7 @@ const INVOICE = {
 const deliveryBoard = (state = 'waiting', { staff = false, problems = false } = {}) => stockPage('Delivery', `${section('[Supplier] · [n] items', `<span style="font-size: 14px; color: ${C.muted}">Booked in [date] by Jack Lewis</span>${deliveryLines(staff)}
 ${staff ? '' : `<div style="display: flex; justify-content: space-between; gap: 10px; padding-top: 6px; font-size: 15px"><span>Booked-in cost, before VAT</span>${mono('£[y]', 'font-size: 16px; font-weight: 700')}</div>`}
 ${problems ? setAside(staff) : ''}`)}
-${staff ? note('Costs and the invoice are for people who can order stock.') : section('Invoice', INVOICE[state][1](), INVOICE[state][0])}`, staff ? JO : MANAGER);
+${staff ? note('Costs are for people who can order stock.') : state ? section('Invoice', INVOICE[state][1](), INVOICE[state][0]) : ''}`, staff ? JO : MANAGER);
 // UX walk-through 3 M6 (option 1): "Accept the difference" asks one optional
 // question, so a cost the supplier put up reaches the product (and margin and
 // stock value). The check itself stays totals only (decision 6).
@@ -334,13 +334,46 @@ def('rs-labels', () => overlay(bookedBoard(), labelsPopup()));
 def('rs-receive-c2w', () => receiveBoard('c2w', JO));
 def('rs-frame-c2w', () => overlay(receiveBoard('c2w', JO), framePopup(false, true)));
 def('rs-booked-c2w', () => bookedBoard({ staff: true, c2w: true }));
-def('rs-job-arrived', () => diaryScreens['job-part-arrived'][SIZE]);
+// Walk-through 3 L1 (third walk): the diary behind the job shows WH-1042 as
+// rs-diary-arrived does (Waiting for parts, part arrived, Sat 16:00–17:30),
+// not journey 12's Thursday 11:30 block. diary.mjs builds job-part-arrived
+// over its plain frozen diary, so the backdrop is drawn twice from the same
+// exported builders, outside and inside withPartArrived, and the part that
+// differs is swapped into the job page. The phone job page has no diary behind.
+// diary.mjs numbers each hover lane and stack (wh-lane-<size>-<n>, wh-stack-…) from a running
+// count, so each copy is first renumbered to start where the job page's do.
+const LANE = /(wh-[a-z]+-(?:desktop|tablet)-)(\d+)/g;
+const firstLane = (x) => Math.min(...[...x.matchAll(LANE)].map((m) => +m[2]));
+const shiftLanes = (x, to) => { const d = to - firstLane(x); return x.replace(LANE, (_, name, n) => `${name}${+n + d}`); };
+const swapBackdrop = (html, before, after) => {
+  const start = firstLane(html);
+  before = shiftLanes(before, start); after = shiftLanes(after, start);
+  if (before === after) throw new Error('rs-job-arrived: withPartArrived changed nothing in the diary');
+  let i = 0; while (before[i] === after[i]) i++;
+  let j = 0; while (j < before.length - i && before[before.length - 1 - j] === after[after.length - 1 - j]) j++;
+  const from = before.slice(i, before.length - j), to = after.slice(i, after.length - j);
+  const at = html.indexOf(from);
+  if (at < 0 || html.indexOf(from, at + 1) >= 0) throw new Error('rs-job-arrived: the diary behind the job page is not the one expected');
+  return html.slice(0, at) + to + html.slice(at + from.length);
+};
+const jobArrivedBackdrop = () => {
+  const html = diaryScreens['job-part-arrived'][SIZE];
+  if (SIZE === 'desktop') {
+    const bare = () => buildJobPageDesktop({ status: 'Waiting for parts', tone: 'amber', leftStatus: 'Waiting for parts', bikeHere: true, customerTexts: [], staffTexts: [], checkedCount: 0, notedCount: 0, lines: LINES_APPROVED, totalLabel: '', totalValue: 0, footer: '' });
+    return swapBackdrop(html, bare(), withPartArrived('WH-1042', bare));
+  }
+  if (SIZE === 'tablet') return swapBackdrop(html, tabletDiary({ highlightJob: null }), withPartArrived('WH-1042', () => tabletDiary({ highlightJob: null })));
+  return html;
+};
+def('rs-job-arrived', () => jobArrivedBackdrop());
 // UX walk-through 3 H1, M2: the job when its part doesn't arrive as planned.
 for (const id of ['job-part-sold', 'job-part-missing', 'job-part-damaged', 'job-part-order-closed']) def('rs-' + id.slice(4), () => diaryScreens[id][SIZE]);
 // Audit H1: the badge on the diary block and the Overview row too.
 def('rs-diary-arrived', () => withPartArrived('WH-1042', () => (SIZE === 'desktop' ? buildDiaryDesktopBoard() : SIZE === 'tablet' ? tabletDiary() : phoneDiary({ day: TODAY, mode: 'everyone' }))));
 def('rs-overview-arrived', () => withPartArrived('WH-1042', () => overviewAt(SIZE)));
-def('rs-delivery', () => deliveryBoard('waiting', { problems: true }));
+// Issue #116 question 6: the invoice check is later, so the booked-in
+// delivery has no Invoice section (state null).
+def('rs-delivery', () => deliveryBoard(null, { problems: true }));
 def('rs-invoice', () => overlay(deliveryBoard('waiting', { problems: true }), invoicePopup()));
 def('rs-invoice-checked', () => deliveryBoard('checked'));
 def('rs-invoice-diff', () => deliveryBoard('diff', { problems: true }));
@@ -381,7 +414,7 @@ export const TITLES = {
   'rs-add-left': 'Adding the product Jo left: it counts into stock, then its label',
   'rs-today-to-add': 'Today: a product left on a delivery, to add',
   'rs-booked': 'Delivery booked in: one held for the waiting job, what’s next',
-  'rs-booked-staff': 'Delivery booked in, as Staff see it: labels first, no invoice',
+  'rs-booked-staff': 'Delivery booked in, as Staff see it: labels first',
   'rs-booked-job-waiting': 'Booked in without the job’s part: the job is still waiting',
   'rs-labels': 'Print labels: only what needs one',
   // UX walk-through 5 M2.
@@ -395,14 +428,14 @@ export const TITLES = {
   'rs-part-order-closed': PART_PROBLEM_TITLES['job-part-order-closed'],
   'rs-diary-arrived': 'The diary: “Part arrived” on the job’s block',
   'rs-overview-arrived': 'Workshop Overview: “Part arrived” on the job’s row',
-  'rs-delivery': 'A booked-in delivery, waiting for its invoice',
+  'rs-delivery': 'A booked-in delivery',
   'rs-invoice': 'Add the invoice: its total against what was booked in',
   'rs-invoice-checked': 'The invoice matches: checked',
   'rs-invoice-diff': 'The invoice doesn’t match: the difference, to query',
   'rs-invoice-cost': 'Accept the difference: did a cost go up?',
   'rs-invoice-queried': 'Queried with the supplier',
   'rs-invoice-accepted': 'The difference accepted, with Undo',
-  'rs-delivery-staff': 'A delivery, as Staff and mechanics see it: no costs, no invoice — where the job’s “booked in” link goes for them',
+  'rs-delivery-staff': 'A delivery, as Staff and mechanics see it: no costs — where the job’s “booked in” link goes for them',
   'rs-invoice-setting': 'Settings › Stockroom: the invoice check, on or off',
   'rs-order': 'A purchase order, built by hand',
   'rs-order-ordered': 'An order, partly delivered: receive against it, or close it',

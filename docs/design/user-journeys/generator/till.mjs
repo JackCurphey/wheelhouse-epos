@@ -10,7 +10,7 @@
 import { C, MONO, esc, icon, button, card, field, badge } from './ui.mjs';
 import { DW, DH, PW, PH } from './stage1.mjs';
 import { foldedRail, tillBar, tillPhoneBar } from './app-map.mjs';
-import { LINES_APPROVED, WORK_TOTAL_APPROVED, TW, TH } from './diary.mjs';
+import { LINES_APPROVED, WORK_TOTAL_APPROVED, TW, TH, STORAGE, barcode128 } from './diary.mjs';
 
 const mono = (t, extra = '') => `<span style="font-family: ${MONO}; ${extra}">${esc(t)}</span>`;
 const money = (n) => `£${n.toFixed(2)}`;
@@ -81,10 +81,11 @@ const signed = (n) => (n < 0 ? `−${money(-n)}` : money(n));
 const line = (l) => `<div style="display: flex; flex-direction: column; gap: 6px; padding: 9px 0; border-top: 1px solid ${C.border}">
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="#" style="display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: ${C.ink}"><span style="font-size: 15px; font-weight: 600">${esc(l.name)}</span><span style="font-size: 13px; color: ${C.muted}">${esc(l.sub)}</span></a>${mono(l.priceText ?? signed(l.price * l.qty), 'font-size: 16px; white-space: nowrap')}</div>
 ${l.fixed ? '' : `<div style="display: flex; align-items: center; justify-content: space-between">${stepper(l.qty, l.name)}<span style="font-size: 13px; color: ${C.muted}">${l.qty > 1 ? `${money(l.price)} each` : ''}</span></div>`}
-${l.warn ? `<span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 13px; font-weight: 600">${icon('alert', 14)}${esc(l.warn)}</span>` : ''}
+${l.warn ? `<span role="status" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 13px; font-weight: 600">${icon('alert', 14)}${esc(l.warn)}</span>` : ''}
 </div>`;
 // UX walk-through 2 M6: a line can carry a warning that doesn't block the
-// sale, like "Stock says 0 — sold anyway" (decision 5).
+// sale, like "Stock says 0 — sold anyway" (decision 5). The warning is
+// announced (role="status"; walk-through 3 M6, second walk).
 // UX walk-through 2 M11: `discount` ({ reason, amount }) draws the whole-sale
 // discount as a row above the total, and the total and Take payment drop.
 // UX walk-through 5 H1: a line's `priceText` and the basket's `totalText`
@@ -130,8 +131,9 @@ def('till-sale', () => tillPage(leftSide(), basket([PADS, BRAKES])));
 def('till-held', () => tillPage(leftSide(), basket([{ ...PADS, warn: '[n] held for online orders — sold anyway' }, BRAKES], { full: true })));
 // UX walk-through 3 H1 (option 1): one of the pads is held for job WH-1042,
 // since it was booked in for it. Same rule as online orders: warned, never
-// blocked (decision 5).
-def('till-held-job', () => tillPage(leftSide(), basket([{ ...PADS, warn: '1 held for job WH-1042 — sold anyway' }, BRAKES], { full: true })));
+// blocked (decision 5). The warning says what selling costs (walk-through 3
+// M6, second walk).
+def('till-held-job', () => tillPage(leftSide(), basket([{ ...PADS, warn: '1 held for job WH-1042 — selling it leaves Maya\'s job waiting for parts' }, BRAKES], { full: true })));
 
 // Decision 3: tap a basket line → a pop-up in the middle with price,
 // discount (amount or percent, with a reason), a note, and Remove.
@@ -172,7 +174,7 @@ const overTill = (d, lines = [PADS, BRAKES]) => overlay(() => tillPage(leftSide(
 const custRow = (name, sub) => `<a href="#" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; box-sizing: border-box; padding: 8px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: ${C.panel}; text-decoration: none; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${sub}</span></span><span style="font-size: 13px; font-weight: 600">Add to sale</span></a>`;
 def('till-customer', () => overTill(dialog('cust-title', 'Add a customer', 'Optional — for a receipt by email, an account, or their bike history', `
 <label style="display: flex; align-items: center; gap: 10px; min-height: 48px; box-sizing: border-box; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 18)}<input type="search" aria-label="Search customers by name, phone or email" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 15px; color: ${C.ink}"></label>
-${custRow('Maya Patel', 'maya@example.com · Trek Domane AL 3')}
+${custRow('Maya Patel', 'maya@example.test · Trek Domane AL 3')}
 <div style="padding-top: 14px; border-top: 1px solid ${C.border}; display: flex; flex-direction: column; gap: 12px"><span style="font-size: 14px; font-weight: 700">Or add someone new</span>
 <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px">${field('Name', { placeholder: 'First and last name' })}${field('Phone or email', { placeholder: 'Either is fine' })}</div>
 ${button('Add new customer to sale', { variant: 'default', block: true })}</div>`, '')));
@@ -278,6 +280,15 @@ def('till-receipt', () => overTill(dialog('paid-title', 'Paid', `Card · ${money
 <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 0 4px; text-align: center"><span style="display: inline-flex; width: 64px; height: 64px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 32)}</span>${mono(money(TOTAL), 'font-size: 30px')}</div>
 <div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('mail', 'Email')}${rcptBtn('phone', 'Text')}${rcptBtn('close', 'No receipt', true)}</div>
 <p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)));
+// UX walk-through 2 H1 (third walk, 3 Oct): the discounted sale paid in two
+// parts (till-split-discounted, then the card) ends on its own Paid box, over
+// the discounted basket: £70.00, Cash £20.00 and Card £50.00. The same receipt
+// choices as till-receipt.
+def('till-receipt-split', () => overDiscounted(dialog('paid-title', 'Paid', `${money(70)} · Cash ${money(20)} · Card ${money(50)} · receipt ${mono('B1-[0000]')}`, `
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 0 4px; text-align: center"><span style="display: inline-flex; width: 64px; height: 64px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.okBg}; color: ${C.successInk}">${icon('check', 32)}</span>${mono(money(70), 'font-size: 30px')}</div>
+<div style="display: flex; flex-direction: column">${paidRow('Cash', money(20))}${paidRow('Card', money(50))}</div>
+<div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('mail', 'Email')}${rcptBtn('phone', 'Text')}${rcptBtn('close', 'No receipt', true)}</div>
+<p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)));
 
 // ---------- Other ways to pay (decision 8) ----------
 // Balances, limits and point values are placeholders — nothing real exists.
@@ -331,7 +342,7 @@ ${listRow(`${mono('B1-[0000]')} · [No customer]`, '[time] · [n] items · cash 
 def('till-find-customer', () => overTill(dialog('findc-title', 'Past sales · find the customer', 'Pick the customer, then the sale', `
 <a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}"><span style="display: inline-flex; transform: rotate(90deg)">${icon('chevron', 16)}</span>Back to today’s sales</a>
 <label style="display: flex; align-items: center; gap: 10px; min-height: 52px; box-sizing: border-box; padding: 0 14px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}; color: ${C.muted}">${icon('search', 20)}<input type="search" aria-label="Search customers by name, phone or email" value="maya" style="flex-grow: 1; min-width: 0; border: 0; background: transparent; font-family: inherit; font-size: 16px; color: ${C.ink}"></label>
-<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}">${icon('user', 18)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">maya@example.com · Trek Domane AL 3</span></span><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Change</a></div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid ${C.ink}; border-radius: 8px; background: ${C.panel}">${icon('user', 18)}<span style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1"><span style="font-size: 15px; font-weight: 600">Maya Patel</span><span style="font-size: 13px; color: ${C.muted}">maya@example.test · Trek Domane AL 3</span></span><a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">Change</a></div>
 <div style="display: flex; flex-direction: column"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: ${C.muted}; padding-bottom: 6px">Maya Patel’s sales</div>
 ${listRow(`${mono('B1-[0000]')} · 3 items`, '[date] · card · Jo Taylor', money(TOTAL), button('Refund', { variant: 'default' }))}
 ${listRow(`${mono('[Till]-[0000]')} · [n] items`, '[date] · [way paid] · [name]', '[£ total]', button('Refund', { variant: 'default' }))}</div>`, '', 640)));
@@ -409,8 +420,19 @@ def('till-c2w-extra', () => overC2w(dialog('c2wextra-title', 'Take payment · £
 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 18px; border-radius: 10px; border: 1px solid ${C.ink}; background: ${C.panel}"><span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 18px; font-weight: 700">Maya pays</span><span style="font-size: 13px; color: ${C.muted}">[Accessory], added at the counter</span></span>${mono('£[£]', 'font-size: 34px')}</div>
 ${bigMethod('Card · £[£]', 'Sends £[£] to the card machine', 'card', true)}
 <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">${['Cash', 'Gift card or credit', 'Another amount'].map((t) => `<button type="button" style="min-height: 56px; border-radius: 10px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</button>`).join('')}</div>`, '', 560), [C2W_EXTRA]));
-// Paid: both payments on the receipt; the bike collected with its frame; the
-// order moves to Collected with the sale number in its history.
+// Third walk, answer 4 (walk-through 5 Q1): paid with the certificate alone,
+// over the order's basket (the bike and its two accessories): only
+// "Cycle to Work · [Provider]", nothing from Maya; the bike collected with its
+// frame, as on till-c2w-paid.
+def('till-c2w-paid-cert', () => overC2w(dialog('c2wpaid-title', 'Paid', `Cycle to Work · [Provider] · receipt ${mono('B1-[0000]')}`, `
+<div style="display: flex; flex-direction: column">${paidRow('Cycle to Work · [Provider]', '£[£]')}<span style="padding: 0 0 8px 24px; font-size: 13px; color: ${C.muted}">${C2W_SUB}</span></div>
+<div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 14px; line-height: 1.45">${icon('bike', 18)}<span><strong>[Bike] · [Size] collected</strong>, frame ${mono('[frame number]')}, on Maya’s bike record. Her order is now Collected, with sale ${mono('B1-[0000]')} in its history.</span></div>
+<div role="group" aria-label="Receipt" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">${rcptBtn('printer', 'Print')}${rcptBtn('mail', 'Email')}${rcptBtn('phone', 'Text')}${rcptBtn('close', 'No receipt', true)}</div>
+<p role="timer" style="margin: 0; text-align: center; font-size: 14px; color: ${C.muted}">Next sale starts in 5 seconds</p>`, '', 560)));
+// Paid with two payments, reached from till-c2w-extra when something is added
+// at the counter (third walk, answer 4): both payments on the receipt; the bike
+// collected with its frame; the order moves to Collected with the sale number
+// in its history.
 def('till-c2w-paid', () => overC2w(dialog('c2wpaid-title', 'Paid', `Cycle to Work · [Provider] and card · receipt ${mono('B1-[0000]')}`, `
 <div style="display: flex; flex-direction: column">${paidRow('Cycle to Work · [Provider]', '£[£]')}${paidRow('Card · Maya Patel', '£[£]')}</div>
 <div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.okBg}; color: ${C.successInk}; font-size: 14px; line-height: 1.45">${icon('bike', 18)}<span><strong>[Bike] · [Size] collected</strong>, frame ${mono('[frame number]')}, on Maya’s bike record. Her order is now Collected, with sale ${mono('B1-[0000]')} in its history.</span></div>
@@ -436,10 +458,34 @@ def('till-c2w-deposit', () => tillPage(leftSide(), swapDiscount(basket([C2W_DEPO
 // Online orders page. L4: items come from the one shelf set in Settings ›
 // Front desk › Online orders ("Where ready orders wait"). M4: drawn over an
 // empty basket, so it isn't mixed up with another customer's sale.
-const handOver = (sub, extra = '') => dialog('collect-title', 'Online order · [order number]', sub, `${extra}
-<div>${tickRow('[Item]', '[Size or colour] · from [Shelf name]', '[£ price]', false)}${tickRow('[Item]', '[Size or colour] · from [Shelf name]', '[£ price]', false)}</div>
+// UX walk-through 2 L2 (third walk): till-collect names Maya Patel and lists
+// her order's two items as her order shows them (online.mjs on-order).
+const ANON_ITEMS = [['[Item]', '[Size or colour]', '[£ price]'], ['[Item]', '[Size or colour]', '[£ price]']];
+const MAYA_ITEMS = [['Shimano brake pads', 'B05S-RX', '£28.00'], ['[Product]', '[Size or colour]', '[£ price]']];
+const handOver = (sub, extra = '', items = ANON_ITEMS) => dialog('collect-title', 'Online order · [order number]', sub, `${extra}
+<div>${items.map(([n, s, p]) => tickRow(n, `${s} · from [Shelf name]`, p, false)).join('')}</div>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Tick each item as you hand it over. Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Hand over')}`, 600);
-def('till-collect', () => overTill(handOver('[Customer] · paid online [date]'), []));
+def('till-collect', () => overTill(handOver('Maya Patel · paid online [date]', '', MAYA_ITEMS), []));
+
+// UX walk-through 8 decision 8: the till can book a bike in and hand over a
+// repair paid online, so a till-only worker needs no email sign-in. Both stay
+// on the till — nothing opens the job page (walk-through 8 M6 part 2).
+// Book in: the expected job found from the till's search, with the storage
+// choice and the tag print as the job page's book-in draws them (diary.mjs
+// "Where the bike is kept", tagStripCompact); one person and one time, Jo
+// Taylor at [time] (walk-through 8 decisions, 3 Oct: walk-through 1 L3 replaces
+// fix L1's fixed time). Slots: the shop's list in diary.mjs.
+const SLOTS = ['Hook 1', 'Hook 2', 'Hook 3', 'Hook 4', 'Hook 5', 'Hook 6', 'Workshop floor', 'Front window'];
+const slotPill = (t, on) => `<button type="button" role="radio" aria-checked="${on}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 14px; font-weight: 600">${t}</button>`;
+const tagSent = `<div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">${barcode128('WH-1042', 140, 26)}<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><div style="display: flex; align-items: center; gap: 8px"><span style="font-size: 15px; font-weight: 700">Bike tag sent</span>${badge('Printed', 'green')}</div><span style="font-size: 13px; color: ${C.muted}">Front desk Zebra · 1 copy · ${mono('[time]')} · printed by Jo Taylor</span><span style="font-size: 13px; color: ${C.muted}">Attach the tag where it can be scanned without removing it from the bike.</span></div></div>`;
+def('till-book-in', () => overTill(dialog('bookin-title', `Book in · job ${mono('WH-1042')}`, 'Maya Patel · Trek Domane AL 3 · Standard service', `
+<div style="display: flex; flex-direction: column; gap: 8px"><span id="bookin-slot-label" style="font-size: 14px; font-weight: 600">Where the bike is kept</span><div role="radiogroup" aria-labelledby="bookin-slot-label" style="display: flex; flex-wrap: wrap; gap: 6px">${SLOTS.map((t) => slotPill(t, t === STORAGE['WH-1042'])).join('')}</div></div>
+${tagSent}`, `${button('Not now', { variant: 'ghost' })}${button('Done')}`, 600), []));
+// Hand over a repair paid online: the same layout as till-collect's online
+// order hand-over, for job WH-1042 (paid online, £111.00 as agreed).
+def('till-hand-over-job', () => overTill(dialog('handjob-title', `Workshop job · ${mono('WH-1042')}`, 'Maya Patel · paid online [date]', `
+<div>${tickRow('Trek Domane AL 3', `Kept on ${STORAGE['WH-1042']}`, '', false)}${infoRow('Paid online', money(WORK_TOTAL_APPROVED), true)}</div>
+<p style="margin: 0; font-size: 13px; color: ${C.muted}">Already paid online — nothing to take at the till.</p>`, `${button('Not now', { variant: 'ghost' })}${button('Hand over')}`, 600), []));
 
 // ---------- When the internet drops (offline spec §3) ----------
 // Selling carries on: sales are saved on this till and send themselves, in
@@ -465,11 +511,11 @@ def('till-noted', () => overTillOffline(dialog('noted-title', 'Noted for later',
 <div style="display: flex; flex-direction: column; padding: 4px 16px 8px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}">
 ${infoRow('Sale', 'B1-[0000]')}${notedRow('Coming back', 'Shimano brake pads × 1')}${notedRow('Customer', 'Maya Patel')}${infoRow('To refund', '£28.00', true)}
 </div>
-<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">When the till is back online, Today shows “[n] refunds to finish”. Finishing one is a single press — the money goes back the way it was paid.</p>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">When the till is back online, Today shows “[n] refunds to finish”, and Past sales shows the count. Finishing one is a single press — the money goes back the way it was paid.</p>
 <p style="margin: 0; font-size: 15px; line-height: 1.5">Tell Maya: “We’ll refund it as soon as we’re back online — we’ve kept your details.”</p>`, `<span></span>${button('Done')}`, 560)));
 // Handing over a paid online order while offline: from the copy the till
 // last downloaded, marked to send when the internet is back.
-def('till-collect-offline', () => overlay(() => tillPage(leftSide(), basket([]), { offline: '[n]', notice: notice(false) }), handOver('[Customer] · paid online [date]', `<div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.45">${icon('wifi', 18)}<span style="flex-grow: 1">The till is offline, so this is its own copy of the order, from [time]. Handing it over is saved here and sends itself when the internet is back.</span>${badge('To send', 'blue')}</div>`)));
+def('till-collect-offline', () => overlay(() => tillPage(leftSide(), basket([]), { offline: '[n]', notice: notice(false) }), handOver('Maya Patel · paid online [date]', `<div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.mutedBg}; font-size: 14px; line-height: 1.45">${icon('wifi', 18)}<span style="flex-grow: 1">The till is offline, so this is its own copy of the order, from [time]. Handing it over is saved here and sends itself when the internet is back.</span>${badge('To send', 'blue')}</div>`, MAYA_ITEMS))); // third walk: agrees with till-collect
 def('till-no-signout', () => overTillOffline(dialog('signout-title', 'Can’t sign this till out yet', '[n] sales are still waiting to send', `
 <p style="margin: 0; font-size: 15px; line-height: 1.5; color: ${C.muted}">Signing out would wipe sales that only exist on this till. It works as soon as they’ve sent — they go by themselves when the internet is back.</p>`, `<span></span>${button('OK')}`, 520)));
 def('till-failed', () => overTill(dialog('failed-title', 'Sales that didn’t send', 'Kept safely on this till — a manager checks each one', `
@@ -536,6 +582,7 @@ export const TITLES = {
   'till-pay-cash': 'Cash — notes to tap, change worked out',
   'till-pay-split': 'Split payment — part paid, the rest by card',
   'till-receipt': 'Paid — receipt choices, closes by itself',
+  'till-receipt-split': 'Paid — the discounted £70.00, cash and card', // UX walk-through 2 H1 (third walk)
   'till-giftcard': 'Gift card or store credit',
   'till-account': 'Put on account — pay later',
   // Journey 15 decision 10 (30 Sep): loyalty is store credit earned by buying.
@@ -550,11 +597,14 @@ export const TITLES = {
   'till-c2w': 'A Cycle to Work bike — the order’s lines locked, the held frame picked', // UX walk-through 5 H1
   'till-c2w-pay': 'Take payment — Cycle to Work · [Provider] is one tap', // UX walk-through 5 H1
   'till-c2w-extra': 'An accessory added at the counter — Maya pays for it as a second payment', // UX walk-through 5 H1
+  'till-c2w-paid-cert': 'Cycle to Work paid — the certificate only, nothing from Maya, the bike collected', // third walk, answer 4
   'till-c2w-paid': 'Cycle to Work paid — both payments, the bike collected', // UX walk-through 5 H1
   'till-c2w-pick': 'Other ways to pay › Cycle to Work — orders ready to collect', // UX walk-through 5 H1
   'till-c2w-deposit': 'A Cycle to Work deposit — one line, linked to the order', // UX walk-through 5 H2
   'till-serial-held': 'A frame held for Cycle to Work — warned, not blocked', // UX walk-through 5 M4
   'till-collect': 'Hand over an online order', // UX walk-through 2 L1
+  'till-book-in': 'Book a bike in at the till', // UX walk-through 8 decision 8
+  'till-hand-over-job': 'Hand over a repair paid online at the till', // UX walk-through 8 decision 8
   'till-empty': 'Empty basket',
   'till-noresults': 'Search with no results',
   'till-sale-detail': 'A past sale — refund, reprint, void',
@@ -570,10 +620,10 @@ export const TITLES = {
 // UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
   { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
-  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt'] },
+  { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt', 'till-receipt-split'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
-  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect'] },
+  { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect', 'till-book-in', 'till-hand-over-job'] },
   // UX walk-through 5 H1, H2: a Cycle to Work bike at the till.
-  { label: 'Cycle to Work', screens: ['till-c2w-pick', 'till-c2w', 'till-c2w-pay', 'till-c2w-extra', 'till-c2w-paid', 'till-c2w-deposit'] },
+  { label: 'Cycle to Work', screens: ['till-c2w-pick', 'till-c2w', 'till-c2w-pay', 'till-c2w-extra', 'till-c2w-paid-cert', 'till-c2w-paid', 'till-c2w-deposit'] },
   { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-noted', 'till-collect-offline', 'till-no-signout', 'till-failed'] },
 ];

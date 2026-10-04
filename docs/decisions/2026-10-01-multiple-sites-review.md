@@ -149,3 +149,5 @@ clicks as possible).
 **Later change (2 Oct 2026, Find the shop decision 8):** every website page gains a "Skip to the main content" link before the header, and the footer reads Contact us, Collection and returns (was "Delivery and returns"), Privacy and Cookies, its links 44px tall. Nothing else changed.
 
 **Later change (2 Oct 2026, Management oversight decisions 6 and 7):** Settings › Office › Staff and roles gains "Signed-in devices" and "Alerts on Today"; every person shows "Sign out everywhere". Nothing else changed.
+
+**Later change (3 Oct 2026, third walk, answer 6, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** Jack, 3 Oct: "1". "Show [Second site] to customers" on the new shop's checklist is one press: the shop shows on the website, in booking and for collecting straight away, and the checklist step ticks, with "Undo" for a moment, like "Hold longer". Chosen over a box saying where it will show, and a switch in the shop's own settings. Decision 7 is unchanged. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.
