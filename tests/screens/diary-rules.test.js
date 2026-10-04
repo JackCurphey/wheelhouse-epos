@@ -27,7 +27,7 @@ test('waiting for parts and finished work have their own colours', () => {
   assert.equal(diaryState(job({ workState: 'complete', custodyState: 'collected' })), 'ready');
 });
 
-test('started or paused work shows as Scheduled', () => {
+test('started or paused work shows as Expected', () => {
   assert.equal(diaryState(job({ workState: 'in_progress' })), 'scheduled');
   assert.equal(diaryState(job({ workState: 'on_hold' })), 'scheduled');
   assert.equal(diaryState(job()), 'scheduled');

@@ -136,7 +136,7 @@ test('if the text could not go, staff are told why and can copy the link', async
 test('while waiting, the job says so, and staff can record the answer taken by phone', async () => {
   const lines = [line({}), line({ id: 2, kind: 'labour', description: 'Fit new gear cable', productId: null, unitAmount: 12, lineTotal: 12, need: 'optional', reason: 'Shifting is stiff' })];
   const { dlg, fireEvent, waitFor, within, ui } = await openJob({ q: quote('sent', lines) });
-  assert.ok(has(await dlg.findByText('Waiting for the customer')));
+  assert.ok(has(await dlg.findByText('Quoting')));
   fireEvent.click(dlg.getByRole('button', { name: 'Record their answer' }));
   const rec = within(await ui.findByRole('dialog', { name: "Record Maya Patel's answer" }));
   // Ticks start the way the mechanic recommended: Needed yes, Optional no.

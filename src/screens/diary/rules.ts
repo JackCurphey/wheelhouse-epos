@@ -7,13 +7,14 @@
 /** The diary's colours (ST in docs/design/user-journeys/generator/diary.mjs). */
 export type DiaryState = 'pending' | 'scheduled' | 'answer' | 'waiting' | 'hold' | 'ready' | 'cancelled';
 
+// The job page's stage words, everywhere (3 Oct answer 11, walk-through 9 M4).
 export const STATE_LABEL: Record<DiaryState, string> = {
-  scheduled: 'Scheduled',
+  scheduled: 'Expected',
   pending: 'Pending',
-  answer: 'Waiting for the customer',
+  answer: 'Quoting',
   hold: 'Change requested',
   waiting: 'Waiting for parts',
-  ready: 'Ready',
+  ready: 'Finished',
   cancelled: 'Cancelled',
 };
 

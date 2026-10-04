@@ -152,7 +152,13 @@ approves, and the part is on the job's order with the quote approved.
 
 ## Piece 4: the diary's teal (built 3 Oct)
 
-A job whose quote is waiting for the customer is "Waiting for the customer"
-in the diary: its own teal block, and a row in the legend (UX walk-through
-M3), so purple only ever means a booking request. A finished job stays
-Ready, and an answered quote goes back to the job's own colour.
+A job whose quote is sent and not yet answered is "Quoting" in the diary and
+on the job window: its own teal block, and a row in the legend (UX
+walk-through M3), so purple only ever means a booking request. A finished
+job stays Finished. Once the quote is answered, withdrawn, replaced or
+expired, the job goes back to its own colour.
+
+The diary's words are the job page's stages (3 Oct answer 11, walk-through
+9 M4; Jack, 4 Oct, chose to change all three in this piece): "Expected" not
+"Scheduled", "Quoting" not "Waiting for the customer", "Finished" not
+"Ready".

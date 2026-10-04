@@ -23,7 +23,7 @@ const money = (n: number) => `£${n.toFixed(2)}`;
 export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'>): string {
   if (j.bookingState === 'pending') return 'Booking request';
   // A quote the customer hasn't answered (UX walk-through M3: its own teal).
-  if (j.quote?.state === 'sent' && j.workState !== 'complete') return 'Waiting for the customer';
+  if (j.quote?.state === 'sent' && j.workState !== 'complete') return 'Quoting';
   if (j.custodyState === 'collected') return 'Collected';
   if (j.workState === 'complete') return 'Ready for collection';
   if (j.workState === 'waiting_parts') return 'Waiting for parts';
@@ -54,7 +54,7 @@ function stageActions(j: WorkshopJob): Action[] {
 
 const BADGE: Record<string, string> = {
   'Booking request': 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
-  'Waiting for the customer': 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
+  Quoting: 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
   Expected: 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   'In workshop': 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   'Waiting for parts': 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
