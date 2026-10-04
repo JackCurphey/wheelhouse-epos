@@ -12,7 +12,9 @@ import { apiGet, ApiError } from '../api/client.ts';
  * The shapes follow serializeSession in server/server.js, which is flat and
  * sends no shop id - so SessionShop has none.
  */
-export type SessionUser = { id: number; name: string; email: string; isOwner: boolean };
+/** The staff member a login is linked to, if any: the till's "serving". */
+export type SessionEmployee = { id: number; name: string; isCashier: boolean };
+export type SessionUser = { id: number; name: string; email: string; isOwner: boolean; employee: SessionEmployee | null };
 export type SessionShop = { name: string; slug: string };
 export type SessionState =
   | { status: 'loading' }
@@ -27,6 +29,7 @@ type MeResponse = {
   isOwner: boolean;
   shopName: string;
   shopSlug: string;
+  employee?: SessionEmployee | null;
 };
 
 export async function resolveSession(): Promise<SessionState> {
@@ -34,7 +37,7 @@ export async function resolveSession(): Promise<SessionState> {
     const me = await apiGet<MeResponse>('/api/auth/me');
     return {
       status: 'signed-in',
-      user: { id: me.id, name: me.name, email: me.email, isOwner: me.isOwner },
+      user: { id: me.id, name: me.name, email: me.email, isOwner: me.isOwner, employee: me.employee ?? null },
       shop: { name: me.shopName, slug: me.shopSlug },
     };
   } catch (err) {

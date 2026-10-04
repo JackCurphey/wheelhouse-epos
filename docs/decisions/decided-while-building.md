@@ -16,7 +16,19 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
 
 ## Jack's lane
 
-(Nothing yet.)
+### 4 Oct 2026: till piece 1 (pull request 111), after its fresh review
+
+1. **`till-pay`: the message when the reply to a payment is lost** reads
+   "Lost touch with the server, so the sale may have saved. Check the sale
+   went through before taking payment again." Was "Couldn't reach the
+   server — nothing was saved. Try again.", which wasn't true when the
+   server had saved before the connection dropped, and "Try again" then
+   sold it twice. *Pattern:* the drawings have no lost-reply state for the
+   till yet; the offline till (WP-1.6) replaces this with a proper one.
+2. **`till-pay`: while a payment is saving, Escape doesn't close the
+   window**, and each step moves keyboard focus to its title. Not drawn;
+   follows the accessibility-first rule and the dialog's own Escape
+   handling.
 
 ## Decided here, for Jack to overrule
 

@@ -653,7 +653,17 @@ route('POST', '/api/auth/logout', async (req, res) => {
 route('GET', '/api/auth/me', async (req, res) => {
   const ctx = await currentSession(req);
   if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  sendJson(res, 200, serializeSession(ctx));
+  // The staff member this login is (migration 013), so the till knows who
+  // is serving. Read here, not in serializeSession, which login and signup
+  // share. This route runs outside a shop's scope, so it opens one.
+  const employee = ctx.login.employee_id
+    ? await runWithShop(ctx.shop.id, () =>
+        db.prepare('SELECT id, name, is_cashier FROM employees WHERE id = ? AND active = 1').get(ctx.login.employee_id))
+    : null;
+  sendJson(res, 200, {
+    ...serializeSession(ctx),
+    employee: employee ? { id: employee.id, name: employee.name, isCashier: !!employee.is_cashier } : null,
+  });
 });
 
 route('GET', '/api/products', async (req, res, params, query) => {
@@ -1784,10 +1794,12 @@ export async function loadDocumentLine(it, { checkStock }) {
 // behaviour runs unchanged, which is what every direct createSale() caller
 // that doesn't care about pool-connection lifetime (tests, the Shopify
 // webhook handlers) keeps getting for free.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note }, { deferShopifyPushesTo } = {}) {
+export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false }, { deferShopifyPushesTo } = {}) {
+  // sellPastStock: the new till sells past zero stock and says so on the
+  // line (journey 11 decision 5); everything else still refuses.
   const loaded = [];
   for (const it of items) {
-    loaded.push(await loadDocumentLine(it, { checkStock: true }));
+    loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock }));
   }
 
   const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
@@ -2005,7 +2017,7 @@ route('POST', '/api/sales', async (req, res, params, searchParams, afterRelease,
   const shopifyPushes = [];
   try {
     saleId = await createSale(
-      { customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note },
+      { customerId, cashierId: cashierResolved.cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock: body.sellPastStock === true },
       { deferShopifyPushesTo: shopifyPushes }
     );
   } catch (err) {
