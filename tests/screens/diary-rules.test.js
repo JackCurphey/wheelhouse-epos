@@ -23,6 +23,7 @@ test('a change request is Change requested (amber)', () => {
 
 test('waiting for parts and finished work have their own colours', () => {
   assert.equal(diaryState(job({ workState: 'waiting_parts' })), 'waiting');
+  assert.equal(diaryState(job({ workState: 'waiting_parts', quote: { state: 'sent' } })), 'waiting');
   assert.equal(diaryState(job({ workState: 'complete' })), 'ready');
   assert.equal(diaryState(job({ workState: 'complete', custodyState: 'collected' })), 'ready');
 });

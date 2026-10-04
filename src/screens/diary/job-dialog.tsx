@@ -22,13 +22,14 @@ const money = (n: number) => `£${n.toFixed(2)}`;
 /** The badge's word for where the job is (the drawings' stage names). */
 export function jobStage(j: Pick<WorkshopJob, 'bookingState' | 'custodyState' | 'workState' | 'quote'>): string {
   if (j.bookingState === 'pending') return 'Booking request';
-  // A quote the customer hasn't answered (UX walk-through M3: its own teal).
-  if (j.quote?.state === 'sent' && j.workState !== 'complete') return 'Quoting';
   if (j.custodyState === 'collected') return 'Collected';
-  if (j.workState === 'complete') return 'Ready for collection';
+  if (j.workState === 'complete') return 'Finished';
+  // Waiting for parts wins over a quote out, as in the diary (Jack, 4 Oct).
   if (j.workState === 'waiting_parts') return 'Waiting for parts';
+  // A quote the customer hasn't answered (UX walk-through M3: its own teal).
+  if (j.quote?.state === 'sent') return 'Quoting';
   if (j.workState === 'on_hold') return 'On hold';
-  if (j.custodyState === 'in_shop') return 'In workshop';
+  if (j.custodyState === 'in_shop') return 'In the workshop';
   return 'Expected';
 }
 
@@ -56,10 +57,10 @@ const BADGE: Record<string, string> = {
   'Booking request': 'bg-[var(--wh-state-pending-bg)] text-[var(--wh-state-pending-ink)]',
   Quoting: 'bg-[var(--wh-state-answer-bg)] text-[var(--wh-state-answer-ink)]',
   Expected: 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
-  'In workshop': 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
+  'In the workshop': 'bg-[var(--wh-state-scheduled-bg)] text-[var(--wh-state-scheduled-ink)]',
   'Waiting for parts': 'bg-[var(--wh-state-waiting-bg)] text-[var(--wh-state-waiting-ink)]',
   'On hold': 'bg-[var(--wh-state-hold-bg)] text-[var(--wh-state-hold-ink)]',
-  'Ready for collection': 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]',
+  Finished: 'bg-[var(--wh-state-ready-bg)] text-[var(--wh-state-ready-ink)]',
   Collected: 'bg-[var(--wh-state-cancelled-bg)] text-[var(--wh-state-cancelled-ink)]',
 };
 

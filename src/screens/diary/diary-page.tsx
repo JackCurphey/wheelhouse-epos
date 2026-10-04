@@ -11,7 +11,7 @@ import { NewJobDialog } from './new-job-dialog.tsx';
 import { JobDialog } from './job-dialog.tsx';
 import { Dialog, DialogBody, DialogHeader, DialogTitle } from '@/components/ui/dialog.tsx';
 import {
-  LEGEND, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
+  LEGEND, LEGEND_LABEL, STATE_LABEL, SNAP_MIN, addDays, dropStart, dayLabel, diaryState, gridRange, hhmm, layoutLanes, todayIso, toMinutes,
   shortDay, waitingCard, weekLabel, weekOf, type DiaryState, type WaitingItem,
 } from './rules.ts';
 
@@ -941,7 +941,7 @@ export function DiaryPage() {
             {LEGEND.map((s) => (
               <li key={s} className="inline-flex items-center gap-1.5 text-xs">
                 <span aria-hidden="true" className={`inline-block size-3.5 rounded-[3px] border-[1.75px] ${BLOCK[s]}`} />
-                {STATE_LABEL[s]}
+                {LEGEND_LABEL[s]}
               </li>
             ))}
           </ul>

@@ -18,6 +18,9 @@ export const STATE_LABEL: Record<DiaryState, string> = {
   cancelled: 'Cancelled',
 };
 
+/** The legend's words: blue covers more than one stage (diaryLegend). */
+export const LEGEND_LABEL: Record<DiaryState, string> = { ...STATE_LABEL, scheduled: 'Expected, booked in or in the workshop' };
+
 /** The legend's order, as drawn (diaryLegend). */
 export const LEGEND: DiaryState[] = ['scheduled', 'pending', 'answer', 'hold', 'waiting', 'ready', 'cancelled'];
 

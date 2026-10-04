@@ -162,3 +162,12 @@ The diary's words are the job page's stages (3 Oct answer 11, walk-through
 9 M4; Jack, 4 Oct, chose to change all three in this piece): "Expected" not
 "Scheduled", "Quoting" not "Waiting for the customer", "Finished" not
 "Ready".
+
+The job window uses the same words as the drawn job page: "In the workshop"
+and "Finished" (not "In workshop" and "Ready for collection"), and the
+legend's blue reads "Expected, booked in or in the workshop" (diaryLegend).
+
+**Which wins (Jack, 4 Oct, option 1):** a job waiting for parts, or with a
+change requested, shows that rather than Quoting, in the diary and on the
+job window alike. The job window has no "Change requested" badge yet; adding
+one is a design question for Jack, not part of this piece.
