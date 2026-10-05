@@ -155,13 +155,19 @@ function branchFromHead(change) {
   const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
   const tree = realpathSync(mkdtempSync(path.join(tmpdir(), 'mig-upgrade-')));
   execFileSync('git', ['-C', root, 'worktree', 'add', '-q', '--detach', tree, 'HEAD']);
-  symlinkSync(path.join(root, 'node_modules'), path.join(tree, 'node_modules'));
-  const git = (...args) => execFileSync('git', ['-C', tree, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-  git('-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '--allow-empty', '-m', 'base');
-  change(path.join(tree, 'server', 'migrations'), git);
-  git('add', '-A');
-  git('-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '-m', 'change');
-  return { tree, remove: () => execFileSync('git', ['-C', root, 'worktree', 'remove', '--force', tree]) };
+  const remove = () => execFileSync('git', ['-C', root, 'worktree', 'remove', '--force', tree]);
+  try {
+    symlinkSync(path.join(root, 'node_modules'), path.join(tree, 'node_modules'));
+    const git = (...args) => execFileSync('git', ['-C', tree, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    git('-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '--allow-empty', '-m', 'base');
+    change(path.join(tree, 'server', 'migrations'), git);
+    git('add', '-A');
+    git('-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '-m', 'change');
+  } catch (err) {
+    remove();
+    throw err;
+  }
+  return { tree, remove };
 }
 
 test('the upgrade check passes a branch that only adds a migration', async (t) => {
