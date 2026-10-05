@@ -120,9 +120,14 @@ test('a diary drag on a copy someone else has changed is refused and the diary r
   // The diary reloads: the block is drawn back at its original 10:00 position.
   // Polled, not read once: the toast shows before the reload redraws the
   // block, and on a slow machine (CI) a single read still saw it where it
-  // was dropped, an hour lower.
+  // was dropped, an hour lower. While the reload redraws it, the block is
+  // briefly off the page and has no box: that reads as "not yet", not a
+  // crash (#169).
   await expect(block).toBeVisible();
-  await expect.poll(async () => Math.round((await block.boundingBox())!.y)).toBe(Math.round(origBox.y));
+  await expect.poll(async () => {
+    const box = await block.boundingBox();
+    return box ? Math.round(box.y) : null;
+  }).toBe(Math.round(origBox.y));
 });
 
 test('toggling complete on a job changed elsewhere is refused and the form closes', async ({ page, context }) => {
