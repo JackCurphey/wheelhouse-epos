@@ -258,12 +258,12 @@ merged, so Jack always builds against the real server. Mark stays about one
 package ahead. When Jack catches up he takes, in this order:
 
 1. a **whole package** that is already his (§6, marked **J**)
-2. the next piece of the workshop pulled forward (§7)
-3. old-app removals (§4.5) and the stage check walk-throughs
+2. old-app removals (§4.5) and the stage check walk-throughs
 
 so he never waits on Mark. (Building blocks ahead of their package was
 proposed and turned down, Mark, 4 Oct. See §7 for what Jack does
-instead.)
+instead. The workshop is not pulled forward either: Jack, 5 Oct, kept it
+in stage 4, §7.2.)
 
 ### 4.5 Retiring the old app
 
@@ -314,7 +314,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 | **0.4 (new) Make it splittable** | **M**: route files (§4.1); per-area types files (§4.3); the migration checks and `scripts/new-db.sh` (§4.2) | review |
 | **0.5 (new) A hosted copy for Jack** | **M**: choose the host (PL-1), deploy `main` there on every merge, test data only | tries it |
 
-### Stage 1 — Foundations (mostly Mark, in the order of §7; Jack pulls workshop pieces forward)
+### Stage 1 — Foundations (mostly Mark, in the order of §7.1)
 
 | Package | Mark | Jack |
 |---|---|---|
@@ -398,8 +398,10 @@ in flight for the next stage can finish.
 
 Mark, 4 Oct: "I want him to see progress and a working prototype ASAP."
 Stage 1 is almost all server work, so on the build plan's order Jack would
-see nothing new on screen for most of it. Three changes fix that. None of
-them changes a package's contents.
+see nothing new on screen for most of it. Two changes fix that (§7.1,
+§7.3). None of them changes a package's contents. A third, building some
+workshop pieces early (§7.2), was checked and turned down: Jack, 5 Oct,
+kept the plan's order.
 
 **7.1 Mark builds stage 1's server halves in the order that unlocks the most
 screens first.** Packages whose server half has screens waiting on it come
@@ -415,27 +417,55 @@ first; packages with no screens come after:
 
 All of stage 1 still finishes before stage 2's server halves start.
 
-**7.2 Jack pulls the workshop forward while stage 1's server work runs.**
-The workshop is his full-stack area (§3, agreed). It already runs: the
-diary, the job page and quotes 1–3 are built. So Jack builds the parts of
-WP-4.1 that use only blocks that already exist, on the server he owns:
+**7.2 The workshop stays in stage 4 (Jack, 5 Oct: "lets just keep the
+plans order").** Mark proposed that Jack build parts of WP-4.1 during
+stage 1, since the workshop is his full-stack area (§3) and the diary, the
+job page and quotes 1–3 already run. Codex's review (finding 5, issue #131)
+found some of those parts depend on stage 1 packages, so they would be
+built twice; checking each one found most do. The list was trimmed to the pieces with no such dependency
+(below), and Jack chose to keep the plan's order anyway: all of WP-4.1,
+including the pieces below, is built in stage 4. The tables stay as the
+record of what could come forward if this is ever reopened. The rule
+stands that workshop server work waits until WP-0.4 has merged (§9), so
+nothing edits `server.js` while it moves.
 
-- the request pop-up (mechanic pills, offer another time, decline with a
-  message)
-- new job extras
-- storage slots
-- bike tag at book-in
-- done ticks and notes per line
-- "I'll do this"
-- "Who did what"
-- "Mark ready" as the sign-off (Q3)
-- "Use my phone" photo
-- diary settings (once 1.3's Settings frame has merged)
+A piece could come forward only if everything it does, as decided, can be
+built on what exists today, or on a stage 1 package that has already
+merged.
 
-`overview` (needs block 3) and `job-checklist` (needs block 7) stay in
-WP-4.1's place after stages 2 and 3, as do the situations that need roles
-(`diary-mechanic`) until 1.1 merges. This changes the order Jack chose in
-Q2, so Jack has to agree (§8).
+Could be built during stage 1, with nothing to wait for:
+
+| Piece | Why it could come early |
+|---|---|
+| New job extras (`new-job`, Workshop day 26): "+ Add a bike" from the form, and the customer's note kept apart from the staff notes | Uses the customer and bike data that already exist. The customer's note is saved now; it is printed on the receipt when receipts print (1.11, 3.1) |
+
+Could be built once a stage 1 package has merged:
+
+| Piece | Waits for |
+|---|---|
+| Choosing the mechanic with pills as you accept a request (`request-new`, Workshop day 62) | 1.4: each site has its own diary and mechanics (Multiple sites 2), so the pills list that site's mechanics. 1.1 then changes only where the names come from (the "Works in the workshop" switch, Owner setup 11) |
+| The free-time warning on New job (Workshop day 26) | 1.4: it reads the site's capacity, and 1.4 puts a site on capacity |
+| Diary settings (`set-workshop-diary`) | 1.3: it is a section of the Settings page (block 1), built in 1.3 on 1.2's settings store |
+| Storage slots (Workshop day 27): "Where the bike is kept" on `new-job`, the slot on the diary block | 1.3 and 1.4: the slots are switched on and listed in diary settings' "Storage slots" section, and each site has its own workshop diary (Multiple sites 2): walk-through 7 (H2) found the other shop's New job form wrongly showing Bolton's hooks |
+
+Stays in WP-4.1 whatever the order, because each needs a later package first:
+
+| Piece | Waits for |
+|---|---|
+| "+ New customer" from the New job form | 3.2: adding a customer catches possible duplicates (Customer service 5), which is built in stage 3 |
+| Offer another time (request pop-up) | 1.8: it sends the "New time offered" message (Book a repair 12); the customer's answer is on the booking page (`bk-offered`, 4.4) |
+| Decline with a message (request pop-up) | 1.8: the "Request declined" message (Book a repair 12). Until then the built pop-up's "Decline booking" sends nothing |
+| "Booking confirmed sent to [phone], or No message" after saving a new job | 1.8: it is a message |
+| Who and when on each staff note (Workshop day 26) | 1.7: on a shared computer it is the person working, by PIN |
+| Bike tag at book-in (`job-book-in`) | 1.11: printing through the print agent. The drawing also shows the print acknowledged and "printed by Jo Taylor" (1.7) |
+| Done ticks and notes per line | 1.9: changes show on every device, and two people editing one job get "Keep mine" or "Keep Alex's" (walk-through 8, decision 2) |
+| "I'll do this" | 1.7: "your column" is the person working, by PIN; 1.9: "every device shows 'Taken by Jo Taylor'" (walk-through 8, decision 5) |
+| "Who did what" | 1.2: the one activity record; 1.7: who did it (walk-through 8, decision 7) |
+| "Mark ready" as the sign-off | 1.7: signed off by the person working, by PIN (Q3); shown in "Who did what" (1.2) |
+| "Use my phone" photo | a photo on each line (4.2), and a page opened with no sign-in, which 1.1's check on every route has to allow (walk-through 8, decision 6) |
+
+`overview` (needs block 3), `job-checklist` (needs block 7) and the
+situations that need roles (`diary-mechanic`) were never candidates.
 
 **7.3 Every merge is clickable.**
 
@@ -460,8 +490,11 @@ Q2, so Jack has to agree (§8).
 6. **For Jack:** agree to §5's change to the project rules and §7.2's
    change to the build order. Jack, 4 Oct (issue #127): **agrees to §5**
    (one status pull request a day) **and to working in two lanes** (§3, §4);
-   `CLAUDE.md` and the top of `.agents/STATUS.md` now say the same. §7.2's
-   change to the build order is still open.
+   `CLAUDE.md` and the top of `.agents/STATUS.md` now say the same.
+   §7.2, trimmed to the pieces with no stage 1 dependency (issue #131),
+   would have changed the order Jack chose on 3 Oct (Q2). Jack, 5 Oct:
+   **keep the plan's order** ("lets just keep the plans order"): the
+   workshop, all of WP-4.1, waits for stage 4.
 
 ## 9. The first week, concretely
 
@@ -492,8 +525,7 @@ edits `server.js` while it moves.
 
 1. Mark writes the WP-1.1 contract, builds 1.1's server half, then 1.2, then
    the rest in §7.1's order.
-2. Jack builds the workshop pieces pulled forward (§7.2, if Jack agrees),
-   then 1.1's screens as soon as their server half merges, then 1.3 once
+2. Jack builds 1.1's screens as soon as their server half merges, then 1.3 once
    1.2's server half merges.
 
 ## 10. Decision log
@@ -508,7 +540,7 @@ edits `server.js` while it moves.
 | Mark builds `mv-start` and `rp-accounts-connect` | Each is one screen over Mark's own adapter |
 | 8.2's real data handled by Jack only | Project rule: real shop data stops for Jack |
 | One status pull request a day | Mark, 4 Oct, answer 1: avoids a conflict on most merges |
-| No building blocks ahead; stage 1's server order puts screens first; workshop pieces pulled forward | Mark, 4 Oct, answer 2: Jack should see progress and working software as early as possible |
+| No building blocks ahead; stage 1's server order puts screens first; workshop pieces pulled forward (the workshop part replaced by Jack, 5 Oct, below) | Mark, 4 Oct, answer 2: Jack should see progress and working software as early as possible |
 | Migrations keep their numbers; the second to merge renumbers; CI catches a clash | Mark, 4 Oct, answer 3 |
 | §4.2 after two fresh reviews: every worktree and review on its own database; new numbers must be higher than everything on `main`; checks required and run against the latest `main` (GitHub setting, on 4 Oct with Jack's yes); renumbering only when another merges first; a backstop on `main` that stops and asks | Fresh reviews, 4 Oct: no branch protection; reviewers' servers run a branch's migrations on start; a freeze rule that forbade the only fix; a late low number runs in a different order on the hosted copy than on a fresh build |
 | §4.1 after the fresh review: the route-list test compares as a set plus a no-shadowing check; the push-tracking store moves with the push helpers; the screen-trace test follows the script | Fresh review, 4 Oct: grouping by area reorders the table (e.g. line 3968); `sales.js` and `server.js` would import each other |
@@ -517,3 +549,5 @@ edits `server.js` while it moves.
 | §4.1 design for WP-0.4: dispatcher and calling conventions stay put, shared helpers to `server/lib/*` and `server/workshop/jobs.js`, fixed registration order, a 161-route list test written before the move, screen-trace check reads the route files and fails on an empty read | Codex finding 3 (issue #129): shared helpers and state, three calling conventions, and a check that would pass with nothing to check |
 | §9 rewritten: stage 0's server work first, every line names what it waits for, stage 0 closes before stage 1 | Codex finding 4 (issue #130): Jack's WP-0.2 screens were listed before the server half they need |
 | Hosting and infrastructure are Mark's, and a hosted copy comes in stage 0 | Mark, 4 Oct: "assign the hosting and infra to me"; Jack sees each merge without running the app |
+| §7.2 trimmed to the workshop pieces with no stage 1 dependency, each with its reason; the rest stay in WP-4.1. This answers the workshop half of finding 5 only; its first half (§7.1's server order) is not covered here | Codex finding 5 (issue #131): "Who did what", sign-off, notes and printing need PIN identity, the activity record, live updates and printing |
+| The workshop is not built early: all of WP-4.1 stays in stage 4, as the build plan's order has it | Jack, 5 Oct, keeping his 3 Oct answer to Q2 ("lets just keep the plans order") |
