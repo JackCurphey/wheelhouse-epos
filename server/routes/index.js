@@ -4,5 +4,6 @@
 // registered there, before these.
 import * as suppliers from './suppliers.js';
 import * as purchaseOrders from './purchase-orders.js';
+import * as shopSettings from './shop-settings.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings];
