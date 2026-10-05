@@ -352,7 +352,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 
 | Package | Mark | Jack |
 |---|---|---|
-| 3.1 The till, complete | discounts and reasons; parked sales; receipts by email and text link; voids and refunds; store credit, gift cards and accounts; paying for a job with collection recorded; the card machine adapter with its pretend machine, then Paymentsense (#138) | blocks 8, 19, 20, 21; the 22 screens. This is the biggest screens package |
+| 3.1 The till, complete | discounts and reasons; parked sales; receipts by email and text link; voids and refunds; store credit, gift cards and accounts; paying for a job with collection recorded; the card machine adapter with its pretend machine, then Stripe Terminal, SumUp and Paymentsense in that order (Jack, 5 Oct) | blocks 8, 19, 20, 21; the 22 screens. This is the biggest screens package |
 | 3.2 Customers | duplicate catching, one history, statements, merging, privacy requests | the 8 screens |
 | 3.3 Opening the shop | — | **J** whole: block 18, float check (a small server change), 2 screens, Today lines |
 | 3.4 End-of-day cash-up | count, paid-outs, banking, card check, end-of-day figures, reopen | blocks 5, 7; the 4 screens |
