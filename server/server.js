@@ -33,7 +33,9 @@ import {
 } from './workshop/quotes.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { runSync } from './suppliers/index.js';
+import { parseCookies, makeRateLimiter, sendJson, notFound, badRequest, readJsonBody, readRawBody, nowIso } from './lib/http.js';
+import { serializeProduct, serializeBike } from './lib/serializers.js';
+import { ROUTE_AREAS } from './routes/index.js';
 import { sendSms } from './sms.js';
 import {
   AuthError,
@@ -324,20 +326,6 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 // shop, so no call site here needs a shop_id filter added by hand.
 const db = { prepare, exec: dbExec };
 
-function parseCookies(req) {
-  const header = req.headers.cookie;
-  const cookies = {};
-  if (!header) return cookies;
-  for (const part of header.split(';')) {
-    const idx = part.indexOf('=');
-    if (idx === -1) continue;
-    const key = part.slice(0, idx).trim();
-    const value = part.slice(idx + 1).trim();
-    if (key) cookies[key] = decodeURIComponent(value);
-  }
-  return cookies;
-}
-
 function setSessionCookie(req, res, token) {
   const secure = isHttpsRequest(req) ? '; Secure' : '';
   res.setHeader(
@@ -348,26 +336,6 @@ function setSessionCookie(req, res, token) {
 
 function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
-}
-
-function makeRateLimiter(max, windowMs) {
-  const hits = new Map(); // key -> { count, resetAt }
-  return {
-    check(key) {
-      const now = Date.now();
-      const entry = hits.get(key);
-      if (!entry || entry.resetAt < now) {
-        hits.set(key, { count: 1, resetAt: now + windowMs });
-        return true;
-      }
-      if (entry.count >= max) return false;
-      entry.count++;
-      return true;
-    },
-    reset(key) {
-      hits.delete(key);
-    },
-  };
 }
 
 const loginLimiter = makeRateLimiter(10, 15 * 60 * 1000); // 10 attempts / 15 min / IP
@@ -434,108 +402,7 @@ const MIME = {
   '.woff2': 'font/woff2',
 };
 
-function sendJson(res, status, data) {
-  const body = JSON.stringify(data);
-  res.writeHead(status, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Content-Length': Buffer.byteLength(body),
-  });
-  res.end(body);
-}
-
-function notFound(res, msg = 'Not found') {
-  sendJson(res, 404, { error: msg });
-}
-
-function badRequest(res, msg = 'Bad request') {
-  sendJson(res, 400, { error: msg });
-}
-
-// Both helpers below accumulate raw Buffers and only convert to a string
-// ONCE, after every chunk has arrived (via Buffer.concat(...).toString()).
-// Converting per-chunk instead (the previous `data += chunk` pattern, which
-// implicitly calls chunk.toString('utf8') on every chunk as it arrives) would
-// corrupt any multi-byte UTF-8 character that happens to land on a TCP chunk
-// boundary - turning it into replacement characters and breaking anything
-// that depends on the exact bytes (notably readRawBody's caller, which HMAC-
-// verifies the raw body against Shopify's signature).
-async function readJsonBody(req, maxBytes = 2_000_000, { answerOverflow = false } = {}) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let bytes = 0;
-    let overflowed = false;
-    req.on('data', (chunk) => {
-      bytes += chunk.length;
-      if (overflowed) {
-        // Still reading so the client can be answered; stop at twice the cap.
-        if (bytes > maxBytes * 2) { reject(new Error('Payload too large')); req.destroy(); }
-        return;
-      }
-      if (bytes > maxBytes) {
-        if (answerOverflow) { overflowed = true; chunks.length = 0; return; }
-        reject(new Error('Payload too large'));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on('end', () => {
-      if (overflowed) return reject(new Error('Payload too large'));
-      if (bytes === 0) return resolve({});
-      try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
-      } catch (err) {
-        reject(err);
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
-function readRawBody(req, maxBytes = 2_000_000) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let bytes = 0;
-    req.on('data', (chunk) => {
-      bytes += chunk.length;
-      if (bytes > maxBytes) {
-        reject(new Error('Payload too large'));
-        req.destroy();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
-}
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
 // ---------- Product helpers ----------
-
-function serializeProduct(row) {
-  return {
-    id: row.id,
-    sku: row.sku,
-    barcode: row.barcode,
-    name: row.name,
-    category: row.category,
-    price: row.price,
-    cost: row.cost,
-    stockQty: row.stock_qty,
-    lowStockThreshold: row.low_stock_threshold,
-    supplier: row.supplier,
-    active: !!row.active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    showOnline: !!row.show_online,
-    description: row.description || '',
-    photoUrl: row.photo_url || null,
-  };
-}
 
 async function listProducts({ search, category, activeOnly }) {
   let sql = 'SELECT * FROM products WHERE 1=1';
@@ -807,149 +674,6 @@ route('POST', '/api/products/:id/stock', async (req, res, params) => {
 route('GET', '/api/categories', async (req, res) => {
   const rows = await db.prepare('SELECT DISTINCT category FROM products ORDER BY category').all();
   sendJson(res, 200, rows.map((r) => r.category));
-});
-
-// ---------- Suppliers & catalogue sync ----------
-// The bike-shop-distributor equivalent of a stock information feed: a
-// supplier's items land in supplier_catalogue_items on sync, and stay in a
-// review queue (status='new') until a person explicitly imports or ignores
-// each one - never auto-created as a real product.
-
-function serializeSupplier(row) {
-  return {
-    id: row.id,
-    name: row.name,
-    adapterType: row.adapter_type,
-    config: row.config,
-    contactName: row.contact_name,
-    email: row.email,
-    phone: row.phone,
-    accountNumber: row.account_number,
-    address: row.address,
-    lastSyncedAt: row.last_synced_at,
-    createdAt: row.created_at,
-  };
-}
-
-function serializeCatalogueItem(row) {
-  return {
-    id: row.id,
-    supplierId: row.supplier_id,
-    supplierSku: row.supplier_sku,
-    barcode: row.barcode,
-    name: row.name,
-    price: row.price,
-    stockQty: row.stock_qty,
-    status: row.status,
-    productId: row.product_id,
-    firstSeenAt: row.first_seen_at,
-    lastSeenAt: row.last_seen_at,
-  };
-}
-
-const SUPPLIER_ADAPTER_TYPES = ['mock_csv'];
-
-route('GET', '/api/suppliers', async (req, res) => {
-  const rows = await db.prepare('SELECT * FROM suppliers ORDER BY name').all();
-  sendJson(res, 200, rows.map(serializeSupplier));
-});
-
-route('POST', '/api/suppliers', async (req, res) => {
-  const body = await readJsonBody(req);
-  const name = (body.name || '').trim();
-  if (!name) return badRequest(res, 'Supplier name is required');
-  const adapterType = (body.adapterType || '').trim();
-  if (!SUPPLIER_ADAPTER_TYPES.includes(adapterType)) return badRequest(res, 'Unsupported adapter type');
-  try {
-    const info = await db
-      .prepare('INSERT INTO suppliers (name, adapter_type, config, updated_at) VALUES (?, ?, ?, ?)')
-      .run(name, adapterType, JSON.stringify(body.config || {}), nowIso());
-    const row = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(info.lastInsertRowid);
-    sendJson(res, 201, serializeSupplier(row));
-  } catch (err) {
-    if (err.code === '23505') return badRequest(res, `A supplier named "${name}" already exists`);
-    throw err;
-  }
-});
-
-route('PUT', '/api/suppliers/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Supplier not found');
-  const body = await readJsonBody(req);
-  const name = body.name !== undefined ? String(body.name).trim() : existing.name;
-  if (!name) return badRequest(res, 'Supplier name is required');
-  const contactName = body.contactName !== undefined ? String(body.contactName).trim() : existing.contact_name;
-  const email = body.email !== undefined ? String(body.email).trim() : existing.email;
-  const phone = body.phone !== undefined ? String(body.phone).trim() : existing.phone;
-  const accountNumber = body.accountNumber !== undefined ? String(body.accountNumber).trim() : existing.account_number;
-  const address = body.address !== undefined ? String(body.address).trim() : existing.address;
-
-  try {
-    await db.prepare(
-      `UPDATE suppliers SET name = ?, contact_name = ?, email = ?, phone = ?, account_number = ?, address = ?, updated_at = ?
-       WHERE id = ?`
-    ).run(name, contactName, email, phone, accountNumber, address, nowIso(), id);
-    const row = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
-    sendJson(res, 200, serializeSupplier(row));
-  } catch (err) {
-    if (err.code === '23505') return badRequest(res, `A supplier named "${name}" already exists`);
-    throw err;
-  }
-});
-
-route('POST', '/api/suppliers/:id/sync', async (req, res, params) => {
-  const id = Number(params.id);
-  const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
-  if (!supplier) return notFound(res, 'Supplier not found');
-  const result = await runSync(db, nowIso(), supplier);
-  sendJson(res, 200, result);
-});
-
-route('GET', '/api/catalogue-items', async (req, res, params, query) => {
-  const status = query.get('status') || 'new';
-  const rows = await db
-    .prepare('SELECT * FROM supplier_catalogue_items WHERE status = ? ORDER BY last_seen_at DESC')
-    .all(status);
-  sendJson(res, 200, rows.map(serializeCatalogueItem));
-});
-
-route('POST', '/api/catalogue-items/:id/import', async (req, res, params) => {
-  const id = Number(params.id);
-  const item = await db.prepare('SELECT * FROM supplier_catalogue_items WHERE id = ?').get(id);
-  if (!item) return notFound(res, 'Catalogue item not found');
-  if (item.status !== 'new') return badRequest(res, 'This item has already been imported or ignored');
-  const body = await readJsonBody(req);
-  const category = (body.category || 'Uncategorised').trim();
-  const sellPrice = Number(body.price);
-  if (!Number.isFinite(sellPrice) || sellPrice < 0) return badRequest(res, 'A valid sell price is required');
-
-  const supplier = await db.prepare('SELECT * FROM suppliers WHERE id = ?').get(item.supplier_id);
-  try {
-    const info = await db
-      .prepare(
-        `INSERT INTO products (sku, barcode, name, category, price, cost, stock_qty, supplier, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(item.supplier_sku, item.barcode, item.name, category, sellPrice, item.price, item.stock_qty, supplier.name, nowIso());
-    await db
-      .prepare(`UPDATE supplier_catalogue_items SET status = 'imported', product_id = ?, updated_at = ? WHERE id = ?`)
-      .run(info.lastInsertRowid, nowIso(), id);
-    const product = await db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
-    sendJson(res, 201, serializeProduct(product));
-  } catch (err) {
-    if (err.code === '23505') return badRequest(res, `SKU or barcode "${item.supplier_sku}" is already in use`);
-    throw err;
-  }
-});
-
-route('POST', '/api/catalogue-items/:id/ignore', async (req, res, params) => {
-  const id = Number(params.id);
-  const item = await db.prepare('SELECT * FROM supplier_catalogue_items WHERE id = ?').get(id);
-  if (!item) return notFound(res, 'Catalogue item not found');
-  if (item.status !== 'new') return badRequest(res, 'This item has already been imported or ignored');
-  await db.prepare(`UPDATE supplier_catalogue_items SET status = 'ignored', updated_at = ? WHERE id = ?`).run(nowIso(), id);
-  sendJson(res, 200, { ok: true });
 });
 
 // ---------- Purchase orders ----------
@@ -1459,21 +1183,6 @@ route('DELETE', '/api/customers/:id', async (req, res, params) => {
 });
 
 // ---------- Customer bikes ----------
-
-function serializeBike(row) {
-  return {
-    id: row.id,
-    customerId: row.customer_id,
-    make: row.make,
-    model: row.model,
-    colour: row.colour,
-    serialNumber: row.serial_number,
-    notes: row.notes,
-    active: !!row.active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
 
 route('GET', '/api/customers/:id/bikes', async (req, res, params, query) => {
   const customerId = Number(params.id);
@@ -6240,6 +5949,10 @@ route('POST', '/api/portal/:shopSlug/booking-links/:code/withdraw-change', async
   if (out) return sendJson(res, out.status, out.body);
   sendJson(res, 200, await bookingLinkView(found.id, shop));
 });
+
+// The route areas already moved to server/routes/ (split plan §4.1), in
+// the fixed order of server/routes/index.js.
+for (const area of ROUTE_AREAS) area.register(route);
 
 // ---------- Static file serving ----------
 
