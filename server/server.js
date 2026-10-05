@@ -83,6 +83,7 @@ import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
 import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
+import { readRequestKey } from './booking-request-key.js';
 import { isValidPin, hashPin } from './till/pin.js';
 import { buildSnapshot } from './till/snapshot.js';
 import { batchProblem, processSyncItems, TransientSyncError } from './till/sync.js';
@@ -1643,8 +1644,9 @@ route('GET', '/api/sales', async (req, res, params, query) => {
   if (dateFilter === 'today') dateStr = await currentShopToday();
   else if (dateFilter) dateStr = dateFilter;
   if (dateStr) {
-    sql += " AND s.created_at >= ?::date AND s.created_at < ?::date + interval '1 day'";
-    args.push(dateStr, dateStr);
+    const day = await shopDayWindow('s.created_at', dateStr);
+    sql += ` AND ${day.sql}`;
+    args.push(...day.args);
   }
   if (customerId) {
     sql += ' AND s.customer_id = ?';
@@ -2919,7 +2921,7 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers }) {
+async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash }) {
   await db.exec('BEGIN');
   try {
     // Inside the transaction: a reference allocated for a job whose insert then
@@ -2938,8 +2940,8 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
     }
     const info = await db
       .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)`
+        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?)`
       )
       .run(
         title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
@@ -2948,6 +2950,7 @@ async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDat
         termsText,
         linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null,
         questionAnswers ? JSON.stringify(questionAnswers) : null,
+        bookingRequestKeyHash ?? null, bookingRequestBodyHash ?? null,
         nowIso()
       );
     const jobIdForHold = info.lastInsertRowid;
@@ -4363,8 +4366,23 @@ route('POST', '/api/till-attention/:id/resolve', async (req, res, params) => {
 // The shop's today, on its own clock and time zone (server/clock.js). Reads
 // the settings row through the request's shop context (row-level security).
 async function currentShopToday() {
+  return shopToday(await currentShopTimeZone());
+}
+
+async function currentShopTimeZone() {
   const row = await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get();
-  return shopToday(row.time_zone);
+  return row.time_zone;
+}
+
+// A timestamp column's rows on one of the shop's days (YYYY-MM-DD): midnight
+// to midnight on the shop's clock, summer time included, not UTC midnight.
+// Returns the SQL condition and its four arguments.
+async function shopDayWindow(column, date) {
+  const timeZone = await currentShopTimeZone();
+  return {
+    sql: `${column} >= (?::date)::timestamp AT TIME ZONE ? AND ${column} < (?::date + 1)::timestamp AT TIME ZONE ?`,
+    args: [date, timeZone, date, timeZone],
+  };
 }
 
 // A workshop_settings row in the capacity calculator's shape (server/capacity.js).
@@ -5292,13 +5310,13 @@ route('POST', '/api/print-agents/jobs/:printJobId/complete', async (req, res, pa
 // ---------- Dashboard ----------
 
 route('GET', '/api/dashboard', async (req, res) => {
-  const today = await currentShopToday();
+  const today = await shopDayWindow('created_at', await currentShopToday());
   const todayAgg = await db
     .prepare(
       `SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
-       FROM sales WHERE created_at >= ?::date AND created_at < ?::date + interval '1 day'`
+       FROM sales WHERE ${today.sql}`
     )
-    .get(today, today);
+    .get(...today.args);
 
   const lowStock = (await db
     .prepare(
@@ -5308,17 +5326,18 @@ route('GET', '/api/dashboard', async (req, res) => {
     .all())
     .map(serializeProduct);
 
+  const todayItems = await shopDayWindow('s.created_at', await currentShopToday());
   const topToday = await db
     .prepare(
       `SELECT si.name, SUM(si.qty) AS qty, SUM(si.line_total) AS revenue
        FROM sale_items si
        JOIN sales s ON s.id = si.sale_id
-       WHERE s.created_at >= ?::date AND s.created_at < ?::date + interval '1 day'
+       WHERE ${todayItems.sql}
        GROUP BY si.name
        ORDER BY revenue DESC
        LIMIT 5`
     )
-    .all(today, today);
+    .all(...todayItems.args);
 
   sendJson(res, 200, {
     todayCount: todayAgg.count,
@@ -5714,6 +5733,25 @@ async function checkCustomerTime({ jobDate, mechanicId, startTime: rawStart, min
   return { times };
 }
 
+// WP-0.2: a booking request sent again with the same request key. Null when
+// the key is new. The same details get the booking already made, with a new
+// private link (only the link's hash is kept, so the first can't be shown
+// again, and the new one replaces it); other details are refused.
+// Spec: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md
+const REUSED_KEY = { status: 409, body: { error: 'This booking was already sent with different details', code: 'reused_key' } };
+async function replayBookingRequest({ keyHash, bodyHash }, shopSlug) {
+  const made = await db.prepare('SELECT id, booking_request_body_hash FROM workshop_jobs WHERE booking_request_key_hash = ?').get(keyHash);
+  if (!made) return null;
+  if (made.booking_request_body_hash !== bodyHash) return REUSED_KEY;
+  const linkCode = newLinkCode();
+  await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(linkCode), nowIso(), made.id);
+  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(made.id);
+  return {
+    status: 200,
+    body: { ...serializePortalBooking(row), ...(await bookedServices(made.id)), privateLink: linkPath(shopSlug, linkCode) },
+  };
+}
+
 route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
   const ctx = await currentCustomerSession(req);
   const signedIn = ctx && ctx.shop.slug === params.shopSlug;
@@ -5726,6 +5764,18 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     return badRequest(res, err.message === 'Payload too large'
       ? 'Those photos are too large to send — please add fewer or smaller photos'
       : 'Invalid request body');
+  }
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) return badRequest(res, 'Invalid request body');
+
+  // A retry of a booking already made (WP-0.2) is answered before anything
+  // else is checked: its own slot is taken now, so the checks below would
+  // refuse it. Checked again inside the lock, for two retries at once.
+  const key = readRequestKey(body);
+  if (key.error) return badRequest(res, key.error);
+  const requestKey = key.value;
+  if (requestKey) {
+    const replay = await replayBookingRequest(requestKey, params.shopSlug);
+    if (replay) return sendJson(res, replay.status, replay.body);
   }
 
   // The request's own fields are checked before any customer row is created, so
@@ -5846,6 +5896,10 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
 
   // Inside the lock: the time checks (checkCustomerTime), then the writes.
   const out = await withBookingLock([jobDate], async () => {
+    if (requestKey) {
+      const replay = await replayBookingRequest(requestKey, params.shopSlug);
+      if (replay) return replay;
+    }
     const checked = await checkCustomerTime({ jobDate, mechanicId: mechResolved.mechanicId, startTime: body.startTime, minutes });
     if (checked.refusal) return checked.refusal;
     const { times } = checked;
@@ -5909,10 +5963,15 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
         customerDescription: description || null,
         customerBikeNote: bikeNoteValue,
         questionAnswers,
+        bookingRequestKeyHash: requestKey?.keyHash,
+        bookingRequestBodyHash: requestKey?.bodyHash,
       });
     } catch (err) {
       // The 024 index, a second guard behind the lock. createWorkshopJob's own
-      // ROLLBACK was a savepoint, so this transaction is still usable.
+      // ROLLBACK was a savepoint, so this transaction is still usable. The 039
+      // index is the last guard on a request key: the same key, on another
+      // day, committed while this one waited.
+      if (err.code === '23505' && err.constraint === 'idx_workshop_jobs_booking_request_key') return REUSED_KEY;
       if (err.code === '23505') return capacityRefusal(SLOT_GONE);
       throw err;
     }
@@ -6323,6 +6382,10 @@ async function handleStorefrontRequest(req, res, pathname, shop) {
     return serveUploadedImage(req, res, pathname.slice('/api/uploaded-images/'.length));
   }
   if (pathname === '/book' || pathname.startsWith('/book/')) {
+    // A website books for its own shop only. Another shop's slug gets the
+    // same answer as an unknown website, so it says nothing about that shop.
+    const bookSlug = pathname.split('/')[2];
+    if (bookSlug && bookSlug !== shop.slug) return notFound(res, 'Storefront not found');
     return serveAppPage(res, BOOK_HTML, 'src/customer/main.tsx', 'book');
   }
   const storePrefix = `/store/${shop.slug}`;
