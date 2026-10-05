@@ -19,8 +19,10 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 3. **Two people build at once** (Jack, 4 Oct, agreeing to the split plan):
    Mark takes the server half of each work package and all hosting; Jack
    takes the screens and the whole workshop. Each file has one owner (split
-   plan §3); a pull request touching the other person's files needs their
-   approval.
+   plan §3); a pull request changing the other person's files needs their
+   approval. Adding your own line to their file doesn't. But every server
+   change Jack makes, the workshop included, needs Mark's approval. §3.1
+   lists the files both touch, some of them shared (Jack, 5 Oct).
 4. **The build has started** (Jack, 4 Oct). Take the next piece in your
    lane in the split plan's §9 order; stage 0 closes, with its stage check,
    before stage 1 starts.
