@@ -33,7 +33,7 @@ import {
 } from './workshop/quotes.js';
 import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
-import { parseCookies, makeRateLimiter, sendJson, notFound, badRequest, readJsonBody, readRawBody, nowIso } from './lib/http.js';
+import { parseCookies, makeRateLimiter, sendJson, notFound, badRequest, readJsonBody, readRawBody, nowIso, ValidationError } from './lib/http.js';
 import { serializeProduct, serializeBike } from './lib/serializers.js';
 import { ROUTE_AREAS } from './routes/index.js';
 import { sendSms } from './sms.js';
@@ -1110,8 +1110,6 @@ route('GET', '/api/sales/:id', async (req, res, params) => {
   const payments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(id);
   sendJson(res, 200, serializeSale(sale, items, payments));
 });
-
-class ValidationError extends Error {}
 
 async function resolveCashierId(rawId) {
   if (rawId === undefined || rawId === null || rawId === '') return { ok: true, cashierId: null };

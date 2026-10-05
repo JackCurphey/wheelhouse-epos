@@ -3,9 +3,9 @@
 // a handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
-import { prepare, dbExec, pool } from '../db.js';
+import { prepare, dbExec } from '../db.js';
 import { pushInventoryLevel } from '../shopify.js';
-import { sendJson, notFound, badRequest, readJsonBody, nowIso } from '../lib/http.js';
+import { sendJson, notFound, badRequest, readJsonBody, nowIso, ValidationError } from '../lib/http.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
