@@ -84,7 +84,8 @@ export default {
     'Search services': STAY,
     'Send request to [Second site]': go('ms-request-from-shop'),
   },
-  'ms-request-from-shop': { Accept: go('ms-request-answered'), 'Offer another time': go('request-change'), 'Another time': go('request-change'), Decline: go('request-decline') },
+  // Accept is answered back at Bolton (issue #123, point 7: the page says "Back at Bolton").
+  'ms-request-from-shop': { Accept: go('ms-request-answered', '', 'Bolton'), 'Offer another time': go('request-change'), 'Another time': go('request-change'), Decline: go('request-decline') },
   'ms-request-answered': { 'Showing Everyone. Change whose jobs are shown': STAY },
   'ms-till-other': { 'Open the basket': STAY, 'Take payment · £111.00': go('till-pay') },
   'ms-till-move': { 'Move Till B3 to [Second site]': go('ms-tills') },

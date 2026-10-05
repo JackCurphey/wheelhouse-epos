@@ -7,7 +7,7 @@
 import { mkdirSync, rmSync, writeFileSync, readFileSync, statSync, readdirSync } from 'node:fs';
 import { loadDrawings } from './drawings.mjs';
 import { controlsOf, resolve, loadLinks } from './controls.mjs';
-import { FONT_LINK } from '../ui.mjs';
+import { VIEWS } from './views.mjs';
 import { situationLines } from '../consolidate/situation-lines.mjs';
 
 const here = new URL('./', import.meta.url).pathname;
@@ -59,8 +59,17 @@ const linesOf = await situationLines();
 const lines = {};
 for (const [id, s] of Object.entries(screens)) if (s.kept) { const l = linesOf(id); if (l.length) lines[id] = l; }
 const css = helmets.map((h) => h.replace(/<link[^>]*>/g, '').replace(/<\/?style>/g, '').replace(/\bbody\s*\{/g, ':host{')).join('\n');
-writeFileSync(out + 'manifest.json', JSON.stringify({ screens, situations, lines, stories, css }));
-writeFileSync(out + 'index.html', readFileSync(here + 'page.html', 'utf8').replace('%FONT_LINK%', FONT_LINK.replace(/&/g, '&amp;')));
+// The views of a screen for another person or shop (views.mjs), as long as
+// the drawing is still shown.
+const views = {};
+for (const [o, vs] of Object.entries(VIEWS)) { const ok = vs.filter((v) => screens[v.id]); if (screens[o] && ok.length) views[o] = ok; }
+writeFileSync(out + 'manifest.json', JSON.stringify({ screens, situations, lines, stories, css, views }));
+// The drawings' own font link (Soft sand: Public Sans). This process is Fjell,
+// so ui.mjs's FONT_LINK here would be Work Sans (issue #123, point 12).
+const fontLinks = new Set(helmets.map((h) => /<link rel="stylesheet" href="([^"]*fonts\.googleapis[^"]*)"/.exec(h)?.[1]).filter(Boolean));
+if (fontLinks.size !== 1) throw new Error(`expected one font link across the drawings, found ${fontLinks.size}`);
+const [FONT_LINK] = fontLinks;
+writeFileSync(out + 'index.html', readFileSync(here + 'page.html', 'utf8').replace('%FONT_LINK%', FONT_LINK.includes('&amp;') ? FONT_LINK : FONT_LINK.replace(/&/g, '&amp;')));
 const files = readdirSync(out + 'data');
 const biggest = Math.max(...files.map((f) => statSync(out + 'data/' + f).size));
 console.log(JSON.stringify({ screens: Object.keys(screens).length, dataFiles: files.length, biggestMB: +(biggest / 1e6).toFixed(1), dead: new Set(dead).size }));

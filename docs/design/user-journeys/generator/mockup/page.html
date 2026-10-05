@@ -8,16 +8,20 @@
 :root[data-theme="dark"] { --bg: #1d1c19; --panel: #26251f; --ink: #ece8de; --muted: #a8a294; --line: #3a382f; --accent: #8cc2b0; --warn: #f0cf8e; --warn-bg: #3b301c; color-scheme: dark; }
 body { background: var(--bg); color: var(--ink); font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif; font-size: 14px; padding: 0 16px 24px; }
 .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; padding: 10px 0; background: var(--bg); border-bottom: 1px solid var(--line); }
-.bar label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
-.bar select, .bar button { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-height: 36px; padding: 0 10px; }
+.bar label { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); letter-spacing: 0.02em; }
+.bar select, .bar button { max-width: 100%; font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-height: 36px; padding: 0 10px; }
 .bar button { cursor: pointer; }
 .bar select:focus-visible, .bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .name { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; }
 .name strong { font-size: 15px; font-weight: 600; }
+.name strong:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .name span { color: var(--muted); font-size: 12px; }
+.note button { font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-height: 32px; padding: 0 10px; margin-left: 8px; cursor: pointer; }
 .note { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 13px; }
 .stage { margin-top: 12px; overflow: hidden; }
-.frame { transform-origin: top left; background: #fff; box-shadow: 0 0 0 1px var(--line); }
+.stage.actual { overflow-x: auto; }
+/* The drawings are light designs; dark mode is the bar's only (issue #123, point 13). */
+.frame { color-scheme: light; transform-origin: top left; background: #fff; box-shadow: 0 0 0 1px var(--line); }
 .empty { padding: 40px 0; color: var(--muted); }
 [hidden] { display: none !important; }
 .step { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 0; font-size: 14px; }
@@ -33,11 +37,12 @@ body { background: var(--bg); color: var(--ink); font-family: 'Public Sans', ui-
   <label for="person">Person<select id="person"></select></label>
   <label for="shop">Shop<select id="shop"><option>Bolton</option><option>[Second site]</option><option>All shops</option></select></label>
   <label for="size">Size<select id="size"><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="phone">Phone</option></select></label>
+  <button type="button" id="zoom" aria-pressed="false">Actual size</button>
   <button type="button" id="back">‹ Back</button>
-  <div class="name"><strong id="title">Loading…</strong><span id="where"></span></div>
+  <div class="name"><strong id="title" tabindex="-1">Loading…</strong><span id="where"></span></div>
   <label for="sit">This screen's situations<select id="sit"></select></label>
 </div>
-<p class="note" id="note" role="status" hidden></p>
+<p class="note" id="note" role="status" hidden><span id="noteText"></span><button type="button" id="retry" hidden>Try again</button></p>
 <p class="step" id="step" hidden><span id="stepText"></span><button type="button" id="next">Next step ›</button></p>
 <div class="stage" id="stage"><p class="empty">Loading the drawings…</p></div>
 <section class="lines" id="lines" aria-labelledby="linesTitle" hidden><h2 id="linesTitle">Situation lines</h2><p>The same lines as under this screen’s board on the canvas. Read only: they are not drawn, so they can’t be clicked.</p><ul id="linesList"></ul></section>
@@ -45,125 +50,200 @@ body { background: var(--bg); color: var(--ink); font-family: 'Public Sans', ui-
 const PEOPLE = ['Owner', 'Manager', 'Staff', 'Saturday worker', 'Mechanic', 'Customer'];
 const $ = (id) => document.getElementById(id);
 const store = { get(k) { try { return localStorage.getItem('wh-mockup-' + k); } catch { return null; } }, set(k, v) { try { localStorage.setItem('wh-mockup-' + k, v); } catch {} } };
-let M = null; const cache = {}; const trail = [];
+let M = null; const cache = {};
+// One history (issue #123, points 4, 6 and 7): the page's own trail of what
+// was shown, with the person, shop and story step at the time. The address is
+// rewritten in place to the screen shown; the mockup runs inside the artifact
+// frame, where browser Back would step through the host page as well.
+const trail = [];
+let current = null;
+// Each navigation has a number; a drawing that arrives for an older one is
+// dropped (issue #123, point 1).
+let nav = 0;
+let actual = store.get('zoom') === 'actual';
 PEOPLE.forEach((p) => $('person').add(new Option(p)));
 for (const k of ['person', 'shop', 'size']) { const v = store.get(k); if (v) $(k).value = v; }
 
-const load = async (file) => (cache[file] ??= fetch('data/' + file + '.json').then((r) => r.json()));
+// A failed file is forgotten, so the next try asks again (issue #123, point 8).
+const load = (file) => (cache[file] ??= fetch('data/' + file + '.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).catch((e) => { delete cache[file]; throw e; }));
 const ownerOf = (id) => M.screens[id]?.owner || id;
 const sitsOf = (id) => [ownerOf(id), ...(M.situations[ownerOf(id)] || [])];
-// Which shop a drawing is for: All shops or [Second site] when its title says
-// so, otherwise any one shop (drawn at Bolton).
-const shopOf = (sid) => { const t = (M.screens[sid].title + ' ' + sid).toLowerCase(); return /all shops/.test(t) ? 'All shops' : /second site/.test(t) ? '[Second site]' : ''; };
+// The screen drawn for another person or shop (mockup/views.mjs): the only
+// situations the Person and Shop boxes move between (issue #123, points 2 and 3).
+const viewsOf = (o) => M.views?.[o] || [];
+const viewOf = (id) => viewsOf(ownerOf(id)).find((v) => v.id === id);
+const poolOf = (id) => { const o = ownerOf(id); return id === o || viewOf(id) ? [o, ...viewsOf(o).map((v) => v.id)] : [id]; };
+// Which shop a drawing is for: a view's own shop; a kept screen is for any
+// shop; otherwise All shops or [Second site] when a situation's title says so,
+// otherwise any one shop (drawn at Bolton).
+const shopOf = (sid) => { const v = viewOf(sid); if (v) return v.shop || ''; if (M.screens[sid].kept) return ''; const t = (M.screens[sid].title + ' ' + sid).toLowerCase(); return /all shops/.test(t) ? 'All shops' : /second site/.test(t) ? '[Second site]' : ''; };
 // How well a drawing fits the chosen person: 2 drawn for them, 1 they can see
 // it (an owner sees what a manager or staff see), 0 not theirs.
 const SEES = { Owner: ['Owner', 'Manager', 'Staff', 'Everyone'], Manager: ['Manager', 'Owner', 'Staff', 'Everyone'], Staff: ['Staff', 'Everyone'], 'Saturday worker': ['Staff', 'Everyone'], Mechanic: ['Mechanic', 'Everyone'], Customer: ['Customer', 'Everyone'] };
-const roleFit = (sid, person) => { const r = M.screens[sid].role; const me = person === 'Saturday worker' ? 'Staff' : person; return r === me || r.split(/ and |, /).includes(me) ? 2 : (SEES[person] || []).some((x) => r.includes(x)) ? 1 : 0; };
+const roleFit = (sid, person) => { const r = viewOf(sid)?.person || M.screens[sid].role; const me = person === 'Saturday worker' ? 'Staff' : person; return r === me || r.split(/ and |, /).includes(me) ? 2 : (SEES[person] || []).some((x) => r.includes(x)) ? 1 : 0; };
 const shopFit = (sid, shop) => { const o = shopOf(sid); return o === (shop === 'Bolton' ? '' : shop) ? 2 : !o ? 1 : 0; };
-const matches = (sid, person, shop) => roleFit(sid, person) > 0 && shopFit(sid, shop) > 0 && (shop === 'Bolton' || shopFit(sid, shop) === 2 || !sitsOf(sid).some((x) => shopFit(x, shop) === 2));
-// The screen to show for the chosen person and shop (the mockup spec: "Person
-// and shop pick the screen's situation for that person or shop where one
-// exists"). On every page, not only when the bar changes (third walk,
-// walk-through 7 M3): a page that already fits stays; one that doesn't opens
-// the situation drawn for them, if there is one.
-// On a page opened by a click, only the same page drawn for another person or
-// shop is picked (its id is the page's own id plus -staff, -mechanic,
-// -manager or -all: st-list → st-list-staff, rp-home → rp-home-all), never a
-// different moment.
-const viewOf = (x, id) => x.startsWith(id + '-') && /^-(staff|mechanic|manager|owner|all)\b/.test(x.slice(id.length));
-function fitFor(id, { strict = false } = {}) {
-  const person = $('person').value, shop = $('shop').value;
-  const score = (x) => roleFit(x, person) * 3 + shopFit(x, shop);
-  const pool = strict ? sitsOf(id) : sitsOf(id).filter((x) => viewOf(x, id));
-  const best = pool.filter((x) => matches(x, person, shop)).sort((a, b) => score(b) - score(a) || (b === id) - (a === id))[0];
-  if (strict) return best || id;
-  // A click keeps its page unless a view drawn better for this person or shop exists.
-  return best && (!matches(id, person, shop) || score(best) > score(id)) ? best : id;
-}
-const say = (t) => { $('note').textContent = t; $('note').hidden = !t; };
+const fits = (x, person, shop) => roleFit(x, person) > 0 && shopFit(x, shop) > 0;
+// At Bolton the person decides; at another shop a view drawn for that shop
+// wins when it fits the person at all (spec row 2, 3).
+const score = (x, person, shop) => shop === 'Bolton' ? roleFit(x, person) * 3 + shopFit(x, shop) : shopFit(x, shop) * 3 + roleFit(x, person);
+// The mockup spec: "Person and shop pick the screen's situation for that
+// person or shop where one exists". The best of the screen and its views for
+// them, the ordinary screen on a tie; a moment has only itself.
+const bestFor = (id, person, shop) => { const o = ownerOf(id); return poolOf(id).filter((x) => fits(x, person, shop)).sort((a, b) => score(b, person, shop) - score(a, person, shop) || (b === o) - (a === o))[0]; };
+// A click keeps its page unless a view drawn better for this person or shop exists.
+const fitFor = (id, person, shop) => { const best = bestFor(id, person, shop); return best && (!fits(id, person, shop) || score(best, person, shop) > score(id, person, shop)) ? best : id; };
+// Why the page shown isn't drawn for the chosen person or shop.
+const why = (id, person, shop) => roleFit(id, person) === 0 ? `No separate view of this screen for ${person} at ${shop}.` : shop !== 'Bolton' && shopFit(id, shop) < 2 ? `No ${shop} view of this screen for ${person}: showing one shop.` : '';
+let again = null, pending = null;
+const say = (t, retry) => { $('noteText').textContent = t; again = retry || null; $('retry').hidden = !retry; $('note').hidden = !t; };
+$('retry').onclick = () => { const f = again; say(''); f?.(); };
 
-async function show(id, { push = true, refit = true } = {}) {
-  if (!M.screens[id]) { say('That screen isn’t in the mockup: ' + id); return; }
+// Story mode: each step says who is on the screen and what they press; the
+// Person box follows the step's person when the step is entered; "Next step"
+// opens the next step (third walk, walk-through 1 L2).
+let story = null, stepAt = -1;
+// The counter moves only to the next step, and stays on a screen off the path
+// (story 8: the Saturday PIN opens the till, which is also the last step).
+const stepIndex = (steps, at, id) => (steps[at]?.id === id ? at : steps[at + 1]?.id === id ? at + 1 : at);
+function renderStep() {
+  if (!story || stepAt < 0) { $('step').hidden = true; return; }
+  const st = story.steps[stepAt];
+  $('stepText').textContent = `Story ${story.n}, step ${stepAt + 1} of ${story.steps.length} · ${st.who}${st.does ? ': ' + st.does : ' · the end'}`;
+  $('next').hidden = stepAt + 1 >= story.steps.length;
+  $('step').hidden = false;
+}
+
+// Show a screen. Nothing on the page changes until its drawing has loaded, and
+// then only if no later navigation has started.
+//   push: add what was shown to the trail; refit: pick the view for the
+//   person and shop; restore: a trail entry (Back); shop: set by the link;
+//   focus: move focus to the title (a click inside the drawing); story: a
+//   story being started; say: a note to show once it's open.
+async function show(id, opts = {}) {
+  let { push = true, refit = true, restore = null, shop: linkShop = null, focus = false, story: starting = null } = opts;
+  if (!M.screens[id]) { say('That screen isn’t in the mockup: ' + id); return false; }
+  const me = ++nav;
+  pending = { id, opts };
+  // The story this screen is shown in, and the step it was at.
+  const st = starting || story, from = starting ? -1 : stepAt;
+  let person = restore ? restore.person : starting ? starting.person : $('person').value;
   // A drawing for one shop (All shops, [Second site]) sets the shop it shows.
+  let shop = restore ? restore.shop : starting ? starting.shop || 'Bolton' : linkShop || shopOf(id) || $('shop').value;
   // In a story, the story's own next step is shown as it is.
-  if (story && story.steps[stepAt + 1]?.id === id) refit = false;
-  if (shopOf(id) && shopOf(id) !== $('shop').value) $('shop').value = shopOf(id);
-  if (refit) id = fitFor(id);
-  storyStep(id);
-  if (push && location.hash.slice(1) !== id) { trail.push(location.hash.slice(1)); history.replaceState(null, '', '#' + id); }
+  if (st && st.steps[from + 1]?.id === id) refit = false;
+  let note = opts.note || '';
+  if (refit) { const to = fitFor(id, person, shop); if (poolOf(id).length > 1) note = why(to, person, shop); id = to; }
+  const j = restore ? restore.stepAt : st ? stepIndex(st.steps, from, id) : -1;
+  if (st && !restore && j !== from && PEOPLE.includes(st.steps[j].who)) person = st.steps[j].who;
   const s = M.screens[id];
-  const size = $('size').value;
+  const size = starting ? starting.size || 'desktop' : $('size').value;
   const at = s.sizes[size] ? size : s.sizes.desktop ? 'desktop' : Object.keys(s.sizes)[0];
+  const tryAgain = () => show(id, { ...opts, refit: false, shop, restore, note });
+  let html;
+  try { html = (await load(s.sizes[at].file))[id]; } catch { html = undefined; }
+  if (me !== nav) return false;
+  pending = null;
+  if (html == null) {
+    if (current) history.replaceState(null, '', '#' + current.id);
+    $('story').value = story ? String(story.n) : '';
+    say(`Couldn’t load the drawing of “${s.title}”.`, tryAgain);
+    return false;
+  }
+  // Commit: the story, the trail, the bar, the story step, the address, then the drawing.
+  if (starting) { story = starting; trail.length = 0; $('size').value = size; store.set('size', size); }
+  if (restore) trail.pop();
+  else if (push && current && current.id !== id) trail.push(current);
+  current = { id, person, shop, stepAt: j };
+  $('person').value = person; $('shop').value = shop; store.set('person', person); store.set('shop', shop);
+  stepAt = j; renderStep();
+  if (!$('retry').hidden) say('');
+  if (opts.say || note) say(opts.say || note);
+  if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id);
+  const { w, h } = s.sizes[at];
   $('title').textContent = s.title;
   $('where').textContent = `${s.journeyName} · ${s.role}${at !== size ? ` · not drawn at ${size}, showing ${at}` : ''}${s.kept ? '' : ` · a situation of “${M.screens[ownerOf(id)].title}”`}`;
   const sel = $('sit'); sel.innerHTML = '';
   sitsOf(id).forEach((x) => sel.add(new Option((x === ownerOf(id) ? 'The screen: ' : '') + M.screens[x].title, x, false, x === id)));
-  const html = (await load(s.sizes[at].file))[id];
-  const { w, h } = s.sizes[at];
   const stage = $('stage'); stage.innerHTML = '';
-  const frame = document.createElement('div'); frame.className = 'frame'; frame.style.width = w + 'px'; frame.style.height = h + 'px';
+  const frame = document.createElement('div'); frame.className = 'frame'; frame.dataset.screen = id; frame.style.width = w + 'px'; frame.style.height = h + 'px';
   const root = frame.attachShadow({ mode: 'open' });
   root.innerHTML = `<style>${M.css}</style><link rel="stylesheet" href="${document.querySelector('link[rel=stylesheet]').href}">${html}`;
   root.addEventListener('click', onClick);
   stage.appendChild(frame);
-  const fit = () => { const k = Math.min(1, stage.clientWidth / w); frame.style.transform = `scale(${k})`; stage.style.height = h * k + 'px'; };
+  // Fit scales the drawing to the page's width; Actual size shows it at 100%
+  // and the drawing area scrolls sideways (issue #123, point 9; Mark, 4 Oct).
+  const fit = () => { const k = actual ? 1 : Math.min(1, stage.clientWidth / w); frame.style.transform = `scale(${k})`; stage.classList.toggle('actual', actual); stage.style.height = actual ? '' : h * k + 'px'; };
   fit(); window.onresize = fit; scrollTo(0, 0);
   // Third walk, answer 7: the screen's situation lines, as on the canvas.
   const ls = M.lines?.[ownerOf(id)] || [];
   $('linesList').innerHTML = '';
   for (const l of ls) { const li = document.createElement('li'); li.textContent = l.replace(/^• /, ''); $('linesList').appendChild(li); }
   $('lines').hidden = !ls.length;
+  // A keyboard click inside the drawing: focus the new screen's title, which
+  // is read out (issue #123, point 10).
+  if (focus) $('title').focus();
+  return true;
 }
-// Story mode: each step says who is on the screen and what they press; the
-// Person box follows the step's person; "Next step" opens the next step
-// (third walk, walk-through 1 L2).
-let story = null, stepAt = -1;
-// The counter moves only to the next step, and stays on a screen off the path
-// (story 8: the Saturday PIN opens the till, which is also the last step).
-const stepIndex = (steps, at, id) => (steps[at]?.id === id ? at : steps[at + 1]?.id === id ? at + 1 : at);
-function storyStep(id) {
-  if (!story) return;
-  const j = stepIndex(story.steps, stepAt, id);
-  if (j < 0) return;
-  stepAt = j;
-  const st = story.steps[stepAt];
-  if (PEOPLE.includes(st.who)) $('person').value = st.who;
-  $('stepText').textContent = `Story ${story.n}, step ${stepAt + 1} of ${story.steps.length} · ${st.who}${st.does ? ': ' + st.does : ' · the end'}`;
-  $('next').hidden = stepAt + 1 >= story.steps.length;
-  $('step').hidden = false;
-}
-$('next').onclick = () => { if (!story || stepAt + 1 >= story.steps.length) return; const st = story.steps[stepAt + 1]; if (PEOPLE.includes(st.who)) $('person').value = st.who; say(''); show(st.id, { refit: false }); };
+const showZoom = () => { $('zoom').textContent = actual ? 'Fit' : 'Actual size'; $('zoom').setAttribute('aria-pressed', String(actual)); };
+showZoom();
+$('zoom').onclick = () => { actual = !actual; store.set('zoom', actual ? 'actual' : 'fit'); showZoom(); window.onresize?.(); };
+$('next').onclick = () => { if (!story || stepAt + 1 >= story.steps.length) return; say(''); show(story.steps[stepAt + 1].id, { refit: false }); };
 function onClick(e) {
   const c = e.target.closest('[data-go],[data-act]'); if (!c) return;
   e.preventDefault(); say('');
   const go = c.getAttribute('data-go'), act = c.getAttribute('data-act'), what = c.getAttribute('data-what'), note = c.getAttribute('data-say');
-  const shop = c.getAttribute('data-shop'); if (shop) { $('shop').value = shop; store.set('shop', shop); }
+  const shop = c.getAttribute('data-shop'); if (shop) store.set('shop', shop);
   // A story's first check-in of the day (its step marked firstIn) opens the
   // float check, as its next step; any other PIN opens the till (walk-through 10 L1).
   const first = c.getAttribute('data-first'), nx = story?.steps[stepAt + 1];
-  if (first && story?.steps[stepAt]?.firstIn && nx && ownerOf(nx.id) === first) return show(nx.id, { refit: false });
-  if (go) return show(go).then(() => { if (note) say(note); });
+  if (first && story?.steps[stepAt]?.firstIn && nx && ownerOf(nx.id) === first) return show(nx.id, { refit: false, focus: true });
+  if (go) return show(go, { shop, focus: true, say: note });
   if (act === 'back') return goBack();
   if (act === 'outside') return say(what + ' — this happens outside Wheelhouse.');
   if (act === 'notdrawn') return say('Not drawn yet: ' + what + '.');
+  // A jump within the page ("Skip to the main content"): focus its target
+  // inside the drawing (issue #123, point 10).
+  const href = c.getAttribute('href');
+  if (act === 'stay' && href?.length > 1 && href.startsWith('#')) { const t = e.currentTarget.getElementById(href.slice(1)); if (t) { if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', '-1'); t.focus(); } }
 }
-function goBack() { const prev = trail.pop(); if (prev) { history.replaceState(null, '', '#' + prev); show(prev, { push: false, refit: false }); } else say('This is where you started.'); }
+function goBack() { const prev = trail.at(-1); if (prev) { say(''); show(prev.id, { push: false, refit: false, restore: prev }); } else say('This is where you started.'); }
+// A screen still loading when Person, Shop or Size changes is opened again
+// with the new choice, rather than lost or committed with the old one.
+const reopen = () => { const { id, opts } = pending; const now = { person: $('person').value, shop: $('shop').value }; return show(id, { ...opts, restore: opts.restore && { ...opts.restore, ...now }, story: opts.story && { ...opts.story, ...now, size: $('size').value } }); };
+// Person or Shop changed: the view of this screen drawn for them, if there is
+// one; a moment stays as it is.
 function pick() {
-  const id = location.hash.slice(1); if (!M.screens[id]) return;
-  const best = fitFor(id, { strict: true });
-  if (!matches(best, $('person').value, $('shop').value)) say(`No separate view of this screen for ${$('person').value} at ${$('shop').value}.`);
-  if (best !== id) show(best, { refit: false }); else show(id, { push: false, refit: false });
+  if (pending) return reopen();
+  if (!current) return;
+  const person = $('person').value, shop = $('shop').value;
+  const best = bestFor(current.id, person, shop);
+  const msg = why(best || current.id, person, shop);
+  if (!best || best === current.id) { current = { ...current, person, shop }; say(msg); return; }
+  show(best, { refit: false, say: msg });
 }
 $('back').onclick = goBack;
-$('sit').onchange = (e) => show(e.target.value);
+// A situation chosen by name is shown as it is.
+$('sit').onchange = (e) => { say(''); show(e.target.value, { refit: false }); };
 for (const k of ['person', 'shop']) $(k).onchange = (e) => { store.set(k, e.target.value); say(''); pick(); };
-$('size').onchange = (e) => { store.set('size', e.target.value); show(location.hash.slice(1), { push: false }); };
-$('story').onchange = (e) => { const st = M.stories.find((x) => String(x.n) === e.target.value); if (!st) { story = null; $('step').hidden = true; return; } story = st; stepAt = -1; $('person').value = st.person; $('shop').value = st.shop || 'Bolton'; $('size').value = st.size || 'desktop'; trail.length = 0; say(`Story ${st.n}: ${st.name}.`); show(st.steps[0].id, { refit: false }); };
-fetch('manifest.json').then((r) => r.json()).then((m) => {
+// A new size redraws the same screen (issue #123, point 5).
+$('size').onchange = (e) => { store.set('size', e.target.value); if (pending) reopen(); else if (current) show(current.id, { push: false, refit: false }); };
+// A story starts only once its first drawing has loaded (fresh review, 4 Oct).
+$('story').onchange = (e) => { const st = M.stories.find((x) => String(x.n) === e.target.value); if (!st) { story = null; stepAt = -1; renderStep(); return; } say(''); show(st.steps[0].id, { push: false, refit: false, story: st, say: `Story ${st.n}: ${st.name}.` }); };
+// The list of screens; if it fails, say so and offer to try again.
+const start = () => fetch('manifest.json').then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((m) => {
   M = m;
   m.stories.forEach((s) => $('story').add(new Option(`${s.n}. ${s.name}`, s.n)));
-  const start = location.hash.slice(1);
-  show(M.screens[start] ? start : 'map', { push: false, refit: false });
+  const first = location.hash.slice(1);
+  show(M.screens[first] ? first : 'map', { push: false, refit: false });
+}).catch(() => { $('stage').innerHTML = ''; say('Couldn’t load the mockup’s list of screens.', start); });
+start();
+// An address typed or changed by hand opens that screen, and Back returns; one
+// that isn't a screen is put back.
+window.addEventListener('hashchange', () => {
+  const id = location.hash.slice(1);
+  if (!M || (id === current?.id && !pending)) return;
+  if (M.screens[id]) return show(id, { refit: false, push: id !== current?.id });
+  if (current) history.replaceState(null, '', '#' + current.id);
+  say('That screen isn’t in the mockup: ' + id);
 });
-window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (M?.screens[id]) show(id, { push: false, refit: false }); });
 </script>
