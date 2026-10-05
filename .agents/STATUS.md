@@ -8,13 +8,13 @@
 **Mark is on:** WP-0.4: 57 of 161 routes moved (5 Oct). Next, a spec for
 `server/lib/sales.js` with customers and sales (deferred Shopify pushes),
 then image uploads and booking/portal; the dashboard needs Jack's
-`currentShopToday`. Then WP-0.5. **Waiting on Mark:** #157; the types split
-(§4.3) waits on it.
+`currentShopToday`. Then WP-0.5. **#157** approved by Mark (5 Oct), for Jack to
+update and merge; the types split (§4.3) waits on it.
 **Jack is on:** WP-0.2's screens half merged (#164, 5 Oct); the stage
 check waits for Mark's lines 4 and 6.
 Ready alongside: #136 (Citrus Lime exports, not started) and #138 (card
-machine: an Ingenico Move/5000, wifi only; waiting on Jack asking
-Paymentsense, questions on the issue), only Jack can do; reviewing Mark's
+machine: Stripe first, SumUp second, Paymentsense later, #174,
+`docs/decisions/2026-10-05-card-payments-provider.md`), only Jack can do; reviewing Mark's
 WP-0.4 pull requests; stage 0's stage check once lines 1–6 of §9 are in.
 **Open for Jack:** drawings needed before WP-1.7: the trust-PIN "tap your
 name" screen, and the "till only" pop-up's line for a Mechanic (WP-1.1 spec
@@ -45,7 +45,7 @@ and `server.js` define every name they use and import nothing unused,
 #155 and #158). Waiting: line 6 (Mark, WP-0.5; waits for line 4); line 7
 (Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
 line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 in
-#157, waiting on Mark. #161 (the migration backstop missed a rename
+#157 (approved by Mark, for Jack to merge). #161 (the migration backstop missed a rename
 that duplicates a number) is fixed by #166.
 
 - **Build plan:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`;
