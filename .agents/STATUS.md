@@ -52,7 +52,7 @@ WP-0.2 screens, #164 in review). Waiting: line 6 (Mark, WP-0.5; waits for line 4
 (Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
 line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 in
 #157, waiting on Mark. New: #161, for Mark: the migration backstop misses a
-rename that duplicates a number (follow-up to #151; fix #166 open).
+rename that duplicates a number (from #151; fix #166 open).
 
 - **Build plan:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`;
   Jack's answers in `docs/decisions/2026-10-03-build-plan-questions.md`.
