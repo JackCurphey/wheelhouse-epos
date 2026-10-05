@@ -36,7 +36,8 @@ keeps the plan's order, so no workshop piece is built early.
 
 Stage 0 (split plan §9). Done: line 1 (WP-0.1); line 2 (WP-0.2 server
 half, #148, 5 Oct); line 3 (this trim). Not done: line 4 (Mark, WP-0.4,
-#150 first); line 5 (Jack, WP-0.2 screens, unblocked); line 6 (Mark, WP-0.5; waits for line 4); line 7 (Jack,
+#150 first); line 5 (Jack, WP-0.2 screens, unblocked); line 6 (Mark,
+WP-0.5; waits for line 4); line 7 (Jack,
 the stage check; waits for lines 1–6). Stage 1 starts only after line 7.
 
 - **Build plan:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`;
