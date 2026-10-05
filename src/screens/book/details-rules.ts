@@ -1,5 +1,6 @@
 import type { PillOption } from '@/components/ui/pill-group';
 import { ApiError } from '@/lib/api/client.ts';
+import type { BookingRequestKey } from '@/lib/api/types.ts';
 import type { Answer, BookingDraft } from './draft.tsx';
 import type { ServicesResponse } from './services-query.ts';
 import type { AvailabilityResponse, PortalMechanic } from './date-query.ts';
@@ -39,7 +40,7 @@ export type BookingBody = {
   email?: string;
   updateChannel: UpdateChannel;
   termsAccepted: true;
-};
+} & BookingRequestKey;
 
 export const DEFAULT_CHANNEL: UpdateChannel = 'sms';
 export const CHANNEL_OPTIONS: PillOption[] = [
@@ -196,7 +197,21 @@ export function bookingBody(services: ServicesResponse, draft: BookingDraft, pho
     ...(email ? { email } : {}),
     updateChannel: channelOf(draft),
     termsAccepted: true,
+    ...(draft.requestKey ? { requestKey: draft.requestKey } : {}),
   };
+}
+
+/**
+ * A new booking's request key (WP-0.2): 32 random bytes as base64url, 43
+ * characters, inside the server's rule (32 to 128 letters, digits, - and _).
+ * The link the server makes from it is only as hard to guess as the key.
+ * getRandomValues rather than randomUUID, which a browser offers only on
+ * https or localhost.
+ * Contract: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md
+ */
+export function newRequestKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /** Where a failed send leaves the customer. Anything that isn't an answer from the server is a lost connection. */
