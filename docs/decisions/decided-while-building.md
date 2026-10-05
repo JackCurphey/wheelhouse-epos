@@ -79,6 +79,22 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    follows the accessibility-first rule and the dialog's own Escape
    handling.
 
+### 5 Oct 2026: WP-0.2 screens half, the booking bugs
+
+1. **`details`: Back while "Sending…" doesn't stop the booking.** The
+   Back link stays as drawn; if the booking is made after the customer has
+   gone back, the app takes them to its private link from whichever booking
+   screen they're on, and clears the draft. If it fails after they've gone
+   back, nothing is shown and their answers are kept, so pressing Request
+   booking again sends the same request key. *Pattern:* success already
+   replaces the details screen with the private link.
+2. **`details`: the same request key sent again with different details**
+   (a lost reply, then the customer changed something and sent again) shows
+   the server's own words on the details screen, "This booking was already
+   sent with different details". Not drawn. *Pattern:* any other refusal
+   with the server's own message is shown as is (d5). A clearer customer
+   message, with the shop's contact, is for Jack to word.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

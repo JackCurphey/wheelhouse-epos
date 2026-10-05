@@ -44,6 +44,10 @@ export type BookingDraft = {
   updateChannel?: 'email' | 'sms' | 'whatsapp';
   termsAccepted?: boolean;
   marketingPermission?: boolean;
+  // Made on the first Send and sent on every retry, so the server makes the
+  // booking once however many times it is sent (WP-0.2). Kept through a
+  // refresh; cleared with the rest of the draft once the booking is made.
+  requestKey?: string;
 };
 
 type DraftApi = {

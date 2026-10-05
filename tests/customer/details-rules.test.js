@@ -245,3 +245,20 @@ test('several photos are read one at a time, not all at once - only one arrayBuf
 test("the booking goes to the shop's bookings address", () => {
   assert.equal(s.bookingsPath('north shop'), '/api/portal/north%20shop/bookings');
 });
+
+// WP-0.2 screens half: a request key the server accepts (32 to 128 letters,
+// digits, - and _), made fresh each time.
+// Contract: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md
+test('newRequestKey makes a key the server accepts, different each time', () => {
+  const a = r.newRequestKey();
+  const b = r.newRequestKey();
+  assert.match(a, /^[A-Za-z0-9_-]{32,128}$/);
+  assert.match(b, /^[A-Za-z0-9_-]{32,128}$/);
+  assert.notEqual(a, b);
+});
+
+test('bookingBody carries the draft\'s request key, and none when the draft has none', () => {
+  const draft = { serviceIds: [12], date: '2026-10-05', mechanicId: 1, startTime: '09:30', name: 'Gina', phone: '07700 900123', termsAccepted: true };
+  assert.equal(r.bookingBody(SERVICES, { ...draft, requestKey: 'k'.repeat(40) }, []).requestKey, 'k'.repeat(40));
+  assert.equal('requestKey' in r.bookingBody(SERVICES, draft, []), false);
+});

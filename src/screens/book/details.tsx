@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Navigate, useParams } from 'react-router';
+import { Navigate, useNavigate, useParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api/client.ts';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { useTerms } from './terms-query.ts';
 import { photosBase64, sendBooking } from './send.ts';
 import {
   CHANNEL_OPTIONS, CHECK_ANSWERS, PHOTOS_QUESTION, bookingBody, channelOf, dropoffWindowOn, emailLabel, fieldErrors,
-  refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
+  newRequestKey, refusalRoute, summaryLines, whenText, type ContactField, type SendRefusalState, type UpdateChannel,
 } from './details-rules.ts';
 
 /**
@@ -80,10 +80,22 @@ function DetailsForm({ services, back, onExit }: FormProps) {
   const errorFor = (field: ContactField) => problems.find((p) => p.field === field)?.message ?? null;
   const termsError = errorFor('terms');
   const note = problems.length > 0 ? CHECK_ANSWERS : sendError;
+  // Back while "Sending…" leaves this screen, but the booking can still be
+  // made (WP-0.2). Once it is, the customer is taken to its link from
+  // wherever they are, so they never lose it.
+  const navigate = useNavigate();
+  const shown = React.useRef(true);
+  React.useEffect(() => () => {
+    shown.current = false;
+  }, []);
 
   const send = async () => {
     setSending(true);
     setSendError(null);
+    // One key per booking, saved before sending, so a retry (or a resend
+    // after a refresh) repeats it and the server makes the booking once.
+    const requestKey = draft.requestKey ?? newRequestKey();
+    if (!draft.requestKey) update({ requestKey });
     try {
       // The shop can edit its questions between problem and now, so the
       // answers are cleaned against a fresh copy. Read outside React Query
@@ -92,9 +104,16 @@ function DetailsForm({ services, back, onExit }: FormProps) {
       const fresh = await apiGet<ServicesResponse>(servicesPath(shopSlug));
       queryClient.setQueryData(servicesQueryKey(shopSlug), fresh);
       const photoData = await photosBase64(photos);
-      const reply = await sendBooking(shopSlug, bookingBody(fresh, draft, photoData));
-      clear();
-      onExit({ to: reply.privateLink, replace: true });
+      const reply = await sendBooking(shopSlug, bookingBody(fresh, { ...draft, requestKey }, photoData));
+      if (shown.current) {
+        clear();
+        onExit({ to: reply.privateLink, replace: true });
+      } else {
+        // Navigate first: clearing first would let the screen they went
+        // back to redirect on the empty draft.
+        navigate(reply.privateLink, { replace: true });
+        clear();
+      }
     } catch (err) {
       const route = refusalRoute(err);
       if (route.to === 'date') {
