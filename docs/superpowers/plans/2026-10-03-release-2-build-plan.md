@@ -128,7 +128,7 @@ of them blocks building; all of them block going live.
 | Outside service | Stand-in until it's real | Who unblocks it |
 |---|---|---|
 | Hosting and a public address (PL-1) | local server | Mark |
-| Card machine | staff key the amount in (already in #111) | Paymentsense (Jack, Q7); model, linking and offline still to check |
+| Card machine | staff key the amount in (already in #111), and a pretend card machine behind the card machine adapter | Paymentsense first (Jack, Q7; Ingenico Move/5000, #138), then other card machine companies, each its own connection behind the same adapter (Jack, 5 Oct) |
 | Online payments (PAY-05) | fake provider with test outcomes | Jack and Mark (Q10) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
 | Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
