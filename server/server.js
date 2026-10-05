@@ -38,7 +38,6 @@ import { serializeProduct, serializeBike } from './lib/serializers.js';
 import { currentSession, currentCustomerSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
 import { sendSms } from './sms.js';
-
 import {
   CustomerAuthError,
   signupCustomer,
