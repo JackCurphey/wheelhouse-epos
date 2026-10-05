@@ -38,9 +38,9 @@ Surveyed on `origin/main` at `a7958bb` (4 Oct):
 | `server/server.js`: 6,861 lines, all 161 routes (146 written out, 15 generated), and every serializer | Every server change edits it | §4.1: one route file per area (WP-0.4) |
 | `server/migrations/NNN_*.sql`: numbered one after another (`038` is the latest) | Both people would claim `039` | §4.2 |
 | `src/lib/api/types.ts`: client copies of server shapes, written by hand | Every package adds types here | §4.3: one types file per area |
-| `src/staff/routes.ts`, `nav.ts`, `app-shell.tsx` `SCREENS` | Every new staff screen edits all three | Jack's alone (§3) |
-| `scripts/ci/assert-screen-trace.mjs` `COVERED` list | Edited with screen-tagged routes | Mark's alone |
-| `tests/helpers/testShop.js`, `workshopFixtures.js`, `staff.js` | Seed data both people's tests use | Mark's alone; Jack asks for what he needs |
+| `src/staff/routes.ts`, `nav.ts`, `app-shell.tsx` `SCREENS` | Every new staff screen edits all three | Jack's; Mark adds his two screens' lines (§3.1) |
+| `scripts/ci/assert-screen-trace.mjs` `COVERED` list | Edited with screen-tagged routes | Mark's; Jack adds his own lines (§3.1) |
+| `tests/helpers/testShop.js`, `workshopFixtures.js`, `staff.js` | Seed data both people's tests use | Split by what each helper is for (§3.1) |
 | `.agents/STATUS.md` and the build board's `BOARD` block | Both are updated after every pull request, by rule | §5 |
 | `docs/decisions/decided-while-building.md` | Both append | §5 |
 | `public/app.js` (the old app, 7,123 lines) and the server fields kept only for it | Removing an old screen touches both | §4.5 |
@@ -52,13 +52,18 @@ onto a file that has moved.
 ## 3. Who owns which files
 
 Each file has one owner. The owner edits it freely. The other person may
-edit it only in a pull request the owner has approved.
+change it only in a pull request the owner has approved; adding their own
+line to it needs no approval. §3.1 lists the files both touch, and where it
+says otherwise it wins over the lists below.
 
 **Mark:** `server/**` (except the workshop area below), `server/migrations/**`,
 `src/lib/api/**` (the client and the per-area types files: the seam between
-the two halves), `src/lib/live/**` (the live-updates hook, WP-1.9), the
-in-browser till copy and send queue (WP-1.6), `tests/*.test.js` (server
-tests), `tests/helpers/**`, `scripts/ci/**`, `.github/**`, `docker*`,
+the two halves; the workshop's parts are Jack's, §3.1), `src/lib/live/**`
+(the live-updates hook, WP-1.9), the in-browser till copy and send queue
+(WP-1.6), `tests/*.test.js` (server tests, except the workshop's, §3.1),
+`tests/helpers/**` (except the workshop and screen helpers, §3.1),
+`scripts/ci/**`, `scripts/new-db.sh`, `scripts/dev/**`,
+`scripts/print-route-list.mjs`, `.github/**`, `docker*`,
 `print-agent/**`, every outside-service adapter (§5 of the build plan),
 and **all hosting and infrastructure** (Mark, 4 Oct): the host (PL-1), the
 hosted copy (WP-0.5), managed Postgres with point-in-time restore and a
@@ -75,7 +80,71 @@ payments, Xero and QuickBooks developer access).
 workshop route file (`server/routes/workshop.js` once WP-0.4 lands) are
 Jack's. He built the diary, the job page and quotes, and WP-4.1 is mostly
 small server changes alongside a lot of screen work. Splitting it would mean
-a contract for every small change.
+a contract for every small change. Every server change Jack makes, here
+included, also needs Mark's approval (Jack, 5 Oct, §3.1).
+
+### 3.1 Files both people touch (issue #141)
+
+Codex finding 11 found files the one-owner rule can't cover as written. Jack
+answered four questions on 5 Oct (§8, question 7); the rest follow from them
+and are marked *(proposed)* for Mark to confirm or change, as is anything
+not marked with one of Jack's answers.
+
+**The general rule (Jack, answer 3).** Adding your own line to the other
+person's file needs no approval beyond the usual fresh review: Mark's line for his screen
+in Jack's screen list, or a new screen test or screen helper.
+Changing or removing anything the other person wrote still needs their
+approval. **The server is the exception** (Jack, 5 Oct, answers 5 and 6): any
+change Jack makes to server code, additions included, needs Mark's approval.
+That covers `server/**` (the workshop and the booking server included),
+workshop migrations and server tests. The workshop server stays Jack's, so
+Mark's changes there still need Jack's approval. A generated
+file follows its source: whoever changes the source
+regenerates it in the same pull request, and never edits the output by hand.
+
+| File or area | Owner | The other person |
+|---|---|---|
+| **Booking server**: the customer booking routes (`/api/portal/*`, the booking route file after WP-0.4), `server/booking-*.js`, `service-questions.js`, `standard-terms.js`, `customer-auth.js` | Mark (answer 1) | Every change Jack makes, additions included, needs Mark's approval, including his WP-4.4 work (answers 5, 6) |
+| `server/capacity.js` and `server/clock.js` (free times, and the shop's "today") | Mark, with the booking server *(proposed)* | The workshop's diary and New job read them too, so a change that alters what the workshop gets needs Jack's approval *(proposed)* |
+| `tests/helpers/` for sign-in, test shops and booking (`staff.js`, `till.js`, `portal.js`, `testShop.js`, `liveServer.js`, `http.js`, `bookable.js`, `linkActions.js`) | Mark | Server test helpers, so any change Jack makes, additions included, needs Mark's approval (answer 6) |
+| `tests/helpers/` for workshop data (`workshopFixtures.js`) and screens (`dom.js`, `book-screen.js`, `css.js`) | Jack | Mark adds; changing one needs Jack's approval *(proposed)* |
+| Tests (`tests/*.test.js`, and screen tests that test Mark's code, such as `tests/screens/api-client.test.js`, `session.test.js`, `intent-adapter.test.js`) | Whoever owns the code tested: Jack for the workshop and his workshop migrations, Mark for the rest, wherever the file sits *(proposed)* | Adds tests for their own code; changing the other's test file needs approval; Jack's server tests go with his server change, so Mark approves them (answer 6) |
+| `src/lib/api/client.ts` | Mark, except `jobAction` and other workshop calls, which are Jack's and move to the workshop's own file in WP-0.4's types split *(proposed)* | Jack changes Mark's part with his approval |
+| Per-area types files (`src/lib/api/<area>.ts`, §4.3) | The area's server owner | A merged contract changes only with both approving (§4.3) |
+| `src/staff/app-shell.tsx`, `routes.ts`, `nav.ts` | Jack | Mark adds a line each for `mv-start` and `rp-accounts-connect` (answer 3) |
+| The `mv-start` screen ("Start the move") | Mark until stage 8, then Jack (answer 4) | In stage 8 Jack takes it over with the other move screens |
+| The `rp-accounts-connect` screen (connecting Xero or QuickBooks) | Mark (§6, 5.3), in its own file under `src/staff/` *(proposed)* | Jack approves changes to shared screen parts it uses |
+| `public/r/**` (generated from `registry/`) | Follows `registry/` (Jack) | Whoever changes `registry/` runs `npm run registry:build` in the same pull request; CI fails if the two differ |
+| `tests/fixtures/route-list.txt` (generated, #150) | Mark owns the test and its script | Whoever adds or renames a route regenerates it in that pull request: `node scripts/print-route-list.mjs > tests/fixtures/route-list.txt` |
+| `scripts/ci/assert-screen-trace.mjs` `COVERED` list | Mark | Jack adds a line for a new workshop route of his (answer 3) |
+| `server/server.js` after WP-0.4, `server/routes/index.js`, `server/lib/*` | Mark | Every change Jack makes, additions included, needs Mark's approval (answer 6) |
+| `server/workshop/**`, `server/routes/workshop.js`, `server/workshop/jobs.js` (WP-0.4) | Jack | Mark's changes need Jack's approval; Jack's need Mark's (answer 6). Mark's areas call `jobs.js` freely |
+| Workshop migrations | Jack writes them (§4.2), each with Mark's approval (answer 6) | `server/migrations/run-migrations.js` stays Mark's |
+| `src/lib/auth/use-session.ts` (the staff app's one source of who is signed in) | Mark, since WP-1.1 and WP-1.7 change it *(proposed)* | A change to what Jack's screens read from it needs Jack's approval *(proposed)* |
+| `src/lib/adapters/intent.ts` (printing and messages, for now) | Mark (an outside-service adapter) | A change to what Jack's screens call needs Jack's approval *(proposed)* |
+| WP-1.6's browser-side till copy and send queue | Mark, in a folder of its own named in WP-1.6's spec *(proposed)* | Mark's changes to till screens need Jack's approval |
+| Front-end build and test config (`vite*.config.ts`, `tsconfig*.json`, `eslint.config.js`, `playwright.config.ts`, `components.json`), `public/*.html`, `public/diary-*.js` | Jack *(proposed)* | Mark edits with Jack's approval |
+| `package.json`, `package-lock.json` | Shared *(proposed)* | Either adds a small dependency, saying so (project rule 6); the lockfile is regenerated with `npm install`, never hand-edited; changing or removing what the other uses needs their approval |
+| `README.md` | Shared *(proposed)* | Each edits their own section |
+| `docs/decisions/**`, `CLAUDE.md` | Jack (they are his decisions and rules) *(proposed)* | Mark proposes; Jack approves |
+| `docs/superpowers/plans/**` | Shared: Mark wrote this plan, Jack the build plan *(proposed)* | Either edits; the other approves a change to a lane or an agreed rule |
+| `docs/superpowers/specs/**` | Whoever wrote it *(proposed)* | Either edits before it merges; a merged contract changes only with both approving (§4.3) |
+| `docs/decisions/decided-while-building.md`, `.agents/STATUS.md`, the build board | Shared, as §5 says | Each in their own section, or in the day's status pull request |
+| `docs/reviews/**` | Shared *(proposed)* | Either adds a review |
+| `tests/registry/**` | Jack, with `registry/` *(proposed)* | Mark with Jack's approval |
+| `public-portal/` (the old customer pages, no longer served) | Jack, who removes it once nothing reads it *(proposed)* | — |
+| `.claude/**`, `public-demo/`, `prototype/`, `research/` | Jack *(proposed)* | Mark with Jack's approval |
+
+**Old-app fields (Jack, answer 2).** A field like a job's `status` can be
+used by more than the old app: `serializePortalBooking` sends it to
+customers, and `server/workshop/legacy-status.mjs` names the old customer
+pages (`public-portal/`) as a reader. Mark removes old server fields, as
+§4.5 says, and the pull request that removes one lists every place that
+uses it: the old app, the booking and customer pages, customer messages,
+the client types and tests. It goes only when that list is empty. Where the
+field lives in the workshop (a job's `status` does), Mark's removal needs
+Jack's approval, and the migration that drops the column is a workshop
+migration, which Jack writes and Mark approves *(proposed)*.
 
 ## 4. The rules that stop collisions
 
@@ -126,7 +195,7 @@ says which branch its routes run under (note: `/api/tills` and
 booking for most of it, and settings, sales and the dashboard for
 `parseWorkingDays`, `toCapacitySettings` and `currentShopToday`
 (`currentShopToday` at `server.js:1633` and 5283). It is one of the
-ownership exceptions to write down (#141). Nine test
+files both people touch, in §3.1 (#141). Nine test
 files import names from `server.js` (`createSale`, `pendingShopifyPushes`,
 `JOB_STATUSES` and others); `server.js` keeps re-exporting every one, so no
 test changes.
@@ -179,7 +248,8 @@ size because moved lines count twice; each says so in its description.
 ### 4.2 Migrations
 
 Migrations keep their three-digit numbers (`039`, `040`, …; Mark, 4 Oct).
-Mark writes them, except in Jack's workshop area. The runner applies files in
+Mark writes them, except in Jack's workshop area, where Jack writes them
+and Mark approves each one (§3.1). The runner applies files in
 filename order and remembers what it has run **by filename**, in the
 `schema_migrations` table (`server/migrations/run-migrations.js:66–83`). So a
 file that has run under one name and is then renamed looks new, and runs a
@@ -278,7 +348,8 @@ in stage 4, §7.2.)
 
 When Jack's replacement screen merges, Jack removes the old screen from
 `public/app.js` (project rule 5). Mark then removes the server fields kept
-only for it, in a follow-up pull request. They are never done in the same
+only for it, in a follow-up pull request that lists every other place still
+using each field (§3.1, old-app fields). They are never done in the same
 pull request.
 
 ### 4.6 Branches, worktrees, size
@@ -288,8 +359,10 @@ pull request.
 - No branch lives more than two days. Rebase on `main` before opening a pull
   request and again before merging.
 - The pull request size target stays at 250–600 changed lines.
-- A pull request that touches a file the other person owns needs that
+- A pull request that changes a file the other person owns needs that
   person's approval, as well as the fresh subagent review (project rule 4).
+  Adding your own line doesn't, except on the server: any server change
+  Jack makes needs Mark's approval (§3.1).
 
 ## 5. Status, the board and the decision log
 
@@ -364,7 +437,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 | 4.1 Workshop day, the rest | — | **J** whole (his workshop area, §3): blocks 15, 23, 25; 9 screens; storage slots, checklist, "Mark ready" as the sign-off (Q3) |
 | 4.2 Quotes, the rest | reminders through 1.8's scheduler, spending limit, deposit through the online payments adapter | blocks 37, 38; 3 screens |
 | 4.3 Collect and pay | "Bike ready" on Mark ready; online payment; receipts; the uncollected reminder | blocks 39, 41; 5 screens |
-| 4.4 Book a repair, rebuilt | deposits and auto-confirm on the server | **J** most of it: block 36, 8 customer screens, change and cancel, saved draft. Jack's sessions built the booking server, so he keeps it |
+| 4.4 Book a repair, rebuilt | deposits and auto-confirm on the server | **J** most of it: block 36, 8 customer screens, change and cancel, saved draft. The booking server itself stays Mark's; Jack's server changes for 4.4 need Mark's approval (§3.1, Jack 5 Oct) |
 | 4.5 Account, history, reminders | consent and "Stop these", service reminders, review requests, the data download, the staff inbox model | block 47; 9 screens |
 
 ### Stage 5 — The office
@@ -493,7 +566,8 @@ situations that need roles (`diary-mechanic`) were never candidates.
 2. **Building blocks ahead.** Mark, 4 Oct: no. He wants Jack to see working
    progress as early as possible instead, so §7 replaces it.
 3. **Migration names.** Mark, 4 Oct: keep the numbers (§4.2).
-4. **The workshop as Jack's full-stack area.** Mark, 4 Oct: yes.
+4. **The workshop as Jack's full-stack area.** Mark, 4 Oct: yes. Jack, 5 Oct: his server changes there also need Mark's
+   approval (question 7, answer 6).
 5. **Hosting and infrastructure.** Mark, 4 Oct: Mark's, all of it,
    including the hosted copy for Jack (WP-0.5).
 6. **For Jack:** agree to §5's change to the project rules and §7.2's
@@ -504,6 +578,19 @@ situations that need roles (`diary-mechanic`) were never candidates.
    would have changed the order Jack chose on 3 Oct (Q2). Jack, 5 Oct:
    **keep the plan's order** ("lets just keep the plans order"): the
    workshop, all of WP-4.1, waits for stage 4.
+
+7. **For Jack: the files both people touch (§3.1, issue #141).** Jack,
+   5 Oct: (1) the booking server stays Mark's, and Jack edits it with
+   Mark's approval ("keep them as marks"); (2) Mark removes old server
+   fields, after listing every place that uses them ("1"); (3) adding your
+   own line to the other person's file needs no approval, changing or
+   removing theirs does ("1"); (4) `mv-start` is Mark's until stage 8, then
+   Jack's ("1"); (5) the booking server is the exception to (3): every
+   change there, additions included, needs Mark's approval ("1"); (6)
+   "anything server related that i change should get marks approval": every
+   server change Jack makes, the workshop included, needs Mark's approval,
+   and the workshop stays Jack's. Mark to confirm the lines marked
+   *(proposed)*.
 
 ## 9. The first week, concretely
 
@@ -560,3 +647,6 @@ edits `server.js` while it moves.
 | Hosting and infrastructure are Mark's, and a hosted copy comes in stage 0 | Mark, 4 Oct: "assign the hosting and infra to me"; Jack sees each merge without running the app |
 | §7.2 trimmed to the workshop pieces with no stage 1 dependency, each with its reason; the rest stay in WP-4.1. This answers the workshop half of finding 5 only; its first half (§7.1's server order) is not covered here | Codex finding 5 (issue #131): "Who did what", sign-off, notes and printing need PIN identity, the activity record, live updates and printing |
 | The workshop is not built early: all of WP-4.1 stays in stage 4, as the build plan's order has it | Jack, 5 Oct, keeping his 3 Oct answer to Q2 ("lets just keep the plans order") |
+| §3.1: the files both people touch, who edits and who approves; the booking server stays Mark's; adding your own line needs no approval | Codex finding 11 (issue #141); Jack, 5 Oct, §8 question 7 |
+| `mv-start` passes to Jack in stage 8 | Jack, 5 Oct: all the move screens end with one owner |
+| Every server change Jack makes needs Mark's approval, the workshop included; the workshop stays Jack's | Jack, 5 Oct: "anything server related that i change should get marks approval" |
