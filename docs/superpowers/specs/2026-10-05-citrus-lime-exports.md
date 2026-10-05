@@ -19,24 +19,35 @@ the same pull request):
 | Stock per shop | Price List - Store Level; Stock by Location | Yes |
 | Barcodes | Barcode/Alias List | Yes |
 | Serial numbers | Serial Number List | Yes |
-| Customers who have bought | Top Customers | Yes |
+| Customers, perhaps only those who have bought | Top Customers | Yes |
 | Every customer, buyers or not | Back office Customers list | **No export button** |
-| Customers' bikes | Service Items Report (tick "include items never serviced") | Yes |
+| Customers' bikes | Service Items Report (tick "include items never serviced"); it has the owner's name, email and phone but no account number | Yes |
 | Money customers owe, credit limits | Customer Accounts with Balances; Outstanding Credit/Debit | Yes |
 | Gift vouchers still to spend | Outstanding Gift Vouchers | Yes |
-| Open orders and deposits | All Customer Orders; Order Line Detail (open only); Outstanding Deposits | Yes |
+| Open orders and deposits, including open workshop jobs (to confirm: their Type column) | All Customer Orders; Order Line Detail (open only); Outstanding Deposits | Yes |
 | Purchase orders | Purchase Order Lines - All Orders | Yes |
 | Past sales, for the weekly check | Who Bought What; Tender Detail (by date range) | Yes |
 | Stock history | Item Movement (from 25 Jan 2017) | Yes |
-| Workshop jobs, with mechanic, bike, dates and status | Back office Workshop list | **No export button** |
+| Workshop job history, with mechanic, bike, dates and status | Back office Workshop list | **No export button** |
 | Each job's notes and work done | Not seen in any list | **Not found** |
+| Closed order lines | Back office Customer Order Lines | **No export button**; not needed for the move |
+| Marketing consent and its date | Top Customers; Who Bought What | Yes |
 
-**The two gaps.** In this order: (1) Jack asks Citrus Lime support for a full
-export of customers and workshop jobs with their notes (shops leaving
-usually get one); (2) Citrus Lime's API, if they offer one; (3) only as a
-last resort, an agent copying the back office screens page by page, after
-checking Citrus Lime's terms allow it, with the copy kept by Jack and never
+**What can't be exported:** every customer (including those who never
+bought) and the workshop job history with its notes. Ways to get them, in
+this order: (1) Jack asks Citrus Lime support for a full export, with each
+customer's account number and marketing consent (shops leaving usually get
+one); (2) a way for programs to read Citrus Lime's data directly (an API),
+if they offer one; (3) only if Jack decides to, as a last resort, after
+checking Citrus Lime's terms and data-protection rules, an agent copying
+the back office screens page by page, with the copy kept by Jack and never
 in the repo.
+
+The weekly check compares the number of customers (Moving from Citrus Lime,
+decision 5), so it can only match once every customer has come across:
+the full export is needed before the weekly check can pass.
+
+"Item Lookup Code" (ILC) is Citrus Lime's product code.
 
 ## Cloud Reports (intelligence.citruslime.com/reports)
 
@@ -133,7 +144,6 @@ Every report below has "Export to Excel".
   may only list buyers).
 - Workshop jobs as a list with their work, mechanic and notes: open ones may
   be in the customer orders reports (Order Type / Type), closed ones not.
-- The Cloud POS back office itself (outside Cloud Reports) was not looked at.
 
 ## Cloud POS back office (pos2.citruslime.com), read 5 Oct 2026
 Column headings and Manage View lists only. None of these screens showed an
