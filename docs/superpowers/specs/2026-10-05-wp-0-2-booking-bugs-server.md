@@ -35,7 +35,7 @@ one optional field:
 
 | Field | Type | Rule |
 |---|---|---|
-| `requestKey` | string | 16 to 128 characters, letters, digits, `-` and `_` only. The client makes one when the customer presses Send (`crypto.randomUUID()` fits) and sends the same key on every retry of that booking. A new booking gets a new key. |
+| `requestKey` | string | 32 to 128 characters, letters, digits, `-` and `_` only. The client makes one when the customer presses Send (`crypto.randomUUID()` fits) and sends the same key on every retry of that booking. A new booking gets a new key. |
 
 Optional for now, so today's screens keep working until Jack's half sends
 it. Without a key, a retry still makes a second booking.
@@ -45,14 +45,16 @@ Replies:
 | Case | Status | Body |
 |---|---|---|
 | A new booking | 201 | `BookingReply`, unchanged |
-| The same key again, with the same booking details | **200** | `BookingReply` for the booking already made. `privateLink` is a **new** link and the earlier one stops working: only a hash of the link is kept, so the first one can't be shown again. Nothing else is written, no second customer, and the guest rate limit isn't counted. |
+| The same key again, with the same booking details | **200** | `BookingReply` for the booking already made. `privateLink` is the **same** link as the first reply: a booking sent with a key gets a link worked out from the key, so every reply to it carries the same one. Nothing is written, no second customer is made, and the early replay doesn't count against the guest rate limit. |
 | The same key again, with different details | 409 | `{ error: 'This booking was already sent with different details', code: 'reused_key' }` |
 | A `requestKey` that breaks the rule above | 400 | `{ error: 'Invalid request key' }` |
 | A body that isn't a JSON object (`null`, a list, a number, a string) | 400 | `{ error: 'Invalid request body' }` |
 
 "The same booking details" means the whole body apart from `requestKey`,
 compared by a SHA-256 hash of its JSON. The key is stored as a SHA-256 hash
-too, since it can mint a fresh private link.
+too. The link code is SHA-256 of `booking-link:` plus the key, and like any
+link only its hash is stored. That's why the key must be at least 32
+characters: the link is only as hard to guess as the key.
 
 Types, in `src/lib/api/types.ts` until WP-0.4 moves them into the per-area
 file: `BookingRequestKey` (`{ requestKey?: string }`, which Jack's half adds
@@ -91,10 +93,16 @@ included.
   anything else is validated or written. A retry of a saved booking would
   otherwise be refused, because its own slot is now taken.
 - Two retries can arrive at once. The key is checked again first thing
-  inside the booking lock, so the second finds the first. The unique index
-  is the last guard, answered as `reused_key`. In that race the second
-  request may already have made a guest customer row. That's the same kind
-  of stray row the archive already records for refusals inside the lock.
+  inside the booking lock, so the second finds the first. The unique
+  indexes are the last guard: the key's (039), or the link's (027), since
+  the link comes from the key. Either is answered as `reused_key`. In that
+  race the second request may already have made a guest customer row and
+  counted against the guest rate limit. That's the same kind of stray row
+  the archive already records for refusals inside the lock.
+- Why the link comes from the key (fresh review, 5 Oct): the first version
+  issued a new link on every replay. A slow first request that replayed
+  after its retry would then replace the link the customer had just been
+  given, leaving them with one that no longer works.
 - `/book/<slug>` is checked in `handleStorefrontRequest`, beside the code
   that forwards `/book` to the booking app.
 - The sales and dashboard windows become
@@ -111,8 +119,8 @@ website stage, not into this pull request.
 ## Tests (written first, each watched failing)
 
 - `tests/portal-booking-request-key.test.js`: a retry with the same key
-  returns 200, the same reference and a working new link, the first link
-  stops working, and there's still one job; a different body with the same
+  returns 200, the same reference and the same working link, and there's
+  still one job; three at once make one job and one link; a different body with the same
   key is 409 `reused_key`; a bad key is 400; no key still books twice; a
   `null`, list or number body is 400.
 - `tests/book-page.test.js`: another shop's `/book/<slug>` on a website

@@ -14,11 +14,14 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
 
 ### 5 Oct 2026: WP-0.2 server half, the booking bugs
 
-1. **A retry gets a new private link, and the first one stops working.**
-   Only the link's hash is stored, so the server can't send the first link
-   again. Keeping the code itself would undo the reason for hashing it.
-   *Pattern:* `POST /api/workshop-jobs/:id/private-link`, where staff get a
-   new link and the old one stops working.
+1. **A retry gets the same private link as the first reply.** For a
+   booking sent with a request key, the link is worked out from the key, so
+   the server can send it again without storing it. Only its hash is kept,
+   as for every link. The key must therefore be at least 32 characters.
+   Issuing a new link on every replay was tried first and dropped: a slow
+   first request replaying late would replace the link the customer had
+   just been given. *Pattern:* the link's existing hash-only storage
+   (`server/booking-link.js`).
 2. **The request key is optional for now.** Today's booking screens don't
    send one. Making it required would break them until Jack's half merges.
    Once it has, the key can become required in a follow-up.

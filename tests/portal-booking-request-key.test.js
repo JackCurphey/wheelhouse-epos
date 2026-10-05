@@ -56,7 +56,7 @@ const jobsOn = (jobDate) => runWithShop(owner.shop.id, () =>
   prepare('SELECT count(*)::int AS n FROM workshop_jobs WHERE job_date = ?').get(jobDate));
 const customerCount = () => runWithShop(owner.shop.id, () => prepare('SELECT count(*)::int AS n FROM customers').get());
 
-test('a retry with the same key gets the booking already made, with a new link, and no second job', async () => {
+test('a retry with the same key gets the booking already made, with the same link, and no second job', async () => {
   const body = bookingBody({ requestKey: randomUUID() });
   const first = await send(body);
   assert.equal(first.status, 201, JSON.stringify(first.body));
@@ -66,13 +66,11 @@ test('a retry with the same key gets the booking already made, with a new link, 
   assert.equal(again.body.reference, first.body.reference);
   assert.equal(again.body.id, first.body.id);
   assert.deepEqual(again.body.services, first.body.services);
-  assert.notEqual(again.body.privateLink, first.body.privateLink);
+  // The link is worked out from the key, so every reply carries the same one.
+  assert.equal(again.body.privateLink, first.body.privateLink);
   assert.equal((await jobsOn(body.jobDate)).n, 1);
   assert.equal((await jobsWithReference(first.body.reference)).n, 1);
-
-  // Only the link's hash is kept, so the new link replaces the first.
-  assert.equal((await readLink(again.body.privateLink)).status, 200);
-  assert.equal((await readLink(first.body.privateLink)).status, 404);
+  assert.equal((await readLink(first.body.privateLink)).status, 200);
 });
 
 test('a guest retry makes no second customer', async () => {
@@ -98,7 +96,7 @@ test('the same key with different details is refused, and nothing is written', a
 });
 
 test('a request key that breaks the rule is refused', async () => {
-  for (const requestKey of ['short', 'x'.repeat(129), 'has spaces in it, sixteen+', 42, null]) {
+  for (const requestKey of ['short', 'x'.repeat(31), 'x'.repeat(129), 'has spaces in it, sixteen+', 42, null]) {
     const res = await send(bookingBody({ requestKey }));
     assert.equal(res.status, 400, `${JSON.stringify(requestKey)}: ${JSON.stringify(res.body)}`);
     assert.deepEqual(res.body, { error: 'Invalid request key' });
@@ -128,6 +126,9 @@ test('two retries arriving at once make one booking', async () => {
   assert.deepEqual(replies.map((r) => r.status).sort(), [200, 200, 201], JSON.stringify(replies.map((r) => r.body)));
   assert.equal(new Set(replies.map((r) => r.body.reference)).size, 1);
   assert.equal((await jobsOn(body.jobDate)).n, 1);
+  // Whichever reply arrives last, its link works: a late replay never changes it.
+  assert.equal(new Set(replies.map((r) => r.body.privateLink)).size, 1);
+  assert.equal((await readLink(replies[0].body.privateLink)).status, 200);
 });
 
 test('the same key sent at once for two different days makes one booking', async () => {

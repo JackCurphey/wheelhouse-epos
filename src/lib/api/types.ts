@@ -67,7 +67,7 @@ export type ApiErrorBody = {
 /** WP-0.2, added to the online booking's body (POST /api/portal/:shopSlug/bookings).
  * Made once when the customer presses Send and repeated on every retry of that
  * booking, so the server accepts it once: a retry gets 200 and the booking
- * already made, with a new private link that replaces the first. 16-128
+ * already made and the same private link as the first reply. 32-128
  * letters, digits, `-` or `_`; `crypto.randomUUID()` fits.
  * Spec: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md */
 export type BookingRequestKey = { requestKey?: string };

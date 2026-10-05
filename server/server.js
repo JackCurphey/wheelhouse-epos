@@ -5734,17 +5734,15 @@ async function checkCustomerTime({ jobDate, mechanicId, startTime: rawStart, min
 }
 
 // WP-0.2: a booking request sent again with the same request key. Null when
-// the key is new. The same details get the booking already made, with a new
-// private link (only the link's hash is kept, so the first can't be shown
-// again, and the new one replaces it); other details are refused.
+// the key is new. The same details get the booking already made, with the
+// same private link (worked out from the key, so nothing is written); other
+// details are refused.
 // Spec: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md
 const REUSED_KEY = { status: 409, body: { error: 'This booking was already sent with different details', code: 'reused_key' } };
-async function replayBookingRequest({ keyHash, bodyHash }, shopSlug) {
+async function replayBookingRequest({ keyHash, bodyHash, linkCode }, shopSlug) {
   const made = await db.prepare('SELECT id, booking_request_body_hash FROM workshop_jobs WHERE booking_request_key_hash = ?').get(keyHash);
   if (!made) return null;
   if (made.booking_request_body_hash !== bodyHash) return REUSED_KEY;
-  const linkCode = newLinkCode();
-  await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?').run(hashLinkCode(linkCode), nowIso(), made.id);
   const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(made.id);
   return {
     status: 200,
@@ -5936,7 +5934,7 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
     // customer (signed-in, or a new guest row each time, see
     // resolveGuestCustomer), always 'pending' until a mechanic reviews it,
     // same principle as createSale() never trusting a client-sent total.
-    const linkCode = newLinkCode();
+    const linkCode = requestKey ? requestKey.linkCode : newLinkCode();
     let jobId;
     try {
       const bikeNoteValue = bikeNote || null;
@@ -5970,8 +5968,10 @@ route('POST', '/api/portal/:shopSlug/bookings', async (req, res, params) => {
       // The 024 index, a second guard behind the lock. createWorkshopJob's own
       // ROLLBACK was a savepoint, so this transaction is still usable. The 039
       // index is the last guard on a request key: the same key, on another
-      // day, committed while this one waited.
-      if (err.code === '23505' && err.constraint === 'idx_workshop_jobs_booking_request_key') return REUSED_KEY;
+      // day, committed while this one waited. Its link is worked out from the
+      // key, so the 027 link index can trip first for the same reason.
+      const keyIndexes = ['idx_workshop_jobs_booking_request_key', 'idx_workshop_jobs_link_token_hash'];
+      if (err.code === '23505' && requestKey && keyIndexes.includes(err.constraint)) return REUSED_KEY;
       if (err.code === '23505') return capacityRefusal(SLOT_GONE);
       throw err;
     }
