@@ -3,5 +3,6 @@
 // which tests/route-list.test.js checks; areas still in server.js are
 // registered there, before these.
 import * as suppliers from './suppliers.js';
+import * as purchaseOrders from './purchase-orders.js';
 
-export const ROUTE_AREAS = [suppliers];
+export const ROUTE_AREAS = [suppliers, purchaseOrders];

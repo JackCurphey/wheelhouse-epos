@@ -115,3 +115,8 @@ export function readRawBody(req, maxBytes = 2_000_000) {
 export function nowIso() {
   return new Date().toISOString();
 }
+
+// A request the caller got wrong, thrown deep inside a write (a sale's or a
+// purchase order's lines) and answered as a 400 with its message by the route
+// that catches it. Moved out of server.js (WP-0.4).
+export class ValidationError extends Error {}
