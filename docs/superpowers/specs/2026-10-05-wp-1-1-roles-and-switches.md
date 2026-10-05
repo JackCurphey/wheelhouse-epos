@@ -67,12 +67,12 @@ change), and so was limiting stock adjustment to switch 5 (Stock control 6).
 - PINs: anyone changes their own (SI 6). Clearing a forgotten PIN: Owner,
   Manager or switch 7 (OS 10). Giving a first or new PIN: Owner or Manager
   (SI later changes), or "Give everything" (R1). Never your own, and
-  only for someone below you *(proposed: otherwise someone could give the
+  never someone above you *(proposed: otherwise someone could give the
   Owner a PIN they know and open the Owner's pages on a workshop
-  computer)*. "Below" runs Owner, then Managers and anyone with "Give
-  everything", then every other Staff and Mechanic: only the Owner clears or
-  gives a Manager's PIN, nobody else touches the Owner's, and a Staff member
-  with switch 7 clears other Staff and Mechanics' PINs.
+  computer)*. The order runs Owner, then Managers and anyone with "Give
+  everything", then every other Staff and Mechanic. So a Staff member with
+  switch 7 clears other Staff and Mechanics' PINs, only the Owner clears or
+  gives a Manager's, and nobody else touches the Owner's.
 - A Manager gives only the shops they work at; the Owner gives any shop
   (second walk 9d). Which shops a person works at is a per-person list, not a
   switch; where it lives is settled with issue #133.
@@ -138,8 +138,9 @@ Wheelhouse (SI 7); `server/till/pin.js` accepts 4–6 today.
 
 161 routes on `main` (the list in `tests/fixtures/route-list.txt`, #150).
 **Any staff** = every role, signed in or working by PIN, but not a "till
-only" person away from a workshop computer. At a workshop computer a till
-only Mechanic counts as any staff (R8). **Till only** = the routes a till-only person may also use
+only" person. The one exception: a till only Mechanic working at a workshop
+computer counts as any staff there (R8). A till only Staff member is till
+only everywhere. **Till only** = the routes a till-only person may also use
 (§6, WT8 8), so the "nothing else" is checked on the server, not just on
 screen *(proposed list)*:
 
@@ -151,6 +152,10 @@ screen *(proposed list)*:
   `book-in`, `collect` and `reopen-custody` actions;
 - printing the bike tag or receipt: `POST /api/print-agents/:deviceId/jobs`;
 - online orders, when they exist.
+
+Mark confirms in the contract whether a walk-in with no booking
+(`POST /api/workshop-jobs`) and a new customer at the till
+(`POST /api/customers`) belong on this list.
 
 Each of these is tagged "any staff or till only" below. Numbers are the
 switches in §2. *(proposed)* = no decision names it; Mark confirms in the
@@ -256,3 +261,6 @@ log: §4. Workshop computers: the Owner makes one (WT8 1).
   issue #133 and WP-1.4.
 - Trust PIN and the tap-your-name screen are not drawn yet (R3); WP-1.7
   builds the workshop computer.
+- The "Add someone, till only" pop-up (`setup.mjs`) says a till only person
+  can't open anything away from the till except Online orders; for a
+  Mechanic it needs to add the workshop computer (R8). To redraw.
