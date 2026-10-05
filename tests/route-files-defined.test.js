@@ -35,3 +35,20 @@ test('every name used in server/routes/ and server/lib/ is defined there or impo
   const problems = results.flatMap((r) => r.messages.map((m) => `${path.relative(ROOT, r.filePath)}:${m.line} ${m.message}`));
   assert.deepEqual(problems, []);
 });
+
+// server.js too, for undefined names only: each move also drops the imports
+// server.js no longer needs, and dropping one it still uses would only fail
+// when that line ran.
+test('every name used in server/server.js is defined there or imported', async () => {
+  const eslint = new ESLint({
+    cwd: ROOT,
+    overrideConfigFile: true,
+    overrideConfig: [{
+      files: ['**/*.js'],
+      languageOptions: { ecmaVersion: 2024, sourceType: 'module', globals: { ...globals.node } },
+      rules: { 'no-undef': 'error' },
+    }],
+  });
+  const [result] = await eslint.lintFiles([path.join(ROOT, 'server', 'server.js')]);
+  assert.deepEqual(result.messages.map((m) => `server/server.js:${m.line} ${m.message}`), []);
+});
