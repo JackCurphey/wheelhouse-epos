@@ -5,9 +5,11 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** WP-0.4's route moves (split plan §4.1), more areas to move
-(eight merged 5 Oct). Then WP-0.5, the hosted
-copy.
+**Mark is on:** WP-0.4: 57 of 161 routes moved (5 Oct). Next, a spec for
+`server/lib/sales.js` with customers and sales (deferred Shopify pushes),
+then image uploads and booking/portal; the dashboard needs Jack's
+`currentShopToday`. Then WP-0.5. **Waiting on Mark:** #157; the types split
+(§4.3) waits on it.
 **Jack is on:** WP-0.2's screens half merged (#164, 5 Oct); the stage
 check waits for Mark's lines 4 and 6.
 Ready alongside: #136 (Citrus Lime exports, not started) and #138 (card
@@ -25,20 +27,9 @@ Jack takes the screens and the whole workshop. STATUS and the build board are
 updated by **one status pull request a day**, not by every feature pull
 request (`CLAUDE.md`, rule 7).
 
-**The build has started** (Jack, 4 Oct: "the corrections are all good, we
-can go"). #126 merged with the four blockers fixed (#127–#130 closed);
-`main` now requires the `test` check and an up-to-date branch (Jack's yes,
-4 Oct). Stage 0, line 1 done: #110 (Quoting, the drawings' status words
-everywhere, waiting for parts beats Quoting), #111 (the till; Escape and a
-closed window can't hide a sale mid-save) and #112 (diary extras; stacked
-jobs move by keyboard, press and hold fans a stack on touch) merged, with
-the follow-up #144 (4 Oct). #146 (5 Oct) trimmed §7.2 and closed #131: Jack
-keeps the plan's order, so no workshop piece is built early. Also 5 Oct:
-#153 (WP-1.1 roles and switches table, closes #132), #154 (WP-1.4 shops and
-sites spec, closes #133), #124 (the clickable mockup's 13 Codex problems,
-closes #123). #157 (split plan §3.1, the files both touch, closes #141) is
-reviewed and waits on Mark's approval, by Jack's choice; once merged, every
-server change Jack makes needs Mark's approval.
+**The build started 4 Oct** (Jack). The record of 4–5 Oct's planning
+merges (#126, #110–#112, #144, #146, #153, #154, #124, #157's state) is in
+ARCHIVE, "Moved from STATUS on 2026-10-05 (evening)".
 
 ## Where the build stands
 
@@ -48,11 +39,14 @@ half, #148, 5 Oct); line 3 (STATUS trim, #149, 5 Oct); line 5 (WP-0.2 screens, #
 (Mark, WP-0.4: route-list test #150, migration checks and
 `scripts/new-db.sh` #151, screen-trace reads the route files #152, route
 moves #155 suppliers, #156 purchase orders, #158 label settings and shop
-theme, #159 website and Shopify, #160 sites and tills, #162 team, #165 printing and messages, #167 sign-in). Waiting: line 6 (Mark, WP-0.5; waits for line 4); line 7
+theme, #159 website and Shopify, #160 sites and tills, #162 team, #165
+printing and messages, #167 sign-in, #168 products; guards that moved files
+and `server.js` define every name they use and import nothing unused,
+#155 and #158). Waiting: line 6 (Mark, WP-0.5; waits for line 4); line 7
 (Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
 line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 in
-#157, waiting on Mark. New: #161, for Mark: the migration backstop misses a
-rename that duplicates a number (from #151; fix #166 open).
+#157, waiting on Mark. #161 (the migration backstop missed a rename
+that duplicates a number) is fixed by #166.
 
 - **Build plan:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`;
   Jack's answers in `docs/decisions/2026-10-03-build-plan-questions.md`.
@@ -88,9 +82,13 @@ to see where we are).
   lock-held race tests are sound.
 - The piece 6 memory risk (large booking bodies) must be decided before the
   booking route is publicly reachable (hosting not chosen).
-- Until WP-0.2's screens half merges: Back while "Sending…" can lose the
-  customer's private link, and a lost reply can duplicate a booking (the
-  screens don't send the request key yet; #148 fixed the server side).
+- #169: three flaky tests in Jack's area (`tests/customer/details-screen.test.js:474`
+  from #164, `tests/screens/diary-new-job.test.js`, `tests/browser/diary-waiting.spec.ts:100`);
+  the first failed `main`'s CI on the #164 merge and passed on the next run.
+- Review Mark's WP-0.4 pull requests after the fact (Mark, 5 Oct: they merge
+  on green CI plus a fresh review while Jack is busy; each says so).
+- `tests/screens/session.test.js:3` says `serializeSession` lives in
+  `server.js`; it is in `server/routes/auth.js` now.
 - Found in #148, not fixed: on a website address `/api/portal/*` returns the
   website's HTML (`decided-while-building.md`, Mark's lane), for WP-0.5.
 - `timed_lead_minutes` isn't used in any customer confirmation yet.
@@ -113,6 +111,9 @@ All in `ARCHIVE.md`, "Moved from STATUS on 2026-10-05 (WP-0.3)":
 
 ## Working notes for the next agent
 
+- Route moves: a move, not a rewrite; `tests/route-files-defined.test.js`
+  catches a name left undefined. A database per worktree:
+  `scripts/new-db.sh <name>`.
 - Jack wants plain English, numbered options with concrete trade-offs,
   mock-ups for anything visual, one question at a time. Merging: until the
   build starts, only when Jack says; after, as `CLAUDE.md` sets out. Always

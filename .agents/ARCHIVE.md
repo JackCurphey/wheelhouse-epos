@@ -7,6 +7,23 @@ content moves here rather than being dropped. Decisions move to
 
 ---
 
+## Moved from STATUS on 2026-10-05 (evening)
+
+**The build has started** (Jack, 4 Oct: "the corrections are all good, we
+can go"). #126 merged with the four blockers fixed (#127–#130 closed);
+`main` now requires the `test` check and an up-to-date branch (Jack's yes,
+4 Oct). Stage 0, line 1 done: #110 (Quoting, the drawings' status words
+everywhere, waiting for parts beats Quoting), #111 (the till; Escape and a
+closed window can't hide a sale mid-save) and #112 (diary extras; stacked
+jobs move by keyboard, press and hold fans a stack on touch) merged, with
+the follow-up #144 (4 Oct). #146 (5 Oct) trimmed §7.2 and closed #131: Jack
+keeps the plan's order, so no workshop piece is built early. Also 5 Oct:
+#153 (WP-1.1 roles and switches table, closes #132), #154 (WP-1.4 shops and
+sites spec, closes #133), #124 (the clickable mockup's 13 Codex problems,
+closes #123). #157 (split plan §3.1, the files both touch, closes #141) is
+reviewed and waits on Mark's approval, by Jack's choice; once merged, every
+server change Jack makes needs Mark's approval.
+
 ## Moved from STATUS on 2026-10-05 (WP-0.3)
 
 STATUS.md was trimmed to its 8,000-byte cap (split plan §5, stage 0 line 3).
