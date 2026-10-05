@@ -7,6 +7,8 @@ const REFUNDED = notDrawn('Refunded: what the till shows once a refund is done')
 const DEPOSIT_PAID = notDrawn('Taking the deposit: how it’s paid, and the paid box for a deposit');
 
 export default {
+  // Trust PIN on (Roles and switches, answer 10): tap your pill to be serving.
+  'till-serving-pills': { 'Jo Taylor': STAY, 'Jack Lewis': STAY, 'Someone else': go('till-checkin') },
   '*': {
     // The quick buttons add to the sale (decision 2)
     'Standard service Labour · 60 min £65.00': STAY,

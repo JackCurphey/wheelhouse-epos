@@ -3,7 +3,7 @@
 Issue #132 (Codex finding 6): before WP-1.1, write the full set of roles and
 switches. The survey found nine switches and five things the decisions left
 open (answers 1, 2, 4, 5, 6); Jack added trust PIN (answer 3), and the
-fresh review raised answers 7 and 8. Jack answered them one at a time on 5 Oct. The table they produce is in
+fresh review raised answers 7 and 8; answers 9 and 10 came while drawing answer 3. Jack answered them one at a time on 5 Oct. The table they produce is in
 `docs/superpowers/specs/2026-10-05-wp-1-1-roles-and-switches.md`.
 
 1. **"Give everything a Manager can do" gives all of it** (Jack: "1"). A
@@ -31,7 +31,8 @@ fresh review raised answers 7 and 8. Jack answered them one at a time on 5 Oct. 
    their PIN on it today, and they tap their own. Opening an Owner or
    Manager page still asks for that person's PIN every time. With it off,
    the computer asks for the PIN again after 10 minutes idle (Q6). Chosen
-   over the computer carrying on as the last person. Not drawn yet.
+   over the computer carrying on as the last person. Drawn 5 Oct
+   (`till-checkin-workshop-names`), with answers 8–10.
 4. **Existing logins take their role from the staff list** (Jack: "1").
    The Owner stays Owner; a login whose staff member is marked as a mechanic
    becomes Mechanic, with "Works in the workshop" and "Customers can book
@@ -65,3 +66,29 @@ fresh review raised answers 7 and 8. Jack answered them one at a time on 5 Oct. 
    Chosen over every workshop-computer user needing an email.
 
 **Later change (5 Oct 2026, issue #133, `docs/decisions/2026-10-05-shops-and-sites.md`):** Jack, 5 Oct, answer 1. Trust PIN (answer 3) is one setting for the whole business, not per site.
+9. **With trust PIN on, today's people as pills at the bottom of every
+   workshop page, and the idle screen as a setting** (Jack, 5 Oct, while
+   reviewing the drawing of answer 3: "there should just a pill switch or
+   something at the bottom of the page so that someone hopping on a computer
+   can just swap it over to them without having to go to another screen";
+   then "1", and "allow shops to change how long the idle screen is, or if
+   they even want it on"). A strip of pills, one per person who typed their
+   PIN there today and "Someone else", sits at the bottom of every workshop
+   page; tapping your own makes you the person working, on the same page.
+   After the computer has been left alone, the "Who's working?" screen
+   still comes up, so nothing is recorded under the last person after a
+   break. How long that takes is a setting for the whole business, 10
+   minutes to start (Q6), and it can be switched off. Owner and Manager
+   pages still ask for a PIN. Chosen over pills only, with no idle screen.
+10. **The till gets the same pills** (Jack, 5 Oct: "I would also like to
+    have that for the till system too, so a staff member can quickly make
+    sure the sales are recorded under their name"; then "1"). With trust
+    PIN on, the till shows a "Serving:" row of pills: everyone who has
+    checked in on that till today with their PIN, and "Someone else" for a
+    PIN. Tapping your own makes you the person serving, with no PIN. The
+    same trust PIN setting covers workshop computers and tills. Proposed,
+    for Jack to overrule: the sale on screen moves to the new name too, so a
+    wrong name can be fixed mid-sale. Chosen over pills on every till
+    whatever the setting, and over a PIN on every tap.
+
+**Drawn (5 Oct 2026):** answers 3, 8, 9 and 10 are drawn on the one canvas and in the clickable mockup: "Who's working?" (`till-checkin-workshop-names`), the workshop pills (`workshop-working-pills`), the till pills (`till-serving-pills`), the Trust PIN and go-back-to-the-start lines on `set-till-quick`, and the line for a Mechanic on the till-only pop-up (`set-staff-invite-till-only`). Jack approved each drawing on 5 Oct.

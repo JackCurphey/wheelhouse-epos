@@ -7,6 +7,7 @@ const SALE = 'Till 5, 11, 12; Customer service 10; walk-throughs 2 M6, 3 H1, 5 H
 export default {
   // A sale
   'till-sale': keep(19, { sizes: ['desktop', 'phone'] }), // rule 3: on a phone the basket becomes a bottom bar (till.mjs:23-25)
+  'till-serving-pills': into('till-sale', 'Roles and switches, answer 10 (5 Oct)', "Trust PIN on: a 'Serving:' row of pills under the quick buttons (Jo Taylor highlighted, Jack Lewis, Someone else); tapping yours makes you the person serving, the sale on screen included"),
   'till-empty': into('till-sale', SALE, "Basket empty: 'Nothing in the sale yet', £0.00 total"),
   'till-noresults': into('till-sale', SALE, "Left side shows 'Nothing matches “[what was typed]”' and search tips, no quick buttons"),
   'till-held': into('till-sale', SALE, "Pads line warns '[n] held for online orders — sold anyway'"),

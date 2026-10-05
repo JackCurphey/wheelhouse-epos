@@ -172,6 +172,36 @@ function checkinWorkshop(size) {
 }
 screens['till-checkin-workshop'] = each((size) => checkinWorkshop(size));
 
+// Roles and switches, answer 3 (5 Oct): with the shop's "trust PIN" on, a
+// workshop computer left alone shows who has typed their PIN on it today;
+// each taps their own name and carries on. Owner and Manager pages still ask
+// for the PIN every time, and anyone else types it as usual. The names are
+// the drawings' own (Alex Morgan, mechanic; Jo Taylor, staff).
+const nameTile = (name, role, P) => `<button type="button" style="display: flex; align-items: center; gap: 14px; width: 100%; box-sizing: border-box; min-height: ${P ? 56 : 64}px; padding: 10px 16px; border: 1px solid ${C.border}; border-radius: 10px; background: ${C.panel}; color: ${C.ink}; font-family: inherit; text-align: left"><span style="display: inline-flex; width: 40px; height: 40px; border-radius: 999px; align-items: center; justify-content: center; background: ${C.mutedBg}; font-weight: 700">${name[0]}</span><span style="display: flex; flex-direction: column"><span style="font-size: 17px; font-weight: 600">${name}</span><span style="font-size: 13px; color: ${C.muted}">${role}</span></span></button>`;
+function checkinWorkshopNames(size) {
+  const [W, H] = SIZE[size];
+  const P = size === 'phone';
+  const w = P ? 'auto' : '360px';
+  return `<div style="width: ${W}px; height: ${H}px; display: flex; flex-direction: column; background: ${C.bg}">${workshopBar(size)}<main style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: ${P ? '16px' : '28px'}"><div style="height: 100%; display: flex; flex-direction: column; align-items: ${P ? 'stretch' : 'center'}; justify-content: center; gap: ${P ? 14 : 18}px">
+<div style="width: ${w}; display: flex; flex-direction: column; gap: ${P ? 12 : 14}px">${h1('Who’s working?', P ? 24 : 28)}${p('You’ve typed your PIN here today, so just tap your name. Owner and manager pages still ask for your PIN.', P ? 14 : 15)}${nameTile('Alex Morgan', 'Mechanic', P)}${nameTile('Jo Taylor', 'Staff', P)}${button('Someone else — enter your PIN', { variant: 'default', block: true })}</div>
+</div></main></div>`;
+}
+screens['till-checkin-workshop-names'] = each((size) => checkinWorkshopNames(size));
+
+// Roles and switches, answer 9 (5 Oct): with trust PIN on, every page on a
+// workshop computer ends in a strip of today's people as pills, the person
+// working highlighted. Tapping your own pill makes you the person working,
+// on the same page; "Someone else" asks for a PIN. Drawn over Alex Morgan's
+// diary (diary-mechanic), the strip pinned to the bottom of the page.
+const workPill = (name, on, P = false) => `<button type="button" aria-pressed="${on}" style="flex-shrink: 0; display: inline-flex; align-items: center; min-height: ${P ? 36 : 40}px; padding: 0 ${P ? 12 : 16}px; border-radius: 999px; font-family: inherit; font-size: ${P ? 13 : 14}px; font-weight: 600; white-space: nowrap; ${on ? `border: 1px solid ${C.ink}; background: ${C.ink}; color: #ffffff` : `border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}`}">${name}</button>`;
+function workingPills(size) {
+  const [W, H] = SIZE[size];
+  const left = size === 'desktop' ? 248 : 0;
+  const strip = `<div role="group" aria-label="Who’s working" style="position: absolute; left: ${left}px; right: 0; bottom: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; align-items: center; gap: ${size === 'phone' ? 6 : 8}px; padding: 10px ${size === 'phone' ? 12 : 24}px; background: ${C.mutedBg}; border-top: 1px solid ${C.border}; box-shadow: 0 -6px 16px rgba(28,30,25,0.08)">${size === 'phone' ? '' : `<span style="font-size: 13px; color: ${C.muted}; margin-right: 4px">Working:</span>`}${workPill('Alex Morgan', true, size === 'phone')}${workPill('Jo Taylor', false, size === 'phone')}${workPill('Someone else', false, size === 'phone')}</div>`;
+  return `<div style="position: relative; width: ${W}px; height: ${H}px; overflow: hidden">${diaryScreens['diary-mechanic'][size]}${strip}</div>`;
+}
+screens['workshop-working-pills'] = each((size) => workingPills(size));
+
 // Decisions 6 and 7: change your PIN from Your settings. Wheelhouse picks a
 // new random PIN nobody else has (so choosing can't reveal a colleague's);
 // "Give me a different one" rolls another. The digits shown are an example.
@@ -264,6 +294,8 @@ export const TITLES = {
   'till-checkin-offline': 'Till start-up: offline, sales waiting to send',
   'till-checkin-stale': 'Till start-up: online, but not up to date',
   'till-checkin-workshop': 'Workshop computer: Enter your PIN, no till number',
+  'till-checkin-workshop-names': 'Workshop computer with trust PIN on: tap your name',
+  'workshop-working-pills': 'Workshop computer with trust PIN on: today’s people as pills at the bottom of every page',
   'till-pin-wrong': 'Till check-in — wrong PIN',
   'pin-change': 'Your new till PIN — Wheelhouse picks it',
   // UX walk-through 4 H1, M2, M4
@@ -279,7 +311,7 @@ export const TITLES = {
 export const ROWS = [
   { label: 'Staff sign-in (WorkOS)', screens: ['workos-signin'] },
   { label: 'Staff access', screens: ['auth-site', 'auth-signedout', 'auth-expired', 'auth-noaccess'] },
-  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-pin-wrong', 'pin-change'] },
+  { label: 'Till', screens: ['till-setup', 'till-checkin', 'till-checkin-offline', 'till-checkin-stale', 'till-checkin-workshop', 'till-checkin-workshop-names', 'workshop-working-pills', 'till-pin-wrong', 'pin-change'] },
   // UX walk-through 4 H1, M2, M4: a new person's first PIN, and the till in practice.
   { label: 'A new person’s first PIN', screens: ['pin-first', 'pin-cleared', 'till-give-pin', 'till-checkin-practice'] },
   { label: 'Customers', screens: ['cust-signin', 'cust-code', 'cust-code-expired'] },

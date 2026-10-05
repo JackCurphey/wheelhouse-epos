@@ -292,10 +292,11 @@ later packages.
 - **`auth-site`** (block 13, Shop switcher) — no other situations; plus 1 written line.
 - **`auth-signedout`** (block 40, Message or outcome page) — 1 situation: `auth-expired`.
 - **`till-setup`** (block 1, Settings page) — its one situation comes with a later package; plus 1 written line.
-- **`till-checkin`** (block 43, PIN pad) — 4 situations: `till-checkin-offline`, `till-checkin-stale`, `till-checkin-workshop`, `till-pin-wrong`; plus 6 written lines.
+- **`till-checkin`** (block 43, PIN pad) — 6 situations: `till-checkin-offline`, `till-checkin-stale`, `till-checkin-workshop`, `till-checkin-workshop-names`, `workshop-working-pills`, `till-pin-wrong`; plus 6 written lines.
 - **`pin-change`** (block 43, PIN pad) — 3 situations: `pin-first`, `pin-cleared`, `till-give-pin`.
 - **`cust-signin`** (block 42, Emailed-code sign-in) — no other situations; plus 2 written lines.
 - **`cust-code`** (block 42, Emailed-code sign-in) — 1 situation: `cust-code-expired`.
+- Added to the `set-till-quick` board (built in WP-1.3) — plus 2 written lines (trust PIN, and when a workshop computer goes back to the start).
 <!-- /screens -->
 
 - **WP-1.8 Messages engine and email** (Owner setup Messages; journeys 3, 4,
@@ -456,7 +457,7 @@ later packages.
 
 *Screens it builds (22) and the situations it covers:*
 
-- **`till-sale`** (block 19, Till page) — 13 of its 18 situations here: `till-empty`, `till-noresults`, `till-held`, `till-held-job`, `till-discounted`, `till-loyalty`, `till-job`, `till-job-balance`, `till-offline`, `till-offline-long`, `till-needs-net`, `till-noted`, `till-no-signout`; plus 6 written lines.
+- **`till-sale`** (block 19, Till page) — 14 of its 19 situations here: `till-serving-pills`, `till-empty`, `till-noresults`, `till-held`, `till-held-job`, `till-discounted`, `till-loyalty`, `till-job`, `till-job-balance`, `till-offline`, `till-offline-long`, `till-needs-net`, `till-noted`, `till-no-signout`; plus 6 written lines.
 - **`till-line`** (block 9, Form box) — 1 situation: `till-discount`.
 - **`till-customer`** (block 21, Pick-one box) — no other situations.
 - **`till-variant`** (block 21, Pick-one box) — no other situations.

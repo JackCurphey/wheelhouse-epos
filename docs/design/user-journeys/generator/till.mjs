@@ -60,7 +60,13 @@ const searchBox = `<label style="display: flex; align-items: center; gap: 10px; 
 const groupPill = (t, on) => `<button type="button" aria-pressed="${on}" style="min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid ${on ? C.ink : C.border}; background: ${on ? C.ink : C.panel}; color: ${on ? C.panel : C.ink}; font-family: inherit; font-size: 15px; font-weight: 600">${t}</button>`;
 const quick = (name, sub, price) => `<button type="button" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 104px; box-sizing: border-box; padding: 14px; border-radius: 12px; border: 1px solid ${C.border}; background: ${C.panel}; font-family: inherit; text-align: left; color: ${C.ink}"><span style="display: flex; flex-direction: column; gap: 3px"><span style="font-size: 15px; font-weight: 700; line-height: 1.25">${esc(name)}</span><span style="font-size: 12px; color: ${C.muted}">${esc(sub)}</span></span>${mono(price, 'font-size: 16px')}</button>`;
 const quickPlaceholder = (t) => `<div style="min-height: 104px; box-sizing: border-box; padding: 14px; border-radius: 12px; border: 2px dashed ${C.border}; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; color: ${C.muted}">${esc(t)}</div>`;
-function leftSide({ group = 'Workshop' } = {}) {
+// Roles and switches, answer 10 (5 Oct): with trust PIN on, the till's
+// product side ends in today's people as pills: everyone checked in on this
+// till today, the person serving highlighted, and "Someone else" for a PIN.
+// Tapping your own makes you the person serving, the sale on screen included.
+const servePill = (name, on) => `<button type="button" aria-pressed="${on}" style="flex-shrink: 0; display: inline-flex; align-items: center; min-height: ${CUR === 'phone' ? 36 : 40}px; padding: 0 ${CUR === 'phone' ? 12 : 16}px; border-radius: 999px; font-family: inherit; font-size: ${CUR === 'phone' ? 13 : 14}px; font-weight: 600; white-space: nowrap; ${on ? `border: 1px solid ${C.ink}; background: ${C.ink}; color: #ffffff` : `border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}`}">${name}</button>`;
+const servingPills = () => `<div role="group" aria-label="Who’s serving" style="margin-top: auto; display: flex; flex-wrap: nowrap; overflow-x: auto; align-items: center; gap: ${CUR === 'phone' ? 6 : 8}px; padding: 10px ${CUR === 'phone' ? 10 : 14}px; border-radius: 10px; background: ${C.mutedBg}; border: 1px solid ${C.border}">${CUR === 'phone' ? '' : `<span style="font-size: 13px; color: ${C.muted}; margin-right: 4px">Serving:</span>`}${servePill('Jo Taylor', true)}${servePill('Jack Lewis', false)}${servePill('Someone else', false)}</div>`;
+function leftSide({ group = 'Workshop', pills = false } = {}) {
   const groups = ['Workshop', 'Parts', 'Accessories', '[Group]'];
   const buttons = [
     quick('Standard service', 'Labour · 60 min', money(65)),
@@ -71,7 +77,7 @@ function leftSide({ group = 'Workshop' } = {}) {
   return `<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px">
 ${CUR === 'phone' ? searchBox.replace('placeholder="Search or scan: products, customers, jobs, orders"', 'placeholder="Search or scan"') : searchBox}
 <div role="group" aria-label="Quick button groups" style="display: flex; flex-wrap: wrap; gap: 8px">${groups.map((g) => groupPill(g, g === group)).join('')}</div>
-<div style="display: grid; grid-template-columns: repeat(${{ desktop: 4, tablet: 3, phone: 2 }[CUR]}, minmax(0, 1fr)); gap: ${CUR === 'phone' ? 10 : 12}px">${buttons.join('')}</div>
+<div style="display: grid; grid-template-columns: repeat(${{ desktop: 4, tablet: 3, phone: 2 }[CUR]}, minmax(0, 1fr)); gap: ${CUR === 'phone' ? 10 : 12}px">${buttons.join('')}</div>${pills ? `\n${servingPills()}` : ''}
 </div>`;
 }
 
@@ -126,6 +132,7 @@ export const screens = {};
 const recipes = [];
 const def = (id, fn) => recipes.push([id, fn]);
 def('till-sale', () => tillPage(leftSide(), basket([PADS, BRAKES])));
+def('till-serving-pills', () => tillPage(leftSide({ pills: true }), basket([PADS, BRAKES])));
 // UX walk-through 2 M6 (option 1): two of the pads are held for online
 // orders. The line says so and the sale carries on — never blocked.
 def('till-held', () => tillPage(leftSide(), basket([{ ...PADS, warn: '[n] held for online orders — sold anyway' }, BRAKES], { full: true })));
@@ -560,6 +567,7 @@ CUR = 'desktop';
 
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
+  'till-serving-pills': 'Trust PIN on: today’s people as pills, tap yours to be serving',
   'till-held': 'Selling pads held for an online order — warned, not blocked', // UX walk-through 2 M6
   'till-held-job': 'Selling pads held for job WH-1042 — warned, not blocked', // UX walk-through 3 H1
   'till-discounted': 'Basket with a discount — the new total', // UX walk-through 2 M11
@@ -619,7 +627,7 @@ export const TITLES = {
 };
 // UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
-  { label: 'A sale', screens: ['till-sale', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
+  { label: 'A sale', screens: ['till-sale', 'till-serving-pills', 'till-empty', 'till-noresults', 'till-held', 'till-held-job', 'till-line', 'till-discount', 'till-discounted', 'till-customer', 'till-variant', 'till-serial', 'till-serial-held'] },
   { label: 'Taking payment', screens: ['till-pay', 'till-pay-other', 'till-card', 'till-card-discounted', 'till-pay-discounted', 'till-split-discounted', 'till-card-declined', 'till-pay-cash', 'till-pay-split', 'till-receipt', 'till-receipt-split'] },
   { label: 'Other ways to pay', screens: ['till-giftcard', 'till-account', 'till-loyalty', 'till-deposit'] },
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect', 'till-book-in', 'till-hand-over-job'] },

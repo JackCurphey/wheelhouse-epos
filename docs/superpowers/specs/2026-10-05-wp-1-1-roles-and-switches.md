@@ -6,7 +6,7 @@ person working by PIN can do, and which server routes check which switch.
 Codex finding 6 (`docs/reviews/2026-10-04-release-2-plans-codex-adversarial.md`
 line 49) found the plans said "eight switches" and the server knew only the
 owner flag. Jack's answers on 5 Oct are in
-`docs/decisions/2026-10-05-roles-and-switches.md` (cited below as **R1–R8**).
+`docs/decisions/2026-10-05-roles-and-switches.md` (cited below as **R1–R10**).
 
 This is the table WP-1.1's contract builds on. Mark writes the contract and
 builds the server half (split plan §4.3, §6); route guards marked
@@ -119,11 +119,16 @@ switch 8, so an Owner who works on bikes stays in the diary. Two routes are ungu
 | Own phone, laptop or office computer, email sign-in | Their role and switches | Everything their role and switches allow |
 
 **Idle:** with trust PIN off, a workshop computer asks for the PIN again
-after 10 minutes (Q6). With trust PIN on (one setting for the whole business, for
+after 10 minutes (Q6); each business can change the time or switch it off
+(R9). With trust PIN on, every workshop page also ends in a strip of
+today's people as pills; tapping your own makes you the person working, on
+the same page (R9). With trust PIN on (one setting for the whole business, for
 workshop computers, R3; #133, S1), after the same 10 minutes it shows the names of everyone who
 typed their PIN on it today; a person taps their own name and carries on.
 The list starts empty each day *(proposed)*. Tills already stay checked in
-until someone checks out, so trust PIN doesn't apply to them.
+until someone checks out; with trust PIN on they also show a "Serving:"
+row of pills, one per person checked in on that till today, and tapping
+your own makes you the person serving, with no PIN (R10).
 
 **For the contract (Mark).** In plain words: the server has to know who is
 working at a shared computer, not just which computer it is. Today a till's requests carry only the till's
@@ -260,8 +265,8 @@ log: §4. Workshop computers: the Owner makes one (WT8 1).
 
 - Which shops a person works at, and how every shop-scoped route checks it:
   WP-1.4 (`specs/2026-10-05-wp-1-4-shops-and-sites.md`, #133).
-- Trust PIN and the tap-your-name screen are not drawn yet (R3); WP-1.7
-  builds the workshop computer.
-- The "Add someone, till only" pop-up (`setup.mjs`) says a till only person
-  can't open anything away from the till except Online orders; for a
-  Mechanic it needs to add the workshop computer (R8). To redraw.
+- Drawn 5 Oct (R3, R8, R9, R10): `till-checkin-workshop-names` ("Who's
+  working?"), `workshop-working-pills` and `till-serving-pills` (the pills),
+  the Trust PIN and go-back-to-the-start lines on `set-till-quick`, and the
+  till-only pop-up's line for a Mechanic. WP-1.7 builds the workshop
+  computer; the till's pills come with the till (WP-3.1).
