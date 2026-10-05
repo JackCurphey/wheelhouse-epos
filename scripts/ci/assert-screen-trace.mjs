@@ -13,7 +13,7 @@
 // screen in it; demanding a screen id from them would fail the build for
 // routes the rule was never about. COVERED below is the list of path shapes
 // this phase owns, and it grows as Phase 4 and Phase 5 land.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,7 +26,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 // with no action segment - GET /api/quotes/:id itself, not just an action
 // hanging off it - is still checked. This list grows as later phases add route
 // shapes; a shape absent from it is not checked at all.
-const COVERED = [
+export const COVERED = [
   /^\/api\/workshop-jobs\/:id\/[a-z-]+$/,
   /^\/api\/quotes\/:id(\/[a-z-]+)?$/,
   /^\/api\/portal\/:shopSlug\/quotes\//,
@@ -62,6 +62,7 @@ function screensAbove(lines, i) {
 export function checkSource(source, screenIds) {
   const lines = source.split('\n');
   const problems = [];
+  let covered = 0;
 
   lines.forEach((line, i) => {
     // Two shapes: a bare route(...) with a literal path, and the
@@ -73,6 +74,7 @@ export function checkSource(source, screenIds) {
 
     const routePath = direct ? direct[1] : `/api/workshop-jobs/:id/${viaHelper[1]}`;
     if (!COVERED.some((re) => re.test(routePath))) return;
+    covered += 1;
 
     const named = screensAbove(lines, i);
     if (named.length === 0) {
@@ -86,13 +88,41 @@ export function checkSource(source, screenIds) {
     }
   });
 
-  return { ok: problems.length === 0, problems };
+  return { ok: problems.length === 0, problems, covered };
 }
 
-// Run as a script rather than imported by a test.
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const source = readFileSync(path.join(ROOT, 'server/server.js'), 'utf8');
-  const { ok, problems } = checkSource(source, screenIdsFromIndex());
+// Where routes are declared: server/server.js, plus each server/routes/*.js
+// once WP-0.4 moves them there (split plan §4.1 step 5). Paths are relative
+// to root, as they are reported.
+export function routeSources(root = ROOT) {
+  const files = ['server/server.js'];
+  const dir = path.join(root, 'server', 'routes');
+  if (existsSync(dir)) {
+    files.push(...readdirSync(dir).filter((f) => f.endsWith('.js')).sort().map((f) => `server/routes/${f}`));
+  }
+  return files.map((file) => ({ file, source: readFileSync(path.join(root, file), 'utf8') }));
+}
+
+// Every file checked; and a read that finds no covered route at all fails, so
+// pointing this at the wrong place, or moving the routes somewhere it doesn't
+// look, can never print OK on nothing.
+export function checkRouteFiles(files, screenIds) {
+  const problems = [];
+  let covered = 0;
+  for (const { file, source } of files) {
+    const result = checkSource(source, screenIds);
+    covered += result.covered;
+    problems.push(...result.problems.map((p) => `${file}: ${p}`));
+  }
+  if (covered === 0) problems.push(`found no screen-tagged routes in ${files.map((f) => f.file).join(', ') || 'any file'}`);
+  return { ok: problems.length === 0, problems, covered };
+}
+
+// Run as a script rather than imported by a test. Compared as real paths, so
+// a symlinked or space-containing path still runs the check rather than
+// silently skipping it.
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
+  const { ok, problems, covered } = checkRouteFiles(routeSources(), screenIdsFromIndex());
   if (!ok) {
     console.error('Screen trace FAILED. Every workshop route must name the screen design it serves:\n');
     for (const p of problems) console.error(`  - ${p}`);
@@ -101,5 +131,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error('the endpoint should not exist - that is the rule, not a formality.');
     process.exit(1);
   }
-  console.log('Screen trace OK: every covered workshop route names a screen that exists.');
+  console.log(`Screen trace OK: all ${covered} covered workshop routes name a screen that exists.`);
 }
