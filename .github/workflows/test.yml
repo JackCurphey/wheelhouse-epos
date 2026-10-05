@@ -182,6 +182,13 @@ jobs:
         working-directory: docs/design/user-journeys/generator
         run: node fitcheck-canvas.mjs
 
+      # The clickable mockup's page in a real browser: late drawings, Back,
+      # Person and Shop, failed loads, phone width, keyboard (issue #123).
+      # Needs the Chromium installed above and the mockup built earlier.
+      - name: Check the clickable mockup's page in a browser
+        working-directory: docs/design/user-journeys/generator
+        run: node --test 'mockup/browser/*.test.mjs'
+
       # A second migrate must be a no-op. run-migrations.js skips anything
       # already recorded in schema_migrations, so re-applying means a
       # migration ran without being recorded, or a committed migration file

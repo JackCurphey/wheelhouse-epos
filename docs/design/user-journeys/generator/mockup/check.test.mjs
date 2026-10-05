@@ -234,3 +234,41 @@ test('the coverage walks’ wording is in the drawings', () => {
   };
   assert.deepEqual(Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k), []);
 });
+
+// Issue #123 (Codex review, point 11): the checks above pass over empty lists
+// when the drawings aren't built, so say so instead.
+test('the drawings are built, so the checks above have something to check', () => {
+  assert.ok(shown.length > 700, `${shown.length} drawings loaded — run node build.mjs in the generator first`);
+});
+
+// Issue #123, point 11: the published manifest itself — every story step,
+// situation and view points at a screen, and every size at a data file.
+test('the built manifest points only at screens and data files that exist', async () => {
+  const { readFileSync, existsSync } = await import('node:fs');
+  const out = new URL('../out-mockup/', import.meta.url);
+  const m = JSON.parse(readFileSync(new URL('manifest.json', out), 'utf8'));
+  const bad = [];
+  const has = (id, why) => { if (!m.screens[id]) bad.push(`${why}: ${id}`); };
+  for (const [id, s] of Object.entries(m.screens)) {
+    if (s.owner) has(s.owner, `${id}'s owner`);
+    for (const [size, z] of Object.entries(s.sizes)) if (!existsSync(new URL(`data/${z.file}.json`, out))) bad.push(`${id} at ${size}: data/${z.file}.json`);
+    if (!Object.keys(s.sizes).length) bad.push(`${id}: no sizes`);
+  }
+  for (const [o, ids] of Object.entries(m.situations)) { has(o, 'situation owner'); for (const id of ids) has(id, `situation of ${o}`); }
+  for (const st of m.stories) for (const step of st.steps) has(step.id, `story ${st.n}`);
+  for (const [o, vs] of Object.entries(m.views ?? {})) for (const v of vs) if (!m.situations[o]?.includes(v.id)) bad.push(`view ${v.id} is not a situation of ${o}`);
+  assert.ok(m.views && Object.keys(m.views).length, 'the manifest lists each screen’s views for a person or shop');
+  assert.deepEqual(bad.slice(0, 40), []);
+});
+
+// Issue #123, point 12: the page loads the drawings' own font (Public Sans in
+// Soft sand), not the Fjell build's Work Sans.
+test('the mockup page loads the font the drawings use', async () => {
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(new URL('../out-mockup/index.html', import.meta.url), 'utf8');
+  const m = JSON.parse(readFileSync(new URL('../out-mockup/manifest.json', import.meta.url), 'utf8'));
+  const link = /<link rel="stylesheet" href="([^"]+)"/.exec(page)?.[1] ?? '';
+  const faces = [...new Set([...m.css.matchAll(/font-family:\s*'([^']+)'/g)].map((x) => x[1]))].filter((f) => !/mono/i.test(f));
+  assert.ok(faces.length, 'the drawings name a font');
+  for (const f of faces) assert.ok(link.includes(f.replace(/ /g, '+')), `the page's font link loads ${f}: ${link}`);
+});
