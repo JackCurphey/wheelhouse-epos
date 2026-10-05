@@ -240,9 +240,12 @@ later packages.
 - **`set-till-quick-add`** (block 9, Form box) — no other situations.
 <!-- /screens -->
 
-- **WP-1.4 Shops (sites) everywhere** (Multiple sites 1–2). The current shop
-  on the session and every request; a shop on stock, jobs, diary, capacity
-  and cash-up; address, phone and hours per shop.
+- **WP-1.4 Shops (sites) everywhere** (Multiple sites 1–2). The current site
+  on the session and every request; a site on stock, jobs, diary, capacity
+  and cash-up; address, phone, hours and the per-site settings on each site.
+  What belongs to the business and what to each site, how the site travels
+  with a request, and the isolation-test rule for every new table:
+  `docs/superpowers/specs/2026-10-05-wp-1-4-shops-and-sites.md` (#133).
 
 <!-- screens 1.4 -->
 *Building blocks built here:* none new.

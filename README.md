@@ -89,6 +89,15 @@ npm test
 The suite needs a real Postgres - it does not mock the database, because the
 row-level security policies are the thing most worth testing.
 
+Each git worktree, and each review, uses its own database, so only throwaway
+databases ever run a migration that isn't merged yet. `scripts/new-db.sh
+<name>` makes one on the compose Postgres, with the same rights for `epos_app`
+as `epos` has. Then change the database name at the end of `DATABASE_URL` in
+that worktree's `.env` and run `npm run migrate`. It needs
+`POSTGRES_SUPERUSER_PASSWORD` in `.env`, or `ADMIN_DATABASE_URL`. Migration
+numbering rules, and the CI checks that enforce them, are in
+`docs/superpowers/plans/2026-10-04-release-2-two-person-split.md` §4.2.
+
 ## What's included
 
 - **Till** — search or tap products to add them to the sale, adjust quantities,

@@ -346,3 +346,5 @@ Nothing here is implemented. The customer-facing content work merged alongside
 it (durations, status words, badges, dates, legend, confirmation panel) is
 independent of every decision in this document, except that the confirmation
 panel is where §2 item 3's drop-off copy will land.
+
+**Later change (5 Oct 2026, issue #133, `docs/decisions/2026-10-05-shops-and-sites.md`):** Jack, 5 Oct, answer 1. With more than one shop, booking mode (exact times or drop-off), the drop-off window and notice are set per site; showing prices online stays one setting for the business's website.
