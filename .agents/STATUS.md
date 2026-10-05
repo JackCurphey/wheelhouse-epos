@@ -5,9 +5,11 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** stage 0 — WP-0.2's server half is #148 (open); WP-0.3 is
-this trim; WP-0.4 starts once #148 merges (split plan §9).
-**Jack is on:** waiting on #148 for the booking screens. Ready meanwhile:
+**Mark is on:** stage 0 — WP-0.4 (split plan §9). Its first pull request,
+the route-list test, is #150, waiting on Jack's review.
+**Jack is on:** WP-0.2's screens half, now unblocked (#148 merged 5 Oct;
+contract in `docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md`).
+Ready alongside:
 #136 (Citrus Lime exports) and #138 (card machine), only Jack can do; the
 planning fixes due before stage 1 (#132, #133, #141); reviewing WP-0.4 when
 Mark opens it; stage 0's stage check once lines 1–6 of §9 are in.
@@ -32,10 +34,9 @@ keeps the plan's order, so no workshop piece is built early.
 
 ## Where the build stands
 
-Stage 0 (split plan §9). Done: line 1 (WP-0.1). Not done: line 2 (Mark,
-WP-0.2 server half, #148 open); line 3 (Mark, this trim); line 4 (Mark,
-WP-0.4; waits for lines 1 and 2 to merge); line 5 (Jack, WP-0.2 screens;
-waits for line 2); line 6 (Mark, WP-0.5; waits for line 4); line 7 (Jack,
+Stage 0 (split plan §9). Done: line 1 (WP-0.1); line 2 (WP-0.2 server
+half, #148, 5 Oct); line 3 (this trim). Not done: line 4 (Mark, WP-0.4,
+#150 first); line 5 (Jack, WP-0.2 screens, unblocked); line 6 (Mark, WP-0.5; waits for line 4); line 7 (Jack,
 the stage check; waits for lines 1–6). Stage 1 starts only after line 7.
 
 - **Build plan:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`;
@@ -72,13 +73,14 @@ to see where we are).
   lock-held race tests are sound.
 - The piece 6 memory risk (large booking bodies) must be decided before the
   booking route is publicly reachable (hosting not chosen).
-- A shop's website subdomain can show another shop's `/book/<slug>`.
-- Dashboard and sales "today" still use a UTC-midnight window in the
-  database.
 - Pressing Back while "Sending…" can leave a customer without their private
   link.
-- A lost reply after a saved booking can lead to a duplicate if the customer
-  retries.
+- A lost reply after a saved booking can lead to a duplicate until the
+  screens send the request key (WP-0.2 screens half). Fixed on the server in
+  #148, along with another shop's `/book/<slug>` on a website and the UTC
+  "today".
+- Found in #148, not fixed: on a website address `/api/portal/*` returns the
+  website's HTML (`decided-while-building.md`, Mark's lane), for WP-0.5.
 - `timed_lead_minutes` isn't used in any customer confirmation yet.
 
 ## Moved to ARCHIVE
