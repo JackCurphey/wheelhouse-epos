@@ -56,3 +56,5 @@ listed, opened and reopened from Reports › Takings and cash-ups, and a reopene
 day is called out on every report it leaves out. No board here changed.
 
 **Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 6. Reopening a closed day (decision 6, "a manager") needs "Can close the day" (Owners and Managers have it).
+
+**Later change (5 Oct 2026, issue #133, `docs/decisions/2026-10-05-shops-and-sites.md`):** Jack, 5 Oct, answer 1. The blind cash count (decision 2) is one setting for the whole business, not per site.
