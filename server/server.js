@@ -578,7 +578,13 @@ function route(method, pattern, handler) {
         .join('/') +
       '$'
   );
-  routes.push({ method, regex, paramNames, handler });
+  routes.push({ method, pattern, regex, paramNames, handler });
+}
+
+// The table as "METHOD pattern", in registration order: what
+// tests/route-list.test.js compares with its snapshot (split plan §4.1).
+export function listRoutes() {
+  return routes.map((r) => `${r.method} ${r.pattern}`);
 }
 
 // URL params that name a row by its SERIAL id. A malformed one - "abc", "NaN",
