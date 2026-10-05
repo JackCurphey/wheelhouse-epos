@@ -25,7 +25,7 @@ open. Jack answered them one at a time on 5 Oct. The table they produce is in
 3. **"Trust PIN" for the day, a per-shop setting** (Jack, 5 Oct: "some
    shops might not want to have to enter a pin every time they use the
    computer"; how it works: "1"). With it on, a person who has typed their
-   PIN on a shared computer that day doesn't type it again: when the
+   PIN on a workshop computer that day doesn't type it again: when the
    computer has been left idle it shows the names of everyone who typed
    their PIN on it today, and they tap their own. Opening an Owner or
    Manager page still asks for that person's PIN every time. With it off,
