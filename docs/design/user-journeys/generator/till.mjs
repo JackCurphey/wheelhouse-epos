@@ -64,8 +64,8 @@ const quickPlaceholder = (t) => `<div style="min-height: 104px; box-sizing: bord
 // product side ends in today's people as pills: everyone checked in on this
 // till today, the person serving highlighted, and "Someone else" for a PIN.
 // Tapping your own makes you the person serving, the sale on screen included.
-const servePill = (name, on) => `<button type="button" aria-pressed="${on}" style="flex-shrink: 0; display: inline-flex; align-items: center; min-height: ${CUR === 'phone' ? 36 : 40}px; padding: 0 ${CUR === 'phone' ? 12 : 16}px; border-radius: 999px; font-family: inherit; font-size: ${CUR === 'phone' ? 13 : 14}px; font-weight: 600; white-space: nowrap; ${on ? `border: 1px solid ${C.ink}; background: ${C.ink}; color: #ffffff` : `border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}`}">${name}</button>`;
-const servingPills = () => `<div role="group" aria-label="Who’s serving" style="margin-top: auto; display: flex; flex-wrap: nowrap; overflow-x: auto; align-items: center; gap: ${CUR === 'phone' ? 6 : 8}px; padding: 10px ${CUR === 'phone' ? 10 : 14}px; border-radius: 10px; background: ${C.mutedBg}; border: 1px solid ${C.border}">${CUR === 'phone' ? '' : `<span style="font-size: 13px; color: ${C.muted}; margin-right: 4px">Serving:</span>`}${servePill('Jo Taylor', true)}${servePill('Jack Lewis', false)}${servePill('Someone else', false)}</div>`;
+const servePill = (name, on, action = false) => `<button type="button"${action ? '' : ` aria-pressed="${on}"`} style="flex-shrink: 0; display: inline-flex; align-items: center; min-height: 44px; padding: 0 ${CUR === 'phone' ? 12 : 16}px; border-radius: 999px; font-family: inherit; font-size: ${CUR === 'phone' ? 13 : 14}px; font-weight: 600; white-space: nowrap; ${on ? `border: 1px solid ${C.ink}; background: ${C.ink}; color: #ffffff` : `border: 1px solid ${C.border}; background: ${C.panel}; color: ${C.ink}`}">${name}</button>`;
+const servingPills = () => `<div role="group" aria-label="Who’s serving" style="margin-top: auto; display: flex; flex-wrap: nowrap; overflow-x: auto; align-items: center; gap: ${CUR === 'phone' ? 6 : 8}px; padding: 10px ${CUR === 'phone' ? 10 : 14}px; border-radius: 10px; background: ${C.mutedBg}; border: 1px solid ${C.border}"><span style="flex-shrink: 0; font-size: 13px; color: ${C.muted}; margin-right: 4px">Serving:</span>${servePill('Jo Taylor', true)}${servePill('Jack Lewis', false)}${servePill('Someone else', false, true)}</div>`;
 function leftSide({ group = 'Workshop', pills = false } = {}) {
   const groups = ['Workshop', 'Parts', 'Accessories', '[Group]'];
   const buttons = [
@@ -567,7 +567,7 @@ CUR = 'desktop';
 
 export const TITLES = {
   'till-sale': 'Sale — quick buttons by group, basket on the right',
-  'till-serving-pills': 'Trust PIN on: today’s people as pills, tap yours to be serving',
+  'till-serving-pills': 'Today’s people as pills, tap yours to be serving',
   'till-held': 'Selling pads held for an online order — warned, not blocked', // UX walk-through 2 M6
   'till-held-job': 'Selling pads held for job WH-1042 — warned, not blocked', // UX walk-through 3 H1
   'till-discounted': 'Basket with a discount — the new total', // UX walk-through 2 M11

@@ -687,7 +687,7 @@ export const journeys = [
     rows: [
       { label: "A sale", screens: [
         sc("till-sale", "Sale: quick buttons by group, basket on the right", "Staff"),
-        sc("till-serving-pills", "Trust PIN on: today’s people as pills, tap yours to be serving", "Staff"),
+        sc("till-serving-pills", "Today’s people as pills, tap yours to be serving", "Staff"),
         sc("till-empty", "Empty basket", "Staff"),
         sc("till-noresults", "Search with no results", "Staff"),
         sc("till-held", "Selling pads held for an online order — warned, not blocked", "Staff"),

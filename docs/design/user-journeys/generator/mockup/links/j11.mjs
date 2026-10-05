@@ -8,7 +8,7 @@ const DEPOSIT_PAID = notDrawn('Taking the deposit: how it’s paid, and the paid
 
 export default {
   // Trust PIN on (Roles and switches, answer 10): tap your pill to be serving.
-  'till-serving-pills': { 'Jo Taylor': STAY, 'Jack Lewis': STAY, 'Someone else': go('till-checkin') },
+  'till-serving-pills': { 'Jo Taylor': STAY, 'Jack Lewis': STAY, 'Someone else': notDrawn('Someone else types their PIN over the sale, and becomes the person serving') },
   '*': {
     // The quick buttons add to the sale (decision 2)
     'Standard service Labour · 60 min £65.00': STAY,

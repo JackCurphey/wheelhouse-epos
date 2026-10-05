@@ -112,23 +112,31 @@ switch 8, so an Owner who works on bikes stays in the diary. Two routes are ungu
 | Where | Who | Can do |
 |---|---|---|
 | Till, nobody checked in | — | The PIN screen only (WT8 M6 part 1) |
-| Till, a person checked in | Their role and switches | Selling needs switch 1; the rest of the shop as that person, except §3's sign-in-only changes (R2) |
+| Till, a person checked in | Their role and switches | Selling needs switch 1; the rest of the shop as that person, except §3's sign-in-only changes (R2). With trust PIN on, anyone checked in on that till today takes over by tapping their pill, no PIN (R10) |
 | Till, a "till only" person | Staff or Mechanic, switch 1 on | The till, Front desk › Online orders, booking a bike in, handing over a repair paid online — nothing else (WT8 8 and its later change, walk-through 10 M1); checked on the server (§7) |
 | Workshop computer, nobody working | — | The PIN screen; with trust PIN on, the names of today's people to tap (R3) |
-| Workshop computer, a person working | Their role and switches, including a Mechanic with no email (R8) | Workshop pages; Owner and Manager pages (Settings and §4's pages) only after the PIN of an Owner, Manager or someone with "Give everything", every time (WT8 3; R3), so a Staff member with switch 7 uses Settings from their own phone or the office computer *(proposed)*; no "Change PIN"; not §3's sign-in-only changes (R2) |
+| Workshop computer, a person working | Their role and switches, including a Mechanic with no email (R8) | Workshop pages; Owner and Manager pages (Settings and §4's pages) only after the PIN of an Owner, Manager or someone with "Give everything", every time (WT8 3; R3), so a Staff member with switch 7 uses Settings from their own phone or the office computer *(proposed)*; no "Change PIN"; not §3's sign-in-only changes (R2). With trust PIN on, anyone who typed their PIN there today takes over by tapping their pill, no PIN (R9) |
 | Own phone, laptop or office computer, email sign-in | Their role and switches | Everything their role and switches allow |
 
-**Idle:** with trust PIN off, a workshop computer asks for the PIN again
-after 10 minutes (Q6); each business can change the time or switch it off
-(R9). With trust PIN on, every workshop page also ends in a strip of
-today's people as pills; tapping your own makes you the person working, on
-the same page (R9). With trust PIN on (one setting for the whole business, for
-workshop computers, R3; #133, S1), after the same 10 minutes it shows the names of everyone who
-typed their PIN on it today; a person taps their own name and carries on.
-The list starts empty each day *(proposed)*. Tills already stay checked in
-until someone checks out; with trust PIN on they also show a "Serving:"
-row of pills, one per person checked in on that till today, and tapping
-your own makes you the person serving, with no PIN (R10).
+**Trust PIN** is one setting for the whole business, covering workshop
+computers and tills (R3, R10; #133, S1), off to start *(proposed)*.
+
+**Idle:** a workshop computer left alone for 10 minutes (Q6) goes back to
+"Enter your PIN", or with trust PIN on to "Who's working?", which shows
+everyone who typed their PIN on it today; a person taps their own name and
+carries on (R3). With trust PIN on, the business can change the time
+(choices 5, 10, 15 or 30 minutes *(proposed)*) or switch it off (R9).
+**[Open for Jack]** whether that setting also applies with trust PIN off.
+The list starts empty each day *(proposed)*.
+
+**Pills:** with trust PIN on, every workshop page ends in a "Working:" strip
+of today's people as pills, and the till shows a "Serving:" row of everyone
+checked in on it today. Tapping your own makes you the person working or
+serving, on the same page, with no PIN (R9, R10); on the till the sale on
+screen moves to you too *(proposed)*. With trust PIN on, the strip takes
+the place of block 26's "Working: [name] · Switch" bar *(proposed)*, so a
+page never has both. Tills already stay checked in until someone checks
+out.
 
 **For the contract (Mark).** In plain words: the server has to know who is
 working at a shared computer, not just which computer it is. Today a till's requests carry only the till's
@@ -138,7 +146,11 @@ person working, so the server checks their role and switches and records
 them (Mark ready as sign-off, Q3). The till's offline copy has to include
 the PIN hashes, role and switches of everyone who may check in, not only
 `is_cashier` staff (`server/till/snapshot.js`). PINs are 4 digits picked by
-Wheelhouse (SI 7); `server/till/pin.js` accepts 4–6 today.
+Wheelhouse (SI 7); `server/till/pin.js` accepts 4–6 today. With trust PIN
+on, a request naming a person who took over by a pill is accepted only if
+that person typed their PIN on that device today, checked by the server and
+by the till's offline copy *(proposed)*, so a device can't simply claim to
+be anyone.
 
 ## 7. Which routes check what
 

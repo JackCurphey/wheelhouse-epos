@@ -78,7 +78,9 @@ fresh review raised answers 7 and 8; answers 9 and 10 came while drawing answer 
    After the computer has been left alone, the "Who's working?" screen
    still comes up, so nothing is recorded under the last person after a
    break. How long that takes is a setting for the whole business, 10
-   minutes to start (Q6), and it can be switched off. Owner and Manager
+   minutes to start (Q6), and it can be switched off. Proposed, for Jack to
+   overrule: the choices offered are 5, 10, 15 or 30 minutes, and trust PIN
+   itself starts off. Owner and Manager
    pages still ask for a PIN. Chosen over pills only, with no idle screen.
 10. **The till gets the same pills** (Jack, 5 Oct: "I would also like to
     have that for the till system too, so a staff member can quickly make

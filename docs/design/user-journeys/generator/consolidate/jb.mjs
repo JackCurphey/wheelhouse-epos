@@ -32,7 +32,7 @@ export default {
 // ("Draw the decisions" spec, section 6: N2, N3, N4).
 export const lines = [
   { on: 'till-setup', text: 'Make this computer a workshop computer: it stays signed in as the shop, and each person takes over by typing their PIN', who: 'Owner', decision: 'Walk-through 8, decision 1' },
-  { on: 'till-checkin', text: 'A workshop computer left alone for [10] minutes (the business can change the time, or switch it off): back to Enter your PIN, nothing lost (with trust PIN on: the names to tap)', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 3; build plan Q6; Roles and switches, answers 3 and 9' },
+  { on: 'till-checkin', text: 'A workshop computer left alone for 10 minutes (the business can change the time, or switch it off): back to Enter your PIN, nothing lost (with trust PIN on: the names to tap)', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 3; build plan Q6; Roles and switches, answers 3 and 9' },
   { on: 'till-checkin', text: 'A till with nobody checked in: only the PIN screen', who: 'Staff', decision: 'Walk-through 8, fix M6 part 1' },
   { on: 'auth-site', text: 'Staff at two shops (Jo Taylor): their two shops, no All shops; the counts only for people who can close the day', who: 'Staff', decision: 'Multiple sites 9; Opening the shop 3 and 4' },
   // "Draw the answers" spec, section 4: N5, N6.
