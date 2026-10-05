@@ -131,3 +131,5 @@ the frame on the bike; "Skip for now" stays for stock that came in without
 one.
 
 **Later change (3 Oct 2026, third walk, answers 1 and 4, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** Jack, 3 Oct: "1" to each. The till search's rows are drawn as decided (each row's name opens it, the till button sits on the right; a job row reads "Expected 11:30 · Book in" or "Paid online · [date] · Hand over"), and a Cycle to Work bike paid with only the certificate has its own paid box, "Paid · Cycle to Work · [Provider]". Decisions 7 and 12 are unchanged. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.
+
+**Later change (5 Oct 2026, issue #138):** Jack, 5 Oct: "can we build it so that we can connect differnet kind of payment machines to it? … i dont want this system to only work with paymentsense". Decision 6's card machine link goes through one card machine adapter that names no company: each make of card machine is its own connection behind it, with its own details. Paymentsense (an Ingenico Move/5000 on wifi, #138) is the first; typing the amount in on the machine stays as the fallback.

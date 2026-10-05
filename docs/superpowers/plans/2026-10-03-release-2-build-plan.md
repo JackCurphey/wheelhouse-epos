@@ -445,7 +445,14 @@ later packages.
   groups; parked sales; receipts (print, email, text link, receipt page);
   past sales and voids; refunds; store credit and gift cards; customer
   accounts; paying for a workshop job with collection recorded; the offline
-  screens. Cycle to Work at the till comes with WP-7.1. The till gives a
+  screens. Card payments go through a card machine adapter that doesn't
+  name any one company (Jack, 5 Oct: the system mustn't only work with
+  Paymentsense): send an amount or a refund, get approved, declined or
+  unclear back, and look up an unclear one. A pretend card machine comes
+  first; Paymentsense's Connect is the first real connection (#138), and
+  another company's machine is added as its own connection without
+  changing the till. Typing the amount in on the machine always stays as
+  the fallback (Selling at the till 6). Cycle to Work at the till comes with WP-7.1. The till gives a
   customer group's discount by itself (Customer service 8); the groups are
   set up in Settings › Payments › Customer groups (`cs-groups`), built in
   WP-5.1, so until then the group parts are built and tested with groups made
