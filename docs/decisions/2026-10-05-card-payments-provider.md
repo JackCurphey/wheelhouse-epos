@@ -32,9 +32,9 @@ marked; nothing was signed up for):
 |---|---|---|---|
 | A single shop can connect | Yes, own dashboard keys | Yes, a key made in its own settings | Not confirmed: live needs IDs from Dojo |
 | Works from a browser till | Yes, the server sends to a named reader | Yes, Solo reader only | Yes |
-| UK card fee in person | 1.4% + 10p (UK and EEA cards), no monthly fee | 1.69%, no monthly fee | about £39.99 a month, then 1% (third-party reviews) |
-| Online payment link fee | 1.5% + 20p (UK cards) | 2.5% | not confirmed |
-| Readers | S700 or S710 £229, WisePad 3 £49 | Solo £79 + VAT | from £79 (third-party) |
+| UK card fee in person | 1.4% + 10p (EEA cards, which include UK cards in Stripe's table), no monthly fee | 1.69%, no monthly fee | about £39.99 a month, then 1% (third-party reviews) |
+| Online payment link fee | 1.5% + 20p (standard UK cards; premium UK cards 2.8% + 20p) | 2.5% (third-party) | not confirmed |
+| Readers | S700 or S710 £229, WisePad 3 £49 | Solo £79 + VAT (third-party) | from £79 (third-party) |
 | Internet down | No card payments; S710 has 4G at £7 a month | Solo has its own SIM and an offline mode | not stated |
 | Test mode | Pretend reader | Pretend Solo | Pretend terminals |
 
@@ -46,7 +46,8 @@ fees from expertmarket.com (third-party). Square, Teya, Zettle and Adyen
 were also checked and fit less well (higher fees, unconfirmed self-serve
 access, or partner-only).
 
-**Still to do, Jack's:** opening the Stripe account (or using the one
-Citrus Lime's links may already use) and buying a reader are real accounts
-and money, so they wait for Jack (project rules). Until then Mark builds
+**Still to do:** Mark sets up the Stripe account (Q10: the online payments
+provider is among the accounts Mark sets up), or uses the one Citrus Lime's
+links may already use; like buying a reader, it is a real account and
+money, so it waits for Jack's yes (project rules). Until then Mark builds
 against Stripe's pretend reader.

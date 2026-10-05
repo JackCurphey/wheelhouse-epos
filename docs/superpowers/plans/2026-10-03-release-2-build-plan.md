@@ -129,7 +129,7 @@ of them blocks building; all of them block going live.
 |---|---|---|
 | Hosting and a public address (PL-1) | local server | Mark |
 | Card machine | staff key the amount in (already in #111), and a pretend card machine behind the card machine adapter | Stripe Terminal first, then SumUp, then Paymentsense (Ingenico Move/5000, #138), each its own connection behind the same adapter (Jack, 5 Oct; `docs/decisions/2026-10-05-card-payments-provider.md`) |
-| Online payments (PAY-05) | fake provider with test outcomes | Stripe (payment links and checkout), the same company as the card reader (Jack, 5 Oct); the account is Jack's to open (Q10) |
+| Online payments (PAY-05) | fake provider with test outcomes | Stripe (payment links and checkout), the same company as the card reader (Jack, 5 Oct); Mark sets the account up, with Jack's yes (Q10; project rules) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
 | Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
 | Text messages (Twilio) | already real; fake in tests | keys exist in Jack's set-up |
