@@ -63,3 +63,5 @@ fresh review raised answers 7 and 8. Jack answered them one at a time on 5 Oct. 
    walk-through 8 decision 8 ("till only") against decision 1 (everyone at
    a workshop computer types a PIN). Raised by the second fresh review.
    Chosen over every workshop-computer user needing an email.
+
+**Later change (5 Oct 2026, issue #133, `docs/decisions/2026-10-05-shops-and-sites.md`):** Jack, 5 Oct, answer 1. Trust PIN (answer 3) is one setting for the whole business, not per site.

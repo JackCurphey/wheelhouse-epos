@@ -75,7 +75,8 @@ change), and so was limiting stock adjustment to switch 5 (Stock control 6).
   gives a Manager's, and nobody else touches the Owner's.
 - A Manager gives only the shops they work at; the Owner gives any shop
   (second walk 9d). Which shops a person works at is a per-person list, not a
-  switch; where it lives is settled with issue #133.
+  switch; WP-1.4 keeps it and checks it on every request
+  (`specs/2026-10-05-wp-1-4-shops-and-sites.md` §2, §3).
 - Adding or removing people, changing roles or switches, and registering or
   removing tills need an email sign-in; they are never offered by PIN on a
   till or workshop computer (R2).
@@ -118,8 +119,8 @@ switch 8, so an Owner who works on bikes stays in the diary. Two routes are ungu
 | Own phone, laptop or office computer, email sign-in | Their role and switches | Everything their role and switches allow |
 
 **Idle:** with trust PIN off, a workshop computer asks for the PIN again
-after 10 minutes (Q6). With trust PIN on (a per-shop setting for workshop
-computers, R3), after the same 10 minutes it shows the names of everyone who
+after 10 minutes (Q6). With trust PIN on (one setting for the whole business, for
+workshop computers, R3; #133, S1), after the same 10 minutes it shows the names of everyone who
 typed their PIN on it today; a person taps their own name and carries on.
 The list starts empty each day *(proposed)*. Tills already stay checked in
 until someone checks out, so trust PIN doesn't apply to them.
@@ -258,7 +259,7 @@ log: §4. Workshop computers: the Owner makes one (WT8 1).
 
 
 - Which shops a person works at, and how every shop-scoped route checks it:
-  issue #133 and WP-1.4.
+  WP-1.4 (`specs/2026-10-05-wp-1-4-shops-and-sites.md`, #133).
 - Trust PIN and the tap-your-name screen are not drawn yet (R3); WP-1.7
   builds the workshop computer.
 - The "Add someone, till only" pop-up (`setup.mjs`) says a till only person
