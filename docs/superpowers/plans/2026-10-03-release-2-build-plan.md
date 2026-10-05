@@ -128,7 +128,7 @@ of them blocks building; all of them block going live.
 | Outside service | Stand-in until it's real | Who unblocks it |
 |---|---|---|
 | Hosting and a public address (PL-1) | local server | Mark |
-| Card machine | staff key the amount in (already in #111) | Paymentsense (Jack, Q7); model, linking and offline still to check |
+| Card machine | staff key the amount in (already in #111), and a pretend card machine behind the card machine adapter | Paymentsense first (Jack, Q7; Ingenico Move/5000, #138), then other card machine companies, each its own connection behind the same adapter (Jack, 5 Oct) |
 | Online payments (PAY-05) | fake provider with test outcomes | Jack and Mark (Q10) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
 | Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
@@ -445,7 +445,14 @@ later packages.
   groups; parked sales; receipts (print, email, text link, receipt page);
   past sales and voids; refunds; store credit and gift cards; customer
   accounts; paying for a workshop job with collection recorded; the offline
-  screens. Cycle to Work at the till comes with WP-7.1. The till gives a
+  screens. Card payments go through a card machine adapter that doesn't
+  name any one company (Jack, 5 Oct: the system mustn't only work with
+  Paymentsense): send an amount or a refund, get approved, declined or
+  unclear back, and look up an unclear one. A pretend card machine comes
+  first; Paymentsense's Connect is the first real connection (#138), and
+  another company's machine is added as its own connection without
+  changing the till. Typing the amount in on the machine always stays as
+  the fallback (Selling at the till 6). Cycle to Work at the till comes with WP-7.1. The till gives a
   customer group's discount by itself (Customer service 8); the groups are
   set up in Settings › Payments › Customer groups (`cs-groups`), built in
   WP-5.1, so until then the group parts are built and tested with groups made
