@@ -271,7 +271,7 @@ const tillOnlyDialog = () => popup('inv-title', 'Add someone', 'No email — the
 ${howPills(true)}
 ${field('Name', { placeholder: 'Their name, as it shows on sales' })}
 ${choice('Role', [['Staff', true], ['Mechanic', false]])}
-${note('A Mechanic added this way gets “Can use the till” switched on. They don’t sign in to Wheelhouse, so they can’t open anything away from the till except Front desk › Online orders.')}
+${note('A Mechanic added this way gets “Can use the till” switched on. They don’t sign in to Wheelhouse, so they can’t open anything away from the till except Front desk › Online orders. A Mechanic can also work at a workshop computer with their PIN.')}
 ${note('Their PIN is given at the till: you or a manager checks in, opens “Give [name] their PIN” and turns the screen to them. A forgotten PIN is cleared and given again the same way. Or use Give a new PIN on their page, from your phone: it shows a one-time PIN to read out over a call, and they change it at check-in.')}`, `${button('Cancel', { variant: 'ghost' })}${button('Add them')}`);
 def('set-staff-invite', () => overlay(settingsPage('staff', 'Staff and roles', STAFF_INTRO, staffFolds({ people: peopleOpen(false, true) }), { who: MANAGER /* UX walk-through 2 (decision 6): Jack Lewis, Owner */ }), inviteDialog()));
 // UX walk-through 4 M2, M3: the Owner's list after inviting Jo and adding a

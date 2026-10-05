@@ -13,6 +13,8 @@ export default {
   'till-checkin-offline': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Offline · [n] sales waiting to send'; the till bar shows offline"),
   'till-checkin-stale': into('till-checkin', 'Leftover 4, Signing in 9', "Amber line 'Online · prices and stock last updated [time] · [n] sales still sending'"),
   'till-checkin-workshop': into('till-checkin', 'Walk-through 8, decisions 1 and 3; 3 Oct (third walk, answer 8)', "Bar 'Workshop computer', no till number; 'What you do on this computer is recorded under your name and role'; no start-up line, no 'Checked in today'"),
+  'till-checkin-workshop-names': into('till-checkin', 'Roles and switches, answer 3 (5 Oct)', "Trust PIN on: 'Who’s working?', today’s names to tap (Alex Morgan, Jo Taylor), 'Someone else — enter your PIN'; Owner and manager pages still ask for the PIN"),
+  'workshop-working-pills': into('till-checkin', 'Roles and switches, answer 9 (5 Oct)', "Trust PIN on: a 'Working:' strip at the bottom of every workshop page, today’s people as pills (Alex Morgan highlighted, Jo Taylor), 'Someone else' for a PIN; tap your own to take over on the same page"),
   'till-pin-wrong': into('till-checkin', 'Leftover 4, Signing in 9', "Dots cleared; 'That PIN isn’t anyone’s — try again'"),
   'pin-change': keep(43),
   'pin-first': into('pin-change', 'Signing in 6–7, Walk-through 4 H1', "First-time version: 'Welcome to North Street Cycles, Jo'; no close; adds 'Skip for now'"),
@@ -30,7 +32,7 @@ export default {
 // ("Draw the decisions" spec, section 6: N2, N3, N4).
 export const lines = [
   { on: 'till-setup', text: 'Make this computer a workshop computer: it stays signed in as the shop, and each person takes over by typing their PIN', who: 'Owner', decision: 'Walk-through 8, decision 1' },
-  { on: 'till-checkin', text: 'A workshop computer left alone for 10 minutes: back to Enter your PIN, nothing lost', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 3; build plan Q6' },
+  { on: 'till-checkin', text: 'A workshop computer left alone for 10 minutes (with trust PIN on, the business can change the time or switch it off): back to Enter your PIN, nothing lost (with trust PIN on: the names to tap)', who: 'Staff and Mechanic', decision: 'Walk-through 8, decision 3; build plan Q6; Roles and switches, answers 3 and 9' },
   { on: 'till-checkin', text: 'A till with nobody checked in: only the PIN screen', who: 'Staff', decision: 'Walk-through 8, fix M6 part 1' },
   { on: 'auth-site', text: 'Staff at two shops (Jo Taylor): their two shops, no All shops; the counts only for people who can close the day', who: 'Staff', decision: 'Multiple sites 9; Opening the shop 3 and 4' },
   // "Draw the answers" spec, section 4: N5, N6.
