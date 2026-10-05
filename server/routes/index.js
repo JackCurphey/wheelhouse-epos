@@ -7,5 +7,6 @@ import * as purchaseOrders from './purchase-orders.js';
 import * as shopSettings from './shop-settings.js';
 import * as shopWebsite from './website.js';
 import * as sitesTills from './sites-tills.js';
+import * as team from './team.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team];
