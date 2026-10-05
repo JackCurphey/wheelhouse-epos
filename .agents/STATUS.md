@@ -6,7 +6,7 @@
 > the WorkOS plan. State facts; let the reader run the verbs.
 
 **Mark is on:** WP-0.4's route moves (split plan §4.1), more areas to move
-(seven merged 5 Oct). Then WP-0.5, the hosted
+(eight merged 5 Oct). Then WP-0.5, the hosted
 copy.
 **Jack is on:** WP-0.2's screens half (#164, in review; contract in
 `docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md`).
@@ -47,7 +47,7 @@ half, #148, 5 Oct); line 3 (STATUS trim, #149, 5 Oct). In progress: line 4
 (Mark, WP-0.4: route-list test #150, migration checks and
 `scripts/new-db.sh` #151, screen-trace reads the route files #152, route
 moves #155 suppliers, #156 purchase orders, #158 label settings and shop
-theme, #159 website and Shopify, #160 sites and tills, #162 team, #165 printing and messages); line 5 (Jack,
+theme, #159 website and Shopify, #160 sites and tills, #162 team, #165 printing and messages, #167 sign-in); line 5 (Jack,
 WP-0.2 screens, #164 in review). Waiting: line 6 (Mark, WP-0.5; waits for line 4); line 7
 (Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
 line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 in
