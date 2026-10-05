@@ -5,15 +5,19 @@
 > **Never put a destructive command here** — one stale reset nearly destroyed
 > the WorkOS plan. State facts; let the reader run the verbs.
 
-**Mark is on:** stage 0 — WP-0.4 (split plan §9). Its first pull request,
-the route-list test, is #150, waiting on Jack's review.
-**Jack is on:** WP-0.2's screens half, now unblocked (#148 merged 5 Oct;
-contract in `docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md`).
-Ready alongside:
-#136 (Citrus Lime exports) and #138 (card machine), only Jack can do; the
-planning fixes due before stage 1 (#132, #133, #141); reviewing WP-0.4 when
-Mark opens it; stage 0's stage check once lines 1–6 of §9 are in.
-**Open for Jack:** a Change requested badge on the job window (not drawn).
+**Mark is on:** WP-0.4's route moves (split plan §4.1), more areas to move
+(four merged 5 Oct; sites and tills, #160, open). Then WP-0.5, the hosted
+copy.
+**Jack is on:** WP-0.2's screens half (started 5 Oct, branch
+`jack/wp-0.2-booking-screens`; contract in
+`docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md`).
+Ready alongside: #136 (Citrus Lime exports, not started) and #138 (card
+machine: an Ingenico Move/5000, wifi only; waiting on Jack asking
+Paymentsense, questions on the issue), only Jack can do; reviewing Mark's
+WP-0.4 pull requests; stage 0's stage check once lines 1–6 of §9 are in.
+**Open for Jack:** drawings needed before WP-1.7: the trust-PIN "tap your
+name" screen, and the "till only" pop-up's line for a Mechanic (WP-1.1 spec
+§8); a Change requested badge on the job window (not drawn).
 
 **Updated:** 2026-10-05. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
@@ -30,15 +34,26 @@ everywhere, waiting for parts beats Quoting), #111 (the till; Escape and a
 closed window can't hide a sale mid-save) and #112 (diary extras; stacked
 jobs move by keyboard, press and hold fans a stack on touch) merged, with
 the follow-up #144 (4 Oct). #146 (5 Oct) trimmed §7.2 and closed #131: Jack
-keeps the plan's order, so no workshop piece is built early.
+keeps the plan's order, so no workshop piece is built early. Also 5 Oct:
+#153 (WP-1.1 roles and switches table, closes #132), #154 (WP-1.4 shops and
+sites spec, closes #133), #124 (the clickable mockup's 13 Codex problems,
+closes #123). #157 (split plan §3.1, the files both touch, closes #141) is
+reviewed and waits on Mark's approval, by Jack's choice; once merged, every
+server change Jack makes needs Mark's approval.
 
 ## Where the build stands
 
 Stage 0 (split plan §9). Done: line 1 (WP-0.1); line 2 (WP-0.2 server
-half, #148, 5 Oct); line 3 (this trim). Not done: line 4 (Mark, WP-0.4,
-#150 first); line 5 (Jack, WP-0.2 screens, unblocked); line 6 (Mark,
-WP-0.5; waits for line 4); line 7 (Jack,
-the stage check; waits for lines 1–6). Stage 1 starts only after line 7.
+half, #148, 5 Oct); line 3 (STATUS trim, #149, 5 Oct). In progress: line 4
+(Mark, WP-0.4: route-list test #150, migration checks and
+`scripts/new-db.sh` #151, screen-trace reads the route files #152, route
+moves #155 suppliers, #156 purchase orders, #158 label settings and shop
+theme, #159 website and Shopify; #160 open); line 5 (Jack, WP-0.2 screens,
+started 5 Oct). Waiting: line 6 (Mark, WP-0.5; waits for line 4); line 7
+(Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
+line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 in
+#157, waiting on Mark. New: #161, for Mark: the migration backstop misses a
+rename that duplicates a number (follow-up to #151).
 
 - **Build plan:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`;
   Jack's answers in `docs/decisions/2026-10-03-build-plan-questions.md`.
@@ -74,12 +89,9 @@ to see where we are).
   lock-held race tests are sound.
 - The piece 6 memory risk (large booking bodies) must be decided before the
   booking route is publicly reachable (hosting not chosen).
-- Pressing Back while "Sending…" can leave a customer without their private
-  link.
-- A lost reply after a saved booking can lead to a duplicate until the
-  screens send the request key (WP-0.2 screens half). Fixed on the server in
-  #148, along with another shop's `/book/<slug>` on a website and the UTC
-  "today".
+- Until WP-0.2's screens half merges: Back while "Sending…" can lose the
+  customer's private link, and a lost reply can duplicate a booking (the
+  screens don't send the request key yet; #148 fixed the server side).
 - Found in #148, not fixed: on a website address `/api/portal/*` returns the
   website's HTML (`decided-while-building.md`, Mark's lane), for WP-0.5.
 - `timed_lead_minutes` isn't used in any customer confirmation yet.
