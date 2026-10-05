@@ -9,9 +9,9 @@ import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStore
 
 // Public-storefront on/off switch plus its branding fields (tagline,
 // description, logo/hero images, theme preset) - same singleton-per-shop,
-// lazy-create-on-GET pattern as shop_theme above. Persistence and validation
-// live in storefront.js (Task 3); these two routes are thin HTTP glue over
-// it, same shape as the shop-theme pair above.
+// lazy-create-on-GET pattern as shop_theme (server/routes/shop-settings.js).
+// Persistence and validation live in storefront.js (Task 3); these two routes
+// are thin HTTP glue over it, same shape as the shop-theme pair there.
 
 // Per-shop connection to a Shopify store via a custom-app Admin API token
 // (Task 3, shopify.js). These two routes are thin HTTP glue over

@@ -86,7 +86,7 @@ import { listOpen as listOpenAttention, resolve as resolveAttention } from './ti
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
-import { getShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
+import { syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 import {
   getShopifyConnectionByShopId,
   decryptSecret,
