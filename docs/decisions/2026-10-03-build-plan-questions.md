@@ -133,4 +133,4 @@ opinion on it."
 
 **Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 3. Q6's 10 minutes applies when the shop's "trust PIN" setting is off. With it on, a workshop computer left idle shows the names of everyone who typed their PIN on it that day, and they tap their own.
 
-**Later change (5 Oct 2026, issue #136):** Q4's exports are now listed by column name in `docs/superpowers/specs/2026-10-05-citrus-lime-exports.md`, read from the shop's Cloud Reports and back office on 5 Oct with Jack signed in. Everything the move needs exports to Excel except the full customer list and the workshop jobs, which show on screen only; Jack is to ask Citrus Lime for a full export of those.
+**Later change (5 Oct 2026, issue #136):** Q4's exports are now listed by column name in `docs/superpowers/specs/2026-10-05-citrus-lime-exports.md`, read from the shop's Cloud Reports and back office on 5 Oct with Jack signed in. Everything the move needs exports to Excel except the full customer list and the workshop job history, which show on screen only; Jack is to ask Citrus Lime for a full export of those.
