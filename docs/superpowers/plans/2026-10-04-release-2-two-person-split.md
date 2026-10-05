@@ -410,7 +410,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 | 1.8 Messages engine | engine, placeholders, text or email, Undo window, scheduler, the outbox stand-in | `set-msg-list`, `set-msg-edit`, `set-msg-new` |
 | 1.9 Live updates | **M** whole: the server side and the `src/lib/live` hook Jack's screens use | — |
 | 1.10 Needs attention and Today | the needs-attention model with Seen; Who's in; Workshop today data | block 6; `op-today` |
-| 1.11 Small shared parts | spreadsheet download; printing through the print agent; header search API; payments adapter with its fake | block 17, `till-search`; `your-settings` (kept in 1.2's store) |
+| 1.11 Small shared parts | spreadsheet download; printing through the print agent; header search API; online payments adapter with its fake | block 17, `till-search`; `your-settings` (kept in 1.2's store) |
 
 ### Stage 2 — Products and stock
 
@@ -425,7 +425,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 
 | Package | Mark | Jack |
 |---|---|---|
-| 3.1 The till, complete | discounts and reasons; parked sales; receipts by email and text link; voids and refunds; store credit, gift cards and accounts; paying for a job with collection recorded | blocks 8, 19, 20, 21; the 22 screens. This is the biggest screens package |
+| 3.1 The till, complete | discounts and reasons; parked sales; receipts by email and text link; voids and refunds; store credit, gift cards and accounts; paying for a job with collection recorded; the card machine adapter with its pretend machine, then Stripe Terminal, SumUp and Paymentsense in that order (Jack, 5 Oct) | blocks 8, 19, 20, 21; the 22 screens. This is the biggest screens package |
 | 3.2 Customers | duplicate catching, one history, statements, merging, privacy requests | the 8 screens |
 | 3.3 Opening the shop | — | **J** whole: block 18, float check (a small server change), 2 screens, Today lines |
 | 3.4 End-of-day cash-up | count, paid-outs, banking, card check, end-of-day figures, reopen | blocks 5, 7; the 4 screens |
@@ -435,7 +435,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 | Package | Mark | Jack |
 |---|---|---|
 | 4.1 Workshop day, the rest | — | **J** whole (his workshop area, §3): blocks 15, 23, 25; 9 screens; storage slots, checklist, "Mark ready" as the sign-off (Q3) |
-| 4.2 Quotes, the rest | reminders through 1.8's scheduler, spending limit, deposit through the payments adapter | blocks 37, 38; 3 screens |
+| 4.2 Quotes, the rest | reminders through 1.8's scheduler, spending limit, deposit through the online payments adapter | blocks 37, 38; 3 screens |
 | 4.3 Collect and pay | "Bike ready" on Mark ready; online payment; receipts; the uncollected reminder | blocks 39, 41; 5 screens |
 | 4.4 Book a repair, rebuilt | deposits and auto-confirm on the server | **J** most of it: block 36, 8 customer screens, change and cancel, saved draft. The booking server itself stays Mark's; Jack's server changes for 4.4 need Mark's approval (§3.1, Jack 5 Oct) |
 | 4.5 Account, history, reminders | consent and "Stop these", service reminders, review requests, the data download, the staff inbox model | block 47; 9 screens |
@@ -494,7 +494,7 @@ first; packages with no screens come after:
 3. 1.10 Needs attention (unlocks Today)
 4. 1.7 Sign-in and PINs (unlocks 8 screens)
 5. 1.8 Messages engine (unlocks Settings › Messages)
-6. 1.11 search, printing, spreadsheet download, the payments adapter
+6. 1.11 search, printing, spreadsheet download, the online payments adapter
 7. then 1.4, 1.5, 1.6 and 1.9, which have no screens of their own
 
 All of stage 1 still finishes before stage 2's server halves start.

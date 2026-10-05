@@ -28,6 +28,17 @@ export default {
   'till-checkin': Object.fromEntries(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => [k, { ...go('till-empty'), first: 'op-float-check' }])),
   // A workshop computer's PIN opens the diary as that person (third walk, answer 8).
   'till-checkin-workshop': Object.fromEntries(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].map((k) => [k, go('diary-mechanic', 'Now working: Alex Morgan')])),
+  // Trust PIN on (Roles and switches, answer 3): tap your name, no PIN.
+  'till-checkin-workshop-names': {
+    'A Alex Morgan Mechanic': go('diary-mechanic', 'Now working: Alex Morgan'),
+    'J Jo Taylor Staff': go('diary', 'Now working: Jo Taylor'),
+    'Someone else — enter your PIN': go('till-checkin-workshop'),
+  },
+  'workshop-working-pills': {
+    'Alex Morgan': STAY,
+    'Jo Taylor': go('diary', 'Now working: Jo Taylor'),
+    'Someone else': go('till-checkin-workshop'),
+  },
   'till-setup': { 'Make this computer Till B1': go('till-checkin'), 'Make this device Till B1': go('till-checkin') },
   // Change PIN from Your settings
   'pin-change': { 'Keep this PIN': go('your-settings') },

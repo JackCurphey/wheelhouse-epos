@@ -103,6 +103,8 @@ export const journeys = [
         sb('till-checkin-offline', 'Till start-up: offline, sales waiting to send (the start-up line on the PIN screen)', 'Staff'),
         sb('till-checkin-stale', 'Till start-up: online, but not up to date', 'Staff'),
         sb('till-checkin-workshop', 'Workshop computer: Enter your PIN, no till number', 'Staff and Mechanic'),
+        sb('till-checkin-workshop-names', 'Workshop computer with trust PIN on: tap your name', 'Staff and Mechanic'),
+        sb('workshop-working-pills', 'Workshop computer with trust PIN on: today’s people as pills at the bottom of every page', 'Staff and Mechanic'),
         sb('till-pin-wrong', 'Till check-in: wrong PIN', 'Staff'),
         sb('pin-change', 'Your new till PIN', 'Staff'),
       ] },
@@ -685,6 +687,7 @@ export const journeys = [
     rows: [
       { label: "A sale", screens: [
         sc("till-sale", "Sale: quick buttons by group, basket on the right", "Staff"),
+        sc("till-serving-pills", "Today’s people as pills, tap yours to be serving", "Staff"),
         sc("till-empty", "Empty basket", "Staff"),
         sc("till-noresults", "Search with no results", "Staff"),
         sc("till-held", "Selling pads held for an online order — warned, not blocked", "Staff"),

@@ -93,8 +93,10 @@ Each git worktree, and each review, uses its own database, so only throwaway
 databases ever run a migration that isn't merged yet. `scripts/new-db.sh
 <name>` makes one on the compose Postgres, with the same rights for `epos_app`
 as `epos` has. Then change the database name at the end of `DATABASE_URL` in
-that worktree's `.env` and run `npm run migrate`. It needs
-`POSTGRES_SUPERUSER_PASSWORD` in `.env`, or `ADMIN_DATABASE_URL`. Migration
+that worktree's `.env` and run `npm run migrate`. It connects as
+the compose superuser: `ADMIN_DATABASE_URL` if set, otherwise user `postgres`
+with `POSTGRES_SUPERUSER_PASSWORD` at `DATABASE_URL`'s host and port. It grants rights to
+`DATABASE_URL`'s user, or `epos_app` when `DATABASE_URL` isn't set. Migration
 numbering rules, and the CI checks that enforce them, are in
 `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md` §4.2.
 

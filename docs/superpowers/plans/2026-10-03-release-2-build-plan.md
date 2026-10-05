@@ -128,13 +128,13 @@ of them blocks building; all of them block going live.
 | Outside service | Stand-in until it's real | Who unblocks it |
 |---|---|---|
 | Hosting and a public address (PL-1) | local server | Mark |
-| Card machine | staff key the amount in (already in #111) | Paymentsense (Jack, Q7); model, linking and offline still to check |
-| Online payments (PAY-05) | fake provider with test outcomes | Jack and Mark (Q10) |
+| Card machine | staff key the amount in (already in #111), and a pretend card machine behind the card machine adapter | Stripe Terminal first, then SumUp, then Paymentsense (Ingenico Move/5000, #138), each its own connection behind the same adapter (Jack, 5 Oct; `docs/decisions/2026-10-05-card-payments-provider.md`) |
+| Online payments (PAY-05) | fake provider with test outcomes | Stripe (payment links and checkout), the same company as the card reader (Jack, 5 Oct); Mark sets the account up, with Jack's yes (Q10; project rules) |
 | Email sending | an outbox kept in the database, viewable in the app | Mark: an email service account (Q10) |
 | Staff sign-in service (WorkOS) | today's sign-in behind `use-session.ts`, and the plan's fake | Mark: WorkOS account (Q10) |
 | Text messages (Twilio) | already real; fake in tests | keys exist in Jack's set-up |
 | Xero and QuickBooks | spreadsheet downloads first, then a fake connector | developer accounts (Q10) |
-| Citrus Lime import | Excel files in a guessed layout (Jack, Q4: Citrus Lime exports Excel) | Jack's real export files |
+| Citrus Lime import | Excel files laid out by the real Cloud Reports column names (`specs/2026-10-05-citrus-lime-exports.md`, #136) | Jack's real export files, and Citrus Lime's full export |
 | Lightspeed | fake Lightspeed server | a test account (Q5) |
 | Receipt and label printers | browser print; the existing print agent | — |
 
@@ -292,10 +292,11 @@ later packages.
 - **`auth-site`** (block 13, Shop switcher) — no other situations; plus 1 written line.
 - **`auth-signedout`** (block 40, Message or outcome page) — 1 situation: `auth-expired`.
 - **`till-setup`** (block 1, Settings page) — its one situation comes with a later package; plus 1 written line.
-- **`till-checkin`** (block 43, PIN pad) — 4 situations: `till-checkin-offline`, `till-checkin-stale`, `till-checkin-workshop`, `till-pin-wrong`; plus 6 written lines.
+- **`till-checkin`** (block 43, PIN pad) — 6 situations: `till-checkin-offline`, `till-checkin-stale`, `till-checkin-workshop`, `till-checkin-workshop-names`, `workshop-working-pills`, `till-pin-wrong`; plus 6 written lines.
 - **`pin-change`** (block 43, PIN pad) — 3 situations: `pin-first`, `pin-cleared`, `till-give-pin`.
 - **`cust-signin`** (block 42, Emailed-code sign-in) — no other situations; plus 2 written lines.
 - **`cust-code`** (block 42, Emailed-code sign-in) — 1 situation: `cust-code-expired`.
+- Added to the `set-till-quick` board (built in WP-1.3) — plus 2 written lines (trust PIN, and when a workshop computer goes back to the start).
 <!-- /screens -->
 
 - **WP-1.8 Messages engine and email** (Owner setup Messages; journeys 3, 4,
@@ -417,9 +418,17 @@ later packages.
 <!-- /screens -->
 
 - **WP-2.4 Citrus Lime import, first half** (journey 9, pieces 1–4): upload,
-  products and stock, customers and bikes, rows that need a look. Reads Excel
-  (Q4) in a guessed layout; matched to the real files when Jack has them (Q4).
-  Runs alongside WP-2.1–2.3.
+  products and stock, customers and bikes, rows that need a look. Reads the
+  Cloud Reports Excel exports, laid out by their real column names
+  (`docs/superpowers/specs/2026-10-05-citrus-lime-exports.md`, #136):
+  Price List - Store Level (products, prices, cost, stock and reorder levels
+  per shop), Barcode/Alias List, Serial Number List, Top Customers, and
+  Service Items Report (the customers' bikes). Each customer's marketing
+  consent and its date come across with them *(proposed)*. Top Customers may
+  leave out customers who never bought; they come from Citrus Lime's full
+  export once Jack has asked for it. The bikes report has no account number,
+  so bikes are matched to customers by name, email or phone, and any that
+  don't match go to "rows that need a look". Runs alongside WP-2.1–2.3.
 
 <!-- screens 2.4 -->
 *Building blocks built here:* 24 Stage strip and its next-step box.
@@ -436,7 +445,15 @@ later packages.
   groups; parked sales; receipts (print, email, text link, receipt page);
   past sales and voids; refunds; store credit and gift cards; customer
   accounts; paying for a workshop job with collection recorded; the offline
-  screens. Cycle to Work at the till comes with WP-7.1. The till gives a
+  screens. Card payments go through a card machine adapter that doesn't
+  name any one company (Jack, 5 Oct: the system mustn't only work with
+  Paymentsense): send an amount or a refund, get approved, declined or
+  unclear back, and look up an unclear one. A pretend card machine comes
+  first; Stripe Terminal is the first real connection, SumUp the second,
+  and Paymentsense's Connect later (Jack, 5 Oct;
+  `docs/decisions/2026-10-05-card-payments-provider.md`), each added as its
+  own connection without changing the till. Typing the amount in on the machine always stays as
+  the fallback (Selling at the till 6). Cycle to Work at the till comes with WP-7.1. The till gives a
   customer group's discount by itself (Customer service 8); the groups are
   set up in Settings › Payments › Customer groups (`cs-groups`), built in
   WP-5.1, so until then the group parts are built and tested with groups made
@@ -448,7 +465,7 @@ later packages.
 
 *Screens it builds (22) and the situations it covers:*
 
-- **`till-sale`** (block 19, Till page) — 13 of its 18 situations here: `till-empty`, `till-noresults`, `till-held`, `till-held-job`, `till-discounted`, `till-loyalty`, `till-job`, `till-job-balance`, `till-offline`, `till-offline-long`, `till-needs-net`, `till-noted`, `till-no-signout`; plus 6 written lines.
+- **`till-sale`** (block 19, Till page) — 14 of its 19 situations here: `till-serving-pills`, `till-empty`, `till-noresults`, `till-held`, `till-held-job`, `till-discounted`, `till-loyalty`, `till-job`, `till-job-balance`, `till-offline`, `till-offline-long`, `till-needs-net`, `till-noted`, `till-no-signout`; plus 6 written lines.
 - **`till-line`** (block 9, Form box) — 1 situation: `till-discount`.
 - **`till-customer`** (block 21, Pick-one box) — no other situations.
 - **`till-variant`** (block 21, Pick-one box) — no other situations.
@@ -884,9 +901,22 @@ later packages.
 
 - **WP-8.1 Citrus Lime import, second half** (journey 9, pieces 5–11):
   weekly refresh; the move page; the weekly check; the switch-over
-  checklist; switch-over morning; the first week; workshop-job import if
-  Citrus Lime exports jobs. While running alongside, the tills wait for
-  switch-over day (Moving from Citrus Lime, later change, walk-through 4 H2).
+  checklist; switch-over morning; the first week. At switch-over it brings
+  across what is still owed or held: account balances and credit limits
+  (Customer Accounts with Balances), gift vouchers still to spend, open
+  orders and their deposits (open workshop jobs among them, to confirm), and
+  open purchase orders. The weekly refresh brings in last week's sales from
+  Who Bought What and Tender Detail, so Wheelhouse has its own four figures
+  (sales total, number of sales, stock value, number of customers); the
+  owner types Citrus Lime's figures, as decision 5 says. The customer count
+  only matches once every customer has come across, so Citrus Lime's full
+  export comes before the weekly check can pass. The workshop job history
+  and its notes can't be exported from the screens either: they come from
+  that full export, a way for programs to read Citrus Lime's data (an API)
+  if they offer one, or, only if Jack decides to and after checking their
+  terms and data-protection rules, copying the screens, with the copy kept
+  by Jack and never in the repo (#136). While running alongside, the tills
+  wait for switch-over day (Moving from Citrus Lime, later change, walk-through 4 H2).
   Practice mode is dropped (see "Later").
 
 <!-- screens 8.1 -->
