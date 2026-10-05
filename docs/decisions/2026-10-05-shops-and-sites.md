@@ -14,7 +14,7 @@ in `docs/superpowers/specs/2026-10-05-wp-1-4-shops-and-sites.md`.
    blind cash count, what a diary block shows, showing prices online (one
    website) and trust PIN. Address, phone, opening hours and the diary were
    already per shop (Multiple sites 2). Chosen over everything else shared,
-   and over the split with changes.
+   and over moving some of these to the other side.
 2. **Repair job numbers run once for the whole business** (Jack: "1").
    WH-1042 at one shop is followed by WH-1043 at the other; a number never
    repeats, so either shop finds a job from its number. As the app works

@@ -119,8 +119,8 @@ switch 8, so an Owner who works on bikes stays in the diary. Two routes are ungu
 | Own phone, laptop or office computer, email sign-in | Their role and switches | Everything their role and switches allow |
 
 **Idle:** with trust PIN off, a workshop computer asks for the PIN again
-after 10 minutes (Q6). With trust PIN on (a per-shop setting for workshop
-computers, R3), after the same 10 minutes it shows the names of everyone who
+after 10 minutes (Q6). With trust PIN on (one setting for the whole business, for
+workshop computers, R3; #133, S1), after the same 10 minutes it shows the names of everyone who
 typed their PIN on it today; a person taps their own name and carries on.
 The list starts empty each day *(proposed)*. Tills already stay checked in
 until someone checks out, so trust PIN doesn't apply to them.

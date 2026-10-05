@@ -19,8 +19,9 @@ contract, and Jack can overrule it.
 
 - **Business**: the whole company, one row in `shops`. One customer list, one
   website, one set of staff, one VAT number (S3). Nothing ever crosses from
-  one business to another: the database enforces it (row-level security on
-  `shop_id`, `app.current_shop_id`, `runWithShop`).
+  one business to another. The database keeps each business's rows to itself
+  (its row-level security on `shop_id`), with one hole the code has to cover:
+  links between rows aren't checked that way (§5, rule 1).
 - **Site**: one physical shop inside a business, one row in `sites` (Bolton,
   [Second site]). Keeping sites apart is a matter of who works where, not
   security between businesses: owners and "All shops" legitimately read
@@ -32,7 +33,7 @@ contract, and Jack can overrule it.
 written before 1 Oct say "each shop chooses" when there was only one, so
 they meant both. From here on, plans and specs say **business** and
 **site**; screens keep "shop". The code keeps `shop_id` for the business
-*(proposed: renaming 46 tables isn't worth it)*.
+*(proposed: renaming 44 tables isn't worth it)*.
 
 ## 2. What belongs to the business, and what to each site
 
@@ -72,10 +73,11 @@ they meant both. From here on, plans and specs say **business** and
 | Per site | Business-wide |
 |---|---|
 | Address, phone, opening hours (Multiple sites 2) | Blind cash count (Cash-up 2) |
-| Storage slots and their list (Workshop day 27) | What a diary block shows (Workshop day 17, 33) |
-| Online booking: exact times or drop-off, the drop-off window, notice (Booking mode 1, 2) | Showing prices online (Booking mode) |
+| Storage slots and their list (Workshop day 27) | What a diary block shows (Workshop day 17; set in Owner setup 12) |
+| Online booking: exact times or drop-off and any change already scheduled (Booking mode 1), the drop-off window and lead time (Booking mode 3), notice (Book a repair 11) | Showing prices online (Booking mode §7.6) |
 | When "Close the day" appears (Owner setup 18) | Trust PIN (Roles and switches 3) |
-| Where "Take payment" goes (Workshop day 1) | Everything else in Settings (Multiple sites 2, "most settings") |
+| Where "Take payment" goes (Workshop day 1) | The rest of Online booking: deposits, confirming automatically, booking terms (Book a repair 3, 8, 11) |
+| | Everything else in Settings (Multiple sites 2, "most settings") |
 
 Owners always see every site; a Manager or anyone with "Give everything"
 works at one site at least *(proposed)*.
@@ -89,9 +91,10 @@ It knows a site only on till requests, from the till's own row.
 *(proposed)*:
 
 1. **Signed in (phone, laptop, office computer):** the chosen site is kept
-   on the session; "Switch shop" changes it. Empty means "All shops". Every
-   request checks it against the person's "Works at" list, so an old or
-   made-up value is refused.
+   on the session; "Switch shop" changes it. Every request checks it against
+   the person's "Works at" list, so an old or made-up value is refused. Empty
+   means "All shops" only for someone allowed it (below); for anyone else it
+   means their one site, or asks which.
 2. **Till:** its own site, always (already true). The session's choice never
    overrides it.
 3. **Workshop computer:** its own site, fixed when the Owner makes it one.
@@ -103,9 +106,12 @@ It knows a site only on till requests, from the till's own row.
    names its business and site; nothing reads a "current" site.
 6. **Every route declares its site rule** next to its WP-1.1 role guard:
    one site, one site or "All shops", or none (business-wide). The route-list
-   test (#150) requires every route to declare one.
+   test (#150) will be extended to require every route to declare one.
 
-**"All shops"** means every site the person works at (the Owner: all).
+**"All shops"** is for the Owner (every site), and for a Manager or anyone
+with "Give everything a Manager can do" who works at two or more sites (the
+sites they work at) (Multiple sites 1 and 9, H1; Roles and switches 1).
+Nobody else can choose it.
 Overview pages (Today, reports, stock lists, the activity log) accept it and
 say which site each line is from. Pages that only make sense for one site
 (the till, the diary, cash-up, receiving, a new job) refuse it, and the
@@ -115,18 +121,25 @@ screen asks "Which shop?" (Multiple sites 1).
 
 What the code has today, and what WP-1.4 does about it:
 
-- `sites` holds only a name and a code, and a new business gets no site.
-  WP-1.4 gives every existing business a first site (the per-business
-  backfill pattern Codex names), makes signing up create one, and moves
-  address, phone, opening hours and the per-site settings in S1 off
-  `workshop_settings` (one row per business today) onto the site.
+- `sites` holds only a name and a code, and a new business gets no site,
+  though an Owner can already add sites and tills point at them. WP-1.4
+  gives a first site to every business that has none and leaves existing
+  sites alone, using the same business-by-business loop as migrations 002,
+  030 and 037; signing up creates one too. Existing jobs, stock movements,
+  holds and time off go to the business's only site, or, where it has
+  several, to its first *(proposed)*; till sales keep the site they have.
+- Opening hours, booking mode with its scheduled change, the drop-off
+  window and notice move off `workshop_settings` (one row per business
+  today) onto the site. Address, phone and the other per-site settings in
+  S1 aren't stored anywhere yet, so they start on the site.
 - Only `tills` and `till_sales` carry a `site_id`. WP-1.4 adds one to stock
   movements, workshop jobs, capacity holds, time off, purchase orders and
   cash-up, and a per-site list of who works where, with each mechanic's days
   there *(proposed: a `staff_sites` table)*.
 - The till's sync takes stock off one figure per product
-  (`server/till/sync.js`). Stock per site is WP-1.5's, built on WP-1.4's
-  site column.
+  (`server/till/sync.js`). WP-1.4 makes it write the till's own site on each
+  stock movement, so till sales keep working once movements have a site.
+  Stock counted per site is WP-1.5's.
 
 ## 5. The test rule for every new table
 
@@ -139,24 +152,31 @@ failing first:
 
 1. **Across businesses** (every table with `shop_id`): as business B, a row
    made by business A can't be read, listed, changed or deleted, through the
-   route and directly under `runWithShop`; and B can't make a row that points
-   at one of A's rows. Database references don't check row-level security
-   *(to confirm against the Postgres docs)*, so this is checked in code or
-   with a key that includes `shop_id`, as `POST /api/tills` does today.
+   route and directly in the database as B; and B can't make a row that
+   points at one of A's rows. The database doesn't apply its row-level
+   security when it checks links between rows or unique values ("Referential
+   integrity checks, such as unique or primary key constraints and foreign
+   key references, always bypass row security", PostgreSQL, Row Security
+   Policies). So a link is checked in code, or with a key that includes
+   `shop_id`, as `POST /api/tills` does today; and a unique value includes
+   `shop_id`, so it can't reveal that another business has used it.
 2. **Across sites** (every table with `site_id`): someone who doesn't work at
    a site can't read or change its rows through any route; "All shops"
-   returns only their sites; a till or workshop computer writes only its own
-   site's rows.
+   returns only their sites, and is refused to anyone not allowed it; a till
+   or workshop computer writes only its own site's rows; an old or made-up
+   site on a session is refused; a site hidden from customers answers like an
+   unknown one.
 3. **Background work** on the table runs for one business at a time and is
    tested with two businesses' data present.
 
-A table without `shop_id` says why in its migration (registry tables only).
-To watch each test fail: loosen the rule (`USING (true)`) or remove the site
-filter, see it fail, put it back.
+A table without `shop_id` says why in its migration; only tables shared by
+every business, like `shops` itself, are allowed. To watch each test fail:
+switch the separation off for the table, or remove the site filter, see it
+fail, put it back.
 
 **The separation check gets stronger** *(proposed, WP-1.4)*.
 `scripts/ci/assert-rls-coverage.mjs` today only checks that row-level
 security is switched on for tables with a `shop_id` column. It also needs
-to fail when a policy doesn't compare `shop_id` with
-`app.current_shop_id` in both its read and write halves, and when a table
-has neither `shop_id` nor a listed reason.
+to fail when a table's rule doesn't compare `shop_id` with the current
+business both for reading rows and for writing them, and when a table has
+neither `shop_id` nor a listed reason.
