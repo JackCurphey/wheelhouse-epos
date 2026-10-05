@@ -54,3 +54,5 @@ from the machine itself rather than being typed in.
 **Later change (1 Oct 2026, Reports and accounts decision 8):** closed days are
 listed, opened and reopened from Reports › Takings and cash-ups, and a reopened
 day is called out on every report it leaves out. No board here changed.
+
+**Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 6. Reopening a closed day (decision 6, "a manager") needs "Can close the day" (Owners and Managers have it).

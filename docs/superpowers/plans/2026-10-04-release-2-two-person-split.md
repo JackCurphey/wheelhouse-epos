@@ -318,7 +318,7 @@ merges first (§4.4). "Whole" means one person builds both halves.
 
 | Package | Mark | Jack |
 |---|---|---|
-| 1.1 Roles and switches | four roles, eight switches, `/api/auth/me`, a check on every route, a login linked to its staff member | blocks 12, 16, 29; `map`, `staff-app`, `till-rail`; the sidebar per role; a mechanic lands on the Diary |
+| 1.1 Roles and switches | four roles, nine switches (the table: `specs/2026-10-05-wp-1-1-roles-and-switches.md`), `/api/auth/me`, a check on every route, a login linked to its staff member | blocks 12, 16, 29; `map`, `staff-app`, `till-rail`; the sidebar per role; a mechanic lands on the Diary |
 | 1.2 Settings, change record, activity | **M** whole (no screens) | — |
 | 1.3 Settings frame | — | **J** whole: blocks 1, 2, 9, 10, 11; `set-till-quick`, `set-till-quick-add`. Uses 1.2's settings store, so no new server routes |
 | 1.4 Shops everywhere | **M** whole (no screens) | — |
