@@ -301,8 +301,7 @@ test('success clears the draft and opens the booking link', async () => {
   const { ui, readPhotos } = await open({ draft: { ...READY, hadPhotos: true }, photos: [pngFile()] });
   await press(ui);
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
-  // The draft is written to storage in an effect after the screen updates,
-  // and after Back it is cleared just after the move to the link (#169).
+  // The draft is written to storage in an effect after the screen updates (#169).
   await (await rtl()).waitFor(() => assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), null));
   // Not only the saved draft: the photos held in the provider's memory too.
   assert.equal(readPhotos().length, 0);
