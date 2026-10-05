@@ -104,7 +104,7 @@ It knows a site only on till requests, from the till's own row.
    an unknown one.
 5. **Background work** (reminders, Shopify, the accounts link): each job
    names its business and site; nothing reads a "current" site.
-6. **Every route declares its site rule** next to its WP-1.1 role guard:
+6. **Every route declares its site rule** next to its WP-1.1 check of who may use it:
    one site, one site or "All shops", or none (business-wide). The route-list
    test (#150) will be extended to require every route to declare one.
 
@@ -127,7 +127,7 @@ What the code has today, and what WP-1.4 does about it:
   sites alone, using the same business-by-business loop as migrations 002,
   030 and 037; signing up creates one too. Existing jobs, stock movements,
   holds and time off go to the business's only site, or, where it has
-  several, to its first *(proposed)*; till sales keep the site they have.
+  several, to its oldest (the first one added) *(proposed)*; till sales keep the site they have.
 - Opening hours, booking mode with its scheduled change, the drop-off
   window and notice move off `workshop_settings` (one row per business
   today) onto the site. Address, phone and the other per-site settings in
@@ -170,7 +170,8 @@ failing first:
    tested with two businesses' data present.
 
 A table without `shop_id` says why in its migration; only tables shared by
-every business, like `shops` itself, are allowed. To watch each test fail:
+every business (like `shops` itself) or used to find the business before
+anyone has signed in (like `sessions` and `customer_sessions`) are allowed. To watch each test fail:
 switch the separation off for the table, or remove the site filter, see it
 fail, put it back.
 
