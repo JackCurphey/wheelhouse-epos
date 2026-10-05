@@ -6,7 +6,7 @@
 > the WorkOS plan. State facts; let the reader run the verbs.
 
 **Mark is on:** WP-0.4's route moves (split plan §4.1), more areas to move
-(five merged 5 Oct, the last #160, sites and tills). Then WP-0.5, the hosted
+(five merged 5 Oct). Then WP-0.5, the hosted
 copy.
 **Jack is on:** WP-0.2's screens half (started 5 Oct, branch
 `jack/wp-0.2-booking-screens`; contract in
