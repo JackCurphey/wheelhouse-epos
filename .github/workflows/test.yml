@@ -35,6 +35,10 @@ jobs:
 
     env:
       DATABASE_URL: postgres://epos_app:ci-epos-app-pw@127.0.0.1:5432/epos
+      # The superuser, for the migration checks' throwaway databases. Set for
+      # the whole job so tests/migration-checks.test.js runs the upgrade check
+      # against a real database in npm test, not only in its own step (#161).
+      ADMIN_DATABASE_URL: postgres://postgres:ci-superuser-pw@127.0.0.1:5432/postgres
 
     steps:
       # Full history: the migration checks below read main and the order its
@@ -180,15 +184,11 @@ jobs:
 
       - name: Upgrading a database from main applies only the new migrations
         if: github.event_name == 'pull_request'
-        env:
-          ADMIN_DATABASE_URL: postgres://postgres:ci-superuser-pw@127.0.0.1:5432/postgres
         run: node scripts/ci/check-migrations.mjs upgrade HEAD^1
 
       # scripts/new-db.sh's proof: on a database it makes, every migration runs
       # and row-level security covers every shop-scoped table, as on epos.
       - name: A database made by scripts/new-db.sh works like epos
-        env:
-          ADMIN_DATABASE_URL: postgres://postgres:ci-superuser-pw@127.0.0.1:5432/postgres
         run: |
           scripts/new-db.sh epos_new_db_check
           export DATABASE_URL=postgres://epos_app:ci-epos-app-pw@127.0.0.1:5432/epos_new_db_check

@@ -37,6 +37,12 @@ export async function dropDatabase(adminUrl, name) {
   try { await client.query(`DROP DATABASE IF EXISTS ${name}`); } finally { await client.end(); }
 }
 
+// The app role to grant rights to: DATABASE_URL's user, or epos_app (the role
+// docker/init-db.sh creates) when only ADMIN_DATABASE_URL is set.
+export function appRoleFrom(env) {
+  return env.DATABASE_URL ? decodeURIComponent(new URL(env.DATABASE_URL).username) : 'epos_app';
+}
+
 export function adminUrlFrom(env) {
   if (env.ADMIN_DATABASE_URL) return env.ADMIN_DATABASE_URL;
   if (!env.DATABASE_URL || !env.POSTGRES_SUPERUSER_PASSWORD) {
@@ -54,7 +60,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const name = process.argv[2];
   try {
     if (!name) throw new Error('usage: scripts/new-db.sh <name>');
-    const appRole = decodeURIComponent(new URL(process.env.DATABASE_URL).username);
+    const appRole = appRoleFrom(process.env);
     await createAppDatabase(adminUrlFrom(process.env), name, appRole);
     console.log(`Made database ${name} for ${appRole}.`);
     console.log(`Point this worktree at it: in .env, change the database name at the end of DATABASE_URL to ${name}, then run npm run migrate.`);
