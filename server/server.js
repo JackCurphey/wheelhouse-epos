@@ -70,15 +70,7 @@ import {
   CUSTOMER_SESSION_COOKIE,
   CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from './customer-auth.js';
-import {
-  getOrCreateStorefrontSettings,
-  updateStorefrontSettings,
-  serializeStorefrontSettings,
-  parseStorefrontSlugCandidate,
-  resolveStorefrontShop,
-  getStorefrontInfo,
-  listStorefrontProducts,
-} from './storefront.js';
+import { updateStorefrontSettings, serializeStorefrontSettings, parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo, listStorefrontProducts } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
 import { STANDARD_BOOKING_TERMS } from './standard-terms.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
@@ -94,7 +86,7 @@ import { listOpen as listOpenAttention, resolve as resolveAttention } from './ti
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
-import { getShopifyConnection, saveShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
+import { getShopifyConnection, serializeShopifyConnection, registerShopifyWebhooks, syncProductToShopify, unpublishProductFromShopify, pushInventoryLevel } from './shopify.js';
 import {
   getShopifyConnectionByShopId,
   decryptSecret,
@@ -4500,67 +4492,6 @@ route('DELETE', '/api/workshop-services/:id', async (req, res, params) => {
   if (!existing) return notFound(res, 'Not found');
   await db.prepare('UPDATE workshop_services SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
   sendJson(res, 200, { ok: true });
-});
-
-// ---------- Website settings ----------
-// Public-storefront on/off switch plus its branding fields (tagline,
-// description, logo/hero images, theme preset) - same singleton-per-shop,
-// lazy-create-on-GET pattern as shop_theme above. Persistence and validation
-// live in storefront.js (Task 3); these two routes are thin HTTP glue over
-// it, same shape as the shop-theme pair above.
-
-route('GET', '/api/storefront-settings', async (req, res) => {
-  sendJson(res, 200, serializeStorefrontSettings(await getOrCreateStorefrontSettings()));
-});
-
-route('PUT', '/api/storefront-settings', async (req, res) => {
-  const body = await readJsonBody(req);
-  try {
-    const updated = await updateStorefrontSettings(body);
-    sendJson(res, 200, serializeStorefrontSettings(updated));
-  } catch (err) {
-    if (err.message.startsWith('Invalid theme preset')) return badRequest(res, err.message);
-    throw err;
-  }
-});
-
-// ---------- Shopify connection ----------
-// Per-shop connection to a Shopify store via a custom-app Admin API token
-// (Task 3, shopify.js). These two routes are thin HTTP glue over
-// getShopifyConnection/saveShopifyConnection - same shape as the
-// storefront-settings pair above.
-
-route('GET', '/api/shopify/connection', async (req, res) => {
-  sendJson(res, 200, serializeShopifyConnection(await getShopifyConnection()));
-});
-
-route('POST', '/api/shopify/connection', async (req, res) => {
-  const body = await readJsonBody(req);
-  const shopDomain = String(body.shopDomain || '').trim();
-  const accessToken = String(body.accessToken || '').trim();
-  const storefrontApiToken = String(body.storefrontApiToken || '').trim();
-  if (!shopDomain || !accessToken || !storefrontApiToken) {
-    return badRequest(res, 'shopDomain, accessToken, and storefrontApiToken are all required');
-  }
-
-  let connection;
-  try {
-    connection = await saveShopifyConnection({ shopDomain, accessToken, storefrontApiToken });
-  } catch (err) {
-    return badRequest(res, `Could not connect to Shopify: ${err.message}`);
-  }
-
-  try {
-    await registerShopifyWebhooks(connection, connection.shop_id);
-  } catch (err) {
-    console.error('Failed to register Shopify webhooks', err);
-    return sendJson(res, 200, {
-      ...serializeShopifyConnection(connection),
-      warning: 'Connected, but webhook registration failed - online orders will not sync back to stock until this is retried.',
-    });
-  }
-
-  sendJson(res, 200, serializeShopifyConnection(connection));
 });
 
 // ---------- Print agents ----------
