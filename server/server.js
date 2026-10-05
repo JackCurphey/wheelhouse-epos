@@ -78,11 +78,8 @@ import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { readRequestKey } from './booking-request-key.js';
-import { hashPin } from './till/pin.js';
 
-import { processSyncItems, TransientSyncError } from './till/sync.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
-import { resolve as resolveAttention } from './till/attention.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';
