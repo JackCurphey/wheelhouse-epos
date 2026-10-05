@@ -93,7 +93,8 @@ test('a phone shows one day, chosen in a strip of the week', async () => {
 
 test('tapping another day shows that day', async () => {
   const { ui, fireEvent } = await openPhone();
-  fireEvent.click(ui.getByRole('tab', { name: 'Monday 5 October' }));
+  // The name gains ", today" when the real clock is on that day, so match its start.
+  fireEvent.click(ui.getByRole('tab', { name: /^Monday 5 October/ }));
   assert.ok(has(await ui.findByText('Giant Escape')));
   assert.equal(has(ui.queryByText('Trek Domane')), false);
 });
