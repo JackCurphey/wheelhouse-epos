@@ -37,7 +37,11 @@ jobs:
       DATABASE_URL: postgres://epos_app:ci-epos-app-pw@127.0.0.1:5432/epos
 
     steps:
+      # Full history: the migration checks below read main and the order its
+      # migrations were added in.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -159,6 +163,43 @@ jobs:
       # ---------- Database ----------
 
       - run: npm run migrate
+
+      # ---------- Migration rules (split plan §4.2) ----------
+      # The runner remembers migrations by filename, so a renamed file runs
+      # twice and a low number runs out of order. Each check was watched
+      # failing before it was added (5 Oct): a new file numbered at or below
+      # main's highest, a file on main renamed or edited, and a renamed file
+      # re-running on upgrade.
+      #
+      # On a pull request the checkout is GitHub's merge of it into main, so
+      # HEAD^1 is exactly the main it was merged with (origin/main can have
+      # moved on since, and would blame this pull request for the new file).
+      - name: New migrations are numbered above main's, and main's are unchanged
+        if: github.event_name == 'pull_request'
+        run: node scripts/ci/check-migrations.mjs pr HEAD^1
+
+      - name: Upgrading a database from main applies only the new migrations
+        if: github.event_name == 'pull_request'
+        env:
+          ADMIN_DATABASE_URL: postgres://postgres:ci-superuser-pw@127.0.0.1:5432/postgres
+        run: node scripts/ci/check-migrations.mjs upgrade HEAD^1
+
+      # scripts/new-db.sh's proof: on a database it makes, every migration runs
+      # and row-level security covers every shop-scoped table, as on epos.
+      - name: A database made by scripts/new-db.sh works like epos
+        env:
+          ADMIN_DATABASE_URL: postgres://postgres:ci-superuser-pw@127.0.0.1:5432/postgres
+        run: |
+          scripts/new-db.sh epos_new_db_check
+          export DATABASE_URL=postgres://epos_app:ci-epos-app-pw@127.0.0.1:5432/epos_new_db_check
+          npm run migrate
+          node scripts/ci/assert-rls-coverage.mjs
+
+      # The backstop. It should never fail; if it does, a rule above was
+      # broken - stop and ask Jack rather than renaming anything on main.
+      - name: Migration numbers on main are unique and in merge order
+        if: github.event_name == 'push'
+        run: node scripts/ci/check-migrations.mjs main
 
       # Tenant isolation is enforced by Postgres RLS rather than by
       # application code, so a migration that adds a shop-scoped table and
