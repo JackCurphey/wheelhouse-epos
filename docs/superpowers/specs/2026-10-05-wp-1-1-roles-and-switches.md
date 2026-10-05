@@ -125,8 +125,8 @@ computers and tills (R3, R10; #133, S1), off to start *(proposed)*.
 "Enter your PIN", or with trust PIN on to "Who's working?", which shows
 everyone who typed their PIN on it today; a person taps their own name and
 carries on (R3). With trust PIN on, the business can change the time
-(choices 5, 10, 15 or 30 minutes *(proposed)*) or switch it off (R9).
-**[Open for Jack]** whether that setting also applies with trust PIN off.
+(choices 5, 10, 15 or 30 minutes *(proposed)*) or switch it off (R9). With trust PIN off it is always 10 minutes (R9,
+Jack 5 Oct: "1").
 The list starts empty each day *(proposed)*.
 
 **Pills:** with trust PIN on, every workshop page ends in a "Working:" strip

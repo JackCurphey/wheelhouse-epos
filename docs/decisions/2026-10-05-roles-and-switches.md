@@ -80,7 +80,10 @@ fresh review raised answers 7 and 8; answers 9 and 10 came while drawing answer 
    break. How long that takes is a setting for the whole business, 10
    minutes to start (Q6), and it can be switched off. Proposed, for Jack to
    overrule: the choices offered are 5, 10, 15 or 30 minutes, and trust PIN
-   itself starts off. Owner and Manager
+   itself starts off. The setting applies only with trust PIN on; with it
+   off, a workshop computer always goes back to "Enter your PIN" after 10
+   minutes (Jack, 5 Oct: "1", asked by the drawings' fresh review). Chosen
+   over the setting applying whatever trust PIN is set to. Owner and Manager
    pages still ask for a PIN. Chosen over pills only, with no idle screen.
 10. **The till gets the same pills** (Jack, 5 Oct: "I would also like to
     have that for the till system too, so a staff member can quickly make
