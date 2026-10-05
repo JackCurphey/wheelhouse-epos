@@ -233,7 +233,9 @@ test('a good request reads the services again, then sends the booking', async ()
   assert.equal(sent.length, 2, JSON.stringify(sent));
   assert.equal(`${sent[0].method} ${sent[0].url}`, 'GET /api/portal/north/services');
   assert.equal(sent[1].url, '/api/portal/north/bookings');
-  assert.deepEqual(sent[1].body, {
+  const { requestKey, ...body } = sent[1].body;
+  assert.match(requestKey, /^[A-Za-z0-9_-]{32,128}$/);
+  assert.deepEqual(body, {
     serviceIds: [11, 12], answers: [{ serviceId: 11, questionId: 'b1', choice: 'Squeaking' }],
     bikeNote: 'Blue Trek road bike', photos: [],
     jobDate: '2026-10-05', mechanicId: 1, startTime: '09:30',
@@ -263,7 +265,9 @@ test('Not sure on a drop-off day sends notSure, the description, no answers or s
   const { ui, requests } = await open({ draft });
   await press(ui);
   assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
-  assert.deepEqual(posts(requests)[0].body, {
+  const { requestKey, ...body } = posts(requests)[0].body;
+  assert.match(requestKey, /^[A-Za-z0-9_-]{32,128}$/);
+  assert.deepEqual(body, {
     notSure: true, description: 'Clicks when pedalling', photos: [], jobDate: '2026-10-06', mechanicId: 2,
     guestName: 'Gina Guest', guestPhone: '07700 900123', email: 'gina@example.com', updateChannel: 'email', termsAccepted: true,
   });
@@ -423,3 +427,107 @@ test('no response: asks the customer to check their connection', async () => {
 test("any other JSON refusal: the server's own message is kept, shown as is, on the details screen", async () => {
   await staysWith(refuse(400, 'version is required - send the version you last read'), 'version is required - send the version you last read');
 });
+
+// WP-0.2 screens half: a retry repeats the request key, so the server makes
+// the booking once; Back while "Sending…" still ends at the booking's link.
+// Contract: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md
+const KEY = /^[A-Za-z0-9_-]{32,128}$/;
+
+test('the request key is saved with the draft before the booking is sent', async () => {
+  let keyWhenSent;
+  const booking = () => {
+    keyWhenSent = JSON.parse(window.sessionStorage.getItem('wh-book-draft:north') ?? '{}').requestKey;
+    return { status: 201, body: { id: 1, reference: 'WH-1001', privateLink: PRIVATE_LINK, services: [], totalPrice: null } };
+  };
+  const { ui, requests } = await open({ draft: READY, booking });
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.match(posts(requests)[0].body.requestKey, KEY);
+  assert.equal(keyWhenSent, posts(requests)[0].body.requestKey);
+});
+
+test('a failed send, tried again, sends the same request key', async () => {
+  let tries = 0;
+  const booking = () => {
+    tries += 1;
+    if (tries === 1) throw new TypeError('Failed to fetch');
+    return { status: 201, body: { id: 1, reference: 'WH-1001', privateLink: PRIVATE_LINK, services: [], totalPrice: null } };
+  };
+  const { ui, requests } = await open({ draft: READY, booking });
+  await press(ui);
+  await ui.findByText("We couldn't send your booking - please check your connection and try again");
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  const [first, second] = posts(requests);
+  assert.match(first.body.requestKey, KEY);
+  assert.equal(second.body.requestKey, first.body.requestKey);
+});
+
+test('a key kept in the draft from before a refresh is sent again, not replaced', async () => {
+  const kept = 'kept-key-'.padEnd(40, 'x');
+  const { ui, requests } = await open({ draft: { ...READY, requestKey: kept } });
+  await press(ui);
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.equal(posts(requests)[0].body.requestKey, kept);
+});
+
+test('Back while "Sending…": when the booking is made, the customer still lands on its link, and the draft is cleared', async () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const booking = async () => {
+    await gate;
+    return { status: 201, body: { id: 1, reference: 'WH-1001', privateLink: PRIVATE_LINK, services: [], totalPrice: null } };
+  };
+  const { ui } = await open({ draft: READY, booking });
+  await press(ui);
+  await ui.findByRole('button', { name: 'Sending…' });
+  await click(ui.getByRole('link', { name: /Back/ }));
+  assert.ok(await ui.findByText('At /book/north/date'));
+  release();
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), null);
+});
+
+// The fresh review of #164: the stub date screen above has no guard, so it
+// can't see the real date screen redirect on the cleared draft and replace
+// the link. These mount the real date screen, and StrictMode as the app does.
+const settle = () => new Promise((resolve) => { setTimeout(resolve, 300); });
+const gated = () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const booking = async () => {
+    await gate;
+    return { status: 201, body: { id: 1, reference: 'WH-1001', privateLink: PRIVATE_LINK, services: [], totalPrice: null } };
+  };
+  return { booking, release: () => release() };
+};
+
+test('Back while "Sending…" to the real date screen: the customer ends on the link, not redirected away from it', async () => {
+  const { booking, release } = gated();
+  const { ui, router } = await open({ draft: READY, booking, mechanics: MECHANICS, real: { date: 'DateScreen' } });
+  await press(ui);
+  await ui.findByRole('button', { name: 'Sending…' });
+  await click(ui.getByRole('link', { name: /Back/ }));
+  await ui.findByRole('heading', { level: 1, name: /When/ });
+  release();
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  await settle();
+  assert.equal(router.state.location.pathname, PRIVATE_LINK);
+});
+
+for (const back of [false, true]) {
+  test(`in StrictMode, as the app runs${back ? ', after Back while "Sending…"' : ''}: the customer ends on the link`, async () => {
+    const { booking, release } = gated();
+    const { ui, router } = await open({ draft: READY, booking, mechanics: MECHANICS, real: { date: 'DateScreen' }, strict: true });
+    await press(ui);
+    await ui.findByRole('button', { name: 'Sending…' });
+    if (back) {
+      await click(ui.getByRole('link', { name: /Back/ }));
+      await ui.findByRole('heading', { level: 1, name: /When/ });
+    }
+    release();
+    await settle();
+    assert.equal(router.state.location.pathname, PRIVATE_LINK);
+  });
+}
+
