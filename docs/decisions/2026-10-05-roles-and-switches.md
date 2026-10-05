@@ -2,7 +2,8 @@
 
 Issue #132 (Codex finding 6): before WP-1.1, write the full set of roles and
 switches. The survey found nine switches and five things the decisions left
-open. Jack answered them one at a time on 5 Oct. The table they produce is in
+open (answers 1, 2, 4, 5, 6); Jack added trust PIN (answer 3), and the
+fresh review raised answer 7. Jack answered them one at a time on 5 Oct. The table they produce is in
 `docs/superpowers/specs/2026-10-05-wp-1-1-roles-and-switches.md`.
 
 1. **"Give everything a Manager can do" gives all of it** (Jack: "1"). A
@@ -49,3 +50,10 @@ open. Jack answered them one at a time on 5 Oct. The table they produce is in
    stock" (Stock control 5 said "a manager"); reopening a closed day needs
    "Can close the day" (Cash-up 6 said "a manager"). Owners and Managers
    have both. Chosen over Managers and Owners only.
+7. **Only Owners and Managers give out "Can change settings" or "Give
+   everything a Manager can do"** (Jack, 5 Oct: "no only managers and owners
+   can change settings", then "1" when asked which meaning). Someone with
+   "Can change settings" turns the other switches on and off for colleagues,
+   but not those two, so two colleagues can't promote each other. Raised by
+   the fresh review of the table. Chosen over anyone with "Can change
+   settings" giving any switch except to themselves.

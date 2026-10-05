@@ -6,7 +6,7 @@ person working by PIN can do, and which server routes check which switch.
 Codex finding 6 (`docs/reviews/2026-10-04-release-2-plans-codex-adversarial.md`
 line 49) found the plans said "eight switches" and the server knew only the
 owner flag. Jack's answers on 5 Oct are in
-`docs/decisions/2026-10-05-roles-and-switches.md` (cited below as **R1–R6**).
+`docs/decisions/2026-10-05-roles-and-switches.md` (cited below as **R1–R7**).
 
 This is the table WP-1.1's contract builds on. Mark writes the contract and
 builds the server half (split plan §4.3, §6); route guards marked
@@ -61,8 +61,9 @@ change), and so was limiting stock adjustment to switch 5 (Stock control 6).
 - Managers, and anyone with switch 7, change other Staff and Mechanics'
   switches. Nobody changes their own role or switches (R5). Moving someone
   between Staff and Mechanic follows the same rule *(proposed)*.
-- **[For Jack, question 7]** Whether someone with switch 7 can turn on
-  switch 7, or "Give everything a Manager can do", for someone else.
+- Only Owners and Managers turn switch 7, or "Give everything a Manager can
+  do", on or off for someone (R7). Someone with switch 7 changes the other
+  switches only, so two colleagues can't promote each other.
 - PINs: anyone changes their own (SI 6). Clearing a forgotten PIN: Owner,
   Manager or switch 7 (OS 10). Giving a first or new PIN: Owner or Manager
   (SI later changes), or "Give everything" (R1). Either only for someone
