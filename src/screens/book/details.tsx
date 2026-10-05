@@ -85,8 +85,13 @@ function DetailsForm({ services, back, onExit }: FormProps) {
   // wherever they are, so they never lose it.
   const navigate = useNavigate();
   const shown = React.useRef(true);
-  React.useEffect(() => () => {
-    shown.current = false;
+  // Set on every mount, not only at first: StrictMode mounts twice, and a
+  // flag only ever cleared would read "gone" for the screen's whole life.
+  React.useEffect(() => {
+    shown.current = true;
+    return () => {
+      shown.current = false;
+    };
   }, []);
 
   const send = async () => {
@@ -109,10 +114,12 @@ function DetailsForm({ services, back, onExit }: FormProps) {
         clear();
         onExit({ to: reply.privateLink, replace: true });
       } else {
-        // Navigate first: clearing first would let the screen they went
-        // back to redirect on the empty draft.
-        navigate(reply.privateLink, { replace: true });
-        clear();
+        // The router applies a navigation inside a transition, so a plain
+        // clear() would render first and the screen they went back to would
+        // redirect on the empty draft, replacing the link. Wait for the
+        // navigation, then clear inside a transition of its own.
+        await navigate(reply.privateLink, { replace: true });
+        React.startTransition(() => clear());
       }
     } catch (err) {
       const route = refusalRoute(err);

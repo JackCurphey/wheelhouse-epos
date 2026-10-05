@@ -92,8 +92,10 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    (a lost reply, then the customer changed something and sent again) shows
    the server's own words on the details screen, "This booking was already
    sent with different details". Not drawn. *Pattern:* any other refusal
-   with the server's own message is shown as is (d5). A clearer customer
-   message, with the shop's contact, is for Jack to word.
+   with the server's own message is shown as is (d5). It repeats on every
+   try, because the key stays (a new key would make a second booking), and
+   the booking was most likely made, but the customer has no link to it. A
+   clearer customer message, with the shop's contact, is for Jack to word.
 
 ## Decided here, for Jack to overrule
 

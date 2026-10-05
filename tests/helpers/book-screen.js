@@ -20,7 +20,11 @@
 // e.g. to prove a screen consumed and cleared a refusal (d5) rather than
 // leaving it to repeat on a refresh or Back/Forward to the same entry.
 // scrollIntoView (missing in jsdom) is recorded in `scrolled`; <dialog>'s
-// showModal and close (missing in jsdom) are stubbed.
+// showModal and close (missing in jsdom) are stubbed. `real` mounts real
+// screens at other addresses ({ date: 'DateScreen' } loads
+// screens/book/date.js), so a test can see a guard on the screen a customer
+// went back to (WP-0.2); `strict` renders inside React.StrictMode, as the
+// customer app does (src/customer/main.tsx).
 import { installDom, importFresh } from './dom.js';
 
 const BUILD = new URL('../../.test-build/', import.meta.url);
@@ -36,7 +40,7 @@ const BOOKED = () => ({
 
 export async function renderBookScreen({
   file, exportName, at, url, services, draft, mechanics = NO_MECHANICS, availability = NO_AVAILABILITY,
-  terms = STANDARD_TERMS, bookingLink = NO_LINK, booking = BOOKED, photos, state,
+  terms = STANDARD_TERMS, bookingLink = NO_LINK, booking = BOOKED, photos, state, real = {}, strict = false,
 }) {
   const uninstall = installDom(`http://localhost${url}`);
   if (draft) window.sessionStorage.setItem('wh-book-draft:north', JSON.stringify(draft));
@@ -75,7 +79,7 @@ export async function renderBookScreen({
   };
 
   const { render } = await import('@testing-library/react');
-  const { createElement: h, useEffect } = await import('react');
+  const { createElement: h, useEffect, StrictMode } = await import('react');
   const { createMemoryRouter, RouterProvider, Outlet, useLocation, useParams } = await import('react-router');
   const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
   const Screen = (await importFresh(new URL(file, BUILD).href))[exportName];
@@ -106,13 +110,18 @@ export async function renderBookScreen({
     return h('p', null, `At ${l.pathname}${l.search}${l.state ? ` ${JSON.stringify(l.state)}` : ''}`);
   }
   const child = (path) => (path === '' ? { index: true } : { path });
+  const realScreens = {};
+  for (const [path, name] of Object.entries(real)) {
+    realScreens[path] = (await importFresh(new URL(`screens/book/${path}.js`, BUILD).href))[name];
+  }
   const routes = ['', 'services', 'problem', 'date', 'details', 'booking/:code']
-    .map((p) => ({ ...child(p), Component: p === at ? Screen : Where }));
+    .map((p) => ({ ...child(p), Component: p === at ? Screen : realScreens[p] ?? Where }));
   const start = new URL(url, 'http://localhost');
   const entry = state ? { pathname: start.pathname, search: start.search, state } : url;
   const router = createMemoryRouter([{ path: '/book/:shopSlug', Component: Layout, children: routes }], { initialEntries: [entry] });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const ui = render(h(QueryClientProvider, { client }, h(RouterProvider, { router })));
+  const tree = h(QueryClientProvider, { client }, h(RouterProvider, { router }));
+  const ui = render(strict ? h(StrictMode, null, tree) : tree);
   const readDraft = () => JSON.parse(window.sessionStorage.getItem('wh-book-draft:north') ?? '{}');
   const readPhotos = () => photosBox.current;
   return { ui, client, router, uninstall, scrolled, scrollCalls, requests, readDraft, readPhotos };

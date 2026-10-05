@@ -488,3 +488,46 @@ test('Back while "Sending…": when the booking is made, the customer still land
   assert.equal(window.sessionStorage.getItem('wh-book-draft:north'), null);
 });
 
+// The fresh review of #164: the stub date screen above has no guard, so it
+// can't see the real date screen redirect on the cleared draft and replace
+// the link. These mount the real date screen, and StrictMode as the app does.
+const settle = () => new Promise((resolve) => { setTimeout(resolve, 300); });
+const gated = () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const booking = async () => {
+    await gate;
+    return { status: 201, body: { id: 1, reference: 'WH-1001', privateLink: PRIVATE_LINK, services: [], totalPrice: null } };
+  };
+  return { booking, release: () => release() };
+};
+
+test('Back while "Sending…" to the real date screen: the customer ends on the link, not redirected away from it', async () => {
+  const { booking, release } = gated();
+  const { ui, router } = await open({ draft: READY, booking, mechanics: MECHANICS, real: { date: 'DateScreen' } });
+  await press(ui);
+  await ui.findByRole('button', { name: 'Sending…' });
+  await click(ui.getByRole('link', { name: /Back/ }));
+  await ui.findByRole('heading', { level: 1, name: /When/ });
+  release();
+  assert.ok(await ui.findByText(`At ${PRIVATE_LINK}`));
+  await settle();
+  assert.equal(router.state.location.pathname, PRIVATE_LINK);
+});
+
+for (const back of [false, true]) {
+  test(`in StrictMode, as the app runs${back ? ', after Back while "Sending…"' : ''}: the customer ends on the link`, async () => {
+    const { booking, release } = gated();
+    const { ui, router } = await open({ draft: READY, booking, mechanics: MECHANICS, real: { date: 'DateScreen' }, strict: true });
+    await press(ui);
+    await ui.findByRole('button', { name: 'Sending…' });
+    if (back) {
+      await click(ui.getByRole('link', { name: /Back/ }));
+      await ui.findByRole('heading', { level: 1, name: /When/ });
+    }
+    release();
+    await settle();
+    assert.equal(router.state.location.pathname, PRIVATE_LINK);
+  });
+}
+
