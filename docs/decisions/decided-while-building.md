@@ -12,7 +12,27 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
 
 ## Mark's lane
 
-(Nothing yet.)
+### 5 Oct 2026: WP-0.2 server half, the booking bugs
+
+1. **A retry gets the same private link as the first reply.** For a
+   booking sent with a request key, the link is worked out from the key, so
+   the server can send it again without storing it. Only its hash is kept,
+   as for every link. The key must therefore be at least 32 characters.
+   Issuing a new link on every replay was tried first and dropped: a slow
+   first request replaying late would replace the link the customer had
+   just been given. *Pattern:* the link's existing hash-only storage
+   (`server/booking-link.js`).
+2. **The request key is optional for now.** Today's booking screens don't
+   send one. Making it required would break them until Jack's half merges.
+   Once it has, the key can become required in a follow-up.
+3. **On a website, another shop's `/book/<slug>` gets "Storefront not
+   found"**, the same 404 as an unknown website, so nothing reveals that the
+   other shop exists. *Pattern:* the dispatcher's existing answer for an
+   unknown or switched-off website.
+4. **Found, not fixed: on a website address `/api/portal/*` returns the
+   website's HTML**, so the booking app served there can't reach the booking
+   API. No website is live and hosting isn't chosen, so this is left for
+   WP-0.5 or the website stage.
 
 ## Jack's lane
 
