@@ -282,3 +282,5 @@ under each staff page's title. Nothing else on these boards changed.
 **Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct. Decision 10's "Give everything a Manager can do" gives everything a Manager can, including what later decisions kept for Owners and Managers (answer 1). Only the Owner makes or unmakes a Manager; a Manager's switches are always on; nobody changes their own role or switches (answer 5). Existing logins take their role from the staff list (answer 4).
 
 **Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 2. Decision 10 and 17's owner-only actions (adding or removing people, registering or removing tills), and changing roles or switches, need an email sign-in; they are never offered by PIN on a till or workshop computer.
+
+**Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 7. Only Owners and Managers turn "Can change settings" or decision 10's "Give everything a Manager can do" on or off for someone; anyone with "Can change settings" changes the other switches only.

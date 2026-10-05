@@ -66,11 +66,13 @@ change), and so was limiting stock adjustment to switch 5 (Stock control 6).
   switches only, so two colleagues can't promote each other.
 - PINs: anyone changes their own (SI 6). Clearing a forgotten PIN: Owner,
   Manager or switch 7 (OS 10). Giving a first or new PIN: Owner or Manager
-  (SI later changes), or "Give everything" (R1). Either only for someone
-  with less than you: only the Owner clears or gives a Manager's PIN, and
-  nobody else clears or gives the Owner's *(proposed: otherwise someone
-  could give the Owner a PIN they know and open the Owner's pages on a
-  workshop computer)*.
+  (SI later changes), or "Give everything" (R1). Never your own, and
+  only for someone below you *(proposed: otherwise someone could give the
+  Owner a PIN they know and open the Owner's pages on a workshop
+  computer)*. "Below" runs Owner, then Managers and anyone with "Give
+  everything", then every other Staff and Mechanic: only the Owner clears or
+  gives a Manager's PIN, nobody else touches the Owner's, and a Staff member
+  with switch 7 clears other Staff and Mechanics' PINs.
 - A Manager gives only the shops they work at; the Owner gives any shop
   (second walk 9d). Which shops a person works at is a per-person list, not a
   switch; where it lives is settled with issue #133.
@@ -95,7 +97,7 @@ out the Owner's devices (MO M6).
 | The Owner's login (`logins.is_owner`) | Owner |
 | A login whose staff member is ticked as a mechanic (`is_mechanic`) | Mechanic, switches 8 and 9 on |
 | Any other login | Staff |
-| A staff member with no login | A "No email — till only" person: Mechanic if ticked as a mechanic, else Staff; switch 1 on |
+| A staff member with no login | A "No email — till only" person: Mechanic if ticked as a mechanic, else Staff; switch 1 on *(see question 8 in §8 for mechanics)* |
 
 Nobody becomes a Manager automatically; the Owner makes Managers after the
 move. For every role *(proposed, beyond R4)*: a staff member ticked as a
@@ -112,7 +114,7 @@ switch 8, so an Owner who works on bikes stays in the diary. Two routes are ungu
 | Till, a person checked in | Their role and switches | Selling needs switch 1; the rest of the shop as that person, except §3's sign-in-only changes (R2) |
 | Till, a "till only" person | Staff or Mechanic, switch 1 on | The till, Front desk › Online orders, booking a bike in, handing over a repair paid online — nothing else (WT8 8 and its later change, walk-through 10 M1); checked on the server (§7) |
 | Workshop computer, nobody working | — | The PIN screen; with trust PIN on, the names of today's people to tap (R3) |
-| Workshop computer, a person working | Their role and switches | Workshop pages; Owner and Manager pages (Settings and §4's pages) only after the PIN of an Owner, Manager or someone with "Give everything", every time (WT8 3; R3); no "Change PIN"; not §3's sign-in-only changes (R2) |
+| Workshop computer, a person working | Their role and switches | Workshop pages; Owner and Manager pages (Settings and §4's pages) only after the PIN of an Owner, Manager or someone with "Give everything", every time (WT8 3; R3), so a Staff member with switch 7 uses Settings from their own phone or the office computer *(proposed)*; no "Change PIN"; not §3's sign-in-only changes (R2) |
 | Own phone, laptop or office computer, email sign-in | Their role and switches | Everything their role and switches allow |
 
 **Idle:** with trust PIN off, a workshop computer asks for the PIN again
@@ -136,11 +138,20 @@ Wheelhouse (SI 7); `server/till/pin.js` accepts 4–6 today.
 
 161 routes on `main` (the list in `tests/fixtures/route-list.txt`, #150).
 **Any staff** = every role, signed in or working by PIN, but not a "till
-only" person. **Till only** = the routes a till-only person may use (§6):
-the till's own routes, finding a customer and a job, booking a bike in,
-handing it over, and online orders when they exist *(proposed list; the
-rule is WT8 8)*. Without this check the "nothing else" in §6 would only be
-on screen. Numbers are the
+only" person. **Till only** = the routes a till-only person may also use
+(§6, WT8 8), so the "nothing else" is checked on the server, not just on
+screen *(proposed list)*:
+
+- the till: `GET /api/till/:shopSlug/snapshot`, `POST /api/till/:shopSlug/sync`,
+  `GET /api/sales`, `GET /api/sales/:id` (refunds start from the sale);
+- finding the customer and their bike: `GET /api/customers`,
+  `GET /api/customers/:id`, `GET` and `POST /api/customers/:id/bikes`;
+- the job: `GET /api/workshop-jobs`, `GET /api/workshop-jobs/:id`, and its
+  `book-in`, `collect` and `reopen-custody` actions;
+- printing the bike tag or receipt: `POST /api/print-agents/:deviceId/jobs`;
+- online orders, when they exist.
+
+Each of these is tagged "any staff or till only" below. Numbers are the
 switches in §2. *(proposed)* = no decision names it; Mark confirms in the
 contract. WP-1.1's route test should require every route to declare one of
 these guards, so a new route can't be left open by accident.
@@ -153,37 +164,40 @@ switches, the linked staff member and the shops they work at.
 ### 7.2 Stock (21)
 - Any staff: `GET /api/categories`; `POST /api/products/:id/stock` (anyone
   adjusts stock, with a reason, Stock control 6);
-  `POST /api/purchase-orders/:id/receive` and reading a delivery
-  (`GET /api/purchase-orders/:id`, without costs) so they can receive it
-  (everyone receives, Receiving 4).
+  `POST /api/purchase-orders/:id/receive`, and reading the orders waiting
+  for delivery (`GET /api/purchase-orders`, `GET /api/purchase-orders/:id`)
+  without costs, so they can find and receive one (everyone receives, and
+  Staff see "recent deliveries", Receiving 4) *(proposed: the list shows
+  only orders waiting for delivery unless 5)*.
 - `GET /api/products`: any staff, with `cost` removed unless 3 or 5.
-- Switch 5: purchase orders (list, create, edit, mark ordered, cancel;
-  Receiving 4); suppliers and the supplier catalogue *(proposed)*;
+- Switch 5: purchase orders (every order in the list, create, edit, mark
+  ordered, cancel; Receiving 4); suppliers and the supplier catalogue *(proposed)*;
   creating, editing, deleting products and their photos *(proposed)*.
 - A delivery's costs show only with 3, or 5 *(proposed: whoever orders
   sees the prices they order at)* (Receiving: "Staff see a delivery without costs").
 
 ### 7.3 Customers, bikes, texts (17)
-Any staff for customers, bikes, their history and texts. Switch 7 for
+Any staff for customers, bikes, their history and texts; any staff or till
+only for finding a customer and their bikes, and adding a bike (§7). Switch 7 for
 customer groups and a customer's credit limit *(proposed)*. Deleting a
 customer: Manager or 7 *(proposed)*.
 
 ### 7.4 Till and sales (13)
 - Switch 1: `POST /api/sales` and the sale-document routes *(proposed)*.
-- Any staff: `GET /api/sales`, `GET /api/sales/:id` (refunds start from
-  the sale).
+- Any staff or till only: `GET /api/sales`, `GET /api/sales/:id` (refunds
+  start from the sale).
 - Switch 4: `GET /api/till-attention`, `POST /api/till-attention/:id/resolve`
   (opening the shop 4).
-- Till device, with the person checked in: `GET /api/till/:shopSlug/snapshot`,
+- Till device, with the person checked in (any staff or till only): `GET /api/till/:shopSlug/snapshot`,
   `POST /api/till/:shopSlug/sync` (each sale's person needs switch 1)
   *(proposed)*.
 
 ### 7.5 Workshop jobs and quotes (38)
 Any staff, including the 18 job-action routes and the staff quote routes:
 the workshop is every role's (Staff: "the workshop diary"). Switch 8
-decides who can be given a job, not who can open one. Booking a bike in and
-handing it over (`book-in`, `collect`, `reopen-custody`) are also open to a
-till only person (WT8 8). `finish` is "Mark ready", recorded as the person
+decides who can be given a job, not who can open one. Any staff or till only: the job list,
+one job, and booking a bike in and handing it over (`book-in`, `collect`,
+`reopen-custody`; WT8 8). `finish` is "Mark ready", recorded as the person
 working (Q3). `DELETE /api/workshop-jobs/:id`: Manager or 7 *(proposed)*.
 
 ### 7.6 Workshop settings (15)
@@ -199,12 +213,16 @@ hours and other people's *(proposed)*.
   `/tills/:id/deactivate`; `DELETE /api/employees/:id/permanent`;
   `POST /api/sites` *(proposed: OS 10 names people and tills, not sites)*.
 - Switch 7, never one's own, by email sign-in (R2, R5):
-  `PUT /api/employees/:id`, `POST /api/team/logins/:loginId/attach-roles`
-  (making a Manager: Owner only); `GET /api/team` *(proposed)*.
-- `PUT /api/employees/:id/pin` is replaced: "change my own PIN" for
-  anyone; "clear or give a PIN" for Owner, Manager or 7 (SI 6, 7; R5).
-- Any staff: `GET /api/employees`, `GET /api/sites`; printing
-  (`POST /api/print-agents/:deviceId/jobs`).
+  `PUT /api/employees/:id`, `POST /api/team/logins/:loginId/attach-roles`.
+  Within those, making or unmaking a Manager is Owner only (R5), and turning
+  switch 7 or "Give everything" on or off is Owner or Manager only (R7).
+  `GET /api/team`: switch 7 *(proposed)*.
+- `PUT /api/employees/:id/pin` is replaced, as §3 says: "change my own PIN"
+  for anyone (SI 6); "clear a PIN" for Owner, Manager or 7; "give a PIN" for
+  Owner, Manager or "Give everything" (SI later changes; R1, R5); both only
+  for someone below you *(proposed)*.
+- Any staff: `GET /api/employees`, `GET /api/sites`. Any staff or till only:
+  printing (`POST /api/print-agents/:deviceId/jobs`).
 - Switch 4 or 7: `GET /api/tills` *(proposed)*. Switch 7:
   `GET /api/print-agents` *(proposed)*. The print agent's own check-in and
   completion: the device *(proposed)*.
@@ -231,6 +249,12 @@ Online orders: a "till only" person can open them (WT8, walk-through 10 M1). Rep
 log: §4. Workshop computers: the Owner makes one (WT8 1).
 
 ## 8. Left for later
+
+- **Question 8, for Jack:** whether a mechanic with no email can work at a
+  workshop computer by PIN. A "till only" person can open nothing away
+  from the till (WT8 8; the Staff and roles drawing), but everyone who uses
+  a workshop computer types a PIN (WT8 1). Until answered, a mechanic with
+  no email is "till only" (§5) and the workshop routes refuse them.
 
 - Which shops a person works at, and how every shop-scoped route checks it:
   issue #133 and WP-1.4.
