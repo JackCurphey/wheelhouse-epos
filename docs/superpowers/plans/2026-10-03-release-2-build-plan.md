@@ -417,9 +417,14 @@ later packages.
 <!-- /screens -->
 
 - **WP-2.4 Citrus Lime import, first half** (journey 9, pieces 1–4): upload,
-  products and stock, customers and bikes, rows that need a look. Reads Excel
-  (Q4) in a guessed layout; matched to the real files when Jack has them (Q4).
-  Runs alongside WP-2.1–2.3.
+  products and stock, customers and bikes, rows that need a look. Reads the
+  Cloud Reports Excel exports, laid out by their real column names
+  (`docs/superpowers/specs/2026-10-05-citrus-lime-exports.md`, #136):
+  Price List - Store Level (products, prices, cost, stock and reorder levels
+  per shop), Barcode/Alias List, Serial Number List, Top Customers, and
+  Service Items Report (the customers' bikes). Customers who never bought
+  aren't in any export: they come from Citrus Lime's full export once Jack
+  has asked for it. Runs alongside WP-2.1–2.3.
 
 <!-- screens 2.4 -->
 *Building blocks built here:* 24 Stage strip and its next-step box.
@@ -884,8 +889,14 @@ later packages.
 
 - **WP-8.1 Citrus Lime import, second half** (journey 9, pieces 5–11):
   weekly refresh; the move page; the weekly check; the switch-over
-  checklist; switch-over morning; the first week; workshop-job import if
-  Citrus Lime exports jobs. While running alongside, the tills wait for
+  checklist; switch-over morning; the first week. At switch-over it brings
+  across what is still owed or held: account balances and credit limits
+  (Customer Accounts with Balances), gift vouchers still to spend, open
+  orders and their deposits, and open purchase orders. The weekly check
+  compares sales using Who Bought What and Tender Detail. Workshop jobs show
+  in Citrus Lime's back office but can't be exported: they come from Citrus
+  Lime's full export, their API if they have one, or, only as a last resort
+  and after checking their terms, copying the screens (#136). While running alongside, the tills wait for
   switch-over day (Moving from Citrus Lime, later change, walk-through 4 H2).
   Practice mode is dropped (see "Later").
 
