@@ -84,7 +84,7 @@ const has = (q) => Boolean(q);
 
 test('a phone shows one day, chosen in a strip of the week', async () => {
   const { ui } = await openPhone();
-  assert.equal(ui.getByRole('tab', { name: 'Tuesday 6 October' }).getAttribute('aria-selected'), 'true');
+  assert.equal(ui.getByRole('tab', { name: /^Tuesday 6 October/ }).getAttribute('aria-selected'), 'true');
   assert.equal(ui.getAllByRole('tab').length, 7);
   assert.ok(has(ui.queryByText('Brompton C Line')));
   assert.equal(has(ui.queryByText('Giant Escape')), false); // Monday's job
@@ -104,7 +104,7 @@ test('the week arrows move a week, keeping the weekday', async () => {
   assert.ok(has(ui.queryByText('5–11 Oct')));
   fireEvent.click(ui.getByRole('button', { name: 'Next week' }));
   assert.ok(has(await ui.findByText('12–18 Oct')));
-  assert.equal((await ui.findByRole('tab', { name: 'Tuesday 13 October' })).getAttribute('aria-selected'), 'true');
+  assert.equal((await ui.findByRole('tab', { name: /^Tuesday 13 October/ })).getAttribute('aria-selected'), 'true');
   assert.ok(has(await ui.findByText('Cube Attain')));
 });
 
@@ -132,7 +132,7 @@ test('Waiting in the top bar opens the list; a card goes to its day and shows th
   fireEvent.click(await ui.findByRole('button', { name: 'Waiting for you, 1' }));
   const sheet = within(await ui.findByRole('dialog', { name: 'Waiting for you (1)' }));
   fireEvent.click(sheet.getByRole('button', { name: /Sam Reed/ }));
-  assert.equal((await ui.findByRole('tab', { name: 'Thursday 8 October' })).getAttribute('aria-selected'), 'true');
+  assert.equal((await ui.findByRole('tab', { name: /^Thursday 8 October/ })).getAttribute('aria-selected'), 'true');
   const bar = within(await ui.findByRole('status', { name: 'Chosen from Waiting for you' }));
   assert.ok(has(bar.queryByText('Sam Reed')));
   fireEvent.click(bar.getByRole('button', { name: "Open Sam Reed's request" }));
