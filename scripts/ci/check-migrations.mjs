@@ -81,7 +81,10 @@ export function readMigrationsAt(repo, ref) {
 // --first-parent: on main, a file merged from a branch counts as added by
 // the merge, in the order the merges happened.
 export function readAddOrder(repo, ref) {
-  const out = git(repo, 'log', ref, '--first-parent', '--diff-filter=A', '--name-only', '--format=', '--reverse', '--', `${DIR}/*.sql`);
+  // --no-renames: git notices renames by default, and a file renamed on main
+  // would show as a rename, not an addition, so its new number would never be
+  // checked (#161).
+  const out = git(repo, 'log', ref, '--first-parent', '--no-renames', '--diff-filter=A', '--name-only', '--format=', '--reverse', '--', `${DIR}/*.sql`);
   return out.split('\n').filter(Boolean).map((f) => path.basename(f));
 }
 
@@ -93,15 +96,15 @@ function report(problems, okMessage) {
   console.log(okMessage);
 }
 
-async function upgrade(repo, mainRef) {
-  const admin = process.env.ADMIN_DATABASE_URL;
-  const app = process.env.DATABASE_URL;
+export async function upgrade(repo, mainRef, env = process.env) {
+  const admin = env.ADMIN_DATABASE_URL;
+  const app = env.DATABASE_URL;
   if (!admin || !app) throw new Error('upgrade needs ADMIN_DATABASE_URL and DATABASE_URL');
   const dbName = `epos_upgrade_${process.pid}`;
   const url = new URL(app);
   url.pathname = `/${dbName}`;
   const migrate = (root) => execFileSync('node', [path.join(root, DIR, 'run-migrations.js')], {
-    encoding: 'utf8', env: { ...process.env, DATABASE_URL: url.href }, stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8', env: { ...env, DATABASE_URL: url.href }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   // The real path: run-migrations.js only runs when its own resolved URL is
   // the script named, and a temp folder can sit behind a symlink (macOS).

@@ -6,13 +6,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, renameSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, renameSync, rmSync, realpathSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import '../server/load-env.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  checkPullRequest, checkMainOrder, appliedFiles, readMigrationsAt, readAddOrder,
+  checkPullRequest, checkMainOrder, appliedFiles, readMigrationsAt, readAddOrder, upgrade,
 } from '../scripts/ci/check-migrations.mjs';
+import { adminUrlFrom, appRoleFrom } from '../scripts/dev/new-db.mjs';
 
 const files = (obj) => new Map(Object.entries(obj));
 const BASE = files({ '001_init.sql': 'a', '002_more.sql': 'b', '039_key.sql': 'c' });
@@ -106,4 +108,82 @@ test('main passes its own backstop', (t) => {
   const order = readAddOrder(root, 'origin/main');
   assert.ok(order.length >= 39, `only ${order.length} migrations read`);
   assert.deepEqual(checkMainOrder(order), []);
+});
+
+// #161: git notices renames by default, so a file renamed on main showed as
+// a rename, not an addition, and the backstop never saw its new number.
+test('the backstop catches a rename on main that duplicates a number', () => {
+  const repo = mkdtempSync(path.join(tmpdir(), 'mig-rename-'));
+  const git = (...args) => execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    git('init', '-q', '-b', 'main');
+    git('config', 'user.email', 't@example.com');
+    git('config', 'user.name', 'T');
+    const dir = path.join(repo, 'server', 'migrations');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, '001_init.sql'), 'CREATE TABLE a (id int);');
+    writeFileSync(path.join(dir, '002_more.sql'), 'CREATE TABLE b (id int);');
+    git('add', '.'); git('commit', '-q', '-m', 'two');
+    renameSync(path.join(dir, '002_more.sql'), path.join(dir, '001_dup.sql'));
+    git('add', '-A'); git('commit', '-q', '-m', 'rename onto a taken number');
+    assert.match(checkMainOrder(readAddOrder(repo, 'main')).join('\n'), /001_dup\.sql.*after 00[12]/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test('new-db grants the role named in DATABASE_URL, or epos_app without one', () => {
+  assert.equal(appRoleFrom({ DATABASE_URL: 'postgres://shop_role:pw@127.0.0.1:5433/epos' }), 'shop_role');
+  assert.equal(appRoleFrom({ ADMIN_DATABASE_URL: 'postgres://postgres:pw@127.0.0.1:5433/postgres' }), 'epos_app');
+});
+
+// #161: the upgrade check itself, against a real database, so it can't pass
+// on everything unnoticed. It needs a superuser to make a throwaway database:
+// ADMIN_DATABASE_URL, or POSTGRES_SUPERUSER_PASSWORD from .env. CI sets one,
+// so there the test runs; it is only skipped on a machine with neither.
+function adminUrlOrSkip(t) {
+  try {
+    return adminUrlFrom(process.env);
+  } catch (err) {
+    if (process.env.CI) throw err;
+    t.skip('no superuser connection configured');
+    return null;
+  }
+}
+
+function branchFromHead(change) {
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const tree = realpathSync(mkdtempSync(path.join(tmpdir(), 'mig-upgrade-')));
+  execFileSync('git', ['-C', root, 'worktree', 'add', '-q', '--detach', tree, 'HEAD']);
+  symlinkSync(path.join(root, 'node_modules'), path.join(tree, 'node_modules'));
+  const git = (...args) => execFileSync('git', ['-C', tree, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  git('-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '--allow-empty', '-m', 'base');
+  change(path.join(tree, 'server', 'migrations'), git);
+  git('add', '-A');
+  git('-c', 'user.email=t@example.com', '-c', 'user.name=T', 'commit', '-q', '-m', 'change');
+  return { tree, remove: () => execFileSync('git', ['-C', root, 'worktree', 'remove', '--force', tree]) };
+}
+
+test('the upgrade check passes a branch that only adds a migration', async (t) => {
+  const admin = adminUrlOrSkip(t);
+  if (!admin) return;
+  const { tree, remove } = branchFromHead((dir) => writeFileSync(path.join(dir, '900_upgrade_probe.sql'), 'CREATE TABLE upgrade_probe (id int);'));
+  try {
+    const env = { ...process.env, ADMIN_DATABASE_URL: admin };
+    assert.deepEqual(await upgrade(tree, 'HEAD~1', env), []);
+  } finally {
+    remove();
+  }
+});
+
+test('the upgrade check fails a branch that renames a migration on main', async (t) => {
+  const admin = adminUrlOrSkip(t);
+  if (!admin) return;
+  const { tree, remove } = branchFromHead((dir, git) => git('mv', 'server/migrations/039_booking_request_key.sql', 'server/migrations/900_booking_request_key.sql'));
+  try {
+    const env = { ...process.env, ADMIN_DATABASE_URL: admin };
+    assert.match((await upgrade(tree, 'HEAD~1', env)).join('\n'), /900_booking_request_key\.sql failed/);
+  } finally {
+    remove();
+  }
 });
