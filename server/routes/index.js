@@ -11,5 +11,6 @@ import * as team from './team.js';
 import * as printAgents from './print-agents.js';
 import * as customerMessages from './customer-messages.js';
 import * as auth from './auth.js';
+import * as products from './products.js';
 
-export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, auth];
+export const ROUTE_AREAS = [suppliers, purchaseOrders, shopSettings, shopWebsite, sitesTills, team, printAgents, customerMessages, auth, products];
