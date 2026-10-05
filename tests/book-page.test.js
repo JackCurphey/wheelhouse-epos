@@ -12,17 +12,20 @@ import { deleteTestShop } from './helpers/testShop.js';
 
 let server;
 let owner;
+let other;
 let customerScript;
 
 before(async () => {
   server = await startLiveServer();
   owner = await staffSignup(server.baseUrl);
+  other = await staffSignup(server.baseUrl);
   const manifest = JSON.parse(await readFile(new URL('../public/dist/.vite/manifest.json', import.meta.url), 'utf8'));
   customerScript = `/dist/${manifest['src/customer/main.tsx'].file}`;
 });
 
 after(async () => {
   if (owner) await deleteTestShop(owner.shop.id);
+  if (other) await deleteTestShop(other.shop.id);
   if (server) await server.stop();
 });
 
@@ -58,4 +61,19 @@ test('on a website, /book serves the customer app too', async () => {
   // ?storefrontSlug= routes the request through the website handler, the
   // same path a <slug>.<base domain> host takes (server/storefront.js).
   await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}?storefrontSlug=${owner.shop.slug}`);
+});
+
+// WP-0.2: a website shows only its own shop's booking pages. Another shop's
+// slug gets the same 404 as an unknown website, so nothing says it exists.
+// Spec: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md
+test("on a website, another shop's /book pages are not found", async () => {
+  await runWithShop(owner.shop.id, () => prepare(
+    'INSERT INTO storefront_settings (enabled) VALUES (true) ON CONFLICT (shop_id) DO UPDATE SET enabled = true'
+  ).run());
+  for (const path of [`/book/${other.shop.slug}`, `/book/${other.shop.slug}/booking/${'a'.repeat(64)}`]) {
+    const res = await fetch(`${server.baseUrl}${path}?storefrontSlug=${owner.shop.slug}`);
+    assert.equal(res.status, 404, path);
+    assert.deepEqual(await res.json(), { error: 'Storefront not found' });
+  }
+  await assertCustomerPage(`${server.baseUrl}/book/${owner.shop.slug}/booking/${'a'.repeat(64)}?storefrontSlug=${owner.shop.slug}`);
 });

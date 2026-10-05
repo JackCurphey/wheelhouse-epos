@@ -57,8 +57,17 @@ export type WorkshopJob = {
   updatedAt: string;
 };
 
-/** The body of every error response. `code` is sent on 409s only. */
+/** The body of every error response. `code` is sent on 409s only.
+ * `reused_key`: a booking's request key was sent again with different details. */
 export type ApiErrorBody = {
   error: string;
-  code?: 'stale' | 'illegal' | 'capacity';
+  code?: 'stale' | 'illegal' | 'capacity' | 'reused_key';
 };
+
+/** WP-0.2, added to the online booking's body (POST /api/portal/:shopSlug/bookings).
+ * Made once when the customer presses Send and repeated on every retry of that
+ * booking, so the server accepts it once: a retry gets 200 and the booking
+ * already made and the same private link as the first reply. 32-128
+ * letters, digits, `-` or `_`; `crypto.randomUUID()` fits.
+ * Spec: docs/superpowers/specs/2026-10-05-wp-0-2-booking-bugs-server.md */
+export type BookingRequestKey = { requestKey?: string };
