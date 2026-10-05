@@ -399,3 +399,5 @@ of sight — the shop's name, "North Street Cycles · Bolton", sits in small typ
 under each staff page's title. Nothing else on these boards changed.
 
 **Later change (3 Oct 2026, third walk, taken without a question, `docs/decisions/2026-10-03-ux-walkthrough-third-walk.md`):** following Jack's 3 Oct "yes you can go ahead and make some text bigger", the desktop diary's block text is at least 12px. A block too short for two lines shows only the bike; the service is in the hover summary and the quick look. Other jobs' blocks no longer use Maya Patel's name. Drawn in `docs/superpowers/specs/2026-10-03-draw-the-third-walk.md`.
+
+**Later change (5 Oct 2026, issue #133, `docs/decisions/2026-10-05-shops-and-sites.md`):** Jack, 5 Oct, answer 1. With more than one shop: storage slots (decision 27) and where "Take payment" goes (decision 1) are set per site; what a diary block shows (decision 17) stays one setting for the business.
