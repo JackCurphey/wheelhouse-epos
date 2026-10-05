@@ -49,17 +49,6 @@ import {
   SESSION_MAX_AGE_SECONDS,
 } from './auth.js';
 import {
-  TeamError,
-  listTeam,
-  createTeamMember,
-  deactivateTeamMember,
-  reactivateTeamMember,
-  attachLogin,
-  attachRoles,
-  deactivateLoginOnly,
-  reactivateLoginOnly,
-} from './team.js';
-import {
   CustomerAuthError,
   signupCustomer,
   verifyCustomerLogin,
@@ -78,7 +67,6 @@ import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { readRequestKey } from './booking-request-key.js';
-
 import { makeFailureLimiter } from './till/failure-limiter.js';
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
@@ -957,60 +945,6 @@ route('GET', '/api/bikes/:id/jobs', async (req, res, params) => {
     .prepare('SELECT * FROM workshop_jobs WHERE bike_id = ? ORDER BY job_date DESC, start_time DESC')
     .all(id);
   sendJson(res, 200, rows.map(serializeWorkshopJob));
-});
-
-// ---------- Customer messages (SMS) ----------
-// One-off texts sent to a customer via Twilio (see sms.js). A failed send
-// still gets a history row (status: 'failed') rather than being dropped, so
-// staff can see what was actually attempted.
-
-function serializeCustomerMessage(row) {
-  return {
-    id: row.id,
-    customerId: row.customer_id,
-    direction: row.direction,
-    body: row.body,
-    status: row.status,
-    error: row.error,
-    sentByName: row.sent_by_name,
-    createdAt: row.created_at,
-  };
-}
-
-const MESSAGE_SELECT = `SELECT m.*, l.name AS sent_by_name FROM customer_messages m LEFT JOIN logins l ON l.id = m.sent_by_login_id`;
-
-route('GET', '/api/customers/:id/texts', async (req, res, params) => {
-  const customerId = Number(params.id);
-  const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
-  if (!customer) return notFound(res, 'Customer not found');
-  const rows = await db.prepare(MESSAGE_SELECT + ' WHERE m.customer_id = ? ORDER BY m.id DESC').all(customerId);
-  sendJson(res, 200, rows.map(serializeCustomerMessage));
-});
-
-route('POST', '/api/customers/:id/texts', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  const customerId = Number(params.id);
-  const customer = await db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId);
-  if (!customer) return notFound(res, 'Customer not found');
-  if (!customer.phone) return badRequest(res, 'This customer has no phone number on file');
-  const body = await readJsonBody(req);
-  const text = String(body.body || '').trim();
-  if (!text) return badRequest(res, 'Message text is required');
-  if (text.length > 1600) return badRequest(res, 'Message is too long');
-
-  const result = await sendSms(customer.phone, text);
-  const info = await db
-    .prepare(
-      `INSERT INTO customer_messages (customer_id, body, status, error, provider_sid, sent_by_login_id)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(customerId, text, result.ok ? 'sent' : 'failed', result.ok ? null : result.error, result.ok ? result.sid : null, ctx.login.id);
-  const row = await db.prepare(MESSAGE_SELECT + ' WHERE m.id = ?').get(info.lastInsertRowid);
-  // Always 201: the request itself succeeded (an attempt was made and
-  // recorded) even when the send didn't - the frontend reads row.status to
-  // show the outcome, rather than this route throwing on a Twilio failure.
-  sendJson(res, 201, serializeCustomerMessage(row));
 });
 
 // ---------- Sales ----------
@@ -3523,140 +3457,6 @@ route('PUT', '/api/employees/:id', async (req, res, params) => {
   sendJson(res, 200, serializeEmployee(row));
 });
 
-// ---------- Team (Office > Edit Shop > Office): merges the employee roster
-// above with login access - see server/team.js for why creation is
-// mandatory-both and deactivate/reactivate cascade to the linked login.
-// Every route here needs to know if the caller is the owner, so each
-// re-resolves the session itself via currentSession(req), same as the other
-// routes that need more than just "signed in" (see the comment above the
-// website routes).
-
-route('GET', '/api/team', async (req, res) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  sendJson(res, 200, await listTeam(ctx.shop.id));
-});
-
-route('POST', '/api/team', async (req, res) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can add team members' });
-  const body = await readJsonBody(req);
-  try {
-    const member = await createTeamMember({
-      shopId: ctx.shop.id,
-      name: body.name,
-      isMechanic: body.isMechanic,
-      isCashier: body.isCashier,
-      workingDays: body.workingDays,
-      email: body.email,
-      password: body.password,
-    });
-    sendJson(res, 201, member);
-  } catch (err) {
-    if (err instanceof TeamError) return badRequest(res, err.message);
-    throw err;
-  }
-});
-
-route('POST', '/api/team/:id/deactivate', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can deactivate a team member' });
-  await deactivateTeamMember({ shopId: ctx.shop.id, employeeId: Number(params.id) });
-  sendJson(res, 200, { ok: true });
-});
-
-route('POST', '/api/team/:id/reactivate', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can reactivate a team member' });
-  await reactivateTeamMember({ shopId: ctx.shop.id, employeeId: Number(params.id) });
-  sendJson(res, 200, { ok: true });
-});
-
-// Gives an existing roster-only employee login access.
-route('POST', '/api/team/:id/attach-login', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can grant login access' });
-  const body = await readJsonBody(req);
-  try {
-    await attachLogin({ shopId: ctx.shop.id, employeeId: Number(params.id), email: body.email, password: body.password });
-    sendJson(res, 200, { ok: true });
-  } catch (err) {
-    if (err instanceof TeamError) return badRequest(res, err.message);
-    throw err;
-  }
-});
-
-// Gives an existing login-only person (typically the owner) roster roles.
-route('POST', '/api/team/logins/:loginId/attach-roles', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can set roles' });
-  const body = await readJsonBody(req);
-  try {
-    await attachRoles({ shopId: ctx.shop.id, loginId: Number(params.loginId), isMechanic: body.isMechanic, isCashier: body.isCashier, workingDays: body.workingDays });
-    sendJson(res, 200, { ok: true });
-  } catch (err) {
-    if (err instanceof TeamError) return badRequest(res, err.message);
-    throw err;
-  }
-});
-
-// Deactivate/reactivate for a login-only person (no roster link) - e.g. any
-// staff login created before this feature, which never had an employee row.
-route('POST', '/api/team/logins/:loginId/deactivate', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can deactivate a team member' });
-  try {
-    await deactivateLoginOnly({ shopId: ctx.shop.id, loginId: Number(params.loginId) });
-    sendJson(res, 200, { ok: true });
-  } catch (err) {
-    if (err instanceof TeamError) return badRequest(res, err.message);
-    throw err;
-  }
-});
-
-route('POST', '/api/team/logins/:loginId/reactivate', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  if (!ctx.login.is_owner) return sendJson(res, 403, { error: 'Only the owner can reactivate a team member' });
-  await reactivateLoginOnly({ shopId: ctx.shop.id, loginId: Number(params.loginId) });
-  sendJson(res, 200, { ok: true });
-});
-
-// Permanently removes the employee row itself (as opposed to the soft
-// deactivate above). Workshop jobs and sales/orders already tied to them are
-// unassigned rather than deleted or blocked by the foreign key, consistent
-// with how removing a customer/bike/product never destroys sale/job history.
-// Till sales are unassigned the same way; staff check-ins are deleted.
-route('DELETE', '/api/employees/:id/permanent', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Employee not found');
-  // All or nothing: if the final delete fails (e.g. a workshop hold or a
-  // requested booking still names this mechanic), nothing above it may stick.
-  await db.exec('BEGIN');
-  try {
-    await db.prepare('UPDATE workshop_jobs SET mechanic_id = NULL WHERE mechanic_id = ?').run(id);
-    await db.prepare('UPDATE sales SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-    await db.prepare('UPDATE sale_documents SET cashier_id = NULL WHERE cashier_id = ?').run(id);
-    // Till sales stay as history, unassigned; check-ins only record that this
-    // person was in, so they go with the person.
-    await db.prepare('UPDATE till_sales SET employee_id = NULL WHERE employee_id = ?').run(id);
-    await db.prepare('DELETE FROM staff_checkins WHERE employee_id = ?').run(id);
-    await db.prepare('DELETE FROM employees WHERE id = ?').run(id);
-    await db.exec('COMMIT');
-  } catch (err) {
-    await db.exec('ROLLBACK');
-    throw err;
-  }
-  sendJson(res, 200, { ok: true });
-});
-
 // ---------- Workshop settings ----------
 
 // The shop's today, on its own clock and time zone (server/clock.js). Reads
@@ -4360,101 +4160,6 @@ route('DELETE', '/api/workshop-services/:id', async (req, res, params) => {
   const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
   if (!existing) return notFound(res, 'Not found');
   await db.prepare('UPDATE workshop_services SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
-  sendJson(res, 200, { ok: true });
-});
-
-// ---------- Print agents ----------
-// Relays sticker print jobs from a browser tab to a print-agent process
-// (print-agent/agent.js) running on any shop PC - possibly a different one
-// than whichever machine the browser is on, so a printer physically wired
-// to a stockroom PC can be reached from the till's browser too. Which
-// devices are currently online and what's queued for each is inherently
-// live/ephemeral state, not history worth a table for - an agent
-// re-registers within one check-in interval of a server restart anyway, so
-// this is plain in-memory state, keyed by shop id. Fine for this app's
-// single-process deployment (see docker-compose.yml - one `app` service,
-// no horizontal scaling to worry about).
-//
-// Every route here re-resolves the session itself via currentSession(req)
-// (the same thing the dispatcher already calls before runWithShop) to get
-// the shop id these maps are keyed by - the same pattern the customer
-// portal's routes already use to get their own shop context inside a
-// handler.
-
-const printAgentsByShop = new Map(); // shopId -> Map<deviceId, {deviceName, printers, lastSeen}>
-const printJobsByDevice = new Map(); // deviceId -> pending job array
-const printJobStatus = new Map(); // jobId -> {status, error} - not surfaced in the UI yet, kept for a future job-history view
-const PRINT_AGENT_STALE_MS = 25000; // ~2-3 missed check-ins before a device drops off the list
-
-function liveAgentsForShop(shopId) {
-  const byDevice = printAgentsByShop.get(shopId);
-  if (!byDevice) return [];
-  const now = Date.now();
-  const live = [];
-  for (const [deviceId, info] of byDevice) {
-    if (now - info.lastSeen > PRINT_AGENT_STALE_MS) {
-      byDevice.delete(deviceId);
-      continue;
-    }
-    live.push({ deviceId, deviceName: info.deviceName, printers: info.printers });
-  }
-  return live;
-}
-
-route('POST', '/api/print-agents/checkin', async (req, res) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  const body = await readJsonBody(req);
-  const deviceId = String(body.deviceId || '').trim();
-  if (!deviceId) return badRequest(res, 'deviceId is required');
-  const deviceName = String(body.deviceName || deviceId).trim().slice(0, 100) || deviceId;
-  const printers = Array.isArray(body.printers) ? body.printers.filter((p) => typeof p === 'string' && p).slice(0, 50) : [];
-
-  if (!printAgentsByShop.has(ctx.shop.id)) printAgentsByShop.set(ctx.shop.id, new Map());
-  printAgentsByShop.get(ctx.shop.id).set(deviceId, { deviceName, printers, lastSeen: Date.now() });
-
-  const jobs = printJobsByDevice.get(deviceId) || [];
-  printJobsByDevice.set(deviceId, []);
-  sendJson(res, 200, { jobs });
-});
-
-// What the sticker-print modal's printer dropdown reads.
-route('GET', '/api/print-agents', async (req, res) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  sendJson(res, 200, { agents: liveAgentsForShop(ctx.shop.id) });
-});
-
-route('POST', '/api/print-agents/:deviceId/jobs', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  // Only ever queue a job for a device this shop can currently see - stops
-  // a stale or guessed deviceId (or one belonging to a different shop, by
-  // construction, since it just wouldn't appear here) from ever receiving
-  // a job.
-  const known = liveAgentsForShop(ctx.shop.id).find((a) => a.deviceId === params.deviceId);
-  if (!known) return badRequest(res, 'That device is not currently online for this shop');
-  const body = await readJsonBody(req);
-  const { printerName, widthMm, heightMm, pages } = body;
-  if (!printerName || !known.printers.includes(printerName)) return badRequest(res, 'Unknown printer for that device');
-  if (!Number.isFinite(widthMm) || !Number.isFinite(heightMm)) return badRequest(res, 'A valid label width and height are required');
-  if (!Array.isArray(pages) || !pages.length) return badRequest(res, 'At least one label page is required');
-
-  const jobId = randomBytes(8).toString('hex');
-  if (!printJobsByDevice.has(params.deviceId)) printJobsByDevice.set(params.deviceId, []);
-  printJobsByDevice.get(params.deviceId).push({ jobId, printerName, widthMm, heightMm, pages });
-  printJobStatus.set(jobId, { status: 'queued' });
-  sendJson(res, 201, { jobId });
-});
-
-// :printJobId, not :jobId - it is the hex id minted above, not a workshop
-// job's SERIAL id, and :jobId is checked as one (ID_PARAMS).
-route('POST', '/api/print-agents/jobs/:printJobId/complete', async (req, res, params) => {
-  const ctx = await currentSession(req);
-  if (!ctx) return sendJson(res, 401, { error: 'Not signed in' });
-  const body = await readJsonBody(req);
-  printJobStatus.set(params.printJobId, { status: body.ok ? 'done' : 'error', error: body.error });
-  if (!body.ok) console.error(`Print job ${params.printJobId} failed: ${body.error}`);
   sendJson(res, 200, { ok: true });
 });
 
