@@ -130,3 +130,5 @@ opinion on it."
   stage 0.
 
 **Later change (3 Oct 2026, walk-through 12 M2, `docs/design/user-journeys/walk-2/`):** Jack, 3 Oct: "1". The customer texts that start each repair step (Request received, Booking confirmed, Quote to approve) are drafted now, as lines on Settings › Messages, so walk-throughs and the clickable mockup can show them. Each says who it's from, what to do, and that no app or sign-in is needed. They are read again in Q9's read-through before going live. Not drawn yet.
+
+**Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 3. Q6's 10 minutes applies when the shop's "trust PIN" setting is off. With it on, a workshop computer left idle shows the names of everyone who typed their PIN on it that day, and they tap their own.

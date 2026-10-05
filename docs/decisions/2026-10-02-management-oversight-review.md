@@ -115,3 +115,5 @@ as few clicks as possible).
    about you" (journeys A and 17).
 
 **Later change (3 Oct 2026, issue #116 question 5):** Jack, 3 Oct: "2". The activity log (decisions 1 and 5) stays in the first release. These come later: the alerts on Today (decision 2), Signed-in devices and "Sign out everywhere" (decision 3), Send feedback (decision 4 and audit H6), and the first sign-in note with "What Wheelhouse records about you" (audit H2). Removing a person still signs them out. To check before release: whether shops are required by law to tell staff what is recorded about them, which might bring the H2 note back. Chosen over all four in the first release. The drawings are not changed yet; they are redone when the canvases are merged (issue #116 step 3).
+
+**Later change (5 Oct 2026, issue #132, `docs/decisions/2026-10-05-roles-and-switches.md`):** Jack, 5 Oct, answer 1. What decision 5 and H4 keep for owners and managers (the activity log, the three Today alerts) is also open to a Staff member given "Give everything a Manager can do".

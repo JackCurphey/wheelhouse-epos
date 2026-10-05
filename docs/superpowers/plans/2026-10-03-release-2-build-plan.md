@@ -199,7 +199,8 @@ foundations have no screen of their own; the screens that show them come in
 later packages.
 
 - **WP-1.1 Roles and switches** (Signing in; Owner setup 8–11). Four roles
-  (Owner, Manager, Staff, Mechanic) and the eight switches on the server;
+  (Owner, Manager, Staff, Mechanic) and the nine switches on the server (the
+  table: `docs/superpowers/specs/2026-10-05-wp-1-1-roles-and-switches.md`, #132);
   `/api/auth/me` returns them; every route checks them; the sidebar shows
   each role its rooms; a mechanic lands on the Diary; a login linked to its
   staff member (the mechanic's "Me").
