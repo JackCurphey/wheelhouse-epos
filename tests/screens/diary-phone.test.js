@@ -5,7 +5,7 @@
 // time" row, a timeline, and "Waiting (n)" in the top bar opening a sheet.
 // jsdom has no screen size, so matchMedia is stubbed to say "phone".
 // Spec: docs/superpowers/specs/2026-10-03-staff-diary-view-design.md (piece 4)
-import test, { afterEach } from 'node:test';
+import test, { after, afterEach, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, importFresh } from '../helpers/dom.js';
 
@@ -36,6 +36,12 @@ const WAITING = {
   count: 1,
   items: [{ kind: 'new_booking', jobId: 7, reference: 'WH-1007', jobDate: '2026-10-08', startTime: '10:00', endTime: '11:00', mechanicId: null, customerName: 'Sam Reed', serviceNames: ['Puncture repair'], services: [], arrivedAt: '2026-10-03T08:15:00Z' }],
 };
+
+// The diary names today's tab "<day>, today", so on a real day inside the
+// fixture weeks (5-18 October 2026) the tab names these tests look for change.
+// The clock is pinned to a day before them.
+before(() => mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-01T12:00:00') }));
+after(() => mock.timers.reset());
 
 const realFetch = globalThis.fetch;
 let uninstall;
