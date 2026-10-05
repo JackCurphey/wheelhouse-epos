@@ -60,12 +60,15 @@ staff can see the week at a glance and what is waiting for them.
 ## Decided here, for Jack to overrule
 
 - **Status mapping.** The drawings have six states; the database has more.
-  Waiting for parts is `workState = waiting_parts`; Ready is
+  Waiting for parts is `workState = waiting_parts`; Finished is
   `workState = complete` (collected or not); started and on-hold work shows
-  as Scheduled.
-- **"Waiting for the customer" (teal)** needs the quote's state, which the
+  as Expected (the legend: "Expected, booked in or in the workshop"). Words
+  per 3 Oct answer 11 (#110).
+- ~~**"Waiting for the customer" (teal)** needs the quote's state, which the
   jobs list doesn't send. It is left out of the grid and the legend until
-  the server sends it.
+  the server sends it.~~ Replaced (#110): the jobs list sends the quote's
+  state, and the teal state is drawn and in the legend, named "Quoting"
+  (3 Oct answer 11).
 - **No "Me" view for mechanics** yet: the server doesn't link a login to a
   mechanic.
 
@@ -166,3 +169,45 @@ the form, and the free-time warning.
 
 Still to come in piece 5: the hover summary, stacks that fan out, and the
 right-click menu (they open the job page, which isn't built yet).
+
+## Piece 5b: the extras (built 3 Oct)
+
+Drawn by `diary-hover-summary`, `diary-stack-hover`, `diary-stack-open` and
+`diary-context-menu` in `diary.mjs`; decisions 37, 58, 59, 61, 65 and 68.
+
+- **Hover summary (decision 65):** resting the mouse on a job for 0.6
+  seconds (at once with reduced motion) shows a card beside it:
+  - the header is "{work} · {job number}", then "{customer} · {bike}";
+  - **Notes:** what the customer wrote ("Customer"), then the shop's notes;
+  - **Line items:** the job's work and parts with their amounts, and any
+    quote line the customer declined, struck through; then **Cost**, the
+    order's total.
+  The card is for sighted mouse users; the block's label already reads out
+  the job. Everyone else gets the same content from **View overview**.
+- **Stacks (decisions 58, 59, 61):** jobs in one column that start at the
+  same time become one stack, with two card edges peeking out behind, a
+  count badge, and the front job's bike and "{work} · {time}". Jobs that
+  only partly overlap stay side by side in lanes. A narrow lane widens to the
+  full column on a 0.3-second hover.
+  - Resting the mouse on a stack for 0.3 seconds fans its jobs out as diary
+    blocks, two to a row, centred on the stack. A fanned job opens with a
+    click, can be dragged to move it, and shows its hover summary.
+  - Clicking or tapping the stack (or Enter) opens "{n} jobs at {time}",
+    "{day} · choose one to open", with a tile for each job.
+- **Right-click menu (decision 37):** "Job actions", with **Open job**,
+  **View overview**, and "Tip: hold the right mouse button to open the
+  overview straight away." Holding the right button for half a second opens
+  the overview without the menu.
+  - On touch, press and hold opens the menu, and the tip reads "Tip: keep
+    holding to see the job's summary straight away."; holding on opens the
+    overview. On a phone the menu is a sheet titled "{work} · {job number}".
+  - From the keyboard, the Menu key or Shift+F10 on a job opens the menu.
+    The arrow keys move through it, and Escape closes it and returns focus to
+    the job.
+- **View overview** is a pop-up with the same content as the hover summary,
+  plus **Open job**. It stays open until it's closed.
+
+Not here, because the server has nowhere to keep them: each staff note's
+author and time (the job has one notes field). Moving a job that sits in a
+stack is done by dragging it out of the fan; from the keyboard there's no
+way yet, because the drawings don't give the stack a keyboard move.

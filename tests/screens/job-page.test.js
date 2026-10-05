@@ -124,8 +124,10 @@ for (const [name, over, button, action] of STAGES) {
 }
 
 test('the status reads as staff say it at each stage', async () => {
-  const cases = [[{}, 'Expected'], [{ custodyState: 'in_shop' }, 'In workshop'], [{ custodyState: 'in_shop', workState: 'waiting_parts' }, 'Waiting for parts'],
-    [{ custodyState: 'in_shop', workState: 'complete' }, 'Ready for collection'], [{ custodyState: 'collected', workState: 'complete' }, 'Collected']];
+  const cases = [[{}, 'Expected'], [{ custodyState: 'in_shop' }, 'In the workshop'], [{ custodyState: 'in_shop', workState: 'waiting_parts' }, 'Waiting for parts'],
+    [{ custodyState: 'in_shop', workState: 'complete' }, 'Finished'], [{ custodyState: 'collected', workState: 'complete' }, 'Collected'],
+    // Jack, 4 Oct: waiting for parts wins over a quote out, as in the diary.
+    [{ custodyState: 'in_shop', workState: 'waiting_parts', quote: { state: 'sent' } }, 'Waiting for parts']];
   for (const [over, word] of cases) {
     const { dlg, cleanup } = await openJob(over);
     assert.ok(has(dlg.queryAllByText(word).length), word);

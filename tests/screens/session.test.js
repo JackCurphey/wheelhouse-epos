@@ -36,9 +36,15 @@ test('a signed-in session carries the user and shop from the real response', asy
   stubFetch(200, ME);
   assert.deepEqual(await resolveSession(), {
     status: 'signed-in',
-    user: { id: 3, name: 'Alex', email: 'a@example.com', isOwner: true },
+    user: { id: 3, name: 'Alex', email: 'a@example.com', isOwner: true, employee: null },
     shop: { name: 'Spokes', slug: 'spokes' },
   });
+});
+
+test('a login linked to a staff member carries who they are, for the till', async () => {
+  stubFetch(200, { ...ME, employee: { id: 21, name: 'Jo Taylor', isCashier: true } });
+  const state = await resolveSession();
+  assert.deepEqual(state.user.employee, { id: 21, name: 'Jo Taylor', isCashier: true });
 });
 
 test('a server failure is an error, not disguised as signed-out', async () => {

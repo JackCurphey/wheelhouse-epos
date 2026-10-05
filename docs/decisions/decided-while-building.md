@@ -6,6 +6,59 @@ live"). Each entry gives the screen id, what was decided and the pattern it
 followed. Jack can overrule any of them; nothing here reopens a recorded
 decision.
 
+From the Release 2 build on, Mark's sessions append under "Mark's lane" and
+Jack's under "Jack's lane", so the two never edit the same spot (split plan
+§5). Everything before the build stays where it is, below.
+
+## Mark's lane
+
+(Nothing yet.)
+
+## Jack's lane
+
+### 4 Oct 2026: diary piece 5b, as drawn (follow-up to pull request 112)
+
+1. **`diary-stack-open`: which tiles a computer and a tablet get.** The
+   drawings show the small tiles (bike; work · start) on a computer and the
+   touch tiles (bike; work; number · start–end) on a tablet. The app can't
+   tell a tablet from a computer by size alone, so a **tap** on a stack gets
+   the touch tiles and a click or Enter gets the small ones. *Pattern:* the
+   diary already tells touch from mouse by how the press started (press and
+   hold, the touch menu tip).
+2. **The chooser box opens above the stack when there's no room below.**
+   Not drawn (the drawing's stack sits high on the board). *Pattern:* the
+   job menu keeps itself on screen the same way.
+3. **A tapped-open fan's tiles show number and times**, as the touch tiles
+   do; a mouse-hover fan keeps the drawn number only (`fanTile`).
+
+### 4 Oct 2026: diary piece 5b (pull request 112), after its fresh review
+
+1. **`diary-stack-open`: each chooser tile answers M (move with the arrow
+   keys) and the Menu key (Job actions)**, and its name ends with the job's
+   state. Not drawn; it keeps the spec's promise that dragging is never the
+   only way, which stacking had broken for keyboard and screen-reader users.
+   *Pattern:* the same keys as a job block (`diary-move-hint`).
+2. **A stacked job being moved by keyboard leaves its stack and takes focus;
+   when the move ends, focus goes back to the stack.** *Pattern:* "a job
+   being moved leaves its stack" (already built for dragging).
+3. **`diary-stack-hover` on touch: press and hold fans the stack out**, as
+   drawn (`touchStackBlock`); a tap elsewhere folds it. The tap that ends
+   the hold doesn't also open the chooser.
+
+### 4 Oct 2026: till piece 1 (pull request 111), after its fresh review
+
+1. **`till-pay`: the message when the reply to a payment is lost** reads
+   "Lost touch with the server, so the sale may have saved. Check the sale
+   went through before taking payment again." Was "Couldn't reach the
+   server — nothing was saved. Try again.", which wasn't true when the
+   server had saved before the connection dropped, and "Try again" then
+   sold it twice. *Pattern:* the drawings have no lost-reply state for the
+   till yet; the offline till (WP-1.6) replaces this with a proper one.
+2. **`till-pay`: while a payment is saving, Escape doesn't close the
+   window**, and each step moves keyboard focus to its title. Not drawn;
+   follows the accessibility-first rule and the dialog's own Escape
+   handling.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks

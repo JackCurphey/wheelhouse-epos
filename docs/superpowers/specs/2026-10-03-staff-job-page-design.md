@@ -44,8 +44,10 @@ job-mechanic, job-waiting-parts, job-finished and job-collection in
 - Each action sends the version the page saw; a stale job says so and
   reloads, as elsewhere.
 
-**Status words** (the badge): Booking request, Expected, In workshop,
-Waiting for parts, On hold, Ready for collection, Collected.
+**Status words** (the badge): Booking request, Expected, In the workshop,
+Quoting, Waiting for parts, On hold, Finished, Collected (the drawn job
+page's words; 3 Oct answer 11, changed in #110). Waiting for parts wins
+over Quoting (Jack, 4 Oct).
 
 Not in this piece: Take payment, the quote stage, the checklist, bike tag,
 storage hook, history, the customer's link to their account, and the

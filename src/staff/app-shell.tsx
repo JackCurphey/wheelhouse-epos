@@ -7,6 +7,7 @@ import { ROUTES, type ScreenId } from './routes.ts';
 import { NAV_ROUTES } from './nav.ts';
 import { Landing, StaffLayout } from './staff-layout.tsx';
 import { DiaryPage } from '@/screens/diary/diary-page.tsx';
+import { TillPage } from '@/screens/till/till-page.tsx';
 
 /**
  * The staff app: query client, router, error boundary. The rooms sidebar
@@ -19,7 +20,7 @@ import { DiaryPage } from '@/screens/diary/diary-page.tsx';
 // are built; an id with no entry renders the placeholder, so every URL in
 // ROUTES is routable from day one - including the five edge screens entered
 // from outside the app.
-const SCREENS: Partial<Record<ScreenId, ComponentType>> = { desk: Landing, diary: DiaryPage };
+const SCREENS: Partial<Record<ScreenId, ComponentType>> = { desk: Landing, diary: DiaryPage, till: TillPage };
 
 // Pages inside the staff frame: /workshop, the sidebar pages, Your settings.
 const IN_FRAME = new Set<ScreenId>(['desk', 'your-settings', ...(Object.keys(NAV_ROUTES) as ScreenId[])]);

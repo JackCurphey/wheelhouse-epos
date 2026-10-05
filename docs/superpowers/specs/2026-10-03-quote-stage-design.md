@@ -149,3 +149,25 @@ On their booking-link page, above the booking summary:
 The browser test `quote-staff.spec.ts` runs the whole story: staff send a
 quote, the customer opens the link in a browser with no sign-in and
 approves, and the part is on the job's order with the quote approved.
+
+## Piece 4: the diary's teal (built 3 Oct)
+
+A job whose quote is sent and not yet answered is "Quoting" in the diary and
+on the job window: its own teal block, and a row in the legend (UX
+walk-through M3), so purple only ever means a booking request. A finished
+job stays Finished. Once the quote is answered, withdrawn, replaced or
+expired, the job goes back to its own colour.
+
+The diary's words are the job page's stages (3 Oct answer 11, walk-through
+9 M4; Jack, 4 Oct, chose to change all three in this piece): "Expected" not
+"Scheduled", "Quoting" not "Waiting for the customer", "Finished" not
+"Ready".
+
+The job window uses the same words as the drawn job page: "In the workshop"
+and "Finished" (not "In workshop" and "Ready for collection"), and the
+legend's blue reads "Expected, booked in or in the workshop" (diaryLegend).
+
+**Which wins (Jack, 4 Oct, option 1):** a job waiting for parts, or with a
+change requested, shows that rather than Quoting, in the diary and on the
+job window alike. The job window has no "Change requested" badge yet; adding
+one is a design question for Jack, not part of this piece.
