@@ -91,8 +91,8 @@ and are marked *(proposed)* for Mark to confirm or change, as is anything
 not marked with one of Jack's answers.
 
 **The general rule (Jack, answer 3).** Adding your own line to the other
-person's file needs no approval beyond the usual fresh review: a new screen
-in Jack's screen list, a new route in Mark's route list, a new test helper.
+person's file needs no approval beyond the usual fresh review: Mark's line for his screen
+in Jack's screen list, or a new screen test or screen helper.
 Changing or removing anything the other person wrote still needs their
 approval. **The server is the exception** (Jack, 5 Oct, answers 5 and 6): any
 change Jack makes to server code, additions included, needs Mark's approval.
@@ -106,7 +106,7 @@ regenerates it in the same pull request, and never edits the output by hand.
 |---|---|---|
 | **Booking server**: the customer booking routes (`/api/portal/*`, the booking route file after WP-0.4), `server/booking-*.js`, `service-questions.js`, `standard-terms.js`, `customer-auth.js` | Mark (answer 1) | Every change Jack makes, additions included, needs Mark's approval, including his WP-4.4 work (answers 5, 6) |
 | `server/capacity.js` and `server/clock.js` (free times, and the shop's "today") | Mark, with the booking server *(proposed)* | The workshop's diary and New job read them too, so a change that alters what the workshop gets needs Jack's approval *(proposed)* |
-| `tests/helpers/` for sign-in, test shops and booking (`staff.js`, `till.js`, `portal.js`, `testShop.js`, `liveServer.js`, `http.js`, `bookable.js`, `linkActions.js`) | Mark | Jack adds a helper; changing one needs Mark's approval *(proposed)* |
+| `tests/helpers/` for sign-in, test shops and booking (`staff.js`, `till.js`, `portal.js`, `testShop.js`, `liveServer.js`, `http.js`, `bookable.js`, `linkActions.js`) | Mark | Server test helpers, so any change Jack makes, additions included, needs Mark's approval (answer 6) |
 | `tests/helpers/` for workshop data (`workshopFixtures.js`) and screens (`dom.js`, `book-screen.js`, `css.js`) | Jack | Mark adds; changing one needs Jack's approval *(proposed)* |
 | Tests (`tests/*.test.js`, and screen tests that test Mark's code, such as `tests/screens/api-client.test.js`, `session.test.js`, `intent-adapter.test.js`) | Whoever owns the code tested: Jack for the workshop and his workshop migrations, Mark for the rest, wherever the file sits *(proposed)* | Adds tests for their own code; changing the other's test file needs approval; Jack's server tests go with his server change, so Mark approves them (answer 6) |
 | `src/lib/api/client.ts` | Mark, except `jobAction` and other workshop calls, which are Jack's and move to the workshop's own file in WP-0.4's types split *(proposed)* | Jack changes Mark's part with his approval |
@@ -143,8 +143,8 @@ pages (`public-portal/`) as a reader. Mark removes old server fields, as
 uses it: the old app, the booking and customer pages, customer messages,
 the client types and tests. It goes only when that list is empty. Where the
 field lives in the workshop (a job's `status` does), Mark's removal needs
-Jack's approval, and dropping the column is a workshop migration
-*(proposed)*.
+Jack's approval, and the migration that drops the column is a workshop
+migration, which Jack writes and Mark approves *(proposed)*.
 
 ## 4. The rules that stop collisions
 
@@ -195,7 +195,7 @@ says which branch its routes run under (note: `/api/tills` and
 booking for most of it, and settings, sales and the dashboard for
 `parseWorkingDays`, `toCapacitySettings` and `currentShopToday`
 (`currentShopToday` at `server.js:1633` and 5283). It is one of the
-ownership exceptions to write down (#141). Nine test
+files both people touch, in §3.1 (#141). Nine test
 files import names from `server.js` (`createSale`, `pendingShopifyPushes`,
 `JOB_STATUSES` and others); `server.js` keeps re-exporting every one, so no
 test changes.
