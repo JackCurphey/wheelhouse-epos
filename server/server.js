@@ -48,7 +48,6 @@ import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
 } from './auth.js';
-import { listTeam, createTeamMember, deactivateTeamMember, reactivateTeamMember, attachLogin, attachRoles, deactivateLoginOnly, reactivateLoginOnly } from './team.js';
 import {
   CustomerAuthError,
   signupCustomer,
@@ -68,9 +67,7 @@ import { saveBookingPhotos } from './booking-photo-store.js';
 import { readServiceQuestions, checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { readRequestKey } from './booking-request-key.js';
-
 import { makeFailureLimiter } from './till/failure-limiter.js';
-
 import {
   currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
 } from './clock.js';

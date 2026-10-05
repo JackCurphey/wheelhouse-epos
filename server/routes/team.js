@@ -1,4 +1,5 @@
-// The team: staff accounts and invitations (Office > Edit Shop > Office).
+// The team (Office > Edit Shop > Office): /api/team/* and
+// DELETE /api/employees/:id/permanent.
 // Staff routes: they run under the dispatcher's /api/ branch (server.js), so
 // a handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session.
@@ -11,12 +12,12 @@ import { TeamError, attachLogin, attachRoles, createTeamMember, deactivateLoginO
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
 
-// above with login access - see server/team.js for why creation is
-// mandatory-both and deactivate/reactivate cascade to the linked login.
-// Every route here needs to know if the caller is the owner, so each
-// re-resolves the session itself via currentSession(req), same as the other
-// routes that need more than just "signed in" (see the comment above the
-// website routes).
+// Merges the employee roster (the Employees routes, still in server.js) with
+// login access - see server/team.js for why creation is mandatory-both and
+// deactivate/reactivate cascade to the linked login. Every route here needs
+// to know if the caller is the owner, so each re-resolves the session itself
+// via currentSession(req), same as the other routes that need more than just
+// "signed in".
 
 export function register(route) {
   route('GET', '/api/team', async (req, res) => {
