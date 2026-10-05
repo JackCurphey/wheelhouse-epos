@@ -209,6 +209,14 @@ second time (Codex review, finding 2). The rules close that:
    deploys `main`, never a branch.
 5. **Once on `main`, a migration file's name never changes and the file is
    never deleted.** A later fix is a new migration.
+6. **Every new table proves it keeps businesses, and sites, apart** (issue
+   #133, Codex finding 7). A migration that adds a table, or a column that
+   points at another table, ships with tests in the same pull request, each
+   watched failing first: one business can't read, change or point at
+   another's rows; for a table with `site_id`, someone who doesn't work at a
+   site can't reach its rows; background work is tested with two
+   businesses' data present. The full rule is in
+   `docs/superpowers/specs/2026-10-05-wp-1-4-shops-and-sites.md` §5.
 
 **Checks (in WP-0.4, Mark), each watched failing first:**
 

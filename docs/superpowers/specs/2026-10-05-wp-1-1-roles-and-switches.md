@@ -75,7 +75,8 @@ change), and so was limiting stock adjustment to switch 5 (Stock control 6).
   gives a Manager's, and nobody else touches the Owner's.
 - A Manager gives only the shops they work at; the Owner gives any shop
   (second walk 9d). Which shops a person works at is a per-person list, not a
-  switch; where it lives is settled with issue #133.
+  switch; WP-1.4 keeps it and checks it on every request
+  (`specs/2026-10-05-wp-1-4-shops-and-sites.md` §2, §3).
 - Adding or removing people, changing roles or switches, and registering or
   removing tills need an email sign-in; they are never offered by PIN on a
   till or workshop computer (R2).
@@ -258,7 +259,7 @@ log: §4. Workshop computers: the Owner makes one (WT8 1).
 
 
 - Which shops a person works at, and how every shop-scoped route checks it:
-  issue #133 and WP-1.4.
+  WP-1.4 (`specs/2026-10-05-wp-1-4-shops-and-sites.md`, #133).
 - Trust PIN and the tap-your-name screen are not drawn yet (R3); WP-1.7
   builds the workshop computer.
 - The "Add someone, till only" pop-up (`setup.mjs`) says a till only person
