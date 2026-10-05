@@ -6,7 +6,7 @@ person working by PIN can do, and which server routes check which switch.
 Codex finding 6 (`docs/reviews/2026-10-04-release-2-plans-codex-adversarial.md`
 line 49) found the plans said "eight switches" and the server knew only the
 owner flag. Jack's answers on 5 Oct are in
-`docs/decisions/2026-10-05-roles-and-switches.md` (cited below as **R1–R7**).
+`docs/decisions/2026-10-05-roles-and-switches.md` (cited below as **R1–R8**).
 
 This is the table WP-1.1's contract builds on. Mark writes the contract and
 builds the server half (split plan §4.3, §6); route guards marked
@@ -97,7 +97,7 @@ out the Owner's devices (MO M6).
 | The Owner's login (`logins.is_owner`) | Owner |
 | A login whose staff member is ticked as a mechanic (`is_mechanic`) | Mechanic, switches 8 and 9 on |
 | Any other login | Staff |
-| A staff member with no login | A "No email — till only" person: Mechanic if ticked as a mechanic, else Staff; switch 1 on *(see question 8 in §8 for mechanics)* |
+| A staff member with no login | A "No email — till only" person: Mechanic if ticked as a mechanic, else Staff; switch 1 on; a mechanic also works at a workshop computer by PIN (R8) |
 
 Nobody becomes a Manager automatically; the Owner makes Managers after the
 move. For every role *(proposed, beyond R4)*: a staff member ticked as a
@@ -114,7 +114,7 @@ switch 8, so an Owner who works on bikes stays in the diary. Two routes are ungu
 | Till, a person checked in | Their role and switches | Selling needs switch 1; the rest of the shop as that person, except §3's sign-in-only changes (R2) |
 | Till, a "till only" person | Staff or Mechanic, switch 1 on | The till, Front desk › Online orders, booking a bike in, handing over a repair paid online — nothing else (WT8 8 and its later change, walk-through 10 M1); checked on the server (§7) |
 | Workshop computer, nobody working | — | The PIN screen; with trust PIN on, the names of today's people to tap (R3) |
-| Workshop computer, a person working | Their role and switches | Workshop pages; Owner and Manager pages (Settings and §4's pages) only after the PIN of an Owner, Manager or someone with "Give everything", every time (WT8 3; R3), so a Staff member with switch 7 uses Settings from their own phone or the office computer *(proposed)*; no "Change PIN"; not §3's sign-in-only changes (R2) |
+| Workshop computer, a person working | Their role and switches, including a Mechanic with no email (R8) | Workshop pages; Owner and Manager pages (Settings and §4's pages) only after the PIN of an Owner, Manager or someone with "Give everything", every time (WT8 3; R3), so a Staff member with switch 7 uses Settings from their own phone or the office computer *(proposed)*; no "Change PIN"; not §3's sign-in-only changes (R2) |
 | Own phone, laptop or office computer, email sign-in | Their role and switches | Everything their role and switches allow |
 
 **Idle:** with trust PIN off, a workshop computer asks for the PIN again
@@ -138,7 +138,8 @@ Wheelhouse (SI 7); `server/till/pin.js` accepts 4–6 today.
 
 161 routes on `main` (the list in `tests/fixtures/route-list.txt`, #150).
 **Any staff** = every role, signed in or working by PIN, but not a "till
-only" person. **Till only** = the routes a till-only person may also use
+only" person away from a workshop computer. At a workshop computer a till
+only Mechanic counts as any staff (R8). **Till only** = the routes a till-only person may also use
 (§6, WT8 8), so the "nothing else" is checked on the server, not just on
 screen *(proposed list)*:
 
@@ -250,11 +251,6 @@ log: §4. Workshop computers: the Owner makes one (WT8 1).
 
 ## 8. Left for later
 
-- **Question 8, for Jack:** whether a mechanic with no email can work at a
-  workshop computer by PIN. A "till only" person can open nothing away
-  from the till (WT8 8; the Staff and roles drawing), but everyone who uses
-  a workshop computer types a PIN (WT8 1). Until answered, a mechanic with
-  no email is "till only" (§5) and the workshop routes refuse them.
 
 - Which shops a person works at, and how every shop-scoped route checks it:
   issue #133 and WP-1.4.

@@ -3,7 +3,7 @@
 Issue #132 (Codex finding 6): before WP-1.1, write the full set of roles and
 switches. The survey found nine switches and five things the decisions left
 open (answers 1, 2, 4, 5, 6); Jack added trust PIN (answer 3), and the
-fresh review raised answer 7. Jack answered them one at a time on 5 Oct. The table they produce is in
+fresh review raised answers 7 and 8. Jack answered them one at a time on 5 Oct. The table they produce is in
 `docs/superpowers/specs/2026-10-05-wp-1-1-roles-and-switches.md`.
 
 1. **"Give everything a Manager can do" gives all of it** (Jack: "1"). A
@@ -57,3 +57,9 @@ fresh review raised answer 7. Jack answered them one at a time on 5 Oct. The tab
    but not those two, so two colleagues can't promote each other. Raised by
    the fresh review of the table. Chosen over anyone with "Can change
    settings" giving any switch except to themselves.
+8. **A mechanic with no email works at a workshop computer by PIN** (Jack,
+   5 Oct: "1"). A "till only" Mechanic gets the diary and jobs at a workshop
+   computer, as their role allows, and only the till anywhere else. Settles
+   walk-through 8 decision 8 ("till only") against decision 1 (everyone at
+   a workshop computer types a PIN). Raised by the second fresh review.
+   Chosen over every workshop-computer user needing an email.
