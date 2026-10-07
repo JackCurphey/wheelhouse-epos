@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **12 of 25 decided.**
+Status: **13 of 25 decided.**
 
 ## Decided
 
@@ -177,6 +177,17 @@ built as decided on 30 Sep, in "Late"'s drawn look (already decided; no new
 choice). Chosen over a stage-1 Tills card with only till names and online
 or offline.
 
+### 13. A customer's wrong code
+
+**The gap.** A wrong or expired customer code "says so under the boxes"
+with "Send a new code" (signing-in decision 9), but only the expired line
+is drawn: "That code has expired — send a new one" (`consolidate/jb.mjs:26`;
+`signin.mjs:281`).
+
+**Decision** (Jack, 7 Oct: "1"). A wrong code reads "That code isn't right
+— check it or send a new one", in the expired line's look (digits in red,
+the line under the boxes). Chosen over "Wrong code — try again".
+
 ### Added while deciding 13: "Continue with Google" for customers
 
 Jack asked why customers need a code when WorkOS offers Google or Apple
@@ -195,8 +206,6 @@ before the real Google key is created.
 
 **B. States that are missing**
 
-13. Customer wrong-code message — only the expired-code message is drawn
-    (`2026-09-29-signing-in-review.md` decision 9; `consolidate/jb.mjs:26`).
 14. Email sign-in timeout — no decision found; the 10 minutes (Q6) is for
     workshop computers (split plan `:409`).
 
