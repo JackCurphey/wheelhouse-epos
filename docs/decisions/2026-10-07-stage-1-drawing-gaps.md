@@ -27,7 +27,8 @@ with no drawing, and it didn't say whether typing that PIN makes the Owner
 the person working.
 
 **Decision** (Jack, 7 Oct: "1"). A PIN pop-up over the page — "Settings
-needs an Owner or Manager PIN" with the usual PIN box. The Owner's or
+needs an Owner or Manager PIN" with the usual PIN box (someone with "Give
+everything a Manager can do" counts too, spec `:118`). The Owner's or
 Manager's change is recorded under their name; the person working on the
 computer stays who they were (for example Sam the mechanic), so nobody has
 to switch back. Chosen over making the Owner the person working, which
@@ -40,16 +41,24 @@ a Manager reads out over a call, and "you change it here at check-in"
 (walk-through 10 M2, `2026-09-29-signing-in-review.md:80`;
 `consolidate/jb.mjs:40`). The check-in step that changes it wasn't drawn.
 
-**Decision** (Jack, 7 Oct: "1"). Straight after the one-time PIN, the till
-shows "Choose your own PIN", typed twice; check-in finishes only once it is
-set, with no way to skip. The one-time PIN then stops working, so nobody
-else knows the person's PIN (signing in, decision 6). Chosen over a
-"Later" button, which would leave the read-out PIN working.
+**Decision** (Jack, 7 Oct: "1", then corrected the same day). Straight after
+the one-time PIN, the till shows the drawn "Your till PIN" pop-up: a new PIN
+Wheelhouse picked, with "Keep this PIN" and "Give me a different one", and
+no way to skip (`signin.mjs:206-236`). The one-time PIN then stops working,
+so nobody else knows the person's PIN (signing in, decision 6). Chosen over
+a "Later" button, which would leave the read-out PIN working.
+
+*Correction (Jack, 7 Oct: "1").* The question first offered "Choose your own
+PIN, typed twice", which would have reversed signing-in decision 7
+("Wheelhouse picks each person's till PIN", `2026-09-29-signing-in-review.md:46-52`):
+a chosen PIN that clashes reveals a colleague's PIN. The fresh review caught
+it; Jack kept decision 7 and the drawn pop-up instead.
 
 ### 3. Giving someone their PIN at the till
 
 **The gap.** The PIN box the person types into (`till-give-pin`) is drawn;
-how the checked-in Owner or Manager opens "Give [name] their PIN" and picks
+how the checked-in Owner or Manager (or someone with "Give everything")
+opens "Give [name] their PIN" and picks
 the person was a written line only (`setup.mjs:275`; `signin.mjs:252`).
 
 **Decision** (Jack, 7 Oct: "1", after a sketch of both). From the checked-in
@@ -79,7 +88,7 @@ temporary link elsewhere (Getting started) that would later move.
 Staff with reports (`reports.mjs:50`) and Staff with the website
 (`website.mjs:150`). Not drawn: Staff with switch 7, a Mechanic with any
 switch, and "Give everything a Manager can do" (spec
-`2026-10-05-wp-1-1-roles-and-switches.md:31`, `:44`, `:105`).
+`2026-10-05-wp-1-1-roles-and-switches.md:31`, `:38-40`, `:44`, `:84`).
 
 **Decision** (Jack, 7 Oct: "1"). Each switch adds only the pages it
 unlocks, in their usual room. A Mechanic with "Can use the till" gets a
@@ -153,9 +162,12 @@ showing it only on the diary and in job pop-ups.
 ### 11. The till's PIN screen with trust PIN on
 
 **The gap.** With trust PIN on, anyone checked in on that till today takes
-over by tapping their name (spec `:114-115`, R10); the till's PIN screen
-lists "Checked in today", but only the workshop computer's tappable names
-were drawn.
+over by tapping their name (spec `:114-115`, R10). That is drawn while
+someone is checked in, as the till's name pills (`till-serving-pills`,
+roles and switches answer 10, `2026-10-05-roles-and-switches.md:88-99`).
+Not drawn: whether the "Checked in today" names on the till's own PIN
+screen can be tapped; only the workshop computer's PIN screen has tappable
+names.
 
 **Decision** (Jack, 7 Oct: "1"). The same as the workshop computer: with
 trust PIN on, tapping a name in "Checked in today" checks that person back
@@ -204,7 +216,8 @@ devices (roles spec). Chosen over 12 hours without use.
 **The gap.** In each, an older drawing or map line disagrees with a later
 recorded decision:
 - 15: the pills drawing shows "Sign out" on a workshop computer
-  (`signin.mjs:197-203`); the decision is "Check out", no "Sign out"
+  (`signin.mjs:197-203`, reusing the diary sidebar's "Sign out",
+  `diary.mjs:186`); the decision is "Check out", no "Sign out"
   (`consolidate/ja.mjs:40`; walk-through 8, decision 1).
 - 16: the mockup opens a Staff member's full sidebar at a workshop computer
   (`mockup/links/jb.mjs:33-36`); the decision is workshop pages, owner pages
@@ -275,13 +288,15 @@ before the real Google key is created.
 - **25. Two STATUS lines.** The trust-PIN and Mechanic drawings were done in
   #172 (`2026-10-05-roles-and-switches.md:99`), and the "Change requested"
   badge belongs to the job page in WP-4.1, stage 4
-  (`2026-10-03-quote-stage-design.md:172`; build plan `:566`). Both are
+  (`docs/superpowers/specs/2026-10-03-quote-stage-design.md:172`; build plan
+  `:566`), where it is still a design question for Jack. Both are
   corrected in the next daily status pull request.
 
 ## What follows
 
 - **Drawings to add or bring into line** before or with their package:
-  the Owner or Manager PIN pop-up (1), "Choose your own PIN" (2), the "Give
+  the Owner or Manager PIN pop-up (1), the "Your till PIN" pop-up shown
+  after a one-time PIN (2; the cleared-PIN version is drawn), the "Give
   someone their PIN" menu and list (3), the stage-1 Tills section and the
   setup screen's two choices (4), the "Signing in" fold (9), the working bar
   on a page (10), the till's tappable names (11), "Not in yet" (12), the
@@ -290,7 +305,8 @@ before the real Google key is created.
   "Continue with Google".
 - **For Mark** (his packages): WP-1.8's engine sends by WhatsApp too,
   behind an adapter with a pretend version (17); Today's data needs no
-  takings (20); staff email sessions last 30 days without use (14); trust
+  takings (20); staff email sessions last 30 days without use (14; set in
+  WorkOS's session settings — not yet checked that WorkOS allows 30 days); trust
   PIN and its idle time are Owner and Manager only (9).
 - **Needs Jack's yes before it is created:** the real Google sign-in key;
   the WhatsApp Business connection; later, the Apple Developer Program
