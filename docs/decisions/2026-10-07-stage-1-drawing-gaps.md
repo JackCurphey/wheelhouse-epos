@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **4 of 25 decided.**
+Status: **5 of 25 decided.**
 
 ## Decided
 
@@ -73,14 +73,26 @@ this computer a till"; the list of tills fills in with WP-5.1. The setup
 screen offers the two choices, a till or a workshop computer. Chosen over a
 temporary link elsewhere (Getting started) that would later move.
 
+### 5. The sidebar for someone given extra switches
+
+**The gap.** Each role's sidebar is drawn (`diary.mjs:117-122`), and so are
+Staff with reports (`reports.mjs:50`) and Staff with the website
+(`website.mjs:150`). Not drawn: Staff with switch 7, a Mechanic with any
+switch, and "Give everything a Manager can do" (spec
+`2026-10-05-wp-1-1-roles-and-switches.md:31`, `:44`, `:105`).
+
+**Decision** (Jack, 7 Oct: "1"). Each switch adds only the pages it
+unlocks, in their usual room. A Mechanic with "Can use the till" gets a
+Front desk room with Till and Online orders — the same as a "till only"
+Mechanic (walk-through 8, decision 8, later change). Staff with "Can change
+settings" get Office › Settings. "Give everything" gives a Manager's
+sidebar. Chosen over giving a Mechanic with the till the whole Front desk
+room.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
 
-5. The sidebar for people with extra switches — not drawn for Staff with
-   switch 7, a Mechanic with any switch, or "Give everything a Manager can
-   do"; which rooms a Mechanic who can use the till gets (spec `:31`, `:44`,
-   `:105`).
 6. What the Settings frame shows in stage 1 — only Front desk › Till has
    content until WP-5.1; nothing says what empty rooms and rows that can't
    open yet show (build plan `:229-232`).
