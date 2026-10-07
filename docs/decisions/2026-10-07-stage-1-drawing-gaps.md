@@ -44,7 +44,9 @@ a Manager reads out over a call, and "you change it here at check-in"
 **Decision** (Jack, 7 Oct: "1", then corrected the same day). Straight after
 the one-time PIN, the till shows the drawn "Your till PIN" pop-up: a new PIN
 Wheelhouse picked, with "Keep this PIN" and "Give me a different one", and
-no way to skip (`signin.mjs:206-236`). The one-time PIN then stops working,
+no way to skip (`signin.mjs:206-236`; the drawn first-time and cleared-PIN
+versions have "Skip for now" and a "Your old PIN was cleared" line, which
+this version drops). The one-time PIN then stops working,
 so nobody else knows the person's PIN (signing in, decision 6). Chosen over
 a "Later" button, which would leave the read-out PIN working.
 
@@ -273,7 +275,8 @@ drawing of the customer sign-in screen with the button.
 **Later the same day** (Jack, 7 Oct: "Apart from saying yes, which i do, for
 the google sign in stuff…", then "1"). Jack says yes to the real Google
 sign-in setup. What it needs, from WorkOS's Google guide
-(workos.com/docs/integrations/google-oauth, read 7 Oct):
+(workos.com/docs/integrations/google-oauth, read 7 Oct) and Google's usual
+sign-in screen requirements (not yet checked against Google's own pages):
 - **Building and testing:** nothing more. WorkOS's staging environment has
   its own default Google keys for testing; until the WorkOS account exists
   (Mark's, build-plan questions Q10), the pretend version stands in.
@@ -283,7 +286,10 @@ sign-in setup. What it needs, from WorkOS's Google guide
   policy page, and the name **"Wheelhouse"** on Google's "Sign in to …"
   screen (Jack's choice, over a neutral name such as "Bike shop sign-in").
   No logo there: Google verifies logos, and there is no official Wheelhouse
-  logo yet.
+  logo yet. Unless WorkOS has a custom sign-in address (a web-address
+  record and a second return address in Google), Google's account chooser
+  may read "continue to workos.com"; whether to set one up is still to
+  decide.
 - **Answered:** Google sends people back to WorkOS's own address, not each
   shop's, so shops' own web addresses need no registering with Google.
 
