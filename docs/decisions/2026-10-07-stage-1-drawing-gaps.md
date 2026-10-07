@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **8 of 25 decided.**
+Status: **9 of 25 decided.**
 
 ## Decided
 
@@ -125,6 +125,20 @@ of the frame every Settings page shares, so it works on the Till page from
 stage 1. Chosen over leaving it to WP-5.1, which would let a failed save on
 the Till page go unnoticed.
 
+### 9. The trust PIN and idle-time settings
+
+**The gap.** Trust PIN (off to start) and how long a workshop computer
+waits before going back to the start were written lines on `set-till-quick`
+with no row drawn (`consolidate/j08.mjs:59-60`); the line says Owner and
+Manager, and the roles spec didn't say whether switch 7 can change them.
+
+**Decision** (Jack, 7 Oct: "1"). Owner and Manager only (and so "Give
+everything", which includes what is kept for Managers): trust PIN loosens
+security for the whole business. Where they go, decided here for Jack to
+overrule: together in their own fold, "Signing in", on the Till settings
+page beside the Tills section, following the drawn folding-sections
+pattern. Chosen over letting anyone with "Can change settings" change them.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
@@ -132,8 +146,6 @@ the Till page go unnoticed.
 
 **B. States that are missing**
 
-9. Where the trust PIN and idle-time settings go, and who may change trust
-   PIN (`consolidate/j08.mjs:59-60`).
 10. Block 26's "Working: [name] · Switch" bar — drawn only inside the job
     pop-up, not on the diary page; Switch goes nowhere (`diary.mjs:2631-2637`;
     `consolidate/j12.mjs:48`).
