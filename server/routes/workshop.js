@@ -624,7 +624,7 @@ export function register(route) {
   // ---------- Workshop job actions ----------
   //
   // One endpoint per thing a person does, not a status field on the job's PUT
-  // (server/routes/workshop.js).
+  // (above).
   // The URL names what happened, so the access log, the screen trace and any
   // future per-action permission all read the path instead of the body.
   //
