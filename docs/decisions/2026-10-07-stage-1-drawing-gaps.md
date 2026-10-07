@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **1 of 25 decided.**
+Status: **2 of 25 decided.**
 
 ## Decided
 
@@ -33,12 +33,23 @@ computer stays who they were (for example Sam the mechanic), so nobody has
 to switch back. Chosen over making the Owner the person working, which
 would record later work under the Owner's name if nobody switched back.
 
+### 2. Changing a one-time PIN at check-in
+
+**The gap.** A forgotten till PIN is replaced by a one-time PIN the Owner or
+a Manager reads out over a call, and "you change it here at check-in"
+(walk-through 10 M2, `2026-09-29-signing-in-review.md:80`;
+`consolidate/jb.mjs:40`). The check-in step that changes it wasn't drawn.
+
+**Decision** (Jack, 7 Oct: "1"). Straight after the one-time PIN, the till
+shows "Choose your own PIN", typed twice; check-in finishes only once it is
+set, with no way to skip. The one-time PIN then stops working, so nobody
+else knows the person's PIN (signing in, decision 6). Chosen over a
+"Later" button, which would leave the read-out PIN working.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
 
-2. Changing a one-time PIN at check-in — the step isn't drawn
-   (`consolidate/jb.mjs:40`; `2026-09-29-signing-in-review.md:80`).
 3. Giving a PIN at the till — the PIN box (`till-give-pin`) is drawn; the
    button that opens it and how the Owner picks the person are not
    (`setup.mjs:275`; `signin.mjs:252`).
