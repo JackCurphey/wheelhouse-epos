@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **19 of 25 decided.**
+Status: **20 of 25 decided.**
 
 ## Decided
 
@@ -222,6 +222,18 @@ recorded decision:
 bring the old drawings and map lines into line with it. No decision
 changes.
 
+### 17. WhatsApp messages
+
+**The gap.** Customers choose text, WhatsApp or email (account and
+reminders 6, 1 Oct; Book a repair d5; `setup.mjs:382,385`), but WP-1.8
+says "text or email" (build plan `:304`; split plan `:410`).
+
+**Decision** (Jack, 7 Oct: "1"). WP-1.8's messages engine sends by text,
+WhatsApp or email, with WhatsApp behind an adapter and a pretend version,
+like the other outside services; the real WhatsApp Business connection (a
+real account, usually a per-message charge) waits for Jack's yes. Chosen
+over adding WhatsApp in a later stage.
+
 ### Added while deciding 13: "Continue with Google" for customers
 
 Jack asked why customers need a code when WorkOS offers Google or Apple
@@ -243,8 +255,6 @@ before the real Google key is created.
 
 **C. Places where two sources disagree**
 
-17. Text, WhatsApp or email (`setup.mjs:382,385`) vs "text or email" (build
-    plan `:304`; split plan `:410`).
 20. Takings on Today — the map and spec include them (`app-map.mjs:411`;
     spec `:261`); the `op-today` drawing has no takings card.
 
