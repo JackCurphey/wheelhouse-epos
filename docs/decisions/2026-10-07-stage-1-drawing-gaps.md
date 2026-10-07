@@ -268,8 +268,24 @@ we start getting money in then we will be getting apple too"): customer
 sign-in adds "Continue with Google" beside the emailed code; Apple follows
 once the business has income ($99 a year developer fee). Recorded as a later
 change to signing-in decision 5 (`2026-09-29-signing-in-review.md`). Needs a
-drawing of the customer sign-in screen with the button, and Jack's yes
-before the real Google key is created.
+drawing of the customer sign-in screen with the button.
+
+**Later the same day** (Jack, 7 Oct: "Apart from saying yes, which i do, for
+the google sign in stuff…", then "1"). Jack says yes to the real Google
+sign-in setup. What it needs, from WorkOS's Google guide
+(workos.com/docs/integrations/google-oauth, read 7 Oct):
+- **Building and testing:** nothing more. WorkOS's staging environment has
+  its own default Google keys for testing; until the WorkOS account exists
+  (Mark's, build-plan questions Q10), the pretend version stands in.
+- **Before real customers (by the move):** a Google Cloud project and
+  sign-in key of Wheelhouse's own, owned by a business Google account (which
+  one is still to settle), with a support email, a homepage, a privacy
+  policy page, and the name **"Wheelhouse"** on Google's "Sign in to …"
+  screen (Jack's choice, over a neutral name such as "Bike shop sign-in").
+  No logo there: Google verifies logos, and there is no official Wheelhouse
+  logo yet.
+- **Answered:** Google sends people back to WorkOS's own address, not each
+  shop's, so shops' own web addresses need no registering with Google.
 
 ### 22–25. The minor ones
 
@@ -308,6 +324,8 @@ before the real Google key is created.
   takings (20); staff email sessions last 30 days without use (14; set in
   WorkOS's session settings — not yet checked that WorkOS allows 30 days); trust
   PIN and its idle time are Owner and Manager only (9).
-- **Needs Jack's yes before it is created:** the real Google sign-in key;
-  the WhatsApp Business connection; later, the Apple Developer Program
-  ($99 a year).
+- **Jack said yes (7 Oct):** the real Google sign-in setup, named
+  "Wheelhouse" — still to settle: which business Google account owns it, and
+  a Wheelhouse privacy policy page for Google's screen.
+- **Needs Jack's yes before it is created:** the WhatsApp Business
+  connection; later, the Apple Developer Program ($99 a year).
