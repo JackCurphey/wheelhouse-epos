@@ -64,12 +64,12 @@ export async function seedRequest(shopId, jobId, { jobDate, mechanicId, startTim
 }
 
 // A different weekday date on each call, Monday to Friday, at least three weeks
-// out (futureDate), a week further on after every five.
-export function dayMaker() {
+// out (futureDate), a week further on after every five. `from` as futureDate's.
+export function dayMaker(from = new Date()) {
   let n = 0;
   return () => {
     const i = n++;
-    const d = new Date(`${futureDate(1 + (i % 5))}T00:00:00Z`);
+    const d = new Date(`${futureDate(1 + (i % 5), from)}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() + 7 * Math.floor(i / 5));
     return d.toISOString().slice(0, 10);
   };

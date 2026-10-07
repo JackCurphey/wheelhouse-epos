@@ -17,7 +17,10 @@ let owner: { cookie: string; shop: { id: number; slug: string } };
 let sam: number;
 let svc: { id: number; questions: { id: string; wording: string }[] };
 let customer: { cookie: string };
-const nextDay = dayMaker();
+// Counted from the pinned clock, not today: the diary opens on 1 Sep and
+// pages at most 8 weeks on (goToWeekOf), so dates counted from the real today
+// drifted past that once it was October.
+const nextDay = dayMaker(new Date(TEST_CLOCK_PIN));
 // A real 1x1 PNG: the booking route accepts a photo by its bytes.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
 
