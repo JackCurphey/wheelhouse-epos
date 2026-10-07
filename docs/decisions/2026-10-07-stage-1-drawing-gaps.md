@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **6 of 25 decided.**
+Status: **7 of 25 decided.**
 
 ## Decided
 
@@ -101,13 +101,22 @@ package builds them. No shop uses the app for real until the move (stage
 8), so this only affects testing. Chosen over the full drawn layout with
 unfinished rows greyed out as "Coming in a later stage".
 
+### 7. The Messages list in stage 1
+
+**The gap.** Settings › Messages is built in WP-1.8, but each automatic
+message row comes with its journey's package (build plan `:303-306`,
+`:315`), so in stage 1 the list starts empty; an empty list wasn't drawn.
+
+**Decision** (Jack, 7 Oct: "1"). The same rule as decision 6: the page
+shows only what exists — "Your own messages" with "+ Add your own message";
+automatic rows appear as each package adds them. With nothing there, it
+uses Till settings' drawn empty-list look (`set-till-empty`): one short line
+and the add button.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
 
-7. The Messages list in stage 1 — its rows arrive with later journeys, so it
-   starts empty or nearly; an empty list isn't drawn (build plan `:303-306`,
-   `:315`).
 
 **B. States that are missing**
 
