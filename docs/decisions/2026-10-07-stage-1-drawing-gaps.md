@@ -177,6 +177,17 @@ built as decided on 30 Sep, in "Late"'s drawn look (already decided; no new
 choice). Chosen over a stage-1 Tills card with only till names and online
 or offline.
 
+### Added while deciding 13: "Continue with Google" for customers
+
+Jack asked why customers need a code when WorkOS offers Google or Apple
+sign-in. **Decision** (Jack, 7 Oct: "lets do just google for now, but once
+we start getting money in then we will be getting apple too"): customer
+sign-in adds "Continue with Google" beside the emailed code; Apple follows
+once the business has income ($99 a year developer fee). Recorded as a later
+change to signing-in decision 5 (`2026-09-29-signing-in-review.md`). Needs a
+drawing of the customer sign-in screen with the button, and Jack's yes
+before the real Google key is created.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
