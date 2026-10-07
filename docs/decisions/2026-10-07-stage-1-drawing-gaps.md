@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **11 of 25 decided.**
+Status: **12 of 25 decided.**
 
 ## Decided
 
@@ -162,6 +162,21 @@ trust PIN on, tapping a name in "Checked in today" checks that person back
 in; with it off, the names are only a list and the PIN is typed. Chosen
 over always typing the PIN on the till's PIN screen.
 
+### 12. The Today page in stage 1
+
+**The gap.** "Not in yet" (grey, then "Late" after the start time) was
+decided on 30 Sep but only "Late" is drawn
+(`2026-09-30-opening-the-shop-review.md:37-40`); and the Tills card's float
+and banking lines depend on WP-3.3, so in stage 1 it has nothing true to
+show.
+
+**Decision** (Jack, 7 Oct: "1"). The same rule as decisions 6 and 7: in
+stage 1 Today shows only what works — Who's in, Workshop today and Needs
+attention; the Tills card arrives with WP-3.3's float check. "Not in yet" is
+built as decided on 30 Sep, in "Late"'s drawn look (already decided; no new
+choice). Chosen over a stage-1 Tills card with only till names and online
+or offline.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
@@ -169,9 +184,6 @@ over always typing the PIN on the till's PIN screen.
 
 **B. States that are missing**
 
-12. Today in stage 1 — "Not in yet" (grey) is decided but only "Late" is
-    drawn (`2026-09-30-opening-the-shop-review.md:37-40`); the Tills card's
-    "float checked" comes in WP-3.3.
 13. Customer wrong-code message — only the expired-code message is drawn
     (`2026-09-29-signing-in-review.md` decision 9; `consolidate/jb.mjs:26`).
 14. Email sign-in timeout — no decision found; the 10 minutes (Q6) is for
