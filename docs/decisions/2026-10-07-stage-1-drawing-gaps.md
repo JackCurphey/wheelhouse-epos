@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **10 of 25 decided.**
+Status: **11 of 25 decided.**
 
 ## Decided
 
@@ -150,6 +150,18 @@ on a workshop computer, looking as drawn; "Switch" opens the existing
 "Enter your PIN" screen (with trust PIN on, the names to tap). Chosen over
 showing it only on the diary and in job pop-ups.
 
+### 11. The till's PIN screen with trust PIN on
+
+**The gap.** With trust PIN on, anyone checked in on that till today takes
+over by tapping their name (spec `:114-115`, R10); the till's PIN screen
+lists "Checked in today", but only the workshop computer's tappable names
+were drawn.
+
+**Decision** (Jack, 7 Oct: "1"). The same as the workshop computer: with
+trust PIN on, tapping a name in "Checked in today" checks that person back
+in; with it off, the names are only a list and the PIN is typed. Chosen
+over always typing the PIN on the till's PIN screen.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
@@ -157,8 +169,6 @@ showing it only on the diary and in job pop-ups.
 
 **B. States that are missing**
 
-11. Till PIN screen with trust PIN on — whether "Checked in today" names can
-    be tapped instead of a PIN (spec `:114-115`).
 12. Today in stage 1 — "Not in yet" (grey) is decided but only "Late" is
     drawn (`2026-09-30-opening-the-shop-review.md:37-40`); the Tills card's
     "float checked" comes in WP-3.3.
