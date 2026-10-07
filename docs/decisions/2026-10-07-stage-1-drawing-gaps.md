@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **2 of 25 decided.**
+Status: **3 of 25 decided.**
 
 ## Decided
 
@@ -46,13 +46,23 @@ set, with no way to skip. The one-time PIN then stops working, so nobody
 else knows the person's PIN (signing in, decision 6). Chosen over a
 "Later" button, which would leave the read-out PIN working.
 
+### 3. Giving someone their PIN at the till
+
+**The gap.** The PIN box the person types into (`till-give-pin`) is drawn;
+how the checked-in Owner or Manager opens "Give [name] their PIN" and picks
+the person was a written line only (`setup.mjs:275`; `signin.mjs:252`).
+
+**Decision** (Jack, 7 Oct: "1", after a sketch of both). From the checked-in
+Owner's or Manager's name on the till's top bar: a menu item "Give someone
+their PIN" opens a list of only the people waiting for one (new, or PIN
+cleared); tapping a name opens the drawn PIN box, screen turned to them.
+Chosen over a "Give a PIN" button on the check-in screen, which every
+member of staff would see.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
 
-3. Giving a PIN at the till — the PIN box (`till-give-pin`) is drawn; the
-   button that opens it and how the Owner picks the person are not
-   (`setup.mjs:275`; `signin.mjs:252`).
 4. Making a computer a till or a workshop computer — the only way into "Set
    up this till" is on the Tills page (WP-5.1), and "Make this computer a
    workshop computer" is a written line only (`mockup/links/j08.mjs:57`;
