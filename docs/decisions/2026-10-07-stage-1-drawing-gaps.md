@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **9 of 25 decided.**
+Status: **10 of 25 decided.**
 
 ## Decided
 
@@ -139,6 +139,17 @@ overrule: together in their own fold, "Signing in", on the Till settings
 page beside the Tills section, following the drawn folding-sections
 pattern. Chosen over letting anyone with "Can change settings" change them.
 
+### 10. The "Working: [name] · Switch" bar (block 26)
+
+**The gap.** On a workshop computer the bar is drawn only as the top row of
+an open job pop-up (`diary.mjs:2631-2637`); a written line puts it on the
+diary page too (`consolidate/j12.mjs:48`), and "Switch" led nowhere.
+
+**Decision** (Jack, 7 Oct: "1"). The bar runs across the top of every page
+on a workshop computer, looking as drawn; "Switch" opens the existing
+"Enter your PIN" screen (with trust PIN on, the names to tap). Chosen over
+showing it only on the diary and in job pop-ups.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
@@ -146,9 +157,6 @@ pattern. Chosen over letting anyone with "Can change settings" change them.
 
 **B. States that are missing**
 
-10. Block 26's "Working: [name] · Switch" bar — drawn only inside the job
-    pop-up, not on the diary page; Switch goes nowhere (`diary.mjs:2631-2637`;
-    `consolidate/j12.mjs:48`).
 11. Till PIN screen with trust PIN on — whether "Checked in today" names can
     be tapped instead of a PIN (spec `:114-115`).
 12. Today in stage 1 — "Not in yet" (grey) is decided but only "Late" is
