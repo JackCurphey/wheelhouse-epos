@@ -4,7 +4,7 @@
  * is the bug.
  */
 
-/** One day of a job (serializePart in server/server.js). */
+/** One day of a job (serializePart in server/routes/workshop.js). */
 export type JobPart = {
   id: number;
   position: number;

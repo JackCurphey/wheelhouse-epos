@@ -16,6 +16,10 @@ const MOVED = [
   ['GET', '/api/workshop-jobs/:id'],
   ['POST', '/api/workshop-jobs/:id/private-link'],
   ['POST', '/api/workshop-jobs'],
+  ['POST', '/api/workshop-jobs/:id/parts'],
+  ['PUT', '/api/workshop-jobs/:id/parts/:partId'],
+  ['DELETE', '/api/workshop-jobs/:id/parts/:partId'],
+  ['PUT', '/api/workshop-jobs/:id'],
 ];
 const registers = (source, [method, routePath]) =>
   new RegExp(`^\\s*route\\('${method}', '${routePath.replace(/[/:-]/g, '\\$&')}'`, 'm').test(source);
