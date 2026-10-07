@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **5 of 25 decided.**
+Status: **6 of 25 decided.**
 
 ## Decided
 
@@ -89,13 +89,22 @@ settings" get Office › Settings. "Give everything" gives a Manager's
 sidebar. Chosen over giving a Mechanic with the till the whole Front desk
 room.
 
+### 6. What Settings shows in stage 1
+
+**The gap.** WP-1.3 builds four room pages, but only Front desk › Till has
+content until WP-5.1 (build plan `:229-232`); the drawing shows every row
+filled in, and nothing says what unfinished rooms and rows show meanwhile.
+
+**Decision** (Jack, 7 Oct: "1"). Show only what works: in stage 1 Settings
+shows the Till section and nothing else; rooms and rows appear as their
+package builds them. No shop uses the app for real until the move (stage
+8), so this only affects testing. Chosen over the full drawn layout with
+unfinished rows greyed out as "Coming in a later stage".
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
 
-6. What the Settings frame shows in stage 1 — only Front desk › Till has
-   content until WP-5.1; nothing says what empty rooms and rows that can't
-   open yet show (build plan `:229-232`).
 7. The Messages list in stage 1 — its rows arrive with later journeys, so it
    starts empty or nearly; an empty list isn't drawn (build plan `:303-306`,
    `:315`).
