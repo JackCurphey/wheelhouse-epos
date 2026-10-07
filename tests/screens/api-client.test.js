@@ -1,7 +1,7 @@
 // The API client's contract, with fetch stubbed - no server, no browser.
 //
 // The stubbed bodies are the server's real 409 shapes ({ error, code }, from
-// jobActionRoute in server/server.js and sendQuoteResult in
+// jobActionRoute in server/routes/workshop.js and sendQuoteResult in
 // server/workshop/jobs.js), not invented ones:
 // a client that classifies a body the server never sends proves nothing.
 import test, { afterEach } from 'node:test';

@@ -8,11 +8,12 @@
 import { prepare, dbExec, pool } from '../db.js';
 import { badRequest, notFound, readJsonBody, sendJson, nowIso } from '../lib/http.js';
 import { newLinkCode, hashLinkCode, linkPath } from '../booking-link.js';
-import { readLegacyStatus } from '../workshop/state-machines.js';
+import { readLegacyStatus, bookingRequest, custody, work } from '../workshop/state-machines.js';
+import { applyEvent } from '../workshop/transitions.js';
 import {
   CLEAR_REQUEST, SLOT_GONE, WORKSHOP_JOB_SELECT, capacityRefusal, checkJobSlot, createWorkshopJob,
   currentShopToday, parseWorkingDays, refusal, requestedOf, resolveJobMechanicId, resolveJobTimes,
-  serializeWorkshopJob, syncJobHold, timeToMinutes, withBookingLock, withJobBookingLock,
+  serializeWorkshopJob, syncJobHold, timeToMinutes, withBookingLock, withJobBookingLock, applyLocked,
 } from '../workshop/jobs.js';
 
 // The same shim server.js uses: each call reads the request's client.
@@ -161,10 +162,10 @@ function resolvePlannedMinutes(input, fallback) {
   return { value: n };
 }
 
-export const VERSION_REQUIRED = 'version is required - send the version you last read';
+const VERSION_REQUIRED = 'version is required - send the version you last read';
 
 // The words applyEvent uses for a lost race (server/workshop/transitions.js).
-export const staleRefusal = {
+const staleRefusal = {
   status: 409,
   body: { error: 'This job changed while you were looking at it. Reload and try again.', code: 'stale' },
 };
@@ -182,6 +183,87 @@ async function sendJobWithParts(res, id) {
 const bumpJobVersion = (id) => db.prepare('UPDATE workshop_jobs SET version = version + 1, updated_at = now() WHERE id = ?').run(id);
 
 const lastPartOf = (id) => db.prepare('SELECT * FROM workshop_job_parts WHERE workshop_job_id = ? ORDER BY position DESC LIMIT 1').get(id);
+
+// Staff answer a customer's change request (piece 12). Under the booking lock
+// for both days; the version is the one staff last read.
+async function answerChangeRequest(req, res, id, answer) {
+  const body = await readJsonBody(req);
+  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+  const requestedGone = { status: 409, body: { error: 'The requested time is no longer free', code: 'capacity' } };
+  let out;
+  try {
+    out = await withJobBookingLock(id, [], async (job) => {
+      if (job.version !== body.version) return staleRefusal;
+      const requested = requestedOf(job);
+      if (!requested) {
+        return { status: 409, body: { error: `There's no change request to ${answer}`, code: 'illegal' } };
+      }
+      if (answer === 'accept') {
+        // The shop's slot rules, the job itself left out; never the capacity
+        // calculator - staff are never refused for capacity (decision log D14).
+        const slotError = await checkJobSlot({
+          jobDate: requested.jobDate, startTime: requested.startTime, endTime: requested.endTime,
+          mechanicId: requested.mechanicId, ignoreJobId: id,
+        });
+        if (slotError) return requestedGone;
+        await applyLocked(job, 'accept');
+        await db.prepare(
+          `UPDATE workshop_jobs SET job_date = ?, mechanic_id = ?, start_time = ?, end_time = ?, ${CLEAR_REQUEST}, updated_at = now()
+           WHERE id = ?`
+        ).run(requested.jobDate, requested.mechanicId, requested.startTime, requested.endTime, id);
+        // The requested hold becomes the booking's own; the old one goes.
+        await db.prepare(
+          `UPDATE workshop_capacity_holds SET state = 'released'
+           WHERE workshop_job_id = ? AND purpose = 'booking' AND state IN ('held', 'confirmed')`
+        ).run(id);
+        await db.prepare(
+          `UPDATE workshop_capacity_holds SET purpose = 'booking'
+           WHERE workshop_job_id = ? AND purpose = 'requested' AND state IN ('held', 'confirmed')`
+        ).run(id);
+      } else {
+        await applyLocked(job, 'decline');
+        await db.prepare(
+          `UPDATE workshop_jobs SET ${CLEAR_REQUEST}, change_declined_at = now(), updated_at = now() WHERE id = ?`
+        ).run(id);
+      }
+      await syncJobHold(id);
+      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+      return { status: 200, body: serializeWorkshopJob(row) };
+    });
+  } catch (err) {
+    // The 024 index: another live hold sits on the requested slot.
+    if (err.code !== '23505') throw err;
+    out = requestedGone;
+  }
+  if (out?.gone) return notFound(res, 'Job not found');
+  sendJson(res, out.status, out.body);
+}
+
+// One item of "Waiting for you" (decision log D12).
+function waitingItem(row) {
+  const kind = row.booking_state === 'pending' ? 'new_booking'
+    : row.booking_state === 'reschedule_requested' ? 'change_request' : 'customer_cancelled';
+  const slot = (jobDate, startTime, endTime, mechanicId, mechanicName) => ({
+    jobDate, startTime: startTime || '', endTime: endTime || '', mechanicId, mechanicName: mechanicName ?? null,
+  });
+  const current = slot(row.job_date, row.start_time, row.end_time, row.mechanic_id, row.mechanic_name);
+  return {
+    kind,
+    jobId: row.id,
+    reference: row.reference,
+    ...current,
+    customerName: row.customer_name ?? null,
+    serviceNames: row.service_names,
+    services: row.services,
+    arrivedAt: { new_booking: row.created_at, change_request: row.requested_at, customer_cancelled: row.cancelled_at }[kind],
+    ...(kind === 'change_request'
+      ? {
+        from: current,
+        to: slot(row.requested_job_date, row.requested_start_time, row.requested_end_time, row.requested_mechanic_id, row.requested_mechanic_name),
+      }
+      : {}),
+  };
+}
 
 export function register(route) {
   route('GET', '/api/workshop-jobs', async (req, res, params, query) => {
@@ -538,4 +620,177 @@ export function register(route) {
     }
     sendJson(res, out.status, out.body);
   });
+
+  // ---------- Workshop job actions ----------
+  //
+  // One endpoint per thing a person does, not a status field on the job's PUT
+  // (server/routes/workshop.js).
+  // The URL names what happened, so the access log, the screen trace and any
+  // future per-action permission all read the path instead of the body.
+  //
+  // Every one of these carries a `screens:` comment naming the screen designs it
+  // serves. scripts/ci/assert-screen-trace.mjs fails the build if a workshop
+  // route has no such comment or names an id that is not in screen-index.json -
+  // the design's "an endpoint no screen consumes is not built" rule, made into a
+  // check that runs rather than a promise in a document.
+  function jobActionRoute(action, machine, event) {
+    route('POST', `/api/workshop-jobs/:id/${action}`, async (req, res, params) => {
+      const id = Number(params.id);
+      const body = await readJsonBody(req);
+      // The caller must say which version it saw. Defaulting it would turn every
+      // racing write into a silent last-one-wins, which is the bug the version
+      // column exists to prevent.
+      if (!Number.isInteger(body.version)) {
+        return badRequest(res, VERSION_REQUIRED);
+      }
+      // A customer's change request is answered with accept-change or
+      // decline-change (piece 12): plain accept/decline would return the job to
+      // scheduled without moving it or telling the customer.
+      if (machine === bookingRequest && (event === 'accept' || event === 'decline')) {
+        const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
+        if (current && requestedOf(current)) {
+          return sendJson(res, 409, {
+            error: 'This booking has a change request from the customer - accept or decline the change instead', code: 'illegal',
+          });
+        }
+      }
+      const result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
+      if (!result.ok) {
+        if (result.code === 'not_found') return notFound(res, 'Job not found');
+        // `code` is what a screen branches on: 'stale' means reload and look
+        // again, 'illegal' means the move was never allowed and retrying cannot
+        // help. The message is for people and may be reworded; the code may not.
+        return sendJson(res, 409, { error: result.message, code: result.code });
+      }
+      if (machine === bookingRequest) {
+        // No staff booking event keeps a customer's request (accept and decline
+        // of one are refused above), so any request columns left on the job go -
+        // a staff request_reschedule must never hold a time nobody checked
+        // (piece 12). Only if nothing has written the job since this event: a
+        // customer's request made after it is theirs to keep.
+        await db.prepare(`UPDATE workshop_jobs SET ${CLEAR_REQUEST} WHERE id = ? AND version = ?`).run(id, result.job.version);
+      }
+      // A staff cancellation never shows in "Waiting for you" (piece 12), and
+      // the link no longer speaks of a declined change.
+      if (machine === bookingRequest && event === 'cancel') {
+        await db.prepare(
+          "UPDATE workshop_jobs SET cancelled_by = 'staff', cancelled_at = now(), change_declined_at = NULL WHERE id = ?"
+        ).run(id);
+      }
+      // A hold that outlives its booking is capacity the diary is still promising
+      // away, released in the same request rather than on a timer - but a
+      // reschedule declined back onto a still-live booking (scheduled) must keep
+      // its hold. syncJobHold decides from the job's current state, not from
+      // which event fired, so it releases only when the job is no longer live
+      // and otherwise keeps (or realigns) the one hold a live job holds.
+      await syncJobHold(id);
+      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+      sendJson(res, 200, serializeWorkshopJob(row));
+    });
+  }
+
+  // screens: requests, review
+  jobActionRoute('accept', bookingRequest, 'accept');
+
+  // screens: reject, rejected
+  jobActionRoute('decline', bookingRequest, 'decline');
+
+  // screens: reschedule, change-pending
+  jobActionRoute('request-reschedule', bookingRequest, 'request_reschedule');
+
+  // screens: cancel, cancelled
+  jobActionRoute('cancel', bookingRequest, 'cancel');
+
+  // screens: expired
+  jobActionRoute('expire', bookingRequest, 'expire');
+
+  // screens: change-pending, diary
+  route('POST', '/api/workshop-jobs/:id/accept-change', async (req, res, params) =>
+    answerChangeRequest(req, res, Number(params.id), 'accept'));
+
+  // screens: change-pending, diary
+  route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params) =>
+    answerChangeRequest(req, res, Number(params.id), 'decline'));
+
+  // Staff saw a customer's cancellation (piece 12, decision 5): it leaves
+  // "Waiting for you". Keeps the first time it was seen; still needs the version.
+  // screens: cancelled, diary
+  route('POST', '/api/workshop-jobs/:id/cancellation-seen', async (req, res, params) => {
+    const id = Number(params.id);
+    const body = await readJsonBody(req);
+    if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
+    const job = await db.prepare('SELECT id, cancelled_by FROM workshop_jobs WHERE id = ?').get(id);
+    if (!job) return notFound(res, 'Job not found');
+    if (job.cancelled_by !== 'customer') {
+      return sendJson(res, 409, { error: "Only a customer's cancellation can be marked as seen", code: 'illegal' });
+    }
+    const { changes } = await db.prepare(
+      `UPDATE workshop_jobs SET cancellation_seen_at = COALESCE(cancellation_seen_at, now()), version = version + 1, updated_at = now()
+     WHERE id = ? AND version = ?`
+    ).run(id, body.version);
+    if (changes === 0) return sendJson(res, staleRefusal.status, staleRefusal.body);
+    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
+    sendJson(res, 200, serializeWorkshopJob(row));
+  });
+
+  // "Waiting for you" (piece 12, decision 3): new online bookings (only the
+  // portal sets terms_accepted_at), customers' change requests and customers'
+  // cancellations not yet seen - oldest first by when each arrived.
+  // screens: requests, diary
+  route('GET', '/api/workshop-waiting', async (req, res) => {
+    const rows = await db.prepare(
+      `SELECT w.*, c.name AS customer_name, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
+            (SELECT coalesce(json_agg(s.name ORDER BY js.position), '[]'::json)
+               FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
+              WHERE js.workshop_job_id = w.id) AS service_names,
+            (SELECT coalesce(json_agg(json_build_object('id', s.id, 'name', s.name) ORDER BY js.position), '[]'::json)
+               FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
+              WHERE js.workshop_job_id = w.id) AS services
+     FROM workshop_jobs w
+     LEFT JOIN customers c ON c.id = w.customer_id
+     LEFT JOIN employees m ON m.id = w.mechanic_id
+     LEFT JOIN employees rm ON rm.id = w.requested_mechanic_id
+     WHERE (w.booking_state = 'pending' AND w.terms_accepted_at IS NOT NULL)
+        OR (w.booking_state = 'reschedule_requested' AND w.requested_job_date IS NOT NULL)
+        OR (w.booking_state = 'cancelled' AND w.cancelled_by = 'customer' AND w.cancellation_seen_at IS NULL)`
+    ).all();
+    const items = rows.map(waitingItem)
+      .sort((a, b) => (new Date(a.arrivedAt) - new Date(b.arrivedAt)) || (a.jobId - b.jobId));
+    sendJson(res, 200, { count: items.length, items });
+  });
+
+  // screens: intake, scan
+  jobActionRoute('book-in', custody, 'book_in');
+
+  // screens: collection, closed
+  jobActionRoute('collect', custody, 'collect');
+
+  // The action is reopen-custody, not reopen, because the work machine has a
+  // reopen event too and they are different acts: one is a bike coming back
+  // through the door, the other is a final check that failed. One URL for both
+  // would be the same conflation the single status column produced.
+  // screens: reopen
+  jobActionRoute('reopen-custody', custody, 'reopen');
+
+  // screens: queue, job-page
+  jobActionRoute('start', work, 'start');
+
+  // screens: waiting
+  jobActionRoute('await-parts', work, 'await_parts');
+
+  // screens: waiting
+  jobActionRoute('parts-arrived', work, 'parts_arrived');
+
+  // screens: job, waiting
+  jobActionRoute('hold', work, 'hold');
+
+  // screens: job, waiting
+  jobActionRoute('resume', work, 'resume');
+
+  // screens: finished, job-page
+  jobActionRoute('finish', work, 'finish');
+
+  // See reopen-custody above: a failed final check is not a bike coming back.
+  // screens: reopen
+  jobActionRoute('reopen-work', work, 'reopen');
 }
