@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **21 of 25 decided.**
+Status: **all 25 decided** (7 Oct).
 
 ## Decided
 
@@ -258,27 +258,40 @@ change to signing-in decision 5 (`2026-09-29-signing-in-review.md`). Needs a
 drawing of the customer sign-in screen with the button, and Jack's yes
 before the real Google key is created.
 
-## Still to decide
+### 22–25. The minor ones
 
-**A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
+**Decision** (Jack, 7 Oct: "yeah lets just go with all the reccomneded"):
+- **22. Header search.** Finding bikes, frame numbers and booking requests
+  (a written line, `consolidate/ja.mjs:36`) is built as the line says, all
+  in WP-1.11 beside its server side rather than split with WP-1.1; the
+  results use the drawn search look, one row type per kind of result.
+- **23. The shop switcher.** The same rule as decisions 6, 7 and 12: in
+  stage 1 the sidebar shows the shop's name only; switching shops arrives
+  with WP-5.2 (build plan `:706`), when a shop can have more than one.
+- **24. The Messages edit box.** When a message can go by email, an email
+  preview — a subject line and the same wording, in the drawn preview's
+  style — sits beneath the text preview. A small design addition, approved
+  here.
+- **25. Two STATUS lines.** The trust-PIN and Mechanic drawings were done in
+  #172 (`2026-10-05-roles-and-switches.md:99`), and the "Change requested"
+  badge belongs to the job page in WP-4.1, stage 4
+  (`2026-10-03-quote-stage-design.md:172`; build plan `:566`). Both are
+  corrected in the next daily status pull request.
 
+## What follows
 
-**B. States that are missing**
-
-
-**C. Places where two sources disagree**
-
-
-**D. Minor**
-
-22. Header search should also find bikes, frame numbers and booking
-    requests — a written line only (`consolidate/ja.mjs:36`); its server
-    side is WP-1.11 but its screen situation is listed under WP-1.1.
-23. The shop switcher's open state is built in WP-5.2 (build plan `:706`)
-    but sits in every stage-1 sidebar.
-24. The Messages edit box shows only a text preview — no email preview or
-    subject line, and no "How messages are sent" section opened.
-25. Two STATUS lines are out of date: the trust-PIN and Mechanic drawings
-    were done in #172 (`2026-10-05-roles-and-switches.md:99`), and the
-    "Change requested" badge belongs to the job page in WP-4.1, stage 4
-    (`2026-10-03-quote-stage-design.md:172`; build plan `:566`).
+- **Drawings to add or bring into line** before or with their package:
+  the Owner or Manager PIN pop-up (1), "Choose your own PIN" (2), the "Give
+  someone their PIN" menu and list (3), the stage-1 Tills section and the
+  setup screen's two choices (4), the "Signing in" fold (9), the working bar
+  on a page (10), the till's tappable names (11), "Not in yet" (12), the
+  wrong-code line (13), the old drawings in 15, 16, 18, 19 and 21, the map's
+  takings line (20), the email preview (24), and customer sign-in with
+  "Continue with Google".
+- **For Mark** (his packages): WP-1.8's engine sends by WhatsApp too,
+  behind an adapter with a pretend version (17); Today's data needs no
+  takings (20); staff email sessions last 30 days without use (14); trust
+  PIN and its idle time are Owner and Manager only (9).
+- **Needs Jack's yes before it is created:** the real Google sign-in key;
+  the WhatsApp Business connection; later, the Apple Developer Program
+  ($99 a year).
