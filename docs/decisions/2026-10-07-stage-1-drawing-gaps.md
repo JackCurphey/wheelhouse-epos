@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **14 of 25 decided.**
+Status: **19 of 25 decided.**
 
 ## Decided
 
@@ -199,6 +199,29 @@ for workshop computers only (split plan `:409`).
 phone; a lost phone is handled by the Owner signing out that person's
 devices (roles spec). Chosen over 12 hours without use.
 
+### 15, 16, 18, 19 and 21. Older drawings that a later decision settles
+
+**The gap.** In each, an older drawing or map line disagrees with a later
+recorded decision:
+- 15: the pills drawing shows "Sign out" on a workshop computer
+  (`signin.mjs:197-203`); the decision is "Check out", no "Sign out"
+  (`consolidate/ja.mjs:40`; walk-through 8, decision 1).
+- 16: the mockup opens a Staff member's full sidebar at a workshop computer
+  (`mockup/links/jb.mjs:33-36`); the decision is workshop pages, owner pages
+  only after an Owner or Manager PIN (spec `:118`; walk-through 8,
+  decision 3).
+- 18: "Not part of your role" says "Reports are for owners and managers"
+  with no name to ask (`signin.mjs:66`); Reports is now switch 2, and block
+  29 reads "ask [name]".
+- 19: the map says a manager sets up a till (`app-map.mjs:403`); only the
+  Owner registers tills (spec `:59`; Owner setup 10, R5).
+- 21: "All shops" is for Owners and multi-shop Managers (`signin.mjs:63`);
+  "Give everything" includes it too (spec `:89`; R1).
+
+**Decision** (Jack, 7 Oct: "1"). Build each as the later decision says, and
+bring the old drawings and map lines into line with it. No decision
+changes.
+
 ### Added while deciding 13: "Continue with Google" for customers
 
 Jack asked why customers need a code when WorkOS offers Google or Apple
@@ -220,21 +243,10 @@ before the real Google key is created.
 
 **C. Places where two sources disagree**
 
-15. Sign out vs Check out on a workshop computer (`consolidate/ja.mjs:40`
-    vs `signin.mjs:197-203`).
-16. A Staff member at a workshop computer — "Workshop pages" (spec `:118`)
-    vs their full Staff sidebar (`mockup/links/jb.mjs:33-36`).
 17. Text, WhatsApp or email (`setup.mjs:382,385`) vs "text or email" (build
     plan `:304`; split plan `:410`).
-18. "Not part of your role" page — "Reports are for owners and managers",
-    no name to ask (`signin.mjs:66`), vs Reports as switch 2 and block 29's
-    "ask [name]".
-19. Who sets up a till — "a manager" (`app-map.mjs:403`) vs the Owner only
-    (spec `:59`).
 20. Takings on Today — the map and spec include them (`app-map.mjs:411`;
     spec `:261`); the `op-today` drawing has no takings card.
-21. "All shops" — Owners and managers at two or more shops (`signin.mjs:63`)
-    vs also anyone with "Give everything" (spec `:89`, decision R1).
 
 **D. Minor**
 
