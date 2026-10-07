@@ -107,8 +107,10 @@ export async function purgeAttachmentFiles(shopId) {
 
 // A date at least three weeks out on the given weekday (0 = Sunday), for tests
 // of anything that only looks from today forward, such as block clashes.
-export function futureDate(weekday) {
-  const d = new Date();
+// `from` is today unless a test runs on a pinned clock and needs the dates
+// near it: a screen pinned to 1 Sep only pages so far ahead.
+export function futureDate(weekday, from = new Date()) {
+  const d = new Date(from);
   d.setUTCHours(0, 0, 0, 0);
   d.setUTCDate(d.getUTCDate() + 21);
   while (d.getUTCDay() !== weekday) d.setUTCDate(d.getUTCDate() + 1);
