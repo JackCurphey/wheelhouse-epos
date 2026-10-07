@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **3 of 25 decided.**
+Status: **4 of 25 decided.**
 
 ## Decided
 
@@ -59,14 +59,24 @@ cleared); tapping a name opens the drawn PIN box, screen turned to them.
 Chosen over a "Give a PIN" button on the check-in screen, which every
 member of staff would see.
 
+### 4. Making a computer a till or a workshop computer
+
+**The gap.** "Set up this till" (`till-setup`) is built in WP-1.7, but the
+only drawn way in, "Make this computer a till", is in Till settings' Tills
+section, built in WP-5.1 (`mockup/links/j08.mjs:57`; build plan `:691`).
+"Make this computer a workshop computer" was a written line only
+(`consolidate/jb.mjs:34`, walk-through 8 decision 1).
+
+**Decision** (Jack, 7 Oct: "1"). Stage 1 brings forward only that button:
+the Owner's Till settings page gets the Tills section holding just "Make
+this computer a till"; the list of tills fills in with WP-5.1. The setup
+screen offers the two choices, a till or a workshop computer. Chosen over a
+temporary link elsewhere (Getting started) that would later move.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
 
-4. Making a computer a till or a workshop computer — the only way into "Set
-   up this till" is on the Tills page (WP-5.1), and "Make this computer a
-   workshop computer" is a written line only (`mockup/links/j08.mjs:57`;
-   build plan `:691`; `consolidate/jb.mjs:34`).
 5. The sidebar for people with extra switches — not drawn for Staff with
    switch 7, a Mechanic with any switch, or "Give everything a Manager can
    do"; which rooms a Mechanic who can use the till gets (spec `:31`, `:44`,
