@@ -6,8 +6,8 @@ import { startLiveServer, TEST_CLOCK_PIN } from '../helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic, staffFreshCookie } from '../helpers/staff.js';
 import { portalSignup } from '../helpers/portal.js';
 import { deleteTestShop } from '../helpers/testShop.js';
-import { bookOnline, dayMaker, linkActions } from '../helpers/linkActions.js';
-import { purgeAttachmentFiles } from '../helpers/workshopFixtures.js';
+import { bookOnline, linkActions } from '../helpers/linkActions.js';
+import { purgeAttachmentFiles, futureDate } from '../helpers/workshopFixtures.js';
 
 // The legacy staff diary (public/app.js, #workshop): "Waiting for you", the
 // review pop-up and the grid markings.
@@ -17,10 +17,19 @@ let owner: { cookie: string; shop: { id: number; slug: string } };
 let sam: number;
 let svc: { id: number; questions: { id: string; wording: string }[] };
 let customer: { cookie: string };
-// Counted from the pinned clock, not today: the diary opens on 1 Sep and
-// pages at most 8 weeks on (goToWeekOf), so dates counted from the real today
-// drifted past that once it was October.
-const nextDay = dayMaker(new Date(TEST_CLOCK_PIN));
+// dayMaker's sequence (a different weekday each call, a week further on after
+// every five), counted from the pinned clock rather than today: the diary
+// opens on the week of 1 Sep and pages at most 8 weeks on (goToWeekOf), so
+// dates counted from the real today drifted past that once it was October.
+const nextDay = (() => {
+  let n = 0;
+  return () => {
+    const i = n++;
+    const d = new Date(`${futureDate(1 + (i % 5), new Date(TEST_CLOCK_PIN))}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 7 * Math.floor(i / 5));
+    return d.toISOString().slice(0, 10);
+  };
+})();
 // A real 1x1 PNG: the booking route accepts a photo by its bytes.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
 
@@ -208,7 +217,7 @@ test('the minute timer stops at logout so it never wipes the login screen', asyn
 test('a change request shows amber on the job and a dashed outline at the requested time', async ({ page, context }) => {
   const booked = await book();
   await staff(`/api/workshop-jobs/${booked.id}/accept`, { method: 'POST', body: { version: 1 } });
-  // Same week as the booking: the next weekday in dayMaker's sequence may be in
+  // Same week as the booking: the next weekday in nextDay's sequence may be in
   // another week, so ask for 14:00 on the booking's own day.
   const link = linkActions(server!.baseUrl, owner.shop.slug);
   const res = await link.change(booked.code, { jobDate: booked.jobDate, mechanicId: sam, startTime: '14:00' });
