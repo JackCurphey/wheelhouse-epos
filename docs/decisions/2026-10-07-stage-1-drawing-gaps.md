@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **13 of 25 decided.**
+Status: **14 of 25 decided.**
 
 ## Decided
 
@@ -188,6 +188,17 @@ is drawn: "That code has expired — send a new one" (`consolidate/jb.mjs:26`;
 — check it or send a new one", in the expired line's look (digits in red,
 the line under the boxes). Chosen over "Wrong code — try again".
 
+### 14. How long before staff are signed out on their own devices
+
+**The gap.** Staff signed in by email and password (own phone, laptop, the
+office computer) eventually see the drawn "Please sign in again" screen
+(`signin.mjs:65`), but no decision said after how long; Q6's 10 minutes is
+for workshop computers only (split plan `:409`).
+
+**Decision** (Jack, 7 Oct: "1"). 30 days without use, like most apps on a
+phone; a lost phone is handled by the Owner signing out that person's
+devices (roles spec). Chosen over 12 hours without use.
+
 ### Added while deciding 13: "Continue with Google" for customers
 
 Jack asked why customers need a code when WorkOS offers Google or Apple
@@ -206,8 +217,6 @@ before the real Google key is created.
 
 **B. States that are missing**
 
-14. Email sign-in timeout — no decision found; the 10 minutes (Q6) is for
-    workshop computers (split plan `:409`).
 
 **C. Places where two sources disagree**
 
