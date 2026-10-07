@@ -1485,7 +1485,7 @@ function customerCanAct(row, today) {
 }
 
 // What a customer is allowed to see about their own job. Deliberately a
-// separate function from serializeWorkshopJob() above rather than a filtered
+// separate function from serializeWorkshopJob() (server/workshop/jobs.js) rather than a filtered
 // version of it: the staff serializer is where new fields get added, and a
 // shared one silently exposes each new field to customers the day it lands.
 // Notably absent - the linked order (id, status, total) and `notes`, which
