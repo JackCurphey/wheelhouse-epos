@@ -321,7 +321,7 @@ export async function syncJobHold(jobId) {
   }
 }
 
-// Shared by the staff "create job" route below and the online booking pages'
+// Shared by the staff "create job" route (server.js) and the online booking pages'
 // booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
 // linked order in one transaction. Trusts every field completely; callers
 // are responsible for validating/resolving them first (the portal route
@@ -330,7 +330,7 @@ export async function syncJobHold(jobId) {
 // client-sent total).
 // Takes the three states, not a status: workshop_jobs.status is a generated
 // column since migration 021 and Postgres refuses a direct write. Callers that
-// still speak the old five-value vocabulary (the staff diary's POST, below)
+// still speak the old five-value vocabulary (the staff diary's POST, in server.js)
 // translate at the boundary with readLegacyStatus().
 // Throws a pg unique-violation (code 23505) when another request already holds
 // the slot. Callers map that to 409 - the request was well-formed and lost a
@@ -379,7 +379,7 @@ export async function createWorkshopJob({ title, customerId, bikeId, mechanicId,
     }
 
     // Take the capacity hold in the same transaction as the job. checkJobSlot
-    // above is a SELECT, so two requests can both pass it and both insert; the
+    // (the caller's, first) is a SELECT, so two requests can both pass it and both insert; the
     // partial unique index from migration 018 is what makes exactly one of them
     // win. Inside the transaction so the loser's job rolls back with its hold
     // rather than surviving as a booking for a slot it does not hold.
