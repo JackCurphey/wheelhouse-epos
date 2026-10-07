@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **20 of 25 decided.**
+Status: **21 of 25 decided.**
 
 ## Decided
 
@@ -234,6 +234,19 @@ like the other outside services; the real WhatsApp Business connection (a
 real account, usually a per-message charge) waits for Jack's yes. Chosen
 over adding WhatsApp in a later stage.
 
+### 20. Takings on Today
+
+**The gap.** The app map says the Owner's Today shows takings
+(`app-map.mjs:411`), and the roles spec's Today data includes them (spec
+`:261`, §7.9); opening the shop decision 3 (30 Sep) sets Today's four parts
+— Tills, Who's in, Workshop today, Needs attention — with no takings, and
+the `op-today` drawing follows it.
+
+**Decision** (Jack, 7 Oct: "1"). Keep the four parts; takings stay in
+Reports › Takings and cash-ups. The map line is brought into line, and
+Mark is told Today's data needs no takings. Chosen over a "Takings so far
+today" line on the Tills card.
+
 ### Added while deciding 13: "Continue with Google" for customers
 
 Jack asked why customers need a code when WorkOS offers Google or Apple
@@ -255,8 +268,6 @@ before the real Google key is created.
 
 **C. Places where two sources disagree**
 
-20. Takings on Today — the map and spec include them (`app-map.mjs:411`;
-    spec `:261`); the `op-today` drawing has no takings card.
 
 **D. Minor**
 
