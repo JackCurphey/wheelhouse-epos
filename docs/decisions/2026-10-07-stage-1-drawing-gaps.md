@@ -13,7 +13,7 @@ the drawings in `docs/design/user-journeys/generator/` (`consolidate/ja.mjs`,
 `jb.mjs`, `j08.mjs`, `j10.mjs`, `j12.mjs`). The check read the drawings' text,
 not their pictures, and not the live claude.ai canvases.
 
-Status: **7 of 25 decided.**
+Status: **8 of 25 decided.**
 
 ## Decided
 
@@ -113,6 +113,18 @@ automatic rows appear as each package adds them. With nothing there, it
 uses Till settings' drawn empty-list look (`set-till-empty`): one short line
 and the add button.
 
+### 8. The "not saved" message
+
+**The gap.** WP-1.3 builds the failed save (build plan `:230`), but its
+drawing (`set-save-failed`: "Not saved — no internet connection. Your
+change is kept here." with "Try again") sits on the End of day page, filed
+under WP-5.1 (`consolidate/j08.mjs:23`; `setup.mjs:157`).
+
+**Decision** (Jack, 7 Oct: "1"). Built in WP-1.3 exactly as drawn, as part
+of the frame every Settings page shares, so it works on the Till page from
+stage 1. Chosen over leaving it to WP-5.1, which would let a failed save on
+the Till page go unnoticed.
+
 ## Still to decide
 
 **A. Needed by stage-1 screens but not drawn, or drawn only in a later package**
@@ -120,8 +132,6 @@ and the add button.
 
 **B. States that are missing**
 
-8. Failed save — WP-1.3 builds it (build plan `:230`), but its drawing
-   (`set-save-failed`) is filed under WP-5.1 (`consolidate/j08.mjs:23`).
 9. Where the trust PIN and idle-time settings go, and who may change trust
    PIN (`consolidate/j08.mjs:59-60`).
 10. Block 26's "Working: [name] · Switch" bar — drawn only inside the job
