@@ -1,5 +1,10 @@
 # Release 2 build plan — from here to the trading week
 
+> **From 8 Oct 2026 this plan sets the order of work and the lanes only.**
+> How each piece is specified and built is in `CLAUDE.md` and OpenSpec
+> (`openspec/`); an OpenSpec change replaces §4 step 2's short spec in
+> `docs/superpowers/specs/` (`docs/decisions/2026-10-08-openspec-only.md`).
+
 **Date:** 3 October 2026
 **Status:** answered by Jack on 3 Oct (`docs/decisions/2026-10-03-build-plan-questions.md`);
 waiting for Mark's view before anything starts. Jack: "dont start the build
