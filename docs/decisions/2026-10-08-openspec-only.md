@@ -1,7 +1,7 @@
 # OpenSpec only — how each piece is specified (8 Oct 2026)
 
 **Who decided.** Mark, 8 Oct 2026, in chat, stating it is Jack's decision
-too. Jack to confirm on #186.
+too. Confirmed by Jack on #186, 8 Oct 2026.
 
 **Decision.**
 1. **OpenSpec is the only place specs are written.** Every piece of work is
@@ -16,13 +16,18 @@ too. Jack to confirm on #186.
 4. **Archiving is the last commit in the change's own pull request**, before
    it merges, not after.
 5. **The split stays; whole features are delivered end to end, in sync**
-   (Mark, 8 Oct, for Jack to confirm on #186). Mark still builds the server
+   (Mark, 8 Oct; confirmed by Jack on #186). Mark still builds the server
    half and Jack the screens half (split plan §4.3), but each work package
    is one OpenSpec change covering both halves: the contract goes in its
    `design.md`, what the feature does in its specs, and its `tasks.md` lists
    both Mark's server tasks and Jack's screens tasks. It is archived once
    both halves are in, so `openspec/specs/` only ever describes whole,
    working features.
+
+6. **Mark still runs one package ahead** (split plan §4.4; Jack, 8 Oct,
+   #186). `main` may carry a package's change, not yet archived, between
+   the two halves; the archive is the last commit of the second pull
+   request.
 
 **What it replaces.** Build plan §4 step 2: a short spec as a section in a
 file in `docs/superpowers/specs/`, which also held split plan §4.3's
