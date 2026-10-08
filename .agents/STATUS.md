@@ -10,7 +10,9 @@
 then image uploads and booking/portal; the dashboard needs Jack's
 `currentShopToday`. Then WP-0.5. #157 merged (5 Oct), so the types split
 (§4.3) can go. Waiting on Mark: approving Jack's #180–#184, #188, #189;
-re-reviewing #187–#189, #191 (answered 8 Oct); Jack's questions on #180.
+re-reviewing #187–#189, #191 (answered 8 Oct); Jack's questions on #180;
+#134's till, sales, Shopify and dashboard part, and where a job's open order
+lives after WP-1.6; #137 for WP-0.5.
 **Jack is on:** WP-0.4's workshop moves (#180–#184, open). OpenSpec specs of
 built areas (#186): workshop-jobs #187 and workshop-diary #191 (open), with
 fixes #188 and #189 found while writing them; #189 also waits on #183. Then
