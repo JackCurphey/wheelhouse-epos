@@ -1369,6 +1369,10 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   if (doc.workshop_job_id) {
     jobToFinish = await db.prepare('SELECT id, work_state, version FROM workshop_jobs WHERE id = ?')
       .get(doc.workshop_job_id);
+    // Work already finished ("Mark ready for collection") already says the
+    // work is done, which is what the decision asks of the record: the
+    // customer pays and the job is left as it is (Jack, 8 Oct).
+    if (jobToFinish && jobToFinish.work_state === 'complete') jobToFinish = null;
     if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
       return sendJson(res, 409, {
         error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,

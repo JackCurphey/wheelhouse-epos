@@ -197,6 +197,36 @@ test('a job on hold or waiting for parts is refused too, and says how to proceed
   }
 });
 
+test('tendering the order for work already finished goes through and leaves the job as it is', async () => {
+  // Jack, 8 Oct, reading his 20 Sep decision as "the record must say the work
+  // is done": "Mark ready for collection" finishes the work first, and the
+  // customer then pays. Refusing that tender (finish is illegal from
+  // complete) blocked the shop's normal order with no clean way back.
+  const { cookie, shop, mechanicId, cashierId } = await newShop();
+  try {
+    const created = await staffRequest(server.baseUrl, cookie, '/api/workshop-jobs', {
+      method: 'POST',
+      body: { title: 'Finished first', jobDate: MONDAY, startTime: '16:00', endTime: '17:00', mechanicId },
+    });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    const finished = await walk(cookie, created.body.id, ['book-in', 'start', 'finish']);
+    assert.equal(finished.workState, 'complete');
+
+    const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/convert`, {
+      method: 'POST',
+      body: { cashierId, cashAmount: 0, cashTendered: 0 },
+    });
+    assert.equal(converted.status, 201, JSON.stringify(converted.body));
+    assert.equal(converted.body.jobWarning, undefined, 'nothing went wrong, so no warning');
+
+    const job = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`);
+    assert.equal(job.body.workState, 'complete');
+    assert.equal(job.body.version, finished.version, 'the job was already finished, so paying does not move it again');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
 test('a cancelled job is not frozen against edits the way finished work is', async () => {
   // The derived status reads 'complete' for a cancelled booking, and the
   // frozen-job guard used to key off that column. Freezing a cancelled job
