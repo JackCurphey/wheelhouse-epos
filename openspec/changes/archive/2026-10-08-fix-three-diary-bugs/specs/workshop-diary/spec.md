@@ -31,7 +31,7 @@ A change request SHALL open in a pop-up headed "Change request", with the custom
 - **THEN** the booking moves to Alex, as the pop-up's To side said
 
 ### Requirement: Dropping a job on the customer's requested time accepts the change
-When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
+When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop of the job's first day on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
 
 #### Scenario: Dropped on the requested start
 - **WHEN** a booking at 10:00 whose customer asked for 14:00 on another day is saved to that day at 14:00 to 15:30
@@ -44,3 +44,7 @@ When a job with a customer's change request waiting is saved onto exactly the re
 #### Scenario: Dropped on the outline in the Week view, for another mechanic
 - **WHEN** the customer asked to move from Alex Morgan to Jo Taylor and staff drop the job on the dashed outline in the Week view
 - **THEN** the move is sent with Jo Taylor as the mechanic, so the change is accepted
+
+#### Scenario: A later day dropped on the requested time
+- **WHEN** a two-day job's customer asked to move it, and staff drop day 2 on the requested day and time in the Week view
+- **THEN** day 2 moves with its own mechanic and the request stays

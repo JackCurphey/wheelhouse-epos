@@ -638,7 +638,8 @@ export function DiaryPage() {
     // change request's time sends the mechanic asked for, so the move accepts
     // the request (Jack, 8 Oct).
     const asked = job.requested as { jobDate?: string; startTime?: string; mechanicId?: number | null } | null | undefined;
-    if ((view === 'week' || c.all) && asked?.mechanicId != null && asked.mechanicId !== job.mechanicId
+    // Only the job's first day: a request is that day's (a later day moves on its own).
+    if (job.partPos === 1 && (view === 'week' || c.all) && asked?.mechanicId != null && asked.mechanicId !== job.mechanicId
       && asked.jobDate === c.date && asked.startTime === hhmm(p.startMin)) {
       body.mechanicId = asked.mechanicId;
     }

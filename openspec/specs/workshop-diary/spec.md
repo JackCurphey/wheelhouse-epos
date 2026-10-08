@@ -165,7 +165,7 @@ A move SHALL be checked against the shop's rules for a job's day and time (see `
 - **THEN** it cannot be picked up or dragged
 
 ### Requirement: Dropping a job on the customer's requested time accepts the change
-When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
+When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop of the job's first day on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
 
 #### Scenario: Dropped on the requested start
 - **WHEN** a booking at 10:00 whose customer asked for 14:00 on another day is saved to that day at 14:00 to 15:30
@@ -178,6 +178,10 @@ When a job with a customer's change request waiting is saved onto exactly the re
 #### Scenario: Dropped on the outline in the Week view, for another mechanic
 - **WHEN** the customer asked to move from Alex Morgan to Jo Taylor and staff drop the job on the dashed outline in the Week view
 - **THEN** the move is sent with Jo Taylor as the mechanic, so the change is accepted
+
+#### Scenario: A later day dropped on the requested time
+- **WHEN** a two-day job's customer asked to move it, and staff drop day 2 on the requested day and time in the Week view
+- **THEN** day 2 moves with its own mechanic and the request stays
 
 ### Requirement: New job starts by choosing a time on the diary
 New job SHALL turn the diary to "Choose a time for the new job.", with "Enter a time instead" and Cancel. A click on the grid SHALL open the New job form at that time, snapped to 15 minutes; Cancel SHALL leave the diary as it was. The form SHALL have no date or time field. In the Day view the clicked column's mechanic SHALL be chosen, or Shared queue in the "Not assigned yet" column. Otherwise the form SHALL choose a mechanic as the next requirement says.

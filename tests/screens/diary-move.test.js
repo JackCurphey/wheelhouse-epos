@@ -31,6 +31,13 @@ const JOBS = [
   // A change request to another day, time and mechanic (Alex → Jo).
   job({ id: 5, reference: 'WH-1005', bikeLabel: 'Brompton C Line', customerName: 'Oliver Chen', jobDate: '2026-10-09', startTime: '14:00', endTime: '15:00',
     bookingState: 'reschedule_requested', requested: { jobDate: '2026-10-08', startTime: '15:00', endTime: '16:00', mechanicId: 12 } }),
+  // A two-day job whose customer asked to move it; the request is day 1's.
+  job({ id: 6, reference: 'WH-1006', bikeLabel: 'Cube Attain', customerName: 'Oliver Chen', title: 'Frame rebuild', jobDate: '2026-10-05', startTime: '09:00', endTime: '10:00',
+    bookingState: 'reschedule_requested', requested: { jobDate: '2026-10-09', startTime: '09:15', endTime: '10:15', mechanicId: 12 },
+    parts: [
+      { id: 61, position: 1, date: '2026-10-05', startTime: '09:00', endTime: '10:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
+      { id: 62, position: 2, date: '2026-10-09', startTime: '09:00', endTime: '10:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
+    ] }),
 ];
 
 const realFetch = globalThis.fetch;
@@ -102,6 +109,15 @@ test('in the Week view, dropping a change request on the time asked for sends th
   for (let i = 0; i < 4; i += 1) fireEvent.keyDown(b, { key: 'ArrowDown' }); // 15 minutes a press
   fireEvent.keyDown(b, { key: 'Enter' });
   await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/5 {"jobDate":"2026-10-08","startTime":"15:00","endTime":"16:00","version":3,"mechanicId":12}']));
+});
+
+test("a later day dropped on the requested time sends no mechanic: the request is the job's first day's", async () => {
+  const { ui, fireEvent, waitFor, within } = await openDiary();
+  const day2 = within(ui.getByRole('group', { name: 'Friday 9 October' })).getByRole('button', { name: /day 2 of 2/ });
+  fireEvent.keyDown(day2, { key: 'm' });
+  fireEvent.keyDown(day2, { key: 'ArrowDown' });
+  fireEvent.keyDown(day2, { key: 'Enter' });
+  await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/6/parts/62 {"jobDate":"2026-10-09","startTime":"09:15","endTime":"10:15","version":3}']));
 });
 
 test('in the Week view, a drop anywhere else still sends no mechanic', async () => {
