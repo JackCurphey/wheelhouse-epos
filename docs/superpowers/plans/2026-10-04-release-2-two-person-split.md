@@ -320,15 +320,21 @@ what every new table must prove:
 
 ### 4.3 The contract, before either half is built
 
-Each package's short spec (build plan §4, step 2) gets a **Contract**
-subsection, written by Mark and read by Jack's session in the same spec
-pull request:
+Each package is one OpenSpec change covering both halves (Mark, 8 Oct,
+`docs/decisions/2026-10-08-openspec-only.md` item 5). The change's
+`design.md` gets a **Contract** section, written by Mark and read by Jack's
+session in the same pull request that adds the change:
 
 - each endpoint: method, path, who may call it (role and switch), request
   and response shapes, error codes
 - the live-update events it sends (WP-1.9 onwards)
 - the needs-attention kinds it adds to Today (WP-1.10 onwards)
 - the test shop data Jack's browser tests will need
+
+What the feature does for the shop goes in the change's specs. Its
+`tasks.md` lists both Mark's server tasks and Jack's screens tasks. The
+change is archived once both halves are in, so `openspec/specs/` only ever
+describes whole, working features.
 
 The types go in `src/lib/api/<area>.ts`, not the single `types.ts`, so two
 packages never edit the same types file. Changing a contract after it

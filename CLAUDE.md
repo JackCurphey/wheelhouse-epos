@@ -41,7 +41,9 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
   plan set only the order of work and the lanes; every piece of work is an
   OpenSpec change (proposal, specs, design, tasks) instead of a section in
   `docs/superpowers/specs/`. An area's spec is written just before work
-  first touches that area, not all at once.
+  first touches that area, not all at once. A package with both halves is
+  one change: the contract in its `design.md`, both people's tasks in its
+  `tasks.md`, archived once both halves are in (split plan §4.3).
 - `docs/superpowers/specs/` is history and source material; no new files go
   there. Older plans in `docs/superpowers/plans/` are history too. As each
   area's OpenSpec spec lands, a line at the top of the old documents it

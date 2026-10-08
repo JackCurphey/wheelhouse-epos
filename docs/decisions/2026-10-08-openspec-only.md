@@ -15,9 +15,18 @@ too. Jack to confirm on #186.
    all filled in at once.
 4. **Archiving is the last commit in the change's own pull request**, before
    it merges, not after.
+5. **The split stays; whole features are delivered end to end, in sync**
+   (Mark, 8 Oct, for Jack to confirm on #186). Mark still builds the server
+   half and Jack the screens half (split plan §4.3), but each work package
+   is one OpenSpec change covering both halves: the contract goes in its
+   `design.md`, what the feature does in its specs, and its `tasks.md` lists
+   both Mark's server tasks and Jack's screens tasks. It is archived once
+   both halves are in, so `openspec/specs/` only ever describes whole,
+   working features.
 
 **What it replaces.** Build plan §4 step 2: a short spec as a section in a
-file in `docs/superpowers/specs/`. That folder is now history; no new files
+file in `docs/superpowers/specs/`, which also held split plan §4.3's
+contract. That folder is now history; no new files
 go there.
 
 **What stays.** The plans for order and lanes; Jack's decisions in
