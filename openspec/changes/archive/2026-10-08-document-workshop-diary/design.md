@@ -85,13 +85,27 @@ the app honestly, not how to build it.
    view, multi-mechanic split, resize handles and job form are old-app
    detail with little or no test, due to be removed once replaced (project
    rule 5). They are left out (see Not confirmed).
-6. **Example data comes from the tests** (Maya Patel, Trek Domane, Alex
-   Morgan, Jo Taylor, Sam Reed, Specialized Sirrus, Oliver Chen, Brompton C
-   Line, Aisha Khan, Cannondale Quick, Priya Shah, Giant Escape, Tom Hale,
-   Ribble CGR, Lena Fox, Cube Attain, WH-1001, WH-1042, WH-1043, WH-1050,
-   Standard service · 90 min, Frame rebuild, Brake pads (pair), £93.00,
-   Wendy Waiting, Sam, Alex, Test repair, Test quick, "Lunch with the
-   dentist", "Training", "Staff training"). No name, price or wording is invented.
+6. **Example data comes from the drawings** (project rules,
+   `openspec/config.yaml`). Every name, bike, job number, service, note,
+   line item and price in a scenario appears in the diary drawings
+   (`docs/design/user-journeys/generator/diary.mjs`, with the mechanics'
+   full names in `personas.md`): Maya Patel, Trek Domane AL 3, WH-1042,
+   Alex Morgan (Alex), Jo Taylor (Jo), Sam Reed, Specialized Sirrus,
+   Oliver Chen, Brompton C Line, WH-1052, Aisha Khan, Cannondale Quick,
+   Jamie Brooks, Giant Escape 2, WH-1038, WH-1040, Standard service, Safety
+   check, Gear service, Brake service · 45 min, Full service and Individual
+   service, the customer's note "My rear brake squeals and feels weak. The
+   gears could use a tune-up too.", Shimano brake pads, Fit & adjust
+   brakes, Replace gear cable and £111.00. Where the drawings have no
+   example (a job over two days, an untimed job's customer and bike, a
+   block's reason, a note, a second time zone), the scenario uses a
+   bracketed placeholder such as [reason]. The tests use other names
+   (Wendy Waiting, Test repair, a mechanic called Sam, and so on); the
+   scenarios describe the same behaviour with the drawings' names. Dates,
+   times and lengths are the tests' own, because they pin the behaviour
+   (the shop's today, notice, capacity sums). The Evidence table and the
+   Surprising list below still quote test names and the reviewer's probes
+   as they were run. No name, price or wording is invented.
 
 ## Evidence
 
@@ -146,8 +160,8 @@ another file is named. "Code only" means no test asserts it.
 | "Today" is the shop's own date, in its own time zone | `clock.test.js`: "in summer, now is UK time, not UTC"; "in winter, UK time and UTC agree"; "on the clock-change days, now follows the UK clock"; "a non-UK zone moves today"; "known and unknown time zones"; "a pinned test clock is read from the environment"; "in production the test pin is ignored and the real time is used". `shop-today-boundary.test.js`: "a new block reports clashes from the shop's today on, not the UTC date"; "a mode change cannot start on the shop's today"; "a booking for the day that has passed in the UK is refused". `workshop-mode-change.test.js`: "the mode change's today is the shop's today, in the shop's time zone". `portal-availability-capacity.test.js`: "in summer the notice runs from UK time, not UTC". Code: `currentShopToday` |
 | Staff can read and change the workshop settings | `workshop-settings.test.js`: "a new shop defaults to timed booking, so nothing changes for existing shops"; "settings not named in a PUT are left alone"; "a new shop has two hours of minimum notice, on UK time"; "a new shop has no terms of its own". `capacity-schema.test.js`: "a new shop starts with no reserve, since blocks now carry lunch". `workshop-weekday-hours.test.js`: "a new shop reports every open day at the usual hours". Code: `GET` and `PUT /api/workshop-settings`, `serializeWorkshopSettings` |
 | The booking mode, the drop-off window and the lengths have limits | `workshop-settings.test.js`: "a shop can switch to drop-off mode and set its window"; "an unknown booking mode is refused" (matches /timed\|drop/); "a drop-off window that ends before it starts is refused" (matches /after/); "the not-sure duration must be a sensible number of minutes" (matches /minutes/). Code: `PUT /api/workshop-settings` (exact messages; lead time and reserve limits: code only) |
-| A shop can schedule a change of booking mode | `workshop-mode-change.test.js`: all six tests. `capacity.test.js`: "a scheduled mode change applies from its date on, not before"; "a scheduled mode change settles once its date arrives, not before"; "a mode change needs both parts, a real future date, and a different mode" (messages matched by /both/, /tomorrow/, /look like/). `capacity-schema.test.js`: "a mode change needs both a mode and a date, or neither". `portal-availability-capacity.test.js`: "a scheduled mode change applies from its date". Code: `validateModeChange`, `settleModeChange` ("The shop already uses that mode": code only) |
-| Minimum notice and the time zone have limits | `workshop-settings.test.js`: "minimum notice and time zone are saved, and kept when a PUT leaves them out"; "minimum notice outside 0 minutes to 7 days, or not whole, is refused" (exact); "a time zone the server does not recognise is refused" (exact). Leaving the field out keeps the value: same test |
+| A shop can schedule a change of booking mode | `workshop-mode-change.test.js`: all six tests. `capacity.test.js`: "a scheduled mode change applies from its date on, not before"; "a scheduled mode change settles once its date arrives, not before"; "a mode change needs both parts, a real future date, and a different mode" (messages matched by /both/, /tomorrow/, /look like/). `capacity-schema.test.js`: "a mode change needs both a mode and a date, or neither". `portal-availability-capacity.test.js`: "a scheduled mode change applies from its date". Code: `validateModeChange`, `settleModeChange` ("The shop already uses that mode": code only). Cancelling: `workshop-mode-change.test.js` "a shop schedules drop-off mode from a future date, and can cancel it" sends both parts as null; a save leaving both parts out keeps the schedule ("other settings saves keep a scheduled change"). One part null and the other left out also cancels: code reading (`PUT /api/workshop-settings` runs `validateModeChange` only when a part is sent, and a missing part becomes null), no test |
+| Minimum notice and the time zone have limits | `workshop-settings.test.js`: "minimum notice and time zone are saved, and kept when a PUT leaves them out"; "minimum notice outside 0 minutes to 7 days, or not whole, is refused" (exact); "a time zone the server does not recognise is refused" (exact). Leaving the field out keeps the value: same test. An empty text ("") saved as 0: code reading (`PUT /api/workshop-settings` refuses only null before `Number()`, and `Number("")` is 0), no test |
 | Prices online and the shop's own booking terms are settings | `workshop-settings.test.js`: "price visibility can be turned on, and comes back as a boolean"; "booking terms are saved, kept when a PUT leaves them out, and reverted by null or blank"; "booking terms over 20,000 characters are refused" (exact); "booking terms that are not text or null are refused" (exact) |
 
 ## Not confirmed
@@ -267,6 +281,12 @@ reading" means confirmed in the code and not covered by any test.
     tablet (the computer layout) a second tap does nothing and only Open or
     a double-tap opens it. The phone does open on a second tap (code
     reading: `choose`, `chooseItem`).
+15. **An empty minimum notice saves no notice at all.** The server refuses
+    null as the minimum notice but reads an empty text ("") as 0, so a
+    save with the field cleared lets customers book from now on (code
+    reading: `PUT /api/workshop-settings`; Mark's review of this pull
+    request). Added after Jack's answer on this list (task 2.2); a fix
+    would be a separate change.
 
 ## Risks / Trade-offs
 

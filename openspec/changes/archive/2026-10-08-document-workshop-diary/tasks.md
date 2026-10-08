@@ -13,7 +13,7 @@ wrong, the spec is corrected, never the code.
 - [x] 1.4 For capacity (weekday hours, blocks, staff not held to capacity, free time, the capacity view, what customers are offered, customer refusals, holds, minimum notice, the shop's today), confirm the same way against `server/capacity.js`, `server/clock.js` and the tests; verified when every row is ticked
 - [x] 1.5 For the settings requirements (reading and saving, mode and lengths, the scheduled mode change, notice and time zone, prices and terms) confirm the same way; verified when every row is ticked
 - [x] 1.6 Confirm every quoted message appears word for word in the code: search `server/server.js`, `server/capacity.js`, `src/screens/diary/` and `public/diary-*.js` for each quoted string; verified when every quote is found
-- [x] 1.7 Run the evidence tests and see them pass on this branch: `npm run pretest`, then `npm test` with compose Postgres up, and `npm run test:browser` for the three diary browser files; verified by the test output showing no failures (the fresh review ran 25 of the evidence files, 260 tests passing; the rest are still to run)
+- [ ] 1.7 Run the evidence tests and see them pass on this branch: `npm run pretest`, then `npm test` with compose Postgres up, and `npm run test:browser` for the three diary browser files; verified by the test output showing no failures (the fresh review ran 25 of the evidence files, 260 tests passing; the rest were not run locally. The full suite runs in CI on this pull request, which is where the remaining evidence tests are checked)
 
 ## 2. Fresh review
 
@@ -33,5 +33,4 @@ wrong, the spec is corrected, never the code.
 
 ## Workflow follow-up
 
-- Archive the change with `/opsx:archive` once merged, so the spec lands in `openspec/specs/workshop-diary/spec.md`.
 - Check the archived spec has the Purpose section and all requirements, with `openspec show workshop-diary --type spec`.

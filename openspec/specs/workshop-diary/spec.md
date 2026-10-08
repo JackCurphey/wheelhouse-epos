@@ -14,12 +14,12 @@ is and how it moves is in `workshop-jobs`.
 The staff diary SHALL open on the week holding today, as seven day columns from Monday to Sunday under an hour scale, with the week's dates named in the toolbar. Previous and Next SHALL move a week, and Today SHALL return to the current week. Each job SHALL sit in its own day at its own time, showing the bike and then the job's title. The diary SHALL keep its place in the page address, so a reload opens the same week and view.
 
 #### Scenario: A job in its day
-- **WHEN** staff open the diary on the week of 5 October 2026 and Maya Patel's Trek Domane is booked for "Brake service" on Tuesday 6 October, 10:00 to 11:00
-- **THEN** the toolbar reads "5–11 October 2026" and the block sits in Tuesday 6 October's column showing "Trek Domane" and "Brake service"
+- **WHEN** staff open the diary on the week of 5 October 2026 and Maya Patel's Trek Domane AL 3 (WH-1042) is booked for "Standard service" on Tuesday 6 October, 10:00 to 11:00
+- **THEN** the toolbar reads "5–11 October 2026" and the block sits in Tuesday 6 October's column showing "Trek Domane AL 3" and "Standard service"
 
 #### Scenario: What a screen reader hears
 - **WHEN** a screen reader reaches that block
-- **THEN** it hears "Trek Domane, Brake service, Maya Patel, WH-1001, Expected, 10:00–11:00"
+- **THEN** it hears "Trek Domane AL 3, Standard service, Maya Patel, WH-1042, Expected, 10:00–11:00"
 
 #### Scenario: Next week
 - **WHEN** staff press Next week
@@ -30,14 +30,14 @@ On a computer or tablet, staff SHALL be able to switch between Week and Day. The
 
 #### Scenario: Switching to Day
 - **WHEN** staff choose Day on Tuesday 6 October
-- **THEN** the toolbar reads "Tuesday 6 October", Alex Morgan and Jo Taylor each have a column, and Alex Morgan's column shows "Trek Domane" with "Brake service · Expected"
+- **THEN** the toolbar reads "Tuesday 6 October", Alex Morgan and Jo Taylor each have a column, and Alex Morgan's column shows "Trek Domane AL 3" with "Standard service · Expected"
 
 ### Requirement: Staff can show one mechanic's jobs
 The diary SHALL offer people chips: Everyone, then each active mechanic. Choosing a mechanic SHALL show only that mechanic's jobs; a booking request with no mechanic yet SHALL show only under Everyone.
 
 #### Scenario: Choosing Alex Morgan
 - **WHEN** staff choose the Alex Morgan chip
-- **THEN** Alex Morgan's Trek Domane still shows, while Jo Taylor's Brompton C Line and the unassigned request for the Specialized Sirrus do not
+- **THEN** Alex Morgan's Trek Domane AL 3 still shows, while Jo Taylor's Brompton C Line and the unassigned request for the Specialized Sirrus do not
 
 ### Requirement: Each job is drawn in its status colour, with a legend
 Each block SHALL be drawn in the colour of one status word: Pending for a booking request, Change requested for a booking with a customer's change request waiting, Waiting for parts, Finished for finished work, Quoting when the job's quote is waiting for the customer, and Expected for anything else, including work started or on hold. A legend under the grid SHALL name every colour.
@@ -58,7 +58,7 @@ Each block SHALL be drawn in the colour of one status word: Pending for a bookin
 The diary SHALL NOT draw declined bookings, expired bookings, or bookings the shop cancelled. A booking the customer cancelled SHALL stay on the diary, struck through and reading Cancelled, until someone marks it seen; then it SHALL go.
 
 #### Scenario: A declined booking
-- **WHEN** Priya Shah's Giant Escape booking has been declined
+- **WHEN** Jamie Brooks's Giant Escape 2 booking has been declined
 - **THEN** it is not drawn
 
 #### Scenario: A customer's cancellation
@@ -69,8 +69,8 @@ The diary SHALL NOT draw declined bookings, expired bookings, or bookings the sh
 A job with no start time SHALL NOT be drawn on the time grid. In the Week view on a computer or tablet it SHALL appear as a chip showing only the bike, in one "No time" row above the grid for the whole week; the chip SHALL be plain text that cannot be opened or moved. The Day view SHALL show untimed jobs nowhere. On a phone the row SHALL show the day's untimed jobs only when one column shows, and read "None" when there are none.
 
 #### Scenario: An untimed job
-- **WHEN** Tom Hale's Ribble CGR is booked for Tuesday with no time
-- **THEN** "Ribble CGR" sits in the Week view's No time row
+- **WHEN** [customer name]'s [bike] is booked for a Standard service on Tuesday with no time
+- **THEN** "[bike]" sits in the Week view's No time row
 
 ### Requirement: The grid covers the shop's opening hours
 The time grid SHALL run from the shop's earliest opening to its latest closing across the week, in 30-minute rows, or 09:00 to 18:00 when no hours are set. A job outside those hours SHALL stretch the grid, on the hour, so it still shows.
@@ -93,16 +93,16 @@ Jobs in one column that overlap but start at different times SHALL sit side by s
 ### Requirement: Jobs that start together become one stack
 Jobs in one column that start at the same time SHALL become one stack, showing the front job and a count. Clicking or tapping a stack SHALL open a chooser with a tile for each job that opens it. Resting the mouse on a stack for 0.3 seconds, or a press and hold on a touch screen, SHALL fan its jobs out as diary blocks that open, move and summarise like any job.
 
-#### Scenario: Two jobs at 10:00
-- **WHEN** Trek Domane's Standard service (WH-1042) and Specialized Sirrus's Puncture repair (WH-1043) both start at 10:00 on Tuesday 6 October
-- **THEN** they show as one stack, and choosing it opens "2 jobs at 10:00" with "Tuesday 6 October · choose one to open" and a tile for each
+#### Scenario: Two jobs at 09:00
+- **WHEN** Jamie Brooks's Giant Escape 2 Safety check (WH-1038) and Aisha Khan's Cannondale Quick Gear service (WH-1040) both start at 09:00 on Tuesday 6 October
+- **THEN** they show as one stack, and choosing it opens "2 jobs at 09:00" with "Tuesday 6 October · choose one to open" and a tile for each
 
 ### Requirement: A job over several days has a block on each day
 A job worked over more than one day SHALL have a block on each of its days, at that day's time and mechanic, each saying "Day [n] of [total]".
 
-#### Scenario: A two-day frame rebuild
-- **WHEN** Maya Patel's Trek Domane AL 3 "Frame rebuild" (WH-1050) is booked 10:00 to 12:00 on Monday 5 and Tuesday 6 October
-- **THEN** Monday shows it as "day 1 of 2" and Tuesday shows "Day 2 of 2 · Frame rebuild"
+#### Scenario: A two-day job
+- **WHEN** [customer name]'s [bike], "[job title]" ([job number]), is booked 10:00 to 12:00 on Monday 5 and Tuesday 6 October
+- **THEN** Monday shows it as "day 1 of 2" and Tuesday shows "Day 2 of 2 · [job title]"
 
 ### Requirement: A customer's change request shows where the customer wants to go
 A booking with a customer's change request waiting SHALL show amber at its current time, and a dashed outline reading "Requested [time]" at the time the customer asked for, when that time falls in a day and column on screen. A screen reader SHALL hear "[bike] asks to move here: [time]".
@@ -134,19 +134,19 @@ Below tablet width the diary SHALL show one day, chosen from a strip of the week
 Staff SHALL be able to drag a timed job to another time or day, or, in the Day view, to another mechanic, snapped to 15 minutes and kept inside the grid's hours. From the keyboard, M SHALL pick a job up, the arrows move it 15 minutes or a column, Enter or Space save it and Escape put it back, each step read out. Saving SHALL send the version the diary saw, and the mechanic only when it changed. A later day of a job SHALL move on its own. A click or Enter that is not a move SHALL open the job.
 
 #### Scenario: Moving from the keyboard
-- **WHEN** staff press M on the Trek Domane block (Tuesday 6 October, 10:00–11:00), press the down arrow twice and the right arrow once
-- **THEN** it reads "Moving Trek Domane. Wed 7 Oct, 10:30–11:30.", and Enter saves that day and time with the version the diary saw
+- **WHEN** staff press M on the Trek Domane AL 3 block (Tuesday 6 October, 10:00–11:00), press the down arrow twice and the right arrow once
+- **THEN** it reads "Moving Trek Domane AL 3. Wed 7 Oct, 10:30–11:30.", and Enter saves that day and time with the version the diary saw
 
 #### Scenario: Escape
 - **WHEN** staff pick the job up, move it and press Escape
-- **THEN** it reads "Move cancelled. Trek Domane stays at Tue 6 Oct, 10:00–11:00." and nothing is saved
+- **THEN** it reads "Move cancelled. Trek Domane AL 3 stays at Tue 6 Oct, 10:00–11:00." and nothing is saved
 
 #### Scenario: Another mechanic in the Day view
 - **WHEN** staff pick the job up in the Day view and press the right arrow
-- **THEN** it reads "Moving Trek Domane. Tue 6 Oct, 10:00–11:00, Jo Taylor." and Enter saves it to Jo Taylor
+- **THEN** it reads "Moving Trek Domane AL 3. Tue 6 Oct, 10:00–11:00, Jo Taylor." and Enter saves it to Jo Taylor
 
 #### Scenario: Moving a second day
-- **WHEN** staff move day 2 of the Frame rebuild to Wednesday 7 October
+- **WHEN** staff move day 2 of that job to Wednesday 7 October
 - **THEN** only day 2 moves
 
 ### Requirement: A move the shop's rules refuse is put back, and says why
@@ -154,11 +154,11 @@ A move SHALL be checked against the shop's rules for a job's day and time (see `
 
 #### Scenario: A clash with another job
 - **WHEN** staff drop a job over another of the same mechanic's jobs
-- **THEN** the diary shows "Couldn't move Trek Domane: That mechanic is already booked over part of that window - please choose another time."
+- **THEN** the diary shows "Couldn't move Trek Domane AL 3: That mechanic is already booked over part of that window - please choose another time."
 
 #### Scenario: Someone else got there first
 - **WHEN** another member of staff changed the job after this diary loaded
-- **THEN** the diary shows "Couldn't move Trek Domane: This job changed while you were looking at it."
+- **THEN** the diary shows "Couldn't move Trek Domane AL 3: This job changed while you were looking at it."
 
 #### Scenario: A booking request
 - **WHEN** the Specialized Sirrus booking is still a request
@@ -176,8 +176,8 @@ When a job with a customer's change request waiting is saved onto exactly the re
 - **THEN** it still reads Change requested, held at 12:00 and at the requested 14:00
 
 #### Scenario: Dropped on the outline in the Week view, for another mechanic
-- **WHEN** the customer asked to move from Sam to Alex and staff drop the job on the dashed outline in the Week view, which sends no mechanic
-- **THEN** the job moves to that day and time with Sam and the request stays
+- **WHEN** the customer asked to move from Jo to Alex and staff drop the job on the dashed outline in the Week view, which sends no mechanic
+- **THEN** the job moves to that day and time with Jo and the request stays
 
 ### Requirement: New job starts by choosing a time on the diary
 New job SHALL turn the diary to "Choose a time for the new job.", with "Enter a time instead" and Cancel. A click on the grid SHALL open the New job form at that time, snapped to 15 minutes; Cancel SHALL leave the diary as it was. The form SHALL have no date or time field. In the Day view the clicked column's mechanic SHALL be chosen, or Shared queue in the "Not assigned yet" column. Otherwise the form SHALL choose a mechanic as the next requirement says.
@@ -204,9 +204,9 @@ Outside a mechanic's own column, New job SHALL choose, among the mechanics whose
 ### Requirement: The New job form finds the customer and fills in the work
 The New job form SHALL find a customer by name, phone or email and offer their bikes, choosing an only bike for them. The work SHALL be chosen as Full service or Individual service pills listing only the shop's active services; choosing one SHALL fill the job title and the job's length. New bike build or pre-delivery check SHALL make the customer optional. The mechanic SHALL be chosen from pills that include Shared queue, and the starting status SHALL be Booked or Waiting for parts.
 
-#### Scenario: A Standard service
-- **WHEN** staff choose Full service and then "Standard service · 90 min"
-- **THEN** the title becomes "Standard service" and the form reads "Tue 6 Oct · 10:00–11:30 · Jo Taylor"
+#### Scenario: A Brake service
+- **WHEN** staff choose Individual service and then "Brake service · 45 min"
+- **THEN** the title becomes "Brake service" and the form reads "Tue 6 Oct · 10:00–10:45 · Jo Taylor"
 
 #### Scenario: A retired service
 - **WHEN** a service is no longer active
@@ -215,9 +215,9 @@ The New job form SHALL find a customer by name, phone or email and offer their b
 ### Requirement: Saving a new job
 Save job SHALL create the job with what the form holds and, when work was chosen, its planned length; with no work chosen the job SHALL be an hour long. A title SHALL be needed, and a customer unless it is a new bike build. If the server refuses, the form SHALL show its words and stay open. "The bike is here now" SHALL book the bike in straight after saving; if that book-in is refused, the job SHALL already be saved and the form SHALL show the refusal and stay open.
 
-#### Scenario: Maya Patel's Standard service
-- **WHEN** staff find "Maya", choose Maya Patel, choose "Standard service · 90 min" and save
-- **THEN** a job is created for Maya Patel's Trek Domane AL 3 on Tuesday 6 October from 10:00 to 11:30 with Jo Taylor, booked, with a planned length of 90 minutes
+#### Scenario: Maya Patel's Brake service
+- **WHEN** staff find "Maya", choose Maya Patel, choose "Brake service · 45 min" and save
+- **THEN** a job is created for Maya Patel's Trek Domane AL 3 on Tuesday 6 October from 10:00 to 10:45 with Jo Taylor, booked, with a planned length of 45 minutes
 
 #### Scenario: The bike is here now
 - **WHEN** staff turn on "The bike is here now" and save with the starting status Booked
@@ -228,15 +228,15 @@ Save job SHALL create the job with what the form holds and, when work was chosen
 - **THEN** the job is saved with the bike already in the shop, the book-in is refused with "cannot book_in a job that is in_shop; from here you can collect", and the form stays open showing that
 
 #### Scenario: No customer
-- **WHEN** staff save a job titled "PDI" with no customer and New bike build off
+- **WHEN** staff save a job titled "Safety check" with no customer and New bike build off
 - **THEN** the form says "Give the job a title, and choose a customer or turn on New bike build."
 
 ### Requirement: Staff can open a job's menu, summary and overview from the diary
 Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shift+F10, SHALL open "Job actions" with Open job and View overview; holding the right mouse button SHALL open the overview straight away. Resting the mouse on a job for about 0.6 seconds (at once when motion is reduced) SHALL show its summary. The summary and View overview SHALL show the job, customer and bike, the notes, the work and parts, and the cost.
 
 #### Scenario: View overview
-- **WHEN** staff right-click Maya Patel's Trek Domane (WH-1042, Standard service) and choose View overview
-- **THEN** it shows "Maya Patel · Trek Domane", "Squeaky brakes", "Front brake rubs at speed", "Brake pads (pair)" and £93.00, with any quote line the customer declined struck through
+- **WHEN** staff right-click Maya Patel's Trek Domane AL 3 (WH-1042, Standard service) and choose View overview
+- **THEN** it shows "Maya Patel · Trek Domane AL 3", her note "My rear brake squeals and feels weak. The gears could use a tune-up too.", the work and parts on the order (Standard service, Shimano brake pads, Fit & adjust brakes) and their cost, £111.00, with the quote line she declined, Replace gear cable, struck through
 
 #### Scenario: Nothing on the order yet
 - **WHEN** staff view the overview of a job with nothing on its order
@@ -250,12 +250,12 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 "Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer and the services in order; a change request SHALL also carry where the customer wants it.
 
 #### Scenario: A new online booking
-- **WHEN** Wendy Waiting books "Test repair" and "Test quick" with Sam at 10:00
-- **THEN** it is listed as a new booking from 10:00 to 11:30 with Sam, for Wendy Waiting, with those two services, arriving when the booking was made
+- **WHEN** Sam Reed books a Brake service online with Alex at 10:00
+- **THEN** it is listed as a new booking from 10:00 to 10:45 with Alex, for Sam Reed, with that service, arriving when the booking was made
 
 #### Scenario: A change request
-- **WHEN** a confirmed booking with Sam at 10:00 asks to move to 14:00 with Alex on another day
-- **THEN** it is listed as a change request from 10:00–11:00 with Sam to 14:00–15:00 with Alex
+- **WHEN** a confirmed booking with Jo at 10:00 asks to move to 14:00 with Alex on another day
+- **THEN** it is listed as a change request from 10:00–11:00 with Jo to 14:00–15:00 with Alex
 
 #### Scenario: Oldest first
 - **WHEN** a cancellation arrived on 8 September, a change request on 9 September and a new booking on 10 September
@@ -268,13 +268,13 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 ### Requirement: The diary's Waiting column chooses and opens what is waiting
 On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the grid, refreshed every minute, one card per item with its kind, the customer, and the services and time or the move; with nothing waiting it SHALL say "Nothing waiting." One click on a card SHALL choose it: the diary moves to that job's week, shows Everyone, marks its block, and the card shows Open. Open, or a double-click, SHALL open the request; a second click or tap SHALL NOT.
 
-#### Scenario: Choosing Lena Fox's request
-- **WHEN** staff click Lena Fox's card, booked for 14 October
-- **THEN** the diary shows "12–18 October 2026" and the Cube Attain block is marked "chosen from Waiting for you"
+#### Scenario: Choosing Sam Reed's request
+- **WHEN** staff click Sam Reed's card, booked for 14 October
+- **THEN** the diary shows "12–18 October 2026" and the Specialized Sirrus block is marked "chosen from Waiting for you"
 
 #### Scenario: A card's words
-- **WHEN** Sam Reed has asked for a Puncture repair on Friday 9 October, 10:00–10:45 (the Week view's example)
-- **THEN** his card reads "New booking request", "Sam Reed" and "Puncture repair · Fri 9 Oct, 10:00–10:45"
+- **WHEN** Sam Reed has asked for a Brake service on Friday 9 October, 10:00–10:45 (the Week view's example)
+- **THEN** his card reads "New booking request", "Sam Reed" and "Brake service · Fri 9 Oct, 10:00–10:45"
 
 #### Scenario: Double-click
 - **WHEN** staff double-click Aisha Khan's cancellation card
@@ -284,7 +284,7 @@ On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the 
 A new booking request SHALL open in a pop-up headed "[customer] · [bike]" with "Pending request", what the customer told us (or "No message from the customer."), the service and the time asked for. Accept SHALL accept the booking with the version the pop-up saw, close the pop-up and refresh the diary. Decline SHALL ask first, with Decline booking to confirm and Keep booking to back out. Accepting and declining follow `workshop-jobs`.
 
 #### Scenario: Sam Reed's request
-- **WHEN** staff open Sam Reed's request for a Puncture repair on Friday 9 October, 10:00–10:45
+- **WHEN** staff open Sam Reed's request for a Brake service on Friday 9 October, 10:00–10:45
 - **THEN** the pop-up is headed "Sam Reed · Specialized Sirrus" and reads "Requested Fri 9 Oct, 10:00–10:45"
 
 #### Scenario: Decline asks first
@@ -299,11 +299,11 @@ A new booking request SHALL open in a pop-up headed "[customer] · [bike]" with 
 Accepting a change request SHALL need the version staff last read, and SHALL move the booking to the requested day, time and mechanic, confirm it, clear the request and turn the requested time's hold into the booking's own, so the job keeps one hold. It SHALL be checked against the shop's rules for that time, never against capacity, and SHALL wait while another booking is being written for that day.
 
 #### Scenario: Accepting
-- **WHEN** staff accept a request to move a 10:00 booking with Sam to 14:00 on another day
+- **WHEN** staff accept a request to move a 10:00 booking with Jo to 14:00 on another day
 - **THEN** the booking is confirmed at 14:00–15:00 on that day with no request left, and it holds only that time
 
 #### Scenario: The time has gone
-- **WHEN** another job now covers 14:30 to 15:30 with Sam on the requested day
+- **WHEN** another job now covers 14:30 to 15:30 with Jo on the requested day
 - **THEN** accepting is refused with "The requested time is no longer free" and the request still stands
 
 #### Scenario: No version, or an old one
@@ -333,7 +333,7 @@ A change request SHALL open in a pop-up headed "Change request", with the custom
 - **THEN** the pop-up shows "Mon 5 Oct · 10:00" and "Mon 5 Oct · 14:00", and Accept accepts the change
 
 #### Scenario: A request for another mechanic
-- **WHEN** a booking with Sam asks to move to Alex and staff accept it from the pop-up
+- **WHEN** a booking with Jo asks to move to Alex and staff accept it from the pop-up
 - **THEN** the booking moves to Alex, though the pop-up named neither mechanic and said the mechanic stays the same
 
 ### Requirement: Staff mark a customer's cancellation as seen
@@ -366,7 +366,7 @@ When an answer from a request pop-up is refused, the pop-up SHALL stay open, say
 A save from the old app's job form SHALL keep a customer's change request and its hold, and keep it in "Waiting for you", whether it resends the confirmed status or sets Waiting for parts, On hold or Complete (the booking stays confirmed). Only saving the old "pending" status SHALL end the request and let its time go. A cancellation by the shop SHALL clear the request and release every hold; a staff reschedule request SHALL never hold a time.
 
 #### Scenario: An ordinary old-app save
-- **WHEN** staff add the note "Rang to confirm" from the old form while a change request waits
+- **WHEN** staff add a note ([note]) from the old form while a change request waits
 - **THEN** the booking still reads Change requested and is still listed in "Waiting for you"
 
 #### Scenario: Saving the old pending status
@@ -396,8 +396,8 @@ The old app's Workshop diary SHALL show a "Waiting for you ([n])" column, oldest
 In the old app a job that is waiting SHALL open a review pop-up headed "New online booking", "Change request" or "Cancelled by customer" with the job number, showing the customer's answers grouped under each service, their photos and notes, with Open full job and either Accept and Decline (a new booking's Decline asking first) or Seen. A diary drag on a job someone else changed SHALL be refused and the diary reload; marking such a job complete from its form SHALL be refused and the form close.
 
 #### Scenario: A heading
-- **WHEN** staff open the change request for WH-1038
-- **THEN** the pop-up is headed "Change request · WH-1038"
+- **WHEN** staff open the change request for WH-1052
+- **THEN** the pop-up is headed "Change request · WH-1052"
 
 #### Scenario: An old copy
 - **WHEN** staff drag a job someone else has changed since the diary loaded
@@ -426,7 +426,7 @@ The server SHALL accept which weekdays are open and each open day's hours, on th
 The server SHALL accept, change, list and remove blocks of three kinds (no screen does this yet): weekly for one mechanic between two times (lunch); one mechanic over a date range, all day or between two times (leave); and a shop closure over a date range, always whole days. Each MAY carry a reason of up to 200 characters. A change SHALL keep fields it leaves out. Another shop's mechanic or block SHALL not be found.
 
 #### Scenario: Lunch
-- **WHEN** staff add Sam's lunch, Monday to Friday 13:00–13:30, reason "Lunch"
+- **WHEN** staff add Jo's lunch, Monday to Friday 13:00–13:30, with the reason [reason]
 - **THEN** it is saved and listed
 
 #### Scenario: A closure with times
@@ -439,7 +439,7 @@ The server SHALL accept, change, list and remove blocks of three kinds (no scree
 
 #### Scenario: Changing the end time
 - **WHEN** staff change only the lunch's end time to 14:00
-- **THEN** the reason "Lunch" is kept
+- **THEN** the reason is kept
 
 #### Scenario: Listing a date range
 - **WHEN** staff list blocks from 2 to 31 January 2030
@@ -449,7 +449,7 @@ The server SHALL accept, change, list and remove blocks of three kinds (no scree
 Adding or changing a block SHALL report the live bookings it overlaps, from the later of the block's first day and the shop's today, and SHALL NOT move or cancel them. A shop closure SHALL clash with every job on its days; a mechanic's whole-day block only with that mechanic's jobs; a timed block only with that mechanic's timed jobs it overlaps. Cancelled bookings SHALL NOT clash.
 
 #### Scenario: Lunch over a job
-- **WHEN** staff add a Monday lunch 13:00–13:30 for Sam, who has a job 12:45–13:45 and another 15:00–16:00
+- **WHEN** staff add a Monday lunch 13:00–13:30 for Jo, who has a job 12:45–13:45 and another 15:00–16:00
 - **THEN** the first job is reported as a clash and stays at 12:45, and the second is not reported
 
 #### Scenario: A closure over a walk-in
@@ -460,11 +460,11 @@ Adding or changing a block SHALL report the live bookings it overlaps, from the 
 A job staff create, edit, move or accept SHALL be checked against the shop's open days, the day's hours, the mechanic's working days, the mechanic's other jobs (see `workshop-jobs`) and another customer's waiting requested time, but SHALL NOT be refused because of a block, the reserve or the mechanic's free minutes. The only capacity refusal staff can meet SHALL be a time held by a leftover hold with no job behind it, refused with "That time is no longer available - please choose another.".
 
 #### Scenario: Booking into lunch
-- **WHEN** staff book Sam from 13:00 to 13:30 on a Tuesday when Sam has lunch then
+- **WHEN** staff book Jo from 13:00 to 13:30 on a Tuesday when Jo has lunch then
 - **THEN** the job is created
 
 #### Scenario: Over another customer's requested time
-- **WHEN** staff book Sam from 14:30 to 15:30 on a day another customer has asked to move to 14:00–15:00 with Sam
+- **WHEN** staff book Jo from 14:30 to 15:30 on a day another customer has asked to move to 14:00–15:00 with Jo
 - **THEN** it is refused with "That mechanic is already booked over part of that window - please choose another time."
 
 #### Scenario: Past a full day
@@ -475,16 +475,16 @@ A job staff create, edit, move or accept SHALL be checked against the shop's ope
 A mechanic SHALL have time only on a weekday the shop opens and they work, with no shop closure. From the day's hours SHALL come off: their blocks; their timed jobs, overlaps counted once; their untimed jobs' minutes; an equal share of the shared queue (jobs with no mechanic) among the mechanics with any time that day; and the reserve. Ended bookings SHALL take no time; a customer's requested time SHALL take time until answered.
 
 #### Scenario: Lunch and a job
-- **WHEN** Sam works 09:00–18:00 on a Monday with lunch 13:00–13:30 and a job 12:45–13:15
-- **THEN** Sam's first free window is 09:00–12:45 and Sam has 495 free minutes
+- **WHEN** Jo works 09:00–18:00 on a Monday with lunch 13:00–13:30 and a job 12:45–13:15
+- **THEN** Jo's first free window is 09:00–12:45 and Jo has 495 free minutes
 
 #### Scenario: The shared queue
 - **WHEN** two mechanics each have a 540-minute drop-off day and 1000 minutes of unassigned work are queued
 - **THEN** each carries 500 of them
 
 #### Scenario: Assigning a queued walk-in
-- **WHEN** a 120-minute walk-in in the shared queue is given to Sam
-- **THEN** the queue drops to 0 and Sam's free minutes drop by the 60 the other mechanic had been carrying
+- **WHEN** a 120-minute walk-in in the shared queue is given to Jo
+- **THEN** the queue drops to 0 and Jo's free minutes drop by the 60 the other mechanic had been carrying
 
 #### Scenario: Leave
 - **WHEN** one mechanic is on leave for the day
@@ -494,8 +494,8 @@ A mechanic SHALL have time only on a weekday the shop opens and they work, with 
 The server SHALL give signed-in staff, for up to 62 days (no screen shows it yet), each day's booking mode, whether the shop is closed and why, the shared queue's minutes, the clashes between blocks and jobs (never a job's requested time), and for each mechanic whether they work, their free minutes, free windows and blocks with reasons. Without a sign-in it SHALL be refused, as SHALL bad dates, an end before the start, or more than 62 days ("Ask for at most 62 days at a time").
 
 #### Scenario: A shop closure
-- **WHEN** the shop is closed on 8 September 2026 for "Training"
-- **THEN** that day reads closed, with the reason "Training", and every mechanic has 0 free minutes
+- **WHEN** the shop is closed on 8 September 2026 for [reason]
+- **THEN** that day reads closed, with that reason, and every mechanic has 0 free minutes
 
 #### Scenario: Too long a range
 - **WHEN** staff ask for 1 September to 2 November 2026
@@ -513,25 +513,25 @@ For the customer booking pages, a timed day SHALL offer each mechanic every star
 - **THEN** a 40-minute job is bookable with a 09:00–10:00 drop-off window, and a 41-minute job is not
 
 #### Scenario: A cancelled booking
-- **WHEN** Sam's 10:00 booking is cancelled
+- **WHEN** Jo's 10:00 booking is cancelled
 - **THEN** 10:00 is offered again
 
 ### Requirement: Customers are told nothing about why time is taken
 What customers are offered SHALL NOT include a block's reason, other customers' jobs or minute totals. The older booking page SHALL see blocks, closures and shorter days only as busy time with a mechanic, a date and a window, and a mechanic-day with nothing left as full. More than 62 days, a job length outside 1 to 720 minutes, a date that does not exist, an end before the start, or a mechanic that is not a number SHALL be refused.
 
-#### Scenario: Lunch with the dentist
-- **WHEN** Sam has lunch on Mondays 13:00–13:30, reason "Lunch with the dentist", and a customer asks for a 60-minute job on a Monday
-- **THEN** Sam is offered 12:00 but not 12:30 or 13:00, Alex is offered 13:00, 13:00–13:30 shows as busy, and the reason appears nowhere
+#### Scenario: A lunch block's reason
+- **WHEN** Jo has lunch on Mondays 13:00–13:30, with the reason [reason], and a customer asks for a 60-minute job on a Monday
+- **THEN** Jo is offered 12:00 but not 12:30 or 13:00, Alex is offered 13:00, 13:00–13:30 shows as busy, and the reason appears nowhere
 
 #### Scenario: A closure
-- **WHEN** the shop is closed for "Staff training"
+- **WHEN** the shop is closed for [reason]
 - **THEN** no start is offered that day, every mechanic's day is full, and the reason appears nowhere
 
 ### Requirement: Customers are held to capacity when they book or change
 A customer's booking or change SHALL be refused when the time is in a block or outside the mechanic's time, when it would leave the mechanic's day short of the reserve, when it overlaps another booking or a customer's requested time, or when another booking already holds that start. In drop-off mode a chosen time SHALL be refused. A refused booking SHALL leave nothing behind.
 
 #### Scenario: A block
-- **WHEN** a customer asks to move to 14:00 with Sam, who has a block from 13:00 to 15:00
+- **WHEN** a customer asks to move to 14:00 with Jo, who has a block from 13:00 to 15:00
 - **THEN** it is refused with "That mechanic is unavailable at that time - please choose another time or day."
 
 #### Scenario: The reserve
@@ -539,7 +539,7 @@ A customer's booking or change SHALL be refused when the time is in a block or o
 - **THEN** a 30-minute job is accepted and a 120-minute service is refused with "That mechanic does not have enough free time that day - please choose another day, or a shorter job."
 
 #### Scenario: A requested time
-- **WHEN** a customer asks for 14:30 with Sam while another customer's request for 14:00–15:00 waits
+- **WHEN** a customer asks for 14:30 with Jo while another customer's request for 14:00–15:00 waits
 - **THEN** it is refused with "That mechanic is already booked over part of that window - please choose another time."
 
 #### Scenario: Four at once
@@ -569,8 +569,8 @@ Every booking that is a request, confirmed or awaiting a reschedule SHALL hold i
 A customer's requested time SHALL be held beside the job's own until staff answer, keeping other customers out of it and off the calendar, and refusing staff jobs over it too. A job's own request SHALL never block that job, and a job that stops being a request SHALL let its requested time go and keep its own.
 
 #### Scenario: A requested time keeps others out
-- **WHEN** a customer has asked to move to 14:00–15:00 with Sam
-- **THEN** the calendar does not offer Sam 13:30, 14:00 or 14:30 for a 60-minute job
+- **WHEN** a customer has asked to move to 14:00–15:00 with Jo
+- **THEN** the calendar does not offer Jo 13:30, 14:00 or 14:30 for a 60-minute job
 
 #### Scenario: The job's own request
 - **WHEN** staff move that job to 14:30–15:30 on the requested day
@@ -629,30 +629,42 @@ The booking mode SHALL be timed or drop-off, refused otherwise with "Booking mod
 - **THEN** it is refused
 
 ### Requirement: A shop can schedule a change of booking mode
-A shop SHALL be able to schedule a change to the other booking mode from a date, and cancel it by sending neither part. The change SHALL need both parts, a real date from tomorrow on in the shop's time zone, and a different mode. Other saves SHALL keep it. Once its date arrives the new mode SHALL count from that date on, even before a save writes it in. Setting the mode directly to the scheduled one SHALL clear the schedule.
+A shop SHALL be able to schedule a change to the other booking mode from a date, needing both parts, a real date from tomorrow on in the shop's time zone, and a different mode. Sending a part as null SHALL cancel the schedule, a part left out counting as null once the other is sent; leaving both parts out SHALL keep it. Once its date arrives the new mode SHALL count from that date on, even before a save writes it in. Setting the mode directly to the scheduled one SHALL clear the schedule.
 
 #### Scenario: Drop-off from a later date
 - **WHEN** a timed shop schedules drop-off from a future date
 - **THEN** it stays timed until then, and days from that date on are drop-off
+
+#### Scenario: Cancelling the scheduled change
+- **WHEN** staff save the new mode as null and leave the start date out, or send both as null
+- **THEN** no change is scheduled any more
+
+#### Scenario: A save that leaves the schedule out
+- **WHEN** staff save only whether prices show online, leaving out the new mode and the start date
+- **THEN** the scheduled change is kept
 
 #### Scenario: Today, half a change, or the same mode
 - **WHEN** staff schedule a change dated today, send only the mode, or schedule the mode the shop already uses
 - **THEN** each is refused, with "A mode change must start tomorrow or later", "Give both the new mode and the date it starts, or neither to cancel" or "The shop already uses that mode"
 
 #### Scenario: Another time zone
-- **WHEN** it is 07:00 on 1 September in the UK and 23:00 on 31 August in Los Angeles
-- **THEN** a UK shop cannot schedule a change from 1 September, and a Los Angeles shop can
+- **WHEN** it is 07:00 on 1 September in the UK and still 31 August in [a time zone behind the UK]
+- **THEN** a UK shop cannot schedule a change from 1 September, and a shop in that time zone can
 
 ### Requirement: Minimum notice and the time zone have limits
-Minimum notice SHALL be 0 minutes to 7 days in whole minutes, a number sent as text accepted, and refused otherwise (including an empty value) with "Minimum notice must be between 0 minutes and 7 days"; leaving the field out SHALL keep the old value. The time zone SHALL be one the server recognises, refused otherwise with "That time zone isn't recognised".
+Minimum notice SHALL be 0 minutes to 7 days in whole minutes, a number sent as text accepted, and refused otherwise (including null) with "Minimum notice must be between 0 minutes and 7 days"; leaving the field out SHALL keep the old value. An empty text ("") or text of only spaces SHALL be read as 0 and saved as no notice at all. The time zone SHALL be one the server recognises, refused otherwise with "That time zone isn't recognised".
 
-#### Scenario: A week's notice in New York
-- **WHEN** staff save 10080 minutes of notice and the New York time zone
+#### Scenario: A week's notice in another time zone
+- **WHEN** staff save 10080 minutes of notice and another recognised time zone ([time zone])
 - **THEN** both are saved, and kept by later saves that leave them out
 
 #### Scenario: Notice out of range
-- **WHEN** staff send -1, 10081, 1.5, "abc" or an empty value
+- **WHEN** staff send -1, 10081, 1.5, "abc" or null
 - **THEN** each is refused with "Minimum notice must be between 0 minutes and 7 days"
+
+#### Scenario: Empty notice saves zero
+- **WHEN** staff send an empty text ("") as the minimum notice
+- **THEN** it is saved as 0 minutes, with no refusal
 
 ### Requirement: Prices online and the shop's own booking terms are settings
 Whether prices show online SHALL save as on or off. The shop's own booking terms SHALL be saved trimmed, kept when a save leaves them out, and reverted to the standard Wheelhouse terms by an empty value or a blank text; terms over 20,000 characters SHALL be refused with "Booking terms can be up to 20,000 characters", and anything not text with "Booking terms must be text".

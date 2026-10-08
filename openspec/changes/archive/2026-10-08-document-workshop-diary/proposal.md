@@ -109,5 +109,14 @@ None. `workshop-jobs` is unchanged; this spec refers to it.
 
 ## Impact
 
-- New files only, under `openspec/changes/document-workshop-diary/`.
+- New files: this change (archived under
+  `openspec/changes/archive/2026-10-08-document-workshop-diary/`) and the
+  spec it adds, `openspec/specs/workshop-diary/spec.md`.
+- Five older spec files each gain one line at the top pointing to the new
+  spec (tasks 3.1 and 3.2), and nothing else in them changes:
+  `docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md`,
+  `docs/superpowers/specs/2026-09-26-book-server-10-notice-timezone-design.md`,
+  `docs/superpowers/specs/2026-09-27-book-server-12-change-cancel-design.md`,
+  `docs/superpowers/specs/2026-09-27-staff-diary-waiting-design.md` and
+  `docs/superpowers/specs/2026-10-03-staff-diary-view-design.md`.
 - No effect on code, database, routes, screens, dependencies or hosting.
