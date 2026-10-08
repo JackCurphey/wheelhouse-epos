@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add "an old-form save that leaves the status as it was keeps work in progress" to `tests/workshop-legacy-save-version.test.js`; watched it fail (work read back "not_started", expected "in_progress")
 - [x] 1.2 Add "an old-form save that changes the status still changes the job", which guards the deliberate change
-- [x] 1.3 Add "an old-form save that changes a finished job to scheduled still reopens it", which the decision promises (Mark's review); watched it fail with the reopen blocked for finished work, then restored
+- [x] 1.3 Add "an old-form save that changes a finished job to scheduled still reopens it", which the decision promises (Mark's review); watched it fail in CI with the reopen blocked for finished work (66b6539), then restored (6dbd71d)
 
 ## 2. Fix
 
@@ -11,5 +11,5 @@
 ## 3. Check and merge
 
 - [x] 3.1 `npm test` and `npm run test:browser` pass locally
-- [x] 3.2 Archived into `openspec/specs/workshop-jobs/spec.md`, as the pull request's last commit before merge (#186)
+- [x] 3.2 Archived into `openspec/specs/workshop-jobs/spec.md`, before merge. Archived before the archive-last rule (#186), so the review fixes after it edit the archived files in place
 - [ ] 3.3 Fresh review; Mark's approval (server change); merge when CI is green on the final commit
