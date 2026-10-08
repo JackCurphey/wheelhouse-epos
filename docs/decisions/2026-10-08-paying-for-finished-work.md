@@ -19,4 +19,7 @@ reviewer on a test server.
 already finished; the job is left as it is. Payment is still refused for
 work not started, on hold or waiting for parts, so the record must still
 say the work is done before money is taken. Chosen over keeping the rule
-and adding a "Reopen work" button to the job page.
+and adding a "Reopen work" button to the job page. This is also what Collect
+and pay decision 3 needs: it draws "Take payment" as the main button on the
+"Ready for collection" board, where the work is already finished
+(`2026-09-30-collect-and-pay-review.md`).

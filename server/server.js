@@ -1350,8 +1350,10 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   if (!doc) return notFound(res, 'Not found');
   if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
-  // Tendering the order for a job is the shop saying the work is done, so it has
-  // to be a legal 'finish' on the work machine. If it is not, the tender is
+  // Tendering the order for a job is the shop saying the work is done, so the
+  // work must already be finished or be a legal 'finish' on the work machine
+  // (Jack, 8 Oct, docs/decisions/2026-10-08-paying-for-finished-work.md). If
+  // it is neither, the tender is
   // refused (Jack's decision, 20 Sep, reaffirmed after a day on the other
   // behaviour): the job record governs, and the shop marks the job's real state
   // before taking the money.

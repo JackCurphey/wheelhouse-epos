@@ -11,4 +11,4 @@
 - [x] 3.1 `npm test` and `npm run test:browser` pass locally
 - [x] 3.2 Break the fix on purpose and see the new test fail, then restore
 - [ ] 3.3 Fresh review; Mark's approval (server change); merge when CI is green on the final commit
-- [ ] 3.4 `openspec archive allow-paying-for-finished-work` so `openspec/specs/workshop-jobs/spec.md` carries the new scenario
+- [x] 3.4 `openspec archive allow-paying-for-finished-work` so `openspec/specs/workshop-jobs/spec.md` carries the new scenario
