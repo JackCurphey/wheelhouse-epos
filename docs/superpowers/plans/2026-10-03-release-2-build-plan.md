@@ -5,6 +5,11 @@
 > (`openspec/`); an OpenSpec change replaces §4 step 2's short spec in
 > `docs/superpowers/specs/` (`docs/decisions/2026-10-08-openspec-only.md`).
 
+> **Pages not drawn yet (8 Oct 2026, #139).** Every button that leads to a
+> page no drawing shows has an answer and a work package, listed by stage in
+> `docs/decisions/2026-10-08-not-drawn-pages.md`. Each stage re-checks its
+> own rows before building.
+
 **Date:** 3 October 2026
 **Status:** answered by Jack on 3 Oct (`docs/decisions/2026-10-03-build-plan-questions.md`);
 waiting for Mark's view before anything starts. Jack: "dont start the build
@@ -208,7 +213,11 @@ later packages.
   table: `docs/superpowers/specs/2026-10-05-wp-1-1-roles-and-switches.md`, #132);
   `/api/auth/me` returns them; every route checks them; the sidebar shows
   each role its rooms; a mechanic lands on the Diary; a login linked to its
-  staff member (the mechanic's "Me").
+  staff member (the mechanic's "Me"). And "Sign out everywhere" on a person,
+  brought back from later by Jack on 8 Oct (#139; not-drawn pages decision
+  2): the person is checked out of the till after the sale that's open and
+  signed out of every phone and computer. Mark builds the server half, Jack
+  the button.
 
 <!-- screens 1.1 -->
 *Building blocks built here:* 12 Controls hidden by role (no board of its own); 16 App frame; 29 "You can't open this — ask [name]" (no board of its own).
@@ -218,6 +227,7 @@ later packages.
 - **`map`** (block 16, App frame) — no other situations.
 - **`staff-app`** (block 16, App frame) — 4 situations: `staff-app-mechanic`, `staff-app-menu`, `staff-search`, `auth-noaccess`; plus 3 written lines.
 - **`till-rail`** (block 16, App frame) — 1 situation: `till-rail-open`; plus 2 written lines.
+- Brought back from later (Jack, 8 Oct, #139): `ops-person-everywhere`, the "Sign Jo Taylor out everywhere?" box. Its button sits on a person's page, the `set-staff-person` board (built in WP-5.1).
 <!-- /screens -->
 
 - **WP-1.2 Settings store, change record and activity log** (Owner setup 4;
@@ -1016,15 +1026,17 @@ dropped, except practice mode.
 <!-- later LATER-invoice -->
   Screens not built (8): `rs-invoice`, `rs-invoice-checked`, `rs-invoice-diff`, `rs-invoice-cost`, `rs-invoice-queried`, `rs-invoice-accepted`, `rs-invoice-setting`, `rp-vat-check-off`.
 <!-- /later -->
-- **Oversight extras** (was in WP-5.4): alerts on Today, signed-in devices
-  and "Sign out everywhere", Send feedback, and the first sign-in note with
-  "What Wheelhouse records about you". Follows Management oversight, later
-  change (issue #116 question 5). Still to check before release: whether
+- **Oversight extras** (was in WP-5.4): alerts on Today, the signed-in
+  devices list, Send feedback, and the first sign-in note with "What
+  Wheelhouse records about you". Follows Management oversight, later
+  change (issue #116 question 5). "Sign out everywhere" on a person came
+  back into WP-1.1 on 8 Oct (Management oversight, later change, issue
+  #139). Still to check before release: whether
   shops must by law tell staff what is recorded about them. Workshop
   computers are seen and stopped beside the tills instead (walk-through 8,
   later change H3), in WP-5.1.
 <!-- later LATER-oversight -->
-  Screens not built (16): `ops-log-filtered`, `ops-first-note`, `ops-your-settings`, `ops-my-activity`, `ops-today-alerts`, `ops-alert-settings`, `ops-devices`, `ops-devices-signout`, `ops-devices-signed-out`, `ops-person`, `ops-person-everywhere`, `ops-feedback-empty`, `ops-feedback`, `ops-feedback-shot`, `ops-feedback-failed`, `ops-feedback-sent`.
+  Screens not built (15): `ops-log-filtered`, `ops-first-note`, `ops-your-settings`, `ops-my-activity`, `ops-today-alerts`, `ops-alert-settings`, `ops-devices`, `ops-devices-signout`, `ops-devices-signed-out`, `ops-person`, `ops-feedback-empty`, `ops-feedback`, `ops-feedback-shot`, `ops-feedback-failed`, `ops-feedback-sent`.
 <!-- /later -->
 - **The full website editor, theme and extra pages** (was in WP-6.1). The
   first release has a fixed design with editable words and photos, the
