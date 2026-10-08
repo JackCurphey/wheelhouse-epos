@@ -1,3 +1,5 @@
+> **History (8 Oct 2026).** What the app does today for the staff diary is now in `openspec/specs/workshop-diary/spec.md`; this document is kept as the record of how it was designed.
+
 # The staff diary, piece 1: seeing the week and the day
 
 **Asked for by Jack, 3 Oct 2026** ("just continue building if you can"),

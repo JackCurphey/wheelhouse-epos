@@ -1,3 +1,5 @@
+> **History (8 Oct 2026).** Its staff side (the diary, capacity, the shop's today, workshop settings) is now described in `openspec/specs/workshop-diary/spec.md`; its customer side moves with the online-booking spec. Kept as the record of how it was designed.
+
 # Book server piece 12: customers change or cancel through the booking link
 
 **Date:** 2026-09-27. **Follows:** d5 (#87) and the look tweaks (#88).

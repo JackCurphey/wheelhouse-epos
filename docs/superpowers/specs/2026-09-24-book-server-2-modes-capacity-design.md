@@ -1,3 +1,5 @@
+> **History (8 Oct 2026).** Its staff side (the diary, capacity, the shop's today, workshop settings) is now described in `openspec/specs/workshop-diary/spec.md`; its customer side moves with the online-booking spec. Kept as the record of how it was designed.
+
 # Book server work, piece 2: booking modes and capacity
 
 **Date:** 2026-09-24. **Approved in session by Jack** (design, 24 Sep; each
