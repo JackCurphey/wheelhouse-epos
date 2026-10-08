@@ -26,7 +26,7 @@ wrong, the spec is corrected, never the code.
 ## 4. Validate and merge
 
 - [x] 4.1 Run `openspec validate document-workshop-jobs --strict`; verified when it prints that the change is valid
-- [ ] 4.2 Open a pull request from `jack/openspec-workshop-jobs` (documentation only; about 1,400 lines, above the 250–600 aim, so say so in the pull request or split the job page requirements into a second change) and merge once CI has passed on its final commit; verified by the green CI run on that commit. Pull request open (#187). Merging comes after this archive, which is the pull request's last commit (#186), so this box stays open here
+- [ ] 4.2 Open a pull request from `jack/openspec-workshop-jobs` (documentation only; about 1,400 lines, above the 250–600 aim, so say so in the pull request or split the job page requirements into a second change) and merge once CI has passed on its final commit; verified by the green CI run on that commit. Pull request open (#187). Merging comes after this archive (#186), so this box stays open here. This change was archived before the archive-last rule; the review fixes after it edit the archived files in place
 
 ## Workflow follow-up
 
