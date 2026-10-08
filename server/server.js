@@ -2363,8 +2363,13 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
   if (body.status !== undefined) {
     const requested = resolveJobStatus(body.status, null);
     if (requested === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
-    const { booking, work: workState } = readLegacyStatus(requested);
-    legacyStates = { booking, workState };
+    // The old form sends its dropdown's status on every Save, and the old
+    // statuses have no "in progress": a status the job already reads changes
+    // nothing, or every Save would reset work in progress (Jack, 8 Oct).
+    if (requested !== existing.status) {
+      const { booking, work: workState } = readLegacyStatus(requested);
+      legacyStates = { booking, workState };
+    }
   }
 
   // A complete job is a record of work already done, so its details are
