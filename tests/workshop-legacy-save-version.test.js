@@ -122,3 +122,14 @@ test('an old-form save that changes the status still changes the job', async () 
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal((await read(before.id)).workState, 'on_hold');
 });
+
+test('an old-form save that changes a cancelled job to scheduled still reopens it', async () => {
+  // The old form's "Reopen job" is a real change of status, so it still applies.
+  const booked = await book();
+  const cancelled = await act(booked.id, 'cancel', (await read(booked.id)).version);
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+  assert.equal(cancelled.body.status, 'complete', 'a cancelled booking reads complete to the old app');
+  const res = await save(booked.id, { status: 'scheduled', version: cancelled.body.version });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal((await read(booked.id)).bookingState, 'scheduled');
+});
