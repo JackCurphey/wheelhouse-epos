@@ -67,6 +67,20 @@ ul.asks li { background: var(--panel); border: 1px solid var(--line); border-rad
 ul.asks li p { margin: 0; min-width: 0; }
 .links { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; }
 .links a { color: var(--ink); }
+.s-old { background: var(--review-bg); color: var(--review-ink); }
+.key { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.area { margin-top: 16px; }
+.area:first-of-type { margin-top: 0; }
+.area h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.area > p { margin: 2px 0 10px; font-size: 14px; color: var(--muted); max-width: 68ch; }
+.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.room { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.room h4 { margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
+.room ul { list-style: none; margin: 0; padding: 0; }
+.room li { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.room li:first-child { border-top: 0; }
+.room li div { min-width: 0; display: flex; flex-direction: column; }
+.room li span.d { font-size: 13px; color: var(--muted); }
 a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 @media (max-width: 560px) {
   ol.pieces li { grid-template-columns: minmax(0, 1fr) auto; }
@@ -87,6 +101,12 @@ a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
     <p class="lead" id="lead"></p>
     <p id="sub"></p>
     <div class="tally" id="tally"></div>
+  </section>
+
+  <section aria-labelledby="screens-h">
+    <h2 id="screens-h">What's built, room by room</h2>
+    <div class="key" id="screens-key"></div>
+    <div id="screens"></div>
   </section>
 
   <section aria-labelledby="pieces-h">
@@ -186,6 +206,38 @@ const BOARD = {
     { what: 'Things the server cannot do yet', detail: 'Choosing the mechanic as you accept a booking, offering another time, and a message with a decline.' },
     { what: 'A Change requested badge on the job window?', detail: 'The diary has the colour; the job window has no badge for it. Not drawn, so it\'s yours to decide. Until then the job window shows the job\'s own stage.' },
   ],
+  // Each page of the app and how far it is built: built, part (partly built),
+  // old (only in the old app for now) or none (drawn, not built yet).
+  screens: [
+    { area: 'Staff app', note: 'The frame is built: Soft sand look, the sidebar grouped by rooms, tablet rail and phone menu. The Owner lands on Today (not built yet), everyone else on the Till.', rooms: [
+      { room: 'Front desk', pages: [
+        ['Till', 'part', 'Search, scan, quick buttons; card, cash or split; Paid. No discounts, receipts or card machine yet'],
+        ['Online orders', 'none'], ['Cycle to Work', 'none'], ['Customers', 'old'], ['Messages', 'none'],
+      ] },
+      { room: 'Workshop', pages: [
+        ['Diary', 'built', 'Week, day and phone views; Waiting for you; drag jobs; New job; jobs over several days'],
+        ['Job window', 'part', 'Move a job through its stages; notes; work and parts; barcode scan. Not yet: the Done tick, a note per line'],
+        ['Quotes', 'built', 'Build, send by text, the customer approves, Quoting in teal'],
+        ['Overview', 'none'],
+      ] },
+      { room: 'Stockroom', pages: [
+        ['Stock', 'old'], ['Deliveries and orders', 'old', 'The old app has Suppliers and Purchase orders'], ['Stock take', 'none'],
+      ] },
+      { room: 'Office', pages: [
+        ['Today', 'old', 'The old app has a Dashboard'], ['Reports', 'old', 'The old app has Sales history'],
+        ['Website', 'old', 'The old app has a Website panel under Edit shop'], ['Settings', 'old', 'The old app has Edit shop'],
+      ] },
+    ] },
+    { area: 'Customer side', note: 'What a shop\'s customers see. Booking a repair works end to end in the new app. The old shop website is still running; the new one, and the customer account, are drawn but not built.', rooms: [
+      { room: 'Booking a repair', pages: [
+        ['Pick a service', 'built'], ['Describe the problem', 'built'], ['Pick a date', 'built'],
+        ['Your details', 'built'], ['Booking sent, with a private link', 'built'], ['Approve the quote', 'built'],
+      ] },
+      { room: 'Website and account', pages: [
+        ['Shop website', 'old'], ['Buy online, or click and collect', 'old', 'The old website sells through Shopify, only when a Shopify account is connected'], ['Account and history', 'none'], ['Customer sign-in', 'none'],
+      ] },
+    ] },
+  ],
   // status per journey id; anything not listed is 'designed'.
   building: { ja: 'Frame built', j12: 'Building', j11: 'Building' },
   journeys: [
@@ -199,12 +251,37 @@ const BOARD = {
 };
 
 const LABEL = { done: 'Merged', review: 'In review', build: 'Building', next: 'Next' };
+const SCREEN = { built: ['s-done', 'Built'], part: ['s-build', 'Partly built'], old: ['s-old', 'Old app only'], none: ['s-next', 'Not built'] };
 const REPO = 'https://github.com/JackCurphey/wheelhouse-epos/pull/';
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
 document.getElementById('updated').textContent = `Updated ${BOARD.updated}`;
 document.getElementById('lead').textContent = BOARD.lead;
 document.getElementById('sub').textContent = BOARD.sub;
+
+const key = document.getElementById('screens-key');
+for (const [cls, label] of Object.values(SCREEN)) key.append(el('span', `pill ${cls}`, label));
+const screens = document.getElementById('screens');
+for (const a of BOARD.screens) {
+  const area = el('div', 'area');
+  area.append(el('h3', null, a.area), el('p', null, a.note));
+  const rooms = el('div', 'rooms');
+  for (const r of a.rooms) {
+    const room = el('div', 'room'); const ul = el('ul');
+    room.append(el('h4', null, r.room), ul);
+    for (const [name, state, detail] of r.pages) {
+      const li = el('li'); const what = el('div');
+      what.append(el('strong', null, name));
+      if (detail) what.append(el('span', 'd', detail));
+      const [cls, label] = SCREEN[state] || ['s-next', String(state)];
+      li.append(what, el('span', `pill ${cls}`, label));
+      ul.append(li);
+    }
+    rooms.append(room);
+  }
+  area.append(rooms);
+  screens.append(area);
+}
 
 const counts = {};
 for (const p of BOARD.pieces) counts[p.status] = (counts[p.status] || 0) + 1;
