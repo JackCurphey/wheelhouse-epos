@@ -73,6 +73,13 @@ each drawn just before its stage. Until then they wait on Jack.
 - #7 and #8, a bike's own page (WP-3.2): one drawing, before stage 3.
 - #10, fixing a sale that didn't send (WP-3.1): before stage 3.
 - #51, sending the customer a link to pay (WP-3.1): before stage 3.
+- Added after the fresh review, following the same rule: where the "Sign out
+  everywhere" button sits on a person's page (`ops-person`, WP-5.1). The
+  confirmation box `ops-person-everywhere` is drawn, but no drawing shows the
+  button (`setup.mjs` `personDialog()` has none): before stage 5.
+- The one-canvas file `consolidate/j20.mjs` still marks `ops-person` and
+  `ops-person-everywhere` as later; it feeds the drawings, so it changes at
+  the next canvas rebuild.
 
 ## The 95, by stage
 
@@ -160,7 +167,7 @@ the accepted detours go around: #90 (Story 2 step 4 says the phone sale
 | 22 | new-job: + Add a bike | Add a bike while making a new job | WP-4.1, plan:570 | C: src/screens/diary/new-job-dialog.tsx (customer bikes) | No |
 | 28 | '*' j07 (ac-inbox): [Customer name] | Another customer's answered question | WP-4.5, plan:658-659 | B: `ac-question` with other data | Not this one: coverage-walks.md:16-20 settled the unanswered version |
 | 38 | '*' j07: Edit your details | Customer edits their details | WP-4.5, plan:661 | C: `ac-contact` Form box | No |
-| 48 | request-new: Offer another time / Another time | Choose a time to offer the customer | WP-4.1, plan:555, :569 | C: src/components/ui/day-diary.tsx or the `bk-when` day strip. src/screens/diary/request-dialog.tsx:16-18 says the server can't do it yet | Partly: 2026-09-27-workshop-day-review.md:56 |
+| 48 | request-new: Offer another time / Another time | Choose a time to offer the customer | WP-4.1, plan:554, :569 | C: src/components/ui/day-diary.tsx or the `bk-when` day strip. src/screens/diary/request-dialog.tsx:16-18 says the server can't do it yet | Partly: 2026-09-27-workshop-day-review.md:56 |
 | 49 | '*' j07: Oliver Chen | An answered conversation in Messages | WP-4.5, plan:658-659 | B: `ac-question` thread | No |
 | 65 | '*' j04 / j05; job-overview: Add item | Job's search for services and products | WP-4.1, plan:571 | C: already built in src/screens/diary/item-search.tsx (used by work-parts.tsx) | No |
 | 71 | dq-ready; '*' j05: Photo … open larger photo | Enlarged pads photo over the ready page | WP-4.3, plan:606 | B: the enlarged-photo pop-up `dq-quote-photo` (plan:587; consolidate/j04.mjs:12) | No |

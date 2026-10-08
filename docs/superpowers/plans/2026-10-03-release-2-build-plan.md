@@ -693,7 +693,7 @@ later packages.
 - **`set-pay-ways`** (block 1, Settings page) — 4 situations: `fr-step`, `set-pay-other`, `set-pay-card`, `cs-groups`.
 - **`set-staff`** (block 1, Settings page) — 3 situations: `set-staff-roles`, `set-staff-invited`, `set-staff-invite-expired`.
 - **`set-staff-person`** (block 9, Form box) — 2 of its 4 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
-- Brought back from later (Jack, 8 Oct, #139): `ops-person-everywhere`, "Sign Jo Taylor out everywhere?" on a person's page. The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
+- Brought back from later (Jack, 8 Oct, #139): `ops-person` and `ops-person-everywhere`, "Sign Jo Taylor out everywhere?" on a person's page. Where the button sits on the page is not drawn yet; Jack draws it before stage 5. The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
 - **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
 - **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
 - **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`; plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).
@@ -1032,7 +1032,7 @@ dropped, except practice mode.
   computers are seen and stopped beside the tills instead (walk-through 8,
   later change H3), in WP-5.1.
 <!-- later LATER-oversight -->
-  Screens not built (15): `ops-log-filtered`, `ops-first-note`, `ops-your-settings`, `ops-my-activity`, `ops-today-alerts`, `ops-alert-settings`, `ops-devices`, `ops-devices-signout`, `ops-devices-signed-out`, `ops-person`, `ops-feedback-empty`, `ops-feedback`, `ops-feedback-shot`, `ops-feedback-failed`, `ops-feedback-sent`.
+  Screens not built (14): `ops-log-filtered`, `ops-first-note`, `ops-your-settings`, `ops-my-activity`, `ops-today-alerts`, `ops-alert-settings`, `ops-devices`, `ops-devices-signout`, `ops-devices-signed-out`, `ops-feedback-empty`, `ops-feedback`, `ops-feedback-shot`, `ops-feedback-failed`, `ops-feedback-sent`.
 <!-- /later -->
 - **The full website editor, theme and extra pages** (was in WP-6.1). The
   first release has a fixed design with editable words and photos, the
