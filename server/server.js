@@ -1350,8 +1350,10 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   if (!doc) return notFound(res, 'Not found');
   if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
-  // Tendering the order for a job is the shop saying the work is done, so it has
-  // to be a legal 'finish' on the work machine. If it is not, the tender is
+  // Tendering the order for a job is the shop saying the work is done, so the
+  // work must already be finished or be a legal 'finish' on the work machine
+  // (Jack, 8 Oct, docs/decisions/2026-10-08-paying-for-finished-work.md). If
+  // it is neither, the tender is
   // refused (Jack's decision, 20 Sep, reaffirmed after a day on the other
   // behaviour): the job record governs, and the shop marks the job's real state
   // before taking the money.
@@ -1366,9 +1368,18 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // a real sale on the books and the job untouched, which is worse than either
   // outcome.
   let jobToFinish = null;
+  let jobAlreadyFinished = null;
   if (doc.workshop_job_id) {
     jobToFinish = await db.prepare('SELECT id, work_state, version FROM workshop_jobs WHERE id = ?')
       .get(doc.workshop_job_id);
+    // Work already finished ("Mark ready for collection") already says the
+    // work is done, which is what the decision asks of the record: the
+    // customer pays and the job is left as it is (Jack, 8 Oct). It is checked
+    // again after the sale, below, in case someone reopens it in between.
+    if (jobToFinish && jobToFinish.work_state === 'complete') {
+      jobAlreadyFinished = jobToFinish;
+      jobToFinish = null;
+    }
     if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
       return sendJson(res, 409, {
         error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
@@ -1453,6 +1464,17 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
     // uncompleted job is exactly the ambiguity the state machines exist to
     // remove.
     if (!finished.ok) jobWarning = finished.message;
+  }
+  // The same race for work that was already finished at the check: if someone
+  // reopened it before the sale was made, the record no longer says the work
+  // is done (docs/decisions/2026-10-08-paying-for-finished-work.md). The sale
+  // stands, the job is left where they put it, and the reply says so.
+  if (jobAlreadyFinished) {
+    const now = await db.prepare('SELECT work_state FROM workshop_jobs WHERE id = ?').get(jobAlreadyFinished.id);
+    if (!now) jobWarning = 'Job not found';
+    else if (now.work_state !== 'complete') {
+      jobWarning = `This job changed while the payment went through: its work is now ${now.work_state}, not finished. The payment stands; check the job.`;
+    }
   }
 
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
