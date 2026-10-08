@@ -51,8 +51,15 @@ person's devices" — which nothing in the first release would do.
 
 **Decision** (Jack, 8 Oct: "1"). Only "Sign out everywhere" on a person
 comes back into the first release: the drawn screen `ops-person-everywhere`
-("Sign Jo Taylor out everywhere?"), in WP-1.1. Mark builds the server half,
-Jack the button. The full Signed-in devices list (`ops-devices`,
+("Sign Jo Taylor out everywhere?"). Mark builds the server half, Jack the
+button.
+
+It is built in WP-5.1 (Jack, 8 Oct: "1", a second question). It was first
+meant for WP-1.1, but the button sits on a person's page (`set-staff-person`,
+built in WP-5.1) and uses the "Are you sure?" box (built in WP-3.1), so it
+comes with them. That is still well before any shop goes live (stage 8), so
+the 30-day rule is covered by then. Chosen over moving the person's page and
+the box into stage 1, and over a new, simpler button on the team list. The full Signed-in devices list (`ops-devices`,
 `ops-devices-signout`, `ops-devices-signed-out`) stays later, and so does
 signing out a single device, so row #57 stays D. A lost phone is covered.
 
@@ -246,7 +253,7 @@ the accepted detours go around: #90 (Story 2 step 4 says the phone sale
   feature but not the missing page.
 - Row #57: decision 2 above settles the clash this row notes. Signing out
   one device stays later; "Sign out everywhere" on a person comes into
-  WP-1.1.
+  WP-5.1 (decision 2).
 
 ## Outside the 95, not looked into
 

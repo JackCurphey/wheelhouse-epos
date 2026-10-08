@@ -213,11 +213,7 @@ later packages.
   table: `docs/superpowers/specs/2026-10-05-wp-1-1-roles-and-switches.md`, #132);
   `/api/auth/me` returns them; every route checks them; the sidebar shows
   each role its rooms; a mechanic lands on the Diary; a login linked to its
-  staff member (the mechanic's "Me"). And "Sign out everywhere" on a person,
-  brought back from later by Jack on 8 Oct (#139; not-drawn pages decision
-  2): the person is checked out of the till after the sale that's open and
-  signed out of every phone and computer. Mark builds the server half, Jack
-  the button.
+  staff member (the mechanic's "Me").
 
 <!-- screens 1.1 -->
 *Building blocks built here:* 12 Controls hidden by role (no board of its own); 16 App frame; 29 "You can't open this — ask [name]" (no board of its own).
@@ -227,7 +223,6 @@ later packages.
 - **`map`** (block 16, App frame) — no other situations.
 - **`staff-app`** (block 16, App frame) — 4 situations: `staff-app-mechanic`, `staff-app-menu`, `staff-search`, `auth-noaccess`; plus 3 written lines.
 - **`till-rail`** (block 16, App frame) — 1 situation: `till-rail-open`; plus 2 written lines.
-- Brought back from later (Jack, 8 Oct, #139): `ops-person-everywhere`, the "Sign Jo Taylor out everywhere?" box. Its button sits on a person's page, the `set-staff-person` board (built in WP-5.1).
 <!-- /screens -->
 
 - **WP-1.2 Settings store, change record and activity log** (Owner setup 4;
@@ -698,6 +693,7 @@ later packages.
 - **`set-pay-ways`** (block 1, Settings page) — 4 situations: `fr-step`, `set-pay-other`, `set-pay-card`, `cs-groups`.
 - **`set-staff`** (block 1, Settings page) — 3 situations: `set-staff-roles`, `set-staff-invited`, `set-staff-invite-expired`.
 - **`set-staff-person`** (block 9, Form box) — 2 of its 4 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
+- Brought back from later (Jack, 8 Oct, #139): `ops-person-everywhere`, "Sign Jo Taylor out everywhere?" on a person's page. The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
 - **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
 - **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
 - **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`; plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).
@@ -1030,7 +1026,7 @@ dropped, except practice mode.
   devices list, Send feedback, and the first sign-in note with "What
   Wheelhouse records about you". Follows Management oversight, later
   change (issue #116 question 5). "Sign out everywhere" on a person came
-  back into WP-1.1 on 8 Oct (Management oversight, later change, issue
+  back into WP-5.1 on 8 Oct (Management oversight, later change, issue
   #139). Still to check before release: whether
   shops must by law tell staff what is recorded about them. Workshop
   computers are seen and stopped beside the tills instead (walk-through 8,
