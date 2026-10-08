@@ -8,19 +8,18 @@
 **Mark is on:** WP-0.4: 57 of 161 routes moved (5 Oct). Next, a spec for
 `server/lib/sales.js` with customers and sales (deferred Shopify pushes),
 then image uploads and booking/portal; the dashboard needs Jack's
-`currentShopToday`. Then WP-0.5. **#157** approved by Mark (5 Oct), for Jack to
-update and merge; the types split (§4.3) waits on it.
-**Jack is on:** WP-0.2's screens half merged (#164, 5 Oct); the stage
-check waits for Mark's lines 4 and 6.
-Ready alongside: #136 (Citrus Lime exports, not started) and #138 (card
-machine: Stripe first, SumUp second, Paymentsense later, #174,
-`docs/decisions/2026-10-05-card-payments-provider.md`), only Jack can do; reviewing Mark's
-WP-0.4 pull requests; stage 0's stage check once lines 1–6 of §9 are in.
-**Open for Jack:** drawings needed before WP-1.7: the trust-PIN "tap your
-name" screen, and the "till only" pop-up's line for a Mechanic (WP-1.1 spec
-§8); a Change requested badge on the job window (not drawn).
+`currentShopToday`. Then WP-0.5. #157 merged (5 Oct), so the types split
+(§4.3) can go. Waiting on Mark: approving Jack's #180–#184, #188, #189;
+re-reviewing #187–#189, #191 (answered 8 Oct); Jack's questions on #180.
+**Jack is on:** WP-0.4's workshop moves (#180–#184, open). OpenSpec specs of
+built areas (#186): workshop-jobs #187 and workshop-diary #191 (open), with
+fixes #188 and #189 found while writing them; #189 also waits on #183. Then
+the stage check, once lines 1–6 of §9 are in.
+**Open for Jack:** asks from Mark #137 (Mark offered to take it, #145), #134,
+#135, #139, #140; till job warning for WP-3.1 (#196); a Change requested
+badge on the job window (stage 4, stage 1 gaps decision 25).
 
-**Updated:** 2026-10-05. **Two people build at once** (Jack agreed to Mark's
+**Updated:** 2026-10-08. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
 PR #126): Mark takes the server half of each work package and all hosting;
 Jack takes the screens and the whole workshop. STATUS and the build board are
@@ -44,9 +43,9 @@ printing and messages, #167 sign-in, #168 products; guards that moved files
 and `server.js` define every name they use and import nothing unused,
 #155 and #158). Waiting: line 6 (Mark, WP-0.5; waits for line 4); line 7
 (Jack, the stage check; waits for lines 1–6). Stage 1 starts only after
-line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 in
-#157 (approved by Mark, for Jack to merge). #161 (the migration backstop missed a rename
-that duplicates a number) is fixed by #166.
+line 7. Planning fixes before stage 1: #131, #132, #133 closed; #141 done in
+#157 (5 Oct). #161 fixed by #166. Stage 1's 25 drawing gaps answered (#185,
+7 Oct). Specs now live in `openspec/` (#186, 8 Oct).
 
 - **Build plan:** `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`;
   Jack's answers in `docs/decisions/2026-10-03-build-plan-questions.md`.
@@ -68,8 +67,9 @@ that duplicates a number) is fixed by #166.
 
 **Build board (keep it current):** https://claude.ai/artifact/NSgsNTKzrYr6GUK4GjF3by,
 source `docs/build-progress/build-board.html`. After any build piece merges or
-opens, edit its `BOARD` data block and republish (Jack, 3 Oct: he keeps it open
-to see where we are).
+opens, edit its `BOARD` data block, including the Overview tab's `overview`
+(Needs you, Waiting on Mark, Next up), and republish (Jack, 3 and 8 Oct).
+It is not Jack's local task log (`~/Dashboards/`).
 
 ## Open for Jack
 
@@ -82,11 +82,6 @@ to see where we are).
   lock-held race tests are sound.
 - The piece 6 memory risk (large booking bodies) must be decided before the
   booking route is publicly reachable (hosting not chosen).
-- #169: three flaky tests in Jack's area (`tests/customer/details-screen.test.js:474`
-  from #164, `tests/screens/diary-new-job.test.js`, `tests/browser/diary-waiting.spec.ts:100`);
-  the first failed `main`'s CI on the #164 merge and passed on the next run.
-- Review Mark's WP-0.4 pull requests after the fact (Mark, 5 Oct: they merge
-  on green CI plus a fresh review while Jack is busy; each says so).
 - `tests/screens/session.test.js:3` says `serializeSession` lives in
   `server.js`; it is in `server/routes/auth.js` now.
 - Found in #148, not fixed: on a website address `/api/portal/*` returns the
