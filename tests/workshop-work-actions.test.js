@@ -7,11 +7,12 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import '../server/load-env.js';
-import { pool, runWithShop, prepare } from '../server/db.js';
+import { pool, runWithShop, prepare, dbExec } from '../server/db.js';
 import { startLiveServer } from './helpers/liveServer.js';
 import { staffSignup, staffRequest, seedMechanic } from './helpers/staff.js';
 import { seedWorkshopJob } from './helpers/workshopFixtures.js';
 import { deleteTestShop } from './helpers/testShop.js';
+import { seedProduct } from './helpers/till.js';
 
 const MONDAY = '2026-09-07';
 let server;
@@ -222,6 +223,126 @@ test('tendering the order for work already finished goes through and leaves the 
     const job = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${created.body.id}`);
     assert.equal(job.body.workState, 'complete');
     assert.equal(job.body.version, finished.version, 'the job was already finished, so paying does not move it again');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// A finished job whose order has one real product line on it, so paying for
+// it takes real money and the sale touches that product's stock row.
+async function finishedJobWithAPart(cookie, shop, mechanicId, title, startTime, endTime) {
+  const created = await staffRequest(server.baseUrl, cookie, '/api/workshop-jobs', {
+    method: 'POST',
+    body: { title, jobDate: MONDAY, startTime, endTime, mechanicId },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const productId = await seedProduct(shop.id);
+  const order = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${created.body.orderId}/items`, {
+    method: 'PUT',
+    body: { items: [{ productId, qty: 1 }] },
+  });
+  assert.equal(order.status, 200, JSON.stringify(order.body));
+  const total = Number(order.body.total);
+  assert.ok(total > 0, `the order must cost something, got ${order.body.total}`);
+  const finished = await walk(cookie, created.body.id, ['book-in', 'start', 'finish']);
+  assert.equal(finished.workState, 'complete');
+  return { jobId: created.body.id, orderId: created.body.orderId, productId, total, finished };
+}
+
+test('paying real money for work already finished goes through and leaves the job as it is', async () => {
+  // Mark's review of #188: the first test pays nothing. This one pays the
+  // order's real total in cash.
+  const { cookie, shop, mechanicId, cashierId } = await newShop();
+  try {
+    const { jobId, orderId, total, finished } =
+      await finishedJobWithAPart(cookie, shop, mechanicId, 'Finished, paid in cash', '09:00', '10:00');
+
+    const converted = await staffRequest(server.baseUrl, cookie, `/api/sale-documents/${orderId}/convert`, {
+      method: 'POST',
+      body: { cashierId, cashAmount: total, cashTendered: total },
+    });
+    assert.equal(converted.status, 201, JSON.stringify(converted.body));
+    assert.equal(Number(converted.body.total), total, 'the sale is for the order\'s total');
+    assert.equal(Number(converted.body.cashAmount), total, 'and that total was paid in cash');
+    assert.equal(converted.body.jobWarning, undefined, 'nothing went wrong, so no warning');
+
+    const job = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${jobId}`);
+    assert.equal(job.body.workState, 'complete');
+    assert.equal(job.body.version, finished.version, 'the job was already finished, so paying does not move it again');
+  } finally {
+    await deleteTestShop(shop.id);
+  }
+});
+
+// Waits until the server's sale is blocked on this test's row lock: another
+// backend waiting on a lock, running the sale's stock UPDATE, with `ourPid`
+// among the backends blocking it. The same seam as till-sync-api.test.js's
+// deadlock test; here there is no second lock, so no deadlock head start.
+async function waitUntilSaleBlockedBy(ourPid, timeoutMs = 10000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const { rows } = await pool.query(
+      `SELECT 1 FROM pg_stat_activity a
+        WHERE a.pid <> $1 AND a.wait_event_type = 'Lock'
+          AND a.query LIKE 'UPDATE products SET stock_qty = %'
+          AND $1 = ANY(pg_blocking_pids(a.pid))`,
+      [ourPid]
+    );
+    if (rows.length) return;
+    if (Date.now() > deadline) {
+      throw new Error(`the server's sale never blocked on this test's lock within ${timeoutMs} ms`);
+    }
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
+test('work reopened while the payment for finished work goes through: the sale stands and the reply warns', async () => {
+  // Mark's review of #188. The payment's check sees the work finished; then,
+  // before the sale is made, someone reopens the work. The decision
+  // (docs/decisions/2026-10-08-paying-for-finished-work.md) is that the record
+  // must say the work is done when money is taken, so the shop must be told -
+  // the same way the in-progress path warns when the job moves under it.
+  //
+  // Made deterministic with a row lock: this test locks the part's stock row,
+  // so the server's sale passes the job check and then waits on the lock;
+  // the work is reopened while it waits; the lock is released.
+  const { cookie, shop, mechanicId, cashierId } = await newShop();
+  try {
+    const { jobId, orderId, productId, total, finished } =
+      await finishedJobWithAPart(cookie, shop, mechanicId, 'Reopened mid-payment', '11:00', '12:00');
+
+    let pending;
+    let reopened;
+    await runWithShop(shop.id, async () => {
+      await dbExec('BEGIN');
+      try {
+        const { pid: ourPid } = await prepare('SELECT pg_backend_pid() AS pid').get();
+        await prepare('UPDATE products SET stock_qty = stock_qty WHERE id = ?').run(productId);
+        pending = staffRequest(server.baseUrl, cookie, `/api/sale-documents/${orderId}/convert`, {
+          method: 'POST',
+          body: { cashierId, cashAmount: total, cashTendered: total },
+        });
+        await waitUntilSaleBlockedBy(ourPid);
+        reopened = await act(cookie, jobId, 'reopen-work', finished.version);
+      } finally {
+        await dbExec('ROLLBACK');
+      }
+    });
+    assert.equal(reopened.status, 200, JSON.stringify(reopened.body));
+    assert.equal(reopened.body.workState, 'in_progress');
+
+    const converted = await pending;
+    assert.equal(converted.status, 201, `the sale stands: ${JSON.stringify(converted.body)}`);
+    assert.equal(Number(converted.body.total), total);
+    assert.equal(
+      typeof converted.body.jobWarning, 'string',
+      `the work was reopened before the sale was made, so the reply must warn; got ${JSON.stringify(converted.body.jobWarning)}`
+    );
+    assert.match(converted.body.jobWarning, /in_progress/, 'the warning says where the work is now');
+
+    const job = await staffRequest(server.baseUrl, cookie, `/api/workshop-jobs/${jobId}`);
+    assert.equal(job.body.workState, 'in_progress', 'the payment does not move the job');
+    assert.equal(job.body.version, reopened.body.version);
   } finally {
     await deleteTestShop(shop.id);
   }
