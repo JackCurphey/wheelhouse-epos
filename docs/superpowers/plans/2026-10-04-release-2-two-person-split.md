@@ -1,5 +1,9 @@
 # Release 2 build — splitting the work between Mark and Jack
 
+> **From 8 Oct 2026 this plan sets the order of work and the lanes only.**
+> How each piece is specified and built is in `CLAUDE.md` and OpenSpec
+> (`openspec/`) (`docs/decisions/2026-10-08-openspec-only.md`).
+
 **Date:** 4 October 2026
 **Status:** proposal from Mark's review of the build plan. Nothing here is
 started. Jack, 4 Oct: the build starts only when he says so.

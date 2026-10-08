@@ -14,8 +14,10 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 2. If building, read `docs/superpowers/plans/2026-10-03-release-2-build-plan.md`
    (what is built, in which stage) and
    `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md` (who
-   builds which half, and in what order). Find out whose session this is —
-   Mark's or Jack's — and take the next piece in that person's lane.
+   builds which half, and in what order). Use them for the order of work and
+   the lanes only; how each piece is specified and built is below. Find out
+   whose session this is — Mark's or Jack's — and take the next piece in that
+   person's lane.
 3. **Two people build at once** (Jack, 4 Oct, agreeing to the split plan):
    Mark takes the server half of each work package and all hosting; Jack
    takes the screens and the whole workshop. Each file has one owner (split
@@ -34,9 +36,16 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
   per area; `openspec/changes/<name>/` holds each piece of work in progress
   (proposal, specs, design, tasks) until it is archived. `openspec/config.yaml`
   carries the project's rules for every proposal.
-- Older specs `docs/superpowers/specs/` and plans `docs/superpowers/plans/`
-  are history and source material. As each area's OpenSpec spec lands, a
-  line at the top of the old documents it replaces points to it.
+- **OpenSpec only** (Mark, 8 Oct, for Jack to confirm on #186;
+  `docs/decisions/2026-10-08-openspec-only.md`): the split plan and build
+  plan set only the order of work and the lanes; every piece of work is an
+  OpenSpec change (proposal, specs, design, tasks) instead of a section in
+  `docs/superpowers/specs/`. An area's spec is written just before work
+  first touches that area, not all at once.
+- `docs/superpowers/specs/` is history and source material; no new files go
+  there. Older plans in `docs/superpowers/plans/` are history too. As each
+  area's OpenSpec spec lands, a line at the top of the old documents it
+  replaces points to it.
 - Jack's decisions: `docs/decisions/` (one file per journey, plus the
   walk-throughs). Never reopen a decision; note when work touches one.
 - The drawings: `docs/design/user-journeys/generator/` (screen ids in
@@ -84,8 +93,9 @@ project only (Jack, 3 Oct 2026, `docs/decisions/2026-10-03-build-plan-questions.
 OpenSpec change (`/opsx:propose`: proposal, specs, design, tasks, citing
 the drawings and Jack's decisions) → tests first, each watched failing for the right reason
 → build to the drawings → fresh review → `npm test` and
-`npm run test:browser` pass locally → pull request → merge when CI is green
-→ `/opsx:archive`, so `openspec/specs/` describes what was built.
+`npm run test:browser` pass locally → pull request → `/opsx:archive` as the
+last commit in that pull request, before it merges, so `openspec/specs/`
+describes what was built → merge when CI is green on that final commit.
 The board and STATUS catch up in the day's status pull request. Where a
 package has both halves, the contract is written first and Mark's server
 half merges before Jack's screens half starts (split plan §4.3, §4.4). Pull requests aim for 250–600 changed lines.
