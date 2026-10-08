@@ -1378,6 +1378,7 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
     // again after the sale, below, in case someone reopens it in between.
     if (jobToFinish && jobToFinish.work_state === 'complete') {
       jobAlreadyFinished = jobToFinish;
+      jobToFinish = null;
     }
     if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
       return sendJson(res, 409, {
