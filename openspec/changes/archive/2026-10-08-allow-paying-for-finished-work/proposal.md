@@ -12,6 +12,9 @@ the job page offers no way back. Found while writing the workshop-jobs spec
 
 - Paying for a job's order is also accepted when the work is already
   finished; the job is left as it is (no second finish, no version change).
+- If someone reopens that finished work before the sale is made, the sale
+  stands and the reply warns that the work is no longer finished, the same
+  way paying for work in progress already warns when the job moves.
 - Unchanged: payment is still refused for work not started, on hold or
   waiting for parts; work in progress is still finished by the payment.
 
@@ -34,4 +37,5 @@ None.
 - Work package: a bug fix to built behaviour, outside the stage plan.
 - Lane: the check lives in the sales code (`POST /api/sale-documents/:id/convert`,
   Mark's); the job rules are Jack's. A server change by Jack, so Mark approves.
-- Code: one guard in the convert route; one new server test.
+- Code: one guard in the convert route, and a second look at the job after
+  the sale; three new server tests.
