@@ -28,6 +28,9 @@ const JOBS = [
   job({}),
   job({ id: 3, reference: 'WH-1003', bikeLabel: 'Specialized Sirrus', customerName: 'Sam Reed', mechanicId: null, jobDate: '2026-10-08', bookingState: 'pending' }),
   job({ id: 4, reference: 'WH-1004', bikeLabel: 'Cannondale Quick', customerName: 'Aisha Khan', jobDate: '2026-10-07', bookingState: 'cancelled', cancelledBy: 'customer' }),
+  // A change request to another day, time and mechanic (Alex → Jo).
+  job({ id: 5, reference: 'WH-1005', bikeLabel: 'Brompton C Line', customerName: 'Oliver Chen', jobDate: '2026-10-09', startTime: '14:00', endTime: '15:00',
+    bookingState: 'reschedule_requested', requested: { jobDate: '2026-10-08', startTime: '15:00', endTime: '16:00', mechanicId: 12 } }),
 ];
 
 const realFetch = globalThis.fetch;
@@ -87,6 +90,27 @@ test('a job can be picked up with M, moved with the arrows, and saved with Enter
   assert.ok(has(ui.queryByText(/Moving Trek Domane\. Wed 7 Oct, 10:30–11:30\./)));
   fireEvent.keyDown(b, { key: 'Enter' });
   await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/1 {"jobDate":"2026-10-07","startTime":"10:30","endTime":"11:30","version":3}']));
+});
+
+test('in the Week view, dropping a change request on the time asked for sends the mechanic asked for too', async () => {
+  // Jack, 8 Oct: the Week view sent no mechanic, so a drop on the dashed
+  // outline moved the job but did not accept a request for another mechanic.
+  const { ui, fireEvent, waitFor } = await openDiary();
+  const b = block(ui, 'Brompton C Line');
+  fireEvent.keyDown(b, { key: 'm' });
+  fireEvent.keyDown(b, { key: 'ArrowLeft' });
+  for (let i = 0; i < 4; i += 1) fireEvent.keyDown(b, { key: 'ArrowDown' }); // 15 minutes a press
+  fireEvent.keyDown(b, { key: 'Enter' });
+  await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/5 {"jobDate":"2026-10-08","startTime":"15:00","endTime":"16:00","version":3,"mechanicId":12}']));
+});
+
+test('in the Week view, a drop anywhere else still sends no mechanic', async () => {
+  const { ui, fireEvent, waitFor } = await openDiary();
+  const b = block(ui, 'Brompton C Line');
+  fireEvent.keyDown(b, { key: 'm' });
+  fireEvent.keyDown(b, { key: 'ArrowLeft' });
+  fireEvent.keyDown(b, { key: 'Enter' });
+  await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/5 {"jobDate":"2026-10-08","startTime":"14:00","endTime":"15:00","version":3}']));
 });
 
 test('Escape puts the job back without saving', async () => {

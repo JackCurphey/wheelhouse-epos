@@ -634,6 +634,14 @@ export function DiaryPage() {
       jobDate: c.date, startTime: hhmm(p.startMin), endTime: hhmm(p.startMin + p.durationMin), version: job.version,
     };
     if (view === 'day' && !c.all && c.mechanicId !== job.mechanicId) body.mechanicId = c.mechanicId;
+    // A column with no mechanic (the Week view, Everyone) dropped exactly on a
+    // change request's time sends the mechanic asked for, so the move accepts
+    // the request (Jack, 8 Oct).
+    const asked = job.requested as { jobDate?: string; startTime?: string; mechanicId?: number | null } | null | undefined;
+    if ((view === 'week' || c.all) && asked?.mechanicId != null && asked.mechanicId !== job.mechanicId
+      && asked.jobDate === c.date && asked.startTime === hhmm(p.startMin)) {
+      body.mechanicId = asked.mechanicId;
+    }
     setMoveError(null);
     try {
       // Day 1 is the job itself; a later day is moved on its own (decision 52).

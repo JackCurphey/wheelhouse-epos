@@ -34,6 +34,11 @@ function Badge({ state }: { state: DiaryState }) {
 
 type Slot = { jobDate?: string | null; startTime?: string | null; endTime?: string | null };
 const at = (s?: Slot) => (s?.jobDate ? `${shortDay(s.jobDate)}${s.startTime ? ` · ${s.startTime}` : ''}` : '');
+// A change request's From and To name the mechanic too: accepting moves the
+// booking to the one the customer asked for (Jack, 8 Oct). No mechanic reads
+// "Shared queue", as on the job page.
+const atWho = (s?: Slot & { mechanicName?: string | null }) =>
+  (s?.jobDate ? `${at(s)} · ${s.mechanicName ?? 'Shared queue'}` : '');
 const when = (s: Slot) => (s.jobDate ? `${shortDay(s.jobDate)}${s.startTime ? `, ${s.startTime}${s.endTime ? `–${s.endTime}` : ''}` : ''}` : '');
 
 /** Why the server refused, in words (the old diary's refusalText). */
@@ -145,11 +150,11 @@ export function RequestDialog({ item, onClose, onAnswered }: { item: WaitingItem
           <span className="text-[11px] font-bold tracking-[0.6px] text-[var(--wh-muted)] uppercase">From</span>
           <span />
           <span className="text-[11px] font-bold tracking-[0.6px] text-[var(--wh-muted)] uppercase">To</span>
-          <strong className="text-sm">{at(item.from)}</strong>
+          <strong className="text-sm">{atWho(item.from)}</strong>
           <span aria-hidden="true">→</span>
-          <strong className="text-sm">{at(item.to)}</strong>
+          <strong className="text-sm">{atWho(item.to)}</strong>
         </div>
-        <p className="m-0 text-[13px] text-[var(--wh-muted)]">The customer asked to move this booking. Accepting keeps the same work and mechanic.</p>
+        <p className="m-0 text-[13px] text-[var(--wh-muted)]">The customer asked to move this booking. Accepting keeps the same work.</p>
       </>
     );
     footer = (

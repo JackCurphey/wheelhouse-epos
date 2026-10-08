@@ -141,6 +141,23 @@ test('"The bike is here now" books it in straight after saving', async () => {
   assert.equal(posts()[1], '/api/workshop-jobs/50/book-in {"version":1}');
 });
 
+test('"Waiting for parts" with the bike here saves once and closes: the server has already booked it in', async () => {
+  // Jack, 8 Oct: the server puts a waiting-for-parts job's bike in the shop as
+  // it creates it, so the book-in after it was refused, the form stayed open,
+  // and a second Save could make a duplicate job.
+  const r = await openDiary();
+  const form = await pickTuesdayTen(r);
+  r.fireEvent.change(form.getByLabelText('Find customer by name, phone or email'), { target: { value: 'Maya' } });
+  r.fireEvent.click(await form.findByRole('button', { name: /Maya Patel/ }));
+  r.fireEvent.change(form.getByLabelText('Job title'), { target: { value: 'Wobbly wheel' } });
+  r.fireEvent.click(form.getByRole('radio', { name: 'Waiting for parts' }));
+  r.fireEvent.click(form.getByRole('switch', { name: 'The bike is here now' }));
+  answer = { status: 201, ok: true, json: async () => ({ ...JOBS[0], id: 50, version: 1, custodyState: 'in_shop', workState: 'waiting_parts' }) };
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  await r.waitFor(() => assert.ok(r.ui.queryByRole('dialog', { name: 'New job' }) === null));
+  assert.deepEqual(posts().map((p) => p.split(' ')[0]), ['/api/workshop-jobs']);
+});
+
 test('a job needs a title, and a customer unless it is a new bike build', async () => {
   const r = await openDiary();
   const form = await pickTuesdayTen(r);
