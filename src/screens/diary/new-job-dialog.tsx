@@ -138,7 +138,9 @@ export function NewJobDialog({ date, startMin, mechanicId, autoChosen, people, o
     if (service) body.plannedMinutes = service.minutes;
     try {
       const job = await apiMutate<WorkshopJob>('/api/workshop-jobs', body);
-      if (bikeHere) await jobAction(job.id, 'book-in', job.version);
+      // A waiting-for-parts job is created with the bike already in, so
+      // booking it in again would be refused (Jack, 8 Oct).
+      if (bikeHere && job.custodyState !== 'in_shop') await jobAction(job.id, 'book-in', job.version);
       await queryClient.invalidateQueries({ queryKey: ['workshop-jobs'] });
       onClose();
     } catch (err) {

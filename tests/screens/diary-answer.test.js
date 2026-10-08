@@ -32,7 +32,7 @@ const WAITING = {
   items: [
     { kind: 'new_booking', jobId: 3, reference: 'WH-1003', jobDate: '2026-10-09', startTime: '10:00', endTime: '10:45', mechanicId: null, customerName: 'Sam Reed', serviceNames: ['Puncture repair'], services: [], arrivedAt: '2026-10-03T08:15:00Z' },
     { kind: 'change_request', jobId: 2, reference: 'WH-1002', jobDate: '2026-10-05', startTime: '10:00', endTime: '11:00', mechanicId: 11, customerName: 'Oliver Chen', serviceNames: ['Full service'], services: [], arrivedAt: '2026-10-03T08:20:00Z',
-      from: { jobDate: '2026-10-05', startTime: '10:00', endTime: '11:00', mechanicId: 11 }, to: { jobDate: '2026-10-05', startTime: '14:00', endTime: '15:00', mechanicId: 11 } },
+      from: { jobDate: '2026-10-05', startTime: '10:00', endTime: '11:00', mechanicId: 11, mechanicName: 'Sam' }, to: { jobDate: '2026-10-05', startTime: '14:00', endTime: '15:00', mechanicId: 12, mechanicName: 'Alex Morgan' } },
     { kind: 'customer_cancelled', jobId: 4, reference: 'WH-1004', jobDate: '2026-10-07', startTime: '13:00', endTime: '14:00', mechanicId: 11, customerName: 'Aisha Khan', serviceNames: ['Safety check'], services: [], arrivedAt: '2026-10-03T07:58:00Z' },
   ],
 };
@@ -147,10 +147,21 @@ test('a change request shows where from and to, and Accept moves it', async () =
   const r = await openDiary();
   const dlg = await openCard(r, 'Oliver Chen');
   assert.ok(has(dlg.queryByRole('heading', { name: 'Change request' })));
-  assert.ok(has(dlg.queryByText('Mon 5 Oct · 10:00')));
-  assert.ok(has(dlg.queryByText('Mon 5 Oct · 14:00')));
+  assert.ok(has(dlg.queryByText('Mon 5 Oct · 10:00 · Sam')));
+  assert.ok(has(dlg.queryByText('Mon 5 Oct · 14:00 · Alex Morgan')));
   r.fireEvent.click(dlg.getByRole('button', { name: 'Accept' }));
   await r.waitFor(() => assert.deepEqual(posted(), ['/api/workshop-jobs/2/accept-change {"version":7}']));
+});
+
+test('a change request names the mechanic on each side, since accepting moves it to the one asked for', async () => {
+  // Jack, 8 Oct: the pop-up said "Accepting keeps the same work and mechanic",
+  // but accepting moves the booking to the mechanic the customer asked for.
+  const r = await openDiary();
+  const dlg = await openCard(r, 'Oliver Chen');
+  assert.ok(has(dlg.queryByText('Mon 5 Oct · 10:00 · Sam')));
+  assert.ok(has(dlg.queryByText('Mon 5 Oct · 14:00 · Alex Morgan')));
+  assert.ok(has(dlg.queryByText('The customer asked to move this booking. Accepting keeps the same work.')));
+  assert.ok(dlg.queryByText(/same work and mechanic/) === null);
 });
 
 test('declining a change request keeps the booking where it was', async () => {

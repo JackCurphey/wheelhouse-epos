@@ -165,19 +165,23 @@ A move SHALL be checked against the shop's rules for a job's day and time (see `
 - **THEN** it cannot be picked up or dragged
 
 ### Requirement: Dropping a job on the customer's requested time accepts the change
-When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length: the booking is confirmed there, the request cleared and one hold kept, at the new time. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
+When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop of the job's first day on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
 
 #### Scenario: Dropped on the requested start
 - **WHEN** a booking at 10:00 whose customer asked for 14:00 on another day is saved to that day at 14:00 to 15:30
-- **THEN** it is confirmed at 14:00 to 15:30 and no request remains
+- **THEN** it is confirmed at 14:00 to 15:30, no request remains, and one hold is kept, at the new time
 
 #### Scenario: Dropped elsewhere
 - **WHEN** the same booking is moved to 12:00 on its own day
 - **THEN** it still reads Change requested, held at 12:00 and at the requested 14:00
 
 #### Scenario: Dropped on the outline in the Week view, for another mechanic
-- **WHEN** the customer asked to move from Sam to Alex and staff drop the job on the dashed outline in the Week view, which sends no mechanic
-- **THEN** the job moves to that day and time with Sam and the request stays
+- **WHEN** the customer asked to move from Alex Morgan to Jo Taylor and staff drop the job on the dashed outline in the Week view
+- **THEN** the move is sent with Jo Taylor as the mechanic, so the change is accepted
+
+#### Scenario: A later day dropped on the requested time
+- **WHEN** a two-day job's customer asked to move it, and staff drop day 2 on the requested day and time in the Week view
+- **THEN** day 2 moves with its own mechanic and the request stays
 
 ### Requirement: New job starts by choosing a time on the diary
 New job SHALL turn the diary to "Choose a time for the new job.", with "Enter a time instead" and Cancel. A click on the grid SHALL open the New job form at that time, snapped to 15 minutes; Cancel SHALL leave the diary as it was. The form SHALL have no date or time field. In the Day view the clicked column's mechanic SHALL be chosen, or Shared queue in the "Not assigned yet" column. Otherwise the form SHALL choose a mechanic as the next requirement says.
@@ -213,7 +217,7 @@ The New job form SHALL find a customer by name, phone or email and offer their b
 - **THEN** it is not offered
 
 ### Requirement: Saving a new job
-Save job SHALL create the job with what the form holds and, when work was chosen, its planned length; with no work chosen the job SHALL be an hour long. A title SHALL be needed, and a customer unless it is a new bike build. If the server refuses, the form SHALL show its words and stay open. "The bike is here now" SHALL book the bike in straight after saving; if that book-in is refused, the job SHALL already be saved and the form SHALL show the refusal and stay open.
+Save job SHALL create the job with what the form holds and, when work was chosen, its planned length; with no work chosen the job SHALL be an hour long. A title SHALL be needed, and a customer unless it is a new bike build. If the server refuses, the form SHALL show its words and stay open. "The bike is here now" SHALL book the bike in straight after saving, unless the job was created with the bike already in the shop.
 
 #### Scenario: Maya Patel's Standard service
 - **WHEN** staff find "Maya", choose Maya Patel, choose "Standard service · 90 min" and save
@@ -225,7 +229,7 @@ Save job SHALL create the job with what the form holds and, when work was chosen
 
 #### Scenario: The bike is here now, waiting for parts
 - **WHEN** staff turn on "The bike is here now" and save with the starting status Waiting for parts
-- **THEN** the job is saved with the bike already in the shop, the book-in is refused with "cannot book_in a job that is in_shop; from here you can collect", and the form stays open showing that
+- **THEN** the job is created with the bike already in the shop, no book-in is sent, and the form closes
 
 #### Scenario: No customer
 - **WHEN** staff save a job titled "PDI" with no customer and New bike build off
@@ -326,15 +330,15 @@ Declining a change request SHALL need the version staff last read, and SHALL kee
 - **THEN** it is refused with "There's no change request to decline"
 
 ### Requirement: The change request pop-up shows from and to
-A change request SHALL open in a pop-up headed "Change request", with the customer and bike, From and To as day and time, and the sentence "The customer asked to move this booking. Accepting keeps the same work and mechanic.", with Accept and Decline, each sent with the version the pop-up saw. The pop-up SHALL NOT name the mechanic the customer asked for, although accepting moves the booking to that mechanic.
+A change request SHALL open in a pop-up headed "Change request", with the customer and bike, From and To as day, time and mechanic ("Shared queue" when there is none), and the sentence "The customer asked to move this booking. Accepting keeps the same work.", with Accept and Decline, each sent with the version the pop-up saw. Accepting SHALL move the booking to the To side's day, time and mechanic.
 
 #### Scenario: Oliver Chen's change
-- **WHEN** staff open Oliver Chen's request to move from Monday 5 October at 10:00 to 14:00
-- **THEN** the pop-up shows "Mon 5 Oct · 10:00" and "Mon 5 Oct · 14:00", and Accept accepts the change
+- **WHEN** staff open Oliver Chen's request to move from Monday 5 October at 10:00 with Sam to 14:00 with Alex Morgan
+- **THEN** the pop-up shows "Mon 5 Oct · 10:00 · Sam" and "Mon 5 Oct · 14:00 · Alex Morgan", and Accept accepts the change
 
 #### Scenario: A request for another mechanic
 - **WHEN** a booking with Sam asks to move to Alex and staff accept it from the pop-up
-- **THEN** the booking moves to Alex, though the pop-up named neither mechanic and said the mechanic stays the same
+- **THEN** the booking moves to Alex, as the pop-up's To side said
 
 ### Requirement: Staff mark a customer's cancellation as seen
 A customer's cancellation SHALL open in a pop-up headed "Cancelled booking", saying when the customer cancelled and "No further action is needed.", with one answer, Seen. Seen SHALL need the version staff last read, keep the first time it was seen, and take the cancellation off "Waiting for you" and off the diary. Seen on anything else SHALL be refused with "Only a customer's cancellation can be marked as seen".
