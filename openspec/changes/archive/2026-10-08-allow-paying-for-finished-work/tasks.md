@@ -16,5 +16,5 @@
 
 - [x] 4.1 `npm test` and `npm run test:browser` pass locally (first round; for Mark's review round the server tests ran in CI, as the worktree had no `.env`)
 - [x] 4.2 Break the fix on purpose and see the new test fail, then restore
-- [x] 4.3 `openspec archive allow-paying-for-finished-work` so `openspec/specs/workshop-jobs/spec.md` carries the new scenario; archiving is the last commit before merge
+- [x] 4.3 `openspec archive allow-paying-for-finished-work` so `openspec/specs/workshop-jobs/spec.md` carries the new scenario; archived before merge. Archived before the archive-last rule (#186), so the review fixes after it edit the archived files in place
 - [ ] 4.4 Fresh review; Mark's approval (server change); merge when CI is green on the final commit
