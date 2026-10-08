@@ -2350,7 +2350,7 @@ route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
     // The old form sends its dropdown's status on every Save, and the old
     // statuses have no "in progress": a status the job already reads changes
     // nothing, or every Save would reset work in progress (Jack, 8 Oct).
-    if (requested !== existing.status && existing.work_state !== 'complete') {
+    if (requested !== existing.status) {
       const { booking, work: workState } = readLegacyStatus(requested);
       legacyStates = { booking, workState };
     }
