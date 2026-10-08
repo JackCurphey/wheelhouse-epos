@@ -250,8 +250,8 @@ Right-clicking a job, a press and hold on a touch screen, or the Menu key or Shi
 "Waiting for you" SHALL list, for the signed-in shop only: new online booking requests (not requests staff made themselves); customers' change requests; and bookings the customer cancelled, until someone marks them seen (never the shop's own cancellations). Items SHALL come oldest first by when each arrived. Each SHALL carry the job number, day, time and mechanic, the customer and the services in order; a change request SHALL also carry where the customer wants it.
 
 #### Scenario: A new online booking
-- **WHEN** Sam Reed books a Brake service online with Alex at 10:00
-- **THEN** it is listed as a new booking from 10:00 to 10:45 with Alex, for Sam Reed, with that service, arriving when the booking was made
+- **WHEN** Sam Reed books a Brake service online with [mechanic] at 10:00
+- **THEN** it is listed as a new booking from 10:00 to 10:45 with [mechanic], for Sam Reed, with that service, arriving when the booking was made
 
 #### Scenario: A change request
 - **WHEN** a confirmed booking with Jo at 10:00 asks to move to 14:00 with Alex on another day
@@ -629,7 +629,7 @@ The booking mode SHALL be timed or drop-off, refused otherwise with "Booking mod
 - **THEN** it is refused
 
 ### Requirement: A shop can schedule a change of booking mode
-A shop SHALL be able to schedule a change to the other booking mode from a date, needing both parts, a real date from tomorrow on in the shop's time zone, and a different mode. Sending a part as null SHALL cancel the schedule, a part left out counting as null once the other is sent; leaving both parts out SHALL keep it. Once its date arrives the new mode SHALL count from that date on, even before a save writes it in. Setting the mode directly to the scheduled one SHALL clear the schedule.
+A shop SHALL be able to schedule a change to the other booking mode from a date, needing both parts, a real date from tomorrow on in the shop's time zone, and a different mode. Sending both parts as null, or one null and the other left out, SHALL cancel it; leaving both out SHALL keep it. Once its date arrives the new mode SHALL count from that date on, even before a save writes it in. Setting the mode directly to the scheduled one SHALL clear the schedule.
 
 #### Scenario: Drop-off from a later date
 - **WHEN** a timed shop schedules drop-off from a future date
