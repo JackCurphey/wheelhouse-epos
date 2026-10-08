@@ -133,3 +133,17 @@ test('an old-form save that changes a cancelled job to scheduled still reopens i
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal((await read(booked.id)).bookingState, 'scheduled');
 });
+
+test('an old-form save that changes a finished job to scheduled still reopens it', async () => {
+  // The decision promises the old form's "Reopen job" still reopens finished
+  // work, not only a cancelled booking (Mark's review on #189).
+  const started = await startedJob();
+  const finished = await act(started.id, 'finish', started.version);
+  assert.equal(finished.status, 200, JSON.stringify(finished.body));
+  assert.equal(finished.body.status, 'complete', 'finished work reads complete to the old app');
+  const res = await save(started.id, { status: 'scheduled', version: finished.body.version });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const after = await read(started.id);
+  assert.notEqual(after.workState, 'complete');
+  assert.equal(after.status, 'scheduled');
+});
