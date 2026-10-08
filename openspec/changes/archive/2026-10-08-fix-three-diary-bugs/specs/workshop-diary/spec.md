@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Saving a new job
-Save job SHALL create the job with what the form holds and, when work was chosen, its planned length; with no work chosen the job SHALL be an hour long. A title SHALL be needed, and a customer unless it is a new bike build. If the server refuses, the form SHALL show its words and stay open. "The bike is here now" SHALL book the bike in straight after saving, unless the job was created with the bike already in the shop; if that book-in is refused, the job SHALL already be saved and the form SHALL show the refusal and stay open.
+Save job SHALL create the job with what the form holds and, when work was chosen, its planned length; with no work chosen the job SHALL be an hour long. A title SHALL be needed, and a customer unless it is a new bike build. If the server refuses, the form SHALL show its words and stay open. "The bike is here now" SHALL book the bike in straight after saving, unless the job was created with the bike already in the shop.
 
 #### Scenario: Maya Patel's Standard service
 - **WHEN** staff find "Maya", choose Maya Patel, choose "Standard service · 90 min" and save
@@ -31,11 +31,11 @@ A change request SHALL open in a pop-up headed "Change request", with the custom
 - **THEN** the booking moves to Alex, as the pop-up's To side said
 
 ### Requirement: Dropping a job on the customer's requested time accepts the change
-When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length: the booking is confirmed there, the request cleared and one hold kept, at the new time. In the Week view, or a column for everyone, a drop on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
+When a job with a customer's change request waiting is saved onto exactly the requested day, start time and mechanic, the change SHALL be accepted, whatever the job's length. In the Week view, or a column for everyone, a drop on exactly the requested day and start time SHALL send the mechanic the customer asked for. Saved anywhere else, the request SHALL stand, with both the job's own time and the requested time held.
 
 #### Scenario: Dropped on the requested start
 - **WHEN** a booking at 10:00 whose customer asked for 14:00 on another day is saved to that day at 14:00 to 15:30
-- **THEN** it is confirmed at 14:00 to 15:30 and no request remains
+- **THEN** it is confirmed at 14:00 to 15:30, no request remains, and one hold is kept, at the new time
 
 #### Scenario: Dropped elsewhere
 - **WHEN** the same booking is moved to 12:00 on its own day
