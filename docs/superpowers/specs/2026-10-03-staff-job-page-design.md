@@ -1,3 +1,5 @@
+> **History (8 Oct 2026).** What the app does today for workshop jobs is now in `openspec/specs/workshop-jobs/spec.md`; this document is kept as the record of how it was designed.
+
 # The staff job page
 
 **Building under Jack's standing go-ahead (3 Oct 2026: "keep going and
