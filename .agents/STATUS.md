@@ -10,13 +10,16 @@
 then image uploads and booking/portal; the dashboard needs Jack's
 `currentShopToday`. Then WP-0.5. #157 merged (5 Oct), so the types split
 (§4.3) can go. Waiting on Mark: approving Jack's #180–#184, #188, #189;
-re-reviewing #187–#189, #191 (answered 8 Oct); Jack's questions on #180.
+re-reviewing #187–#189, #191 (answered 8 Oct); Jack's questions on #180;
+#134's till, sales, Shopify and dashboard part, and where a job's open order
+lives after WP-1.6; #137 for WP-0.5.
 **Jack is on:** WP-0.4's workshop moves (#180–#184, open). OpenSpec specs of
 built areas (#186): workshop-jobs #187 and workshop-diary #191 (open), with
 fixes #188 and #189 found while writing them; #189 also waits on #183. Then
 the stage check, once lines 1–6 of §9 are in.
-**Open for Jack:** asks from Mark #137 (Mark offered to take it, #145), #134,
-#135, #139, #140; till job warning for WP-3.1 (#196); a Change requested
+**Open for Jack:** asks from Mark #135, #139, #140 (#137 handed to Mark,
+8 Oct; #134's workshop part listed 8 Oct, Mark to say where a job's order
+lives after WP-1.6); till job warning for WP-3.1 (#196); a Change requested
 badge on the job window (stage 4, stage 1 gaps decision 25).
 
 **Updated:** 2026-10-08. **Two people build at once** (Jack agreed to Mark's

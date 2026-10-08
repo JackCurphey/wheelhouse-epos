@@ -187,7 +187,7 @@ const BOARD = {
     next: {
       Mark: [
         { what: 'Finish the server split (WP-0.4)', detail: 'Customers and sales, image uploads, booking; then the shared definitions the screens use' },
-        { what: 'Online test copy (WP-0.5)', detail: 'A hosted copy for you to try, test data only. Waits for the server split' },
+        { what: 'Online test copy (WP-0.5)', detail: 'A hosted copy for you to try, test data only, starting with what it must do (#137, handed to Mark 8 Oct). Waits for the server split' },
         { what: 'Stage 1: roles and switches (WP-1.1)', detail: 'The contract and the server half, first in stage 1' },
       ],
       Jack: [
@@ -197,8 +197,6 @@ const BOARD = {
       ],
     },
     waiting: [
-      { from: 'Mark', what: 'What the online test copy must do', detail: 'Write it down before WP-0.5, which comes after the server split. Mark said on 5 Oct he can take it if that\'s easier.', links: [137, 145] },
-      { from: 'Mark', what: 'What still uses the old sales tables', detail: 'List it before WP-1.5 and WP-1.6 in stage 1. Asked 4 Oct.', links: [134] },
       { from: 'Mark', what: 'Later, before their stages', detail: 'Browser tests for the offline till, an answer for each page not drawn yet, and a go-live checklist. Asked 4 Oct.', links: [135, 139, 140] },
       { what: 'Still to design', detail: 'Where a mechanic signs off a finished job, and whether the job window gets a Change requested badge (stage 4).' },
       { what: 'Later, with the shop', detail: 'Ask Citrus Lime for the full export (stage 7), the Paymentsense questions (when it is added), and your yes for the Stripe account and reader.', links: [171, 138] },
@@ -208,6 +206,7 @@ const BOARD = {
       { what: 'Re-reviewing four pull requests', detail: 'You answered his comments on 8 Oct. #187 merges first, because #188, #189 and #191 build on it. He also said he would reply on #191\'s task 2.3 separately.', links: [187, 188, 189, 191] },
       { what: 'Approving your workshop moves', detail: 'The workshop part of the server split. #189 also waits for #183 to merge.', links: [180, 181, 182, 183, 184] },
       { what: 'Your three questions on #180', detail: 'Who owns the 15 workshop settings routes, where the uploads folder and one other server value should live, and when a sales helper moves. Asked 7 Oct.', links: [180] },
+      { what: 'Where a job\'s order lives after the till moves', detail: 'You listed the workshop\'s part of the old sales tables on 8 Oct; the new tables have nowhere for an open order, so Mark decides where it goes before WP-1.6. The till, sales, Shopify and dashboard part of that list is his too.', links: [134] },
       { what: 'Your two small follow-ups', detail: 'You offered to fix a script check and add a missing test after reviewing his split. Offered 7 Oct.', links: [151] },
     ],
   },
