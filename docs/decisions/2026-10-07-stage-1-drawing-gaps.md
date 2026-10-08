@@ -213,6 +213,8 @@ for workshop computers only (split plan `:409`).
 phone; a lost phone is handled by the Owner signing out that person's
 devices (roles spec). Chosen over 12 hours without use.
 
+*Note (8 Oct, #139):* "Sign out everywhere" on a person is back in the first release, in WP-5.1, before any shop goes live (`docs/decisions/2026-10-08-not-drawn-pages.md`, decision 2).
+
 ### 15, 16, 18, 19 and 21. Older drawings that a later decision settles
 
 **The gap.** In each, an older drawing or map line disagrees with a later
