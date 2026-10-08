@@ -33,7 +33,7 @@
   --next-bg: #302d27; --next-ink: #c9c1b0; --ask-bg: #47261f; --ask-ink: #f0bdb2; color-scheme: dark;
 }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
-.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 0 48px; display: flex; flex-direction: column; gap: 28px; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 0 48px; display: flex; flex-direction: column; gap: 20px; }
 header.top { background: var(--rail); color: #f4eee1; padding-inline: 20px; padding-block: 18px; }
 header.top .in { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 18px; }
 header.top h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.2px; }
@@ -67,6 +67,7 @@ ul.asks li { background: var(--panel); border: 1px solid var(--line); border-rad
 ul.asks li p { margin: 0; min-width: 0; }
 .links { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; }
 .links a { color: var(--ink); }
+ul.asks a { color: var(--ink); font-family: var(--mono); font-size: 13px; }
 .s-old { background: var(--review-bg); color: var(--review-ink); }
 .key { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .area { margin-top: 16px; }
@@ -81,7 +82,19 @@ ul.asks li p { margin: 0; min-width: 0; }
 .room li:first-child { border-top: 0; }
 .room li div { min-width: 0; display: flex; flex-direction: column; }
 .room li span.d { font-size: 13px; color: var(--muted); }
-a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+a:focus-visible, .tabs button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 20px; }
+.tabs button { font: inherit; font-size: 15px; font-weight: 600; color: var(--muted); background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px 9px; margin-bottom: -1px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--amber); }
+.panel { display: flex; flex-direction: column; gap: 28px; }
+.panel[hidden] { display: none; }
+.next { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
+.next > div { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.next h3 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+.next ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.next li span { display: block; font-size: 13px; color: var(--muted); }
+.more { margin: 0; font-size: 14px; color: var(--muted); }
+.more button { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
 @media (max-width: 560px) {
   ol.pieces li { grid-template-columns: minmax(0, 1fr) auto; }
   ol.pieces li .st { grid-column: 1 / -1; }
@@ -96,6 +109,33 @@ a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 </header>
 
 <main class="wrap">
+  <div class="tabs" role="tablist" aria-label="Board view">
+    <button role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
+    <button role="tab" id="tab-detail" aria-controls="panel-detail" aria-selected="false" tabindex="-1">Detail</button>
+  </div>
+
+  <div class="panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+    <section class="now" aria-labelledby="ov-now-h">
+      <h2 id="ov-now-h">Where we're at</h2>
+      <p class="lead" id="ov-now"></p>
+      <div class="tally" id="ov-tally"></div>
+    </section>
+    <section aria-labelledby="ov-wait-h">
+      <h2 id="ov-wait-h">Needs you</h2>
+      <ul class="asks" id="ov-wait"></ul>
+    </section>
+    <section aria-labelledby="ov-mark-h">
+      <h2 id="ov-mark-h">Waiting on Mark</h2>
+      <ul class="asks" id="ov-mark"></ul>
+    </section>
+    <section aria-labelledby="ov-next-h">
+      <h2 id="ov-next-h">Next up</h2>
+      <div class="next" id="ov-next"></div>
+    </section>
+    <p class="more">Every piece, page, decision and journey is on the <button type="button" id="to-detail">Detail</button> tab.</p>
+  </div>
+
+  <div class="panel" id="panel-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
   <section class="now" aria-labelledby="now-h">
     <h2 id="now-h">Where we are</h2>
     <p class="lead" id="lead"></p>
@@ -132,15 +172,45 @@ a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
       <a href="https://claude.ai/artifact/6XUis1aqRZqeST5f8UHWXh">Customers and the website</a>
     </div>
   </section>
+  </div>
 </main>
 
 <script>
 // THE DATA. Update this block (and only this block) as pieces move on, then
 // republish. Source: docs/build-progress/build-board.html in the repo.
 const BOARD = {
-  updated: '5 October 2026',
-  lead: 'Stage 0 is under way. Mark\'s booking-bug server fixes and your booking screens are in, and nine areas of the server have moved to their own files. Mark approved #157 (the files you both touch): it\'s yours to bring up to date and merge.',
-  sub: 'Merged 5 Oct: the booking-bug server fixes (#148) and your screens (#164), the shorter STATUS (#149), the checks and nine moves of the server split (57 of 161 routes), the fix for the migration gap you found (#166), the roles and switches table (#153), the shops and sites spec (#154) and Stripe first for card payments (#174).',
+  // The Overview tab: where things stand in a sentence, everything waiting on
+  // Jack (from Mark, or a decision), with a link where there is one, and the
+  // next few pieces for each person. Keep it short; the rest is on Detail.
+  overview: {
+    now: 'Stage 0. The server is still being split into one file per area: Mark had moved 57 of 161 routes by 5 Oct, and your workshop moves (#180 to #184) are waiting for his approval. Your answers to the 25 stage 1 gaps are in (#185), and specs are now written in OpenSpec (#186).',
+    next: {
+      Mark: [
+        { what: 'Finish the server split (WP-0.4)', detail: 'Customers and sales, image uploads, booking; then the shared definitions the screens use' },
+        { what: 'Online test copy (WP-0.5)', detail: 'A hosted copy for you to try, test data only. Waits for the server split' },
+        { what: 'Stage 1: roles and switches (WP-1.1)', detail: 'The contract and the server half, first in stage 1' },
+      ],
+      Jack: [
+        { what: 'Your workshop part of the server split', detail: 'Pull requests #180 to #184, waiting for Mark\'s approval' },
+        { what: 'Stage 0 check', detail: 'Walk booking, the till and the diary in the real app. Waits for the server split and the test copy' },
+        { what: 'Stage 1: the screens for roles (WP-1.1)', detail: 'The sidebar for each role; a mechanic lands on the Diary' },
+      ],
+    },
+    waiting: [
+      { from: 'Mark', what: 'What the online test copy must do', detail: 'Write it down before Mark starts WP-0.5, which is his next piece but one (4 Oct).', links: [137] },
+      { from: 'Mark', what: 'What still uses the old sales tables', detail: 'List it before WP-1.5 and WP-1.6 in stage 1 (4 Oct).', links: [134] },
+      { from: 'Mark', what: 'Later, before their stages', detail: 'Browser tests for the offline till, an answer for each page not drawn yet, and a go-live checklist (4 Oct).', links: [135, 139, 140] },
+    ],
+    waitingOnMark: [
+      { what: 'Your three questions on #180', detail: 'Who owns the 15 workshop settings routes, where two settings live, and when a sales helper moves (7 Oct).', links: [180] },
+      { what: 'Approving your server changes', detail: 'The workshop moves and the two fixes from today\'s review.', links: [180, 181, 182, 183, 184, 188, 189] },
+      { what: 'Your two small follow-ups', detail: 'You offered to fix a script check and add a missing test after reviewing his split (7 Oct).', links: [151] },
+      { what: 'His reply on the diary spec', detail: 'He said he would answer task 2.3, the capacity and clock check, separately (8 Oct).', links: [191] },
+    ],
+  },
+  updated: '8 October 2026',
+  lead: 'Stage 0 is still under way: the server split is in progress, with your workshop moves (#180 to #184) waiting for Mark\'s approval. The files you both touch are settled (#157), and specs are now written in OpenSpec (#186).',
+  sub: 'Merged 5 to 8 Oct: who edits the files you both touch (#157), the three flaky tests fixed (#178), the diary browser tests green again (#179), your answers to the 25 stage 1 gaps (#185), the move to OpenSpec (#186) and "What\'s built, room by room" on this board (#194).',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -189,22 +259,26 @@ const BOARD = {
     { status: 'done', what: 'Drawings: trust PIN', detail: '"Who\'s working?" on a workshop computer, today\'s people as pills on workshop pages and the till, and the till-only line for a mechanic. Canvas version 107, mockup version 6', pr: 172 },
     { status: 'done', what: 'Card machine behind one adapter', detail: 'The till talks to "a card machine", not to one company', pr: 173 },
     { status: 'done', what: 'Card payments: Stripe first', detail: 'Stripe for the till reader and payment links, SumUp second, Paymentsense later', pr: 174 },
-    { status: 'review', what: 'Who edits the files you both touch', detail: 'Split plan §3.1. Approved by Mark (5 Oct), including every proposed line: yours to bring up to date and merge. Then every server change you make needs Mark\'s approval', pr: 157 },
+    { status: 'done', what: 'Who edits the files you both touch', detail: 'Split plan §3.1: every server change you make needs Mark\'s approval', pr: 157 },
     { status: 'done', what: 'Booking bugs: your screens half', detail: 'Back while "Sending…" keeps the private link; a retry sends the same request key', pr: 164 },
-    { status: 'next', what: 'Server split: the rest', detail: 'Mark: customers and sales (a short spec first), image uploads and booking; then the shared definitions the screens use, once #157 is in' },
+    { status: 'done', what: 'The three flaky tests fixed', detail: 'Two screen tests and the diary drag test no longer fail now and then (#169)', pr: 178 },
+    { status: 'done', what: 'Diary browser tests green again', detail: 'They booked from the real date, not the diary\'s pinned 1 September', pr: 179 },
+    { status: 'done', what: 'Your answers to the 25 stage 1 gaps', detail: 'Every gap between the screens and the drawings decided before building; four affect Mark\'s pieces', pr: 185 },
+    { status: 'done', what: 'Moving the project to OpenSpec', detail: 'Each piece is one OpenSpec change covering both halves; built areas get a spec checked against the code', pr: 186 },
+    { status: 'done', what: 'What\'s built, room by room', detail: 'Each page on this board marked built, partly built, old app only or not built', pr: 194 },
+    { status: 'review', what: 'Server split: the workshop', detail: 'Your moves of the workshop helpers and routes, waiting for Mark\'s approval (#180 to #184)', pr: 180 },
+    { status: 'next', what: 'Server split: the rest', detail: 'Mark: customers and sales (a short spec first), image uploads and booking; then the shared definitions the screens use' },
     { status: 'next', what: 'Online test copy (WP-0.5)', detail: 'Mark: a hosted copy for you to try, test data only. Waits for the server split' },
     { status: 'next', what: 'Stage 0 check', detail: 'You walk booking, the till and the diary in the real app. Waits for everything above' },
   ],
   asks: [
     { what: 'Wording to check', detail: 'A few words the drawings needed that no answer gave, in decided-while-building.md, for you to overrule if you want.' },
     { what: 'Check with the shop', detail: 'Citrus Lime\'s exports are listed (#170); ask Citrus Lime for the full customer list and workshop history nearer the end (#171). Card payments: Stripe first (#174); the Paymentsense questions (#138) wait until Paymentsense is added. Your yes is needed later for the Stripe account and which reader to buy.' },
-    { what: 'Three flaky tests (#169)', detail: 'Two screen tests and the diary drag browser test fail now and then and pass on retry; one failed main\'s CI on 5 Oct. All in your tests.' },
-    { what: 'Review Mark\'s server split', detail: 'On 5 Oct Mark merged the server split on green CI and a fresh review while you were busy; each pull request asks you to review it afterwards.' },
     { what: 'Pages not drawn yet', detail: '96 pages a mockup button leads to that no drawing shows, listed in mockup-gaps.md, for later.' },
     { what: 'Mechanic sign-off (Workshop day 64)', detail: 'Where and when a mechanic puts their name to a finished job. Still to design.' },
     { what: 'Staff roles', detail: 'The roles and switches are written down (#153), but the server still only knows who the Owner is until WP-1.1 is built.' },
     { what: 'Things the server cannot do yet', detail: 'Choosing the mechanic as you accept a booking, offering another time, and a message with a decline.' },
-    { what: 'A Change requested badge on the job window?', detail: 'The diary has the colour; the job window has no badge for it. Not drawn, so it\'s yours to decide. Until then the job window shows the job\'s own stage.' },
+    { what: 'A Change requested badge on the job window?', detail: 'The diary has the colour; the job window has no badge for it. Not drawn, so it\'s yours to decide; it belongs to the stage 4 job page (stage 1 gaps, decision 25). Until then the job window shows the job\'s own stage.' },
   ],
   // Each page of the app and how far it is built: built, part (partly built),
   // old (only in the old app for now) or none (drawn, not built yet).
@@ -289,6 +363,64 @@ const tally = document.getElementById('tally');
 for (const s of ['done', 'review', 'build', 'next']) {
   if (counts[s]) tally.append(el('span', `pill s-${s}`, `${counts[s]} ${LABEL[s].toLowerCase()}`));
 }
+
+const ov = BOARD.overview;
+document.getElementById('ov-now').textContent = ov.now;
+const ovTally = document.getElementById('ov-tally');
+for (const n of tally.children) ovTally.append(n.cloneNode(true));
+const next = document.getElementById('ov-next');
+for (const [who, items] of Object.entries(ov.next)) {
+  const box = el('div'); const ol = el('ol');
+  box.append(el('h3', null, who), ol);
+  for (const it of items) {
+    const li = el('li', null, it.what);
+    if (it.detail) li.append(el('span', null, it.detail));
+    ol.append(li);
+  }
+  next.append(box);
+}
+// GitHub sends an issues/ link for a pull request on to the pull request.
+const ISSUE = 'https://github.com/JackCurphey/wheelhouse-epos/issues/';
+function askList(id, items, pill) {
+  const ul = document.getElementById(id);
+  for (const a of items) {
+    const li = el('li'); const p = el('p');
+    p.append(el('strong', null, `${a.what}. `), document.createTextNode(a.detail));
+    for (const n of a.links || []) {
+      p.append(document.createTextNode(' '));
+      const l = el('a', null, `#${n}`); l.href = ISSUE + n; p.append(l);
+    }
+    const [cls, label] = pill(a);
+    li.append(el('span', `pill ${cls}`, label), p);
+    ul.append(li);
+  }
+  if (!items.length) { const li = el('li'); li.append(el('p', null, 'Nothing right now.')); ul.append(li); }
+}
+askList('ov-wait', ov.waiting, (a) => a.from === 'Mark' ? ['s-review', 'From Mark'] : ['s-ask', 'Decision']);
+askList('ov-mark', ov.waitingOnMark, () => ['s-next', 'Mark']);
+
+// Tabs. The chosen tab is remembered on this device only.
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function show(id, focus) {
+  for (const t of tabs) {
+    const on = t.id === id;
+    t.setAttribute('aria-selected', String(on));
+    t.tabIndex = on ? 0 : -1;
+    document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    if (on && focus) t.focus();
+  }
+  try { localStorage.setItem('board-tab', id); } catch {}
+}
+for (const t of tabs) {
+  t.addEventListener('click', () => show(t.id));
+  t.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const i = tabs.indexOf(t) + (e.key === 'ArrowRight' ? 1 : -1);
+    show(tabs[(i + tabs.length) % tabs.length].id, true);
+  });
+}
+document.getElementById('to-detail').addEventListener('click', () => { show('tab-detail', true); window.scrollTo(0, 0); });
+try { const saved = localStorage.getItem('board-tab'); if (saved && document.getElementById(saved)) show(saved); } catch {}
 
 const list = document.getElementById('pieces');
 for (const p of BOARD.pieces) {
