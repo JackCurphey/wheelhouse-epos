@@ -1368,13 +1368,18 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // a real sale on the books and the job untouched, which is worse than either
   // outcome.
   let jobToFinish = null;
+  let jobAlreadyFinished = null;
   if (doc.workshop_job_id) {
     jobToFinish = await db.prepare('SELECT id, work_state, version FROM workshop_jobs WHERE id = ?')
       .get(doc.workshop_job_id);
     // Work already finished ("Mark ready for collection") already says the
     // work is done, which is what the decision asks of the record: the
-    // customer pays and the job is left as it is (Jack, 8 Oct).
-    if (jobToFinish && jobToFinish.work_state === 'complete') jobToFinish = null;
+    // customer pays and the job is left as it is (Jack, 8 Oct). It is checked
+    // again after the sale, below, in case someone reopens it in between.
+    if (jobToFinish && jobToFinish.work_state === 'complete') {
+      jobAlreadyFinished = jobToFinish;
+      jobToFinish = null;
+    }
     if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
       return sendJson(res, 409, {
         error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
@@ -1459,6 +1464,17 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
     // uncompleted job is exactly the ambiguity the state machines exist to
     // remove.
     if (!finished.ok) jobWarning = finished.message;
+  }
+  // The same race for work that was already finished at the check: if someone
+  // reopened it before the sale was made, the record no longer says the work
+  // is done (docs/decisions/2026-10-08-paying-for-finished-work.md). The sale
+  // stands, the job is left where they put it, and the reply says so.
+  if (jobAlreadyFinished) {
+    const now = await db.prepare('SELECT work_state FROM workshop_jobs WHERE id = ?').get(jobAlreadyFinished.id);
+    if (!now) jobWarning = 'Job not found';
+    else if (now.work_state !== 'complete') {
+      jobWarning = `This job changed while the payment went through: its work is now ${now.work_state}, not finished. The payment stands; check the job.`;
+    }
   }
 
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
