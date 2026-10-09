@@ -1,7 +1,8 @@
 // The API client's contract, with fetch stubbed - no server, no browser.
 //
 // The stubbed bodies are the server's real 409 shapes ({ error, code }, from
-// jobActionRoute and sendQuoteResult in server/server.js), not invented ones:
+// jobActionRoute in server/server.js and sendQuoteResult in
+// server/workshop/jobs.js), not invented ones:
 // a client that classifies a body the server never sends proves nothing.
 import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -88,7 +89,7 @@ test('requests send the session cookie and mutations declare JSON', async () => 
 });
 
 test('a 409 for used-up capacity is its own code, not stale', async () => {
-  // The body server/server.js's capacityRefusal() sends.
+  // The body capacityRefusal() (server/workshop/jobs.js) sends.
   stubFetch(409, { error: 'That time is no longer available - please choose another.', code: 'capacity' });
   await assert.rejects(
     () => apiMutate('/api/portal/shop/bookings', {}),
