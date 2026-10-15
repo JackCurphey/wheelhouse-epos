@@ -182,6 +182,17 @@ export function firePendingShopifyPushes(shopId, pushes) {
   }
 }
 
+// For a stock change outside a sale (a product's stock adjustment, booking in
+// a purchase order): the same as createSale's deferShopifyPushesTo path. The
+// pushes are registered for graceful shutdown now, and fired from a fresh
+// connection once the request has released its own, so a slow or failing
+// Shopify never holds a pooled connection (#151 follow-up, Jack, 7 Oct).
+export function deferShopifyPushes(afterRelease, shopId, pushes) {
+  if (!pushes.length) return;
+  pushes._pendingPushSettle = registerPendingShopifyPushSlot();
+  afterRelease.push(() => firePendingShopifyPushes(shopId, pushes));
+}
+
 // ---------- Sales ----------
 
 export function serializeSale(row, items, payments) {

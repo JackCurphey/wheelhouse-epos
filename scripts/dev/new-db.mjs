@@ -10,7 +10,7 @@
 // init-db.sh grants on epos, so row-level security works there as on epos.
 // Node and pg rather than psql: psql isn't on every machine, and the app
 // already depends on pg.
-import path from 'node:path';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
@@ -55,7 +55,9 @@ export function adminUrlFrom(env) {
   return u.href;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Compared as real paths, so a symlinked path (a worktree under macOS's /tmp)
+// still runs the script rather than silently skipping it.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await import('../../server/load-env.js');
   const name = process.argv[2];
   try {

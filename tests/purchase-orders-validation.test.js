@@ -47,3 +47,25 @@ test('a line with no quantity, a bad cost or an unknown product is a 400 with it
     assert.deepEqual(res.body, { error: message });
   }
 });
+
+// The edit route shares the create route's ValidationError handling, and no
+// test reached it (#151 follow-up, Jack, 7 Oct), so a break there would have
+// been a silent 500.
+test('editing a draft with a bad line is a 400 with its message, and the order is unchanged', async () => {
+  const made = await create([{ productId, qty: 2, unitCost: 2 }]);
+  assert.equal(made.status, 201, JSON.stringify(made.body));
+  const id = made.body.id;
+  const edit = (items) => staffRequest(server.baseUrl, owner.cookie, `/api/purchase-orders/${id}`, { method: 'PUT', body: { items } });
+  for (const [line, message] of [
+    [{ productId, qty: 0, unitCost: 2 }, 'Each item needs a valid productId and positive qty'],
+    [{ productId, qty: 1, unitCost: -1 }, 'Each item needs a valid unit cost'],
+    [{ productId: 999999, qty: 1, unitCost: 1 }, 'Product 999999 not found or inactive'],
+  ]) {
+    const res = await edit([line]);
+    assert.equal(res.status, 400, `${JSON.stringify(line)}: ${JSON.stringify(res.body)}`);
+    assert.deepEqual(res.body, { error: message });
+  }
+  const lines = await runWithShop(owner.shop.id, () =>
+    prepare('SELECT qty_ordered, unit_cost FROM purchase_order_items WHERE purchase_order_id = ?').all(id));
+  assert.deepEqual(lines.map((l) => [l.qty_ordered, Number(l.unit_cost)]), [[2, 2]]);
+});
