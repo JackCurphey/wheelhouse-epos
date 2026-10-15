@@ -321,7 +321,7 @@ export async function syncJobHold(jobId) {
   }
 }
 
-// Shared by the staff "create job" route (server.js) and the online booking pages'
+// Shared by the staff "create job" route (server/routes/workshop.js) and the online booking pages'
 // booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
 // linked order in one transaction. Trusts every field completely; callers
 // are responsible for validating/resolving them first (the portal route

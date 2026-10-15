@@ -20,7 +20,17 @@ const MOVED = [
   ['PUT', '/api/workshop-jobs/:id/parts/:partId'],
   ['DELETE', '/api/workshop-jobs/:id/parts/:partId'],
   ['PUT', '/api/workshop-jobs/:id'],
+  ['POST', '/api/workshop-jobs/:id/accept-change'],
+  ['POST', '/api/workshop-jobs/:id/decline-change'],
+  ['POST', '/api/workshop-jobs/:id/cancellation-seen'],
+  ['GET', '/api/workshop-waiting'],
 ];
+// POST /api/workshop-jobs/:id/<action>, each registered by jobActionRoute.
+const ACTIONS = [
+  'accept', 'decline', 'request-reschedule', 'cancel', 'expire', 'book-in', 'collect', 'reopen-custody',
+  'start', 'await-parts', 'parts-arrived', 'hold', 'resume', 'finish', 'reopen-work',
+];
+const registersAction = (source, action) => new RegExp(`^\\s*jobActionRoute\\('${action}',`, 'm').test(source);
 const registers = (source, [method, routePath]) =>
   new RegExp(`^\\s*route\\('${method}', '${routePath.replace(/[/:-]/g, '\\$&')}'`, 'm').test(source);
 
@@ -32,6 +42,14 @@ test('the moved workshop routes are registered in server/routes/workshop.js', ()
 test('server/server.js no longer registers a moved workshop route', () => {
   const server = read('server/server.js');
   assert.deepEqual(MOVED.filter((r) => registers(server, r)), []);
+});
+
+test('each job action is registered in server/routes/workshop.js, none in server.js', () => {
+  const workshop = read('server/routes/workshop.js');
+  const server = read('server/server.js');
+  assert.deepEqual(ACTIONS.filter((a) => !registersAction(workshop, a)), []);
+  assert.deepEqual(ACTIONS.filter((a) => registersAction(server, a)), []);
+  assert.ok(!/^\s*(async )?function jobActionRoute\b/m.test(server), 'server.js still defines jobActionRoute');
 });
 
 test('server/routes/index.js registers the workshop area', () => {
