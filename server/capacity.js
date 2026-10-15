@@ -340,3 +340,13 @@ export function validateModeChange(input, { today, bookingMode }) {
   if (mode === bookingMode) return { error: 'The shop already uses that mode' };
   return { nextBookingMode: mode, nextBookingModeFrom: from };
 }
+
+// A days-of-the-week array (0 = Sunday) as the JSON the database stores,
+// deduplicated and sorted; the stored value when none is sent. Used by the
+// employees routes and workshop settings (moved out of server.js, WP-0.4).
+export function resolveWorkingDays(rawDays, existingRaw) {
+  if (rawDays === undefined) return existingRaw !== undefined ? existingRaw : '[0,1,2,3,4,5,6]';
+  if (!Array.isArray(rawDays)) return null;
+  const days = [...new Set(rawDays.map(Number))].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  return JSON.stringify(days.sort((a, b) => a - b));
+}
