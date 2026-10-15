@@ -1,5 +1,5 @@
-// The team (Office > Edit Shop > Office): /api/team/* and
-// DELETE /api/employees/:id/permanent.
+// The team (Office > Edit Shop > Office): /api/team/*, GET /api/employees,
+// PUT /api/employees/:id and DELETE /api/employees/:id/permanent.
 // Staff routes: they run under the dispatcher's /api/ branch (server.js), so
 // a handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session.
@@ -180,7 +180,7 @@ export function register(route) {
   });
 
   // Name/roles/working-days only - never touches login access. See the
-  // /api/team routes below for creating a person, and for deactivate/
+  // /api/team routes above for creating a person, and for deactivate/
   // reactivate, which also has to cascade to their login when they have one.
   route('PUT', '/api/employees/:id', async (req, res, params) => {
     const id = Number(params.id);

@@ -1,4 +1,4 @@
-// The dashboard: GET /api/dashboard, today's takings, open jobs and low stock.
+// The dashboard: GET /api/dashboard, today's takings, top sellers and low stock.
 // Staff route: it runs under the dispatcher's /api/ branch (server.js), so a
 // handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session. Mark's
