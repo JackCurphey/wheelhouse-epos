@@ -65,6 +65,15 @@ const tag = (t, tone = 'ok') => { const [bg, ink] = tone === 'ok' ? [C.okBg, C.s
 const link = (t) => `<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: ${C.ink}">${t}</a>`;
 // Audit L2: "Ask us to help" always sits top right of the card it helps with.
 const helpLink = link('Ask us to help');
+// What "Ask us to help" opens (Jack, 15 Oct: "1", a short form in the app; not-drawn
+// pages #30). Drawn as Send feedback is (oversight.mjs): what's wrong in the
+// owner's words, the card they asked from and who they are sent with it, and
+// a toast once it's sent. No picture of the screen: a move's rows hold
+// customers' details. Shown from the weekly check's odd figure (Moving 2).
+const helpPopup = () => popup('ah-title', 'Ask us to help', 'With moving from Citrus Lime · to the Wheelhouse team', `<div style="display: flex; flex-direction: column; gap: 6px"><label for="ah-text" style="font-size: 14px; font-weight: 600">What looks wrong?</label><textarea id="ah-text" rows="${isPhone() ? 6 : 4}" style="box-sizing: border-box; width: 100%; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}; resize: vertical">[What Jack wrote]</textarea></div>
+<p style="margin: 0; display: flex; gap: 8px; font-size: 14px; color: ${C.muted}">${icon('website', 16)}<span>We’ll see you asked from <strong style="color: ${C.ink}">Check last week against Citrus Lime</strong>, and that you’re Jack Lewis at North Street Cycles.</span></p>`, `${button('Cancel', { variant: 'ghost' })}${button('Send')}`, 540);
+const helpToast = () => `<div role="status" style="position: absolute; ${isPhone() ? 'left: 12px; right: 12px; bottom: 12px' : 'left: 50%; bottom: 24px; transform: translateX(-50%); white-space: nowrap'}; z-index: 6; display: flex; align-items: center; gap: 10px; padding: 6px 16px; border-radius: 10px; background: ${C.ink}; color: #ffffff; font-size: 14px; box-shadow: 0 8px 24px rgba(38,36,32,0.25)">${icon('check', 16)}<span style="flex-grow: 1; padding: 8px 0">Thanks — we’ve got it. Any reply comes to your email.</span></div>`;
+const withHelpToast = (html) => html.replace('<main style="', '<main style="position: relative; ').replace('</main>', `${helpToast()}</main>`);
 const srOnly = (t) => `<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">${t}</span>`;
 const named = (html, label) => html.replace(/^<(\w+)/, `<$1 aria-label="${label}"`);
 const offBtn = (t) => button(t).replace(/^<(\w+)/, '<$1 aria-disabled="true"').replace('style="', 'style="opacity: 0.45; cursor: not-allowed; ');
@@ -281,6 +290,8 @@ def('mv-change-day', () => { STAGE = 1; return overlay(alongsideBoard(), changeD
 def('mv-both', () => { STAGE = 1; return bothBoard(); });
 def('mv-check', () => { STAGE = 1; return movePage(checkSection(false)); });
 def('mv-check-result', () => { STAGE = 1; return movePage(checkSection(true)); });
+def('mv-help', () => { STAGE = 1; return overlay(movePage(checkSection(true)), helpPopup()); });
+def('mv-help-sent', () => { STAGE = 1; return withHelpToast(movePage(checkSection(true))); });
 
 // Desktop first (journey process); tablet and phone once desktop is approved.
 const SIZES = ['desktop', 'tablet', 'phone'];
@@ -303,6 +314,8 @@ export const TITLES = {
   'mv-both': 'Changed in both: Citrus Lime’s kept',
   'mv-check': 'The weekly check: each figure checks itself',
   'mv-check-result': 'The weekly check: three match, one doesn’t',
+  'mv-help': 'Ask us to help: what looks wrong',
+  'mv-help-sent': 'Sent to the Wheelhouse team',
   'mv-practice-sale': 'The till before switch-over: practice, not real money',
   'mv-practice-card': 'A practice card payment: try either outcome',
   'mv-practice-checkin': 'Checked in during practice: no float check', // UX walk-through 4 M4
@@ -318,7 +331,7 @@ export const TITLES = {
 };
 export const ROWS = [
   { label: 'Bring your data', screens: ['mv-start', 'mv-progress', 'mv-progress-failed', 'mv-summary', 'mv-fix', 'mv-sorted'] },
-  { label: 'Run alongside', screens: ['mv-today-refresh', 'mv-alongside', 'mv-change-day', 'mv-both', 'mv-check', 'mv-check-result'] },
+  { label: 'Run alongside', screens: ['mv-today-refresh', 'mv-alongside', 'mv-change-day', 'mv-both', 'mv-check', 'mv-check-result', 'mv-help', 'mv-help-sent'] },
   { label: 'Practice: the till and jobs', screens: ['mv-practice-checkin', 'mv-practice-sale', 'mv-practice-card', 'mv-practice-job'] }, // UX walk-through 4 M4, H3
   { label: 'Switch over', screens: ['mv-ready', 'mv-weeks', 'mv-ready-all', 'mv-pick-day', 'mv-morning', 'mv-go-real', 'mv-week', 'mv-week-done'] },
 ];

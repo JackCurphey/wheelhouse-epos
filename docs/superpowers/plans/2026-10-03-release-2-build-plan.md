@@ -445,7 +445,8 @@ later packages.
 
 *Screens it builds (1) and the situations it covers:*
 
-- **`mv-start`** (block 24, Stage strip and its next-step box) — 5 of its 13 situations here: `mv-progress`, `mv-progress-failed`, `mv-summary`, `mv-fix`, `mv-sorted`.
+- **`mv-start`** (block 24, Stage strip and its next-step box) — 7 of its 15 situations here: `mv-progress`, `mv-progress-failed`, `mv-summary`, `mv-fix`, `mv-sorted`, `mv-help`, `mv-help-sent`.
+- "Ask us to help" (Jack, 15 Oct, #139 row #30): a short form in the app, and a toast once sent. What the owner writes, the card they asked from and who they are go to the Wheelhouse team; until a real inbox exists, it is built behind an adapter with a pretend version.
 <!-- /screens -->
 
 ### Stage 3 — The till and the shop day
@@ -480,7 +481,7 @@ later packages.
 - **`till-customer`** (block 21, Pick-one box) — no other situations.
 - **`till-variant`** (block 21, Pick-one box) — no other situations.
 - **`till-serial`** (block 21, Pick-one box) — 1 situation: `till-serial-held`.
-- **`till-pay`** (block 20, Payment step) — 2 of its 4 situations here: `till-pay-other`, `till-pay-discounted`; plus 1 written line.
+- **`till-pay`** (block 20, Payment step) — 4 of its 6 situations here: `till-pay-other`, `till-pay-discounted`, `till-pay-link`, `till-pay-link-paid`; plus 1 written line.
 - **`till-card`** (block 20, Payment step) — 2 situations: `till-card-discounted`, `till-card-declined`.
 - **`till-pay-cash`** (block 20, Payment step) — no other situations.
 - **`till-pay-split`** (block 20, Payment step) — 1 situation: `till-split-discounted`.
@@ -488,7 +489,8 @@ later packages.
 - **`till-giftcard`** (block 20, Payment step) — no other situations.
 - **`till-account`** (block 20, Payment step) — no other situations.
 - **`till-deposit`** (block 20, Payment step) — 1 situation: `till-job-deposit`.
-- **`till-park`** (block 21, Pick-one box) — no other situations.
+- **`till-park`** (block 21, Pick-one box) — 1 situation: `till-pay-link-waiting`.
+- Sending a link to pay (Jack, 15 Oct, #139 row #51): Text or Email, through Stripe behind the online payments adapter (WP-1.11) with a pretend version first. The sale waits in Parked sales as "Waiting for payment" and finishes by itself when Stripe says it's paid.
 - **`till-find`** (block 3, Table with search and filters) — 1 situation: `till-find-customer`.
 - **`till-sale-detail`** (block 4, Detail page) — its one situation comes with a later package.
 - **`till-refund`** (block 9, Form box) — 3 situations: `till-refund-older`, `till-refund-cash`, `till-refund-noreceipt`; plus 1 written line.
@@ -496,7 +498,7 @@ later packages.
 - **`till-collect`** (block 9, Form box) — 1 of its 2 situations here: `till-collect-offline`; plus 1 written line.
 - **`till-book-in`** (block 9, Form box) — no other situations.
 - **`till-hand-over-job`** (block 9, Form box) — no other situations.
-- **`till-failed`** (block 3, Table with search and filters) — no other situations.
+- **`till-failed`** (block 3, Table with search and filters) — 2 situations: `till-fix`, `till-fix-sorted`. Fixing a sale that didn't send (Jack, 15 Oct, #139 row #10): the sale with Wheelhouse's reason, then Send again, or Mark as sorted with a note of what was done.
 - `on-hand-over` is the same drawing as `till-collect`, so it adds nothing of its own.
 <!-- /screens -->
 
@@ -509,9 +511,10 @@ later packages.
 *Building blocks built here:* none new.
 *Reused, already built:* 3 Table with search and filters (WP-2.1); 4 Detail page (WP-2.1); 9 Form box (WP-1.3).
 
-*Screens it builds (8) and the situations it covers:*
+*Screens it builds (9) and the situations it covers:*
 
 - **`cs-list`** (block 3, Table with search and filters) — no other situations.
+- **`cs-bike`** (block 4, Detail page) — no other situations. A bike's own page (Jack, 15 Oct, #139 rows #7 and #8): details, warranty if bought here, the customer it belongs to, and its jobs; header search opens it directly.
 - **`cs-page`** (block 4, Detail page) — 5 of its 9 situations here: `customer`, `cs-page-over`, `cs-page-new`, `cs-page-off`, `cs-page-dup`.
 - **`cs-credit`** (block 9, Form box) — no other situations.
 - **`cs-add`** (block 9, Form box) — 3 situations: `cs-edit`, `cs-add-company`, `cs-add-match`.
@@ -692,8 +695,8 @@ later packages.
 - **`set-eod`** (block 1, Settings page) — 2 situations: `set-eod-close`, `set-save-failed`.
 - **`set-pay-ways`** (block 1, Settings page) — 4 situations: `fr-step`, `set-pay-other`, `set-pay-card`, `cs-groups`.
 - **`set-staff`** (block 1, Settings page) — 3 situations: `set-staff-roles`, `set-staff-invited`, `set-staff-invite-expired`.
-- **`set-staff-person`** (block 9, Form box) — 2 of its 4 situations here: `set-staff-person-all`, `set-staff-clear-pin`; plus 4 written lines.
-- Brought back from later (Jack, 8 Oct, #139): `ops-person` and `ops-person-everywhere`, "Sign Jo Taylor out everywhere?" on a person's page. Where the button sits on the page is not drawn yet; Jack draws it before stage 5. The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
+- **`set-staff-person`** (block 9, Form box) — 4 of its 6 situations here: `set-staff-person-all`, `set-staff-clear-pin`, `ops-person`, `ops-person-everywhere`; plus 4 written lines.
+- Brought back from later (Jack, 8 Oct, #139): the two situations above, "Sign Jo Taylor out everywhere?" on a person's page. The button is drawn (Jack, 15 Oct): a row under Till PIN, "Signed in somewhere?", and the box reads "Every till, phone and computer". The person is checked out of the till after the sale that's open and signed out of every phone and computer. Mark builds the server half, Jack the button. Built here, with the person's page and after the "Are you sure?" box (WP-3.1), and well before any shop goes live (stage 8).
 - **`set-staff-invite`** (block 9, Form box) — 1 situation: `set-staff-invite-till-only`.
 - **`set-shop-details`** (block 1, Settings page) — 1 of its 3 situations here: `set-shop-hours`.
 - **`set-workshop-services`** (block 1, Settings page) — 3 of its 5 situations here: `ac-services`, `ac-service-edit`, `set-workshop-mechanics`; plus 2 written lines (the service box's online booking and deposit, Book a repair 3 and 11).

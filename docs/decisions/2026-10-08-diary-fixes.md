@@ -22,3 +22,12 @@ recorded in issue #192.
 3. **A Week-view drop on the requested time** sent no mechanic, so a request
    for another mechanic was not accepted. Fixed: a drop on exactly the
    requested day and time sends the requested mechanic.
+
+**Later change (15 Oct 2026): three more from issue #192** (Jack, 15 Oct:
+fix them now rather than at stage 4). A job with no time opens from the No
+time row, as a block does, as the drawing shows. On a tablet a second tap on
+a Waiting for you card opens it (Workshop day decision 14). And the Day view
+gets the No time row too, with that day's untimed jobs (Jack, 15 Oct: "1",
+asked because no drawing shows them there; chosen over leaving them out of
+the Day view). Still open: date or time fields on "Enter a time instead",
+which no decision or drawing has.

@@ -21,6 +21,8 @@ export default {
   'till-serial-held': into('till-serial', '', "Warning 'Sell anyway? Maya’s order loses its bike.' and button 'Sell anyway · add to sale'"), // inferred: a warning on the frame box, like till-held on the till page
   // Taking payment
   'till-pay': keep(20),
+  'till-pay-link': into('till-pay', 'Not-drawn pages #51 (Jack, 15 Oct)', "'Payment link · £74.00' box: send by Text or Email, 'Back' or 'Send the link'"),
+  'till-pay-link-paid': into('till-pay', 'Not-drawn pages #51 (Jack, 15 Oct)', "The till's next sale, with 'Paid by link: Maya Patel · £74.00 · receipt B1-[0000]'"),
   'till-pay-other': into('till-pay', 'Till 6, 15', "'Other ways to pay' opened: Finance, Cycle to Work, Payment link, [Shop’s own]"),
   'till-card': keep(20),
   'till-card-discounted': into('till-card', 'Till 6', "Discount line −£4.00 in the basket; card machine asks for £70.00, not £74.00"),
@@ -38,6 +40,7 @@ export default {
   'till-deposit': keep(20),
   // Other till jobs
   'till-park': keep(21),
+  'till-pay-link-waiting': into('till-park', 'Not-drawn pages #51 (Jack, 15 Oct: the sale waits, parked)', "Maya Patel's sale 'Waiting for payment', 'Payment link sent by text', with 'Send again'"),
   'till-find': keep(3),
   'till-find-customer': into('till-find', 'Till 13', "Maya Patel picked ('Change'); list of 'Maya Patel’s sales', each with 'Refund'"),
   'till-sale-detail': keep(4),
@@ -68,6 +71,8 @@ export default {
   'till-collect-offline': into('till-collect', 'Walk-through 2 M7', "Offline note on the hand-over: 'its own copy of the order', marked 'To send'"),
   'till-no-signout': into('till-sale', 'Walk-through 2 M7', "Offline till, dialog 'Can’t sign this till out yet' — '[n] sales are still waiting to send'"), // report: "Messages, not drawings"
   'till-failed': keep(3), // report: a list layout of its own, for a manager
+  'till-fix': into('till-failed', 'Not-drawn pages #10 (Jack, 15 Oct: send again, or mark as sorted)', "Fix opens the sale with Wheelhouse's reason: 'Back', 'Mark as sorted' or 'Send again'"),
+  'till-fix-sorted': into('till-failed', 'Not-drawn pages #10 (Jack, 15 Oct)', "'Mark B1-[0000] as sorted?' box: 'What did you do?', 'Back' or 'Mark as sorted'"),
 };
 
 // Extra situation lines (Draw the answers, spec section 6: T5, T6, T7).

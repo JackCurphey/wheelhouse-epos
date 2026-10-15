@@ -213,6 +213,48 @@ test('a change to a time that has gone says the time is no longer free', async (
   assert.ok(has(await dlg.findByText('The requested time is no longer free.')));
 });
 
+// Decision 14: on a touch screen the first tap chooses, a second tap opens.
+test('a second tap on a chosen card opens it, on a touch screen', async () => {
+  const r = await openDiary();
+  const col = r.within(r.ui.getByRole('region', { name: /Waiting for you/ }));
+  const tap = () => {
+    const card = col.getAllByRole('button', { name: /Aisha Khan/ }).find((b) => b.hasAttribute('aria-pressed'));
+    r.fireEvent.pointerDown(card, { button: 0, pointerType: 'touch' });
+    r.fireEvent.click(card, { detail: 1 });
+  };
+  tap();
+  assert.ok(r.ui.queryByRole('dialog') === null);
+  tap();
+  const dlg = await loaded(r);
+  assert.ok(has(dlg.queryByRole('heading', { name: 'Cancelled booking' })));
+});
+
+// A click from the keyboard (detail 0) is never a tap, as for a stack: Enter
+// on a chosen card chooses it, whatever was pressed before.
+test('Enter on a chosen card does not open it, even after a tap', async () => {
+  const r = await openDiary();
+  const col = r.within(r.ui.getByRole('region', { name: /Waiting for you/ }));
+  const card = () => col.getAllByRole('button', { name: /Aisha Khan/ }).find((b) => b.hasAttribute('aria-pressed'));
+  r.fireEvent.pointerDown(card(), { button: 0, pointerType: 'touch' });
+  r.fireEvent.click(card(), { detail: 1 });
+  r.fireEvent.click(card(), { detail: 0 });
+  await new Promise((done) => setTimeout(done, 50));
+  assert.ok(r.ui.queryByRole('dialog') === null);
+});
+
+test('a second mouse click on a chosen card does not open it', async () => {
+  const r = await openDiary();
+  const col = r.within(r.ui.getByRole('region', { name: /Waiting for you/ }));
+  for (let i = 0; i < 2; i++) {
+    const card = col.getAllByRole('button', { name: /Aisha Khan/ }).find((b) => b.hasAttribute('aria-pressed'));
+    r.fireEvent.pointerDown(card, { button: 0, pointerType: 'mouse' });
+    r.fireEvent.click(card);
+  }
+  await new Promise((done) => setTimeout(done, 50));
+  assert.ok(r.ui.queryByRole('dialog') === null);
+  assert.equal(col.getAllByRole('button', { name: /Aisha Khan/ }).find((b) => b.hasAttribute('aria-pressed')).getAttribute('aria-pressed'), 'true');
+});
+
 test('double-clicking a card opens it straight away', async () => {
   const r = await openDiary();
   const col = r.within(r.ui.getByRole('region', { name: /Waiting for you/ }));
