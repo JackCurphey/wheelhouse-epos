@@ -113,11 +113,9 @@ async function listCustomers({ search, activeOnly }) {
   return rows.map((row) => serializeCustomer(row, groupMap.get(row.id) || []));
 }
 
-// ---------- Customer groups ----------
-
-// ---------- Customer bikes ----------
-
 export function register(route) {
+  // ---------- Customer groups ----------
+
   route('GET', '/api/customer-groups', async (req, res) => {
     const rows = await db.prepare('SELECT * FROM customer_groups ORDER BY name').all();
     sendJson(res, 200, rows.map(serializeCustomerGroup));
@@ -243,6 +241,8 @@ export function register(route) {
     await db.prepare('UPDATE customers SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
     sendJson(res, 200, { ok: true });
   });
+
+  // ---------- Customer bikes ----------
 
   route('GET', '/api/customers/:id/bikes', async (req, res, params, query) => {
     const customerId = Number(params.id);
