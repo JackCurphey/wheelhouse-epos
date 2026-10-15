@@ -6,7 +6,8 @@
 import { dbExec, prepare } from '../db.js';
 import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
 import { serializeProduct } from '../lib/serializers.js';
-import { pushInventoryLevel, syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
+import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
+import { deferShopifyPushes } from '../lib/sales.js';
 
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
@@ -161,7 +162,7 @@ export function register(route) {
     sendJson(res, 200, { ok: true });
   });
 
-  route('POST', '/api/products/:id/stock', async (req, res, params) => {
+  route('POST', '/api/products/:id/stock', async (req, res, params, query, afterRelease, shopId) => {
     const id = Number(params.id);
     const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     if (!existing) return notFound(res, 'Product not found');
@@ -182,8 +183,9 @@ export function register(route) {
       note
     );
     if (existing.shopify_inventory_item_id) {
-      // Never let a Shopify hiccup fail a real stock adjustment - log and move on.
-      await pushInventoryLevel(existing, newQty).catch((err) => console.error('Shopify inventory push failed', err));
+      // After the reply, from a fresh connection; a Shopify hiccup is logged
+      // and never fails the adjustment (firePendingShopifyPushes).
+      deferShopifyPushes(afterRelease, shopId, [{ product: existing, newQty }]);
     }
     const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     sendJson(res, 200, serializeProduct(row));
