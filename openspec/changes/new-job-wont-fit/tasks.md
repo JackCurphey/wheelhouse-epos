@@ -12,6 +12,11 @@
 
 - [x] 2.1 The warning and the button on New job
 
+## 2b. After the fresh review
+
+- [x] 2b.1 Tests first, watched failing: "nothing found" goes when the mechanic changes; a failed search says so; after a move the focus is on the new time and the automatic choice keeps its day
+- [x] 2b.2 The fixes; an answer that arrives after the mechanic, work or time changed is dropped; the warning sits below the mechanic note, its button inline, as drawn
+
 ## 3. Checks
 
 - [x] 3.1 The decided-here choices logged in Jack's section of `decided-while-building.md`

@@ -38,6 +38,7 @@ let answer;
 // Free time by day and mechanic, as GET /api/workshop-capacity gives it.
 // Unless a test says otherwise everyone is free 09:00–18:00.
 let freeOn;
+let capacityDown;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -50,6 +51,7 @@ function stubServer() {
   calls = [];
   answer = null;
   freeOn = () => [{ start: '09:00', end: '18:00' }];
+  capacityDown = false;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     calls.push({ url, method, body: init.body ? JSON.parse(init.body) : undefined });
@@ -64,6 +66,7 @@ function stubServer() {
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
     if (u.pathname === '/api/workshop-capacity') {
+      if (capacityDown && u.searchParams.get('start') !== u.searchParams.get('end')) return reply(500, { error: 'Something broke' });
       const days = [];
       for (let d = new Date(`${u.searchParams.get('start')}T12:00:00Z`); d.toISOString().slice(0, 10) <= u.searchParams.get('end'); d.setUTCDate(d.getUTCDate() + 1)) {
         const date = d.toISOString().slice(0, 10);
@@ -382,4 +385,38 @@ test('from "Enter a time instead", the warning follows the time typed and the bu
   r.fireEvent.click(form.getByRole('button', { name: 'Find the next free 90 minutes' }));
   await r.waitFor(() => assert.equal(form.getByLabelText('Start time').value, '12:00'));
   assert.equal(form.getByLabelText('Date').value, '2026-10-06');
+});
+
+// After the fresh review.
+test('"nothing found" goes when the mechanic changes', async () => {
+  const r = await openDiary();
+  freeOn = () => [{ start: '09:00', end: '10:00' }];
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  await form.findByText('Jo Taylor has no free 90 minutes in the next 60 days.');
+  r.fireEvent.click(form.getByRole('radio', { name: 'Alex Morgan' }));
+  await form.findByRole('button', { name: 'Find the next free 90 minutes' });
+  assert.equal(has(form.queryByText(/has no free 90 minutes/)), false);
+});
+
+test('a search the server fails says so', async () => {
+  const r = await openDiary();
+  freeOn = joBusyAt1030;
+  capacityDown = true;
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  assert.ok(has(await form.findByText("Couldn't find free time — try again.")));
+});
+
+test('after a move the focus is on the new time, and the automatic choice still names the day it was made for', async () => {
+  const r = await openDiary();
+  freeOn = (date, id) => (id === 12 && date === '2026-10-06' ? [{ start: '09:00', end: '10:30' }] : [{ start: '09:00', end: '18:00' }]);
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  const line = await form.findByText('Wed 7 Oct · 09:00–10:30 · Jo Taylor');
+  await r.waitFor(() => assert.ok(document.activeElement === line));
+  assert.ok(has(form.queryByText('Mechanic chosen automatically: most free time on Tuesday.')));
 });

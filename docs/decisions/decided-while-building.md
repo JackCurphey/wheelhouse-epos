@@ -196,6 +196,8 @@ silent:
    60 days." *Pattern:* Add another day's 60 days.
 4. **`new-job`: the found time is on the quarter hour**, as a grid click
    snaps to 15 minutes.
+5. **`new-job`: a failed search reads "Couldn't find free time — try
+   again."** *Pattern:* the form's "Couldn't reach the server — try again."
 
 ## Decided here, for Jack to overrule
 

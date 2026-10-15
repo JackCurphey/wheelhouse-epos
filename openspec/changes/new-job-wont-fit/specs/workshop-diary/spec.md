@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: New job warns when the work won't fit
-Once work is chosen on New job, the form SHALL compare the work's length with the chosen mechanic's free time from the chosen start, to the end of that free stretch, on that day (decision 23). When the work is longer, the form SHALL show "Only [n] minutes free at [time] — this job needs [m]. Choose another time, or save anyway and the diary will show the overlap.", or "No free time at [time] — this job needs [m]. …" when the start is in busy time, with a "Find the next free [m] minutes" button. Save job SHALL stay available. The button SHALL move the job to the start of the same mechanic's first free stretch long enough for the work, later that day or on one of the next 60 days, and the warning SHALL go (Jack, 15 Oct); when there is none it SHALL say "[mechanic] has no free [m] minutes in the next 60 days." The Shared queue SHALL get no warning.
+Once work is chosen on New job, the form SHALL compare the work's length with the chosen mechanic's free time from the chosen start, to the end of that free stretch, on that day (decision 23). When the work is longer, the form SHALL show "Only [n] minutes free at [time] — this job needs [m]. Choose another time, or save anyway and the diary will show the overlap.", or "No free time at [time] — this job needs [m]. …" when the start is in busy time, with a "Find the next free [m] minutes" button. Save job SHALL stay available. The button SHALL move the job to the same mechanic's first free stretch long enough for the work, starting on the quarter hour, later that day or on a following day within 60 days counting the chosen one, keep the mechanic, put the focus on the new time, and the warning SHALL go (Jack, 15 Oct); when there is none it SHALL say "[mechanic] has no free [m] minutes in the next 60 days.", and when the search fails "Couldn't find free time — try again." Free time here is what the shop's capacity gives as free stretches: it leaves out blocks, closures, days off and timed jobs, but not untimed jobs, the Shared queue's share or the reserve. The Shared queue SHALL get no warning.
 
 #### Scenario: Work longer than the gap
 - **WHEN** staff choose a 90-minute Standard service at 10:00 on Tue 6 Oct for Jo Taylor, who is free 09:00–10:30 and from 12:00
@@ -26,3 +26,7 @@ Once work is chosen on New job, the form SHALL compare the work's length with th
 #### Scenario: The Shared queue
 - **WHEN** the mechanic is the Shared queue
 - **THEN** there is no warning
+
+#### Scenario: The automatic choice after a move
+- **WHEN** Jo Taylor was chosen automatically for Tuesday and "Find the next free 90 minutes" moves the job to Wed 7 Oct
+- **THEN** the form still says "Mechanic chosen automatically: most free time on Tuesday." and the focus is on the new time
