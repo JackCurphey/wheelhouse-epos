@@ -20,8 +20,8 @@ export default {
   'ops-till-checkout': into('set-till-quick', 'Management oversight 6 H5; 3 Oct (walk-through 8 H3): beside the tills', "'Check Jo Taylor out of Till B1?' box: 'After this sale' or 'Now' (basket put on hold)"), // inferred: the button is on the till ("Check out Jo Taylor"), not one of the deferred extras
   'ops-devices-signout': later('Issue #116 question 5: oversight extras later'),
   'ops-devices-signed-out': later('Issue #116 question 5: oversight extras later'),
-  'ops-person': later('Issue #116 question 5: oversight extras later'),
-  'ops-person-everywhere': later('Issue #116 question 5: oversight extras later'),
+  'ops-person': into('set-staff-person', 'Not-drawn pages 2 (Jack, 8 Oct; 15 Oct: option 2)', "Under Till PIN: 'Signed in somewhere? Signs Jo out of every till, phone and computer' with 'Sign out everywhere'"),
+  'ops-person-everywhere': into('set-staff-person', 'Not-drawn pages 2 (Jack, 8 Oct)', "'Sign Jo Taylor out everywhere?' box: 'Cancel' or 'Sign out everywhere'"),
   'ops-feedback-empty': later('Issue #116 question 5: oversight extras later'),
   'ops-feedback': later('Issue #116 question 5: oversight extras later'),
   'ops-feedback-shot': later('Issue #116 question 5: oversight extras later'),

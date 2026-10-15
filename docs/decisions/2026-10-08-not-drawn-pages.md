@@ -81,6 +81,17 @@ each drawn just before its stage. Until then they wait on Jack.
   `ops-person-everywhere` as later; it feeds the drawings, so it changes at
   the next canvas rebuild.
 
+**Later change (15 Oct 2026): where "Sign out everywhere" sits** (Jack, 15
+Oct: "2"). On a person's pop-up (`set-staff-person`), a row under Till PIN:
+"Signed in somewhere?" / "Signs Jo out of every till, phone and computer",
+with a "Sign out everywhere" button that opens `ops-person-everywhere`. Same
+place and look as Till PIN's "Clear a forgotten PIN", and it needs nothing
+new from the server beyond the button. Chosen over the 3 Oct row ("Signed in
+· Till B1 now · [n] phone or computer"), whose count of devices is what the
+later Signed-in devices list would show, and over a button beside Done.
+`consolidate/j20.mjs` now puts `ops-person` and `ops-person-everywhere` into
+`set-staff-person`.
+
 ## The 95, by stage
 
 Kept as researched on 8 Oct, from `origin/main` at that date. "plan:N" is a
