@@ -1,3 +1,5 @@
+> **History (8 Oct 2026).** What the app does today for the staff diary is now in `openspec/specs/workshop-diary/spec.md`; this document is kept as the record of how it was designed.
+
 # Staff diary: "Waiting for you", review pop-up and diary markings
 
 **Date:** 2026-09-27. **Follows:** server piece 12 (#89), which supplies

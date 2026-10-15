@@ -1,3 +1,5 @@
+> **History (8 Oct 2026).** What the app does today for workshop jobs is now in `openspec/specs/workshop-jobs/spec.md`; this document is kept as the record of how it was designed.
+
 # Jobs over several days
 
 **Decided by Jack, 3 Oct 2026.** Workshop day decision 52: "one block per

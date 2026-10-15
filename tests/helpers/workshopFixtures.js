@@ -1,7 +1,7 @@
 // Seeds workshop rows directly, for tests whose subject is a read path
 // rather than the booking flow that creates them.
 //
-// Deliberately mirrors createWorkshopJob() in server/server.js - a job plus
+// Deliberately mirrors createWorkshopJob() in server/workshop/jobs.js - a job plus
 // its linked order in one transaction - because the linked order is exactly
 // what the portal must not leak back to a customer.
 import path from 'node:path';

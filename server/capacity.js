@@ -276,7 +276,7 @@ export function fitsDropoff(mech, minutes) {
 }
 
 // Whether [start, end) sits inside time the mechanic is available - blocks and
-// the shop's hours removed. Job overlap is checkJobSlot's, in server.js.
+// the shop's hours removed. Job overlap is checkJobSlot's, in server/workshop/jobs.js.
 export function fitsFreeTime(mech, startTime, endTime) {
   const s = toMinutes(startTime);
   const e = toMinutes(endTime);

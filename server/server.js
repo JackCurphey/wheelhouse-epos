@@ -8,14 +8,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
-import { readLegacyStatus, bookingRequest, custody, work } from './workshop/state-machines.js';
+import { work } from './workshop/state-machines.js';
 import { applyEvent } from './workshop/transitions.js';
-import { allocateReference } from './workshop/references.js';
 import {
-  HOUR_RE, MAX_RANGE_DAYS, LIVE_BOOKING_STATES, isRealDate, dayCount, datesBetween, parseWeekdayHours,
-  effectiveHours, widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
-  computeCapacity, startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
-  settleModeChange, validateModeChange, bookingLockKey,
+  requestedOf, serializeWorkshopJob, WORKSHOP_JOB_SELECT, TIME_RE, resolveJobMechanicId,
+  addMinutesToTime, timeToMinutes, resolveJobTimes, CLEAR_REQUEST, capacityRefusal, refusal, SLOT_GONE,
+  sendQuoteResult, parseWorkingDays, currentShopToday, currentShopTimeZone, toCapacitySettings, LIVE_STATES_SQL,
+  withBookingLock, withJobBookingLock, applyLocked, syncJobHold, createWorkshopJob, checkJobSlot,
+  toBlock, toCapacityJob, loadCapacity,
+} from './workshop/jobs.js';
+import {
+  HOUR_RE, MAX_RANGE_DAYS, isRealDate, dayCount, parseWeekdayHours,
+  widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
+  startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
+  settleModeChange, validateModeChange,
 } from './capacity.js';
 import {
   createRevision as createQuoteRevision,
@@ -37,6 +43,8 @@ import { parseCookies, makeRateLimiter, sendJson, notFound, badRequest, readJson
 import { serializeProduct, serializeBike } from './lib/serializers.js';
 import { currentSession, currentCustomerSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
+// tests/portal-copy.test.js reads the job statuses from here.
+export { JOB_STATUSES } from './routes/workshop.js';
 import { sendSms } from './sms.js';
 import {
   CustomerAuthError,
@@ -1350,11 +1358,12 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   if (!doc) return notFound(res, 'Not found');
   if (doc.status !== 'open') return badRequest(res, `This ${doc.kind} is already ${doc.status}`);
 
-  // Tendering the order for a job is the shop saying the work is done, so it has
-  // to be a legal 'finish' on the work machine. If it is not, the tender is
-  // refused (Jack's decision, 20 Sep, reaffirmed after a day on the other
-  // behaviour): the job record governs, and the shop marks the job's real state
-  // before taking the money.
+  // Tendering the order for a job is the shop saying the work is done, so the
+  // work must already be finished or be a legal 'finish' on the work machine
+  // (Jack, 8 Oct, docs/decisions/2026-10-08-paying-for-finished-work.md). If
+  // it is neither, the tender is refused (Jack's decision, 20 Sep, reaffirmed
+  // after a day on the other behaviour): the job record governs, and the shop
+  // marks the job's real state before taking the money.
   //
   // Note the breadth. 'finish' is legal only from in_progress, so this refuses a
   // job that never started AND one that is on hold or waiting for parts. The
@@ -1366,9 +1375,18 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // a real sale on the books and the job untouched, which is worse than either
   // outcome.
   let jobToFinish = null;
+  let jobAlreadyFinished = null;
   if (doc.workshop_job_id) {
     jobToFinish = await db.prepare('SELECT id, work_state, version FROM workshop_jobs WHERE id = ?')
       .get(doc.workshop_job_id);
+    // Work already finished ("Mark ready for collection") already says the
+    // work is done, which is what the decision asks of the record: the
+    // customer pays and the job is left as it is (Jack, 8 Oct). It is checked
+    // again after the sale, below, in case someone reopens it in between.
+    if (jobToFinish && jobToFinish.work_state === 'complete') {
+      jobAlreadyFinished = jobToFinish;
+      jobToFinish = null;
+    }
     if (jobToFinish && !work.can(jobToFinish.work_state, 'finish')) {
       return sendJson(res, 409, {
         error: `cannot finish a job that is ${jobToFinish.work_state}; from here you can ${work.events(jobToFinish.work_state).join(', ') || 'do nothing'}`,
@@ -1454,6 +1472,17 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
     // remove.
     if (!finished.ok) jobWarning = finished.message;
   }
+  // The same race for work that was already finished at the check: if someone
+  // reopened it before the sale was made, the record no longer says the work
+  // is done (docs/decisions/2026-10-08-paying-for-finished-work.md). The sale
+  // stands, the job is left where they put it, and the reply says so.
+  if (jobAlreadyFinished) {
+    const now = await db.prepare('SELECT work_state FROM workshop_jobs WHERE id = ?').get(jobAlreadyFinished.id);
+    if (!now) jobWarning = 'Job not found';
+    else if (now.work_state !== 'complete') {
+      jobWarning = `This job changed while the payment went through: its work is now ${now.work_state}, not finished. The payment stands; check the job.`;
+    }
+  }
 
   const sale = await db.prepare(SALE_SELECT + ' WHERE s.id = ?').get(saleId);
   const savedItems = await db.prepare('SELECT * FROM sale_items WHERE sale_id = ?').all(saleId);
@@ -1467,20 +1496,6 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
 
 // ---------- Workshop jobs ----------
 
-// A customer's stored change request (piece 12). It counts only while the job
-// is waiting on it: a route that moves the job out of reschedule_requested
-// without clearing the columns (the old diary's status PUT, staff cancel)
-// leaves them behind, and then they mean nothing.
-function requestedOf(row) {
-  if (row.booking_state !== 'reschedule_requested' || !row.requested_job_date) return null;
-  return {
-    jobDate: row.requested_job_date,
-    startTime: row.requested_start_time || '',
-    endTime: row.requested_end_time || '',
-    mechanicId: row.requested_mechanic_id,
-  };
-}
-
 // A customer may change or cancel through the link while the bike has not
 // reached the shop and the booking is live (piece 12) - and only while no work
 // has started on it and its day has not passed in the shop's time zone (Jack,
@@ -1493,57 +1508,8 @@ function customerCanAct(row, today) {
   return !customerTooLate(row, today) && CUSTOMER_ACTIONABLE.has(row.booking_state);
 }
 
-function serializeWorkshopJob(row) {
-  return {
-    id: row.id,
-    title: row.title,
-    customerId: row.customer_id,
-    customerName: row.customer_name !== undefined ? row.customer_name : undefined,
-    bikeId: row.bike_id,
-    bikeLabel: row.bike_label !== undefined ? row.bike_label : undefined,
-    mechanicId: row.mechanic_id,
-    mechanicName: row.mechanic_name !== undefined ? row.mechanic_name : undefined,
-    jobDate: row.job_date,
-    startTime: row.start_time,
-    endTime: row.end_time,
-    status: row.status,
-    // The states the screens actually drive from. `status` above is the derived
-    // legacy field, kept only for public/app.js and the online booking pages until
-    // Phase 4 replaces them.
-    reference: row.reference,
-    bookingState: row.booking_state,
-    custodyState: row.custody_state,
-    workState: row.work_state,
-    // Every action endpoint requires the version the caller last saw, so it has
-    // to come back on every read.
-    version: row.version,
-    notes: row.notes,
-    // The customer's answers to the service's questions, frozen at booking
-    // (migration 028). Null for staff jobs, "not sure" and older bookings.
-    questionAnswers: row.question_answers ?? null,
-    // The customer's own words from the booking (piece 3), apart from the
-    // notes they were also copied into - the review pop-up shows them alone.
-    customerDescription: row.customer_description ?? null,
-    customerBikeNote: row.customer_bike_note ?? null,
-    // Piece 12: the customer's change request while it waits, and who
-    // cancelled (a customer's shows in "Waiting for you" until seen).
-    requested: requestedOf(row),
-    cancelledBy: row.cancelled_by ?? null,
-    cancelledAt: row.cancelled_at ?? null,
-    cancellationSeenAt: row.cancellation_seen_at ?? null,
-    changeDeclinedAt: row.change_declined_at ?? null,
-    orderId: row.order_id,
-    orderStatus: row.order_status,
-    orderTotal: row.order_total,
-    // The job's current quote (its latest revision), or null (journey 4).
-    quote: row.quote_id ? { id: row.quote_id, state: row.quote_state, revision: row.quote_revision } : null,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
 // What a customer is allowed to see about their own job. Deliberately a
-// separate function from serializeWorkshopJob() above rather than a filtered
+// separate function from serializeWorkshopJob() (server/workshop/jobs.js) rather than a filtered
 // version of it: the staff serializer is where new fields get added, and a
 // shared one silently exposes each new field to customers the day it lands.
 // Notably absent - the linked order (id, status, total) and `notes`, which
@@ -1564,287 +1530,6 @@ function serializePortalBooking(row) {
     createdAt: row.created_at,
   };
 }
-
-// 'pending' is a customer-submitted booking (see /api/portal/*) awaiting a
-// mechanic's manual review before it counts as scheduled - it still occupies
-// its diary slot like any other status, so a second booking can't silently
-// double it up, but staff have to explicitly approve it first.
-export const JOB_STATUSES = ['pending', 'scheduled', 'waiting_parts', 'on_hold', 'complete'];
-
-function resolveJobStatus(raw, existing) {
-  if (raw === undefined) return existing || 'scheduled';
-  if (!JOB_STATUSES.includes(raw)) return null;
-  return raw;
-}
-
-const WORKSHOP_JOB_SELECT = `SELECT w.*, lq.id AS quote_id, lq.state AS quote_state, lq.revision AS quote_revision, c.name AS customer_name, trim(b.make || ' ' || b.model) AS bike_label, mech.name AS mechanic_name, d.id AS order_id, d.status AS order_status, d.total AS order_total
-  FROM workshop_jobs w
-  LEFT JOIN customers c ON c.id = w.customer_id
-  LEFT JOIN customer_bikes b ON b.id = w.bike_id
-  LEFT JOIN employees mech ON mech.id = w.mechanic_id
-  LEFT JOIN sale_documents d ON d.workshop_job_id = w.id
-  LEFT JOIN LATERAL (SELECT id, state, revision FROM workshop_quotes q
-                     WHERE q.workshop_job_id = w.id ORDER BY revision DESC LIMIT 1) lq ON true`;
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-// ---- A job's parts: one per day it is worked (migration 037; Workshop day
-// decision 52). Part 1 is the job's own date, times and mechanic, kept
-// identical by triggers; later parts come from "Add another day" and from
-// carry-over. Spec: docs/superpowers/specs/2026-10-03-multi-day-jobs-design.md
-function serializePart(row) {
-  return {
-    id: row.id,
-    position: row.position,
-    date: row.part_date,
-    startTime: row.start_time || '',
-    endTime: row.end_time || '',
-    mechanicId: row.mechanic_id ?? null,
-    mechanicName: row.mechanic_name ?? null,
-  };
-}
-
-// Adds each job's parts, in order, to serialized jobs.
-async function attachParts(jobs) {
-  if (!jobs.length) return jobs;
-  const rows = await db.prepare(
-    `SELECT p.*, e.name AS mechanic_name FROM workshop_job_parts p
-     LEFT JOIN employees e ON e.id = p.mechanic_id
-     WHERE p.workshop_job_id = ANY(?::int[]) ORDER BY p.workshop_job_id, p.position`
-  ).all(jobs.map((j) => j.id));
-  const byJob = new Map();
-  for (const r of rows) {
-    if (!byJob.has(r.workshop_job_id)) byJob.set(r.workshop_job_id, []);
-    byJob.get(r.workshop_job_id).push(serializePart(r));
-  }
-  return jobs.map((j) => ({ ...j, parts: byJob.get(j.id) ?? [] }));
-}
-
-const addDaysIso = (date, n) => {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-
-// The first day on or after `from` that the shop opens and the mechanic works
-// (any day the shop opens when there is no mechanic), within 60 days.
-async function nextWorkingDay(from, mechanicId) {
-  const settings = await db.prepare('SELECT opening_days FROM workshop_settings LIMIT 1').get();
-  const shopDays = settings ? parseWorkingDays(settings.opening_days) : null;
-  let mechDays = null;
-  if (mechanicId) {
-    const m = await db.prepare('SELECT working_days FROM employees WHERE id = ?').get(mechanicId);
-    mechDays = m ? parseWorkingDays(m.working_days) : null;
-  }
-  for (let i = 0; i < 60; i += 1) {
-    const date = addDaysIso(from, i);
-    const weekday = new Date(`${date}T00:00:00Z`).getUTCDay();
-    if (Array.isArray(shopDays) && !shopDays.includes(weekday)) continue;
-    if (Array.isArray(mechDays) && !mechDays.includes(weekday)) continue;
-    return date;
-  }
-  return null;
-}
-
-// Carry-over (decision 52; Jack, 3 Oct): an unfinished job - the bike is in
-// the shop and the work isn't finished - whose last day has passed gets a new
-// part on the next working day from today, at the same time, with the same
-// mechanic. Run when the jobs list is read (nothing runs at midnight). Not
-// refused for overlapping another job: the diary shows the overlap.
-// Idempotent: once a job has a part today or later it no longer qualifies,
-// and a second reader racing the first is stopped by UNIQUE(job, position).
-async function carryOverUnfinished() {
-  const today = await currentShopToday();
-  const late = await db.prepare(
-    `SELECT w.id, w.shop_id, p.part_date, p.start_time, p.end_time, p.mechanic_id, p.position
-       FROM workshop_jobs w
-       JOIN workshop_job_parts p ON p.workshop_job_id = w.id
-      WHERE w.custody_state = 'in_shop' AND w.work_state <> 'complete'
-        AND w.booking_state IN ('scheduled', 'reschedule_requested')
-        AND p.position = (SELECT max(position) FROM workshop_job_parts q WHERE q.workshop_job_id = w.id)
-        AND p.part_date < ?`
-  ).all(today);
-  for (const last of late) {
-    const date = await nextWorkingDay(today, last.mechanic_id);
-    if (!date) continue;
-    const added = await db.prepare(
-      `INSERT INTO workshop_job_parts (shop_id, workshop_job_id, part_date, start_time, end_time, mechanic_id, position)
-       VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (workshop_job_id, position) DO NOTHING RETURNING id`
-    ).get(last.shop_id, last.id, date, last.start_time, last.end_time, last.mechanic_id, last.position + 1);
-    if (added) await db.prepare('UPDATE workshop_jobs SET version = version + 1, updated_at = now() WHERE id = ?').run(last.id);
-  }
-}
-
-async function resolveJobCustomerId(rawId, existingId) {
-  if (rawId === undefined) return { ok: true, customerId: existingId };
-  if (rawId === null || rawId === '') return { ok: true, customerId: null };
-  const customerId = Number(rawId);
-  const customer = await db.prepare('SELECT * FROM customers WHERE id = ? AND active = 1').get(customerId);
-  if (!customer) return { ok: false };
-  return { ok: true, customerId };
-}
-
-// A bike belongs to exactly one customer, so a job can only be linked to a
-// bike when it's also linked to that same bike's owner. When bikeId isn't
-// explicitly provided (e.g. a drag/resize that only moves the time), the
-// existing link is kept unless it no longer matches the resolved customer,
-// in which case it's silently dropped rather than rejecting the request.
-async function resolveJobBikeId(rawId, existingId, resolvedCustomerId) {
-  if (rawId === undefined) {
-    if (!existingId) return { ok: true, bikeId: null };
-    const bike = await db.prepare('SELECT * FROM customer_bikes WHERE id = ?').get(existingId);
-    if (!bike || !resolvedCustomerId || bike.customer_id !== resolvedCustomerId) {
-      return { ok: true, bikeId: null };
-    }
-    return { ok: true, bikeId: existingId };
-  }
-  if (rawId === null || rawId === '') return { ok: true, bikeId: null };
-  const bikeId = Number(rawId);
-  const bike = await db.prepare('SELECT * FROM customer_bikes WHERE id = ? AND active = 1').get(bikeId);
-  if (!bike) return { ok: false, error: 'Bike not found or inactive' };
-  if (!resolvedCustomerId || bike.customer_id !== resolvedCustomerId) {
-    return { ok: false, error: "That bike doesn't belong to the selected customer" };
-  }
-  return { ok: true, bikeId };
-}
-
-async function resolveJobMechanicId(rawId, existingId) {
-  if (rawId === undefined) return { ok: true, mechanicId: existingId };
-  if (rawId === null || rawId === '') return { ok: true, mechanicId: null };
-  const mechanicId = Number(rawId);
-  const mechanic = await db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_mechanic = 1').get(mechanicId);
-  if (!mechanic) return { ok: false };
-  return { ok: true, mechanicId };
-}
-
-function addMinutesToTime(timeStr, minutes) {
-  const [h, m] = timeStr.split(':').map(Number);
-  const total = Math.max(0, Math.min(23 * 60 + 59, h * 60 + m + minutes));
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function timeToMinutes(timeStr) {
-  const [h, m] = timeStr.split(':').map(Number);
-  return h * 60 + m;
-}
-
-// A job with a start time always gets an end time - defaulting to +1 hour
-// keeps every scheduled job a draggable/resizable block on the diary grid.
-function resolveJobTimes(startTime, endTimeInput) {
-  if (!startTime) return { startTime: '', endTime: '' };
-  if (!TIME_RE.test(startTime)) return { error: 'Start time must be in HH:MM format' };
-  let endTime = endTimeInput;
-  if (!endTime) endTime = addMinutesToTime(startTime, 60);
-  if (!TIME_RE.test(endTime)) return { error: 'End time must be in HH:MM format' };
-  if (endTime <= startTime) return { error: 'End time must be after start time' };
-  return { startTime, endTime };
-}
-
-route('GET', '/api/workshop-jobs', async (req, res, params, query) => {
-  const start = query.get('start');
-  const end = query.get('end');
-  await carryOverUnfinished();
-  let sql = WORKSHOP_JOB_SELECT + ' WHERE 1=1';
-  const args = [];
-  // A job is in the range when any of its days is (a job over several days).
-  if (start || end) {
-    sql += ` AND EXISTS (SELECT 1 FROM workshop_job_parts p WHERE p.workshop_job_id = w.id
-      AND (?::text IS NULL OR p.part_date >= ?) AND (?::text IS NULL OR p.part_date <= ?))`;
-    args.push(start || null, start || null, end || null, end || null);
-  }
-  const status = query.get('status');
-  if (status) {
-    sql += ' AND w.status = ?';
-    args.push(status);
-  }
-  sql += ' ORDER BY w.job_date, w.start_time';
-  const rows = await db.prepare(sql).all(...args);
-  sendJson(res, 200, await attachParts(rows.map(serializeWorkshopJob)));
-});
-
-route('GET', '/api/workshop-jobs/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-  if (!row) return notFound(res, 'Job not found');
-  sendJson(res, 200, (await attachParts([serializeWorkshopJob(row)]))[0]);
-});
-
-// A new booking link for a job: the old one stops working at once, because a
-// job holds one hash. Returned once; staff text it or read it out.
-// Spec: docs/superpowers/specs/2026-09-25-book-server-4-guest-link-design.md
-// Staff handlers get (req, res, params, query, afterRelease, shopId); the slug
-// for the path comes from shops, which is outside row-level security.
-// screens: expired
-route('POST', '/api/workshop-jobs/:id/private-link', async (req, res, params, query, afterRelease, shopId) => {
-  const job = await db.prepare('SELECT id, customer_id FROM workshop_jobs WHERE id = ?').get(Number(params.id));
-  if (!job) return notFound(res, 'Job not found');
-  if (!job.customer_id) return badRequest(res, 'This job has no customer to send a link to');
-  const code = newLinkCode();
-  await db.prepare('UPDATE workshop_jobs SET link_token_hash = ?, updated_at = ? WHERE id = ?')
-    .run(hashLinkCode(code), nowIso(), job.id);
-  const { rows: [shop] } = await pool.query('SELECT slug FROM shops WHERE id = $1', [shopId]);
-  sendJson(res, 201, { privateLink: linkPath(shop.slug, code) });
-});
-
-// Booking writes for one shop and date run one at a time: check, then write,
-// with nothing between them. A transaction-scoped advisory lock keyed (shop,
-// date), released at COMMIT or ROLLBACK. Several dates (a move) are locked in
-// date order, so two moves between the same days cannot deadlock. Nested
-// BEGIN/COMMIT inside fn (createWorkshopJob) becomes a savepoint (server/db.js).
-async function withBookingLock(dates, fn) {
-  await db.exec('BEGIN');
-  try {
-    for (const date of [...new Set(dates)].sort()) {
-      await db.prepare(
-        "SELECT pg_advisory_xact_lock(current_setting('app.current_shop_id')::int, ?::int)"
-      ).get(bookingLockKey(date));
-    }
-    const result = await fn();
-    await db.exec('COMMIT');
-    return result;
-  } catch (err) {
-    // A failed ROLLBACK (e.g. the connection already dropped) must not hide
-    // the original error - that's the one the caller needs to see.
-    await db.exec('ROLLBACK').catch(() => {});
-    throw err;
-  }
-}
-
-// The booking lock for every day a job touches (piece 12): its own day, the
-// day it asked to move to, and `extraDates` (where it is moving now). The days
-// are read before the lock, so the job is read again under it - FOR UPDATE, so
-// nothing else writes it until this commits - and if it moved in between, the
-// lock is taken again for its new days. fn(job) returns a { status, body }
-// refusal or undefined; this returns that, or { gone: true } when the job no
-// longer exists.
-const JOB_MOVED = Symbol('job moved');
-async function withJobBookingLock(jobId, extraDates, fn) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const before = await db.prepare('SELECT job_date, requested_job_date FROM workshop_jobs WHERE id = ?').get(jobId);
-    if (!before) return { gone: true };
-    const dates = [before.job_date, before.requested_job_date, ...extraDates].filter(Boolean);
-    const out = await withBookingLock(dates, async () => {
-      const job = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(jobId);
-      if (!job) return { gone: true };
-      if (job.job_date !== before.job_date || job.requested_job_date !== before.requested_job_date) return JOB_MOVED;
-      return fn(job);
-    });
-    if (out !== JOB_MOVED) return out;
-  }
-  throw new Error(`workshop job ${jobId} kept moving while its booking days were being locked`);
-}
-
-// A booking-state change on a job read FOR UPDATE under the lock: nothing can
-// have moved it since, so a refusal here is a bug, not a race - it throws, and
-// the whole write rolls back.
-async function applyLocked(job, event) {
-  const moved = await applyEvent({ jobId: job.id, machine: bookingRequest, event, expectedVersion: job.version });
-  if (!moved.ok) throw new Error(`job ${job.id}: ${event} refused under the booking lock: ${moved.message}`);
-  return moved.job;
-}
-
-// Clears a stored change request (piece 12).
-const CLEAR_REQUEST = `requested_job_date = NULL, requested_mechanic_id = NULL, requested_start_time = NULL,
-  requested_end_time = NULL, requested_at = NULL`;
 
 // Why the customer may not change or cancel through the link, or null. The
 // code is what a screen branches on; the words are the spec's. Work started
@@ -1869,662 +1554,7 @@ function customerActionRefusal(job, action, today) {
   return null;
 }
 
-// A refusal because other bookings have used the time. The code is what a
-// screen branches on; the words are what the old booking page shows.
-const capacityRefusal = (error) => ({ status: 409, body: { error, code: 'capacity' } });
-const refusal = (error) => ({ status: 400, body: { error } });
-// The 024 hold index firing: another live hold already sits on the slot.
-const SLOT_GONE = 'That time is no longer available - please choose another.';
-
-// A customer's requested time (piece 12) is held beside the job's own hold,
-// marked purpose 'requested', while the job waits on the request: one live
-// requested hold, on the requested slot. A request replaced by another lets
-// the old slot go; a job that stops being a request lets it go. syncJobHold
-// runs this first, so a requested slot is given up before the job's own hold
-// may move onto it.
-async function syncRequestedHold(jobId) {
-  const job = await db.prepare(
-    `SELECT booking_state, requested_job_date, requested_mechanic_id, requested_start_time, requested_end_time, planned_minutes
-     FROM workshop_jobs WHERE id = ?`
-  ).get(jobId);
-  const wanted = job && job.booking_state === 'reschedule_requested' && job.requested_job_date
-    ? {
-      jobDate: job.requested_job_date,
-      // As for the job's own hold: an unassigned slot is counted, never slotted.
-      startTime: job.requested_mechanic_id ? (job.requested_start_time || '') : '',
-      mechanicId: job.requested_mechanic_id,
-      minutes: job.requested_start_time
-        ? Math.max(0, timeToMinutes(job.requested_end_time) - timeToMinutes(job.requested_start_time))
-        : (job.planned_minutes || 0),
-    }
-    : null;
-  const held = await db.prepare(
-    `SELECT id, job_date, start_time, mechanic_id FROM workshop_capacity_holds
-     WHERE workshop_job_id = ? AND purpose = 'requested' AND state IN ('held', 'confirmed') ORDER BY id`
-  ).all(jobId);
-  const keep = wanted && held.find((h) =>
-    h.job_date === wanted.jobDate && h.start_time === wanted.startTime && h.mechanic_id === wanted.mechanicId);
-  for (const h of held) {
-    if (h !== keep) await db.prepare("UPDATE workshop_capacity_holds SET state = 'released' WHERE id = ?").run(h.id);
-  }
-  if (wanted && !keep) {
-    await db.prepare(
-      `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state, purpose)
-       VALUES (?, ?, ?, ?, ?, 'held', 'requested')`
-    ).run(jobId, wanted.jobDate, wanted.startTime, wanted.mechanicId, wanted.minutes);
-  }
-}
-
-// Shared by the staff "create job" route below and the online booking pages'
-// booking route (/api/portal/:shopSlug/bookings) - inserts the job plus its
-// linked order in one transaction. Trusts every field completely; callers
-// are responsible for validating/resolving them first (the portal route
-// deliberately ignores anything the client sends for customerId/status and
-// forces its own values, same principle as createSale() never trusting a
-// client-sent total).
-// Takes the three states, not a status: workshop_jobs.status is a generated
-// column since migration 021 and Postgres refuses a direct write. Callers that
-// still speak the old five-value vocabulary (the staff diary's POST, below)
-// translate at the boundary with readLegacyStatus().
-// Throws a pg unique-violation (code 23505) when another request already holds
-// the slot. Callers map that to 409 - the request was well-formed and lost a
-// race, which is not the same thing as being wrong.
-// A job's capacity hold follows the job. One live hold per live job: an
-// assigned job holds a timed slot at its start with its length; an unassigned
-// job (no mechanic - drop-off, a walk-in, or a timed job nobody has taken yet)
-// holds no slot, so its hold is untimed and carries only its length - the
-// shared queue counts it, never a slot on the grid. A timed job's length
-// still comes from its times regardless of assignment. A job that stops being
-// live has its hold released. Called inside createWorkshopJob's transaction;
-// the booking lock (Task 5) wraps the other writes. Only the job's own hold
-// (purpose 'booking') - a requested slot's is syncRequestedHold's.
-async function syncJobHold(jobId) {
-  await syncRequestedHold(jobId);
-  const job = await db.prepare(
-    'SELECT id, mechanic_id, job_date, start_time, end_time, planned_minutes, booking_state FROM workshop_jobs WHERE id = ?'
-  ).get(jobId);
-  if (!job || !LIVE_BOOKING_STATES.includes(job.booking_state)) {
-    await db.prepare(
-      `UPDATE workshop_capacity_holds SET state = 'released'
-       WHERE workshop_job_id = ? AND state IN ('held', 'confirmed')`
-    ).run(jobId);
-    return;
-  }
-  const startTime = job.start_time || '';
-  const minutes = startTime
-    ? Math.max(0, timeToMinutes(job.end_time) - timeToMinutes(startTime))
-    : (job.planned_minutes || 0);
-  // An unassigned job's hold is untimed - the shared queue is counted, never slotted.
-  const holdStartTime = job.mechanic_id ? startTime : '';
-  const hold = await db.prepare(
-    `SELECT id FROM workshop_capacity_holds
-     WHERE workshop_job_id = ? AND purpose = 'booking' AND state IN ('held', 'confirmed') ORDER BY id LIMIT 1`
-  ).get(jobId);
-  if (hold) {
-    await db.prepare(
-      'UPDATE workshop_capacity_holds SET job_date = ?, start_time = ?, mechanic_id = ?, minutes = ? WHERE id = ?'
-    ).run(job.job_date, holdStartTime, job.mechanic_id, minutes, hold.id);
-  } else {
-    await db.prepare(
-      `INSERT INTO workshop_capacity_holds (workshop_job_id, job_date, start_time, mechanic_id, minutes, state)
-       VALUES (?, ?, ?, ?, ?, 'held')`
-    ).run(jobId, job.job_date, holdStartTime, job.mechanic_id, minutes);
-  }
-}
-
-// A job's length when it has no times: whole minutes, 1 to 720, or null.
-function resolvePlannedMinutes(input, fallback) {
-  if (input === undefined) return { value: fallback ?? null };
-  if (input === null || input === '') return { value: null };
-  const n = Number(input);
-  if (!Number.isInteger(n) || n < 1 || n > 720) {
-    return { error: 'The planned length must be a whole number of minutes between 1 and 720' };
-  }
-  return { value: n };
-}
-
-async function createWorkshopJob({ title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, notes, skipAutoOrder, plannedMinutes, termsAcceptedAt, serviceIds, linkTokenHash, customerDescription, customerBikeNote, questionAnswers, bookingRequestKeyHash, bookingRequestBodyHash }) {
-  await db.exec('BEGIN');
-  try {
-    // Inside the transaction: a reference allocated for a job whose insert then
-    // fails is a number spent for nothing, which is tolerable, but a reference
-    // allocated outside and reused is not.
-    const reference = await allocateReference();
-    // The terms in force right now, for a booking that took consent
-    // (termsAcceptedAt is only ever set by the portal booking route - a
-    // staff-made job takes no terms consent and stores none). Read inside
-    // this transaction so a later change to the shop's terms never rewrites
-    // what an already-committed booking agreed to (piece 11).
-    let termsText = null;
-    if (termsAcceptedAt) {
-      const settingsRow = await db.prepare('SELECT booking_terms FROM workshop_settings LIMIT 1').get();
-      termsText = settingsRow?.booking_terms || STANDARD_BOOKING_TERMS;
-    }
-    const info = await db
-      .prepare(
-        `INSERT INTO workshop_jobs (title, customer_id, bike_id, mechanic_id, job_date, start_time, end_time, booking_state, work_state, custody_state, reference, notes, planned_minutes, terms_accepted_at, terms_text, link_token_hash, customer_description, customer_bike_note, question_answers, booking_request_key_hash, booking_request_body_hash, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?)`
-      )
-      .run(
-        title, customerId, bikeId, mechanicId, jobDate, startTime, endTime, bookingState, workState, custodyState, reference, notes,
-        plannedMinutes ?? (startTime ? Math.max(0, timeToMinutes(endTime) - timeToMinutes(startTime)) : null),
-        termsAcceptedAt ?? null,
-        termsText,
-        linkTokenHash ?? null, customerDescription ?? null, customerBikeNote ?? null,
-        questionAnswers ? JSON.stringify(questionAnswers) : null,
-        bookingRequestKeyHash ?? null, bookingRequestBodyHash ?? null,
-        nowIso()
-      );
-    const jobIdForHold = info.lastInsertRowid;
-
-    // One row per booked service, in the order chosen, each price copied in SQL
-    // so it never passes through a JavaScript number (piece 7).
-    for (const [position, serviceId] of (serviceIds ?? []).entries()) {
-      await db.prepare(
-        `INSERT INTO workshop_job_services (workshop_job_id, service_id, booked_price, position)
-         VALUES (?, ?, (SELECT price FROM workshop_services WHERE id = ?), ?)`
-      ).run(info.lastInsertRowid, serviceId, serviceId, position);
-    }
-
-    // Take the capacity hold in the same transaction as the job. checkJobSlot
-    // above is a SELECT, so two requests can both pass it and both insert; the
-    // partial unique index from migration 018 is what makes exactly one of them
-    // win. Inside the transaction so the loser's job rolls back with its hold
-    // rather than surviving as a booking for a slot it does not hold.
-    await syncJobHold(jobIdForHold);
-    const jobId = info.lastInsertRowid;
-
-    // Every workshop job is backed by an order so it's findable from the
-    // Orders page, unless the caller already has an order it's about to link
-    // this job to itself (the order's "show in workshop diary" toggle).
-    if (!skipAutoOrder) {
-      await db.prepare(
-        `INSERT INTO sale_documents (kind, customer_id, subtotal, discount, total, note, title, workshop_job_id, updated_at)
-         VALUES ('order', ?, 0, 0, 0, ?, ?, ?, ?)`
-      ).run(customerId, notes, title, jobId, nowIso());
-    }
-
-    await db.exec('COMMIT');
-    return jobId;
-  } catch (err) {
-    await db.exec('ROLLBACK');
-    throw err;
-  }
-}
-
-// The diary's scheduling rules, enforced server-side.
-//
-// These lived only in public/app.js, which made them suggestions: the browser
-// greys out a closed Sunday, but a raw POST scheduled one anyway. Both the
-// staff routes and the portal booking route go through here now, so there is
-// one implementation of "is this slot legal" rather than three that drift.
-//
-// Returns null when the slot is fine, or { error, taken } - taken means another
-// live booking holds the time. `ignoreJobId` is the job being edited - a job
-// must not collide with itself.
-async function checkJobSlot({ jobDate, startTime, endTime, mechanicId, ignoreJobId = null }) {
-  const settings = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-  if (!settings) return null;
-
-  // getUTCDay() rather than getDay(): job_date is a bare calendar date with
-  // no timezone, and parsing it locally would shift the weekday for anyone
-  // west of UTC.
-  const dayOfWeek = new Date(`${jobDate}T00:00:00Z`).getUTCDay();
-  const openingDays = parseWorkingDays(settings.opening_days);
-  if (Array.isArray(openingDays) && !openingDays.includes(dayOfWeek)) {
-    return { error: 'The shop is closed that day - please choose another date.', taken: false };
-  }
-
-  // A mechanic's own days off are separate from the shop's closing days - a
-  // part-timer can be off on a Monday the shop is open. Checked before the
-  // times, because a day off rules out the whole day regardless of hours.
-  if (mechanicId) {
-    const mechanic = await db.prepare('SELECT working_days FROM employees WHERE id = ?').get(mechanicId);
-    const workingDays = mechanic ? parseWorkingDays(mechanic.working_days) : null;
-    if (Array.isArray(workingDays) && !workingDays.includes(dayOfWeek)) {
-      return { error: 'That mechanic does not work that day - please choose another day or another mechanic.', taken: false };
-    }
-  }
-
-  // A job with no times is a loose "sometime that day" entry - it occupies no
-  // slot, so there is nothing to check it against.
-  if (!startTime || !endTime) return null;
-
-  // The day's own hours - Saturday may close earlier than the week.
-  const hours = effectiveHours(toCapacitySettings(settings), dayOfWeek);
-  if (startTime < hours.open || endTime > hours.close) {
-    return { error: `That job doesn't fit in the shop's opening hours (${hours.open}\u2013${hours.close}) - please choose an earlier time or a shorter job type.`, taken: false };
-  }
-
-  if (!mechanicId) return null;
-  // A customer's requested time (piece 12) is held like a booking until staff
-  // answer, so it is an overlap too - except for the job that asked for it.
-  const overlap = await db
-    .prepare(
-      `SELECT w.id FROM workshop_job_parts p JOIN workshop_jobs w ON w.id = p.workshop_job_id
-       WHERE p.mechanic_id = ? AND p.part_date = ? AND p.start_time IS NOT NULL AND p.start_time != ''
-       AND p.start_time < ? AND p.end_time > ? AND (?::int IS NULL OR w.id != ?::int)
-       AND w.booking_state IN (${LIVE_STATES_SQL})
-       UNION ALL
-       SELECT id FROM workshop_jobs
-       WHERE requested_mechanic_id = ? AND requested_job_date = ? AND requested_start_time <> ''
-       AND requested_start_time < ? AND requested_end_time > ? AND (?::int IS NULL OR id != ?::int)
-       AND booking_state = 'reschedule_requested'
-       LIMIT 1`
-    )
-    .get(mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId,
-      mechanicId, jobDate, endTime, startTime, ignoreJobId, ignoreJobId);
-  if (overlap) {
-    return { error: 'That mechanic is already booked over part of that window - please choose another time.', taken: true };
-  }
-  return null;
-}
-
-route('POST', '/api/workshop-jobs', async (req, res) => {
-  const body = await readJsonBody(req);
-  const title = (body.title || '').trim();
-  if (!title) return badRequest(res, 'Job title is required');
-  const jobDate = (body.jobDate || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
-  const notes = (body.notes || '').trim();
-
-  const times = resolveJobTimes((body.startTime || '').trim(), (body.endTime || '').trim());
-  if (times.error) return badRequest(res, times.error);
-
-  const resolved = await resolveJobCustomerId(body.customerId, null);
-  if (!resolved.ok) return badRequest(res, 'Customer not found or inactive');
-
-  const bikeResolved = await resolveJobBikeId(body.bikeId, null, resolved.customerId);
-  if (!bikeResolved.ok) return badRequest(res, bikeResolved.error);
-
-  const mechResolved = await resolveJobMechanicId(body.mechanicId, null);
-  if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
-
-  // A walk-in for the shared queue carries a length and no mechanic or time.
-  const planned = resolvePlannedMinutes(body.plannedMinutes, null);
-  if (planned.error) return badRequest(res, planned.error);
-
-  const status = resolveJobStatus(body.status, null);
-  if (status === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
-  // The staff diary still sends a legacy status and will until Phase 4 replaces
-  // it. Translating here rather than changing the request contract is what
-  // keeps public/app.js working untouched through this phase.
-  const created = readLegacyStatus(status);
-
-  // Staff are held to the shop's rules, never to capacity: no calculator here.
-  // The only capacity answer is the 024 index firing on a stale pre-2b hold,
-  // which rolls the whole write back.
-  let out;
-  try {
-    out = await withBookingLock([jobDate], async () => {
-      const slotError = await checkJobSlot({
-        jobDate,
-        startTime: times.startTime,
-        endTime: times.endTime,
-        mechanicId: mechResolved.mechanicId,
-      });
-      if (slotError) return refusal(slotError.error);
-
-      const jobId = await createWorkshopJob({
-        title,
-        customerId: resolved.customerId,
-        bikeId: bikeResolved.bikeId,
-        mechanicId: mechResolved.mechanicId,
-        jobDate,
-        startTime: times.startTime,
-        endTime: times.endTime,
-        bookingState: created.booking,
-        workState: created.work,
-        custodyState: created.custody ?? 'expected',
-        notes,
-        skipAutoOrder: !!body.skipAutoOrder,
-        plannedMinutes: planned.value,
-      });
-      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(jobId);
-      return { status: 201, body: serializeWorkshopJob(row) };
-    });
-  } catch (err) {
-    if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
-    else throw err;
-  }
-  if (out.status === 201) out.body = (await attachParts([out.body]))[0];
-  sendJson(res, out.status, out.body);
-});
-
-// ---- A job's later days (Jack, 3 Oct: "Add another day" on the job page) ----
-// Each changes the job, so each needs the version the caller saw and bumps
-// it. Day 1 is the job's own date and is moved with PUT /api/workshop-jobs/:id.
-// Spec: docs/superpowers/specs/2026-10-03-multi-day-jobs-design.md
-async function sendJobWithParts(res, id) {
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-  if (!row) return notFound(res, 'Job not found');
-  sendJson(res, 200, (await attachParts([serializeWorkshopJob(row)]))[0]);
-}
-const bumpJobVersion = (id) => db.prepare('UPDATE workshop_jobs SET version = version + 1, updated_at = now() WHERE id = ?').run(id);
-const lastPartOf = (id) => db.prepare('SELECT * FROM workshop_job_parts WHERE workshop_job_id = ? ORDER BY position DESC LIMIT 1').get(id);
-
-// screens: diary, week
-route('POST', '/api/workshop-jobs/:id/parts', async (req, res, params) => {
-  const id = Number(params.id);
-  const body = await readJsonBody(req);
-  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
-  const last = await lastPartOf(id);
-  if (!last) return notFound(res, 'Job not found');
-  const date = await nextWorkingDay(addDaysIso(last.part_date, 1), last.mechanic_id);
-  if (!date) return badRequest(res, 'There is no working day for this mechanic in the next 60 days');
-  const out = await withJobBookingLock(id, [date], async (job) => {
-    if (job.version !== body.version) return staleRefusal;
-    const now = await lastPartOf(id);
-    if (now.id !== last.id || now.part_date !== last.part_date) return staleRefusal;
-    const slot = await checkJobSlot({ jobDate: date, startTime: last.start_time, endTime: last.end_time, mechanicId: last.mechanic_id, ignoreJobId: id });
-    if (slot) return refusal(slot.error);
-    await db.prepare(
-      `INSERT INTO workshop_job_parts (shop_id, workshop_job_id, part_date, start_time, end_time, mechanic_id, position)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(job.shop_id, id, date, last.start_time, last.end_time, last.mechanic_id, last.position + 1);
-    await bumpJobVersion(id);
-    return undefined;
-  });
-  if (out?.gone) return notFound(res, 'Job not found');
-  if (out) return sendJson(res, out.status, out.body);
-  return sendJobWithParts(res, id);
-});
-
-// screens: diary, week
-route('PUT', '/api/workshop-jobs/:id/parts/:partId', async (req, res, params) => {
-  const id = Number(params.id);
-  const partId = Number(params.partId);
-  const body = await readJsonBody(req);
-  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
-  const part = await db.prepare('SELECT * FROM workshop_job_parts WHERE id = ? AND workshop_job_id = ?').get(partId, id);
-  if (!part) return notFound(res, 'That day of the job was not found');
-  if (part.position === 1) return badRequest(res, "Move a job's first day by moving the job itself");
-  const jobDate = body.jobDate !== undefined ? String(body.jobDate).trim() : part.part_date;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
-  const times = resolveJobTimes(
-    body.startTime !== undefined ? String(body.startTime).trim() : part.start_time,
-    body.endTime !== undefined ? String(body.endTime).trim() : part.end_time,
-  );
-  if (times.error) return badRequest(res, times.error);
-  const mech = await resolveJobMechanicId(body.mechanicId, part.mechanic_id);
-  if (!mech.ok) return badRequest(res, 'Mechanic not found or inactive');
-  const out = await withJobBookingLock(id, [part.part_date, jobDate], async (job) => {
-    if (job.version !== body.version) return staleRefusal;
-    const slot = await checkJobSlot({ jobDate, startTime: times.startTime, endTime: times.endTime, mechanicId: mech.mechanicId, ignoreJobId: id });
-    if (slot) return refusal(slot.error);
-    await db.prepare('UPDATE workshop_job_parts SET part_date = ?, start_time = ?, end_time = ?, mechanic_id = ? WHERE id = ?')
-      .run(jobDate, times.startTime, times.endTime, mech.mechanicId, partId);
-    await bumpJobVersion(id);
-    return undefined;
-  });
-  if (out?.gone) return notFound(res, 'Job not found');
-  if (out) return sendJson(res, out.status, out.body);
-  return sendJobWithParts(res, id);
-});
-
-// screens: diary, week
-route('DELETE', '/api/workshop-jobs/:id/parts/:partId', async (req, res, params) => {
-  const id = Number(params.id);
-  const partId = Number(params.partId);
-  const body = await readJsonBody(req);
-  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
-  const part = await db.prepare('SELECT * FROM workshop_job_parts WHERE id = ? AND workshop_job_id = ?').get(partId, id);
-  if (!part) return notFound(res, 'That day of the job was not found');
-  if (part.position === 1) return badRequest(res, "A job's first day can't be removed");
-  const out = await withJobBookingLock(id, [part.part_date], async (job) => {
-    if (job.version !== body.version) return staleRefusal;
-    await db.prepare('DELETE FROM workshop_job_parts WHERE id = ?').run(partId);
-    // Close up the positions after it, in two steps so UNIQUE(job, position)
-    // never sees two parts at the same position mid-update.
-    await db.prepare('UPDATE workshop_job_parts SET position = -position WHERE workshop_job_id = ? AND position > ?').run(id, part.position);
-    await db.prepare('UPDATE workshop_job_parts SET position = -position - 1 WHERE workshop_job_id = ? AND position < 0').run(id);
-    await bumpJobVersion(id);
-    return undefined;
-  });
-  if (out?.gone) return notFound(res, 'Job not found');
-  if (out) return sendJson(res, out.status, out.body);
-  return sendJobWithParts(res, id);
-});
-
-route('PUT', '/api/workshop-jobs/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Job not found');
-  const body = await readJsonBody(req);
-  // The old diary now sends the version it last read (staff diary piece).
-  // Optional, so a caller that doesn't send one keeps the old behaviour.
-  if (body.version !== undefined && !Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
-
-  const title = body.title !== undefined ? String(body.title).trim() : existing.title;
-  if (!title) return badRequest(res, 'Job title is required');
-  const jobDate = body.jobDate !== undefined ? String(body.jobDate).trim() : existing.job_date;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(jobDate)) return badRequest(res, 'A valid date is required');
-  const notes = body.notes !== undefined ? String(body.notes).trim() : existing.notes;
-
-  const startTimeInput = body.startTime !== undefined ? String(body.startTime).trim() : existing.start_time;
-  const endTimeInput = body.endTime !== undefined ? String(body.endTime).trim() : existing.end_time;
-  const times = resolveJobTimes(startTimeInput, endTimeInput);
-  if (times.error) return badRequest(res, times.error);
-
-  const resolved = await resolveJobCustomerId(body.customerId, existing.customer_id);
-  if (!resolved.ok) return badRequest(res, 'Customer not found or inactive');
-
-  const bikeResolved = await resolveJobBikeId(body.bikeId, existing.bike_id, resolved.customerId);
-  if (!bikeResolved.ok) return badRequest(res, bikeResolved.error);
-
-  const mechResolved = await resolveJobMechanicId(body.mechanicId, existing.mechanic_id);
-  if (!mechResolved.ok) return badRequest(res, 'Mechanic not found or inactive');
-
-  const planned = resolvePlannedMinutes(body.plannedMinutes, existing.planned_minutes);
-  if (planned.error) return badRequest(res, planned.error);
-  // A timed job's length is its times; planned_minutes only speaks for untimed work.
-  const plannedMinutes = times.startTime
-    ? Math.max(0, timeToMinutes(times.endTime) - timeToMinutes(times.startTime))
-    : planned.value;
-
-  // The staff diary still changes a job's state by PUTting a legacy status
-  // (public/app.js approveJob() and the complete/reopen toggle), and will until
-  // Phase 4 replaces it. This translates that into the state columns.
-  //
-  // Deliberately NOT routed through applyEvent: some of its moves are not
-  // single machine events, and this is the unguarded legacy path - the reason
-  // the action endpoints exist beside it rather than instead of it. It dies
-  // with public/app.js. The old diary now sends the version it last read
-  // (staff diary piece), checked above when present, and every save through
-  // this route bumps it - so it does take part in the optimistic-concurrency
-  // contract even though it isn't routed through applyEvent.
-  //
-  // custody_state is left alone. The old status never expressed custody (Phase
-  // 1: readLegacyStatus('complete') returns custody: null), so deriving one
-  // here would reset a bike that is in the shop back to 'expected'.
-  let legacyStates = null;
-  if (body.status !== undefined) {
-    const requested = resolveJobStatus(body.status, null);
-    if (requested === null) return badRequest(res, `status must be one of: ${JOB_STATUSES.join(', ')}`);
-    const { booking, work: workState } = readLegacyStatus(requested);
-    legacyStates = { booking, workState };
-  }
-
-  // A complete job is a record of work already done, so its details are
-  // frozen - the browser disables every field on the form. Changing status
-  // is the one edit that stays open, because that is how a job is reopened.
-  // Was `existing.status === 'complete'`. The derived column now also reads
-  // 'complete' for a cancelled, declined or expired booking, and freezing those
-  // against edits is a behaviour change nobody asked for. This guard was always
-  // about finished work.
-  if (existing.work_state === 'complete') {
-    const changesBeyondStatus =
-      title !== existing.title ||
-      jobDate !== existing.job_date ||
-      notes !== existing.notes ||
-      times.startTime !== existing.start_time ||
-      times.endTime !== existing.end_time ||
-      resolved.customerId !== existing.customer_id ||
-      bikeResolved.bikeId !== existing.bike_id ||
-      mechResolved.mechanicId !== existing.mechanic_id;
-    if (changesBeyondStatus) {
-      return badRequest(res, 'This job is complete - reopen it before making changes.');
-    }
-  }
-
-  // Both days are locked: the one the job leaves and the one it joins, and the
-  // day a customer asked to move to (piece 12). The UPDATE and its hold commit
-  // or roll back together.
-  let out;
-  try {
-    out = await withBookingLock([existing.job_date, jobDate, existing.requested_job_date].filter(Boolean), async () => {
-      // A customer's change request (piece 12), read again under the lock.
-      // The old diary knows nothing of requests and sends 'scheduled' for one,
-      // so an ordinary save keeps it; dropping the job onto exactly the
-      // requested time answers it - the change is accepted; a status that
-      // takes the job anywhere else ends it. Request columns left on a job
-      // that is no longer a request are cleared on any save.
-      const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ? FOR UPDATE').get(id);
-      if (body.version !== undefined && current && current.version !== body.version) return staleRefusal;
-
-      const slotError = await checkJobSlot({
-        jobDate,
-        startTime: times.startTime,
-        endTime: times.endTime,
-        mechanicId: mechResolved.mechanicId,
-        ignoreJobId: id,
-      });
-      if (slotError) return refusal(slotError.error);
-
-      const request = current ? requestedOf(current) : null;
-      let bookingState = legacyStates?.booking ?? null;
-      let clearRequest = Boolean(current?.requested_job_date) && !request;
-      if (request) {
-        // Same day, start and mechanic answers the request whatever the
-        // length (staff diary piece): the drop is the staff member's answer.
-        const onRequested = jobDate === request.jobDate && times.startTime === request.startTime
-          && mechResolved.mechanicId === request.mechanicId;
-        if (onRequested && (bookingState === null || bookingState === 'scheduled')) {
-          bookingState = 'scheduled';
-          clearRequest = true;
-        } else if (bookingState === 'scheduled') {
-          bookingState = null;
-        } else if (bookingState !== null) {
-          clearRequest = true;
-        }
-      }
-
-      await db.prepare(
-        `UPDATE workshop_jobs SET title = ?, customer_id = ?, bike_id = ?, mechanic_id = ?, job_date = ?, start_time = ?, end_time = ?, notes = ?, planned_minutes = ?, updated_at = ?,
-           version = version + 1,
-           booking_state = COALESCE(?, booking_state), work_state = COALESCE(?, work_state)${clearRequest ? `, ${CLEAR_REQUEST}` : ''}
-         WHERE id = ?`
-      ).run(
-        title,
-        resolved.customerId,
-        bikeResolved.bikeId,
-        mechResolved.mechanicId,
-        jobDate,
-        times.startTime,
-        times.endTime,
-        notes,
-        plannedMinutes,
-        nowIso(),
-        bookingState,
-        legacyStates?.workState ?? null,
-        id
-      );
-      await syncJobHold(id);
-      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-      return { status: 200, body: serializeWorkshopJob(row) };
-    });
-  } catch (err) {
-    // Only a stale pre-2b hold can trip the 024 index for staff.
-    if (err.code === '23505') out = capacityRefusal(SLOT_GONE);
-    else throw err;
-  }
-  sendJson(res, out.status, out.body);
-});
-
-// ---------- Workshop job actions ----------
-//
-// One endpoint per thing a person does, not a status field on the PUT above.
-// The URL names what happened, so the access log, the screen trace and any
-// future per-action permission all read the path instead of the body.
-//
-// Every one of these carries a `screens:` comment naming the screen designs it
-// serves. scripts/ci/assert-screen-trace.mjs fails the build if a workshop
-// route has no such comment or names an id that is not in screen-index.json -
-// the design's "an endpoint no screen consumes is not built" rule, made into a
-// check that runs rather than a promise in a document.
-const VERSION_REQUIRED = 'version is required - send the version you last read';
-// The words applyEvent uses for a lost race (server/workshop/transitions.js).
-const staleRefusal = {
-  status: 409,
-  body: { error: 'This job changed while you were looking at it. Reload and try again.', code: 'stale' },
-};
-
-function jobActionRoute(action, machine, event) {
-  route('POST', `/api/workshop-jobs/:id/${action}`, async (req, res, params) => {
-    const id = Number(params.id);
-    const body = await readJsonBody(req);
-    // The caller must say which version it saw. Defaulting it would turn every
-    // racing write into a silent last-one-wins, which is the bug the version
-    // column exists to prevent.
-    if (!Number.isInteger(body.version)) {
-      return badRequest(res, VERSION_REQUIRED);
-    }
-    // A customer's change request is answered with accept-change or
-    // decline-change (piece 12): plain accept/decline would return the job to
-    // scheduled without moving it or telling the customer.
-    if (machine === bookingRequest && (event === 'accept' || event === 'decline')) {
-      const current = await db.prepare('SELECT * FROM workshop_jobs WHERE id = ?').get(id);
-      if (current && requestedOf(current)) {
-        return sendJson(res, 409, {
-          error: 'This booking has a change request from the customer - accept or decline the change instead', code: 'illegal',
-        });
-      }
-    }
-    const result = await applyEvent({ jobId: id, machine, event, expectedVersion: body.version });
-    if (!result.ok) {
-      if (result.code === 'not_found') return notFound(res, 'Job not found');
-      // `code` is what a screen branches on: 'stale' means reload and look
-      // again, 'illegal' means the move was never allowed and retrying cannot
-      // help. The message is for people and may be reworded; the code may not.
-      return sendJson(res, 409, { error: result.message, code: result.code });
-    }
-    if (machine === bookingRequest) {
-      // No staff booking event keeps a customer's request (accept and decline
-      // of one are refused above), so any request columns left on the job go -
-      // a staff request_reschedule must never hold a time nobody checked
-      // (piece 12). Only if nothing has written the job since this event: a
-      // customer's request made after it is theirs to keep.
-      await db.prepare(`UPDATE workshop_jobs SET ${CLEAR_REQUEST} WHERE id = ? AND version = ?`).run(id, result.job.version);
-    }
-    // A staff cancellation never shows in "Waiting for you" (piece 12), and
-    // the link no longer speaks of a declined change.
-    if (machine === bookingRequest && event === 'cancel') {
-      await db.prepare(
-        "UPDATE workshop_jobs SET cancelled_by = 'staff', cancelled_at = now(), change_declined_at = NULL WHERE id = ?"
-      ).run(id);
-    }
-    // A hold that outlives its booking is capacity the diary is still promising
-    // away, released in the same request rather than on a timer - but a
-    // reschedule declined back onto a still-live booking (scheduled) must keep
-    // its hold. syncJobHold decides from the job's current state, not from
-    // which event fired, so it releases only when the job is no longer live
-    // and otherwise keeps (or realigns) the one hold a live job holds.
-    await syncJobHold(id);
-    const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-    sendJson(res, 200, serializeWorkshopJob(row));
-  });
-}
-
 // ---------- Quotes ----------
-//
-// One mapper so a single place decides that a refused move is 409 and a hidden
-// row is 404.
-function sendQuoteResult(res, result, status = 200) {
-  if (result.ok) return sendJson(res, status, serializeQuote(result.quote));
-  if (result.code === 'not_found') return notFound(res, result.message);
-  return sendJson(res, 409, { error: result.message, code: result.code });
-}
-
 // screens: quote-editor, quote-send, approved
 route('GET', '/api/quotes/:id', async (req, res, params) => {
   const result = await readQuote({ quoteId: Number(params.id) });
@@ -2700,179 +1730,6 @@ route('POST', '/api/portal/:shopSlug/quotes/:id/approve', async (req, res, param
     customerId: ctx.login.customer_id,
   }));
 });
-
-// screens: requests, review
-jobActionRoute('accept', bookingRequest, 'accept');
-// screens: reject, rejected
-jobActionRoute('decline', bookingRequest, 'decline');
-// screens: reschedule, change-pending
-jobActionRoute('request-reschedule', bookingRequest, 'request_reschedule');
-// screens: cancel, cancelled
-jobActionRoute('cancel', bookingRequest, 'cancel');
-// screens: expired
-jobActionRoute('expire', bookingRequest, 'expire');
-
-// Staff answer a customer's change request (piece 12). Under the booking lock
-// for both days; the version is the one staff last read.
-async function answerChangeRequest(req, res, id, answer) {
-  const body = await readJsonBody(req);
-  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
-  const requestedGone = { status: 409, body: { error: 'The requested time is no longer free', code: 'capacity' } };
-  let out;
-  try {
-    out = await withJobBookingLock(id, [], async (job) => {
-      if (job.version !== body.version) return staleRefusal;
-      const requested = requestedOf(job);
-      if (!requested) {
-        return { status: 409, body: { error: `There's no change request to ${answer}`, code: 'illegal' } };
-      }
-      if (answer === 'accept') {
-        // The shop's slot rules, the job itself left out; never the capacity
-        // calculator - staff are never refused for capacity (decision log D14).
-        const slotError = await checkJobSlot({
-          jobDate: requested.jobDate, startTime: requested.startTime, endTime: requested.endTime,
-          mechanicId: requested.mechanicId, ignoreJobId: id,
-        });
-        if (slotError) return requestedGone;
-        await applyLocked(job, 'accept');
-        await db.prepare(
-          `UPDATE workshop_jobs SET job_date = ?, mechanic_id = ?, start_time = ?, end_time = ?, ${CLEAR_REQUEST}, updated_at = now()
-           WHERE id = ?`
-        ).run(requested.jobDate, requested.mechanicId, requested.startTime, requested.endTime, id);
-        // The requested hold becomes the booking's own; the old one goes.
-        await db.prepare(
-          `UPDATE workshop_capacity_holds SET state = 'released'
-           WHERE workshop_job_id = ? AND purpose = 'booking' AND state IN ('held', 'confirmed')`
-        ).run(id);
-        await db.prepare(
-          `UPDATE workshop_capacity_holds SET purpose = 'booking'
-           WHERE workshop_job_id = ? AND purpose = 'requested' AND state IN ('held', 'confirmed')`
-        ).run(id);
-      } else {
-        await applyLocked(job, 'decline');
-        await db.prepare(
-          `UPDATE workshop_jobs SET ${CLEAR_REQUEST}, change_declined_at = now(), updated_at = now() WHERE id = ?`
-        ).run(id);
-      }
-      await syncJobHold(id);
-      const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-      return { status: 200, body: serializeWorkshopJob(row) };
-    });
-  } catch (err) {
-    // The 024 index: another live hold sits on the requested slot.
-    if (err.code !== '23505') throw err;
-    out = requestedGone;
-  }
-  if (out?.gone) return notFound(res, 'Job not found');
-  sendJson(res, out.status, out.body);
-}
-
-// screens: change-pending, diary
-route('POST', '/api/workshop-jobs/:id/accept-change', async (req, res, params) =>
-  answerChangeRequest(req, res, Number(params.id), 'accept'));
-// screens: change-pending, diary
-route('POST', '/api/workshop-jobs/:id/decline-change', async (req, res, params) =>
-  answerChangeRequest(req, res, Number(params.id), 'decline'));
-
-// Staff saw a customer's cancellation (piece 12, decision 5): it leaves
-// "Waiting for you". Keeps the first time it was seen; still needs the version.
-// screens: cancelled, diary
-route('POST', '/api/workshop-jobs/:id/cancellation-seen', async (req, res, params) => {
-  const id = Number(params.id);
-  const body = await readJsonBody(req);
-  if (!Number.isInteger(body.version)) return badRequest(res, VERSION_REQUIRED);
-  const job = await db.prepare('SELECT id, cancelled_by FROM workshop_jobs WHERE id = ?').get(id);
-  if (!job) return notFound(res, 'Job not found');
-  if (job.cancelled_by !== 'customer') {
-    return sendJson(res, 409, { error: "Only a customer's cancellation can be marked as seen", code: 'illegal' });
-  }
-  const { changes } = await db.prepare(
-    `UPDATE workshop_jobs SET cancellation_seen_at = COALESCE(cancellation_seen_at, now()), version = version + 1, updated_at = now()
-     WHERE id = ? AND version = ?`
-  ).run(id, body.version);
-  if (changes === 0) return sendJson(res, staleRefusal.status, staleRefusal.body);
-  const row = await db.prepare(WORKSHOP_JOB_SELECT + ' WHERE w.id = ?').get(id);
-  sendJson(res, 200, serializeWorkshopJob(row));
-});
-
-// One item of "Waiting for you" (decision log D12).
-function waitingItem(row) {
-  const kind = row.booking_state === 'pending' ? 'new_booking'
-    : row.booking_state === 'reschedule_requested' ? 'change_request' : 'customer_cancelled';
-  const slot = (jobDate, startTime, endTime, mechanicId, mechanicName) => ({
-    jobDate, startTime: startTime || '', endTime: endTime || '', mechanicId, mechanicName: mechanicName ?? null,
-  });
-  const current = slot(row.job_date, row.start_time, row.end_time, row.mechanic_id, row.mechanic_name);
-  return {
-    kind,
-    jobId: row.id,
-    reference: row.reference,
-    ...current,
-    customerName: row.customer_name ?? null,
-    serviceNames: row.service_names,
-    services: row.services,
-    arrivedAt: { new_booking: row.created_at, change_request: row.requested_at, customer_cancelled: row.cancelled_at }[kind],
-    ...(kind === 'change_request'
-      ? {
-        from: current,
-        to: slot(row.requested_job_date, row.requested_start_time, row.requested_end_time, row.requested_mechanic_id, row.requested_mechanic_name),
-      }
-      : {}),
-  };
-}
-
-// "Waiting for you" (piece 12, decision 3): new online bookings (only the
-// portal sets terms_accepted_at), customers' change requests and customers'
-// cancellations not yet seen - oldest first by when each arrived.
-// screens: requests, diary
-route('GET', '/api/workshop-waiting', async (req, res) => {
-  const rows = await db.prepare(
-    `SELECT w.*, c.name AS customer_name, m.name AS mechanic_name, rm.name AS requested_mechanic_name,
-            (SELECT coalesce(json_agg(s.name ORDER BY js.position), '[]'::json)
-               FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
-              WHERE js.workshop_job_id = w.id) AS service_names,
-            (SELECT coalesce(json_agg(json_build_object('id', s.id, 'name', s.name) ORDER BY js.position), '[]'::json)
-               FROM workshop_job_services js JOIN workshop_services s ON s.id = js.service_id
-              WHERE js.workshop_job_id = w.id) AS services
-     FROM workshop_jobs w
-     LEFT JOIN customers c ON c.id = w.customer_id
-     LEFT JOIN employees m ON m.id = w.mechanic_id
-     LEFT JOIN employees rm ON rm.id = w.requested_mechanic_id
-     WHERE (w.booking_state = 'pending' AND w.terms_accepted_at IS NOT NULL)
-        OR (w.booking_state = 'reschedule_requested' AND w.requested_job_date IS NOT NULL)
-        OR (w.booking_state = 'cancelled' AND w.cancelled_by = 'customer' AND w.cancellation_seen_at IS NULL)`
-  ).all();
-  const items = rows.map(waitingItem)
-    .sort((a, b) => (new Date(a.arrivedAt) - new Date(b.arrivedAt)) || (a.jobId - b.jobId));
-  sendJson(res, 200, { count: items.length, items });
-});
-
-// screens: intake, scan
-jobActionRoute('book-in', custody, 'book_in');
-// screens: collection, closed
-jobActionRoute('collect', custody, 'collect');
-// The action is reopen-custody, not reopen, because the work machine has a
-// reopen event too and they are different acts: one is a bike coming back
-// through the door, the other is a final check that failed. One URL for both
-// would be the same conflation the single status column produced.
-// screens: reopen
-jobActionRoute('reopen-custody', custody, 'reopen');
-
-// screens: queue, job-page
-jobActionRoute('start', work, 'start');
-// screens: waiting
-jobActionRoute('await-parts', work, 'await_parts');
-// screens: waiting
-jobActionRoute('parts-arrived', work, 'parts_arrived');
-// screens: job, waiting
-jobActionRoute('hold', work, 'hold');
-// screens: job, waiting
-jobActionRoute('resume', work, 'resume');
-// screens: finished, job-page
-jobActionRoute('finish', work, 'finish');
-// See reopen-custody above: a failed final check is not a bike coming back.
-// screens: reopen
-jobActionRoute('reopen-work', work, 'reopen');
 
 route('DELETE', '/api/workshop-jobs/:id', async (req, res, params) => {
   const id = Number(params.id);
@@ -3108,16 +1965,6 @@ async function serveUploadedImage(req, res, key) {
 // mechanic (or Staff) - isMechanic/isCashier are independent flags on
 // the same person.
 
-function parseWorkingDays(raw) {
-  try {
-    const days = JSON.parse(raw);
-    if (Array.isArray(days)) return days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
-  } catch (_) {
-    // fall through to default
-  }
-  return [0, 1, 2, 3, 4, 5, 6];
-}
-
 function serializeEmployee(row) {
   return {
     id: row.id,
@@ -3173,17 +2020,6 @@ route('PUT', '/api/employees/:id', async (req, res, params) => {
 
 // ---------- Workshop settings ----------
 
-// The shop's today, on its own clock and time zone (server/clock.js). Reads
-// the settings row through the request's shop context (row-level security).
-async function currentShopToday() {
-  return shopToday(await currentShopTimeZone());
-}
-
-async function currentShopTimeZone() {
-  const row = await db.prepare('SELECT time_zone FROM workshop_settings LIMIT 1').get();
-  return row.time_zone;
-}
-
 // A timestamp column's rows on one of the shop's days (YYYY-MM-DD): midnight
 // to midnight on the shop's clock, summer time included, not UTC midnight.
 // Returns the SQL condition and its four arguments.
@@ -3192,24 +2028,6 @@ async function shopDayWindow(column, date) {
   return {
     sql: `${column} >= (?::date)::timestamp AT TIME ZONE ? AND ${column} < (?::date + 1)::timestamp AT TIME ZONE ?`,
     args: [date, timeZone, date, timeZone],
-  };
-}
-
-// A workshop_settings row in the capacity calculator's shape (server/capacity.js).
-function toCapacitySettings(row) {
-  return {
-    openingTime: row.opening_time,
-    closingTime: row.closing_time,
-    openingDays: parseWorkingDays(row.opening_days),
-    weekdayHours: parseWeekdayHours(row.weekday_hours),
-    reserveMinutes: row.full_day_threshold_minutes,
-    bookingMode: row.booking_mode,
-    nextBookingMode: row.next_booking_mode ?? null,
-    nextBookingModeFrom: row.next_booking_mode_from ?? null,
-    dropoffWindowStart: row.dropoff_window_start,
-    dropoffWindowEnd: row.dropoff_window_end,
-    minNoticeMinutes: row.min_notice_minutes,
-    timeZone: row.time_zone,
   };
 }
 
@@ -3390,33 +2208,6 @@ route('PUT', '/api/workshop-settings', async (req, res) => {
 // move a staff booking (4 Sep decision §7.7): adding one reports the live
 // bookings it clashes with, and staff decide what to do.
 // Spec: docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md
-
-const LIVE_STATES_SQL = LIVE_BOOKING_STATES.map((s) => `'${s}'`).join(', ');
-
-function toBlock(row) {
-  return {
-    id: row.id,
-    mechanicId: row.employee_id ?? null,
-    kind: row.kind,
-    weekdays: row.weekdays ? JSON.parse(row.weekdays) : null,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    startTime: row.start_time,
-    endTime: row.end_time,
-    reason: row.reason,
-  };
-}
-
-function toCapacityJob(row) {
-  return {
-    id: row.id,
-    mechanicId: row.mechanic_id ?? null,
-    jobDate: row.job_date,
-    startTime: row.start_time || '',
-    endTime: row.end_time || '',
-    plannedMinutes: row.planned_minutes ?? null,
-  };
-}
 
 // Live bookings a block overlaps, from today on - a block's past is history.
 async function clashesFor(block) {
@@ -4065,42 +2856,6 @@ route('GET', '/api/portal/:shopSlug/terms', async (req, res) => {
     standard,
   });
 });
-
-// Everything the capacity calculator needs for a date range, read inside the
-// request's shop context. Every active mechanic, even when a caller wants one:
-// the walk-in queue is split across everyone working. `ignoreJobId` leaves one
-// job's own booking and request out - a change is never counted against the
-// booking it changes (piece 12).
-async function loadCapacity(start, end, { ignoreJobId = null } = {}) {
-  const settings = toCapacitySettings(await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get());
-  const mechanics = (await db.prepare(
-    'SELECT id, working_days FROM employees WHERE is_mechanic = 1 AND active = 1 ORDER BY name'
-  ).all()).map((m) => ({ id: m.id, workingDays: parseWorkingDays(m.working_days) }));
-  const blocks = (await db.prepare(
-    `SELECT * FROM workshop_unavailability WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?)`
-  ).all(end, start)).map(toBlock);
-  // One row per day a job is worked (its parts), so a job's second day takes
-  // that mechanic's time too. Only part 1 speaks for untimed planned minutes.
-  const jobs = (await db.prepare(
-    `SELECT w.id, p.mechanic_id, p.part_date AS job_date, p.start_time, p.end_time,
-            CASE WHEN p.position = 1 THEN w.planned_minutes END AS planned_minutes
-       FROM workshop_job_parts p JOIN workshop_jobs w ON w.id = p.workshop_job_id
-      WHERE p.part_date >= ? AND p.part_date <= ? AND w.booking_state IN (${LIVE_STATES_SQL})
-        AND (?::int IS NULL OR w.id <> ?::int)`
-  ).all(start, end, ignoreJobId, ignoreJobId)).map(toCapacityJob);
-  // A customer's requested time (piece 12) takes capacity like a booking while
-  // staff decide, so nobody else is offered it. Tagged `requested` so a job is
-  // only ever listed once, and only for its own slot, among a block's clashes.
-  jobs.push(...(await db.prepare(
-    `SELECT id, requested_mechanic_id AS mechanic_id, requested_job_date AS job_date,
-            requested_start_time AS start_time, requested_end_time AS end_time, planned_minutes
-     FROM workshop_jobs
-     WHERE booking_state = 'reschedule_requested' AND requested_job_date >= ? AND requested_job_date <= ?
-       AND (?::int IS NULL OR id <> ?::int)`
-  ).all(start, end, ignoreJobId, ignoreJobId)).map((r) => ({ ...toCapacityJob(r), requested: true })));
-  const days = computeCapacity({ settings, mechanics, blocks, jobs, dates: datesBetween(start, end) });
-  return { settings, blocks, jobs, days };
-}
 
 // Public: the customer calendar. `busy` and `fullDays` keep the shape the old
 // booking page reads (public-portal/portal.js:263) - blocks, closures and a
