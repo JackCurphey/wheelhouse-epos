@@ -1,7 +1,6 @@
 // Wheelhouse - local server, PostgreSQL-backed.
 import './load-env.js';
 import { createServer } from 'node:http';
-import { AsyncLocalStorage } from 'node:async_hooks';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -11,17 +10,15 @@ import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.j
 import { work } from './workshop/state-machines.js';
 import { applyEvent } from './workshop/transitions.js';
 import {
-  requestedOf, serializeWorkshopJob, WORKSHOP_JOB_SELECT, TIME_RE, resolveJobMechanicId,
+  requestedOf, serializeWorkshopJob, WORKSHOP_JOB_SELECT, resolveJobMechanicId,
   addMinutesToTime, timeToMinutes, resolveJobTimes, CLEAR_REQUEST, capacityRefusal, refusal, SLOT_GONE,
-  sendQuoteResult, parseWorkingDays, currentShopToday, currentShopTimeZone, toCapacitySettings, LIVE_STATES_SQL,
+  sendQuoteResult, parseWorkingDays, currentShopToday, currentShopTimeZone, toCapacitySettings,
   withBookingLock, withJobBookingLock, applyLocked, syncJobHold, createWorkshopJob, checkJobSlot,
-  toBlock, toCapacityJob, loadCapacity,
+  loadCapacity,
 } from './workshop/jobs.js';
 import {
-  HOUR_RE, MAX_RANGE_DAYS, isRealDate, dayCount, parseWeekdayHours,
-  widestHours, openingHoursFor, resolveOpeningHours, validateBlock, blockClashes,
-  startTimesFor, fitsDropoff, fitsFreeTime, legacyView, toHHMM,
-  settleModeChange, validateModeChange,
+  MAX_RANGE_DAYS, isRealDate, dayCount, widestHours,
+  startTimesFor, fitsDropoff, fitsFreeTime, legacyView, resolveWorkingDays,
 } from './capacity.js';
 import {
   createRevision as createQuoteRevision,
@@ -41,10 +38,18 @@ import { clientIp, isHttpsRequest } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { parseCookies, makeRateLimiter, sendJson, notFound, badRequest, readJsonBody, readRawBody, nowIso, ValidationError } from './lib/http.js';
 import { serializeProduct, serializeBike } from './lib/serializers.js';
+import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
+import {
+  serializeSale, SALE_SELECT, resolveCashierId, loadDocumentLine, createSale,
+  pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes,
+} from './lib/sales.js';
+// Tests import these from server.js; it keeps re-exporting them (split plan §4.1).
+export { loadDocumentLine, createSale, pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes };
 import { currentSession, currentCustomerSession } from './lib/session.js';
 import { ROUTE_AREAS } from './routes/index.js';
 // tests/portal-copy.test.js reads the job statuses from here.
 export { JOB_STATUSES } from './routes/workshop.js';
+export { serializeWorkshopService } from './routes/workshop-settings.js';
 import { sendSms } from './sms.js';
 import {
   CustomerAuthError,
@@ -57,17 +62,17 @@ import {
   CUSTOMER_SESSION_COOKIE,
   CUSTOMER_SESSION_MAX_AGE_SECONDS,
 } from './customer-auth.js';
-import { updateStorefrontSettings, serializeStorefrontSettings, parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo, listStorefrontProducts } from './storefront.js';
+import { parseStorefrontSlugCandidate, resolveStorefrontShop, getStorefrontInfo, listStorefrontProducts } from './storefront.js';
 import { parseBookingRequest } from './booking-request.js';
 import { STANDARD_BOOKING_TERMS } from './standard-terms.js';
 import { MAX_BOOKING_BODY_BYTES, readBookingPhotos } from './booking-photos.js';
 import { saveBookingPhotos } from './booking-photo-store.js';
-import { readServiceQuestions, checkAnswers } from './service-questions.js';
+import { checkAnswers } from './service-questions.js';
 import { newLinkCode, hashLinkCode, linkPath, isLinkExpired, bookingStage } from './booking-link.js';
 import { readRequestKey } from './booking-request-key.js';
 import { makeFailureLimiter } from './till/failure-limiter.js';
 import {
-  currentMoment, shopToday, earliestBookable, isKnownTimeZone, startIsInTime, dropoffIsInTime,
+  currentMoment, shopToday, earliestBookable, startIsInTime, dropoffIsInTime,
 } from './clock.js';
 import { pushInventoryLevel } from './shopify.js';
 import {
@@ -80,177 +85,6 @@ import {
   markShopifyEventError,
 } from './shopify.js';
 
-// Fires createSale's deferred Shopify inventory pushes (see
-// deferShopifyPushesTo on createSale). Called only once the request's own
-// pooled client has already gone back to the pool - `product` here is a row
-// createSale read earlier in the same request, before COMMIT, so nothing
-// about firing this late depends on that original client.
-//
-// pushInventoryLevel (server/shopify.js) is not a pure HTTP call, though:
-// getShopifyConnection() and the post-push status update both go through
-// prepare(), which reads the current request-scoped client out of
-// AsyncLocalStorage (server/db.js) and throws "No database client in scope"
-// with none active. Firing this with no scope at all would crash every
-// deferred push. runWithShop(shopId, ...) here checks out a NEW client from
-// the pool - not the one that was just released - and, as of the fix below,
-// holds it only for ONE push at a time (see firePendingShopifyPushes' own
-// comment for why a single scope wrapping every queued push was unbounded,
-// not "small"), each starting strictly after the original request has
-// already sent its response. The two never overlap for this request, so the
-// property the brief asks for holds: the
-// connection a real till sale's own reads/writes needed is free again
-// before any Shopify HTTP round-trip (with its retries/backoff) begins.
-//
-// This is fire-and-forget from the caller's point of view - the HTTP
-// response has already been sent - but graceful shutdown still needs to know
-// it happened. `pendingShopifyPushes` tracks every push started this way so
-// gracefulShutdown() can wait for them before calling dbPool.end(): pg
-// rejects connect() once end() has been called, so a push that opens its
-// runWithShop(shopId, ...) scope after the pool has already ended gets a
-// connection refused mid-push. The .catch() below already means that
-// wouldn't fail a till sale, but it would fail the push itself silently -
-// tracking it here means shutdown drains it first instead.
-// Exported (read-only use in tests) so tests/sale-shopify-push-release.test.js
-// can assert this set is non-empty at QUEUE time (right after createSale
-// commits), not just at fire time - see registerPendingShopifyPushSlot below
-// for why that distinction matters.
-export const pendingShopifyPushes = new Set();
-
-// Important 4: without this, the tracking entry above was only added inside
-// firePendingShopifyPushes - i.e. at FIRE time, from the afterRelease
-// callback, which runs after res.end() and after runWithShop/releaseClient's
-// own round-trips (commit 26034ae closed the same seam one layer earlier: a
-// signal landing in that ~1ms gap between the sale committing and
-// afterRelease actually firing found pendingShopifyPushes still empty, so
-// gracefulShutdown's drain saw nothing to wait for, closeIdleConnections()
-// could cut the idle client's socket, and pool.end() could beat the push's
-// own connect(). Registering a promise the moment createSale knows it has
-// pushes to fire - immediately after COMMIT, well before the HTTP response
-// is even sent - closes that gap: the set is non-empty from the moment the
-// sale commits, and stays that way (via `slot.settle`) until the push
-// actually runs, however late that turns out to be.
-// Regression fix (fix round 2): the ONLY code that ever calls the resolver
-// this returns is firePendingShopifyPushes, which is ONLY ever reached from
-// a route's own `afterRelease.push(...)` call at the very end of the
-// handler - after several more db.prepare calls and sendJson(). If anything
-// in that tail throws (a transient DB error, a bug in serializeSale,
-// anything), the dispatcher's catch sends the 500 and returns without ever
-// reaching afterRelease - so the slot registered right above at COMMIT time
-// would otherwise sit in pendingShopifyPushes forever, and every later
-// gracefulShutdown() call would hit the 10s force-exit path (exit 1)
-// instead of draining cleanly. `pendingPushSlotRequestStorage` (an
-// AsyncLocalStorage set up per-request by runRequestWithPushSlotCleanup,
-// which the dispatcher wraps every route handler in) makes this structural
-// rather than remembered: whichever request is currently running when a
-// slot is registered gets a reference to this exact resolver added to its
-// own request-scoped set, and runRequestWithPushSlotCleanup's catch settles
-// every slot still in that set the moment the request fails - whatever
-// throws, wherever, on any current or future route. A slot that DOES fire
-// normally removes itself from the request-scoped set too (the
-// `slot.finally` above), so a request that succeeds never touches this at
-// all - it's purely a backstop for the failure path.
-function registerPendingShopifyPushSlot() {
-  let settle;
-  const slot = new Promise((resolve) => { settle = resolve; });
-  pendingShopifyPushes.add(slot);
-  slot.finally(() => pendingShopifyPushes.delete(slot));
-
-  const requestSlots = pendingPushSlotRequestStorage.getStore();
-  if (requestSlots) {
-    requestSlots.add(settle);
-    slot.finally(() => requestSlots.delete(settle));
-  } else {
-    // No request-scoped store means this call is NOT covered by
-    // runRequestWithPushSlotCleanup - see the comment on
-    // pendingPushSlotRequestStorage below for exactly which dispatcher
-    // branches that is true of today. That is precisely the condition
-    // under which a later throw in this same call's tail cannot settle
-    // the slot above, and it would sit in pendingShopifyPushes forever,
-    // degrading every later gracefulShutdown() to its 10s force-exit
-    // path. This does not throw: the failure it guards against is a
-    // degraded shutdown, not lost data or a lost sale, and this file's
-    // own uncaughtException/unhandledRejection handlers (below) exit the
-    // whole process on an unhandled error - turning an
-    // unwrapped-but-otherwise-working route into a hard outage is worse
-    // than the problem it would be catching. Logging makes the gap
-    // visible the moment it is first exercised, so it gets wired up
-    // before it ever reaches production shutdown behaviour.
-    console.error(
-      'registerPendingShopifyPushSlot: slot registered with no active request-scoped store (pendingPushSlotRequestStorage.getStore() ' +
-        'returned undefined) - if this call\'s tail throws before the push fires, the slot will be orphaned in pendingShopifyPushes ' +
-        'forever and every later gracefulShutdown() will hit its 10s force-exit path. Wrap this code path in runRequestWithPushSlotCleanup.'
-    );
-  }
-  return settle;
-}
-
-// registerPendingShopifyPushSlot's slot is only cleaned up on a request
-// tail's failure if that call happened inside runRequestWithPushSlotCleanup.
-// Today that is true of exactly ONE branch: the generic non-auth `/api/*`
-// loop below (the one that wraps its route call in
-// runRequestWithPushSlotCleanup). It is NOT true of the /api/auth/* branch
-// inside that same loop, the /api/portal/* branch, the website branch, or
-// the Shopify webhook branch - a deferred push registered from any of those
-// would not be settled by a request-tail throw and would orphan the slot.
-// No branch does that today (processShopifyOrderWebhook, the only webhook
-// caller of createSale, never passes deferShopifyPushesTo, so it always
-// takes the immediate-push path and never reaches here without a store) -
-// but nothing stops a future change to one of those four branches from
-// doing so. The guard in registerPendingShopifyPushSlot's `else` branch
-// above is what will tell you if that ever happens; it is not structural
-// coverage, only a loud signal that coverage is missing.
-const pendingPushSlotRequestStorage = new AsyncLocalStorage();
-
-export async function runRequestWithPushSlotCleanup(fn) {
-  const requestSlots = new Set();
-  try {
-    return await pendingPushSlotRequestStorage.run(requestSlots, fn);
-  } catch (err) {
-    for (const settle of requestSlots) settle();
-    throw err;
-  }
-}
-
-// Exported (read-only use in tests) so a test can drive it directly with a
-// slow stubbed Shopify call and observe the pool's active-client count
-// dipping back to baseline BETWEEN items - proving each push opens and
-// releases its own connection instead of one scope holding a client for the
-// whole batch (Important 1).
-export function firePendingShopifyPushes(shopId, pushes) {
-  if (!pushes.length) return;
-  const settleQueuedSlot = pushes._pendingPushSettle;
-  const pending = (async () => {
-    // ONE runWithShop scope per push, not one scope wrapping the whole
-    // `for` loop - a single wrapping scope held one of only ten pooled
-    // Postgres connections for the ENTIRE batch (each item up to ~15.15s
-    // under withRetry - see server/shopify.js), which for a sale with many
-    // line items could pin a connection for minutes during a Shopify
-    // outage; a few concurrent sales like that exhausts the pool and stalls
-    // every till in every shop. There is no bound on how many items a
-    // single sale can queue here, so "this shop's small batch" was never a
-    // safe assumption - opening a fresh scope per item bounds the
-    // connection-hold to one push's worth of time, however many items are
-    // queued.
-    for (const { product, newQty } of pushes) {
-      await runWithShop(shopId, () => pushInventoryLevel(product, newQty))
-        // Never let a Shopify hiccup fail a real till sale - log and move on.
-        .catch((err) => console.error('Shopify inventory push failed', err));
-    }
-  })().catch((err) => console.error('Shopify inventory push scope failed', err));
-  if (settleQueuedSlot) {
-    // The tracking entry already exists (added at queue time, in
-    // createSale) - settle it once this actual work finishes instead of
-    // adding a second, redundant entry.
-    pending.finally(settleQueuedSlot);
-  } else {
-    // Defensive fallback only - every real caller goes through createSale's
-    // deferShopifyPushesTo path above, which always registers a slot when
-    // pushes.length > 0.
-    pendingShopifyPushes.add(pending);
-    pending.finally(() => pendingShopifyPushes.delete(pending));
-  }
-}
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const STOREFRONT_DIR = path.join(__dirname, '..', 'public-storefront');
@@ -258,14 +92,6 @@ const WORKSHOP_HTML = path.join(PUBLIC_DIR, 'workshop.html');
 const BOOK_HTML = path.join(PUBLIC_DIR, 'book.html');
 const VITE_MANIFEST = path.join(PUBLIC_DIR, 'dist', '.vite', 'manifest.json');
 const DEMO_FILE = path.join(__dirname, '..', 'public-demo', 'sdbdemo.html');
-// Attachment bytes live here as flat files named by a random per-file token
-// (see workshop_job_attachments.storage_key) - never the customer's original
-// filename, so there's nothing to sanitize or path-traverse with. The token
-// alone never grants access; every read goes through the download route,
-// which checks the owning job through the normal RLS-scoped `db`. Backed by
-// a named Docker volume (docker-compose.yml) so uploads survive a rebuild
-// the same way Postgres's data does.
-const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 // Every request that touches shop data runs inside `runWithShop(shopId, ...)`
@@ -355,7 +181,6 @@ export function listRoutes() {
 // params, where a missing param arrives as "undefined".
 // :shopSlug and :deviceId are not ids and are not checked.
 const ID_PARAMS = new Set(['id', 'jobId', 'lineId', 'loginId']);
-const MAX_SERIAL = 2147483647;
 
 function idParamsWellFormed(params) {
   for (const [name, value] of Object.entries(params)) {
@@ -671,41 +496,6 @@ route('GET', '/api/bikes/:id/jobs', async (req, res, params) => {
 
 // ---------- Sales ----------
 
-function serializeSale(row, items, payments) {
-  return {
-    id: row.id,
-    createdAt: row.created_at,
-    customerId: row.customer_id,
-    customerName: row.customer_name !== undefined ? row.customer_name : undefined,
-    cashierId: row.cashier_id,
-    cashierName: row.cashier_name !== undefined ? row.cashier_name : undefined,
-    subtotal: row.subtotal,
-    discount: row.discount,
-    groupDiscountAmount: row.group_discount_amount,
-    groupDiscountName: row.group_discount_name,
-    total: row.total,
-    paymentMethod: row.payment_method,
-    cashAmount: row.cash_amount,
-    cardAmount: row.card_amount,
-    cashTendered: row.cash_tendered,
-    extraPayments: payments ? payments.map((p) => ({ tenderType: p.tender_type, amount: p.amount })) : undefined,
-    note: row.note,
-    items: items
-      ? items.map((it) => ({
-          id: it.id,
-          productId: it.product_id,
-          name: it.name,
-          sku: it.sku,
-          unitPrice: it.unit_price,
-          qty: it.qty,
-          lineTotal: it.line_total,
-        }))
-      : undefined,
-  };
-}
-
-const SALE_SELECT = `SELECT s.*, c.name AS customer_name, ca.name AS cashier_name FROM sales s LEFT JOIN customers c ON c.id = s.customer_id LEFT JOIN employees ca ON ca.id = s.cashier_id`;
-
 route('GET', '/api/sales', async (req, res, params, query) => {
   const dateFilter = query.get('date'); // 'today' or 'YYYY-MM-DD'
   const customerId = query.get('customerId');
@@ -745,241 +535,6 @@ route('GET', '/api/sales/:id', async (req, res, params) => {
   const payments = await db.prepare('SELECT * FROM sale_payments WHERE sale_id = ?').all(id);
   sendJson(res, 200, serializeSale(sale, items, payments));
 });
-
-async function resolveCashierId(rawId) {
-  if (rawId === undefined || rawId === null || rawId === '') return { ok: true, cashierId: null };
-  const cashierId = Number(rawId);
-  const cashier = await db.prepare('SELECT * FROM employees WHERE id = ? AND active = 1 AND is_cashier = 1').get(cashierId);
-  if (!cashier) return { ok: false };
-  return { ok: true, cashierId };
-}
-
-// Computed server-side (never trusts a client-sent amount) from whichever of
-// the customer's groups carries the highest discount_percent, so a sale's
-// group discount can't be tampered with via the API. Applies to the same net
-// subtotal (after any per-line price overrides) that the flat discount does.
-async function resolveGroupDiscount(customerId, subtotal) {
-  if (!customerId) return { amount: 0, name: '' };
-  const top = await db
-    .prepare(
-      `SELECT g.name, g.discount_percent FROM customer_groups g
-       JOIN customer_group_members m ON m.group_id = g.id
-       WHERE m.customer_id = ? AND g.discount_percent > 0
-       ORDER BY g.discount_percent DESC, g.name ASC LIMIT 1`
-    )
-    .get(customerId);
-  if (!top) return { amount: 0, name: '' };
-  const amount = Math.round(subtotal * (top.discount_percent / 100) * 100) / 100;
-  return { amount, name: `${top.name} (${top.discount_percent}%)` };
-}
-
-// The one place a request line becomes a stored line. Extracted from the three
-// near-identical blocks in createSale, POST /api/sale-documents and PUT
-// /api/sale-documents/:id/items, so the rules cannot drift between them.
-// checkStock is true only at tender - a quote or an open order may reference
-// something that is currently out of stock.
-export async function loadDocumentLine(it, { checkStock }) {
-  // A labour line is a typed price with an optional recorded duration. It
-  // carries no product, so nothing downstream may treat it as stock.
-  if (it.lineType === 'labour') {
-    let name = String(it.name || '').trim();
-    let unitPrice = it.unitPrice;
-    let minutes = it.minutes;
-    let serviceId = null;
-
-    // Picking a saved service snapshots its name, price and duration onto the
-    // line. Repricing the service later must never rewrite a past job, which
-    // is why these are copied rather than read through service_id.
-    if (it.serviceId !== undefined && it.serviceId !== null && it.serviceId !== '') {
-      serviceId = Number(it.serviceId);
-      const service = await db.prepare('SELECT * FROM workshop_services WHERE id = ? AND active = 1').get(serviceId);
-      if (!service) throw new ValidationError(`Service ${serviceId} not found or inactive`);
-      if (!name) name = service.name;
-      if (unitPrice === undefined || unitPrice === null || unitPrice === '') unitPrice = service.price;
-      if (minutes === undefined || minutes === null || minutes === '') minutes = service.minutes;
-    }
-
-    if (!name) throw new ValidationError('A labour line needs a description');
-    const price = Number(unitPrice);
-    if (!Number.isFinite(price) || price < 0) {
-      throw new ValidationError('A labour line needs a price of zero or more');
-    }
-    let mins = null;
-    if (minutes !== undefined && minutes !== null && minutes !== '') {
-      mins = Math.trunc(Number(minutes));
-      if (!Number.isFinite(mins) || mins <= 0) {
-        throw new ValidationError('Duration must be a positive number of minutes');
-      }
-    }
-    return {
-      lineType: 'labour',
-      product: null,
-      serviceId,
-      name,
-      sku: null,
-      qty: 1,
-      unitPrice: price,
-      minutes: mins,
-      lineTotal: price,
-    };
-  }
-
-  const productId = Number(it.productId);
-  const qty = Math.trunc(Number(it.qty));
-  if (!productId || !Number.isFinite(qty) || qty <= 0) {
-    throw new ValidationError('Each item needs a valid productId and positive qty');
-  }
-  const product = await db.prepare('SELECT * FROM products WHERE id = ? AND active = 1').get(productId);
-  if (!product) throw new ValidationError(`Product ${productId} not found or inactive`);
-  if (checkStock && product.stock_qty < qty) {
-    throw new ValidationError(`Not enough stock for "${product.name}" (have ${product.stock_qty}, need ${qty})`);
-  }
-  let unitPrice = product.price;
-  if (it.unitPrice !== undefined && it.unitPrice !== null && it.unitPrice !== '') {
-    const overridden = Number(it.unitPrice);
-    if (!Number.isFinite(overridden) || overridden < 0) {
-      throw new ValidationError(`Invalid price for "${product.name}"`);
-    }
-    unitPrice = overridden;
-  }
-  return {
-    lineType: 'product',
-    product,
-    serviceId: null,
-    name: product.name,
-    sku: product.sku,
-    qty,
-    unitPrice,
-    minutes: null,
-    lineTotal: unitPrice * qty,
-  };
-}
-
-// Validates items against live stock, inserts the sale + sale_items, and
-// deducts stock. Shared by direct checkout and quote/order -> sale conversion.
-//
-// `deferShopifyPushesTo`, if given an array, makes this function record the
-// {product, newQty} pairs onto it instead of firing pushInventoryLevel
-// itself - the caller is then responsible for firing them once it is safe to
-// (see the comment above the shopifyPushes collection below, and the HTTP
-// route handlers that pass this in). Left undefined, the old inline
-// behaviour runs unchanged, which is what every direct createSale() caller
-// that doesn't care about pool-connection lifetime (tests, the Shopify
-// webhook handlers) keeps getting for free.
-export async function createSale({ customerId, cashierId, items, discount, cashAmount, cardAmount, cashTendered, payments, note, sellPastStock = false }, { deferShopifyPushesTo } = {}) {
-  // sellPastStock: the new till sells past zero stock and says so on the
-  // line (journey 11 decision 5); everything else still refuses.
-  const loaded = [];
-  for (const it of items) {
-    loaded.push(await loadDocumentLine(it, { checkStock: !sellPastStock }));
-  }
-
-  const subtotal = loaded.reduce((sum, { qty, unitPrice }) => sum + unitPrice * qty, 0);
-  const groupDiscount = await resolveGroupDiscount(customerId, subtotal);
-  const total = Math.max(0, subtotal - discount - groupDiscount.amount);
-
-  const cash = Math.max(0, Number(cashAmount) || 0);
-  const card = Math.max(0, Number(cardAmount) || 0);
-  const extraPayments = (Array.isArray(payments) ? payments : [])
-    .map((p) => ({ tenderType: String(p.tenderType || '').trim(), amount: Math.max(0, Number(p.amount) || 0) }))
-    .filter((p) => p.tenderType && p.amount > 0);
-  const extraTotal = extraPayments.reduce((sum, p) => sum + p.amount, 0);
-  if (Math.abs(cash + card + extraTotal - total) > 0.01) {
-    throw new ValidationError('Payment amounts must add up to the total');
-  }
-  const methodsUsed = [];
-  if (cash > 0) methodsUsed.push('Cash');
-  if (card > 0) methodsUsed.push('Card');
-  for (const p of extraPayments) methodsUsed.push(p.tenderType);
-  const paymentMethod = methodsUsed.length > 1 ? 'Split' : methodsUsed[0] || 'Cash';
-
-  // Shopify inventory pushes for items with a mapped inventory_item_id are
-  // collected here and only fired AFTER the transaction commits (see below) -
-  // pushInventoryLevel makes an HTTP call with up to 3 retries and backoff,
-  // and firing it while the transaction is still open would hold this sale's
-  // row locks and tie up a pool connection (10 max) for however long that
-  // HTTP round-trip takes. A rollback would also have discarded any
-  // sync_error status write a failed push made, hiding the failure.
-  const shopifyPushes = [];
-
-  await db.exec('BEGIN');
-  try {
-    const saleInfo = await db
-      .prepare(
-        `INSERT INTO sales (customer_id, cashier_id, subtotal, discount, total, payment_method, cash_amount, card_amount, cash_tendered, note, group_discount_amount, group_discount_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(customerId, cashierId, subtotal, discount, total, paymentMethod, cash, card, cashTendered, note, groupDiscount.amount, groupDiscount.name);
-    const saleId = saleInfo.lastInsertRowid;
-
-    for (const p of extraPayments) {
-      await db.prepare('INSERT INTO sale_payments (sale_id, tender_type, amount) VALUES (?, ?, ?)').run(
-        saleId,
-        p.tenderType,
-        p.amount
-      );
-    }
-
-    for (const line of loaded) {
-      await db.prepare(
-        `INSERT INTO sale_items (sale_id, product_id, name, sku, unit_price, qty, line_total, line_type, service_id, minutes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(
-        saleId,
-        line.product ? line.product.id : null,
-        line.name,
-        line.sku,
-        line.unitPrice,
-        line.qty,
-        line.lineTotal,
-        line.lineType,
-        line.serviceId,
-        line.minutes
-      );
-
-      // Labour is not stock. stock_movements.product_id is NOT NULL, so a
-      // labour line reaching this block is a constraint violation, not a
-      // cosmetic bug.
-      if (line.lineType === 'product') {
-        const newQty = line.product.stock_qty - line.qty;
-        await db.prepare('UPDATE products SET stock_qty = ?, updated_at = ? WHERE id = ?').run(newQty, nowIso(), line.product.id);
-        await db.prepare(
-          `INSERT INTO stock_movements (product_id, change_qty, type, note) VALUES (?, ?, 'sale', ?)`
-        ).run(line.product.id, -line.qty, `Sale #${saleId}`);
-        if (line.product.shopify_inventory_item_id) {
-          shopifyPushes.push({ product: line.product, newQty });
-        }
-      }
-    }
-    await db.exec('COMMIT');
-
-    if (deferShopifyPushesTo) {
-      // The caller (an HTTP route handler releasing its pooled client before
-      // firing these - see the dispatcher's afterRelease handling below)
-      // owns firing these now. `product` is the row this function already
-      // read earlier in the request, captured in the closure - nothing here
-      // depends on the database client remaining checked out.
-      deferShopifyPushesTo.push(...shopifyPushes);
-      if (shopifyPushes.length && !deferShopifyPushesTo._pendingPushSettle) {
-        // Registered at QUEUE time, right after COMMIT - see
-        // registerPendingShopifyPushSlot's comment. The whole point is for
-        // gracefulShutdown's drain to see this sale's push as pending from
-        // this line onward, well before the HTTP response is sent or
-        // firePendingShopifyPushes ever runs.
-        deferShopifyPushesTo._pendingPushSettle = registerPendingShopifyPushSlot();
-      }
-    } else {
-      for (const { product, newQty } of shopifyPushes) {
-        // Never let a Shopify hiccup fail a real till sale - log and move on.
-        await pushInventoryLevel(product, newQty).catch((err) => console.error('Shopify inventory push failed', err));
-      }
-    }
-    return saleId;
-  } catch (err) {
-    await db.exec('ROLLBACK');
-    throw err;
-  }
-}
 
 async function processShopifyOrderWebhook(shopId, order) {
   return runWithShop(shopId, async () => {
@@ -1851,93 +1406,11 @@ route('DELETE', '/api/workshop-jobs/:jobId/attachments/:id', async (req, res, pa
   sendJson(res, 200, { ok: true });
 });
 
-// ---------- Image uploads (product photos, shop logo, shop hero image) ----------
-// Same base64-in-a-JSON-body convention as workshop job attachments above,
-// and the same opaque-storage_key-on-disk approach - but the uploader can be
-// any of three different call sites (a product photo, the website logo,
-// or its hero image), so the actual read/validate/store logic lives in one
-// shared helper and each route just says what changed after the upload.
+// ---------- Uploaded images, served to anyone ----------
 
-const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-
-// Shared by product photo, logo, and hero image uploads - only the size
-// cap and what happens with the resulting URL differ between them.
-async function readUploadedImage(req, maxBytes) {
-  const maxBodyBytes = Math.ceil(maxBytes * 1.4);
-  let body;
-  try {
-    body = await readJsonBody(req, maxBodyBytes);
-  } catch (err) {
-    throw new ValidationError(err.message === 'Payload too large' ? `That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).` : 'Invalid request body');
-  }
-  if (!body.dataBase64) throw new ValidationError('No image data received');
-
-  const contentType = String(body.contentType || '').trim().toLowerCase();
-  if (!ALLOWED_IMAGE_TYPES.has(contentType)) {
-    throw new ValidationError('Image must be JPEG, PNG, or WebP');
-  }
-
-  let buffer;
-  try {
-    buffer = Buffer.from(body.dataBase64, 'base64');
-  } catch (err) {
-    throw new ValidationError('Could not decode image data');
-  }
-  if (!buffer.length) throw new ValidationError('That image is empty');
-  if (buffer.length > maxBytes) throw new ValidationError(`That image is too large (max ${Math.round(maxBytes / 1024 / 1024)}MB).`);
-
-  const storageKey = randomBytes(24).toString('hex');
-  await writeFile(path.join(UPLOADS_DIR, storageKey), buffer);
-  // uploaded_image_types has no `id` column (storage_key is its primary
-  // key), so this INSERT carries its own RETURNING clause - otherwise
-  // db.js's prepare() would auto-append `RETURNING id` (see needsReturningId
-  // there) and the query would fail with "column \"id\" does not exist".
-  await db.prepare('INSERT INTO uploaded_image_types (storage_key, content_type) VALUES (?, ?) RETURNING storage_key').run(storageKey, contentType);
-  return `/api/uploaded-images/${storageKey}`;
-}
-
-const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
-const MAX_SHOP_IMAGE_BYTES = 5 * 1024 * 1024;
-
-route('POST', '/api/products/:id/photo', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Product not found');
-
-  let photoUrl;
-  try {
-    photoUrl = await readUploadedImage(req, MAX_PRODUCT_PHOTO_BYTES);
-  } catch (err) {
-    if (err instanceof ValidationError) return badRequest(res, err.message);
-    throw err;
-  }
-
-  await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
-  const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-  sendJson(res, 200, serializeProduct(row));
-});
-
-route('POST', '/api/storefront-settings/logo', async (req, res) => {
-  let logoUrl;
-  try {
-    logoUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
-  } catch (err) {
-    if (err instanceof ValidationError) return badRequest(res, err.message);
-    throw err;
-  }
-  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ logoUrl })));
-});
-
-route('POST', '/api/storefront-settings/hero', async (req, res) => {
-  let heroImageUrl;
-  try {
-    heroImageUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
-  } catch (err) {
-    if (err instanceof ValidationError) return badRequest(res, err.message);
-    throw err;
-  }
-  sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ heroImageUrl })));
-});
+// The upload routes are in server/routes/products.js (a product's photo) and
+// server/routes/website.js (the shop's logo and hero image); they share
+// readUploadedImage in server/lib/uploads.js.
 
 // Deliberately NOT registered via route() into the shared routes table -
 // every route reached that way requires a signed-in staff session (see the
@@ -1978,12 +1451,6 @@ function serializeEmployee(row) {
   };
 }
 
-function resolveWorkingDays(rawDays, existingRaw) {
-  if (rawDays === undefined) return existingRaw !== undefined ? existingRaw : '[0,1,2,3,4,5,6]';
-  if (!Array.isArray(rawDays)) return null;
-  const days = [...new Set(rawDays.map(Number))].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
-  return JSON.stringify(days.sort((a, b) => a - b));
-}
 
 route('GET', '/api/employees', async (req, res, params, query) => {
   let sql = 'SELECT * FROM employees WHERE 1=1';
@@ -2018,7 +1485,7 @@ route('PUT', '/api/employees/:id', async (req, res, params) => {
   sendJson(res, 200, serializeEmployee(row));
 });
 
-// ---------- Workshop settings ----------
+// ---------- The shop's day ----------
 
 // A timestamp column's rows on one of the shop's days (YYYY-MM-DD): midnight
 // to midnight on the shop's clock, summer time included, not UTC midnight.
@@ -2030,643 +1497,6 @@ async function shopDayWindow(column, date) {
     args: [date, timeZone, date, timeZone],
   };
 }
-
-function serializeWorkshopSettings(row) {
-  return {
-    openingTime: row.opening_time,
-    closingTime: row.closing_time,
-    openingDays: parseWorkingDays(row.opening_days),
-    // Every open day with its hours - its own where the shop set them, else
-    // the usual opening/closing time above.
-    openingHours: openingHoursFor(toCapacitySettings(row)),
-    fullDayThresholdMinutes: row.full_day_threshold_minutes,
-    // Today's mode: a scheduled change whose date has arrived counts as made,
-    // even before a save writes it into booking_mode.
-    ...settleModeChange(toCapacitySettings(row), shopToday(row.time_zone)),
-    dropoffWindowStart: row.dropoff_window_start,
-    dropoffWindowEnd: row.dropoff_window_end,
-    timedLeadMinutes: row.timed_lead_minutes,
-    unspecifiedJobMinutes: row.unspecified_job_minutes,
-    minNoticeMinutes: row.min_notice_minutes,
-    timeZone: row.time_zone,
-    // INTEGER 0/1 in the column, boolean over the wire - the client renders
-    // it directly, same shape serializeWorkshopService uses for `active`.
-    showPricesOnline: row.show_prices_online === 1,
-    // null: this shop has no terms of its own, so the standard Wheelhouse
-    // terms (server/standard-terms.js) apply (piece 11).
-    bookingTerms: row.booking_terms ?? null,
-    updatedAt: row.updated_at,
-  };
-}
-
-// One row per shop (RLS scopes it), rather than the old global single-row
-// (id=1) singleton - a shop's id is assigned by Postgres, not fixed at 1, so
-// lookups just take whichever single row RLS makes visible.
-// screens: booking-settings, hours
-route('GET', '/api/workshop-settings', async (req, res) => {
-  const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-  sendJson(res, 200, serializeWorkshopSettings(row));
-});
-
-// screens: booking-settings, hours
-route('PUT', '/api/workshop-settings', async (req, res) => {
-  const existing = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-  const body = await readJsonBody(req);
-  const openingTime = body.openingTime !== undefined ? String(body.openingTime).trim() : existing.opening_time;
-  const closingTime = body.closingTime !== undefined ? String(body.closingTime).trim() : existing.closing_time;
-  if (!HOUR_RE.test(openingTime) || !HOUR_RE.test(closingTime)) {
-    return badRequest(res, 'Opening and closing times must be on the hour (e.g. 09:00)');
-  }
-  if (closingTime <= openingTime) return badRequest(res, 'Closing time must be after opening time');
-  const openingDays = resolveWorkingDays(body.openingDays, existing.opening_days);
-  if (openingDays === null) return badRequest(res, 'openingDays must be an array of day numbers (0-6)');
-  // openingHours sets which days are open and each day's hours at once. The
-  // old fields still work: openingTime/closingTime move the usual hours, and a
-  // day with its own hours keeps them, so the old settings page (which sends
-  // openingTime on every save) never wipes a shorter Saturday.
-  let openingDaysJson = openingDays;
-  let weekdayHours = parseWeekdayHours(existing.weekday_hours);
-  if (body.openingHours !== undefined) {
-    if (body.openingDays !== undefined) return badRequest(res, 'Send openingHours or openingDays, not both');
-    const resolved = resolveOpeningHours(body.openingHours, { openingTime, closingTime });
-    if (resolved.error) return badRequest(res, resolved.error);
-    openingDaysJson = JSON.stringify(resolved.openingDays);
-    weekdayHours = resolved.weekdayHours;
-  }
-  // A closed day keeps no hours of its own, so re-opening it starts from the usual ones.
-  const openNow = JSON.parse(openingDaysJson);
-  weekdayHours = Object.fromEntries(Object.entries(weekdayHours).filter(([w]) => openNow.includes(Number(w))));
-  let fullDayThresholdMinutes = existing.full_day_threshold_minutes;
-  if (body.fullDayThresholdMinutes !== undefined) {
-    fullDayThresholdMinutes = Number(body.fullDayThresholdMinutes);
-    if (!Number.isInteger(fullDayThresholdMinutes) || fullDayThresholdMinutes < 0 || fullDayThresholdMinutes > 480) {
-      return badRequest(res, 'The full-day threshold must be a whole number of minutes between 0 and 480');
-    }
-  }
-
-  // The shop's time zone first: it decides which date is today below.
-  const timeZone = body.timeZone !== undefined ? body.timeZone : existing.time_zone;
-  if (!isKnownTimeZone(timeZone)) return badRequest(res, "That time zone isn't recognised");
-
-  // A scheduled change whose date has arrived is written into booking_mode
-  // now, so the next schedule never overwrites a change that already happened.
-  const today = shopToday(timeZone);
-  const settled = settleModeChange(toCapacitySettings(existing), today);
-  const bookingMode = body.bookingMode !== undefined ? String(body.bookingMode).trim() : settled.bookingMode;
-  if (bookingMode !== 'timed' && bookingMode !== 'dropoff') {
-    return badRequest(res, "Booking mode must be either 'timed' or 'dropoff'");
-  }
-  let nextMode = { nextBookingMode: settled.nextBookingMode, nextBookingModeFrom: settled.nextBookingModeFrom };
-  if (body.nextBookingMode !== undefined || body.nextBookingModeFrom !== undefined) {
-    nextMode = validateModeChange(
-      { nextBookingMode: body.nextBookingMode ?? null, nextBookingModeFrom: body.nextBookingModeFrom ?? null },
-      { today, bookingMode },
-    );
-    if (nextMode.error) return badRequest(res, nextMode.error);
-  }
-  // Setting bookingMode straight to the already-scheduled mode makes the
-  // schedule self-contradictory (booking_mode and next_booking_mode equal);
-  // clear it rather than leave a dangling future date.
-  if (nextMode.nextBookingMode === bookingMode) {
-    nextMode = { nextBookingMode: null, nextBookingModeFrom: null };
-  }
-
-  const dropoffWindowStart = body.dropoffWindowStart !== undefined
-    ? String(body.dropoffWindowStart).trim() : existing.dropoff_window_start;
-  const dropoffWindowEnd = body.dropoffWindowEnd !== undefined
-    ? String(body.dropoffWindowEnd).trim() : existing.dropoff_window_end;
-  if (!TIME_RE.test(dropoffWindowStart) || !TIME_RE.test(dropoffWindowEnd)) {
-    return badRequest(res, 'Drop-off window times must look like 09:00');
-  }
-  if (dropoffWindowEnd <= dropoffWindowStart) {
-    return badRequest(res, 'The drop-off window must end after it starts');
-  }
-
-  let timedLeadMinutes = existing.timed_lead_minutes;
-  if (body.timedLeadMinutes !== undefined) {
-    timedLeadMinutes = Number(body.timedLeadMinutes);
-    if (!Number.isInteger(timedLeadMinutes) || timedLeadMinutes < 0 || timedLeadMinutes > 240) {
-      return badRequest(res, 'The arrival lead time must be a whole number of minutes between 0 and 240');
-    }
-  }
-
-  let unspecifiedJobMinutes = existing.unspecified_job_minutes;
-  if (body.unspecifiedJobMinutes !== undefined) {
-    unspecifiedJobMinutes = Number(body.unspecifiedJobMinutes);
-    if (!Number.isInteger(unspecifiedJobMinutes) || unspecifiedJobMinutes <= 0 || unspecifiedJobMinutes > 480) {
-      return badRequest(res, 'The not-sure duration must be a whole number of minutes between 1 and 480');
-    }
-  }
-
-  let minNoticeMinutes = existing.min_notice_minutes;
-  if (body.minNoticeMinutes !== undefined) {
-    // A number sent as text is accepted, as the fields above; null is refused
-    // rather than read as 0 (no notice at all).
-    minNoticeMinutes = body.minNoticeMinutes === null ? NaN : Number(body.minNoticeMinutes);
-    if (!Number.isInteger(minNoticeMinutes) || minNoticeMinutes < 0 || minNoticeMinutes > 10080) {
-      return badRequest(res, 'Minimum notice must be between 0 minutes and 7 days');
-    }
-  }
-
-  const showPricesOnline = body.showPricesOnline === undefined
-    ? existing.show_prices_online : (body.showPricesOnline ? 1 : 0);
-
-  // A shop's own terms, or null to use the standard ones (piece 11). A
-  // string is trimmed; null or an empty/blank string reverts to standard;
-  // omitted keeps whatever is stored.
-  let bookingTerms = existing.booking_terms;
-  if (body.bookingTerms !== undefined) {
-    if (body.bookingTerms === null) {
-      bookingTerms = null;
-    } else if (typeof body.bookingTerms === 'string') {
-      const trimmed = body.bookingTerms.trim();
-      if (trimmed.length > 20000) return badRequest(res, 'Booking terms can be up to 20,000 characters');
-      bookingTerms = trimmed.length === 0 ? null : trimmed;
-    } else {
-      return badRequest(res, 'Booking terms must be text');
-    }
-  }
-
-  await db.prepare(
-    `UPDATE workshop_settings SET opening_time = ?, closing_time = ?, opening_days = ?, weekday_hours = ?,
-       full_day_threshold_minutes = ?, booking_mode = ?, next_booking_mode = ?, next_booking_mode_from = ?,
-       dropoff_window_start = ?,
-       dropoff_window_end = ?, timed_lead_minutes = ?, unspecified_job_minutes = ?,
-       min_notice_minutes = ?, time_zone = ?,
-       show_prices_online = ?, booking_terms = ?, updated_at = ? WHERE id = ?`
-  ).run(openingTime, closingTime, openingDaysJson, JSON.stringify(weekdayHours), fullDayThresholdMinutes, bookingMode,
-        nextMode.nextBookingMode, nextMode.nextBookingModeFrom,
-        dropoffWindowStart, dropoffWindowEnd, timedLeadMinutes, unspecifiedJobMinutes,
-        minNoticeMinutes, timeZone,
-        showPricesOnline, bookingTerms, nowIso(), existing.id);
-  const row = await db.prepare('SELECT * FROM workshop_settings LIMIT 1').get();
-  sendJson(res, 200, serializeWorkshopSettings(row));
-});
-
-// ---------- Workshop unavailability (lunch, leave, closures) ----------
-// Blocks take time away from what customers can book. They never refuse or
-// move a staff booking (4 Sep decision §7.7): adding one reports the live
-// bookings it clashes with, and staff decide what to do.
-// Spec: docs/superpowers/specs/2026-09-24-book-server-2-modes-capacity-design.md
-
-// Live bookings a block overlaps, from today on - a block's past is history.
-async function clashesFor(block) {
-  const today = await currentShopToday();
-  const from = block.kind === 'dates' && block.startDate > today ? block.startDate : today;
-  // Every day of a job (its parts), so a block over a job's second day finds it.
-  let sql = `SELECT w.id, w.reference, w.title, p.mechanic_id, p.part_date AS job_date, p.start_time, p.end_time,
-      CASE WHEN p.position = 1 THEN w.planned_minutes END AS planned_minutes
-    FROM workshop_job_parts p JOIN workshop_jobs w ON w.id = p.workshop_job_id
-    WHERE p.part_date >= ? AND w.booking_state IN (${LIVE_STATES_SQL})`;
-  const args = [from];
-  if (block.kind === 'dates') {
-    sql += ' AND p.part_date <= ?';
-    args.push(block.endDate);
-  }
-  const rows = await db.prepare(`${sql} ORDER BY p.part_date, p.start_time`).all(...args);
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  return blockClashes(block, rows.map(toCapacityJob)).map((j) => ({
-    id: j.id,
-    reference: byId.get(j.id).reference,
-    title: byId.get(j.id).title,
-    mechanicId: j.mechanicId,
-    jobDate: j.jobDate,
-    startTime: j.startTime,
-    endTime: j.endTime,
-  }));
-}
-
-// Through the shop-scoped db: a foreign key check bypasses row-level security,
-// so another shop's mechanic id must be refused here, not by the constraint.
-async function blockMechanicExists(mechanicId) {
-  if (mechanicId === null) return true;
-  return !!(await db.prepare('SELECT id FROM employees WHERE id = ? AND is_mechanic = 1').get(mechanicId));
-}
-
-// screens: hours, diary, week, month
-route('GET', '/api/workshop-unavailability', async (req, res, params, query) => {
-  const start = query.get('start');
-  const end = query.get('end');
-  let rows;
-  if (start || end) {
-    if (!isRealDate(start || '') || !isRealDate(end || '')) return badRequest(res, 'Give both start and end dates, or neither');
-    rows = await db.prepare(
-      `SELECT * FROM workshop_unavailability
-       WHERE kind = 'weekly' OR (start_date <= ? AND end_date >= ?) ORDER BY id`
-    ).all(end, start);
-  } else {
-    rows = await db.prepare('SELECT * FROM workshop_unavailability ORDER BY id').all();
-  }
-  sendJson(res, 200, { blocks: rows.map(toBlock) });
-});
-
-// screens: hours
-route('POST', '/api/workshop-unavailability', async (req, res) => {
-  const checked = validateBlock(await readJsonBody(req));
-  if (checked.error) return badRequest(res, checked.error);
-  const b = checked.block;
-  if (!(await blockMechanicExists(b.mechanicId))) return notFound(res, 'Mechanic not found');
-  const { lastInsertRowid } = await db.prepare(
-    `INSERT INTO workshop_unavailability (employee_id, kind, weekdays, start_date, end_date, start_time, end_time, reason)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
-        b.startDate, b.endDate, b.startTime, b.endTime, b.reason);
-  const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(lastInsertRowid));
-  sendJson(res, 201, { block, clashes: await clashesFor(block) });
-});
-
-// screens: hours
-route('PUT', '/api/workshop-unavailability/:id', async (req, res, params) => {
-  const row = await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
-  if (!row) return notFound(res, 'Block not found');
-  const body = await readJsonBody(req);
-  const checked = validateBlock({ ...toBlock(row), ...body });
-  if (checked.error) return badRequest(res, checked.error);
-  const b = checked.block;
-  if (!(await blockMechanicExists(b.mechanicId))) return notFound(res, 'Mechanic not found');
-  await db.prepare(
-    `UPDATE workshop_unavailability SET employee_id = ?, kind = ?, weekdays = ?, start_date = ?, end_date = ?,
-       start_time = ?, end_time = ?, reason = ?, updated_at = now() WHERE id = ?`
-  ).run(b.mechanicId, b.kind, b.weekdays ? JSON.stringify(b.weekdays) : null,
-        b.startDate, b.endDate, b.startTime, b.endTime, b.reason, row.id);
-  const block = toBlock(await db.prepare('SELECT * FROM workshop_unavailability WHERE id = ?').get(row.id));
-  sendJson(res, 200, { block, clashes: await clashesFor(block) });
-});
-
-// screens: hours
-route('DELETE', '/api/workshop-unavailability/:id', async (req, res, params) => {
-  const row = await db.prepare('SELECT id FROM workshop_unavailability WHERE id = ?').get(Number(params.id));
-  if (!row) return notFound(res, 'Block not found');
-  await db.prepare('DELETE FROM workshop_unavailability WHERE id = ?').run(row.id);
-  sendJson(res, 200, { ok: true });
-});
-
-// The calculator's full answer for staff: reasons, clashes and minutes
-// included. Read by the diary, queue, week, month and hours screens.
-// screens: diary, queue, week, month, hours
-route('GET', '/api/workshop-capacity', async (req, res, params, query) => {
-  const start = query.get('start');
-  const end = query.get('end');
-  if (!isRealDate(start || '') || !isRealDate(end || '')) {
-    return badRequest(res, 'Valid start and end dates are required');
-  }
-  if (end < start) return badRequest(res, 'The end date must be on or after the start date');
-  if (dayCount(start, end) > MAX_RANGE_DAYS) {
-    return badRequest(res, `Ask for at most ${MAX_RANGE_DAYS} days at a time`);
-  }
-  const { blocks, jobs, days } = await loadCapacity(start, end);
-  const range = ([s, e]) => ({ start: toHHMM(s), end: toHHMM(e) });
-  sendJson(res, 200, {
-    days: days.map((day) => {
-      const dayJobs = jobs.filter((j) => j.jobDate === day.date && !j.requested);
-      const clashes = blocks.flatMap((b) => blockClashes(b, dayJobs).map((j) => ({ jobId: j.id, blockId: b.id })));
-      return {
-        date: day.date,
-        mode: day.mode,
-        shopClosed: day.shopClosed,
-        closures: day.shopBlocks,
-        queueMinutes: day.queueMinutes,
-        clashes,
-        mechanics: day.mechanics.map((m) => ({
-          mechanicId: m.mechanicId,
-          working: m.working,
-          freeMinutes: Math.max(0, Math.floor(m.freeMinutes)),
-          freeWindows: m.freeWindows.map(range),
-          blocks: m.blocks,
-        })),
-      };
-    }),
-  });
-});
-
-// ---------- Workshop service categories ----------
-// One level deep (Jack, 24 Sep): a category holds individual services, never
-// other categories. Full services carry no category. Deleting a category moves
-// its services to uncategorised (ON DELETE SET NULL in migration 022).
-// Spec: docs/superpowers/specs/2026-09-24-book-server-1-service-list-design.md
-
-function serializeServiceCategory(row) {
-  return { id: row.id, name: row.name, position: row.position };
-}
-
-// Shared by POST and PUT; `existing` is null on POST. An omitted field keeps
-// its stored value on PUT.
-function readCategoryBody(body, existing) {
-  const name = body.name !== undefined ? String(body.name).trim() : (existing ? existing.name : '');
-  if (!name) throw new ValidationError('A category needs a name');
-  let position = existing ? existing.position : 0;
-  if (body.position !== undefined) {
-    position = Number(body.position);
-    if (!Number.isInteger(position) || position < -MAX_SERIAL - 1 || position > MAX_SERIAL) {
-      throw new ValidationError('Position must be a whole number');
-    }
-  }
-  return { name, position };
-}
-
-// screens: services, service-edit
-route('GET', '/api/workshop-service-categories', async (req, res) => {
-  const rows = await db.prepare('SELECT * FROM workshop_service_categories ORDER BY position, name').all();
-  sendJson(res, 200, rows.map(serializeServiceCategory));
-});
-
-// screens: services, service-edit
-route('POST', '/api/workshop-service-categories', async (req, res) => {
-  const body = await readJsonBody(req);
-  let fields;
-  try {
-    fields = readCategoryBody(body, null);
-  } catch (err) {
-    if (err instanceof ValidationError) return badRequest(res, err.message);
-    throw err;
-  }
-  const info = await db.prepare('INSERT INTO workshop_service_categories (name, position) VALUES (?, ?)')
-    .run(fields.name, fields.position);
-  const row = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(info.lastInsertRowid);
-  sendJson(res, 201, serializeServiceCategory(row));
-});
-
-// screens: services, service-edit
-route('PUT', '/api/workshop-service-categories/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Not found');
-  const body = await readJsonBody(req);
-  let fields;
-  try {
-    fields = readCategoryBody(body, existing);
-  } catch (err) {
-    if (err instanceof ValidationError) return badRequest(res, err.message);
-    throw err;
-  }
-  await db.prepare('UPDATE workshop_service_categories SET name = ?, position = ?, updated_at = ? WHERE id = ?')
-    .run(fields.name, fields.position, nowIso(), id);
-  const row = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
-  sendJson(res, 200, serializeServiceCategory(row));
-});
-
-// screens: services, service-edit
-route('DELETE', '/api/workshop-service-categories/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM workshop_service_categories WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Not found');
-  await db.prepare('DELETE FROM workshop_service_categories WHERE id = ?').run(id);
-  sendJson(res, 200, { ok: true });
-});
-
-// ---------- Workshop services (the fixed-price labour catalogue) ----------
-
-export function serializeWorkshopService(row, includes = []) {
-  return {
-    id: row.id,
-    name: row.name,
-    price: row.price,
-    minutes: row.minutes,
-    // active is INTEGER 0/1 on this table, matching products.active.
-    active: row.active === 1,
-    // Whether a customer may book this service themselves. The catalogue is
-    // written in mechanic language and organised by work performed; only the
-    // subset a shop ticks belongs in front of a customer. See
-    // docs/decisions/2026-09-04-booking-mode-and-downtime.md §7.
-    bookableOnline: row.bookable_online === 1,
-    // Where the customer booking page lists it: 'full' services in a short
-    // list of their own, 'individual' ones under their category (or "Other"
-    // when uncategorised). One level deep; see migration 022.
-    kind: row.kind,
-    categoryId: row.category_id,
-    position: row.position,
-    // Ordered; each { id, wording, kind, required, choices?, allowNotSure? }.
-    // See server/service-questions.js and migration 028.
-    questions: row.questions ?? [],
-    // Ordered ids of the individual services a full service includes,
-    // removed ones too (a future staff screen marks them). Always [] for an
-    // individual service. See migration 031.
-    includes,
-  };
-}
-
-// Shared by POST and PUT. Throws ValidationError so both callers translate it
-// the same way.
-function readServiceBody(body) {
-  const name = String(body.name || '').trim();
-  if (!name) throw new ValidationError('A service needs a name');
-  const price = Number(body.price);
-  if (!Number.isFinite(price) || price < 0) throw new ValidationError('A service needs a price of zero or more');
-  let minutes = null;
-  if (body.minutes !== undefined && body.minutes !== null && body.minutes !== '') {
-    minutes = Math.trunc(Number(body.minutes));
-    if (!Number.isFinite(minutes) || minutes <= 0) throw new ValidationError('Duration must be a positive number of minutes');
-  }
-  return { name, price, minutes };
-}
-
-// Where a service sits in the customer's list. `existing` is null on POST; on
-// PUT an omitted field keeps its stored value, so a caller that predates these
-// fields (the old staff app) cannot wipe them. A category id is looked up
-// through the shop-scoped db first: the foreign key alone bypasses row-level
-// security and would accept another shop's category.
-async function readServicePlacement(body, existing) {
-  const kind = body.kind !== undefined ? body.kind : (existing ? existing.kind : 'individual');
-  if (kind !== 'full' && kind !== 'individual') {
-    throw new ValidationError("A service's kind must be 'full' or 'individual'");
-  }
-  let categoryId = body.categoryId !== undefined ? body.categoryId : (existing ? existing.category_id : null);
-  if (kind === 'full') {
-    categoryId = null;
-  } else if (categoryId === '') {
-    // An empty form dropdown - treat exactly like null (uncategorised).
-    categoryId = null;
-  } else if (categoryId !== null) {
-    categoryId = Number(categoryId);
-    const valid = Number.isInteger(categoryId) && categoryId >= 1 && categoryId <= MAX_SERIAL;
-    const found = valid
-      ? await db.prepare('SELECT id FROM workshop_service_categories WHERE id = ?').get(categoryId)
-      : null;
-    if (!found) throw new ValidationError('That category does not exist');
-  }
-  let position = existing ? existing.position : 0;
-  if (body.position !== undefined) {
-    position = Number(body.position);
-    if (!Number.isInteger(position) || position < -MAX_SERIAL - 1 || position > MAX_SERIAL) {
-      throw new ValidationError('Position must be a whole number');
-    }
-  }
-  return { kind, categoryId, position };
-}
-
-// A service's questions, saved as one whole list. Omitted on PUT keeps the
-// stored list, like the placement fields above.
-function readQuestionsOrKeep(body, stored) {
-  if (body.questions === undefined) return stored;
-  const r = readServiceQuestions(body.questions, stored);
-  if (r.error) throw new ValidationError(r.error);
-  return r.value;
-}
-
-const MAX_INCLUDES = 50;
-
-// A full service's included services, saved as one whole ordered list.
-// `kind` is the service's kind after this save; `stored` the saved ids (null
-// on POST). `selfId`/`selfName` identify the service being saved (null on
-// POST, since it has no id yet) so it can be refused as its own include -
-// migration 031's CHECK would otherwise reject that as a database error
-// (500) rather than a clean 400, and on PUT the lookup below runs before the
-// UPDATE that changes this service's own kind, so a currently-individual
-// service promoting itself would otherwise look like a valid individual
-// service to include. Omitted keeps the stored list, as questions and
-// placement do, so a caller that predates the field cannot wipe it - except
-// that an individual service never includes anything. Each id is looked up
-// through the shop-scoped db: the foreign key alone bypasses row-level
-// security and would accept another shop's service.
-async function readIncludes(body, kind, stored, selfId, selfName) {
-  if (body.includes === undefined) return kind === 'full' ? (stored ?? []) : [];
-  const ids = body.includes;
-  if (!Array.isArray(ids)) throw new ValidationError('That service does not exist');
-  if (kind !== 'full') {
-    if (ids.length > 0) throw new ValidationError('Only a full service can include other services');
-    return [];
-  }
-  if (ids.length > MAX_INCLUDES) throw new ValidationError(`A full service can include at most ${MAX_INCLUDES} services`);
-  if (new Set(ids).size !== ids.length) throw new ValidationError("A service can't be included twice");
-  if (selfId !== null && ids.includes(selfId)) throw new ValidationError(`${selfName} is not an individual service`);
-  for (const id of ids) {
-    const found = Number.isInteger(id) && id >= 1 && id <= MAX_SERIAL
-      ? await db.prepare('SELECT name, kind FROM workshop_services WHERE id = ?').get(id)
-      : null;
-    if (!found) throw new ValidationError('That service does not exist');
-    if (found.kind !== 'individual') throw new ValidationError(`${found.name} is not an individual service`);
-  }
-  return ids;
-}
-
-// Replaces a service's list whole. Callers run it inside their transaction.
-async function replaceIncludes(serviceId, ids) {
-  await db.prepare('DELETE FROM workshop_service_includes WHERE service_id = ?').run(serviceId);
-  for (const [position, id] of ids.entries()) {
-    await db.prepare(
-      'INSERT INTO workshop_service_includes (service_id, included_service_id, position) VALUES (?, ?, ?)'
-    ).run(serviceId, id, position);
-  }
-}
-
-// Ordered included ids for every service that has any, as Map<serviceId, id[]>.
-async function loadIncludes() {
-  const rows = await db.prepare(
-    'SELECT service_id, included_service_id FROM workshop_service_includes ORDER BY service_id, position'
-  ).all();
-  const map = new Map();
-  for (const r of rows) {
-    if (!map.has(r.service_id)) map.set(r.service_id, []);
-    map.get(r.service_id).push(r.included_service_id);
-  }
-  return map;
-}
-
-// screens: services, service-edit
-route('GET', '/api/workshop-services', async (req, res) => {
-  const rows = await db.prepare('SELECT * FROM workshop_services ORDER BY active DESC, name').all();
-  const includes = await loadIncludes();
-  sendJson(res, 200, rows.map((r) => serializeWorkshopService(r, includes.get(r.id) ?? [])));
-});
-
-// screens: services, service-edit
-route('POST', '/api/workshop-services', async (req, res) => {
-  const body = await readJsonBody(req);
-  let fields;
-  let placement;
-  let questions;
-  let includes;
-  try {
-    fields = readServiceBody(body);
-    placement = await readServicePlacement(body, null);
-    questions = readQuestionsOrKeep(body, []);
-    includes = await readIncludes(body, placement.kind, null, null, null);
-  } catch (err) {
-    if (err instanceof ValidationError) return badRequest(res, err.message);
-    throw err;
-  }
-  const bookableOnline = body.bookableOnline ? 1 : 0;
-  await db.exec('BEGIN');
-  let info;
-  try {
-    info = await db.prepare(
-      'INSERT INTO workshop_services (name, price, minutes, bookable_online, kind, category_id, position, questions) VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))'
-    ).run(fields.name, fields.price, fields.minutes, bookableOnline, placement.kind, placement.categoryId, placement.position, JSON.stringify(questions));
-    await replaceIncludes(info.lastInsertRowid, includes);
-    await db.exec('COMMIT');
-  } catch (err) {
-    await db.exec('ROLLBACK');
-    throw err;
-  }
-  const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(info.lastInsertRowid);
-  sendJson(res, 201, serializeWorkshopService(row, includes));
-});
-
-// screens: services, service-edit
-route('PUT', '/api/workshop-services/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Not found');
-  const body = await readJsonBody(req);
-  let fields;
-  let placement;
-  let questions;
-  let includes;
-  try {
-    fields = readServiceBody(body);
-    placement = await readServicePlacement(body, existing);
-    questions = readQuestionsOrKeep(body, existing.questions ?? []);
-    const stored = (await db.prepare(
-      'SELECT included_service_id FROM workshop_service_includes WHERE service_id = ? ORDER BY position'
-    ).all(id)).map((r) => r.included_service_id);
-    includes = await readIncludes(body, placement.kind, stored, id, fields.name);
-    if (existing.kind === 'individual' && placement.kind === 'full') {
-      const holder = await db.prepare(
-        `SELECT f.name FROM workshop_service_includes i JOIN workshop_services f ON f.id = i.service_id
-         WHERE i.included_service_id = ? ORDER BY f.name LIMIT 1`
-      ).get(id);
-      if (holder) throw new ValidationError(`${fields.name} is part of ${holder.name} - take it out of that first`);
-    }
-  } catch (err) {
-    if (err instanceof ValidationError) return badRequest(res, err.message);
-    throw err;
-  }
-  const active = body.active === undefined ? existing.active : (body.active ? 1 : 0);
-  const bookableOnline = body.bookableOnline === undefined
-    ? existing.bookable_online : (body.bookableOnline ? 1 : 0);
-  await db.exec('BEGIN');
-  try {
-    await db.prepare(
-      'UPDATE workshop_services SET name = ?, price = ?, minutes = ?, active = ?, bookable_online = ?, kind = ?, category_id = ?, position = ?, questions = CAST(? AS jsonb), updated_at = ? WHERE id = ?'
-    ).run(fields.name, fields.price, fields.minutes, active, bookableOnline,
-      placement.kind, placement.categoryId, placement.position, JSON.stringify(questions), nowIso(), id);
-    // Only touch the stored list when the caller actually sent one, or when
-    // the demotion to individual must clear it - a save that leaves
-    // `includes` out (as `questions` and placement work) must not delete and
-    // reinsert rows that did not change.
-    const demotedToIndividual = existing.kind === 'full' && placement.kind === 'individual';
-    if (body.includes !== undefined || demotedToIndividual) {
-      await replaceIncludes(id, includes);
-    }
-    await db.exec('COMMIT');
-  } catch (err) {
-    await db.exec('ROLLBACK');
-    throw err;
-  }
-  const row = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
-  sendJson(res, 200, serializeWorkshopService(row, includes));
-});
-
-// Deactivate rather than delete: a job line keeps its service_id, and that
-// link must not dangle.
-// screens: services, service-edit
-route('DELETE', '/api/workshop-services/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM workshop_services WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Not found');
-  await db.prepare('UPDATE workshop_services SET active = 0, updated_at = ? WHERE id = ?').run(nowIso(), id);
-  sendJson(res, 200, { ok: true });
-});
 
 // ---------- Dashboard ----------
 
@@ -4153,7 +2983,7 @@ export function gracefulShutdown(signal, {
     // A sale that completed just as the signal landed can still have a
     // deferred Shopify push in flight, opened on its OWN pooled client after
     // the sale's own client was already released (see
-    // firePendingShopifyPushes above) - draining HTTP connections says
+    // firePendingShopifyPushes in lib/sales.js) - draining HTTP connections says
     // nothing about that. Wait for it before ending the pool, or pg refuses
     // its connect() with the pool already ended and the push dies silently.
     waitForPendingShopifyPushes(pendingPushes)
