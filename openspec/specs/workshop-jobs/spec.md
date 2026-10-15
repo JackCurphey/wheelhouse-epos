@@ -297,7 +297,7 @@ A shop SHALL NOT be able to see, move, or touch another shop's job, its attachme
 - **THEN** it is refused as not found, and the job is unchanged
 
 ### Requirement: Paying for a job's order finishes the work only when finishing is allowed
-When a job's linked order is paid at the till, the job's work SHALL be finished as part of the same act. If the work cannot be finished from its current state, the payment SHALL be refused before any sale is made, with the code "illegal" and the same "cannot finish a job that is [state]; from here you can [moves]" message.
+When a job's linked order is paid at the till, the job's work SHALL be finished as part of the same act. If the work is already finished, the payment SHALL go through and the job SHALL be left as it is, with a warning if it is no longer finished once the sale is made, or the job is no longer there. If the work cannot be finished from its current state, the payment SHALL be refused before any sale is made, with the code "illegal" and the same "cannot finish a job that is [state]; from here you can [moves]" message.
 
 #### Scenario: Paying for work in progress
 - **WHEN** a job's work is in progress and its order is paid
@@ -312,12 +312,20 @@ When a job's linked order is paid at the till, the job's work SHALL be finished 
 - **THEN** the payment is refused with a message naming "resume"; after staff resume the work, the same payment goes through
 
 #### Scenario: Paying for work already finished
-- **WHEN** a job's work is already finished and its order is paid
-- **THEN** the payment is refused with "cannot finish a job that is complete; from here you can reopen"
+- **WHEN** a job's work is already finished ("Mark ready for collection") and its order is paid
+- **THEN** the sale is made, the job's work stays finished, and the job is not changed again
 
 #### Scenario: The job moves while the payment is going through
 - **WHEN** the work could be finished when the payment was checked, but someone moved the job before it was finished
 - **THEN** the sale stands, the job is not moved, and the reply carries a warning saying why
+
+#### Scenario: Finished work is reopened while the payment is going through
+- **WHEN** the work was already finished when the payment was checked, but someone reopened it before the sale was made, or just after
+- **THEN** the sale stands, the job stays where they put it, and the reply carries a warning saying the work is no longer finished
+
+#### Scenario: The job is deleted while the payment is going through
+- **WHEN** the work was already finished when the payment was checked, but the job was deleted before the second check
+- **THEN** the sale stands and the reply carries the warning "Job not found"
 
 ### Requirement: A job can be worked over several days
 A job SHALL have one or more days, in order. Day 1 SHALL always be the job's own date, times and mechanic, and SHALL move when the job moves. Each later day SHALL have its own date, times and mechanic. Every day SHALL count as that mechanic's time when checking for double bookings.
@@ -424,15 +432,27 @@ For screens not yet replaced, every job SHALL also show one of five old statuses
 - **THEN** the old status is one of pending, scheduled, waiting_parts, on_hold, complete
 
 ### Requirement: The old app can still set a job's status on create and save
-Creating or saving a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A save SHALL leave the bike alone; a create with waiting_parts or on_hold SHALL put it in the shop.
+Creating or saving a job MAY carry an old status, which SHALL be set directly without the move rules: pending → pending booking, work not started; scheduled → scheduled, not started; waiting_parts → scheduled, waiting for parts; on_hold → scheduled, on hold; complete → scheduled, finished. A save whose status matches the status the job already reads SHALL change none of the job's states. A save SHALL leave the bike alone; a create with waiting_parts or on_hold SHALL put it in the shop. While a customer's change request is waiting, an old status whose booking is scheduled (scheduled, waiting_parts, on_hold or complete) SHALL leave the booking and the request as they are, unless the save puts the job on exactly the requested day, start and mechanic, which SHALL accept the request; "pending" SHALL end the request.
+
+#### Scenario: Saving a job with a change request waiting
+- **WHEN** a customer's change request is waiting and staff save the job from the old form, which sends the status "scheduled", without moving it to the requested time
+- **THEN** the request stays waiting and the booking is unchanged
+
+#### Scenario: Dropping a job onto the time the customer asked for
+- **WHEN** a customer's change request is waiting and a save puts the job on the requested day, start and mechanic, with no status or "scheduled"
+- **THEN** the request is accepted and the booking is scheduled
 
 #### Scenario: A cancelled booking saved as scheduled
 - **WHEN** staff save a cancelled job with the old status "scheduled"
 - **THEN** the booking is scheduled again
 
 #### Scenario: Saving work in progress from the old form
-- **WHEN** a job's work is in progress and staff save it from the old form, which sends the status "scheduled"
-- **THEN** the work is set back to not started
+- **WHEN** a job's work is in progress and staff save it from the old form, which sends the status "scheduled" it already reads
+- **THEN** the work stays in progress and the other changes are saved
+
+#### Scenario: Changing the status from the old form
+- **WHEN** a job's work is in progress and staff save it with the status "on_hold"
+- **THEN** the work is on hold
 
 #### Scenario: An unknown status
 - **WHEN** a create or save sends a status that is not one of the five
@@ -469,7 +489,7 @@ The job page SHALL show the button for the job's next step: Book in (bike expect
 - **THEN** there is no Book in, Start work, Hand over or Mark ready for collection button
 
 #### Scenario: Someone else moved the job first
-- **WHEN** staff press a stage button and the shop refuses it as stale
+- **WHEN** staff press a stage button and the shop refuses it as stale, or as a move the job can no longer make
 - **THEN** the page says "This job changed while you were looking at it." and reloads the job
 
 ### Requirement: The job page has one notes box and a "Bike is here" switch
