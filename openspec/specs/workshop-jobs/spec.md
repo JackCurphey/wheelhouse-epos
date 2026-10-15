@@ -524,7 +524,7 @@ The notes SHALL be one plain box, saved only when staff press Save notes after c
 - **THEN** the bike is booked in
 
 ### Requirement: The job page lists and changes the job's work and parts
-The job page SHALL list the lines on the job's order, labour above parts. Staff SHALL be able to add a product or service by searching or scanning a barcode, change a part's quantity, and remove a line. An order that is no longer open (paid or cancelled) SHALL be read-only here, and a job with no order SHALL say "This job has no order to add work and parts to." If the shop refuses a change, the page SHALL show the shop's reason.
+The job page SHALL list the lines on the job's order, labour above parts. Staff SHALL be able to add a product or service by searching or scanning a barcode, change a part's quantity, and remove a line. An order that is no longer open (paid or cancelled) SHALL be read-only here, and a job with no order SHALL say "This job has no order to add work and parts to." If the shop refuses a change, the page SHALL say why in plain words: "This job has been paid for, so its work and parts can't change." for a paid order, "This job's order was cancelled, so its work and parts can't change." for a cancelled one, "This job's order no longer exists." for a deleted one, "That service is no longer offered. Choose another." or "That product is no longer sold. Choose another." for one that has gone, "The work needs a description.", "The work needs a price of £0.00 or more.", "The work needs a time of at least 1 minute." or "Each part needs a quantity of 1 or more." for a line the shop can't take; and the shop's own words for any reason already in plain English (Jack, 15 Oct).
 
 #### Scenario: Labour first
 - **WHEN** a job's order has brake pads and a Standard service
@@ -539,11 +539,11 @@ The job page SHALL list the lines on the job's order, labour above parts. Staff 
 - **THEN** there is no Add item or Remove button
 
 #### Scenario: A refused change
-- **WHEN** the shop refuses a change to the job's order
-- **THEN** the page shows the shop's words, for example "This order is already converted" for an order that has been paid
+- **WHEN** the shop refuses a change to the job's order because it has been paid
+- **THEN** the page says "This job has been paid for, so its work and parts can't change."
 
 ### Requirement: The job page lists the days and can add or remove one
-A one-day job's page SHALL show "[day], [times]" or "[day], no set time". A job with more than one day SHALL list its days as "Day [n]: [date], [times], [mechanic]", with a "Remove" button (named "Remove day [n]") on every day except day 1. "Ready by" SHALL be the last day. "Add another day" SHALL be offered unless the bike has been collected.
+A one-day job's page SHALL show "[day], [times]" or "[day], no set time". A job with more than one day SHALL list its days as "Day [n]: [date], [times], [mechanic]", with a "Remove" button (named "Remove day [n]") on every day except day 1. "Ready by" SHALL be the last day. "Add another day" SHALL be offered unless the bike has been collected. A refused add or remove SHALL say "This job changed while you were looking at it." when someone else changed the job first, "That day has already been removed." for a day that has gone, "This job no longer exists." for a deleted job, and otherwise the shop's words in plain English (Jack, 15 Oct).
 
 #### Scenario: A collected bike
 - **WHEN** a job's bike has been collected
@@ -556,6 +556,10 @@ A one-day job's page SHALL show "[day], [times]" or "[day], no set time". A job 
 #### Scenario: Removing a day
 - **WHEN** staff look for a way to remove day 1, and press "Remove day 2"
 - **THEN** there is no "Remove day 1", and day 2 is removed with the version the page saw
+
+#### Scenario: Removing a day someone else removed
+- **WHEN** staff press "Remove day 2" and the shop refuses because that day has gone
+- **THEN** the page says "That day has already been removed."
 
 ### Requirement: The job page's quote refusals are in plain words
 When the shop refuses a quote action because of the quote's state, including an answer the customer has already given, the job page SHALL say why in plain words from that state, such as "This quote has been sent. Withdraw it before changing it.", not the shop's internal words (Jack, 15 Oct).
