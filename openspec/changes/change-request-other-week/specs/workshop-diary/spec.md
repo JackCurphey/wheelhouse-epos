@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: A customer's change request shows where the customer wants to go
-A booking with a customer's change request waiting SHALL show amber at its current time, and a dashed outline reading "Requested [time]" at the time the customer asked for, when that time falls in a day and column on screen, also in a week where the booking itself is not (Jack, 15 Oct). A screen reader SHALL hear "[bike] asks to move here: [time]", or "[customer] asks to move here: [time]" in a week without the booking. The outline of a request chosen from "Waiting for you" SHALL be marked as its block is.
+A booking with a customer's change request waiting SHALL show amber at its current time, and a dashed outline reading "Requested [time]" at the time the customer asked for, when that time falls in a day and column on screen, also in a week where the booking itself is not (Jack, 15 Oct). A screen reader SHALL hear "[bike] asks to move here: [time]", or "[customer] asks to move here: [time]" in a week without the booking. The outline of a request chosen from "Waiting for you" SHALL take the strong mark a chosen block has; when it is on screen, the booking's own block SHALL take only a light grey ring (the drawing's change-selected).
 
 #### Scenario: Oliver Chen asks to move
 - **WHEN** Oliver Chen's Brompton C Line is booked at 10:00 on Monday 5 October and he asks for 14:00 the same day
@@ -33,3 +33,26 @@ On a computer or tablet the diary SHALL show "Waiting for you ([n])" beside the 
 #### Scenario: A second click with a mouse
 - **WHEN** staff click Aisha Khan's cancellation card with a mouse, then click it again
 - **THEN** it stays chosen and its pop-up does not open
+
+### Requirement: On a phone the diary is one day at a time
+Below tablet width the diary SHALL show one day, chosen from a strip of the week's seven days in place of the Week and Day switch, with arrows that move a week and keep the weekday. One people chip SHALL choose Everyone (one column), By mechanic (a column each) or one person. "Waiting" with its count SHALL sit in the top bar and open the list as a sheet; choosing a card SHALL go to its day, or for a change request into another week to the day asked for (Jack, 15 Oct).
+
+#### Scenario: A phone opens on Tuesday
+- **WHEN** staff open the diary on a phone on Tuesday 6 October
+- **THEN** seven day tabs show with Tuesday chosen, Tuesday's jobs show, Monday's do not, and there is no Week tab
+
+#### Scenario: The week arrows
+- **WHEN** staff press Next week on Tuesday 6 October
+- **THEN** the label reads "12–18 Oct" and Tuesday 13 October is chosen
+
+#### Scenario: By mechanic
+- **WHEN** staff open the people chip and choose By mechanic
+- **THEN** Alex Morgan and Jo Taylor each get a column
+
+#### Scenario: A waiting card on a phone
+- **WHEN** staff open Waiting and choose the card for a booking request on Thursday 8 October
+- **THEN** the diary goes to Thursday 8 October with a bar at the bottom showing the customer and Open, and Open shows the request
+
+#### Scenario: A change request into another week on a phone
+- **WHEN** Oliver Chen's Brompton C Line is booked on Tuesday 6 October, he asks for 14:00 on Tuesday 13 October, and staff choose his card
+- **THEN** Tuesday 13 October is chosen and shows "Requested 14:00"

@@ -162,6 +162,7 @@ test('on a phone, a change request into another week goes to the day asked for a
     fireEvent.click(sheet.getByRole('button', { name: /Oliver Chen/ }));
     assert.equal((await ui.findByRole('tab', { name: /^Tuesday 13 October/ })).getAttribute('aria-selected'), 'true');
     assert.ok(has(await ui.findByText('Requested 14:00')));
+    assert.ok(has(ui.queryByText('Oliver Chen asks to move here: 14:00–15:00, chosen from Waiting for you')));
   } finally {
     WAITING.items.pop();
     WAITING.count = 1;

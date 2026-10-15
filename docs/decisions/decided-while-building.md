@@ -212,8 +212,9 @@ silent:
    gives no bike. *Pattern:* the card, which names the customer.
 2. **`change-selected`: the chosen request's outline is marked** with the
    chosen block's highlight, and a screen reader hears ", chosen from
-   Waiting for you". *Pattern:* the chosen block; decision 19's "highlights
-   the time the customer wants".
+   Waiting for you"; with it on screen the booking's own block takes the
+   drawing's light grey ring. *Pattern:* the drawing's change-selected;
+   decision 19's "highlights the time the customer wants".
 3. **`diary`: a job over several days shows its requested time once**, from
    its first day, rather than once per day. *Pattern:* the change request
    pop-up, which moves the booking as a whole.
