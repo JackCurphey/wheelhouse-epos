@@ -1,9 +1,12 @@
-// The shop's website and its Shopify connection: /api/storefront-settings and /api/shopify/connection.
+// The shop's website and its Shopify connection: /api/storefront-settings
+// (with the logo and hero image uploads, which share readUploadedImage in
+// server/lib/uploads.js) and /api/shopify/connection.
 // Staff routes: they run under the dispatcher's /api/ branch (server.js), so
 // a handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
-import { badRequest, readJsonBody, sendJson } from '../lib/http.js';
+import { badRequest, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
+import { readUploadedImage } from '../lib/uploads.js';
 import { getShopifyConnection, registerShopifyWebhooks, saveShopifyConnection, serializeShopifyConnection } from '../shopify.js';
 import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStorefrontSettings } from '../storefront.js';
 
@@ -17,6 +20,8 @@ import { getOrCreateStorefrontSettings, serializeStorefrontSettings, updateStore
 // (Task 3, shopify.js). These two routes are thin HTTP glue over
 // getShopifyConnection/saveShopifyConnection - same shape as the
 // storefront-settings pair above.
+
+const MAX_SHOP_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export function register(route) {
   route('GET', '/api/storefront-settings', async (req, res) => {
@@ -65,5 +70,27 @@ export function register(route) {
     }
 
     sendJson(res, 200, serializeShopifyConnection(connection));
+  });
+
+  route('POST', '/api/storefront-settings/logo', async (req, res) => {
+    let logoUrl;
+    try {
+      logoUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      throw err;
+    }
+    sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ logoUrl })));
+  });
+
+  route('POST', '/api/storefront-settings/hero', async (req, res) => {
+    let heroImageUrl;
+    try {
+      heroImageUrl = await readUploadedImage(req, MAX_SHOP_IMAGE_BYTES);
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      throw err;
+    }
+    sendJson(res, 200, serializeStorefrontSettings(await updateStorefrontSettings({ heroImageUrl })));
   });
 }

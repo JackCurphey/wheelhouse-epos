@@ -1,10 +1,12 @@
-// Products and their stock: /api/products and /api/categories (the product photo route stays with the image uploads).
+// Products and their stock: /api/products (with a product's photo) and
+// /api/categories. Image uploads share readUploadedImage (server/lib/uploads.js).
 // Staff routes: they run under the dispatcher's /api/ branch (server.js), so
 // a handler gets (req, res, params, query, afterRelease, shopId) with the
 // shop's row-level security already bound, and needs a staff session.
 // Moved out of server.js unchanged (split plan §4.1, WP-0.4).
 import { dbExec, prepare } from '../db.js';
-import { badRequest, notFound, nowIso, readJsonBody, sendJson } from '../lib/http.js';
+import { badRequest, notFound, nowIso, readJsonBody, sendJson, ValidationError } from '../lib/http.js';
+import { readUploadedImage } from '../lib/uploads.js';
 import { serializeProduct } from '../lib/serializers.js';
 import { syncProductToShopify, unpublishProductFromShopify } from '../shopify.js';
 import { deferShopifyPushes } from '../lib/sales.js';
@@ -57,6 +59,8 @@ async function listProducts({ search, category, activeOnly }) {
 }
 
 // ---------- Products ----------
+
+const MAX_PRODUCT_PHOTO_BYTES = 5 * 1024 * 1024;
 
 export function register(route) {
   route('GET', '/api/products', async (req, res, params, query) => {
@@ -194,5 +198,23 @@ export function register(route) {
   route('GET', '/api/categories', async (req, res) => {
     const rows = await db.prepare('SELECT DISTINCT category FROM products ORDER BY category').all();
     sendJson(res, 200, rows.map((r) => r.category));
+  });
+
+  route('POST', '/api/products/:id/photo', async (req, res, params) => {
+    const id = Number(params.id);
+    const existing = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    if (!existing) return notFound(res, 'Product not found');
+
+    let photoUrl;
+    try {
+      photoUrl = await readUploadedImage(req, MAX_PRODUCT_PHOTO_BYTES);
+    } catch (err) {
+      if (err instanceof ValidationError) return badRequest(res, err.message);
+      throw err;
+    }
+
+    await db.prepare('UPDATE products SET photo_url = ?, updated_at = ? WHERE id = ?').run(photoUrl, nowIso(), id);
+    const row = await db.prepare('SELECT * FROM products WHERE id = ?').get(id);
+    sendJson(res, 200, serializeProduct(row));
   });
 }
