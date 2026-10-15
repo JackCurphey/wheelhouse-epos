@@ -1,7 +1,9 @@
 // WP-0.4: the online booking pages' customer accounts and the routes they read
 // live in server/routes/portal.js, Mark's file (split plan §4.1), with the
-// customer cookie helpers and the sign-in limiters only they use. Bookings and
-// booking links are still in server.js until the next move.
+// customer cookie helpers and the sign-in limiters only they use. Bookings,
+// booking links and the portal quote routes followed, with their helpers and
+// limiters. One route stays in server.js: the booking link's quote answer,
+// which needs answerAndAddToOrder until Jack's quote routes move.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
@@ -18,8 +20,21 @@ const ROUTES = [
   "'GET', '/api/portal/:shopSlug/mechanics'", "'GET', '/api/portal/:shopSlug/services'",
   "'GET', '/api/portal/:shopSlug/terms'", "'GET', '/api/portal/:shopSlug/availability'",
   "'GET', '/api/portal/:shopSlug/bikes'", "'POST', '/api/portal/:shopSlug/bikes'",
+  "'GET', '/api/portal/:shopSlug/bookings'", "'POST', '/api/portal/:shopSlug/bookings'",
+  "'GET', '/api/portal/:shopSlug/booking-links/:code'", "'GET', '/api/portal/:shopSlug/booking-links/:code/quote'",
+  "'POST', '/api/portal/:shopSlug/booking-links/:code/cancel'", "'POST', '/api/portal/:shopSlug/booking-links/:code/change'",
+  "'POST', '/api/portal/:shopSlug/booking-links/:code/withdraw-change'",
+  "'GET', '/api/portal/:shopSlug/quotes/:id'", "'POST', '/api/portal/:shopSlug/quotes/:id/lines/:lineId/decision'",
+  "'POST', '/api/portal/:shopSlug/quotes/:id/approve'",
 ];
-const HELPERS = ['setCustomerSessionCookie', 'clearCustomerSessionCookie', 'portalLoginLimiter', 'portalSignupLimiter'];
+const STAYS = "'POST', '/api/portal/:shopSlug/booking-links/:code/quote/answer'";
+const HELPERS = [
+  'setCustomerSessionCookie', 'clearCustomerSessionCookie', 'portalLoginLimiter', 'portalSignupLimiter',
+  'portalGuestBookingLimiter', 'bookingLinkLimiter', 'CUSTOMER_ACTIONABLE', 'customerTooLate', 'customerCanAct',
+  'serializePortalBooking', 'CUSTOMER_REFUSALS', 'customerActionRefusal', 'bookedServices', 'answerNoteLine',
+  'bookingNotes', 'checkCustomerTime', 'REUSED_KEY', 'replayBookingRequest', 'resolveBookingLink',
+  'bookingLinkView', 'changeBookingTime', 'withdrawRequest',
+];
 const defines = (source, name) =>
   new RegExp(`^(export )?((async )?function ${name}\\b|const ${name}\\b)`, 'm').test(source);
 
@@ -40,4 +55,9 @@ test('the portal routes are registered, and import nothing from server.js', () =
   assert.match(read('server/routes/index.js'), /import \* as portal from '\.\/portal\.js'/);
   assert.ok(existsSync(path.join(ROOT, FILE)), `${FILE} does not exist`);
   assert.ok(!/['"]\.\.\/server\.js['"]/.test(read(FILE)), 'portal.js imports ../server.js');
+});
+
+test('the booking link\'s quote answer waits in server.js for answerAndAddToOrder', () => {
+  assert.ok(read('server/server.js').includes(`route(${STAYS}`));
+  assert.ok(!read(FILE).includes(`route(${STAYS}`));
 });
