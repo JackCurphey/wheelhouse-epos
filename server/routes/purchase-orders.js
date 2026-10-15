@@ -161,7 +161,6 @@ export function register(route) {
       try {
         loaded = await loadPoLineItems(items);
       } catch (err) {
-        if (err instanceof ValidationError) return badRequest(res, err.message);
         throw err;
       }
     }
