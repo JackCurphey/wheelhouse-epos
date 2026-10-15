@@ -16,6 +16,8 @@ const MOVED = [
   'addMinutesToTime', 'timeToMinutes', 'resolveJobTimes', 'CLEAR_REQUEST', 'capacityRefusal',
   'refusal', 'SLOT_GONE', 'sendQuoteResult', 'parseWorkingDays', 'currentShopToday',
   'currentShopTimeZone', 'toCapacitySettings', 'LIVE_STATES_SQL',
+  'withBookingLock', 'withJobBookingLock', 'applyLocked', 'syncRequestedHold', 'syncJobHold',
+  'createWorkshopJob', 'checkJobSlot', 'toBlock', 'toCapacityJob', 'loadCapacity',
 ];
 const defines = (source, name) =>
   new RegExp(`^(export )?((async )?function ${name}\\b|const ${name}\\b)`, 'm').test(source);
