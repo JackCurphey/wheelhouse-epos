@@ -7,7 +7,7 @@
 
 ## 2. The purchase-order edit route's bad lines
 
-- [ ] 2.1 Added the edit-route case to `tests/purchase-orders-validation.test.js`. Watch it fail in CI against a deliberate break (the edit route's `ValidationError` check removed), then revert the break
+- [x] 2.1 Added the edit-route case to `tests/purchase-orders-validation.test.js`. It failed in CI against a deliberate break, the edit route's `ValidationError` check removed (run 38735535589: "500 !== 400", the only failing test). The break is reverted
 - [ ] 2.2 Verify `npm test` and `npm run test:browser` pass in CI on the final commit (this Mac has no Postgres), then get a fresh review
 
 ## Workflow follow-up
