@@ -81,6 +81,66 @@ each drawn just before its stage. Until then they wait on Jack.
   `ops-person-everywhere` as later; it feeds the drawings, so it changes at
   the next canvas rebuild.
 
+**Later change (15 Oct 2026): where "Sign out everywhere" sits** (Jack, 15
+Oct: "2"). On a person's pop-up (`set-staff-person`), a row under Till PIN:
+"Signed in somewhere?" / "Signs Jo out of every till, phone and computer",
+with a "Sign out everywhere" button that opens `ops-person-everywhere`. Same
+place and look as Till PIN's "Clear a forgotten PIN", and it needs nothing
+new from the server beyond the button. Chosen over the 3 Oct row ("Signed in
+· Till B1 now · [n] phone or computer"), whose count of devices is what the
+later Signed-in devices list would show, and over a button beside Done.
+`consolidate/j20.mjs` now puts `ops-person` and `ops-person-everywhere` into
+`set-staff-person`. The "Are you sure?" box drops its count too (Jack, 15 Oct:
+"yes"): its line under the title reads "Every till, phone and computer"
+instead of "Till B1 now · [n] phone or computer".
+
+**Later change (15 Oct 2026): what "Ask us to help" opens** (#30; Jack, 15
+Oct: "1"). A short form in the app, "Ask us to help" / "With moving from
+Citrus Lime · to the Wheelhouse team": "What looks wrong?", and a line saying
+the team will see which card it was asked from and who is asking. Cancel or
+Send; once sent, "Thanks — we’ve got it. Any reply comes to your email."
+Drawn as `mv-help` and `mv-help-sent`, situations of `mv-start`, built in
+WP-2.4, following Send feedback (`oversight.mjs`), without its picture of the
+screen because a move's rows hold customers' details. Where the message
+lands is a real account, so it is built behind an adapter with a pretend
+version until one exists. Chosen over an email address or phone number, and
+over booking a call.
+
+**Later change (15 Oct 2026): a bike's own page** (#7 and #8; Jack, 15 Oct:
+"1"). Its own page, `cs-bike`, built in WP-3.2, laid out as a customer's
+page is (Detail page, block 4): back to the customer, the bike's name with
+"[Customer]’s bike" and New job; on the left its details (colour, frame
+number, note) with Edit, the warranty when bought here (Customer service 4),
+and who it belongs to; on the right its jobs, sorted as the customer's page
+sorts them (a Finished job waiting to be collected is still open).
+Header search can open it directly, since it finds bikes and frame numbers
+(second walk 12; stage 1 gaps 22). Chosen over a pop-up over the customer's
+page. Taken from the customer page's pattern without a question: New job,
+Edit and the jobs list's shape. Still not drawn: the box Edit opens, and a
+Cycle to Work bike's page (it would read as this one, with its frame number).
+
+**Later change (15 Oct 2026): fixing a sale that didn't send** (#10; Jack,
+15 Oct: "1"). Fix on `till-failed` opens the sale (`till-fix`) with
+Wheelhouse's reason in plain words, its lines and total, and "It still counts
+in today’s takings". Two ways out: Send again, once the cause is fixed
+elsewhere, or Mark as sorted, which asks "What did you do?"
+(`till-fix-sorted`) and keeps the note with the sale. Both are situations of
+`till-failed`, built in WP-3.1, for a manager as the list is. Chosen over a
+fix for each kind of reason inside the sale, which can come once the reasons
+are known.
+
+**Later change (15 Oct 2026): sending a link to pay** (#51; Jack, 15 Oct:
+"1"). "Payment link" in Other ways to pay opens `till-pay-link`: send it by
+Text or Email, as the receipt offers, then "Send the link". The sale waits in
+Parked sales as "Waiting for payment", with Send again (`till-pay-link-waiting`),
+and the till is free for the next customer. When Stripe says it's paid, the
+sale finishes by itself and the till shows "Paid by link: Maya Patel · £74.00
+· receipt B1-[0000]" (`till-pay-link-paid`). Built in WP-3.1, through the
+online payments adapter (WP-1.11) with a pretend Stripe first. Chosen over putting the
+sale on the customer's account, and over the till waiting on the payment
+screen. Not drawn: how long a link lasts, cancelling a link, or paying at
+the till instead if the customer comes back in person.
+
 ## The 95, by stage
 
 Kept as researched on 8 Oct, from `origin/main` at that date. "plan:N" is a

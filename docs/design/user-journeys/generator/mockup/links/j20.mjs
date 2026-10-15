@@ -65,4 +65,8 @@ export default {
     'Sign out — [Computer] · [browser]': LATER('Sign a computer out'),
     'Sign out — [Phone model] · [browser]': LATER('Sign a computer out'),
   },
+  // Not-drawn pages decision 2 (Jack, 8 Oct): the box opened from a person's
+  // "Sign out everywhere" (Settings › Staff and roles).
+  'ops-person': { 'Clear a forgotten PIN': go('set-staff-clear-pin'), 'Sign out everywhere': go('ops-person-everywhere') },
+  'ops-person-everywhere': { Cancel: go('set-staff-person'), 'Sign out everywhere': go('set-staff-person') },
 };

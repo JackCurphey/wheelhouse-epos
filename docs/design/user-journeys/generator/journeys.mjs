@@ -631,6 +631,8 @@ export const journeys = [
         sd9("mv-both", "Changed in both: Citrus Lime’s kept", "Owner"),
         sd9("mv-check", "The weekly check: each figure checks itself", "Owner"),
         sd9("mv-check-result", "The weekly check: three match, one doesn’t", "Owner"),
+        sd9("mv-help", "Ask us to help: what looks wrong", "Owner"),
+        sd9("mv-help-sent", "Sent to the Wheelhouse team", "Owner"),
       ] },
       { label: "Practice: the till and jobs", screens: [
         sd9("mv-practice-checkin", "Checked in during practice: no float check", "Staff"),
@@ -718,6 +720,9 @@ export const journeys = [
         sc("till-account", "Put on account: pay later", "Staff"),
         sc("till-loyalty", "Store credit, earned by buying: shown with the customer in the basket", "Staff"),
         sc("till-deposit", "Take a deposit: part now, the rest later", "Staff"),
+        sc("till-pay-link", "Send a link to pay: text or email", "Staff"),
+        sc("till-pay-link-waiting", "Parked sales: one waiting for payment", "Staff"),
+        sc("till-pay-link-paid", "Paid by link: the sale finishes by itself", "Staff"),
       ] },
       { label: "Other till jobs", screens: [
         sc("till-park", "Parked sales: resume", "Staff"),
@@ -753,6 +758,8 @@ export const journeys = [
         sc("till-collect-offline", "Hand over an online order while offline — marked to send", "Staff"),
         sc("till-no-signout", "Can’t sign out while sales are waiting", "Staff"),
         sc("till-failed", "Sales that didn’t send: for a manager", "Manager"),
+        sc("till-fix", "A sale that didn’t send: send again, or mark as sorted", "Manager"),
+        sc("till-fix-sorted", "Mark it as sorted: what did you do?", "Manager"),
       ] },
     ],
   },
@@ -928,6 +935,7 @@ export const journeys = [
       { label: "Customers and the customer page", screens: [
         sd15("cs-list", "Customers: find someone, or add them", "Staff"),
         sd15("cs-page", "A customer’s page: details, bikes with warranty, one history", "Staff"),
+        sd15("cs-bike", "A bike’s page: details, warranty and its jobs", "Staff"),
         sd15("cs-page-over", "Over her account limit", "Staff"),
         sd15("cs-page-new", "A new customer: nothing in the history yet", "Staff"),
         sd15("cs-page-off", "A shop with customer accounts switched off (Payments › Ways to pay)", "Staff"),
