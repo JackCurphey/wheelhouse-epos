@@ -525,7 +525,7 @@ What customers are offered SHALL NOT include a block's reason, other customers' 
 
 #### Scenario: A closure
 - **WHEN** the shop is closed for [reason]
-- **THEN** no start is offered that day, every mechanic's day is full, and the reason appears nowhere
+- **THEN** no start is offered that day, every working mechanic's day is full, and the reason appears nowhere
 
 ### Requirement: Customers are held to capacity when they book or change
 A customer's booking or change SHALL be refused when the time is in a block or outside the mechanic's time, when it would leave the mechanic's day short of the reserve, when it overlaps another booking or a customer's requested time, or when another booking already holds that start. In drop-off mode a chosen time SHALL be refused. A refused booking SHALL leave nothing behind.
@@ -535,7 +535,7 @@ A customer's booking or change SHALL be refused when the time is in a block or o
 - **THEN** it is refused with "That mechanic is unavailable at that time - please choose another time or day."
 
 #### Scenario: The reserve
-- **WHEN** the mechanic has 180 minutes free with a 120-minute reserve
+- **WHEN** the mechanic has 180 minutes left in the day before the 120-minute reserve
 - **THEN** a 30-minute job is accepted and a 120-minute service is refused with "That mechanic does not have enough free time that day - please choose another day, or a shorter job."
 
 #### Scenario: A requested time
