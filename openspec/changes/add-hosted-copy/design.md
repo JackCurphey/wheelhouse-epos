@@ -48,8 +48,8 @@ builds on:
 ## Goals / Non-Goals
 
 **Goals:**
-- Name no host. Any host that passes the checklist in Decision 1 will do, so
-  Jack can choose on #137 without the spec changing.
+- One host, DigitalOcean in London (Decision 1), set up from a script in the
+  repo so it can be rebuilt or reviewed.
 - Keep code changes small: one start-up guard, one Shopify refusal, the
   commit in `/healthz`, and a loader for the test shop. The rest is host
   settings, a GitHub workflow and runbooks.
@@ -57,51 +57,58 @@ builds on:
 **Non-Goals:**
 - Hosting fit for real shops (more than one server, monitoring, a status
   page). That is PL-11 to PL-14, before go-live.
-- A file store such as S3 for uploads (Decision 4), unless the chosen host
-  forces it (Decision 1).
+- Keeping uploads (Decision 4). That comes with a file store before real use.
 
 ## Decisions
 
-### 1. What the host must offer (the checklist for Jack's choice)
+### 1. The host: DigitalOcean in London (Mark, 15 Oct; for Jack's yes on #137)
 
-The host SHALL offer:
-- running our existing container image;
-- managed Postgres 16 with point-in-time restore over [n] days and a
-  **direct** connection address (PL-2);
-- a persistent disk that survives deploys and restarts;
-- HTTPS on a fixed address;
-- deploys started from GitHub Actions, with its own deploy-on-push switched
-  off;
-- a UK or EU region, whichever Jack picks;
-- disk snapshots, or another place inside the same account to copy uploads
-  to each night.
+Jack chose a UK region for the test copy, as an answer for the test copy
+only (#137, 15 Oct; `docs/decisions/2026-10-15-hosted-copy-region.md`).
+Mark chose DigitalOcean's London region (`lon1`):
+- **one server (a 1GB "Basic" droplet)** running our existing container
+  image with Docker, about $6 a month;
+- **DigitalOcean managed Postgres, smallest plan**, about $15 a month, with
+  daily backups and point-in-time restore (to be confirmed on the new
+  cluster before anything relies on it), using its **direct** connection
+  (port 25060), not its optional pools (port 25061), with SSL. The app
+  verifies the database's certificate (`PGSSL=require`, `server/db.js`), and
+  DigitalOcean signs it with its own authority, so the server holds that
+  certificate (`doctl databases get-ca`) and the app trusts it through
+  `NODE_EXTRA_CA_CERTS`; `sslmode` stays out of `DATABASE_URL`;
+- the database reachable only from the server (DigitalOcean "trusted
+  sources"), and the server's firewall open only for web traffic and SSH.
 
-**The disk and a no-downtime deploy, together.** Many hosts can't keep the
-old version serving while the new one starts if the app has a persistent
-disk: the disk belongs to one machine, so the old container stops first.
-That is fine for a test copy, but it changes what a failed migration looks
-like. The copy is down until the old version is put back, rather than the
-old version carrying on. So the spec promises "reported, and back on the
-previous version within [n] minutes", which every host on the list can
-meet:
-- where the host can do both, a failed deploy never takes the copy down;
-- where it can't, the deploy workflow puts the previous version back itself
-  (Decision 3).
+That's about $21 a month, about £20 with VAT. Everything is set up from a
+script in the repo (`scripts/hosting/`, Mark's area) through DigitalOcean's
+`doctl` command-line tool, so the whole setup can be rebuilt or reviewed.
+**Jack runs it himself** (Mark, 15 Oct: good learning for him), following
+`docs/runbooks/hosted-copy.md`, with Mark on hand.
 
-Each candidate host is checked against this before it goes to Jack. If none
-can put the previous version back automatically, a file store (Decision 4's
-alternative) moves into this change.
+**A deploy means a short outage.** One server runs one copy of the app, so
+the old version stops before the new one starts: under a minute. A failed
+deploy puts the previous version back (Decision 3). That's fine for a test
+copy.
 
-*Alternative:* a plain virtual server running `docker compose`. It is
-cheapest, but restores, HTTPS and safe deploys would all be ours to build
-and look after. It goes on the list for Jack only if he wants the cheapest
-option.
+*Alternatives considered (15 Oct):*
+- **Fly.io** (app plus its managed Postgres, about $45 a month, about £40
+  with VAT; or app plus Neon's free Postgres, under $5). No servers to look after and no outage on
+  deploy, but its managed Postgres is young, and the free database's 6-hour
+  restore window and sleeping compute suit development, not the restore
+  rehearsal.
+- **Everything on one server** (Postgres in Docker too, about $8 a month).
+  Cheapest, but backups and restores would be ours to build.
+- **Free tiers** (Render, Supabase, Oracle). None offers a UK region, a
+  managed database with backups and an always-on app together.
 
-### 2. One app process, no gateway
+### 2. The app and Caddy on the server, no gateway
 
-The hosted copy runs `server/server.js` alone. The host's health check and
-its own error page do the gateway's job there. The gateway stays for a
-shop's own machine, where nothing else would do it.
+The server runs two containers: the app (`server/server.js`) and Caddy in
+front of it, which gets and renews the HTTPS certificate and redirects
+`http://` to `https://`. There is no Postgres container (the database is
+managed) and no gateway (Caddy shows its own error page while the app
+restarts). The server's own settings file holds the run-time settings
+(Decision 6); it is written by the setup script and never committed.
 
 ### 3. Deploys: `main` only, after tests, in order, watched to the end
 
@@ -116,16 +123,22 @@ hold:
 
 It then works like this:
 - **The commit.** It deploys `workflow_run.head_sha`, never `GITHUB_SHA`,
-  which is just the latest `main`.
+  which is just the latest `main`. It builds the image in GitHub Actions,
+  pushes it to GitHub's container registry tagged with that commit (the
+  package made public, as the repo is, so the server pulls it without a
+  token), then logs into the server with a deploy-only SSH key (a repository
+  secret, checked against the server's stored `known_hosts` entry) and
+  starts the new image. The deploy key can run Docker, which amounts to
+  root on that server, so it is used for nothing else. The previous image stays on the server for
+  rolling back.
 - **Order.** One concurrency group (`hosted-copy`), without cancelling a
   deploy already under way. Before deploying, it skips a commit that is an
   ancestor of the one already running, so two quick merges finishing out of
   order can't put the older one on top.
-- **Watching to the end.** It waits until the host reports the new version
-  healthy and `/healthz` answers with the new commit. If that doesn't happen
+- **Watching to the end.** It waits until `/healthz`, over HTTPS, answers
+  `ok` with the new commit (task 2.4). If that doesn't happen
   within [n] minutes, the workflow fails, which emails Mark through GitHub,
-  and it puts the previous commit back (where the host doesn't already keep
-  the old version running).
+  and it starts the previous image again.
 - **Settings at build time.** `NODE_ENV` is a run-time setting only. If it
   reached the image build, `npm ci` would skip the tools the build stage
   needs.
@@ -138,26 +151,23 @@ app, so the advisory lock never has to wait on another one.
 `WHEELHOUSE_COMMIT`. `/healthz` returns it as `commit` beside `status`, and
 leaves `commit` out when the setting is unset.
 
-**Old code against a new schema.** Where the host keeps the old version
-serving while the new one migrates, the old code briefly reads a newer
-database. Migrations are forward-only and names are frozen on `main` (split
+**Old code against a new schema.** A rollback starts the previous image
+against a database the new version may already have migrated, so the old
+code can read a newer schema. Migrations are forward-only and names are frozen on `main` (split
 plan §4.2 rule 5). So until a later change says otherwise, a migration that
 drops or renames something the running code reads is split into two
 merges: add first, remove later.
 
-### 4. Uploads on the host's persistent disk, backed up nightly
+### 4. Uploads are not kept on the test copy (Mark, 15 Oct)
 
-Mount the host's persistent disk at `/app/uploads`. No code change is
-needed, because `UPLOADS_DIR` already resolves there. Back it up nightly,
-inside the same host account, so there is no second account or bill: disk
-snapshots if the host has them, otherwise a scheduled copy. Keep each
-backup [n] days.
-
-*Alternative:* a file store such as S3. It would last better and suit more
-than one server, but every upload route would need changing, behind a new
-adapter. That's worth doing before go-live, not for a test copy, unless
-Decision 1's check forces it. The shared `server/lib/uploads.js` promised
-on #180 is where that adapter would go.
+The photos part isn't being built now, so the test copy doesn't keep
+uploads. The upload screens still work, but files land inside the app's
+container, aren't backed up, and are lost whenever a deploy replaces the
+container. Jack is told this up front
+(#137), so a missing attachment isn't a surprise. Before any real use,
+uploads need a home that survives: DigitalOcean Spaces (its file store),
+behind the shared `server/lib/uploads.js` (#180), is the likely choice, with
+its own backups and a place in the restore rehearsal.
 
 ### 5. One "hosted copy" setting that refuses anything unsafe
 
@@ -188,12 +198,12 @@ check steps include confirming `WHEELHOUSE_HOSTED_COPY=1` is set.
 pasting one in. One mistaken paste sends a real text to a real phone, and
 the guard is a few lines.
 
-### 6. `NODE_ENV=production` in the host's settings, not the Dockerfile
+### 6. `NODE_ENV=production` in the server's settings, not the Dockerfile
 
 Setting it in the `Dockerfile` would switch it on for everyone's local
 `docker compose`, which would then refuse to start without
-`SHOPIFY_TOKEN_ENCRYPTION_KEY`. So the hosted copy sets it in the host's
-run-time settings. That is how the encryption key is never left out: the
+`SHOPIFY_TOKEN_ENCRYPTION_KEY`. So the hosted copy sets it in the server's
+settings file. That is how the encryption key is never left out: the
 guard insists on `NODE_ENV=production`, and `server/shopify.js` then
 insists on the key. The key is a random secret we generate, not an outside
 account.
@@ -217,17 +227,17 @@ WP-0.4.
 
 ### 8. Rollback
 
-- **No new migration:** deploy the previous good commit through the same
-  workflow (run by hand on that commit) or the host's release history.
+- **No new migration:** start the previous image on the server (the deploy
+  workflow, run by hand, or one command in the runbook).
 - **New migration**, in this order:
-  1. Stop the bad version, or deploy the previous commit with the app
-     stopped, so the bad migration can't run again.
+  1. Stop the bad version, so the bad migration can't run again.
   2. Restore the database to the moment the workflow recorded just before
-     the bad deploy. Most hosts restore into a new database with a new
+     the bad deploy. DigitalOcean restores into a new cluster with a new
      address.
-  3. Point `DATABASE_URL` at the restored database. It must still be the
-     direct address.
-  4. Start the previous commit, and check `/healthz` shows it.
+  3. Point `DATABASE_URL` at the restored cluster, by its direct address,
+     add the server to its trusted sources, and refresh the server's copy of
+     the database certificate if the new cluster's differs.
+  4. Start the previous image, and check `/healthz` shows its commit.
   5. Tell Jack that anything made after that moment is gone.
 
 Both are written up in `docs/runbooks/hosted-copy.md`, and each is done once
@@ -239,9 +249,10 @@ The rehearsal follows the agreed PL-3
 (`docs/decisions/2026-09-01-ownership-signoff.md:55`;
 `docs/superpowers/plans/2026-08-31-master-implementation-plan.md:194`):
 - Jack does it with Mark watching.
-- It restores the database to a chosen moment, and the latest uploads
-  backup, into a fresh copy on the same host.
-- Jack opens a job with a photo, and each step is timed.
+- It restores the database to a chosen moment into a new cluster, and
+  points a fresh copy of the app at it. Once uploads are kept (Decision 4),
+  their backup is restored too.
+- Jack opens a job, and each step is timed.
 - The result is a dated runbook, `docs/runbooks/<date>-restore-drill.md`.
   Until it exists, the rehearsal reads "blocked", never "done".
 
@@ -249,39 +260,43 @@ Mark writes the steps first, so Jack can follow them.
 
 ## Risks / Trade-offs
 
-- [The host's disk is tied to one machine and region] → Nightly backups
-  plus the rehearsal prove it can be brought back. A file store comes before
-  go-live.
-- [On a host that stops the old version first, a failed migration takes the
-  copy down until the previous version is back] → The workflow puts it back
-  itself, within [n] minutes. It's a test copy.
-- [Old code serves briefly against a newer schema] → The add-first,
+- [A deploy takes the copy down briefly] → Under a minute, and a failed one
+  puts the previous version back. It's a test copy.
+- [We look after a server: updates and security] → The setup script turns
+  on automatic security updates; only web traffic and SSH are allowed in,
+  SSH by key only.
+- [Uploads vanish on deploy] → Jack is told; a file store comes before real
+  use (Decision 4).
+- [Old code against a newer schema after a rollback] → The add-first,
   remove-later rule (Decision 3).
 - [The real-key list falls behind a new adapter] → Each adapter's change
   adds its key names to the list, with a test.
-- [Someone forgets `WHEELHOUSE_HOSTED_COPY=1`] → It's in the runbook's setup
-  and check steps. Without it, `NODE_ENV=production` still forces the
-  encryption key, and no texting keys are set.
-- [Jack takes time on the residency question] → The guard and the loader
-  can be built before he answers. The account and the first deploy can't.
+- [Someone forgets `WHEELHOUSE_HOSTED_COPY=1`] → The setup script writes it,
+  and the runbook's check steps confirm it.
+- [Point-in-time restore isn't on the smallest plan] → Checked on the new
+  cluster before the first deploy; if missing, the plan is raised (and Jack
+  told the cost) or the restore rehearsal uses the daily backup.
 
 ## Migration Plan
 
-1. The test shop loader (any time), and the guard, Shopify refusal and
-   commit in `/healthz` (once WP-0.4 has merged, because they edit
-   `server.js`). None of them needs an account.
-2. Once Jack says yes to a host (#137): open the account, then set up
-   Postgres (direct address), the disk, the settings and HTTPS.
-3. Add the deploy workflow and do the first deploy. Load the test shop, and
-   give Jack his address and login privately.
-4. Write the runbook, and do each rollback once. Then the restore rehearsal,
-   Jack's hands, Mark's eyes.
+1. Jack says yes on #137 and opens the DigitalOcean account with his card,
+   inviting Mark. He makes an API token and stores it with `doctl auth init`
+   on his own machine; no token goes in the repo or chat.
+2. Jack runs `scripts/hosting/setup.sh`, following the runbook, with Mark on
+   hand. It creates the server, database, firewall and trusted sources in
+   London, installs Docker and Caddy, writes the settings, and starts the
+   app built from `main`. Jack can sign up with his code and try it at once.
+3. Tasks group 2 (the guard, the Shopify refusal and the commit in
+   `/healthz`) merges, and the server is updated to it by hand.
+4. The deploy workflow goes in, so every merge deploys itself. Then the test
+   shop, the runbook's rollbacks, and the restore rehearsal (Jack's hands,
+   Mark's eyes).
 
-Rollback for this change itself: switch off the deploy workflow. Nothing on
-a shop's own machine changes.
+Rollback for this change itself: switch off the deploy workflow and destroy
+the server and database. Nothing on a shop's own machine changes.
 
 ## Open Questions
 
 - The `[n]` values: deploy time, rollback time, days of point-in-time
-  restore and backup retention. These are set once the host is known and
-  don't change the approach.
+  restore and backup retention. They're measured on DigitalOcean and don't
+  change the approach.
