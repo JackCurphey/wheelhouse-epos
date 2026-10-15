@@ -100,8 +100,11 @@ export default {
     // Offline
     OK: go('till-offline'),
     'Note it for later': go('till-noted'),
-    Fix: notDrawn('A sale that didn’t send, opened with its problem shown'),
+    Fix: go('till-fix'),
   },
+  // A sale that didn't send (Jack, 15 Oct): back to the list either way.
+  'till-fix': { Back: go('till-failed'), 'Mark as sorted': go('till-fix-sorted'), 'Send again': go('till-failed') },
+  'till-fix-sorted': { Back: go('till-fix'), 'Mark as sorted': go('till-failed') },
   // Done applies the discount: the basket with its Discount line and new total (decisions 3, 4).
   'till-discount': { Done: go('till-discounted') },
   // Book-in is drawn over the empty till: Done closes it there (walk-through 8, decision 8).

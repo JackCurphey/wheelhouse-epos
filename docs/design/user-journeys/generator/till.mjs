@@ -528,6 +528,17 @@ def('till-no-signout', () => overTillOffline(dialog('signout-title', 'Can’t si
 def('till-failed', () => overTill(dialog('failed-title', 'Sales that didn’t send', 'Kept safely on this till — a manager checks each one', `
 <div>${listRow(`${mono('B1-[0000]')} · [n] items`, '[Reason from Wheelhouse, in plain words]', '[£ total]', button('Fix', { variant: 'default' }))}${listRow(`${mono('B1-[0000]')} · [n] items`, '[Reason from Wheelhouse, in plain words]', '[£ total]', button('Fix', { variant: 'default' }))}</div>
 <p style="margin: 0; font-size: 13px; color: ${C.muted}">Fixing opens the sale with the problem shown. Nothing is deleted.</p>`, '', 620)));
+// What Fix opens (not-drawn pages #10; Jack, 15 Oct: "1"): the sale with
+// Wheelhouse's reason in plain words, still counted in the takings. Send it
+// again once the cause is fixed elsewhere, or mark it as sorted with a note
+// of what was done. No fix per reason: those can come once the reasons are
+// known. The lines and total are the past sale's (till-sale-detail).
+const fixBody = () => `<div role="status" style="display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 8px; background: ${C.warnBg}; color: ${C.warnInk}; font-size: 15px; line-height: 1.45">${icon('alert', 18)}<span><strong>Wheelhouse didn’t take this sale.</strong> [Reason from Wheelhouse, in plain words]</span></div>
+<div>${listRow('Shimano brake pads × 2', 'Part · B05S-RX', '£56.00', '')}${listRow('Fit & adjust brakes', 'Labour · 30 min', '£18.00', '')}</div>
+<div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid ${C.border}"><span style="font-size: 16px; font-weight: 700">Total · card</span>${mono(money(TOTAL), 'font-size: 22px')}</div>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: ${C.muted}">It still counts in today’s takings. Fix what’s wrong, then send it again, or mark it as sorted and say what you did.</p>`;
+def('till-fix', () => overTill(dialog('fix-title', `Sale ${'B1-[0000]'} didn’t send`, 'Today [time] · Jo Taylor serving · card', fixBody(), `${button('Back', { variant: 'ghost' })}<span style="display: flex; gap: 10px">${button('Mark as sorted', { variant: 'default' })}${button('Send again')}</span>`, 600)));
+def('till-fix-sorted', () => overTill(dialog('sorted-title', `Mark ${'B1-[0000]'} as sorted?`, 'It comes off the list, and your note stays with the sale', `<div style="display: flex; flex-direction: column; gap: 6px"><label for="sorted-note" style="font-size: 14px; font-weight: 600">What did you do?</label><textarea id="sorted-note" rows="3" style="box-sizing: border-box; width: 100%; padding: 10px; border-radius: 6px; border: 1px solid ${C.input}; background: ${C.panel}; font-family: inherit; font-size: 15px; color: ${C.ink}; resize: vertical"></textarea></div>`, `${button('Back', { variant: 'ghost' })}${button('Mark as sorted')}`, 520)));
 
 // ---------- Audit additions (decision 12) ----------
 def('till-empty', () => tillPage(leftSide(), basket([])));
@@ -624,6 +635,8 @@ export const TITLES = {
   'till-needs-net': 'Needs the internet — refunds wait, or note one for later', // UX walk-through 2 M7
   'till-no-signout': 'Can’t sign out while sales are waiting',
   'till-failed': 'Sales that didn’t send — for a manager',
+  'till-fix': 'A sale that didn’t send: send again, or mark as sorted',
+  'till-fix-sorted': 'Mark it as sorted: what did you do?',
 };
 // UX walk-through 2: new boards slotted beside the ones they follow.
 export const ROWS = [
@@ -633,5 +646,5 @@ export const ROWS = [
   { label: 'Other till jobs', screens: ['till-park', 'till-find', 'till-find-customer', 'till-sale-detail', 'till-refund', 'till-refund-older', 'till-refund-cash', 'till-refund-noreceipt', 'till-void', 'till-job', 'till-job-deposit', 'till-job-balance', 'till-collect', 'till-book-in', 'till-hand-over-job'] },
   // UX walk-through 5 H1, H2: a Cycle to Work bike at the till.
   { label: 'Cycle to Work', screens: ['till-c2w-pick', 'till-c2w', 'till-c2w-pay', 'till-c2w-extra', 'till-c2w-paid-cert', 'till-c2w-paid', 'till-c2w-deposit'] },
-  { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-noted', 'till-collect-offline', 'till-no-signout', 'till-failed'] },
+  { label: 'When the internet drops', screens: ['till-offline', 'till-offline-long', 'till-needs-net', 'till-noted', 'till-collect-offline', 'till-no-signout', 'till-failed', 'till-fix', 'till-fix-sorted'] },
 ];

@@ -755,6 +755,8 @@ export const journeys = [
         sc("till-collect-offline", "Hand over an online order while offline — marked to send", "Staff"),
         sc("till-no-signout", "Can’t sign out while sales are waiting", "Staff"),
         sc("till-failed", "Sales that didn’t send: for a manager", "Manager"),
+        sc("till-fix", "A sale that didn’t send: send again, or mark as sorted", "Manager"),
+        sc("till-fix-sorted", "Mark it as sorted: what did you do?", "Manager"),
       ] },
     ],
   },

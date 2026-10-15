@@ -68,6 +68,8 @@ export default {
   'till-collect-offline': into('till-collect', 'Walk-through 2 M7', "Offline note on the hand-over: 'its own copy of the order', marked 'To send'"),
   'till-no-signout': into('till-sale', 'Walk-through 2 M7', "Offline till, dialog 'Can’t sign this till out yet' — '[n] sales are still waiting to send'"), // report: "Messages, not drawings"
   'till-failed': keep(3), // report: a list layout of its own, for a manager
+  'till-fix': into('till-failed', 'Not-drawn pages #10 (Jack, 15 Oct: send again, or mark as sorted)', "Fix opens the sale with Wheelhouse's reason: 'Back', 'Mark as sorted' or 'Send again'"),
+  'till-fix-sorted': into('till-failed', 'Not-drawn pages #10 (Jack, 15 Oct)', "'Mark B1-[0000] as sorted?' box: 'What did you do?', 'Back' or 'Mark as sorted'"),
 };
 
 // Extra situation lines (Draw the answers, spec section 6: T5, T6, T7).

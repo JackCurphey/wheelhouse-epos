@@ -497,7 +497,7 @@ later packages.
 - **`till-collect`** (block 9, Form box) — 1 of its 2 situations here: `till-collect-offline`; plus 1 written line.
 - **`till-book-in`** (block 9, Form box) — no other situations.
 - **`till-hand-over-job`** (block 9, Form box) — no other situations.
-- **`till-failed`** (block 3, Table with search and filters) — no other situations.
+- **`till-failed`** (block 3, Table with search and filters) — 2 situations: `till-fix`, `till-fix-sorted`. Fixing a sale that didn't send (Jack, 15 Oct, #139 row #10): the sale with Wheelhouse's reason, then Send again, or Mark as sorted with a note of what was done.
 - `on-hand-over` is the same drawing as `till-collect`, so it adds nothing of its own.
 <!-- /screens -->
 

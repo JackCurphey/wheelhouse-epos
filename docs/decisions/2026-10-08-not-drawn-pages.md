@@ -117,6 +117,16 @@ page. Taken from the customer page's pattern without a question: New job,
 Edit and the jobs list's shape. Still not drawn: the box Edit opens, and a
 Cycle to Work bike's page (it would read as this one, with its frame number).
 
+**Later change (15 Oct 2026): fixing a sale that didn't send** (#10; Jack,
+15 Oct: "1"). Fix on `till-failed` opens the sale (`till-fix`) with
+Wheelhouse's reason in plain words, its lines and total, and "It still counts
+in today’s takings". Two ways out: Send again, once the cause is fixed
+elsewhere, or Mark as sorted, which asks "What did you do?"
+(`till-fix-sorted`) and keeps the note with the sale. Both are situations of
+`till-failed`, built in WP-3.1, for a manager as the list is. Chosen over a
+fix for each kind of reason inside the sale, which can come once the reasons
+are known.
+
 ## The 95, by stage
 
 Kept as researched on 8 Oct, from `origin/main` at that date. "plan:N" is a
