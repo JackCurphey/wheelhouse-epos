@@ -11,14 +11,16 @@ brings hosts. WP-0.4: the sale helpers to `server/lib/sales.js` (#202,
 open; unblocks Jack's quote move); then the 15 workshop settings routes
 to his own `server/routes/workshop-settings.js`, a shared
 `server/lib/uploads.js` with image uploads, then booking. #134: where a
-job's open order lives after WP-1.6. Still unanswered: Jack's two
+job's open order lives after WP-1.6, and his till, sales, Shopify and
+dashboard part. Still unanswered: Jack's two
 follow-ups on #151.
 **Jack is on:** WP-0.4's workshop moves merged 15 Oct (#180–#184), with
 #187, #188, #189, #191 and #193. Next: answer #137 (where the data
 lives); the test shop loader, #201 tasks group 1 (Mark's area, so his
-approval); the quote move once #202 merges. Then the stage check once
+approval); the quote move once #202 merges; attachments and deleting a job once
+Mark's `server/lib/uploads.js` is in. Then the stage check once
 lines 1–6 of §9 are in.
-**Open for Jack:** ask from Mark #140 (#135 and #137 handed to Mark, 8 Oct;
+**Open for Jack:** Mark's UK-or-EU question on #137 (15 Oct); ask from Mark #140 (#135 and #137 handed to Mark, 8 Oct;
 #139 answered 8 Oct, with pages to draw before stages 2, 3 and 5; #134's
 workshop part listed 8 Oct, Mark to say where a job's order lives after
 WP-1.6); till job warning for WP-3.1 (#196); a Change requested
