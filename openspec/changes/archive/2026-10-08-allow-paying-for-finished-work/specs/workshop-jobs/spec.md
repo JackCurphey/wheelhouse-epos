@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Paying for a job's order finishes the work only when finishing is allowed
-When a job's linked order is paid at the till, the job's work SHALL be finished as part of the same act. If the work is already finished, the payment SHALL go through and the job SHALL be left as it is, with a warning if it is reopened before the sale. If the work cannot be finished from its current state, the payment SHALL be refused before any sale is made, with the code "illegal" and the same "cannot finish a job that is [state]; from here you can [moves]" message.
+When a job's linked order is paid at the till, the job's work SHALL be finished as part of the same act. If the work is already finished, the payment SHALL go through and the job SHALL be left as it is, with a warning if it is no longer finished once the sale is made, or the job is no longer there. If the work cannot be finished from its current state, the payment SHALL be refused before any sale is made, with the code "illegal" and the same "cannot finish a job that is [state]; from here you can [moves]" message.
 
 #### Scenario: Paying for work in progress
 - **WHEN** a job's work is in progress and its order is paid
@@ -24,5 +24,9 @@ When a job's linked order is paid at the till, the job's work SHALL be finished 
 - **THEN** the sale stands, the job is not moved, and the reply carries a warning saying why
 
 #### Scenario: Finished work is reopened while the payment is going through
-- **WHEN** the work was already finished when the payment was checked, but someone reopened it before the sale was made
+- **WHEN** the work was already finished when the payment was checked, but someone reopened it before the sale was made, or just after
 - **THEN** the sale stands, the job stays where they put it, and the reply carries a warning saying the work is no longer finished
+
+#### Scenario: The job is deleted while the payment is going through
+- **WHEN** the work was already finished when the payment was checked, but the job was deleted before the second check
+- **THEN** the sale stands and the reply carries the warning "Job not found"

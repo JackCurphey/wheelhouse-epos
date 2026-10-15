@@ -1353,10 +1353,9 @@ route('POST', '/api/sale-documents/:id/convert', async (req, res, params, search
   // Tendering the order for a job is the shop saying the work is done, so the
   // work must already be finished or be a legal 'finish' on the work machine
   // (Jack, 8 Oct, docs/decisions/2026-10-08-paying-for-finished-work.md). If
-  // it is neither, the tender is
-  // refused (Jack's decision, 20 Sep, reaffirmed after a day on the other
-  // behaviour): the job record governs, and the shop marks the job's real state
-  // before taking the money.
+  // it is neither, the tender is refused (Jack's decision, 20 Sep, reaffirmed
+  // after a day on the other behaviour): the job record governs, and the shop
+  // marks the job's real state before taking the money.
   //
   // Note the breadth. 'finish' is legal only from in_progress, so this refuses a
   // job that never started AND one that is on hold or waiting for parts. The
