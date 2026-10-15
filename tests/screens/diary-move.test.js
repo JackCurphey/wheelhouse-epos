@@ -28,6 +28,16 @@ const JOBS = [
   job({}),
   job({ id: 3, reference: 'WH-1003', bikeLabel: 'Specialized Sirrus', customerName: 'Sam Reed', mechanicId: null, jobDate: '2026-10-08', bookingState: 'pending' }),
   job({ id: 4, reference: 'WH-1004', bikeLabel: 'Cannondale Quick', customerName: 'Aisha Khan', jobDate: '2026-10-07', bookingState: 'cancelled', cancelledBy: 'customer' }),
+  // A change request to another day, time and mechanic (Alex → Jo).
+  job({ id: 5, reference: 'WH-1005', bikeLabel: 'Brompton C Line', customerName: 'Oliver Chen', jobDate: '2026-10-09', startTime: '14:00', endTime: '15:00',
+    bookingState: 'reschedule_requested', requested: { jobDate: '2026-10-08', startTime: '15:00', endTime: '16:00', mechanicId: 12 } }),
+  // A two-day job whose customer asked to move it; the request is day 1's.
+  job({ id: 6, reference: 'WH-1006', bikeLabel: 'Cube Attain', customerName: 'Oliver Chen', title: 'Frame rebuild', jobDate: '2026-10-05', startTime: '09:00', endTime: '10:00',
+    bookingState: 'reschedule_requested', requested: { jobDate: '2026-10-09', startTime: '09:15', endTime: '10:15', mechanicId: 12 },
+    parts: [
+      { id: 61, position: 1, date: '2026-10-05', startTime: '09:00', endTime: '10:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
+      { id: 62, position: 2, date: '2026-10-09', startTime: '09:00', endTime: '10:00', mechanicId: 11, mechanicName: 'Alex Morgan' },
+    ] }),
 ];
 
 const realFetch = globalThis.fetch;
@@ -87,6 +97,36 @@ test('a job can be picked up with M, moved with the arrows, and saved with Enter
   assert.ok(has(ui.queryByText(/Moving Trek Domane\. Wed 7 Oct, 10:30–11:30\./)));
   fireEvent.keyDown(b, { key: 'Enter' });
   await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/1 {"jobDate":"2026-10-07","startTime":"10:30","endTime":"11:30","version":3}']));
+});
+
+test('in the Week view, dropping a change request on the time asked for sends the mechanic asked for too', async () => {
+  // Jack, 8 Oct: the Week view sent no mechanic, so a drop on the dashed
+  // outline moved the job but did not accept a request for another mechanic.
+  const { ui, fireEvent, waitFor } = await openDiary();
+  const b = block(ui, 'Brompton C Line');
+  fireEvent.keyDown(b, { key: 'm' });
+  fireEvent.keyDown(b, { key: 'ArrowLeft' });
+  for (let i = 0; i < 4; i += 1) fireEvent.keyDown(b, { key: 'ArrowDown' }); // 15 minutes a press
+  fireEvent.keyDown(b, { key: 'Enter' });
+  await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/5 {"jobDate":"2026-10-08","startTime":"15:00","endTime":"16:00","version":3,"mechanicId":12}']));
+});
+
+test("a later day dropped on the requested time sends no mechanic: the request is the job's first day's", async () => {
+  const { ui, fireEvent, waitFor, within } = await openDiary();
+  const day2 = within(ui.getByRole('group', { name: 'Friday 9 October' })).getByRole('button', { name: /day 2 of 2/ });
+  fireEvent.keyDown(day2, { key: 'm' });
+  fireEvent.keyDown(day2, { key: 'ArrowDown' });
+  fireEvent.keyDown(day2, { key: 'Enter' });
+  await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/6/parts/62 {"jobDate":"2026-10-09","startTime":"09:15","endTime":"10:15","version":3}']));
+});
+
+test('in the Week view, a drop anywhere else still sends no mechanic', async () => {
+  const { ui, fireEvent, waitFor } = await openDiary();
+  const b = block(ui, 'Brompton C Line');
+  fireEvent.keyDown(b, { key: 'm' });
+  fireEvent.keyDown(b, { key: 'ArrowLeft' });
+  fireEvent.keyDown(b, { key: 'Enter' });
+  await waitFor(() => assert.deepEqual(puts(), ['/api/workshop-jobs/5 {"jobDate":"2026-10-08","startTime":"14:00","endTime":"15:00","version":3}']));
 });
 
 test('Escape puts the job back without saving', async () => {

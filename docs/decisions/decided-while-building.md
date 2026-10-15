@@ -97,6 +97,14 @@ Jack's under "Jack's lane", so the two never edit the same spot (split plan
    the booking was most likely made, but the customer has no link to it. A
    clearer customer message, with the shop's contact, is for Jack to word.
 
+### 15 Oct 2026: the change request pop-up (pull request 193)
+
+1. **`request-change`: a side with no mechanic reads "Shared queue".** The
+   pop-up now names the mechanic on its From and To sides (Jack, 8 Oct,
+   `2026-10-08-diary-fixes.md` item 2), but a customer can ask for no
+   mechanic, and the drawing doesn't say what that side shows. *Pattern:*
+   the job page reads "Shared queue" for a job with no mechanic.
+
 ## Decided here, for Jack to overrule
 
 ### 4 Oct 2026: drawing the coverage walks
