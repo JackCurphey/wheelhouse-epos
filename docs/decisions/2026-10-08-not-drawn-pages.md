@@ -90,7 +90,9 @@ new from the server beyond the button. Chosen over the 3 Oct row ("Signed in
 · Till B1 now · [n] phone or computer"), whose count of devices is what the
 later Signed-in devices list would show, and over a button beside Done.
 `consolidate/j20.mjs` now puts `ops-person` and `ops-person-everywhere` into
-`set-staff-person`.
+`set-staff-person`. The "Are you sure?" box drops its count too (Jack, 15 Oct:
+"yes"): its line under the title reads "Every till, phone and computer"
+instead of "Till B1 now · [n] phone or computer".
 
 ## The 95, by stage
 
