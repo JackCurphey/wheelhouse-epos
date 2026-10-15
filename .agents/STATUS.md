@@ -15,8 +15,8 @@ and Jack's guide are in `scripts/hosting/` and `docs/runbooks/hosted-copy.md`
 move the booking link's quote answer to `portal.js` (after #207); a login
 for the drawings' test shop (task 3.6); WP-0.5 tasks group 2 (the guard,
 the commit in `/healthz`), then the deploy workflow; then #203 step A.
-**Jack is on:** setting up the online test copy himself, following
-`docs/runbooks/hosted-copy.md` (Mark, 15 Oct: good learning), once he says
+**Jack is on:** setting up the online test copy himself (#221, assigned to
+him), following `docs/runbooks/hosted-copy.md` (Mark, 15 Oct: good learning), once he says
 yes on #137 and opens the DigitalOcean account. Merge #207 (quote routes,
 approved by Mark) and #216 (test shop loader, approved). Then attachments
 and deleting a job, now that `server/lib/uploads.js` is in (#205). Then the
