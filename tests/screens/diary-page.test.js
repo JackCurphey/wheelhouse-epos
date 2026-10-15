@@ -69,12 +69,21 @@ function stubServer() {
     if (u.pathname === '/api/workshop-settings') return ok(SETTINGS);
     if (u.pathname === '/api/workshop-waiting') return ok(WAITING);
     if (u.pathname === '/api/workshop-jobs') return ok(u.searchParams.get('start') === '2026-10-12' ? NEXT_WEEK : JOBS);
+    const one = u.pathname.match(/^\/api\/workshop-jobs\/(\d+)$/);
+    if (one) return ok(JOBS.find((j) => j.id === Number(one[1])));
     return { status: 404, ok: false, json: async () => ({ error: 'Not found' }) };
   };
 }
 
 async function openDiary(query = '?date=2026-10-05') {
   uninstall = installDom(`http://localhost/workshop/diary${query}`);
+  // jsdom has no <dialog> methods; the job page opens in one.
+  window.HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+  window.HTMLDialogElement.prototype.close = function close() {
+    if (!this.open) return;
+    this.open = false;
+    this.dispatchEvent(new window.Event('close'));
+  };
   stubServer();
   const rtl = await import('@testing-library/react');
   const { createElement } = await import('react');
@@ -103,6 +112,22 @@ test('the week runs Monday to Sunday and is named in the toolbar', async () => {
 test('a job with no time sits in the No time row', async () => {
   const { ui, within } = await openDiary();
   assert.ok(has(within(ui.getByRole('group', { name: 'No time' })).queryByText('Ribble CGR')));
+});
+
+// The drawing's No time chips open the job, as a block does (#192).
+test('a job in the No time row opens its page', async () => {
+  const { ui, within, fireEvent } = await openDiary();
+  fireEvent.click(within(ui.getByRole('group', { name: 'No time' })).getByRole('button', { name: /Ribble CGR/ }));
+  assert.ok(has(await ui.findByRole('dialog', { name: /Standard service/ })));
+});
+
+test('while choosing a time for New job, a No time chip does not open', async () => {
+  const { ui, within, fireEvent } = await openDiary();
+  fireEvent.click(ui.getByRole('button', { name: 'New job' }));
+  assert.ok(has(await ui.findByText('Choose a time for the new job.')));
+  fireEvent.click(within(ui.getByRole('group', { name: 'No time' })).getByRole('button', { name: /Ribble CGR/ }));
+  await new Promise((done) => setTimeout(done, 50));
+  assert.ok(ui.queryByRole('dialog', { name: /Standard service/ }) === null);
 });
 
 test('a booking request is Pending, a change request shows where it asks to go, a customer cancellation stays until seen', async () => {
@@ -146,6 +171,24 @@ test('Day view shows one column per mechanic for one day', async () => {
   assert.ok(has(alex.queryByText('Trek Domane')));
   assert.ok(has(alex.queryByText('Brake service · Expected')));
   assert.ok(has(ui.queryByRole('group', { name: 'Jo Taylor' })));
+});
+
+// Jack, 15 Oct (#192): the Day view has the No time row too, with that day's
+// untimed jobs, as the phone does with one column.
+test('the Day view shows that day\'s jobs with no time, and they open', async () => {
+  const { ui, fireEvent, within } = await openDiary('?date=2026-10-06');
+  fireEvent.click(ui.getByRole('tab', { name: 'Day' }));
+  assert.ok(has(await ui.findByText('Tuesday 6 October')));
+  const row = within(ui.getByRole('group', { name: 'No time' }));
+  fireEvent.click(row.getByRole('button', { name: /Ribble CGR/ }));
+  assert.ok(has(await ui.findByRole('dialog', { name: /Standard service/ })));
+});
+
+test('the Day view\'s No time row leaves out other days\' jobs', async () => {
+  const { ui, fireEvent } = await openDiary('?date=2026-10-07');
+  fireEvent.click(ui.getByRole('tab', { name: 'Day' }));
+  assert.ok(has(await ui.findByText('Wednesday 7 October')));
+  assert.ok(ui.queryByText('Ribble CGR') === null);
 });
 
 test('Waiting for you lists what needs an answer', async () => {
