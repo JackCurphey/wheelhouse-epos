@@ -1,7 +1,8 @@
 // Shared by more than one route area (split plan §4.1, WP-0.4; #180, 15 Oct):
-// where uploaded files live, and the largest id Postgres's int4 holds. Moved
-// out of server.js unchanged. Creating the folder at startup stays in
-// server.js.
+// where uploaded files live, the largest id Postgres's int4 holds, and
+// readUploadedImage, which the product photo, logo and hero image uploads
+// share. Moved out of server.js unchanged. Creating the folder at startup and
+// serving an uploaded image stay in server.js.
 import { writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
@@ -26,7 +27,7 @@ export const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 // The largest value a SERIAL (int4) id can hold.
 export const MAX_SERIAL = 2147483647;
 
-// Same base64-in-a-JSON-body convention as workshop job attachments above,
+// Same base64-in-a-JSON-body convention as the workshop job attachments,
 // and the same opaque-storage_key-on-disk approach - but the uploader can be
 // any of three different call sites (a product photo, the website logo,
 // or its hero image), so the actual read/validate/store logic lives in one
