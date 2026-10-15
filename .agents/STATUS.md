@@ -15,17 +15,18 @@ and Jack's guide are in `scripts/hosting/` and `docs/runbooks/hosted-copy.md`
 move the booking link's quote answer to `portal.js` (after #207); a login
 for the drawings' test shop (task 3.6); WP-0.5 tasks group 2 (the guard,
 the commit in `/healthz`), then the deploy workflow; then #203 step A.
-**Jack is on:** setting up the online test copy himself (#221, assigned to
-him), following `docs/runbooks/hosted-copy.md` (Mark, 15 Oct: good learning), once he says
-yes on #137 and opens the DigitalOcean account. Merge #207 (quote routes,
-approved by Mark) and #216 (test shop loader, approved). Then attachments
-and deleting a job, now that `server/lib/uploads.js` is in (#205). Then the
-stage check once lines 1–6 of §9 are in.
+**Jack is on:** 15 Oct merged: quote routes (#207), test shop loader
+(#216), the five #139 drawings (#217, canvas and mockup republished), diary
+fixes (#218), Enter a time instead (#220) and four job page fixes from #190
+(#223). Next: set up the online test copy (#221) once he says yes on #137;
+attachments and deleting a job (WP-0.4, `server/lib/uploads.js` is in); the
+rest of #190; then the stage check once lines 1–6 of §9 are in.
 **Open for Jack:** yes to DigitalOcean on #137 (about £20 a month; 15 Oct);
 labour's VAT rate on #134 (15 Oct); before WP-3.1, two new "check these"
 kinds and deposits on unfinished work (`openspec/changes/wp-1-6-sales-in-pence/design.md`,
-Open Questions); ask from Mark #140; till job warning for WP-3.1 (#196); a
-Change requested badge on the job window (stage 4).
+Open Questions); ask from Mark #140; till job warning for WP-3.1 (#196); the test shop's two
+defaults in `decided-while-building.md` (£0.00 unpriced services, the past
+drawn week).
 
 **Updated:** 2026-10-15. **Two people build at once** (Jack agreed to Mark's
 split plan, `docs/superpowers/plans/2026-10-04-release-2-two-person-split.md`,
