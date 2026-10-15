@@ -204,6 +204,21 @@ silent:
    longer working here. Choose another."
 4. Refusals the server already words in plain English (the diary's rule
    refusals, "A job's first day can't be removed") still show as sent.
+### 15 Oct 2026: New job's "won't fit" warning (decision 23, issue 192)
+
+1. **`new-job`: no warning for the Shared queue**, which has no free time of
+   its own to compare with. *Pattern:* the server's capacity answer, which
+   gives the queue only a total.
+2. **`new-job`: a start inside busy time reads "No free time at [time] —
+   this job needs [m]. …"** rather than "Only 0 minutes free". *Pattern:*
+   the drawn warning's own wording.
+3. **`new-job`: "Find the next free [m] minutes" looks 60 days ahead**, and
+   with nothing found says "[mechanic] has no free [m] minutes in the next
+   60 days." *Pattern:* Add another day's 60 days.
+4. **`new-job`: the found time is on the quarter hour**, as a grid click
+   snaps to 15 minutes.
+5. **`new-job`: a failed search reads "Couldn't find free time — try
+   again."** *Pattern:* the form's "Couldn't reach the server — try again."
 
 ## Decided here, for Jack to overrule
 

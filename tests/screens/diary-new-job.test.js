@@ -35,6 +35,10 @@ let uninstall;
 let shell;
 let calls;
 let answer;
+// Free time by day and mechanic, as GET /api/workshop-capacity gives it.
+// Unless a test says otherwise everyone is free 09:00–18:00.
+let freeOn;
+let capacityDown;
 afterEach(async () => {
   const { cleanup } = await import('@testing-library/react');
   cleanup();
@@ -46,6 +50,8 @@ afterEach(async () => {
 function stubServer() {
   calls = [];
   answer = null;
+  freeOn = () => [{ start: '09:00', end: '18:00' }];
+  capacityDown = false;
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method ?? 'GET';
     calls.push({ url, method, body: init.body ? JSON.parse(init.body) : undefined });
@@ -59,6 +65,15 @@ function stubServer() {
     if (u.pathname === '/api/workshop-waiting') return reply(200, { count: 0, items: [] });
     if (u.pathname === '/api/workshop-jobs') return reply(200, JOBS);
     if (u.pathname === '/api/workshop-services') return reply(200, SERVICES);
+    if (u.pathname === '/api/workshop-capacity') {
+      if (capacityDown && u.searchParams.get('start') !== u.searchParams.get('end')) return reply(500, { error: 'Something broke' });
+      const days = [];
+      for (let d = new Date(`${u.searchParams.get('start')}T12:00:00Z`); d.toISOString().slice(0, 10) <= u.searchParams.get('end'); d.setUTCDate(d.getUTCDate() + 1)) {
+        const date = d.toISOString().slice(0, 10);
+        days.push({ date, mechanics: MECHANICS.map((m) => ({ mechanicId: m.id, working: true, freeWindows: freeOn(date, m.id) })) });
+      }
+      return reply(200, { days });
+    }
     if (u.pathname === '/api/customers') return reply(200, CUSTOMERS.filter((c) => c.name.toLowerCase().includes((u.searchParams.get('search') || '').toLowerCase())));
     if (u.pathname === '/api/customers/5/bikes') return reply(200, BIKES);
     return reply(404, { error: 'Not found' });
@@ -269,4 +284,139 @@ test('if the server refuses, the form says why and stays open', async () => {
   r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
   assert.ok(has(await form.findByText('Jo Taylor is off on that day')));
   assert.ok(has(r.ui.queryByRole('dialog', { name: 'New job' })));
+});
+
+// Decision 23: New job warns when the work won't fit (drawn as new-job; the
+// link's behaviour is Jack's answer of 15 Oct,
+// docs/decisions/2026-10-15-new-job-wont-fit.md).
+// Spec: openspec/changes/new-job-wont-fit
+const WARN = 'Only 30 minutes free at 10:00 — this job needs 90. Choose another time, or save anyway and the diary will show the overlap.';
+const joBusyAt1030 = (date, id) => (id === 12 && date === '2026-10-06' ? [{ start: '09:00', end: '10:30' }, { start: '12:00', end: '18:00' }] : [{ start: '09:00', end: '18:00' }]);
+
+async function chooseWork(r, form, kind, name) {
+  r.fireEvent.click(form.getByRole('radio', { name: kind }));
+  r.fireEvent.click(await form.findByRole('radio', { name: new RegExp(`^${name}`) }));
+}
+
+test('work longer than the free time at the chosen start is warned about; Save job stays', async () => {
+  const r = await openDiary();
+  freeOn = joBusyAt1030;
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  assert.ok(has(await form.findByText(WARN)));
+  assert.ok(has(form.getByRole('button', { name: 'Find the next free 90 minutes' })));
+  assert.equal(form.getByRole('button', { name: 'Save job' }).disabled, false);
+});
+
+test('work that fits, and the Shared queue, get no warning', async () => {
+  const r = await openDiary();
+  freeOn = joBusyAt1030;
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Individual service', 'Brake adjust');
+  await r.waitFor(() => assert.ok(calls.some((c) => c.url.includes('/api/workshop-capacity'))));
+  assert.equal(has(form.queryByText(/minutes free at/)), false);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  await form.findByText(WARN);
+  r.fireEvent.click(form.getByRole('radio', { name: 'Shared queue' }));
+  assert.equal(has(form.queryByText(/minutes free at/)), false);
+});
+
+test('a start in busy time reads "No free time"', async () => {
+  const r = await openDiary();
+  freeOn = (date, id) => (id === 12 && date === '2026-10-06' ? [{ start: '12:00', end: '18:00' }] : [{ start: '09:00', end: '18:00' }]);
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  assert.ok(has(await form.findByText('No free time at 10:00 — this job needs 90. Choose another time, or save anyway and the diary will show the overlap.')));
+});
+
+test('"Find the next free" moves the job to the mechanic\'s next gap that day, and the warning goes', async () => {
+  const r = await openDiary();
+  freeOn = joBusyAt1030;
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  assert.ok(has(await form.findByText('Tue 6 Oct · 12:00–13:30 · Jo Taylor')));
+  assert.equal(has(form.queryByText(/free at/)), false);
+  r.fireEvent.change(form.getByLabelText('Job title'), { target: { value: 'Standard service' } });
+  r.fireEvent.click(form.getByRole('switch', { name: 'New bike build or pre-delivery check' }));
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  await r.waitFor(() => assert.match(posts()[0], /"jobDate":"2026-10-06","startTime":"12:00","endTime":"13:30"/));
+});
+
+test('"Find the next free" goes on to a later day when that day has no gap', async () => {
+  const r = await openDiary();
+  freeOn = (date, id) => (id === 12 && date === '2026-10-06' ? [{ start: '09:00', end: '10:30' }] : [{ start: '09:00', end: '18:00' }]);
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  assert.ok(has(await form.findByText('Wed 7 Oct · 09:00–10:30 · Jo Taylor')));
+});
+
+test('"Find the next free" says so when there is none in 60 days', async () => {
+  const r = await openDiary();
+  freeOn = (date, id) => (id === 12 ? [{ start: '09:00', end: '10:00' }] : [{ start: '09:00', end: '18:00' }]);
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  assert.ok(has(await form.findByText('Jo Taylor has no free 90 minutes in the next 60 days.')));
+});
+
+test('saving with the warning showing saves at the time chosen', async () => {
+  const r = await openDiary();
+  freeOn = joBusyAt1030;
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  await form.findByText(WARN);
+  r.fireEvent.click(form.getByRole('switch', { name: 'New bike build or pre-delivery check' }));
+  r.fireEvent.click(form.getByRole('button', { name: 'Save job' }));
+  await r.waitFor(() => assert.match(posts()[0], /"jobDate":"2026-10-06","startTime":"10:00","endTime":"11:30"/));
+});
+
+test('from "Enter a time instead", the warning follows the time typed and the button fills the boxes', async () => {
+  const r = await openDiary();
+  freeOn = (date, id) => ([11, 12].includes(id) && date === '2026-10-06' ? [{ start: '09:00', end: '10:30' }, { start: '12:00', end: '18:00' }] : [{ start: '09:00', end: '18:00' }]);
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'New job' }));
+  r.fireEvent.click(r.ui.getByRole('button', { name: 'Enter a time instead' }));
+  const form = r.within(await r.ui.findByRole('dialog', { name: 'New job' }));
+  r.fireEvent.change(form.getByLabelText('Date'), { target: { value: '2026-10-06' } });
+  r.fireEvent.change(form.getByLabelText('Start time'), { target: { value: '10:00' } });
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  assert.ok(has(await form.findByText(WARN)));
+  r.fireEvent.click(form.getByRole('button', { name: 'Find the next free 90 minutes' }));
+  await r.waitFor(() => assert.equal(form.getByLabelText('Start time').value, '12:00'));
+  assert.equal(form.getByLabelText('Date').value, '2026-10-06');
+});
+
+// After the fresh review.
+test('"nothing found" goes when the mechanic changes', async () => {
+  const r = await openDiary();
+  freeOn = () => [{ start: '09:00', end: '10:00' }];
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  await form.findByText('Jo Taylor has no free 90 minutes in the next 60 days.');
+  r.fireEvent.click(form.getByRole('radio', { name: 'Alex Morgan' }));
+  await form.findByRole('button', { name: 'Find the next free 90 minutes' });
+  assert.equal(has(form.queryByText(/has no free 90 minutes/)), false);
+});
+
+test('a search the server fails says so', async () => {
+  const r = await openDiary();
+  freeOn = joBusyAt1030;
+  capacityDown = true;
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  assert.ok(has(await form.findByText("Couldn't find free time — try again.")));
+});
+
+test('after a move the focus is on the new time, and the automatic choice still names the day it was made for', async () => {
+  const r = await openDiary();
+  freeOn = (date, id) => (id === 12 && date === '2026-10-06' ? [{ start: '09:00', end: '10:30' }] : [{ start: '09:00', end: '18:00' }]);
+  const form = await pickTuesdayTen(r);
+  await chooseWork(r, form, 'Full service', 'Standard service');
+  r.fireEvent.click(await form.findByRole('button', { name: 'Find the next free 90 minutes' }));
+  const line = await form.findByText('Wed 7 Oct · 09:00–10:30 · Jo Taylor');
+  await r.waitFor(() => assert.ok(document.activeElement === line));
+  assert.ok(has(form.queryByText('Mechanic chosen automatically: most free time on Tuesday.')));
 });
