@@ -1,5 +1,9 @@
 # Release 2 build — splitting the work between Mark and Jack
 
+> **From 8 Oct 2026 this plan sets the order of work and the lanes only.**
+> How each piece is specified and built is in `CLAUDE.md` and OpenSpec
+> (`openspec/`) (`docs/decisions/2026-10-08-openspec-only.md`).
+
 **Date:** 4 October 2026
 **Status:** proposal from Mark's review of the build plan. Nothing here is
 started. Jack, 4 Oct: the build starts only when he says so.
@@ -129,6 +133,9 @@ regenerates it in the same pull request, and never edits the output by hand.
 | `docs/decisions/**`, `CLAUDE.md` | Jack (they are his decisions and rules) *(proposed)* | Mark proposes; Jack approves |
 | `docs/superpowers/plans/**` | Shared: Mark wrote this plan, Jack the build plan *(proposed)* | Either edits; the other approves a change to a lane or an agreed rule |
 | `docs/superpowers/specs/**` | Whoever wrote it *(proposed)* | Either edits before it merges; a merged contract changes only with both approving (§4.3) |
+| `openspec/config.yaml` (the project's rules for OpenSpec) | Jack, like `CLAUDE.md` (Jack, 8 Oct, #186) | Mark proposes; Jack approves |
+| `openspec/changes/<name>/` (one change per package) | Shared (Jack, 8 Oct, #186) | Mark writes the contract in `design.md`; a merged contract changes only with both approving (§4.3). `tasks.md` has two headed sections, "Mark — server" and "Jack — screens"; each ticks only their own section, in their own pull request |
+| `openspec/specs/<area>/` | Whoever owns the area (Jack, 8 Oct, #186) | Changes only by archiving a change, approved like any other change to that area |
 | `docs/decisions/decided-while-building.md`, `.agents/STATUS.md`, the build board | Shared, as §5 says | Each in their own section, or in the day's status pull request |
 | `docs/reviews/**` | Shared *(proposed)* | Either adds a review |
 | `tests/registry/**` | Jack, with `registry/` *(proposed)* | Mark with Jack's approval |
@@ -316,15 +323,21 @@ what every new table must prove:
 
 ### 4.3 The contract, before either half is built
 
-Each package's short spec (build plan §4, step 2) gets a **Contract**
-subsection, written by Mark and read by Jack's session in the same spec
-pull request:
+Each package is one OpenSpec change covering both halves (Mark, 8 Oct,
+`docs/decisions/2026-10-08-openspec-only.md` item 5). The change's
+`design.md` gets a **Contract** section, written by Mark and read by Jack's
+session in the same pull request that adds the change:
 
 - each endpoint: method, path, who may call it (role and switch), request
   and response shapes, error codes
 - the live-update events it sends (WP-1.9 onwards)
 - the needs-attention kinds it adds to Today (WP-1.10 onwards)
 - the test shop data Jack's browser tests will need
+
+What the feature does for the shop goes in the change's specs. Its
+`tasks.md` lists both Mark's server tasks and Jack's screens tasks. The
+change is archived once both halves are in, so `openspec/specs/` only ever
+describes whole, working features.
 
 The types go in `src/lib/api/<area>.ts`, not the single `types.ts`, so two
 packages never edit the same types file. Changing a contract after it
@@ -343,6 +356,12 @@ so he never waits on Mark. (Building blocks ahead of their package was
 proposed and turned down, Mark, 4 Oct. See §7 for what Jack does
 instead. The workshop is not pulled forward either: Jack, 5 Oct, kept it
 in stage 4, §7.2.)
+
+This stays with OpenSpec (Jack, 8 Oct, #186). Between Mark's merge of his
+server half and Jack's merge of his screens half, `main` carries the
+package's change in `openspec/changes/`, not yet archived. That is
+expected: `openspec/specs/` is untouched until the archive, which is the
+last commit of the second pull request.
 
 ### 4.5 Retiring the old app
 
@@ -650,3 +669,4 @@ edits `server.js` while it moves.
 | §3.1: the files both people touch, who edits and who approves; the booking server stays Mark's; adding your own line needs no approval | Codex finding 11 (issue #141); Jack, 5 Oct, §8 question 7 |
 | `mv-start` passes to Jack in stage 8 | Jack, 5 Oct: all the move screens end with one owner |
 | Every server change Jack makes needs Mark's approval, the workshop included; the workshop stays Jack's | Jack, 5 Oct: "anything server related that i change should get marks approval" |
+| §4.4 stays with OpenSpec: `main` may carry an unarchived change between the two halves; the archive is the last commit of the second pull request. §3.1 gains owners for `openspec/**` and a two-section `tasks.md` | Jack, 8 Oct, answering Mark's open points on #186 |
