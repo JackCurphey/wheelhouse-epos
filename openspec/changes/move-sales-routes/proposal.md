@@ -16,10 +16,11 @@ in pence) will change these routes, so it's better done in their own file.
   the dashboard (still in `server.js`) share it.
 - The Shopify order and refund webhook functions stay in `server.js`, where
   the dispatcher calls them outside the route table (split plan §4.1 rule
-  1). They're grouped under their own heading above the remaining code.
+  1). Their code is untouched; the routes that sat above them moved out,
+  and a heading now names them.
 - Moved, not rewritten. The only changes are the 2-space indent inside
-  `register(route)`, `export` on `shopDayWindow`, the imports, and the one
-  new heading. No behaviour changes (`skip_specs`).
+  `register(route)`, `export` on `shopDayWindow`, the imports, and one new
+  heading. No behaviour changes (`skip_specs`).
 
 ## Lane, drawings and decisions
 

@@ -18,8 +18,6 @@ import { applyEvent } from '../workshop/transitions.js';
 // The same shim server.js uses: each call reads the request's client.
 const db = { prepare, exec: dbExec };
 
-// ---------- Sales ----------
-
 // ---------- Quotes & orders (sale documents) ----------
 // Both share one shape: a not-yet-completed set of items for a customer that
 // can later be turned into a real sale via the /convert endpoint. "Quotes"
@@ -66,6 +64,8 @@ const DOC_SELECT = `SELECT d.*, c.name AS customer_name, ca.name AS cashier_name
 const DOC_KINDS = ['quote', 'order'];
 
 export function register(route) {
+  // ---------- Sales ----------
+
   route('GET', '/api/sales', async (req, res, params, query) => {
     const dateFilter = query.get('date'); // 'today' or 'YYYY-MM-DD'
     const customerId = query.get('customerId');
