@@ -7,15 +7,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
 import { prepare, dbExec, runWithShop, pool, assertPoolerModeSafe } from './db.js';
-import { sendQuoteResult, answerAndAddToOrder, parseWorkingDays, currentShopToday } from './workshop/jobs.js';
-import { resolveWorkingDays } from './capacity.js';
+import { sendQuoteResult, answerAndAddToOrder } from './workshop/jobs.js';
 import { clientIp } from './proxy-trust.js';
 import { runMigrations } from './migrations/run-migrations.js';
 import { sendJson, notFound, badRequest, readJsonBody, readRawBody, nowIso, ValidationError } from './lib/http.js';
-import { serializeProduct } from './lib/serializers.js';
 import { UPLOADS_DIR, MAX_SERIAL } from './lib/uploads.js';
 import {
-  loadDocumentLine, createSale, shopDayWindow,
+  loadDocumentLine, createSale,
   pendingShopifyPushes, runRequestWithPushSlotCleanup, firePendingShopifyPushes,
 } from './lib/sales.js';
 // Tests import these from server.js; it keeps re-exporting them (split plan §4.1).
@@ -345,98 +343,6 @@ async function serveUploadedImage(req, res, key) {
   res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' });
   createReadStream(filePath).pipe(res);
 }
-
-// ---------- Employees ----------
-// A single roster shared by the Workshop (mechanics) and the Till
-// (Staff): every mechanic is an employee, but not every employee is a
-// mechanic (or Staff) - isMechanic/isCashier are independent flags on
-// the same person.
-
-function serializeEmployee(row) {
-  return {
-    id: row.id,
-    name: row.name,
-    isMechanic: !!row.is_mechanic,
-    isCashier: !!row.is_cashier,
-    workingDays: parseWorkingDays(row.working_days),
-    active: !!row.active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-route('GET', '/api/employees', async (req, res, params, query) => {
-  let sql = 'SELECT * FROM employees WHERE 1=1';
-  const args = [];
-  if (query.get('all') !== '1') sql += ' AND active = 1';
-  const role = query.get('role');
-  if (role === 'mechanic') sql += ' AND is_mechanic = 1';
-  else if (role === 'cashier') sql += ' AND is_cashier = 1';
-  sql += ' ORDER BY name';
-  const rows = await db.prepare(sql).all(...args);
-  sendJson(res, 200, rows.map(serializeEmployee));
-});
-
-// Name/roles/working-days only - never touches login access. See the
-// /api/team routes below for creating a person, and for deactivate/
-// reactivate, which also has to cascade to their login when they have one.
-route('PUT', '/api/employees/:id', async (req, res, params) => {
-  const id = Number(params.id);
-  const existing = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
-  if (!existing) return notFound(res, 'Employee not found');
-  const body = await readJsonBody(req);
-  const name = body.name !== undefined ? String(body.name).trim() : existing.name;
-  if (!name) return badRequest(res, 'Employee name is required');
-  const isMechanic = body.isMechanic !== undefined ? (body.isMechanic ? 1 : 0) : existing.is_mechanic;
-  const isCashier = body.isCashier !== undefined ? (body.isCashier ? 1 : 0) : existing.is_cashier;
-  const workingDays = resolveWorkingDays(body.workingDays, existing.working_days);
-  if (workingDays === null) return badRequest(res, 'workingDays must be an array of day numbers (0-6)');
-  await db.prepare(
-    'UPDATE employees SET name = ?, is_mechanic = ?, is_cashier = ?, working_days = ?, updated_at = ? WHERE id = ?'
-  ).run(name, isMechanic, isCashier, workingDays, nowIso(), id);
-  const row = await db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
-  sendJson(res, 200, serializeEmployee(row));
-});
-
-// ---------- Dashboard ----------
-
-route('GET', '/api/dashboard', async (req, res) => {
-  const today = await shopDayWindow('created_at', await currentShopToday());
-  const todayAgg = await db
-    .prepare(
-      `SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
-       FROM sales WHERE ${today.sql}`
-    )
-    .get(...today.args);
-
-  const lowStock = (await db
-    .prepare(
-      `SELECT * FROM products WHERE active = 1 AND low_stock_threshold > 0 AND stock_qty <= low_stock_threshold
-       ORDER BY stock_qty ASC`
-    )
-    .all())
-    .map(serializeProduct);
-
-  const todayItems = await shopDayWindow('s.created_at', await currentShopToday());
-  const topToday = await db
-    .prepare(
-      `SELECT si.name, SUM(si.qty) AS qty, SUM(si.line_total) AS revenue
-       FROM sale_items si
-       JOIN sales s ON s.id = si.sale_id
-       WHERE ${todayItems.sql}
-       GROUP BY si.name
-       ORDER BY revenue DESC
-       LIMIT 5`
-    )
-    .all(...todayItems.args);
-
-  sendJson(res, 200, {
-    todayCount: todayAgg.count,
-    todayTotal: todayAgg.total,
-    lowStock,
-    topToday,
-  });
-});
 
 // The customer's whole answer in one call - every line's yes or no, then
 // approve - so a quote with many lines doesn't run into the link's limit on
