@@ -62,6 +62,7 @@ export default {
     'Wed: Jo is at Bolton': STAY,
     'Sat: Jo is at Bolton': STAY,
     'Clear a forgotten PIN': go('set-staff-clear-pin'),
+    'Sign out everywhere': go('ops-person-everywhere'),
     'Give everything a Manager can do': go('set-staff-person-all'),
   },
   'ms-today-shown': { Undo: go('ms-today-new') },
