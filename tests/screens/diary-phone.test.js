@@ -113,6 +113,12 @@ test('jobs with no time sit in the No time row', async () => {
   assert.ok(has(within(ui.getByRole('group', { name: 'No time' })).queryByText('Ribble CGR')));
 });
 
+test('a job in the No time row opens its page on a phone too', async () => {
+  const { ui, within, fireEvent } = await openPhone();
+  fireEvent.click(within(ui.getByRole('group', { name: 'No time' })).getByRole('button', { name: /Ribble CGR/ }));
+  assert.ok(has(await ui.findByRole('dialog', { name: /Standard service/ })));
+});
+
 test('one people chip chooses Everyone, By mechanic, or one person', async () => {
   const { ui, fireEvent, within } = await openPhone();
   const chip = ui.getByRole('button', { name: 'Showing Everyone. Change whose jobs are shown' });

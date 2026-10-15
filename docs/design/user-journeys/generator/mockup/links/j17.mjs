@@ -57,6 +57,7 @@ export default {
     'Open the diary': go('diary'),
     // A person's page
     'Clear a forgotten PIN': go('set-staff-clear-pin'),
+    'Sign out everywhere': go('ops-person-everywhere'),
     'Give everything a Manager can do': go('set-staff-person-all'),
   },
   'rp-report-menu': { Rename: STAY, 'Share with managers': STAY, Delete: go('rp-report-deleted') },

@@ -8,6 +8,7 @@ export default {
   // Customers and the customer page
   'cs-list': keep(3),
   'cs-page': keep(4),
+  'cs-bike': keep(4), // Not-drawn pages #7 and #8 (Jack, 15 Oct: its own page)
   'cs-page-over': into('cs-page', PAGE, "Shows 'Over her limit by [£]' instead of 'Owes [£ owed]'"),
   'cs-page-new': into('cs-page', PAGE, "History empty: 'Nothing yet — Jobs, sales and messages show here, newest first.'"),
   'cs-page-off': into('cs-page', PAGE, "No 'Owes' line and no 'Owes on account' — accounts switched off"),

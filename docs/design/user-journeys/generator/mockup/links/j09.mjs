@@ -13,7 +13,7 @@ export default {
     // The move's own page in the sidebar (Moving 4); "Moving" on tablet and phone.
     'Moving from Citrus Lime': go('mv-start'),
     Moving: go('mv-start'),
-    'Ask us to help': notDrawn('Ask us to help: how the owner reaches Wheelhouse for help with the move (Moving 2, 9 H2)'),
+    'Ask us to help': go('mv-help'),
     // The three stages across the top are links (Moving 9 H1).
     '1 Bring your data Now': STAY,
     'Bring your data Done': go('mv-sorted'),
@@ -56,4 +56,6 @@ export default {
   },
   // Turn it on puts the website on (third walk, walk-throughs 4 M1, L3).
   'mv-morning': { 'Turn it on': go('ws-published', 'Your website is on: step 2 of the morning ticks (a line under the morning).') },
+  // Ask us to help (Jack, 15 Oct): the box, then back on the move with a toast.
+  'mv-help': { Cancel: go('mv-check-result'), Send: go('mv-help-sent') },
 };
