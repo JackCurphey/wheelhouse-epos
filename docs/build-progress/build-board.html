@@ -183,17 +183,17 @@ const BOARD = {
   // Jack (from Mark, or a decision), with a link where there is one, and the
   // next few pieces for each person. Keep it short; the rest is on Detail.
   overview: {
-    now: 'Stage 0. The server is still being split into one file per area: Mark had moved 57 of 161 routes by 5 Oct, and your workshop moves (#180 to #184) are waiting for his approval. Your answers to the 25 stage 1 gaps are in (#185), and specs are now written in OpenSpec (#186).',
+    now: 'Stage 0. Mark came back on 15 Oct: he approved your workshop moves (#180 to #184) and the two fixes (#188, #189), answered your questions on #180, and is now writing what the online test copy must do (#137). Your workshop moves can be merged, in order.',
     next: {
       Mark: [
-        { what: 'Finish the server split (WP-0.4)', detail: 'Customers and sales, image uploads, booking; then the shared definitions the screens use' },
-        { what: 'Online test copy (WP-0.5)', detail: 'A hosted copy for you to try, test data only, starting with what it must do (#137, handed to Mark 8 Oct). Waits for the server split' },
-        { what: 'Stage 1: roles and switches (WP-1.1)', detail: 'The contract and the server half, first in stage 1' },
+        { what: 'What the online test copy must do (#137)', detail: 'Started 15 Oct, first because it holds up your stage check. He will mark a part of WP-0.5 you can take, on #137' },
+        { what: 'Where a job\'s open order lives after the till moves (#134)', detail: 'Started 15 Oct, with his till, sales, Shopify and dashboard part of the list' },
+        { what: 'Finish the server split (WP-0.4)', detail: 'The sales helpers to server/lib/sales.js before you move quotes; the 15 workshop settings routes to his own workshop-settings.js; a shared uploads.js with his image uploads move; then booking' },
       ],
       Jack: [
-        { what: 'Your workshop part of the server split', detail: 'Pull requests #180 to #184, waiting for Mark\'s approval' },
-        { what: 'Stage 0 check', detail: 'Walk booking, the till and the diary in the real app. Waits for the server split and the test copy' },
-        { what: 'Stage 1: the screens for roles (WP-1.1)', detail: 'The sidebar for each role; a mechanic lands on the Diary' },
+        { what: 'Merge your workshop moves', detail: '#180 to #184, approved 15 Oct, merged in order. Then #188, and #189 rebased so its check moves into workshop.js after #183' },
+        { what: 'Mark\'s small spec points', detail: 'One on #187 (the old Save and a waiting change request), three on #191; then #187 merges first, #191 after. #193 needs a rebase' },
+        { what: 'A part of the online test copy (WP-0.5)', detail: 'Once Mark marks one on #137. The stage 0 check waits for the server split and the test copy' },
       ],
     },
     waiting: [
@@ -204,16 +204,15 @@ const BOARD = {
       { what: 'When the till pays for jobs (WP-3.1)', detail: 'Approve how the warning looks when a job changes while it is being paid for.', links: [196] },
     ],
     waitingOnMark: [
-      { what: 'Re-reviewing four pull requests', detail: 'You answered his comments on 8 Oct. #187 merges first, because #188, #189 and #191 build on it. He also said he would reply on #191\'s task 2.3 separately.', links: [187, 188, 189, 191] },
-      { what: 'Approving your workshop moves', detail: 'The workshop part of the server split. #189 also waits for #183 to merge.', links: [180, 181, 182, 183, 184] },
-      { what: 'Your three questions on #180', detail: 'Who owns the 15 workshop settings routes, where the uploads folder and one other server value should live, and when a sales helper moves. Asked 7 Oct.', links: [180] },
-      { what: 'Where a job\'s order lives after the till moves', detail: 'You listed the workshop\'s part of the old sales tables on 8 Oct; the new tables have nowhere for an open order, so Mark decides where it goes before WP-1.6. The till, sales, Shopify and dashboard part of that list is his too.', links: [134] },
-      { what: 'Your two small follow-ups', detail: 'You offered to fix a script check and add a missing test after reviewing his split. Offered 7 Oct.', links: [151] },
+      { what: 'What the online test copy must do', detail: 'Started 15 Oct. He will say on #137 which part of WP-0.5 you can take.', links: [137] },
+      { what: 'Where a job\'s order lives after the till moves', detail: 'Started 15 Oct. The new tables have nowhere for an open order, so he decides where it goes before WP-1.6.', links: [134] },
+      { what: 'The sales helpers move', detail: 'He moves them to server/lib/sales.js before you move quotes, and will say on #180 when it is merged.', links: [180] },
+      { what: 'Your two small follow-ups', detail: 'You offered to fix a script check and add a missing test after reviewing his split. Offered 7 Oct; no answer yet.', links: [151] },
     ],
   },
-  updated: '8 October 2026',
-  lead: 'Stage 0 is still under way: the server split is in progress, with your workshop moves (#180 to #184) waiting for Mark\'s approval. The files you both touch are settled (#157), and specs are now written in OpenSpec (#186).',
-  sub: 'Merged 5 to 8 Oct: who edits the files you both touch (#157), the three flaky tests fixed (#178), the diary browser tests green again (#179), your answers to the 25 stage 1 gaps (#185), the move to OpenSpec (#186) and "What\'s built, room by room" on this board (#194).',
+  updated: '15 October 2026',
+  lead: 'Stage 0 is still under way. Mark approved your workshop moves (#180 to #184) on 15 Oct, so your part of the server split can be merged; his part, and the online test copy, come next.',
+  sub: 'Merged since 8 Oct: the Overview tab on this board (#195), the board and STATUS brought up to date (#197), and an answer for each of the 95 pages not drawn yet (#198). On 15 Oct Mark approved #180 to #184, #188 and #189, and asked for small spec changes on #187 and #191.',
   pieces: [
     { status: 'done', what: 'Soft sand look', detail: 'Colours, Public Sans, outlined delete buttons, in both the new and old app', pr: 96 },
     { status: 'done', what: 'Staff app frame', detail: 'Sidebar grouped by rooms, tablet rail, phone menu, where each person lands', pr: 97 },
@@ -269,9 +268,16 @@ const BOARD = {
     { status: 'done', what: 'Your answers to the 25 stage 1 gaps', detail: 'Every gap between the screens and the drawings decided before building; four affect Mark\'s pieces', pr: 185 },
     { status: 'done', what: 'Moving the project to OpenSpec', detail: 'Each piece is one OpenSpec change covering both halves; built areas get a spec checked against the code', pr: 186 },
     { status: 'done', what: 'What\'s built, room by room', detail: 'Each page on this board marked built, partly built, old app only or not built', pr: 194 },
-    { status: 'review', what: 'Server split: the workshop', detail: 'Your moves of the workshop helpers and routes, waiting for Mark\'s approval (#180 to #184)', pr: 180 },
-    { status: 'next', what: 'Server split: the rest', detail: 'Mark: customers and sales (a short spec first), image uploads and booking; then the shared definitions the screens use' },
-    { status: 'next', what: 'Online test copy (WP-0.5)', detail: 'Mark: a hosted copy for you to try, test data only. Waits for the server split' },
+    { status: 'done', what: 'The board\'s Overview tab', detail: 'Where things stand, what needs you, what waits on Mark, and what\'s next for each of you', pr: 195 },
+    { status: 'done', what: 'Pages not drawn yet: an answer for each', detail: 'All 95 pages a mockup button leads to have an answer and a work package; five things to draw before their stages (#139)', pr: 198 },
+    { status: 'review', what: 'Server split: the workshop', detail: 'Your moves of the workshop helpers and routes (#180 to #184). Approved by Mark 15 Oct; merge in order', pr: 180 },
+    { status: 'review', what: 'Paying for a job whose work is finished', detail: 'The payment goes through, with a warning if the job changes meanwhile. Approved by Mark 15 Oct', pr: 188 },
+    { status: 'review', what: 'The old job form\'s Save keeps a job\'s progress', detail: 'Unless its status changed. Approved by Mark 15 Oct; rebase onto workshop.js after #183', pr: 189 },
+    { status: 'review', what: 'OpenSpec: what the app does with a job', detail: 'The workshop-jobs spec. Mark asked for one more sentence on 15 Oct; merges before #191', pr: 187 },
+    { status: 'review', what: 'OpenSpec: what the staff diary does', detail: 'The workshop-diary spec. Mark checked it on 15 Oct and asked for three small wording fixes', pr: 191 },
+    { status: 'review', what: 'Three diary fixes', detail: 'New job\'s double book-in, the change request pop-up, the Week-view drop. Doesn\'t need Mark; needs a rebase', pr: 193 },
+    { status: 'next', what: 'Server split: the rest', detail: 'Mark: the sales helpers, the workshop settings routes, image uploads and booking; then the shared definitions the screens use' },
+    { status: 'next', what: 'Online test copy (WP-0.5)', detail: 'Mark: a hosted copy for you to try, test data only. What it must do (#137) started 15 Oct; a part of it may be yours' },
     { status: 'next', what: 'Stage 0 check', detail: 'You walk booking, the till and the diary in the real app. Waits for everything above' },
   ],
   asks: [
